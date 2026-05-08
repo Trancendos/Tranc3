@@ -1,0 +1,17 @@
+name = "trancendos-api-gateway"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = ""  # fill in from: wrangler kv:namespace list
+
+[vars]
+ENVIRONMENT = "production"
+# These are set as secrets via: wrangler secret put <NAME> --name trancendos-api-gateway
+# USERS_SERVICE_URL    = "https://infinity-auth-api.trancendos.workers.dev"
+# PRODUCTS_SERVICE_URL = "https://trancendos-products-service.trancendos.workers.dev"
+# ORDERS_SERVICE_URL   = "https://trancendos-orders-service.trancendos.workers.dev"
+# PAYMENTS_SERVICE_URL = "https://trancendos-payments-service.trancendos.workers.dev"
+# TRANC3_AI_SERVICE_URL= "https://tranc3-ai.trancendos.workers.dev"
+# JWT_SECRET           = "<shared secret>"

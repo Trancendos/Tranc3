@@ -1,0 +1,17 @@
+name = "tranc3-ai"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[ai]
+binding = "AI"
+
+[vars]
+ENVIRONMENT = "production"
+# TRANC3_BACKEND_URL = "https://your-tranc3-server.example.com"  # set when backend is running
+# TRANC3_AUTH_URL    = "https://infinity-auth-api.trancendos.workers.dev"
+# ALLOWED_ORIGINS    = "https://your-custom-domain.com"
+
+# Uncomment if you want to use KV for caching
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = ""  # fill in KV namespace ID
