@@ -1,0 +1,126 @@
+# deploy/multi-cloud-federation.yaml
+# Federate TRANC3 across EKS, AKS, and GKE
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tranc3-federation-config
+  namespace: tranc3
+data:
+  primary_cluster: "gke-us-central1"
+  failover_clusters:
+    - "aks-eastus"
+    - "eks-us-east-1"
+  health_check_interval: "30s"
+  failover_threshold: "3"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tranc3-federation-controller
+  namespace: tranc3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tranc3-federation
+  template:
+    metadata:
+      labels:
+        app: tranc3-federation
+    spec:
+      serviceAccountName: tranc3-federation
+      containers:
+      - name: controller
+        image: tranc3:federation-controller-latest
+        env:
+        - name: PRIMARY_CLUSTER
+          valueFrom:
+            configMapKeyRef:
+              name: tranc3-federation-config
+              key: primary_cluster
+        - name: FAILOVER_CLUSTERS
+          valueFrom:
+            configMapKeyRef:
+              name: tranc3-federation-config
+              key: failover_clusters
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tranc3-federation
+  namespace: tranc3
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tranc3-federation
+rules:
+- apiGroups: [""]
+  resources: ["services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tranc3-federation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tranc3-federation
+subjects:
+- kind: ServiceAccount
+  name: tranc3-federation
+  namespace: tranc3
+
+---
+# Global DNS for multi-cloud routing
+apiVersion: v1
+kind: Service
+metadata:
+  name: tranc3-global
+  namespace: tranc3
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"ports": {"80":"tranc3-backendconfig"}}'
+spec:
+  type: LoadBalancer
+  selector:
+    app: tranc3-api
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+
+---
+# Cross-cluster service discovery
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tranc3-cluster-endpoints
+  namespace: tranc3
+data:
+  gke-us-central1: "tranc3-api.tranc3.svc.cluster.local"
+  aks-eastus: "tranc3-api.tranc3.svc.cluster.local"
+  eks-us-east-1: "tranc3-api.tranc3.svc.cluster.local"
+  health_endpoints:
+    gke: "http://gke-us-central1:8000/health"
+    aks: "http://aks-eastus:8000/health"
+    eks: "http://eks-us-east-1:8000/health"
