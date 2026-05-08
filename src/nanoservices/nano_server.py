@@ -30,7 +30,8 @@ from src.workers.bot_registry import BotRegistry, get_registry
 
 logger = logging.getLogger(__name__)
 
-_NANO_PORT  = int(os.getenv("NANO_PORT", "8001"))
+_NANO_PORT    = int(os.getenv("NANO_PORT", "8001"))
+_BOTS_URL     = os.getenv("TRANC3_BOTS_URL", "")   # e.g. https://tranc3-bots.fly.dev
 _CORS_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
     "http://localhost:3000,http://localhost:5173,https://trancendos.com,https://www.trancendos.com",
@@ -116,6 +117,18 @@ nano_app.add_middleware(
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async def _run(bot_name: str, **kwargs) -> dict:
+    # If TRANC3_BOTS_URL is configured, proxy to the standalone bots service first.
+    if _BOTS_URL:
+        try:
+            import httpx
+            url = _BOTS_URL.rstrip("/") + "/" + bot_name
+            async with httpx.AsyncClient(timeout=60.0) as http:
+                r = await http.post(url, json=kwargs)
+                if r.status_code < 500:
+                    return r.json()
+        except Exception as exc:
+            logger.warning("Bots proxy to %s failed (%s) — falling back to local", bot_name, exc)
+
     if _registry is None:
         raise HTTPException(503, detail="Worker registry not initialised")
     result = await _registry.run(bot_name, **kwargs)
