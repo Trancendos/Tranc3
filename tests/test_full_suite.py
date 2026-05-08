@@ -485,6 +485,16 @@ class TestVectorStore:
 
 # ── API Integration Tests ─────────────────────────────────────────────────────
 
+def _api_available() -> bool:
+    """True only when the full production stack (torch, transformers, etc.) is installed."""
+    try:
+        import fastapi, redis, passlib, sqlalchemy, transformers, torch  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+@pytest.mark.skipif(not _api_available(), reason="Full production stack not installed (transformers/torch/sqlalchemy missing)")
 class TestAPIIntegration:
     """Integration tests for the full API pipeline."""
 
