@@ -116,7 +116,23 @@ class TRANC3Enhanced:
         except Exception as e:
             logger.warning("Code generator init failed (non-fatal): %s", e)
 
-        # 7. TF Hybrid engine
+        # 7. TRANC3 local inference engine (own weights, no API)
+        try:
+            from src.core.tranc3_inference import get_engine
+            tranc3_engine = get_engine()
+            self._subsystems["tranc3_engine"] = tranc3_engine
+            status = tranc3_engine.status()
+            if status["loaded"]:
+                logger.info("✓ TRANC3 local model loaded (device=%s)", status["device"])
+            else:
+                logger.warning(
+                    "TRANC3 model not trained yet — bootstrap mode active. "
+                    "Run: python train.py  to train from scratch."
+                )
+        except Exception as e:
+            logger.warning("TRANC3 engine init failed (non-fatal): %s", e)
+
+        # 7b. TF Hybrid engine (optional)
         try:
             from src.tensorflow_core.hybrid_engine import hybrid_engine
             self._subsystems["hybrid_engine"] = hybrid_engine
@@ -151,44 +167,93 @@ class TRANC3Enhanced:
             "memory": {"dimensions": 768},
         }
 
-    async def think(self, prompt: str, context: Dict = {}) -> Dict:
-        """Multi-system reasoning: plan → skills → execute → heal."""
-        start = time.time()
-        result: Dict[str, Any] = {"prompt": prompt, "mode": "enhanced"}
+    async def think(
+        self,
+        prompt: str,
+        context: Dict = {},
+        personality: str = "tranc3-base",
+        system_prompt: Optional[str] = None,
+        max_new_tokens: int = 256,
+        temperature: float = 0.8,
+    ) -> Dict:
+        """
+        Multi-system reasoning: local LLM → plan → skills → consciousness → evolve.
 
-        # Strategic planning
+        The local TRANC3 transformer model provides the primary language output.
+        All other subsystems enrich the response with structured metadata.
+        No external API is called.
+        """
+        start = time.time()
+        result: Dict[str, Any] = {"prompt": prompt, "mode": "enhanced", "personality": personality}
+
+        # ── 1. Primary language generation (local TRANC3 model) ──────────────
+        tranc3_engine = self._subsystems.get("tranc3_engine")
+        if tranc3_engine:
+            gen = await tranc3_engine.generate(
+                prompt=prompt,
+                personality=personality,
+                system_prompt=system_prompt,
+                max_new_tokens=max_new_tokens,
+                temperature=temperature,
+                context=context,
+            )
+            result["response"] = gen.get("response", "")
+            result["model"] = gen.get("model", "tranc3-local")
+            result["tokens"] = gen.get("tokens", 0)
+            if not gen.get("trained", True):
+                result["warning"] = gen.get("response", "")
+                result["action_required"] = gen.get("action_required", "python train.py")
+        else:
+            result["response"] = (
+                "TRANC3 language engine not initialised. "
+                "Run `python train.py` then restart."
+            )
+            result["model"] = "none"
+
+        # ── 2. Strategic planning ─────────────────────────────────────────────
         planner = self._subsystems.get("planner")
         if planner:
-            plan = await planner.plan_action(
-                goal=prompt,
-                state=context,
-                constraints=["zero-cost", "gdpr-compliant", "self-healing"],
-            )
-            result["plan"] = plan
+            try:
+                plan = await planner.plan_action(
+                    goal=prompt,
+                    state=context,
+                    constraints=["zero-cost", "gdpr-compliant", "self-healing"],
+                )
+                result["plan"] = plan
+            except Exception as e:
+                logger.debug("Planner error (non-fatal): %s", e)
 
-        # Skill routing
+        # ── 3. Skill routing ──────────────────────────────────────────────────
         skill_registry = self._subsystems.get("skill_registry")
         if skill_registry:
-            skills = await skill_registry.search(prompt, top_k=5)
-            result["matched_skills"] = [s.skill.name for s in skills]
+            try:
+                skills = await skill_registry.search(prompt, top_k=5)
+                result["matched_skills"] = [s.skill.name for s in skills]
 
-            # Auto-load bundle if trigger detected
-            bundle = await skill_registry.detect_and_load_bundle(prompt)
-            if bundle:
-                result["triggered_bundle"] = bundle.name
+                bundle = await skill_registry.detect_and_load_bundle(prompt)
+                if bundle:
+                    result["triggered_bundle"] = bundle.name
+            except Exception as e:
+                logger.debug("Skill routing error (non-fatal): %s", e)
 
-        # Consciousness-aware processing (original 2060)
+        # ── 4. Consciousness-aware processing (2060 subsystem) ────────────────
         consciousness = self._subsystems.get("consciousness")
         if consciousness:
-            encoded = self._encode(prompt)
-            cs_state = consciousness.simulate_consciousness_stream(encoded, time_steps=100)
-            result["consciousness_phi"] = cs_state.get("average_phi", 0.0)
+            try:
+                encoded = self._encode(prompt)
+                cs_state = consciousness.simulate_consciousness_stream(encoded, time_steps=100)
+                result["consciousness_phi"] = cs_state.get("average_phi", 0.0)
+            except Exception as e:
+                logger.debug("Consciousness error (non-fatal): %s", e)
 
-        # Evolution tick
+        # ── 5. Evolution tick ─────────────────────────────────────────────────
         evolution = self._subsystems.get("evolution")
         if evolution:
-            evolution.evolve(num_generations=1)
-            result["evolution_gen"] = evolution.generation
+            try:
+                evolution.evolve(num_generations=1)
+                result["evolution_gen"] = evolution.generation
+            except Exception as e:
+                logger.debug("Evolution error (non-fatal): %s", e)
 
         result["duration_ms"] = round((time.time() - start) * 1000, 2)
         return result
