@@ -1,0 +1,52 @@
+# deploy/forgejo/docker-compose.yml
+# Forgejo ("The Workshop") — self-hosted Git for all Trancendos projects.
+#
+# Deploy with:
+#   docker compose -f deploy/forgejo/docker-compose.yml up -d
+#
+# Forgejo will be available at: https://trancendos.com/the-workshop
+# (after setting up the nginx reverse proxy in nginx-the-workshop.conf)
+
+version: "3.9"
+
+services:
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:7
+    container_name: the-workshop
+    restart: unless-stopped
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - FORGEJO__server__ROOT_URL=https://trancendos.com/the-workshop
+      - FORGEJO__server__HTTP_PORT=3000
+      - FORGEJO__server__DOMAIN=trancendos.com
+      - FORGEJO__server__SSH_DOMAIN=trancendos.com
+      - FORGEJO__server__SSH_PORT=2222
+      - FORGEJO__server__DISABLE_SSH=false
+      - FORGEJO__server__LFS_START_SERVER=true
+      - FORGEJO__database__DB_TYPE=sqlite3
+      - FORGEJO__database__PATH=/data/forgejo/forgejo.db
+      - FORGEJO__repository__DEFAULT_BRANCH=main
+      - FORGEJO__service__DISABLE_REGISTRATION=false
+      - FORGEJO__service__REQUIRE_SIGNIN_VIEW=false
+      - FORGEJO__picture__DISABLE_GRAVATAR=false
+      - FORGEJO__log__LEVEL=Info
+      - FORGEJO__security__INSTALL_LOCK=false
+    ports:
+      # HTTP — nginx proxies /the-workshop → this port (not exposed publicly)
+      - "127.0.0.1:3456:3000"
+      # SSH git — exposed directly on port 2222
+      - "2222:22"
+    volumes:
+      - forgejo-data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/the-workshop/-/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  forgejo-data:
+    name: forgejo-data
