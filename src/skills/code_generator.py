@@ -7,14 +7,11 @@ import ast
 import asyncio
 import hashlib
 import logging
-import os
 import re
 import textwrap
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
-
-import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -621,15 +618,15 @@ def _generate_pytest_tests(code: str, description: str) -> str:
 
 class AdvancedCodeGenerator:
     """
-    Combines template-based generation, optional LLM enhancement via the
-    Anthropic API, automated test generation, and self-improvement.
+    Combines template-based generation, local TRANC3 LLM enhancement,
+    automated test generation, and self-improvement.
+    Zero external API dependency — uses the local Tranc3 inference engine.
     """
 
     def __init__(self) -> None:
         self._analyzer = CodeAnalyzer()
         self._improver = CodeSelfImprover()
         self._templates = _TEMPLATES
-        self._anthropic_key: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
         self._cache: Dict[str, CodeResult] = {}
 
     # ------------------------------------------------------------------
@@ -700,61 +697,45 @@ class AdvancedCodeGenerator:
         self, base_code: str, request: CodeGenerationRequest
     ) -> Optional[str]:
         """
-        Call the Anthropic API to refine the template-generated code.
-        Returns None on any failure so the caller can fall back gracefully.
+        Use the local TRANC3 inference engine to refine template-generated code.
+        Returns None on any failure so the caller falls back to the template.
+        No external API is called.
         """
-        if not self._anthropic_key:
-            return None
-
-        constraints_text = (
-            "\n".join(f"- {c}" for c in request.constraints)
-            if request.constraints
-            else "None"
-        )
-        examples_text = (
-            "\n".join(
-                f"Input: {ex.get('input', '')}\nOutput: {ex.get('output', '')}"
-                for ex in request.examples[:3]
-            )
-            if request.examples
-            else "None"
-        )
-
-        prompt = (
-            f"You are an expert {request.language} developer.\n\n"
-            f"Task: {request.description}\n\n"
-            f"Context: {request.context or 'None'}\n\n"
-            f"Constraints:\n{constraints_text}\n\n"
-            f"Examples:\n{examples_text}\n\n"
-            f"Improve the following base code. Return ONLY the improved code, "
-            f"no explanation:\n\n```{request.language}\n{base_code}\n```"
-        )
-
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(
-                    "https://api.anthropic.com/v1/messages",
-                    headers={
-                        "x-api-key": self._anthropic_key,
-                        "anthropic-version": "2023-06-01",
-                        "content-type": "application/json",
-                    },
-                    json={
-                        "model": "claude-haiku-4-5",
-                        "max_tokens": request.max_tokens,
-                        "messages": [{"role": "user", "content": prompt}],
-                    },
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                text = data["content"][0]["text"]
-                # Extract code block if present
-                m = re.search(
-                    rf"```(?:{request.language})?\n(.*?)```", text, re.DOTALL
-                )
-                return m.group(1).strip() if m else text.strip()
+            from src.core.tranc3_inference import get_engine
+            engine = get_engine()
+
+            constraints_text = (
+                "\n".join(f"- {c}" for c in request.constraints)
+                if request.constraints
+                else "None"
+            )
+
+            prompt = (
+                f"You are an expert {request.language} developer.\n\n"
+                f"Task: {request.description}\n\n"
+                f"Context: {request.context or 'None'}\n\n"
+                f"Constraints:\n{constraints_text}\n\n"
+                f"Improve the following base code. Return ONLY the improved code, "
+                f"no explanation:\n\n```{request.language}\n{base_code}\n```"
+            )
+
+            result = await engine.generate(
+                prompt=prompt,
+                personality="cornelius-macintyre",
+                max_new_tokens=min(request.max_tokens, 512),
+                temperature=0.4,
+            )
+
+            text = result.get("response", "")
+            if not text or not result.get("trained", True):
+                return None
+
+            m = re.search(rf"```(?:{request.language})?\n(.*?)```", text, re.DOTALL)
+            return m.group(1).strip() if m else text.strip()
+
         except Exception as exc:
-            logger.warning("LLM enhancement failed: %s", exc)
+            logger.debug("Local LLM enhancement unavailable (non-fatal): %s", exc)
             return None
 
     # ------------------------------------------------------------------
@@ -828,36 +809,26 @@ class AdvancedCodeGenerator:
     async def explain_code(self, code: str) -> str:
         """
         Generate a human-readable explanation of the code.
-        Uses LLM if available, falls back to static analysis summary.
+        Uses local TRANC3 engine if trained, falls back to static analysis.
+        No external API is called.
         """
-        if self._anthropic_key:
-            try:
-                async with httpx.AsyncClient(timeout=20.0) as client:
-                    resp = await client.post(
-                        "https://api.anthropic.com/v1/messages",
-                        headers={
-                            "x-api-key": self._anthropic_key,
-                            "anthropic-version": "2023-06-01",
-                            "content-type": "application/json",
-                        },
-                        json={
-                            "model": "claude-haiku-4-5",
-                            "max_tokens": 512,
-                            "messages": [
-                                {
-                                    "role": "user",
-                                    "content": (
-                                        "Explain this code in 2-3 sentences for a senior developer:\n\n"
-                                        f"```python\n{code[:2000]}\n```"
-                                    ),
-                                }
-                            ],
-                        },
-                    )
-                    resp.raise_for_status()
-                    return resp.json()["content"][0]["text"].strip()
-            except Exception as exc:
-                logger.debug("LLM explanation failed, using static fallback: %s", exc)
+        try:
+            from src.core.tranc3_inference import get_engine
+            engine = get_engine()
+            result = await engine.generate(
+                prompt=(
+                    "Explain this code in 2-3 sentences for a senior developer:\n\n"
+                    f"```python\n{code[:1500]}\n```"
+                ),
+                personality="cornelius-macintyre",
+                max_new_tokens=128,
+                temperature=0.3,
+            )
+            text = result.get("response", "")
+            if text and result.get("trained", True):
+                return text.strip()
+        except Exception as exc:
+            logger.debug("Local LLM explanation unavailable (non-fatal): %s", exc)
 
         # Static fallback
         try:
@@ -872,9 +843,7 @@ class AdvancedCodeGenerator:
                 parts.append(f"Contains function(s): {', '.join(fns)}.")
             if imports:
                 parts.append(f"Uses: {', '.join(imports)}.")
-            parts.append(
-                f"Cyclomatic complexity: {analysis['complexity']}."
-            )
+            parts.append(f"Cyclomatic complexity: {analysis['complexity']}.")
             return " ".join(parts) if parts else "Code module."
         except Exception:
             return "Generated code module."
