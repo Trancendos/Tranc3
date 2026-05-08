@@ -221,14 +221,17 @@ class CodeExecNode(BaseNode):
     """Executes Python code in a restricted sandbox, capturing stdout."""
 
     _SAFE_BUILTINS = {
+        # Intentionally excludes: setattr, getattr, input, exec, eval, open,
+        # __import__, compile, vars, dir, id, object, super, type, property
+        # — these are sandbox escape vectors.
         "abs", "all", "any", "bin", "bool", "bytearray", "bytes", "callable",
-        "chr", "complex", "dict", "dir", "divmod", "enumerate", "filter",
-        "float", "format", "frozenset", "getattr", "hasattr", "hash", "hex",
-        "id", "input", "int", "isinstance", "issubclass", "iter", "len",
-        "list", "map", "max", "min", "next", "object", "oct", "ord", "pow",
-        "print", "property", "range", "repr", "reversed", "round", "set",
-        "setattr", "slice", "sorted", "str", "sum", "super", "tuple", "type",
-        "vars", "zip", "True", "False", "None",
+        "chr", "complex", "dict", "divmod", "enumerate", "filter",
+        "float", "format", "frozenset", "hash", "hex",
+        "int", "isinstance", "issubclass", "iter", "len",
+        "list", "map", "max", "min", "next", "oct", "ord", "pow",
+        "print", "range", "repr", "reversed", "round", "set",
+        "slice", "sorted", "str", "sum", "tuple",
+        "zip", "True", "False", "None",
     }
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
