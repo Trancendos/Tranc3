@@ -35,7 +35,7 @@ class MCPClient:
 
     Usage::
 
-        client = MCPClient("http://localhost:8000/mcp", api_key="sk-...")
+        client = MCPClient("http://localhost:8000/mcp", api_key="<your-api-key>")
         await client.connect()
         tools = await client.list_tools()
         result = await client.call_tool("search_skills", {"query": "healing"})
@@ -298,7 +298,7 @@ class MCPClientPool:
     Usage::
 
         pool = MCPClientPool()
-        pool.add_server("primary", "http://localhost:8000/mcp", api_key="sk-...")
+        pool.add_server("primary", "http://localhost:8000/mcp", api_key="<your-api-key>")
         pool.add_server("secondary", "http://remote-mcp.example.com/mcp")
         await pool.connect_all()
 
