@@ -158,8 +158,9 @@ class PersonalitySpawner:
             # Cache (Upstash Redis free tier)
             REDIS_URL=
 
-            # LLM (required for Claude-powered nodes)
-            ANTHROPIC_API_KEY=
+            # Tranc3 local model (train with: python train.py --model-size small)
+            TRANC3_MODEL_PATH=./models/tranc3-v1/tranc3-final.pt
+            TRANC3_TOKENIZER_PATH=./models/tokenizer
 
             # Rate limiting
             RATE_LIMIT_PER_WINDOW=120
