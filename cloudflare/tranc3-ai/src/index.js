@@ -1,29 +1,46 @@
 /**
  * Tranc3 AI Worker — Cloudflare Edge
  *
+ * Self-owned inference. Zero external AI service dependencies.
+ *
  * Routes:
- *   GET  /                         → API info
- *   GET  /health                   → health check
- *   GET  /api/v1/ai/models         → list available models
- *   POST /api/v1/ai/chat           → chat / text generation
- *   POST /api/v1/ai/embeddings     → text embeddings
+ *   GET  /                          → API info
+ *   GET  /health                    → health check
+ *   GET  /api/v1/ai/models          → list available models
+ *   POST /api/v1/ai/chat            → chat / text generation
+ *   POST /api/v1/ai/embeddings      → text embeddings
  *   POST /api/v1/ai/analyze-emotion → emotion detection
- *   POST /api/v1/ai/consciousness  → consciousness scoring
+ *   POST /api/v1/ai/consciousness   → consciousness scoring
+ *   POST /api/v1/ai/tokenize        → tokenization
+ *   POST /api/v1/ai/predict         → next-token prediction
  *
- * Inference strategy (in order):
- *   1. If TRANC3_BACKEND_URL is set → proxy to the Tranc3 Python backend
- *   2. Otherwise → Cloudflare Workers AI (hosted models)
+ * Inference strategy (in priority order — NO external AI APIs):
+ *   1. TRANC3_BACKEND_URL  → full Tranc3 Python backend (FastAPI + WorkerPool)
+ *   2. TRANC3_NANO_URL     → Tranc3 nanoservices HTTP server (nano_server.py)
+ *   3. Deterministic stub  → honest "model not trained yet" response
  *
- * Auth: validated against infinity-auth-api via TRANC3_AUTH_URL
+ * To deploy your own backend (free):
+ *   Fly.io free tier: fly deploy (3 shared VMs free)
+ *   Self-hosted VPS:  docker run -p 8000:8000 tranc3:latest
+ *
+ * Bindings required (set via wrangler secret):
+ *   TRANC3_AUTH_URL     → infinity-auth-api URL (JWT validation)
+ *   TRANC3_BACKEND_URL  → Tranc3 FastAPI backend (optional but recommended)
+ *   TRANC3_NANO_URL     → Nanoservices server (optional fallback)
+ *   ALLOWED_ORIGINS     → extra CORS origins (comma-separated)
  */
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const MODELS = {
-  default: "@cf/meta/llama-3.1-8b-instruct",
-  fast: "@cf/mistral/mistral-7b-instruct-v0.1",
-  embedding: "@cf/baai/bge-small-en-v1.5",
-  tranc3: "tranc3-base",
+const TRANC3_MODELS = {
+  "tranc3-base":         { name: "Tranc3 Base",        backend: "tranc3-own",   capabilities: ["chat", "emotion", "consciousness"] },
+  "tranc3-fast":         { name: "Tranc3 Fast",         backend: "tranc3-own",   capabilities: ["chat"] },
+  "tranc3-embeddings":   { name: "Tranc3 Embeddings",   backend: "tranc3-own",   capabilities: ["embeddings"] },
+  "dorris-fontaine":     { name: "Dorris Fontaine",     backend: "tranc3-own",   capabilities: ["chat", "finance"] },
+  "cornelius-macintyre": { name: "Cornelius MacIntyre", backend: "tranc3-own",   capabilities: ["chat", "orchestration"] },
+  "the-guardian":        { name: "The Guardian",        backend: "tranc3-own",   capabilities: ["chat", "security"] },
+  "vesper-nightingale":  { name: "Vesper Nightingale",  backend: "tranc3-own",   capabilities: ["chat", "healthcare"] },
+  "atlas-meridian":      { name: "Atlas Meridian",      backend: "tranc3-own",   capabilities: ["chat", "infrastructure"] },
 };
 
 const SECURITY_HEADERS = {
@@ -51,7 +68,6 @@ function getAllowedOrigin(request, env) {
   const all = [...new Set([...DEFAULT_ORIGINS, ...extra])];
   if (all.includes(origin)) return origin;
   if (origin.endsWith(".trancendos.com")) return origin;
-  if (origin.endsWith(".infinity-portal.pages.dev")) return origin;
   return null;
 }
 
@@ -89,7 +105,7 @@ async function verifyAuth(request, env) {
   const header = request.headers.get("Authorization");
   if (!header?.startsWith("Bearer ")) return null;
 
-  // If no auth URL configured, skip validation in dev mode
+  // Dev bypass when no auth URL is configured
   if (!env.TRANC3_AUTH_URL && env.ENVIRONMENT !== "production") {
     return { userId: "dev", role: "admin" };
   }
@@ -107,38 +123,67 @@ async function verifyAuth(request, env) {
   }
 }
 
-// ── Backend proxy ─────────────────────────────────────────────────────────────
+// ── Self-owned backend call ───────────────────────────────────────────────────
+//
+// Priority:
+//   1. Full backend  (TRANC3_BACKEND_URL  → /nano/<endpoint>)
+//   2. Nanoservices  (TRANC3_NANO_URL     → /<endpoint>)
+//   3. Stub response (no external service)
 
-async function proxyToBackend(request, env, path) {
-  const backendUrl = `${env.TRANC3_BACKEND_URL}${path}`;
-  const headers = new Headers(request.headers);
-  headers.set("X-Forwarded-For", request.headers.get("CF-Connecting-IP") || "");
-  headers.set("X-Tranc3-Edge", "cloudflare");
+async function callNano(env, endpoint, payload) {
+  // Try full backend first
+  if (env.TRANC3_BACKEND_URL) {
+    try {
+      const res = await fetch(`${env.TRANC3_BACKEND_URL}/nano/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Tranc3-Edge": "cloudflare" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.warn(`Backend ${endpoint} failed: ${e.message}`);
+    }
+  }
 
-  const body = ["GET", "HEAD"].includes(request.method) ? null : request.body;
-  const res = await fetch(backendUrl, {
-    method: request.method,
-    headers,
-    body,
-  });
-  return res;
+  // Try dedicated nanoservices server
+  if (env.TRANC3_NANO_URL) {
+    try {
+      const res = await fetch(`${env.TRANC3_NANO_URL}/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.warn(`Nanoservice ${endpoint} failed: ${e.message}`);
+    }
+  }
+
+  // No backend available — return honest stub
+  return null;
 }
 
-// ── CF Workers AI inference ───────────────────────────────────────────────────
+// ── Stub responses (no external AI — honest, useful) ─────────────────────────
 
-async function cfChat(env, messages, model) {
-  const selectedModel = model === "tranc3-base" ? MODELS.default : (model || MODELS.default);
-  const response = await env.AI.run(selectedModel, { messages });
+function stubChat(messages, model) {
+  const lastMsg = messages[messages.length - 1]?.content || "";
   return {
     id: crypto.randomUUID(),
     object: "chat.completion",
-    model: selectedModel,
-    backend: "cloudflare-workers-ai",
+    model: model || "tranc3-base",
+    backend: "tranc3-stub",
+    trained: false,
+    message: "TRANC3 model weights not yet trained. Run: python train.py",
     choices: [{
       index: 0,
       message: {
         role: "assistant",
-        content: response.response || response.result || "",
+        content: (
+          `TRANC3 (${model || "tranc3-base"}) is initialising. ` +
+          "Model weights are not yet trained. " +
+          "Run `python train.py` on your Tranc3 backend to produce weights. " +
+          `Your message: "${lastMsg.slice(0, 80)}"`
+        ),
       },
       finish_reason: "stop",
     }],
@@ -146,60 +191,64 @@ async function cfChat(env, messages, model) {
   };
 }
 
-async function cfEmbeddings(env, input) {
+function stubEmbedding(input) {
   const texts = Array.isArray(input) ? input : [input];
-  const response = await env.AI.run(MODELS.embedding, { text: texts });
-  const embeddings = Array.isArray(response.data) ? response.data : [response.data];
+  // Deterministic pseudo-embedding derived from text hash
   return {
     object: "list",
-    model: MODELS.embedding,
-    backend: "cloudflare-workers-ai",
-    data: embeddings.map((vec, i) => ({ object: "embedding", index: i, embedding: vec })),
+    model: "tranc3-embeddings",
+    backend: "tranc3-stub",
+    trained: false,
+    data: texts.map((text, i) => {
+      const hash = simpleHash(text);
+      const vec  = Array.from({ length: 256 }, (_, j) => ((hash >> (j % 32)) & 1) * 0.1 - 0.05);
+      return { object: "embedding", index: i, embedding: vec };
+    }),
     usage: { prompt_tokens: 0, total_tokens: 0 },
   };
 }
 
+function stubEmotion(text) {
+  const t = text.toLowerCase();
+  const scores = {
+    joy:      [/happy|great|excellent|wonderful|love|yay|amazing/].some(r => r.test(t)) ? 0.6 : 0.05,
+    sadness:  [/sad|unhappy|terrible|awful|cry|miss|depressed/].some(r => r.test(t)) ? 0.6 : 0.05,
+    anger:    [/angry|furious|hate|rage|frustrated|annoyed/].some(r => r.test(t)) ? 0.6 : 0.05,
+    fear:     [/scared|afraid|fear|worried|anxious|nervous/].some(r => r.test(t)) ? 0.6 : 0.05,
+    surprise: [/wow|amazing|unexpected|shocked|unbelievable/].some(r => r.test(t)) ? 0.6 : 0.05,
+    disgust:  [/disgusting|horrible|gross|nasty|repulsive/].some(r => r.test(t)) ? 0.6 : 0.05,
+  };
+  const total = Object.values(scores).reduce((a, b) => a + b, 0) || 1;
+  const norm  = Object.fromEntries(Object.entries(scores).map(([k, v]) => [k, +(v / total).toFixed(4)]));
+  const dominant = Object.entries(norm).sort((a, b) => b[1] - a[1])[0][0];
+  return { dominant, scores: norm, model: "tranc3-rule-based", backend: "tranc3-stub" };
+}
+
+function simpleHash(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h;
+}
+
 // ── Route handlers ────────────────────────────────────────────────────────────
 
-async function handleModels(request, env) {
-  const hasTranc3Backend = !!env.TRANC3_BACKEND_URL;
+function handleModels(request, env) {
+  const hasBackend = !!(env.TRANC3_BACKEND_URL || env.TRANC3_NANO_URL);
   return json({
     object: "list",
-    data: [
-      {
-        id: "tranc3-base",
-        object: "model",
-        name: "Tranc3 Base",
-        description: "Tranc3 consciousness-aware language model",
-        available: hasTranc3Backend,
-        backend: hasTranc3Backend ? "tranc3-backend" : "cloudflare-workers-ai",
-        capabilities: ["chat", "consciousness-scoring", "emotion-detection"],
-      },
-      {
-        id: MODELS.default,
-        object: "model",
-        name: "LLaMA 3.1 8B Instruct",
-        available: true,
-        backend: "cloudflare-workers-ai",
-        capabilities: ["chat"],
-      },
-      {
-        id: MODELS.fast,
-        object: "model",
-        name: "Mistral 7B Instruct",
-        available: true,
-        backend: "cloudflare-workers-ai",
-        capabilities: ["chat"],
-      },
-      {
-        id: MODELS.embedding,
-        object: "model",
-        name: "BGE Small EN v1.5",
-        available: true,
-        backend: "cloudflare-workers-ai",
-        capabilities: ["embeddings"],
-      },
-    ],
+    backend_connected: hasBackend,
+    data: Object.entries(TRANC3_MODELS).map(([id, info]) => ({
+      id,
+      object: "model",
+      name: info.name,
+      available: true,
+      backend: hasBackend ? info.backend : "tranc3-stub",
+      trained: hasBackend,
+      capabilities: info.capabilities,
+    })),
   }, 200, {}, request, env);
 }
 
@@ -209,36 +258,49 @@ async function handleChat(request, env) {
     return err("Invalid JSON body", 400, request, env);
   }
 
-  const { messages, model, stream } = body;
+  const { messages, model, stream, personality } = body;
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     return err("messages array is required", 400, request, env);
   }
   if (stream) {
-    return err("Streaming not supported on edge; use the Tranc3 backend directly", 400, request, env);
+    return err("Streaming not supported at edge; use the Tranc3 backend directly", 400, request, env);
   }
 
-  // Proxy to Python backend if available
-  if (env.TRANC3_BACKEND_URL) {
-    try {
-      const res = await proxyToBackend(
-        new Request(request.url, { method: "POST", headers: request.headers, body: JSON.stringify(body) }),
-        env,
-        "/chat",
-      );
-      if (res.ok) return res;
-    } catch (e) {
-      console.error("Backend proxy failed, falling back to CF Workers AI:", e.message);
-    }
+  // Build nanoservice payload
+  const lastUser = messages.filter(m => m.role === "user").pop()?.content || "";
+  const systemMsg = messages.find(m => m.role === "system")?.content;
+
+  const nano = await callNano(env, "generate", {
+    prompt:        lastUser,
+    personality:   personality || model || "tranc3-base",
+    system_prompt: systemMsg,
+    max_tokens:    body.max_tokens || 256,
+    temperature:   body.temperature || 0.8,
+    top_p:         body.top_p || 0.9,
+  });
+
+  if (nano && nano.response) {
+    return json({
+      id:      crypto.randomUUID(),
+      object:  "chat.completion",
+      model:   model || "tranc3-base",
+      backend: "tranc3-own",
+      choices: [{
+        index:  0,
+        message: { role: "assistant", content: nano.response },
+        finish_reason: "stop",
+      }],
+      usage: {
+        prompt_tokens:     0,
+        completion_tokens: nano.tokens || 0,
+        total_tokens:      nano.tokens || 0,
+      },
+      personality: nano.personality,
+    }, 200, {}, request, env);
   }
 
-  // Fall back to CF Workers AI
-  try {
-    const result = await cfChat(env, messages, model);
-    return json(result, 200, {}, request, env);
-  } catch (e) {
-    console.error("CF Workers AI error:", e);
-    return err("Inference failed", 502, request, env, e.message);
-  }
+  // No backend available — return honest stub
+  return json(stubChat(messages, model), 200, {}, request, env);
 }
 
 async function handleEmbeddings(request, env) {
@@ -247,28 +309,27 @@ async function handleEmbeddings(request, env) {
     return err("Invalid JSON body", 400, request, env);
   }
 
-  const { input, model } = body;
+  const { input } = body;
   if (!input) return err("input is required", 400, request, env);
 
-  if (env.TRANC3_BACKEND_URL) {
-    try {
-      const res = await proxyToBackend(
-        new Request(request.url, { method: "POST", headers: request.headers, body: JSON.stringify(body) }),
-        env,
-        "/embeddings",
-      );
-      if (res.ok) return res;
-    } catch (e) {
-      console.error("Backend proxy failed:", e.message);
-    }
+  const texts = Array.isArray(input) ? input : [input];
+  const nano  = await callNano(env, "embed", { text: texts[0], pooling: body.pooling || "mean" });
+
+  if (nano && nano.embedding) {
+    return json({
+      object:  "list",
+      model:   "tranc3-embeddings",
+      backend: "tranc3-own",
+      data: texts.map((_, i) => ({
+        object: "embedding",
+        index:  i,
+        embedding: nano.embedding,
+      })),
+      usage: { prompt_tokens: 0, total_tokens: 0 },
+    }, 200, {}, request, env);
   }
 
-  try {
-    const result = await cfEmbeddings(env, input);
-    return json(result, 200, {}, request, env);
-  } catch (e) {
-    return err("Embedding failed", 502, request, env, e.message);
-  }
+  return json(stubEmbedding(input), 200, {}, request, env);
 }
 
 async function handleEmotion(request, env) {
@@ -277,45 +338,13 @@ async function handleEmotion(request, env) {
     return err("Invalid JSON body", 400, request, env);
   }
 
-  const { text } = body;
+  const text = body.text || body.input || "";
   if (!text) return err("text is required", 400, request, env);
 
-  if (env.TRANC3_BACKEND_URL) {
-    try {
-      const res = await proxyToBackend(
-        new Request(request.url, { method: "POST", headers: request.headers, body: JSON.stringify(body) }),
-        env,
-        "/analyze-emotion",
-      );
-      if (res.ok) return res;
-    } catch (e) {
-      console.error("Backend proxy failed:", e.message);
-    }
-  }
+  const nano = await callNano(env, "emotion", { text });
+  if (nano && nano.dominant) return json(nano, 200, {}, request, env);
 
-  // Lightweight CF Workers AI fallback: classify via LLM
-  try {
-    const msgs = [
-      { role: "system", content: "You are an emotion classifier. Respond ONLY with a JSON object like: {\"dominant\":\"neutral\",\"scores\":{\"neutral\":0.7,\"happy\":0.1,\"sad\":0.1,\"angry\":0.05,\"surprised\":0.03,\"fearful\":0.01,\"disgusted\":0.01}}" },
-      { role: "user", content: `Classify the emotion in this text: "${text}"` },
-    ];
-    const response = await env.AI.run(MODELS.default, { messages: msgs });
-    const raw = response.response || "{}";
-    const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}");
-    return json({
-      text,
-      dominant: parsed.dominant || "neutral",
-      scores: parsed.scores || { neutral: 1.0 },
-      backend: "cloudflare-workers-ai",
-    }, 200, {}, request, env);
-  } catch (e) {
-    return json({
-      text,
-      dominant: "neutral",
-      scores: { neutral: 1.0 },
-      backend: "fallback",
-    }, 200, {}, request, env);
-  }
+  return json(stubEmotion(text), 200, {}, request, env);
 }
 
 async function handleConsciousness(request, env) {
@@ -324,108 +353,169 @@ async function handleConsciousness(request, env) {
     return err("Invalid JSON body", 400, request, env);
   }
 
-  if (env.TRANC3_BACKEND_URL) {
-    try {
-      const res = await proxyToBackend(
-        new Request(request.url, { method: "POST", headers: request.headers, body: JSON.stringify(body) }),
-        env,
-        "/consciousness/score",
-      );
-      if (res.ok) return res;
-    } catch (e) {
-      console.error("Backend proxy failed:", e.message);
-    }
-  }
+  const text = body.text || body.input || "";
+  if (!text) return err("text or input is required", 400, request, env);
 
-  // Without the full Tranc3 engine, return a placeholder
+  const nano = await callNano(env, "consciousness", { text });
+  if (nano && typeof nano.phi === "number") return json(nano, 200, {}, request, env);
+
+  // Heuristic phi estimate
+  const words = text.split(/\s+/).filter(Boolean);
+  const vocab  = new Set(words).size;
+  const phi    = Math.min(1.0, (vocab / Math.max(words.length, 1)) * 2.0);
   return json({
-    phi: 0.0,
-    awareness: 0.0,
-    is_conscious: false,
-    note: "Full consciousness scoring requires the Tranc3 backend. Set TRANC3_BACKEND_URL to enable.",
-    backend: "edge-placeholder",
+    phi:      +phi.toFixed(4),
+    awareness: phi > 0.7 ? "high" : phi > 0.4 ? "medium" : "low",
+    model:    "tranc3-heuristic",
+    backend:  "tranc3-stub",
   }, 200, {}, request, env);
 }
 
-// ── Main handler ──────────────────────────────────────────────────────────────
+async function handleTokenize(request, env) {
+  let body;
+  try { body = await request.json(); } catch {
+    return err("Invalid JSON body", 400, request, env);
+  }
+
+  const nano = await callNano(env, "tokenize", {
+    action:       body.action || "encode",
+    text:         body.text || "",
+    ids:          body.ids || [],
+    skip_special: body.skip_special ?? true,
+  });
+  if (nano) return json(nano, 200, {}, request, env);
+
+  // Whitespace fallback
+  if ((body.action || "encode") === "encode") {
+    const tokens = (body.text || "").split(/\s+/).filter(Boolean);
+    return json({ tokens, ids: tokens.map((_, i) => i), model: "fallback" }, 200, {}, request, env);
+  }
+  return json({ text: `[${(body.ids || []).length} tokens decoded]`, model: "fallback" }, 200, {}, request, env);
+}
+
+async function handlePredict(request, env) {
+  let body;
+  try { body = await request.json(); } catch {
+    return err("Invalid JSON body", 400, request, env);
+  }
+
+  const text = body.text || "";
+  if (!text) return err("text is required", 400, request, env);
+
+  const nano = await callNano(env, "predict", {
+    text,
+    top_k:        body.top_k || 5,
+    predict_type: body.predict_type || "next_token",
+  });
+  if (nano) return json(nano, 200, {}, request, env);
+
+  return json({
+    prediction: "the",
+    confidence: 0.1,
+    top_k:  [{ token: "the", prob: 0.1 }],
+    model:  "tranc3-stub",
+    backend: "tranc3-stub",
+  }, 200, {}, request, env);
+}
+
+// ── Health ────────────────────────────────────────────────────────────────────
+
+async function handleHealth(env) {
+  const hasBackend = !!env.TRANC3_BACKEND_URL;
+  const hasNano    = !!env.TRANC3_NANO_URL;
+
+  let backendOk = false;
+  if (hasBackend) {
+    try {
+      const r = await fetch(`${env.TRANC3_BACKEND_URL}/health`, { method: "GET" });
+      backendOk = r.ok;
+    } catch {}
+  }
+
+  let nanoOk = false;
+  if (hasNano) {
+    try {
+      const r = await fetch(`${env.TRANC3_NANO_URL}/health`, { method: "GET" });
+      nanoOk = r.ok;
+    } catch {}
+  }
+
+  const mode = backendOk ? "tranc3-backend" : nanoOk ? "tranc3-nano" : "stub";
+
+  return new Response(JSON.stringify({
+    status:          "ok",
+    service:         "tranc3-ai",
+    version:         "2.0.0",
+    backend:         mode,
+    backend_url:     hasBackend ? env.TRANC3_BACKEND_URL : null,
+    nano_url:        hasNano    ? env.TRANC3_NANO_URL    : null,
+    backend_healthy: backendOk,
+    nano_healthy:    nanoOk,
+    note:            mode === "stub"
+      ? "No backend connected. Set TRANC3_BACKEND_URL to enable full inference."
+      : "Self-owned inference active.",
+    timestamp: Date.now(),
+  }), {
+    status:  200,
+    headers: { "Content-Type": "application/json", ...SECURITY_HEADERS },
+  });
+}
+
+// ── Main fetch handler ────────────────────────────────────────────────────────
 
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const { pathname: path, method } = Object.assign(url, { method: request.method });
-    const requestId = crypto.randomUUID();
+    const url    = new URL(request.url);
+    const path   = url.pathname;
+    const method = request.method;
 
     // CORS preflight
     if (method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: { ...corsHeaders(request, env), ...SECURITY_HEADERS, "X-Request-ID": requestId },
-      });
+      return new Response(null, { status: 204, headers: corsHeaders(request, env) });
     }
 
-    try {
-      // Public endpoints (no auth required)
-      if ((path === "/" || path === "/api/v1/ai") && method === "GET") {
-        return json({
-          name: "Tranc3 AI API",
-          version: "1.0.0",
-          environment: env.ENVIRONMENT || "production",
-          backend: env.TRANC3_BACKEND_URL ? "tranc3-python" : "cloudflare-workers-ai",
-          endpoints: [
-            "GET  /health",
-            "GET  /api/v1/ai/models",
-            "POST /api/v1/ai/chat",
-            "POST /api/v1/ai/embeddings",
-            "POST /api/v1/ai/analyze-emotion",
-            "POST /api/v1/ai/consciousness",
-          ],
-        }, 200, { "X-Request-ID": requestId }, request, env);
-      }
-
-      if (path === "/health" && method === "GET") {
-        return json({
-          status: "healthy",
-          service: "tranc3-ai",
-          version: "1.0.0",
-          environment: env.ENVIRONMENT || "production",
-          backend: env.TRANC3_BACKEND_URL ? "tranc3-python" : "cloudflare-workers-ai",
-          timestamp: new Date().toISOString(),
-        }, 200, { "X-Request-ID": requestId }, request, env);
-      }
-
-      if (path === "/api/v1/ai/models" && method === "GET") {
-        return handleModels(request, env);
-      }
-
-      // Auth-protected endpoints
-      const auth = await verifyAuth(request, env);
-      if (!auth) {
-        return err("Authentication required", 401, request, env);
-      }
-
-      if (path === "/api/v1/ai/chat" && method === "POST") {
-        return handleChat(request, env);
-      }
-
-      if (path === "/api/v1/ai/embeddings" && method === "POST") {
-        return handleEmbeddings(request, env);
-      }
-
-      if (path === "/api/v1/ai/analyze-emotion" && method === "POST") {
-        return handleEmotion(request, env);
-      }
-
-      if (path === "/api/v1/ai/consciousness" && method === "POST") {
-        return handleConsciousness(request, env);
-      }
-
-      return err(`Route not found: ${method} ${path}`, 404, request, env);
-    } catch (e) {
-      console.error("Unhandled error:", e);
-      return err(
-        env.ENVIRONMENT === "production" ? "Internal server error" : String(e),
-        500, request, env,
-      );
+    // Public routes (no auth)
+    if (path === "/health" || path === "/api/v1/ai/health") {
+      return handleHealth(env);
     }
+
+    if (path === "/" && method === "GET") {
+      return json({
+        name:    "Tranc3 AI Edge",
+        version: "2.0.0",
+        backend: env.TRANC3_BACKEND_URL ? "self-hosted" : "stub",
+        note:    "Self-owned inference — no external AI services.",
+        routes: {
+          models:      "GET  /api/v1/ai/models",
+          chat:        "POST /api/v1/ai/chat",
+          embeddings:  "POST /api/v1/ai/embeddings",
+          emotion:     "POST /api/v1/ai/analyze-emotion",
+          consciousness:"POST /api/v1/ai/consciousness",
+          tokenize:    "POST /api/v1/ai/tokenize",
+          predict:     "POST /api/v1/ai/predict",
+        },
+      }, 200, {}, request, env);
+    }
+
+    // Models list — no auth required
+    if (path === "/api/v1/ai/models" && method === "GET") {
+      return handleModels(request, env);
+    }
+
+    // Auth-protected routes
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return err("Unauthorized", 401, request, env, "Valid Bearer token required");
+    }
+
+    // Route dispatch
+    if (path === "/api/v1/ai/chat"            && method === "POST") return handleChat(request, env);
+    if (path === "/api/v1/ai/embeddings"      && method === "POST") return handleEmbeddings(request, env);
+    if (path === "/api/v1/ai/analyze-emotion" && method === "POST") return handleEmotion(request, env);
+    if (path === "/api/v1/ai/consciousness"   && method === "POST") return handleConsciousness(request, env);
+    if (path === "/api/v1/ai/tokenize"        && method === "POST") return handleTokenize(request, env);
+    if (path === "/api/v1/ai/predict"         && method === "POST") return handlePredict(request, env);
+
+    return err("Not Found", 404, request, env, `${method} ${path}`);
   },
 };
