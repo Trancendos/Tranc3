@@ -1,0 +1,70 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Models & cache
+models/
+cache/
+*.pt
+*.bin
+*.safetensors
+
+# Logs
+*.log
+logs/
+
+# Node / frontend
+web/node_modules/
+web/dist/
+web/.vite/
+
+# IDE
+.vscode/
+.idea/
+*.vsix
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.zip
+*.jpeg
+*.jpg
+*.png
+!web/src/assets/**
+*.xmind
+
+# Kiro / tooling
+.adstar/
+.automate/
+
+# SQLite dev DB
+*.db
+*.db-shm
+*.db-wal
