@@ -1,28 +1,27 @@
 name = "tranc3-ai"
 main = "src/index.js"
 compatibility_date = "2024-09-23"
+account_id = "e0214028cb64d31232f5662548a55e4e"
 
-# NOTE: [ai] binding (CF Workers AI) intentionally removed.
 # Tranc3 uses its own self-hosted inference — no external AI APIs.
-# Set TRANC3_BACKEND_URL or TRANC3_NANO_URL to connect your own backend.
+# Set TRANC3_BACKEND_URL / TRANC3_NANO_URL via: wrangler secret put <NAME>
 
 [vars]
 ENVIRONMENT = "production"
 
-# ── Self-owned backend (set via: wrangler secret put <NAME>) ──────────────────
-# TRANC3_BACKEND_URL  = "https://your-tranc3-server.example.com"   # FastAPI + WorkerPool
-# TRANC3_NANO_URL     = "https://your-nano-server.example.com"     # nano_server.py
-# TRANC3_AUTH_URL     = "https://infinity-auth-api.trancendos.workers.dev"
-# ALLOWED_ORIGINS     = "https://your-custom-domain.com"
+# ── KV cache (AI_CACHE namespace — already exists in account) ─────────────────
+[[kv_namespaces]]
+binding = "CACHE"
+id = "2a0e09cfd22741eeb3245607ce6e76fd"
 
-# ── Fly.io free deployment (3 VMs free) ───────────────────────────────────────
-# 1. cd to project root
-# 2. fly launch --name tranc3-backend --region lhr
-# 3. fly deploy
-# 4. wrangler secret put TRANC3_BACKEND_URL --name tranc3-ai
-#    (paste: https://tranc3-backend.fly.dev)
+# ── Secrets (set via: wrangler secret put <NAME> --name tranc3-ai) ────────────
+# TRANC3_BACKEND_URL  → https://tranc3-backend.fly.dev   (after fly deploy)
+# TRANC3_NANO_URL     → https://tranc3-nano.fly.dev      (optional fallback)
+# TRANC3_AUTH_URL     → https://infinity-auth-api.trancendos.workers.dev
+# ALLOWED_ORIGINS     → https://trancendos.com (extra CORS, comma-separated)
 
-# ── Optional KV cache ──────────────────────────────────────────────────────────
-# [[kv_namespaces]]
-# binding = "CACHE"
-# id = ""  # fill in KV namespace ID
+# ── Deploy steps ──────────────────────────────────────────────────────────────
+# 1. fly deploy                         (from Tranc3 repo root)
+# 2. cd cloudflare/tranc3-ai && npm ci
+# 3. wrangler secret put TRANC3_BACKEND_URL   (paste: https://tranc3-backend.fly.dev)
+# 4. wrangler deploy
