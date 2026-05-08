@@ -4,9 +4,19 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from scipy.stats import entropy
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import logging
+
+try:
+    from scipy.stats import entropy as _scipy_entropy
+    def entropy(pk, **kw):
+        return float(_scipy_entropy(pk, **kw))
+except ImportError:
+    import math
+    def entropy(pk, **kw):  # type: ignore[misc]
+        vals = [p for p in pk if p > 0]
+        total = sum(vals)
+        return -sum((p / total) * math.log(p / total) for p in vals) if total else 0.0
 
 logger = logging.getLogger(__name__)
 

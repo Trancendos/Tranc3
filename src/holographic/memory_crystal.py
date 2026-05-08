@@ -2,8 +2,12 @@
 
 import numpy as np
 import torch
-from scipy.fft import fftn, ifftn
 from typing import Dict, List
+
+try:
+    from scipy.fft import fftn, ifftn
+except ImportError:
+    from numpy.fft import fftn, ifftn  # type: ignore[assignment]
 
 class HolographicMemoryCrystal:
     """
@@ -104,9 +108,7 @@ class HolographicMemoryCrystal:
         # Spatial → axes 0,1,2
         s = spatial.detach().cpu().numpy().flatten()
         for i in range(min(3, len(s))):
-            encoded[i % dims[0], :, :, :, :, :] += s[i] * np.ones(
-                (1, dims[1], dims[2], dims[3], dims[4], dims[5])
-            )
+            encoded[i % dims[0]] += s[i]
 
         # Temporal → axis 3
         t = temporal.detach().cpu().numpy().flatten()
