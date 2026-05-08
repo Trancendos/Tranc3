@@ -416,21 +416,23 @@ async def publish_event(event_type: str, data: Any) -> None:
 async def handle_rpc(body: Dict[str, Any], enhanced: Any = None) -> Dict[str, Any]:
     """
     Process a raw JSON-RPC 2.0 request dict and return a response dict.
-    Usable outside the FastAPI router context.
+    Usable outside the FastAPI router context (e.g. called from api_enhanced.py).
     """
     rpc_id = body.get("id")
     method = body.get("method", "")
     params = body.get("params") or {}
 
-    try:
-        request_obj = MCPRequest(
-            jsonrpc=body.get("jsonrpc", "2.0"),
-            id=rpc_id,
-            method=method,
-            params=params,
-        )
-    except Exception as e:
-        return _err(rpc_id, PARSE_ERROR, f"Invalid request: {e}")
+    if body.get("jsonrpc") != JSONRPC_VERSION:
+        return _err(rpc_id, ERR_INVALID_REQUEST, "jsonrpc must be '2.0'")
+    if not method or not isinstance(method, str):
+        return _err(rpc_id, ERR_INVALID_REQUEST, "method must be a non-empty string")
 
-    result = await _dispatch(request_obj)
-    return MCPResponse(jsonrpc="2.0", id=rpc_id, result=result).model_dump()
+    handler = _METHOD_DISPATCH.get(method)
+    if handler is None:
+        return _err(rpc_id, ERR_METHOD_NOT_FOUND, f"Method '{method}' not found")
+
+    try:
+        return await handler(params, rpc_id)
+    except Exception as exc:
+        logger.exception("handle_rpc unhandled error method=%s", method)
+        return _err(rpc_id, ERR_INTERNAL_ERROR, f"Internal error: {type(exc).__name__}: {exc}")
