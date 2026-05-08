@@ -17,14 +17,15 @@ langdetect==1.0.9
 # AI / ML — Enhanced (MCP + DeepMind + TF)
 sentence-transformers==3.0.0        # semantic skill search
 sse-starlette==2.1.0                # MCP SSE transport
-anthropic==0.28.0                   # Claude API for LLM workflow nodes
+tokenizers==0.19.1                  # Tranc3 BPE tokenizer (Rust backend — NOT a pretrained model)
 langchain==0.2.5                    # workflow/chain integration
 langchain-community==0.2.5
-langchain-anthropic==0.1.15
 faiss-cpu==1.8.0                    # fast similarity search
 jmespath==1.0.1                     # data transform in workflow nodes
 # tensorflow==2.16.1                # optional: uncomment for TF hybrid engine
 # keras==3.3.3                      # optional: required with tensorflow
+# anthropic==0.28.0                 # optional: NOT used by Tranc3 — external API removed
+# langchain-anthropic==0.1.15       # optional: only needed if re-enabling Anthropic integration
 
 # DeepMind / Planning / RL
 gymnasium==0.29.1                   # RL environment interface

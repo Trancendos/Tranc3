@@ -122,95 +122,55 @@ class BaseNode:
 
 
 # ---------------------------------------------------------------------------
-# LLM Node — calls Claude via Anthropic Messages API
+# LLM Node — uses local TRANC3 inference engine (no external API)
 # ---------------------------------------------------------------------------
 
 class LLMNode(BaseNode):
-    """Calls an LLM (Claude) via the Anthropic Messages API, returns text."""
-
-    _DEFAULT_MODEL = "claude-3-5-sonnet-20241022"
-    _API_URL = "https://api.anthropic.com/v1/messages"
+    """Generates text using the local TRANC3 model. No external API required."""
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         cfg = self.config.config
-        api_key = cfg.get("api_key") or os.environ.get("ANTHROPIC_API_KEY", "")
-        model = cfg.get("model", self._DEFAULT_MODEL)
-        max_tokens = int(cfg.get("max_tokens", 1024))
+
+        personality = cfg.get("personality", "tranc3-base")
         system_prompt = cfg.get("system_prompt", "")
+        max_tokens = int(cfg.get("max_tokens", 512))
+        temperature = float(cfg.get("temperature", 0.8))
 
         # Build user message from inputs or config
         user_message = cfg.get("prompt", "")
         if not user_message:
-            # Try to use first input value as prompt
             user_message = str(next(iter(inputs.values()), "")) if inputs else ""
 
-        # Allow template substitution
+        # Template substitution
         for k, v in inputs.items():
             user_message = user_message.replace(f"{{{{{k}}}}}", str(v))
 
-        messages: List[Dict] = [{"role": "user", "content": user_message}]
-
-        payload: Dict[str, Any] = {
-            "model": model,
-            "max_tokens": max_tokens,
-            "messages": messages,
-        }
-        if system_prompt:
-            payload["system"] = system_prompt
-
-        stream = cfg.get("stream", False)
-        if stream:
-            payload["stream"] = True
-
-        headers = {
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        }
-
-        async def _call() -> str:
-            async with httpx.AsyncClient(timeout=self.config.timeout_sec) as client:
-                if stream:
-                    text_chunks: List[str] = []
-                    async with client.stream(
-                        "POST", self._API_URL, json=payload, headers=headers
-                    ) as resp:
-                        resp.raise_for_status()
-                        async for line in resp.aiter_lines():
-                            if line.startswith("data: "):
-                                chunk = line[6:]
-                                if chunk == "[DONE]":
-                                    break
-                                import json as _json
-                                try:
-                                    event = _json.loads(chunk)
-                                    if event.get("type") == "content_block_delta":
-                                        delta = event.get("delta", {})
-                                        text_chunks.append(delta.get("text", ""))
-                                except Exception:
-                                    pass
-                    return "".join(text_chunks)
-                else:
-                    resp = await client.post(self._API_URL, json=payload, headers=headers)
-                    resp.raise_for_status()
-                    data = resp.json()
-                    return data["content"][0]["text"]
-
         try:
-            result_text = await self._retry(
-                lambda: self._with_timeout(_call(), self.config.timeout_sec),
-                self.config.retry_count,
+            from src.core.tranc3_inference import get_engine
+            engine = get_engine()
+            gen = await engine.generate(
+                prompt=user_message,
+                personality=personality,
+                system_prompt=system_prompt or None,
+                max_new_tokens=max_tokens,
+                temperature=temperature,
             )
+            result_text = gen.get("response", "")
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                result_text, duration_ms, metadata={"model": model, "tokens_used": max_tokens}
+                result_text,
+                duration_ms,
+                metadata={
+                    "model": gen.get("model", "tranc3-local"),
+                    "personality": personality,
+                    "tokens": gen.get("tokens", 0),
+                    "trained": gen.get("trained", True),
+                },
             )
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(
-                None, duration_ms, success=False, error=str(exc)
-            )
+            return self._make_result(None, duration_ms, success=False, error=str(exc))
 
 
 # ---------------------------------------------------------------------------
