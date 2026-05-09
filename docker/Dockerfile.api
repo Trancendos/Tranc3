@@ -1,4 +1,9 @@
-# TRANC3 API — Multi-stage Docker build
+# TRANC3 Production API — Multi-stage Docker build
+# Uses api_production.py with LLM Router, DB persistence, and structured logging.
+#
+# Build:  docker build -f docker/Dockerfile.api -t tranc3-api .
+# Run:    docker run -p 8000:8000 --env-file .env tranc3-api
+
 FROM python:3.11-slim AS builder
 
 WORKDIR /app
@@ -17,12 +22,18 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY . .
 
-RUN chown -R tranc3:tranc3 /app
+# Create data directory for SQLite (if used)
+RUN mkdir -p /app/data && chown -R tranc3:tranc3 /app
+
 USER tranc3
 
-EXPOSE 8000
-
+# Health check — uses /ready endpoint which checks all subsystems
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:8000/health')"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')" || exit 1
 
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# Production API with structured JSON logging
+ENV LOG_LEVEL=INFO
+ENV LOG_FORMAT=json
+ENV PYTHONUNBUFFERED=1
+
+CMD ["uvicorn", "api_production:app", "--host", "0.0.0.0", "--port", "8000"]

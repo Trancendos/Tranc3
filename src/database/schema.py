@@ -1,17 +1,64 @@
 # src/database/schema.py
 # TRANC3 Complete Database Schema (SQLAlchemy + Alembic)
+#
+# Supports both PostgreSQL (production) and SQLite (development).
+# PostgreSQL-specific types (UUID, JSONB, ARRAY) are conditionally
+# used based on the database dialect.
 
 from sqlalchemy import (
     create_engine, Column, String, Integer, Float,
     Boolean, DateTime, Text, JSON, ForeignKey,
-    Index, UniqueConstraint, BigInteger
+    Index, UniqueConstraint, BigInteger, event, text,
 )
-from sqlalchemy.orm import declarative_base, relationship, Session
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+from sqlalchemy.orm import declarative_base, relationship, Session, sessionmaker
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB, ARRAY
+from sqlalchemy.types import TypeDecorator, CHAR
 from datetime import datetime
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 Base = declarative_base()
+
+
+# ─── Cross-dialect UUID type ──────────────────────────────────────
+
+class GUID(TypeDecorator):
+    """
+    Platform-independent UUID type.
+    Uses PostgreSQL's UUID type when available, otherwise stores as CHAR(36).
+    """
+    impl = CHAR(36)
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PG_UUID(as_uuid=True))
+        return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        if dialect.name == "postgresql":
+            return str(value) if not isinstance(value, uuid.UUID) else value
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        if not isinstance(value, uuid.UUID):
+            value = uuid.UUID(str(value))
+        return value
+
+
+# ─── Helper for JSON type ─────────────────────────────────────────
+
+def _json_type():
+    """Return JSONB for PostgreSQL, JSON for everything else."""
+    from sqlalchemy import JSON
+    return JSON()  # Works for both SQLite and PostgreSQL
+
 
 # ============================================================
 # USERS
@@ -19,7 +66,7 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = 'users'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     username = Column(String(64), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
@@ -29,8 +76,8 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
-    preferences = Column(JSONB, default={})
-    metadata_ = Column('metadata', JSONB, default={})
+    preferences = Column(JSON, default={})
+    metadata_ = Column('metadata', JSON, default={})
 
     # Relationships
     conversations = relationship('Conversation', back_populates='user', cascade='all, delete-orphan')
@@ -42,21 +89,22 @@ class User(Base):
         Index('ix_users_username', 'username'),
     )
 
+
 # ============================================================
 # CONVERSATIONS
 # ============================================================
 class Conversation(Base):
     __tablename__ = 'conversations'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID(), ForeignKey('users.id'), nullable=False)
     title = Column(String(255), nullable=True)
     language = Column(String(10), default='en')
     personality = Column(String(64), default='tranc3-base')
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
-    metadata_ = Column('metadata', JSONB, default={})
+    metadata_ = Column('metadata', JSON, default={})
 
     # Relationships
     user = relationship('User', back_populates='conversations')
@@ -67,14 +115,15 @@ class Conversation(Base):
         Index('ix_conversations_created_at', 'created_at'),
     )
 
+
 # ============================================================
 # MESSAGES
 # ============================================================
 class Message(Base):
     __tablename__ = 'messages'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    conversation_id = Column(UUID(as_uuid=True), ForeignKey('conversations.id'), nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    conversation_id = Column(GUID(), ForeignKey('conversations.id'), nullable=False)
     role = Column(String(20), nullable=False)  # user, assistant, system
     content = Column(Text, nullable=False)
     language = Column(String(10), default='en')
@@ -84,8 +133,9 @@ class Message(Base):
     quantum_used = Column(Boolean, default=False)
     tokens_used = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    advanced_metrics = Column(JSONB, default={})
-    embedding = Column(ARRAY(Float), nullable=True)
+    advanced_metrics = Column(JSON, default={})
+    # Note: ARRAY(Float) is PostgreSQL-only; store as JSON for portability
+    embedding = Column(JSON, nullable=True)
 
     # Relationships
     conversation = relationship('Conversation', back_populates='messages')
@@ -96,14 +146,15 @@ class Message(Base):
         Index('ix_messages_created_at', 'created_at'),
     )
 
+
 # ============================================================
 # API KEYS
 # ============================================================
 class APIKey(Base):
     __tablename__ = 'api_keys'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID(), ForeignKey('users.id'), nullable=False)
     key_hash = Column(String(255), unique=True, nullable=False)
     name = Column(String(100), nullable=False)
     tier = Column(String(20), default='free')
@@ -113,9 +164,10 @@ class APIKey(Base):
     expires_at = Column(DateTime, nullable=True)
     last_used_at = Column(DateTime, nullable=True)
     usage_count = Column(BigInteger, default=0)
-    permissions = Column(JSONB, default={})
+    permissions = Column(JSON, default={})
 
     user = relationship('User', back_populates='api_keys')
+
 
 # ============================================================
 # FEEDBACK
@@ -123,11 +175,12 @@ class APIKey(Base):
 class Feedback(Base):
     __tablename__ = 'feedback'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
-    message_id = Column(UUID(as_uuid=True), ForeignKey('messages.id'), nullable=True)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID(), ForeignKey('users.id'), nullable=False)
+    message_id = Column(GUID(), ForeignKey('messages.id'), nullable=True)
     rating = Column(Integer, nullable=False)  # 1-5
-    categories = Column(ARRAY(String), default=[])
+    # ARRAY(String) is PostgreSQL-only; store as JSON for portability
+    categories = Column(JSON, default=[])
     comments = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     processed = Column(Boolean, default=False)
@@ -136,22 +189,24 @@ class Feedback(Base):
     user = relationship('User', back_populates='feedback')
     message = relationship('Message', back_populates='feedback')
 
+
 # ============================================================
 # EVOLUTION EVENTS
 # ============================================================
 class EvolutionEvent(Base):
     __tablename__ = 'evolution_events'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     generation = Column(Integer, nullable=False)
     fitness_score = Column(Float, nullable=False)
     mutation_rate = Column(Float, nullable=False)
     population_size = Column(Integer, nullable=False)
-    improvements = Column(JSONB, default={})
+    improvements = Column(JSON, default={})
     applied_at = Column(DateTime, default=datetime.utcnow)
     model_version = Column(String(50), nullable=False)
-    metrics_before = Column(JSONB, default={})
-    metrics_after = Column(JSONB, default={})
+    metrics_before = Column(JSON, default={})
+    metrics_after = Column(JSON, default={})
+
 
 # ============================================================
 # QUANTUM SESSIONS
@@ -159,7 +214,7 @@ class EvolutionEvent(Base):
 class QuantumSession(Base):
     __tablename__ = 'quantum_sessions'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     request_id = Column(String(64), nullable=False)
     num_qubits = Column(Integer, nullable=False)
     circuit_type = Column(String(50), nullable=False)
@@ -169,7 +224,8 @@ class QuantumSession(Base):
     success = Column(Boolean, default=True)
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    circuit_data = Column(JSONB, default={})
+    circuit_data = Column(JSON, default={})
+
 
 # ============================================================
 # SYSTEM METRICS
@@ -180,36 +236,76 @@ class SystemMetric(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     metric_name = Column(String(100), nullable=False)
     metric_value = Column(Float, nullable=False)
-    labels = Column(JSONB, default={})
+    labels = Column(JSON, default={})
     recorded_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
         Index('ix_system_metrics_name_time', 'metric_name', 'recorded_at'),
     )
 
+
 # ============================================================
 # DATABASE MANAGER
 # ============================================================
 class DatabaseManager:
+    """
+    Manages database connections, session creation, and health checks.
+    Supports both PostgreSQL (production) and SQLite (development).
+    """
+
     def __init__(self, database_url: str):
-        self.engine = create_engine(
-            database_url,
-            pool_size=20,
-            max_overflow=40,
-            pool_pre_ping=True,
-            pool_recycle=3600
-        )
+        self.database_url = database_url
+        self._is_sqlite = database_url.startswith("sqlite")
+
+        engine_kwargs = {
+            "pool_pre_ping": True,
+            "pool_recycle": 3600,
+        }
+
+        if self._is_sqlite:
+            # SQLite-specific settings
+            engine_kwargs["pool_size"] = 5
+            engine_kwargs["max_overflow"] = 10
+            engine_kwargs["connect_args"] = {"check_same_thread": False}
+        else:
+            # PostgreSQL settings
+            engine_kwargs["pool_size"] = 20
+            engine_kwargs["max_overflow"] = 40
+
+        self.engine = create_engine(database_url, **engine_kwargs)
+
+        # Enable WAL mode for SQLite (better concurrent reads)
+        if self._is_sqlite:
+            @event.listens_for(self.engine, "connect")
+            def _set_sqlite_pragma(dbapi_connection, connection_record):
+                cursor = dbapi_connection.cursor()
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA foreign_keys=ON")
+                cursor.close()
+
+        # Create all tables
         Base.metadata.create_all(self.engine)
+        logger.info("Database tables created/verified for %s", "SQLite" if self._is_sqlite else "PostgreSQL")
 
     def get_session(self) -> Session:
-        from sqlalchemy.orm import sessionmaker
         SessionLocal = sessionmaker(bind=self.engine)
         return SessionLocal()
 
+    def get_session_factory(self):
+        """Return a session factory callable for dependency injection."""
+        SessionLocal = sessionmaker(bind=self.engine)
+        return SessionLocal
+
     def health_check(self) -> bool:
+        """Check database connectivity. Fixed: uses text() for raw SQL."""
         try:
             with self.engine.connect() as conn:
-                conn.execute("SELECT 1")
+                conn.execute(text("SELECT 1"))
             return True
-        except:
+        except Exception as e:
+            logger.error("Database health check failed: %s", e)
             return False
+
+    @property
+    def is_sqlite(self) -> bool:
+        return self._is_sqlite

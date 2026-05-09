@@ -8,20 +8,48 @@ services:
     container_name: tranc3-api
     env_file: .env
     environment:
+      # Override for container networking
       PORT: "8000"
       REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://tranc3:${DB_PASSWORD:-tranc3}@db:5432/tranc3
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      # Structured JSON logging inside containers
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: json
     ports:
       - "8000:8000"
+    volumes:
+      # Persist SQLite if used as fallback
+      - api_data:/app/data
     depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
       interval: 15s
       timeout: 5s
       retries: 5
+
+  db:
+    image: postgres:16-alpine
+    container_name: tranc3-db
+    environment:
+      POSTGRES_USER: tranc3
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-tranc3}
+      POSTGRES_DB: tranc3
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tranc3"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
   web:
     build:
@@ -49,6 +77,7 @@ services:
       timeout: 3s
       retries: 3
 
+  # Observability stack (optional — comment out for minimal deploy)
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.105.0
     container_name: tranc3-otel
@@ -59,6 +88,8 @@ services:
       - "4317:4317"
       - "4318:4318"
     restart: unless-stopped
+    profiles:
+      - observability
 
   prometheus:
     image: prom/prometheus:v2.54.1
@@ -66,15 +97,16 @@ services:
     command: ["--config.file=/etc/prometheus/prometheus.yml"]
     volumes:
       - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./deploy/prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml:ro
+      - ./deploy/prometheus-alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
     depends_on:
       - api
     restart: unless-stopped
+    profiles:
+      - observability
 
-  # Loki — log aggregation (Gap G18 action)
   loki:
     image: grafana/loki:2.9.0
     container_name: tranc3-loki
@@ -84,6 +116,8 @@ services:
     volumes:
       - loki_data:/loki
     restart: unless-stopped
+    profiles:
+      - observability
 
   grafana:
     image: grafana/grafana:11.1.4
@@ -96,15 +130,18 @@ services:
       - "3001:3000"
     volumes:
       - grafana_data:/var/lib/grafana
-      # Auto-provision dashboard — Gap G17 action
       - ./deploy/grafana-provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
       - loki
     restart: unless-stopped
+    profiles:
+      - observability
 
 volumes:
+  pg_data:
   redis_data:
+  api_data:
   prometheus_data:
   grafana_data:
   loki_data:
