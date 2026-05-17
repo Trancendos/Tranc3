@@ -13,6 +13,38 @@ from typing import Any, Callable, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Workflow Registry — maps workflow_id → WorkflowDefinition
+# ---------------------------------------------------------------------------
+
+class WorkflowRegistry:
+    """In-memory registry of WorkflowDefinitions, keyed by workflow ID."""
+
+    def __init__(self) -> None:
+        self._workflows: Dict[str, Any] = {}
+
+    def register(self, workflow: Any) -> None:
+        """Register a WorkflowDefinition; overwrites any existing entry with the same ID."""
+        self._workflows[workflow.id] = workflow
+        logger.debug("workflow.registry registered id=%s name=%s", workflow.id, workflow.name)
+
+    def get(self, workflow_id: str) -> Optional[Any]:
+        return self._workflows.get(workflow_id)
+
+    def list_ids(self) -> List[str]:
+        return list(self._workflows.keys())
+
+    def list_all(self) -> List[Dict[str, Any]]:
+        return [
+            {"id": wf.id, "name": wf.name, "description": wf.description}
+            for wf in self._workflows.values()
+        ]
+
+
+# Singleton workflow registry — import this alongside `registry`
+_workflow_registry = WorkflowRegistry()
+
+
 @dataclass
 class MCPTool:
     """Descriptor for a single MCP-registered tool."""
@@ -335,6 +367,30 @@ class MCPToolRegistry:
                 category="skills",
             ),
             MCPTool(
+                name="register_workflow",
+                description=(
+                    "Register a workflow definition by ID so it can later be triggered "
+                    "via run_workflow. Accepts a JSON-serialisable workflow dict or a "
+                    "known template name (spark_ignition | self_healing | ml_training)."
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "workflow": {
+                            "type": "object",
+                            "description": "WorkflowDefinition serialised as a JSON object.",
+                        },
+                        "template": {
+                            "type": "string",
+                            "enum": ["spark_ignition", "self_healing", "ml_training"],
+                            "description": "Name of a built-in workflow template to register.",
+                        },
+                    },
+                },
+                handler=self._handle_register_workflow,
+                category="workflow",
+            ),
+            MCPTool(
                 name="get_evolution_stats",
                 description=(
                     "Retrieve evolutionary statistics for a skill or model, including "
@@ -437,30 +493,94 @@ class MCPToolRegistry:
         async_mode = bool(params.get("async_mode", True))
         timeout_seconds = int(params.get("timeout_seconds", 60))
 
-        execution_id = f"exec-{workflow_id}-{int(time.time() * 1000)}"
+        wf = _workflow_registry.get(workflow_id)
+        if wf is None:
+            return {
+                "error": f"Workflow '{workflow_id}' not found in registry.",
+                "registered_workflows": _workflow_registry.list_ids(),
+            }
+
+        try:
+            from src.workflow.executor import executor as _wf_executor  # noqa: PLC0415
+        except ImportError:
+            return {"error": "Workflow executor not available (import failed)."}
+
         logger.info(
-            "mcp.run_workflow workflow=%s execution=%s async=%s",
-            workflow_id,
-            execution_id,
-            async_mode,
+            "mcp.run_workflow workflow=%s async=%s", workflow_id, async_mode
         )
 
-        result: Dict[str, Any] = {
-            "execution_id": execution_id,
-            "workflow_id": workflow_id,
-            "status": "queued",
-            "async_mode": async_mode,
-            "params": input_params,
-            "started_at": time.time(),
-        }
-        if not async_mode:
-            # Simulate synchronous wait (real impl would poll or await a future)
-            await asyncio.sleep(0)
-            result["status"] = "completed"
-            result["completed_at"] = time.time()
-            result["timeout_seconds"] = timeout_seconds
+        if async_mode:
+            asyncio.create_task(_wf_executor.execute(wf, input_params))
+            return {
+                "workflow_id": workflow_id,
+                "status": "started",
+                "async_mode": True,
+                "started_at": time.time(),
+            }
 
-        return result
+        try:
+            state = await asyncio.wait_for(
+                _wf_executor.execute(wf, input_params),
+                timeout=float(timeout_seconds),
+            )
+            return {
+                "execution_id": state.execution_id,
+                "workflow_id": workflow_id,
+                "status": state.status,
+                "async_mode": False,
+                "elapsed_ms": state.elapsed_ms,
+                "error": state.error,
+            }
+        except asyncio.TimeoutError:
+            return {
+                "workflow_id": workflow_id,
+                "status": "timeout",
+                "error": f"Workflow did not complete within {timeout_seconds}s.",
+            }
+
+    async def _handle_register_workflow(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        workflow_dict = params.get("workflow")
+        template_name = params.get("template")
+
+        if template_name:
+            try:
+                from src.workflow.builder import (  # noqa: PLC0415
+                    spark_ignition_workflow,
+                    self_healing_workflow,
+                    ml_training_workflow,
+                )
+            except ImportError:
+                return {"error": "Workflow builder not available (import failed)."}
+
+            templates: Dict[str, Any] = {
+                "spark_ignition": spark_ignition_workflow,
+                "self_healing": self_healing_workflow,
+                "ml_training": ml_training_workflow,
+            }
+            factory = templates.get(template_name)
+            if factory is None:
+                return {
+                    "error": f"Unknown template '{template_name}'.",
+                    "available": list(templates.keys()),
+                }
+            wf = factory()
+        elif workflow_dict:
+            try:
+                from src.workflow.builder import WorkflowDefinition  # noqa: PLC0415
+                wf = WorkflowDefinition.from_dict(workflow_dict)
+            except Exception as exc:
+                return {"error": f"Invalid workflow definition: {exc}"}
+        else:
+            return {"error": "Provide either 'workflow' dict or 'template' name."}
+
+        _workflow_registry.register(wf)
+        logger.info("mcp.register_workflow id=%s name=%s", wf.id, wf.name)
+        return {
+            "registered": True,
+            "workflow_id": wf.id,
+            "workflow_name": wf.name,
+            "total_registered": len(_workflow_registry.list_ids()),
+        }
 
     async def _handle_get_system_health(self, params: Dict[str, Any]) -> Dict[str, Any]:
         requested = set(params.get("subsystems") or [])
@@ -473,14 +593,39 @@ class MCPToolRegistry:
         overall_healthy = True
 
         for sub in check_list:
+            t0 = time.monotonic()
             healthy = True
-            detail: Dict[str, Any] = {"status": "ok"}
+            detail: Dict[str, Any] = {}
+
+            if sub == "mcp_server":
+                tool_count = len(self._tools)
+                healthy = tool_count > 0
+                detail = {
+                    "status": "ok" if healthy else "degraded",
+                    "tools_registered": tool_count,
+                    "workflows_registered": len(_workflow_registry.list_ids()),
+                }
+            elif sub == "redis":
+                try:
+                    import redis.asyncio as aioredis  # noqa: PLC0415
+                    redis_url = __import__("os").environ.get("REDIS_URL", "redis://localhost:6379")
+                    client = aioredis.from_url(redis_url, socket_connect_timeout=1)
+                    await asyncio.wait_for(client.ping(), timeout=1.0)
+                    await client.aclose()
+                    detail = {"status": "ok"}
+                except Exception as exc:
+                    healthy = False
+                    detail = {"status": "unavailable", "detail": str(exc)}
+            else:
+                detail = {"status": "ok"}
+
             if verbose:
-                detail["latency_ms"] = 0.0
+                detail["latency_ms"] = round((time.monotonic() - t0) * 1000, 2)
                 detail["last_checked"] = time.time()
-            subsystem_results[sub] = detail
+
             if not healthy:
                 overall_healthy = False
+            subsystem_results[sub] = detail
 
         return {
             "healthy": overall_healthy,

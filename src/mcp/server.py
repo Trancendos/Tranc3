@@ -18,7 +18,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .tools import registry
 
@@ -63,14 +63,12 @@ class MCPRequest(BaseModel):
 
 
 class MCPResponse(BaseModel):
+    model_config = ConfigDict()
+
     jsonrpc: str = Field(default=JSONRPC_VERSION)
     id: Optional[Any] = None
     result: Optional[Any] = None
     error: Optional[MCPError] = None
-
-    class Config:
-        # Exclude None fields so we never send both result and error
-        json_encoders = {}
 
 
 # ---------------------------------------------------------------------------
