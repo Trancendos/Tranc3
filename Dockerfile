@@ -33,6 +33,6 @@ EXPOSE 8000 8001
 # Default: run main FastAPI + nanoservices in parallel
 # Override CMD for worker-only mode: CMD ["python", "-m", "src.workers.inference_worker"]
 CMD ["sh", "-c", \
-  "uvicorn src.main_enhanced:app --host 0.0.0.0 --port 8000 & \
-   python -m src.nanoservices.nano_server & \
+  "uvicorn api:app --host 0.0.0.0 --port 8000 & \
+   uvicorn src.nanoservices.nano_server:nano_app --host 0.0.0.0 --port 8001 & \
    wait"]
