@@ -9,10 +9,15 @@ account_id = "e0214028cb64d31232f5662548a55e4e"
 [vars]
 ENVIRONMENT = "production"
 
-# ── KV cache (AI_CACHE namespace — already exists in account) ─────────────────
+# ── KV: response cache (AI_CACHE — existing namespace) ───────────────────────
 [[kv_namespaces]]
 binding = "CACHE"
 id = "2a0e09cfd22741eeb3245607ce6e76fd"
+
+# ── KV: session store (TRANC3-SESSIONS — created 2026-05-08) ─────────────────
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "f321bee2495547ad9e224522f214defd"
 
 # ── Secrets (set via: wrangler secret put <NAME> --name tranc3-ai) ────────────
 # TRANC3_BACKEND_URL  → https://tranc3-backend.fly.dev   (after fly deploy)
