@@ -479,20 +479,45 @@ class MCPToolNode(BaseNode):
             )
 
         fn = _MCP_TOOL_REGISTRY.get(tool_name)
+        # MCP registry handlers use fn(params: dict); workflow-local ones use fn(**kwargs).
+        # Track which convention applies so we can call correctly below.
+        _uses_kwargs = True
+
+        # Fall back to the MCP tool registry singleton (lazy import avoids circularity)
+        if fn is None:
+            try:
+                from src.mcp.tools import registry as _mcp_registry  # noqa: PLC0415
+                mcp_tool = _mcp_registry.get(tool_name)
+                if mcp_tool is not None:
+                    fn = mcp_tool.handler
+                    _uses_kwargs = False  # MCP handlers receive a single params dict
+            except ImportError:
+                pass
+
         if fn is None:
             duration_ms = (time.monotonic() - t0) * 1000
+            available = list(_MCP_TOOL_REGISTRY.keys())
+            try:
+                from src.mcp.tools import registry as _mcp_registry  # noqa: PLC0415
+                available += [t["name"] for t in _mcp_registry.list_tools()]
+            except ImportError:
+                pass
             return self._make_result(
                 None,
                 duration_ms,
                 success=False,
-                error=f"MCP tool '{tool_name}' not found in registry. "
-                      f"Available: {list(_MCP_TOOL_REGISTRY.keys())}",
+                error=f"MCP tool '{tool_name}' not found. Available: {available}",
             )
 
         async def _call() -> Any:
-            if asyncio.iscoroutinefunction(fn):
-                return await fn(**tool_args)
-            return fn(**tool_args)
+            if _uses_kwargs:
+                if asyncio.iscoroutinefunction(fn):
+                    return await fn(**tool_args)
+                return fn(**tool_args)
+            else:
+                if asyncio.iscoroutinefunction(fn):
+                    return await fn(tool_args)
+                return fn(tool_args)
 
         try:
             result = await self._retry(
