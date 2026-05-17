@@ -1,4 +1,10 @@
-"""Async workflow execution engine with topological scheduling and event bus."""
+"""
+The Digital Grid — async workflow execution engine.
+
+Topological scheduling, parallel layer execution, per-node retry/timeout,
+and a pub/sub event bus.  Events are forwarded to The Spark (MCP) SSE bus
+when the grid bridge is active (see src/mcp/server._start_grid_bridge).
+"""
 
 from typing import Dict, Any, Optional, List, Callable, Set
 import asyncio

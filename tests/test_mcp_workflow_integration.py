@@ -348,3 +348,97 @@ class TestGetSystemHealth:
         mcp = result["subsystems"]["mcp_server"]
         assert "latency_ms" in mcp
         assert "last_checked" in mcp
+
+
+# ---------------------------------------------------------------------------
+# The Spark identity — server name and initialize response
+# ---------------------------------------------------------------------------
+
+class TestSparkIdentity:
+    @pytest.mark.asyncio
+    async def test_server_name_is_the_spark(self):
+        from src.mcp.server import SERVER_NAME, ENGINE_LABEL
+        assert SERVER_NAME == "the-spark"
+        assert "Spark" in ENGINE_LABEL
+
+    @pytest.mark.asyncio
+    async def test_initialize_exposes_grid_reference(self):
+        from src.mcp.server import handle_rpc
+        resp = await handle_rpc({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {"protocolVersion": "2024-11-05", "clientInfo": {"name": "test", "version": "0"}},
+        })
+        info = resp["result"]["serverInfo"]
+        assert info["name"] == "the-spark"
+        assert info.get("grid") == "the-digital-grid"
+
+    @pytest.mark.asyncio
+    async def test_resources_use_spark_and_grid_uris(self):
+        from src.mcp.server import handle_rpc
+        resp = await handle_rpc({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "resources/list",
+            "params": {},
+        })
+        uris = [r["uri"] for r in resp["result"]["resources"]]
+        assert any(u.startswith("spark://") for u in uris)
+        assert any(u.startswith("grid://") for u in uris)
+        assert "grid://events" in uris
+
+
+# ---------------------------------------------------------------------------
+# The Digital Grid identity — workflow definitions carry engine label
+# ---------------------------------------------------------------------------
+
+class TestDigitalGridIdentity:
+    def test_workflow_dict_includes_engine(self):
+        from src.workflow.builder import GRID_ENGINE
+        wf = _simple_workflow("engine-test")
+        d = wf.to_dict()
+        assert d.get("engine") == GRID_ENGINE
+
+    def test_grid_engine_constant(self):
+        from src.workflow.builder import GRID_ENGINE
+        assert GRID_ENGINE == "the-digital-grid"
+
+
+# ---------------------------------------------------------------------------
+# Grid event bridge — Digital Grid events reach The Spark's SSE bus
+# ---------------------------------------------------------------------------
+
+class TestGridBridge:
+    @pytest.mark.asyncio
+    async def test_bridge_forwards_workflow_events(self):
+        """Workflow lifecycle events should appear on The Spark's SSE bus."""
+        import src.mcp.server as spark
+        # Reset bridge so we can test initialisation
+        spark._grid_bridge_started = False
+        await spark._start_grid_bridge()
+        assert spark._grid_bridge_started
+
+        received: list = []
+
+        async def _sub_id_and_queue():
+            return spark._bus.subscribe()
+
+        sub_id, queue = spark._bus.subscribe()
+        try:
+            # Publish a synthetic grid event through the workflow event bus
+            from src.workflow.executor import event_bus as grid_bus
+            await grid_bus.publish("workflow.completed", {"workflow_id": "test-wf", "elapsed_ms": 1.0})
+
+            # The bridge should have forwarded it as "grid.workflow.completed"
+            # Give the coroutine a tick to propagate
+            await asyncio.sleep(0)
+
+            assert not queue.empty(), "SSE queue should contain the forwarded grid event"
+            raw = queue.get_nowait()
+            import json
+            payload = json.loads(raw)
+            assert payload["event"] == "grid.workflow.completed"
+        finally:
+            spark._bus.unsubscribe(sub_id)
+            spark._grid_bridge_started = False  # reset for other tests
