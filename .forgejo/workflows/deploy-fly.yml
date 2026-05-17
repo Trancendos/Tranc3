@@ -24,12 +24,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: web/package-lock.json
 
       - name: Build frontend
         working-directory: web
-        run: npm ci && npm run build
+        run: npm install && npm run build
 
       - name: Install flyctl
         run: |
@@ -38,7 +36,7 @@ jobs:
             echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
           fi
 
-      - name: Deploy
+      - name: Deploy backend
         run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -60,7 +58,16 @@ jobs:
             echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
           fi
 
-      - name: Deploy
+      - name: Deploy bots
         run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Wire bots URL into backend secrets
+        run: |
+          flyctl secrets set \
+            TRANC3_BOTS_URL=https://tranc3-bots.fly.dev \
+            TRANC3_NANO_URL=https://tranc3-backend.fly.dev \
+            --app tranc3-backend
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
