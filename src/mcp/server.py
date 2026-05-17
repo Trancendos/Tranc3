@@ -396,7 +396,7 @@ async def list_tools_endpoint() -> JSONResponse:
 @router.get("/health")
 async def health_endpoint() -> JSONResponse:
     """The Spark health check."""
-    from src.mcp.tools import _workflow_registry  # noqa: PLC0415
+    from src.mcp.tools import _grid_registry  # noqa: PLC0415
     tool_count = len(registry.list_tools())
     subscriber_count = len(_bus._queues)
     return JSONResponse(
@@ -407,7 +407,7 @@ async def health_endpoint() -> JSONResponse:
             "grid": "the-digital-grid",
             "version": SERVER_VERSION,
             "tools_registered": tool_count,
-            "workflows_registered": len(_workflow_registry.list_ids()),
+            "workflows_registered": len(_grid_registry.list_ids()),
             "sse_subscribers": subscriber_count,
             "grid_bridge_active": _grid_bridge_started,
             "ts": time.time(),
@@ -418,7 +418,7 @@ async def health_endpoint() -> JSONResponse:
 @router.get("/grid/status")
 async def grid_status_endpoint() -> JSONResponse:
     """Return The Digital Grid's workflow registry and executor state."""
-    from src.mcp.tools import _workflow_registry  # noqa: PLC0415
+    from src.mcp.tools import _grid_registry  # noqa: PLC0415
     from src.workflow.executor import executor as _wf_executor  # noqa: PLC0415
 
     active_executions = [
@@ -436,7 +436,7 @@ async def grid_status_endpoint() -> JSONResponse:
         content={
             "grid": "the-digital-grid",
             "spark": SERVER_NAME,
-            "registered_workflows": _workflow_registry.list_all(),
+            "registered_workflows": _grid_registry.list_all(),
             "active_executions": active_executions,
             "bridge_active": _grid_bridge_started,
             "ts": time.time(),

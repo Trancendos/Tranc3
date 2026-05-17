@@ -26,7 +26,7 @@ class NodeType(str, Enum):
     CONDITION = "CONDITION"
     TRANSFORM = "TRANSFORM"
     VECTOR_SEARCH = "VECTOR_SEARCH"
-    MCP_TOOL = "MCP_TOOL"
+    SPARK_TOOL = "SPARK_TOOL"
     PARALLEL = "PARALLEL"
     LOOP = "LOOP"
     MERGE = "MERGE"
@@ -455,17 +455,18 @@ class VectorSearchNode(BaseNode):
 # MCP Tool Node — invokes a registered MCP tool
 # ---------------------------------------------------------------------------
 
-# Global MCP tool registry: name -> async callable
-_MCP_TOOL_REGISTRY: Dict[str, Callable] = {}
+# The Digital Grid's local Spark tool registry: name -> async callable
+# Takes precedence over The Spark's global registry for workflow-local overrides.
+_SPARK_TOOL_REGISTRY: Dict[str, Callable] = {}
 
 
-def register_mcp_tool(name: str, fn: Callable) -> None:
-    """Register an MCP tool callable for use in MCPToolNode."""
-    _MCP_TOOL_REGISTRY[name] = fn
+def register_spark_tool(name: str, fn: Callable) -> None:
+    """Register a Spark tool callable for use in SparkToolNode within The Digital Grid."""
+    _SPARK_TOOL_REGISTRY[name] = fn
 
 
-class MCPToolNode(BaseNode):
-    """Calls a registered MCP tool by name."""
+class SparkToolNode(BaseNode):
+    """A Digital Grid node that calls a registered Spark (MCP) tool by name."""
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
@@ -478,35 +479,35 @@ class MCPToolNode(BaseNode):
                 None, duration_ms, success=False, error="No 'tool_name' specified in config"
             )
 
-        fn = _MCP_TOOL_REGISTRY.get(tool_name)
-        # MCP registry handlers use fn(params: dict); workflow-local ones use fn(**kwargs).
+        fn = _SPARK_TOOL_REGISTRY.get(tool_name)
+        # Spark registry handlers use fn(params: dict); workflow-local ones use fn(**kwargs).
         # Track which convention applies so we can call correctly below.
         _uses_kwargs = True
 
-        # Fall back to the MCP tool registry singleton (lazy import avoids circularity)
+        # Fall back to The Spark's global tool registry (lazy import avoids circularity)
         if fn is None:
             try:
-                from src.mcp.tools import registry as _mcp_registry  # noqa: PLC0415
-                mcp_tool = _mcp_registry.get(tool_name)
-                if mcp_tool is not None:
-                    fn = mcp_tool.handler
-                    _uses_kwargs = False  # MCP handlers receive a single params dict
+                from src.mcp.tools import registry as _spark_registry  # noqa: PLC0415
+                spark_tool = _spark_registry.get(tool_name)
+                if spark_tool is not None:
+                    fn = spark_tool.handler
+                    _uses_kwargs = False  # Spark handlers receive a single params dict
             except ImportError:
                 pass
 
         if fn is None:
             duration_ms = (time.monotonic() - t0) * 1000
-            available = list(_MCP_TOOL_REGISTRY.keys())
+            available = list(_SPARK_TOOL_REGISTRY.keys())
             try:
-                from src.mcp.tools import registry as _mcp_registry  # noqa: PLC0415
-                available += [t["name"] for t in _mcp_registry.list_tools()]
+                from src.mcp.tools import registry as _spark_registry  # noqa: PLC0415
+                available += [t["name"] for t in _spark_registry.list_tools()]
             except ImportError:
                 pass
             return self._make_result(
                 None,
                 duration_ms,
                 success=False,
-                error=f"MCP tool '{tool_name}' not found. Available: {available}",
+                error=f"Spark tool '{tool_name}' not found. Available: {available}",
             )
 
         async def _call() -> Any:
@@ -827,7 +828,7 @@ NODE_REGISTRY: Dict[NodeType, Type[BaseNode]] = {
     NodeType.CONDITION: ConditionNode,
     NodeType.TRANSFORM: TransformNode,
     NodeType.VECTOR_SEARCH: VectorSearchNode,
-    NodeType.MCP_TOOL: MCPToolNode,
+    NodeType.SPARK_TOOL: SparkToolNode,
     NodeType.PARALLEL: ParallelNode,
     NodeType.LOOP: LoopNode,
     NodeType.MERGE: MergeNode,

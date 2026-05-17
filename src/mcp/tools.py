@@ -1,5 +1,6 @@
 """
-MCP Tool Registry — registers and dispatches Model Context Protocol tools.
+The Spark — tool registry for the Model Context Protocol server.
+Registers and dispatches SparkTool instances over JSON-RPC 2.0.
 """
 
 from __future__ import annotations
@@ -14,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Workflow Registry — maps workflow_id → WorkflowDefinition
+# Digital Grid Registry — maps workflow_id → WorkflowDefinition
 # ---------------------------------------------------------------------------
 
-class WorkflowRegistry:
-    """In-memory registry of WorkflowDefinitions, keyed by workflow ID."""
+class GridWorkflowRegistry:
+    """In-memory registry of WorkflowDefinitions for The Digital Grid, keyed by workflow ID."""
 
     def __init__(self) -> None:
         self._workflows: Dict[str, Any] = {}
@@ -26,7 +27,7 @@ class WorkflowRegistry:
     def register(self, workflow: Any) -> None:
         """Register a WorkflowDefinition; overwrites any existing entry with the same ID."""
         self._workflows[workflow.id] = workflow
-        logger.debug("workflow.registry registered id=%s name=%s", workflow.id, workflow.name)
+        logger.debug("grid.registry registered id=%s name=%s", workflow.id, workflow.name)
 
     def get(self, workflow_id: str) -> Optional[Any]:
         return self._workflows.get(workflow_id)
@@ -41,13 +42,13 @@ class WorkflowRegistry:
         ]
 
 
-# Singleton workflow registry — import this alongside `registry`
-_workflow_registry = WorkflowRegistry()
+# Singleton Digital Grid workflow registry — import this alongside `registry`
+_grid_registry = GridWorkflowRegistry()
 
 
 @dataclass
-class MCPTool:
-    """Descriptor for a single MCP-registered tool."""
+class SparkTool:
+    """Descriptor for a single tool registered with The Spark."""
 
     name: str
     description: str
@@ -57,25 +58,25 @@ class MCPTool:
     version: str = "1.0.0"
 
 
-class MCPToolRegistry:
-    """Registry that maps tool names to MCPTool instances and dispatches calls."""
+class SparkToolRegistry:
+    """The Spark's tool registry — maps tool names to SparkTool instances and dispatches calls."""
 
     def __init__(self) -> None:
-        self._tools: Dict[str, MCPTool] = {}
+        self._tools: Dict[str, SparkTool] = {}
         self._register_builtins()
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
-    def register(self, tool: MCPTool) -> None:
+    def register(self, tool: SparkTool) -> None:
         """Register a tool, overwriting any existing entry with the same name."""
         if tool.name in self._tools:
             logger.warning("mcp.registry overwriting tool=%s", tool.name)
         self._tools[tool.name] = tool
         logger.debug("mcp.registry registered tool=%s category=%s", tool.name, tool.category)
 
-    def get(self, name: str) -> Optional[MCPTool]:
+    def get(self, name: str) -> Optional[SparkTool]:
         """Return the tool with *name*, or None if not found."""
         return self._tools.get(name)
 
@@ -94,7 +95,7 @@ class MCPToolRegistry:
             for t in self._tools.values()
         ]
 
-    def search(self, query: str) -> List[MCPTool]:
+    def search(self, query: str) -> List[SparkTool]:
         """
         Fuzzy search over tool names and descriptions.
 
@@ -108,7 +109,7 @@ class MCPToolRegistry:
 
         q_lower = query.lower()
         tokens = q_lower.split()
-        scored: List[tuple[int, MCPTool]] = []
+        scored: List[tuple[int, SparkTool]] = []
 
         for tool in self._tools.values():
             name_l = tool.name.lower()
@@ -136,7 +137,7 @@ class MCPToolRegistry:
 
     def _register_builtins(self) -> None:
         builtins = [
-            MCPTool(
+            SparkTool(
                 name="search_skills",
                 description=(
                     "Search the Tranc3 skill library by name or semantic query. "
@@ -166,7 +167,7 @@ class MCPToolRegistry:
                 handler=self._handle_search_skills,
                 category="skills",
             ),
-            MCPTool(
+            SparkTool(
                 name="get_spark_status",
                 description=(
                     "Return real-time status of one or all Spark compute nodes, "
@@ -190,7 +191,7 @@ class MCPToolRegistry:
                 handler=self._handle_get_spark_status,
                 category="infrastructure",
             ),
-            MCPTool(
+            SparkTool(
                 name="run_workflow",
                 description=(
                     "Trigger a named workflow with optional input parameters. "
@@ -225,7 +226,7 @@ class MCPToolRegistry:
                 handler=self._handle_run_workflow,
                 category="workflow",
             ),
-            MCPTool(
+            SparkTool(
                 name="get_system_health",
                 description=(
                     "Return a consolidated health report for all Tranc3 subsystems: "
@@ -253,7 +254,7 @@ class MCPToolRegistry:
                 handler=self._handle_get_system_health,
                 category="monitoring",
             ),
-            MCPTool(
+            SparkTool(
                 name="execute_code",
                 description=(
                     "Execute a Python code snippet in a sandboxed environment and return "
@@ -289,7 +290,7 @@ class MCPToolRegistry:
                 handler=self._handle_execute_code,
                 category="coding",
             ),
-            MCPTool(
+            SparkTool(
                 name="query_vector_store",
                 description=(
                     "Run a semantic similarity search against the Tranc3 vector store. "
@@ -331,7 +332,7 @@ class MCPToolRegistry:
                 handler=self._handle_query_vector_store,
                 category="knowledge",
             ),
-            MCPTool(
+            SparkTool(
                 name="trigger_bundle",
                 description=(
                     "Assemble and dispatch a composite skill bundle — a named set of "
@@ -366,7 +367,7 @@ class MCPToolRegistry:
                 handler=self._handle_trigger_bundle,
                 category="skills",
             ),
-            MCPTool(
+            SparkTool(
                 name="register_workflow",
                 description=(
                     "Register a workflow definition by ID so it can later be triggered "
@@ -390,7 +391,7 @@ class MCPToolRegistry:
                 handler=self._handle_register_workflow,
                 category="workflow",
             ),
-            MCPTool(
+            SparkTool(
                 name="get_evolution_stats",
                 description=(
                     "Retrieve evolutionary statistics for a skill or model, including "
@@ -493,11 +494,11 @@ class MCPToolRegistry:
         async_mode = bool(params.get("async_mode", True))
         timeout_seconds = int(params.get("timeout_seconds", 60))
 
-        wf = _workflow_registry.get(workflow_id)
+        wf = _grid_registry.get(workflow_id)
         if wf is None:
             return {
                 "error": f"Workflow '{workflow_id}' not found in registry.",
-                "registered_workflows": _workflow_registry.list_ids(),
+                "registered_workflows": _grid_registry.list_ids(),
             }
 
         try:
@@ -573,13 +574,13 @@ class MCPToolRegistry:
         else:
             return {"error": "Provide either 'workflow' dict or 'template' name."}
 
-        _workflow_registry.register(wf)
+        _grid_registry.register(wf)
         logger.info("mcp.register_workflow id=%s name=%s", wf.id, wf.name)
         return {
             "registered": True,
             "workflow_id": wf.id,
             "workflow_name": wf.name,
-            "total_registered": len(_workflow_registry.list_ids()),
+            "total_registered": len(_grid_registry.list_ids()),
         }
 
     async def _handle_get_system_health(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -603,7 +604,7 @@ class MCPToolRegistry:
                 detail = {
                     "status": "ok" if healthy else "degraded",
                     "tools_registered": tool_count,
-                    "workflows_registered": len(_workflow_registry.list_ids()),
+                    "workflows_registered": len(_grid_registry.list_ids()),
                 }
             elif sub == "redis":
                 try:
@@ -757,5 +758,5 @@ class MCPToolRegistry:
         return result
 
 
-# Singleton registry — import this throughout the codebase
-registry = MCPToolRegistry()
+# Singleton Spark tool registry — import this throughout the codebase
+registry = SparkToolRegistry()
