@@ -1,11 +1,15 @@
 # deploy/forgejo/docker-compose.yml
-# Forgejo ("The Workshop") — self-hosted Git for all Trancendos projects.
+# The Workshop — Forgejo + act runner (self-hosted CI/CD).
 #
-# Deploy with:
+# Deploy:
 #   docker compose -f deploy/forgejo/docker-compose.yml up -d
 #
-# Forgejo will be available at: https://trancendos.com/the-workshop
-# (after setting up the nginx reverse proxy in nginx-the-workshop.conf)
+# Available at: https://trancendos.com/the-workshop
+# Runner: registers automatically once RUNNER_REGISTRATION_TOKEN is set.
+#
+# Get the token after first Forgejo boot:
+#   Site Admin → Management → Runners → Create new runner → copy token
+#   Then: RUNNER_REGISTRATION_TOKEN=<token> docker compose up -d act-runner
 
 version: "3.9"
 
@@ -29,13 +33,12 @@ services:
       - FORGEJO__repository__DEFAULT_BRANCH=main
       - FORGEJO__service__DISABLE_REGISTRATION=false
       - FORGEJO__service__REQUIRE_SIGNIN_VIEW=false
-      - FORGEJO__picture__DISABLE_GRAVATAR=false
       - FORGEJO__log__LEVEL=Info
       - FORGEJO__security__INSTALL_LOCK=false
+      # Enable Forgejo Actions
+      - FORGEJO__actions__ENABLED=true
     ports:
-      # HTTP — nginx proxies /the-workshop → this port (not exposed publicly)
       - "127.0.0.1:3456:3000"
-      # SSH git — exposed directly on port 2222
       - "2222:22"
     volumes:
       - forgejo-data:/data
@@ -47,6 +50,27 @@ services:
       timeout: 10s
       retries: 3
 
+  act-runner:
+    image: code.forgejo.org/forgejo/runner:3
+    container_name: the-workshop-runner
+    restart: unless-stopped
+    depends_on:
+      forgejo:
+        condition: service_healthy
+    environment:
+      - FORGEJO_INSTANCE_URL=http://forgejo:3000/the-workshop
+      - FORGEJO_RUNNER_REGISTRATION_TOKEN=${RUNNER_REGISTRATION_TOKEN:-}
+      - FORGEJO_RUNNER_NAME=trancendos-runner
+      - FORGEJO_RUNNER_LABELS=self-hosted,linux,x64
+    volumes:
+      - act-runner-data:/data
+      # Docker socket so runner can build/run containers
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Runner needs wrangler + flyctl available — install via runner config
+    # or build a custom image (see scripts/runner-dockerfile)
+
 volumes:
   forgejo-data:
     name: forgejo-data
+  act-runner-data:
+    name: act-runner-data
