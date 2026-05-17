@@ -227,6 +227,23 @@ app.add_middleware(
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(GovernanceMiddleware)
 
+# ── The Spark (MCP server) ────────────────────────────────────────────────────
+from src.mcp.server import router as _mcp_router
+app.include_router(_mcp_router)
+
+# ── Frontend static files (served from web/dist/ after `npm run build`) ───────
+_FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
+if os.path.isdir(_FRONTEND_DIST):
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    app.mount("/assets", StaticFiles(directory=os.path.join(_FRONTEND_DIST, "assets")), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str):
+        index = os.path.join(_FRONTEND_DIST, "index.html")
+        return FileResponse(index)
+
 
 # ── Models ────────────────────────────────────────────────────────────────────
 class ChatRequest(BaseModel):
