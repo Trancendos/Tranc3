@@ -4,10 +4,37 @@
 import os
 import logging
 from dataclasses import dataclass
-from typing import Dict, Optional
+from enum import Enum
+from typing import Dict, Optional, Tuple
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# BILLING TIER ENUM
+# ---------------------------------------------------------------------------
+
+class BillingTier(str, Enum):
+    FREE       = "free"
+    PRO        = "pro"
+    BUSINESS   = "business"
+    ENTERPRISE = "enterprise"
+
+
+def check_rate_limit(user_id: str, tier: "BillingTier", request_count: int) -> Tuple[bool, Optional[str]]:
+    """
+    Check whether request_count exceeds the hourly rate limit for the given tier.
+    Returns (allowed: bool, error_message: str | None).
+    """
+    tier_key  = tier.value if isinstance(tier, BillingTier) else str(tier)
+    limits    = TIERS.get(tier_key, TIERS["free"])
+    hourly    = limits.get("req_per_hour", 100)
+
+    if hourly != -1 and request_count > hourly:
+        return False, f"Hourly rate limit exceeded ({request_count} > {hourly} req/hr for {tier_key} tier)"
+    return True, None
+
 
 # ---------------------------------------------------------------------------
 # TIER DEFINITIONS
