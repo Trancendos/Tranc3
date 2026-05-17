@@ -1,4 +1,4 @@
-# Workflow Builder and Executor — visual/programmatic workflow system
+# The Digital Grid — workflow DAG builder + executor + event bus
 
 from .nodes import (  # noqa: F401
     NodeType,
@@ -11,7 +11,7 @@ from .nodes import (  # noqa: F401
     ConditionNode,
     TransformNode,
     VectorSearchNode,
-    MCPToolNode,
+    SparkToolNode,
     ParallelNode,
     LoopNode,
     SkillCallNode,
@@ -46,7 +46,7 @@ __all__ = [
     "ConditionNode",
     "TransformNode",
     "VectorSearchNode",
-    "MCPToolNode",
+    "SparkToolNode",
     "ParallelNode",
     "LoopNode",
     "SkillCallNode",
