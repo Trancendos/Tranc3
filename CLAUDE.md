@@ -29,6 +29,15 @@ The `tranc3-bots` sub-project has its own pyproject.toml with matching pytest co
 
 ## Architecture
 
+### Named subsystems
+
+| Identity | Code path | Role |
+|---|---|---|
+| **The Spark** | `src/mcp/` | MCP server + tool registry — JSON-RPC 2.0 over HTTP/SSE |
+| **The Digital Grid** | `src/workflow/` | Workflow DAG builder + topological executor + event bus |
+| **The Void** | `cloudflare/infinity-void/` | AES-GCM encrypted secrets vault (CF Worker) |
+| **The Workshop** | `deploy/forgejo/` | Self-hosted Forgejo CI/CD at trancendos.com/the-workshop |
+
 ### Service map
 
 | Service | Port | Repo path | Notes |
@@ -37,7 +46,7 @@ The `tranc3-bots` sub-project has its own pyproject.toml with matching pytest co
 | nanoservices | 8001 | `src/nanoservices/` | Thin proxy to tranc3-bots |
 | tranc3-bots | 8080 | `tranc3-bots/` | Separate Fly.io app, 12 bot types |
 | tranc3-ai | edge | `cloudflare/tranc3-ai/` | CF Worker — AI edge proxy |
-| infinity-void | edge | `cloudflare/infinity-void/` | CF Worker — encrypted secrets vault |
+| infinity-void | edge | `cloudflare/infinity-void/` | CF Worker — The Void encrypted vault |
 
 ### Inference pipeline (3-tier fallback)
 
@@ -60,9 +69,9 @@ Key module domains under `src/`:
 - `monetisation/` — billing tiers: free (100 req/hr), pro £29 (1k/hr), business £149 (10k/hr)
 - `database/` — SQLAlchemy models + Alembic migrations
 - `auth/` — JWT, session management
-- `mcp/` — MCP server integration
-- `workers/` — background worker tasks
-- `workflow/` — multi-step workflow orchestration
+- `mcp/` — **The Spark**: JSON-RPC 2.0 MCP server + tool registry + SSE bus. Routes: `/mcp/rpc`, `/mcp/sse`, `/mcp/tools`, `/mcp/health`, `/mcp/grid/status`
+- `workers/` — background worker tasks; `InferenceWorker` drains Redis queue → Tranc3Engine
+- `workflow/` — **The Digital Grid**: `WorkflowBuilder` (fluent DAG DSL) + `WorkflowExecutor` (topological BFS, parallel layers) + `WorkflowEventBus`. Events bridge to The Spark's SSE on first client connect.
 - `errors/error_catalog.py` — canonical ErrorCode enum
 - `validation/loop_validator.py` — CircuitBreaker + LoopValidator (prevents cascade failures)
 - `observability/` — metrics, tracing

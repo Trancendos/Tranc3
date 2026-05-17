@@ -1,4 +1,10 @@
-"""Workflow DSL builder — define, validate, serialize, and template workflows."""
+"""
+The Digital Grid — workflow DSL builder.
+
+Defines, validates, serialises, and templates workflow DAGs.
+Workflows registered here are executable by the Grid executor and
+visible to The Spark (MCP) via the register_workflow / run_workflow tools.
+"""
 
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
@@ -16,9 +22,13 @@ logger = logging.getLogger(__name__)
 # WorkflowDefinition
 # ---------------------------------------------------------------------------
 
+GRID_ENGINE = "the-digital-grid"
+GRID_VERSION = "1.0.0"
+
+
 @dataclass
 class WorkflowDefinition:
-    """Complete, serializable description of a workflow DAG."""
+    """Complete, serialisable description of a Digital Grid workflow DAG."""
 
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
@@ -52,6 +62,7 @@ class WorkflowDefinition:
             "name": self.name,
             "description": self.description,
             "version": self.version,
+            "engine": GRID_ENGINE,
             "nodes": {
                 nid: self._node_config_to_dict(nc) for nid, nc in self.nodes.items()
             },

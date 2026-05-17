@@ -29,8 +29,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 JSONRPC_VERSION = "2.0"
-SERVER_NAME = "tranc3-mcp-server"
+SERVER_NAME = "the-spark"
 SERVER_VERSION = "1.0.0"
+ENGINE_LABEL = "The Spark — Tranc3 MCP Interface"
 
 # Standard JSON-RPC error codes
 ERR_PARSE_ERROR = -32700
@@ -142,6 +143,8 @@ async def _method_initialize(params: Optional[Dict[str, Any]], request_id: Any) 
             "serverInfo": {
                 "name": SERVER_NAME,
                 "version": SERVER_VERSION,
+                "label": ENGINE_LABEL,
+                "grid": "the-digital-grid",
             },
             "capabilities": {
                 "tools": {"listChanged": True},
@@ -150,6 +153,7 @@ async def _method_initialize(params: Optional[Dict[str, Any]], request_id: Any) 
                 "experimental": {
                     "sse": True,
                     "batchRequests": False,
+                    "workflowEvents": True,
                 },
             },
         },
@@ -217,25 +221,31 @@ async def _method_resources_list(
 ) -> Dict[str, Any]:
     resources: List[Dict[str, Any]] = [
         {
-            "uri": "tranc3://skills",
+            "uri": "spark://skills",
             "name": "Skill Library",
-            "description": "All registered Tranc3 skills with metadata",
+            "description": "All registered Tranc3 skills with metadata (The Spark)",
             "mimeType": "application/json",
         },
         {
-            "uri": "tranc3://workflows",
+            "uri": "grid://workflows",
             "name": "Workflow Registry",
-            "description": "All defined Tranc3 workflows",
+            "description": "All workflows registered in The Digital Grid",
             "mimeType": "application/json",
         },
         {
-            "uri": "tranc3://health",
+            "uri": "grid://events",
+            "name": "Workflow Event Stream",
+            "description": "Live node/workflow lifecycle events from The Digital Grid",
+            "mimeType": "text/event-stream",
+        },
+        {
+            "uri": "spark://health",
             "name": "System Health",
-            "description": "Real-time system health snapshot",
+            "description": "Real-time health snapshot for The Spark and The Digital Grid",
             "mimeType": "application/json",
         },
         {
-            "uri": "tranc3://evolution",
+            "uri": "spark://evolution",
             "name": "Evolution Stats",
             "description": "Model and skill evolutionary statistics",
             "mimeType": "application/json",
@@ -331,8 +341,10 @@ async def rpc_endpoint(request: Request) -> JSONResponse:
 async def sse_endpoint(request: Request) -> StreamingResponse:
     """
     Server-Sent Events stream.  Clients connect here to receive async events
-    (tool_result, progress, error) pushed from the MCP server.
+    (tool_result, progress, error) from The Spark, and lifecycle events
+    (grid.*) forwarded from The Digital Grid.
     """
+    await _start_grid_bridge()
     sub_id, queue = _bus.subscribe()
     logger.info("mcp.sse client connected sub_id=%s", sub_id)
 
@@ -368,13 +380,14 @@ async def sse_endpoint(request: Request) -> StreamingResponse:
 
 @router.get("/tools")
 async def list_tools_endpoint() -> JSONResponse:
-    """Return all registered MCP tools in JSON-schema format."""
+    """Return all registered Spark tools in JSON-schema format."""
     tools = registry.list_tools()
     return JSONResponse(
         content={
             "tools": tools,
             "count": len(tools),
             "server": SERVER_NAME,
+            "label": ENGINE_LABEL,
             "version": SERVER_VERSION,
         }
     )
@@ -382,16 +395,50 @@ async def list_tools_endpoint() -> JSONResponse:
 
 @router.get("/health")
 async def health_endpoint() -> JSONResponse:
-    """MCP server health check."""
+    """The Spark health check."""
+    from src.mcp.tools import _workflow_registry  # noqa: PLC0415
     tool_count = len(registry.list_tools())
     subscriber_count = len(_bus._queues)
     return JSONResponse(
         content={
             "status": "ok",
             "server": SERVER_NAME,
+            "label": ENGINE_LABEL,
+            "grid": "the-digital-grid",
             "version": SERVER_VERSION,
             "tools_registered": tool_count,
+            "workflows_registered": len(_workflow_registry.list_ids()),
             "sse_subscribers": subscriber_count,
+            "grid_bridge_active": _grid_bridge_started,
+            "ts": time.time(),
+        }
+    )
+
+
+@router.get("/grid/status")
+async def grid_status_endpoint() -> JSONResponse:
+    """Return The Digital Grid's workflow registry and executor state."""
+    from src.mcp.tools import _workflow_registry  # noqa: PLC0415
+    from src.workflow.executor import executor as _wf_executor  # noqa: PLC0415
+
+    active_executions = [
+        {
+            "execution_id": state.execution_id,
+            "workflow_id": state.workflow_id,
+            "status": state.status,
+            "elapsed_ms": state.elapsed_ms,
+        }
+        for state in _wf_executor.executions.values()
+        if state.status == "running"
+    ]
+
+    return JSONResponse(
+        content={
+            "grid": "the-digital-grid",
+            "spark": SERVER_NAME,
+            "registered_workflows": _workflow_registry.list_all(),
+            "active_executions": active_executions,
+            "bridge_active": _grid_bridge_started,
             "ts": time.time(),
         }
     )
@@ -405,6 +452,47 @@ async def health_endpoint() -> JSONResponse:
 async def publish_event(event_type: str, data: Any) -> None:
     """Push an event to all active SSE subscribers."""
     await _bus.publish(event_type, data)
+
+
+# ---------------------------------------------------------------------------
+# The Digital Grid → The Spark event bridge
+#
+# Subscribes to the workflow executor's event bus and forwards every
+# node/workflow lifecycle event to all active SSE clients.  This is
+# initialised lazily on first connection so the import cycle is avoided.
+# ---------------------------------------------------------------------------
+
+_grid_bridge_started = False
+
+
+async def _start_grid_bridge() -> None:
+    """Wire The Digital Grid event bus into The Spark's SSE bus (idempotent)."""
+    global _grid_bridge_started
+    if _grid_bridge_started:
+        return
+    try:
+        from src.workflow.executor import event_bus as _grid_bus  # noqa: PLC0415
+    except ImportError:
+        logger.warning("the-spark: could not import grid event bus — bridge skipped")
+        return
+
+    async def _forward(payload: dict) -> None:
+        event_type = payload.get("event", "grid.event")
+        data = payload.get("data", {})
+        await _bus.publish(f"grid.{event_type}", data)
+
+    for ev in (
+        "workflow.started",
+        "workflow.completed",
+        "workflow.failed",
+        "node.started",
+        "node.completed",
+        "node.failed",
+    ):
+        _grid_bus.subscribe(ev, _forward)
+
+    _grid_bridge_started = True
+    logger.info("the-spark: Digital Grid event bridge active")
 
 
 # ---------------------------------------------------------------------------
