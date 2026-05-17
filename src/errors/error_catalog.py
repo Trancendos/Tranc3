@@ -473,3 +473,17 @@ def format_error_response(code: ErrorCode, detail: Optional[str] = None) -> Dict
             "severity":  defn.severity,
         }
     }
+
+
+# Flat dict alias used by compliance tests: code_str -> {guidance, http_status, ...}
+ERROR_DEFINITIONS: Dict[str, Dict] = {
+    code.value: {
+        "guidance":    defn.guidance,
+        "action":      defn.self_heal,
+        "http_status": defn.http_status,
+        "severity":    defn.severity,
+        "retryable":   defn.retryable,
+        "title":       defn.title,
+    }
+    for code, defn in CATALOG.items()
+}

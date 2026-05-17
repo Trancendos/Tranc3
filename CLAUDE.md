@@ -10,6 +10,17 @@ make test            # full pytest suite with coverage
 make test-fast       # skip slow/integration tests
 pytest tests/test_tranc3_ml.py -v  # single test file
 
+# Targeted test suites (all produce logs/test_results.jsonl)
+pytest tests/test_smoke.py -v           # fast sanity checks (<2s)
+pytest tests/test_uat.py -v             # user acceptance / end-to-end journeys
+pytest tests/test_chaos.py -v           # fault injection and resilience
+pytest tests/test_penetration.py -v     # OWASP injection / security boundary
+pytest tests/test_compliance.py -v      # error catalog, MCP protocol, GDPR
+pytest tests/test_nanoservices.py -v    # nanoservice layer (port 8001)
+pytest tests/test_compatibility.py -v  # JSON-RPC 2.0, Pydantic v2, serialization
+pytest tests/test_validation.py -v     # input validation and schema enforcement
+pytest tests/test_spark_grid_integration.py -v  # The Spark + The Digital Grid integration
+
 # Linting
 make lint            # ruff + mypy
 
