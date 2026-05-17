@@ -84,6 +84,9 @@ class AbuseDetector:
         r"jailbreak",
         r"DAN\s+mode",
         r"pretend\s+you\s+are",
+        r"###\s*override",
+        r"override\s+mode\s+activated",
+        r"you\s+are\s+now\s+\w+",
     ]
     EXTRACTION_PATTERNS  = [
         r"repeat\s+your\s+(system\s+)?prompt",
@@ -196,3 +199,15 @@ class ResponseWatermarker:
 # Singletons
 abuse_detector = AbuseDetector()
 watermarker    = ResponseWatermarker()
+
+
+class IPProtection:
+    """Thin facade used by penetration tests and middleware to detect injection attempts."""
+
+    def __init__(self):
+        self._detector = AbuseDetector()
+
+    def detect_injection(self, text: str) -> bool:
+        """Return True if text contains a prompt injection pattern."""
+        result = self._detector.check_message(text, user_id="probe")
+        return not result.get("allowed", True)
