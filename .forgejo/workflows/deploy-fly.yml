@@ -19,6 +19,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install flyctl
+        run: |
+          if ! command -v flyctl &>/dev/null; then
+            curl -L https://fly.io/install.sh | sh
+            echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+          fi
+
       - name: Deploy
         run: flyctl deploy --remote-only
         env:
@@ -33,6 +40,13 @@ jobs:
         working-directory: tranc3-bots
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install flyctl
+        run: |
+          if ! command -v flyctl &>/dev/null; then
+            curl -L https://fly.io/install.sh | sh
+            echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+          fi
 
       - name: Deploy
         run: flyctl deploy --remote-only
