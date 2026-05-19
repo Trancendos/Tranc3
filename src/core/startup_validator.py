@@ -66,20 +66,20 @@ def _check_redis_url() -> None:
 
 
 def _check_cors_origins() -> None:
-    origins = os.getenv("ALLOWED_ORIGINS", "")
+    origins = os.getenv("CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", ""))
     if _IS_PROD and (not origins or origins == "*"):
         raise RuntimeError(
-            "ALLOWED_ORIGINS must be set to specific domain(s) in production. "
+            "CORS_ORIGINS must be set to specific domain(s) in production. "
             "Wildcard '*' is not acceptable."
         )
 
 
 def _check_api_key() -> None:
-    if _IS_PROD and not os.getenv("TRANC3_API_KEY"):
+    require_auth = os.getenv("REQUIRE_AUTH", "false").lower() == "true"
+    if _IS_PROD and require_auth and not os.getenv("TRANC3_API_KEY"):
         raise RuntimeError(
             "TRANC3_API_KEY must be set in production when REQUIRE_AUTH=true."
         )
-    require_auth = os.getenv("REQUIRE_AUTH", "false").lower() == "true"
     if require_auth and not os.getenv("TRANC3_API_KEY") and not os.getenv("JWT_SECRET"):
         logger.warning("REQUIRE_AUTH=true but neither TRANC3_API_KEY nor JWT_SECRET is set — all requests will fail auth.")
 

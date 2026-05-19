@@ -148,7 +148,7 @@ class PersonalitySpawner:
             REQUIRE_AUTH=false
 
             # CORS (comma-separated origins; use * only for dev)
-            ALLOWED_ORIGINS=*
+            CORS_ORIGINS=*
 
             # Database (Supabase free tier)
             DATABASE_URL=
@@ -187,7 +187,7 @@ class PersonalitySpawner:
             from pydantic import BaseModel, Field
 
             _ENV = os.getenv("ENVIRONMENT", "development")
-            _ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+            _ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", "*")).split(",")
 
             ACTIVE_PERSONALITY = "{personality_id}"
             CODE_NAME = "{code_name}"
