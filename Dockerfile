@@ -24,15 +24,15 @@ RUN pip install --no-cache-dir onnxruntime==1.18.0
 # Copy application
 COPY . .
 
-# Create model directory (weights mounted at runtime or downloaded)
-RUN mkdir -p models/tranc3-v1 models/tokenizer
+# Create runtime directories (model weights mounted from Fly.io persistent volume)
+RUN mkdir -p models/tranc3-v1 models/tokenizer data/vector_store cache
+
+# Entrypoint handles migrations then starts servers
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Expose main API + nanoservices
 EXPOSE 8000 8001
 
-# Default: run main FastAPI + nanoservices in parallel
 # Override CMD for worker-only mode: CMD ["python", "-m", "src.workers.inference_worker"]
-CMD ["sh", "-c", \
-  "uvicorn api:app --host 0.0.0.0 --port 8000 & \
-   uvicorn src.nanoservices.nano_server:nano_app --host 0.0.0.0 --port 8001 & \
-   wait"]
+ENTRYPOINT ["docker-entrypoint.sh"]
