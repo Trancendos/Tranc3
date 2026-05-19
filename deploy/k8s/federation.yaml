@@ -8,9 +8,7 @@ metadata:
   namespace: tranc3
 data:
   primary_cluster: "gke-us-central1"
-  failover_clusters:
-    - "aks-eastus"
-    - "eks-us-east-1"
+  failover_clusters: '["aks-eastus","eks-us-east-1"]'
   health_check_interval: "30s"
   failover_threshold: "3"
 
