@@ -33,8 +33,8 @@ logger = logging.getLogger(__name__)
 _NANO_PORT    = int(os.getenv("NANO_PORT", "8001"))
 _BOTS_URL     = os.getenv("TRANC3_BOTS_URL", "")   # e.g. https://tranc3-bots.fly.dev
 _CORS_ORIGINS = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:3000,http://localhost:5173,https://trancendos.com,https://www.trancendos.com",
+    "CORS_ORIGINS",
+    os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,https://trancendos.com,https://www.trancendos.com"),
 ).split(",")
 
 
