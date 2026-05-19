@@ -120,7 +120,4 @@ data:
   gke-us-central1: "tranc3-api.tranc3.svc.cluster.local"
   aks-eastus: "tranc3-api.tranc3.svc.cluster.local"
   eks-us-east-1: "tranc3-api.tranc3.svc.cluster.local"
-  health_endpoints:
-    gke: "http://gke-us-central1:8000/health"
-    aks: "http://aks-eastus:8000/health"
-    eks: "http://eks-us-east-1:8000/health"
+  health_endpoints: '{"gke":"http://gke-us-central1:8000/health","aks":"http://aks-eastus:8000/health","eks":"http://eks-us-east-1:8000/health"}'
