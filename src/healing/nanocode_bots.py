@@ -21,6 +21,19 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Shared HTTP client (lazy singleton — avoids per-call connection overhead)
+# ---------------------------------------------------------------------------
+
+_shared_client: Optional[httpx.AsyncClient] = None
+
+
+def _get_client(timeout: float = 15.0) -> httpx.AsyncClient:
+    global _shared_client
+    if _shared_client is None or _shared_client.is_closed:
+        _shared_client = httpx.AsyncClient(timeout=timeout)
+    return _shared_client
+
 
 # ---------------------------------------------------------------------------
 # Enumerations
@@ -111,40 +124,40 @@ class ComplianceMetadataBot(NanoBot):
         action = ""
 
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                # Step 1: fetch existing config
-                resp = await client.get(f"{endpoint}/config/compliance")
-                existing: Dict = {}
-                if resp.status_code == 200:
-                    existing = resp.json()
+            client = _get_client(timeout=15.0)
+            # Step 1: fetch existing config
+            resp = await client.get(f"{endpoint}/config/compliance")
+            existing: Dict = {}
+            if resp.status_code == 200:
+                existing = resp.json()
 
-                # Merge: only inject missing fields
-                payload = {**self._REQUIRED_FIELDS, **existing}
-                # Always ensure required keys present
-                for k, v in self._REQUIRED_FIELDS.items():
-                    payload.setdefault(k, v)
+            # Merge: only inject missing fields
+            payload = {**self._REQUIRED_FIELDS, **existing}
+            # Always ensure required keys present
+            for k, v in self._REQUIRED_FIELDS.items():
+                payload.setdefault(k, v)
 
-                # Step 2: push updated config
-                patch_resp = await client.post(
-                    f"{endpoint}/config/compliance",
-                    json=payload,
-                    headers={"Content-Type": "application/json"},
+            # Step 2: push updated config
+            patch_resp = await client.post(
+                f"{endpoint}/config/compliance",
+                json=payload,
+                headers={"Content-Type": "application/json"},
+            )
+            patch_resp.raise_for_status()
+
+            # Step 3: validate with re-check
+            verify_resp = await client.get(f"{endpoint}/config/compliance/validate")
+            if verify_resp.status_code == 200:
+                data = verify_resp.json()
+                success = data.get("valid", False)
+                action = (
+                    f"Injected {len(self._REQUIRED_FIELDS)} GDPR fields; "
+                    f"validation={'pass' if success else 'fail'}"
                 )
-                patch_resp.raise_for_status()
-
-                # Step 3: validate with re-check
-                verify_resp = await client.get(f"{endpoint}/config/compliance/validate")
-                if verify_resp.status_code == 200:
-                    data = verify_resp.json()
-                    success = data.get("valid", False)
-                    action = (
-                        f"Injected {len(self._REQUIRED_FIELDS)} GDPR fields; "
-                        f"validation={'pass' if success else 'fail'}"
-                    )
-                else:
-                    # Treat successful POST as partial success
-                    success = patch_resp.status_code < 300
-                    action = f"Injected compliance metadata; validation endpoint unavailable"
+            else:
+                # Treat successful POST as partial success
+                success = patch_resp.status_code < 300
+                action = f"Injected compliance metadata; validation endpoint unavailable"
 
         except httpx.HTTPStatusError as exc:
             action = f"HTTP error during compliance injection: {exc.response.status_code}"
@@ -187,68 +200,68 @@ class StaleEmbeddingBot(NanoBot):
         action = ""
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                # Step 1: get stale content list
-                stale_resp = await client.get(
-                    f"{endpoint}/content/stale",
-                    params={"limit": 50},
+            client = _get_client(timeout=60.0)
+            # Step 1: get stale content list
+            stale_resp = await client.get(
+                f"{endpoint}/content/stale",
+                params={"limit": 50},
+            )
+            stale_resp.raise_for_status()
+            stale_items: List[Dict] = stale_resp.json().get("items", [])
+
+            if not stale_items:
+                return BotResult(
+                    bot_id=self.bot_id,
+                    failure_mode=self.failure_mode,
+                    service_id=service_id,
+                    success=True,
+                    action_taken="No stale embeddings found — nothing to do",
+                    duration_ms=(time.perf_counter() - t0) * 1000.0,
                 )
-                stale_resp.raise_for_status()
-                stale_items: List[Dict] = stale_resp.json().get("items", [])
 
-                if not stale_items:
-                    return BotResult(
-                        bot_id=self.bot_id,
-                        failure_mode=self.failure_mode,
-                        service_id=service_id,
-                        success=True,
-                        action_taken="No stale embeddings found — nothing to do",
-                        duration_ms=(time.perf_counter() - t0) * 1000.0,
-                    )
-
-                # Step 2: embed in batches of 16
-                batch_size = 16
-                qdrant_points = []
-                for i in range(0, len(stale_items), batch_size):
-                    batch = stale_items[i : i + batch_size]
-                    texts = [item.get("text", "") for item in batch]
-                    embed_resp = await client.post(
-                        self._embed_url,
-                        json={"texts": texts},
-                        headers={"Content-Type": "application/json"},
-                    )
-                    embed_resp.raise_for_status()
-                    vectors = embed_resp.json().get("embeddings", [])
-
-                    for item, vec in zip(batch, vectors):
-                        qdrant_points.append(
-                            {
-                                "id": item.get("id"),
-                                "vector": vec,
-                                "payload": {
-                                    "service_id": service_id,
-                                    "content_id": item.get("id"),
-                                    "updated_at": time.time(),
-                                },
-                            }
-                        )
-
-                # Step 3: upsert to Qdrant
-                collection = context.get(
-                    "qdrant_collection", f"tranc3_{service_id}"
-                )
-                upsert_resp = await client.put(
-                    f"{self._qdrant_url}/collections/{collection}/points",
-                    json={"points": qdrant_points},
+            # Step 2: embed in batches of 16
+            batch_size = 16
+            qdrant_points = []
+            for i in range(0, len(stale_items), batch_size):
+                batch = stale_items[i : i + batch_size]
+                texts = [item.get("text", "") for item in batch]
+                embed_resp = await client.post(
+                    self._embed_url,
+                    json={"texts": texts},
                     headers={"Content-Type": "application/json"},
                 )
-                upsert_resp.raise_for_status()
-                upserted = len(qdrant_points)
-                success = True
-                action = (
-                    f"Re-embedded and upserted {upserted} stale items "
-                    f"into Qdrant collection '{collection}'"
-                )
+                embed_resp.raise_for_status()
+                vectors = embed_resp.json().get("embeddings", [])
+
+                for item, vec in zip(batch, vectors):
+                    qdrant_points.append(
+                        {
+                            "id": item.get("id"),
+                            "vector": vec,
+                            "payload": {
+                                "service_id": service_id,
+                                "content_id": item.get("id"),
+                                "updated_at": time.time(),
+                            },
+                        }
+                    )
+
+            # Step 3: upsert to Qdrant
+            collection = context.get(
+                "qdrant_collection", f"tranc3_{service_id}"
+            )
+            upsert_resp = await client.put(
+                f"{self._qdrant_url}/collections/{collection}/points",
+                json={"points": qdrant_points},
+                headers={"Content-Type": "application/json"},
+            )
+            upsert_resp.raise_for_status()
+            upserted = len(qdrant_points)
+            success = True
+            action = (
+                f"Re-embedded and upserted {upserted} stale items "
+                f"into Qdrant collection '{collection}'"
+            )
 
         except Exception as exc:
             action = f"StaleEmbeddingBot repair failed: {exc}"
@@ -286,49 +299,49 @@ class FreeTierBot(NanoBot):
         success = False
 
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                # 1. Reduce request rate
-                rate_resp = await client.post(
-                    f"{endpoint}/config/rate_limit",
-                    json={
-                        "mode": "conservation",
-                        "rps": self._CONSERVATION_RATE_LIMIT_RPS,
-                        "burst": self._CONSERVATION_RATE_LIMIT_RPS * 2,
-                    },
+            client = _get_client(timeout=15.0)
+            # 1. Reduce request rate
+            rate_resp = await client.post(
+                f"{endpoint}/config/rate_limit",
+                json={
+                    "mode": "conservation",
+                    "rps": self._CONSERVATION_RATE_LIMIT_RPS,
+                    "burst": self._CONSERVATION_RATE_LIMIT_RPS * 2,
+                },
+            )
+            if rate_resp.status_code < 300:
+                actions_taken.append(
+                    f"Rate limited to {self._CONSERVATION_RATE_LIMIT_RPS} RPS"
                 )
-                if rate_resp.status_code < 300:
-                    actions_taken.append(
-                        f"Rate limited to {self._CONSERVATION_RATE_LIMIT_RPS} RPS"
-                    )
 
-                # 2. Enable caching
-                cache_resp = await client.post(
-                    f"{endpoint}/config/cache",
-                    json={
-                        "enabled": True,
-                        "ttl_sec": self._CACHE_TTL_SEC,
-                        "strategy": "lru",
-                        "max_size_mb": 256,
-                    },
+            # 2. Enable caching
+            cache_resp = await client.post(
+                f"{endpoint}/config/cache",
+                json={
+                    "enabled": True,
+                    "ttl_sec": self._CACHE_TTL_SEC,
+                    "strategy": "lru",
+                    "max_size_mb": 256,
+                },
+            )
+            if cache_resp.status_code < 300:
+                actions_taken.append(
+                    f"Enabled LRU cache (TTL={self._CACHE_TTL_SEC}s)"
                 )
-                if cache_resp.status_code < 300:
-                    actions_taken.append(
-                        f"Enabled LRU cache (TTL={self._CACHE_TTL_SEC}s)"
-                    )
 
-                # 3. Pre-warm next tier
-                try:
-                    tier_resp = await client.post(
-                        f"{endpoint}/tier/upgrade/prepare",
-                        json={"reason": "free_tier_conservation", "notify": True},
-                    )
-                    if tier_resp.status_code < 300:
-                        actions_taken.append("Next-tier upgrade preparation triggered")
-                except Exception:
-                    # Non-critical — not every service has tier management
-                    pass
+            # 3. Pre-warm next tier
+            try:
+                tier_resp = await client.post(
+                    f"{endpoint}/tier/upgrade/prepare",
+                    json={"reason": "free_tier_conservation", "notify": True},
+                )
+                if tier_resp.status_code < 300:
+                    actions_taken.append("Next-tier upgrade preparation triggered")
+            except Exception:
+                # Non-critical — not every service has tier management
+                pass
 
-                success = len(actions_taken) >= 1
+            success = len(actions_taken) >= 1
 
         except Exception as exc:
             actions_taken.append(f"Error: {exc}")
@@ -385,41 +398,41 @@ class RateLimitBot(NanoBot):
         success = False
 
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                # 1. Rotate API token
-                if self._token_pool:
-                    idx = self._current_token_idx.get(service_id, 0)
-                    next_idx = (idx + 1) % len(self._token_pool)
-                    self._current_token_idx[service_id] = next_idx
-                    new_token = self._token_pool[next_idx]
+            client = _get_client(timeout=15.0)
+            # 1. Rotate API token
+            if self._token_pool:
+                idx = self._current_token_idx.get(service_id, 0)
+                next_idx = (idx + 1) % len(self._token_pool)
+                self._current_token_idx[service_id] = next_idx
+                new_token = self._token_pool[next_idx]
 
-                    token_resp = await client.post(
-                        f"{endpoint}/config/token",
-                        json={"token": new_token, "reason": "rate_limit_rotation"},
-                    )
-                    if token_resp.status_code < 300:
-                        actions.append(
-                            f"Rotated to token pool index {next_idx}"
-                        )
-                        success = True
-                else:
-                    actions.append("No backup tokens in pool")
-
-                # 2. Enable Redis-backed request queue
-                queue_resp = await client.post(
-                    f"{endpoint}/config/queue",
-                    json={
-                        "enabled": True,
-                        "backend": "redis",
-                        "redis_url": self._redis_url,
-                        "queue_key": f"tranc3:ratelimit:{service_id}",
-                        "max_depth": 500,
-                        "drain_rps": 5,
-                    },
+                token_resp = await client.post(
+                    f"{endpoint}/config/token",
+                    json={"token": new_token, "reason": "rate_limit_rotation"},
                 )
-                if queue_resp.status_code < 300:
-                    actions.append("Enabled Redis request queuing")
+                if token_resp.status_code < 300:
+                    actions.append(
+                        f"Rotated to token pool index {next_idx}"
+                    )
                     success = True
+            else:
+                actions.append("No backup tokens in pool")
+
+            # 2. Enable Redis-backed request queue
+            queue_resp = await client.post(
+                f"{endpoint}/config/queue",
+                json={
+                    "enabled": True,
+                    "backend": "redis",
+                    "redis_url": self._redis_url,
+                    "queue_key": f"tranc3:ratelimit:{service_id}",
+                    "max_depth": 500,
+                    "drain_rps": 5,
+                },
+            )
+            if queue_resp.status_code < 300:
+                actions.append("Enabled Redis request queuing")
+                success = True
 
         except Exception as exc:
             actions.append(f"Error: {exc}")
@@ -456,88 +469,88 @@ class ServiceUnreachableBot(NanoBot):
         actions: List[str] = []
         success = False
 
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            # Strategy 1: restart ping
-            try:
-                restart_resp = await client.post(
-                    f"{endpoint}/admin/restart",
-                    json={"reason": "service_unreachable_auto_repair"},
-                )
-                if restart_resp.status_code < 300:
-                    actions.append("Restart signal sent")
-                    # Poll health until recovery or timeout
-                    for _ in range(self._HEALTH_POLL_RETRIES):
-                        await asyncio.sleep(self._HEALTH_POLL_INTERVAL)
-                        try:
-                            hresp = await client.get(health_endpoint)
-                            if hresp.status_code == 200:
-                                actions.append("Service recovered after restart")
-                                success = True
-                                break
-                        except Exception:
-                            pass
-            except Exception as exc:
-                actions.append(f"Restart failed: {exc}")
-                logger.warning("[ServiceUnreachableBot] Restart attempt failed: %s", exc)
+        client = _get_client(timeout=20.0)
+        # Strategy 1: restart ping
+        try:
+            restart_resp = await client.post(
+                f"{endpoint}/admin/restart",
+                json={"reason": "service_unreachable_auto_repair"},
+            )
+            if restart_resp.status_code < 300:
+                actions.append("Restart signal sent")
+                # Poll health until recovery or timeout
+                for _ in range(self._HEALTH_POLL_RETRIES):
+                    await asyncio.sleep(self._HEALTH_POLL_INTERVAL)
+                    try:
+                        hresp = await client.get(health_endpoint)
+                        if hresp.status_code == 200:
+                            actions.append("Service recovered after restart")
+                            success = True
+                            break
+                    except Exception:
+                        pass
+        except Exception as exc:
+            actions.append(f"Restart failed: {exc}")
+            logger.warning("[ServiceUnreachableBot] Restart attempt failed: %s", exc)
 
-            if success:
-                self._update_success_rate(True)
-                return BotResult(
-                    bot_id=self.bot_id,
-                    failure_mode=self.failure_mode,
-                    service_id=service_id,
-                    success=True,
-                    action_taken="; ".join(actions),
-                    duration_ms=(time.perf_counter() - t0) * 1000.0,
-                )
+        if success:
+            self._update_success_rate(True)
+            return BotResult(
+                bot_id=self.bot_id,
+                failure_mode=self.failure_mode,
+                service_id=service_id,
+                success=True,
+                action_taken="; ".join(actions),
+                duration_ms=(time.perf_counter() - t0) * 1000.0,
+            )
 
-            # Strategy 2: failover to replica
-            try:
-                replica_url = context.get(
-                    "replica_endpoint", f"{endpoint}-replica"
-                )
-                failover_resp = await client.post(
-                    f"{endpoint}/admin/failover",
-                    json={
-                        "target": replica_url,
-                        "mode": "active-passive",
-                        "reason": "primary_unreachable",
-                    },
-                )
-                if failover_resp.status_code < 300:
-                    actions.append(f"Failover to replica {replica_url}")
-                    success = True
-            except Exception as exc:
-                actions.append(f"Failover failed: {exc}")
-                logger.warning("[ServiceUnreachableBot] Failover failed: %s", exc)
+        # Strategy 2: failover to replica
+        try:
+            replica_url = context.get(
+                "replica_endpoint", f"{endpoint}-replica"
+            )
+            failover_resp = await client.post(
+                f"{endpoint}/admin/failover",
+                json={
+                    "target": replica_url,
+                    "mode": "active-passive",
+                    "reason": "primary_unreachable",
+                },
+            )
+            if failover_resp.status_code < 300:
+                actions.append(f"Failover to replica {replica_url}")
+                success = True
+        except Exception as exc:
+            actions.append(f"Failover failed: {exc}")
+            logger.warning("[ServiceUnreachableBot] Failover failed: %s", exc)
 
-            if success:
-                self._update_success_rate(True)
-                return BotResult(
-                    bot_id=self.bot_id,
-                    failure_mode=self.failure_mode,
-                    service_id=service_id,
-                    success=True,
-                    action_taken="; ".join(actions),
-                    duration_ms=(time.perf_counter() - t0) * 1000.0,
-                )
+        if success:
+            self._update_success_rate(True)
+            return BotResult(
+                bot_id=self.bot_id,
+                failure_mode=self.failure_mode,
+                service_id=service_id,
+                success=True,
+                action_taken="; ".join(actions),
+                duration_ms=(time.perf_counter() - t0) * 1000.0,
+            )
 
-            # Strategy 3: circuit breaker
-            try:
-                cb_resp = await client.post(
-                    f"{endpoint}/admin/circuit_breaker/open",
-                    json={
-                        "duration_sec": 300,
-                        "reason": "auto_repair_all_strategies_failed",
-                    },
-                )
-                if cb_resp.status_code < 300:
-                    actions.append("Circuit breaker activated (300 s)")
-                    # Partial success: at least we stopped the bleeding
-                    success = True
-            except Exception as exc:
-                actions.append(f"Circuit breaker failed: {exc}")
-                logger.error("[ServiceUnreachableBot] All strategies failed: %s", exc)
+        # Strategy 3: circuit breaker
+        try:
+            cb_resp = await client.post(
+                f"{endpoint}/admin/circuit_breaker/open",
+                json={
+                    "duration_sec": 300,
+                    "reason": "auto_repair_all_strategies_failed",
+                },
+            )
+            if cb_resp.status_code < 300:
+                actions.append("Circuit breaker activated (300 s)")
+                # Partial success: at least we stopped the bleeding
+                success = True
+        except Exception as exc:
+            actions.append(f"Circuit breaker failed: {exc}")
+            logger.error("[ServiceUnreachableBot] All strategies failed: %s", exc)
 
         self._update_success_rate(success)
         return BotResult(

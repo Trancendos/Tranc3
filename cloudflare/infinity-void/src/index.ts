@@ -30,6 +30,23 @@ export interface Env {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const ALLOWED_ORIGINS = new Set([
+  "https://trancendos.com",
+  "https://api.trancendos.com",
+  "https://arcadia.trancendos.com",
+]);
+
+function corsHeaders(origin?: string | null): Record<string, string> {
+  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://trancendos.com";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-Request-ID, X-MFA-Token, X-Hardware-Key, X-Lighthouse-Token, X-Internal-Secret",
+    "Vary": "Origin",
+  };
+}
+
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -48,15 +65,6 @@ function errorResponse(message: string, status = 400, code = "ERROR"): Response 
     { error: { message, code, status }, timestamp: new Date().toISOString() },
     status,
   );
-}
-
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers":
-      "Content-Type, Authorization, X-Request-ID, X-MFA-Token, X-Hardware-Key, X-Lighthouse-Token, X-Internal-Secret",
-  };
 }
 
 async function d1Query<T = Record<string, unknown>>(
@@ -100,6 +108,15 @@ async function checkRateLimit(
 
 // ── Crypto ────────────────────────────────────────────────────────────────────
 
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const CHUNK = 8192;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
 async function deriveKey(seed: string, salt: Uint8Array): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
@@ -133,10 +150,10 @@ async function encryptSecret(
   const ciphertext = encryptedArray.slice(0, -16);
   const tag = encryptedArray.slice(-16);
   return {
-    ciphertext: btoa(String.fromCharCode(...ciphertext)),
-    iv: btoa(String.fromCharCode(...iv)),
-    salt: btoa(String.fromCharCode(...salt)),
-    tag: btoa(String.fromCharCode(...tag)),
+    ciphertext: uint8ToBase64(ciphertext),
+    iv: uint8ToBase64(iv),
+    salt: uint8ToBase64(salt),
+    tag: uint8ToBase64(tag),
   };
 }
 
@@ -469,38 +486,50 @@ export default {
     const path = url.pathname;
     const method = request.method;
 
+    const origin = request.headers.get("Origin");
+    const cors = corsHeaders(origin);
+
     if (method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders() });
+      return new Response(null, { status: 204, headers: cors });
     }
 
     await initSchema(env.DB).catch(console.error);
 
+    let response: Response;
     try {
-      if (method === "GET" && path === "/health") return handleHealth(env);
-      if (method === "GET" && path === "/vault/status") return handleVaultStatus(env);
-
-      const userId = await getAuthUserId(request, env);
-      if (!userId) return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
-
-      if (method === "POST" && path === "/secrets") return handleStoreSecret(request, env);
-      if (method === "POST" && path === "/secrets/retrieve") return handleRetrieveSecret(request, env);
-      if (method === "GET" && path === "/secrets") return handleListSecrets(userId, env);
-
-      const secretMatch = path.match(/^\/secrets\/([\w-]+)$/);
-      if (secretMatch) {
-        const secretId = secretMatch[1];
-        if (method === "GET") return handleGetSecretMeta(secretId, userId, env);
-        if (method === "DELETE") return handleDeleteSecret(secretId, userId, env, request);
+      if (method === "GET" && path === "/health") response = await handleHealth(env);
+      else if (method === "GET" && path === "/vault/status") response = await handleVaultStatus(env);
+      else {
+        const userId = await getAuthUserId(request, env);
+        if (!userId) response = errorResponse("Unauthorized", 401, "UNAUTHORIZED");
+        else if (method === "POST" && path === "/secrets") response = await handleStoreSecret(request, env);
+        else if (method === "POST" && path === "/secrets/retrieve") response = await handleRetrieveSecret(request, env);
+        else if (method === "GET" && path === "/secrets") response = await handleListSecrets(userId, env);
+        else {
+          const secretMatch = path.match(/^\/secrets\/([\w-]+)$/);
+          if (secretMatch) {
+            const secretId = secretMatch[1];
+            if (method === "GET") response = await handleGetSecretMeta(secretId, userId, env);
+            else if (method === "DELETE") response = await handleDeleteSecret(secretId, userId, env, request);
+            else response = errorResponse("Method not allowed", 405, "METHOD_NOT_ALLOWED");
+          } else {
+            const auditMatch = path.match(/^\/secrets\/([\w-]+)\/audit$/);
+            if (auditMatch && method === "GET") response = await handleGetAuditLog(auditMatch[1], userId, env);
+            else response = errorResponse("Not found", 404, "NOT_FOUND");
+          }
+        }
       }
-
-      const auditMatch = path.match(/^\/secrets\/([\w-]+)\/audit$/);
-      if (auditMatch && method === "GET") return handleGetAuditLog(auditMatch[1], userId, env);
-
-      return errorResponse("Not found", 404, "NOT_FOUND");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Internal server error";
       console.error("VOID error:", msg);
-      return errorResponse(msg, 500, "INTERNAL_ERROR");
+      response = errorResponse(msg, 500, "INTERNAL_ERROR");
     }
+
+    // Attach CORS headers to every response
+    const mutableResponse = new Response(response.body, response);
+    for (const [k, v] of Object.entries(cors)) {
+      mutableResponse.headers.set(k, v);
+    }
+    return mutableResponse;
   },
 };

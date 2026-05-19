@@ -16,10 +16,11 @@ import time
 import uuid
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.auth.dependencies import get_current_user
 from .tools import registry
 
 logger = logging.getLogger(__name__)
@@ -276,7 +277,7 @@ router = APIRouter(prefix="/mcp", tags=["mcp"])
 
 
 @router.post("/rpc")
-async def rpc_endpoint(request: Request) -> JSONResponse:
+async def rpc_endpoint(request: Request, current_user: dict = Depends(get_current_user)) -> JSONResponse:
     """
     JSON-RPC 2.0 entry-point.  Accepts a single request object or a batch array.
     """
@@ -338,7 +339,7 @@ async def rpc_endpoint(request: Request) -> JSONResponse:
 
 
 @router.get("/sse")
-async def sse_endpoint(request: Request) -> StreamingResponse:
+async def sse_endpoint(request: Request, current_user: dict = Depends(get_current_user)) -> StreamingResponse:
     """
     Server-Sent Events stream.  Clients connect here to receive async events
     (tool_result, progress, error) from The Spark, and lifecycle events

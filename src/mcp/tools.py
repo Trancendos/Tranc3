@@ -13,6 +13,24 @@ from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Restricted built-ins for execute_code sandbox
+# ---------------------------------------------------------------------------
+
+_SAFE_BUILTINS = {
+    k: __builtins__[k] if isinstance(__builtins__, dict) else getattr(__builtins__, k, None)
+    for k in (
+        "abs", "all", "any", "bool", "bytes", "chr", "dict", "dir", "divmod",
+        "enumerate", "filter", "float", "format", "frozenset", "getattr",
+        "hasattr", "hash", "hex", "int", "isinstance", "issubclass", "iter",
+        "len", "list", "map", "max", "min", "next", "oct", "ord", "pow",
+        "print", "range", "repr", "reversed", "round", "set", "slice",
+        "sorted", "str", "sum", "tuple", "type", "zip",
+    )
+    if (isinstance(__builtins__, dict) and k in __builtins__)
+    or (not isinstance(__builtins__, dict) and hasattr(__builtins__, k))
+}
+
 
 # ---------------------------------------------------------------------------
 # Digital Grid Registry — maps workflow_id → WorkflowDefinition
@@ -871,11 +889,14 @@ class SparkToolRegistry:
         }
 
     async def _handle_execute_code(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        if not params.get("__admin__"):
+            return {"error": "execute_code is restricted to admin callers", "code": -32603}
+
         code = params["code"]
         timeout_seconds = int(params.get("timeout_seconds", 30))
         context = params.get("context", {})
 
-        namespace: Dict[str, Any] = {"__builtins__": __builtins__}
+        namespace: Dict[str, Any] = {"__builtins__": _SAFE_BUILTINS}
         namespace.update(context)
 
         stdout_lines: List[str] = []

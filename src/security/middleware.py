@@ -64,6 +64,15 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
                 if cx.is_blocked(ip=ip):
                     return _JSONResponse({"error": "Access denied"}, status_code=403,
                                          headers={"X-Request-ID": request_id})
+                # Reject oversized bodies before buffering to prevent OOM
+                MAX_BODY = 1 * 1024 * 1024  # 1 MB
+                content_length = request.headers.get("content-length")
+                if content_length and int(content_length) > MAX_BODY:
+                    return _JSONResponse(
+                        {"error": "Request body too large"},
+                        status_code=413,
+                        headers={"X-Request-ID": request_id},
+                    )
                 body_bytes = await request.body()
                 body_text = body_bytes.decode("utf-8", errors="replace")[:1000]
                 signals = cx.analyse_request(path=path, body=body_text,

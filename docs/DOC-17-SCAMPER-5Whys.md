@@ -127,7 +127,7 @@ Each letter interrogates the current state and produces a concrete action.
 | `Directory.csharp`, `Auto.ruby` | Wrong language files in Python project | Delete |
 | `atest` | Unknown file, no extension | Delete |
 | `Results.yaml` | Unknown purpose, no references | Delete |
-| Duplicate CI/CD files | `tranc3-cicd-pipeline.code.yaml` duplicates `.github/workflows/ci-cd.yml` | Delete |
+| Duplicate CI/CD files | `tranc3-cicd-pipeline.code.yaml` duplicates `.forgejo/workflows/` | Delete |
 | `tranc3-docker-compose.code.yaml` | Duplicate of `docker-compose.yml` | Delete |
 | `tranc3-dockerfiles.md` | Superseded by actual Dockerfiles | Delete |
 | CORS `allow_origins=["*"]` | Security risk in production | Replace with env var |
@@ -331,4 +331,4 @@ Consolidated, prioritised, ready to implement.
 | 17 | Replace pgvector for Pinecone | SCAMPER-S | `src/database/` |
 | 18 | Add GovernanceMiddleware (auth+rate+sanitise+compliance) | SCAMPER-C | `api.py` |
 | 19 | Add GitHub Issues for all stubs | 5W#3 | GitHub |
-| 20 | Add PR template with wiring checklist | 5W#5 | `.github/` |
+| 20 | Add PR template with wiring checklist | 5W#5 | `.forgejo/` |

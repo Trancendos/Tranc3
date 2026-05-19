@@ -138,9 +138,9 @@ async def lifespan(app: FastAPI):
     # Tokenizer
     try:
         tokenizer = MultilingualTokenizer(cfg)
-        logger.info(f"Tokenizer ready: {cfg.supported_languages}")
+        logger.info("Tokenizer ready")
     except Exception as e:
-        logger.error(f"Tokenizer failed: {e}")
+        logger.error("Tokenizer failed")
 
     # Personality matrix
     try:
@@ -484,7 +484,7 @@ async def features():
 # ── Inference ─────────────────────────────────────────────────────────────────
 @app.post("/chat", response_model=ChatResponse, tags=["inference"])
 async def chat(
-    request: ChatRequest,
+    chat_req: ChatRequest,
     background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
 ):
@@ -494,10 +494,10 @@ async def chat(
     tier       = current_user.get("tier", "free")
 
     # Sanitise input — blocks XSS, SQLi, path traversal, prompt injection
-    InputSanitizer.sanitize(request.message)
+    InputSanitizer.sanitize(chat_req.message)
 
     # IP protection — prompt injection + model extraction detection
-    ip_check = abuse_detector.check_message(request.message, user_id)
+    ip_check = abuse_detector.check_message(chat_req.message, user_id)
     if not ip_check["allowed"]:
         raise HTTPException(
             status_code=400,
@@ -505,7 +505,7 @@ async def chat(
         )
 
     # Compliance
-    compliance.check_request({"user_id": user_id, "message": request.message})
+    compliance.check_request({"user_id": user_id, "message": chat_req.message})
 
     # Rate limiting
     try:
@@ -519,31 +519,31 @@ async def chat(
 
     # Language validation
     supported = tokenizer.supported_languages if tokenizer else Config.supported_languages
-    if request.language not in supported:
+    if chat_req.language not in supported:
         raise HTTPException(status_code=400, detail=f"Unsupported language. Supported: {supported}")
 
     try:
         # Emotion detection
-        detected_emotion = request.user_emotion or "neutral"
+        detected_emotion = chat_req.user_emotion or "neutral"
         emotion_scores   = {"neutral": 1.0}
         if personality_matrix and getattr(personality_matrix, "emotion_detector", None):
-            emotion_scores   = personality_matrix.emotion_detector.detect_emotion(request.message)
+            emotion_scores   = personality_matrix.emotion_detector.detect_emotion(chat_req.message)
             detected_emotion = personality_matrix.emotion_detector.get_dominant_emotion(emotion_scores)
 
         # Compress conversation history if long
-        history = compressor.compress(request.conversation_history or [])
+        history = compressor.compress(chat_req.conversation_history or [])
 
         # Predictive analytics
         analysis = analytics.analyse_request(
-            user_id=user_id, message=request.message,
-            emotion=detected_emotion, language=request.language,
-            personality=request.personality,
+            user_id=user_id, message=chat_req.message,
+            emotion=detected_emotion, language=chat_req.language,
+            personality=chat_req.personality,
         )
 
         # Foresight
         foresight_result = foresight.analyse(
-            session_id=request.session_id or user_id,
-            user_message=request.message,
+            session_id=chat_req.session_id or user_id,
+            user_message=chat_req.message,
             emotion=detected_emotion,
             intent=analysis.get("dominant_intent", "question"),
             churn_risk=analysis.get("churn_probability", 0.0),
@@ -554,14 +554,14 @@ async def chat(
         personality_vector = None
         if personality_matrix:
             personality_vector = personality_matrix.get_personality_vector(
-                request.personality, emotion_scores, request.language
+                chat_req.personality, emotion_scores, chat_req.language
             )
 
         # Encode
         encoded = None
         if tokenizer:
             encoded = tokenizer.encode(
-                request.message, language=request.language, return_tensors=True
+                chat_req.message, language=chat_req.language, return_tensors=True
             )
 
         # Quantum attention
@@ -592,9 +592,9 @@ async def chat(
                 ),
                 fallback=lambda: None,
             )
-            response_text = f"[TRANC3] {request.message[:80]}..." if result else f"[Echo] {request.message}"
+            response_text = f"[TRANC3] {chat_req.message[:80]}..." if result else f"[Echo] {chat_req.message}"
         else:
-            response_text = f"[Echo] {request.message}"
+            response_text = f"[Echo] {chat_req.message}"
 
         # Watermark response for IP protection
         response_text = watermarker.watermark(response_text, request_id)
@@ -603,33 +603,33 @@ async def chat(
 
         # Quality scoring
         quality = analytics.score_response(
-            response=response_text, user_message=request.message,
+            response=response_text, user_message=chat_req.message,
             emotion=detected_emotion, processing_time_ms=processing_ms,
         )
 
         # Observability
         record_request("/chat", "POST", 200, tier, processing_ms / 1000)
-        record_emotion(detected_emotion, request.language)
+        record_emotion(detected_emotion, chat_req.language)
         record_churn_risk(analysis.get("churn_probability", 0.0))
         record_quality(quality["quality_scores"].get("overall", 0.0))
 
         # Background tasks
         background_tasks.add_task(
             _log_conversation, user_id, request_id,
-            request.language, request.personality, detected_emotion, processing_ms,
+            chat_req.language, chat_req.personality, detected_emotion, processing_ms,
         )
         background_tasks.add_task(
             _persist_conversation, user_id, request_id,
-            request.message, response_text, request.language,
-            request.personality, detected_emotion, processing_ms,
+            chat_req.message, response_text, chat_req.language,
+            chat_req.personality, detected_emotion, processing_ms,
             phi_score, quantum_used,
         )
 
         return ChatResponse(
             response=response_text,
             detected_emotion=detected_emotion,
-            language=request.language,
-            personality=request.personality,
+            language=chat_req.language,
+            personality=chat_req.personality,
             timestamp=datetime.datetime.utcnow(),
             processing_time_ms=round(processing_ms, 2),
             request_id=request_id,
@@ -728,7 +728,7 @@ async def billing_checkout(tier: str, current_user: dict = Depends(get_current_u
         current_user["id"], tier, f"{base}/billing/success", f"{base}/billing/cancel"
     )
     if not url:
-        raise HTTPException(status_code=503, detail="Stripe not configured — set STRIPE_SECRET_KEY")
+        raise HTTPException(status_code=503, detail="Stripe not configured")
     return {"checkout_url": url, "tier": tier}
 
 
