@@ -481,6 +481,182 @@ class SparkToolRegistry:
                 handler=self._handle_ingest_document,
                 category="knowledge",
             ),
+            # ── Luminous (Consciousness + Neuromorphic) ────────────────────
+            SparkTool(
+                name="luminous_phi",
+                description=(
+                    "Calculate Φ (integrated information / consciousness score) for a "
+                    "given probability state vector using IIT (Integrated Information "
+                    "Theory). Part of the Luminous AI intelligence core."
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "state": {
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "description": "Probability state vector (list of floats, auto-normalised).",
+                        },
+                    },
+                    "required": ["state"],
+                },
+                handler=self._handle_luminous_phi,
+                category="ai",
+            ),
+            SparkTool(
+                name="luminous_process",
+                description=(
+                    "Run input through the Luminous neuromorphic spiking neural network. "
+                    "Returns spike-encoded output tensor. Used for bio-inspired pattern "
+                    "recognition and temporal signal processing."
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "input": {
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "description": "Input float vector to process.",
+                        },
+                        "timesteps": {
+                            "type": "integer",
+                            "description": "Simulation timesteps (default 10).",
+                            "default": 10,
+                        },
+                    },
+                    "required": ["input"],
+                },
+                handler=self._handle_luminous_process,
+                category="ai",
+            ),
+            # ── Think Tank (Quantum + DeepMind Planning) ───────────────────
+            SparkTool(
+                name="quantum_simulate",
+                description=(
+                    "Run a quantum circuit simulation via Qiskit Aer (Think Tank). "
+                    "Creates a Bell-state entanglement circuit for the given qubit count "
+                    "and returns measurement outcome probabilities."
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "qubits": {
+                            "type": "integer",
+                            "description": "Number of qubits (default 2).",
+                            "default": 2,
+                        },
+                        "shots": {
+                            "type": "integer",
+                            "description": "Measurement shots (default 1024).",
+                            "default": 1024,
+                        },
+                    },
+                },
+                handler=self._handle_quantum_simulate,
+                category="research",
+            ),
+            SparkTool(
+                name="deepmind_plan",
+                description=(
+                    "Generate a structured action plan for a problem using the Think Tank "
+                    "MCTS (Monte Carlo Tree Search) planning engine."
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "problem": {
+                            "type": "string",
+                            "description": "Problem description or goal statement.",
+                        },
+                        "depth": {
+                            "type": "integer",
+                            "description": "Planning depth / tree expansion depth (default 3).",
+                            "default": 3,
+                        },
+                    },
+                    "required": ["problem"],
+                },
+                handler=self._handle_deepmind_plan,
+                category="research",
+            ),
+            # ── The Citadel (DevOps) ───────────────────────────────────────
+            SparkTool(
+                name="citadel_deploy_status",
+                description=(
+                    "Query The Citadel for current deployment and service health status. "
+                    "Returns healthy/unhealthy service counts and recent deploy history."
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "target": {
+                            "type": "string",
+                            "description": (
+                                "Optional deploy target to filter by. One of: "
+                                "tranc3-backend, tranc3-bots, tranc3-ai, infinity-void, "
+                                "trancendos-api-gateway"
+                            ),
+                        },
+                    },
+                },
+                handler=self._handle_citadel_deploy_status,
+                category="devops",
+            ),
+            # ── The Observatory (Audit / Events) ───────────────────────────
+            SparkTool(
+                name="observatory_observe",
+                description=(
+                    "Emit a structured audit event to The Observatory. All platform "
+                    "actions, AI decisions, and security events should be observable. "
+                    "Events with category=SECURITY and severity=critical are also "
+                    "forwarded to The Basement for long-term archival."
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "event_type": {
+                            "type": "string",
+                            "description": "Dot-separated event type e.g. 'spark.tool.called'.",
+                        },
+                        "category": {
+                            "type": "string",
+                            "description": "Event category: AI, SYSTEM, SECURITY, USER, WORKFLOW.",
+                            "default": "AI",
+                        },
+                        "service": {
+                            "type": "string",
+                            "description": "Originating service name.",
+                            "default": "the-spark",
+                        },
+                        "metadata": {
+                            "type": "object",
+                            "description": "Arbitrary key-value metadata for the event.",
+                        },
+                    },
+                    "required": ["event_type"],
+                },
+                handler=self._handle_observatory_observe,
+                category="observability",
+            ),
+            # ── The Digital Grid (Workflow introspection) ──────────────────
+            SparkTool(
+                name="grid_list_workflows",
+                description=(
+                    "List all registered workflows in The Digital Grid, with their "
+                    "status, node counts, and last execution results."
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "description": "Filter by status: active, idle, error.",
+                        },
+                    },
+                },
+                handler=self._handle_grid_list_workflows,
+                category="workflow",
+            ),
         ]
 
         for tool in builtins:
@@ -883,6 +1059,136 @@ class SparkToolRegistry:
             result["lineage"] = []
 
         return result
+
+    # ── Luminous handlers ─────────────────────────────────────────────────
+
+    async def _handle_luminous_phi(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            import numpy as np
+            from src.bio_neural.consciousness_engine import IITCalculator
+
+            state = params["state"]
+            arr = np.array(state, dtype=float)
+            if arr.sum() > 0:
+                arr = arr / arr.sum()
+            calc = IITCalculator()
+            phi = calc.calculate_phi(arr) if hasattr(calc, "calculate_phi") else 0.0
+            return {"phi": float(phi), "state_dim": len(state)}
+        except ImportError as exc:
+            return {"phi": 0.0, "note": f"Luminous degraded — missing dependency: {exc}"}
+        except Exception as exc:
+            return {"error": str(exc)}
+
+    async def _handle_luminous_process(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            import torch
+            from src.bio_neural.neuromorphic import NeuromorphicProcessor
+
+            input_data = params["input"]
+            timesteps = int(params.get("timesteps", 10))
+            processor = NeuromorphicProcessor({})
+            tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)
+            result = (
+                processor.process(tensor, timesteps=timesteps)
+                if hasattr(processor, "process")
+                else {"note": "neuromorphic scaffold — wire input dimensions to activate"}
+            )
+            if hasattr(result, "tolist"):
+                result = result.tolist()
+            return {"input_dim": len(input_data), "timesteps": timesteps, "output": result}
+        except ImportError as exc:
+            return {"output": None, "note": f"Luminous degraded — missing dependency: {exc}"}
+        except Exception as exc:
+            return {"error": str(exc)}
+
+    # ── Think Tank handlers ───────────────────────────────────────────────
+
+    async def _handle_quantum_simulate(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            from qiskit import QuantumCircuit
+            from qiskit_aer import AerSimulator
+
+            qubits = int(params.get("qubits", 2))
+            shots = int(params.get("shots", 1024))
+            qc = QuantumCircuit(qubits, qubits)
+            qc.h(0)
+            for i in range(qubits - 1):
+                qc.cx(i, i + 1)
+            qc.measure_all()
+            sim = AerSimulator()
+            job = sim.run(qc, shots=shots)
+            counts = job.result().get_counts()
+            return {"qubits": qubits, "shots": shots, "counts": dict(counts)}
+        except ImportError:
+            return {"counts": {}, "note": "Think Tank degraded — qiskit not installed"}
+        except Exception as exc:
+            return {"error": str(exc)}
+
+    async def _handle_deepmind_plan(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            from src.deepmind.planning import PlanningEngine
+
+            problem = params["problem"]
+            depth = int(params.get("depth", 3))
+            engine = PlanningEngine()
+            plan = engine.plan(problem, depth=depth) if hasattr(engine, "plan") else {
+                "note": "planning engine scaffold — wire problem space to activate"
+            }
+            return {"problem": problem, "depth": depth, "plan": plan}
+        except Exception as exc:
+            return {"problem": params.get("problem", ""), "plan": None, "error": str(exc)[:120]}
+
+    # ── The Citadel handler ───────────────────────────────────────────────
+
+    async def _handle_citadel_deploy_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            from src.citadel.devops_hub import DeployTarget, get_citadel
+
+            citadel = get_citadel()
+            target_filter = params.get("target")
+            target = None
+            if target_filter:
+                try:
+                    target = DeployTarget(target_filter)
+                except ValueError:
+                    return {"error": f"Unknown target: {target_filter}"}
+
+            deploys = [d.to_dict() for d in citadel.list_deploys(target=target)]
+            stats = citadel.stats()
+            return {**stats, "recent_deploys": deploys[:10]}
+        except Exception as exc:
+            return {"error": str(exc)}
+
+    # ── The Observatory handler ───────────────────────────────────────────
+
+    async def _handle_observatory_observe(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            from src.observability.observatory import EventCategory, observe
+
+            event_type = params["event_type"]
+            raw_cat = params.get("category", "AI").upper()
+            try:
+                category = EventCategory[raw_cat]
+            except KeyError:
+                category = EventCategory.AI
+            service = params.get("service", "the-spark")
+            metadata = params.get("metadata") or {}
+            observe(event_type, category=category, service=service, metadata=metadata)
+            return {"observed": True, "event_type": event_type, "category": raw_cat}
+        except Exception as exc:
+            return {"observed": False, "error": str(exc)}
+
+    # ── The Digital Grid handler ──────────────────────────────────────────
+
+    async def _handle_grid_list_workflows(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        status_filter = params.get("status")
+        workflows = self._grid_registry.list_all()
+        if status_filter:
+            workflows = [w for w in workflows if w.get("status") == status_filter]
+        return {
+            "total": len(workflows),
+            "workflows": workflows,
+        }
 
 
 # Singleton Spark tool registry — import this throughout the codebase
