@@ -171,7 +171,7 @@ class Tranc3Engine:
             self.load()
 
         if self._bootstrap_mode:
-            return self._bootstrap_response(prompt, personality)
+            return await self._bootstrap_response_async(prompt, personality, system_prompt)
 
         # Build chat-formatted input
         sys_text = system_prompt or self._default_system(personality)
@@ -234,11 +234,40 @@ class Tranc3Engine:
         }
         return systems.get(personality, "You are TRANC3, an advanced AI assistant.")
 
-    def _bootstrap_response(self, prompt: str, personality: str) -> Dict[str, Any]:
+    async def _bootstrap_response_async(
+        self,
+        prompt: str,
+        personality: str,
+        override_system: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
-        Returned when model weights are not yet available.
-        Gives an honest, useful response rather than pretending to be trained.
+        Async bootstrap: tries Ollama (free local) → OpenRouter (free cloud) →
+        honest stub.  Called from generate() when model weights are absent.
         """
+        sys_text = override_system or self._default_system(personality)
+
+        # Tier 1: local Ollama (zero-cost, fully self-owned)
+        try:
+            from src.core.ollama_adapter import is_available, generate as ollama_gen
+            if await is_available():
+                result = await ollama_gen(prompt=prompt, system_prompt=sys_text)
+                if result:
+                    result["personality"] = personality
+                    return result
+        except Exception as exc:
+            logger.debug("tranc3.bootstrap ollama: %s", exc)
+
+        # Tier 2: OpenRouter free models (cloud, zero-cost)
+        try:
+            from src.core.openrouter_adapter import generate as or_gen
+            result = await or_gen(prompt=prompt, system_prompt=sys_text)
+            if result:
+                result["personality"] = personality
+                return result
+        except Exception as exc:
+            logger.debug("tranc3.bootstrap openrouter: %s", exc)
+
+        # Tier 3: honest stub
         return {
             "response": (
                 f"TRANC3 ({personality}) is initialising. "
@@ -247,9 +276,25 @@ class Tranc3Engine:
                 "then restart the service. "
                 f"Your message was: '{prompt[:100]}'"
             ),
-            "personality":    personality,
-            "model":          "tranc3-bootstrap",
-            "trained":        False,
+            "personality":     personality,
+            "model":           "tranc3-bootstrap",
+            "trained":         False,
+            "action_required": "python train.py",
+        }
+
+    def _bootstrap_response(self, prompt: str, personality: str) -> Dict[str, Any]:
+        """Synchronous bootstrap stub — used only by generate_sync()."""
+        return {
+            "response": (
+                f"TRANC3 ({personality}) is initialising. "
+                "The language model weights are not yet trained. "
+                "Run `python train.py` to train the Tranc3 model from scratch, "
+                "then restart the service. "
+                f"Your message was: '{prompt[:100]}'"
+            ),
+            "personality":     personality,
+            "model":           "tranc3-bootstrap",
+            "trained":         False,
             "action_required": "python train.py",
         }
 
