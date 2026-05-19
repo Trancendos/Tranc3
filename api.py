@@ -286,6 +286,22 @@ app.include_router(_tranquility_router)
 from src.resonate.routes import router as _resonate_router
 app.include_router(_resonate_router)
 
+# ── The Studio (creativity hub — Sasha's Photo, TateKing, TranceFlow, Fabulousa)
+from src.studio.routes import router as _studio_router
+app.include_router(_studio_router)
+
+# ── The Lab (AI code creation platform) ──────────────────────────────────────
+from src.lab.routes import router as _lab_router
+app.include_router(_lab_router)
+
+# ── ChronosSphere / ArcStream (time + schedule management) ───────────────────
+from src.chronos.routes import router as _chronos_router
+app.include_router(_chronos_router)
+
+# ── Turing's Hub (AI personality creation centre) ────────────────────────────
+from src.personality.turingshub.routes import router as _turingshub_router
+app.include_router(_turingshub_router)
+
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
 if os.path.isdir(_FRONTEND_DIST):
