@@ -1,0 +1,30 @@
+# TRANC3 — Extended AI/ML Dependencies (Optional)
+# Only install if you need LangChain, Transformers, Qiskit, or LangFuse
+# Updated: 2025-07 — CVE Remediation
+
+# === AI Orchestration ===
+# Fixes: CVE-2024-7042 (SQL injection), CVE-2024-7774 (SSRF),
+#        CVE-2024-58340 (deserialization), CVE-2024-5998 (XSS in agent output),
+#        CVE-2024-3095 (prompt injection), CVE-2026-41481 (data exfiltration),
+#        CVE-2026-41488 (tool execution), CVE-2026-45134 (arbitrary code exec)
+langchain==1.3.1
+
+# Fixes: CVE-2025-6984 (prompt injection in community tools)
+langchain-community==0.4.1
+
+# === NLP / Model Hub ===
+# Fixes: CVE-2024-11394, CVE-2024-11393, CVE-2024-11392 (unsafe deserialization),
+#        CVE-2026-1839 (pickle RCE), CVE-2025-6638 (path traversal),
+#        CVE-2025-2099 (model loading RCE), CVE-2025-6921 (arbitrary file write),
+#        CVE-2024-12720 (tokenization overflow), CVE-2025-1194 (DoS),
+#        CVE-2025-3264, CVE-2025-3263, CVE-2025-3933, CVE-2025-5197,
+#        CVE-2025-6051, CVE-2025-3777
+transformers==5.8.1
+
+# === Quantum Computing ===
+# Fixes: CVE-2025-2000 (RCE), CVE-2025-1403 (information disclosure)
+qiskit==2.4.1
+
+# === Observability ===
+# Fixes: CVE-2025-9799 (SSRF in LangFuse)
+langfuse==4.6.1
