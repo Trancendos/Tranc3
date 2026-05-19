@@ -302,6 +302,18 @@ app.include_router(_chronos_router)
 from src.personality.turingshub.routes import router as _turingshub_router
 app.include_router(_turingshub_router)
 
+# ── DevOcity (developer centre — API keys, webhooks, guides) ─────────────────
+from src.devocity.routes import router as _devocity_router
+app.include_router(_devocity_router)
+
+# ── The Artifactory (OCI artefact repository — Zot foundation) ───────────────
+from src.artifactory.routes import router as _artifactory_router
+app.include_router(_artifactory_router)
+
+# ── API Marketplace (connector hub — Gravitee.io foundation) ─────────────────
+from src.apimarket.routes import router as _apimarket_router
+app.include_router(_apimarket_router)
+
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
 if os.path.isdir(_FRONTEND_DIST):
