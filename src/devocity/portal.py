@@ -145,15 +145,98 @@ _GUIDES: List[Dict[str, Any]] = [
 ]
 
 
+_ACCOUNT_TTL = 365 * 86400  # 1 year — API keys must outlive process restarts
+
+
 class DevOcity:
-    """DevOcity — developer portal and API key management."""
+    """DevOcity — developer portal and API key management. Persisted to Redis."""
 
     def __init__(self):
         self._accounts: Dict[str, DeveloperAccount] = {}
+        self._loaded = False
+
+    async def _ensure_loaded(self) -> None:
+        if self._loaded:
+            return
+        self._loaded = True
+        try:
+            from src.core.redis_store import get_store
+            import dataclasses
+            store = await get_store()
+            keys = await store.keys("devocity:account:*")
+            for key in keys:
+                data = await store.get(key)
+                if not data:
+                    continue
+                try:
+                    acct = DeveloperAccount(
+                        user_id=data["user_id"],
+                        display_name=data["display_name"],
+                    )
+                    acct.id = data["id"]
+                    acct.created_at = data.get("created_at", acct.created_at)
+                    acct.api_keys = [
+                        ApiKey(
+                            developer_id=k["developer_id"],
+                            name=k["name"],
+                            key_prefix=k["key_prefix"],
+                            key_hash=k["key_hash"],
+                            scopes=[ApiKeyScope(s) for s in k.get("scopes", [])],
+                            revoked=k.get("revoked", False),
+                        )
+                        for k in data.get("api_keys", [])
+                    ]
+                    self._accounts[acct.id] = acct
+                except Exception:
+                    pass
+            logger.info("devocity: loaded %d accounts from Redis", len(self._accounts))
+        except Exception as exc:
+            logger.warning("devocity: Redis hydration skipped: %s", exc)
+
+    async def _persist_account(self, account: DeveloperAccount) -> None:
+        try:
+            from src.core.redis_store import get_store
+            store = await get_store()
+            data = {
+                "id": account.id,
+                "user_id": account.user_id,
+                "display_name": account.display_name,
+                "created_at": account.created_at,
+                "api_keys": [
+                    {
+                        "id": k.id,
+                        "developer_id": k.developer_id,
+                        "name": k.name,
+                        "key_prefix": k.key_prefix,
+                        "key_hash": k.key_hash,
+                        "scopes": [s.value for s in k.scopes],
+                        "revoked": k.revoked,
+                        "created_at": k.created_at,
+                    }
+                    for k in account.api_keys
+                ],
+                "webhooks": [
+                    {"id": w.id, "url": w.url, "events": w.events}
+                    for w in account.webhooks
+                ],
+            }
+            await store.set(f"devocity:account:{account.id}", data, ttl=_ACCOUNT_TTL)
+        except Exception:
+            pass
+
+    def _fire_persist(self, account: DeveloperAccount) -> None:
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self._persist_account(account))
+        except Exception:
+            pass
 
     def create_account(self, user_id: str, display_name: str) -> DeveloperAccount:
         account = DeveloperAccount(user_id=user_id, display_name=display_name)
         self._accounts[account.id] = account
+        self._fire_persist(account)
         self._emit("devocity.account.created", {"account_id": account.id, "user_id": user_id})
         logger.info("devocity: account created id=%s user=%s", account.id, user_id)
         return account
@@ -188,6 +271,7 @@ class DevOcity:
             scopes=scopes or [ApiKeyScope.READ],
         )
         account.api_keys.append(api_key)
+        self._fire_persist(account)
         self._emit("devocity.apikey.issued", {"account_id": account_id, "key_id": api_key.id})
         return plain, api_key
 
@@ -198,6 +282,7 @@ class DevOcity:
         for k in account.api_keys:
             if k.id == key_id:
                 k.revoked = True
+                self._fire_persist(account)
                 return True
         return False
 

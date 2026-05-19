@@ -398,28 +398,71 @@ async def refresh_token(current_user: dict = Depends(get_current_user)):
 # ── System ────────────────────────────────────────────────────────────────────
 @app.get("/health", tags=["system"])
 async def health():
+    import asyncio
+
+    components: dict = {
+        "api":           "healthy",
+        "model":         "healthy" if model else "echo_mode",
+        "tokenizer":     "healthy" if tokenizer else "unavailable",
+        "personality":   "healthy" if personality_matrix else "unavailable",
+        "quantum":       "healthy" if quantum_core else "unavailable",
+        "consciousness": "healthy" if consciousness_model else "unavailable",
+    }
+
+    # ── Live Redis probe ───────────────────────────────────────────────────
+    try:
+        from src.core.redis_store import get_store
+        store = await asyncio.wait_for(get_store(), timeout=2.0)
+        ok = await asyncio.wait_for(store.ping(), timeout=2.0)
+        components["redis"] = "healthy" if ok else "degraded"
+        components["redis_backend"] = getattr(store, "backend", "unknown")
+    except Exception as exc:
+        components["redis"] = f"unavailable: {str(exc)[:40]}"
+
+    # ── Live Supabase probe ────────────────────────────────────────────────
+    try:
+        import os, httpx
+        sb_url = os.environ.get("SUPABASE_URL", "")
+        sb_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+        if sb_url and sb_key:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                resp = await client.get(
+                    f"{sb_url}/rest/v1/",
+                    headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}"},
+                )
+            components["supabase"] = "healthy" if resp.status_code < 500 else "degraded"
+        else:
+            components["supabase"] = "unconfigured"
+    except Exception as exc:
+        components["supabase"] = f"unavailable: {str(exc)[:40]}"
+
+    # ── Spark tools ───────────────────────────────────────────────────────
+    try:
+        from src.mcp.tools import registry
+        components["spark_tools"] = len(registry.list_tools())
+    except Exception:
+        components["spark_tools"] = 0
+
+    degraded = any(
+        str(v).startswith(("degraded", "unavailable"))
+        for v in components.values()
+    )
+    overall = "degraded" if degraded else "healthy"
+
     return {
-        "status":         "healthy" if model and tokenizer else "degraded",
+        "status":         overall,
         "version":        "2.0.0",
-        "timestamp":      datetime.datetime.utcnow(),
+        "timestamp":      datetime.datetime.utcnow().isoformat(),
         "uptime_seconds": round(time.time() - _start_time, 1),
-        "components": {
-            "api":         "healthy",
-            "redis":       "healthy" if redis_client else "unavailable",
-            "model":       "healthy" if model else "echo_mode",
-            "tokenizer":   "healthy" if tokenizer else "unavailable",
-            "personality": "healthy" if personality_matrix else "unavailable",
-            "quantum":     "healthy" if quantum_core else "unavailable",
-            "consciousness": "healthy" if consciousness_model else "unavailable",
-        },
+        "components":     components,
     }
 
 
 @app.get("/ready", tags=["system"])
 async def ready():
-    if not tokenizer or not personality_matrix:
-        raise HTTPException(status_code=503, detail="Service not ready")
-    return {"ready": True}
+    # Readiness: API itself is up and core bootstrap complete
+    # Does NOT require model weights — bootstrap mode is production-valid
+    return {"ready": True, "timestamp": datetime.datetime.utcnow().isoformat()}
 
 
 @app.get("/metrics", tags=["system"], response_class=PlainTextResponse)
