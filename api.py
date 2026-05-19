@@ -231,6 +231,21 @@ app.add_middleware(GovernanceMiddleware)
 from src.mcp.server import router as _mcp_router
 app.include_router(_mcp_router)
 
+# ── The Observatory (audit log + event feed) ──────────────────────────────────
+from src.observability.routes import router as _observatory_router
+app.include_router(_observatory_router)
+
+# ── The Nexus (message bus — status endpoint) ─────────────────────────────────
+from fastapi import APIRouter as _APIRouter
+_nexus_router = _APIRouter(prefix="/nexus", tags=["nexus"])
+
+@_nexus_router.get("/status")
+async def nexus_status():
+    from src.nexus.hub import get_nexus
+    return get_nexus().status()
+
+app.include_router(_nexus_router)
+
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
 if os.path.isdir(_FRONTEND_DIST):
