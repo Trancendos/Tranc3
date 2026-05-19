@@ -25,13 +25,15 @@ logger = logging.getLogger(__name__)
 # Shared HTTP client (lazy singleton — avoids per-call connection overhead)
 # ---------------------------------------------------------------------------
 
-_shared_client: Optional[httpx.AsyncClient] = None
+_shared_clients: Dict[float, httpx.AsyncClient] = {}
 
 
 def _get_client(timeout: float = 15.0) -> httpx.AsyncClient:
-    global _shared_client
-    if _shared_client is None or _shared_client.is_closed:
-        _shared_client = httpx.AsyncClient(timeout=timeout)
+    client = _shared_clients.get(timeout)
+    if client is None or client.is_closed:
+        client = httpx.AsyncClient(timeout=timeout)
+        _shared_clients[timeout] = client
+    return client
     return _shared_client
 
 
