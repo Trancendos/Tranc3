@@ -86,14 +86,74 @@ _SERVICE_INVENTORY: List[Dict[str, Any]] = [
 ]
 
 
+_DEPLOY_TTL = 30 * 86400  # 30 days
+_HEALTH_TTL = 7 * 86400   # 7 days
+
+
 class TheCitadel:
-    """The Citadel — unified DevOps hub."""
+    """The Citadel — unified DevOps hub. Deploy records and health state persisted to Redis."""
 
     def __init__(self):
+        # In-memory cache — authoritative source of truth, backed by Redis async
         self._deploys: Dict[str, DeployRecord] = {}
         self._service_health: Dict[str, ServiceHealthStatus] = {
             s["name"]: ServiceHealthStatus.UNKNOWN for s in _SERVICE_INVENTORY
         }
+        self._loaded = False
+
+    async def _ensure_loaded(self) -> None:
+        """Hydrate in-memory state from Redis on first access."""
+        if self._loaded:
+            return
+        self._loaded = True
+        try:
+            from src.core.redis_store import get_store
+            store = await get_store()
+            # Load deploy records
+            keys = await store.keys("citadel:deploy:*")
+            for key in keys:
+                data = await store.get(key)
+                if data:
+                    try:
+                        rec = DeployRecord(
+                            id=data["id"],
+                            target=DeployTarget(data["target"]),
+                            version=data["version"],
+                            status=DeployStatus(data["status"]),
+                            triggered_by=data.get("triggered_by", "unknown"),
+                            started_at=data.get("started_at", time.time()),
+                            completed_at=data.get("completed_at"),
+                            error=data.get("error"),
+                        )
+                        self._deploys[rec.id] = rec
+                    except Exception:
+                        pass
+            # Load health state
+            health_data = await store.hgetall("citadel:health")
+            for svc, status_val in health_data.items():
+                try:
+                    self._service_health[svc] = ServiceHealthStatus(status_val)
+                except ValueError:
+                    pass
+            logger.info("citadel: loaded %d deploys from Redis", len(self._deploys))
+        except Exception as exc:
+            logger.warning("citadel: Redis hydration skipped: %s", exc)
+
+    async def _persist_deploy(self, record: DeployRecord) -> None:
+        try:
+            from src.core.redis_store import get_store
+            store = await get_store()
+            await store.set(f"citadel:deploy:{record.id}", record.to_dict(), ttl=_DEPLOY_TTL)
+        except Exception:
+            pass
+
+    async def _persist_health(self, service_name: str, status: ServiceHealthStatus) -> None:
+        try:
+            from src.core.redis_store import get_store
+            store = await get_store()
+            await store.hset("citadel:health", {service_name: status.value})
+        except Exception:
+            pass
 
     def inventory(self) -> List[Dict[str, Any]]:
         return [
@@ -101,7 +161,7 @@ class TheCitadel:
             for svc in _SERVICE_INVENTORY
         ]
 
-    def record_deploy(
+    async def record_deploy_async(
         self,
         target: DeployTarget,
         version: str,
@@ -109,6 +169,7 @@ class TheCitadel:
         status: DeployStatus = DeployStatus.PENDING,
     ) -> DeployRecord:
         import uuid
+        await self._ensure_loaded()
         record = DeployRecord(
             id=str(uuid.uuid4()),
             target=target,
@@ -117,6 +178,37 @@ class TheCitadel:
             triggered_by=triggered_by,
         )
         self._deploys[record.id] = record
+        await self._persist_deploy(record)
+        self._emit(f"citadel.deploy.{status.value}", {
+            "target": target.value, "version": version, "deploy_id": record.id
+        })
+        logger.info("citadel: deploy recorded target=%s version=%s status=%s", target.value, version, status.value)
+        return record
+
+    def record_deploy(
+        self,
+        target: DeployTarget,
+        version: str,
+        triggered_by: str = "forgejo",
+        status: DeployStatus = DeployStatus.PENDING,
+    ) -> DeployRecord:
+        """Sync wrapper — persists async via fire-and-forget."""
+        import asyncio, uuid
+        record = DeployRecord(
+            id=str(uuid.uuid4()),
+            target=target,
+            version=version,
+            status=status,
+            triggered_by=triggered_by,
+        )
+        self._deploys[record.id] = record
+        # Persist non-blocking
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self._persist_deploy(record))
+        except Exception:
+            pass
         self._emit(f"citadel.deploy.{status.value}", {
             "target": target.value, "version": version, "deploy_id": record.id
         })
@@ -129,6 +221,7 @@ class TheCitadel:
         status: DeployStatus,
         error: Optional[str] = None,
     ) -> Optional[DeployRecord]:
+        import asyncio
         record = self._deploys.get(deploy_id)
         if not record:
             return None
@@ -140,11 +233,24 @@ class TheCitadel:
                 self._service_health[record.target.value] = ServiceHealthStatus.HEALTHY
             elif status == DeployStatus.FAILED:
                 self._service_health[record.target.value] = ServiceHealthStatus.UNHEALTHY
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self._persist_deploy(record))
+        except Exception:
+            pass
         self._emit(f"citadel.deploy.{status.value}", {"deploy_id": deploy_id})
         return record
 
     def update_health(self, service_name: str, status: ServiceHealthStatus) -> None:
+        import asyncio
         self._service_health[service_name] = status
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self._persist_health(service_name, status))
+        except Exception:
+            pass
 
     def list_deploys(self, target: Optional[DeployTarget] = None) -> List[DeployRecord]:
         deploys = list(self._deploys.values())

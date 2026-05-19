@@ -1182,7 +1182,7 @@ class SparkToolRegistry:
 
     async def _handle_grid_list_workflows(self, params: Dict[str, Any]) -> Dict[str, Any]:
         status_filter = params.get("status")
-        workflows = self._grid_registry.list_all()
+        workflows = _grid_registry.list_all()
         if status_filter:
             workflows = [w for w in workflows if w.get("status") == status_filter]
         return {
