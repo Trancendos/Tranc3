@@ -266,6 +266,26 @@ app.include_router(_cryptex_router)
 from src.research.routes import router as _section7_router
 app.include_router(_section7_router)
 
+# ── The Digital Grid (workflow DAG builder + executor) ────────────────────────
+from src.workflow.routes import router as _grid_router
+app.include_router(_grid_router)
+
+# ── I-Mind (sensitivity + crisis protocol) ────────────────────────────────────
+from src.imind.routes import router as _imind_router
+app.include_router(_imind_router)
+
+# ── tAimra (digital twin — opt-in, OFFLINE by default) ────────────────────────
+from src.taimra.routes import router as _taimra_router
+app.include_router(_taimra_router)
+
+# ── Tranquility (wellbeing hub) ────────────────────────────────────────────────
+from src.tranquility.routes import router as _tranquility_router
+app.include_router(_tranquility_router)
+
+# ── Resonate (empathy + understanding services) ────────────────────────────────
+from src.resonate.routes import router as _resonate_router
+app.include_router(_resonate_router)
+
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
 if os.path.isdir(_FRONTEND_DIST):
