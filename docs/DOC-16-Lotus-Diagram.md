@@ -91,7 +91,7 @@ P7 = Frontend & UX            P8 = Future & Evolution
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
-│  [Dockerfile.api] [docker-compose] [GitHub Actions]            │
+│  [Dockerfile.api] [docker-compose] [Forgejo Workflows]         │
 │  [Render/HF    ←][INFRASTRUCTURE]→ [K8s manifests ]            │
 │  [Multi-cloud  ] [  & DevOps    ]  [OTEL collector ]           │
 │                                                                 │
@@ -103,7 +103,7 @@ P7 = Frontend & UX            P8 = Future & Evolution
 | 2.1 | Multi-stage Dockerfile (API) | `docker/Dockerfile.api` | ✅ Non-root, health checks |
 | 2.2 | Multi-stage Dockerfile (Web) | `docker/Dockerfile.web` | ✅ Nginx, gzip, SPA routing |
 | 2.3 | Docker Compose (6 services) | `docker-compose.yml` | ✅ API, web, Redis, OTEL, Prometheus, Grafana |
-| 2.4 | GitHub Actions CI/CD | `.github/workflows/ci-cd.yml` | ✅ Test → Build → Deploy |
+| 2.4 | Forgejo CI/CD (The Workshop) | `.forgejo/workflows/` | ✅ Test → Build → Deploy |
 | 2.5 | OTEL collector config | `deploy/otel-collector-config.yaml` | ✅ Traces + metrics |
 | 2.6 | Prometheus config | `deploy/prometheus.yml` | ✅ Scraping api:8000 |
 | 2.7 | Multi-cloud K8s manifests | `tranc3-gke/aks/eks-deployment.code.sh` | ⚠️ Exist but not in main deploy |

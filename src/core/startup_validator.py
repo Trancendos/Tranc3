@@ -17,6 +17,7 @@ def validate_startup() -> None:
     Run all startup checks. Call once from the FastAPI lifespan before
     initialising subsystems.
     """
+    _check_secret_key()
     _check_jwt_secret()
     _check_database_url()
     _check_redis_url()
@@ -24,6 +25,27 @@ def validate_startup() -> None:
     _check_api_key()
     _warn_optional()
     logger.info("Startup validation passed (environment=%s)", _ENV)
+
+
+def _check_secret_key() -> None:
+    secret = os.getenv("SECRET_KEY", "")
+    if not secret:
+        if _IS_PROD:
+            raise RuntimeError(
+                "SECRET_KEY is not set. Set a strong random secret before deploying to production."
+            )
+        generated = secrets.token_hex(32)
+        os.environ["SECRET_KEY"] = generated
+        logger.warning(
+            "SECRET_KEY not set — generated ephemeral key %s...  "
+            "Set SECRET_KEY in .env for persistent signing.",
+            generated[:8],
+        )
+    elif len(secret) < 32:
+        msg = "SECRET_KEY is too short (< 32 chars). Use secrets.token_hex(32)."
+        if _IS_PROD:
+            raise RuntimeError(msg)
+        logger.warning(msg)
 
 
 def _check_jwt_secret() -> None:

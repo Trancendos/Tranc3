@@ -15,8 +15,11 @@ log() { echo "[runner-setup] $*"; }
 die() { echo "[runner-setup] ERROR: $*" >&2; exit 1; }
 
 : "${RUNNER_REGISTRATION_TOKEN:?Set RUNNER_REGISTRATION_TOKEN first}"
-: "${CF_API_TOKEN:?Set CF_API_TOKEN (Cloudflare Workers deploy token)}"
-: "${FLY_API_TOKEN:?Set FLY_API_TOKEN (Fly.io deploy token)}"
+
+# CF_API_TOKEN and FLY_API_TOKEN are only needed when FORGEJO_ADMIN_TOKEN is set
+# (to push secrets via the Forgejo API).  They are NOT required for runner registration.
+CF_API_TOKEN="${CF_API_TOKEN:-}"
+FLY_API_TOKEN="${FLY_API_TOKEN:-}"
 
 # ── Start/restart the runner ──────────────────────────────────────────────────
 log "Starting act runner…"
@@ -34,6 +37,9 @@ FORGEJO_ADMIN_TOKEN="${FORGEJO_ADMIN_TOKEN:-}"
 ORG="${FORGEJO_ORG:-trancendos}"
 
 if [ -n "$FORGEJO_ADMIN_TOKEN" ]; then
+  [ -n "$CF_API_TOKEN" ]  || die "CF_API_TOKEN must be set when FORGEJO_ADMIN_TOKEN is provided"
+  [ -n "$FLY_API_TOKEN" ] || die "FLY_API_TOKEN must be set when FORGEJO_ADMIN_TOKEN is provided"
+
   log "Storing CF_API_TOKEN secret in Forgejo org ${ORG}…"
   curl -sf -X PUT "${FORGEJO_URL}/api/v1/orgs/${ORG}/actions/secrets/CF_API_TOKEN" \
     -H "Authorization: token ${FORGEJO_ADMIN_TOKEN}" \
