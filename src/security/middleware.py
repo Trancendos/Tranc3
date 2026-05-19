@@ -40,15 +40,46 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 class GovernanceMiddleware(BaseHTTPMiddleware):
     """
-    SCAMPER-C: Combined governance layer.
-    Handles request ID injection and basic request logging.
-    Auth, rate limiting, and compliance are handled as FastAPI dependencies.
+    Combined governance layer: request ID injection, basic logging,
+    and Cryptex threat scanning on mutating requests.
     """
+
+    # Paths exempt from Cryptex scanning (health checks, SSE streams)
+    _SCAN_SKIP = frozenset({"/health", "/ready", "/observatory/sse", "/mcp/sse"})
 
     async def dispatch(self, request: Request, call_next) -> Response:
         import os
+        from fastapi.responses import JSONResponse as _JSONResponse
+
         request_id = os.urandom(6).hex()
         request.state.request_id = request_id
+
+        # Cryptex scan on POST/PUT/PATCH to non-exempt paths
+        path = request.url.path
+        if request.method in ("POST", "PUT", "PATCH") and path not in self._SCAN_SKIP:
+            try:
+                from src.cryptex.threat_detector import get_cryptex
+                cx = get_cryptex()
+                ip = request.client.host if request.client else None
+                if cx.is_blocked(ip=ip):
+                    return _JSONResponse({"error": "Access denied"}, status_code=403,
+                                         headers={"X-Request-ID": request_id})
+                body_bytes = await request.body()
+                body_text = body_bytes.decode("utf-8", errors="replace")[:1000]
+                signals = cx.analyse_request(path=path, body=body_text,
+                                             headers=dict(request.headers), ip=ip)
+                if any(s.severity.value == "critical" for s in signals):
+                    return _JSONResponse({"error": "Request blocked by Cryptex"}, status_code=403,
+                                         headers={"X-Request-ID": request_id})
+                # Re-attach body so FastAPI can read it normally
+                from starlette.datastructures import Headers
+                from starlette.requests import Request as _Req
+                import io
+                async def _body_override():
+                    return body_bytes
+                request._body = body_bytes
+            except Exception:
+                pass  # Never block on Cryptex failure
 
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id

@@ -122,6 +122,15 @@ class Observatory:
             event_type, actor, target, outcome,
         )
         self._notify_subscribers(event)
+
+        # Forward SECURITY and CRITICAL events to The Basement for permanent archival
+        if severity in (EventSeverity.SECURITY, EventSeverity.CRITICAL):
+            try:
+                from src.basement.archive import get_basement
+                get_basement().ingest_observatory_event(event)
+            except Exception:
+                pass
+
         return event
 
     def _notify_subscribers(self, event: AuditEvent) -> None:

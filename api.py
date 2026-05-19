@@ -254,6 +254,18 @@ app.include_router(_townhall_router)
 from src.library.routes import router as _library_router
 app.include_router(_library_router)
 
+# ── The Basement (archive + vector search) ────────────────────────────────────
+from src.basement.routes import router as _basement_router
+app.include_router(_basement_router)
+
+# ── Cryptex (threat detection + cyber defence) ────────────────────────────────
+from src.cryptex.routes import router as _cryptex_router
+app.include_router(_cryptex_router)
+
+# ── Section 7 (research + intelligence reports) ───────────────────────────────
+from src.research.routes import router as _section7_router
+app.include_router(_section7_router)
+
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
 if os.path.isdir(_FRONTEND_DIST):
