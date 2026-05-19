@@ -22,7 +22,7 @@ id = "f321bee2495547ad9e224522f214defd"
 # ── Secrets (set via: wrangler secret put <NAME> --name tranc3-ai) ────────────
 # TRANC3_BACKEND_URL  → https://tranc3-backend.fly.dev   (after fly deploy)
 # TRANC3_NANO_URL     → https://tranc3-nano.fly.dev      (optional fallback)
-# TRANC3_AUTH_URL     → https://infinity-auth-api.trancendos.workers.dev
+# TRANC3_AUTH_URL     → https://infinity-auth-api.luminous-aimastermind.workers.dev
 # ALLOWED_ORIGINS     → https://trancendos.com (extra CORS, comma-separated)
 
 # ── Deploy steps ──────────────────────────────────────────────────────────────
