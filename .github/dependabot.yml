@@ -1,11 +1,79 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# TRANC3 — Automated Dependency Updates (Dependabot)
+# Scans Python (pip) and Node.js (npm) for outdated/vulnerable deps
+# Updated: 2025-07 — CVE Remediation
 
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Trancendos/security"
+    labels:
+      - "dependencies"
+      - "security"
+      - "python"
+    commit-message:
+      prefix: "security(pip)"
+      include: "scope"
+    # Auto-merge patch updates for security
+    allow:
+      - dependency-type: "all"
+    # Group updates by type
+    groups:
+      security-patches:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      patch-updates:
+        applies-to: version-updates
+        patterns:
+          - "*"
+
+  # Node.js dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Trancendos/security"
+    labels:
+      - "dependencies"
+      - "security"
+      - "javascript"
+    commit-message:
+      prefix: "security(npm)"
+      include: "scope"
+    allow:
+      - dependency-type: "all"
+    groups:
+      security-patches:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      patch-updates:
+        applies-to: version-updates
+        patterns:
+          - "*"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "security"
+    commit-message:
+      prefix: "ci(actions)"
