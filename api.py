@@ -315,6 +315,14 @@ app.include_router(_vrar3d_router)
 from src.citadel.routes import router as _citadel_router
 app.include_router(_citadel_router)
 
+# ── Luminous (AI brain — consciousness engine + neuromorphic) ─────────────────
+from src.bio_neural.routes import router as _luminous_router
+app.include_router(_luminous_router)
+
+# ── Think Tank (quantum + deep research engines) ──────────────────────────────
+from src.quantum.routes import router as _thinktank_router
+app.include_router(_thinktank_router)
+
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
 if os.path.isdir(_FRONTEND_DIST):
