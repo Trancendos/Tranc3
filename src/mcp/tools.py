@@ -75,6 +75,12 @@ class SparkToolRegistry:
             logger.warning("mcp.registry overwriting tool=%s", tool.name)
         self._tools[tool.name] = tool
         logger.debug("mcp.registry registered tool=%s category=%s", tool.name, tool.category)
+        # Rebuild semantic index lazily after each registration so RAG stays current
+        try:
+            from src.mcp.tool_rag import rebuild_rag_index
+            rebuild_rag_index(list(self._tools.values()))
+        except Exception:
+            pass
 
     def get(self, name: str) -> Optional[SparkTool]:
         """Return the tool with *name*, or None if not found."""
@@ -95,18 +101,26 @@ class SparkToolRegistry:
             for t in self._tools.values()
         ]
 
-    def search(self, query: str) -> List[SparkTool]:
+    def search(self, query: str, top_k: int = 10) -> List[SparkTool]:
         """
-        Fuzzy search over tool names and descriptions.
+        Search tools by query — tries semantic (RAG) first, falls back to keyword scoring.
 
-        Scoring:
-          +3  exact name match
-          +2  name contains query
-          +1  description contains any query token
+        Semantic search (via ToolRAG) returns the most semantically relevant tools.
+        Keyword scoring applies when RAG is not yet indexed.
         """
         if not query:
             return list(self._tools.values())
 
+        # Semantic search via ToolRAG
+        try:
+            from src.mcp.tool_rag import get_rag
+            rag = get_rag()
+            if rag.is_ready():
+                return rag.select_tools(query, top_k=top_k)
+        except Exception:
+            pass
+
+        # Keyword fallback
         q_lower = query.lower()
         tokens = q_lower.split()
         scored: List[tuple[int, SparkTool]] = []
@@ -428,10 +442,56 @@ class SparkToolRegistry:
                 handler=self._handle_get_evolution_stats,
                 category="evolution",
             ),
+            SparkTool(
+                name="ingest_document",
+                description=(
+                    "Ingest one or more text documents into the FAISS vector store for "
+                    "later semantic retrieval via query_vector_store. Supports custom "
+                    "collections, doc IDs, and metadata for filtering."
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "text": {
+                            "type": "string",
+                            "description": "Single document text to ingest.",
+                        },
+                        "texts": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Batch of document texts to ingest.",
+                        },
+                        "collection": {
+                            "type": "string",
+                            "description": "Target collection name (default: 'default').",
+                            "default": "default",
+                        },
+                        "ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional parallel list of document IDs.",
+                        },
+                        "metadatas": {
+                            "type": "array",
+                            "items": {"type": "object"},
+                            "description": "Optional parallel list of metadata dicts.",
+                        },
+                    },
+                },
+                handler=self._handle_ingest_document,
+                category="knowledge",
+            ),
         ]
 
         for tool in builtins:
-            self.register(tool)
+            self._tools[tool.name] = tool
+
+        # Build initial RAG index after all builtins are loaded
+        try:
+            from src.mcp.tool_rag import rebuild_rag_index
+            rebuild_rag_index(list(self._tools.values()))
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Built-in handlers
@@ -702,16 +762,83 @@ class SparkToolRegistry:
             top_k,
         )
 
-        # Placeholder — real implementation calls the vector DB client.
-        return {
-            "query": query,
-            "collection": collection,
-            "top_k": top_k,
-            "score_threshold": score_threshold,
-            "metadata_filter": metadata_filter,
-            "results": [],
-            "total_searched": 0,
-        }
+        try:
+            from src.knowledge.vector_store import get_store
+            store = get_store()
+            hits = store.search(
+                query=query,
+                collection=collection,
+                top_k=top_k,
+                score_threshold=score_threshold,
+                metadata_filter=metadata_filter if metadata_filter else None,
+            )
+            info = store.collection_info(collection)
+            return {
+                "query": query,
+                "collection": collection,
+                "top_k": top_k,
+                "score_threshold": score_threshold,
+                "metadata_filter": metadata_filter,
+                "results": [
+                    {
+                        "id": h.document.id,
+                        "text": h.document.text,
+                        "score": round(h.score, 4),
+                        "rank": h.rank,
+                        "metadata": h.document.metadata,
+                    }
+                    for h in hits
+                ],
+                "total_searched": info["count"],
+            }
+        except Exception as exc:
+            logger.warning("mcp.query_vector_store error: %s", exc)
+            return {
+                "query": query,
+                "collection": collection,
+                "top_k": top_k,
+                "score_threshold": score_threshold,
+                "metadata_filter": metadata_filter,
+                "results": [],
+                "total_searched": 0,
+                "error": str(exc),
+            }
+
+    async def _handle_ingest_document(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        texts = params.get("texts") or []
+        text = params.get("text")
+        if text:
+            texts = [text] + texts
+        if not texts:
+            return {"error": "Provide 'text' or 'texts' to ingest."}
+
+        collection = params.get("collection", "default")
+        ids = params.get("ids")
+        metadatas = params.get("metadatas")
+
+        try:
+            from src.knowledge.vector_store import get_store
+            store = get_store()
+            doc_ids = store.ingest(
+                texts=texts,
+                collection=collection,
+                ids=ids,
+                metadatas=metadatas,
+            )
+            info = store.collection_info(collection)
+            logger.info(
+                "mcp.ingest_document collection=%s +%d docs total=%d",
+                collection, len(doc_ids), info["count"],
+            )
+            return {
+                "ingested": len(doc_ids),
+                "ids": doc_ids,
+                "collection": collection,
+                "collection_total": info["count"],
+            }
+        except Exception as exc:
+            logger.warning("mcp.ingest_document error: %s", exc)
+            return {"error": str(exc)}
 
     async def _handle_trigger_bundle(self, params: Dict[str, Any]) -> Dict[str, Any]:
         bundle_id = params["bundle_id"]
