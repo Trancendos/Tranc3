@@ -235,15 +235,8 @@ app.include_router(_mcp_router)
 from src.observability.routes import router as _observatory_router
 app.include_router(_observatory_router)
 
-# ── The Nexus (message bus — status endpoint) ─────────────────────────────────
-from fastapi import APIRouter as _APIRouter
-_nexus_router = _APIRouter(prefix="/nexus", tags=["nexus"])
-
-@_nexus_router.get("/status")
-async def nexus_status():
-    from src.nexus.hub import get_nexus
-    return get_nexus().status()
-
+# ── The Nexus (AI communications + transfer hub) ─────────────────────────────
+from src.nexus.routes import router as _nexus_router
 app.include_router(_nexus_router)
 
 # ── The Town Hall (governance + compliance) ───────────────────────────────────
@@ -313,6 +306,14 @@ app.include_router(_artifactory_router)
 # ── API Marketplace (connector hub — Gravitee.io foundation) ─────────────────
 from src.apimarket.routes import router as _apimarket_router
 app.include_router(_apimarket_router)
+
+# ── VRAR3D (AR/VR wellbeing centre — Three.js / A-Frame WebXR) ───────────────
+from src.vrar3d.routes import router as _vrar3d_router
+app.include_router(_vrar3d_router)
+
+# ── The Citadel (DevOps hub — Forgejo + Fly.io + CF Workers) ─────────────────
+from src.citadel.routes import router as _citadel_router
+app.include_router(_citadel_router)
 
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
