@@ -20,13 +20,13 @@ binding = "SESSIONS"
 id = "f321bee2495547ad9e224522f214defd"
 
 # ── Secrets (set via: wrangler secret put <NAME> --name tranc3-ai) ────────────
-# TRANC3_BACKEND_URL  → https://tranc3-backend.fly.dev   (after fly deploy)
-# TRANC3_NANO_URL     → https://tranc3-nano.fly.dev      (optional fallback)
+# TRANC3_BACKEND_URL  → https://trancendos-backend.fly.dev   (after fly deploy)
+# TRANC3_NANO_URL     → https://trancendos-backend.fly.dev   (nanoservices on same host)
 # TRANC3_AUTH_URL     → https://infinity-auth-api.luminous-aimastermind.workers.dev
 # ALLOWED_ORIGINS     → https://trancendos.com (extra CORS, comma-separated)
 
 # ── Deploy steps ──────────────────────────────────────────────────────────────
-# 1. fly deploy                         (from Tranc3 repo root)
+# 1. fly deploy                         (from Tranc3 repo root — app: trancendos-backend)
 # 2. cd cloudflare/tranc3-ai && npm ci
-# 3. wrangler secret put TRANC3_BACKEND_URL   (paste: https://tranc3-backend.fly.dev)
+# 3. wrangler secret put TRANC3_BACKEND_URL   (paste: https://trancendos-backend.fly.dev)
 # 4. wrangler deploy

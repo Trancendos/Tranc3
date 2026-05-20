@@ -253,7 +253,7 @@ else
       \"active\": true,
       \"events\": [\"push\",\"pull_request\",\"workflow_run\"],
       \"config\": {
-        \"url\": \"https://tranc3-backend.fly.dev/citadel/webhooks/forgejo\",
+        \"url\": \"https://trancendos-backend.fly.dev/citadel/webhooks/forgejo\",
         \"content_type\": \"json\",
         \"secret\": \"${WEBHOOK_SECRET}\"
       }
