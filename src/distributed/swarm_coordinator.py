@@ -5,7 +5,8 @@ import logging
 logger = logging.getLogger("src.distributed.swarm_coordinator")
 
 import asyncio  # noqa: E402
-from typing import Dict, List, Optional, Any  # noqa: E402
+from typing import Any, Dict, List, Optional  # noqa: E402
+
 import aiohttp  # noqa: E402
 
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
@@ -44,8 +45,8 @@ class SwarmCoordinator:
 
         try:
             return await self._coordinate_swarm(problem)
-        except Exception:
-            logger.warning("Swarm reasoning failed: {e}")
+        except Exception as e:
+            logger.warning(f"Swarm reasoning failed: {e}")
             return None
 
     async def _coordinate_swarm(self, problem: Dict[str, Any]) -> Dict[str, Any]:
@@ -78,9 +79,7 @@ class SwarmCoordinator:
             "confidence": len(valid_results) / len(self.swarm_nodes),
         }
 
-    async def _query_node(
-        self, node_url: str, sub_problem: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _query_node(self, node_url: str, sub_problem: Dict[str, Any]) -> Dict[str, Any]:
         """Query individual swarm node"""
         async with self.session.post(
             f"{node_url}/reason",
@@ -129,7 +128,7 @@ class SwarmCoordinator:
         # Keep only healthy nodes
         self.swarm_nodes = [
             node
-            for node, health in zip(new_nodes, health_results)
+            for node, health in zip(new_nodes, health_results, strict=False)
             if not isinstance(health, Exception) and health.get("status") == "healthy"
         ]
 

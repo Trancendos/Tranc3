@@ -4,9 +4,10 @@ import logging
 
 logger = logging.getLogger("src.core.self_evolution")
 
+from typing import Any, Dict, Optional  # noqa: E402
+
 import torch  # noqa: E402
 import torch.nn as nn  # noqa: E402
-from typing import Any, Dict, Optional  # noqa: E402
 
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
 from src.evolution.self_improving_core import SelfEvolvingArchitecture  # noqa: E402
@@ -40,13 +41,11 @@ class SelfEvolvingInference:
 
         try:
             return self._evolve_model(input_data, feedback)
-        except Exception:
-            logger.warning("Self-evolution failed: {e}")
+        except Exception as e:
+            logger.warning(f"Self-evolution failed: {e}")
             return None
 
-    def _evolve_model(
-        self, input_data: torch.Tensor, feedback: Dict[str, Any]
-    ) -> nn.Module:
+    def _evolve_model(self, input_data: torch.Tensor, feedback: Dict[str, Any]) -> nn.Module:
         """Core evolutionary adaptation"""
 
         # Extract feedback metrics
