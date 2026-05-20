@@ -18,7 +18,14 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # CONFIGURATION
 # ============================================================
-SECRET_KEY = os.getenv("JWT_SECRET", secrets.token_hex(32))
+_JWT_SECRET = os.getenv("JWT_SECRET")
+if not _JWT_SECRET:
+    raise RuntimeError(
+        "JWT_SECRET environment variable is not set. "
+        "Tokens would be invalidated on every restart. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+SECRET_KEY = _JWT_SECRET
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 REFRESH_TOKEN_EXPIRE_DAYS = 30
