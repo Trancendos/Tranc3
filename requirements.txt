@@ -98,5 +98,5 @@ stripe==9.9.0
 # Testing
 # Fixes: CVE-2025-71176 (tempfile race condition)
 pytest==9.0.3
-pytest-asyncio==0.23.6
+pytest-asyncio==0.25.0
 pytest-cov==5.0.0
