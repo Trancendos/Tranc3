@@ -55,8 +55,10 @@ qiskit-nature==0.7.2
 
 # Logging / Observability
 python-json-logger==2.0.7
-opentelemetry-sdk==1.33.1
-opentelemetry-instrumentation-fastapi==0.54b1
+opentelemetry-sdk==1.34.0
+opentelemetry-instrumentation-fastapi==0.55b0
+# Pinned to match sdk 1.34.x (exporter uses ~= so versions must align; 1.33.x doesn't exist)
+opentelemetry-exporter-otlp-proto-http==1.34.0
 prometheus-client==0.20.0
 prometheus-fastapi-instrumentator==7.0.0
 # Fixes: 1 CVE
