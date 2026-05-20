@@ -13,16 +13,16 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-from fastapi import APIRouter, Body, Path, Query
+from fastapi import APIRouter, Body, Path
 from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/grid", tags=["digital-grid"])
 
 # ── In-process workflow registry ──────────────────────────────────────────────
-_workflow_registry: Dict[str, Any] = {}   # id → WorkflowDefinition
+_workflow_registry: Dict[str, Any] = {}  # id → WorkflowDefinition
 _executor_singleton = None
 
 
@@ -30,11 +30,13 @@ def _get_executor():
     global _executor_singleton
     if _executor_singleton is None:
         from src.workflow.executor import WorkflowExecutor
+
         _executor_singleton = WorkflowExecutor()
     return _executor_singleton
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
 
 @router.get("/status")
 async def grid_status():
@@ -75,16 +77,24 @@ async def register_workflow(body: Dict[str, Any] = Body(...)):
     """Register a workflow from a JSON definition dict."""
     try:
         from src.workflow.builder import WorkflowDefinition
+
         wf = WorkflowDefinition.from_dict(body)
     except Exception as exc:
-        return JSONResponse({"error": f"Invalid workflow definition: {exc}"}, status_code=400)
+        return JSONResponse(
+            {"error": f"Invalid workflow definition: {exc}"}, status_code=400
+        )
     _workflow_registry[wf.id] = wf
     logger.info("grid: registered workflow id=%s name=%s", wf.id, wf.name)
     try:
         from src.observability.observatory import observe, EventCategory
-        observe("workflow.registered", target=f"workflow:{wf.id}",
-                category=EventCategory.WORKFLOW, service="grid",
-                metadata={"name": wf.name, "nodes": len(wf.nodes)})
+
+        observe(
+            "workflow.registered",
+            target=f"workflow:{wf.id}",
+            category=EventCategory.WORKFLOW,
+            service="grid",
+            metadata={"name": wf.name, "nodes": len(wf.nodes)},
+        )
     except Exception:
         pass
     return {"registered": wf.id, "name": wf.name}
@@ -99,6 +109,7 @@ async def run_workflow(
     if not wf:
         return JSONResponse({"error": "Workflow not found"}, status_code=404)
     import asyncio
+
     executor = _get_executor()
     try:
         state = await asyncio.wait_for(executor.execute(wf, inputs), timeout=300.0)
@@ -138,5 +149,7 @@ async def cancel_execution(execution_id: str = Path(...)):
     executor = _get_executor()
     cancelled = await executor.cancel(execution_id)
     if not cancelled:
-        return JSONResponse({"error": "Execution not found or already complete"}, status_code=404)
+        return JSONResponse(
+            {"error": "Execution not found or already complete"}, status_code=404
+        )
     return {"cancelled": execution_id}

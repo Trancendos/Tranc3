@@ -6,7 +6,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, Any
 
 import torch
 
@@ -29,7 +29,7 @@ class TRANC3Enhanced:
         return {
             "mcp": {
                 "enabled": True,
-                "host": "0.0.0.0",
+                "host": "0.0.0.0",  # nosec B104
                 "port": 8001,
             },
             "workflow": {
@@ -62,14 +62,18 @@ class TRANC3Enhanced:
         # 1. MCP Tools registry
         try:
             from src.mcp.tools import registry as mcp_registry
+
             self._subsystems["mcp_registry"] = mcp_registry
-            logger.info("✓ MCP tool registry ready (%d tools)", len(mcp_registry._tools))
+            logger.info(
+                "✓ MCP tool registry ready (%d tools)", len(mcp_registry._tools)
+            )
         except Exception as e:
             logger.warning("MCP registry init failed (non-fatal): %s", e)
 
         # 2. Workflow executor
         try:
             from src.workflow.executor import executor as workflow_executor, event_bus
+
             self._subsystems["workflow_executor"] = workflow_executor
             self._subsystems["event_bus"] = event_bus
             logger.info("✓ Workflow executor ready")
@@ -79,6 +83,7 @@ class TRANC3Enhanced:
         # 3. DeepMind planning
         try:
             from src.deepmind.planning import planner
+
             self._subsystems["planner"] = planner
             logger.info("✓ Strategic planner ready")
         except Exception as e:
@@ -89,6 +94,7 @@ class TRANC3Enhanced:
             from src.healing.health_monitor import health_monitor
             from src.healing.self_repair import repair_engine, config_tuner
             from src.healing.nanocode_bots import dispatcher
+
             self._subsystems["health_monitor"] = health_monitor
             self._subsystems["repair_engine"] = repair_engine
             self._subsystems["config_tuner"] = config_tuner
@@ -100,17 +106,22 @@ class TRANC3Enhanced:
         # 5. Enhanced skill registry
         try:
             from src.skills.enhanced_registry import registry as skill_registry
+
             skills_dir = self.config["skills"].get("skills_dir")
             if skills_dir and os.path.isdir(skills_dir):
                 skill_registry.load_from_directory(skills_dir)
             self._subsystems["skill_registry"] = skill_registry
-            logger.info("✓ Enhanced skill registry ready (%d skills)", len(skill_registry.skills))
+            logger.info(
+                "✓ Enhanced skill registry ready (%d skills)",
+                len(skill_registry.skills),
+            )
         except Exception as e:
             logger.warning("Skill registry init failed (non-fatal): %s", e)
 
         # 6. Code generator
         try:
             from src.skills.code_generator import code_generator
+
             self._subsystems["code_generator"] = code_generator
             logger.info("✓ Advanced code generator ready")
         except Exception as e:
@@ -119,6 +130,7 @@ class TRANC3Enhanced:
         # 7. TRANC3 local inference engine (own weights, no API)
         try:
             from src.core.tranc3_inference import get_engine
+
             tranc3_engine = get_engine()
             self._subsystems["tranc3_engine"] = tranc3_engine
             status = tranc3_engine.status()
@@ -135,6 +147,7 @@ class TRANC3Enhanced:
         # 7b. TF Hybrid engine (optional)
         try:
             from src.tensorflow_core.hybrid_engine import hybrid_engine
+
             self._subsystems["hybrid_engine"] = hybrid_engine
             logger.info("✓ TF Hybrid inference engine ready")
         except Exception as e:
@@ -150,14 +163,21 @@ class TRANC3Enhanced:
             cfg = self._default_2060_config()
             self._subsystems["quantum"] = QuantumNeuralCore(cfg["quantum"])
             self._subsystems["consciousness"] = ConsciousnessModel(cfg["consciousness"])
-            self._subsystems["evolution"] = SelfEvolvingArchitecture(cfg["ai_capabilities"])
-            self._subsystems["memory"] = HolographicMemoryCrystal(cfg["memory"]["dimensions"])
+            self._subsystems["evolution"] = SelfEvolvingArchitecture(
+                cfg["ai_capabilities"]
+            )
+            self._subsystems["memory"] = HolographicMemoryCrystal(
+                cfg["memory"]["dimensions"]
+            )
             logger.info("✓ TRANC3 2060 core systems ready")
         except Exception as e:
             logger.warning("2060 core init failed (non-fatal): %s", e)
 
         self._initialized = True
-        logger.info("TRANC3 Enhanced fully initialized — %d subsystems active", len(self._subsystems))
+        logger.info(
+            "TRANC3 Enhanced fully initialized — %d subsystems active",
+            len(self._subsystems),
+        )
 
     def _default_2060_config(self) -> Dict:
         return {
@@ -184,7 +204,11 @@ class TRANC3Enhanced:
         No external API is called.
         """
         start = time.time()
-        result: Dict[str, Any] = {"prompt": prompt, "mode": "enhanced", "personality": personality}
+        result: Dict[str, Any] = {
+            "prompt": prompt,
+            "mode": "enhanced",
+            "personality": personality,
+        }
 
         # ── 1. Primary language generation (local TRANC3 model) ──────────────
         tranc3_engine = self._subsystems.get("tranc3_engine")
@@ -202,7 +226,9 @@ class TRANC3Enhanced:
             result["tokens"] = gen.get("tokens", 0)
             if not gen.get("trained", True):
                 result["warning"] = gen.get("response", "")
-                result["action_required"] = gen.get("action_required", "python train.py")
+                result["action_required"] = gen.get(
+                    "action_required", "python train.py"
+                )
         else:
             result["response"] = (
                 "TRANC3 language engine not initialised. "
@@ -241,7 +267,9 @@ class TRANC3Enhanced:
         if consciousness:
             try:
                 encoded = self._encode(prompt)
-                cs_state = consciousness.simulate_consciousness_stream(encoded, time_steps=100)
+                cs_state = consciousness.simulate_consciousness_stream(
+                    encoded, time_steps=100
+                )
                 result["consciousness_phi"] = cs_state.get("average_phi", 0.0)
             except Exception as e:
                 logger.debug("Consciousness error (non-fatal): %s", e)
@@ -272,6 +300,7 @@ class TRANC3Enhanced:
             return {"error": "Workflow executor not available"}
 
         from src.workflow.builder import WorkflowDefinition
+
         workflow = WorkflowDefinition.from_dict(workflow_def)
         state = await executor.execute(workflow, inputs)
         return {

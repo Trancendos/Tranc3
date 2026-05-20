@@ -5,8 +5,8 @@ import math
 import time
 import logging
 from collections import deque, defaultdict
-from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +30,13 @@ class IntentPredictor:
     """
 
     INTENT_PATTERNS = {
-        "question":    ["what", "how", "why", "when", "where", "who", "?"],
-        "complaint":   ["not working", "broken", "error", "wrong", "bad", "terrible"],
-        "praise":      ["great", "amazing", "love", "perfect", "excellent", "thank"],
-        "request":     ["please", "can you", "could you", "help me", "i need"],
-        "creative":    ["write", "create", "generate", "imagine", "story", "poem"],
-        "analytical":  ["analyse", "analyze", "compare", "explain", "calculate", "data"],
-        "emotional":   ["feel", "sad", "happy", "anxious", "worried", "excited"],
+        "question": ["what", "how", "why", "when", "where", "who", "?"],
+        "complaint": ["not working", "broken", "error", "wrong", "bad", "terrible"],
+        "praise": ["great", "amazing", "love", "perfect", "excellent", "thank"],
+        "request": ["please", "can you", "could you", "help me", "i need"],
+        "creative": ["write", "create", "generate", "imagine", "story", "poem"],
+        "analytical": ["analyse", "analyze", "compare", "explain", "calculate", "data"],
+        "emotional": ["feel", "sad", "happy", "anxious", "worried", "excited"],
     }
 
     def predict(self, partial_text: str, emotion: str = "neutral") -> Dict[str, float]:
@@ -51,10 +51,10 @@ class IntentPredictor:
 
         # Emotion boosts
         emotion_boosts = {
-            "angry":   {"complaint": 0.3},
-            "happy":   {"praise": 0.2, "creative": 0.1},
+            "angry": {"complaint": 0.3},
+            "happy": {"praise": 0.2, "creative": 0.1},
             "fearful": {"emotional": 0.3, "question": 0.1},
-            "sad":     {"emotional": 0.4},
+            "sad": {"emotional": 0.4},
         }
         for intent, boost in emotion_boosts.get(emotion, {}).items():
             scores[intent] = min(1.0, scores[intent] + boost)
@@ -94,8 +94,12 @@ class ChurnPredictor:
 
         # Signals that increase churn risk
         avg_rating = sum(s.response_rating or 3.0 for s in recent) / len(recent)
-        complaint_ratio = sum(1 for s in recent if s.emotion in ("angry", "sad")) / len(recent)
-        recency_score = 1.0 - min(1.0, (now - recent[-1].timestamp) / self.window_seconds)
+        complaint_ratio = sum(1 for s in recent if s.emotion in ("angry", "sad")) / len(
+            recent
+        )
+        recency_score = 1.0 - min(
+            1.0, (now - recent[-1].timestamp) / self.window_seconds
+        )
         session_trend = self._session_trend(recent)
 
         # Weighted score (lower = less churn risk)
@@ -139,7 +143,11 @@ class QualityPredictor:
         user_len = len(user_message.split())
         resp_len = len(response_text.split())
         length_ratio = resp_len / max(user_len, 1)
-        scores["length_score"] = min(1.0, length_ratio / 3.0) if length_ratio < 3 else max(0.3, 1.0 - (length_ratio - 3) / 10)
+        scores["length_score"] = (
+            min(1.0, length_ratio / 3.0)
+            if length_ratio < 3
+            else max(0.3, 1.0 - (length_ratio - 3) / 10)
+        )
 
         # Repetition penalty
         words = response_text.lower().split()
@@ -151,7 +159,9 @@ class QualityPredictor:
 
         # Emotion alignment
         negative_emotions = {"angry", "sad", "fearful", "disgusted"}
-        if emotion in negative_emotions and any(w in response_text.lower() for w in ["sorry", "understand", "help"]):
+        if emotion in negative_emotions and any(
+            w in response_text.lower() for w in ["sorry", "understand", "help"]
+        ):
             scores["empathy_score"] = 1.0
         else:
             scores["empathy_score"] = 0.6
@@ -165,7 +175,9 @@ class QualityPredictor:
         )
         return scores
 
-    def should_regenerate(self, scores: Dict[str, float], threshold: float = 0.4) -> bool:
+    def should_regenerate(
+        self, scores: Dict[str, float], threshold: float = 0.4
+    ) -> bool:
         return scores.get("overall", 1.0) < threshold
 
 
@@ -257,7 +269,11 @@ class PredictiveAnalyticsEngine:
             "intent": intent_scores,
             "dominant_intent": self.intent.dominant_intent(intent_scores),
             "churn_probability": churn_prob,
-            "churn_risk": "high" if churn_prob > 0.7 else "medium" if churn_prob > 0.4 else "low",
+            "churn_risk": "high"
+            if churn_prob > 0.7
+            else "medium"
+            if churn_prob > 0.4
+            else "low",
             "load_forecast": self.load.forecast_next_hour(),
         }
 

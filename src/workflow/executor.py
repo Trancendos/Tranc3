@@ -6,7 +6,7 @@ and a pub/sub event bus.  Events are forwarded to The Spark (MCP) SSE bus
 when the grid bridge is active (see src/mcp/server._start_grid_bridge).
 """
 
-from typing import Dict, Any, Optional, List, Callable, Set
+from typing import Dict, Any, Optional, List, Callable
 import asyncio
 import logging
 import time
@@ -24,15 +24,18 @@ logger = logging.getLogger(__name__)
 # Execution state
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ExecutionState:
     """Mutable state tracked for a single workflow run."""
 
     execution_id: str
     workflow_id: str
-    status: str = "pending"                                  # pending | running | completed | failed | cancelled
+    status: str = "pending"  # pending | running | completed | failed | cancelled
     node_outputs: Dict[str, Any] = field(default_factory=dict)
-    node_statuses: Dict[str, str] = field(default_factory=dict)  # node_id -> pending|running|completed|failed|skipped
+    node_statuses: Dict[str, str] = field(
+        default_factory=dict
+    )  # node_id -> pending|running|completed|failed|skipped
     started_at: float = field(default_factory=time.monotonic)
     finished_at: Optional[float] = None
     error: Optional[str] = None
@@ -46,6 +49,7 @@ class ExecutionState:
 # ---------------------------------------------------------------------------
 # Workflow event bus
 # ---------------------------------------------------------------------------
+
 
 class WorkflowEventBus:
     """
@@ -104,6 +108,7 @@ class WorkflowEventBus:
 # Topological scheduling helpers
 # ---------------------------------------------------------------------------
 
+
 def _build_adjacency(
     nodes: Dict[str, NodeConfig],
     edges: List[tuple],
@@ -151,7 +156,7 @@ def _topological_sort(
         layers.append(layer)
         queue = next_queue
 
-    total_sorted = sum(len(l) for l in layers)
+    total_sorted = sum(len(layer) for layer in layers)
     if total_sorted != len(nodes):
         raise ValueError(
             f"Workflow contains a cycle or disconnected subgraph: "
@@ -198,6 +203,7 @@ def _gather_inputs(
 # Workflow executor
 # ---------------------------------------------------------------------------
 
+
 class WorkflowExecutor:
     """
     Async engine that executes a WorkflowDefinition against live node implementations.
@@ -223,7 +229,7 @@ class WorkflowExecutor:
         self,
         workflow: WorkflowDefinition,
         initial_inputs: Dict[str, Any] = None,  # type: ignore[assignment]
-        context: Dict[str, Any] = None,          # type: ignore[assignment]
+        context: Dict[str, Any] = None,  # type: ignore[assignment]
     ) -> ExecutionState:
         """
         Execute a workflow and return the final ExecutionState.
@@ -248,11 +254,14 @@ class WorkflowExecutor:
         )
         self.executions[execution_id] = state
 
-        await event_bus.publish("workflow.started", {
-            "execution_id": execution_id,
-            "workflow_id": workflow.id,
-            "workflow_name": workflow.name,
-        })
+        await event_bus.publish(
+            "workflow.started",
+            {
+                "execution_id": execution_id,
+                "workflow_id": workflow.id,
+                "workflow_name": workflow.name,
+            },
+        )
 
         logger.info(
             "Starting workflow '%s' (execution %s)", workflow.name, execution_id
@@ -264,10 +273,13 @@ class WorkflowExecutor:
             state.status = "failed"
             state.error = str(exc)
             state.finished_at = time.monotonic()
-            await event_bus.publish("workflow.failed", {
-                "execution_id": execution_id,
-                "error": state.error,
-            })
+            await event_bus.publish(
+                "workflow.failed",
+                {
+                    "execution_id": execution_id,
+                    "error": state.error,
+                },
+            )
             logger.error("Topological sort failed: %s", exc)
             return state
 
@@ -287,16 +299,17 @@ class WorkflowExecutor:
                     workflow=workflow,
                     node_outputs=node_outputs,
                     initial_inputs=initial_inputs,
-                    context={**context, "execution_id": execution_id, "workflow_id": workflow.id},
+                    context={
+                        **context,
+                        "execution_id": execution_id,
+                        "workflow_id": workflow.id,
+                    },
                     state=state,
                     cancel_flag=cancel_flag,
                 )
 
                 # Stop on first node failure (fail-fast)
-                if any(
-                    state.node_statuses.get(nid) == "failed"
-                    for nid in layer
-                ):
+                if any(state.node_statuses.get(nid) == "failed" for nid in layer):
                     raise RuntimeError(
                         f"Layer {layer} had a node failure; aborting workflow."
                     )
@@ -305,11 +318,14 @@ class WorkflowExecutor:
             state.finished_at = time.monotonic()
             state.node_outputs = node_outputs
 
-            await event_bus.publish("workflow.completed", {
-                "execution_id": execution_id,
-                "workflow_id": workflow.id,
-                "elapsed_ms": state.elapsed_ms,
-            })
+            await event_bus.publish(
+                "workflow.completed",
+                {
+                    "execution_id": execution_id,
+                    "workflow_id": workflow.id,
+                    "elapsed_ms": state.elapsed_ms,
+                },
+            )
             logger.info(
                 "Workflow '%s' completed in %.1fms.", workflow.name, state.elapsed_ms
             )
@@ -324,14 +340,15 @@ class WorkflowExecutor:
             state.error = str(exc)
             state.finished_at = time.monotonic()
             state.node_outputs = node_outputs
-            await event_bus.publish("workflow.failed", {
-                "execution_id": execution_id,
-                "error": state.error,
-                "elapsed_ms": state.elapsed_ms,
-            })
-            logger.error(
-                "Workflow '%s' failed: %s", workflow.name, exc, exc_info=True
+            await event_bus.publish(
+                "workflow.failed",
+                {
+                    "execution_id": execution_id,
+                    "error": state.error,
+                    "elapsed_ms": state.elapsed_ms,
+                },
             )
+            logger.error("Workflow '%s' failed: %s", workflow.name, exc, exc_info=True)
 
         finally:
             self._cancel_flags.pop(execution_id, None)
@@ -391,12 +408,15 @@ class WorkflowExecutor:
                 node_inputs = dict(initial_inputs)
 
             state.node_statuses[node_id] = "running"
-            await event_bus.publish("node.started", {
-                "node_id": node_id,
-                "node_name": nc.name,
-                "node_type": nc.type.value,
-                "execution_id": context.get("execution_id"),
-            })
+            await event_bus.publish(
+                "node.started",
+                {
+                    "node_id": node_id,
+                    "node_name": nc.name,
+                    "node_type": nc.type.value,
+                    "execution_id": context.get("execution_id"),
+                },
+            )
 
             try:
                 node = create_node(nc)
@@ -413,28 +433,32 @@ class WorkflowExecutor:
             if result.success:
                 state.node_statuses[node_id] = "completed"
                 node_outputs[node_id] = result.output
-                await event_bus.publish("node.completed", {
-                    "node_id": node_id,
-                    "node_name": nc.name,
-                    "duration_ms": result.duration_ms,
-                    "execution_id": context.get("execution_id"),
-                })
+                await event_bus.publish(
+                    "node.completed",
+                    {
+                        "node_id": node_id,
+                        "node_name": nc.name,
+                        "duration_ms": result.duration_ms,
+                        "execution_id": context.get("execution_id"),
+                    },
+                )
                 logger.debug(
                     "Node '%s' completed in %.1fms.", node_id, result.duration_ms
                 )
             else:
                 state.node_statuses[node_id] = "failed"
                 node_outputs[node_id] = None
-                await event_bus.publish("node.failed", {
-                    "node_id": node_id,
-                    "node_name": nc.name,
-                    "error": result.error,
-                    "duration_ms": result.duration_ms,
-                    "execution_id": context.get("execution_id"),
-                })
-                logger.warning(
-                    "Node '%s' failed: %s", node_id, result.error
+                await event_bus.publish(
+                    "node.failed",
+                    {
+                        "node_id": node_id,
+                        "node_name": nc.name,
+                        "error": result.error,
+                        "duration_ms": result.duration_ms,
+                        "execution_id": context.get("execution_id"),
+                    },
                 )
+                logger.warning("Node '%s' failed: %s", node_id, result.error)
 
         await asyncio.gather(*[_run_node(nid) for nid in layer])
 

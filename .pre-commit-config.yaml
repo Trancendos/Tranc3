@@ -37,4 +37,5 @@ repos:
     hooks:
       - id: bandit
         args: [-r, src/, -ll, -ii]   # medium severity + confidence
+        pass_filenames: false
         exclude: tests/

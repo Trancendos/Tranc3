@@ -3,7 +3,7 @@
 # Stub with real interface — swap implementation when hardware available
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -16,11 +16,11 @@ class BCISignalProcessor:
     """
 
     FREQUENCY_BANDS = {
-        "delta":      (0.5, 4),    # Deep sleep
-        "theta":      (4, 8),      # Memory, creativity
-        "alpha":      (8, 12),     # Relaxed awareness
-        "beta":       (12, 30),    # Active thinking
-        "gamma":      (30, 100),   # Consciousness binding
+        "delta": (0.5, 4),  # Deep sleep
+        "theta": (4, 8),  # Memory, creativity
+        "alpha": (8, 12),  # Relaxed awareness
+        "beta": (12, 30),  # Active thinking
+        "gamma": (30, 100),  # Consciousness binding
         "high_gamma": (100, 200),  # Hyper-consciousness
     }
 
@@ -52,24 +52,28 @@ class BCISignalProcessor:
         dominant_band = max(features, key=features.get).replace("_power", "")
         features["dominant_band"] = dominant_band
         features["intent_signal"] = self._band_to_intent(dominant_band)
-        features["consciousness_estimate"] = features.get("gamma_power", 0) + features.get("high_gamma_power", 0)
+        features["consciousness_estimate"] = features.get(
+            "gamma_power", 0
+        ) + features.get("high_gamma_power", 0)
 
         return features
 
     def _band_to_intent(self, band: str) -> str:
         mapping = {
-            "delta":      "rest",
-            "theta":      "creative",
-            "alpha":      "reflective",
-            "beta":       "analytical",
-            "gamma":      "focused",
+            "delta": "rest",
+            "theta": "creative",
+            "alpha": "reflective",
+            "beta": "analytical",
+            "gamma": "focused",
             "high_gamma": "hyper_focused",
         }
         return mapping.get(band, "neutral")
 
     def _empty_signal(self) -> Dict:
         return {f"{b}_power": 0.0 for b in self.FREQUENCY_BANDS} | {
-            "dominant_band": "alpha", "intent_signal": "neutral", "consciousness_estimate": 0.0
+            "dominant_band": "alpha",
+            "intent_signal": "neutral",
+            "consciousness_estimate": 0.0,
         }
 
 
@@ -86,7 +90,9 @@ class BCIInputAdapter:
 
     def connect(self, device_type: str = "openbci") -> bool:
         """Connect to BCI hardware. Returns True if successful."""
-        logger.info(f"BCI connect requested: {device_type} — stub mode, returning False")
+        logger.info(
+            f"BCI connect requested: {device_type} — stub mode, returning False"
+        )
         return False  # Stub — implement when hardware available
 
     def read_signal(self) -> Optional[np.ndarray]:
@@ -99,17 +105,22 @@ class BCIInputAdapter:
         """Convert neural signal to /chat request parameters."""
         features = self.processor.process_neural_signal(signal)
         return {
-            "intent_hint":    features.get("intent_signal", "neutral"),
-            "consciousness":  features.get("consciousness_estimate", 0.0),
-            "dominant_band":  features.get("dominant_band", "alpha"),
-            "user_emotion":   self._band_to_emotion(features.get("dominant_band", "alpha")),
+            "intent_hint": features.get("intent_signal", "neutral"),
+            "consciousness": features.get("consciousness_estimate", 0.0),
+            "dominant_band": features.get("dominant_band", "alpha"),
+            "user_emotion": self._band_to_emotion(
+                features.get("dominant_band", "alpha")
+            ),
         }
 
     def _band_to_emotion(self, band: str) -> str:
         mapping = {
-            "delta": "neutral", "theta": "curious",
-            "alpha": "calm",    "beta": "focused",
-            "gamma": "excited", "high_gamma": "intense",
+            "delta": "neutral",
+            "theta": "curious",
+            "alpha": "calm",
+            "beta": "focused",
+            "gamma": "excited",
+            "high_gamma": "intense",
         }
         return mapping.get(band, "neutral")
 

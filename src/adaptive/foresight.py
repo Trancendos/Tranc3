@@ -4,11 +4,10 @@
 
 import math
 import time
-import random
 import logging
 from typing import Dict, List, Optional, Tuple
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ProbabilityVector:
     """Weighted probability distribution over outcomes"""
+
     outcomes: Dict[str, float]
 
     def normalise(self) -> "ProbabilityVector":
@@ -43,27 +43,31 @@ class ConversationTrajectoryPredictor:
     """
 
     TRAJECTORIES = {
-        "escalating_positive":  "User satisfaction increasing — maintain current approach",
-        "escalating_negative":  "User frustration building — switch to empathetic mode",
-        "topic_drift":          "Conversation moving off original topic",
-        "resolution_imminent":  "User about to reach their goal",
-        "abandonment_risk":     "User likely to end conversation without resolution",
+        "escalating_positive": "User satisfaction increasing — maintain current approach",
+        "escalating_negative": "User frustration building — switch to empathetic mode",
+        "topic_drift": "Conversation moving off original topic",
+        "resolution_imminent": "User about to reach their goal",
+        "abandonment_risk": "User likely to end conversation without resolution",
         "deepening_engagement": "User becoming more invested — opportunity to upsell",
-        "stable":               "Conversation proceeding normally",
+        "stable": "Conversation proceeding normally",
     }
 
     def __init__(self):
         self._history: Dict[str, deque] = {}
 
-    def record_turn(self, session_id: str, emotion: str, intent: str, rating: Optional[float] = None):
+    def record_turn(
+        self, session_id: str, emotion: str, intent: str, rating: Optional[float] = None
+    ):
         if session_id not in self._history:
             self._history[session_id] = deque(maxlen=20)
-        self._history[session_id].append({
-            "emotion": emotion,
-            "intent": intent,
-            "rating": rating,
-            "ts": time.time(),
-        })
+        self._history[session_id].append(
+            {
+                "emotion": emotion,
+                "intent": intent,
+                "rating": rating,
+                "ts": time.time(),
+            }
+        )
 
     def predict_trajectory(self, session_id: str) -> ProbabilityVector:
         history = list(self._history.get(session_id, []))
@@ -130,10 +134,10 @@ class AdaptiveParameterController:
 
         # Intent-based adjustments
         intent_adjustments = {
-            "creative":   {"temperature": +0.2, "top_p": +0.05, "max_tokens": +100},
-            "analytical": {"temperature": -0.3, "top_p": -0.1,  "max_tokens": +50},
-            "emotional":  {"temperature": +0.1, "max_tokens": +50},
-            "question":   {"temperature": -0.1, "max_tokens": -20},
+            "creative": {"temperature": +0.2, "top_p": +0.05, "max_tokens": +100},
+            "analytical": {"temperature": -0.3, "top_p": -0.1, "max_tokens": +50},
+            "emotional": {"temperature": +0.1, "max_tokens": +50},
+            "question": {"temperature": -0.1, "max_tokens": -20},
         }
         for k, v in intent_adjustments.get(intent, {}).items():
             params[k] = params.get(k, 0) + v

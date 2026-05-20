@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 import numpy as np
 
@@ -33,12 +33,14 @@ def _get_encoder():
     global _encoder, _encoder_lock
     if _encoder_lock is None:
         import threading
+
         _encoder_lock = threading.Lock()
     if _encoder is None:
         with _encoder_lock:
             if _encoder is None:
                 try:
                     from sentence_transformers import SentenceTransformer
+
                     _encoder = SentenceTransformer("all-MiniLM-L6-v2")
                     logger.info("tool_rag: encoder loaded")
                 except Exception as exc:
@@ -59,7 +61,7 @@ class ToolRAG:
 
     def __init__(self) -> None:
         self._tools: List["SparkTool"] = []
-        self._index = None      # faiss.IndexFlatIP
+        self._index = None  # faiss.IndexFlatIP
         self._embeddings: Optional[np.ndarray] = None
         self._indexed = False
 
@@ -104,6 +106,7 @@ class ToolRAG:
 
         try:
             import faiss
+
             q_vec = encoder.encode([query], show_progress_bar=False)
             if not isinstance(q_vec, np.ndarray):
                 q_vec = np.array(q_vec)

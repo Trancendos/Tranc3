@@ -16,13 +16,12 @@ All providers implement the same async interface: generate(prompt) → str.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 
@@ -35,13 +34,14 @@ _TIMEOUT = httpx.Timeout(60.0, connect=5.0)
 # Provider enum + config
 # ---------------------------------------------------------------------------
 
+
 class Provider(str, Enum):
-    TRANC3   = "tranc3"
-    OLLAMA   = "ollama"
+    TRANC3 = "tranc3"
+    OLLAMA = "ollama"
     OPENROUTER = "openrouter"
     HUGGINGFACE = "huggingface"
-    GROQ     = "groq"
-    STUB     = "stub"
+    GROQ = "groq"
+    STUB = "stub"
 
 
 @dataclass
@@ -80,39 +80,54 @@ class LLMResponse:
 # Individual provider implementations
 # ---------------------------------------------------------------------------
 
-async def _try_tranc3(cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient) -> str:
+
+async def _try_tranc3(
+    cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient
+) -> str:
     """Call the local Tranc3Engine via the nanoservices proxy."""
     url = os.getenv("TRANC3_ENGINE_URL", "http://localhost:8000/v1/chat")
-    resp = await client.post(url, json={
-        "messages": [
-            {"role": "system", "content": req.system},
-            {"role": "user", "content": req.prompt},
-        ],
-        "max_tokens": req.max_tokens,
-        "temperature": req.temperature,
-    }, timeout=_TIMEOUT)
+    resp = await client.post(
+        url,
+        json={
+            "messages": [
+                {"role": "system", "content": req.system},
+                {"role": "user", "content": req.prompt},
+            ],
+            "max_tokens": req.max_tokens,
+            "temperature": req.temperature,
+        },
+        timeout=_TIMEOUT,
+    )
     resp.raise_for_status()
     data = resp.json()
     return data.get("response") or data["choices"][0]["message"]["content"]
 
 
-async def _try_ollama(cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient) -> str:
+async def _try_ollama(
+    cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient
+) -> str:
     base = os.getenv("OLLAMA_URL", "http://localhost:11434")
     model = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
-    resp = await client.post(f"{base}/api/chat", json={
-        "model": model,
-        "messages": [
-            {"role": "system", "content": req.system},
-            {"role": "user", "content": req.prompt},
-        ],
-        "stream": False,
-        "options": {"num_predict": req.max_tokens, "temperature": req.temperature},
-    }, timeout=_TIMEOUT)
+    resp = await client.post(
+        f"{base}/api/chat",
+        json={
+            "model": model,
+            "messages": [
+                {"role": "system", "content": req.system},
+                {"role": "user", "content": req.prompt},
+            ],
+            "stream": False,
+            "options": {"num_predict": req.max_tokens, "temperature": req.temperature},
+        },
+        timeout=_TIMEOUT,
+    )
     resp.raise_for_status()
     return resp.json()["message"]["content"]
 
 
-async def _try_openrouter(cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient) -> str:
+async def _try_openrouter(
+    cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient
+) -> str:
     api_key = os.getenv("OPENROUTER_API_KEY", "")
     if not api_key:
         raise ValueError("OPENROUTER_API_KEY not set")
@@ -139,7 +154,9 @@ async def _try_openrouter(cfg: ProviderConfig, req: LLMRequest, client: httpx.As
     return resp.json()["choices"][0]["message"]["content"]
 
 
-async def _try_huggingface(cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient) -> str:
+async def _try_huggingface(
+    cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient
+) -> str:
     api_key = os.getenv("HF_API_KEY", "")
     if not api_key:
         raise ValueError("HF_API_KEY not set")
@@ -165,11 +182,15 @@ async def _try_huggingface(cfg: ProviderConfig, req: LLMRequest, client: httpx.A
     return str(data)
 
 
-async def _try_groq(cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient) -> str:
+async def _try_groq(
+    cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient
+) -> str:
     api_key = os.getenv("GROQ_API_KEY", "")
     if not api_key:
         raise ValueError("GROQ_API_KEY not set")
-    model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")  # free tier model (llama3-8b-8192 decommissioned)
+    model = os.getenv(
+        "GROQ_MODEL", "llama-3.1-8b-instant"
+    )  # free tier model (llama3-8b-8192 decommissioned)
     resp = await client.post(
         "https://api.groq.com/openai/v1/chat/completions",
         headers={"Authorization": f"Bearer {api_key}"},
@@ -212,11 +233,11 @@ def _stub_response(req: LLMRequest) -> str:
 # ---------------------------------------------------------------------------
 
 _PROVIDER_FNS = {
-    Provider.TRANC3:      _try_tranc3,
-    Provider.OLLAMA:      _try_ollama,
-    Provider.OPENROUTER:  _try_openrouter,
+    Provider.TRANC3: _try_tranc3,
+    Provider.OLLAMA: _try_ollama,
+    Provider.OPENROUTER: _try_openrouter,
     Provider.HUGGINGFACE: _try_huggingface,
-    Provider.GROQ:        _try_groq,
+    Provider.GROQ: _try_groq,
 }
 
 
@@ -266,7 +287,9 @@ class LLMRouter:
                 latency_ms = (time.monotonic() - t0) * 1000
                 self._stats[provider]["failures"] += 1
                 self._stats[provider]["last_error"] = str(exc)
-                logger.debug("LLMRouter: %s failed (%.0fms): %s", provider, latency_ms, exc)
+                logger.debug(
+                    "LLMRouter: %s failed (%.0fms): %s", provider, latency_ms, exc
+                )
 
         # All failed — honest stub
         return LLMResponse(
@@ -285,7 +308,8 @@ class LLMRouter:
                     "failures": s["failures"],
                     "success_rate": (
                         round((s["calls"] - s["failures"]) / s["calls"] * 100, 1)
-                        if s["calls"] > 0 else None
+                        if s["calls"] > 0
+                        else None
                     ),
                     "last_error": s["last_error"] or None,
                 }

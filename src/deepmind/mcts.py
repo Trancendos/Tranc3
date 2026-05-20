@@ -1,7 +1,5 @@
 import math
 import numpy as np
-import torch
-import torch.nn as nn
 import logging
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, field
@@ -168,7 +166,9 @@ class MCTS:
         # Initialise root with priors + Dirichlet noise for exploration
         priors, _ = self.nn.evaluate(root_state)
         # Only keep valid actions
-        filtered = {a: priors.get(a, 1.0 / max(len(valid_actions), 1)) for a in valid_actions}
+        filtered = {
+            a: priors.get(a, 1.0 / max(len(valid_actions), 1)) for a in valid_actions
+        }
         # Normalise
         total = sum(filtered.values())
         if total > 0:
@@ -178,7 +178,7 @@ class MCTS:
 
         for sim_idx in range(self.config.num_simulations):
             try:
-                leaf_value = self._simulate(root)
+                self._simulate(root)
             except Exception as exc:
                 logger.debug("Simulation %d failed: %s", sim_idx, exc)
 
@@ -278,9 +278,7 @@ class MCTS:
         noise = np.random.dirichlet([alpha] * len(actions))
         noisy: Dict[str, float] = {}
         for action, eta in zip(actions, noise):
-            noisy[action] = (
-                (1.0 - epsilon) * priors[action] + epsilon * float(eta)
-            )
+            noisy[action] = (1.0 - epsilon) * priors[action] + epsilon * float(eta)
         return noisy
 
     def get_policy(self, root: MCTSNode, temperature: float) -> Dict[str, float]:
@@ -311,6 +309,8 @@ class MCTS:
             # Softmax over (visit_count)^(1/T)
             powered = np.power(counts, 1.0 / temperature)
             total = powered.sum()
-            policy = powered / total if total > 0 else np.ones_like(powered) / len(powered)
+            policy = (
+                powered / total if total > 0 else np.ones_like(powered) / len(powered)
+            )
 
         return {action: float(prob) for action, prob in zip(actions, policy)}

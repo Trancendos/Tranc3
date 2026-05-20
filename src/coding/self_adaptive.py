@@ -6,9 +6,8 @@ import ast
 import re
 import time
 import logging
-import asyncio
-from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CodeQualityMetric:
     """Snapshot of code quality at a point in time."""
+
     timestamp: float
     complexity: int
     lines_of_code: int
@@ -32,12 +32,22 @@ class CodeQualityMetric:
             tree = ast.parse(code)
         except SyntaxError:
             return cls(
-                timestamp=time.time(), complexity=0, lines_of_code=len(code.splitlines()),
-                function_count=0, class_count=0, docstring_coverage=0.0,
-                type_hint_coverage=0.0, error_handling_score=0.0, overall_score=0.0,
+                timestamp=time.time(),
+                complexity=0,
+                lines_of_code=len(code.splitlines()),
+                function_count=0,
+                class_count=0,
+                docstring_coverage=0.0,
+                type_hint_coverage=0.0,
+                error_handling_score=0.0,
+                overall_score=0.0,
             )
 
-        functions = [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+        functions = [
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+        ]
         classes = [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
         try_nodes = [n for n in ast.walk(tree) if isinstance(n, ast.Try)]
 
@@ -51,8 +61,10 @@ class CodeQualityMetric:
 
         # Type hint coverage
         hint_count = sum(
-            1 for fn in functions
-            if fn.returns is not None or any(a.annotation is not None for a in fn.args.args)
+            1
+            for fn in functions
+            if fn.returns is not None
+            or any(a.annotation is not None for a in fn.args.args)
         )
         hint_cov = hint_count / fn_count if fn_count > 0 else 1.0
 
@@ -61,7 +73,8 @@ class CodeQualityMetric:
 
         # Cyclomatic complexity estimate
         branches = sum(
-            1 for n in ast.walk(tree)
+            1
+            for n in ast.walk(tree)
             if isinstance(n, (ast.If, ast.For, ast.While, ast.ExceptHandler, ast.With))
         )
         complexity = branches + 1
@@ -116,7 +129,9 @@ class RegressionDetector:
             }
         return None
 
-    def _find_causes(self, baseline: CodeQualityMetric, current: CodeQualityMetric) -> List[str]:
+    def _find_causes(
+        self, baseline: CodeQualityMetric, current: CodeQualityMetric
+    ) -> List[str]:
         causes = []
         if current.docstring_coverage < baseline.docstring_coverage - 0.1:
             causes.append("docstring_coverage_dropped")
@@ -175,12 +190,14 @@ class AdaptiveCodingEngine:
 
         if fixes_applied:
             self._monitored_modules[name] = improved_code
-            self._fix_history.append({
-                "module": name,
-                "timestamp": time.time(),
-                "fixes": fixes_applied,
-                "delta_before": regression["delta"],
-            })
+            self._fix_history.append(
+                {
+                    "module": name,
+                    "timestamp": time.time(),
+                    "fixes": fixes_applied,
+                    "delta_before": regression["delta"],
+                }
+            )
 
         return {"fixes_applied": fixes_applied, "improved": bool(fixes_applied)}
 
@@ -193,12 +210,16 @@ class AdaptiveCodingEngine:
             line = lines[i]
             output.append(line)
             stripped = line.strip()
-            if (stripped.startswith("def ") or stripped.startswith("async def ")):
+            if stripped.startswith("def ") or stripped.startswith("async def "):
                 # Check if next non-empty line is a docstring
                 j = i + 1
                 while j < len(lines) and lines[j].strip() == "":
                     j += 1
-                if j < len(lines) and not lines[j].strip().startswith('"""') and not lines[j].strip().startswith("'''"):
+                if (
+                    j < len(lines)
+                    and not lines[j].strip().startswith('"""')
+                    and not lines[j].strip().startswith("'''")
+                ):
                     indent = len(line) - len(line.lstrip()) + 4
                     fn_name = re.search(r"def (\w+)", stripped)
                     name_str = fn_name.group(1) if fn_name else "function"
@@ -210,7 +231,9 @@ class AdaptiveCodingEngine:
         """Add -> None to functions that have no return annotation."""
         return re.sub(
             r"(def \w+\([^)]*\))(\s*:)",
-            lambda m: m.group(1) + " -> None" + m.group(2) if "->" not in m.group(0) else m.group(0),
+            lambda m: m.group(1) + " -> None" + m.group(2)
+            if "->" not in m.group(0)
+            else m.group(0),
             code,
         )
 

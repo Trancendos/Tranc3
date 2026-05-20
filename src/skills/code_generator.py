@@ -4,7 +4,6 @@ with AST analysis, smell detection, and autonomous self-improvement.
 """
 
 import ast
-import asyncio
 import hashlib
 import logging
 import re
@@ -19,6 +18,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Request / Result
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class CodeGenerationRequest:
@@ -45,6 +45,7 @@ class CodeResult:
 # CodeAnalyzer
 # ---------------------------------------------------------------------------
 
+
 class CodeAnalyzer:
     """
     Static analysis for Python code: complexity, smells, docstrings.
@@ -68,20 +69,24 @@ class CodeAnalyzer:
 
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                result["functions"].append({
-                    "name": node.name,
-                    "lineno": node.lineno,
-                    "args": [a.arg for a in node.args.args],
-                    "has_docstring": (
-                        isinstance(node.body[0], ast.Expr)
-                        and isinstance(node.body[0].value, ast.Constant)
-                        if node.body else False
-                    ),
-                    "line_count": (
-                        node.end_lineno - node.lineno + 1
-                        if hasattr(node, "end_lineno") else 0
-                    ),
-                })
+                result["functions"].append(
+                    {
+                        "name": node.name,
+                        "lineno": node.lineno,
+                        "args": [a.arg for a in node.args.args],
+                        "has_docstring": (
+                            isinstance(node.body[0], ast.Expr)
+                            and isinstance(node.body[0].value, ast.Constant)
+                            if node.body
+                            else False
+                        ),
+                        "line_count": (
+                            node.end_lineno - node.lineno + 1
+                            if hasattr(node, "end_lineno")
+                            else 0
+                        ),
+                    }
+                )
             elif isinstance(node, ast.ClassDef):
                 result["classes"].append({"name": node.name, "lineno": node.lineno})
             elif isinstance(node, (ast.Import, ast.ImportFrom)):
@@ -102,9 +107,7 @@ class CodeAnalyzer:
                     f"Function '{fn['name']}' is long ({fn['line_count']} lines)."
                 )
             if not fn["has_docstring"]:
-                result["issues"].append(
-                    f"Function '{fn['name']}' lacks a docstring."
-                )
+                result["issues"].append(f"Function '{fn['name']}' lacks a docstring.")
 
         return result
 
@@ -120,9 +123,7 @@ class CodeAnalyzer:
             stripped = line.strip()
             if re.match(r"^(async\s+)?def\s+\w+", stripped):
                 if in_fn and (i - fn_start) > 50:
-                    smells.append(
-                        f"Long function '{fn_name}' (~{i - fn_start} lines)"
-                    )
+                    smells.append(f"Long function '{fn_name}' (~{i - fn_start} lines)")
                 in_fn = True
                 fn_start = i
                 m = re.search(r"def\s+(\w+)", stripped)
@@ -175,8 +176,13 @@ class CodeAnalyzer:
             if isinstance(
                 node,
                 (
-                    ast.If, ast.For, ast.While, ast.ExceptHandler,
-                    ast.With, ast.AsyncFor, ast.AsyncWith,
+                    ast.If,
+                    ast.For,
+                    ast.While,
+                    ast.ExceptHandler,
+                    ast.With,
+                    ast.AsyncFor,
+                    ast.AsyncWith,
                 ),
             ):
                 count += 1
@@ -206,6 +212,7 @@ class CodeAnalyzer:
 # ---------------------------------------------------------------------------
 # CodeSelfImprover
 # ---------------------------------------------------------------------------
+
 
 class CodeSelfImprover:
     """Applies automated quality improvements to Python code."""
@@ -243,7 +250,9 @@ class CodeSelfImprover:
         if added:
             applied.append("Added type hints")
 
-        if feedback and ("docstring" in feedback.lower() or "document" in feedback.lower()):
+        if feedback and (
+            "docstring" in feedback.lower() or "document" in feedback.lower()
+        ):
             improved, added_doc = self._add_docstrings(improved, analysis)
             if added_doc:
                 applied.append("Added docstrings")
@@ -258,12 +267,14 @@ class CodeSelfImprover:
 
         quality = self._score_quality(improved, analysis, smells)
 
-        self._history.append({
-            "timestamp": time.time(),
-            "improvements": applied,
-            "quality": quality,
-            "duration_ms": (time.perf_counter() - t0) * 1000.0,
-        })
+        self._history.append(
+            {
+                "timestamp": time.time(),
+                "improvements": applied,
+                "quality": quality,
+                "duration_ms": (time.perf_counter() - t0) * 1000.0,
+            }
+        )
 
         return CodeResult(
             code=improved,
@@ -303,7 +314,9 @@ class CodeSelfImprover:
         """Insert a stub docstring for functions missing one."""
         modified = False
         lines = code.splitlines()
-        insert_positions: List[Tuple[int, str, str]] = []  # (lineno_after_def, indent, fn_name)
+        insert_positions: List[
+            Tuple[int, str, str]
+        ] = []  # (lineno_after_def, indent, fn_name)
 
         for fn in analysis.get("functions", []):
             if not fn.get("has_docstring"):
@@ -322,9 +335,7 @@ class CodeSelfImprover:
 
         return "\n".join(lines), modified
 
-    def _split_long_functions(
-        self, code: str, max_lines: int = 30
-    ) -> Tuple[str, bool]:
+    def _split_long_functions(self, code: str, max_lines: int = 30) -> Tuple[str, bool]:
         """
         Detect functions longer than *max_lines* and insert a # TODO comment
         advising extraction.  Full splitting requires semantic understanding
@@ -336,7 +347,9 @@ class CodeSelfImprover:
         for i, line in enumerate(lines):
             m = re.match(r"^(\s*(?:async\s+)?def\s+(\w+))", line)
             if m:
-                fn_starts.append((i, m.group(2), len(m.group(1)) - len(m.group(1).lstrip())))
+                fn_starts.append(
+                    (i, m.group(2), len(m.group(1)) - len(m.group(1).lstrip()))
+                )
 
         if not fn_starts:
             return code, False
@@ -356,9 +369,11 @@ class CodeSelfImprover:
             if fn_len > max_lines:
                 comment_indent = " " * (indent_lvl + 4)
                 inserts.append(
-                    (start + 1,
-                     f"{comment_indent}# TODO: Function '{name}' is {fn_len} lines "
-                     f"— consider extracting helper functions.")
+                    (
+                        start + 1,
+                        f"{comment_indent}# TODO: Function '{name}' is {fn_len} lines "
+                        f"— consider extracting helper functions.",
+                    )
                 )
                 modified = True
 
@@ -382,9 +397,7 @@ class CodeSelfImprover:
             modified = True
         return code, modified
 
-    def _score_quality(
-        self, code: str, analysis: Dict, smells: List[str]
-    ) -> float:
+    def _score_quality(self, code: str, analysis: Dict, smells: List[str]) -> float:
         """
         Heuristic quality score in [0, 1].
         Starts at 1.0 and deducts for issues, smells, complexity.
@@ -554,6 +567,7 @@ _TEMPLATES: Dict[str, Dict[str, str]] = {
 # Test generator helper
 # ---------------------------------------------------------------------------
 
+
 def _generate_pytest_tests(code: str, description: str) -> str:
     """Generate pytest test stubs from function signatures found in *code*."""
     lines: List[str] = [
@@ -567,7 +581,7 @@ def _generate_pytest_tests(code: str, description: str) -> str:
     try:
         tree = ast.parse(code)
     except SyntaxError:
-        return "\n".join(lines) + f"# Could not parse code for test generation\n"
+        return "\n".join(lines) + "# Could not parse code for test generation\n"
 
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -595,19 +609,23 @@ def _generate_pytest_tests(code: str, description: str) -> str:
 
             prefix = "async " if is_async else ""
             decorator = "@pytest.mark.asyncio\n" if is_async else ""
-            call = f"await {fn}({', '.join(params)})" if is_async else f"{fn}({', '.join(params)})"
+            call = (
+                f"await {fn}({', '.join(params)})"
+                if is_async
+                else f"{fn}({', '.join(params)})"
+            )
             lines += [
                 f"{decorator}{prefix}def test_{fn}() -> None:",
                 f'    """Test {fn}."""',
-                f"    # Arrange / Act",
+                "    # Arrange / Act",
                 f"    result = {call}",
-                f"    # Assert",
-                f"    assert result is not None  # TODO: strengthen assertion",
+                "    # Assert",
+                "    assert result is not None  # TODO: strengthen assertion",
                 "",
             ]
 
     if len(lines) <= 5:
-        lines.append(f"# No testable functions found in generated code")
+        lines.append("# No testable functions found in generated code")
 
     return "\n".join(lines)
 
@@ -615,6 +633,7 @@ def _generate_pytest_tests(code: str, description: str) -> str:
 # ---------------------------------------------------------------------------
 # AdvancedCodeGenerator
 # ---------------------------------------------------------------------------
+
 
 class AdvancedCodeGenerator:
     """
@@ -642,11 +661,23 @@ class AdvancedCodeGenerator:
         desc_lower = request.description.lower()
 
         keyword_map = [
-            (["api", "endpoint", "route", "rest", "crud", "fastapi"], "api", "fastapi_router"),
+            (
+                ["api", "endpoint", "route", "rest", "crud", "fastapi"],
+                "api",
+                "fastapi_router",
+            ),
             (["model", "neural", "torch", "pytorch", "nn"], "ml_model", "torch_module"),
-            (["pipeline", "etl", "extract", "transform", "load"], "data_pipeline", "async_pipeline"),
+            (
+                ["pipeline", "etl", "extract", "transform", "load"],
+                "data_pipeline",
+                "async_pipeline",
+            ),
             (["cli", "command", "terminal", "typer", "argparse"], "cli", "typer_cli"),
-            (["handler", "web", "request", "response"], "web_handler", "fastapi_handler"),
+            (
+                ["handler", "web", "request", "response"],
+                "web_handler",
+                "fastapi_handler",
+            ),
         ]
 
         for keywords, category, template_key in keyword_map:
@@ -670,17 +701,18 @@ class AdvancedCodeGenerator:
                 raise NotImplementedError
             """)
 
-    def _apply_substitutions(self, template: str, request: CodeGenerationRequest) -> str:
+    def _apply_substitutions(
+        self, template: str, request: CodeGenerationRequest
+    ) -> str:
         """Fill in template placeholders from the request description."""
         words = re.findall(r"[A-Za-z]+", request.description)
-        resource = (words[0].lower() if words else "resource")
+        resource = words[0].lower() if words else "resource"
         model = resource.title()
         prefix = resource + "s"
         tag = resource
 
         return (
-            template
-            .replace("{prefix}", prefix)
+            template.replace("{prefix}", prefix)
             .replace("{tag}", tag)
             .replace("{Model}", model)
             .replace("{resource}", resource)
@@ -703,6 +735,7 @@ class AdvancedCodeGenerator:
         """
         try:
             from src.core.tranc3_inference import get_engine
+
             engine = get_engine()
 
             constraints_text = (
@@ -745,7 +778,8 @@ class AdvancedCodeGenerator:
     async def generate(self, request: CodeGenerationRequest) -> CodeResult:
         # Cache by content hash
         cache_key = hashlib.md5(
-            (request.description + request.language + request.context).encode()
+            (request.description + request.language + request.context).encode(),
+            usedforsecurity=False,
         ).hexdigest()
         if cache_key in self._cache:
             return self._cache[cache_key]
@@ -773,8 +807,14 @@ class AdvancedCodeGenerator:
         explanation = await self.explain_code(final_code)
 
         # 6. Quality score
-        analysis = self._analyzer.analyze_python(final_code) if request.language == "python" else {}
-        smells = self._analyzer.detect_code_smells(final_code) if request.language == "python" else []
+        self._analyzer.analyze_python(
+            final_code
+        ) if request.language == "python" else {}
+        smells = (
+            self._analyzer.detect_code_smells(final_code)
+            if request.language == "python"
+            else []
+        )
         quality = improved_result.quality_score
 
         result = CodeResult(
@@ -794,9 +834,7 @@ class AdvancedCodeGenerator:
     # Test generation
     # ------------------------------------------------------------------
 
-    async def generate_tests(
-        self, code: str, language: str = "python"
-    ) -> str:
+    async def generate_tests(self, code: str, language: str = "python") -> str:
         if language != "python":
             return f"# Test generation not implemented for {language}\n"
 
@@ -814,6 +852,7 @@ class AdvancedCodeGenerator:
         """
         try:
             from src.core.tranc3_inference import get_engine
+
             engine = get_engine()
             result = await engine.generate(
                 prompt=(

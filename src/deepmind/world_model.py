@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -140,9 +139,7 @@ class PredictionNetwork(nn.Module):
         self.policy_head = nn.Linear(config.hidden_dim, config.action_dim)
         self.value_head = nn.Linear(config.hidden_dim, 1)
 
-    def forward(
-        self, state: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute policy logits and value.
 
         Args:
@@ -208,9 +205,7 @@ class MuZeroWorldModel(nn.Module):
         policy_logits, value = self.prediction(next_state)
         return next_state, reward, policy_logits, value
 
-    def plan(
-        self, initial_obs: torch.Tensor, horizon: int = 5
-    ) -> List[Dict]:
+    def plan(self, initial_obs: torch.Tensor, horizon: int = 5) -> List[Dict]:
         """Unroll the world model for planning without gradient accumulation.
 
         For each step the greedy action (highest policy logit) is chosen and
@@ -266,10 +261,10 @@ class MuZeroWorldModel(nn.Module):
             "policy_loss", "consistency_loss", "total_loss".
         """
         observations: torch.Tensor = batch["observations"]
-        actions: torch.Tensor = batch["actions"]           # (B, K)
-        target_rewards: torch.Tensor = batch["target_rewards"]   # (B, K)
-        target_values: torch.Tensor = batch["target_values"]     # (B, K)
-        target_policies: torch.Tensor = batch["target_policies"] # (B, K, action_dim)
+        actions: torch.Tensor = batch["actions"]  # (B, K)
+        target_rewards: torch.Tensor = batch["target_rewards"]  # (B, K)
+        target_values: torch.Tensor = batch["target_values"]  # (B, K)
+        target_policies: torch.Tensor = batch["target_policies"]  # (B, K, action_dim)
 
         B, K = actions.shape
         device = observations.device
@@ -295,14 +290,10 @@ class MuZeroWorldModel(nn.Module):
             policy_logits, value = self.prediction(state)
 
             # Reward loss: MSE between predicted and target reward
-            reward_loss = F.mse_loss(
-                reward.squeeze(-1), target_rewards[:, k]
-            )
+            reward_loss = F.mse_loss(reward.squeeze(-1), target_rewards[:, k])
 
             # Value loss: MSE between predicted and target value
-            value_loss = F.mse_loss(
-                value.squeeze(-1), target_values[:, k]
-            )
+            value_loss = F.mse_loss(value.squeeze(-1), target_values[:, k])
 
             # Policy loss: cross-entropy against target policy distribution
             log_probs = F.log_softmax(policy_logits, dim=-1)

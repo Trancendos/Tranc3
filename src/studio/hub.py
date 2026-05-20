@@ -26,18 +26,18 @@ logger = logging.getLogger(__name__)
 
 
 class StudioServiceType(str, Enum):
-    PHOTO     = "sashas-photo-studio"
-    VIDEO     = "tatekings"
-    GAME_DEV  = "tranceflow"
+    PHOTO = "sashas-photo-studio"
+    VIDEO = "tatekings"
+    GAME_DEV = "tranceflow"
     UI_DESIGN = "fabulousa"
     IMAGINARIUM = "imaginarium"
 
 
 class JobStatus(str, Enum):
-    QUEUED     = "queued"
+    QUEUED = "queued"
     PROCESSING = "processing"
-    COMPLETE   = "complete"
-    FAILED     = "failed"
+    COMPLETE = "complete"
+    FAILED = "failed"
 
 
 @dataclass
@@ -67,14 +67,26 @@ _CAPABILITIES: Dict[StudioServiceType, Dict[str, Any]] = {
         "name": "Sasha's Photo Studio",
         "description": "AI image creation and editing — Stable Diffusion + ComfyUI",
         "foundation": "Stable Diffusion / ComfyUI",
-        "capabilities": ["text-to-image", "img2img", "inpainting", "upscaling", "style-transfer"],
+        "capabilities": [
+            "text-to-image",
+            "img2img",
+            "inpainting",
+            "upscaling",
+            "style-transfer",
+        ],
         "status": "planned",
     },
     StudioServiceType.VIDEO: {
         "name": "TateKing",
         "description": "Video creation and editing — FFmpeg + custom UI",
         "foundation": "FFmpeg",
-        "capabilities": ["transcoding", "trim-merge", "subtitles", "transitions", "audio-mix"],
+        "capabilities": [
+            "transcoding",
+            "trim-merge",
+            "subtitles",
+            "transitions",
+            "audio-mix",
+        ],
         "status": "planned",
     },
     StudioServiceType.GAME_DEV: {
@@ -88,7 +100,13 @@ _CAPABILITIES: Dict[StudioServiceType, Dict[str, Any]] = {
         "name": "Fabulousa",
         "description": "UX/UI + Aria styling and design platform — Penpot self-hosted",
         "foundation": "Penpot",
-        "capabilities": ["wireframing", "prototyping", "design-tokens", "handoff", "aria-audit"],
+        "capabilities": [
+            "wireframing",
+            "prototyping",
+            "design-tokens",
+            "handoff",
+            "aria-audit",
+        ],
         "status": "planned",
     },
     StudioServiceType.IMAGINARIUM: {
@@ -146,8 +164,9 @@ class TheStudio:
     def _emit(self, job: StudioJob) -> None:
         try:
             from src.observability.observatory import observe, EventCategory
+
             observe(
-                f"studio.job.submitted",
+                "studio.job.submitted",
                 category=EventCategory.DATA,
                 service="the-studio",
                 metadata={"job_id": job.id, "sub_service": job.service.value},

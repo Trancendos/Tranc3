@@ -1,10 +1,9 @@
-import torch
 import numpy as np
 import asyncio
 import logging
 import re
 import hashlib
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Optional
 from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
@@ -86,8 +85,7 @@ class BeamSearchPlanner:
 
             # Expand every node currently in the beam
             expansion_tasks = [
-                self._async_expand(node, goal, context, depth)
-                for node in beam
+                self._async_expand(node, goal, context, depth) for node in beam
             ]
             expanded_groups = await asyncio.gather(*expansion_tasks)
 
@@ -103,8 +101,12 @@ class BeamSearchPlanner:
             candidates.sort(key=lambda n: n.score, reverse=True)
             beam = candidates[: self.beam_width]
 
-            logger.debug("Beam search depth %d: %d candidates → %d kept",
-                         depth, len(candidates), len(beam))
+            logger.debug(
+                "Beam search depth %d: %d candidates → %d kept",
+                depth,
+                len(candidates),
+                len(beam),
+            )
 
         return beam
 
@@ -117,7 +119,7 @@ class BeamSearchPlanner:
         for t in next_thoughts:
             score = self._score_thought(t, goal)
             # Penalise deep nodes slightly to prefer breadth
-            adjusted = score * (0.95 ** depth)
+            adjusted = score * (0.95**depth)
             children.append(ThoughtNode(thought=t, score=adjusted, depth=depth))
         return children
 
@@ -137,10 +139,41 @@ class BeamSearchPlanner:
 
         # Strip common stop words for a cleaner overlap
         stop_words = {
-            "a", "an", "the", "and", "or", "but", "in", "on", "at", "to",
-            "for", "of", "with", "by", "from", "is", "are", "was", "were",
-            "be", "been", "being", "have", "has", "had", "do", "does", "did",
-            "will", "would", "could", "should", "may", "might", "shall",
+            "a",
+            "an",
+            "the",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "by",
+            "from",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "shall",
         }
         tw = thought_words - stop_words
         gw = goal_words - stop_words
@@ -181,7 +214,7 @@ class BeamSearchPlanner:
             List of candidate child thought strings.
         """
         constraints: List[str] = context.get("constraints", [])
-        state: Dict = context.get("state", {})
+        context.get("state", {})
 
         # Decomposition templates — applied in rotation based on thought hash
         templates = [
@@ -196,8 +229,12 @@ class BeamSearchPlanner:
         ]
 
         # Seed selection from thought content for deterministic variety
-        seed = int(hashlib.md5(thought.encode()).hexdigest(), 16) % len(templates)
-        selected = templates[seed: seed + 4] + templates[:max(0, seed - len(templates) + 4)]
+        seed = int(
+            hashlib.md5(thought.encode(), usedforsecurity=False).hexdigest(), 16
+        ) % len(templates)
+        selected = (
+            templates[seed : seed + 4] + templates[: max(0, seed - len(templates) + 4)]
+        )
         selected = selected[: self.beam_width]
 
         expansions = []
@@ -235,9 +272,7 @@ class ChainOfThoughtReasoner:
             "Synthesise sub-results into a unified answer.",
         ]
 
-    async def reason(
-        self, problem: str, examples: List[Dict] = []
-    ) -> Dict:
+    async def reason(self, problem: str, examples: List[Dict] = []) -> Dict:
         """Perform chain-of-thought reasoning on a problem.
 
         Args:
@@ -270,12 +305,14 @@ class ChainOfThoughtReasoner:
         for i, step in enumerate(steps):
             running_context += f" {step}"
             intermediate_confidence = min(1.0, confidence * (i + 1) / len(steps))
-            reasoning_chain.append({
-                "step_index": i,
-                "step": step,
-                "cumulative_context": running_context.strip(),
-                "intermediate_confidence": intermediate_confidence,
-            })
+            reasoning_chain.append(
+                {
+                    "step_index": i,
+                    "step": step,
+                    "cumulative_context": running_context.strip(),
+                    "intermediate_confidence": intermediate_confidence,
+                }
+            )
 
         return {
             "steps": steps,
@@ -297,7 +334,9 @@ class ChainOfThoughtReasoner:
             Ordered list of reasoning step strings.
         """
         # Extract key noun phrases (simple heuristic: capitalised or quoted)
-        key_terms = re.findall(r'"([^"]+)"|\'([^\']+)\'|([A-Z][a-z]+ [A-Z][a-z]+)', text)
+        key_terms = re.findall(
+            r'"([^"]+)"|\'([^\']+)\'|([A-Z][a-z]+ [A-Z][a-z]+)', text
+        )
         flat_terms = [
             next(t for t in group if t) for group in key_terms if any(key_terms)
         ]
@@ -343,7 +382,9 @@ class ChainOfThoughtReasoner:
         avg_len = np.mean([len(s.split()) for s in steps])
         length_factor = min(1.0, avg_len / 15.0)
         # Combine with slight random perturbation representing epistemic uncertainty
-        confidence = 0.5 * coverage + 0.4 * length_factor + 0.1 * np.random.uniform(0.8, 1.0)
+        confidence = (
+            0.5 * coverage + 0.4 * length_factor + 0.1 * np.random.uniform(0.8, 1.0)
+        )
         return float(np.clip(confidence, 0.0, 1.0))
 
 
@@ -386,12 +427,8 @@ class StrategicPlanner:
         context = {"state": state, "constraints": constraints}
 
         # Run beam search and chain-of-thought concurrently
-        beam_task = asyncio.create_task(
-            self._beam_planner.plan(goal, context)
-        )
-        cot_task = asyncio.create_task(
-            self._cot_reasoner.reason(goal)
-        )
+        beam_task = asyncio.create_task(self._beam_planner.plan(goal, context))
+        cot_task = asyncio.create_task(self._cot_reasoner.reason(goal))
 
         beam_nodes, cot_result = await asyncio.gather(beam_task, cot_task)
 
@@ -425,7 +462,9 @@ class StrategicPlanner:
 
         logger.info(
             "plan_action: goal=%r, plan_len=%d, confidence=%.3f",
-            goal[:60], len(valid_plan), combined_confidence,
+            goal[:60],
+            len(valid_plan),
+            combined_confidence,
         )
 
         return {
@@ -466,9 +505,7 @@ class StrategicPlanner:
         goal_kw = goal_words - stop
         plan_kw = plan_words - stop
 
-        completeness = (
-            len(goal_kw & plan_kw) / len(goal_kw) if goal_kw else 0.5
-        )
+        completeness = len(goal_kw & plan_kw) / len(goal_kw) if goal_kw else 0.5
 
         # Coherence: fraction of adjacent step pairs sharing at least one word
         coherent_pairs = 0
@@ -488,7 +525,9 @@ class StrategicPlanner:
         last_step = plan[-1]
         alignment = BeamSearchPlanner(1)._score_thought(last_step, goal)
 
-        score = 0.35 * completeness + 0.25 * coherence + 0.2 * feasibility + 0.2 * alignment
+        score = (
+            0.35 * completeness + 0.25 * coherence + 0.2 * feasibility + 0.2 * alignment
+        )
 
         feedback_parts = []
         if completeness < 0.5:
@@ -510,9 +549,7 @@ class StrategicPlanner:
             "feedback": " ".join(feedback_parts),
         }
 
-    def _apply_constraints(
-        self, plan: List[str], constraints: List[str]
-    ) -> List[str]:
+    def _apply_constraints(self, plan: List[str], constraints: List[str]) -> List[str]:
         """Filter or annotate plan steps to respect hard constraints.
 
         Steps that explicitly violate a constraint (contain a constraint keyword

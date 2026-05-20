@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import logging
 import time
-import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -24,10 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 class TwinStatus(str, Enum):
-    OFFLINE  = "offline"    # Default — not active
-    LEARNING = "learning"   # Accumulating interaction data
-    ACTIVE   = "active"     # Personalising responses
-    PAUSED   = "paused"     # User-paused
+    OFFLINE = "offline"  # Default — not active
+    LEARNING = "learning"  # Accumulating interaction data
+    ACTIVE = "active"  # Personalising responses
+    PAUSED = "paused"  # User-paused
 
 
 @dataclass
@@ -38,8 +37,12 @@ class TwinProfile:
     interaction_count: int = 0
     preferences: Dict[str, Any] = field(default_factory=dict)
     goals: List[str] = field(default_factory=list)
-    personality_affinity: Dict[str, float] = field(default_factory=dict)  # personality_id → score
-    topics_of_interest: Dict[str, int] = field(default_factory=dict)     # topic → frequency
+    personality_affinity: Dict[str, float] = field(
+        default_factory=dict
+    )  # personality_id → score
+    topics_of_interest: Dict[str, int] = field(
+        default_factory=dict
+    )  # topic → frequency
     last_active: Optional[float] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -48,7 +51,9 @@ class TwinProfile:
             "status": self.status.value,
             "interaction_count": self.interaction_count,
             "goals": self.goals,
-            "topics": dict(sorted(self.topics_of_interest.items(), key=lambda x: -x[1])[:10]),
+            "topics": dict(
+                sorted(self.topics_of_interest.items(), key=lambda x: -x[1])[:10]
+            ),
             "personality_affinity": self.personality_affinity,
             "last_active": self.last_active,
         }
@@ -84,8 +89,13 @@ class TAimra:
             twin.status = TwinStatus.OFFLINE
             self._emit(user_id, "taimra.deactivated")
 
-    def record_interaction(self, user_id: str, message: str, topics: Optional[List[str]] = None,
-                           personality_used: Optional[str] = None) -> None:
+    def record_interaction(
+        self,
+        user_id: str,
+        message: str,
+        topics: Optional[List[str]] = None,
+        personality_used: Optional[str] = None,
+    ) -> None:
         twin = self._twins.get(user_id)
         if not twin or twin.status == TwinStatus.OFFLINE:
             return
@@ -107,7 +117,11 @@ class TAimra:
     def suggest_personality(self, user_id: str) -> Optional[str]:
         """Return the personality with highest affinity score, or None."""
         twin = self._twins.get(user_id)
-        if not twin or twin.status == TwinStatus.OFFLINE or not twin.personality_affinity:
+        if (
+            not twin
+            or twin.status == TwinStatus.OFFLINE
+            or not twin.personality_affinity
+        ):
             return None
         return max(twin.personality_affinity, key=twin.personality_affinity.get)
 
@@ -135,8 +149,14 @@ class TAimra:
     def _emit(self, user_id: str, event_type: str) -> None:
         try:
             from src.observability.observatory import observe, EventCategory
-            observe(event_type, actor=f"user:{user_id}", category=EventCategory.DATA,
-                    service="taimra", metadata={"user_id": user_id})
+
+            observe(
+                event_type,
+                actor=f"user:{user_id}",
+                category=EventCategory.DATA,
+                service="taimra",
+                metadata={"user_id": user_id},
+            )
         except Exception:
             pass
 

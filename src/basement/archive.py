@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 
 
 class ArchiveSource(str, Enum):
-    OBSERVATORY  = "observatory"   # Overflow audit events
-    LIBRARY      = "library"       # Retired KB articles
-    WORKFLOW     = "workflow"      # Completed workflow runs
-    INFERENCE    = "inference"     # AI conversation logs
-    SECURITY     = "security"      # Always-retained security events
+    OBSERVATORY = "observatory"  # Overflow audit events
+    LIBRARY = "library"  # Retired KB articles
+    WORKFLOW = "workflow"  # Completed workflow runs
+    INFERENCE = "inference"  # AI conversation logs
+    SECURITY = "security"  # Always-retained security events
 
 
 @dataclass
@@ -36,10 +36,10 @@ class ArchiveRecord:
     timestamp: float = field(default_factory=time.time)
     source: ArchiveSource = ArchiveSource.OBSERVATORY
     event_type: str = ""
-    content: str = ""                    # Serialised/text representation
+    content: str = ""  # Serialised/text representation
     metadata: Dict[str, Any] = field(default_factory=dict)
     embedding: Optional[List[float]] = field(default=None, repr=False)
-    retained: bool = False               # True = never auto-purge (security events)
+    retained: bool = False  # True = never auto-purge (security events)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -68,7 +68,7 @@ class Basement:
 
     def __init__(self):
         self._records: Dict[str, ArchiveRecord] = {}
-        self._source_index: Dict[str, List[str]] = {}   # source → [record_id]
+        self._source_index: Dict[str, List[str]] = {}  # source → [record_id]
         self._faiss_index = None
         self._faiss_ids: List[str] = []
         self._embedder = None
@@ -122,7 +122,11 @@ class Basement:
             content=content,
             source=ArchiveSource.SECURITY if retained else ArchiveSource.OBSERVATORY,
             event_type=getattr(event, "event_type", ""),
-            metadata={"actor": event.actor, "target": event.target, "service": event.service},
+            metadata={
+                "actor": event.actor,
+                "target": event.target,
+                "service": event.service,
+            },
             retained=retained,
         )
 
@@ -141,7 +145,9 @@ class Basement:
         ids = self._source_index.get(source.value, [])
         return [self._records[i] for i in ids[-limit:] if i in self._records]
 
-    def recent(self, limit: int = 50, source: Optional[ArchiveSource] = None) -> List[ArchiveRecord]:
+    def recent(
+        self, limit: int = 50, source: Optional[ArchiveSource] = None
+    ) -> List[ArchiveRecord]:
         records = list(self._records.values())
         if source:
             records = [r for r in records if r.source == source]
@@ -170,29 +176,36 @@ class Basement:
         try:
             import faiss  # type: ignore
             from sentence_transformers import SentenceTransformer  # type: ignore
+
             model_name = "all-MiniLM-L6-v2"
             self._embedder = SentenceTransformer(model_name)
             dim = self._embedder.get_sentence_embedding_dimension()
             self._faiss_index = faiss.IndexFlatIP(dim)
             logger.info("basement: FAISS vector search active (dim=%d)", dim)
         except ImportError:
-            logger.debug("basement: faiss/sentence-transformers not installed — keyword search only")
+            logger.debug(
+                "basement: faiss/sentence-transformers not installed — keyword search only"
+            )
         except Exception as exc:
             logger.warning("basement: FAISS init failed: %s", exc)
 
     def _add_to_faiss(self, record_id: str, vec) -> None:
         try:
             import numpy as np
+
             self._faiss_index.add(np.array([vec], dtype="float32"))
             self._faiss_ids.append(record_id)
         except Exception as exc:
             logger.debug("basement: faiss add failed: %s", exc)
 
-    def _faiss_search(self, query: str, top_k: int) -> List[Tuple[ArchiveRecord, float]]:
+    def _faiss_search(
+        self, query: str, top_k: int
+    ) -> List[Tuple[ArchiveRecord, float]]:
         try:
-            import numpy as np
             vec = self._embedder.encode([query], normalize_embeddings=True)
-            scores, indices = self._faiss_index.search(vec.astype("float32"), min(top_k, len(self._faiss_ids)))
+            scores, indices = self._faiss_index.search(
+                vec.astype("float32"), min(top_k, len(self._faiss_ids))
+            )
             results = []
             for score, idx in zip(scores[0], indices[0]):
                 if idx < 0 or idx >= len(self._faiss_ids):
@@ -205,7 +218,9 @@ class Basement:
             logger.debug("basement: faiss search failed: %s", exc)
             return self._keyword_search(query, top_k)
 
-    def _keyword_search(self, query: str, top_k: int) -> List[Tuple[ArchiveRecord, float]]:
+    def _keyword_search(
+        self, query: str, top_k: int
+    ) -> List[Tuple[ArchiveRecord, float]]:
         terms = set(query.lower().split())
         scored = []
         for record in self._records.values():

@@ -7,21 +7,23 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 import torch
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MODEL_PATH      = os.getenv("TRANC3_MODEL_PATH", "./models/tranc3-v1/tranc3-final.pt")
-_DEFAULT_TOKENIZER_PATH  = os.getenv("TRANC3_TOKENIZER_PATH", "./models/tokenizer")
+_DEFAULT_MODEL_PATH = os.getenv(
+    "TRANC3_MODEL_PATH", "./models/tranc3-v1/tranc3-final.pt"
+)
+_DEFAULT_TOKENIZER_PATH = os.getenv("TRANC3_TOKENIZER_PATH", "./models/tokenizer")
 
 # Generation defaults (overridable per-call)
-_DEFAULT_TEMPERATURE     = 0.8
-_DEFAULT_TOP_P           = 0.9
-_DEFAULT_TOP_K           = 50
-_DEFAULT_MAX_NEW_TOKENS  = 256
-_DEFAULT_REP_PENALTY     = 1.1
+_DEFAULT_TEMPERATURE = 0.8
+_DEFAULT_TOP_P = 0.9
+_DEFAULT_TOP_K = 50
+_DEFAULT_MAX_NEW_TOKENS = 256
+_DEFAULT_REP_PENALTY = 1.1
 
 
 class Tranc3Engine:
@@ -45,12 +47,14 @@ class Tranc3Engine:
         tokenizer_path: Optional[str] = None,
         device: Optional[str] = None,
     ):
-        self._model_path     = Path(model_path or _DEFAULT_MODEL_PATH)
+        self._model_path = Path(model_path or _DEFAULT_MODEL_PATH)
         self._tokenizer_path = Path(tokenizer_path or _DEFAULT_TOKENIZER_PATH)
-        self._device         = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
-        self._model          = None
-        self._tokenizer      = None
-        self._loaded         = False
+        self._device = torch.device(
+            device or ("cuda" if torch.cuda.is_available() else "cpu")
+        )
+        self._model = None
+        self._tokenizer = None
+        self._loaded = False
         self._bootstrap_mode = False
 
     # ─── Lifecycle ─────────────────────────────────────────────────────────────
@@ -73,6 +77,7 @@ class Tranc3Engine:
             return
 
         from src.core.tranc3_tokenizer import Tranc3Tokenizer
+
         self._tokenizer = Tranc3Tokenizer.load(tok_path)
         logger.info("Tranc3 tokenizer loaded (vocab=%d)", len(self._tokenizer))
 
@@ -96,23 +101,28 @@ class Tranc3Engine:
 
             # Reconstruct config from saved state
             state_dict = checkpoint["model_state_dict"]
-            vocab_size  = state_dict["token_embeddings.weight"].shape[0]
+            vocab_size = state_dict["token_embeddings.weight"].shape[0]
             hidden_size = state_dict["token_embeddings.weight"].shape[1]
-            num_layers  = sum(1 for k in state_dict if k.startswith("layers.") and k.endswith(".norm1.weight"))
-            num_heads   = hidden_size // 64  # convention: head_dim = 64
+            num_layers = sum(
+                1
+                for k in state_dict
+                if k.startswith("layers.") and k.endswith(".norm1.weight")
+            )
+            num_heads = hidden_size // 64  # convention: head_dim = 64
 
             class _Cfg:
                 pass
 
             cfg = _Cfg()
-            cfg.vocab_size          = vocab_size
-            cfg.hidden_size         = hidden_size
-            cfg.num_layers          = num_layers
-            cfg.num_heads           = num_heads
+            cfg.vocab_size = vocab_size
+            cfg.hidden_size = hidden_size
+            cfg.num_layers = num_layers
+            cfg.num_heads = num_heads
             cfg.max_sequence_length = 512
-            cfg.dropout             = 0.0   # no dropout at inference
+            cfg.dropout = 0.0  # no dropout at inference
 
             from src.core.advanced_model import AdvancedTransformerModel
+
             self._model = AdvancedTransformerModel(cfg)
             self._model.load_state_dict(state_dict, strict=True)
             self._model.eval()
@@ -121,7 +131,9 @@ class Tranc3Engine:
             n_params = sum(p.numel() for p in self._model.parameters())
             logger.info(
                 "TRANC3 model loaded from %s — %.2fM params, device=%s",
-                checkpoint_path, n_params / 1e6, self._device,
+                checkpoint_path,
+                n_params / 1e6,
+                self._device,
             )
             self._loaded = True
 
@@ -130,7 +142,9 @@ class Tranc3Engine:
             self._bootstrap_mode = True
 
     def _resolve_checkpoint(self) -> Optional[Path]:
-        base = self._model_path if self._model_path.is_dir() else self._model_path.parent
+        base = (
+            self._model_path if self._model_path.is_dir() else self._model_path.parent
+        )
 
         for name in ("tranc3-final.pt", "tranc3-best.pt"):
             candidate = base / name
@@ -138,7 +152,9 @@ class Tranc3Engine:
                 return candidate
 
         # Find latest numbered checkpoint
-        checkpoints = sorted(base.glob("checkpoint-*.pt"), key=lambda p: int(p.stem.split("-")[1]))
+        checkpoints = sorted(
+            base.glob("checkpoint-*.pt"), key=lambda p: int(p.stem.split("-")[1])
+        )
         if checkpoints:
             return checkpoints[-1]
 
@@ -171,7 +187,9 @@ class Tranc3Engine:
             self.load()
 
         if self._bootstrap_mode:
-            return await self._bootstrap_response_async(prompt, personality, system_prompt)
+            return await self._bootstrap_response_async(
+                prompt, personality, system_prompt
+            )
 
         # Build chat-formatted input
         sys_text = system_prompt or self._default_system(personality)
@@ -201,19 +219,22 @@ class Tranc3Engine:
             )
 
         # Decode only the newly generated tokens (after the input)
-        new_ids = generated[0, input_tensor.shape[1]:].tolist()
-        response_text = self._tokenizer.decode(new_ids, skip_special_tokens=True).strip()
+        new_ids = generated[0, input_tensor.shape[1] :].tolist()
+        response_text = self._tokenizer.decode(
+            new_ids, skip_special_tokens=True
+        ).strip()
 
         return {
-            "response":    response_text,
+            "response": response_text,
             "personality": personality,
-            "model":       "tranc3-local",
-            "tokens":      len(new_ids),
+            "model": "tranc3-local",
+            "tokens": len(new_ids),
         }
 
     def generate_sync(self, prompt: str, **kwargs) -> Dict[str, Any]:
         """Synchronous version of generate() for non-async callers."""
         import asyncio
+
         loop = asyncio.new_event_loop()
         try:
             return loop.run_until_complete(self.generate(prompt, **kwargs))
@@ -222,15 +243,15 @@ class Tranc3Engine:
 
     def _default_system(self, personality: str) -> str:
         systems = {
-            "tranc3-base":          "You are TRANC3, a balanced, intelligent AI assistant.",
-            "dorris-fontaine":      "You are Dorris Fontaine, TRANC3's financial specialist. You provide precise, regulation-aware financial analysis.",
-            "cornelius-macintyre":  "You are Cornelius MacIntyre, TRANC3's orchestration specialist. You coordinate complex multi-system tasks with strategic clarity.",
-            "the-guardian":         "You are The Guardian, TRANC3's cybersecurity specialist. You identify threats, enforce compliance, and protect systems.",
-            "vesper-nightingale":   "You are Vesper Nightingale, TRANC3's healthcare advisor. You provide evidence-based health guidance with warmth and care.",
-            "atlas-meridian":       "You are Atlas Meridian, TRANC3's infrastructure specialist. You architect resilient, scalable, cost-efficient systems.",
-            "tranc3-creative":      "You are TRANC3, a highly creative AI with a flair for imagination and original thinking.",
-            "tranc3-analytical":    "You are TRANC3, a precision-focused analytical AI driven by data and logic.",
-            "tranc3-empathetic":    "You are TRANC3, a deeply empathetic AI that listens carefully and responds with warmth.",
+            "tranc3-base": "You are TRANC3, a balanced, intelligent AI assistant.",
+            "dorris-fontaine": "You are Dorris Fontaine, TRANC3's financial specialist. You provide precise, regulation-aware financial analysis.",
+            "cornelius-macintyre": "You are Cornelius MacIntyre, TRANC3's orchestration specialist. You coordinate complex multi-system tasks with strategic clarity.",
+            "the-guardian": "You are The Guardian, TRANC3's cybersecurity specialist. You identify threats, enforce compliance, and protect systems.",
+            "vesper-nightingale": "You are Vesper Nightingale, TRANC3's healthcare advisor. You provide evidence-based health guidance with warmth and care.",
+            "atlas-meridian": "You are Atlas Meridian, TRANC3's infrastructure specialist. You architect resilient, scalable, cost-efficient systems.",
+            "tranc3-creative": "You are TRANC3, a highly creative AI with a flair for imagination and original thinking.",
+            "tranc3-analytical": "You are TRANC3, a precision-focused analytical AI driven by data and logic.",
+            "tranc3-empathetic": "You are TRANC3, a deeply empathetic AI that listens carefully and responds with warmth.",
         }
         return systems.get(personality, "You are TRANC3, an advanced AI assistant.")
 
@@ -249,6 +270,7 @@ class Tranc3Engine:
         # Tier 1: local Ollama (zero-cost, fully self-owned)
         try:
             from src.core.ollama_adapter import is_available, generate as ollama_gen
+
             if await is_available():
                 result = await ollama_gen(prompt=prompt, system_prompt=sys_text)
                 if result:
@@ -260,6 +282,7 @@ class Tranc3Engine:
         # Tier 2: OpenRouter free models (cloud, zero-cost)
         try:
             from src.core.openrouter_adapter import generate as or_gen
+
             result = await or_gen(prompt=prompt, system_prompt=sys_text)
             if result:
                 result["personality"] = personality
@@ -276,9 +299,9 @@ class Tranc3Engine:
                 "then restart the service. "
                 f"Your message was: '{prompt[:100]}'"
             ),
-            "personality":     personality,
-            "model":           "tranc3-bootstrap",
-            "trained":         False,
+            "personality": personality,
+            "model": "tranc3-bootstrap",
+            "trained": False,
             "action_required": "python train.py",
         }
 
@@ -292,9 +315,9 @@ class Tranc3Engine:
                 "then restart the service. "
                 f"Your message was: '{prompt[:100]}'"
             ),
-            "personality":     personality,
-            "model":           "tranc3-bootstrap",
-            "trained":         False,
+            "personality": personality,
+            "model": "tranc3-bootstrap",
+            "trained": False,
             "action_required": "python train.py",
         }
 
@@ -302,11 +325,11 @@ class Tranc3Engine:
 
     def status(self) -> Dict[str, Any]:
         return {
-            "loaded":         self._loaded,
+            "loaded": self._loaded,
             "bootstrap_mode": self._bootstrap_mode,
-            "model_path":     str(self._model_path),
+            "model_path": str(self._model_path),
             "tokenizer_path": str(self._tokenizer_path),
-            "device":         str(self._device),
+            "device": str(self._device),
         }
 
 

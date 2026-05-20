@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -17,34 +16,34 @@ logger = logging.getLogger(__name__)
 # ─── Special tokens ────────────────────────────────────────────────────────────
 
 SPECIAL_TOKENS = {
-    "<pad>":   0,
-    "<unk>":   1,
-    "<bos>":   2,   # beginning of sequence
-    "<eos>":   3,   # end of sequence
-    "<sep>":   4,   # turn separator
-    "<sys>":   5,   # system prompt marker
-    "<usr>":   6,   # user turn marker
-    "<ast>":   7,   # assistant turn marker
+    "<pad>": 0,
+    "<unk>": 1,
+    "<bos>": 2,  # beginning of sequence
+    "<eos>": 3,  # end of sequence
+    "<sep>": 4,  # turn separator
+    "<sys>": 5,  # system prompt marker
+    "<usr>": 6,  # user turn marker
+    "<ast>": 7,  # assistant turn marker
     # Personality tokens — one per named personality
-    "<p:tranc3-base>":          8,
-    "<p:tranc3-creative>":      9,
-    "<p:tranc3-analytical>":   10,
-    "<p:tranc3-empathetic>":   11,
+    "<p:tranc3-base>": 8,
+    "<p:tranc3-creative>": 9,
+    "<p:tranc3-analytical>": 10,
+    "<p:tranc3-empathetic>": 11,
     "<p:tranc3-multilingual>": 12,
-    "<p:dorris-fontaine>":     13,
+    "<p:dorris-fontaine>": 13,
     "<p:cornelius-macintyre>": 14,
-    "<p:the-guardian>":        15,
-    "<p:vesper-nightingale>":  16,
-    "<p:atlas-meridian>":      17,
+    "<p:the-guardian>": 15,
+    "<p:vesper-nightingale>": 16,
+    "<p:atlas-meridian>": 17,
 }
 
-PAD_ID   = SPECIAL_TOKENS["<pad>"]
-UNK_ID   = SPECIAL_TOKENS["<unk>"]
-BOS_ID   = SPECIAL_TOKENS["<bos>"]
-EOS_ID   = SPECIAL_TOKENS["<eos>"]
-SEP_ID   = SPECIAL_TOKENS["<sep>"]
+PAD_ID = SPECIAL_TOKENS["<pad>"]
+UNK_ID = SPECIAL_TOKENS["<unk>"]
+BOS_ID = SPECIAL_TOKENS["<bos>"]
+EOS_ID = SPECIAL_TOKENS["<eos>"]
+SEP_ID = SPECIAL_TOKENS["<sep>"]
 
-_SPECIAL_COUNT = max(SPECIAL_TOKENS.values()) + 1   # 18
+_SPECIAL_COUNT = max(SPECIAL_TOKENS.values()) + 1  # 18
 
 
 class Tranc3Tokenizer:
@@ -66,14 +65,16 @@ class Tranc3Tokenizer:
 
     def __init__(self, vocab_size: int = 8192):
         self.vocab_size = vocab_size
-        self._vocab: Dict[str, int] = dict(SPECIAL_TOKENS)          # token → id
+        self._vocab: Dict[str, int] = dict(SPECIAL_TOKENS)  # token → id
         self._id_to_token: Dict[int, str] = {v: k for k, v in self._vocab.items()}
         self._merges: List[Tuple[str, str]] = []
         self._trained = False
 
     # ─── Training ──────────────────────────────────────────────────────────────
 
-    def train(self, texts: List[str], vocab_size: Optional[int] = None) -> "Tranc3Tokenizer":
+    def train(
+        self, texts: List[str], vocab_size: Optional[int] = None
+    ) -> "Tranc3Tokenizer":
         """Train BPE on a list of strings. Uses HuggingFace tokenizers (Rust) if available,
         falls back to pure-Python implementation."""
         if vocab_size:
@@ -82,11 +83,13 @@ class Tranc3Tokenizer:
         try:
             return self._train_with_hf(texts)
         except ImportError:
-            logger.info("tokenizers library not installed — using pure-Python BPE trainer")
+            logger.info(
+                "tokenizers library not installed — using pure-Python BPE trainer"
+            )
             return self._train_python_bpe(texts)
 
     def _train_with_hf(self, texts: List[str]) -> "Tranc3Tokenizer":
-        from tokenizers import Tokenizer, models, trainers, pre_tokenizers, decoders, processors
+        from tokenizers import Tokenizer
         from tokenizers.models import BPE
         from tokenizers.trainers import BpeTrainer
         from tokenizers.pre_tokenizers import ByteLevel
@@ -114,7 +117,12 @@ class Tranc3Tokenizer:
         for tok, expected_id in SPECIAL_TOKENS.items():
             actual_id = vocab.get(tok)
             if actual_id != expected_id:
-                logger.warning("Special token %s has id=%s (expected %s)", tok, actual_id, expected_id)
+                logger.warning(
+                    "Special token %s has id=%s (expected %s)",
+                    tok,
+                    actual_id,
+                    expected_id,
+                )
 
         self._hf_tokenizer = tokenizer
         self._trained = True
@@ -164,7 +172,11 @@ class Tranc3Tokenizer:
                 new_word: List[str] = []
                 i = 0
                 while i < len(word):
-                    if i < len(word) - 1 and word[i] == best[0] and word[i + 1] == best[1]:
+                    if (
+                        i < len(word) - 1
+                        and word[i] == best[0]
+                        and word[i + 1] == best[1]
+                    ):
                         new_word.append(new_token)
                         i += 2
                     else:
@@ -177,7 +189,11 @@ class Tranc3Tokenizer:
         self._id_to_token = {v: k for k, v in vocab.items()}
         self._merges = merges
         self._trained = True
-        logger.info("Tranc3Tokenizer trained via Python BPE (vocab=%d, merges=%d)", len(vocab), len(merges))
+        logger.info(
+            "Tranc3Tokenizer trained via Python BPE (vocab=%d, merges=%d)",
+            len(vocab),
+            len(merges),
+        )
         return self
 
     # ─── Encoding / decoding ───────────────────────────────────────────────────
@@ -236,7 +252,9 @@ class Tranc3Tokenizer:
     def decode(self, ids: List[int], skip_special_tokens: bool = True) -> str:
         """Decode token IDs back to text."""
         if hasattr(self, "_hf_tokenizer"):
-            return self._hf_tokenizer.decode(ids, skip_special_tokens=skip_special_tokens)
+            return self._hf_tokenizer.decode(
+                ids, skip_special_tokens=skip_special_tokens
+            )
 
         tokens = []
         for i in ids:
@@ -264,13 +282,16 @@ class Tranc3Tokenizer:
             if key in self._vocab:
                 ids.append(self._vocab[key])
 
-        sys_id   = self._vocab.get("<sys>", SEP_ID)
-        usr_id   = self._vocab.get("<usr>", SEP_ID)
-        ast_id   = self._vocab.get("<ast>", SEP_ID)
+        sys_id = self._vocab.get("<sys>", SEP_ID)
+        usr_id = self._vocab.get("<usr>", SEP_ID)
+        ast_id = self._vocab.get("<ast>", SEP_ID)
 
         ids.append(sys_id)
-        ids.extend(self._python_encode(system) if not hasattr(self, "_hf_tokenizer")
-                   else self._hf_tokenizer.encode(system, add_special_tokens=False).ids)
+        ids.extend(
+            self._python_encode(system)
+            if not hasattr(self, "_hf_tokenizer")
+            else self._hf_tokenizer.encode(system, add_special_tokens=False).ids
+        )
         ids.append(SEP_ID)
 
         for turn in turns:
@@ -278,8 +299,11 @@ class Tranc3Tokenizer:
             content = turn.get("content", "")
             role_token = usr_id if role == "user" else ast_id
             ids.append(role_token)
-            encoded = (self._python_encode(content) if not hasattr(self, "_hf_tokenizer")
-                       else self._hf_tokenizer.encode(content, add_special_tokens=False).ids)
+            encoded = (
+                self._python_encode(content)
+                if not hasattr(self, "_hf_tokenizer")
+                else self._hf_tokenizer.encode(content, add_special_tokens=False).ids
+            )
             ids.extend(encoded)
             ids.append(SEP_ID)
 
@@ -306,7 +330,9 @@ class Tranc3Tokenizer:
             "merges": self._merges,
             "special_tokens": SPECIAL_TOKENS,
         }
-        (path / "tokenizer_meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2))
+        (path / "tokenizer_meta.json").write_text(
+            json.dumps(meta, ensure_ascii=False, indent=2)
+        )
         logger.info("Tokenizer saved to %s", path)
 
     @classmethod
@@ -329,6 +355,7 @@ class Tranc3Tokenizer:
         if hf_path.exists():
             try:
                 from tokenizers import Tokenizer
+
                 tok._hf_tokenizer = Tokenizer.from_file(str(hf_path))
                 logger.info("Loaded HF tokenizer from %s", hf_path)
             except ImportError:
@@ -348,7 +375,7 @@ class Tranc3Tokenizer:
         """Convenience: build tokenizer from file paths or text list, optionally save."""
         all_texts: List[str] = list(texts or [])
 
-        for cp in (corpus_paths or []):
+        for cp in corpus_paths or []:
             p = Path(cp)
             if p.exists():
                 all_texts.append(p.read_text(encoding="utf-8", errors="replace"))
@@ -356,6 +383,7 @@ class Tranc3Tokenizer:
         if not all_texts:
             # Bootstrap with Tranc3 personality prompts so we have SOMETHING
             from src.core.dataset import PERSONALITY_SYSTEM_PROMPTS
+
             all_texts = list(PERSONALITY_SYSTEM_PROMPTS.values()) * 100
 
         tok = cls(vocab_size=vocab_size)

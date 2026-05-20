@@ -7,9 +7,8 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
-import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -21,32 +20,42 @@ logger = logging.getLogger(__name__)
 
 # ─── Multi-Modal Input ─────────────────────────────────────────────────────────
 
+
 @dataclass
 class ModalInput:
-    modality: str           # "text", "image", "audio", "structured"
-    data: Any               # raw data (str, bytes, np.ndarray, dict)
+    modality: str  # "text", "image", "audio", "structured"
+    data: Any  # raw data (str, bytes, np.ndarray, dict)
     encoding: Optional[str] = None  # "base64", "utf-8", etc.
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class FusedRepresentation:
-    embedding: torch.Tensor         # fused cross-modal embedding
-    modalities: List[str]           # which modalities contributed
-    confidence: float               # fusion confidence
+    embedding: torch.Tensor  # fused cross-modal embedding
+    modalities: List[str]  # which modalities contributed
+    confidence: float  # fusion confidence
     attention_weights: Dict[str, float]  # per-modality attention weight
-    latent_code: torch.Tensor       # compressed latent representation
+    latent_code: torch.Tensor  # compressed latent representation
 
 
 # ─── Modality Encoders ─────────────────────────────────────────────────────────
 
+
 class TextEncoder(nn.Module):
     """Transformer-based text encoder."""
 
-    def __init__(self, vocab_size: int = 32000, d_model: int = 512, nhead: int = 8, num_layers: int = 4):
+    def __init__(
+        self,
+        vocab_size: int = 32000,
+        d_model: int = 512,
+        nhead: int = 8,
+        num_layers: int = 4,
+    ):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, d_model, padding_idx=0)
-        encoder_layer = nn.TransformerEncoderLayer(d_model, nhead, d_model * 4, dropout=0.1, batch_first=True)
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model, nhead, d_model * 4, dropout=0.1, batch_first=True
+        )
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
         self.pool = nn.AdaptiveAvgPool1d(1)
         self.proj = nn.Linear(d_model, 256)
@@ -70,10 +79,14 @@ class VisionEncoder(nn.Module):
     def __init__(self, out_dim: int = 256):
         super().__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(3, 32, 3, stride=2, padding=1), nn.GELU(),
-            nn.Conv2d(32, 64, 3, stride=2, padding=1), nn.GELU(),
-            nn.Conv2d(64, 128, 3, stride=2, padding=1), nn.GELU(),
-            nn.Conv2d(128, 256, 3, stride=2, padding=1), nn.GELU(),
+            nn.Conv2d(3, 32, 3, stride=2, padding=1),
+            nn.GELU(),
+            nn.Conv2d(32, 64, 3, stride=2, padding=1),
+            nn.GELU(),
+            nn.Conv2d(64, 128, 3, stride=2, padding=1),
+            nn.GELU(),
+            nn.Conv2d(128, 256, 3, stride=2, padding=1),
+            nn.GELU(),
         )
         self.pool = nn.AdaptiveAvgPool2d(1)
         self.proj = nn.Linear(256, out_dim)
@@ -89,7 +102,9 @@ class VisionEncoder(nn.Module):
             array = np.stack([array] * 3, axis=-1)
         img = torch.from_numpy(array.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
         if img.shape[2] != 224 or img.shape[3] != 224:
-            img = F.interpolate(img, size=(224, 224), mode="bilinear", align_corners=False)
+            img = F.interpolate(
+                img, size=(224, 224), mode="bilinear", align_corners=False
+            )
         with torch.no_grad():
             return self.forward(img)
 
@@ -100,8 +115,11 @@ class StructuredEncoder(nn.Module):
     def __init__(self, input_dim: int = 128, out_dim: int = 256):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 256), nn.LayerNorm(256), nn.GELU(),
-            nn.Linear(256, 256), nn.GELU(),
+            nn.Linear(input_dim, 256),
+            nn.LayerNorm(256),
+            nn.GELU(),
+            nn.Linear(256, 256),
+            nn.GELU(),
             nn.Linear(256, out_dim),
         )
 
@@ -127,6 +145,7 @@ class StructuredEncoder(nn.Module):
 
 # ─── Cross-Modal Attention Fusion ──────────────────────────────────────────────
 
+
 class CrossModalAttention(nn.Module):
     """
     Attend over multiple modality embeddings to produce a fused representation.
@@ -138,7 +157,8 @@ class CrossModalAttention(nn.Module):
         self.attn = nn.MultiheadAttention(embed_dim, num_heads, batch_first=True)
         self.norm = nn.LayerNorm(embed_dim)
         self.proj = nn.Sequential(
-            nn.Linear(embed_dim, embed_dim * 2), nn.GELU(),
+            nn.Linear(embed_dim, embed_dim * 2),
+            nn.GELU(),
             nn.Linear(embed_dim * 2, embed_dim),
         )
 
@@ -155,6 +175,7 @@ class CrossModalAttention(nn.Module):
 
 
 # ─── Gemini-Inspired Multi-Modal Model ────────────────────────────────────────
+
 
 class GeminiMultiModalModel(nn.Module):
     """
@@ -179,12 +200,17 @@ class GeminiMultiModalModel(nn.Module):
         if not modal_embeddings:
             dummy = torch.zeros(1, self.EMBED_DIM)
             return FusedRepresentation(
-                embedding=dummy, modalities=[], confidence=0.0,
-                attention_weights={}, latent_code=self.latent(dummy),
+                embedding=dummy,
+                modalities=[],
+                confidence=0.0,
+                attention_weights={},
+                latent_code=self.latent(dummy),
             )
 
         modalities = list(modal_embeddings.keys())
-        stack = torch.stack([modal_embeddings[m] for m in modalities], dim=1)  # (1, M, D)
+        stack = torch.stack(
+            [modal_embeddings[m] for m in modalities], dim=1
+        )  # (1, M, D)
 
         fused, attn_w = self.cross_attn(stack)  # (D,), (1, M)
         latent = self.latent(fused)
@@ -205,6 +231,7 @@ class GeminiMultiModalModel(nn.Module):
 
 
 # ─── Multi-Modal Pipeline ─────────────────────────────────────────────────────
+
 
 class MultiModalPipeline:
     """

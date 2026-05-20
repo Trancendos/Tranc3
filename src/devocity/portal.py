@@ -25,18 +25,18 @@ logger = logging.getLogger(__name__)
 
 
 class DevAccountStatus(str, Enum):
-    ACTIVE    = "active"
+    ACTIVE = "active"
     SUSPENDED = "suspended"
-    SANDBOX   = "sandbox"
+    SANDBOX = "sandbox"
 
 
 class ApiKeyScope(str, Enum):
-    READ      = "read"
-    WRITE     = "write"
-    ADMIN     = "admin"
-    SPARK     = "spark"      # Access to The Spark MCP tools
-    GRID      = "grid"       # Access to The Digital Grid
-    FULL      = "full"
+    READ = "read"
+    WRITE = "write"
+    ADMIN = "admin"
+    SPARK = "spark"  # Access to The Spark MCP tools
+    GRID = "grid"  # Access to The Digital Grid
+    FULL = "full"
 
 
 @dataclass
@@ -44,8 +44,8 @@ class ApiKey:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     developer_id: str = ""
     name: str = ""
-    key_prefix: str = ""     # First 8 chars — shown in UI
-    key_hash: str = ""       # SHA-256 of full key — never store plain
+    key_prefix: str = ""  # First 8 chars — shown in UI
+    key_hash: str = ""  # SHA-256 of full key — never store plain
     scopes: List[ApiKeyScope] = field(default_factory=list)
     created_at: float = field(default_factory=time.time)
     last_used: Optional[float] = None
@@ -92,7 +92,7 @@ class WebhookEndpoint:
 @dataclass
 class DeveloperAccount:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    user_id: str = ""                  # Infinity user ID
+    user_id: str = ""  # Infinity user ID
     display_name: str = ""
     status: DevAccountStatus = DevAccountStatus.ACTIVE
     created_at: float = field(default_factory=time.time)
@@ -161,7 +161,7 @@ class DevOcity:
         self._loaded = True
         try:
             from src.core.redis_store import get_store
-            import dataclasses
+
             store = await get_store()
             keys = await store.keys("devocity:account:*")
             for key in keys:
@@ -196,6 +196,7 @@ class DevOcity:
     async def _persist_account(self, account: DeveloperAccount) -> None:
         try:
             from src.core.redis_store import get_store
+
             store = await get_store()
             data = {
                 "id": account.id,
@@ -226,6 +227,7 @@ class DevOcity:
 
     def _fire_persist(self, account: DeveloperAccount) -> None:
         import asyncio
+
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
@@ -237,7 +239,9 @@ class DevOcity:
         account = DeveloperAccount(user_id=user_id, display_name=display_name)
         self._accounts[account.id] = account
         self._fire_persist(account)
-        self._emit("devocity.account.created", {"account_id": account.id, "user_id": user_id})
+        self._emit(
+            "devocity.account.created", {"account_id": account.id, "user_id": user_id}
+        )
         logger.info("devocity: account created id=%s user=%s", account.id, user_id)
         return account
 
@@ -262,6 +266,7 @@ class DevOcity:
             return None
         plain = "trx_" + secrets.token_hex(28)
         import hashlib
+
         key_hash = hashlib.sha256(plain.encode()).hexdigest()
         api_key = ApiKey(
             developer_id=account_id,
@@ -272,7 +277,9 @@ class DevOcity:
         )
         account.api_keys.append(api_key)
         self._fire_persist(account)
-        self._emit("devocity.apikey.issued", {"account_id": account_id, "key_id": api_key.id})
+        self._emit(
+            "devocity.apikey.issued", {"account_id": account_id, "key_id": api_key.id}
+        )
         return plain, api_key
 
     def revoke_api_key(self, account_id: str, key_id: str) -> bool:
@@ -297,7 +304,10 @@ class DevOcity:
             return None
         webhook = WebhookEndpoint(developer_id=account_id, url=url, events=events)
         account.webhooks.append(webhook)
-        self._emit("devocity.webhook.registered", {"account_id": account_id, "webhook_id": webhook.id})
+        self._emit(
+            "devocity.webhook.registered",
+            {"account_id": account_id, "webhook_id": webhook.id},
+        )
         return webhook
 
     def guides(self) -> List[Dict[str, Any]]:
@@ -318,8 +328,13 @@ class DevOcity:
     def _emit(self, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
             from src.observability.observatory import observe, EventCategory
-            observe(event_type, category=EventCategory.DATA, service="devocity",
-                    metadata=metadata or {})
+
+            observe(
+                event_type,
+                category=EventCategory.DATA,
+                service="devocity",
+                metadata=metadata or {},
+            )
         except Exception:
             pass
 

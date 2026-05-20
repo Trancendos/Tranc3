@@ -18,23 +18,23 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class ScheduleType(str, Enum):
-    CRON     = "cron"      # Standard cron expression
+    CRON = "cron"  # Standard cron expression
     INTERVAL = "interval"  # Repeat every N seconds
-    ONCE     = "once"      # Fire once at a specific UTC timestamp
+    ONCE = "once"  # Fire once at a specific UTC timestamp
     WORKFLOW = "workflow"  # Trigger a Digital Grid workflow
 
 
 class ScheduleStatus(str, Enum):
-    ACTIVE   = "active"
-    PAUSED   = "paused"
-    EXPIRED  = "expired"
-    FAILED   = "failed"
+    ACTIVE = "active"
+    PAUSED = "paused"
+    EXPIRED = "expired"
+    FAILED = "failed"
 
 
 @dataclass
@@ -71,10 +71,10 @@ class ScheduledTask:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
     schedule_type: ScheduleType = ScheduleType.ONCE
-    cron_expression: Optional[str] = None    # for CRON type
-    interval_seconds: Optional[float] = None # for INTERVAL type
-    fire_at: Optional[float] = None          # for ONCE type (UTC epoch)
-    workflow_id: Optional[str] = None        # for WORKFLOW type
+    cron_expression: Optional[str] = None  # for CRON type
+    interval_seconds: Optional[float] = None  # for INTERVAL type
+    fire_at: Optional[float] = None  # for ONCE type (UTC epoch)
+    workflow_id: Optional[str] = None  # for WORKFLOW type
     status: ScheduleStatus = ScheduleStatus.ACTIVE
     created_at: float = field(default_factory=time.time)
     last_fired: Optional[float] = None
@@ -134,13 +134,20 @@ class ChronosSphere:
         )
         self._tasks[task.id] = task
         self._emit("chronos.task.created", {"task_id": task.id, "name": name})
-        logger.info("chronos: task created id=%s name=%s type=%s", task.id, name, schedule_type.value)
+        logger.info(
+            "chronos: task created id=%s name=%s type=%s",
+            task.id,
+            name,
+            schedule_type.value,
+        )
         return task
 
     def get_task(self, task_id: str) -> Optional[ScheduledTask]:
         return self._tasks.get(task_id)
 
-    def list_tasks(self, status: Optional[ScheduleStatus] = None) -> List[ScheduledTask]:
+    def list_tasks(
+        self, status: Optional[ScheduleStatus] = None
+    ) -> List[ScheduledTask]:
         tasks = list(self._tasks.values())
         if status:
             tasks = [t for t in tasks if t.status == status]
@@ -176,7 +183,9 @@ class ChronosSphere:
         end_ts: float,
         **kwargs,
     ) -> CalendarEvent:
-        event = CalendarEvent(user_id=user_id, title=title, start_ts=start_ts, end_ts=end_ts, **kwargs)
+        event = CalendarEvent(
+            user_id=user_id, title=title, start_ts=start_ts, end_ts=end_ts, **kwargs
+        )
         self._events[event.id] = event
         self._emit("chronos.event.created", {"event_id": event.id, "user_id": user_id})
         return event
@@ -184,7 +193,12 @@ class ChronosSphere:
     def get_event(self, event_id: str) -> Optional[CalendarEvent]:
         return self._events.get(event_id)
 
-    def list_events(self, user_id: str, from_ts: Optional[float] = None, to_ts: Optional[float] = None) -> List[CalendarEvent]:
+    def list_events(
+        self,
+        user_id: str,
+        from_ts: Optional[float] = None,
+        to_ts: Optional[float] = None,
+    ) -> List[CalendarEvent]:
         events = [e for e in self._events.values() if e.user_id == user_id]
         if from_ts:
             events = [e for e in events if e.end_ts >= from_ts]
@@ -199,7 +213,9 @@ class ChronosSphere:
         return False
 
     def stats(self) -> Dict[str, Any]:
-        active_tasks = sum(1 for t in self._tasks.values() if t.status == ScheduleStatus.ACTIVE)
+        active_tasks = sum(
+            1 for t in self._tasks.values() if t.status == ScheduleStatus.ACTIVE
+        )
         return {
             "service": "chronossphere",
             "total_tasks": len(self._tasks),
@@ -210,8 +226,13 @@ class ChronosSphere:
     def _emit(self, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
             from src.observability.observatory import observe, EventCategory
-            observe(event_type, category=EventCategory.SYSTEM, service="chronossphere",
-                    metadata=metadata or {})
+
+            observe(
+                event_type,
+                category=EventCategory.SYSTEM,
+                service="chronossphere",
+                metadata=metadata or {},
+            )
         except Exception:
             pass
 

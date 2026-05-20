@@ -3,10 +3,10 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from typing import List, Dict, Any, Optional
+from typing import List, Dict
 import logging
 
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit import QuantumCircuit
 from qiskit.circuit.library import QFT
 from qiskit_aer import AerSimulator
 
@@ -17,12 +17,13 @@ class NeuromorphicInterface:
     """Interface bridging quantum and spiking neural network layers."""
 
     def __init__(self, config: dict):
-        self.spike_rate = config.get('spike_rate', 1000)
-        self.neuron_model = config.get('neuron_model', 'LIF')
-        self.synaptic_plasticity = config.get('plasticity', 'STDP')
+        self.spike_rate = config.get("spike_rate", 1000)
+        self.neuron_model = config.get("neuron_model", "LIF")
+        self.synaptic_plasticity = config.get("plasticity", "STDP")
 
-    def create_spiking_network(self, input_dim: int, hidden_layers: List[int],
-                                output_dim: int) -> nn.ModuleList:
+    def create_spiking_network(
+        self, input_dim: int, hidden_layers: List[int], output_dim: int
+    ) -> nn.ModuleList:
         class SpikingNeuron(nn.Module):
             def __init__(self, input_size, output_size, tau=10.0):
                 super().__init__()
@@ -56,11 +57,11 @@ class QuantumNeuralCore:
 
     def __init__(self, config: dict):
         self.config = config
-        self.num_qubits = min(config.get('num_qubits', 8), 16)  # Cap for simulation
-        self.coherence_time = config.get('coherence_time', 1000)
+        self.num_qubits = min(config.get("num_qubits", 8), 16)  # Cap for simulation
+        self.coherence_time = config.get("coherence_time", 1000)
 
         try:
-            self.backend = AerSimulator(method='statevector')
+            self.backend = AerSimulator(method="statevector")
             logger.info(f"QuantumNeuralCore initialised: {self.num_qubits} qubits")
         except Exception as e:
             logger.warning(f"AerSimulator init failed: {e} — falling back to classical")
@@ -101,7 +102,7 @@ class QuantumNeuralCore:
             # Map counts back to attention weights over input shape
             out = np.zeros(input_state.numel())
             for state, count in counts.items():
-                idx = int(state.replace(' ', ''), 2) % len(out)
+                idx = int(state.replace(" ", ""), 2) % len(out)
                 out[idx] += count / 512
 
             out = out / (out.sum() + 1e-8)
@@ -118,6 +119,7 @@ class QuantumNeuralCore:
         """Generate a quantum-random key using measurement outcomes."""
         if self.backend is None:
             import secrets
+
             return secrets.token_hex(32)
         try:
             qc = QuantumCircuit(8)
@@ -125,15 +127,16 @@ class QuantumNeuralCore:
             qc.measure_all()
             job = self.backend.run(qc, shots=1)
             counts = job.result().get_counts()
-            bits = list(counts.keys())[0].replace(' ', '')
+            bits = list(counts.keys())[0].replace(" ", "")
             return hex(int(bits, 2))[2:].zfill(2)
         except Exception:
             import secrets
+
             return secrets.token_hex(32)
 
     def get_state_info(self) -> Dict:
         return {
-            'num_qubits': self.num_qubits,
-            'backend': 'AerSimulator' if self.backend else 'classical_fallback',
-            'coherence_time_ms': self.coherence_time,
+            "num_qubits": self.num_qubits,
+            "backend": "AerSimulator" if self.backend else "classical_fallback",
+            "coherence_time_ms": self.coherence_time,
         }

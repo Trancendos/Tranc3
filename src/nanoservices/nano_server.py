@@ -18,7 +18,7 @@ import logging
 import os
 import time
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,29 +30,33 @@ from src.workers.bot_registry import BotRegistry, get_registry
 
 logger = logging.getLogger(__name__)
 
-_NANO_PORT    = int(os.getenv("NANO_PORT", "8001"))
-_BOTS_URL     = os.getenv("TRANC3_BOTS_URL", "")   # e.g. https://tranc3-bots.fly.dev
+_NANO_PORT = int(os.getenv("NANO_PORT", "8001"))
+_BOTS_URL = os.getenv("TRANC3_BOTS_URL", "")  # e.g. https://tranc3-bots.fly.dev
 _CORS_ORIGINS = os.getenv(
     "CORS_ORIGINS",
-    os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,https://trancendos.com,https://www.trancendos.com"),
+    os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://localhost:5173,https://trancendos.com,https://www.trancendos.com",
+    ),
 ).split(",")
 
 
 # ─── Pydantic request models ──────────────────────────────────────────────────
 
+
 class GenerateRequest(BaseModel):
-    prompt:       str
-    personality:  str  = "tranc3-base"
+    prompt: str
+    personality: str = "tranc3-base"
     system_prompt: Optional[str] = None
-    max_tokens:   int  = Field(256, ge=1, le=4096)
-    temperature:  float = Field(0.8, ge=0.0, le=2.0)
-    top_p:        float = Field(0.9, ge=0.0, le=1.0)
+    max_tokens: int = Field(256, ge=1, le=4096)
+    temperature: float = Field(0.8, ge=0.0, le=2.0)
+    top_p: float = Field(0.9, ge=0.0, le=1.0)
 
 
 class EmbedRequest(BaseModel):
-    text:    str
-    pooling: str  = "mean"
-    dims:    int  = Field(256, ge=8, le=4096)
+    text: str
+    pooling: str = "mean"
+    dims: int = Field(256, ge=8, le=4096)
 
 
 class EmotionRequest(BaseModel):
@@ -60,9 +64,9 @@ class EmotionRequest(BaseModel):
 
 
 class TokenizeRequest(BaseModel):
-    action: str = "encode"           # "encode" | "decode"
-    text:   str = ""
-    ids:    List[int] = []
+    action: str = "encode"  # "encode" | "decode"
+    text: str = ""
+    ids: List[int] = []
     skip_special: bool = True
 
 
@@ -72,13 +76,13 @@ class ConsciousnessRequest(BaseModel):
 
 class PersonalityRequest(BaseModel):
     profile: str = "tranc3-base"
-    dim:     int = Field(128, ge=8, le=2048)
+    dim: int = Field(128, ge=8, le=2048)
 
 
 class PredictRequest(BaseModel):
-    text:         str
-    top_k:        int  = Field(5, ge=1, le=100)
-    predict_type: str  = "next_token"
+    text: str
+    top_k: int = Field(5, ge=1, le=100)
+    predict_type: str = "next_token"
 
 
 # ─── App factory ─────────────────────────────────────────────────────────────
@@ -91,8 +95,10 @@ async def _lifespan(app: FastAPI):
     global _registry
     _registry = get_registry()
     await _registry.start()
-    logger.info("Nanoservice server ready — bots: %s",
-                [b["name"] for b in _registry.list_bots()])
+    logger.info(
+        "Nanoservice server ready — bots: %s",
+        [b["name"] for b in _registry.list_bots()],
+    )
     yield
     await _registry.stop()
     logger.info("Nanoservice server shutdown")
@@ -107,27 +113,31 @@ nano_app = FastAPI(
 
 nano_app.add_middleware(
     CORSMiddleware,
-    allow_origins     = _CORS_ORIGINS,
-    allow_methods     = ["GET", "POST", "OPTIONS"],
-    allow_headers     = ["*"],
-    allow_credentials = False,
+    allow_origins=_CORS_ORIGINS,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+    allow_credentials=False,
 )
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
+
 
 async def _run(bot_name: str, **kwargs) -> dict:
     # If TRANC3_BOTS_URL is configured, proxy to the standalone bots service first.
     if _BOTS_URL:
         try:
             import httpx
+
             url = _BOTS_URL.rstrip("/") + "/" + bot_name
             async with httpx.AsyncClient(timeout=60.0) as http:
                 r = await http.post(url, json=kwargs)
                 if r.status_code < 500:
                     return r.json()
         except Exception as exc:
-            logger.warning("Bots proxy to %s failed (%s) — falling back to local", bot_name, exc)
+            logger.warning(
+                "Bots proxy to %s failed (%s) — falling back to local", bot_name, exc
+            )
 
     if _registry is None:
         raise HTTPException(503, detail="Worker registry not initialised")
@@ -138,6 +148,7 @@ async def _run(bot_name: str, **kwargs) -> dict:
 
 
 # ─── Health ───────────────────────────────────────────────────────────────────
+
 
 @nano_app.get("/health")
 async def health():
@@ -154,18 +165,19 @@ async def list_services():
 
 # ─── /nano/generate ───────────────────────────────────────────────────────────
 
+
 @nano_app.post("/generate")
 async def generate(req: GenerateRequest):
     """Text generation / chat."""
-    t0  = time.monotonic()
+    t0 = time.monotonic()
     out = await _run(
         "generate",
-        prompt       = req.prompt,
-        personality  = req.personality,
-        system_prompt= req.system_prompt,
-        max_tokens   = req.max_tokens,
-        temperature  = req.temperature,
-        top_p        = req.top_p,
+        prompt=req.prompt,
+        personality=req.personality,
+        system_prompt=req.system_prompt,
+        max_tokens=req.max_tokens,
+        temperature=req.temperature,
+        top_p=req.top_p,
     )
     out["latency_ms"] = round((time.monotonic() - t0) * 1000, 1)
     return out
@@ -177,6 +189,7 @@ async def generate_health():
 
 
 # ─── /nano/embed ──────────────────────────────────────────────────────────────
+
 
 @nano_app.post("/embed")
 async def embed(req: EmbedRequest):
@@ -191,6 +204,7 @@ async def embed_health():
 
 # ─── /nano/emotion ────────────────────────────────────────────────────────────
 
+
 @nano_app.post("/emotion")
 async def emotion(req: EmotionRequest):
     """Emotion detection."""
@@ -204,15 +218,16 @@ async def emotion_health():
 
 # ─── /nano/tokenize ───────────────────────────────────────────────────────────
 
+
 @nano_app.post("/tokenize")
 async def tokenize(req: TokenizeRequest):
     """Tokenization / decoding."""
     return await _run(
         "tokenize",
-        action       = req.action,
-        text         = req.text,
-        ids          = req.ids,
-        skip_special = req.skip_special,
+        action=req.action,
+        text=req.text,
+        ids=req.ids,
+        skip_special=req.skip_special,
     )
 
 
@@ -222,6 +237,7 @@ async def tokenize_health():
 
 
 # ─── /nano/consciousness ──────────────────────────────────────────────────────
+
 
 @nano_app.post("/consciousness")
 async def consciousness(req: ConsciousnessRequest):
@@ -236,6 +252,7 @@ async def consciousness_health():
 
 # ─── /nano/personality ────────────────────────────────────────────────────────
 
+
 @nano_app.post("/personality")
 async def personality(req: PersonalityRequest):
     """Personality vector lookup."""
@@ -249,14 +266,15 @@ async def personality_health():
 
 # ─── /nano/predict ────────────────────────────────────────────────────────────
 
+
 @nano_app.post("/predict")
 async def predict(req: PredictRequest):
     """Next-token / intent prediction."""
     return await _run(
         "predict",
-        text         = req.text,
-        top_k        = req.top_k,
-        predict_type = req.predict_type,
+        text=req.text,
+        top_k=req.top_k,
+        predict_type=req.predict_type,
     )
 
 
@@ -267,24 +285,27 @@ async def predict_health():
 
 # ─── /nano/memory (stub — delegated to vector DB) ────────────────────────────
 
+
 class MemoryRequest(BaseModel):
-    action: str = "store"            # "store" | "recall" | "search"
-    text:   str = ""
-    key:    str = ""
-    top_k:  int = 5
+    action: str = "store"  # "store" | "recall" | "search"
+    text: str = ""
+    key: str = ""
+    top_k: int = 5
+
 
 @nano_app.post("/memory")
 async def memory(req: MemoryRequest):
     """Vector memory store/recall (Qdrant-backed)."""
     try:
         from src.database.vector_store import VectorStore
+
         vs = VectorStore()
         if req.action == "store":
             embed = await _run("embed", text=req.text)
             doc_id = await vs.store(req.key or req.text[:50], embed["embedding"])
             return {"stored": True, "id": doc_id}
         elif req.action in ("recall", "search"):
-            embed  = await _run("embed", text=req.text)
+            embed = await _run("embed", text=req.text)
             results = await vs.search(embed["embedding"], top_k=req.top_k)
             return {"results": results}
         else:
@@ -300,10 +321,12 @@ async def memory_health():
 
 # ─── /nano/translate (lightweight LangDetect + generation-based) ──────────────
 
+
 class TranslateRequest(BaseModel):
-    text:        str
+    text: str
     target_lang: str = "en"
     source_lang: Optional[str] = None
+
 
 @nano_app.post("/translate")
 async def translate(req: TranslateRequest):
@@ -312,6 +335,7 @@ async def translate(req: TranslateRequest):
     if req.source_lang is None:
         try:
             from langdetect import detect
+
             detected = detect(req.text)
         except Exception:
             detected = "unknown"
@@ -322,11 +346,12 @@ async def translate(req: TranslateRequest):
     )
     result = await _run("generate", prompt=prompt, temperature=0.3, max_tokens=256)
     return {
-        "original":    req.text,
+        "original": req.text,
         "translation": result.get("response", ""),
         "source_lang": src,
         "target_lang": req.target_lang,
     }
+
 
 @nano_app.get("/translate/health")
 async def translate_health():
@@ -335,12 +360,14 @@ async def translate_health():
 
 # ─── /nano/quantum (stub — routes to quantum module) ─────────────────────────
 
+
 @nano_app.post("/quantum")
 async def quantum(request: Request):
     body = await request.json()
     try:
         from src.quantum.quantum_optimizer import QuantumOptimizer
-        qo  = QuantumOptimizer()
+
+        qo = QuantumOptimizer()
         action = body.get("action", "rng")
         if action == "rng":
             val = qo.quantum_random()
@@ -350,13 +377,14 @@ async def quantum(request: Request):
             result = qo.quantum_attention(qubits)
             return {"attention": result}
         elif action == "optimize":
-            params  = body.get("params", {})
-            result  = await qo.optimize(params)
+            params = body.get("params", {})
+            result = await qo.optimize(params)
             return {"result": result}
         else:
             raise HTTPException(400, detail=f"Unknown quantum action: {action}")
     except ImportError:
         return {"error": "Quantum module not available", "action": body.get("action")}
+
 
 @nano_app.get("/quantum/health")
 async def quantum_health():
@@ -365,12 +393,14 @@ async def quantum_health():
 
 # ─── /nano/evolution ─────────────────────────────────────────────────────────
 
+
 @nano_app.post("/evolution")
 async def evolution(request: Request):
     body = await request.json()
     try:
         from src.evolution.model_evolution import ModelEvolution
-        ev  = ModelEvolution()
+
+        ev = ModelEvolution()
         action = body.get("action", "fitness")
         if action == "fitness":
             score = ev.evaluate_fitness()
@@ -383,6 +413,7 @@ async def evolution(request: Request):
     except ImportError:
         return {"error": "Evolution module not available", "action": body.get("action")}
 
+
 @nano_app.get("/evolution/health")
 async def evolution_health():
     return {"service": "evolution", "status": "ok"}
@@ -390,21 +421,26 @@ async def evolution_health():
 
 # ─── Error handler ────────────────────────────────────────────────────────────
 
+
 @nano_app.exception_handler(Exception)
 async def _generic_error(request: Request, exc: Exception):
     logger.exception("Nanoservice error at %s: %s", request.url.path, exc)
-    return JSONResponse(status_code=500, content={"error": str(exc), "path": str(request.url.path)})
+    return JSONResponse(
+        status_code=500, content={"error": str(exc), "path": str(request.url.path)}
+    )
 
 
 # ─── Standalone entry point ───────────────────────────────────────────────────
 
 if __name__ == "__main__":
     import uvicorn
-    logging.basicConfig(level=logging.INFO,
-                        format="%(asctime)s [%(name)s] %(levelname)s %(message)s")
+
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s %(message)s"
+    )
     uvicorn.run(
         "src.nanoservices.nano_server:nano_app",
-        host="0.0.0.0",
+        host="0.0.0.0",  # nosec B104
         port=_NANO_PORT,
         reload=False,
         log_level="info",

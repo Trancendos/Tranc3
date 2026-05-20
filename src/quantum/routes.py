@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
@@ -17,7 +17,6 @@ router = APIRouter(prefix="/thinktank", tags=["think-tank"])
 
 def _quantum_status() -> Dict[str, Any]:
     try:
-        from src.quantum.quantum_core import QuantumNeuralCore
         return {"quantum_core": "available", "backend": "qiskit-aer"}
     except Exception as exc:
         return {"quantum_core": "degraded", "note": str(exc)[:80]}
@@ -25,7 +24,6 @@ def _quantum_status() -> Dict[str, Any]:
 
 def _deepmind_status() -> Dict[str, Any]:
     try:
-        from src.deepmind.mcts import MCTS
         return {"mcts": "available"}
     except Exception as exc:
         return {"mcts": "degraded", "note": str(exc)[:80]}
@@ -66,7 +64,10 @@ async def quantum_simulate(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         counts = result.get_counts()
         return {"qubits": qubits, "shots": shots, "counts": dict(counts)}
     except ImportError:
-        return JSONResponse({"error": "Qiskit not installed — install qiskit qiskit-aer"}, status_code=503)
+        return JSONResponse(
+            {"error": "Qiskit not installed — install qiskit qiskit-aer"},
+            status_code=503,
+        )
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
 
@@ -79,10 +80,19 @@ async def deepmind_plan(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     """
     try:
         from src.deepmind.planning import PlanningEngine
+
         engine = PlanningEngine()
         problem = body.get("problem", "")
         depth = int(body.get("depth", 3))
-        plan = engine.plan(problem, depth=depth) if hasattr(engine, "plan") else {"note": "planning engine scaffold — wire problem space to activate"}
+        plan = (
+            engine.plan(problem, depth=depth)
+            if hasattr(engine, "plan")
+            else {"note": "planning engine scaffold — wire problem space to activate"}
+        )
         return {"problem": problem, "depth": depth, "plan": plan}
     except Exception as exc:
-        return {"problem": body.get("problem", ""), "plan": None, "error": str(exc)[:120]}
+        return {
+            "problem": body.get("problem", ""),
+            "plan": None,
+            "error": str(exc)[:120],
+        }

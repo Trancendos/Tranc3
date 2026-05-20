@@ -2,8 +2,7 @@
 # TRANC3 Nanoservice Registry — service discovery and routing
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Callable
-import asyncio
+from typing import Dict, List, Optional
 import logging
 import time
 
@@ -30,19 +29,58 @@ class NanoServiceRegistry:
 
     # Built-in nanoservice definitions
     SERVICES = {
-        "tokenizer":     {"endpoint": "/nano/tokenize",     "capabilities": ["tokenize", "decode", "detect_language"]},
-        "emotion":       {"endpoint": "/nano/emotion",      "capabilities": ["detect_emotion", "emotion_scores"]},
-        "personality":   {"endpoint": "/nano/personality",  "capabilities": ["get_vector", "list_profiles", "adapt"]},
-        "quantum":       {"endpoint": "/nano/quantum",      "capabilities": ["attention", "optimize", "rng"]},
-        "consciousness": {"endpoint": "/nano/consciousness", "capabilities": ["phi", "awareness", "stream"]},
-        "memory":        {"endpoint": "/nano/memory",       "capabilities": ["store", "recall", "search"]},
-        "evolution":     {"endpoint": "/nano/evolution",    "capabilities": ["evolve", "fitness", "generation"]},
-        "translate":     {"endpoint": "/nano/translate",    "capabilities": ["translate", "languages"]},
-        "generate":      {"endpoint": "/nano/generate",     "capabilities": ["generate", "stream", "complete"]},
-        "auth":          {"endpoint": "/nano/auth",         "capabilities": ["login", "token", "verify"]},
-        "billing":       {"endpoint": "/nano/billing",      "capabilities": ["check_tier", "usage", "stripe"]},
-        "analytics":     {"endpoint": "/nano/analytics",    "capabilities": ["predict_intent", "churn", "quality"]},
-        "predict":       {"endpoint": "/nano/predict",      "capabilities": ["intent", "next_message", "load_forecast"]},
+        "tokenizer": {
+            "endpoint": "/nano/tokenize",
+            "capabilities": ["tokenize", "decode", "detect_language"],
+        },
+        "emotion": {
+            "endpoint": "/nano/emotion",
+            "capabilities": ["detect_emotion", "emotion_scores"],
+        },
+        "personality": {
+            "endpoint": "/nano/personality",
+            "capabilities": ["get_vector", "list_profiles", "adapt"],
+        },
+        "quantum": {
+            "endpoint": "/nano/quantum",
+            "capabilities": ["attention", "optimize", "rng"],
+        },
+        "consciousness": {
+            "endpoint": "/nano/consciousness",
+            "capabilities": ["phi", "awareness", "stream"],
+        },
+        "memory": {
+            "endpoint": "/nano/memory",
+            "capabilities": ["store", "recall", "search"],
+        },
+        "evolution": {
+            "endpoint": "/nano/evolution",
+            "capabilities": ["evolve", "fitness", "generation"],
+        },
+        "translate": {
+            "endpoint": "/nano/translate",
+            "capabilities": ["translate", "languages"],
+        },
+        "generate": {
+            "endpoint": "/nano/generate",
+            "capabilities": ["generate", "stream", "complete"],
+        },
+        "auth": {
+            "endpoint": "/nano/auth",
+            "capabilities": ["login", "token", "verify"],
+        },
+        "billing": {
+            "endpoint": "/nano/billing",
+            "capabilities": ["check_tier", "usage", "stripe"],
+        },
+        "analytics": {
+            "endpoint": "/nano/analytics",
+            "capabilities": ["predict_intent", "churn", "quality"],
+        },
+        "predict": {
+            "endpoint": "/nano/predict",
+            "capabilities": ["intent", "next_message", "load_forecast"],
+        },
     }
 
     def __init__(self):
