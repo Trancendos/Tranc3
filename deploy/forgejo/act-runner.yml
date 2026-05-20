@@ -1,0 +1,43 @@
+# deploy/forgejo/act-runner.yml
+# Configuration for the Forgejo act-runner (The Workshop CI/CD executor).
+#
+# Mount this into the runner container at /data/.runner
+# Or set FORGEJO_RUNNER_CONFIG env var to point to this file.
+#
+# Reference: https://forgejo.org/docs/latest/admin/runner-installation/
+
+log:
+  level: info
+
+runner:
+  # Runner labels exposed to Forgejo — jobs use `runs-on: self-hosted` or these
+  labels:
+    - "self-hosted:host"
+    - "linux:host"
+    - "x64:host"
+    - "python3.11:host"
+    - "node20:host"
+
+  # Fetch interval for new jobs
+  fetch_interval: 2s
+  # Parallel jobs — set to number of CPU cores
+  capacity: 4
+  # Timeout per job
+  timeout: 3h
+
+cache:
+  enabled: true
+  # Internal cache server address (shared between jobs on same runner)
+  host: ""
+  port: 0
+  # External cache — leave empty to use internal
+  external_server: ""
+
+container:
+  # Network for containers spun up by runner (not used for host-mode jobs)
+  network: ""
+  # Use host network for jobs that need localhost access (Forgejo, Redis etc.)
+  privileged: false
+  valid_volumes: []
+  docker_host: ""
+  force_pull: false
