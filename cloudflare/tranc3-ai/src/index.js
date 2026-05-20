@@ -233,6 +233,95 @@ function simpleHash(str) {
   return h;
 }
 
+// ── Free-tier LLM fallback (Groq → OpenRouter → HuggingFace) ─────────────────
+// Used when Tranc3 backend is unavailable. All zero-cost providers.
+
+async function callFreeProvider(env, messages, maxTokens, temperature) {
+  // Tier 1: Groq (fastest, 6k RPM free)
+  if (env.GROQ_API_KEY) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${env.GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: env.GROQ_MODEL || "llama-3.1-8b-instant",
+          messages,
+          max_tokens: maxTokens || 512,
+          temperature: temperature || 0.7,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) return { content, provider: "groq", model: data.model };
+      }
+    } catch (e) {
+      console.warn("Groq fallback failed:", e.message);
+    }
+  }
+
+  // Tier 2: OpenRouter (free suffix models)
+  if (env.OPENROUTER_API_KEY) {
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${env.OPENROUTER_API_KEY}`,
+          "HTTP-Referer": "https://trancendos.com",
+          "X-Title": "Tranc3",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: env.OPENROUTER_MODEL || "meta-llama/llama-3.2-3b-instruct:free",
+          messages,
+          max_tokens: maxTokens || 512,
+          temperature: temperature || 0.7,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) return { content, provider: "openrouter", model: data.model };
+      }
+    } catch (e) {
+      console.warn("OpenRouter fallback failed:", e.message);
+    }
+  }
+
+  // Tier 3: HuggingFace Inference API (free tier)
+  if (env.HF_API_KEY) {
+    try {
+      const model = env.HF_MODEL || "mistralai/Mistral-7B-Instruct-v0.3";
+      const lastUser = messages.filter(m => m.role === "user").pop()?.content || "";
+      const sysMsg = messages.find(m => m.role === "system")?.content || "";
+      const prompt = sysMsg ? `<s>[INST] ${sysMsg}\n\n${lastUser} [/INST]` : `<s>[INST] ${lastUser} [/INST]`;
+      const res = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${env.HF_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inputs: prompt,
+          parameters: { max_new_tokens: maxTokens || 256, temperature: temperature || 0.7, return_full_text: false },
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const content = Array.isArray(data) ? data[0]?.generated_text : null;
+        if (content) return { content, provider: "huggingface", model };
+      }
+    } catch (e) {
+      console.warn("HuggingFace fallback failed:", e.message);
+    }
+  }
+
+  return null;
+}
+
 // ── Route handlers ────────────────────────────────────────────────────────────
 
 function handleModels(request, env) {
@@ -299,7 +388,24 @@ async function handleChat(request, env) {
     }, 200, {}, request, env);
   }
 
-  // No backend available — return honest stub
+  // Try free-tier providers (Groq → OpenRouter → HuggingFace) before stub
+  const freeResult = await callFreeProvider(env, messages, body.max_tokens, body.temperature);
+  if (freeResult) {
+    return json({
+      id:      crypto.randomUUID(),
+      object:  "chat.completion",
+      model:   freeResult.model || model || "tranc3-base",
+      backend: freeResult.provider,
+      choices: [{
+        index:  0,
+        message: { role: "assistant", content: freeResult.content },
+        finish_reason: "stop",
+      }],
+      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+    }, 200, {}, request, env);
+  }
+
+  // No provider available — return honest stub
   return json(stubChat(messages, model), 200, {}, request, env);
 }
 
