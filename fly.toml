@@ -11,7 +11,7 @@
 #   echo "https://tranc3-backend.fly.dev" | wrangler secret put TRANC3_BACKEND_URL --name tranc3-ai
 #   echo "https://tranc3-backend.fly.dev" | wrangler secret put TRANC3_NANO_URL     --name tranc3-ai
 
-app = "trancendos-backend"
+app = "tranc3-backend"
 primary_region = "lhr"
 
 [build]
