@@ -14,8 +14,22 @@ ENV PYTHONUNBUFFERED=1 \
 
 # System deps — remove build tools after install to reduce attack surface
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential git curl \
+    build-essential git curl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
+
+# Allow injecting a custom CA cert at build time (e.g. corporate/sandbox TLS inspection)
+# In production (Fly.io remote builder) this arg is empty; build proceeds with default CAs.
+ARG EXTRA_CA_CERT=""
+RUN if [ -n "$EXTRA_CA_CERT" ]; then \
+      printf '%s\n' "$EXTRA_CA_CERT" >> /usr/local/share/ca-certificates/extra-ca.crt \
+      && update-ca-certificates; \
+    fi
+
+# Point pip/requests at the system CA bundle (which may include EXTRA_CA_CERT above).
+# This is a no-op in production — the system bundle already contains all needed CAs.
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 # Security: non-root user
 RUN groupadd -r tranc3 && useradd -r -g tranc3 -d /app -s /sbin/nologin tranc3
