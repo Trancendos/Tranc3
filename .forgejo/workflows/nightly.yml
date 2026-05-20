@@ -95,7 +95,7 @@ jobs:
       - name: Notify The Citadel on failure
         if: failure()
         run: |
-          curl -sf -X POST "https://tranc3-backend.fly.dev/citadel/webhooks/forgejo" \
+          curl -sf -X POST "https://trancendos-backend.fly.dev/citadel/webhooks/forgejo" \
             -H "Content-Type: application/json" \
             -d "{
               \"event\": \"nightly_failure\",

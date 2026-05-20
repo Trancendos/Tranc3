@@ -16,10 +16,10 @@ on:
 
 jobs:
   # ────────────────────────────────────────────────────────────────────────────
-  # Backend: tranc3-backend on Fly.io
+  # Backend: trancendos-backend on Fly.io
   # ────────────────────────────────────────────────────────────────────────────
   deploy-backend:
-    name: Deploy tranc3-backend
+    name: Deploy trancendos-backend
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -48,31 +48,32 @@ jobs:
             CITADEL_WEBHOOK_SECRET="${{ secrets.CITADEL_WEBHOOK_SECRET }}" \
             CF_ACCOUNT_ID="e0214028cb64d31232f5662548a55e4e" \
             ENVIRONMENT="production" \
-            TRANC3_BACKEND_URL="https://tranc3-backend.fly.dev" \
+            TRANC3_BACKEND_URL="https://trancendos-backend.fly.dev" \
+            TRANC3_BOTS_URL="https://trancendos-bots.fly.dev" \
             OLLAMA_URL="http://localhost:11434" \
             EMBED_MODEL="all-MiniLM-L6-v2" \
             CORS_ORIGINS="https://trancendos.com,https://api.trancendos.com" \
-            --app tranc3-backend
+            --app trancendos-backend
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy backend
-        run: flyctl deploy --remote-only --app tranc3-backend
+        run: flyctl deploy --remote-only --app trancendos-backend
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Health check
         run: |
           sleep 15
-          STATUS=$(curl -sf https://tranc3-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
+          STATUS=$(curl -sf https://trancendos-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
           echo "Health check status: $STATUS"
           [ "$STATUS" = "200" ] || { echo "Health check failed"; exit 1; }
 
   # ────────────────────────────────────────────────────────────────────────────
-  # Bots: tranc3-bots on Fly.io
+  # Bots: trancendos-bots on Fly.io
   # ────────────────────────────────────────────────────────────────────────────
   deploy-bots:
-    name: Deploy tranc3-bots
+    name: Deploy trancendos-bots
     runs-on: self-hosted
     needs: deploy-backend
     defaults:
@@ -92,30 +93,30 @@ jobs:
         run: |
           flyctl secrets set \
             REDIS_URL="${{ secrets.REDIS_URL }}" \
-            TRANC3_ENGINE_URL="https://tranc3-backend.fly.dev" \
+            TRANC3_ENGINE_URL="https://trancendos-backend.fly.dev" \
             SECRET_KEY="${{ secrets.SECRET_KEY }}" \
             JWT_SECRET="${{ secrets.JWT_SECRET }}" \
             ENVIRONMENT="production" \
-            --app tranc3-bots
+            --app trancendos-bots
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy bots
-        run: flyctl deploy --remote-only --app tranc3-bots
+        run: flyctl deploy --remote-only --app trancendos-bots
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Wire bots URL into backend
         run: |
           flyctl secrets set \
-            TRANC3_BOTS_URL="https://tranc3-bots.fly.dev" \
-            --app tranc3-backend
+            TRANC3_BOTS_URL="https://trancendos-bots.fly.dev" \
+            --app trancendos-backend
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Notify The Citadel
         run: |
-          BACKEND_URL="https://tranc3-backend.fly.dev"
+          BACKEND_URL="https://trancendos-backend.fly.dev"
           curl -sf -X POST "$BACKEND_URL/citadel/webhooks/forgejo" \
             -H "Content-Type: application/json" \
             -H "X-Forgejo-Event: workflow_run" \

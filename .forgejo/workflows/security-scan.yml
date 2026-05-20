@@ -177,7 +177,7 @@ jobs:
     steps:
       - name: Post security alert to The Citadel
         run: |
-          curl -sf -X POST "https://tranc3-backend.fly.dev/citadel/webhooks/forgejo" \
+          curl -sf -X POST "https://trancendos-backend.fly.dev/citadel/webhooks/forgejo" \
             -H "Content-Type: application/json" \
             -d "{
               \"event\": \"security_scan_failure\",
