@@ -6,7 +6,7 @@
 # Core web framework
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
-pydantic==2.7.1
+pydantic==2.7.4
 # Fixes: CVE-2026-24486, CVE-2024-53981, CVE-2026-42561, CVE-2026-40347
 python-multipart==0.0.29
 websockets==12.0
