@@ -4,12 +4,13 @@ import logging
 
 logger = logging.getLogger("src.core.consciousness_integration")
 
-import torch  # noqa: E402
-import numpy as np  # noqa: E402
-from typing import Any, Dict, Optional, List  # noqa: E402
+from typing import Any, Dict, List, Optional  # noqa: E402
 
-from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
+
 from src.bio_neural.consciousness_engine import ConsciousnessModel  # noqa: E402
+from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
 
 
 class ConsciousnessAwareGenerator:
@@ -35,15 +36,13 @@ class ConsciousnessAwareGenerator:
         """
         Generate response with consciousness modulation
         """
-        if not self.feature_manager.is_enabled(
-            FeatureFlag.CONSCIOUSNESS_ENGINE, user_id
-        ):
+        if not self.feature_manager.is_enabled(FeatureFlag.CONSCIOUSNESS_ENGINE, user_id):
             return self._classical_generate(input_text, personality_vector)
 
         try:
             return self._conscious_generate(input_text, personality_vector)
-        except Exception:
-            logger.warning("Consciousness generation failed, falling back: {e}")
+        except Exception as e:
+            logger.warning(f"Consciousness generation failed, falling back: {e}")
             return self._classical_generate(input_text, personality_vector)
 
     def _conscious_generate(
@@ -52,9 +51,7 @@ class ConsciousnessAwareGenerator:
         """Consciousness-enhanced generation"""
 
         # Simulate neural state from input
-        input_tensor = torch.tensor(
-            [ord(c) for c in input_text[:768]], dtype=torch.float
-        )
+        input_tensor = torch.tensor([ord(c) for c in input_text[:768]], dtype=torch.float)
         neural_state = input_tensor.unsqueeze(0).unsqueeze(0)
 
         # Calculate consciousness metrics
@@ -134,9 +131,7 @@ class ConsciousnessAwareGenerator:
             "recommendations": self._generate_improvement_suggestions(assessment),
         }
 
-    def _generate_improvement_suggestions(
-        self, assessment: Dict[str, float]
-    ) -> List[str]:
+    def _generate_improvement_suggestions(self, assessment: Dict[str, float]) -> List[str]:
         """Generate self-improvement suggestions"""
         suggestions = []
 

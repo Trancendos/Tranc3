@@ -4,12 +4,13 @@ import logging
 
 logger = logging.getLogger("src.core.quantum_inference")
 
+from typing import Optional  # noqa: E402
+
+import numpy as np  # noqa: E402
 import torch  # noqa: E402
 import torch.nn as nn  # noqa: E402
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister  # noqa: E402
+from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister  # noqa: E402
 from qiskit_aer import AerSimulator  # noqa: E402
-from typing import Optional  # noqa: E402
-import numpy as np  # noqa: E402
 
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
 
@@ -22,15 +23,11 @@ class QuantumInferenceEngine:
     def __init__(self, config, feature_manager: FeatureFlagManager):
         self.config = config
         self.feature_manager = feature_manager
-        self.quantum_enabled = feature_manager.is_enabled(
-            FeatureFlag.QUANTUM_OPTIMIZATION
-        )
+        self.quantum_enabled = feature_manager.is_enabled(FeatureFlag.QUANTUM_OPTIMIZATION)
 
         if self.quantum_enabled:
             self.backend = AerSimulator(method="statevector")
-            self.num_qubits = min(
-                config.get("num_qubits", 8), 16
-            )  # Limit for simulation
+            self.num_qubits = min(config.get("num_qubits", 8), 16)  # Limit for simulation
 
         # Classical fallback
         self.classical_model = nn.Linear(768, 768)  # Placeholder
@@ -41,15 +38,13 @@ class QuantumInferenceEngine:
         """
         Quantum attention with classical fallback
         """
-        if not self.feature_manager.is_enabled(
-            FeatureFlag.QUANTUM_OPTIMIZATION, user_id
-        ):
+        if not self.feature_manager.is_enabled(FeatureFlag.QUANTUM_OPTIMIZATION, user_id):
             return self._classical_attention(input_tensor)
 
         try:
             return self._quantum_attention_core(input_tensor)
-        except Exception:
-            logger.warning("Quantum attention failed, falling back to classical: {e}")
+        except Exception as e:
+            logger.warning(f"Quantum attention failed, falling back to classical: {e}")
             return self._classical_attention(input_tensor)
 
     def _quantum_attention_core(self, input_tensor: torch.Tensor) -> torch.Tensor:
@@ -85,11 +80,7 @@ class QuantumInferenceEngine:
             if idx < seq_len:
                 attention_weights[idx] = count / 1024
 
-        return (
-            attention_weights.unsqueeze(0)
-            .unsqueeze(-1)
-            .expand(batch_size, seq_len, dim)
-        )
+        return attention_weights.unsqueeze(0).unsqueeze(-1).expand(batch_size, seq_len, dim)
 
     def _classical_attention(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """Classical attention fallback"""
@@ -133,6 +124,6 @@ class QuantumInferenceEngine:
             # Mock memory retrieval
             return torch.randn_like(query) * 0.1  # Placeholder for retrieved memory
 
-        except Exception:
-            logger.warning("Quantum memory recall failed: {e}")
+        except Exception as e:
+            logger.warning(f"Quantum memory recall failed: {e}")
             return None
