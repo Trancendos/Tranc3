@@ -107,7 +107,7 @@ class LanguageDetector:
     def detect(self, text: str) -> str:
         try:
             return langdetect.detect(text)
-        except:
+        except Exception:
             return 'en'
 
     def detect_with_confidence(self, text: str) -> List[Dict]:
@@ -115,5 +115,5 @@ class LanguageDetector:
             from langdetect import detect_langs
             results = detect_langs(text)
             return [{'language': str(r).split(':')[0], 'confidence': float(str(r).split(':')[1])} for r in results]
-        except:
+        except Exception:
             return [{'language': 'en', 'confidence': 1.0}]

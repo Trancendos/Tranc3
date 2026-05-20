@@ -102,12 +102,14 @@ class APIMarketplace:
         self._seed_defaults()
 
     def _seed_defaults(self) -> None:
+        import os
+        _backend = os.getenv("TRANC3_BACKEND_URL", "http://localhost:8000")
         defaults = [
-            ("The Spark", "the-spark", "http://localhost:8000/mcp/rpc", AuthType.BEARER,
+            ("The Spark", "the-spark", f"{_backend}/mcp/rpc", AuthType.BEARER,
              ["mcp", "ai", "tools"], "JSON-RPC 2.0 MCP tool registry"),
-            ("The Digital Grid", "the-grid", "http://localhost:8000/grid", AuthType.BEARER,
+            ("The Digital Grid", "the-grid", f"{_backend}/grid", AuthType.BEARER,
              ["workflow", "automation"], "Workflow DAG builder and executor"),
-            ("The Observatory", "observatory", "http://localhost:8000/observatory", AuthType.BEARER,
+            ("The Observatory", "observatory", f"{_backend}/observatory", AuthType.BEARER,
              ["audit", "events"], "Platform audit log and event stream"),
             ("The Void", "the-void", "https://infinity-void.luminous-aimastermind.workers.dev", AuthType.API_KEY,
              ["secrets", "vault"], "AES-GCM encrypted secrets vault"),

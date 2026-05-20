@@ -1,5 +1,9 @@
 # src/core/self_evolution.py
 
+import logging
+
+logger = logging.getLogger("src.core.self_evolution")
+
 import torch
 import torch.nn as nn
 from typing import Dict, Optional, List
@@ -33,7 +37,7 @@ class SelfEvolvingInference:
         try:
             return self._evolve_model(input_data, feedback)
         except Exception as e:
-            print(f"Self-evolution failed: {e}")
+            logger.warning("Self-evolution failed: {e}")
             return None
     
     def _evolve_model(self, input_data: torch.Tensor, feedback: Dict[str, Any]) -> nn.Module:

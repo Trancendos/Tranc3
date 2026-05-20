@@ -1,5 +1,9 @@
 # src/core/quantum_inference.py
 
+import logging
+
+logger = logging.getLogger("src.core.quantum_inference")
+
 import torch
 import torch.nn as nn
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
@@ -36,7 +40,7 @@ class QuantumInferenceEngine:
         try:
             return self._quantum_attention_core(input_tensor)
         except Exception as e:
-            print(f"Quantum attention failed, falling back to classical: {e}")
+            logger.warning("Quantum attention failed, falling back to classical: {e}")
             return self._classical_attention(input_tensor)
     
     def _quantum_attention_core(self, input_tensor: torch.Tensor) -> torch.Tensor:
@@ -115,5 +119,5 @@ class QuantumInferenceEngine:
             return torch.randn_like(query) * 0.1  # Placeholder for retrieved memory
             
         except Exception as e:
-            print(f"Quantum memory recall failed: {e}")
+            logger.warning("Quantum memory recall failed: {e}")
             return None

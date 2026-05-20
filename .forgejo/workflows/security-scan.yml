@@ -1,0 +1,164 @@
+# .forgejo/workflows/security-scan.yml
+# The Workshop — Security scanning via Forgejo CI.
+# Runs: on every push to main or PR, and weekly on Sunday 02:00 UTC.
+# NO GitHub Actions — all CI through Forgejo (The Workshop) only.
+#
+# Checks:
+#   1. pip-audit  — Python CVE scanning
+#   2. bandit     — Python SAST (OWASP Top 10)
+#   3. npm audit  — Node.js CVE scanning (CF Workers)
+#   4. semgrep    — semantic pattern matching (free, open-source)
+#   5. secrets scan — detect hardcoded secrets (truffleHog / gitleaks)
+
+name: Security Scan
+
+on:
+  push:
+    branches: [main, "claude/*"]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 2 * * 0"   # Weekly Sunday 02:00 UTC
+
+jobs:
+  python-security:
+    name: Python — pip-audit + bandit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install security tools
+        run: |
+          pip install pip-audit==2.9.0 bandit==1.8.3 safety==3.5.1 --quiet
+
+      - name: pip-audit (CVE scan)
+        run: |
+          pip-audit --requirement requirements.txt \
+            --output json --output-file pip-audit-results.json || true
+          pip-audit --requirement requirements.txt
+        continue-on-error: true
+
+      - name: bandit (SAST — OWASP Top 10)
+        run: |
+          bandit -r src/ \
+            --severity-level medium \
+            --confidence-level medium \
+            --format json \
+            --output bandit-results.json || true
+          bandit -r src/ --severity-level high --confidence-level high
+        continue-on-error: true
+
+      - name: safety check
+        run: safety check --file requirements.txt --output text || true
+        continue-on-error: true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-security-reports
+          path: |
+            pip-audit-results.json
+            bandit-results.json
+
+  node-security:
+    name: Node.js — npm audit (CF Workers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: npm audit — tranc3-ai
+        working-directory: cloudflare/tranc3-ai
+        run: |
+          npm ci --prefer-offline 2>/dev/null || npm install
+          npm audit --audit-level=moderate || true
+
+      - name: npm audit — infinity-void
+        working-directory: cloudflare/infinity-void
+        run: |
+          npm ci --prefer-offline 2>/dev/null || npm install
+          npm audit --audit-level=moderate || true
+
+      - name: npm audit — web frontend
+        working-directory: web
+        run: |
+          npm ci --prefer-offline 2>/dev/null || npm install
+          npm audit --audit-level=high || true
+        continue-on-error: true
+
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install semgrep
+        run: pip install semgrep==1.100.0 --quiet
+
+      - name: Run semgrep (Python security rules)
+        run: |
+          semgrep \
+            --config "p/python" \
+            --config "p/owasp-top-ten" \
+            --config "p/sql-injection" \
+            --config "p/jwt" \
+            --error \
+            --json \
+            --output semgrep-results.json \
+            src/ || true
+          semgrep \
+            --config "p/python" \
+            --config "p/owasp-top-ten" \
+            --severity ERROR \
+            src/
+        continue-on-error: true
+
+      - name: Upload semgrep results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
+
+  secret-detection:
+    name: Secret Detection (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Run gitleaks
+        run: |
+          gitleaks detect \
+            --source . \
+            --log-level warn \
+            --report-format json \
+            --report-path gitleaks-results.json \
+            --exit-code 1 || {
+              echo "::warning::Potential secrets detected — review gitleaks-results.json"
+              exit 0
+            }
+
+      - name: Upload gitleaks report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gitleaks-results
+          path: gitleaks-results.json

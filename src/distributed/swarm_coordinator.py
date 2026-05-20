@@ -1,5 +1,9 @@
 # src/core/swarm_coordination.py
 
+import logging
+
+logger = logging.getLogger("src.distributed.swarm_coordinator")
+
 import asyncio
 import torch
 from typing import Dict, List, Optional, Any
@@ -40,7 +44,7 @@ class SwarmCoordinator:
         try:
             return await self._coordinate_swarm(problem)
         except Exception as e:
-            print(f"Swarm reasoning failed: {e}")
+            logger.warning("Swarm reasoning failed: {e}")
             return None
     
     async def _coordinate_swarm(self, problem: Dict[str, Any]) -> Dict[str, Any]:
@@ -132,5 +136,5 @@ class SwarmCoordinator:
         try:
             async with self.session.get(f"{node_url}/health", timeout=aiohttp.ClientTimeout(total=5)) as response:
                 return await response.json()
-        except:
+        except Exception:
             return {'status': 'unhealthy'}
