@@ -10,14 +10,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 SECURITY_HEADERS = {
-    "X-Content-Type-Options":    "nosniff",
-    "X-Frame-Options":           "DENY",
-    "X-XSS-Protection":          "1; mode=block",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-    "Content-Security-Policy":   "default-src 'self'; connect-src 'self' https://api.tranc3.ai",
-    "Referrer-Policy":           "strict-origin-when-cross-origin",
-    "Permissions-Policy":        "geolocation=(), microphone=(), camera=()",
-    "X-Powered-By":              "TRANC3-Conscious-AI",
+    "Content-Security-Policy": "default-src 'self'; connect-src 'self' https://api.tranc3.ai",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+    "X-Powered-By": "TRANC3-Conscious-AI",
 }
 
 
@@ -59,11 +59,15 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
         if request.method in ("POST", "PUT", "PATCH") and path not in self._SCAN_SKIP:
             try:
                 from src.cryptex.threat_detector import get_cryptex
+
                 cx = get_cryptex()
                 ip = request.client.host if request.client else None
                 if cx.is_blocked(ip=ip):
-                    return _JSONResponse({"error": "Access denied"}, status_code=403,
-                                         headers={"X-Request-ID": request_id})
+                    return _JSONResponse(
+                        {"error": "Access denied"},
+                        status_code=403,
+                        headers={"X-Request-ID": request_id},
+                    )
                 # Reject oversized bodies before buffering to prevent OOM
                 MAX_BODY = 1 * 1024 * 1024  # 1 MB
                 content_length = request.headers.get("content-length")
@@ -75,17 +79,20 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
                     )
                 body_bytes = await request.body()
                 body_text = body_bytes.decode("utf-8", errors="replace")[:1000]
-                signals = cx.analyse_request(path=path, body=body_text,
-                                             headers=dict(request.headers), ip=ip)
+                signals = cx.analyse_request(
+                    path=path, body=body_text, headers=dict(request.headers), ip=ip
+                )
                 if any(s.severity.value == "critical" for s in signals):
-                    return _JSONResponse({"error": "Request blocked by Cryptex"}, status_code=403,
-                                         headers={"X-Request-ID": request_id})
+                    return _JSONResponse(
+                        {"error": "Request blocked by Cryptex"},
+                        status_code=403,
+                        headers={"X-Request-ID": request_id},
+                    )
+
                 # Re-attach body so FastAPI can read it normally
-                from starlette.datastructures import Headers
-                from starlette.requests import Request as _Req
-                import io
                 async def _body_override():
                     return body_bytes
+
                 request._body = body_bytes
             except Exception:
                 pass  # Never block on Cryptex failure

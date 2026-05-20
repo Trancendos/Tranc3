@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -18,14 +18,54 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _SAFE_BUILTINS = {
-    k: __builtins__[k] if isinstance(__builtins__, dict) else getattr(__builtins__, k, None)
+    k: __builtins__[k]
+    if isinstance(__builtins__, dict)
+    else getattr(__builtins__, k, None)
     for k in (
-        "abs", "all", "any", "bool", "bytes", "chr", "dict", "dir", "divmod",
-        "enumerate", "filter", "float", "format", "frozenset", "getattr",
-        "hasattr", "hash", "hex", "int", "isinstance", "issubclass", "iter",
-        "len", "list", "map", "max", "min", "next", "oct", "ord", "pow",
-        "print", "range", "repr", "reversed", "round", "set", "slice",
-        "sorted", "str", "sum", "tuple", "type", "zip",
+        "abs",
+        "all",
+        "any",
+        "bool",
+        "bytes",
+        "chr",
+        "dict",
+        "dir",
+        "divmod",
+        "enumerate",
+        "filter",
+        "float",
+        "format",
+        "frozenset",
+        "getattr",
+        "hasattr",
+        "hash",
+        "hex",
+        "int",
+        "isinstance",
+        "issubclass",
+        "iter",
+        "len",
+        "list",
+        "map",
+        "max",
+        "min",
+        "next",
+        "oct",
+        "ord",
+        "pow",
+        "print",
+        "range",
+        "repr",
+        "reversed",
+        "round",
+        "set",
+        "slice",
+        "sorted",
+        "str",
+        "sum",
+        "tuple",
+        "type",
+        "zip",
     )
     if (isinstance(__builtins__, dict) and k in __builtins__)
     or (not isinstance(__builtins__, dict) and hasattr(__builtins__, k))
@@ -36,6 +76,7 @@ _SAFE_BUILTINS = {
 # Digital Grid Registry — maps workflow_id → WorkflowDefinition
 # ---------------------------------------------------------------------------
 
+
 class GridWorkflowRegistry:
     """In-memory registry of WorkflowDefinitions for The Digital Grid, keyed by workflow ID."""
 
@@ -45,7 +86,9 @@ class GridWorkflowRegistry:
     def register(self, workflow: Any) -> None:
         """Register a WorkflowDefinition; overwrites any existing entry with the same ID."""
         self._workflows[workflow.id] = workflow
-        logger.debug("grid.registry registered id=%s name=%s", workflow.id, workflow.name)
+        logger.debug(
+            "grid.registry registered id=%s name=%s", workflow.id, workflow.name
+        )
 
     def get(self, workflow_id: str) -> Optional[Any]:
         return self._workflows.get(workflow_id)
@@ -71,7 +114,7 @@ class SparkTool:
     name: str
     description: str
     input_schema: Dict[str, Any]
-    handler: Callable[..., Any]          # async (params: dict) -> dict
+    handler: Callable[..., Any]  # async (params: dict) -> dict
     category: str = "general"
     version: str = "1.0.0"
 
@@ -92,10 +135,13 @@ class SparkToolRegistry:
         if tool.name in self._tools:
             logger.warning("mcp.registry overwriting tool=%s", tool.name)
         self._tools[tool.name] = tool
-        logger.debug("mcp.registry registered tool=%s category=%s", tool.name, tool.category)
+        logger.debug(
+            "mcp.registry registered tool=%s category=%s", tool.name, tool.category
+        )
         # Rebuild semantic index lazily after each registration so RAG stays current
         try:
             from src.mcp.tool_rag import rebuild_rag_index
+
             rebuild_rag_index(list(self._tools.values()))
         except Exception:
             pass
@@ -132,6 +178,7 @@ class SparkToolRegistry:
         # Semantic search via ToolRAG
         try:
             from src.mcp.tool_rag import get_rag
+
             rag = get_rag()
             if rag.is_ready():
                 return rag.select_tools(query, top_k=top_k)
@@ -683,6 +730,7 @@ class SparkToolRegistry:
         # Build initial RAG index after all builtins are loaded
         try:
             from src.mcp.tool_rag import rebuild_rag_index
+
             rebuild_rag_index(list(self._tools.values()))
         except Exception:
             pass
@@ -722,7 +770,11 @@ class SparkToolRegistry:
         node_id = params.get("node_id")
         include_metrics = bool(params.get("include_metrics", False))
 
-        node_ids = [node_id] if node_id else ["spark-node-01", "spark-node-02", "spark-node-03"]
+        node_ids = (
+            [node_id]
+            if node_id
+            else ["spark-node-01", "spark-node-02", "spark-node-03"]
+        )
         nodes = []
         for nid in node_ids:
             node: Dict[str, Any] = {
@@ -760,9 +812,7 @@ class SparkToolRegistry:
         except ImportError:
             return {"error": "Workflow executor not available (import failed)."}
 
-        logger.info(
-            "mcp.run_workflow workflow=%s async=%s", workflow_id, async_mode
-        )
+        logger.info("mcp.run_workflow workflow=%s async=%s", workflow_id, async_mode)
 
         if async_mode:
             asyncio.create_task(_wf_executor.execute(wf, input_params))
@@ -822,6 +872,7 @@ class SparkToolRegistry:
         elif workflow_dict:
             try:
                 from src.workflow.builder import WorkflowDefinition  # noqa: PLC0415
+
                 wf = WorkflowDefinition.from_dict(workflow_dict)
             except Exception as exc:
                 return {"error": f"Invalid workflow definition: {exc}"}
@@ -841,7 +892,13 @@ class SparkToolRegistry:
         requested = set(params.get("subsystems") or [])
         verbose = bool(params.get("verbose", False))
 
-        all_subsystems = ["api_gateway", "redis", "vector_store", "skill_executor", "mcp_server"]
+        all_subsystems = [
+            "api_gateway",
+            "redis",
+            "vector_store",
+            "skill_executor",
+            "mcp_server",
+        ]
         check_list = [s for s in all_subsystems if not requested or s in requested]
 
         subsystem_results: Dict[str, Any] = {}
@@ -863,7 +920,10 @@ class SparkToolRegistry:
             elif sub == "redis":
                 try:
                     import redis.asyncio as aioredis  # noqa: PLC0415
-                    redis_url = __import__("os").environ.get("REDIS_URL", "redis://localhost:6379")
+
+                    redis_url = __import__("os").environ.get(
+                        "REDIS_URL", "redis://localhost:6379"
+                    )
                     client = aioredis.from_url(redis_url, socket_connect_timeout=1)
                     await asyncio.wait_for(client.ping(), timeout=1.0)
                     await client.aclose()
@@ -890,7 +950,10 @@ class SparkToolRegistry:
 
     async def _handle_execute_code(self, params: Dict[str, Any]) -> Dict[str, Any]:
         if not params.get("__admin__"):
-            return {"error": "execute_code is restricted to admin callers", "code": -32603}
+            return {
+                "error": "execute_code is restricted to admin callers",
+                "code": -32603,
+            }
 
         code = params["code"]
         timeout_seconds = int(params.get("timeout_seconds", 30))
@@ -912,16 +975,26 @@ class SparkToolRegistry:
         sys.stderr = io.StringIO()
 
         try:
+
             async def _run() -> Any:
-                exec(compile(code, "<mcp_code>", "exec"), namespace)  # noqa: S102
+                exec(compile(code, "<mcp_code>", "exec"), namespace)  # noqa: S102  # nosec B102
                 lines = code.strip().splitlines()
                 if lines:
                     last_line = lines[-1].strip()
                     if last_line and not last_line.startswith(
-                        ("import ", "from ", "def ", "class ", "for ", "while ", "if ", "#")
+                        (
+                            "import ",
+                            "from ",
+                            "def ",
+                            "class ",
+                            "for ",
+                            "while ",
+                            "if ",
+                            "#",
+                        )
                     ):
                         try:
-                            return eval(last_line, namespace)  # noqa: S307
+                            return eval(last_line, namespace)  # noqa: S307  # nosec B307
                         except Exception:
                             return None
                 return None
@@ -945,7 +1018,9 @@ class SparkToolRegistry:
             "language": "python",
         }
 
-    async def _handle_query_vector_store(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _handle_query_vector_store(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         query = params["query"]
         collection = params.get("collection", "default")
         top_k = int(params.get("top_k", 5))
@@ -961,6 +1036,7 @@ class SparkToolRegistry:
 
         try:
             from src.knowledge.vector_store import get_store
+
             store = get_store()
             hits = store.search(
                 query=query,
@@ -1015,6 +1091,7 @@ class SparkToolRegistry:
 
         try:
             from src.knowledge.vector_store import get_store
+
             store = get_store()
             doc_ids = store.ingest(
                 texts=texts,
@@ -1025,7 +1102,9 @@ class SparkToolRegistry:
             info = store.collection_info(collection)
             logger.info(
                 "mcp.ingest_document collection=%s +%d docs total=%d",
-                collection, len(doc_ids), info["count"],
+                collection,
+                len(doc_ids),
+                info["count"],
             )
             return {
                 "ingested": len(doc_ids),
@@ -1061,7 +1140,9 @@ class SparkToolRegistry:
             "queued_at": time.time(),
         }
 
-    async def _handle_get_evolution_stats(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _handle_get_evolution_stats(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         target_id = params["target_id"]
         target_type = params.get("target_type", "skill")
         generations = int(params.get("generations", 10))
@@ -1096,7 +1177,10 @@ class SparkToolRegistry:
             phi = calc.calculate_phi(arr) if hasattr(calc, "calculate_phi") else 0.0
             return {"phi": float(phi), "state_dim": len(state)}
         except ImportError as exc:
-            return {"phi": 0.0, "note": f"Luminous degraded — missing dependency: {exc}"}
+            return {
+                "phi": 0.0,
+                "note": f"Luminous degraded — missing dependency: {exc}",
+            }
         except Exception as exc:
             return {"error": str(exc)}
 
@@ -1112,13 +1196,22 @@ class SparkToolRegistry:
             result = (
                 processor.process(tensor, timesteps=timesteps)
                 if hasattr(processor, "process")
-                else {"note": "neuromorphic scaffold — wire input dimensions to activate"}
+                else {
+                    "note": "neuromorphic scaffold — wire input dimensions to activate"
+                }
             )
             if hasattr(result, "tolist"):
                 result = result.tolist()
-            return {"input_dim": len(input_data), "timesteps": timesteps, "output": result}
+            return {
+                "input_dim": len(input_data),
+                "timesteps": timesteps,
+                "output": result,
+            }
         except ImportError as exc:
-            return {"output": None, "note": f"Luminous degraded — missing dependency: {exc}"}
+            return {
+                "output": None,
+                "note": f"Luminous degraded — missing dependency: {exc}",
+            }
         except Exception as exc:
             return {"error": str(exc)}
 
@@ -1152,16 +1245,26 @@ class SparkToolRegistry:
             problem = params["problem"]
             depth = int(params.get("depth", 3))
             engine = PlanningEngine()
-            plan = engine.plan(problem, depth=depth) if hasattr(engine, "plan") else {
-                "note": "planning engine scaffold — wire problem space to activate"
-            }
+            plan = (
+                engine.plan(problem, depth=depth)
+                if hasattr(engine, "plan")
+                else {
+                    "note": "planning engine scaffold — wire problem space to activate"
+                }
+            )
             return {"problem": problem, "depth": depth, "plan": plan}
         except Exception as exc:
-            return {"problem": params.get("problem", ""), "plan": None, "error": str(exc)[:120]}
+            return {
+                "problem": params.get("problem", ""),
+                "plan": None,
+                "error": str(exc)[:120],
+            }
 
     # ── The Citadel handler ───────────────────────────────────────────────
 
-    async def _handle_citadel_deploy_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _handle_citadel_deploy_status(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         try:
             from src.citadel.devops_hub import DeployTarget, get_citadel
 
@@ -1182,7 +1285,9 @@ class SparkToolRegistry:
 
     # ── The Observatory handler ───────────────────────────────────────────
 
-    async def _handle_observatory_observe(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _handle_observatory_observe(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         try:
             from src.observability.observatory import EventCategory, observe
 
@@ -1201,7 +1306,9 @@ class SparkToolRegistry:
 
     # ── The Digital Grid handler ──────────────────────────────────────────
 
-    async def _handle_grid_list_workflows(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _handle_grid_list_workflows(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         status_filter = params.get("status")
         workflows = _grid_registry.list_all()
         if status_filter:

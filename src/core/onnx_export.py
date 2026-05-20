@@ -22,19 +22,20 @@ import argparse
 import logging
 import os
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-_DEFAULT_PT_PATH   = os.getenv("TRANC3_MODEL_PATH", "./models/tranc3-v1/tranc3-final.pt")
-_DEFAULT_ONNX_PATH = os.getenv("TRANC3_ONNX_PATH",  "./models/tranc3-v1/tranc3.onnx")
-_DEFAULT_OPSET     = 17     # ONNX opset — 17 is widely supported (ORT 1.16+)
+_DEFAULT_PT_PATH = os.getenv("TRANC3_MODEL_PATH", "./models/tranc3-v1/tranc3-final.pt")
+_DEFAULT_ONNX_PATH = os.getenv("TRANC3_ONNX_PATH", "./models/tranc3-v1/tranc3.onnx")
+_DEFAULT_OPSET = 17  # ONNX opset — 17 is widely supported (ORT 1.16+)
 
 
 # ─── Exporter ─────────────────────────────────────────────────────────────────
+
 
 class OnnxExporter:
     """
@@ -51,13 +52,13 @@ class OnnxExporter:
 
     def __init__(
         self,
-        pt_path:   Optional[str] = None,
+        pt_path: Optional[str] = None,
         onnx_path: Optional[str] = None,
-        opset:     int           = _DEFAULT_OPSET,
+        opset: int = _DEFAULT_OPSET,
     ):
-        self._pt_path   = Path(pt_path   or _DEFAULT_PT_PATH)
+        self._pt_path = Path(pt_path or _DEFAULT_PT_PATH)
         self._onnx_path = Path(onnx_path or _DEFAULT_ONNX_PATH)
-        self._opset     = opset
+        self._opset = opset
 
     # ─── Main export ───────────────────────────────────────────────────────────
 
@@ -84,20 +85,26 @@ class OnnxExporter:
             model,
             (dummy_ids,),
             str(self._onnx_path),
-            input_names     = ["input_ids"],
-            output_names    = ["logits"],
-            dynamic_axes    = {"input_ids": {0: "batch", 1: "seq_len"},
-                               "logits":    {0: "batch", 1: "seq_len"}},
-            opset_version   = self._opset,
-            do_constant_folding = True,
+            input_names=["input_ids"],
+            output_names=["logits"],
+            dynamic_axes={
+                "input_ids": {0: "batch", 1: "seq_len"},
+                "logits": {0: "batch", 1: "seq_len"},
+            },
+            opset_version=self._opset,
+            do_constant_folding=True,
         )
-        logger.info("ONNX export complete: %s (%.2f MB)", self._onnx_path,
-                    self._onnx_path.stat().st_size / 1e6)
+        logger.info(
+            "ONNX export complete: %s (%.2f MB)",
+            self._onnx_path,
+            self._onnx_path.stat().st_size / 1e6,
+        )
 
         if quantize:
             q_path = self._quantize(self._onnx_path)
-            logger.info("Quantized model: %s (%.2f MB)", q_path,
-                        q_path.stat().st_size / 1e6)
+            logger.info(
+                "Quantized model: %s (%.2f MB)", q_path, q_path.stat().st_size / 1e6
+            )
 
         return self._onnx_path
 
@@ -110,26 +117,29 @@ class OnnxExporter:
         import torch
 
         model, cfg = self._load_model()
-        emb_model  = _EmbeddingOnlyWrapper(model)
+        emb_model = _EmbeddingOnlyWrapper(model)
 
         dummy_ids = torch.randint(0, cfg.vocab_size, (1, 32), dtype=torch.long)
-        out_path  = self._onnx_path.with_name(
-            self._onnx_path.stem + "-embeddings.onnx"
-        )
+        out_path = self._onnx_path.with_name(self._onnx_path.stem + "-embeddings.onnx")
 
         torch.onnx.export(
             emb_model,
             (dummy_ids,),
             str(out_path),
-            input_names   = ["input_ids"],
-            output_names  = ["hidden_states"],
-            dynamic_axes  = {"input_ids":    {0: "batch", 1: "seq_len"},
-                             "hidden_states": {0: "batch", 1: "seq_len"}},
-            opset_version = self._opset,
-            do_constant_folding = True,
+            input_names=["input_ids"],
+            output_names=["hidden_states"],
+            dynamic_axes={
+                "input_ids": {0: "batch", 1: "seq_len"},
+                "hidden_states": {0: "batch", 1: "seq_len"},
+            },
+            opset_version=self._opset,
+            do_constant_folding=True,
         )
-        logger.info("Embedding ONNX export: %s (%.2f MB)", out_path,
-                    out_path.stat().st_size / 1e6)
+        logger.info(
+            "Embedding ONNX export: %s (%.2f MB)",
+            out_path,
+            out_path.stat().st_size / 1e6,
+        )
         return out_path
 
     # ─── Validation ────────────────────────────────────────────────────────────
@@ -149,6 +159,7 @@ class OnnxExporter:
         # ONNX structural check
         try:
             import onnx
+
             onnx.checker.check_model(str(onnx_path))
             logger.info("ONNX structural check: PASSED")
         except Exception as exc:
@@ -161,21 +172,25 @@ class OnnxExporter:
             import numpy as np
 
             model, cfg = self._load_model()
-            dummy_ids  = torch.randint(0, cfg.vocab_size, (1, 16), dtype=torch.long)
+            dummy_ids = torch.randint(0, cfg.vocab_size, (1, 16), dtype=torch.long)
 
             with torch.no_grad():
                 pt_out = model(dummy_ids).numpy()
 
-            sess   = ort.InferenceSession(str(onnx_path))
+            sess = ort.InferenceSession(str(onnx_path))
             ort_out = sess.run(["logits"], {"input_ids": dummy_ids.numpy()})[0]
 
             match = np.allclose(pt_out, ort_out, atol=1e-4, rtol=1e-3)
             if match:
-                logger.info("Numerical validation: PASSED (max diff=%.6f)",
-                            float(np.abs(pt_out - ort_out).max()))
+                logger.info(
+                    "Numerical validation: PASSED (max diff=%.6f)",
+                    float(np.abs(pt_out - ort_out).max()),
+                )
             else:
-                logger.warning("Numerical validation: FAILED (max diff=%.6f)",
-                               float(np.abs(pt_out - ort_out).max()))
+                logger.warning(
+                    "Numerical validation: FAILED (max diff=%.6f)",
+                    float(np.abs(pt_out - ort_out).max()),
+                )
             return match
 
         except ImportError:
@@ -201,9 +216,9 @@ class OnnxExporter:
 
         out_path = onnx_path.with_name(onnx_path.stem + "-int8.onnx")
         quantize_dynamic(
-            model_input   = str(onnx_path),
-            model_output  = str(out_path),
-            weight_type   = QuantType.QInt8,
+            model_input=str(onnx_path),
+            model_output=str(out_path),
+            weight_type=QuantType.QInt8,
         )
         return out_path
 
@@ -211,7 +226,6 @@ class OnnxExporter:
 
     def _load_model(self):
         """Load the PyTorch model in eval mode. Returns (model, cfg)."""
-        import torch
         from src.core.tranc3_inference import Tranc3Engine
 
         engine = Tranc3Engine(model_path=str(self._pt_path))
@@ -236,6 +250,7 @@ class OnnxExporter:
 
 # ─── Embedding-only wrapper ───────────────────────────────────────────────────
 
+
 class _EmbeddingOnlyWrapper:
     """Thin nn.Module wrapper that exposes only the hidden states (no LM head)."""
 
@@ -254,6 +269,7 @@ class _EmbeddingOnlyWrapper:
 
 # ─── ONNX Runtime inference helper ───────────────────────────────────────────
 
+
 class OnnxInferenceEngine:
     """
     Lightweight inference wrapper over an ONNX model.
@@ -266,18 +282,19 @@ class OnnxInferenceEngine:
     """
 
     def __init__(self, onnx_path: Optional[str] = None):
-        self._path    = Path(onnx_path or _DEFAULT_ONNX_PATH)
+        self._path = Path(onnx_path or _DEFAULT_ONNX_PATH)
         self._session = None
 
     def load(self) -> "OnnxInferenceEngine":
         try:
             import onnxruntime as ort
+
             opts = ort.SessionOptions()
             opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
             self._session = ort.InferenceSession(
                 str(self._path),
-                sess_options = opts,
-                providers    = ["CPUExecutionProvider"],
+                sess_options=opts,
+                providers=["CPUExecutionProvider"],
             )
             logger.info("ONNX session loaded: %s", self._path)
         except ImportError:
@@ -285,13 +302,14 @@ class OnnxInferenceEngine:
             raise
         return self
 
-    def forward(self, input_ids) -> "np.ndarray":
+    def forward(self, input_ids):  # -> np.ndarray (imported lazily inside method)
         """
         Run one forward pass.
         input_ids: numpy int64[batch, seq_len] or torch.Tensor
         Returns: numpy float32[batch, seq_len, vocab]
         """
         import numpy as np
+
         if hasattr(input_ids, "numpy"):
             input_ids = input_ids.numpy()
         input_ids = input_ids.astype(np.int64)
@@ -303,17 +321,25 @@ class OnnxInferenceEngine:
 
 # ─── CLI entry point ──────────────────────────────────────────────────────────
 
+
 def _cli():
-    logging.basicConfig(level=logging.INFO,
-                        format="%(asctime)s %(levelname)s %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+    )
 
     parser = argparse.ArgumentParser(description="Export Tranc3 model to ONNX")
-    parser.add_argument("--pt",       default=_DEFAULT_PT_PATH,   help="Input .pt checkpoint")
-    parser.add_argument("--out",      default=_DEFAULT_ONNX_PATH, help="Output .onnx path")
-    parser.add_argument("--opset",    default=_DEFAULT_OPSET, type=int, help="ONNX opset")
-    parser.add_argument("--quantize", action="store_true",         help="Also export INT8 variant")
-    parser.add_argument("--embeddings", action="store_true",       help="Also export embeddings-only graph")
-    parser.add_argument("--validate", action="store_true",         help="Validate ONNX output numerically")
+    parser.add_argument("--pt", default=_DEFAULT_PT_PATH, help="Input .pt checkpoint")
+    parser.add_argument("--out", default=_DEFAULT_ONNX_PATH, help="Output .onnx path")
+    parser.add_argument("--opset", default=_DEFAULT_OPSET, type=int, help="ONNX opset")
+    parser.add_argument(
+        "--quantize", action="store_true", help="Also export INT8 variant"
+    )
+    parser.add_argument(
+        "--embeddings", action="store_true", help="Also export embeddings-only graph"
+    )
+    parser.add_argument(
+        "--validate", action="store_true", help="Validate ONNX output numerically"
+    )
     args = parser.parse_args()
 
     exporter = OnnxExporter(pt_path=args.pt, onnx_path=args.out, opset=args.opset)

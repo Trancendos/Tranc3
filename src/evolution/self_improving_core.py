@@ -1,14 +1,12 @@
 # src/evolution/self_improving_core.py
 # TRANC3 Self-Evolution Engine
 
-import copy
 import logging
 import numpy as np
 import torch
-import torch.nn as nn
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +14,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Individual:
     """A single individual in the evolutionary population."""
+
     genome: np.ndarray
     fitness: float = 0.0
     generation: int = 0
@@ -39,7 +38,9 @@ class GeneticOperators:
     @staticmethod
     def crossover(parent_a: Individual, parent_b: Individual) -> Individual:
         point = np.random.randint(1, len(parent_a.genome))
-        child_genome = np.concatenate([parent_a.genome[:point], parent_b.genome[point:]])
+        child_genome = np.concatenate(
+            [parent_a.genome[:point], parent_b.genome[point:]]
+        )
         return Individual(
             genome=child_genome,
             generation=max(parent_a.generation, parent_b.generation) + 1,
@@ -55,7 +56,9 @@ class GeneticOperators:
 
     @staticmethod
     def tournament_select(population: List[Individual], k: int = 3) -> Individual:
-        contestants = np.random.choice(population, size=min(k, len(population)), replace=False)
+        contestants = np.random.choice(
+            population, size=min(k, len(population)), replace=False
+        )
         return max(contestants, key=lambda ind: ind.fitness)
 
 
@@ -70,21 +73,23 @@ class FitnessEvaluator:
         if len(self._feedback_history) > 1000:
             self._feedback_history.pop(0)
 
-    def evaluate(self, individual: Individual, recent_feedback: Optional[List[Dict]] = None) -> float:
+    def evaluate(
+        self, individual: Individual, recent_feedback: Optional[List[Dict]] = None
+    ) -> float:
         feedback = recent_feedback or self._feedback_history[-10:]
         if not feedback:
             return float(np.linalg.norm(individual.genome))
 
-        quality = np.mean([f.get('quality_score', 0.5) for f in feedback])
-        satisfaction = np.mean([f.get('user_satisfaction', 0.5) for f in feedback])
+        quality = np.mean([f.get("quality_score", 0.5) for f in feedback])
+        satisfaction = np.mean([f.get("user_satisfaction", 0.5) for f in feedback])
         diversity = float(np.std(individual.genome))
 
         fitness = quality * 0.4 + satisfaction * 0.4 + diversity * 0.2
         individual.fitness = fitness
         individual.metrics = {
-            'quality': quality,
-            'satisfaction': satisfaction,
-            'diversity': diversity,
+            "quality": quality,
+            "satisfaction": satisfaction,
+            "diversity": diversity,
         }
         return fitness
 
@@ -97,10 +102,10 @@ class SelfEvolvingArchitecture:
     """
 
     def __init__(self, config: Dict):
-        self.population_size = config.get('population_size', 10)
-        self.mutation_rate = config.get('mutation_rate', 0.01)
-        self.genome_dim = config.get('genome_dim', 768)
-        self.elite_ratio = config.get('elite_ratio', 0.2)
+        self.population_size = config.get("population_size", 10)
+        self.mutation_rate = config.get("mutation_rate", 0.01)
+        self.genome_dim = config.get("genome_dim", 768)
+        self.elite_ratio = config.get("elite_ratio", 0.2)
         self.generation = 0
 
         self.operators = GeneticOperators()
@@ -111,9 +116,13 @@ class SelfEvolvingArchitecture:
             Individual(genome=np.random.randn(self.genome_dim) * 0.01)
             for _ in range(self.population_size)
         ]
-        logger.info(f"SelfEvolvingArchitecture initialised: pop={self.population_size}, dim={self.genome_dim}")
+        logger.info(
+            f"SelfEvolvingArchitecture initialised: pop={self.population_size}, dim={self.genome_dim}"
+        )
 
-    def evolve(self, num_generations: int = 1, feedback: Optional[List[Dict]] = None) -> Individual:
+    def evolve(
+        self, num_generations: int = 1, feedback: Optional[List[Dict]] = None
+    ) -> Individual:
         """Run evolutionary loop and return best individual."""
         for _ in range(num_generations):
             for ind in self.population:
@@ -135,7 +144,9 @@ class SelfEvolvingArchitecture:
             self.generation += 1
 
         best = self.population[0]
-        logger.info(f"Generation {self.generation}: best_fitness={best.fitness:.4f}, mutations={best.mutations}")
+        logger.info(
+            f"Generation {self.generation}: best_fitness={best.fitness:.4f}, mutations={best.mutations}"
+        )
 
         # Persist best genome to Redis — Gap G25 action
         self._persist_genome(best)
@@ -145,21 +156,33 @@ class SelfEvolvingArchitecture:
     def _persist_genome(self, individual: Individual):
         """Save best genome to Redis for cross-restart continuity."""
         try:
-            import redis as _redis, json, os
+            import redis as _redis
+            import json
+            import os
+
             r = _redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
-            r.set("tranc3:evolution:best_genome", json.dumps({
-                "genome": individual.genome.tolist(),
-                "fitness": individual.fitness,
-                "generation": self.generation,
-                "mutations": individual.mutations,
-            }), ex=86400 * 7)  # 7-day TTL
+            r.set(
+                "tranc3:evolution:best_genome",
+                json.dumps(
+                    {
+                        "genome": individual.genome.tolist(),
+                        "fitness": individual.fitness,
+                        "generation": self.generation,
+                        "mutations": individual.mutations,
+                    }
+                ),
+                ex=86400 * 7,
+            )  # 7-day TTL
         except Exception as e:
             logger.debug(f"Genome persist skipped: {e}")
 
     def load_genome_from_redis(self) -> bool:
         """Restore best genome from Redis on startup."""
         try:
-            import redis as _redis, json, os
+            import redis as _redis
+            import json
+            import os
+
             r = _redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
             data = r.get("tranc3:evolution:best_genome")
             if data:
@@ -167,7 +190,9 @@ class SelfEvolvingArchitecture:
                 self.population[0].genome = np.array(saved["genome"])
                 self.population[0].fitness = saved["fitness"]
                 self.generation = saved.get("generation", 0)
-                logger.info(f"Genome restored from Redis: gen={self.generation}, fitness={saved['fitness']:.4f}")
+                logger.info(
+                    f"Genome restored from Redis: gen={self.generation}, fitness={saved['fitness']:.4f}"
+                )
                 return True
         except Exception as e:
             logger.debug(f"Genome restore skipped: {e}")
@@ -184,9 +209,9 @@ class SelfEvolvingArchitecture:
     def get_stats(self) -> Dict:
         fitnesses = [ind.fitness for ind in self.population]
         return {
-            'generation': self.generation,
-            'population_size': len(self.population),
-            'best_fitness': max(fitnesses) if fitnesses else 0.0,
-            'avg_fitness': float(np.mean(fitnesses)) if fitnesses else 0.0,
-            'mutation_rate': self.mutation_rate,
+            "generation": self.generation,
+            "population_size": len(self.population),
+            "best_fitness": max(fitnesses) if fitnesses else 0.0,
+            "avg_fitness": float(np.mean(fitnesses)) if fitnesses else 0.0,
+            "mutation_rate": self.mutation_rate,
         }

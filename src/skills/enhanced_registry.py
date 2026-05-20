@@ -7,7 +7,6 @@ skills and are activated when trigger keywords appear in the request text.
 """
 
 import asyncio
-import json
 import logging
 import math
 import os
@@ -16,7 +15,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +23,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class Skill:
@@ -59,7 +59,7 @@ class SkillBundle:
     id: str
     name: str
     trigger_keywords: List[str]
-    skills: List[str]          # list of skill IDs
+    skills: List[str]  # list of skill IDs
     description: str
 
 
@@ -74,6 +74,7 @@ class SkillSearchResult:
 # Registry
 # ---------------------------------------------------------------------------
 
+
 class EnhancedSkillRegistry:
     """
     ML-powered skill registry with hybrid lexical + semantic search.
@@ -87,7 +88,7 @@ class EnhancedSkillRegistry:
     def __init__(self) -> None:
         self.skills: Dict[str, Skill] = {}
         self.bundles: Dict[str, SkillBundle] = {}
-        self._embedder = None            # sentence_transformers.SentenceTransformer
+        self._embedder = None  # sentence_transformers.SentenceTransformer
         self._embedder_attempted = False
         # IDF cache — rebuilt on register()
         self._idf: Dict[str, float] = {}
@@ -119,23 +120,32 @@ class EnhancedSkillRegistry:
         doc_freq: Dict[str, int] = defaultdict(int)
         for skill in self.skills.values():
             corpus = (
-                skill.name + " " + skill.description + " "
-                + skill.content + " " + " ".join(skill.tags)
+                skill.name
+                + " "
+                + skill.description
+                + " "
+                + skill.content
+                + " "
+                + " ".join(skill.tags)
             )
             seen = set(self._tokenize(corpus))
             for tok in seen:
                 doc_freq[tok] += 1
         self._idf = {
-            tok: math.log((N + 1) / (df + 1)) + 1.0
-            for tok, df in doc_freq.items()
+            tok: math.log((N + 1) / (df + 1)) + 1.0 for tok, df in doc_freq.items()
         }
         self._idf_dirty = False
 
     def _tfidf_score(self, query_tokens: List[str], skill: Skill) -> float:
         """Compute a simple TF-IDF dot-product score for a query against a skill."""
         corpus = (
-            skill.name + " " + skill.description + " "
-            + skill.content + " " + " ".join(skill.tags)
+            skill.name
+            + " "
+            + skill.description
+            + " "
+            + skill.content
+            + " "
+            + " ".join(skill.tags)
         )
         doc_tokens = self._tokenize(corpus)
         tf: Dict[str, float] = defaultdict(float)
@@ -158,13 +168,17 @@ class EnhancedSkillRegistry:
         self._embedder_attempted = True
         try:
             from sentence_transformers import SentenceTransformer  # type: ignore
+
             model_name = os.getenv(
                 "EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
             )
             self._embedder = SentenceTransformer(model_name)
             logger.info("Loaded sentence-transformer: %s", model_name)
         except Exception as exc:
-            logger.info("sentence-transformers not available (%s) — using lexical search only.", exc)
+            logger.info(
+                "sentence-transformers not available (%s) — using lexical search only.",
+                exc,
+            )
             self._embedder = None
 
     def _cosine(self, a: List[float], b: List[float]) -> float:
@@ -217,7 +231,8 @@ class EnhancedSkillRegistry:
             )
 
         candidates = [
-            s for s in self.skills.values()
+            s
+            for s in self.skills.values()
             if category is None or s.category == category
         ]
 
@@ -237,7 +252,9 @@ class EnhancedSkillRegistry:
             popularity_boost = 1.0 + 0.05 * math.log1p(skill.usage_count)
             combined *= skill.avg_quality * popularity_boost
 
-            results.append(SkillSearchResult(skill=skill, score=combined, match_reason=reason))
+            results.append(
+                SkillSearchResult(skill=skill, score=combined, match_reason=reason)
+            )
 
         results.sort(key=lambda r: r.score, reverse=True)
         return results[:top_k]
@@ -292,7 +309,9 @@ class EnhancedSkillRegistry:
             "categories": dict(categories),
             "most_used": sorted(
                 self.skills.values(), key=lambda s: s.usage_count, reverse=True
-            )[:5][0].id if self.skills else None,
+            )[:5][0].id
+            if self.skills
+            else None,
         }
 
     # ------------------------------------------------------------------
@@ -350,7 +369,10 @@ class EnhancedSkillRegistry:
                         v = v.strip()
                         # Handle inline lists: [a, b, c]
                         if v.startswith("[") and v.endswith("]"):
-                            v = [i.strip().strip('"').strip("'") for i in v[1:-1].split(",")]
+                            v = [
+                                i.strip().strip('"').strip("'")
+                                for i in v[1:-1].split(",")
+                            ]
                         else:
                             v = v.strip('"').strip("'")
                         meta[k] = v
@@ -385,6 +407,7 @@ class EnhancedSkillRegistry:
 # ---------------------------------------------------------------------------
 # Pre-registered built-in skills (20 total)
 # ---------------------------------------------------------------------------
+
 
 def _bootstrap_registry(reg: EnhancedSkillRegistry) -> None:
     _SKILLS = [
@@ -638,36 +661,57 @@ def _bootstrap_registry(reg: EnhancedSkillRegistry) -> None:
         reg.register(skill)
 
     # Bundles
-    reg.register_bundle(SkillBundle(
-        id="compliance-audit",
-        name="Compliance Audit Bundle",
-        trigger_keywords=["gdpr", "compliance", "audit", "license", "privacy"],
-        skills=["gdpr-compliance-check", "license-scanner", "model-card-generator"],
-        description="Full compliance audit: GDPR, OSS licensing, ML model cards.",
-    ))
-    reg.register_bundle(SkillBundle(
-        id="backend-api",
-        name="Backend API Bundle",
-        trigger_keywords=["fastapi", "api", "rest", "crud", "endpoint"],
-        skills=["fastapi-crud-generator", "async-db-pool", "jwt-auth-middleware",
-                "rate-limiter-sliding-window"],
-        description="Complete backend API stack with auth, database, and rate limiting.",
-    ))
-    reg.register_bundle(SkillBundle(
-        id="ai-stack",
-        name="AI Orchestration Bundle",
-        trigger_keywords=["embedding", "vector", "llm", "semantic", "rag"],
-        skills=["vector-search-pipeline", "llm-prompt-chaining",
-                "embedding-drift-detector"],
-        description="AI pipeline: embeddings, vector search, LLM chaining, drift detection.",
-    ))
-    reg.register_bundle(SkillBundle(
-        id="observability",
-        name="Observability Bundle",
-        trigger_keywords=["monitoring", "metrics", "logging", "tracing", "observability"],
-        skills=["prometheus-metrics", "structured-logging"],
-        description="Full observability stack: Prometheus metrics and structured logging.",
-    ))
+    reg.register_bundle(
+        SkillBundle(
+            id="compliance-audit",
+            name="Compliance Audit Bundle",
+            trigger_keywords=["gdpr", "compliance", "audit", "license", "privacy"],
+            skills=["gdpr-compliance-check", "license-scanner", "model-card-generator"],
+            description="Full compliance audit: GDPR, OSS licensing, ML model cards.",
+        )
+    )
+    reg.register_bundle(
+        SkillBundle(
+            id="backend-api",
+            name="Backend API Bundle",
+            trigger_keywords=["fastapi", "api", "rest", "crud", "endpoint"],
+            skills=[
+                "fastapi-crud-generator",
+                "async-db-pool",
+                "jwt-auth-middleware",
+                "rate-limiter-sliding-window",
+            ],
+            description="Complete backend API stack with auth, database, and rate limiting.",
+        )
+    )
+    reg.register_bundle(
+        SkillBundle(
+            id="ai-stack",
+            name="AI Orchestration Bundle",
+            trigger_keywords=["embedding", "vector", "llm", "semantic", "rag"],
+            skills=[
+                "vector-search-pipeline",
+                "llm-prompt-chaining",
+                "embedding-drift-detector",
+            ],
+            description="AI pipeline: embeddings, vector search, LLM chaining, drift detection.",
+        )
+    )
+    reg.register_bundle(
+        SkillBundle(
+            id="observability",
+            name="Observability Bundle",
+            trigger_keywords=[
+                "monitoring",
+                "metrics",
+                "logging",
+                "tracing",
+                "observability",
+            ],
+            skills=["prometheus-metrics", "structured-logging"],
+            description="Full observability stack: Prometheus metrics and structured logging.",
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -681,6 +725,7 @@ _bootstrap_registry(registry)
 # ---------------------------------------------------------------------------
 # Convenience async function
 # ---------------------------------------------------------------------------
+
 
 async def route_skill_request(query: str) -> List[SkillSearchResult]:
     """
@@ -697,10 +742,12 @@ async def route_skill_request(query: str) -> List[SkillSearchResult]:
             existing_ids = {r.skill.id for r in results}
             for skill in bundle_skills:
                 if skill.id not in existing_ids:
-                    results.append(SkillSearchResult(
-                        skill=skill,
-                        score=0.5,
-                        match_reason=f"bundle:{bundle.id}",
-                    ))
+                    results.append(
+                        SkillSearchResult(
+                            skill=skill,
+                            score=0.5,
+                            match_reason=f"bundle:{bundle.id}",
+                        )
+                    )
 
     return results

@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
-from fastapi import APIRouter, Body, Query
+from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/nexus", tags=["the-nexus"])
@@ -13,6 +13,7 @@ router = APIRouter(prefix="/nexus", tags=["the-nexus"])
 
 def _nexus():
     from src.nexus.hub import get_nexus
+
     return get_nexus()
 
 
@@ -29,9 +30,14 @@ async def publish(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     if not topic:
         return JSONResponse({"error": "topic is required"}, status_code=400)
     from src.nexus.hub import MessagePriority
+
     raw_priority = body.get("priority", "normal")
-    priority_map = {"low": MessagePriority.LOW, "normal": MessagePriority.NORMAL,
-                    "high": MessagePriority.HIGH, "critical": MessagePriority.CRITICAL}
+    priority_map = {
+        "low": MessagePriority.LOW,
+        "normal": MessagePriority.NORMAL,
+        "high": MessagePriority.HIGH,
+        "critical": MessagePriority.CRITICAL,
+    }
     priority = priority_map.get(raw_priority, MessagePriority.NORMAL)
     msg = _nexus().publish(
         topic=topic,
@@ -45,7 +51,6 @@ async def publish(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
 @router.post("/send")
 async def send_direct(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
-    import asyncio
     recipient = body.get("recipient")
     payload = body.get("payload", {})
     sender = body.get("sender", "api")
@@ -53,7 +58,9 @@ async def send_direct(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         return JSONResponse({"error": "recipient is required"}, status_code=400)
     msg = await _nexus().send(recipient=recipient, payload=payload, sender=sender)
     if msg is None:
-        return JSONResponse({"error": "Recipient service not registered"}, status_code=404)
+        return JSONResponse(
+            {"error": "Recipient service not registered"}, status_code=404
+        )
     return {"sent": msg.id, "recipient": recipient}
 
 

@@ -15,9 +15,8 @@ Two primary abstractions:
 import asyncio
 import gc
 import logging
-import math
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -27,12 +26,13 @@ logger = logging.getLogger(__name__)
 # RepairStrategy
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class RepairStrategy:
     name: str
-    priority: int                        # lower number = higher priority
-    condition: Callable[[Dict], bool]    # receives context dict
-    action: Callable[[Dict], Any]        # sync or async; receives context dict
+    priority: int  # lower number = higher priority
+    condition: Callable[[Dict], bool]  # receives context dict
+    action: Callable[[Dict], Any]  # sync or async; receives context dict
     cooldown_sec: float = 300.0
     last_applied: float = 0.0
 
@@ -45,6 +45,7 @@ class RepairStrategy:
 # SelfRepairEngine
 # ---------------------------------------------------------------------------
 
+
 class SelfRepairEngine:
     """
     Evaluates registered RepairStrategies against the current system context
@@ -54,7 +55,7 @@ class SelfRepairEngine:
 
     def __init__(self) -> None:
         self.strategies: List[RepairStrategy] = []
-        self.active_repairs: Dict[str, float] = {}   # strategy_name → start_time
+        self.active_repairs: Dict[str, float] = {}  # strategy_name → start_time
         self._register_builtins()
 
     # ------------------------------------------------------------------
@@ -64,7 +65,11 @@ class SelfRepairEngine:
     def register_strategy(self, strategy: RepairStrategy) -> None:
         self.strategies.append(strategy)
         self.strategies.sort(key=lambda s: s.priority)
-        logger.info("Registered repair strategy '%s' (priority=%d)", strategy.name, strategy.priority)
+        logger.info(
+            "Registered repair strategy '%s' (priority=%d)",
+            strategy.name,
+            strategy.priority,
+        )
 
     # ------------------------------------------------------------------
     # Evaluation
@@ -82,17 +87,22 @@ class SelfRepairEngine:
             try:
                 triggered = strategy.condition(context)
             except Exception as exc:
-                logger.warning("Condition error in strategy '%s': %s", strategy.name, exc)
+                logger.warning(
+                    "Condition error in strategy '%s': %s", strategy.name, exc
+                )
                 triggered = False
 
             if not triggered:
                 continue
 
             if not strategy.is_ready():
-                remaining = strategy.cooldown_sec - (time.time() - strategy.last_applied)
+                remaining = strategy.cooldown_sec - (
+                    time.time() - strategy.last_applied
+                )
                 logger.debug(
                     "Strategy '%s' triggered but on cooldown (%.0f s remaining).",
-                    strategy.name, remaining
+                    strategy.name,
+                    remaining,
                 )
                 continue
 
@@ -110,7 +120,6 @@ class SelfRepairEngine:
         results = []
         for strategy in self.strategies:
             # Override cooldown by resetting last_applied
-            original_last = strategy.last_applied
             strategy.last_applied = 0.0
             try:
                 result = await self._apply_strategy(strategy, context)
@@ -160,7 +169,7 @@ class SelfRepairEngine:
             collected = gc.collect()
             # Clear any module-level LRU caches
             import functools
-            import sys
+
             cleared = 0
             for obj in gc.get_objects():
                 if isinstance(obj, functools._lru_cache_wrapper):  # type: ignore[attr-defined]
@@ -171,16 +180,19 @@ class SelfRepairEngine:
                         pass
             logger.info(
                 "Memory pressure repair: gc collected=%d, caches cleared=%d",
-                collected, cleared
+                collected,
+                cleared,
             )
 
-        self.register_strategy(RepairStrategy(
-            name="memory_pressure",
-            priority=1,
-            condition=lambda ctx: float(ctx.get("memory_percent", 0)) > 85.0,
-            action=_memory_pressure_action,
-            cooldown_sec=120.0,
-        ))
+        self.register_strategy(
+            RepairStrategy(
+                name="memory_pressure",
+                priority=1,
+                condition=lambda ctx: float(ctx.get("memory_percent", 0)) > 85.0,
+                action=_memory_pressure_action,
+                cooldown_sec=120.0,
+            )
+        )
 
         # 2. High error rate → circuit breaker pattern
         _circuit_breakers: Dict[str, Dict] = {}
@@ -195,18 +207,21 @@ class SelfRepairEngine:
             }
             logger.info(
                 "Circuit breaker OPENED for service '%s' (error_rate=%.2f)",
-                service_id, ctx.get("error_rate", 0),
+                service_id,
+                ctx.get("error_rate", 0),
             )
             # Attach circuit breaker state to context so callers can inspect
             ctx["circuit_breaker"] = _circuit_breakers[service_id]
 
-        self.register_strategy(RepairStrategy(
-            name="high_error_rate",
-            priority=2,
-            condition=lambda ctx: float(ctx.get("error_rate", 0)) > 0.1,
-            action=_high_error_rate_action,
-            cooldown_sec=60.0,
-        ))
+        self.register_strategy(
+            RepairStrategy(
+                name="high_error_rate",
+                priority=2,
+                condition=lambda ctx: float(ctx.get("error_rate", 0)) > 0.1,
+                action=_high_error_rate_action,
+                cooldown_sec=60.0,
+            )
+        )
 
         # 3. Evolution stagnation → inject diversity
         async def _evolution_stagnation_action(ctx: Dict) -> None:
@@ -217,19 +232,22 @@ class SelfRepairEngine:
             ctx["population_shuffle"] = True
             logger.info(
                 "Evolution diversity injected: mutation_rate %.4f → %.4f",
-                current_mutation, boosted_mutation,
+                current_mutation,
+                boosted_mutation,
             )
 
-        self.register_strategy(RepairStrategy(
-            name="evolution_stagnation",
-            priority=3,
-            condition=lambda ctx: (
-                "evolution_fitness_delta" in ctx
-                and float(ctx["evolution_fitness_delta"]) < 0.001
-            ),
-            action=_evolution_stagnation_action,
-            cooldown_sec=600.0,
-        ))
+        self.register_strategy(
+            RepairStrategy(
+                name="evolution_stagnation",
+                priority=3,
+                condition=lambda ctx: (
+                    "evolution_fitness_delta" in ctx
+                    and float(ctx["evolution_fitness_delta"]) < 0.001
+                ),
+                action=_evolution_stagnation_action,
+                cooldown_sec=600.0,
+            )
+        )
 
         # 4. Model drift → trigger model refresh
         async def _model_drift_action(ctx: Dict) -> None:
@@ -248,13 +266,16 @@ class SelfRepairEngine:
                 else:
                     refresh_cb(ctx)
 
-        self.register_strategy(RepairStrategy(
-            name="model_drift",
-            priority=4,
-            condition=lambda ctx: float(ctx.get("prediction_confidence", 1.0)) < 0.5,
-            action=_model_drift_action,
-            cooldown_sec=900.0,
-        ))
+        self.register_strategy(
+            RepairStrategy(
+                name="model_drift",
+                priority=4,
+                condition=lambda ctx: float(ctx.get("prediction_confidence", 1.0))
+                < 0.5,
+                action=_model_drift_action,
+                cooldown_sec=900.0,
+            )
+        )
 
         # 5. Queue overflow → backpressure
         async def _queue_overflow_action(ctx: Dict) -> None:
@@ -268,18 +289,21 @@ class SelfRepairEngine:
                 ctx.get("queue_depth", 0),
             )
 
-        self.register_strategy(RepairStrategy(
-            name="queue_overflow",
-            priority=5,
-            condition=lambda ctx: int(ctx.get("queue_depth", 0)) > 1000,
-            action=_queue_overflow_action,
-            cooldown_sec=30.0,
-        ))
+        self.register_strategy(
+            RepairStrategy(
+                name="queue_overflow",
+                priority=5,
+                condition=lambda ctx: int(ctx.get("queue_depth", 0)) > 1000,
+                action=_queue_overflow_action,
+                cooldown_sec=30.0,
+            )
+        )
 
 
 # ---------------------------------------------------------------------------
 # AdaptiveConfigTuner
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class _MetricPoint:
@@ -328,7 +352,9 @@ class AdaptiveConfigTuner:
         """Store a metric observation with the current timestamp."""
         if name not in self._metric_series:
             self._metric_series[name] = []
-        self._metric_series[name].append(_MetricPoint(value=value, timestamp=time.time()))
+        self._metric_series[name].append(
+            _MetricPoint(value=value, timestamp=time.time())
+        )
         # Keep a bounded window (last 500 observations)
         if len(self._metric_series[name]) > 500:
             self._metric_series[name] = self._metric_series[name][-250:]
@@ -367,7 +393,10 @@ class AdaptiveConfigTuner:
                 recommendations[param]["applied"] = True
                 logger.info(
                     "AdaptiveConfigTuner: %s %.4f → %.4f (confidence=%.2f)",
-                    param, old_val, optimal, confidence,
+                    param,
+                    old_val,
+                    optimal,
+                    confidence,
                 )
 
         return recommendations

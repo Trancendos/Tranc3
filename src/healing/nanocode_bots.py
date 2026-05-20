@@ -15,7 +15,7 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, ClassVar, Dict, List, Optional, Tuple
+from typing import ClassVar, Dict, List
 
 import httpx
 
@@ -34,12 +34,12 @@ def _get_client(timeout: float = 15.0) -> httpx.AsyncClient:
         client = httpx.AsyncClient(timeout=timeout)
         _shared_clients[timeout] = client
     return client
-    return _shared_client
 
 
 # ---------------------------------------------------------------------------
 # Enumerations
 # ---------------------------------------------------------------------------
+
 
 class FailureMode(Enum):
     COMPLIANCE_METADATA_MISSING = "compliance_metadata_missing"
@@ -57,6 +57,7 @@ class FailureMode(Enum):
 # Result
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BotResult:
     bot_id: str
@@ -71,6 +72,7 @@ class BotResult:
 # ---------------------------------------------------------------------------
 # Abstract NanoBot
 # ---------------------------------------------------------------------------
+
 
 class NanoBot(ABC):
     failure_mode: ClassVar[FailureMode]
@@ -96,6 +98,7 @@ class NanoBot(ABC):
 # ---------------------------------------------------------------------------
 # Concrete bots
 # ---------------------------------------------------------------------------
+
 
 class ComplianceMetadataBot(NanoBot):
     """
@@ -159,10 +162,12 @@ class ComplianceMetadataBot(NanoBot):
             else:
                 # Treat successful POST as partial success
                 success = patch_resp.status_code < 300
-                action = f"Injected compliance metadata; validation endpoint unavailable"
+                action = "Injected compliance metadata; validation endpoint unavailable"
 
         except httpx.HTTPStatusError as exc:
-            action = f"HTTP error during compliance injection: {exc.response.status_code}"
+            action = (
+                f"HTTP error during compliance injection: {exc.response.status_code}"
+            )
             logger.error("[ComplianceMetadataBot] %s — %s", service_id, action)
         except Exception as exc:
             action = f"Repair failed: {exc}"
@@ -249,9 +254,7 @@ class StaleEmbeddingBot(NanoBot):
                     )
 
             # Step 3: upsert to Qdrant
-            collection = context.get(
-                "qdrant_collection", f"tranc3_{service_id}"
-            )
+            collection = context.get("qdrant_collection", f"tranc3_{service_id}")
             upsert_resp = await client.put(
                 f"{self._qdrant_url}/collections/{collection}/points",
                 json={"points": qdrant_points},
@@ -327,9 +330,7 @@ class FreeTierBot(NanoBot):
                 },
             )
             if cache_resp.status_code < 300:
-                actions_taken.append(
-                    f"Enabled LRU cache (TTL={self._CACHE_TTL_SEC}s)"
-                )
+                actions_taken.append(f"Enabled LRU cache (TTL={self._CACHE_TTL_SEC}s)")
 
             # 3. Pre-warm next tier
             try:
@@ -413,9 +414,7 @@ class RateLimitBot(NanoBot):
                     json={"token": new_token, "reason": "rate_limit_rotation"},
                 )
                 if token_resp.status_code < 300:
-                    actions.append(
-                        f"Rotated to token pool index {next_idx}"
-                    )
+                    actions.append(f"Rotated to token pool index {next_idx}")
                     success = True
             else:
                 actions.append("No backup tokens in pool")
@@ -461,8 +460,8 @@ class ServiceUnreachableBot(NanoBot):
 
     failure_mode: ClassVar[FailureMode] = FailureMode.SERVICE_UNREACHABLE
 
-    _HEALTH_POLL_INTERVAL = 3.0   # seconds between restart health polls
-    _HEALTH_POLL_RETRIES = 5      # max polls after restart
+    _HEALTH_POLL_INTERVAL = 3.0  # seconds between restart health polls
+    _HEALTH_POLL_RETRIES = 5  # max polls after restart
 
     async def repair(self, service_id: str, context: Dict) -> BotResult:
         t0 = time.perf_counter()
@@ -508,9 +507,7 @@ class ServiceUnreachableBot(NanoBot):
 
         # Strategy 2: failover to replica
         try:
-            replica_url = context.get(
-                "replica_endpoint", f"{endpoint}-replica"
-            )
+            replica_url = context.get("replica_endpoint", f"{endpoint}-replica")
             failover_resp = await client.post(
                 f"{endpoint}/admin/failover",
                 json={
@@ -569,6 +566,7 @@ class ServiceUnreachableBot(NanoBot):
 # Dispatcher
 # ---------------------------------------------------------------------------
 
+
 class NanoCodeBotDispatcher:
     """
     Routes incoming failure events to the appropriate NanoBot and records
@@ -603,9 +601,7 @@ class NanoCodeBotDispatcher:
         """Find the right bot for *failure_mode* and execute its repair."""
         bot = self._bots.get(failure_mode)
         if bot is None:
-            logger.warning(
-                "No bot registered for failure mode %s", failure_mode.value
-            )
+            logger.warning("No bot registered for failure mode %s", failure_mode.value)
             return BotResult(
                 bot_id="dispatcher",
                 failure_mode=failure_mode,
@@ -628,9 +624,7 @@ class NanoCodeBotDispatcher:
             self._history = self._history[-5_000:]
         return result
 
-    async def auto_dispatch(
-        self, service_id: str, metrics: Dict
-    ) -> List[BotResult]:
+    async def auto_dispatch(self, service_id: str, metrics: Dict) -> List[BotResult]:
         """
         Infer failure modes from *metrics* and dispatch the appropriate bots.
         Returns a list of BotResults, one per detected failure mode.
@@ -656,19 +650,13 @@ class NanoCodeBotDispatcher:
     def get_bot_stats(self) -> Dict:
         stats = {}
         for mode, bot in self._bots.items():
-            invocations = [
-                r for r in self._history if r.failure_mode == mode
-            ]
+            invocations = [r for r in self._history if r.failure_mode == mode]
             stats[mode.value] = {
                 "bot_id": bot.bot_id,
                 "success_rate_ema": round(bot.success_rate, 4),
                 "total_invocations": bot._invocation_count,
-                "recent_successes": sum(
-                    1 for r in invocations[-100:] if r.success
-                ),
-                "recent_failures": sum(
-                    1 for r in invocations[-100:] if not r.success
-                ),
+                "recent_successes": sum(1 for r in invocations[-100:] if r.success),
+                "recent_failures": sum(1 for r in invocations[-100:] if not r.success),
             }
         return stats
 

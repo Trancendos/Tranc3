@@ -1,7 +1,6 @@
 import numpy as np
 import logging
-import os
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
@@ -14,6 +13,7 @@ def TFAvailable() -> bool:
     """Return True if TensorFlow can be imported in this environment."""
     try:
         import tensorflow as _tf  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -29,11 +29,11 @@ def _get_tf() -> Any:
     """
     try:
         import tensorflow as tf
+
         return tf
     except ImportError as exc:
         raise ImportError(
-            "TensorFlow is not installed.  Install it with: "
-            "pip install tensorflow"
+            "TensorFlow is not installed.  Install it with: " "pip install tensorflow"
         ) from exc
 
 
@@ -114,7 +114,9 @@ class TFSequenceClassifier:
         )(x)
 
         # Second LSTM layer
-        lstm_units = self.config.hidden_dims[1] if len(self.config.hidden_dims) > 1 else 128
+        lstm_units = (
+            self.config.hidden_dims[1] if len(self.config.hidden_dims) > 1 else 128
+        )
         x = tf.keras.layers.LSTM(
             lstm_units,
             dropout=self.config.dropout_rate,
@@ -132,8 +134,12 @@ class TFSequenceClassifier:
             self.config.output_dim, activation="softmax", name="output"
         )(x)
 
-        self.model = tf.keras.Model(inputs=inputs, outputs=outputs, name=self.config.name)
-        self._optimizer = tf.keras.optimizers.Adam(learning_rate=self.config.learning_rate)
+        self.model = tf.keras.Model(
+            inputs=inputs, outputs=outputs, name=self.config.name
+        )
+        self._optimizer = tf.keras.optimizers.Adam(
+            learning_rate=self.config.learning_rate
+        )
         self._loss_fn = tf.keras.losses.SparseCategoricalCrossentropy()
 
         self.model.compile(
@@ -172,9 +178,7 @@ class TFSequenceClassifier:
             uniform = np.ones((batch, self.config.output_dim), dtype=np.float32)
             return uniform / self.config.output_dim
 
-    def train_step(
-        self, inputs: np.ndarray, labels: np.ndarray
-    ) -> Dict[str, float]:
+    def train_step(self, inputs: np.ndarray, labels: np.ndarray) -> Dict[str, float]:
         """Perform one training step with gradient tape.
 
         Args:
@@ -197,13 +201,13 @@ class TFSequenceClassifier:
                 loss = self._loss_fn(y, logits)
 
             grads = tape.gradient(loss, self.model.trainable_variables)
-            self._optimizer.apply_gradients(
-                zip(grads, self.model.trainable_variables)
-            )
+            self._optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
             # Compute batch accuracy
             preds = tf.argmax(logits, axis=-1, output_type=tf.int32)
-            accuracy = float(tf.reduce_mean(tf.cast(tf.equal(preds, y), tf.float32)).numpy())
+            accuracy = float(
+                tf.reduce_mean(tf.cast(tf.equal(preds, y), tf.float32)).numpy()
+            )
 
             return {"loss": float(loss.numpy()), "accuracy": accuracy}
 
@@ -286,7 +290,9 @@ class TFReinforcementAgent:
 
         logger.info(
             "Built DQN Q-network '%s': state_dim=%d, action_dim=%d, params=%d",
-            self.config.name, self.state_dim, self.action_dim,
+            self.config.name,
+            self.state_dim,
+            self.action_dim,
             self.q_network.count_params(),
         )
         return self.q_network
@@ -355,9 +361,7 @@ class TFReinforcementAgent:
             with tf.GradientTape() as tape:
                 q_vals = self.q_network(states, training=True)  # (B, action_dim)
                 # Gather Q-values for the taken actions
-                indices = tf.stack(
-                    [tf.range(B, dtype=tf.int32), actions], axis=1
-                )
+                indices = tf.stack([tf.range(B, dtype=tf.int32), actions], axis=1)
                 predicted_q = tf.gather_nd(q_vals, indices)  # (B,)
                 loss = self._loss_fn(targets, predicted_q)
 

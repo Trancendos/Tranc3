@@ -9,7 +9,9 @@ from typing import Dict, Optional
 logger = logging.getLogger(__name__)
 
 MAGNA_CARTA_ENABLED = os.getenv("MAGNA_CARTA_ENABLED", "false").lower() == "true"
-MAGNA_CARTA_CONFIG_PATH = os.getenv("MAGNA_CARTA_CONFIG_PATH", "./magna_carta_config.json")
+MAGNA_CARTA_CONFIG_PATH = os.getenv(
+    "MAGNA_CARTA_CONFIG_PATH", "./magna_carta_config.json"
+)
 
 
 class MagnaCartaCompliance:
@@ -25,13 +27,16 @@ class MagnaCartaCompliance:
         if self.enabled:
             logger.info("Magna Carta compliance framework ACTIVE")
         else:
-            logger.info("Magna Carta compliance framework INACTIVE — provide config to enable")
+            logger.info(
+                "Magna Carta compliance framework INACTIVE — provide config to enable"
+            )
 
     def _load_config(self) -> Optional[Dict]:
         if not self.enabled:
             return None
         try:
             import json
+
             with open(MAGNA_CARTA_CONFIG_PATH) as f:
                 config = json.load(f)
                 logger.info(f"Magna Carta config loaded from {MAGNA_CARTA_CONFIG_PATH}")
@@ -70,7 +75,7 @@ class MagnaCartaCompliance:
     def _apply_rule(self, rule: Dict, data: Dict) -> Dict:
         """Apply a single compliance rule"""
         rule_id = rule.get("id", "unknown")
-        rule_type = rule.get("type", "")
+        rule.get("type", "")
 
         # Extend with actual rule logic when framework is provided
         return {"rule_id": rule_id, "passed": True, "message": "Rule check placeholder"}

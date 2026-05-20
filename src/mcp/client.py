@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 JSONRPC_VERSION = "2.0"
-DEFAULT_TIMEOUT = 30.0          # seconds
+DEFAULT_TIMEOUT = 30.0  # seconds
 DEFAULT_MAX_RETRIES = 3
-DEFAULT_BACKOFF_BASE = 0.5      # seconds
+DEFAULT_BACKOFF_BASE = 0.5  # seconds
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +88,7 @@ class MCPClient:
             headers=headers,
             timeout=httpx.Timeout(self.timeout),
             limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
-            http2=False,            # keep h/1.1 for broad compat; flip when needed
+            http2=False,  # keep h/1.1 for broad compat; flip when needed
         )
 
         try:
@@ -257,19 +257,20 @@ class MCPClient:
         """Long-running coroutine that consumes the SSE stream."""
         assert self._client is not None
 
-        sse_url = f"{self.server_url}/sse"
         headers = dict(self._client.headers)
         headers["Accept"] = "text/event-stream"
 
         try:
-            async with self._client.stream("GET", "/sse", headers={"Accept": "text/event-stream"}) as resp:
+            async with self._client.stream(
+                "GET", "/sse", headers={"Accept": "text/event-stream"}
+            ) as resp:
                 resp.raise_for_status()
                 async for line in resp.aiter_lines():
                     line = line.strip()
                     if not line or line.startswith(":"):
                         continue
                     if line.startswith("data: "):
-                        raw = line[len("data: "):]
+                        raw = line[len("data: ") :]
                         try:
                             payload = json.loads(raw)
                             event_type = payload.get("event", "message")
@@ -279,11 +280,15 @@ class MCPClient:
                             else:
                                 callback(event_type, data)
                         except Exception as exc:
-                            logger.warning("mcp.client SSE parse error: %s raw=%r", exc, raw)
+                            logger.warning(
+                                "mcp.client SSE parse error: %s raw=%r", exc, raw
+                            )
         except asyncio.CancelledError:
             logger.debug("mcp.client SSE loop cancelled server=%s", self.server_url)
         except Exception as exc:
-            logger.error("mcp.client SSE loop error server=%s error=%s", self.server_url, exc)
+            logger.error(
+                "mcp.client SSE loop error server=%s error=%s", self.server_url, exc
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -311,7 +316,7 @@ class MCPClientPool:
     def __init__(self) -> None:
         self._servers: Dict[str, MCPClient] = {}
         self._server_configs: Dict[str, Dict[str, Any]] = {}
-        self._tool_index: Dict[str, List[str]] = {}   # tool_name → [server_names]
+        self._tool_index: Dict[str, List[str]] = {}  # tool_name → [server_names]
 
     # ------------------------------------------------------------------
     # Pool management
@@ -385,9 +390,7 @@ class MCPClientPool:
     # Broadcast / aggregate operations
     # ------------------------------------------------------------------
 
-    async def broadcast_tool(
-        self, name: str, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def broadcast_tool(self, name: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Call *name* on every server that advertises it.
         Returns {server_name: result_or_error_dict}.
@@ -417,10 +420,13 @@ class MCPClientPool:
         """
         Ping all servers and return a combined health report.
         """
-        async def _ping(server_name: str, client: MCPClient) -> tuple[str, Dict[str, Any]]:
+
+        async def _ping(
+            server_name: str, client: MCPClient
+        ) -> tuple[str, Dict[str, Any]]:
             try:
                 start = time.monotonic()
-                result = await client.call_tool.__func__(client, "ping", {})  # type: ignore[attr-defined]
+                await client.call_tool.__func__(client, "ping", {})  # type: ignore[attr-defined]
                 latency_ms = (time.monotonic() - start) * 1000
                 return server_name, {
                     "status": "ok",
@@ -431,7 +437,9 @@ class MCPClientPool:
                 return server_name, {"status": "error", "error": str(exc)}
 
         # Use raw RPC for ping (bypasses call_tool routing)
-        async def _ping_rpc(server_name: str, client: MCPClient) -> tuple[str, Dict[str, Any]]:
+        async def _ping_rpc(
+            server_name: str, client: MCPClient
+        ) -> tuple[str, Dict[str, Any]]:
             try:
                 start = time.monotonic()
                 result = await client._rpc_raw("ping", {})
@@ -495,7 +503,9 @@ class MCPClientPool:
                 return server_name, [t["name"] for t in tools]
             except Exception as exc:
                 logger.warning(
-                    "mcp.pool tool index fetch failed server=%s error=%s", server_name, exc
+                    "mcp.pool tool index fetch failed server=%s error=%s",
+                    server_name,
+                    exc,
                 )
                 return server_name, []
 

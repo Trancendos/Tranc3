@@ -6,8 +6,8 @@ import hashlib
 import json
 import time
 import logging
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, field
+from typing import Dict, List, Any
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +22,17 @@ class Block:
     hash: str = ""
 
     def compute_hash(self) -> str:
-        block_str = json.dumps({
-            "index": self.index,
-            "timestamp": self.timestamp,
-            "computations": self.computations,
-            "proof": self.proof,
-            "previous_hash": self.previous_hash,
-        }, sort_keys=True, default=str)
+        block_str = json.dumps(
+            {
+                "index": self.index,
+                "timestamp": self.timestamp,
+                "computations": self.computations,
+                "proof": self.proof,
+                "previous_hash": self.previous_hash,
+            },
+            sort_keys=True,
+            default=str,
+        )
         return hashlib.sha256(block_str.encode()).hexdigest()
 
 
@@ -47,18 +51,21 @@ class IntelligenceBlockchain:
 
     def _create_genesis(self):
         genesis = Block(
-            index=0, timestamp=time.time(),
-            computations=[], proof=1, previous_hash="0"
+            index=0, timestamp=time.time(), computations=[], proof=1, previous_hash="0"
         )
         genesis.hash = genesis.compute_hash()
         self.chain.append(genesis)
 
-    def add_computation(self, problem: Dict, result: Any, participants: List[str]) -> int:
+    def add_computation(
+        self, problem: Dict, result: Any, participants: List[str]
+    ) -> int:
         computation = {
             "problem_hash": self._hash_dict(problem),
-            "result_hash":  self._hash_dict(result) if isinstance(result, dict) else str(result)[:64],
+            "result_hash": self._hash_dict(result)
+            if isinstance(result, dict)
+            else str(result)[:64],
             "participants": participants,
-            "timestamp":    time.time(),
+            "timestamp": time.time(),
         }
         self.pending.append(computation)
 
@@ -85,7 +92,11 @@ class IntelligenceBlockchain:
     def _proof_of_work(self, last_proof: int, difficulty: int = 2) -> int:
         proof = 0
         target = "0" * difficulty
-        while not hashlib.sha256(f"{last_proof}{proof}".encode()).hexdigest().startswith(target):
+        while (
+            not hashlib.sha256(f"{last_proof}{proof}".encode())
+            .hexdigest()
+            .startswith(target)
+        ):
             proof += 1
         return proof
 
@@ -126,6 +137,7 @@ class HomomorphicCrypto:
     def encrypt_gradients(self, model) -> Dict:
         """Add Gaussian noise to gradients (differential privacy)."""
         import torch
+
         noisy = {}
         for name, param in model.named_parameters():
             if param.grad is not None:
@@ -137,6 +149,7 @@ class HomomorphicCrypto:
     def secure_aggregation(self, encrypted_list: List[Dict]) -> Dict:
         """Aggregate noisy gradients — noise cancels out in expectation."""
         import torch
+
         if not encrypted_list:
             return {}
         aggregated = {}
@@ -148,6 +161,7 @@ class HomomorphicCrypto:
     def add_differential_privacy(self, gradients: Dict) -> Dict:
         """Clip and add calibrated noise."""
         import torch
+
         private = {}
         for key, grad in gradients.items():
             clipped = grad / max(1.0, grad.norm().item())

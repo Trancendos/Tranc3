@@ -3,7 +3,7 @@
 # Summarises old conversation turns to extend effective context window
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +28,8 @@ class ContextCompressor:
             return history
 
         # Keep recent turns verbatim
-        recent = history[-self.keep_recent:]
-        older = history[:-self.keep_recent]
+        recent = history[-self.keep_recent :]
+        older = history[: -self.keep_recent]
 
         if not older:
             return recent

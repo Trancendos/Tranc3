@@ -7,16 +7,15 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import shutil
 import textwrap
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
-_BASE_DIR = Path(__file__).resolve().parents[2]   # /home/user/Tranc3
+_BASE_DIR = Path(__file__).resolve().parents[2]  # /home/user/Tranc3
 _PROFILES_DIR = Path(__file__).parent / "profiles"
 
 
@@ -120,6 +119,7 @@ class PersonalitySpawner:
         }
         path = target / "tranc3_config.yaml"
         import yaml  # type: ignore
+
         with open(path, "w") as f:
             yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
         return [str(path)]
@@ -345,7 +345,7 @@ class PersonalitySpawner:
         return [str(path)]
 
     def _write_requirements(self, target: Path) -> list:
-        base_reqs = (_BASE_DIR / "requirements.txt")
+        base_reqs = _BASE_DIR / "requirements.txt"
         path = target / "requirements.txt"
         if base_reqs.exists():
             shutil.copy(base_reqs, path)

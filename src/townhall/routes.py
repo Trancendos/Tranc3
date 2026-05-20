@@ -4,9 +4,8 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Body, Query
-from fastapi.responses import JSONResponse
 
-from src.townhall.governance import ComplianceResult, PolicyStatus, get_townhall
+from src.townhall.governance import ComplianceResult, get_townhall
 
 router = APIRouter(prefix="/townhall", tags=["townhall"])
 
@@ -49,4 +48,7 @@ async def compliance_check(
             break
         if r == ComplianceResult.WARN:
             overall = ComplianceResult.WARN
-    return {"overall": overall.value, "results": {k: v.value for k, v in results.items()}}
+    return {
+        "overall": overall.value,
+        "results": {k: v.value for k, v in results.items()},
+    }

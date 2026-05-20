@@ -3,7 +3,7 @@ import numpy as np
 import asyncio
 import logging
 from typing import Dict, Any, Optional, List, Tuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -70,12 +70,8 @@ class ModelEnsemble:
         loop = asyncio.get_event_loop()
 
         # Run both models in the thread pool so neither blocks the event loop
-        torch_task = loop.run_in_executor(
-            None, self._torch_predict, inputs
-        )
-        tf_task = loop.run_in_executor(
-            None, self._tf_predict, inputs
-        )
+        torch_task = loop.run_in_executor(None, self._torch_predict, inputs)
+        tf_task = loop.run_in_executor(None, self._tf_predict, inputs)
 
         torch_out, tf_out = await asyncio.gather(
             torch_task, tf_task, return_exceptions=True
@@ -268,7 +264,9 @@ class HybridInferenceEngine:
         if model_hint in ("torch", "tf"):
             preferred = model_hint
         else:
-            preferred = _TASK_ROUTING.get(task, "torch" if self.config.prefer_torch else "tf")
+            preferred = _TASK_ROUTING.get(
+                task, "torch" if self.config.prefer_torch else "tf"
+            )
 
         output, backend = await self._route(task, inputs, preferred)
         return {"output": output, "backend": backend, "task": task}
@@ -289,21 +287,19 @@ class HybridInferenceEngine:
         loop = asyncio.get_event_loop()
 
         async def _try_torch() -> np.ndarray:
-            return await loop.run_in_executor(
-                None, self._dispatch_torch, task, inputs
-            )
+            return await loop.run_in_executor(None, self._dispatch_torch, task, inputs)
 
         async def _try_tf() -> np.ndarray:
-            return await loop.run_in_executor(
-                None, self._dispatch_tf, task, inputs
-            )
+            return await loop.run_in_executor(None, self._dispatch_tf, task, inputs)
 
         if preferred == "torch":
             try:
                 out = await _try_torch()
                 return out, "torch"
             except Exception as exc:
-                logger.warning("Torch dispatch failed (%s), falling back to TF: %s", task, exc)
+                logger.warning(
+                    "Torch dispatch failed (%s), falling back to TF: %s", task, exc
+                )
                 if self.config.tf_fallback:
                     try:
                         out = await _try_tf()
@@ -315,7 +311,9 @@ class HybridInferenceEngine:
                 out = await _try_tf()
                 return out, "tf"
             except Exception as exc:
-                logger.warning("TF dispatch failed (%s), falling back to Torch: %s", task, exc)
+                logger.warning(
+                    "TF dispatch failed (%s), falling back to Torch: %s", task, exc
+                )
                 if self.config.prefer_torch or self.config.tf_fallback:
                     try:
                         out = await _try_torch()
@@ -378,6 +376,7 @@ class HybridInferenceEngine:
         if self._tf_available is None:
             try:
                 import tensorflow as _tf  # noqa: F401
+
                 self._tf_available = True
             except ImportError:
                 self._tf_available = False
@@ -389,12 +388,11 @@ class HybridInferenceEngine:
         if arr is None:
             raise ValueError("inputs must contain 'array' or 'tensor'")
 
-        model = self._tf_models.get(task) or next(
-            iter(self._tf_models.values()), None
-        )
+        model = self._tf_models.get(task) or next(iter(self._tf_models.values()), None)
 
         if model is not None:
             import tensorflow as tf
+
             x = tf.constant(np.array(arr, dtype=np.float32))
             out = model(x, training=False)
             if hasattr(out, "numpy"):
@@ -432,7 +430,9 @@ class HybridInferenceEngine:
         for i, res in enumerate(results):
             if isinstance(res, Exception):
                 logger.error("batch_infer task %d failed: %s", i, res)
-                output.append({"output": None, "error": str(res), "task": tasks[i].get("task")})
+                output.append(
+                    {"output": None, "error": str(res), "task": tasks[i].get("task")}
+                )
             else:
                 output.append(res)
 
@@ -466,6 +466,7 @@ class HybridInferenceEngine:
         if self._tf_available is None:
             try:
                 import tensorflow as _tf  # noqa: F401
+
                 self._tf_available = True
             except ImportError:
                 self._tf_available = False
@@ -475,6 +476,7 @@ class HybridInferenceEngine:
         if self._tf_available:
             try:
                 import tensorflow as tf
+
                 info["tf_version"] = tf.__version__
                 gpus = tf.config.list_physical_devices("GPU")
                 info["tf_gpus"] = [g.name for g in gpus]

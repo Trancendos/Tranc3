@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
@@ -20,13 +20,11 @@ async def luminous_status() -> Dict[str, Any]:
     modules: Dict[str, Any] = {}
 
     try:
-        from src.bio_neural.consciousness_engine import ConsciousnessModel
         modules["consciousness"] = "available"
     except Exception as exc:
         modules["consciousness"] = f"degraded: {str(exc)[:60]}"
 
     try:
-        from src.bio_neural.neuromorphic import NeuromorphicProcessor
         modules["neuromorphic"] = "available"
     except Exception as exc:
         modules["neuromorphic"] = f"degraded: {str(exc)[:60]}"
@@ -46,7 +44,9 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
         state = body.get("state")
         if not state:
-            return JSONResponse({"error": "state (list of floats) is required"}, status_code=400)
+            return JSONResponse(
+                {"error": "state (list of floats) is required"}, status_code=400
+            )
 
         calc = IITCalculator()
         state_arr = np.array(state, dtype=float)
@@ -75,11 +75,17 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
         input_data = body.get("input", [])
         timesteps = int(body.get("timesteps", 10))
         if not input_data:
-            return JSONResponse({"error": "input (list of floats) is required"}, status_code=400)
+            return JSONResponse(
+                {"error": "input (list of floats) is required"}, status_code=400
+            )
 
         processor = NeuromorphicProcessor({})
         tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)
-        result = processor.process(tensor, timesteps=timesteps) if hasattr(processor, "process") else {"note": "processor scaffold — wire input dimensions to activate"}
+        result = (
+            processor.process(tensor, timesteps=timesteps)
+            if hasattr(processor, "process")
+            else {"note": "processor scaffold — wire input dimensions to activate"}
+        )
         if hasattr(result, "tolist"):
             result = result.tolist()
         return {"input_dim": len(input_data), "timesteps": timesteps, "output": result}

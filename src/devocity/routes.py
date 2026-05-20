@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from fastapi import APIRouter, Body, Path
 from fastapi.responses import JSONResponse
@@ -50,14 +50,20 @@ async def issue_api_key(
     raw_scopes = body.get("scopes", ["read"])
     try:
         scopes = [ApiKeyScope(s) for s in raw_scopes]
-    except ValueError as exc:
+    except ValueError:
         valid = [s.value for s in ApiKeyScope]
-        return JSONResponse({"error": f"Invalid scope. Valid: {valid}"}, status_code=400)
+        return JSONResponse(
+            {"error": f"Invalid scope. Valid: {valid}"}, status_code=400
+        )
     result = get_devocity().issue_api_key(account_id, name=name, scopes=scopes)
     if result is None:
         return JSONResponse({"error": "Account not found"}, status_code=404)
     plain, api_key = result
-    return {**api_key.to_dict(), "key": plain, "warning": "Store this key securely — it will not be shown again."}
+    return {
+        **api_key.to_dict(),
+        "key": plain,
+        "warning": "Store this key securely — it will not be shown again.",
+    }
 
 
 @router.get("/accounts/{account_id}/keys")
@@ -69,7 +75,9 @@ async def list_keys(account_id: str = Path(...)) -> list:
 
 
 @router.delete("/accounts/{account_id}/keys/{key_id}")
-async def revoke_key(account_id: str = Path(...), key_id: str = Path(...)) -> Dict[str, Any]:
+async def revoke_key(
+    account_id: str = Path(...), key_id: str = Path(...)
+) -> Dict[str, Any]:
     ok = get_devocity().revoke_api_key(account_id, key_id)
     if not ok:
         return JSONResponse({"error": "Account or key not found"}, status_code=404)

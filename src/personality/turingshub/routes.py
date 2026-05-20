@@ -5,10 +5,9 @@
 
 from __future__ import annotations
 
-import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
-from fastapi import APIRouter, Body, Path, Query
+from fastapi import APIRouter, Body, Path
 from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/turingshub", tags=["turings-hub"])
@@ -16,11 +15,13 @@ router = APIRouter(prefix="/turingshub", tags=["turings-hub"])
 
 def _spawner():
     from src.personality.spawner import PersonalitySpawner
+
     return PersonalitySpawner()
 
 
 def _matrix():
     from src.personality.matrix import EnhancedPersonalityMatrix
+
     return EnhancedPersonalityMatrix()
 
 
@@ -28,8 +29,12 @@ def _matrix():
 async def turings_hub_status() -> Dict[str, Any]:
     try:
         spawner = _spawner()
-        profiles = spawner.list_profiles() if hasattr(spawner, "list_profiles") else list(spawner._profiles.keys())
-    except Exception as exc:
+        profiles = (
+            spawner.list_profiles()
+            if hasattr(spawner, "list_profiles")
+            else list(spawner._profiles.keys())
+        )
+    except Exception:
         profiles = []
     return {
         "service": "turings-hub",
@@ -43,10 +48,13 @@ async def turings_hub_status() -> Dict[str, Any]:
 async def list_personalities() -> list:
     spawner = _spawner()
     try:
-        profiles = spawner.list_profiles() if hasattr(spawner, "list_profiles") else list(spawner._profiles.keys())
+        profiles = (
+            spawner.list_profiles()
+            if hasattr(spawner, "list_profiles")
+            else list(spawner._profiles.keys())
+        )
         return [
-            {"id": pid, "profile": spawner._profiles.get(pid, {})}
-            for pid in profiles
+            {"id": pid, "profile": spawner._profiles.get(pid, {})} for pid in profiles
         ]
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
@@ -71,7 +79,9 @@ async def spawn_personality(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     personality_id = body.get("personality_id")
     repo_name = body.get("repo_name")
     if not personality_id or not repo_name:
-        return JSONResponse({"error": "personality_id and repo_name are required"}, status_code=400)
+        return JSONResponse(
+            {"error": "personality_id and repo_name are required"}, status_code=400
+        )
     output_dir = body.get("output_dir", "./spawned")
     try:
         result = _spawner().spawn(personality_id, repo_name, output_dir=output_dir)
