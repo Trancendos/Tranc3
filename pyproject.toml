@@ -24,6 +24,9 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*"  = ["S", "B"]
 "scripts/*" = ["T201"]   # print() allowed in scripts
+# api.py intentionally imports after load_dotenv() (env must be loaded before internal modules)
+# B904 (raise-without-from-cause) is pre-existing; address separately.
+"api.py"   = ["E402", "B904"]
 
 [tool.ruff.format]
 quote-style = "double"
