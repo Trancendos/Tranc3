@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
-# deploy/forgejo/setup.sh — First-time setup for The Workshop (Forgejo).
+# deploy/forgejo/setup.sh — Quick start for The Workshop (Forgejo).
 #
+# For FULL automated bootstrap (admin user, org, runner, secrets), use instead:
+#   bash deploy/forgejo/bootstrap.sh
+#
+# This script only starts the Docker containers and waits for health.
 # Run from the repo root on your trancendos.com server:
 #   ./deploy/forgejo/setup.sh
-#
-# What it does:
-#   1. Starts Forgejo via docker compose
-#   2. Waits until Forgejo is healthy
-#   3. Prints the URL to complete the web installer
 
 set -euo pipefail
 
@@ -16,10 +15,11 @@ COMPOSE_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/docker-compose.yml"
 log() { echo "[workshop] $*"; }
 
 log "Starting The Workshop (Forgejo)…"
-docker compose -f "$COMPOSE_FILE" up -d
+docker compose -f "$COMPOSE_FILE" up -d forgejo
 
 log "Waiting for Forgejo to be ready…"
-until curl -sf http://127.0.0.1:3456/the-workshop/-/health > /dev/null 2>&1; do
+# Health check uses the internal mapped port (3456) and correct path
+until curl -sf http://127.0.0.1:3456/-/health > /dev/null 2>&1; do
     printf "."
     sleep 3
 done
