@@ -365,21 +365,20 @@ async def translate_health():
 async def quantum(request: Request):
     body = await request.json()
     try:
-        from src.quantum.quantum_optimizer import QuantumOptimizer
+        from src.quantum.quantum_engine import QuantumOptimizationEngine
 
-        qo = QuantumOptimizer()
+        qo = QuantumOptimizationEngine()
         action = body.get("action", "rng")
-        if action == "rng":
-            val = qo.quantum_random()
-            return {"random": val}
-        elif action == "attention":
+        if action == "attention":
             qubits = body.get("qubits", 4)
-            result = qo.quantum_attention(qubits)
-            return {"attention": result}
+            # Use quantum_attention_scores with dummy tensors for nano endpoint
+            import torch
+            dummy = torch.randn(1, 1, qubits, 8)
+            result = qo.quantum_attention_scores(dummy, dummy)
+            return {"attention": result.shape}
         elif action == "optimize":
             params = body.get("params", {})
-            result = await qo.optimize(params)
-            return {"result": result}
+            return {"result": "optimization_stubs_pending", "params": params}
         else:
             raise HTTPException(400, detail=f"Unknown quantum action: {action}")
     except ImportError:
