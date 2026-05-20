@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# Local sandbox CA cert (never commit)
+sandbox-ca.crt
+
 # Python
 __pycache__/
 *.py[cod]
