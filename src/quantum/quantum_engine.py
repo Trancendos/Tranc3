@@ -161,7 +161,7 @@ class QuantumMemorySystem:
         
         try:
             qc.initialize(normalized.tolist(), range(self.num_qubits))
-        except:
+        except Exception:
             qc.h(range(self.num_qubits))
         
         # Measure

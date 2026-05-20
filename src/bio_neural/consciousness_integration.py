@@ -1,5 +1,9 @@
 # src/core/consciousness_integration.py
 
+import logging
+
+logger = logging.getLogger("src.bio_neural.consciousness_integration")
+
 import torch
 import numpy as np
 from typing import Dict, Optional, List
@@ -33,7 +37,7 @@ class ConsciousnessAwareGenerator:
         try:
             return self._conscious_generate(input_text, personality_vector)
         except Exception as e:
-            print(f"Consciousness generation failed, falling back: {e}")
+            logger.warning("Consciousness generation failed, falling back: {e}")
             return self._classical_generate(input_text, personality_vector)
     
     def _conscious_generate(self, input_text: str, personality_vector: torch.Tensor) -> Dict[str, Any]:

@@ -71,3 +71,16 @@ download-model:
 		t = AutoTokenizer.from_pretrained('microsoft/phi-3-mini-4k-instruct'); \
 		m.save_pretrained('./models/phi3-base'); t.save_pretrained('./models/phi3-base'); \
 		print('Model downloaded to ./models/phi3-base')"
+
+# ── Security ──────────────────────────────────────────────────────────────────
+security-scan:
+	bash scripts/security_scan.sh
+
+security-install:
+	pip install pip-audit==2.9.0 bandit==1.8.3 safety==3.5.1 semgrep==1.100.0 pre-commit==3.7.1 --quiet
+
+pre-commit-install:
+	pre-commit install
+	pre-commit install --hook-type commit-msg
+
+security-full: security-install security-scan
