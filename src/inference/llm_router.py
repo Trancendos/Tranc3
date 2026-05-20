@@ -116,7 +116,7 @@ async def _try_openrouter(cfg: ProviderConfig, req: LLMRequest, client: httpx.As
     api_key = os.getenv("OPENROUTER_API_KEY", "")
     if not api_key:
         raise ValueError("OPENROUTER_API_KEY not set")
-    model = os.getenv("OPENROUTER_MODEL", "mistralai/mistral-7b-instruct:free")
+    model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.2-3b-instruct:free")
     resp = await client.post(
         "https://openrouter.ai/api/v1/chat/completions",
         headers={
@@ -169,7 +169,7 @@ async def _try_groq(cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncCli
     api_key = os.getenv("GROQ_API_KEY", "")
     if not api_key:
         raise ValueError("GROQ_API_KEY not set")
-    model = os.getenv("GROQ_MODEL", "llama3-8b-8192")  # free tier model
+    model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")  # free tier model (llama3-8b-8192 decommissioned)
     resp = await client.post(
         "https://api.groq.com/openai/v1/chat/completions",
         headers={"Authorization": f"Bearer {api_key}"},
