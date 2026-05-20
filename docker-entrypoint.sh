@@ -18,6 +18,6 @@ fi
 # Start main FastAPI + nanoservices
 echo "[entrypoint] Starting services on :8000 and :8001..."
 exec sh -c \
-    "uvicorn api:app --host 0.0.0.0 --port 8000 --workers 2 & \
+    "uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1 & \
      uvicorn src.nanoservices.nano_server:nano_app --host 0.0.0.0 --port 8001 & \
      wait"
