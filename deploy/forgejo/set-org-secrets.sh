@@ -6,15 +6,15 @@
 #
 # Prerequisites:
 #   1. Forgejo running at trancendos.com/the-workshop
-#   2. A Forgejo admin token: FORGEJO_TOKEN env var
-#   3. FLY_API_TOKEN from https://fly.io/user/personal_access_tokens
-#   4. CF_API_TOKEN from https://dash.cloudflare.com/profile/api-tokens
+#   2. Source your local .env first:  set -a; source .env; set +a
+#   3. A Forgejo admin token: FORGEJO_TOKEN env var
+#   4. FLY_API_TOKEN from https://fly.io/user/personal_access_tokens
+#   5. CF_API_TOKEN from https://dash.cloudflare.com/profile/api-tokens
 #      (permissions: Workers:Edit, KV:Edit, D1:Edit, Account:Read)
 #
 # Usage:
+#   set -a; source .env; set +a          # load .env into shell
 #   export FORGEJO_TOKEN="your-forgejo-admin-token"
-#   export FLY_API_TOKEN="your-fly-api-token"
-#   export CF_API_TOKEN="your-cloudflare-api-token"
 #   bash deploy/forgejo/set-org-secrets.sh
 
 set -euo pipefail
@@ -23,20 +23,30 @@ FORGEJO_URL="${FORGEJO_URL:-https://trancendos.com/the-workshop}"
 ORG="${FORGEJO_ORG:-Trancendos}"
 API="$FORGEJO_URL/api/v1"
 
-if [[ -z "${FORGEJO_TOKEN:-}" ]]; then
-  echo "ERROR: FORGEJO_TOKEN is not set"
-  exit 1
-fi
+# ── Pre-flight checks ──────────────────────────────────────────────────────
+REQUIRED_VARS=(
+  FORGEJO_TOKEN
+  FLY_API_TOKEN
+  CF_API_TOKEN
+  SECRET_KEY
+  JWT_SECRET
+  CITADEL_WEBHOOK_SECRET
+  DATABASE_URL
+  SUPABASE_URL
+  SUPABASE_ANON_KEY
+  SUPABASE_SERVICE_ROLE_KEY
+  REDIS_URL
+  UPSTASH_REDIS_REST_URL
+  UPSTASH_REDIS_REST_TOKEN
+)
 
-if [[ -z "${FLY_API_TOKEN:-}" ]]; then
-  echo "ERROR: FLY_API_TOKEN is not set. Get it from https://fly.io/user/personal_access_tokens"
-  exit 1
-fi
-
-if [[ -z "${CF_API_TOKEN:-}" ]]; then
-  echo "ERROR: CF_API_TOKEN is not set. Get it from https://dash.cloudflare.com/profile/api-tokens"
-  exit 1
-fi
+for VAR in "${REQUIRED_VARS[@]}"; do
+  if [[ -z "${!VAR:-}" ]]; then
+    echo "ERROR: $VAR is not set. Source your .env first:"
+    echo "  set -a; source .env; set +a"
+    exit 1
+  fi
+done
 
 set_secret() {
   local name="$1"
@@ -54,29 +64,29 @@ echo "    Org:  $ORG"
 echo "    API:  $API"
 echo ""
 
-# ── Deployment tokens ──────────────────────────────────────────────────────
+# ── Deployment tokens (from env) ──────────────────────────────────────────
 echo "--- Deployment tokens ---"
 set_secret "FLY_API_TOKEN"   "$FLY_API_TOKEN"
 set_secret "CF_API_TOKEN"    "$CF_API_TOKEN"
 
-# ── Signing keys (from .env.production) ───────────────────────────────────
+# ── Signing keys (from .env) ──────────────────────────────────────────────
 echo "--- Signing keys ---"
-set_secret "SECRET_KEY"      "REDACTED_SECRET_KEY"
-set_secret "JWT_SECRET"      "REDACTED_JWT_SECRET"
-set_secret "CITADEL_WEBHOOK_SECRET" "REDACTED_CITADEL_WEBHOOK_SECRET"
+set_secret "SECRET_KEY"               "$SECRET_KEY"
+set_secret "JWT_SECRET"               "$JWT_SECRET"
+set_secret "CITADEL_WEBHOOK_SECRET"   "$CITADEL_WEBHOOK_SECRET"
 
-# ── Supabase ───────────────────────────────────────────────────────────────
+# ── Supabase (from .env) ──────────────────────────────────────────────────
 echo "--- Supabase ---"
-set_secret "DATABASE_URL"              "postgresql://postgres:REDACTED_DB_PASSWORD@db.ijizzeycvmqlobszojhf.supabase.co:5432/postgres"
-set_secret "SUPABASE_URL"              "https://ijizzeycvmqlobszojhf.supabase.co"
-set_secret "SUPABASE_ANON_KEY"         "REDACTED_SUPABASE_ANON_KEY"
-set_secret "SUPABASE_SERVICE_ROLE_KEY" "REDACTED_SUPABASE_SERVICE_ROLE_KEY"
+set_secret "DATABASE_URL"              "$DATABASE_URL"
+set_secret "SUPABASE_URL"              "$SUPABASE_URL"
+set_secret "SUPABASE_ANON_KEY"         "$SUPABASE_ANON_KEY"
+set_secret "SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_SERVICE_ROLE_KEY"
 
-# ── Upstash Redis ──────────────────────────────────────────────────────────
+# ── Upstash Redis (from .env) ─────────────────────────────────────────────
 echo "--- Upstash Redis ---"
-set_secret "REDIS_URL"                 "rediss://:REDACTED_UPSTASH_REDIS_TOKEN@chief-buzzard-130766.upstash.io:6379"
-set_secret "UPSTASH_REDIS_REST_URL"   "https://chief-buzzard-130766.upstash.io"
-set_secret "UPSTASH_REDIS_REST_TOKEN" "REDACTED_UPSTASH_REDIS_TOKEN"
+set_secret "REDIS_URL"                 "$REDIS_URL"
+set_secret "UPSTASH_REDIS_REST_URL"   "$UPSTASH_REDIS_REST_URL"
+set_secret "UPSTASH_REDIS_REST_TOKEN" "$UPSTASH_REDIS_REST_TOKEN"
 
 echo ""
 echo "=== Done. Verify at: $FORGEJO_URL/org/$ORG/settings/secrets ==="
@@ -85,4 +95,4 @@ echo "Next steps:"
 echo "  1. Merge this branch to main → deploy-fly.yml auto-runs"
 echo "  2. Configure Forgejo webhook in tranc3-backend repo settings:"
 echo "     URL: https://tranc3-backend.fly.dev/citadel/webhooks/forgejo"
-echo "     Secret: (value of CITADEL_WEBHOOK_SECRET above)"
+echo "     Secret: (value of CITADEL_WEBHOOK_SECRET from .env)"
