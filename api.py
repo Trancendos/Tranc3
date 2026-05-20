@@ -9,13 +9,18 @@ import time
 from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
 
-import torch
 import redis as redis_lib
+import torch
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import (
-    BackgroundTasks, Depends, FastAPI, HTTPException,
-    Request, WebSocket, WebSocketDisconnect,
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    HTTPException,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
@@ -28,7 +33,7 @@ _SECRET_KEY = os.getenv("SECRET_KEY")
 if not _SECRET_KEY:
     raise RuntimeError(
         "SECRET_KEY is not set. "
-        "Generate one: python -c \"import secrets; print(secrets.token_hex(32))\""
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
 
 # ── Internal imports ──────────────────────────────────────────────────────────
@@ -42,23 +47,35 @@ from src.core.advanced_model import AdvancedTransformerModel
 from src.core.context_compressor import compressor
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager
 from src.core.multilingual_tokenizer import MultilingualTokenizer
-from src.database.schema import DatabaseManager, Conversation, Message
+from src.database.schema import Conversation, DatabaseManager, Message
 from src.database.vector_store import vector_store
 from src.errors.error_catalog import ErrorCode, format_error_response
 from src.evolution.self_improving_core import SelfEvolvingArchitecture
-from src.monetisation.billing import enforcer as tier_enforcer, TIERS
+from src.monetisation.billing import TIERS
+from src.monetisation.billing import enforcer as tier_enforcer
 from src.observability.metrics import (
-    log, record_churn_risk, record_emotion,
-    record_phi, record_quality, record_request,
+    log,
+    record_churn_risk,
+    record_emotion,
+    record_phi,
+    record_quality,
+    record_request,
 )
 from src.personality.matrix import EnhancedPersonalityMatrix
-from src.quantum.quantum_core import QuantumNeuralCore
+
+try:
+    from src.quantum.quantum_core import QuantumNeuralCore
+except ImportError as _qiskit_err:
+    QuantumNeuralCore = None  # type: ignore[assignment,misc]
+    import logging as _log
+
+    _log.getLogger(__name__).warning("Quantum core unavailable (qiskit): %s", _qiskit_err)
+from auth import get_current_user, token_manager
 from src.registry.file_registry import registry as file_registry
 from src.security.ip_protection import abuse_detector, watermarker
 from src.security.middleware import GovernanceMiddleware, SecurityHeadersMiddleware
 from src.security.security_framework import InputSanitizer
 from src.validation.loop_validator import CIRCUITS, loop_validator, self_healer
-from auth import get_current_user, token_manager
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
@@ -67,40 +84,40 @@ logger = logging.getLogger("tranc3.api")
 
 # ── Runtime config ────────────────────────────────────────────────────────────
 class Config:
-    model_path          = os.getenv("MODEL_PATH", "./models/tranc3-base.pt")
-    cache_dir           = os.getenv("CACHE_DIR", "./cache")
-    redis_url           = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    primary_language    = os.getenv("PRIMARY_LANGUAGE", "en")
+    model_path = os.getenv("MODEL_PATH", "./models/tranc3-base.pt")
+    cache_dir = os.getenv("CACHE_DIR", "./cache")
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    primary_language = os.getenv("PRIMARY_LANGUAGE", "en")
     supported_languages = os.getenv("SUPPORTED_LANGUAGES", "en,es,fr,de,zh,ja").split(",")
-    enable_emotion      = os.getenv("ENABLE_EMOTION", "true").lower() == "true"
-    personality_dir     = os.getenv("PERSONALITY_DIR", "./src/personality/profiles")
-    vocab_size          = 119547
-    hidden_size         = 768
-    num_layers          = 12
-    num_heads           = 12
+    enable_emotion = os.getenv("ENABLE_EMOTION", "true").lower() == "true"
+    personality_dir = os.getenv("PERSONALITY_DIR", "./src/personality/profiles")
+    vocab_size = 119547
+    hidden_size = 768
+    num_layers = 12
+    num_heads = 12
     max_sequence_length = 512
-    architecture        = "multilingual"
-    freeze_base         = False
+    architecture = "multilingual"
+    freeze_base = False
 
     def get(self, key, default=None):
         return getattr(self, key, default)
 
 
 # ── Global state ──────────────────────────────────────────────────────────────
-model               = None
-tokenizer           = None
-personality_matrix  = None
-redis_client        = None
-feature_flags       = None
-quantum_core        = None
+model = None
+tokenizer = None
+personality_matrix = None
+redis_client = None
+feature_flags = None
+quantum_core = None
 consciousness_model = None
-neuromorphic        = None
-evolution_engine    = None
-db_manager          = None
-db_user_manager     = None
-_start_time         = time.time()
-_feedback_count     = 0
-EVOLUTION_TRIGGER   = 100
+neuromorphic = None
+evolution_engine = None
+db_manager = None
+db_user_manager = None
+_start_time = time.time()
+_feedback_count = 0
+EVOLUTION_TRIGGER = 100
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -139,7 +156,7 @@ async def lifespan(app: FastAPI):
     try:
         tokenizer = MultilingualTokenizer(cfg)
         logger.info("Tokenizer ready")
-    except Exception as e:
+    except Exception:
         logger.error("Tokenizer failed")
 
     # Personality matrix
@@ -150,21 +167,24 @@ async def lifespan(app: FastAPI):
         logger.error(f"Personality matrix failed: {e}")
 
     # Quantum core
-    try:
-        quantum_core = QuantumNeuralCore({"num_qubits": 8})
-        logger.info("Quantum core ready")
-    except Exception as e:
-        logger.warning(f"Quantum core unavailable: {e}")
+    if QuantumNeuralCore is not None:
+        try:
+            quantum_core = QuantumNeuralCore({"num_qubits": 8})
+            logger.info("Quantum core ready")
+        except Exception as e:
+            logger.warning(f"Quantum core unavailable: {e}")
 
     # Consciousness model
     try:
-        consciousness_model = ConsciousnessModel({
-            "consciousness_threshold": 3.0,
-            "state_dimensions": 64,
-            "workspace_size": 256,
-            "competition_threshold": 0.7,
-            "introspection_depth": 3,
-        })
+        consciousness_model = ConsciousnessModel(
+            {
+                "consciousness_threshold": 3.0,
+                "state_dimensions": 64,
+                "workspace_size": 256,
+                "competition_threshold": 0.7,
+                "introspection_depth": 3,
+            }
+        )
         logger.info("Consciousness model ready")
     except Exception as e:
         logger.warning(f"Consciousness model unavailable: {e}")
@@ -178,11 +198,13 @@ async def lifespan(app: FastAPI):
 
     # Evolution engine
     try:
-        evolution_engine = SelfEvolvingArchitecture({
-            "population_size": 10,
-            "mutation_rate": 0.01,
-            "genome_dim": 768,
-        })
+        evolution_engine = SelfEvolvingArchitecture(
+            {
+                "population_size": 10,
+                "mutation_rate": 0.01,
+                "genome_dim": 768,
+            }
+        )
         evolution_engine.load_genome_from_redis()
         logger.info("Evolution engine ready")
     except Exception as e:
@@ -229,107 +251,136 @@ app.add_middleware(GovernanceMiddleware)
 
 # ── The Spark (MCP server) ────────────────────────────────────────────────────
 from src.mcp.server import router as _mcp_router
+
 app.include_router(_mcp_router)
 
 # ── The Observatory (audit log + event feed) ──────────────────────────────────
 from src.observability.routes import router as _observatory_router
+
 app.include_router(_observatory_router)
 
 # ── The Nexus (AI communications + transfer hub) ─────────────────────────────
 from src.nexus.routes import router as _nexus_router
+
 app.include_router(_nexus_router)
 
 # ── The Town Hall (governance + compliance) ───────────────────────────────────
 from src.townhall.routes import router as _townhall_router
+
 app.include_router(_townhall_router)
 
 # ── The Library (knowledge base) ─────────────────────────────────────────────
 from src.library.routes import router as _library_router
+
 app.include_router(_library_router)
 
 # ── The Basement (archive + vector search) ────────────────────────────────────
 from src.basement.routes import router as _basement_router
+
 app.include_router(_basement_router)
 
 # ── Cryptex (threat detection + cyber defence) ────────────────────────────────
 from src.cryptex.routes import router as _cryptex_router
+
 app.include_router(_cryptex_router)
 
 # ── Section 7 (research + intelligence reports) ───────────────────────────────
 from src.research.routes import router as _section7_router
+
 app.include_router(_section7_router)
 
 # ── The Digital Grid (workflow DAG builder + executor) ────────────────────────
 from src.workflow.routes import router as _grid_router
+
 app.include_router(_grid_router)
 
 # ── I-Mind (sensitivity + crisis protocol) ────────────────────────────────────
 from src.imind.routes import router as _imind_router
+
 app.include_router(_imind_router)
 
 # ── tAimra (digital twin — opt-in, OFFLINE by default) ────────────────────────
 from src.taimra.routes import router as _taimra_router
+
 app.include_router(_taimra_router)
 
 # ── Tranquility (wellbeing hub) ────────────────────────────────────────────────
 from src.tranquility.routes import router as _tranquility_router
+
 app.include_router(_tranquility_router)
 
 # ── Resonate (empathy + understanding services) ────────────────────────────────
 from src.resonate.routes import router as _resonate_router
+
 app.include_router(_resonate_router)
 
 # ── The Studio (creativity hub — Sasha's Photo, TateKing, TranceFlow, Fabulousa)
 from src.studio.routes import router as _studio_router
+
 app.include_router(_studio_router)
 
 # ── The Lab (AI code creation platform) ──────────────────────────────────────
 from src.lab.routes import router as _lab_router
+
 app.include_router(_lab_router)
 
 # ── ChronosSphere / ArcStream (time + schedule management) ───────────────────
 from src.chronos.routes import router as _chronos_router
+
 app.include_router(_chronos_router)
 
 # ── Turing's Hub (AI personality creation centre) ────────────────────────────
 from src.personality.turingshub.routes import router as _turingshub_router
+
 app.include_router(_turingshub_router)
 
 # ── DevOcity (developer centre — API keys, webhooks, guides) ─────────────────
 from src.devocity.routes import router as _devocity_router
+
 app.include_router(_devocity_router)
 
 # ── The Artifactory (OCI artefact repository — Zot foundation) ───────────────
 from src.artifactory.routes import router as _artifactory_router
+
 app.include_router(_artifactory_router)
 
 # ── API Marketplace (connector hub — Gravitee.io foundation) ─────────────────
 from src.apimarket.routes import router as _apimarket_router
+
 app.include_router(_apimarket_router)
 
 # ── VRAR3D (AR/VR wellbeing centre — Three.js / A-Frame WebXR) ───────────────
 from src.vrar3d.routes import router as _vrar3d_router
+
 app.include_router(_vrar3d_router)
 
 # ── The Citadel (DevOps hub — Forgejo + Fly.io + CF Workers) ─────────────────
 from src.citadel.routes import router as _citadel_router
+
 app.include_router(_citadel_router)
 
 # ── Luminous (AI brain — consciousness engine + neuromorphic) ─────────────────
 from src.bio_neural.routes import router as _luminous_router
+
 app.include_router(_luminous_router)
 
 # ── Think Tank (quantum + deep research engines) ──────────────────────────────
-from src.quantum.routes import router as _thinktank_router
-app.include_router(_thinktank_router)
+try:
+    from src.quantum.routes import router as _thinktank_router
+
+    app.include_router(_thinktank_router)
+except ImportError:
+    pass
 
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
 if os.path.isdir(_FRONTEND_DIST):
-    from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
 
-    app.mount("/assets", StaticFiles(directory=os.path.join(_FRONTEND_DIST, "assets")), name="assets")
+    app.mount(
+        "/assets", StaticFiles(directory=os.path.join(_FRONTEND_DIST, "assets")), name="assets"
+    )
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_frontend(full_path: str):
@@ -339,26 +390,26 @@ if os.path.isdir(_FRONTEND_DIST):
 
 # ── Models ────────────────────────────────────────────────────────────────────
 class ChatRequest(BaseModel):
-    message:              str                  = Field(..., min_length=1, max_length=10000)
-    language:             str                  = Field("en")
-    personality:          str                  = "tranc3-base"
-    user_emotion:         Optional[str]        = "neutral"
+    message: str = Field(..., min_length=1, max_length=10000)
+    language: str = Field("en")
+    personality: str = "tranc3-base"
+    user_emotion: Optional[str] = "neutral"
     conversation_history: Optional[List[Dict]] = []
-    session_id:           Optional[str]        = None
+    session_id: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
-    response:            str
-    detected_emotion:    str
-    language:            str
-    personality:         str
-    timestamp:           datetime.datetime
-    processing_time_ms:  float
-    request_id:          str
+    response: str
+    detected_emotion: str
+    language: str
+    personality: str
+    timestamp: datetime.datetime
+    processing_time_ms: float
+    request_id: str
     consciousness_level: Optional[float] = None
-    quantum_used:        bool            = False
-    foresight:           Optional[Dict]  = None
-    quality:             Optional[Dict]  = None
+    quantum_used: bool = False
+    foresight: Optional[Dict] = None
+    quality: Optional[Dict] = None
 
 
 class TokenRequest(BaseModel):
@@ -401,17 +452,18 @@ async def health():
     import asyncio
 
     components: dict = {
-        "api":           "healthy",
-        "model":         "healthy" if model else "echo_mode",
-        "tokenizer":     "healthy" if tokenizer else "unavailable",
-        "personality":   "healthy" if personality_matrix else "unavailable",
-        "quantum":       "healthy" if quantum_core else "unavailable",
+        "api": "healthy",
+        "model": "healthy" if model else "echo_mode",
+        "tokenizer": "healthy" if tokenizer else "unavailable",
+        "personality": "healthy" if personality_matrix else "unavailable",
+        "quantum": "healthy" if quantum_core else "unavailable",
         "consciousness": "healthy" if consciousness_model else "unavailable",
     }
 
     # ── Live Redis probe ───────────────────────────────────────────────────
     try:
         from src.core.redis_store import get_store
+
         store = await asyncio.wait_for(get_store(), timeout=2.0)
         ok = await asyncio.wait_for(store.ping(), timeout=2.0)
         components["redis"] = "healthy" if ok else "degraded"
@@ -421,7 +473,10 @@ async def health():
 
     # ── Live Supabase probe ────────────────────────────────────────────────
     try:
-        import os, httpx
+        import os
+
+        import httpx
+
         sb_url = os.environ.get("SUPABASE_URL", "")
         sb_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
         if sb_url and sb_key:
@@ -439,22 +494,20 @@ async def health():
     # ── Spark tools ───────────────────────────────────────────────────────
     try:
         from src.mcp.tools import registry
+
         components["spark_tools"] = len(registry.list_tools())
     except Exception:
         components["spark_tools"] = 0
 
-    degraded = any(
-        str(v).startswith(("degraded", "unavailable"))
-        for v in components.values()
-    )
+    degraded = any(str(v).startswith(("degraded", "unavailable")) for v in components.values())
     overall = "degraded" if degraded else "healthy"
 
     return {
-        "status":         overall,
-        "version":        "2.0.0",
-        "timestamp":      datetime.datetime.utcnow().isoformat(),
+        "status": overall,
+        "version": "2.0.0",
+        "timestamp": datetime.datetime.utcnow().isoformat(),
         "uptime_seconds": round(time.time() - _start_time, 1),
-        "components":     components,
+        "components": components,
     }
 
 
@@ -469,6 +522,7 @@ async def ready():
 async def metrics():
     try:
         from prometheus_client import generate_latest
+
         return generate_latest()
     except Exception:
         return "# prometheus_client not available\n"
@@ -489,9 +543,9 @@ async def chat(
     current_user: dict = Depends(get_current_user),
 ):
     request_id = os.urandom(8).hex()
-    start      = time.time()
-    user_id    = current_user["id"]
-    tier       = current_user.get("tier", "free")
+    start = time.time()
+    user_id = current_user["id"]
+    tier = current_user.get("tier", "free")
 
     # Sanitise input — blocks XSS, SQLi, path traversal, prompt injection
     InputSanitizer.sanitize(chat_req.message)
@@ -501,7 +555,9 @@ async def chat(
     if not ip_check["allowed"]:
         raise HTTPException(
             status_code=400,
-            detail=format_error_response(ErrorCode.SEC_INPUT_BLOCKED, "Message blocked by security filter"),
+            detail=format_error_response(
+                ErrorCode.SEC_INPUT_BLOCKED, "Message blocked by security filter"
+            ),
         )
 
     # Compliance
@@ -514,8 +570,16 @@ async def chat(
         raise HTTPException(status_code=429, detail=str(e))
 
     # Feature gates
-    use_quantum       = feature_flags.is_enabled(FeatureFlag.QUANTUM_OPTIMIZATION, user_id) if feature_flags else False
-    use_consciousness = feature_flags.is_enabled(FeatureFlag.CONSCIOUSNESS_ENGINE, user_id) if feature_flags else False
+    use_quantum = (
+        feature_flags.is_enabled(FeatureFlag.QUANTUM_OPTIMIZATION, user_id)
+        if feature_flags
+        else False
+    )
+    use_consciousness = (
+        feature_flags.is_enabled(FeatureFlag.CONSCIOUSNESS_ENGINE, user_id)
+        if feature_flags
+        else False
+    )
 
     # Language validation
     supported = tokenizer.supported_languages if tokenizer else Config.supported_languages
@@ -525,18 +589,22 @@ async def chat(
     try:
         # Emotion detection
         detected_emotion = chat_req.user_emotion or "neutral"
-        emotion_scores   = {"neutral": 1.0}
+        emotion_scores = {"neutral": 1.0}
         if personality_matrix and getattr(personality_matrix, "emotion_detector", None):
-            emotion_scores   = personality_matrix.emotion_detector.detect_emotion(chat_req.message)
-            detected_emotion = personality_matrix.emotion_detector.get_dominant_emotion(emotion_scores)
+            emotion_scores = personality_matrix.emotion_detector.detect_emotion(chat_req.message)
+            detected_emotion = personality_matrix.emotion_detector.get_dominant_emotion(
+                emotion_scores
+            )
 
         # Compress conversation history if long
         history = compressor.compress(chat_req.conversation_history or [])
 
         # Predictive analytics
         analysis = analytics.analyse_request(
-            user_id=user_id, message=chat_req.message,
-            emotion=detected_emotion, language=chat_req.language,
+            user_id=user_id,
+            message=chat_req.message,
+            emotion=detected_emotion,
+            language=chat_req.language,
             personality=chat_req.personality,
         )
 
@@ -592,7 +660,9 @@ async def chat(
                 ),
                 fallback=lambda: None,
             )
-            response_text = f"[TRANC3] {chat_req.message[:80]}..." if result else f"[Echo] {chat_req.message}"
+            response_text = (
+                f"[TRANC3] {chat_req.message[:80]}..." if result else f"[Echo] {chat_req.message}"
+            )
         else:
             response_text = f"[Echo] {chat_req.message}"
 
@@ -603,8 +673,10 @@ async def chat(
 
         # Quality scoring
         quality = analytics.score_response(
-            response=response_text, user_message=chat_req.message,
-            emotion=detected_emotion, processing_time_ms=processing_ms,
+            response=response_text,
+            user_message=chat_req.message,
+            emotion=detected_emotion,
+            processing_time_ms=processing_ms,
         )
 
         # Observability
@@ -615,14 +687,26 @@ async def chat(
 
         # Background tasks
         background_tasks.add_task(
-            _log_conversation, user_id, request_id,
-            chat_req.language, chat_req.personality, detected_emotion, processing_ms,
+            _log_conversation,
+            user_id,
+            request_id,
+            chat_req.language,
+            chat_req.personality,
+            detected_emotion,
+            processing_ms,
         )
         background_tasks.add_task(
-            _persist_conversation, user_id, request_id,
-            chat_req.message, response_text, chat_req.language,
-            chat_req.personality, detected_emotion, processing_ms,
-            phi_score, quantum_used,
+            _persist_conversation,
+            user_id,
+            request_id,
+            chat_req.message,
+            response_text,
+            chat_req.language,
+            chat_req.personality,
+            detected_emotion,
+            processing_ms,
+            phi_score,
+            quantum_used,
         )
 
         return ChatResponse(
@@ -636,10 +720,10 @@ async def chat(
             consciousness_level=round(phi_score, 4) if phi_score is not None else None,
             quantum_used=quantum_used,
             foresight={
-                "trajectory":      foresight_result["trajectory"],
-                "recommendation":  foresight_result["recommendation"],
+                "trajectory": foresight_result["trajectory"],
+                "recommendation": foresight_result["recommendation"],
                 "dominant_intent": analysis.get("dominant_intent"),
-                "churn_risk":      analysis.get("churn_risk"),
+                "churn_risk": analysis.get("churn_risk"),
             },
             quality=quality,
         )
@@ -656,7 +740,7 @@ async def chat(
 async def languages():
     return {
         "languages": tokenizer.supported_languages if tokenizer else Config.supported_languages,
-        "primary":   Config.primary_language,
+        "primary": Config.primary_language,
     }
 
 
@@ -671,7 +755,7 @@ async def personalities():
 async def analyze_emotion(text: str, current_user: dict = Depends(get_current_user)):
     if not personality_matrix or not getattr(personality_matrix, "emotion_detector", None):
         raise HTTPException(status_code=503, detail="Emotion analysis unavailable")
-    scores   = personality_matrix.emotion_detector.detect_emotion(text)
+    scores = personality_matrix.emotion_detector.detect_emotion(text)
     dominant = personality_matrix.emotion_detector.get_dominant_emotion(scores)
     return {"dominant_emotion": dominant, "emotion_scores": scores, "text": text}
 
@@ -690,7 +774,9 @@ async def feedback(
         _feedback_count += 1
         if _feedback_count >= EVOLUTION_TRIGGER:
             _feedback_count = 0
-            evolution_engine.record_feedback({"quality_score": rating / 5.0, "user_satisfaction": rating / 5.0})
+            evolution_engine.record_feedback(
+                {"quality_score": rating / 5.0, "user_satisfaction": rating / 5.0}
+            )
             best = evolution_engine.evolve(num_generations=1)
             logger.info(f"Evolution: gen={evolution_engine.generation}, fitness={best.fitness:.4f}")
 
@@ -702,8 +788,12 @@ async def consciousness_score(text: str, current_user: dict = Depends(get_curren
     if not consciousness_model:
         raise HTTPException(status_code=503, detail="Consciousness engine unavailable")
     try:
-        phi    = consciousness_model.calculate_phi(torch.randn(64))
-        report = consciousness_model.get_consciousness_report() if hasattr(consciousness_model, "get_consciousness_report") else {}
+        phi = consciousness_model.calculate_phi(torch.randn(64))
+        report = (
+            consciousness_model.get_consciousness_report()
+            if hasattr(consciousness_model, "get_consciousness_report")
+            else {}
+        )
         return {"phi": round(phi, 4), "is_conscious": phi > 2.0, "text": text, "report": report}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -723,8 +813,9 @@ async def billing_usage(current_user: dict = Depends(get_current_user)):
 @app.post("/billing/checkout", tags=["billing"])
 async def billing_checkout(tier: str, current_user: dict = Depends(get_current_user)):
     from src.monetisation.billing import stripe_manager
+
     base = os.getenv("FRONTEND_URL", "http://localhost:3000")
-    url  = stripe_manager.create_checkout_session(
+    url = stripe_manager.create_checkout_session(
         current_user["id"], tier, f"{base}/billing/success", f"{base}/billing/cancel"
     )
     if not url:
@@ -735,10 +826,11 @@ async def billing_checkout(tier: str, current_user: dict = Depends(get_current_u
 @app.post("/billing/webhook", tags=["billing"], include_in_schema=False)
 async def stripe_webhook(request: Request):
     payload = await request.body()
-    sig     = request.headers.get("stripe-signature", "")
-    secret  = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    sig = request.headers.get("stripe-signature", "")
+    secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
     try:
         import stripe as _stripe
+
         _stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
         event = _stripe.Webhook.construct_event(payload, sig, secret)
     except Exception as e:
@@ -746,7 +838,7 @@ async def stripe_webhook(request: Request):
         raise HTTPException(status_code=400, detail="Invalid webhook")
 
     etype = event.get("type", "")
-    obj   = event.get("data", {}).get("object", {})
+    obj = event.get("data", {}).get("object", {})
     logger.info(f"Stripe event: {etype} id={obj.get('id')}")
     return {"received": True}
 
@@ -770,10 +862,12 @@ async def ws_chat(websocket: WebSocket):
             data = await websocket.receive_json()
             words = f"[TRANC3] {data.get('message', '')}".split()
             for i, word in enumerate(words):
-                await websocket.send_json({
-                    "chunk": word + (" " if i < len(words) - 1 else ""),
-                    "done":  i == len(words) - 1,
-                })
+                await websocket.send_json(
+                    {
+                        "chunk": word + (" " if i < len(words) - 1 else ""),
+                        "done": i == len(words) - 1,
+                    }
+                )
                 await asyncio.sleep(0.05)
     except WebSocketDisconnect:
         pass
@@ -781,41 +875,66 @@ async def ws_chat(websocket: WebSocket):
 
 # ── Background helpers ────────────────────────────────────────────────────────
 async def _log_conversation(user_id, request_id, language, personality, emotion, processing_ms):
-    log.info("conversation", user_id=user_id, request_id=request_id,
-             language=language, personality=personality,
-             emotion=emotion, processing_ms=round(processing_ms, 2))
+    log.info(
+        "conversation",
+        user_id=user_id,
+        request_id=request_id,
+        language=language,
+        personality=personality,
+        emotion=emotion,
+        processing_ms=round(processing_ms, 2),
+    )
 
 
 async def _persist_conversation(
-    user_id: str, request_id: str, user_message: str, ai_response: str,
-    language: str, personality: str, emotion: str, processing_ms: float,
-    phi: Optional[float] = None, quantum_used: bool = False,
+    user_id: str,
+    request_id: str,
+    user_message: str,
+    ai_response: str,
+    language: str,
+    personality: str,
+    emotion: str,
+    processing_ms: float,
+    phi: Optional[float] = None,
+    quantum_used: bool = False,
 ):
     if not db_manager:
         return
     try:
         import uuid as _uuid
+
         session = db_manager.get_session()
         conv = Conversation(
             id=_uuid.uuid4(),
             user_id=_uuid.UUID(user_id) if len(user_id) == 36 else _uuid.uuid4(),
-            language=language, personality=personality,
+            language=language,
+            personality=personality,
         )
         session.add(conv)
         session.flush()
-        session.add(Message(
-            id=_uuid.uuid4(), conversation_id=conv.id,
-            role="user", content=user_message,
-            language=language, detected_emotion=emotion,
-        ))
-        session.add(Message(
-            id=_uuid.uuid4(), conversation_id=conv.id,
-            role="assistant", content=ai_response,
-            language=language, detected_emotion=emotion,
-            processing_time_ms=processing_ms,
-            consciousness_level=phi,
-            quantum_used=quantum_used,
-        ))
+        session.add(
+            Message(
+                id=_uuid.uuid4(),
+                conversation_id=conv.id,
+                role="user",
+                content=user_message,
+                language=language,
+                detected_emotion=emotion,
+            )
+        )
+        session.add(
+            Message(
+                id=_uuid.uuid4(),
+                conversation_id=conv.id,
+                role="assistant",
+                content=ai_response,
+                language=language,
+                detected_emotion=emotion,
+                processing_time_ms=processing_ms,
+                consciousness_level=phi,
+                quantum_used=quantum_used,
+            )
+        )
         session.commit()
         session.close()
     except Exception as e:
@@ -833,11 +952,14 @@ if __name__ == "__main__":
 
 # ── Admin endpoints ───────────────────────────────────────────────────────────
 
+
 @app.get("/admin/registry", tags=["admin"])
 async def admin_registry(current_user: dict = Depends(get_current_user)):
     """File registry — lists all files with FID, version, and integrity status."""
     if current_user.get("tier") not in ("enterprise", "business"):
-        raise HTTPException(status_code=403, detail="Admin access requires Business or Enterprise tier")
+        raise HTTPException(
+            status_code=403, detail="Admin access requires Business or Enterprise tier"
+        )
     return file_registry.verify_all()
 
 
@@ -877,16 +999,17 @@ async def admin_healing(current_user: dict = Depends(get_current_user)):
 async def error_docs(error_code: str):
     """Look up error code documentation — no auth required."""
     from src.errors.error_catalog import ErrorCode, get_error
+
     try:
         code = ErrorCode(error_code)
         defn = get_error(code)
         return {
-            "code":      defn.code.value,
-            "title":     defn.title,
-            "message":   defn.message,
-            "guidance":  defn.guidance,
-            "docs_url":  defn.docs_url,
-            "severity":  defn.severity,
+            "code": defn.code.value,
+            "title": defn.title,
+            "message": defn.message,
+            "guidance": defn.guidance,
+            "docs_url": defn.docs_url,
+            "severity": defn.severity,
             "retryable": defn.retryable,
             "self_heal": defn.self_heal,
         }

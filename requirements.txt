@@ -47,11 +47,11 @@ jmespath==1.0.1
 gymnasium==0.29.1
 optuna==3.6.1
 
-# Quantum
+# Quantum (core only — aer simulator not in prod; quantum routes degrade gracefully)
 # Fixes: CVE-2025-2000 (RCE)
 qiskit==2.4.1
-qiskit-aer==0.14.2
-qiskit-nature==0.7.2
+# qiskit-aer: incompatible with qiskit 2.x (requires qiskit<1.5). Omit until aer 0.16+ is stable.
+# qiskit-nature: not used in codebase; removed to avoid conflicting qiskit<1.0 constraint.
 
 # Logging / Observability
 python-json-logger==2.0.7
