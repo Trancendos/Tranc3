@@ -8,7 +8,10 @@ import os
 import time
 from typing import Dict, Optional, Any
 
-import torch
+try:
+    import torch
+except ImportError:  # pragma: no cover — optional for CPU-only / test environments
+    torch = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -286,7 +289,11 @@ class TRANC3Enhanced:
         result["duration_ms"] = round((time.time() - start) * 1000, 2)
         return result
 
-    def _encode(self, text: str) -> torch.Tensor:
+    def _encode(self, text: str):
+        """Encode text to tensor representation. Returns None if torch unavailable."""
+        if torch is None:  # pragma: no cover
+            tokens = [ord(c) % 768 for c in text[:768]]
+            return tokens
         tokens = [ord(c) % 768 for c in text[:768]]
         t = torch.tensor(tokens, dtype=torch.float32)
         if len(t) < 768:

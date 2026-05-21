@@ -8,6 +8,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ class HolographicMemory:
             self._leaves = self._leaves[-self._max_leaves:]
             self._rebuild_tree()
 
-        logger.debug(f"Holographic memory append: {event_hash[:12]}...")
+        logger.debug("Holographic memory append: %s...", sanitize_for_log(event_hash[:12]))
         return event_hash
 
     def _rebuild_tree(self) -> None:

@@ -216,9 +216,8 @@ class Tranc3Model(nn.Module):
         mask: Optional[torch.Tensor] = None
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         B, T = input_ids.shape
-        assert T <= self.config.max_seq_len, \  # nosec B101 — assertion for type/class contract checking
-
-            f"Sequence length {T} exceeds model max {self.config.max_seq_len}"
+        # nosec B101 — assertion for type/class contract checking
+        assert T <= self.config.max_seq_len, f"Sequence length {T} exceeds model max {self.config.max_seq_len}"
 
         x = self.embed_dropout(self.token_embed(input_ids))
 

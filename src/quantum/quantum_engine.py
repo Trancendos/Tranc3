@@ -8,6 +8,7 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.circuit.library import QFT
 from qiskit_aer import AerSimulator
 import logging
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -230,7 +231,7 @@ class QuantumOptimizationEngine:
                 .unsqueeze(-1)
             )
         except Exception as e:
-            logger.warning(f"Quantum attention failed: {e}")
+            logger.warning("Quantum attention failed: %s", sanitize_for_log(e))
             return torch.ones(B, H, T, 1) / T
 
     def quantum_parameter_optimization(
@@ -258,7 +259,7 @@ class QuantumOptimizationEngine:
 
             return params + updates
         except Exception as e:
-            logger.warning(f"Quantum optimization failed: {e}")
+            logger.warning("Quantum optimization failed: %s", sanitize_for_log(e))
             return params
 
     def get_quantum_state_info(self) -> Dict:

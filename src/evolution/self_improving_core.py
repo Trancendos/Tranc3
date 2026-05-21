@@ -7,6 +7,7 @@ import torch
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +175,7 @@ class SelfEvolvingArchitecture:
                 ex=86400 * 7,
             )  # 7-day TTL
         except Exception as e:
-            logger.debug(f"Genome persist skipped: {e}")
+            logger.debug("Genome persist skipped: %s", sanitize_for_log(e))
 
     def load_genome_from_redis(self) -> bool:
         """Restore best genome from Redis on startup."""
@@ -195,7 +196,7 @@ class SelfEvolvingArchitecture:
                 )
                 return True
         except Exception as e:
-            logger.debug(f"Genome restore skipped: {e}")
+            logger.debug("Genome restore skipped: %s", sanitize_for_log(e))
         return False
 
     def get_best_genome(self) -> torch.Tensor:

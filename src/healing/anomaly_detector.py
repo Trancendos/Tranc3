@@ -5,6 +5,7 @@ import logging
 import statistics
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,7 @@ class AnomalyDetector:
                 try:
                     handler(anomaly)
                 except Exception as e:
-                    logger.error(f"Anomaly handler error: {e}")
+                    logger.error("Anomaly handler error: %s", sanitize_for_log(e))
 
             return anomaly
 

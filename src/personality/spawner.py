@@ -2,6 +2,9 @@
 # Generates a new Tranc3 repository scaffold for a specific personality instance.
 # Each spawned repo is a self-contained Tranc3 derivative pre-configured with
 # one dominant personality, its domain skills, and its system-prompt identity.
+#
+# Security: All user-supplied path components (output_dir, repo_name) are
+# validated through shared_core.path_validation to prevent path traversal.
 
 from __future__ import annotations
 
@@ -13,10 +16,64 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+from shared_core.path_validation import PathTraversalError, safe_join, sanitize_filename
+
 logger = logging.getLogger(__name__)
 
 _BASE_DIR = Path(__file__).resolve().parents[2]  # /home/user/Tranc3
 _PROFILES_DIR = Path(__file__).parent / "profiles"
+
+# Allowed output directory roots — spawn targets must land under one of these.
+# In production, restrict this to a dedicated sandbox directory.
+_ALLOWED_OUTPUT_ROOTS = [
+    Path.cwd().resolve(),          # current working directory
+    Path("/tmp").resolve(),        # nosec B108 — system temp, validated by safe_join below
+    Path.home().resolve(),         # user home
+]
+
+
+def _resolve_output_base(output_dir: str) -> Path:
+    """Resolve and validate the output directory against allowed roots.
+
+    The output_dir must resolve to a path under one of the allowed roots.
+    This prevents an attacker from specifying arbitrary filesystem locations.
+
+    Args:
+        output_dir: User-supplied output directory string.
+
+    Returns:
+        Resolved, validated base Path for output.
+
+    Raises:
+        PathTraversalError: If the path escapes all allowed roots.
+        FileNotFoundError: If the parent of the path does not exist.
+    """
+    candidate = Path(output_dir).resolve()
+
+    # Allow the path if it already exists and is under an allowed root
+    for allowed_root in _ALLOWED_OUTPUT_ROOTS:
+        try:
+            candidate.relative_to(allowed_root)
+            return candidate
+        except ValueError:
+            continue
+
+    # Also allow if the resolved parent exists and is under an allowed root
+    # (this handles the common case where output_dir is "./spawned" which
+    # may not yet exist)
+    parent = candidate.parent
+    if parent.exists():
+        for allowed_root in _ALLOWED_OUTPUT_ROOTS:
+            try:
+                parent.relative_to(allowed_root)
+                return candidate
+            except ValueError:
+                continue
+
+    raise PathTraversalError(
+        f"Output directory {candidate} is not under any allowed root. "
+        f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}"
+    )
 
 
 class PersonalitySpawner:
@@ -28,12 +85,14 @@ class PersonalitySpawner:
       - .env.example         with personality-specific notes
       - api_personality.py   a minimal FastAPI app wired to the personality
       - README.md            with identity, purpose, and quickstart
+
+    Security: All path construction uses safe_join() to prevent traversal.
     """
 
     def __init__(self) -> None:
         self._profiles: Dict[str, Dict] = self._load_all_profiles()
 
-    # ─── Public API ────────────────────────────────────────────────────────
+    # ─── Public API ──────────────────────────────────────────────────
 
     def spawn(
         self,
@@ -48,7 +107,14 @@ class PersonalitySpawner:
                 f"Unknown personality '{personality_id}'. Available: {available}"
             )
 
-        target = Path(output_dir) / repo_name
+        # Validate and sanitize repo_name — prevents directory traversal
+        safe_repo_name = sanitize_filename(repo_name)
+
+        # Validate output_dir is under an allowed root
+        output_base = _resolve_output_base(output_dir)
+
+        # Safely construct the target path under the validated output base
+        target = safe_join(output_base, safe_repo_name)
         if target.exists():
             raise FileExistsError(f"Target directory already exists: {target}")
 
@@ -59,15 +125,15 @@ class PersonalitySpawner:
         files_written += self._write_config(target, profile)
         files_written += self._write_active_profile(target, profile)
         files_written += self._write_env_example(target, profile)
-        files_written += self._write_api(target, profile, repo_name)
-        files_written += self._write_readme(target, profile, repo_name)
+        files_written += self._write_api(target, profile, safe_repo_name)
+        files_written += self._write_readme(target, profile, safe_repo_name)
         files_written += self._write_requirements(target)
-        files_written += self._write_docker(target, profile, repo_name)
+        files_written += self._write_docker(target, profile, safe_repo_name)
 
         return {
             "personality": personality_id,
             "code_name": profile.get("code_name", personality_id),
-            "repo_name": repo_name,
+            "repo_name": safe_repo_name,
             "output_path": str(target.resolve()),
             "files_written": files_written,
             "spawned_at": datetime.utcnow().isoformat(),
@@ -90,7 +156,7 @@ class PersonalitySpawner:
             for pid, p in self._profiles.items()
         ]
 
-    # ─── File writers ──────────────────────────────────────────────────────
+    # ─── File writers ────────────────────────────────────────────────
 
     def _write_config(self, target: Path, profile: Dict) -> list:
         code_name = profile.get("code_name", profile["id"])
@@ -117,7 +183,8 @@ class PersonalitySpawner:
             },
             "environment": "development",
         }
-        path = target / "tranc3_config.yaml"
+        # Safe path construction: target is already validated
+        path = safe_join(target, "tranc3_config.yaml")
         import yaml  # type: ignore
 
         with open(path, "w") as f:
@@ -125,8 +192,10 @@ class PersonalitySpawner:
         return [str(path)]
 
     def _write_active_profile(self, target: Path, profile: Dict) -> list:
-        (target / "src" / "personality").mkdir(parents=True, exist_ok=True)
-        path = target / "src" / "personality" / "active_profile.json"
+        # Safe path construction under validated target
+        profile_dir = safe_join(target, "src", "personality")
+        profile_dir.mkdir(parents=True, exist_ok=True)
+        path = safe_join(target, "src", "personality", "active_profile.json")
         with open(path, "w") as f:
             json.dump(profile, f, indent=2)
         return [str(path)]
@@ -166,7 +235,7 @@ class PersonalitySpawner:
             RATE_LIMIT_PER_WINDOW=120
             RATE_WINDOW_SECONDS=60
         """)
-        path = target / ".env.example"
+        path = safe_join(target, ".env.example")
         path.write_text(content)
         return [str(path)]
 
@@ -282,7 +351,7 @@ class PersonalitySpawner:
                             port=int(os.getenv("PORT", "8000")),
                             reload=os.getenv("DEBUG", "false").lower() == "true")
         """)
-        path = target / "api_personality.py"
+        path = safe_join(target, "api_personality.py")
         path.write_text(content)
         return [str(path)]
 
@@ -340,13 +409,13 @@ class PersonalitySpawner:
             Available personalities: `dorris-fontaine`, `cornelius-macintyre`,
             `the-guardian`, `vesper-nightingale`, `atlas-meridian`.
         """)
-        path = target / "README.md"
+        path = safe_join(target, "README.md")
         path.write_text(content)
         return [str(path)]
 
     def _write_requirements(self, target: Path) -> list:
         base_reqs = _BASE_DIR / "requirements.txt"
-        path = target / "requirements.txt"
+        path = safe_join(target, "requirements.txt")
         if base_reqs.exists():
             shutil.copy(base_reqs, path)
         else:
@@ -369,11 +438,11 @@ class PersonalitySpawner:
             EXPOSE 8000
             CMD ["uvicorn", "api_personality:app", "--host", "0.0.0.0", "--port", "8000"]
         """)
-        path = target / "Dockerfile"
+        path = safe_join(target, "Dockerfile")
         path.write_text(content)
         return [str(path)]
 
-    # ─── Internal ──────────────────────────────────────────────────────────
+    # ─── Internal ────────────────────────────────────────────────────
 
     def _load_all_profiles(self) -> Dict[str, Dict]:
         profiles: Dict[str, Dict] = {}
