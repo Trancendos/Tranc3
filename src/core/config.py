@@ -56,7 +56,7 @@ class Tranc3Config(BaseSettings):
     REDIS_URL: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
 
     # ── Server ────────────────────────────────────────────────────────────
-    HOST: str = Field(default="0.0.0.0", env="HOST")
+    HOST: str = Field(default="127.0.0.1", env="HOST")
     PORT: int = Field(default=8000, env="PORT")
     WORKERS: int = Field(default=1, env="WORKERS")
     CORS_ORIGINS: str = Field(default="*", env="CORS_ORIGINS")

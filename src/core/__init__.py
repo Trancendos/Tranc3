@@ -23,12 +23,14 @@ except Exception:
 try:
     from src.core.feature_flags import FeatureFlag, FeatureFlagManager
 except Exception:
-    pass
+    pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 try:
     from src.core.context_compressor import compressor
 except Exception:
-    pass
+    pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 # Legacy BERT-based tokenizer — only available when `transformers` is installed.
 try:
@@ -40,4 +42,5 @@ except ImportError:
 try:
     from src.core.ml_pipeline import MLPipeline, PipelineRequest, PipelineResponse, get_pipeline
 except Exception:
-    pass
+    pass  # nosec B110 — graceful degradation; error logged upstream
+

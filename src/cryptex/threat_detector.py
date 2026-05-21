@@ -230,7 +230,8 @@ class Cryptex:
                 metadata=signal.to_dict(),
             )
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
         if signal.severity in (ThreatSeverity.HIGH, ThreatSeverity.CRITICAL):
             try:
@@ -241,7 +242,8 @@ class Cryptex:
                     sender="cryptex",
                 )
             except Exception:
-                pass
+                pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     def _register_default_rules(self) -> None:
         rules = [

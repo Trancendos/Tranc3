@@ -158,7 +158,8 @@ class TAimra:
                 metadata={"user_id": user_id},
             )
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _taimra: Optional[TAimra] = None

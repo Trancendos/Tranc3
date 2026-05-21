@@ -97,7 +97,7 @@ class Tranc3Engine:
             return
 
         try:
-            checkpoint = torch.load(checkpoint_path, map_location=self._device)
+            checkpoint = torch.load(checkpoint_path, map_location=self._device, weights_only=True)
 
             # Reconstruct config from saved state
             state_dict = checkpoint["model_state_dict"]

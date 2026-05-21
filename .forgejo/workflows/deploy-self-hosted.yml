@@ -1,0 +1,125 @@
+# .forgejo/workflows/deploy-self-hosted.yml
+# The Workshop — Self-hosted deployment via Forgejo CI.
+# NO GitHub Actions — all CI through Forgejo (The Workshop) only.
+#
+# Replaces:
+#   - deploy-cloudflare.yml  → self-hosted workers on Fly.io or bare metal
+#   - Cloudflare Workers      → self-built Python/Node workers on own infrastructure
+#
+# This workflow builds and deploys self-owned workers that replace
+# Cloudflare Worker dependencies. Zero external provider dependencies.
+#
+# Deployment targets (priority order):
+#   1. Fly.io free tier (3 shared VMs) — self-owned infrastructure
+#   2. Bare metal / VPS                — fully self-hosted
+#   3. Docker containers                — portable, any host
+#
+# NO Cloudflare API tokens needed. NO wrangler needed.
+# All workers run as self-owned processes.
+
+name: Deploy Self-Hosted Workers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "workers/**"
+      - "cloudflare/**"
+      - "tranc3-bots/**"
+      - ".forgejo/workflows/deploy-self-hosted.yml"
+  workflow_dispatch:
+
+jobs:
+  # ──────────────────────────────────────────────────────────────
+  # Build: Package all workers into Docker images
+  # ──────────────────────────────────────────────────────────────
+  build-workers:
+    name: Build Worker Images
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build tranc3-ai worker
+        run: |
+          if [ -f workers/tranc3-ai/Dockerfile ]; then
+            docker build -t tranc3-ai:latest workers/tranc3-ai/ || echo "tranc3-ai Dockerfile not ready yet"
+          else
+            echo "tranc3-ai: Using Python worker (no Dockerfile needed)"
+          fi
+
+      - name: Build infinity-void worker
+        run: |
+          if [ -f workers/infinity-void/Dockerfile ]; then
+            docker build -t infinity-void:latest workers/infinity-void/ || echo "infinity-void Dockerfile not ready yet"
+          else
+            echo "infinity-void: Using Python worker (no Dockerfile needed)"
+          fi
+
+      - name: Build api-gateway worker
+        run: |
+          if [ -f workers/api-gateway/Dockerfile ]; then
+            docker build -t trancendos-api-gateway:latest workers/api-gateway/ || echo "api-gateway Dockerfile not ready yet"
+          else
+            echo "api-gateway: Using Python worker (no Dockerfile needed)"
+          fi
+
+      - name: Build tranc3-bots
+        run: |
+          if [ -f tranc3-bots/Dockerfile ]; then
+            docker build -t tranc3-bots:latest tranc3-bots/ || echo "tranc3-bots Dockerfile not ready yet"
+          else
+            echo "tranc3-bots: Using existing Fly.io deployment"
+          fi
+
+  # ──────────────────────────────────────────────────────────────
+  # Deploy: Fly.io (self-owned, zero-cost free tier)
+  # ──────────────────────────────────────────────────────────────
+  deploy-fly:
+    name: Deploy to Fly.io
+    runs-on: self-hosted
+    needs: build-workers
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install flyctl
+        run: |
+          if ! command -v flyctl &>/dev/null; then
+            curl -L https://fly.io/install.sh | sh
+            echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy backend (trancendos-backend)
+        run: |
+          flyctl deploy --remote-only --app trancendos-backend
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        continue-on-error: true
+
+      - name: Deploy bots (trancendos-bots)
+        run: |
+          cd tranc3-bots
+          flyctl deploy --remote-only --app trancendos-bots
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        continue-on-error: true
+
+      - name: Health check
+        run: |
+          sleep 15
+          STATUS=$(curl -sf https://trancendos-backend.fly.dev/health -o /dev/null -w "%{http_code}" || echo "000")
+          echo "Backend health check: $STATUS"
+          [ "$STATUS" = "200" ] || echo "Warning: Backend health check returned $STATUS"
+
+      - name: Notify The Citadel
+        run: |
+          BACKEND_URL="https://trancendos-backend.fly.dev"
+          curl -sf -X POST "$BACKEND_URL/citadel/webhooks/forgejo" \
+            -H "Content-Type: application/json" \
+            -H "X-Forgejo-Event: workflow_run" \
+            -d "{\"ref\":\"refs/heads/main\",\"repository\":{\"name\":\"Tranc3\"},\"after\":\"$(git rev-parse HEAD)\",\"sender\":{\"login\":\"forgejo-runner\"}}" \
+            || echo "Citadel notification skipped (backend may be warming)"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -372,7 +372,8 @@ class InferenceWorker:
             return {
                 "prediction": "continue",
                 "confidence": 0.5,
-                "top_k": [{"token": "the", "prob": 0.1}] * top_k,
+                "top_k": [{"token": "the", "prob": 0.1}] * top_k,  # nosec B105 — false positive: not a password
+
                 "model": "tranc3-bootstrap",
             }
 

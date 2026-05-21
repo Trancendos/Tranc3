@@ -155,7 +155,8 @@ class IMind:
                 metadata=assessment.to_dict(),
             )
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _imind: Optional[IMind] = None

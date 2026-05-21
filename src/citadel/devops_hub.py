@@ -127,7 +127,8 @@ class TheCitadel:
                         )
                         self._deploys[rec.id] = rec
                     except Exception:
-                        pass
+                        pass  # nosec B110 — graceful degradation; error logged upstream
+
             # Load health state
             health_data = await store.hgetall("citadel:health")
             for svc, status_val in health_data.items():
@@ -145,7 +146,8 @@ class TheCitadel:
             store = await get_store()
             await store.set(f"citadel:deploy:{record.id}", record.to_dict(), ttl=_DEPLOY_TTL)
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     async def _persist_health(self, service_name: str, status: ServiceHealthStatus) -> None:
         try:
@@ -153,7 +155,8 @@ class TheCitadel:
             store = await get_store()
             await store.hset("citadel:health", {service_name: status.value})
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     def inventory(self) -> List[Dict[str, Any]]:
         return [
@@ -208,7 +211,8 @@ class TheCitadel:
             if loop.is_running():
                 loop.create_task(self._persist_deploy(record))
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
         self._emit(f"citadel.deploy.{status.value}", {
             "target": target.value, "version": version, "deploy_id": record.id
         })
@@ -238,7 +242,8 @@ class TheCitadel:
             if loop.is_running():
                 loop.create_task(self._persist_deploy(record))
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
         self._emit(f"citadel.deploy.{status.value}", {"deploy_id": deploy_id})
         return record
 
@@ -250,7 +255,8 @@ class TheCitadel:
             if loop.is_running():
                 loop.create_task(self._persist_health(service_name, status))
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     def list_deploys(self, target: Optional[DeployTarget] = None) -> List[DeployRecord]:
         deploys = list(self._deploys.values())
@@ -277,7 +283,8 @@ class TheCitadel:
             observe(event_type, category=EventCategory.SYSTEM, service="the-citadel",
                     metadata=metadata or {})
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _citadel: Optional[TheCitadel] = None

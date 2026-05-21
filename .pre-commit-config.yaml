@@ -2,11 +2,12 @@
 # Local security enforcement before every commit.
 # Install: pip install pre-commit && pre-commit install
 # Run manually: pre-commit run --all-files
+# Updated: 2026-05 — Proactive Remediation & Automation
 
 repos:
   # ── Ruff (lint + format) ──────────────────────────────────────────
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.4
+    rev: v0.11.7
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -27,13 +28,15 @@ repos:
         args: ["--maxkb=500"]
       - id: no-commit-to-branch
         args: [--branch, main]
+      - id: check-ast
+      - id: debug-statements
 
   # ── Bandit (Python SAST) ──────────────────────────────────────────
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.8.3
+    rev: 1.9.4
     hooks:
       - id: bandit
-        args: [-c, pyproject.toml]
+        args: [-c, pyproject.toml, -r, src]
         additional_dependencies: ["bandit[toml]"]
 
   # ── Python formatting ─────────────────────────────────────────────
@@ -48,9 +51,16 @@ repos:
     hooks:
       - id: isort
 
+  # ── Semgrep (semantic code analysis) ──────────────────────────────
+  - repo: https://github.com/returntocorp/semgrep-pre-commit
+    rev: v1.63.0
+    hooks:
+      - id: semgrep
+        args: ["--config", "auto", "--error"]
+
   # ── Secrets detection ─────────────────────────────────────────────
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.4
+    rev: v8.21.2
     hooks:
       - id: gitleaks
 
@@ -66,3 +76,10 @@ repos:
     hooks:
       - id: python-safety-dependencies-check
         files: requirements.*\.txt$
+
+  # ── Typo detection (security-sensitive) ───────────────────────────
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.31.1
+    hooks:
+      - id: typos
+        args: [--config, .typos.toml]
