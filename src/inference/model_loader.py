@@ -4,6 +4,7 @@
 import logging
 import threading
 from typing import Any, Callable, Dict, Optional
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class LazyModelLoader:
     def register(self, name: str, factory: Callable) -> None:
         """Register a model factory function"""
         self._factories[name] = factory
-        logger.debug(f"Registered model factory: {name}")
+        logger.debug("Registered model factory: %s", sanitize_for_log(name))
 
     def get(self, name: str) -> Any:
         """Get a model, loading it lazily on first access"""
@@ -39,15 +40,15 @@ class LazyModelLoader:
             if name in self._models:
                 return self._models[name]
 
-            logger.info(f"Loading model: {name}...")
+            logger.info("Loading model: %s...", sanitize_for_log(name))
             try:
                 model = self._factories[name]()
                 self._models[name] = model
                 self._loaded[name] = True
-                logger.info(f"Model loaded: {name}")
+                logger.info("Model loaded: %s", sanitize_for_log(name))
                 return model
             except Exception as e:
-                logger.error(f"Failed to load model '{name}': {e}")
+                logger.error("Failed to load model '%s': %s", sanitize_for_log(name), sanitize_for_log(e))
                 raise
 
     def is_loaded(self, name: str) -> bool:
@@ -60,7 +61,7 @@ class LazyModelLoader:
             if name in self._models:
                 del self._models[name]
                 self._loaded[name] = False
-                logger.info(f"Unloaded model: {name}")
+                logger.info("Unloaded model: %s", sanitize_for_log(name))
                 return True
             return False
 
@@ -70,7 +71,7 @@ class LazyModelLoader:
             try:
                 self.get(name)
             except Exception as e:
-                logger.error(f"Pre-load failed for {name}: {e}")
+                logger.error("Pre-load failed for %s: %s", sanitize_for_log(name), sanitize_for_log(e))
 
     def status(self) -> Dict[str, Dict[str, Any]]:
         """Get loading status for all models"""
@@ -124,10 +125,10 @@ class InferenceRouter:
             provider = self._providers[name]
             try:
                 result = await provider.generate(prompt, **kwargs)
-                logger.debug(f"Inference succeeded via {name}")
+                logger.debug("Inference succeeded via %s", sanitize_for_log(name))
                 return result
             except Exception as e:
-                logger.warning(f"Provider {name} failed: {e}")
+                logger.warning("Provider %s failed: %s", sanitize_for_log(name), sanitize_for_log(e))
                 last_error = e
                 continue
 

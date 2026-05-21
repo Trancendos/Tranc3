@@ -7,6 +7,7 @@ import os
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class HotConfig:
                 self._file_mtimes[path] = os.path.getmtime(path)
 
         self._task = asyncio.create_task(self._watch_loop())
-        logger.info(f"HotConfig watching: {self._watch_paths}")
+        logger.info("HotConfig watching: %s", sanitize_for_log(self._watch_paths))
 
     async def stop(self) -> None:
         """Stop watching"""
@@ -61,7 +62,7 @@ class HotConfig:
                 await asyncio.sleep(self._poll_interval)
                 changes = self._detect_changes()
                 if changes:
-                    logger.info(f"Config changed: {list(changes.keys())}")
+                    logger.info("Config changed: %s", sanitize_for_log(list(changes.keys())))
                     self._config_cache.update(changes)
                     for callback in self._callbacks:
                         try:
@@ -70,11 +71,11 @@ class HotConfig:
                             else:
                                 callback(changes)
                         except Exception as e:
-                            logger.error(f"Config callback error: {e}")
+                            logger.error("Config callback error: %s", sanitize_for_log(e))
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"HotConfig watch error: {e}")
+                logger.error("HotConfig watch error: %s", sanitize_for_log(e))
 
     def _detect_changes(self) -> Dict[str, Any]:
         """Detect file changes and return updated values"""
@@ -115,7 +116,7 @@ class HotConfig:
                             # Also update os.environ
                             os.environ[key] = value
         except Exception as e:
-            logger.error(f"Error parsing {path}: {e}")
+            logger.error("Error parsing %s: %s", sanitize_for_log(path), sanitize_for_log(e))
         return result
 
     def _parse_json_file(self, path: str) -> Dict[str, Any]:
@@ -125,7 +126,7 @@ class HotConfig:
             with open(path, "r") as f:
                 return json.load(f)
         except Exception as e:
-            logger.error(f"Error parsing {path}: {e}")
+            logger.error("Error parsing %s: %s", sanitize_for_log(path), sanitize_for_log(e))
             return {}
 
     @property

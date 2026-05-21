@@ -26,6 +26,7 @@ from typing import Any, Callable, Optional
 import httpx
 
 from src.mesh.circuit_breaker import CircuitBreaker
+from shared_core.sanitize import sanitize_for_log
 from src.mesh.types import (
     CircuitBreakerConfig,
     CircuitState,
@@ -400,5 +401,5 @@ class ServiceMesh:
             try:
                 await self.health_check_all()
             except Exception as e:
-                logger.error(f"health_monitor_error: {e}")
+                logger.error("health_monitor_error: %s", sanitize_for_log(e))
             await asyncio.sleep(self.config.health_check_interval_ms / 1000.0)

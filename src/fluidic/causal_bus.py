@@ -8,6 +8,7 @@ from collections import defaultdict
 from typing import Any, Callable, Dict, List, Optional, Set
 
 from shared_core.models import EventMessage, VectorClock
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +32,11 @@ class CausalEventBus:
 
     async def start(self) -> None:
         self._running = True
-        logger.info(f"CausalEventBus started (node={self.node_id})")
+        logger.info("CausalEventBus started (node=%s)", sanitize_for_log(self.node_id))
 
     async def stop(self) -> None:
         self._running = False
-        logger.info(f"CausalEventBus stopped (node={self.node_id})")
+        logger.info("CausalEventBus stopped (node=%s)", sanitize_for_log(self.node_id))
 
     def subscribe(self, event_type: str, handler: Callable) -> None:
         self._subscribers[event_type].append(handler)
@@ -64,7 +65,7 @@ class CausalEventBus:
             await self._deliver(event)
         else:
             self._pending.append(event)
-            logger.debug(f"Buffered remote event: {event.event_type} (pending={len(self._pending)})")
+            logger.debug("Buffered remote event: %s (pending=%s)", sanitize_for_log(event.event_type), sanitize_for_log(len(self._pending)))
 
         await self._try_deliver_pending()
 
@@ -102,7 +103,7 @@ class CausalEventBus:
                 else:
                     handler(event)
             except Exception as e:
-                logger.error(f"Causal delivery error for {event.event_type}: {e}")
+                logger.error("Causal delivery error for %s: %s", sanitize_for_log(event.event_type), sanitize_for_log(e))
 
     @property
     def clock_state(self) -> Dict[str, int]:

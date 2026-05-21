@@ -5,6 +5,7 @@ import logging
 from typing import Any, Callable, Dict, Optional, TypeVar
 
 from fastapi import Depends, Request
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +146,7 @@ def configure_services(config=None) -> None:
     container.register_factory("quantum", _quantum_core)
 
     container._initialized = True
-    logger.info(f"Service container configured with {len(container.list_services())} services")
+    logger.info("Service container configured with %s services", sanitize_for_log(len(container.list_services())))
 
 
 # ── FastAPI dependency helpers ────────────────────────────────────────────

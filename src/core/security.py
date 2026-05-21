@@ -19,6 +19,7 @@ import logging
 from pathlib import Path
 from typing import Any, Optional, Dict, List
 from dataclasses import dataclass, field
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.security")
 
@@ -50,10 +51,10 @@ def safe_torch_load(path: str, device: str = "cpu", **kwargs) -> Dict[str, Any]:
 
     try:
         checkpoint = torch.load(path, **safe_kwargs, weights_only=True)
-        logger.info(f"Safe load successful: {path}")
+        logger.info("Safe load successful: %s", sanitize_for_log(path))
         return checkpoint
     except Exception as e:
-        logger.error(f"Safe load failed for {path}: {e}")
+        logger.error("Safe load failed for %s: %s", sanitize_for_log(path), sanitize_for_log(e))
         raise
 
 
@@ -63,7 +64,7 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
     Prevents supply-chain attacks on model weights.
     """
     if not os.path.exists(path):
-        logger.error(f"Model file not found: {path}")
+        logger.error("Model file not found: %s", sanitize_for_log(path))
         return False
 
     sha256_hash = hashlib.sha256()
@@ -80,7 +81,7 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
         )
         return False
 
-    logger.info(f"Integrity check passed for {path} (sha256: {actual_hash[:16]}...)")
+    logger.info("Integrity check passed for %s (sha256: %s...)", sanitize_for_log(path), sanitize_for_log(actual_hash[:16]))
     return True
 
 
@@ -159,14 +160,14 @@ def validate_path(path: str, allowed_dirs: Optional[List[str]] = None) -> bool:
 
     # Check for path traversal
     if ".." in str(path):
-        logger.warning(f"Path traversal detected: {path}")
+        logger.warning("Path traversal detected: %s", sanitize_for_log(path))
         return False
 
     # Check against allowed directories
     if allowed_dirs:
         allowed_resolved = [Path(d).resolve() for d in allowed_dirs]
         if not any(str(resolved).startswith(str(d)) for d in allowed_resolved):
-            logger.warning(f"Path outside allowed directories: {path}")
+            logger.warning("Path outside allowed directories: %s", sanitize_for_log(path))
             return False
 
     return True

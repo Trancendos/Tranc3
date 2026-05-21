@@ -24,6 +24,7 @@ import time
 from collections import OrderedDict
 from typing import Any, Optional
 
+from shared_core.sanitize import sanitize_for_log
 from src.ai_gateway.providers.base import AIProvider
 from src.ai_gateway.types import (
     AIRequest,
@@ -121,7 +122,7 @@ class AIGateway:
     def register_provider(self, provider: AIProvider) -> None:
         """Register a new AI provider."""
         self._providers[provider.name] = provider
-        logger.info(f"ai_provider_registered: {provider.name}")
+        logger.info("ai_provider_registered: %s", sanitize_for_log(provider.name))
 
     def unregister_provider(self, name: str) -> bool:
         """Remove a provider by name."""
@@ -190,7 +191,7 @@ class AIGateway:
             health = self._health_status.get(route.provider)
             if health and not health.healthy:
                 if self._config.verbose:
-                    logger.info(f"Skipping unhealthy provider: {route.provider}")
+                    logger.info("Skipping unhealthy provider: %s", sanitize_for_log(route.provider))
                 continue
 
             try:

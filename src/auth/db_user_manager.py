@@ -10,6 +10,7 @@ from typing import Optional
 from fastapi import HTTPException
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -26,14 +27,14 @@ class DBUserManager:
         self._session_factory = db_session_factory
         self._fallback: dict = {}  # in-memory fallback
         self._use_db = db_session_factory is not None
-        logger.info(f"DBUserManager initialised — DB={'enabled' if self._use_db else 'fallback'}")
+        logger.info("DBUserManager initialised — DB=%s", "enabled" if self._use_db else "fallback")
 
     def _get_session(self) -> Optional[Session]:
         if self._session_factory:
             try:
                 return self._session_factory()
             except Exception as e:
-                logger.warning(f"DB session failed: {e} — using fallback")
+                logger.warning("DB session failed: %s — using fallback", sanitize_for_log(e))
         return None
 
     def create_user(self, username: str, password: str, email: str = "") -> dict:
@@ -60,13 +61,13 @@ class DBUserManager:
                 session.add(user)
                 session.commit()
                 session.refresh(user)
-                logger.info(f"User created in DB: {username}")
+                logger.info("User created in DB: %s", sanitize_for_log(username))
                 return {"user_id": str(user.id), "username": username, "tier": "free"}
             except HTTPException:
                 raise
             except Exception as e:
                 session.rollback()
-                logger.error(f"DB create_user failed: {e} — using fallback")
+                logger.error("DB create_user failed: %s — using fallback", sanitize_for_log(e))
             finally:
                 session.close()
 
@@ -102,7 +103,7 @@ class DBUserManager:
                     "tier": user.tier, "is_active": user.is_active,
                 }
             except Exception as e:
-                logger.error(f"DB authenticate_user failed: {e}")
+                logger.error("DB authenticate_user failed: %s", sanitize_for_log(e))
             finally:
                 session.close()
 
@@ -126,7 +127,7 @@ class DBUserManager:
                         "tier": user.tier, "is_active": user.is_active,
                     }
             except Exception as e:
-                logger.error(f"DB get_user failed: {e}")
+                logger.error("DB get_user failed: %s", sanitize_for_log(e))
             finally:
                 session.close()
 
@@ -143,7 +144,7 @@ class DBUserManager:
                     session.commit()
                     return True
             except Exception as e:
-                logger.error(f"DB update_tier failed: {e}")
+                logger.error("DB update_tier failed: %s", sanitize_for_log(e))
             finally:
                 session.close()
         return False

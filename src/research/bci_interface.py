@@ -5,6 +5,7 @@
 import logging
 from typing import Dict, Optional
 import numpy as np
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class BCISignalProcessor:
     def __init__(self, sample_rate: int = 256, channels: int = 8):
         self.sample_rate = sample_rate
         self.channels = channels
-        logger.info(f"BCISignalProcessor: {channels}ch @ {sample_rate}Hz")
+        logger.info("BCISignalProcessor: %sch @ %sHz", sanitize_for_log(channels), sanitize_for_log(sample_rate))
 
     def process_neural_signal(self, raw_signal: np.ndarray) -> Dict:
         """
