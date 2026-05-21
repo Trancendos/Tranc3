@@ -182,6 +182,9 @@ services:
     command: -config.file=/etc/promtail/config.yml
     depends_on:
       - loki
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      <<: *healthcheck-default
 
   # ── IPFS — Distributed Storage ───────────────────────────────────────
   # Replaces: Cloudflare R2, CF IPFS Gateway
