@@ -2,8 +2,9 @@
 # TRANC3 Observability — Prometheus metrics + structured logging
 
 import time
-import structlog
 from contextlib import contextmanager
+
+import structlog
 
 # ---------------------------------------------------------------------------
 # STRUCTURED LOGGING
@@ -28,7 +29,7 @@ log = structlog.get_logger("tranc3")
 # PROMETHEUS METRICS (lazy import — only if prometheus_client installed)
 # ---------------------------------------------------------------------------
 try:
-    from prometheus_client import Counter, Histogram, Gauge  # noqa: F401
+    from prometheus_client import Counter, Gauge, Histogram  # noqa: F401
 
     REQUEST_COUNT = Counter(
         "tranc3_requests_total",

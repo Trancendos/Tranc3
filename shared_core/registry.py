@@ -6,7 +6,7 @@ import logging
 import time
 from typing import Callable, Dict, List, Optional
 
-from .models import ServiceCapability, ServiceHealth, ServiceInfo
+from .models import ServiceHealth, ServiceInfo
 
 logger = logging.getLogger(__name__)
 

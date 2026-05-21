@@ -10,6 +10,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
+
 from shared_core.error_handlers import safe_error_detail
 
 logger = logging.getLogger(__name__)
@@ -19,14 +20,14 @@ router = APIRouter(prefix="/thinktank", tags=["think-tank"])
 def _quantum_status() -> Dict[str, Any]:
     try:
         return {"quantum_core": "available", "backend": "qiskit-aer"}
-    except Exception as exc:
+    except Exception:
         return {"quantum_core": "degraded", "note": "degraded"}
 
 
 def _deepmind_status() -> Dict[str, Any]:
     try:
         return {"mcts": "available"}
-    except Exception as exc:
+    except Exception:
         return {"mcts": "degraded", "note": "degraded"}
 
 

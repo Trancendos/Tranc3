@@ -2,10 +2,10 @@
 # FID: TRANC3-ERR-001 | Version: 1.0.0 | Module: errors
 # TRANC3 Error Catalog — structured error codes, messages, guidance, and self-healing actions
 
-from enum import Enum
-from dataclasses import dataclass
-from typing import Optional, Dict
 import logging
+from dataclasses import dataclass
+from enum import Enum
+from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 

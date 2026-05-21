@@ -1,8 +1,9 @@
 # src/holographic/memory_crystal.py
 
+from typing import Dict, List
+
 import numpy as np
 import torch
-from typing import Dict, List
 
 try:
     from scipy.fft import fftn, ifftn
@@ -14,7 +15,7 @@ class HolographicMemoryCrystal:
     6D holographic data storage using quantum-optical crystals
     Stores entire experiences as holographic interference patterns
     """
-    
+
     def __init__(self, dimensions=(100, 100, 100, 50, 50, 50)):
         """
         6D memory structure:
@@ -27,7 +28,7 @@ class HolographicMemoryCrystal:
         self.crystal = np.zeros(dimensions, dtype=np.complex128)
         self.reference_beam = self._generate_reference()
         self.coherence_length = 1e12  # Picoseconds
-        
+
     def _generate_reference(self):
         """Generate coherent reference beam for holographic encoding"""
         dims = self.dimensions
@@ -39,7 +40,7 @@ class HolographicMemoryCrystal:
                 [1]*i + [dim_size] + [1]*(len(dims)-i-1)
             ))
         return ref
-    
+
     def store_experience(self, experience: Dict[str, torch.Tensor]) -> np.ndarray:
         """
         Store complete experience as holographic patterns
@@ -50,19 +51,19 @@ class HolographicMemoryCrystal:
         temporal_data = experience.get('temporal', torch.randn(50))
         frequency_data = experience.get('frequency', torch.randn(50))
         consciousness_data = experience.get('consciousness', torch.randn(50))
-        
+
         # Create interference pattern
-        data = self._encode_6d(spatial_data, temporal_data, 
+        data = self._encode_6d(spatial_data, temporal_data,
                                 frequency_data, consciousness_data)
-        
+
         # Generate hologram
         hologram = data * self.reference_beam
-        
+
         # Store in crystal with superposition
         self.crystal += hologram
-        
+
         return hologram
-    
+
     def recall_by_association(self, partial_cue: torch.Tensor,
                             dimensions_known: List[str]) -> Dict:
         """
@@ -71,18 +72,18 @@ class HolographicMemoryCrystal:
         """
         # Create probe beam from partial information
         probe = self._create_probe_beam(partial_cue, dimensions_known)
-        
+
         # Holographic reconstruction
         reconstruction = ifftn(fftn(self.crystal) * fftn(probe))
-        
+
         # Extract different components
         experience = self._decode_6d(reconstruction)
-        
+
         # Error correction using quantum codes
         experience = self._quantum_error_correction(experience)
-        
+
         return experience
-    
+
     def parallel_search(self, query: torch.Tensor) -> List[Dict]:
         """Search all memories simultaneously using quantum parallelism."""
         query_hologram = self._create_query_hologram(query)

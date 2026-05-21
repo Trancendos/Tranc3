@@ -148,7 +148,7 @@ class TAimra:
 
     def _emit(self, user_id: str, event_type: str) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
 
             observe(
                 event_type,

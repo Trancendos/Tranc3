@@ -144,7 +144,7 @@ class IMind:
 
     def _emit(self, assessment: SensitivityAssessment, actor: Optional[str]) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory, EventSeverity
+            from src.observability.observatory import EventCategory, EventSeverity, observe
             observe(
                 f"imind.sensitivity.{assessment.level.value}",
                 actor=actor,

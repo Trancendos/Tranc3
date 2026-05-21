@@ -1,11 +1,13 @@
 # src/bio_neural/neuromorphic.py
 # TRANC3 Complete Spiking Neural Network — merged from DOC-07
 
+import logging
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-from typing import Dict, List, Optional, Tuple
-import logging
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)

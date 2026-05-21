@@ -160,7 +160,7 @@ class Library:
 
     def _emit_observatory_event(self, art: Article, event_type: str) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
             observe(
                 event_type,
                 actor=art.author,

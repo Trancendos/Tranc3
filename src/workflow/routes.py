@@ -17,6 +17,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Body, Path
 from fastapi.responses import JSONResponse
+
 from shared_core.error_handlers import safe_error_detail
 
 logger = logging.getLogger(__name__)
@@ -80,14 +81,14 @@ async def register_workflow(body: Dict[str, Any] = Body(...)):
         from src.workflow.builder import WorkflowDefinition
 
         wf = WorkflowDefinition.from_dict(body)
-    except Exception as exc:
+    except Exception:
         return JSONResponse(
             {"error": "Invalid workflow definition"}, status_code=400
         )
     _workflow_registry[wf.id] = wf
     logger.info("grid: registered workflow id=%s name=%s", wf.id, wf.name)
     try:
-        from src.observability.observatory import observe, EventCategory
+        from src.observability.observatory import EventCategory, observe
 
         observe(
             "workflow.registered",

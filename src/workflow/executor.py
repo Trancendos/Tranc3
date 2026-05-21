@@ -6,13 +6,13 @@ and a pub/sub event bus.  Events are forwarded to The Spark (MCP) SSE bus
 when the grid bridge is active (see src/mcp/server._start_grid_bridge).
 """
 
-from typing import Dict, Any, Optional, List, Callable
 import asyncio
 import logging
 import time
 import uuid
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional
 
 from .builder import WorkflowDefinition
 from .nodes import NodeConfig, NodeResult, create_node

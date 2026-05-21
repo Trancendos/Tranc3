@@ -9,7 +9,6 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 
 from __future__ import annotations
 
-import json
 import logging
 import sqlite3
 import threading
@@ -19,9 +18,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -99,7 +97,7 @@ class IdentitiesDatabase:
 
     def list(self, limit: int = 50, offset: int = 0, **filters) -> List[Dict[str, Any]]:
         conn = self._get_conn()
-        query = f"SELECT * FROM identities WHERE 1=1"
+        query = "SELECT * FROM identities WHERE 1=1"
         params: list = []
         for key, val in filters.items():
             query += f" AND {key}=?"

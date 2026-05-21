@@ -9,9 +9,9 @@ from typing import Any, Dict, Optional  # noqa: E402
 import torch  # noqa: E402
 import torch.nn as nn  # noqa: E402
 
+from shared_core.sanitize import sanitize_for_log
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
 from src.evolution.self_improving_core import SelfEvolvingArchitecture  # noqa: E402
-from shared_core.sanitize import sanitize_for_log
 
 
 class SelfEvolvingInference:

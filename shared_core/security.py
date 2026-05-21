@@ -1,7 +1,6 @@
 # shared_core/security.py
 # Shared security utilities — JWT, password hashing, input validation
 
-import hashlib
 import logging
 import os
 import secrets
@@ -18,7 +17,7 @@ _passlib = None
 def _get_jose():
     global _jose
     if _jose is None:
-        from jose import JWTError, jwt
+        from jose import jwt
         _jose = jwt
     return _jose
 

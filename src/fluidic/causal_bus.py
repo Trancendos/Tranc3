@@ -3,9 +3,8 @@
 
 import asyncio
 import logging
-import time
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Set
 
 from shared_core.models import EventMessage, VectorClock
 from shared_core.sanitize import sanitize_for_log

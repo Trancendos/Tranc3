@@ -1,14 +1,15 @@
 # src/quantum/quantum_core.py
 
+import logging
+from typing import Dict, List
+
 import numpy as np
 import torch
 import torch.nn as nn
-from typing import List, Dict
-import logging
-
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import QFT
 from qiskit_aer import AerSimulator
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)

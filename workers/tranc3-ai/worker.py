@@ -24,7 +24,6 @@ Inference strategy (priority — NO external AI APIs):
 
 from __future__ import annotations
 
-import hashlib
 import os
 import re
 import uuid
@@ -33,7 +32,6 @@ from typing import Any
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 # ── Constants ──────────────────────────────────────────────────
 

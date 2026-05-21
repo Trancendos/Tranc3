@@ -109,11 +109,11 @@ class OllamaProvider(AIProvider):
                 done=data.get("done", True),
             )
         except httpx.ConnectError:
-            raise RuntimeError(f"Ollama not available at {self.base_url}")
+            raise RuntimeError(f"Ollama not available at {self.base_url}") from None
         except httpx.TimeoutException:
-            raise RuntimeError(f"Ollama request timed out after {self.timeout}s")
+            raise RuntimeError(f"Ollama request timed out after {self.timeout}s") from None
         except httpx.HTTPStatusError as e:
-            raise RuntimeError(f"Ollama HTTP error: {e.response.status_code}")
+            raise RuntimeError(f"Ollama HTTP error: {e.response.status_code}") from None
 
     async def health_check(self) -> ProviderHealth:
         """Check if Ollama is running and responsive."""

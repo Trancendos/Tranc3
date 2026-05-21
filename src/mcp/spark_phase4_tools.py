@@ -34,10 +34,9 @@ Usage:
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +151,7 @@ async def _handle_neural_mesh_emit(params: Dict[str, Any]) -> Dict[str, Any]:
     payload = params.get("payload", {})
     ttl = int(params.get("ttl", 5))
     try:
-        from src.neural.neural_mesh import Signal, MeshNode
+        from src.neural.neural_mesh import MeshNode, Signal
         # Auto-register source node if absent
         if source_id not in mesh._nodes:
             node = MeshNode(id=source_id, service_name="spark", host="internal", port=0)
@@ -351,6 +350,7 @@ async def _handle_attention_route(params: Dict[str, Any]) -> Dict[str, Any]:
         return _err("AttentionRouter not initialised")
     try:
         import uuid
+
         from src.neural.attention_router import RoutingRequest
         request_id = params.get("request_id", uuid.uuid4().hex[:12])
         required_tags = set(params.get("required_tags", []))
@@ -488,7 +488,7 @@ async def _handle_knowledge_graph_add(params: Dict[str, Any]) -> Dict[str, Any]:
     if kg is None:
         return _err("SemanticKnowledgeGraph not initialised")
     try:
-        from src.intelligence.semantic_knowledge import KnowledgeNode, EdgeType
+        from src.intelligence.semantic_knowledge import EdgeType, KnowledgeNode
         node_data = params.get("node", {})
         node = KnowledgeNode(
             label=node_data.get("label", ""),
@@ -724,7 +724,7 @@ async def _handle_nanobot_dispatch(params: Dict[str, Any]) -> Dict[str, Any]:
         target_service_url (str, optional): Override service URL for the bot.
     """
     try:
-        from src.healing.nanocode_bots import NanoCodeBotDispatcher, FailureMode
+        from src.healing.nanocode_bots import FailureMode, NanoCodeBotDispatcher
         dispatcher = NanoCodeBotDispatcher()
         failure_mode_str = params.get("failure_mode")
         metrics = dict(params.get("metrics", {}))

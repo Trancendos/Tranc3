@@ -330,7 +330,7 @@ class DevOcity:
 
     def _emit(self, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
 
             observe(
                 event_type,

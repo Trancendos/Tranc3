@@ -33,11 +33,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
-import random
 import time
-from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 

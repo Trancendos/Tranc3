@@ -10,6 +10,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
+
 from shared_core.error_handlers import safe_error_detail
 
 logger = logging.getLogger(__name__)
@@ -22,12 +23,12 @@ async def luminous_status() -> Dict[str, Any]:
 
     try:
         modules["consciousness"] = "available"
-    except Exception as exc:
+    except Exception:
         modules["consciousness"] = "degraded"
 
     try:
         modules["neuromorphic"] = "available"
-    except Exception as exc:
+    except Exception:
         modules["neuromorphic"] = "degraded"
 
     return {"service": "luminous", "modules": modules}
@@ -41,6 +42,7 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     """
     try:
         import numpy as np
+
         from src.bio_neural.consciousness_engine import IITCalculator
 
         state = body.get("state")
@@ -57,7 +59,7 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
         phi = calc.calculate_phi(state_arr) if hasattr(calc, "calculate_phi") else 0.0
         return {"phi": float(phi), "state_dim": len(state)}
-    except ImportError as exc:
+    except ImportError:
         return JSONResponse({"error": "Required dependency not available"}, status_code=503)
     except Exception as exc:
         return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
@@ -71,6 +73,7 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
     """
     try:
         import torch
+
         from src.bio_neural.neuromorphic import NeuromorphicProcessor
 
         input_data = body.get("input", [])
@@ -90,7 +93,7 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
         if hasattr(result, "tolist"):
             result = result.tolist()
         return {"input_dim": len(input_data), "timesteps": timesteps, "output": result}
-    except ImportError as exc:
+    except ImportError:
         return JSONResponse({"error": "Required dependency not available"}, status_code=503)
     except Exception as exc:
         return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)

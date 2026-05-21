@@ -2,13 +2,11 @@
 # Fluidic router — adaptive request routing inspired by liquid neural networks
 # Routes requests to the best available service based on health, load, and capability
 
-import asyncio
 import logging
-import math
 import random
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from shared_core.models import ServiceHealth, ServiceInfo
 from shared_core.registry import ServiceRegistry

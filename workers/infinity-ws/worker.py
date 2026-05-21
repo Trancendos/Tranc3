@@ -17,7 +17,6 @@ Zero-cost: FastAPI WebSocket + asyncio. No CF Durable Objects.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import time
@@ -26,7 +25,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, HTTPException, Depends
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -218,7 +217,6 @@ def verify_token(token: str, secret: str = "change-me-in-production") -> dict[st
     In production, use the full JWT auth module from src/auth/.
     """
     try:
-        import hmac
         import base64
 
         parts = token.split(".")
