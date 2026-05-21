@@ -111,7 +111,8 @@ def _warn_optional() -> None:
         "TRANC3_MODEL_PATH":     "Custom model path not set — using default ./models/tranc3-v1/tranc3-final.pt",
         "TRANC3_TOKENIZER_PATH": "Custom tokenizer path not set — using default ./models/tokenizer",
         "PINECONE_API_KEY":      "Pinecone vector search will be unavailable; falling back to local FAISS.",
-        "STRIPE_SECRET_KEY":     "Payments/billing endpoints will be unavailable.",
+        "STRIPE_SECRET_KEY":     "Payments/billing endpoints will be unavailable.",  # nosec B105 — false positive: not a password
+
         "LANGFUSE_PUBLIC_KEY":   "LLM observability via Langfuse will be inactive.",
         "OTEL_EXPORTER_OTLP_ENDPOINT": "OpenTelemetry tracing will be inactive.",
     }

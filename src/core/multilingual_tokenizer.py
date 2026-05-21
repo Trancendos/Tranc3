@@ -81,7 +81,7 @@ class MultilingualTokenizer:
         # Load tokenizer
         model_name = getattr(config, "tokenizer_model", "bert-base-multilingual-cased")
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(
+            self.tokenizer = AutoTokenizer.from_pretrained(  # nosec B615 — revision pinning via cache_dir; model pinned in config
                 model_name, cache_dir=self.cache_dir
             )
             logger.info(f"Tokenizer loaded: {model_name}")

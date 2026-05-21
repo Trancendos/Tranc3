@@ -1,17 +1,19 @@
 # TRANC3 — Automated Dependency Updates (Dependabot)
-# Scans Python (pip) and Node.js (npm) for outdated/vulnerable deps
-# Updated: 2025-07 — CVE Remediation
+# Scans Python (pip), Node.js (npm), and GitHub Actions for outdated/vulnerable deps
+# Updated: 2026-05 — Proactive Remediation & Automation
 
 version: 2
+
 updates:
   # Python dependencies
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "tuesday"
       time: "06:00"
-    open-pull-requests-limit: 10
+      timezone: "UTC"
+    open-pull-requests-limit: 5
     reviewers:
       - "Trancendos/security"
     labels:
@@ -19,12 +21,10 @@ updates:
       - "security"
       - "python"
     commit-message:
-      prefix: "security(pip)"
+      prefix: "deps(pip):"
       include: "scope"
-    # Auto-merge patch updates for security
     allow:
       - dependency-type: "all"
-    # Group updates by type
     groups:
       security-patches:
         applies-to: security-updates
@@ -34,15 +34,22 @@ updates:
         applies-to: version-updates
         patterns:
           - "*"
+    # Do not auto-update major versions of ML packages — require manual review
+    ignore:
+      - dependency-name: "torch"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "numpy"
+        update-types: ["version-update:semver-major"]
 
   # Node.js dependencies
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "tuesday"
       time: "06:00"
-    open-pull-requests-limit: 10
+      timezone: "UTC"
+    open-pull-requests-limit: 5
     reviewers:
       - "Trancendos/security"
     labels:
@@ -50,7 +57,7 @@ updates:
       - "security"
       - "javascript"
     commit-message:
-      prefix: "security(npm)"
+      prefix: "deps(npm):"
       include: "scope"
     allow:
       - dependency-type: "all"
@@ -69,11 +76,17 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "wednesday"
       time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
     labels:
       - "dependencies"
       - "github-actions"
       - "security"
     commit-message:
-      prefix: "ci(actions)"
+      prefix: "ci(actions):"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

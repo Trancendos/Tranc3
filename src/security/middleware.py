@@ -95,7 +95,7 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
 
                 request._body = body_bytes
             except Exception:
-                pass  # Never block on Cryptex failure
+                pass  # nosec B110 - never block on Cryptex failure
 
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id

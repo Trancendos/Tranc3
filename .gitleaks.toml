@@ -1,0 +1,27 @@
+# .gitleaks.toml — Custom gitleaks configuration for Tranc3
+# Extends default rules with Tranc3-specific patterns and allowlists
+
+[allowlist]
+  description = "Global allowlist for false positives"
+  paths = [
+    '''^docs/.*\.md$''',           # Documentation examples
+    '''^tests/.*\.py$''',          # Test fixtures
+    '''^\.secrets\.baseline$''',   # detect-secrets baseline
+  ]
+
+  regexes = [
+    '''TRANC3-AUTH-\d{3}''',       # Error codes, not secrets
+    '''<pad>|<unk>|<bos>|<eos>''', # Tokenizer special tokens
+  ]
+
+[[rules]]
+  id = "generic-api-key"
+  description = "Generic API Key"
+  regex = '''(?i)(?:api[_-]?key|apikey|access[_-]?token)\s*[=:]\s*['"]?[a-zA-Z0-9_\-]{20,}['"]?'''
+  tags = ["key", "api"]
+  [[rules.allowlist]]
+    regexes = [
+      '''<your-.*>''',             # Placeholder patterns
+      '''REPLACE_ME''',
+      '''your[_-]?api[_-]?key''',
+    ]

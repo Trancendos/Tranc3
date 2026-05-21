@@ -55,10 +55,30 @@ markers = [
 [tool.bandit]
 targets = ["src", "api.py"]
 exclude_dirs = ["tests", "scripts"]
-severity = "medium"
-confidence = "medium"
+severity = "low"
+confidence = "low"
 skips = [
   "B101",  # assert statements (acceptable in non-production paths)
+]
+
+# ── semgrep ────────────────────────────────────────────────────────────────
+[tool.semgrep]
+config = "auto"
+
+# ── safety ─────────────────────────────────────────────────────────────────
+[tool.safety]
+ignore = [
+  { id = "PYSEC-2025-210", reason = "Profiler not used in Tranc3" },
+  { id = "PYSEC-2025-194", reason = "TorchScript JIT not used in Tranc3" },
+  { id = "PYSEC-2025-196", reason = "Flatbuffer loading not used in Tranc3" },
+  { id = "PYSEC-2025-195", reason = "Local-only; mitigated by input sanitization" },
+  { id = "PYSEC-2025-193", reason = "Local-only; mitigated by input sanitization" },
+  { id = "PYSEC-2025-192", reason = "Local-only; mitigated by input sanitization" },
+  { id = "PYSEC-2026-139", reason = "Mitigated by weights_only=True on all torch.load()" },
+  { id = "PYSEC-2025-191", reason = "Disputed; mkldnn not used in Tranc3" },
+  { id = "PYSEC-2025-197", reason = "Local-only; no direct CUDA allocator interaction" },
+  { id = "PYSEC-2025-189", reason = "Remote-capable but high complexity; profiler not used" },
+  { id = "PYSEC-2025-190", reason = "Local-only; quantized sigmoid not used in Tranc3" },
 ]
 
 # ── coverage ──────────────────────────────────────────────────────────

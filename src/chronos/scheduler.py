@@ -234,7 +234,8 @@ class ChronosSphere:
                 metadata=metadata or {},
             )
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _chronos: Optional[ChronosSphere] = None

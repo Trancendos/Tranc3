@@ -49,7 +49,7 @@ def safe_torch_load(path: str, device: str = "cpu", **kwargs) -> Dict[str, Any]:
     safe_kwargs["weights_only"] = True
 
     try:
-        checkpoint = torch.load(path, **safe_kwargs)
+        checkpoint = torch.load(path, **safe_kwargs, weights_only=True)
         logger.info(f"Safe load successful: {path}")
         return checkpoint
     except Exception as e:

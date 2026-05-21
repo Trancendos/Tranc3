@@ -331,9 +331,10 @@ class MetaLearner:
 
             # Exploration: occasionally pick a random top-5 prototype
             import random
-            if random.random() < self._exploration_rate and len(scores) > 1:
+            if random.random() < self._exploration_rate and len(scores) > 1:  # nosec B311 — non-cryptographic random usage
+
                 top_n = min(5, len(scores))
-                choice_idx = random.randint(0, top_n - 1)
+                choice_idx = random.randint(0, top_n - 1)  # nosec B311 — non-cryptographic exploration sampling
                 best_pid, best_score = scores[choice_idx]
             else:
                 best_pid, best_score = scores[0]

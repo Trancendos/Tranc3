@@ -24,7 +24,8 @@ class Parameter:
 
     def mutate(self) -> float:
         """Apply a random mutation to the parameter"""
-        delta = random.uniform(-self.step_size, self.step_size)
+        delta = random.uniform(-self.step_size, self.step_size)  # nosec B311 — non-cryptographic random usage
+
         new_value = max(self.min_value, min(self.max_value, self.value + delta))
         self.value = new_value
         self.history.append(new_value)
