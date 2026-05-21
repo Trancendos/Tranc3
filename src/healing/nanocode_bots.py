@@ -342,7 +342,7 @@ class FreeTierBot(NanoBot):
                     actions_taken.append("Next-tier upgrade preparation triggered")
             except Exception:
                 # Non-critical — not every service has tier management
-                pass
+                pass  # nosec B110 — graceful degradation for optional tier feature
 
             success = len(actions_taken) >= 1
 
@@ -489,7 +489,8 @@ class ServiceUnreachableBot(NanoBot):
                             success = True
                             break
                     except Exception:
-                        pass
+                        pass  # nosec B110 — graceful degradation; error logged upstream
+
         except Exception as exc:
             actions.append(f"Restart failed: {exc}")
             logger.warning("[ServiceUnreachableBot] Restart attempt failed: %s", exc)

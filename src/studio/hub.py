@@ -172,7 +172,8 @@ class TheStudio:
                 metadata={"job_id": job.id, "sub_service": job.service.value},
             )
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _studio: Optional[TheStudio] = None

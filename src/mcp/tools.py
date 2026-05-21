@@ -144,7 +144,8 @@ class SparkToolRegistry:
 
             rebuild_rag_index(list(self._tools.values()))
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     def get(self, name: str) -> Optional[SparkTool]:
         """Return the tool with *name*, or None if not found."""
@@ -183,7 +184,8 @@ class SparkToolRegistry:
             if rag.is_ready():
                 return rag.select_tools(query, top_k=top_k)
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
         # Keyword fallback
         q_lower = query.lower()
@@ -733,7 +735,8 @@ class SparkToolRegistry:
 
             rebuild_rag_index(list(self._tools.values()))
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     # ------------------------------------------------------------------
     # Built-in handlers

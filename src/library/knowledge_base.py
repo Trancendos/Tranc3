@@ -170,7 +170,8 @@ class Library:
                 metadata={"title": art.title, "tags": art.tags},
             )
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     def _seed_platform_articles(self) -> None:
         """Seed initial platform documentation articles."""

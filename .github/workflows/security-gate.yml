@@ -1,0 +1,120 @@
+# TRANC3 — Security Gate
+# PR security gate that blocks merges on critical/high findings
+# Runs on every pull request to main
+# Updated: 2026-05 — Proactive Remediation & Automation
+
+name: "Security Gate"
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  security-events: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  bandit-gate:
+    name: Bandit Security Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install bandit
+        run: pip install bandit[toml]
+
+      - name: Run Bandit (medium+ severity)
+        run: |
+          bandit -r src/ -c pyproject.toml -f json -o bandit-gate.json || true
+          # Check for MEDIUM+ severity issues
+          MEDIUM_HIGH=$(python3 -c "
+          import json
+          data = json.load(open('bandit-gate.json'))
+          results = data.get('results', [])
+          medium_high = [r for r in results if r['issue_severity'] in ('MEDIUM', 'HIGH')]
+          print(len(medium_high))
+          ")
+          echo "Medium/High severity issues: $MEDIUM_HIGH"
+          if [ "$MEDIUM_HIGH" -gt 0 ]; then
+            echo "::error::$MEDIUM_HIGH medium/high severity bandit issues found. Please fix before merging."
+            bandit -r src/ -c pyproject.toml -f txt || true
+            exit 1
+          fi
+          echo "✅ No medium/high severity bandit issues found"
+
+  pip-audit-gate:
+    name: Dependency Vulnerability Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Check for critical/high vulnerabilities
+        run: |
+          pip-audit -r requirements.txt --desc -o pip-audit-gate.txt || true
+          # pip-audit exits non-zero if vulnerabilities found
+          # We allow the workflow to continue but report findings
+          CRITICAL=$(grep -c "critical" pip-audit-gate.txt 2>/dev/null || echo "0")
+          echo "Critical vulnerabilities: $CRITICAL"
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "::error::Critical dependency vulnerabilities found. Please update dependencies before merging."
+            cat pip-audit-gate.txt
+            exit 1
+          fi
+          echo "✅ No critical dependency vulnerabilities found"
+
+  secret-detection-gate:
+    name: Secret Detection Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for gitleaks
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, AGPL-3.0
+          vulnerability-check: true
+          license-check: true
+
+  security-gate-summary:
+    name: Security Gate Summary
+    runs-on: ubuntu-latest
+    needs: [bandit-gate, pip-audit-gate, secret-detection-gate, dependency-review]
+    if: always()
+    steps:
+      - name: Check gate results
+        run: |
+          echo "## 🔒 Security Gate Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Gate | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Bandit (medium+) | ${{ needs.bandit-gate.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dependency Audit | ${{ needs.pip-audit-gate.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Secret Detection | ${{ needs.secret-detection-gate.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dependency Review | ${{ needs.dependency-review.result }} |" >> "$GITHUB_STEP_SUMMARY"

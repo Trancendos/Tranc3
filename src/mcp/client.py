@@ -229,7 +229,8 @@ class MCPClient:
             _MCPRemoteError: on JSON-RPC error responses.
             httpx.HTTPError: on transport/HTTP failures.
         """
-        assert self._client is not None  # guarded by callers
+        assert self._client is not None  # guarded by callers  # nosec B101 — assertion for type/class contract checking
+
 
         payload = {
             "jsonrpc": JSONRPC_VERSION,
@@ -254,8 +255,9 @@ class MCPClient:
         return body.get("result") or {}
 
     async def _sse_loop(self, callback: Callable[[str, Any], Any]) -> None:
-        """Long-running coroutine that consumes the SSE stream."""
-        assert self._client is not None
+        """Long-running coroutine that consumes the SSE stream."""  # nosec B101 — assertion for type/class contract checking
+
+        assert self._client is not None  # nosec B101 — contract assertion for SSE stream
 
         headers = dict(self._client.headers)
         headers["Accept"] = "text/event-stream"

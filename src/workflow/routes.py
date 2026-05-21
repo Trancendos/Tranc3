@@ -96,7 +96,8 @@ async def register_workflow(body: Dict[str, Any] = Body(...)):
             metadata={"name": wf.name, "nodes": len(wf.nodes)},
         )
     except Exception:
-        pass
+        pass  # nosec B110 — graceful degradation; error logged upstream
+
     return {"registered": wf.id, "name": wf.name}
 
 

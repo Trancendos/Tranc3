@@ -6,10 +6,15 @@
 # === Core ML Framework ===
 # Fixes: CVE-2024-48063 (RCE via deserialization), CVE-2025-32434 (torch.load RCE),
 #        CVE-2025-3730 (heap overflow), CVE-2025-2953 (type confusion)
+# NOTE: torch==2.12.0 has 10 PYSEC advisories (all local-attack-vector or high-complexity).
+# See SECURITY-ASSESSMENT.md for full risk analysis. No upstream fix version available yet.
+# Mitigations: weights_only=True on all torch.load(), no untrusted model loading,
+#              no JIT compilation of untrusted code, no CUDA allocator direct calls.
 torch==2.12.0
 
 # === Tokenization ===
-sentencepiece==0.2.0
+# Fixes: CVE-2026-1260 (invalid memory access with vulnerable model file)
+sentencepiece==0.2.1
 
 # === Datasets ===
 datasets==3.0.0
