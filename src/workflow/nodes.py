@@ -958,9 +958,25 @@ NODE_REGISTRY: Dict[NodeType, Type[BaseNode]] = {
 def create_node(config: NodeConfig) -> BaseNode:
     """Factory: instantiate the correct BaseNode subclass for a given NodeConfig."""
     node_class = NODE_REGISTRY.get(config.type)
+    # Phase 4 fallback: look up by string type name for extended node types
+    if node_class is None:
+        node_class = _PHASE4_NODE_REGISTRY.get(config.type)
     if node_class is None:
         raise ValueError(
             f"Unknown node type: {config.type!r}. "
-            f"Available types: {[t.value for t in NODE_REGISTRY]}"
+            f"Available types: {[t.value for t in NODE_REGISTRY] + list(_PHASE4_NODE_REGISTRY.keys())}"
         )
     return node_class(config)
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 node registry extension (string-keyed, populated at import time)
+# ---------------------------------------------------------------------------
+_PHASE4_NODE_REGISTRY: Dict[str, Any] = {}
+
+try:
+    from src.workflow.phase4_nodes import PHASE4_NODE_TYPES as _p4_types
+    _PHASE4_NODE_REGISTRY.update(_p4_types)
+    logger.info("Phase 4 workflow nodes loaded: %s", list(_p4_types.keys()))
+except Exception as _p4_exc:
+    logger.warning("Phase 4 workflow nodes unavailable: %s", _p4_exc)
