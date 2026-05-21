@@ -1,9 +1,11 @@
+# Reference documentation — imports are illustrative
+# ruff: noqa: F401,F821
 # src/core/multilingual_tokenizer.py
 # TRANC3 Full Multilingual Engine
 
 import torch
-from transformers import AutoTokenizer, AutoModel
-from typing import Dict, List, Optional, Tuple
+from transformers import AutoTokenizer
+from typing import Dict, List
 import langdetect
 import logging
 

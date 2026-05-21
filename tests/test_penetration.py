@@ -149,7 +149,7 @@ class TestSecurityLogging:
     async def test_workflow_failure_state_error_is_string(self, caplog):
         """WorkflowExecutor failure state error must be a plain string."""
         from src.workflow.builder import WorkflowBuilder
-        from src.workflow.nodes import NodeType, NodeConfig, BaseNode
+        from src.workflow.nodes import NodeType, BaseNode
         from src.workflow.executor import WorkflowExecutor
 
         class RaisingNode(BaseNode):

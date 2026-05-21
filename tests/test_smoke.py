@@ -120,7 +120,7 @@ class TestErrorCatalogSmoke:
 
     def test_critical_error_domains_present(self, caplog):
         from src.errors.error_catalog import ErrorCode
-        values = {e.value for e in ErrorCode}
+        values = {e.value for e in list(ErrorCode)}
         domains = {v.split("-")[1] for v in values}
         _log.info("error_catalog.smoke domains=%s", sorted(domains))
         for required in ("AUTH", "RATE", "SEC", "MODEL", "SYS"):
@@ -128,7 +128,7 @@ class TestErrorCatalogSmoke:
 
     def test_error_code_format(self, caplog):
         from src.errors.error_catalog import ErrorCode
-        for code in ErrorCode:
+        for code in list(ErrorCode):
             parts = code.value.split("-")
             assert len(parts) == 3, f"Bad format: {code.value}"
             assert parts[0] == "TRANC3"

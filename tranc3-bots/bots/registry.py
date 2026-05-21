@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional
 
-from bots.types import BotType, JobSpec, JobResult, JobStatus
+from bots.types import JobSpec, JobResult, JobStatus
 from bots.pool import BotPool
 from bots.handlers import HANDLERS
 

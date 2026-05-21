@@ -22,7 +22,7 @@ actually spin up containers (requires Docker daemon).
 import sys
 import yaml
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Dict
 
 
 # Expected worker ports from docker-compose.production.yml

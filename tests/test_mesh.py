@@ -4,10 +4,9 @@ Tests for src/mesh/ — CircuitBreaker + ServiceMesh
 Validates the core service mesh components ported from infinity-adminOS.
 """
 
-import asyncio
 import time
-from datetime import datetime, timezone, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -20,9 +19,7 @@ from src.mesh.types import (
     HealthStatus,
     ServiceCategory,
     ServiceDescriptor,
-    ServiceHealth,
     ServiceMeshConfig,
-    ServiceCallOptions,
     ServiceCallResult,
 )
 

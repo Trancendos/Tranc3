@@ -3,9 +3,6 @@ Tests for src/ai_gateway/ — AIGateway router, LRU cache, provider failover
 ============================================================================
 """
 
-import asyncio
-import time
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 

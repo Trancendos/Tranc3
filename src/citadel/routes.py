@@ -6,6 +6,9 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
 import os
 from typing import Any, Dict, Optional
 
@@ -124,7 +127,7 @@ async def forgejo_webhook(
     ref = payload.get("ref", "")
     sender = payload.get("pusher", {}).get("login", payload.get("sender", {}).get("login", "forgejo"))
 
-    logger.info("citadel: forgejo webhook event=%s ref=%s sender=%s", event, ref, sender)
+    logger.info("citadel: forgejo webhook event=%s ref=%s sender=%s", sanitize_for_log(event), sanitize_for_log(ref), sanitize_for_log(sender))
 
     # Map workflow_run / push on main branch → auto record deploy
     if event in ("workflow_run", "push") and ("main" in ref or "master" in ref):

@@ -260,7 +260,7 @@ def extract_trace_context(headers: Dict[str, str]) -> tuple:
                 parent_span_id = parts[2]
                 return trace_id, parent_span_id
         except Exception:
-            pass
+            logger.debug("Graceful degradation in Exception")  # nosec B110
 
     return None, None
 

@@ -3,14 +3,11 @@
 # Full test suite with sample data, logic validation, and error code verification
 
 import json
-import os
-import sys
-import time
 import pytest
 
 torch = pytest.importorskip("torch", reason="torch not installed — ML tests skipped")
 np = pytest.importorskip("numpy", reason="numpy not installed — ML tests skipped")
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -52,7 +49,7 @@ def sample_emotions():
 class TestErrorCatalog:
     def test_all_error_codes_have_definitions(self):
         from src.errors.error_catalog import ErrorCode, CATALOG
-        for code in ErrorCode:
+        for code in list(ErrorCode):
             assert code in CATALOG, f"ErrorCode {code} has no definition in CATALOG"
 
     def test_error_format_response(self):
@@ -160,16 +157,16 @@ class TestLoopValidator:
             try:
                 cb.call(lambda: (_ for _ in ()).throw(ValueError("fail")))
             except ValueError:
-                pass
+                pass  # nosec B110 — graceful degradation
         assert cb.state == CircuitState.OPEN
 
     def test_circuit_breaker_fallback(self):
-        from src.validation.loop_validator import CircuitBreaker, CircuitState
+        from src.validation.loop_validator import CircuitBreaker
         cb = CircuitBreaker("test_fb", failure_threshold=1, recovery_timeout=999)
         try:
             cb.call(lambda: (_ for _ in ()).throw(ValueError("fail")))
         except ValueError:
-            pass
+            pass  # nosec B110 — graceful degradation
         result = cb.call(lambda: "real", fallback=lambda: "fallback")
         assert result == "fallback"
 

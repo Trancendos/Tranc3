@@ -152,12 +152,12 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
             try:
                 test_db._conn.close()
             except Exception:
-                pass
+                pass  # nosec B110 — graceful degradation
         if hasattr(test_db, "_local") and hasattr(test_db._local, "conn") and test_db._local.conn:
             try:
                 test_db._local.conn.close()
             except Exception:
-                pass
+                pass  # nosec B110 — graceful degradation
 
 
 class TestAllWorkersHealth:

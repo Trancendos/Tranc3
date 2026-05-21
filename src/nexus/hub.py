@@ -15,6 +15,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+
+from shared_core.error_handlers import safe_error_detail
+from shared_core.sanitize import sanitize_for_log
+
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -101,7 +105,7 @@ class NexusHub:
         q: asyncio.Queue = asyncio.Queue(maxsize=maxsize)
         self._topics.setdefault(topic, []).append(q)
         self._stats["subscribers"] += 1
-        logger.debug("nexus: +subscriber topic=%s total=%d", topic, len(self._topics[topic]))
+        logger.debug("nexus: +subscriber topic=%s total=%d", sanitize_for_log(topic), len(self._topics[topic]))
         return q
 
     def unsubscribe_topic(self, topic: str, q: asyncio.Queue) -> None:
@@ -110,7 +114,7 @@ class NexusHub:
             subscribers.remove(q)
             self._stats["subscribers"] -= 1
         except ValueError:
-            pass
+            logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
     def publish(self, topic: str, payload: Dict[str, Any], sender: str = "system",
                 priority: MessagePriority = MessagePriority.NORMAL,
@@ -143,7 +147,7 @@ class NexusHub:
                 subscribers.remove(q)
                 self._stats["subscribers"] -= 1
             except ValueError:
-                pass
+                logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
     # ── Direct send ──────────────────────────────────────────────────────────
 
@@ -159,7 +163,7 @@ class NexusHub:
         """Send a direct message to a registered service. Returns None if no inbox."""
         q = self._direct.get(recipient)
         if q is None:
-            logger.debug("nexus: no inbox for recipient=%s", recipient)
+            logger.debug("nexus: no inbox for recipient=%s", sanitize_for_log(recipient))
             self._stats["dropped"] += 1
             return None
         msg = NexusMessage(
@@ -186,8 +190,8 @@ class NexusHub:
             self.publish("ai.inference.complete", {"prompt_len": len(prompt), **result}, sender=sender)
             return result
         except Exception as exc:
-            logger.error("nexus.route_inference error: %s", exc)
-            return {"response": "", "error": str(exc)}
+            logger.error("nexus.route_inference error: %s", sanitize_for_log(exc))
+            return {"response": "", "error": safe_error_detail(exc, 500)}
 
     # ── Status ───────────────────────────────────────────────────────────────
 

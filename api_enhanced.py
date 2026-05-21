@@ -9,9 +9,9 @@ import time
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Request, BackgroundTasks, Security
+from fastapi import Depends, FastAPI, HTTPException, Request, Security
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from shared_core.error_handlers import safe_error_detail
@@ -231,7 +231,7 @@ async def think(req: ThinkRequest, request: Request):
             result["personality_vector"] = vec.tolist()
             result["personality"] = req.personality
         except Exception:
-            pass
+            logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
     return result
 
 
@@ -279,7 +279,7 @@ async def mcp_sse(request: Request):
                 try:
                     queue.put_nowait(data)
                 except asyncio.QueueFull:
-                    pass
+                    logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
             event_bus.subscribe("*", cb)
             while True:

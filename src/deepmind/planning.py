@@ -1,6 +1,10 @@
 import asyncio
 import hashlib
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
+
 import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
@@ -463,7 +467,7 @@ class StrategicPlanner:
 
         logger.info(
             "plan_action: goal=%r, plan_len=%d, confidence=%.3f",
-            goal[:60],
+            sanitize_for_log(goal[:60]),
             len(valid_plan),
             combined_confidence,
         )
