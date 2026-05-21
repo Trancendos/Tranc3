@@ -48,49 +48,29 @@ def _get_attention_router():
     global _attention_router_inst
     if _attention_router_inst is None:
         try:
-            from src.neural.attention_router import AttentionRouter, ServiceAttention
+            from src.neural.attention_router import AttentionRouter
             router = AttentionRouter()
-            # Register the 5 inference providers as routable services
+            # Register the 5 inference providers as routable services using the
+            # correct register_service(service_id, capability_tags=...) API.
             providers = [
-                ServiceAttention(
-                    service_id="tranc3",
-                    service_name="Tranc3Engine",
-                    capabilities=["llm", "local", "custom", "fast"],
-                    tags=["local", "self-hosted", "zero-cost"],
-                ),
-                ServiceAttention(
-                    service_id="ollama",
-                    service_name="Ollama",
-                    capabilities=["llm", "local", "open-source"],
-                    tags=["local", "self-hosted", "zero-cost", "open-source"],
-                ),
-                ServiceAttention(
-                    service_id="openrouter",
-                    service_name="OpenRouter",
-                    capabilities=["llm", "cloud", "free-tier"],
-                    tags=["cloud", "zero-cost", "free-tier"],
-                ),
-                ServiceAttention(
-                    service_id="huggingface",
-                    service_name="HuggingFace",
-                    capabilities=["llm", "cloud", "free-tier", "open-source"],
-                    tags=["cloud", "zero-cost", "free-tier", "open-source"],
-                ),
-                ServiceAttention(
-                    service_id="groq",
-                    service_name="Groq",
-                    capabilities=["llm", "cloud", "fast", "free-tier"],
-                    tags=["cloud", "zero-cost", "free-tier", "fast"],
-                ),
+                ("tranc3",      {"llm", "local", "custom", "fast"}),
+                ("ollama",      {"llm", "local", "open-source"}),
+                ("openrouter",  {"llm", "cloud", "free-tier"}),
+                ("huggingface", {"llm", "cloud", "free-tier", "open-source"}),
+                ("groq",        {"llm", "cloud", "fast", "free-tier"}),
             ]
             import asyncio
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                for svc in providers:
-                    asyncio.ensure_future(router.register_service(svc))
+                for svc_id, tags in providers:
+                    asyncio.ensure_future(
+                        router.register_service(svc_id, capability_tags=tags)
+                    )
             else:
-                for svc in providers:
-                    loop.run_until_complete(router.register_service(svc))
+                for svc_id, tags in providers:
+                    loop.run_until_complete(
+                        router.register_service(svc_id, capability_tags=tags)
+                    )
             _attention_router_inst = router
         except Exception as exc:
             logger.debug("AttentionRouter unavailable: %s", exc)
@@ -124,47 +104,51 @@ def _get_causal_reasoner():
     if _causal_reasoner_inst is None:
         try:
             from src.intelligence.causal_reasoner import CausalReasoner, CausalRule, CausalStrength
+            import asyncio
             cr = CausalReasoner()
-            # Seed with inference failure causal rules
+            # Seed with inference failure causal rules.
+            # CausalRule uses `confidence=` (not `probability=`) and has no
+            # `description` field.  add_rule() is async — run synchronously here
+            # since we're in a synchronous initialiser.
             rules = [
                 CausalRule(
                     cause="provider_failure",
                     effect="degraded_response",
                     strength=CausalStrength.SUFFICIENT,
-                    probability=0.9,
-                    description="Provider failure causes degraded/stub response",
+                    confidence=0.9,
                 ),
                 CausalRule(
                     cause="high_latency",
                     effect="timeout",
                     strength=CausalStrength.CONTRIBUTING,
-                    probability=0.7,
-                    description="High latency contributes to timeout",
+                    confidence=0.7,
                 ),
                 CausalRule(
                     cause="context_window_exceeded",
                     effect="provider_failure",
                     strength=CausalStrength.SUFFICIENT,
-                    probability=0.95,
-                    description="Exceeding context window causes provider failure",
+                    confidence=0.95,
                 ),
                 CausalRule(
                     cause="model_unavailable",
                     effect="provider_failure",
                     strength=CausalStrength.SUFFICIENT,
-                    probability=0.99,
-                    description="Model unavailability directly causes provider failure",
+                    confidence=0.99,
                 ),
                 CausalRule(
                     cause="rate_limit_exceeded",
                     effect="provider_failure",
                     strength=CausalStrength.SUFFICIENT,
-                    probability=0.85,
-                    description="Rate limiting causes provider failure",
+                    confidence=0.85,
                 ),
             ]
-            for rule in rules:
-                cr.add_rule(rule)
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                for rule in rules:
+                    asyncio.ensure_future(cr.add_rule(rule))
+            else:
+                for rule in rules:
+                    loop.run_until_complete(cr.add_rule(rule))
             _causal_reasoner_inst = cr
         except Exception as exc:
             logger.debug("CausalReasoner unavailable: %s", exc)
@@ -313,16 +297,16 @@ class MLPipeline:
             try:
                 ml = _get_meta_learner()
                 if ml:
-                    from src.neural.meta_learner import TaskPrototype
-                    task = TaskPrototype(
+                    # Use keyword-arg API: adapt(domain, task_type, input_signature,
+                    # output_signature, tags, current_parameters)
+                    result = await ml.adapt(
                         domain=request.task_domain,
                         task_type=request.task_type,
-                        tags=set(request.task_tags),
-                        input_schema=["prompt", "personality"],
-                        output_schema=["text"],
-                        parameters=base_params,
+                        input_signature={"prompt": "str", "personality": "str"},
+                        output_signature={"text": "str"},
+                        tags=list(request.task_tags),
+                        current_parameters=base_params,
                     )
-                    result = await ml.adapt(task)
                     if result:
                         adapted_params = result.adapted_parameters
                         # Apply adapted values if within safe ranges
@@ -344,20 +328,24 @@ class MLPipeline:
             try:
                 router = _get_attention_router()
                 if router:
+                    import uuid
                     from src.neural.attention_router import RoutingRequest
-                    caps = list(request.required_capabilities) or ["llm"]
+                    # RoutingRequest uses request_id and required_tags (Set[str]),
+                    # not query/required_capabilities/preferred_tags/top_k.
+                    caps = set(request.required_capabilities) if request.required_capabilities else {"llm"}
                     rreq = RoutingRequest(
-                        query=f"{request.task_domain} {request.task_type}",
-                        required_capabilities=caps,
-                        preferred_tags=list(request.task_tags),
-                        top_k=5,
+                        request_id=uuid.uuid4().hex[:12],
+                        required_tags=caps,
                     )
                     decision = await router.route(rreq)
-                    if decision and decision.candidates:
-                        provider_order = decision.candidates + [
-                            p for p in provider_order if p not in decision.candidates
+                    # RoutingDecision only has selected_service (str), not candidates
+                    if decision and decision.selected_service:
+                        # Put the chosen provider first; keep others as fallback
+                        chosen = decision.selected_service
+                        provider_order = [chosen] + [
+                            p for p in provider_order if p != chosen
                         ]
-                        routed_from = decision.primary_service
+                        routed_from = chosen
                         logger.debug("Pipeline: attention-routed to %s", routed_from)
             except Exception as exc:
                 logger.debug("Pipeline stage3 (attention_route) error: %s", exc)
@@ -392,20 +380,27 @@ class MLPipeline:
             try:
                 cr = _get_causal_reasoner()
                 if cr:
-                    cr.observe("provider_failure", True)
+                    # All CausalReasoner methods are async — must await them.
+                    await cr.observe("provider_failure", 1.0)
                     if "timeout" in (llm_response.error or "").lower():
-                        cr.observe("high_latency", True)
+                        await cr.observe("high_latency", 1.0)
                     if "rate" in (llm_response.error or "").lower():
-                        cr.observe("rate_limit_exceeded", True)
+                        await cr.observe("rate_limit_exceeded", 1.0)
                     if "context" in (llm_response.error or "").lower():
-                        cr.observe("context_window_exceeded", True)
-                    diagnosis = cr.diagnose(max_causes=3)
+                        await cr.observe("context_window_exceeded", 1.0)
+                    # diagnose(effects: List[str], max_results=10) — no max_causes kwarg
+                    diagnosis = await cr.diagnose(
+                        effects=["provider_failure", "degraded_response"],
+                        max_results=3,
+                    )
+                    # InferenceResult has .causes: List[Tuple[str, float]]
                     causal_diagnosis = {
-                        "root_causes": diagnosis.root_causes[:3],
-                        "probabilities": {k: round(v, 3) for k, v in
-                                          list(diagnosis.probabilities.items())[:3]},
+                        "root_causes": [c for c, _ in diagnosis.causes[:3]],
+                        "probabilities": {
+                            c: round(p, 3) for c, p in diagnosis.causes[:3]
+                        },
                     }
-                    cr.reset_evidence()
+                    await cr.reset_evidence()
                     logger.debug("Pipeline: causal diagnosis complete")
             except Exception as exc:
                 logger.debug("Pipeline stage5 (causal_diagnose) error: %s", exc)
@@ -444,7 +439,7 @@ class MLPipeline:
                     success = not bool(llm_response.error)
                     await router.report_latency(routed_from, total_ms)
                     if not success:
-                        await router.report_error(routed_from)
+                        await router.report_error(routed_from, True)
             except Exception:
                 pass
 

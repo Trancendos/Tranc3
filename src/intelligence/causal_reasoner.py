@@ -338,14 +338,16 @@ class CausalReasoner:
         async with self._lock:
             effects: Dict[str, float] = {}
             chain: List[str] = []
-            visited: Set[str] = set()
+            # Track (event, depth) pairs already enqueued to avoid redundant
+            # re-traversal from the *same* path, but allow re-entry from
+            # different paths that may carry higher probability.
+            enqueued: Set[tuple] = set()
 
             queue = deque([(c, 1.0, 0) for c in causes])
             while queue:
                 event, prob, depth = queue.popleft()
-                if depth >= self._max_depth or event in visited:
+                if depth >= self._max_depth:
                     continue
-                visited.add(event)
 
                 rules = self._graph.get_rules_from_cause(event)
                 rules.sort(key=lambda r: -r.priority)
@@ -360,7 +362,7 @@ class CausalReasoner:
                     elif rule.strength == CausalStrength.INHIBITING:
                         rule_prob = -rule_prob  # Negative = inhibiting
 
-                    # Check conditions
+                    # Check conditions — only scalar values are checkable
                     if rule.conditions:
                         cond_met = all(
                             self._evidence.get(k) == v or k in self._interventions
@@ -381,7 +383,13 @@ class CausalReasoner:
                             f"{event} -> {rule.effect} "
                             f"(p={abs(rule_prob):.2f}, {rule.strength.value})"
                         )
-                        queue.append((rule.effect, abs(rule_prob), depth + 1))
+                        # Only enqueue if this (effect, depth) pair hasn't been
+                        # processed yet — prevents infinite loops in the DAG while
+                        # still allowing re-propagation from different source paths.
+                        key = (rule.effect, depth + 1)
+                        if key not in enqueued:
+                            enqueued.add(key)
+                            queue.append((rule.effect, abs(rule_prob), depth + 1))
 
             # Sort by probability and return top results
             sorted_effects = sorted(effects.items(), key=lambda x: -abs(x[1]))[:max_results]
@@ -471,25 +479,29 @@ class CausalReasoner:
         1. Diagnose likely causes from the observed effects.
         2. Apply the intervention (do-calculus: sever incoming edges).
         3. Predict new effects from the intervened state.
-        """
-        async with self._lock:
-            # Step 1: Diagnose
-            diagnosis = await self.diagnose(observed_effects, max_results)
 
-            # Step 2: Apply intervention
+        NOTE: We must NOT hold self._lock while awaiting diagnose()/predict(),
+        because those methods acquire self._lock themselves — deadlock.  Instead
+        we snapshot and restore state without the outer lock.
+        """
+        # Step 1: Diagnose (acquires its own lock internally)
+        diagnosis = await self.diagnose(observed_effects, max_results)
+
+        # Step 2: Apply intervention and save/restore state atomically
+        async with self._lock:
             old_evidence = dict(self._evidence)
             old_interventions = set(self._interventions)
             self._interventions.add(intervention)
             self._evidence[intervention] = 1.0
-
             # Remove evidence for effects that were caused by severed edges
             for effect in observed_effects:
                 self._evidence.pop(effect, None)
 
-            # Step 3: Predict from intervened state
-            prediction = await self.predict([intervention], max_results)
+        # Step 3: Predict from intervened state (acquires its own lock internally)
+        prediction = await self.predict([intervention], max_results)
 
-            # Restore state
+        # Restore state
+        async with self._lock:
             self._evidence = old_evidence
             self._interventions = old_interventions
 
