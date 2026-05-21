@@ -570,8 +570,11 @@ class SemanticKnowledgeGraph:
 
         The algorithm:
           1. For each constrained node variable, find candidate node ids.
-          2. Bind free variables by checking edge constraints.
-          3. Score matches by average confidence of involved nodes and edges.
+          2. Seed any variables that appear only in edge constraints (not in
+             node_constraints) with the full set of known node ids so they
+             can be bound during edge-constraint checking.
+          3. Bind free variables by checking edge constraints.
+          4. Score matches by average confidence of involved nodes and edges.
         """
         # Step 1: resolve candidates for each constrained node variable
         candidates: Dict[str, List[str]] = {}
@@ -588,11 +591,22 @@ class SemanticKnowledgeGraph:
                 matching = await self.query_nodes(**criteria)
                 candidates[var] = [n.id for n in matching]
 
+        # Step 2: seed variables that appear only in edge constraints but not
+        # in node_constraints — without this they would never be bound.
+        for src_var, tgt_var, _etype in pattern.edge_constraints:
+            for var in (src_var, tgt_var):
+                if var not in candidates:
+                    if var in pattern.variable_bindings:
+                        candidates[var] = [pattern.variable_bindings[var]]
+                    else:
+                        # No node-level filter: all known nodes are candidates
+                        candidates[var] = list(self._nodes.keys())
+
         # If any variable has zero candidates, no matches possible
         if any(len(v) == 0 for v in candidates.values()):
             return []
 
-        # Step 2: enumerate binding combinations and check edge constraints
+        # Step 3: enumerate binding combinations and check edge constraints
         var_names = list(candidates.keys())
         matches: List[PatternMatch] = []
 
@@ -753,11 +767,22 @@ class SemanticKnowledgeGraph:
         if best_id and best_id in self._nodes:
             # Synchronous removal (called from within lock context)
             self._update_indices_remove(best_id)
-            # Remove incident edges
+            # Remove edges that originate from the evicted node and clean up
+            # the stale back-references in the target nodes' _in adjacency lists.
             for e in list(self._out.get(best_id, [])):
                 self._edges.pop(self._edge_id(e.source_id, e.target_id, e.edge_type), None)
+                if e.target_id in self._in:
+                    self._in[e.target_id] = [
+                        x for x in self._in[e.target_id] if x.source_id != best_id
+                    ]
+            # Remove edges that point to the evicted node and clean up the
+            # stale forward-references in the source nodes' _out adjacency lists.
             for e in list(self._in.get(best_id, [])):
                 self._edges.pop(self._edge_id(e.source_id, e.target_id, e.edge_type), None)
+                if e.source_id in self._out:
+                    self._out[e.source_id] = [
+                        x for x in self._out[e.source_id] if x.target_id != best_id
+                    ]
             self._out.pop(best_id, None)
             self._in.pop(best_id, None)
             del self._nodes[best_id]
