@@ -46,18 +46,18 @@ Every service, location, and subsystem has a canonical code name. Use ONLY these
 |---|---|---|---|
 | **The Spark** | MCP server — AI tool registry, JSON-RPC 2.0 over HTTP/SSE | ✅ In repo | `src/mcp/` |
 | **The Digital Grid** | Workflow DAG builder + executor (n8n-style) | ✅ In repo | `src/workflow/` |
-| **The Void** | Secrets + password vault (AES-GCM, CF Worker) | ✅ Deployed | `cloudflare/infinity-void/` |
+| **The Void** | Secrets + password vault (AES-GCM) | 🔧 Migrating | `cloudflare/infinity-void/` → self-hosted |
 | **The Workshop** | CI/CD hub — Forgejo self-hosted git + pipelines | ✅ In repo | `deploy/forgejo/` |
-| **Infinity** | OAuth, SSO, central user management (1 account, all services) | ✅ Deployed | CF workers: `infinity-*` |
+| **Infinity** | OAuth, SSO, central user management (1 account, all services) | ✅ Self-hosted | `workers/infinity-auth/` (Port 8005) |
 | **The Lighthouse** | Cryptographic token assignment, authenticator, token scanner | ✅ Deployed | CF: `infinity-lighthouse` |
 | **The HIVE** | Data transfer hub, agent coordination | ✅ Deployed | CF: `infinity-hive` |
 | **Royal Bank of Arcadia** | Financial hub — billing, payments | ✅ Deployed | CF: `arcadia-royal-bank` |
 | **Arcadian Exchange** | Financial exchange, trading, crypto/stocks | ✅ Deployed | CF: `arcadia-exchange` |
-| **The Observatory** | Audit log — every action, change, activity on Trancendos | 🔧 Scaffold | `src/observability/` |
+| **The Observatory** | Audit log — every action, change, activity on Trancendos | ✅ Self-hosted | `src/observability/`, `workers/monitoring/` |
 | **Luminous** | Brain of Trancendos — AI intelligence core | 🔧 Partial | `src/bio_neural/`, `src/core/` |
 | **Turing's Hub** | AI creation centre — personality template creator | 🔧 Partial | `src/personality/` |
 | **Arcadia** | Front-end post-login + forum | 🔧 Partial | `web/` |
-| **The Nexus** | AI communications and transfer hub | 🔧 Planned | `src/nexus/` (to create) |
+| **The Nexus** | AI communications and transfer hub | 🔧 Self-hosted | `workers/infinity-ws/` (Port 8004) |
 | **The Town Hall** | Governance hub — PRINCE2, ITIL, legal, compliance, policies | 🔧 Planned | `src/townhall/` (to create) |
 | **The Library** | KB (user-facing), Wiki (admin), Basement (archived) articles | 🔧 Planned | Outline (self-hosted) |
 | **The Academy** | Learning management — courses from Library articles | 🔧 Planned | Custom LMS |
@@ -76,7 +76,7 @@ Every service, location, and subsystem has a canonical code name. Use ONLY these
 | **Cryptex** | Threat analysis, cyber security defence, bug bounty | 🔧 Planned | Wazuh + MISP |
 | **The Ice Box** | Threat holding + assessment (malware, virus, trojans) | 🔧 Planned | Cuckoo sandbox |
 | **Section 7** | Research + analysis hub, information analytics | 🔧 Planned | `src/research/` |
-| **The Citadel** | DevOps hub | 🔧 Planned | `deploy/` + Forgejo |
+| **The Citadel** | DevOps hub | ✅ Self-hosted | Docker Compose + Traefik + Forgejo |
 | **Think Tank** | Solutions + forefront technologies innovation centre | 🔧 Planned | `src/quantum/`, `src/deepmind/` |
 | **ChronosSphere / ArcStream** | Time and schedule management | 🔧 Planned | Cal.com (self-hosted) |
 | **DevOcity** | Developer centre — user developer hub | 🔧 Planned | Custom dev portal |
@@ -121,39 +121,107 @@ Workers subdomain: `luminous-aimastermind.workers.dev`
 
 ## Architecture
 
+### Zero-Cost Self-Hosted Architecture (Fortiere)
+
+The Tranc3 platform has been transformed from a Cloudflare Workers + paid-services architecture to a fully self-hosted, zero-cost Python/FastAPI architecture. All 26+ Cloudflare Workers are being migrated to self-hosted Python workers backed by SQLite, in-memory state, and local filesystem. No paid APIs, no third-party cost-incurring dependencies.
+
+**Key documents:**
+- `CROSS_REPO_SYNERGY.md` — Maps all 29 infinity-adminOS TypeScript packages to Python equivalents
+- `CF_WORKER_MIGRATION_ROADMAP.md` — Full migration plan for all 26+ CF Workers to self-hosted Python
+- `ARCHITECTURE_THREAT_MODEL.md` — STRIDE analysis and risk register for self-hosted architecture
+- `docker-compose.production.yml` — Full production stack (29 workers + infrastructure)
+
+**Architecture principles:**
+1. **SQLite over Cloudflare D1** — Each worker owns its own database file; no shared state
+2. **In-memory rate limiting over Cloudflare KV** — Token-bucket algorithm per-worker
+3. **Local filesystem + IPFS over Cloudflare R2** — Docker volumes + content-addressed distribution
+4. **Self-hosted Python/FastAPI over Cloudflare Workers** — No cold starts, no vendor API limits
+5. **Forgejo over GitHub Actions** — Complete CI/CD sovereignty (`.forgejo/workflows/`)
+6. **Vault over Cloudflare secrets** — Self-hosted secret management with Shamir unseal
+
+### Core Python Packages (ported from infinity-adminOS)
+
+| Package | Code path | Origin | Role |
+|---|---|---|---|
+| **Service Mesh** | `src/mesh/` | infinity-adminOS @trancendos/service-mesh | CircuitBreaker + ServiceMesh with health monitoring, retries |
+| **Event Bus** | `src/event_bus/` | infinity-adminOS @trancendos/event-bus | Pattern-based routing, subscriptions, SQLite persistence |
+| **AI Gateway** | `src/ai_gateway/` | infinity-adminOS @trancendos/ai-gateway | Priority failover (Ollama→OpenRouter→Offline), token budgets |
+| **Zero Trust IAM** | `src/auth/zero_trust.py` | infinity-adminOS @trancendos/iam | Device posture, MFA, geographic policies, risk scoring |
+
 ### Named subsystems (in this repo)
 
 | Identity | Code path | Role |
 |---|---|---|
 | **The Spark** | `src/mcp/` | MCP server + tool registry — JSON-RPC 2.0 over HTTP/SSE |
 | **The Digital Grid** | `src/workflow/` | Workflow DAG builder + topological executor + event bus |
-| **The Void** | `cloudflare/infinity-void/` | AES-GCM encrypted secrets vault (CF Worker) |
+| **The Void** | `cloudflare/infinity-void/` | AES-GCM encrypted secrets vault (CF Worker — migrating to self-hosted) |
 | **The Workshop** | `deploy/forgejo/` | Self-hosted Forgejo CI/CD at trancendos.com/the-workshop |
-| **The Observatory** | `src/observability/` | Metrics, tracing, audit log |
+| **The Observatory** | `src/observability/` | Metrics, tracing, health aggregation, audit log |
+| **The Nexus** | `workers/infinity-ws/` | WebSocket hub (replaces CF infinity-ws-api) — Port 8004 |
+| **Infinity** | `workers/infinity-auth/` | OAuth2/SSO/MFA auth (replaces CF infinity-auth-api) — Port 8005 |
+| **The Citadel** | Docker Compose + Traefik | DevOps hub, production infrastructure |
 | **Luminous** | `src/bio_neural/`, `src/core/tranc3_inference.py` | AI brain, consciousness, inference |
 | **Think Tank** | `src/quantum/`, `src/deepmind/` | Quantum + deep research engines |
 | **Turing's Hub** | `src/personality/` | Personality profiles + spawner |
 
-### Service map
+### Self-Hosted Worker Map (replacing Cloudflare Workers)
+
+| Service | Port | Priority | Repo path | Replaces CF Worker |
+|---|---|---|---|---|
+| tranc3-backend | 8000 | — | `/` (root) | FastAPI main app |
+| nanoservices | 8001 | — | `src/nanoservices/` | Internal proxy |
+| tranc3-bots | 8080 | — | `tranc3-bots/` | 12 bot types |
+| infinity-ws | 8004 | P0 | `workers/infinity-ws/` | infinity-ws-api |
+| infinity-auth | 8005 | P0 | `workers/infinity-auth/` | infinity-auth-api |
+| users-service | 8006 | P1 | `workers/users-service/` | trancendos-users-service |
+| monitoring | 8007 | P1 | `workers/monitoring/` | infinity-monitoring-dashboard |
+| notifications | 8008 | P1 | `workers/notifications/` | trancendos-notifications-service |
+| infinity-ai | 8009 | P1 | `workers/infinity-ai/` | infinity-ai-api |
+| the-grid | 8010 | P2 | `workers/the-grid/` | the-grid-api |
+| products-service | 8011 | P2 | `workers/products-service/` | trancendos-products-service |
+| orders-service | 8012 | P2 | `workers/orders-service/` | trancendos-orders-service |
+| payments-service | 8013 | P2 | `workers/payments-service/` | trancendos-payments-service |
+| files-service | 8014 | P2 | `workers/files-service/` | infinity-files-api |
+| identity-service | 8015 | P2 | `workers/identity-service/` | infinity-os-identity |
+| 14 P3 stubs | 8016–8029 | P3 | `workers/*/` | Various CF Workers |
+
+### Production Infrastructure Stack
+
+| Component | Role | Config |
+|---|---|---|
+| Traefik | Reverse proxy, TLS, rate limiting | `docker-compose.production.yml` |
+| Vault | Secrets management (Shamir unseal) | `docker-compose.production.yml` |
+| Prometheus | Metrics collection | `monitoring/prometheus.yml` |
+| Grafana | Dashboards | `monitoring/grafana/` |
+| Loki + Promtail | Log aggregation | `monitoring/loki.yml`, `monitoring/promtail.yml` |
+| IPFS | Distributed content storage | `docker-compose.production.yml` |
+
+### Legacy Cloudflare Workers (being decommissioned)
 
 | Service | Port | Repo path | Notes |
 |---|---|---|---|
-| tranc3-backend | 8000 | `/` (root) | FastAPI, SQLAlchemy, JWT auth |
-| nanoservices | 8001 | `src/nanoservices/` | Thin proxy to tranc3-bots (internal only) |
-| tranc3-bots | 8080 | `tranc3-bots/` | Separate Fly.io app, 12 bot types |
-| tranc3-ai | edge | `cloudflare/tranc3-ai/` | CF Worker — AI edge proxy |
-| infinity-void | edge | `cloudflare/infinity-void/` | CF Worker — The Void encrypted vault |
-| trancendos-api-gateway | edge | `cloudflare/trancendos-api-gateway/` | CF Worker — `api.trancendos.com/*` |
+| tranc3-ai | edge | `cloudflare/tranc3-ai/` | CF Worker — AI edge proxy (migrating to workers/infinity-ai) |
+| infinity-void | edge | `cloudflare/infinity-void/` | CF Worker — The Void encrypted vault (migrating to self-hosted) |
+| trancendos-api-gateway | edge | `cloudflare/trancendos-api-gateway/` | CF Worker — `api.trancendos.com/*` (migrating to Traefik) |
 
-### Inference pipeline (5-tier fallback)
+### Inference pipeline (5-tier fallback via AI Gateway)
+
+The self-hosted AI Gateway (`src/ai_gateway/`, worker `workers/infinity-ai/` on port 8009) provides an OpenAI-compatible API with priority-based failover:
 
 ```
-Client → tranc3-ai CF Worker
-           ↓ Tier 1: Tranc3Engine local weights (if trained)
-           ↓ FAIL → Tier 2: Ollama (localhost:11434, zero-cost)
+Client → infinity-ai worker (:8009) → AIGatewayRouter
+           ↓ Tier 1: Ollama (localhost:11434, zero-cost, local)
+           ↓ FAIL → Tier 2: HuggingFace Inference API (free tier)
            ↓ FAIL → Tier 3: OpenRouter free models (cloud, zero-cost)
            ↓ FAIL → Tier 4: TRANC3_BACKEND_URL (Fly.io :8000)
-           ↓ FAIL → Tier 5: deterministic stub response
+           ↓ FAIL → Tier 5: OfflineProvider (deterministic stub response)
+```
+
+Features: LRU cache (1000 entries), token budgets per tenant, circuit breaker per provider, request logging to SQLite.
+
+**Legacy CF Worker pipeline** (being decommissioned):
+```
+Client → tranc3-ai CF Worker → same 5-tier fallback
 ```
 
 ### Backend (`api.py`)
@@ -164,6 +232,10 @@ Key module domains under `src/`:
 - `core/` — Tranc3Engine (transformer inference), startup validator, circuit breaker
 - `core/ollama_adapter.py` — free local LLM fallback (Ollama)
 - `core/openrouter_adapter.py` — free cloud LLM fallback (OpenRouter :free models)
+- `mesh/` — **Service Mesh**: CircuitBreaker (closed/open/half-open) + ServiceMesh (registration, health, retries, httpx)
+- `event_bus/` — **Event Bus**: pattern-based routing, subscriptions, SQLite persistence, batch processing
+- `ai_gateway/` — **AI Gateway**: priority-based failover router, LRU cache, token budgets, provider health tracking
+- `auth/zero_trust.py` — **Zero Trust IAM**: device posture, MFA, geographic policies, risk scoring
 - `registry/` — BotRegistry: maps BotType → handler
 - `personality/` — 5 named personality instances (dorris-fontaine, cornelius-macintyre, the-guardian, vesper-nightingale, atlas-meridian)
 - `monetisation/` — billing tiers: free (100 req/hr), pro £29 (1k/hr), business £149 (10k/hr)
@@ -224,9 +296,24 @@ EMBED_MODEL              # all-MiniLM-L6-v2 (sentence-transformers)
 
 Workflow files in `.forgejo/workflows/`:
 - `deploy-fly.yml` — tranc3-backend + tranc3-bots to Fly.io
-- `deploy-cloudflare.yml` — tranc3-ai + infinity-void + trancendos-api-gateway CF Workers
+- `deploy-cloudflare.yml` — tranc3-ai + infinity-void + trancendos-api-gateway CF Workers (legacy, being phased out)
+- `security-scan.yml` — Python security (pip-audit, bandit, safety, ruff), Node security (npm audit), Semgrep SAST, Secret detection (gitleaks)
+- `dependency-audit.yml` — Weekly + on-PR dependency vulnerability scanning (pip-audit, Safety, npm audit, worker requirements scan)
 
 Forgejo at `trancendos.com/the-workshop`. Act-runner in `deploy/forgejo/docker-compose.yml`. Org secrets: `CF_API_TOKEN`, `FLY_API_TOKEN`.
+
+### Pre-commit Hooks (`.pre-commit-config.yaml`)
+
+Runs on every local commit — zero-cost security gate:
+- **ruff** — Fast Python linter
+- **black** — Code formatting
+- **isort** — Import sorting
+- **bandit** — Python security linter
+- **semgrep** — Multi-language SAST
+- **gitleaks** — Secret detection
+- **detect-secrets** — Additional secret scanning
+- **safety** — Dependency vulnerability check
+- **typos** — Typo detection
 
 ### Manual deploy (from your machine)
 
@@ -261,16 +348,32 @@ cd cloudflare/tranc3-ai && npm ci && wrangler deploy
 
 All Trancendos services are **subdirectories** of `trancendos.com`, not subdomains.
 - `trancendos.com/the-workshop` → Forgejo (port 3456)
-- `api.trancendos.com/*` → trancendos-api-gateway CF Worker
+- `api.trancendos.com/*` → Traefik → self-hosted workers (replacing CF trancendos-api-gateway)
 
-Fly.io apps (region `lhr`):
+**Self-Hosted Production Stack** (`docker-compose.production.yml`):
+- **Traefik** — Reverse proxy, TLS termination, rate limiting
+- **Vault** — Secrets management with Shamir unseal
+- **Prometheus** — Metrics collection from all workers
+- **Grafana** — Dashboards (auto-provisioned with Prometheus + Loki datasources)
+- **Loki + Promtail** — Log aggregation from Docker containers
+- **IPFS** — Distributed content-addressed storage
+- **29 workers** — P0/P1/P2/P3 FastAPI + uvicorn + SQLite workers (ports 8004–8029)
+
+Fly.io apps (region `lhr`) — legacy, evaluating for migration:
 - `tranc3-backend` — 256MB RAM, 1GB encrypted volume at `/app/models`
 - `tranc3-bots` — 256MB RAM
 
 Cloudflare account ID: `e0214028cb64d31232f5662548a55e4e`
 Workers subdomain: `luminous-aimastermind.workers.dev`
 
-**Zero-cost model** — no paid external services beyond committed Fly.io/Cloudflare free tiers.
+**Zero-cost model** — no paid external services beyond committed Fly.io/Cloudflare free tiers. Goal: eliminate all paid dependencies entirely.
+
+### Observability Stack
+
+- **Distributed Tracing**: W3C TraceContext propagation across all workers (`src/observability/tracing.py`)
+- **Health Aggregation**: Central health checker monitoring all P0–P2 services (`src/observability/health.py`)
+- **Structured Logging**: JSON logs with trace_id, user_id, service_name bindings
+- **Alerting**: Prometheus alert rules via monitoring worker (port 8007)
 
 ## Recommended Open Source Foundations
 
