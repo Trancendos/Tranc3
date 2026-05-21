@@ -1,0 +1,665 @@
+# docker-compose.production.yml
+# Tranc3 Full Production Stack — Self-Hosted, Zero-Cost Architecture
+#
+# Replaces ALL Cloudflare Worker dependencies with self-hosted Python/FastAPI workers.
+# Includes observability stack (Prometheus, Grafana, Loki), reverse proxy (Traefik),
+# secrets management (Vault), and IPFS for distributed storage.
+#
+# Usage:
+#   docker compose -f docker-compose.production.yml up -d
+#
+# Architecture:
+#   - Traefik: Reverse proxy + auto-discovery (replaces CF routing)
+#   - 29 FastAPI workers: Self-hosted Python services (replaces CF Workers)
+#   - Prometheus + Grafana + Loki: Observability stack (replaces CF analytics)
+#   - Vault: Secrets management (replaces CF environment variables)
+#   - IPFS: Distributed storage (replaces CF R2)
+#
+# Zero external provider dependencies. Zero cost.
+
+version: "3.8"
+
+# ---------------------------------------------------------------------------
+# Shared configuration
+# ---------------------------------------------------------------------------
+x-common: &common
+  restart: unless-stopped
+  networks:
+    - tranc3-net
+
+x-worker-common: &worker-common
+  <<: *common
+  env_file:
+    - .env.production
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  labels:
+    - "tranc3.stack=production"
+
+x-healthcheck-default: &healthcheck-default
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 10s
+
+# ---------------------------------------------------------------------------
+# Services
+# ---------------------------------------------------------------------------
+services:
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # INFRASTRUCTURE LAYER
+  # ═══════════════════════════════════════════════════════════════════════
+
+  # ── Traefik — Reverse Proxy & Load Balancer ──────────────────────────
+  # Replaces: Cloudflare routing, CF Load Balancing
+  traefik:
+    image: traefik:v3.0
+    container_name: tranc3-traefik
+    <<: *common
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=tranc3-net"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.metrics.address=:9090"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.entrypoint=metrics"
+      - "--log.level=INFO"
+      - "--accesslog=true"
+      - "--accesslog.format=json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"   # Traefik dashboard
+      - "9090:9090"   # Metrics
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-config:/etc/traefik
+      - traefik-certs:/letsencrypt
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.trancendos.local`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=web"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      <<: *healthcheck-default
+
+  # ── Vault — Secrets Management ───────────────────────────────────────
+  # Replaces: Cloudflare environment variables, CF Secrets
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: tranc3-vault
+    <<: *common
+    command: server -dev
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=tranc3-root-token
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+    ports:
+      - "8200:8200"
+    volumes:
+      - vault-data:/vault/data
+      - vault-config:/vault/config
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      <<: *healthcheck-default
+
+  # ── Prometheus — Metrics Collection ──────────────────────────────────
+  # Replaces: Cloudflare Analytics, CF Worker Analytics
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    container_name: tranc3-prometheus
+    <<: *common
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+      - "--storage.tsdb.retention.size=5GB"
+      - "--web.enable-lifecycle"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      <<: *healthcheck-default
+
+  # ── Grafana — Observability Dashboard ────────────────────────────────
+  # Replaces: Cloudflare Dashboard, CF Analytics
+  grafana:
+    image: grafana/grafana:10.3.0
+    container_name: tranc3-grafana
+    <<: *common
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-tranc3-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+      - loki
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      <<: *healthcheck-default
+
+  # ── Loki — Log Aggregation ───────────────────────────────────────────
+  # Replaces: Cloudflare Logs, CF Logpush
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: tranc3-loki
+    <<: *common
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      <<: *healthcheck-default
+
+  # ── Promtail — Log Shipper ───────────────────────────────────────────
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: tranc3-promtail
+    <<: *common
+    volumes:
+      - ./monitoring/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  # ── IPFS — Distributed Storage ───────────────────────────────────────
+  # Replaces: Cloudflare R2, CF IPFS Gateway
+  ipfs:
+    image: ipfs/kubo:v0.28.0
+    container_name: tranc3-ipfs
+    <<: *common
+    ports:
+      - "4001:4001"   # Swarm
+      - "5001:5001"   # API
+      - "8081:8080"   # Gateway
+    volumes:
+      - ipfs-data:/data/ipfs
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      <<: *healthcheck-default
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # P0 WORKERS — Critical Path
+  # ═══════════════════════════════════════════════════════════════════════
+
+  # ── Tranc3 AI — The Spark (Port 8001) ────────────────────────────────
+  tranc3-ai:
+    <<: *worker-common
+    build:
+      context: ./workers/tranc3-ai
+      dockerfile: Dockerfile
+    container_name: tranc3-ai-worker
+    environment:
+      - TRANC3_BACKEND_URL=${TRANC3_BACKEND_URL:-}
+      - TRANC3_NANO_URL=${TRANC3_NANO_URL:-}
+      - TRANC3_AUTH_URL=${TRANC3_AUTH_URL:-}
+      - ENVIRONMENT=production
+    ports:
+      - "8001:8001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tranc3-ai.rule=PathPrefix(`/api/ai`)"
+      - "traefik.http.routers.tranc3-ai.entrypoints=web"
+      - "traefik.http.services.tranc3-ai.loadbalancer.server.port=8001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      <<: *healthcheck-default
+
+  # ── The Void — Secrets Vault (Port 8002) ────────────────────────────
+  infinity-void:
+    <<: *worker-common
+    build:
+      context: ./workers/infinity-void
+      dockerfile: Dockerfile
+    container_name: infinity-void-worker
+    environment:
+      - MASTER_KEY_SEED=${MASTER_KEY_SEED:-change-me-in-production}
+      - INTERNAL_SECRET=${INTERNAL_SECRET:-internal-dev-secret}
+      - ENVIRONMENT=production
+    ports:
+      - "8002:8002"
+    volumes:
+      - void-data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.infinity-void.rule=PathPrefix(`/api/void`)"
+      - "traefik.http.routers.infinity-void.entrypoints=web"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      <<: *healthcheck-default
+
+  # ── API Gateway (Port 8003) ─────────────────────────────────────────
+  api-gateway:
+    <<: *worker-common
+    build:
+      context: ./workers/api-gateway
+      dockerfile: Dockerfile
+    container_name: trancendos-api-gateway-worker
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-not-for-prod}
+      - TRANC3_AI_SERVICE_URL=http://tranc3-ai:8001
+      - ENVIRONMENT=production
+    ports:
+      - "8003:8003"
+    depends_on:
+      - tranc3-ai
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api-gateway.rule=PathPrefix(`/api/`)"
+      - "traefik.http.routers.api-gateway.entrypoints=web"
+      - "traefik.http.routers.api-gateway.priority=1"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      <<: *healthcheck-default
+
+  # ── The Nexus — WebSocket API (Port 8004) ──────────────────────────
+  infinity-ws:
+    <<: *worker-common
+    build:
+      context: ./workers/infinity-ws
+      dockerfile: Dockerfile
+    container_name: infinity-ws-worker
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-not-for-prod}
+      - ENVIRONMENT=production
+    ports:
+      - "8004:8004"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.infinity-ws.rule=PathPrefix(`/ws/`)"
+      - "traefik.http.routers.infinity-ws.entrypoints=web"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      <<: *healthcheck-default
+
+  # ── Infinity Auth — OAuth2/SSO (Port 8005) ──────────────────────────
+  infinity-auth:
+    <<: *worker-common
+    build:
+      context: ./workers/infinity-auth
+      dockerfile: Dockerfile
+    container_name: infinity-auth-worker
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-not-for-prod}
+      - MASTER_KEY_SEED=${MASTER_KEY_SEED:-change-me-in-production}
+      - ENVIRONMENT=production
+    ports:
+      - "8005:8005"
+    volumes:
+      - auth-data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.infinity-auth.rule=PathPrefix(`/auth/`)"
+      - "traefik.http.routers.infinity-auth.entrypoints=web"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      <<: *healthcheck-default
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # P1 WORKERS — Core Services
+  # ═══════════════════════════════════════════════════════════════════════
+
+  # ── Users Service (Port 8006) ────────────────────────────────────────
+  users-service:
+    <<: *worker-common
+    build:
+      context: ./workers/users-service
+      dockerfile: Dockerfile
+    container_name: users-service-worker
+    ports:
+      - "8006:8006"
+    volumes:
+      - users-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      <<: *healthcheck-default
+
+  # ── The Observatory — Monitoring Dashboard (Port 8007) ──────────────
+  monitoring:
+    <<: *worker-common
+    build:
+      context: ./workers/monitoring
+      dockerfile: Dockerfile
+    container_name: monitoring-worker
+    ports:
+      - "8007:8007"
+    volumes:
+      - monitoring-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      <<: *healthcheck-default
+
+  # ── Notifications Service (Port 8008) ───────────────────────────────
+  notifications:
+    <<: *worker-common
+    build:
+      context: ./workers/notifications
+      dockerfile: Dockerfile
+    container_name: notifications-worker
+    ports:
+      - "8008:8008"
+    volumes:
+      - notifications-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      <<: *healthcheck-default
+
+  # ── Infinity AI — AI API Gateway (Port 8009) ────────────────────────
+  infinity-ai:
+    <<: *worker-common
+    build:
+      context: ./workers/infinity-ai
+      dockerfile: Dockerfile
+    container_name: infinity-ai-worker
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY:-}
+      - ENVIRONMENT=production
+    ports:
+      - "8009:8009"
+    volumes:
+      - ai-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8009/health"]
+      <<: *healthcheck-default
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # P2 WORKERS — Domain Services
+  # ═══════════════════════════════════════════════════════════════════════
+
+  # ── The Digital Grid — Workflow Orchestration (Port 8010) ────────────
+  the-grid:
+    <<: *worker-common
+    build:
+      context: ./workers/the-grid
+      dockerfile: Dockerfile
+    container_name: the-grid-worker
+    ports:
+      - "8010:8010"
+    volumes:
+      - grid-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
+      <<: *healthcheck-default
+
+  # ── Products Service (Port 8011) ─────────────────────────────────────
+  products-service:
+    <<: *worker-common
+    build:
+      context: ./workers/products-service
+      dockerfile: Dockerfile
+    container_name: products-service-worker
+    ports:
+      - "8011:8011"
+    volumes:
+      - products-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
+      <<: *healthcheck-default
+
+  # ── Orders Service (Port 8012) ───────────────────────────────────────
+  orders-service:
+    <<: *worker-common
+    build:
+      context: ./workers/orders-service
+      dockerfile: Dockerfile
+    container_name: orders-service-worker
+    ports:
+      - "8012:8012"
+    volumes:
+      - orders-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8012/health"]
+      <<: *healthcheck-default
+
+  # ── Payments Service (Port 8013) ─────────────────────────────────────
+  payments-service:
+    <<: *worker-common
+    build:
+      context: ./workers/payments-service
+      dockerfile: Dockerfile
+    container_name: payments-service-worker
+    ports:
+      - "8013:8013"
+    volumes:
+      - payments-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8013/health"]
+      <<: *healthcheck-default
+
+  # ── Files Service (Port 8014) ────────────────────────────────────────
+  files-service:
+    <<: *worker-common
+    build:
+      context: ./workers/files-service
+      dockerfile: Dockerfile
+    container_name: files-service-worker
+    ports:
+      - "8014:8014"
+    volumes:
+      - files-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8014/health"]
+      <<: *healthcheck-default
+
+  # ── Identity Service (Port 8015) ─────────────────────────────────────
+  identity-service:
+    <<: *worker-common
+    build:
+      context: ./workers/identity-service
+      dockerfile: Dockerfile
+    container_name: identity-service-worker
+    ports:
+      - "8015:8015"
+    volumes:
+      - identity-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8015/health"]
+      <<: *healthcheck-default
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # P3 WORKERS — Stub Services (TODO: Full Implementation)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  analytics-service:
+    <<: *worker-common
+    build: { context: ./workers/analytics-service, dockerfile: Dockerfile }
+    container_name: analytics-service-worker
+    ports: ["8016:8016"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8016/health"]
+      <<: *healthcheck-default
+
+  search-service:
+    <<: *worker-common
+    build: { context: ./workers/search-service, dockerfile: Dockerfile }
+    container_name: search-service-worker
+    ports: ["8017:8017"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8017/health"]
+      <<: *healthcheck-default
+
+  email-service:
+    <<: *worker-common
+    build: { context: ./workers/email-service, dockerfile: Dockerfile }
+    container_name: email-service-worker
+    ports: ["8018:8018"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8018/health"]
+      <<: *healthcheck-default
+
+  sms-service:
+    <<: *worker-common
+    build: { context: ./workers/sms-service, dockerfile: Dockerfile }
+    container_name: sms-service-worker
+    ports: ["8019:8019"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8019/health"]
+      <<: *healthcheck-default
+
+  storage-service:
+    <<: *worker-common
+    build: { context: ./workers/storage-service, dockerfile: Dockerfile }
+    container_name: storage-service-worker
+    ports: ["8020:8020"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8020/health"]
+      <<: *healthcheck-default
+
+  cron-service:
+    <<: *worker-common
+    build: { context: ./workers/cron-service, dockerfile: Dockerfile }
+    container_name: cron-service-worker
+    ports: ["8021:8021"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/health"]
+      <<: *healthcheck-default
+
+  queue-service:
+    <<: *worker-common
+    build: { context: ./workers/queue-service, dockerfile: Dockerfile }
+    container_name: queue-service-worker
+    ports: ["8022:8022"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8022/health"]
+      <<: *healthcheck-default
+
+  cache-service:
+    <<: *worker-common
+    build: { context: ./workers/cache-service, dockerfile: Dockerfile }
+    container_name: cache-service-worker
+    ports: ["8023:8023"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8023/health"]
+      <<: *healthcheck-default
+
+  config-service:
+    <<: *worker-common
+    build: { context: ./workers/config-service, dockerfile: Dockerfile }
+    container_name: config-service-worker
+    ports: ["8024:8024"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8024/health"]
+      <<: *healthcheck-default
+
+  audit-service:
+    <<: *worker-common
+    build: { context: ./workers/audit-service, dockerfile: Dockerfile }
+    container_name: audit-service-worker
+    ports: ["8025:8025"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8025/health"]
+      <<: *healthcheck-default
+
+  rate-limit-service:
+    <<: *worker-common
+    build: { context: ./workers/rate-limit-service, dockerfile: Dockerfile }
+    container_name: rate-limit-service-worker
+    ports: ["8026:8026"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8026/health"]
+      <<: *healthcheck-default
+
+  geo-service:
+    <<: *worker-common
+    build: { context: ./workers/geo-service, dockerfile: Dockerfile }
+    container_name: geo-service-worker
+    ports: ["8027:8027"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8027/health"]
+      <<: *healthcheck-default
+
+  cdn-service:
+    <<: *worker-common
+    build: { context: ./workers/cdn-service, dockerfile: Dockerfile }
+    container_name: cdn-service-worker
+    ports: ["8028:8028"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8028/health"]
+      <<: *healthcheck-default
+
+  health-aggregator:
+    <<: *worker-common
+    build: { context: ./workers/health-aggregator, dockerfile: Dockerfile }
+    container_name: health-aggregator-worker
+    ports: ["8029:8029"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8029/health"]
+      <<: *healthcheck-default
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Volumes
+# ═══════════════════════════════════════════════════════════════════════════
+volumes:
+  traefik-config:
+    driver: local
+  traefik-certs:
+    driver: local
+  vault-data:
+    driver: local
+  vault-config:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
+    driver: local
+  ipfs-data:
+    driver: local
+  void-data:
+    driver: local
+  auth-data:
+    driver: local
+  users-data:
+    driver: local
+  monitoring-data:
+    driver: local
+  notifications-data:
+    driver: local
+  ai-data:
+    driver: local
+  grid-data:
+    driver: local
+  products-data:
+    driver: local
+  orders-data:
+    driver: local
+  payments-data:
+    driver: local
+  files-data:
+    driver: local
+  identity-data:
+    driver: local
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Networks
+# ═══════════════════════════════════════════════════════════════════════════
+networks:
+  tranc3-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
