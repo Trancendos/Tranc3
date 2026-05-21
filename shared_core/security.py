@@ -2,6 +2,8 @@
 # Shared security utilities — JWT, password hashing, input validation
 
 import logging
+
+from shared_core.sanitize import sanitize_for_log
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -68,7 +70,7 @@ def verify_jwt(
     try:
         return jwt.decode(token, key, algorithms=[algorithm])
     except Exception as e:
-        logger.warning(f"JWT verification failed: {e}")
+        logger.warning("JWT verification failed: %s", sanitize_for_log(e))
         raise
 
 

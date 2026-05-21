@@ -4,6 +4,8 @@
 import asyncio
 import datetime
 import logging
+
+from shared_core.sanitize import sanitize_for_log
 import os
 import time
 from contextlib import asynccontextmanager
@@ -173,7 +175,7 @@ async def lifespan(app: FastAPI):
         db_user_manager = DBUserManager(db_manager.get_session)
         logger.info("Database connected")
     except Exception as e:
-        logger.warning(f"Database unavailable: {e} — in-memory fallback")
+        logger.warning("Database unavailable: %s — in-memory fallback", sanitize_for_log(e))
         db_user_manager = DBUserManager(None)
 
     # Redis
@@ -182,7 +184,7 @@ async def lifespan(app: FastAPI):
         redis_client.ping()
         logger.info("Redis connected")
     except Exception as e:
-        logger.warning(f"Redis unavailable: {e}")
+        logger.warning("Redis unavailable: %s", sanitize_for_log(e))
         redis_client = None
 
     # Feature flags (requires Redis)
@@ -201,7 +203,7 @@ async def lifespan(app: FastAPI):
         personality_matrix = EnhancedPersonalityMatrix(cfg)
         logger.info("Personality matrix ready")
     except Exception as e:
-        logger.error(f"Personality matrix failed: {e}")
+        logger.error("Personality matrix failed: %s", sanitize_for_log(e))
 
     # Quantum core
     if QuantumNeuralCore is not None:
@@ -209,7 +211,7 @@ async def lifespan(app: FastAPI):
             quantum_core = QuantumNeuralCore({"num_qubits": 8})
             logger.info("Quantum core ready")
         except Exception as e:
-            logger.warning(f"Quantum core unavailable: {e}")
+            logger.warning("Quantum core unavailable: %s", sanitize_for_log(e))
 
     # Consciousness model
     try:
@@ -224,14 +226,14 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Consciousness model ready")
     except Exception as e:
-        logger.warning(f"Consciousness model unavailable: {e}")
+        logger.warning("Consciousness model unavailable: %s", sanitize_for_log(e))
 
     # Neuromorphic processor
     try:
         neuromorphic = NeuromorphicProcessor(cfg)
         logger.info("Neuromorphic processor ready")
     except Exception as e:
-        logger.warning(f"Neuromorphic processor unavailable: {e}")
+        logger.warning("Neuromorphic processor unavailable: %s", sanitize_for_log(e))
 
     # Evolution engine
     try:
@@ -245,7 +247,7 @@ async def lifespan(app: FastAPI):
         evolution_engine.load_genome_from_redis()
         logger.info("Evolution engine ready")
     except Exception as e:
-        logger.warning(f"Evolution engine unavailable: {e}")
+        logger.warning("Evolution engine unavailable: %s", sanitize_for_log(e))
 
     # Model
     try:
@@ -257,7 +259,7 @@ async def lifespan(app: FastAPI):
             logger.warning("No model weights — echo mode active")
         model.eval()
     except Exception as e:
-        logger.warning(f"Model init failed: {e} — echo mode")
+        logger.warning("Model init failed: %s — echo mode", sanitize_for_log(e))
         model = None
 
     logger.info("TRANC3 API ready ✓")
@@ -676,7 +678,7 @@ async def chat(
                 quantum_core.quantum_attention(torch.randn(1, 8, 64))
                 quantum_used = True
             except Exception as e:
-                logger.warning(f"Quantum attention skipped: {e}")
+                logger.warning("Quantum attention skipped: %s", sanitize_for_log(e))
 
         # Consciousness Φ
         phi_score = None
@@ -685,7 +687,7 @@ async def chat(
                 phi_score = consciousness_model.calculate_phi(torch.randn(64))
                 record_phi(phi_score)
             except Exception as e:
-                logger.warning(f"Consciousness Φ skipped: {e}")
+                logger.warning("Consciousness Φ skipped: %s", sanitize_for_log(e))
 
         # Generate
         if model and encoded is not None:
@@ -768,7 +770,7 @@ async def chat(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Chat error [{request_id}]: {e}", exc_info=True)
+        logger.error("Chat error [%s]: %s", sanitize_for_log(request_id), sanitize_for_log(e), exc_info=True)
         record_request("/chat", "POST", 500, tier, time.time() - start)
         raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -815,7 +817,7 @@ async def feedback(
                 {"quality_score": rating / 5.0, "user_satisfaction": rating / 5.0}
             )
             best = evolution_engine.evolve(num_generations=1)
-            logger.info(f"Evolution: gen={evolution_engine.generation}, fitness={best.fitness:.4f}")
+            logger.info("Evolution: gen=%d, fitness=%.4f", evolution_engine.generation, best.fitness)
 
     return {"message": "Feedback recorded", "impact": "evolution_queued"}
 
@@ -871,12 +873,12 @@ async def stripe_webhook(request: Request):
         _stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
         event = _stripe.Webhook.construct_event(payload, sig, secret)
     except Exception as e:
-        logger.warning(f"Stripe webhook invalid: {e}")
+        logger.warning("Stripe webhook invalid: %s", sanitize_for_log(e))
         raise HTTPException(status_code=400, detail="Invalid webhook")
 
     etype = event.get("type", "")
     obj = event.get("data", {}).get("object", {})
-    logger.info(f"Stripe event: {etype} id={obj.get('id')}")
+    logger.info("Stripe event: %s id=%s", sanitize_for_log(etype), sanitize_for_log(obj.get("id")))
     return {"received": True}
 
 

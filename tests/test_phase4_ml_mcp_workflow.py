@@ -400,7 +400,6 @@ class TestCausalReasoner:
             CausalRule, CausalStrength, CausalGraph
         )
         # Cycle detection lives in CausalGraph._graph (sync), test via the underlying graph
-        from src.intelligence.causal_reasoner import CausalGraph
         g = CausalGraph()
         g.add_rule(CausalRule(cause="A", effect="B", strength=CausalStrength.CONTRIBUTING))
         g.add_rule(CausalRule(cause="B", effect="C", strength=CausalStrength.CONTRIBUTING))

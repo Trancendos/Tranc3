@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import json
 import logging
+
+from shared_core.sanitize import sanitize_for_log
 import time
 import uuid
 from collections import defaultdict
@@ -112,7 +114,7 @@ class ConnectionManager:
             "connected_at": datetime.now(timezone.utc).isoformat(),
             "metadata": metadata or {},
         }
-        logger.info(f"ws_connected: user={user_id}, total={self.total_connections}")
+        logger.info("ws_connected: user=%s, total=%s", sanitize_for_log(user_id), self.total_connections)
         return True
 
     def disconnect(self, ws: WebSocket) -> None:
@@ -126,7 +128,7 @@ class ConnectionManager:
         self._subscriptions.pop(ws, None)
         conn_info = self._connections.pop(ws, None)
         if conn_info:
-            logger.info(f"ws_disconnected: user={conn_info.get('user_id', 'unknown')}")
+            logger.info("ws_disconnected: user=%s", sanitize_for_log(conn_info.get('user_id', 'unknown')))
 
     async def subscribe(self, ws: WebSocket, channel: str) -> bool:
         """Subscribe a connection to a channel."""
@@ -236,7 +238,7 @@ def verify_token(token: str, secret: str = "change-me-in-production") -> dict[st
 
         return payload
     except Exception as e:
-        logger.warning(f"token_verification_failed: {e}")
+        logger.warning("token_verification_failed: %s", sanitize_for_log(e))
         return None
 
 
@@ -382,7 +384,7 @@ async def websocket_endpoint(
     except WebSocketDisconnect:
         manager.disconnect(ws)
     except Exception as e:
-        logger.error(f"ws_error: {e}")
+        logger.error("ws_error: %s", sanitize_for_log(e))
         manager.disconnect(ws)
 
 
