@@ -72,3 +72,4 @@ Thumbs.db
 *.db-shm
 *.db-wal
 spawned/
+node_modules/

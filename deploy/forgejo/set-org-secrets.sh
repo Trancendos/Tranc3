@@ -19,6 +19,33 @@
 
 set -euo pipefail
 
+# Parse CLI flags
+INCLUDE_SERVICE_ROLE="false"
+for arg in "$@"; do
+  case "$arg" in
+    --include-service-role) INCLUDE_SERVICE_ROLE="true" ;;
+    -h|--help)
+      echo "Usage: $0 [--include-service-role]"
+      echo ""
+      echo "Options:"
+      echo "  --include-service-role  Also set SUPABASE_SERVICE_ROLE_KEY (bypasses RLS)"
+      echo ""
+      echo "Environment variables can also be used:"
+      echo "  INCLUDE_SERVICE_ROLE=true  $0"
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $arg" >&2
+      exit 1
+      ;;
+  esac
+done
+
+# Allow env var to override / supplement CLI flag
+if [[ "${INCLUDE_SERVICE_ROLE_ENV:-}" == "true" ]]; then
+  INCLUDE_SERVICE_ROLE="true"
+fi
+
 FORGEJO_URL="${FORGEJO_URL:-https://trancendos.com/the-workshop}"
 ORG="${FORGEJO_ORG:-Trancendos}"
 API="$FORGEJO_URL/api/v1"
@@ -90,7 +117,7 @@ set_secret "SUPABASE_ANON_KEY"         "$SUPABASE_ANON_KEY"
 if [[ "${INCLUDE_SERVICE_ROLE:-}" == "true" ]]; then
   set_secret "SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_SERVICE_ROLE_KEY"
 else
-  echo "  ⊘ Skipping SUPABASE_SERVICE_ROLE_KEY (use --include-service-role to enable)"
+  echo "  ⊘ Skipping SUPABASE_SERVICE_ROLE_KEY (pass --include-service-role or set INCLUDE_SERVICE_ROLE=true)"
 fi
 
 # ── Upstash Redis (from .env) ─────────────────────────────────────────────

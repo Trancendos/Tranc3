@@ -247,5 +247,46 @@ class TestSpawnerSecurity:
         assert "\\" not in result
 
 
+class TestSpawnerEndToEnd:
+    """End-to-end tests for _resolve_output_base and safe_join in spawner."""
+
+    def test_resolve_output_base_rejects_disallowed_dir(self):
+        """_resolve_output_base should reject dirs outside _ALLOWED_OUTPUT_ROOTS."""
+        from src.personality.spawner import _resolve_output_base, PathTraversalError
+        with pytest.raises(PathTraversalError):
+            _resolve_output_base("/etc")
+
+    def test_resolve_output_base_accepts_cwd_subdir(self):
+        """_resolve_output_base should accept a subdir of CWD."""
+        from src.personality.spawner import _resolve_output_base
+        import tempfile
+        with tempfile.TemporaryDirectory(dir=".") as tmpdir:
+            result = _resolve_output_base(tmpdir)
+            assert result.is_absolute()
+
+    def test_resolve_output_base_rejects_strict_outside(self):
+        """_resolve_output_base should reject /var/log (outside allowed roots)."""
+        from src.personality.spawner import _resolve_output_base, PathTraversalError
+        with pytest.raises(PathTraversalError):
+            _resolve_output_base("/var/log")
+
+    def test_spawn_end_to_end_with_safe_dir(self):
+        """spawn() should succeed with a safe output directory."""
+        from src.personality.spawner import PersonalitySpawner
+        import tempfile
+        spawner = PersonalitySpawner()
+        with tempfile.TemporaryDirectory(dir=".") as tmpdir:
+            spawner.spawn("dorris-fontaine", "test-repo", tmpdir)
+            target = Path(tmpdir) / "test-repo"
+            assert target.exists()
+
+    def test_spawn_end_to_end_rejects_outside_dir(self):
+        """spawn() should raise when output_dir is outside allowed roots."""
+        from src.personality.spawner import PersonalitySpawner, PathTraversalError
+        spawner = PersonalitySpawner()
+        with pytest.raises(PathTraversalError):
+            spawner.spawn("dorris-fontaine", "test-repo", "/etc/tranc3-output")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

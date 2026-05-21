@@ -101,15 +101,17 @@ class CircuitBreaker:
         elif self._failure_count >= self.config.failure_threshold:
             self.state = CircuitState.OPEN
             logger.warning(
-                f"Circuit {self.name}: CLOSED → OPEN "
-                f"({self._failure_count} failures >= {self.config.failure_threshold})"
+                "Circuit %s: CLOSED → OPEN (%s failures >= %s)",
+                sanitize_for_log(self.name),
+                sanitize_for_log(self._failure_count),
+                sanitize_for_log(self.config.failure_threshold),
             )
 
     async def call(self, fn: Callable, *args, **kwargs) -> Any:
         """Execute a function with circuit breaker protection"""
         if not self.can_execute():
             raise RuntimeError(
-                f"Circuit breaker '{self.name}' is OPEN — requests rejected"
+                "Circuit breaker is OPEN — requests rejected"
             )
 
         try:

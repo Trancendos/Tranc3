@@ -21,6 +21,8 @@ import logging
 import os
 from typing import Optional
 
+from fastapi import HTTPException
+
 logger = logging.getLogger(__name__)
 
 # In production, we return generic messages. In development, we can be
@@ -72,7 +74,9 @@ def safe_error_detail(
         # Log the real error server-side for debugging
         import uuid
         ref_id = uuid.uuid4().hex[:8]
-        logger.error(
+        # Use WARNING for 4xx client errors, ERROR for 5xx server errors
+        log_fn = logger.warning if status_code < 500 else logger.error
+        log_fn(
             "Error ref=%s status=%d: %s: %s",
             ref_id, status_code, type(exc).__name__, exc,
         )
@@ -99,23 +103,26 @@ def safe_error_detail(
     return _SAFE_MESSAGES.get(status_code, "An error occurred.")
 
 
-class SafeHTTPException(Exception):
+class SafeHTTPException(HTTPException):
     """Convenience exception that automatically produces safe error details.
 
+    Inherits from FastAPI's HTTPException so it is handled by the default
+    exception handlers (returns proper JSON response with status code).
+
     Usage with FastAPI:
-        from fastapi import HTTPException
         from shared_core.error_handlers import SafeHTTPException
 
         try:
             ...
         except SomeError as e:
-            raise HTTPException(status_code=500, detail=safe_error_detail(e, 500))
+            raise SafeHTTPException(status_code=500, exc=e)
     """
     def __init__(
         self,
         status_code: int = 500,
         exc: Optional[Exception] = None,
+        headers: Optional[dict] = None,
     ):
-        self.status_code = status_code
-        self.detail = safe_error_detail(exc, status_code)
+        detail = safe_error_detail(exc, status_code)
+        super().__init__(status_code=status_code, detail=detail, headers=headers)
         super().__init__(self.detail)

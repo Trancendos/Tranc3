@@ -132,26 +132,30 @@ class SafeLogger:
     def __init__(self, logger: logging.Logger) -> None:
         self._logger = logger
 
+    def _sanitize_msg(self, msg: str) -> str:
+        """Sanitize the message format string itself to prevent log injection."""
+        return sanitize_for_log(msg, max_length=4096)
+
     def _sanitize_args(self, args: tuple) -> tuple:
         return tuple(sanitize_for_log(a) for a in args)
 
     def debug(self, msg: str, *args: Any, **kwargs: Any) -> None:
-        self._logger.debug(msg, *self._sanitize_args(args), **kwargs)
+        self._logger.debug(self._sanitize_msg(msg), *self._sanitize_args(args), **kwargs)
 
     def info(self, msg: str, *args: Any, **kwargs: Any) -> None:
-        self._logger.info(msg, *self._sanitize_args(args), **kwargs)
+        self._logger.info(self._sanitize_msg(msg), *self._sanitize_args(args), **kwargs)
 
     def warning(self, msg: str, *args: Any, **kwargs: Any) -> None:
-        self._logger.warning(msg, *self._sanitize_args(args), **kwargs)
+        self._logger.warning(self._sanitize_msg(msg), *self._sanitize_args(args), **kwargs)
 
     def error(self, msg: str, *args: Any, **kwargs: Any) -> None:
-        self._logger.error(msg, *self._sanitize_args(args), **kwargs)
+        self._logger.error(self._sanitize_msg(msg), *self._sanitize_args(args), **kwargs)
 
     def critical(self, msg: str, *args: Any, **kwargs: Any) -> None:
-        self._logger.critical(msg, *self._sanitize_args(args), **kwargs)
+        self._logger.critical(self._sanitize_msg(msg), *self._sanitize_args(args), **kwargs)
 
     def exception(self, msg: str, *args: Any, **kwargs: Any) -> None:
-        self._logger.exception(msg, *self._sanitize_args(args), **kwargs)
+        self._logger.exception(self._sanitize_msg(msg), *self._sanitize_args(args), **kwargs)
 
     # Pass-through for logger attributes
     @property
