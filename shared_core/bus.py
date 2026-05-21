@@ -3,6 +3,8 @@
 
 import asyncio
 import logging
+
+from shared_core.sanitize import sanitize_for_log
 from collections import defaultdict
 from typing import Callable, Dict, List, Optional
 
@@ -29,17 +31,17 @@ class EventBus:
     async def start(self) -> None:
         """Start the event bus"""
         self._running = True
-        logger.info(f"EventBus started (node={self.node_id})")
+        logger.info("EventBus started (node=%s)", sanitize_for_log(self.node_id))
 
     async def stop(self) -> None:
         """Stop the event bus"""
         self._running = False
-        logger.info(f"EventBus stopped (node={self.node_id})")
+        logger.info("EventBus stopped (node=%s)", sanitize_for_log(self.node_id))
 
     def subscribe(self, event_type: str, handler: Callable) -> None:
         """Subscribe to events of a specific type"""
         self._subscribers[event_type].append(handler)
-        logger.debug(f"Subscribed to {event_type}: {handler.__name__}")
+        logger.debug("Subscribed to %s: %s", sanitize_for_log(event_type), sanitize_for_log(handler.__name__))
 
     def subscribe_all(self, handler: Callable) -> None:
         """Subscribe to all events (wildcard)"""
@@ -91,7 +93,7 @@ class EventBus:
                     else:
                         handler(event)
                 except Exception as e:
-                    logger.error(f"Replay handler error: {e}")
+                    logger.error("Replay handler error: %s", sanitize_for_log(e))
 
         return events
 

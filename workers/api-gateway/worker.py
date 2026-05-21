@@ -32,6 +32,8 @@ import hashlib
 import hmac
 import json
 import logging
+
+from shared_core.sanitize import sanitize_for_log
 import os
 import time
 import uuid
@@ -292,7 +294,7 @@ async def gateway(request: Request, path: str):
         try:
             resp = await breaker.execute(lambda: proxy_request(request, target_service, target_path, request_id))
             elapsed = time.time() - start
-            logger.info(f"http method={request.method} path=/{path} status={resp.status_code} ms={elapsed*1000:.0f}")
+            logger.info("http method=%s path=/%s status=%s ms=%.0f", sanitize_for_log(request.method), sanitize_for_log(path), resp.status_code, elapsed * 1000)
             return JSONResponse(
                 content=json.loads(resp.text) if resp.headers.get("content-type", "").startswith("application/json") else resp.text,
                 status_code=resp.status_code,
@@ -301,7 +303,7 @@ async def gateway(request: Request, path: str):
         except Exception as e:
             if "Circuit" in str(e):
                 raise HTTPException(status_code=503, detail="Service temporarily unavailable. Retry in 60s.") from None
-            logger.error(f"Proxy failed: path=/{path} error={e}")
+            logger.error("Proxy failed: path=/%s error=%s", sanitize_for_log(path), sanitize_for_log(e))
             raise HTTPException(status_code=502, detail="Failed to reach upstream service.") from None
 
     raise HTTPException(status_code=404, detail=f"{request.method} /{path} not found")

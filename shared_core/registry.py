@@ -3,6 +3,8 @@
 
 import asyncio
 import logging
+
+from shared_core.sanitize import sanitize_for_log
 import time
 from typing import Callable, Dict, List, Optional
 
@@ -30,7 +32,7 @@ class ServiceRegistry:
         self._services[service.name] = service
         for cap in service.capabilities:
             self._capability_index.setdefault(cap.name, []).append(service.name)
-        logger.info(f"Registered service: {service.name} @ {service.endpoint}")
+        logger.info("Registered service: %s @ %s", sanitize_for_log(service.name), sanitize_for_log(service.endpoint))
         self._notify_watchers("register", service.name)
 
     def deregister(self, name: str) -> Optional[ServiceInfo]:
@@ -45,7 +47,7 @@ class ServiceRegistry:
                     ]
                     if not self._capability_index[cap.name]:
                         del self._capability_index[cap.name]
-            logger.info(f"Deregistered service: {name}")
+            logger.info("Deregistered service: %s", sanitize_for_log(name))
             self._notify_watchers("deregister", name)
         return service
 
@@ -84,7 +86,7 @@ class ServiceRegistry:
             service.health = health
             service.last_seen = time.time()
             if old_health != health:
-                logger.info(f"Service {name}: {old_health.value} → {health.value}")
+                logger.info("Service %s: %s → %s", sanitize_for_log(name), old_health.value, health.value)
                 self._notify_watchers("health_change", name)
 
     def add_watcher(self, callback: Callable) -> None:
@@ -97,7 +99,7 @@ class ServiceRegistry:
             try:
                 watcher(event, service_name)
             except Exception as e:
-                logger.error(f"Watcher error: {e}")
+                logger.error("Watcher error: %s", sanitize_for_log(e))
 
     async def start_health_monitor(self) -> None:
         """Start periodic health checking"""
@@ -131,7 +133,7 @@ class ServiceRegistry:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Health check loop error: {e}")
+                logger.error("Health check loop error: %s", sanitize_for_log(e))
 
 
 # Singleton instance
