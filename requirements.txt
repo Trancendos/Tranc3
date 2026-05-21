@@ -9,7 +9,7 @@
 torch==2.12.0
 
 # === Tokenization ===
-sentencepiece==0.2.0
+sentencepiece==0.2.1
 
 # === Datasets ===
 datasets==3.0.0
