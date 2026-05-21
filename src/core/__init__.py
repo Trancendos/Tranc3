@@ -5,7 +5,7 @@
 
 try:
     from src.core.advanced_model import AdvancedTransformerModel
-except Exception:
+except ImportError:
     AdvancedTransformerModel = None  # type: ignore[assignment,misc]
 try:
     from src.core.tranc3_tokenizer import Tranc3Tokenizer

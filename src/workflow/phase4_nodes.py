@@ -316,22 +316,22 @@ class MetaLearnNode:
             ml = _meta_learner()
             if ml is None:
                 raise RuntimeError("MetaLearner not available")
-            from src.neural.meta_learner import TaskPrototype
             domain = cfg.get("domain", inputs.get("domain", "general"))
             task_type = cfg.get("task_type", inputs.get("task_type", "generic"))
             input_schema = list(cfg.get("input_schema", []))
             output_schema = list(cfg.get("output_schema", []))
-            tags = set(cfg.get("tags", []))
+            tags = list(cfg.get("tags", []))
             base_params = dict(cfg.get("base_params", inputs.get("parameters", {})))
-            task = TaskPrototype(
+            # Use keyword-arg API: adapt(domain, task_type, input_signature,
+            # output_signature, tags, current_parameters)
+            result = await ml.adapt(
                 domain=domain,
                 task_type=task_type,
-                input_schema=input_schema,
-                output_schema=output_schema,
+                input_signature={k: "str" for k in input_schema},
+                output_signature={k: "str" for k in output_schema},
                 tags=tags,
-                parameters=base_params,
+                current_parameters=base_params,
             )
-            result = await ml.adapt(task)
             output = {
                 "adapted": result is not None,
                 "parameters": result.adapted_parameters if result else base_params,
@@ -468,24 +468,32 @@ class CausalReasonNode:
             obs_key = cfg.get("observations_key", "observations")
             observations = {**dict(cfg.get("static_observations", {})),
                             **dict(inputs.get(obs_key, {}))}
+            # All CausalReasoner methods are async — must await each call.
             for var, val in observations.items():
-                cr.observe(var, val)
+                await cr.observe(var, float(val) if isinstance(val, (int, float)) else 1.0)
             if action == "predict":
+                # predict(causes: List[str], max_results=10) → InferenceResult
                 target_vars = list(cfg.get("target_variables", []))
-                threshold = float(cfg.get("threshold", 0.1))
-                result = cr.predict(target_variables=target_vars or None, threshold=threshold)
+                cause_list = target_vars or list(observations.keys())
+                result = await cr.predict(causes=cause_list, max_results=10)
                 output = {
                     "action": "predict",
-                    "predictions": result.predictions,
+                    # InferenceResult.effects: List[Tuple[str, float]]
+                    "predictions": {e: round(p, 4) for e, p in result.effects},
                     "confidence": result.confidence,
                 }
             elif action == "diagnose":
-                max_causes = int(cfg.get("max_causes", 5))
-                result = cr.diagnose(max_causes=max_causes)
+                max_results = int(cfg.get("max_causes", 5))
+                # diagnose(effects: List[str], max_results=10) → InferenceResult
+                effect_list = list(cfg.get("target_variables", []))
+                if not effect_list:
+                    effect_list = list(observations.keys())
+                result = await cr.diagnose(effects=effect_list, max_results=max_results)
+                # InferenceResult.causes: List[Tuple[str, float]]
                 output = {
                     "action": "diagnose",
-                    "root_causes": result.root_causes,
-                    "probabilities": result.probabilities,
+                    "root_causes": [c for c, _ in result.causes],
+                    "probabilities": {c: round(p, 4) for c, p in result.causes},
                     "confidence": result.confidence,
                 }
             elif action == "counterfactual":
@@ -493,14 +501,22 @@ class CausalReasonNode:
                 interventions = {**dict(cfg.get("static_interventions", {})),
                                  **dict(inputs.get(int_key, {}))}
                 target_vars = list(cfg.get("target_variables", []))
-                result = cr.counterfactual(
-                    interventions=interventions,
-                    target_variables=target_vars or None,
+                observed_effects = target_vars or list(observations.keys())
+                # counterfactual(observed_effects, intervention, max_results)
+                # The API takes a single intervention string; use first key if dict
+                intervention_str = (
+                    next(iter(interventions.keys()), "")
+                    if interventions else ""
+                )
+                result = await cr.counterfactual(
+                    observed_effects=observed_effects,
+                    intervention=intervention_str,
+                    max_results=10,
                 )
                 output = {
                     "action": "counterfactual",
-                    "predictions": result.predictions,
-                    "delta": result.delta,
+                    "predictions": {e: round(p, 4) for e, p in result.effects},
+                    "delta": {e: round(p, 4) for e, p in result.effects},
                     "confidence": result.confidence,
                     "interventions": interventions,
                 }
