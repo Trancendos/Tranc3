@@ -22,14 +22,13 @@ import time
 import uuid
 from collections import OrderedDict
 from contextlib import contextmanager
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Header, Query, Request
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
@@ -271,8 +270,8 @@ class OllamaClient:
         self._available: Optional[bool] = None
 
     async def complete(self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float) -> Optional[Dict[str, Any]]:
-        import urllib.request
         import urllib.error
+        import urllib.request
         try:
             payload = {
                 "model": model,
@@ -321,8 +320,8 @@ class OpenRouterClient:
         self.api_key = api_key
 
     async def complete(self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float) -> Optional[Dict[str, Any]]:
-        import urllib.request
         import urllib.error
+        import urllib.request
         try:
             # Use free model if the requested model isn't free
             actual_model = model
@@ -370,8 +369,8 @@ class HuggingFaceClient:
         self.api_key = api_key
 
     async def complete(self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float) -> Optional[Dict[str, Any]]:
-        import urllib.request
         import urllib.error
+        import urllib.request
         try:
             prompt = "\n".join(f"{m.role}: {m.content}" for m in messages) + "\nassistant:"
             payload = {"inputs": prompt, "parameters": {"max_new_tokens": max_tokens, "temperature": temperature}}

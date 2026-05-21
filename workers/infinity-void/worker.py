@@ -34,15 +34,15 @@ import sqlite3
 import time
 import uuid
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
 
+import httpx
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives import hashes
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-import httpx
 
 # ── Configuration ───────────────────────────────────────────────
 
@@ -220,10 +220,18 @@ async def get_auth_user_id(authorization: str | None) -> str | None:
 
 # ── App ─────────────────────────────────────────────────────────
 
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    """Startup: initialize DB schema. Shutdown: cleanup (if needed)."""
+    init_schema()
+    yield
+
+
 app = FastAPI(
     title="The Void — Self-Hosted Secrets Vault",
     version="2.1.0",
     description="Encrypted secrets vault — replaces Cloudflare Worker. Zero external dependencies.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -234,12 +242,6 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-MFA-Token", "X-Hardware-Key", "X-Lighthouse-Token", "X-Internal-Secret"],
     max_age=86400,
 )
-
-
-# Initialize schema on startup
-@app.on_event("startup")
-async def startup() -> None:
-    init_schema()
 
 
 # ── Routes ──────────────────────────────────────────────────────

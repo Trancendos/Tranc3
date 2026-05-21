@@ -163,7 +163,7 @@ class TheStudio:
 
     def _emit(self, job: StudioJob) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
 
             observe(
                 "studio.job.submitted",

@@ -1,7 +1,7 @@
 # TensorFlow hybrid engine — TF models alongside PyTorch for specialized tasks
 
-from .tf_model import TFModelConfig, TFSequenceClassifier, TFReinforcementAgent, TFAvailable
-from .hybrid_engine import HybridConfig, ModelEnsemble, HybridInferenceEngine, hybrid_engine
+from .hybrid_engine import HybridConfig, HybridInferenceEngine, ModelEnsemble, hybrid_engine
+from .tf_model import TFAvailable, TFModelConfig, TFReinforcementAgent, TFSequenceClassifier
 
 __all__ = [
     "TFModelConfig",

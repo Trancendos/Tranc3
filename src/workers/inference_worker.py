@@ -19,13 +19,13 @@ import time
 from typing import Any, Dict, Optional
 
 from src.workers.pool import (
-    JobSpec,
-    JobResult,
-    JobStatus,
-    JobType,
     _QUEUE_KEY,
     _RESULT_PREFIX,
     _RESULT_TTL,
+    JobResult,
+    JobSpec,
+    JobStatus,
+    JobType,
 )
 
 logging.basicConfig(

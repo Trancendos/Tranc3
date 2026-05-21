@@ -91,8 +91,8 @@ class Tranc3Tokenizer:
     def _train_with_hf(self, texts: List[str]) -> "Tranc3Tokenizer":
         from tokenizers import Tokenizer
         from tokenizers.models import BPE
-        from tokenizers.trainers import BpeTrainer
         from tokenizers.pre_tokenizers import ByteLevel
+        from tokenizers.trainers import BpeTrainer
 
         special_list = list(SPECIAL_TOKENS.keys())
 

@@ -134,9 +134,9 @@ def generate_p2_worker(name: str, config: dict) -> str:
     col_defs = ",\n                    ".join(f"{f[0]} {f[1]}" for f in fields)
     # Build INSERT columns
     insert_cols = ", ".join(f[0] for f in fields if f[0] not in ("created_at", "updated_at"))
-    insert_placeholders = ", ".join("?" for _ in insert_cols.split(", "))
+    ", ".join("?" for _ in insert_cols.split(", "))
     # Build SELECT all columns
-    all_cols = ", ".join(f[0] for f in fields)
+    ", ".join(f[0] for f in fields)
 
     return f'''"""
 Trancendos {title} — Self-Hosted Worker

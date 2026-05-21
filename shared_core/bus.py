@@ -4,7 +4,7 @@
 import asyncio
 import logging
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Callable, Dict, List, Optional
 
 from .models import EventMessage, VectorClock
 

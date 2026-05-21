@@ -10,13 +10,13 @@ The empathetic dialogue dataset and daily dialogue dataset both
 convert cleanly into format 1 via the provided download script.
 """
 
-import os
 import json
-import torch
 import random
 from pathlib import Path
-from typing import List, Dict, Optional
-from torch.utils.data import Dataset, DataLoader
+from typing import Dict, List
+
+import torch
+from torch.utils.data import DataLoader, Dataset
 
 from ..core.tokenizer import Tranc3Tokenizer
 

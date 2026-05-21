@@ -36,10 +36,9 @@ Usage:
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

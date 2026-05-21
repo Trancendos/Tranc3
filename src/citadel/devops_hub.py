@@ -196,7 +196,8 @@ class TheCitadel:
         status: DeployStatus = DeployStatus.PENDING,
     ) -> DeployRecord:
         """Sync wrapper — persists async via fire-and-forget."""
-        import asyncio, uuid
+        import asyncio
+        import uuid
         record = DeployRecord(
             id=str(uuid.uuid4()),
             target=target,
@@ -279,7 +280,7 @@ class TheCitadel:
 
     def _emit(self, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
             observe(event_type, category=EventCategory.SYSTEM, service="the-citadel",
                     metadata=metadata or {})
         except Exception:

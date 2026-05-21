@@ -27,7 +27,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-from src.workers.pool import JobSpec, JobType, JobResult, WorkerPool, get_pool
+from src.workers.pool import JobResult, JobSpec, JobType, WorkerPool, get_pool
 
 logger = logging.getLogger(__name__)
 

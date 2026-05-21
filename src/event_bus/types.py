@@ -12,7 +12,6 @@ from typing import Any, Callable, Coroutine, Optional
 
 from pydantic import BaseModel, Field
 
-
 # ── Enums ────────────────────────────────────────────────────
 
 

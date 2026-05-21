@@ -103,8 +103,9 @@ def _get_causal_reasoner():
     global _causal_reasoner_inst
     if _causal_reasoner_inst is None:
         try:
-            from src.intelligence.causal_reasoner import CausalReasoner, CausalRule, CausalStrength
             import asyncio
+
+            from src.intelligence.causal_reasoner import CausalReasoner, CausalRule, CausalStrength
             cr = CausalReasoner()
             # Seed with inference failure causal rules.
             # CausalRule uses `confidence=` (not `probability=`) and has no
@@ -329,6 +330,7 @@ class MLPipeline:
                 router = _get_attention_router()
                 if router:
                     import uuid
+
                     from src.neural.attention_router import RoutingRequest
                     # RoutingRequest uses request_id and required_tags (Set[str]),
                     # not query/required_capabilities/preferred_tags/top_k.

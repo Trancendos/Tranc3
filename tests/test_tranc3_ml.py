@@ -9,7 +9,8 @@ import asyncio
 import sys
 import os
 import pytest
-import torch
+
+torch = pytest.importorskip("torch", reason="torch not installed — ML tests skipped")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 

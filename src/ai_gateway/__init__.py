@@ -25,10 +25,10 @@ Usage:
 from src.ai_gateway.gateway import AIGateway, AIGatewayConfig
 from src.ai_gateway.providers import (
     AIProvider,
+    HuggingFaceProvider,
+    OfflineProvider,
     OllamaProvider,
     OpenRouterProvider,
-    OfflineProvider,
-    HuggingFaceProvider,
 )
 from src.ai_gateway.types import (
     AIRequest,

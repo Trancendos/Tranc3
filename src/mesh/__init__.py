@@ -16,16 +16,16 @@ Usage:
 """
 
 from src.mesh.circuit_breaker import CircuitBreaker, CircuitState
-from src.mesh.service_mesh import ServiceMesh, ServiceDescriptor, ServiceHealth
+from src.mesh.service_mesh import ServiceDescriptor, ServiceHealth, ServiceMesh
 from src.mesh.types import (
     CircuitBreakerConfig,
     CircuitBreakerState,
+    HealthStatus,
+    RPCMethodDescriptor,
     ServiceCallOptions,
     ServiceCallResult,
     ServiceCategory,
     ServiceMeshConfig,
-    HealthStatus,
-    RPCMethodDescriptor,
 )
 
 __all__ = [

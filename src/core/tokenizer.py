@@ -14,11 +14,11 @@ Special tokens:
 """
 
 import os
-import sentencepiece as spm
-from pathlib import Path
-from typing import List, Union
 import tempfile
+from pathlib import Path
+from typing import List
 
+import sentencepiece as spm
 
 SPECIAL_TOKENS = {
     "pad_token": "<pad>",  # nosec B105 — false positive: not a password
@@ -144,7 +144,7 @@ def train_tokenizer(
     print(f"Training tokenizer on {len(data_files)} files → vocab_size={vocab_size}")
 
     # Build special tokens string for sentencepiece
-    special = ",".join(SPECIAL_TOKENS.values())
+    ",".join(SPECIAL_TOKENS.values())
 
     spm.SentencePieceTrainer.train(
         input=",".join(str(p) for p in data_files),
@@ -156,7 +156,7 @@ def train_tokenizer(
         bos_id=BOS_ID,
         eos_id=EOS_ID,
         unk_id=UNK_ID,
-        user_defined_symbols=f"<sys>,<usr>,<ast>",
+        user_defined_symbols="<sys>,<usr>,<ast>",
         input_sentence_size=5_000_000,
         shuffle_input_sentence=True,
     )

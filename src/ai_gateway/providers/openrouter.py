@@ -95,9 +95,9 @@ class OpenRouterProvider(AIProvider):
                 finish_reason=choice.get("finish_reason"),
             )
         except httpx.HTTPStatusError as e:
-            raise RuntimeError(f"OpenRouter HTTP error: {e.response.status_code}")
+            raise RuntimeError(f"OpenRouter HTTP error: {e.response.status_code}") from None
         except Exception as e:
-            raise RuntimeError(f"OpenRouter error: {e}")
+            raise RuntimeError(f"OpenRouter error: {e}") from None
 
     async def health_check(self) -> ProviderHealth:
         """Check OpenRouter availability."""

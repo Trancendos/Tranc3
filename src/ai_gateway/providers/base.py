@@ -7,7 +7,6 @@ Abstract base for all AI providers.
 from __future__ import annotations
 
 import abc
-from typing import Any
 
 from src.ai_gateway.types import AIRequest, AIResponse, ProviderHealth
 

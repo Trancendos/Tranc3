@@ -269,7 +269,8 @@ class Tranc3Engine:
 
         # Tier 1: local Ollama (zero-cost, fully self-owned)
         try:
-            from src.core.ollama_adapter import is_available, generate as ollama_gen
+            from src.core.ollama_adapter import generate as ollama_gen
+            from src.core.ollama_adapter import is_available
 
             if await is_available():
                 result = await ollama_gen(prompt=prompt, system_prompt=sys_text)

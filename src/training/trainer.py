@@ -8,18 +8,18 @@ Full training loop with:
   - Validation loop with perplexity reporting
 """
 
-import os
 import math
+import os
 import time
-import json
-import torch
-import torch.nn as nn
 from pathlib import Path
 from typing import Optional
+
+import torch
+import torch.nn as nn
 from torch.cuda.amp import GradScaler, autocast
 
-from ..core.model import Tranc3Model
 from ..core.config import ModelConfig, TrainingConfig
+from ..core.model import Tranc3Model
 from ..core.tokenizer import Tranc3Tokenizer
 from ..training.dataset import ConversationDataset, build_dataloader
 

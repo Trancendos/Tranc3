@@ -21,8 +21,8 @@ from src.event_bus.bus import EventBus
 from src.event_bus.types import (
     DeliveryResult,
     DeliveryStatus,
-    EventCallback,
     EventBusConfig,
+    EventCallback,
     EventEnvelope,
     EventFilter,
     EventMetadata,

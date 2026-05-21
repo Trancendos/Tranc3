@@ -21,6 +21,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.auth.dependencies import get_current_user
+
 from .tools import registry
 
 logger = logging.getLogger(__name__)

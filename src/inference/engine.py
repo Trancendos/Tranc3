@@ -8,13 +8,14 @@ The model does the language generation; the personality shapes the behaviour.
 Security: Uses safe_torch_load to prevent pickle-based RCE (CVE-2024-48063, CVE-2025-32434)
 """
 
-import torch
-from typing import List, Dict, Optional, Any
+from typing import Any, Dict, List, Optional
 
+import torch
+
+from ..core.config import InferenceConfig, ModelConfig
 from ..core.model import Tranc3Model
-from ..core.config import ModelConfig, InferenceConfig
+from ..core.security import safe_torch_load
 from ..core.tokenizer import Tranc3Tokenizer
-from ..core.security import safe_torch_load, verify_model_integrity, sanitize_input
 from ..personality.matrix import PersonalityMatrix, PersonalityProfile
 
 

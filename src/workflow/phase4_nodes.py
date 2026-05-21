@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +139,7 @@ class NeuralMeshNode:
             if mesh is None:
                 raise RuntimeError("NeuralMesh not available")
             if action == "emit":
-                from src.neural.neural_mesh import Signal, MeshNode
+                from src.neural.neural_mesh import MeshNode, Signal
                 source_id = cfg.get("source_id", "workflow")
                 signal_type = cfg.get("signal_type", "workflow_event")
                 payload_key = cfg.get("payload_key")

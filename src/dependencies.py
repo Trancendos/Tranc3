@@ -2,9 +2,10 @@
 # FastAPI dependency injection — wires services to routes without globals
 
 import logging
-from typing import Any, Callable, Dict, Optional, TypeVar
+from typing import Any, Callable, Dict, TypeVar
 
-from fastapi import Depends, Request
+from fastapi import Request
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)

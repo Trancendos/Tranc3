@@ -1,26 +1,27 @@
 # src/database/schema.py
 # TRANC3 Complete Database Schema (SQLAlchemy + Alembic)
 
+import uuid
+from datetime import datetime
+
 from sqlalchemy import (
-    create_engine,
-    Column,
-    String,
-    Integer,
-    Float,
-    Boolean,
-    DateTime,
-    Text,
+    CHAR,
     JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
     ForeignKey,
     Index,
-    BigInteger,
-    text,
+    Integer,
+    String,
+    Text,
     TypeDecorator,
-    CHAR,
+    create_engine,
+    text,
 )
-from sqlalchemy.orm import declarative_base, relationship, Session
-from datetime import datetime
-import uuid
+from sqlalchemy.orm import Session, declarative_base, relationship
 
 
 # Cross-dialect UUID type — stores as CHAR(36) on any backend,

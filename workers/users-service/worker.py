@@ -14,7 +14,6 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -111,7 +110,7 @@ async def create_user(user: UserCreate):
         )
         db.commit()
     except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="Username or email already exists")
+        raise HTTPException(status_code=409, detail="Username or email already exists") from None
     return UserResponse(user_id=user_id, username=user.username, email=user.email,
                         display_name=user.display_name, role=user.role,
                         preferences=user.preferences, is_active=True, created_at=now)

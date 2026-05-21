@@ -7,11 +7,10 @@ Replaces Cloudflare Health Checks and CF Analytics Dashboard.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
-import urllib.request
 import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
