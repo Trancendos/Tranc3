@@ -3,18 +3,18 @@
 # These tools enforce proactive vulnerability management and compliance
 
 # === Dependency Vulnerability Scanning ===
-safety==3.2.11        # Scan Python dependencies for known CVEs
-pip-audit==2.8.0      # Audit pip packages against OSV/NVD databases
-bandit==1.8.3         # Security linter — finds common Python security issues
+safety==3.7.0        # Scan Python dependencies for known CVEs
+pip-audit==2.10.0      # Audit pip packages against OSV/NVD databases
+bandit==1.9.4         # Security linter — finds common Python security issues
 
 # === Supply Chain Verification ===
-pip-tools==7.4.0      # Pin and hash dependencies for reproducibility
+pip-tools==7.5.3      # Pin and hash dependencies for reproducibility
 hashin==1.0.5         # Add package hashes to requirements for integrity
 
 # === OWASP Compliance ===
 # These support OWASP Top 10 validation in CI/CD
-semgrep==1.114.0      # Pattern-based static analysis for security anti-patterns
+semgrep==1.163.0      # Pattern-based static analysis for security anti-patterns
 
 # === SBOM Generation ===
 # CycloneDX for Software Bill of Materials (compliance requirement)
-cyclonedx-bom==7.0.0  # Generate SBOM from requirements/pip environment
+cyclonedx-bom==7.3.0  # Generate SBOM from requirements/pip environment

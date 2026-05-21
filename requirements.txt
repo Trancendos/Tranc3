@@ -9,16 +9,16 @@
 torch==2.12.0
 
 # === Tokenization ===
-sentencepiece==0.2.0
+sentencepiece==0.2.1
 
 # === Datasets ===
-datasets==3.0.0
+datasets==4.8.5
 
 # === Numerical Computing ===
-numpy==2.1.3
+numpy==2.4.6
 
 # === Progress Bars ===
-tqdm==4.67.1
+tqdm==4.67.3
 
 # === Security & Infrastructure ===
 # Fixes: CVE-2026-26007 (key exchange), CVE-2024-12797 (Flush+Reload),

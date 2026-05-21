@@ -19,7 +19,7 @@ langchain-community==0.4.1
 #        CVE-2024-12720 (tokenization overflow), CVE-2025-1194 (DoS),
 #        CVE-2025-3264, CVE-2025-3263, CVE-2025-3933, CVE-2025-5197,
 #        CVE-2025-6051, CVE-2025-3777
-transformers==5.8.1
+transformers==5.9.0
 
 # === Quantum Computing ===
 # Fixes: CVE-2025-2000 (RCE), CVE-2025-1403 (information disclosure)
