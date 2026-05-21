@@ -2,7 +2,6 @@
 # Tests for Phase 10 security remediation: path validation, error handlers,
 # log sanitization, and information exposure prevention.
 
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -197,7 +196,6 @@ class TestLogSanitization:
 
     def test_safe_logger_info(self):
         from shared_core.sanitize import SafeLogger
-        import logging
         mock_logger = MagicMock()
         safe = SafeLogger(mock_logger)
 
@@ -209,7 +207,6 @@ class TestLogSanitization:
 
     def test_safe_logger_warning(self):
         from shared_core.sanitize import SafeLogger
-        import logging
         mock_logger = MagicMock()
         safe = SafeLogger(mock_logger)
 

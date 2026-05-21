@@ -45,7 +45,7 @@ def run(coro):
 
 class TestSparkPhase4ToolsRegistration:
     def test_phase4_tools_module_importable(self):
-        from src.mcp.spark_phase4_tools import PHASE4_TOOLS, register_phase4_tools
+        from src.mcp.spark_phase4_tools import PHASE4_TOOLS
         assert len(PHASE4_TOOLS) == 16, f"Expected 16 phase4 tools, got {len(PHASE4_TOOLS)}"
 
     def test_all_tool_names_unique(self):
@@ -397,7 +397,7 @@ class TestCausalReasoner:
 
     def test_cycle_detection(self):
         from src.intelligence.causal_reasoner import (
-            CausalReasoner, CausalRule, CausalStrength, CausalGraph
+            CausalRule, CausalStrength, CausalGraph
         )
         # Cycle detection lives in CausalGraph._graph (sync), test via the underlying graph
         from src.intelligence.causal_reasoner import CausalGraph

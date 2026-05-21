@@ -2,7 +2,6 @@
 # Tests for api_enhanced.py — covers auth, rate limiting, all endpoint groups.
 # Uses TestClient with mocked subsystems so no real Redis/DB/AI needed.
 
-import json
 import os
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch

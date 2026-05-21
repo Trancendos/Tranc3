@@ -15,6 +15,9 @@
 from __future__ import annotations
 
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -163,7 +166,7 @@ class TheArtifactory:
         self._emit("artifactory.version.pushed", {
             "artifact_id": artifact_id, "version": version, "digest": digest
         })
-        logger.info("artifactory: pushed %s v%s digest=%s", artifact.name, version, digest[:12] if digest else "")
+        logger.info("artifactory: pushed %s v%s digest=%s", sanitize_for_log(artifact.name), sanitize_for_log(version), sanitize_for_log(digest[:12]) if digest else "")
         return ver
 
     def get_artifact(self, artifact_id: str) -> Optional[Artifact]:

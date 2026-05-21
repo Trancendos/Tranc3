@@ -1,13 +1,15 @@
+# Reference documentation — imports are illustrative
+# ruff: noqa: F401,F821
 # src/security/security_framework.py
 # TRANC3 Complete Security Framework
 
-import os, secrets, hashlib, hmac
+import os, secrets, hashlib
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, Security, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import HTTPException
+from fastapi.security import HTTPBearer
 import redis
 import logging
 

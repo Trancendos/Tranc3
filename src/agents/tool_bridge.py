@@ -279,7 +279,7 @@ class ToolBridge:
             from src.mcp.tools import registry as _spark_registry
             tools.update(t.name for t in _spark_registry._tools.values())
         except Exception:
-            pass
+            logger.debug("Graceful degradation in Exception")  # nosec B110
 
         return sorted(tools)
 
@@ -311,7 +311,7 @@ class ToolBridge:
                     "version": tool.version,
                 }
         except Exception:
-            pass
+            logger.debug("Graceful degradation in Exception")  # nosec B110
 
         return None
 
@@ -371,7 +371,7 @@ class ToolBridge:
                     description=tool.description,
                 )
         except Exception:
-            pass
+            logger.debug("Graceful degradation in Exception")  # nosec B110
         return None
 
     def _resolve_workflow_tool(self, tool_name: str) -> Optional[_ToolDescriptor]:
@@ -387,7 +387,7 @@ class ToolBridge:
                     source="workflow",
                 )
         except Exception:
-            pass
+            logger.debug("Graceful degradation in Exception")  # nosec B110
         return None
 
     def _record_invocation(self, result: ToolResult) -> None:

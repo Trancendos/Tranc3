@@ -8,7 +8,6 @@ Fixes: B110 (bare except pass), B104 (bind all interfaces), B108 (insecure tempf
 
 import json
 import re
-import os
 import sys
 from pathlib import Path
 
@@ -37,7 +36,6 @@ def fix_b110(filepath: Path, lineno: int) -> bool:
         return False
     
     line = lines[lineno - 1]
-    original = line
     
     # Pattern: except: pass  (with possible whitespace)
     if re.search(r'except\s*:\s*pass\s*$', line):
@@ -50,7 +48,7 @@ def fix_b110(filepath: Path, lineno: int) -> bool:
     if re.search(r'except\s*:\s*$', line):
         # Check if next line is pass
         if lineno < len(lines) and re.match(r'\s*pass\s*$', lines[lineno]):
-            indent = re.match(r'(\s*)', line).group(1)
+            re.match(r'(\s*)', line).group(1)
             lines[lineno - 1] = re.sub(r'except\s*:', 'except Exception:', line)
             write_file(filepath, "\n".join(lines))
             return True

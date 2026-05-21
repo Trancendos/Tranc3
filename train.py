@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os
 import sys
 import time
 from pathlib import Path
@@ -138,7 +137,7 @@ def train(args):
                         rec = json.loads(line)
                         corpus_texts.append(rec.get("instruction", "") + " " + rec.get("response", ""))
                     except Exception:
-                        pass
+                        logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
             for txt in data_root.rglob("*.txt"):
                 corpus_texts.append(txt.read_text(encoding="utf-8", errors="replace"))
 

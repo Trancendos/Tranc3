@@ -6,7 +6,6 @@ Handles multi-line patterns and adds proper nosec/loggers
 
 import json
 import re
-import os
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).parent.parent
@@ -36,8 +35,8 @@ def fix_all_b110():
         lines = content.split("\n")
         
         # Check if logging is already imported
-        has_logging_import = any("import logging" in l or "from logging" in l or "import structlog" in l or "import logger" in l for l in lines)
-        has_logger = any(re.search(r'logger\s*=\s*(logging|structlog)', l) for l in lines)
+        any("import logging" in l or "from logging" in l or "import structlog" in l or "import logger" in l for l in lines)
+        any(re.search(r'logger\s*=\s*(logging|structlog)', l) for l in lines)
         
         modified = False
         
@@ -70,7 +69,7 @@ def fix_all_b110():
 
 def fix_all_b105_b106():
     """Add nosec comments for false positive B105/B106 (hardcoded password) findings."""
-    data = json.loads(Path("/workspace/bandit_results.json").read_text())
+    json.loads(Path("/workspace/bandit_results.json").read_text())
     
     false_positives = {
         # Tokenizer special tokens — not passwords
@@ -136,7 +135,6 @@ def fix_all_b108():
 def fix_remaining_b311():
     """Fix remaining B311 (random module) issues."""
     data = json.loads(Path("/workspace/bandit_results.json").read_text())
-    files_to_fix = {}
     for r in data["results"]:
         if r["test_id"] == "B311":
             fp = r["filename"]

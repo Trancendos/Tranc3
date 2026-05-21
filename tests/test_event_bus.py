@@ -3,10 +3,8 @@ Tests for src/event_bus/ — EventBus with pattern routing and persistence
 ========================================================================
 """
 
-import asyncio
 import os
 import tempfile
-from unittest.mock import AsyncMock
 
 import pytest
 

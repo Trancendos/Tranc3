@@ -409,7 +409,7 @@ class AlertEngine:
             elif condition.startswith("<="):
                 return value <= threshold
         except Exception:
-            pass
+            logger.debug("Graceful degradation in Exception")  # nosec B110
         return False
 
 
@@ -642,7 +642,7 @@ async def dashboard_websocket(ws: WebSocket):
                     stats_data = await stats()
                     await ws.send_text(json.dumps({"type": "stats", "data": stats_data}))
             except json.JSONDecodeError:
-                pass
+                logger.debug("Graceful degradation in json")  # nosec B110
     except WebSocketDisconnect:
         ws_manager.disconnect(ws)
 

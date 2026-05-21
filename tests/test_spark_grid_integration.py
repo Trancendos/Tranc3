@@ -14,16 +14,14 @@ from __future__ import annotations
 import asyncio
 import pytest
 
-from src.mcp.tools import SparkToolRegistry, SparkTool, GridWorkflowRegistry, _grid_registry
+from src.mcp.tools import SparkToolRegistry, SparkTool, GridWorkflowRegistry
 from src.workflow.nodes import (
     NodeConfig,
     NodeType,
     SparkToolNode,
-    register_spark_tool,
     _SPARK_TOOL_REGISTRY,
 )
 from src.workflow.builder import WorkflowBuilder, WorkflowDefinition
-from src.workflow.executor import WorkflowExecutor
 
 
 # ---------------------------------------------------------------------------

@@ -10,6 +10,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict
 
+from shared_core.error_handlers import safe_error_detail
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -207,6 +208,9 @@ def with_retry(max_attempts: int = 3, backoff: float = 1.0, exceptions=(Exceptio
                     )
                     time.sleep(wait)
 
+            # Should not reach here — either returned or raised
+            return None  # type: ignore[unreachable]
+
         return wrapper
 
     return decorator
@@ -244,7 +248,7 @@ class SelfHealer:
                 {"action": action_name, "time": time.time(), "result": f"failed: {e}"}
             )
             logger.error("SelfHealer: '%s' failed: %s", sanitize_for_log(action_name), sanitize_for_log(e))
-            return {"healed": False, "action": action_name, "error": str(e)}
+            return {"healed": False, "action": action_name, "error": safe_error_detail(e, 500)}
 
     def get_history(self) -> list:
         return list(self._history)

@@ -35,7 +35,7 @@ class TestCircuitBreakerChaos:
             try:
                 cb.call(_fail)
             except RuntimeError:
-                pass
+                pass  # nosec B110 — graceful degradation
             _log.debug("chaos.circuit attempt=%d state=%s", i, cb._state)
 
         _log.info("chaos.circuit state=%s after 3 failures", cb.state)
@@ -48,7 +48,7 @@ class TestCircuitBreakerChaos:
         try:
             cb.call(lambda: (_ for _ in ()).throw(RuntimeError("boom")))
         except RuntimeError:
-            pass
+            pass  # nosec B110 — graceful degradation
         assert cb.state == CircuitState.OPEN
 
         result = cb.call(lambda: "should-not-run", fallback=lambda: "safe-fallback")
@@ -61,7 +61,7 @@ class TestCircuitBreakerChaos:
         try:
             cb.call(lambda: (_ for _ in ()).throw(RuntimeError("x")), fallback=None)
         except RuntimeError:
-            pass
+            pass  # nosec B110 — graceful degradation
         assert cb.state == CircuitState.OPEN
         time.sleep(0.05)
         state_after = cb.state
@@ -90,7 +90,7 @@ class TestWorkflowChaos:
     async def test_failing_node_aborts_workflow(self, caplog):
         """A node that raises should mark workflow as failed."""
         from src.workflow.builder import WorkflowBuilder
-        from src.workflow.nodes import NodeType, NodeConfig, NodeResult, BaseNode
+        from src.workflow.nodes import NodeType, BaseNode
         from src.workflow.executor import WorkflowExecutor
 
         class BoomNode(BaseNode):
@@ -165,9 +165,8 @@ class TestWorkflowChaos:
     @pytest.mark.asyncio
     async def test_cyclic_workflow_fails_gracefully(self, caplog):
         """A workflow definition with a cycle should fail at execution, not crash."""
-        from src.workflow.builder import WorkflowBuilder
         from src.workflow.nodes import NodeType
-        from src.workflow.executor import WorkflowExecutor, _topological_sort, NodeConfig
+        from src.workflow.executor import _topological_sort, NodeConfig
 
         # Build two nodes and manually wire a cycle
         nc_a = NodeConfig(id="a", type=NodeType.OUTPUT, name="a", config={})

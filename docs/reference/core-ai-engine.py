@@ -1,13 +1,13 @@
+# Reference documentation — imports are illustrative
+# ruff: noqa: F401,F821
 # src/core/advanced_model.py
 # TRANC3 Core AI Engine - Full Implementation
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import AutoModel, AutoTokenizer, AutoConfig
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Tuple
 import math
-import numpy as np
 import logging
 
 logger = logging.getLogger(__name__)

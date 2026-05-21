@@ -89,7 +89,7 @@ class TestObservabilityJourney:
     @pytest.mark.asyncio
     async def test_workflow_events_emitted_in_order(self, caplog, sample_workflow_definitions):
         """Executing a workflow must emit started → node events → completed in order."""
-        from src.workflow.executor import WorkflowExecutor, WorkflowEventBus, event_bus
+        from src.workflow.executor import WorkflowExecutor, event_bus
 
         received_events = []
 

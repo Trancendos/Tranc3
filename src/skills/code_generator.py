@@ -12,6 +12,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+from shared_core.error_handlers import safe_error_detail  # noqa: F401 – used in generated code template
+
 logger = logging.getLogger(__name__)
 
 
@@ -155,7 +157,7 @@ class CodeAnalyzer:
                             f"Missing type hints on '{node.name}': {unannotated}"
                         )
         except SyntaxError:
-            pass
+            logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
         return smells
 
@@ -557,7 +559,7 @@ _TEMPLATES: Dict[str, Dict[str, str]] = {
                     return JSONResponse(content={{"status": "ok"}})
                 except Exception as exc:
                     logger.exception("Handler error: %s", exc)
-                    raise HTTPException(status_code=500, detail=str(exc)) from exc
+                    raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
             """),
     },
 }

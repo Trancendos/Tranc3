@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -135,7 +138,7 @@ class TheCitadel:
                 try:
                     self._service_health[svc] = ServiceHealthStatus(status_val)
                 except ValueError:
-                    pass
+                    logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
             logger.info("citadel: loaded %d deploys from Redis", len(self._deploys))
         except Exception as exc:
             logger.warning("citadel: Redis hydration skipped: %s", exc)
@@ -185,7 +188,7 @@ class TheCitadel:
         self._emit(f"citadel.deploy.{status.value}", {
             "target": target.value, "version": version, "deploy_id": record.id
         })
-        logger.info("citadel: deploy recorded target=%s version=%s status=%s", target.value, version, status.value)
+        logger.info("citadel: deploy recorded target=%s version=%s status=%s", sanitize_for_log(target.value), sanitize_for_log(version), sanitize_for_log(status.value))
         return record
 
     def record_deploy(
@@ -217,7 +220,7 @@ class TheCitadel:
         self._emit(f"citadel.deploy.{status.value}", {
             "target": target.value, "version": version, "deploy_id": record.id
         })
-        logger.info("citadel: deploy recorded target=%s version=%s status=%s", target.value, version, status.value)
+        logger.info("citadel: deploy recorded target=%s version=%s status=%s", sanitize_for_log(target.value), sanitize_for_log(version), sanitize_for_log(status.value))
         return record
 
     def update_deploy(

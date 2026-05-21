@@ -1,10 +1,12 @@
+# Reference documentation — imports are illustrative
+# ruff: noqa: F401,F821
 # src/personality/matrix.py
 # TRANC3 Full Personality Matrix System
 
 import torch
 import numpy as np
-from typing import Dict, List, Optional, Any
-import json, os, logging
+from typing import Dict, List, Optional
+import logging
 
 logger = logging.getLogger(__name__)
 
