@@ -326,7 +326,12 @@ class NeuralMesh:
                 continue
 
             try:
-                queue.put_nowait(signal)
+                # Decrement TTL before forwarding so the hop limit is enforced.
+                # We put a copy with ttl-1 to avoid mutating the original signal
+                # (which may be forwarded to multiple neighbors in the same call).
+                import dataclasses
+                forwarded = dataclasses.replace(signal, ttl=signal.ttl - 1)
+                queue.put_nowait(forwarded)
                 delivered += 1
                 # Reinforce successful edge
                 edge_key = f"{source_id}->{target_id}"

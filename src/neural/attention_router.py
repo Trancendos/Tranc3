@@ -361,10 +361,11 @@ class AttentionRouter:
                     jaccard = 0.0
                 capability_bonus = self._capability_bonus_weight * jaccard
 
-                # Hard filter: if required tags exist and none match, penalize heavily
+                # Hard filter: if required tags exist and the service doesn't
+                # support ALL of them, penalize heavily.
                 tag_penalty = 0.0
                 if request.required_tags:
-                    if not (request.required_tags & service.capability_tags):
+                    if not request.required_tags.issubset(service.capability_tags):
                         tag_penalty = -10.0  # Very low score for non-matching services
 
                 # Load penalty: reduce score for heavily loaded services

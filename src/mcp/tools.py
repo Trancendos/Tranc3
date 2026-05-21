@@ -1321,3 +1321,14 @@ class SparkToolRegistry:
 
 # Singleton Spark tool registry — import this throughout the codebase
 registry = SparkToolRegistry()
+
+# ---------------------------------------------------------------------------
+# Phase 4: Neural & Intelligence tools extension
+# Registers 16 additional Spark tools from Phase 4 modules
+# ---------------------------------------------------------------------------
+try:
+    from src.mcp.spark_phase4_tools import register_phase4_tools as _reg_p4
+    _p4_count = _reg_p4(registry)
+    logger.info("Phase 4 Spark tools loaded: %d tools added (total=%d)", _p4_count, len(registry._tools))
+except Exception as _p4_exc:
+    logger.warning("Phase 4 Spark tools unavailable: %s", _p4_exc)

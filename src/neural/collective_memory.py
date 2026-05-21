@@ -83,13 +83,21 @@ class MemoryEntry:
     ttl: float = 3600.0  # 1 hour default
     source: str = ""
     tags: Set[str] = field(default_factory=set)
+    # Tracks the original TTL so reinforce() can cap relative to it, not the
+    # current (already-extended) TTL which would make the cap drift upward.
+    _original_ttl: float = field(default=0.0, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        # Store the original TTL for use by reinforce() cap calculation.
+        self._original_ttl = self.ttl
 
     @property
     def is_expired(self) -> bool:
-        """Check if this entry has exceeded its TTL."""
-        if self.ttl <= 0:
+        """Check if this entry has exceeded its effective (priority-scaled) TTL."""
+        eff = self.effective_ttl
+        if eff <= 0:
             return False
-        return (time.monotonic() - self.created_at) > self.ttl
+        return (time.monotonic() - self.created_at) > eff
 
     @property
     def effective_ttl(self) -> float:
@@ -125,10 +133,12 @@ class MemoryEntry:
         """Extend TTL when the entry is reinforced (read/referenced).
 
         Each reinforcement adds a limited TTL extension, but never
-        more than 3x the original TTL.
+        more than 3x the *original* TTL (not the current mutable TTL,
+        which would let the cap drift upward with each reinforcement).
         """
         if self.ttl > 0:
-            max_ttl = self.ttl * 3.0
+            # Cap is based on the immutable original TTL, not self.ttl
+            max_ttl = (self._original_ttl or self.ttl) * 3.0
             self.ttl = min(max_ttl, self.ttl + extension)
 
 
@@ -206,14 +216,36 @@ class CollectiveMemory:
             if key in self._entries:
                 await self._remove_from_indices(key)
 
-            # Evict if at capacity
+            # Evict if at capacity.  Guard against an infinite loop when all
+            # remaining entries are CRITICAL (evict_one() is a no-op for them).
+            # Collect eviction events to fire *outside* the lock to avoid
+            # deadlocking subscriber callbacks that re-acquire the lock.
+            eviction_events: list = []  # [(event_type, evicted_entry), ...]
+            eviction_attempts = 0
+            max_evictions = len(self._entries) + 1
             while len(self._entries) >= self._max_entries:
-                await self._evict_one()
+                prev_size = len(self._entries)
+                evicted = await self._evict_one()
+                eviction_attempts += 1
+                if evicted is not None:
+                    # Determine whether it was an expiry or a capacity eviction.
+                    eviction_events.append(("evict", evicted))
+                if len(self._entries) >= prev_size or eviction_attempts >= max_evictions:
+                    # evict_one() did nothing (all CRITICAL) — stop to avoid loop
+                    logger.warning(
+                        "collective_memory: cannot evict; all %d entries are CRITICAL",
+                        len(self._entries),
+                    )
+                    break
 
             self._entries[key] = entry
             await self._add_to_indices(entry)
 
-        # Notify subscribers
+        # Fire eviction notifications outside the lock to avoid deadlocks
+        for evt_type, evicted_entry in eviction_events:
+            await self._notify(evt_type, evicted_entry)
+
+        # Notify subscribers of the store event
         await self._notify("store", entry)
 
         logger.debug(
@@ -388,10 +420,15 @@ class CollectiveMemory:
 
     # ── Eviction ───────────────────────────────────────────────────
 
-    async def _evict_one(self) -> None:
+    async def _evict_one(self) -> Optional["MemoryEntry"]:
         """Evict the lowest-priority, least-recently-used entry.
 
-        Must be called under lock.  Entries are evicted in order:
+        Must be called under lock.  Returns the evicted entry (with its event
+        type) so the caller can fire subscriber notifications *outside* the lock,
+        avoiding potential deadlocks.  Returns None when nothing was evicted
+        (e.g. only CRITICAL entries remain).
+
+        Entries are evicted in order:
         1. Expired entries (oldest first)
         2. LOW priority LRU
         3. NORMAL priority LRU
@@ -402,19 +439,18 @@ class CollectiveMemory:
         for key, entry in self._entries.items():
             if entry.is_expired:
                 await self._remove_entry(key)
-                await self._notify("expire", entry)
-                return
+                return entry  # Caller will fire "expire" notification
 
         # Second pass: evict by priority (LOW first) then LRU
         for priority in (MemoryPriority.LOW, MemoryPriority.NORMAL, MemoryPriority.HIGH):
             for key, entry in self._entries.items():
                 if entry.priority == priority:
                     await self._remove_entry(key)
-                    await self._notify("evict", entry)
-                    return
+                    return entry  # Caller will fire "evict" notification
 
         # If only CRITICAL entries remain, do not evict
         logger.warning("collective_memory: at capacity with only CRITICAL entries")
+        return None
 
     # ── Garbage collection ─────────────────────────────────────────
 
@@ -442,13 +478,17 @@ class CollectiveMemory:
     async def collect_garbage(self) -> int:
         """Remove all expired entries. Returns count of removed entries."""
         removed = 0
+        expired_entries: list = []
         async with self._lock:
             expired_keys = [k for k, e in self._entries.items() if e.is_expired]
             for key in expired_keys:
                 entry = self._entries[key]
                 await self._remove_entry(key)
-                await self._notify("expire", entry)
+                expired_entries.append(entry)
                 removed += 1
+        # Fire notifications outside the lock to prevent subscriber deadlocks
+        for entry in expired_entries:
+            await self._notify("expire", entry)
         if removed:
             logger.debug("collective_memory: GC removed %d expired entries", removed)
         return removed
