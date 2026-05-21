@@ -1,0 +1,147 @@
+# Tranc3 Prometheus Configuration
+# Scrape all self-hosted workers + infrastructure services
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'tranc3-production'
+    environment: 'production'
+
+scrape_configs:
+  # ── Traefik Metrics ──────────────────────────────────────────────────
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:9090']
+        labels:
+          service: 'traefik'
+          category: 'infrastructure'
+
+  # ── Prometheus Self-Monitoring ────────────────────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+          category: 'infrastructure'
+
+  # ── P0 Workers ───────────────────────────────────────────────────────
+  - job_name: 'tranc3-ai'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['tranc3-ai:8001']
+        labels:
+          service: 'tranc3-ai'
+          priority: 'P0'
+          named: 'The Spark'
+
+  - job_name: 'infinity-void'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['infinity-void:8002']
+        labels:
+          service: 'infinity-void'
+          priority: 'P0'
+          named: 'The Void'
+
+  - job_name: 'api-gateway'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['api-gateway:8003']
+        labels:
+          service: 'api-gateway'
+          priority: 'P0'
+          named: 'The Citadel'
+
+  - job_name: 'infinity-ws'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['infinity-ws:8004']
+        labels:
+          service: 'infinity-ws'
+          priority: 'P0'
+          named: 'The Nexus'
+
+  - job_name: 'infinity-auth'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['infinity-auth:8005']
+        labels:
+          service: 'infinity-auth'
+          priority: 'P0'
+          named: 'Infinity'
+
+  # ── P1 Workers ───────────────────────────────────────────────────────
+  - job_name: 'users-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['users-service:8006']
+        labels:
+          service: 'users-service'
+          priority: 'P1'
+
+  - job_name: 'monitoring'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['monitoring:8007']
+        labels:
+          service: 'monitoring'
+          priority: 'P1'
+          named: 'The Observatory'
+
+  - job_name: 'notifications'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['notifications:8008']
+        labels:
+          service: 'notifications'
+          priority: 'P1'
+
+  - job_name: 'infinity-ai'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['infinity-ai:8009']
+        labels:
+          service: 'infinity-ai'
+          priority: 'P1'
+          named: 'AI Gateway'
+
+  # ── P2 Workers ───────────────────────────────────────────────────────
+  - job_name: 'the-grid'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['the-grid:8010']
+        labels:
+          service: 'the-grid'
+          priority: 'P2'
+          named: 'The Digital Grid'
+
+  - job_name: 'p2-workers'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'products-service:8011'
+          - 'orders-service:8012'
+          - 'payments-service:8013'
+          - 'files-service:8014'
+          - 'identity-service:8015'
+        labels:
+          priority: 'P2'
+
+  # ── Infrastructure Health Probes ─────────────────────────────────────
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://tranc3-ai:8001/health
+          - http://infinity-void:8002/health
+          - http://api-gateway:8003/health
+          - http://infinity-ws:8004/health
+          - http://infinity-auth:8005/health
+          - http://users-service:8006/health
+          - http://monitoring:8007/health
+          - http://notifications:8008/health
+          - http://infinity-ai:8009/health
+          - http://the-grid:8010/health
