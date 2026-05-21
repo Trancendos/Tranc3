@@ -116,9 +116,10 @@ class OrdersDatabase:
             return cur.rowcount > 0
 
     def delete(self, id_field: str, id_value: str, soft: bool = True) -> bool:
+        # orders table doesn't have is_active column; use status-based soft delete
         if soft:
             with self._cursor() as cur:
-                cur.execute(f"UPDATE orders SET is_active=0, updated_at=? WHERE {id_field}=?",
+                cur.execute(f"UPDATE orders SET status='cancelled', updated_at=? WHERE {id_field}=?",
                             (datetime.now(timezone.utc).isoformat(), id_value))
                 return cur.rowcount > 0
         else:

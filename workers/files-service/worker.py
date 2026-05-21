@@ -109,7 +109,7 @@ class FilesDatabase:
         return [dict(r) for r in rows]
 
     def update(self, id_field: str, id_value: str, data: Dict[str, Any]) -> bool:
-        data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        # files table doesn't have updated_at column
         sets = ", ".join(f"{k}=?" for k in data.keys())
         vals = list(data.values()) + [id_value]
         with self._cursor() as cur:
@@ -119,8 +119,8 @@ class FilesDatabase:
     def delete(self, id_field: str, id_value: str, soft: bool = True) -> bool:
         if soft:
             with self._cursor() as cur:
-                cur.execute(f"UPDATE files SET is_active=0, updated_at=? WHERE {id_field}=?",
-                            (datetime.now(timezone.utc).isoformat(), id_value))
+                cur.execute(f"UPDATE files SET is_public=0 WHERE {id_field}=?",
+                            (id_value,))
                 return cur.rowcount > 0
         else:
             with self._cursor() as cur:

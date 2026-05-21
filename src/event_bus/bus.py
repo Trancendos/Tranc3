@@ -367,7 +367,10 @@ class EventBus:
 
     async def _deliver_to_callbacks(self, event: EventEnvelope) -> None:
         """Deliver an event to all matching in-memory callbacks."""
-        for pattern, callbacks in self._callbacks.items():
+        # Snapshot the callback map to avoid RuntimeError from dict mutation
+        # during iteration (e.g., `once` callbacks unsubscribe themselves)
+        snapshot = {pattern: list(cbs) for pattern, cbs in self._callbacks.items()}
+        for pattern, callbacks in snapshot.items():
             if self._matches_pattern(pattern, event.event_type):
                 for cb in callbacks:
                     try:
