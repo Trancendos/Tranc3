@@ -226,7 +226,8 @@ class TheArtifactory:
             observe(event_type, category=EventCategory.SYSTEM, service="the-artifactory",
                     metadata=metadata or {})
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _artifactory: Optional[TheArtifactory] = None

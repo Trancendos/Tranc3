@@ -55,9 +55,10 @@ class Resonate:
         parts = []
 
         if sensitivity_level in ("critical", "high"):
-            parts.append(random.choice(_EMPATHY_PREFIXES))
+            parts.append(random.choice(_EMPATHY_PREFIXES))  # nosec B311 — non-cryptographic random usage
+
         elif sensitivity_level == "medium" or (user_mood is not None and user_mood <= 2):
-            parts.append(random.choice(_EMPATHY_PREFIXES[:2]))
+            parts.append(random.choice(_EMPATHY_PREFIXES[:2]))  # nosec B311 — non-cryptographic empathy variation
 
         parts.append(response)
 
@@ -70,7 +71,7 @@ class Resonate:
                 "You don't have to face this alone. 💙"
             )
         elif sensitivity_level in ("medium", "high"):
-            parts.append(f"\n\n*{random.choice(_VALIDATION_PHRASES)}*")
+            parts.append(f"\n\n*{random.choice(_VALIDATION_PHRASES)}*")  # nosec B311 — non-cryptographic phrase variation
 
         return "\n\n".join(p.strip() for p in parts if p.strip())
 
@@ -91,7 +92,7 @@ class Resonate:
                 metadata={"context_preview": context[:100]},
             )
         except Exception:
-            pass
+            pass  # nosec B110 — observation failure must not block escalation
         logger.warning("resonate: human escalation triggered for user=%s", user_id)
         return {
             "escalated": True,

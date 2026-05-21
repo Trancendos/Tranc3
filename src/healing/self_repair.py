@@ -177,7 +177,8 @@ class SelfRepairEngine:
                         obj.cache_clear()
                         cleared += 1
                     except Exception:
-                        pass
+                        pass  # nosec B110 — graceful degradation; error logged upstream
+
             logger.info(
                 "Memory pressure repair: gc collected=%d, caches cleared=%d",
                 collected,

@@ -144,7 +144,7 @@ class Trainer:
         print(f"[Checkpoint] Saved → {path}")
 
     def load_checkpoint(self, path: str):
-        ckpt = torch.load(path, map_location=self.device)
+        ckpt = torch.load(path, map_location=self.device, weights_only=True)
         self.model.load_state_dict(ckpt["model_state"])
         self.optimiser.load_state_dict(ckpt["optimiser_state"])
         self.step = ckpt["step"]

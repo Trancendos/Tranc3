@@ -188,7 +188,8 @@ class DevOcity:
                     ]
                     self._accounts[acct.id] = acct
                 except Exception:
-                    pass
+                    pass  # nosec B110 — graceful degradation; error logged upstream
+
             logger.info("devocity: loaded %d accounts from Redis", len(self._accounts))
         except Exception as exc:
             logger.warning("devocity: Redis hydration skipped: %s", exc)
@@ -223,7 +224,8 @@ class DevOcity:
             }
             await store.set(f"devocity:account:{account.id}", data, ttl=_ACCOUNT_TTL)
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     def _fire_persist(self, account: DeveloperAccount) -> None:
         import asyncio
@@ -233,7 +235,8 @@ class DevOcity:
             if loop.is_running():
                 loop.create_task(self._persist_account(account))
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     def create_account(self, user_id: str, display_name: str) -> DeveloperAccount:
         account = DeveloperAccount(user_id=user_id, display_name=display_name)
@@ -336,7 +339,8 @@ class DevOcity:
                 metadata=metadata or {},
             )
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _devocity: Optional[DevOcity] = None

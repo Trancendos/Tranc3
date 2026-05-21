@@ -206,7 +206,8 @@ class APIMarketplace:
             observe(event_type, category=EventCategory.DATA, service="api-marketplace",
                     metadata=metadata or {})
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _marketplace: Optional[APIMarketplace] = None

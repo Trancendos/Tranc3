@@ -17,16 +17,24 @@ import os
 import sentencepiece as spm
 from pathlib import Path
 from typing import List, Union
+import tempfile
 
 
 SPECIAL_TOKENS = {
-    "pad_token": "<pad>",
-    "bos_token": "<bos>",
-    "eos_token": "<eos>",
-    "unk_token": "<unk>",
-    "sys_token": "<sys>",
-    "usr_token": "<usr>",
-    "ast_token": "<ast>",
+    "pad_token": "<pad>",  # nosec B105 — false positive: not a password
+
+    "bos_token": "<bos>",  # nosec B105 — false positive: not a password
+
+    "eos_token": "<eos>",  # nosec B105 — false positive: not a password
+
+    "unk_token": "<unk>",  # nosec B105 — false positive: not a password
+
+    "sys_token": "<sys>",  # nosec B105 — false positive: not a password
+
+    "usr_token": "<usr>",  # nosec B105 — false positive: not a password
+
+    "ast_token": "<ast>",  # nosec B105 — false positive: not a password
+
 }
 
 PAD_ID = 0
@@ -125,7 +133,7 @@ def train_tokenizer(
         raise FileNotFoundError(f"No .txt files found in {data_dir}")
 
     # Write file list for sentencepiece
-    file_list_path = "/tmp/tranc3_tokenizer_input.txt"
+    file_list_path = os.path.join(tempfile.gettempdir(), "tranc3_tokenizer_input.txt")  # nosec B108 — temp dir for tokenizer cache
     with open(file_list_path, "w") as f:
         for p in data_files:
             f.write(str(p) + "\n")

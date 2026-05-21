@@ -131,9 +131,10 @@ class FluidicRouter:
         # Weighted random selection
         total = sum(weights)
         if total <= 0:
-            return random.choice(available)
+            return random.choice(available)  # nosec B311 — non-cryptographic random usage
 
-        r = random.uniform(0, total)
+
+        r = random.uniform(0, total)  # nosec B311 — non-cryptographic weighted routing
         cumulative = 0.0
         for svc, w in zip(available, weights):
             cumulative += w
