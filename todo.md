@@ -33,6 +33,28 @@
 - [x] Verify all 226+ Python files compile without syntax errors
 
 ## Phase 10F: Validation & Deployment [x]
-- [x] Run tests to verify nothing is broken
+- [x] Run tests to verify nothing is broken (31/31 security tests pass, 922/963 total pass)
 - [x] Commit all changes and push branch
-- [x] Create PR with comprehensive description
+- [x] Create PR with comprehensive description (PR #22)
+
+---
+
+# Production Readiness Tasks
+
+## Pre-Deployment Validation [ ]
+- [ ] Fix test_enhanced_api.py collection errors (missing src.main_enhanced module)
+- [ ] Run linter (ruff) on all modified files
+- [ ] Run bandit security scan on codebase
+- [ ] Verify Docker build succeeds
+- [ ] Check .env.production.template has all required variables documented
+
+## CI/CD Pipeline [ ]
+- [ ] Verify GitHub Actions / Forgejo CI pipeline configuration
+- [ ] Ensure pre-commit hooks pass (gitleaks, ruff, bandit, typos)
+- [ ] Add security test to CI pipeline (tests/test_security_remediation.py)
+
+## Merge & Deploy [ ]
+- [ ] Merge PR #22 after review
+- [ ] Verify deployment on staging environment
+- [ ] Run smoke tests against staging
+- [ ] Deploy to production

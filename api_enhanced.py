@@ -550,4 +550,4 @@ async def spawn_personality(req: SpawnRequest):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", "8000"))
-    uvicorn.run("api_enhanced:app", host="0.0.0.0", port=port, reload=_DEBUG)
+    uvicorn.run("api_enhanced:app", host="0.0.0.0", port=port, reload=_DEBUG)  # nosec B104 — Docker container binding

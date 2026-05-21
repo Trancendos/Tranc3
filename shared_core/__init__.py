@@ -1,37 +1,37 @@
 # shared_core/__init__.py
 # Trancendos Shared Core — Common utilities, models, and interfaces
 
+from .bus import EventBus
+from .error_handlers import (
+    SafeHTTPException,
+    safe_error_detail,
+)
 from .models import (
-    ServiceInfo,
-    ServiceHealth,
-    ServiceCapability,
     EventMessage,
+    ServiceCapability,
+    ServiceHealth,
+    ServiceInfo,
     VectorClock,
 )
-from .registry import ServiceRegistry
-from .bus import EventBus
-from .security import (
-    generate_jwt,
-    verify_jwt,
-    hash_password,
-    verify_password,
-)
+from .optional_import import LazyLoader
 from .path_validation import (
     PathTraversalError,
-    validate_path,
     safe_join,
     sanitize_filename,
+    validate_path,
 )
-from .error_handlers import (
-    safe_error_detail,
-    SafeHTTPException,
-)
+from .registry import ServiceRegistry
 from .sanitize import (
-    sanitize_for_log,
-    sanitize_dict_for_log,
     SafeLogger,
+    sanitize_dict_for_log,
+    sanitize_for_log,
 )
-from .optional_import import LazyLoader
+from .security import (
+    generate_jwt,
+    hash_password,
+    verify_jwt,
+    verify_password,
+)
 
 __all__ = [
     # Models

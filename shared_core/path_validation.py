@@ -13,7 +13,7 @@ import logging
 import os
 import re
 from pathlib import Path, PurePosixPath
-from typing import Optional, Union
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def validate_path(
     except ValueError:
         raise PathTraversalError(
             f"Path escapes base directory: {resolved} is not under {base}"
-        )
+        ) from None
 
     if must_exist and not resolved.exists():
         raise FileNotFoundError(f"Validated path does not exist: {resolved}")
@@ -133,7 +133,7 @@ def safe_join(
     except ValueError:
         raise PathTraversalError(
             f"Joined path escapes base directory: {resolved} is not under {base}"
-        )
+        ) from None
 
     return resolved
 
