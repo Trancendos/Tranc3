@@ -340,7 +340,6 @@ class TestTokenizerModelIntegration:
 
 class TestNoExternalAPI:
     def test_advanced_model_no_transformers(self):
-        import importlib
         import src.core.advanced_model as mod
         src_path = mod.__file__
         with open(src_path) as f:

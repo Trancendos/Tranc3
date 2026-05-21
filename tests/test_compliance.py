@@ -6,7 +6,6 @@ compliance error codes) are fully implemented and structurally sound.
 """
 from __future__ import annotations
 
-import json
 import logging
 import re
 import pytest
@@ -76,7 +75,8 @@ class TestErrorCatalogCompliance:
         try:
             from src.errors.error_catalog import ERROR_DEFINITIONS
         except ImportError:
-            pytest.skip("ERROR_DEFINITIONS not exported from error_catalog")
+            pytest.skip("ERROR_DEFINITIONS not exported from error_catalog")  # type: ignore[unreachable]
+            return  # unreachable, but helps static analysis
         missing_guidance = [
             code for code, defn in ERROR_DEFINITIONS.items()
             if not defn.get("guidance") and not defn.get("action")
@@ -89,7 +89,8 @@ class TestErrorCatalogCompliance:
         try:
             from src.errors.error_catalog import ERROR_DEFINITIONS
         except ImportError:
-            pytest.skip("ERROR_DEFINITIONS not exported from error_catalog")
+            pytest.skip("ERROR_DEFINITIONS not exported from error_catalog")  # type: ignore[unreachable]
+            return  # unreachable, but helps static analysis
         # 200 is valid for informational/degraded-mode responses (echo mode, fallback active)
         valid = {200, 400, 401, 403, 404, 409, 422, 429, 500, 502, 503}
         invalid = []
@@ -173,7 +174,7 @@ class TestDigitalGridContractCompliance:
 
     def test_execution_state_fields_complete(self, caplog):
         from src.workflow.executor import ExecutionState
-        import time, uuid
+        import uuid
         state = ExecutionState(
             execution_id=str(uuid.uuid4()),
             workflow_id="test",

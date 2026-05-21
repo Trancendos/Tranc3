@@ -7,6 +7,10 @@ import hashlib
 import hmac
 import json
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
+
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -473,7 +477,8 @@ class FileRegistry:
         if stored_sig and stored_sig != expected_sig:
             record.tampered = True
             logger.warning(
-                f"INTEGRITY ALERT: {fid} ({record.path}) signature mismatch — possible tampering"
+                "INTEGRITY ALERT: %s (%s) signature mismatch — possible tampering",
+                sanitize_for_log(fid), sanitize_for_log(record.path),
             )
             return {
                 "fid": fid,

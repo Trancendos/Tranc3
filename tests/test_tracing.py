@@ -5,17 +5,13 @@ Covers: thread-local trace context, Span lifecycle, Tracer with SQLite,
 W3C TraceContext propagation, convenience functions.
 """
 
-import json
-import sqlite3
 import tempfile
 import threading
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
 from src.observability.tracing import (
-    TRACEPARENT_HEADER,
     Tracer,
     Span,
     clear_trace,
@@ -28,7 +24,6 @@ from src.observability.tracing import (
     new_span_id,
     new_trace_id,
     set_trace,
-    _global_tracer,
 )
 
 
@@ -233,7 +228,7 @@ class TestTracer:
             tracer = Tracer(db_path=db_path, service_name="test-svc")
 
             with pytest.raises(ValueError):
-                with tracer.span("failing_op") as span:
+                with tracer.span("failing_op"):
                     raise ValueError("boom")
 
             # The span should still be recorded with error status
@@ -265,9 +260,9 @@ class TestTracer:
             tracer = Tracer(db_path=db_path, service_name="test-svc")
 
             # Create two traces
-            with tracer.span("op1") as span:
+            with tracer.span("op1"):
                 pass
-            with tracer.span("op2") as span:
+            with tracer.span("op2"):
                 pass
 
             traces = tracer.get_recent_traces(limit=10)
@@ -397,5 +392,5 @@ class TestConvenienceFunctions:
         assert get_tracer() is tracer
 
     def test_get_tracer_returns_initialized(self):
-        tracer = init_tracing(db_path=None, service_name="my-svc")
+        init_tracing(db_path=None, service_name="my-svc")
         assert get_tracer().service_name == "my-svc"

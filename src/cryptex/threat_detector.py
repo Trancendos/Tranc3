@@ -13,6 +13,9 @@
 from __future__ import annotations
 
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
 import re
 import time
 import uuid
@@ -174,7 +177,7 @@ class Cryptex:
 
     def block_ip(self, ip: str) -> None:
         self._blocked_ips.add(ip)
-        logger.warning("cryptex: blocked IP %s", ip)
+        logger.warning("cryptex: blocked IP %s", sanitize_for_log(ip))
 
     def unblock_ip(self, ip: str) -> None:
         self._blocked_ips.discard(ip)

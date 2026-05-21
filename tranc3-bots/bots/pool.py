@@ -5,7 +5,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from bots.types import JobResult, JobSpec, JobStatus
 

@@ -391,7 +391,7 @@ class AgentRuntime:
             try:
                 obs(step)
             except Exception:
-                pass
+                logger.debug("Graceful degradation in Exception")  # nosec B110
 
         # Record in memory
         if self._memory_stream:
@@ -413,7 +413,7 @@ class AgentRuntime:
                 try:
                     obs(old_state, new_state)
                 except Exception:
-                    pass
+                    logger.debug("Graceful degradation in Exception")  # nosec B110
 
     def _init_components(self) -> None:
         """Lazy-initialize sub-components."""

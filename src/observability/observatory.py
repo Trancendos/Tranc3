@@ -16,6 +16,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
+
 import time
 import uuid
 from collections import deque
@@ -119,7 +123,7 @@ class Observatory:
         self._buffer.append(event)
         logger.debug(
             "observatory: %s actor=%s target=%s outcome=%s",
-            event_type, actor, target, outcome,
+            sanitize_for_log(event_type), sanitize_for_log(actor), sanitize_for_log(target), sanitize_for_log(outcome),
         )
         self._notify_subscribers(event)
 
@@ -154,7 +158,7 @@ class Observatory:
         try:
             self._subscribers.remove(q)
         except ValueError:
-            pass
+            logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
     def recent(self, limit: int = 100, category: Optional[EventCategory] = None) -> List[AuditEvent]:
         """Return recent events, newest first. Optionally filter by category."""

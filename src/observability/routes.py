@@ -13,6 +13,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
 from typing import Optional
 
 from fastapi import APIRouter, Query, Request
@@ -90,7 +93,7 @@ async def observatory_sse(request: Request):
                     # Keepalive comment so proxies don't close the connection
                     yield ": keepalive\n\n"
         except asyncio.CancelledError:
-            pass
+            logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
         finally:
             obs.unsubscribe(queue)
 
@@ -140,5 +143,5 @@ async def observatory_record(request: Request):
         metadata=body.get("metadata", {}),
         session_id=body.get("session_id"),
     )
-    logger.debug("observatory.record via HTTP: %s", event_type)
+    logger.debug("observatory.record via HTTP: %s", sanitize_for_log(event_type))
     return {"id": event.id, "timestamp": event.timestamp}

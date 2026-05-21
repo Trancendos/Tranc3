@@ -1,10 +1,12 @@
+# Reference documentation — imports are illustrative
+# ruff: noqa: F401,F821
 # src/database/schema.py
 # TRANC3 Complete Database Schema (SQLAlchemy + Alembic)
 
 from sqlalchemy import (
     create_engine, Column, String, Integer, Float,
-    Boolean, DateTime, Text, JSON, ForeignKey,
-    Index, UniqueConstraint, BigInteger
+    Boolean, DateTime, Text, ForeignKey,
+    Index, BigInteger
 )
 from sqlalchemy.orm import declarative_base, relationship, Session
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY

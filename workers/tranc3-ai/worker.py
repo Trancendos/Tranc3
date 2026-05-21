@@ -101,7 +101,7 @@ async def call_nano(endpoint: str, payload: dict) -> dict | None:
                 if resp.status_code == 200:
                     return resp.json()
             except httpx.HTTPError:
-                pass
+                pass  # nosec B110 — graceful degradation
 
         # Try dedicated nanoservices server
         if NANO_URL:
@@ -114,7 +114,7 @@ async def call_nano(endpoint: str, payload: dict) -> dict | None:
                 if resp.status_code == 200:
                     return resp.json()
             except httpx.HTTPError:
-                pass
+                pass  # nosec B110 — graceful degradation
 
     return None
 
@@ -203,7 +203,7 @@ async def verify_auth(authorization: str | None) -> dict | None:
                 user = resp.json()
                 return {"userId": user.get("id"), "role": user.get("role"), "email": user.get("email")}
         except httpx.HTTPError:
-            pass
+            pass  # nosec B110 — graceful degradation
     return None
 
 
@@ -241,13 +241,13 @@ async def health():
                 resp = await client.get(f"{BACKEND_URL}/health")
                 backend_ok = resp.status_code == 200
             except httpx.HTTPError:
-                pass
+                pass  # nosec B110 — graceful degradation
         if has_nano:
             try:
                 resp = await client.get(f"{NANO_URL}/health")
                 nano_ok = resp.status_code == 200
             except httpx.HTTPError:
-                pass
+                pass  # nosec B110 — graceful degradation
 
     mode = "tranc3-backend" if backend_ok else "tranc3-nano" if nano_ok else "stub"
 

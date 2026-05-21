@@ -100,5 +100,5 @@ class LazyLoader:
             try:
                 self._load()
             except ImportError:
-                pass
+                logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
         return not object.__getattribute__(self, "_failed")

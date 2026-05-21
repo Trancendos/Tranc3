@@ -96,8 +96,8 @@ class AdaptiveProxy:
 
             except Exception as e:
                 elapsed = time.time() - start_time
-                self.router.record_error(service.name)
                 last_error = e
+                self.router.record_error(service.name)
                 logger.warning(
                     f"Call to {service.name} failed (attempt {attempt + 1}/{retries + 1}): {e}"
                 )

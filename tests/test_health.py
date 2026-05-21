@@ -7,7 +7,6 @@ Covers: HealthChecker, SERVICE_REGISTRY, SystemHealth enum, service health check
 import json
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from unittest.mock import patch, MagicMock
 
 import pytest
 

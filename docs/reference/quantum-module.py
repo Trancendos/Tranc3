@@ -1,13 +1,14 @@
+# Reference documentation — imports are illustrative
+# ruff: noqa: F401,F821
 # src/quantum/quantum_engine.py
 # TRANC3 Full Quantum Module
 
 import numpy as np
 import torch
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
-from qiskit.circuit.library import QFT, GroverOperator
+from qiskit.circuit.library import QFT
 from qiskit_aer import AerSimulator
-from qiskit_aer.noise import NoiseModel
 import logging
 
 logger = logging.getLogger(__name__)

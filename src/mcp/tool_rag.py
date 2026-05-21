@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, List, Optional
 import numpy as np
 
 if TYPE_CHECKING:
-    from src.mcp.tools import SparkTool
+    from src.mcp.tools import SparkTool  # noqa: F401  # intentional top-level import
 
 logger = logging.getLogger(__name__)
 

@@ -7,7 +7,6 @@ no TestClient (avoids requiring torch/transformers/qiskit in CI).
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 import pytest
 import os
@@ -139,7 +138,7 @@ class TestCitadel:
         assert c._service_health["tranc3-backend"] == ServiceHealthStatus.DEGRADED
 
     def test_deploy_to_dict_has_required_keys(self):
-        from src.citadel.devops_hub import get_citadel, DeployTarget, DeployStatus
+        from src.citadel.devops_hub import get_citadel, DeployTarget
         c = get_citadel()
         rec = c.record_deploy(DeployTarget.TRANC3_AI, "edge-0a1b")
         d = rec.to_dict()
@@ -415,7 +414,8 @@ class TestMigrations:
             if not fname.endswith(".py") or fname.startswith("__"):
                 continue
             path = os.path.join(base, fname)
-            src = open(path).read()
+            with open(path) as f:
+                src = f.read()
             rev_m = re.search(r"^revision\s*=\s*['\"](.+?)['\"]", src, re.MULTILINE)
             down_m = re.search(r"^down_revision\s*=\s*(['\"](.+?)['\"]|None)", src, re.MULTILINE)
             if not rev_m:

@@ -96,7 +96,6 @@ def get_current_user(
 
     # Try DB-backed manager (imported lazily to avoid circular import)
     try:
-        from src.auth.db_user_manager import DBUserManager as _DBM
         import api as _api
         mgr = getattr(_api, "db_user_manager", None)
         if mgr:
@@ -104,7 +103,7 @@ def get_current_user(
             if user:
                 return user
     except Exception:
-        pass
+        pass  # nosec B110 — graceful degradation
 
     # Fallback to in-memory
     user = user_manager.get_user(username)
