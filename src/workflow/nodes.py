@@ -980,3 +980,13 @@ try:
     logger.info("Phase 4 workflow nodes loaded: %s", list(_p4_types.keys()))
 except Exception as _p4_exc:
     logger.warning("Phase 4 workflow nodes unavailable: %s", _p4_exc)
+
+# ---------------------------------------------------------------------------
+# Phase 5 node registry extension (string-keyed, populated at import time)
+# ---------------------------------------------------------------------------
+try:
+    from src.workflow.phase5_nodes import PHASE5_NODE_TYPES as _p5_types
+    _PHASE4_NODE_REGISTRY.update(_p5_types)
+    logger.info("Phase 5 workflow nodes loaded: %s", list(_p5_types.keys()))
+except Exception as _p5_exc:
+    logger.warning("Phase 5 workflow nodes unavailable: %s", _p5_exc)

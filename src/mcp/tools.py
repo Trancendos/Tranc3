@@ -1332,3 +1332,14 @@ try:
     logger.info("Phase 4 Spark tools loaded: %d tools added (total=%d)", _p4_count, len(registry._tools))
 except Exception as _p4_exc:
     logger.warning("Phase 4 Spark tools unavailable: %s", _p4_exc)
+
+# ---------------------------------------------------------------------------
+# Phase 5: Autonomous Agent Orchestration tools extension
+# Registers 12 additional Spark tools from Phase 5 agent modules
+# ---------------------------------------------------------------------------
+try:
+    from src.mcp.spark_phase5_tools import register_phase5_tools as _reg_p5
+    _p5_count = _reg_p5(registry)
+    logger.info("Phase 5 Spark tools loaded: %d tools added (total=%d)", _p5_count, len(registry._tools))
+except Exception as _p5_exc:
+    logger.warning("Phase 5 Spark tools unavailable: %s", _p5_exc)

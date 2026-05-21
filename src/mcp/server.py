@@ -251,6 +251,24 @@ async def _method_resources_list(
             "description": "Model and skill evolutionary statistics",
             "mimeType": "application/json",
         },
+        {
+            "uri": "spark://agents",
+            "name": "Agent Registry",
+            "description": "All active autonomous agents managed by the Phase 5 orchestration layer",
+            "mimeType": "application/json",
+        },
+        {
+            "uri": "spark://agent-goals",
+            "name": "Agent Goals",
+            "description": "Goal tracking for all autonomous agents in the system",
+            "mimeType": "application/json",
+        },
+        {
+            "uri": "spark://agent-memory",
+            "name": "Agent Memory Stream",
+            "description": "Episodic memory stream for autonomous agents with recency, relevance, importance scoring",
+            "mimeType": "application/json",
+        },
     ]
     return _ok(request_id, {"resources": resources})
 
