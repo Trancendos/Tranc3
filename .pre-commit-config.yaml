@@ -4,7 +4,7 @@
 # Run manually: pre-commit run --all-files
 
 repos:
-  # ── Ruff (lint + format) ──────────────────────────────────────
+  # ── Ruff (lint + format) ──────────────────────────────────────────
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.4
     hooks:
@@ -12,30 +12,57 @@ repos:
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
 
-  # ── Secrets detection ─────────────────────────────────────────
+  # ── General file checks ───────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: no-commit-to-branch
+        args: [--branch, main]
+
+  # ── Bandit (Python SAST) ──────────────────────────────────────────
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.3
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml]
+        additional_dependencies: ["bandit[toml]"]
+
+  # ── Python formatting ─────────────────────────────────────────────
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3.11
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+
+  # ── Secrets detection ─────────────────────────────────────────────
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.4
     hooks:
       - id: gitleaks
 
-  # ── Security: detect-private-key, credentials ─────────────────
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
     hooks:
-      - id: detect-private-key
-      - id: check-merge-conflict
-      - id: check-yaml
-      - id: check-toml
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
-      - id: no-commit-to-branch
-        args: [--branch, main]
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
 
-  # ── Bandit (Python SAST) ──────────────────────────────────────
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
+  # ── Dependency safety ─────────────────────────────────────────────
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.3
     hooks:
-      - id: bandit
-        args: [-r, src/, -ll, -ii]   # medium severity + confidence
-        pass_filenames: false
-        exclude: tests/
+      - id: python-safety-dependencies-check
+        files: requirements.*\.txt$

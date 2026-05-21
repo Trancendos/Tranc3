@@ -1,0 +1,32 @@
+{
+  "name": "tranc3",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tranc3 — Secure AI Language Model Platform",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "security:audit": "npm audit --audit-level=moderate",
+    "security:outdated": "npm outdated",
+    "sbom": "npm sbom --sbom-type cyclonedx > sbom.json"
+  },
+  "dependencies": {
+    "undici": "7.15.0",
+    "vite": "7.1.3",
+    "ws": "8.18.3",
+    "esbuild": "0.25.9"
+  },
+  "overrides": {
+    "undici": "7.15.0",
+    "vite": "7.1.3",
+    "ws": "8.18.3",
+    "esbuild": "0.25.9"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

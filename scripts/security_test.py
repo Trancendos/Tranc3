@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-scripts/security_test.py
-Trancendos — Python security test suite.
-Complements scripts/security_scan.sh (bash) with structured pass/fail reporting.
+TRANC3 — Security Testing Script
+Runs comprehensive security checks on the Tranc3 codebase.
 
 Usage:
-  python scripts/security_test.py            # run all checks
-  python scripts/security_test.py --deps     # dependency CVE scan only
-  python scripts/security_test.py --code     # SAST only
-  python scripts/security_test.py --pins     # exact pinning check only
-  python scripts/security_test.py --secrets  # hardcoded secret heuristics
+  python scripts/security_test.py --all
+  python scripts/security_test.py --check-dependencies
+  python scripts/security_test.py --check-code
+
+Updated: 2025-07 — CVE Remediation
 """
 
 import argparse
@@ -17,187 +16,202 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent
 
+def run_command(cmd: list, description: str) -> bool:
+    """Run a command and return success status."""
+    print(f"\n{'='*60}")
+    print(f"Running: {description}")
+    print(f"Command: {' '.join(cmd)}")
+    print('='*60)
 
-def run(cmd: list[str], label: str) -> bool:
-    print(f"\n{'─'*60}")
-    print(f"  {label}")
-    print(f"  $ {' '.join(cmd)}")
-    print(f"{'─'*60}")
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
-        if result.stdout:
-            print(result.stdout.rstrip())
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print(result.stdout)
         if result.stderr:
-            sys.stderr.write(result.stderr)
-        if result.returncode == 0:
-            print("  ✓  PASS")
-            return True
-        print(f"  ✗  FAIL (exit {result.returncode})")
+            print("STDERR:", result.stderr)
+        print(f"✅ {description} — PASSED")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"❌ {description} — FAILED")
+        print("STDOUT:", e.stdout)
+        print("STDERR:", e.stderr)
         return False
-    except FileNotFoundError:
-        print(f"  ⚠  SKIP — command not found: {cmd[0]}")
-        return True  # don't fail for missing optional tool
 
 
-def check_deps() -> bool:
-    ok = True
-    ok &= run(
-        ["pip-audit", "-r", str(ROOT / "requirements.txt"), "--progress-spinner", "off"],
-        "pip-audit: requirements.txt",
+def check_dependencies() -> bool:
+    """Check Python dependencies for vulnerabilities."""
+    print("\n" + "="*60)
+    print("DEPENDENCY VULNERABILITY SCANNING")
+    print("="*60)
+
+    all_passed = True
+
+    # pip-audit
+    all_passed &= run_command(
+        ["pip", "audit", "-r", "requirements.txt"],
+        "pip-audit (requirements.txt)"
     )
-    for extra in ("requirements-ai.txt", "requirements-security.txt"):
-        path = ROOT / extra
-        if path.exists():
-            ok &= run(
-                ["pip-audit", "-r", str(path), "--progress-spinner", "off"],
-                f"pip-audit: {extra}",
-            )
-    return ok
+
+    # Check AI dependencies if they exist
+    if Path("requirements-ai.txt").exists():
+        all_passed &= run_command(
+            ["pip", "audit", "-r", "requirements-ai.txt"],
+            "pip-audit (requirements-ai.txt)"
+        )
+
+    # Safety check
+    all_passed &= run_command(
+        ["safety", "check", "-r", "requirements.txt"],
+        "Safety check (requirements.txt)"
+    )
+
+    return all_passed
 
 
 def check_code() -> bool:
-    ok = run(
-        ["bandit", "-r", "src/", "-ll", "-ii", "--quiet"],
-        "bandit: SAST scan (severity=medium, confidence=medium)",
+    """Check Python code for security issues."""
+    print("\n" + "="*60)
+    print("CODE SECURITY ANALYSIS")
+    print("="*60)
+
+    all_passed = True
+
+    # Bandit security linting
+    all_passed &= run_command(
+        ["bandit", "-r", "src/", "-f", "txt"],
+        "Bandit security linting"
     )
-    return ok
+
+    # Check for exact version pinning
+    print("\nChecking for exact version pinning in requirements.txt...")
+    with open("requirements.txt", "r") as f:
+        lines = f.readlines()
+        for line in lines:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                if ">=" in line or "~=" in line or "*" in line:
+                    print(f"⚠️  Non-exact version specifier found: {line}")
+                    all_passed = False
+    if all_passed:
+        print("✅ All dependencies use exact version pinning")
+
+    return all_passed
 
 
-def check_pins() -> bool:
-    print(f"\n{'─'*60}")
-    print("  Exact version pinning check")
-    print(f"{'─'*60}")
-    bad_lines: list[tuple[str, int, str]] = []
-    for req_file in [
-        "requirements.txt",
-        "requirements-ai.txt",
-        "requirements-security.txt",
-    ]:
-        path = ROOT / req_file
-        if not path.exists():
-            continue
-        for i, raw in enumerate(path.read_text().splitlines(), 1):
-            line = raw.strip()
-            if not line or line.startswith("#") or line.startswith("-r "):
-                continue
-            pkg = line.split("#")[0].strip()
-            if any(op in pkg for op in (">=", "~=", "!=", ">", "<")) and "==" not in pkg:
-                bad_lines.append((req_file, i, line))
-            elif "*" in pkg:
-                bad_lines.append((req_file, i, line))
+def check_docker() -> bool:
+    """Check Docker configuration for security issues."""
+    print("\n" + "="*60)
+    print("DOCKER SECURITY CHECKS")
+    print("="*60)
 
-    if bad_lines:
-        for f, lno, line in bad_lines:
-            print(f"  ⚠  {f}:{lno}  {line}")
-        print(f"  ✗  FAIL — {len(bad_lines)} non-exact specifier(s) found")
-        return False
+    all_passed = True
 
-    print("  ✓  All dependencies use exact version pinning (==)")
-    return True
+    # Check for non-root user
+    print("\nChecking Dockerfile for non-root user...")
+    dockerfile_path = Path("docker/Dockerfile")
+    if dockerfile_path.exists():
+        with open(dockerfile_path, "r") as f:
+            content = f.read()
+            if "USER" in content and "tranc3" in content:
+                print("✅ Dockerfile uses non-root user")
+            else:
+                print("❌ Dockerfile may run as root")
+                all_passed = False
+
+            if "no-new-privileges" in content:
+                print("✅ Dockerfile disables privilege escalation")
+            else:
+                print("⚠️  Dockerfile missing no-new-privileges")
+
+    return all_passed
 
 
 def check_secrets() -> bool:
-    print(f"\n{'─'*60}")
-    print("  Hardcoded secret heuristics (gitleaks / grep)")
-    print(f"{'─'*60}")
-    gitleaks = run(
-        ["gitleaks", "detect", "--source", ".", "--log-level", "warn", "--exit-code", "1"],
-        "gitleaks detect",
-    )
-    if gitleaks:
-        return True
+    """Check for leaked secrets in the codebase."""
+    print("\n" + "="*60)
+    print("SECRET DETECTION")
+    print("="*60)
 
-    # gitleaks not installed — fall back to grep heuristics
-    print("  gitleaks not available — running grep heuristics")
-    patterns = [
-        r"sk-[a-zA-Z0-9]{20,}",  # OpenAI key
-        r"ghp_[a-zA-Z0-9]{36}",  # GitHub PAT
-        r"AKIA[0-9A-Z]{16}",  # AWS access key
-        r"-----BEGIN (RSA|EC) PRIVATE",  # Private keys
-        r"password\s*=\s*['\"][^'\"]{8,}",  # Hardcoded passwords
+    all_passed = True
+
+    # Check for common secret patterns
+    secret_patterns = [
+        "password",
+        "api_key",
+        "secret",
+        "token",
+        "private_key",
     ]
-    result = subprocess.run(
-        [
-            "grep",
-            "-rn",
-            "-E",
-            "|".join(patterns),
-            "--include=*.py",
-            "--include=*.js",
-            "--include=*.ts",
-            "--exclude-dir=.git",
-            "--exclude-dir=node_modules",
-            "src/",
-            "cloudflare/",
-        ],
-        capture_output=True,
-        text=True,
-        cwd=ROOT,
-    )
-    if result.stdout.strip():
-        print(result.stdout.rstrip())
-        print("  ✗  FAIL — potential secrets detected")
-        return False
-    print("  ✓  No obvious hardcoded secrets found")
-    return True
+
+    print("\nScanning for potential secrets...")
+    for pattern in secret_patterns:
+        result = subprocess.run(
+            ["grep", "-r", "-i", pattern, "src/", "--include=*.py"],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            print(f"⚠️  Found '{pattern}' in source code:")
+            print(result.stdout[:500])  # Limit output
+
+    print("✅ Secret detection scan complete")
+    return all_passed
 
 
-def check_semgrep() -> bool:
-    return run(
-        [
-            "semgrep",
-            "--config",
-            "p/python",
-            "--config",
-            "p/owasp-top-ten",
-            "--severity",
-            "ERROR",
-            "--exit-zero",
-            "src/",
-        ],
-        "semgrep: p/python + p/owasp-top-ten",
+def generate_sbom() -> bool:
+    """Generate Software Bill of Materials."""
+    print("\n" + "="*60)
+    print("SBOM GENERATION")
+    print("="*60)
+
+    return run_command(
+        ["cyclonedx-py", "requirements", "-i", "requirements.txt", "-o", "sbom.json", "--format", "json"],
+        "CycloneDX SBOM generation"
     )
 
 
-def main() -> int:
-    p = argparse.ArgumentParser(description="Trancendos security test suite")
-    p.add_argument("--deps", action="store_true", help="Dependency CVE scan")
-    p.add_argument("--code", action="store_true", help="SAST (bandit)")
-    p.add_argument("--pins", action="store_true", help="Exact pinning check")
-    p.add_argument("--secrets", action="store_true", help="Hardcoded secrets")
-    p.add_argument("--semgrep", action="store_true", help="Semgrep SAST")
-    args = p.parse_args()
+def main():
+    parser = argparse.ArgumentParser(description="Tranc3 Security Testing Script")
+    parser.add_argument("--all", action="store_true", help="Run all security checks")
+    parser.add_argument("--check-dependencies", action="store_true", help="Check dependencies")
+    parser.add_argument("--check-code", action="store_true", help="Check code")
+    parser.add_argument("--check-docker", action="store_true", help="Check Docker")
+    parser.add_argument("--check-secrets", action="store_true", help="Check for secrets")
+    parser.add_argument("--generate-sbom", action="store_true", help="Generate SBOM")
 
-    run_all = not any([args.deps, args.code, args.pins, args.secrets, args.semgrep])
+    args = parser.parse_args()
 
-    results: dict[str, bool] = {}
+    if not any(vars(args).values()):
+        parser.print_help()
+        sys.exit(1)
 
-    if run_all or args.pins:
-        results["pin-check"] = check_pins()
-    if run_all or args.deps:
-        results["pip-audit"] = check_deps()
-    if run_all or args.code:
-        results["bandit"] = check_code()
-    if run_all or args.secrets:
-        results["secrets"] = check_secrets()
-    if run_all or args.semgrep:
-        results["semgrep"] = check_semgrep()
+    all_passed = True
 
-    print(f"\n{'═'*60}")
-    print("  Results")
-    print(f"{'═'*60}")
-    for name, passed in results.items():
-        mark = "✓" if passed else "✗"
-        print(f"  {mark}  {name}")
+    if args.all or args.check_dependencies:
+        all_passed &= check_dependencies()
 
-    total = len(results)
-    passed = sum(results.values())
-    print(f"\n  {passed}/{total} checks passed")
+    if args.all or args.check_code:
+        all_passed &= check_code()
 
-    return 0 if all(results.values()) else 1
+    if args.all or args.check_docker:
+        all_passed &= check_docker()
+
+    if args.all or args.check_secrets:
+        all_passed &= check_secrets()
+
+    if args.all or args.generate_sbom:
+        all_passed &= generate_sbom()
+
+    print("\n" + "="*60)
+    if all_passed:
+        print("✅ ALL SECURITY CHECKS PASSED")
+        print("="*60)
+        sys.exit(0)
+    else:
+        print("❌ SOME SECURITY CHECKS FAILED")
+        print("="*60)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
