@@ -23,6 +23,8 @@ import hashlib
 import hmac
 import json
 import logging
+
+from shared_core.sanitize import sanitize_for_log
 import os
 import secrets
 import sqlite3
@@ -341,7 +343,7 @@ async def register(user: UserRegister, _=Depends(rate_limit_check)):
     )
     db.commit()
 
-    logger.info(f"user_registered: username={user.username}")
+    logger.info("user_registered: username=%s", sanitize_for_log(user.username))
 
     return TokenResponse(
         access_token=access_token,
@@ -395,7 +397,7 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     db.execute("UPDATE users SET last_login = ? WHERE user_id = ?", (now, user_id))
     db.commit()
 
-    logger.info(f"user_login: username={credentials.username}")
+    logger.info("user_login: username=%s", sanitize_for_log(credentials.username))
 
     return TokenResponse(
         access_token=access_token,

@@ -5,6 +5,8 @@ import torch
 from typing import Dict
 import logging
 
+from shared_core.sanitize import sanitize_for_log
+
 # Import TRANC3 2060 modules
 from src.quantum.quantum_core import QuantumNeuralCore
 from src.bio_neural.consciousness_engine import ConsciousnessModel
@@ -41,7 +43,7 @@ class TRANC3_2060:
             with open(config_path, 'r') as f:
                 return yaml.safe_load(f)
         except FileNotFoundError:
-            logger.warning(f"Config not found at {config_path}, using defaults")
+            logger.warning("Config not found at %s, using defaults", sanitize_for_log(config_path))
             return {
                 'quantum':         {'num_qubits': 16},
                 'consciousness':   {'consciousness_threshold': 3.0, 'state_dimensions': 768},

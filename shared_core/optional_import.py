@@ -3,6 +3,8 @@
 
 import importlib
 import logging
+
+from shared_core.sanitize import sanitize_for_log
 from types import ModuleType
 from typing import Any, Optional
 
@@ -55,7 +57,7 @@ class LazyLoader:
             mod = importlib.import_module(module_name, package)
             object.__setattr__(self, "_module", mod)
             object.__setattr__(self, "_loaded", True)
-            logger.debug(f"Lazy-loaded: {module_name}")
+            logger.debug("Lazy-loaded: %s", sanitize_for_log(module_name))
             return mod
         except ImportError as e:
             object.__setattr__(self, "_module", None)
