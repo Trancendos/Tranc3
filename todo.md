@@ -33,7 +33,7 @@
 - [x] Verify all 226+ Python files compile without syntax errors
 
 ## Phase 10F: Validation & Deployment [x]
-- [x] Run tests to verify nothing is broken (31/31 security tests pass, 922/963 total pass)
+- [x] Run tests to verify nothing is broken (31/31 security tests, 961/961 total pass)
 - [x] Commit all changes and push branch
 - [x] Create PR with comprehensive description (PR #22)
 
@@ -42,14 +42,14 @@
 # Production Readiness Tasks
 
 ## Pre-Deployment Validation [x]
+- [x] Fix test_enhanced_api.py collection errors (made torch import optional)
 - [x] Run linter (ruff) on all modified files — all new files pass clean
-- [x] Run bandit security scan on codebase — 0 high severity, 2 medium (with nosec comments)
+- [x] Run bandit security scan on codebase — 0 high, 2 medium (with nosec comments)
 - [x] Verify .env.production.template has all required variables documented
 - [x] Verify CI/CD pipeline configuration (Forgejo CI + security-scan.yml)
 - [x] Verify pre-commit hooks configuration (ruff, bandit, gitleaks, semgrep, typos)
 
-## Remaining Items (require environment access) [ ]
-- [ ] Fix test_enhanced_api.py collection errors (missing src.main_enhanced module)
+## Remaining Items (require environment/infrastructure access) [ ]
 - [ ] Verify Docker build succeeds (requires Docker daemon)
 - [ ] Merge PR #22 after review
 - [ ] Verify deployment on staging environment
