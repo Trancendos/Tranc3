@@ -8,6 +8,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, Optional
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ class CircuitBreaker:
             ):
                 self.state = CircuitState.HALF_OPEN
                 self._half_open_calls = 0
-                logger.info(f"Circuit {self.name}: OPEN → HALF_OPEN")
+                logger.info("Circuit %s: OPEN → HALF_OPEN", sanitize_for_log(self.name))
                 return True
             return False
 
@@ -83,7 +84,7 @@ class CircuitBreaker:
                 self.state = CircuitState.CLOSED
                 self._failure_count = 0
                 self._success_count = 0
-                logger.info(f"Circuit {self.name}: HALF_OPEN → CLOSED")
+                logger.info("Circuit %s: HALF_OPEN → CLOSED", sanitize_for_log(self.name))
         else:
             self._failure_count = max(0, self._failure_count - 1)
 
@@ -96,7 +97,7 @@ class CircuitBreaker:
 
         if self.state == CircuitState.HALF_OPEN:
             self.state = CircuitState.OPEN
-            logger.warning(f"Circuit {self.name}: HALF_OPEN → OPEN (failed during test)")
+            logger.warning("Circuit %s: HALF_OPEN → OPEN (failed during test)", sanitize_for_log(self.name))
         elif self._failure_count >= self.config.failure_threshold:
             self.state = CircuitState.OPEN
             logger.warning(

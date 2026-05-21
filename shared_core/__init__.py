@@ -16,6 +16,21 @@ from .security import (
     hash_password,
     verify_password,
 )
+from .path_validation import (
+    PathTraversalError,
+    validate_path,
+    safe_join,
+    sanitize_filename,
+)
+from .error_handlers import (
+    safe_error_detail,
+    SafeHTTPException,
+)
+from .sanitize import (
+    sanitize_for_log,
+    sanitize_dict_for_log,
+    SafeLogger,
+)
 from .optional_import import LazyLoader
 
 __all__ = [
@@ -34,6 +49,18 @@ __all__ = [
     "verify_jwt",
     "hash_password",
     "verify_password",
+    # Path validation
+    "PathTraversalError",
+    "validate_path",
+    "safe_join",
+    "sanitize_filename",
+    # Error handlers
+    "safe_error_detail",
+    "SafeHTTPException",
+    # Log sanitization
+    "sanitize_for_log",
+    "sanitize_dict_for_log",
+    "SafeLogger",
     # Utilities
     "LazyLoader",
 ]

@@ -6,6 +6,7 @@ import torch.nn as nn
 import numpy as np
 from typing import Dict, List, Optional, Tuple
 import logging
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +131,7 @@ class SpikingNeuralNetwork(nn.Module):
         )
         self.stdp = STDPLearning()
         self.spike_rates: List[float] = []
-        logger.info(f"SNN initialised: {sizes}")
+        logger.info("SNN initialised: %s", sanitize_for_log(sizes))
 
     def forward(
         self, x: torch.Tensor, use_stdp: bool = False
@@ -207,7 +208,7 @@ class NeuromorphicProcessor:
         try:
             return self.snn(x, use_stdp=learn)
         except Exception as e:
-            logger.warning(f"Neuromorphic processing failed: {e}")
+            logger.warning("Neuromorphic processing failed: %s", sanitize_for_log(e))
             return {"output": x, "spike_rate": 0.0, "energy_estimate": 0.0}
 
     def get_stats(self) -> Dict:

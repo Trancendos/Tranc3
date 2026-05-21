@@ -6,6 +6,7 @@ import os
 from typing import Dict
 from datetime import datetime
 import logging
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ class MultiCloudFederationController:
         # Start health monitoring
         asyncio.create_task(self._health_monitor_loop())
 
-        logger.info(f"Federation controller started. Primary: {self.primary_cluster}")
+        logger.info("Federation controller started. Primary: %s", sanitize_for_log(self.primary_cluster))
 
     async def stop(self):
         """Stop federation controller"""
@@ -57,7 +58,7 @@ class MultiCloudFederationController:
                 await self._check_all_clusters()
                 await asyncio.sleep(self.health_check_interval)
             except Exception as e:
-                logger.error(f"Health monitor error: {e}")
+                logger.error("Health monitor error: %s", sanitize_for_log(e))
                 await asyncio.sleep(5)
 
     async def _check_all_clusters(self):
@@ -77,11 +78,11 @@ class MultiCloudFederationController:
                     await response.json()
                     self.cluster_health[cluster]["status"] = "healthy"
                     self.cluster_health[cluster]["consecutive_failures"] = 0
-                    logger.info(f"✓ {cluster} is healthy")
+                    logger.info("✓ %s is healthy", sanitize_for_log(cluster))
                 else:
                     self._mark_unhealthy(cluster)
         except Exception as e:
-            logger.warning(f"Health check failed for {cluster}: {e}")
+            logger.warning("Health check failed for %s: %s", sanitize_for_log(cluster), sanitize_for_log(e))
             self._mark_unhealthy(cluster)
 
     def _mark_unhealthy(self, cluster: str):
@@ -90,7 +91,7 @@ class MultiCloudFederationController:
 
         if self.cluster_health[cluster]["consecutive_failures"] >= 3:
             self.cluster_health[cluster]["status"] = "unhealthy"
-            logger.error(f"✗ {cluster} marked as UNHEALTHY")
+            logger.error("✗ %s marked as UNHEALTHY", sanitize_for_log(cluster))
 
             # Trigger failover if primary
             if cluster == self.primary_cluster:
@@ -103,7 +104,7 @@ class MultiCloudFederationController:
         # Find healthy failover cluster
         for cluster in self.failover_clusters:
             if self.cluster_health[cluster]["status"] == "healthy":
-                logger.info(f"Failing over to: {cluster}")
+                logger.info("Failing over to: %s", sanitize_for_log(cluster))
                 self.primary_cluster = cluster
 
                 # Update DNS/routing
@@ -112,7 +113,7 @@ class MultiCloudFederationController:
 
     async def _update_global_routing(self, new_primary: str):
         """Update global DNS/routing to new primary"""
-        logger.info(f"Updating routing to {new_primary}")
+        logger.info("Updating routing to %s", sanitize_for_log(new_primary))
         # Implementation depends on DNS provider (Route53, Cloud DNS, etc.)
 
     def _get_cluster_endpoint(self, cluster: str) -> str:
@@ -142,7 +143,7 @@ class MultiCloudFederationController:
         # Fallback to healthy failover clusters
         for cluster in self.failover_clusters:
             if self.cluster_health[cluster]["status"] == "healthy":
-                logger.warning(f"Primary unavailable, routing to {cluster}")
+                logger.warning("Primary unavailable, routing to %s", sanitize_for_log(cluster))
                 return await self._send_to_cluster(cluster, request_data)
 
         raise Exception("No healthy clusters available")
@@ -159,7 +160,7 @@ class MultiCloudFederationController:
             ) as response:
                 return await response.json()
         except Exception as e:
-            logger.error(f"Request to {cluster} failed: {e}")
+            logger.error("Request to %s failed: %s", sanitize_for_log(cluster), sanitize_for_log(e))
             raise
 
 

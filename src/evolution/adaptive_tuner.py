@@ -7,6 +7,7 @@ import random
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ class AdaptiveTuner:
     async def start(self, interval: float = 60.0) -> None:
         self._running = True
         self._task = asyncio.create_task(self._tune_loop(interval))
-        logger.info(f"AdaptiveTuner started (interval={interval}s)")
+        logger.info("AdaptiveTuner started (interval=%ss)", sanitize_for_log(interval))
 
     async def stop(self) -> None:
         self._running = False
@@ -98,7 +99,7 @@ class AdaptiveTuner:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Tuning loop error: {e}")
+                logger.error("Tuning loop error: %s", sanitize_for_log(e))
 
     async def tune_step(self) -> Dict[str, Any]:
         current_params = {name: p.value for name, p in self._parameters.items()}
@@ -123,7 +124,7 @@ class AdaptiveTuner:
         if best_mutation_fitness > self._best_fitness:
             self._best_fitness = best_mutation_fitness
             self._best_params = {name: p.value for name, p in self._parameters.items()}
-            logger.info(f"New best fitness: {self._best_fitness:.4f} (params: {self._best_params})")
+            logger.info("New best fitness: %s (params: %s)", sanitize_for_log(f"{self._best_fitness:.4f}"), sanitize_for_log(self._best_params))
 
         return {
             "current_fitness": current_fitness,
@@ -139,7 +140,7 @@ class AdaptiveTuner:
             else:
                 return self.fitness_fn(params)
         except Exception as e:
-            logger.error(f"Fitness evaluation error: {e}")
+            logger.error("Fitness evaluation error: %s", sanitize_for_log(e))
             return float("-inf")
 
     def get_params(self) -> Dict[str, float]:

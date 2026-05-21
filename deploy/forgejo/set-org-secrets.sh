@@ -24,6 +24,10 @@ ORG="${FORGEJO_ORG:-Trancendos}"
 API="$FORGEJO_URL/api/v1"
 
 # ── Pre-flight checks ──────────────────────────────────────────────────────
+# SECURITY: All secrets must be sourced from the environment (.env file).
+# NEVER hardcode secret values in this script or commit .env to version control.
+# The SUPABASE_SERVICE_ROLE_KEY is a highly privileged credential that bypasses
+# Row Level Security. Only use it when CI/CD requires it; prefer ANON_KEY + RLS.
 REQUIRED_VARS=(
   FORGEJO_TOKEN
   FLY_API_TOKEN
@@ -34,11 +38,13 @@ REQUIRED_VARS=(
   DATABASE_URL
   SUPABASE_URL
   SUPABASE_ANON_KEY
-  SUPABASE_SERVICE_ROLE_KEY
   REDIS_URL
   UPSTASH_REDIS_REST_URL
   UPSTASH_REDIS_REST_TOKEN
 )
+
+# Optional high-privilege secret — only set when --include-service-role is passed
+# SUPABASE_SERVICE_ROLE_KEY (bypasses RLS; use with extreme caution)
 
 for VAR in "${REQUIRED_VARS[@]}"; do
   if [[ -z "${!VAR:-}" ]]; then
@@ -80,7 +86,12 @@ echo "--- Supabase ---"
 set_secret "DATABASE_URL"              "$DATABASE_URL"
 set_secret "SUPABASE_URL"              "$SUPABASE_URL"
 set_secret "SUPABASE_ANON_KEY"         "$SUPABASE_ANON_KEY"
-set_secret "SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_SERVICE_ROLE_KEY"
+# SUPABASE_SERVICE_ROLE_KEY — only pushed when --include-service-role flag is set
+if [[ "${INCLUDE_SERVICE_ROLE:-}" == "true" ]]; then
+  set_secret "SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_SERVICE_ROLE_KEY"
+else
+  echo "  ⊘ Skipping SUPABASE_SERVICE_ROLE_KEY (use --include-service-role to enable)"
+fi
 
 # ── Upstash Redis (from .env) ─────────────────────────────────────────────
 echo "--- Upstash Redis ---"

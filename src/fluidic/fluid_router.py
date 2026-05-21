@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from shared_core.models import ServiceHealth, ServiceInfo
 from shared_core.registry import ServiceRegistry
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +106,7 @@ class FluidicRouter:
             service_name=service_name,
             weight=initial_weight,
         )
-        logger.info(f"Fluidic route registered: {service_name} (weight={initial_weight})")
+        logger.info("Fluidic route registered: %s (weight=%s)", sanitize_for_log(service_name), sanitize_for_log(initial_weight))
 
     def select(self, capability: str) -> Optional[ServiceInfo]:
         """

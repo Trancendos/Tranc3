@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from shared_core.sanitize import sanitize_for_log
 from src.event_bus.types import (
     DEFAULT_EVENT_BUS_CONFIG,
     DeliveryResult,
@@ -249,7 +250,7 @@ class EventBus:
         """Flush the event buffer. Returns number of events flushed."""
         events = self._buffer.copy()
         self._buffer.clear()
-        logger.info(f"event_buffer_flushed: {len(events)} events")
+        logger.info("event_buffer_flushed: %s events", sanitize_for_log(len(events)))
         return len(events)
 
     # ── Private ──────────────────────────────────────────────
@@ -399,4 +400,4 @@ class EventBus:
             )
             self._db.commit()
         except sqlite3.Error as e:
-            logger.error(f"sqlite_persist_error: {e}")
+            logger.error("sqlite_persist_error: %s", sanitize_for_log(e))

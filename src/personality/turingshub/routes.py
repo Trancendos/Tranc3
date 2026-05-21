@@ -9,6 +9,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Body, Path
 from fastapi.responses import JSONResponse
+from shared_core.error_handlers import safe_error_detail
 
 router = APIRouter(prefix="/turingshub", tags=["turings-hub"])
 
@@ -57,7 +58,7 @@ async def list_personalities() -> list:
             {"id": pid, "profile": spawner._profiles.get(pid, {})} for pid in profiles
         ]
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
 
 
 @router.get("/personalities/{personality_id}")
@@ -87,11 +88,11 @@ async def spawn_personality(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         result = _spawner().spawn(personality_id, repo_name, output_dir=output_dir)
         return result
     except ValueError as exc:
-        return JSONResponse({"error": str(exc)}, status_code=400)
+        return JSONResponse({"error": safe_error_detail(exc, 400)}, status_code=400)
     except FileExistsError as exc:
-        return JSONResponse({"error": str(exc)}, status_code=409)
+        return JSONResponse({"error": safe_error_detail(exc, 409)}, status_code=409)
     except Exception as exc:
-        return JSONResponse({"error": f"Spawn failed: {exc}"}, status_code=500)
+        return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
 
 
 @router.get("/matrix/active")
@@ -104,4 +105,4 @@ async def active_personality() -> Dict[str, Any]:
             active = active()
         return {"active_personality": active}
     except Exception as exc:
-        return {"active_personality": None, "note": str(exc)}
+        return {"active_personality": None, "note": safe_error_detail(exc, 500)}

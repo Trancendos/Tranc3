@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from fastapi.security import HTTPBearer
 import redis
 import logging
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -213,7 +214,7 @@ class AuditLogger:
         }
         self.redis.lpush("audit_log", json.dumps(event))
         self.redis.ltrim("audit_log", 0, 99999)
-        logger.info(f"AUDIT: {event_type} | user={user_id} | ip={ip}")
+        logger.info("AUDIT: %s | user=%s | ip=%s", sanitize_for_log(event_type), sanitize_for_log(user_id), sanitize_for_log(ip))
 
     def get_recent_events(self, limit: int = 100) -> List[Dict]:
         import json

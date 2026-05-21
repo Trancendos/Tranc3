@@ -10,6 +10,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
+from shared_core.error_handlers import safe_error_detail
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/luminous", tags=["luminous"])
@@ -22,12 +23,12 @@ async def luminous_status() -> Dict[str, Any]:
     try:
         modules["consciousness"] = "available"
     except Exception as exc:
-        modules["consciousness"] = f"degraded: {str(exc)[:60]}"
+        modules["consciousness"] = "degraded"
 
     try:
         modules["neuromorphic"] = "available"
     except Exception as exc:
-        modules["neuromorphic"] = f"degraded: {str(exc)[:60]}"
+        modules["neuromorphic"] = "degraded"
 
     return {"service": "luminous", "modules": modules}
 
@@ -57,9 +58,9 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         phi = calc.calculate_phi(state_arr) if hasattr(calc, "calculate_phi") else 0.0
         return {"phi": float(phi), "state_dim": len(state)}
     except ImportError as exc:
-        return JSONResponse({"error": f"Missing dependency: {exc}"}, status_code=503)
+        return JSONResponse({"error": "Required dependency not available"}, status_code=503)
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
 
 
 @router.post("/neuromorphic/process")
@@ -90,6 +91,6 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
             result = result.tolist()
         return {"input_dim": len(input_data), "timesteps": timesteps, "output": result}
     except ImportError as exc:
-        return JSONResponse({"error": f"Missing dependency: {exc}"}, status_code=503)
+        return JSONResponse({"error": "Required dependency not available"}, status_code=503)
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)

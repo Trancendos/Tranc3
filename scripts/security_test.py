@@ -127,7 +127,11 @@ def check_docker() -> bool:
 
 
 def check_secrets() -> bool:
-    """Check for leaked secrets in the codebase."""
+    """Check for leaked secrets in the codebase.
+
+    Reports only the count and file locations of matches — never the
+    matching lines themselves — to avoid logging sensitive data.
+    """
     print("\n" + "="*60)
     print("SECRET DETECTION")
     print("="*60)
@@ -146,15 +150,24 @@ def check_secrets() -> bool:
     print("\nScanning for potential secrets...")
     for pattern in secret_patterns:
         result = subprocess.run(
-            ["grep", "-r", "-i", pattern, "src/", "--include=*.py"],
+            ["grep", "-r", "-i", "-l", pattern, "src/", "--include=*.py"],
             capture_output=True,
             text=True
         )
         if result.returncode == 0:
-            print(f"⚠️  Found '{pattern}' in source code:")
-            print(result.stdout[:500])  # Limit output
+            matching_files = [f for f in result.stdout.strip().splitlines() if f]
+            if matching_files:
+                print(f"⚠️  Found '{pattern}' references in {len(matching_files)} file(s):")
+                for filepath in matching_files:
+                    print(f"    - {filepath}")
+                all_passed = False
 
-    print("✅ Secret detection scan complete")
+    if all_passed:
+        print("✅ No secret patterns detected in source code")
+    else:
+        print("⚠️  Review the files above — ensure no hardcoded secrets are present")
+        print("    (Use environment variables or a secrets manager instead)")
+
     return all_passed
 
 

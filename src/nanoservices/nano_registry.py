@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 import logging
 import time
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +103,7 @@ class NanoServiceRegistry:
         self._registry[service.name] = service
         for cap in service.capabilities:
             self._capability_index.setdefault(cap, []).append(service.name)
-        logger.info(f"Registered nanoservice: {service.name} @ {service.endpoint}")
+        logger.info("Registered nanoservice: %s @ %s", sanitize_for_log(service.name), sanitize_for_log(service.endpoint))
 
     def get(self, name: str) -> Optional[NanoService]:
         return self._registry.get(name)
@@ -126,7 +127,7 @@ class NanoServiceRegistry:
     def mark_unhealthy(self, name: str):
         if name in self._registry:
             self._registry[name].is_healthy = False
-            logger.warning(f"Nanoservice marked unhealthy: {name}")
+            logger.warning("Nanoservice marked unhealthy: %s", sanitize_for_log(name))
 
     def mark_healthy(self, name: str):
         if name in self._registry:

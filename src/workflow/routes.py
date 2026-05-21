@@ -17,6 +17,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Body, Path
 from fastapi.responses import JSONResponse
+from shared_core.error_handlers import safe_error_detail
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/grid", tags=["digital-grid"])
@@ -81,7 +82,7 @@ async def register_workflow(body: Dict[str, Any] = Body(...)):
         wf = WorkflowDefinition.from_dict(body)
     except Exception as exc:
         return JSONResponse(
-            {"error": f"Invalid workflow definition: {exc}"}, status_code=400
+            {"error": "Invalid workflow definition"}, status_code=400
         )
     _workflow_registry[wf.id] = wf
     logger.info("grid: registered workflow id=%s name=%s", wf.id, wf.name)
@@ -118,7 +119,7 @@ async def run_workflow(
         return JSONResponse({"error": "Workflow execution timed out"}, status_code=504)
     except Exception as exc:
         logger.error("grid: execution error workflow=%s: %s", workflow_id, exc)
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
     return {
         "execution_id": state.execution_id,
         "workflow_id": workflow_id,
