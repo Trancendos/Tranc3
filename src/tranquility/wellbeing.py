@@ -155,7 +155,7 @@ class Tranquility:
 
     def _emit(self, user_id: str, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
             observe(event_type, actor=f"user:{user_id}", category=EventCategory.DATA,
                     service="tranquility", metadata=metadata or {})
         except Exception:

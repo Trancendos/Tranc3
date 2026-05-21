@@ -100,7 +100,7 @@ class Section7:
 
         # Cryptex threat signals
         try:
-            from src.cryptex.threat_detector import get_cryptex, ThreatSeverity
+            from src.cryptex.threat_detector import ThreatSeverity, get_cryptex
             cx_stats = get_cryptex().stats()
             findings.append({"source": "cryptex", "data": cx_stats})
             sources.append("cryptex")
@@ -155,7 +155,7 @@ class Section7:
         recommendations: List[str] = []
 
         try:
-            from src.cryptex.threat_detector import get_cryptex, ThreatSeverity
+            from src.cryptex.threat_detector import ThreatSeverity, get_cryptex
             cx = get_cryptex()
             recent = cx.recent_signals(limit=20, min_severity=ThreatSeverity.MEDIUM)
             findings.append({
@@ -169,7 +169,7 @@ class Section7:
             logger.debug("section7: cryptex unavailable: %s", exc)
 
         try:
-            from src.observability.observatory import get_observatory, EventCategory
+            from src.observability.observatory import EventCategory, get_observatory
             obs = get_observatory()
             security_events = obs.recent(limit=20, category=EventCategory.SECURITY)
             findings.append({
@@ -228,7 +228,7 @@ class Section7:
 
         # Emit Observatory event
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
             observe(
                 f"section7.report.{report.report_type.value}",
                 actor="section7",

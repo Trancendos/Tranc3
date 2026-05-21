@@ -7,8 +7,9 @@ import os
 import sys
 import time
 import pytest
-import torch
-import numpy as np
+
+torch = pytest.importorskip("torch", reason="torch not installed — ML tests skipped")
+np = pytest.importorskip("numpy", reason="numpy not installed — ML tests skipped")
 from unittest.mock import MagicMock, patch
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────

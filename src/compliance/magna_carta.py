@@ -2,9 +2,10 @@
 # TRANC3 Magna Carta Framework Compliance Layer
 # Placeholder — apply full framework when config file is provided
 
-import os
 import logging
+import os
 from typing import Dict, Optional
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)

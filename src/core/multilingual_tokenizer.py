@@ -1,11 +1,13 @@
 # src/core/multilingual_tokenizer.py
 # TRANC3 Full Multilingual Engine
 
+import logging
+from typing import Dict, List
+
+import langdetect
 import torch
 from transformers import AutoTokenizer
-from typing import Dict, List
-import langdetect
-import logging
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)

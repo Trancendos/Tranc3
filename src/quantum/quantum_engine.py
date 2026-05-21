@@ -1,13 +1,15 @@
 # src/quantum/quantum_engine.py
 # TRANC3 Full Quantum Module
 
+import logging
+from typing import Dict, List, Optional
+
 import numpy as np
 import torch
-from typing import Dict, List, Optional
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import QFT
 from qiskit_aer import AerSimulator
-import logging
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)

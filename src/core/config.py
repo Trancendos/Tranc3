@@ -2,7 +2,6 @@
 # Pydantic-settings based configuration with hot-reload support
 # Replaces the scattered os.getenv() calls across the codebase
 
-import os
 from typing import List, Optional
 
 try:

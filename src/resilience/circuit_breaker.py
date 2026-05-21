@@ -4,10 +4,10 @@
 import asyncio
 import logging
 import time
-from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, Optional
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -118,7 +118,7 @@ class CircuitBreaker:
             result = await fn(*args, **kwargs) if asyncio.iscoroutinefunction(fn) else fn(*args, **kwargs)
             self.record_success()
             return result
-        except Exception as e:
+        except Exception:
             self.record_failure()
             raise
 

@@ -4,9 +4,9 @@
 import asyncio
 import logging
 import random
-import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -110,7 +110,7 @@ class AdaptiveTuner:
 
         for name, param in self._parameters.items():
             old_value = param.value
-            new_value = param.mutate()
+            param.mutate()
 
             mutated_params = {n: p.value for n, p in self._parameters.items()}
             mutated_fitness = await self._evaluate_fitness(mutated_params)

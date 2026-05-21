@@ -13,11 +13,11 @@ All modules are zero-cost: pure Python, no paid APIs, lazy-loaded singletons.
 """
 
 from .agent_runtime import AgentRuntime, AgentState
-from .task_decomposer import TaskDecomposer, SubTask, Decomposition
+from .agent_types import AgentProfile, AgentType
+from .goal_manager import Goal, GoalManager, GoalState
+from .memory_stream import EpisodicMemory, MemoryStream
+from .task_decomposer import Decomposition, SubTask, TaskDecomposer
 from .tool_bridge import ToolBridge, ToolResult
-from .memory_stream import MemoryStream, EpisodicMemory
-from .goal_manager import GoalManager, Goal, GoalState
-from .agent_types import AgentType, AgentProfile
 
 __all__ = [
     "AgentRuntime",

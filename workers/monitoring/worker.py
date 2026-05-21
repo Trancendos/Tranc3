@@ -15,18 +15,16 @@ import json
 import logging
 import sqlite3
 import threading
-import time
 import uuid
 from collections import defaultdict
 from contextlib import contextmanager
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
@@ -668,9 +666,8 @@ KNOWN_SERVICES = [
 @app.post("/monitoring/collect")
 async def collect_health():
     """Trigger health collection from all known services. Called by scheduler or manually."""
-    import asyncio
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     results = []
     for svc in KNOWN_SERVICES:

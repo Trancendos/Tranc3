@@ -1,26 +1,26 @@
 # TRANC3 — Core AI Platform
 
-A custom transformer-based AI built from the ground up in PyTorch.
-Owned entirely by you. No API wrappers. No hosted dependencies.
+A self-hosted, zero-cost AI platform built from the ground up. Custom transformer model, autonomous agent orchestration, encrypted secrets vault, and a full observability stack — all running on your infrastructure with no paid external dependencies.
 
 ---
 
 ## What This Is
 
-A decoder-only transformer language model — the same architectural family as GPT — built from PyTorch primitives. It has a real training pipeline, a real tokenizer, and a personality matrix system that lets you deploy different agent personas from a single trained model.
+TRANC3 is a decoder-only transformer language model — the same architectural family as GPT — built from PyTorch primitives, combined with a production-ready platform that includes 29 self-hosted workers, an MCP tool registry with 45+ tools, and a comprehensive security framework.
 
-The model is designed to be compassionate, capable, and honest. The two included personality profiles are `tranc3-base` (empathetic companion) and `tranc3-builder` (technical assistant). More can be added as JSON files without touching any code.
+The platform is designed to be **compassionate, capable, and honest**. The two included personality profiles are `tranc3-base` (empathetic companion) and `tranc3-builder` (technical assistant). More can be added as JSON files without touching any code.
+
+**Core Principle**: Zero cost. No paid APIs. No third-party dependencies that incur costs. All services are self-hosted Python workers or open-source infrastructure components.
 
 ---
 
 ## Architecture
 
+### AI Model
 - **Model**: Decoder-only transformer with RoPE positional embeddings and SwiGLU activation
 - **Tokenizer**: SentencePiece BPE, trained on your data, 32k vocabulary
 - **Personality layer**: JSON profile system injected at inference time
 - **Training**: AdamW, cosine LR schedule, gradient accumulation, mixed precision
-
-Model sizes available:
 
 | Size   | Parameters | Hardware       |
 |--------|-----------|----------------|
@@ -28,20 +28,66 @@ Model sizes available:
 | medium | ~50M      | GPU recommended|
 | large  | ~150M     | Slough-grade   |
 
+### Platform Services
+- **29 Python/FastAPI workers** replacing Cloudflare Workers
+- **MCP tool registry** with 45+ tools across 5 Spark phases
+- **Infinity Void** — AES-256-GCM encrypted secrets vault
+- **Autonomous agent orchestration** with goal decomposition and reflection
+- **Quantum-inspired routing** and **bio-neural consciousness** modules
+- **Full observability**: Prometheus + Grafana + Loki + OpenTelemetry
+
+### What This Replaces
+
+| Cloudflare Service | Self-Hosted Replacement |
+|---|---|
+| Cloudflare Workers | 29 Python/FastAPI workers |
+| Cloudflare D1 | SQLite (per-worker) |
+| Cloudflare KV | In-memory rate limiting + SQLite |
+| Cloudflare R2 | IPFS + local filesystem |
+| Cloudflare Routing | Traefik reverse proxy |
+| Cloudflare Analytics | Prometheus + Grafana + Loki |
+| Cloudflare Secrets | HashiCorp Vault / Infinity Void |
+
 ---
 
-## Setup (Docker on Windows)
+## Quick Start
+
+### Local Development
 
 ```bash
-# Clone or copy this directory into your Ubuntu Docker container
-
-# Build the container
-cd docker
-docker compose build
-
-# Or run directly in your Ubuntu environment
+# Install Python dependencies
 pip install -r requirements.txt
+
+# Install pre-commit hooks
+pip install pre-commit && pre-commit install
+
+# Start the backend
+python -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+
+# Start the frontend (separate terminal)
+cd web && npm install && npm run dev
+
+# Run the test suite
+python -m pytest tests/ -q --tb=short
 ```
+
+### Docker (Full Stack)
+
+```bash
+# Build and run everything
+docker compose up -d
+
+# Services: api (8000), web (3000), redis (6379),
+#           prometheus (9090), grafana (3001), loki (3100)
+```
+
+### Fly.io (Production)
+
+```bash
+flyctl deploy --remote-only --app trancendos-backend
+```
+
+See [docs/DEPLOYMENT_RUNBOOK.md](docs/DEPLOYMENT_RUNBOOK.md) for the complete deployment guide.
 
 ---
 
@@ -77,6 +123,95 @@ python scripts/chat.py --profile tranc3-builder
 
 ---
 
+## Project Structure
+
+```
+tranc3/
+├── src/                          Core source code
+│   ├── core/                     Transformer architecture, tokenizer, config
+│   ├── personality/              Personality matrix + profile system
+│   ├── mcp/                      MCP tool registry (45+ tools)
+│   ├── workflow/                 Workflow builder + execution engine
+│   ├── ai_gateway/               Multi-provider LLM routing
+│   ├── security/                 Security framework
+│   ├── observability/            Health, metrics, logging
+│   ├── quantum/                  Quantum-inspired routing
+│   ├── bio_neural/               Consciousness + neuromorphic modules
+│   └── agents/                   Autonomous agent orchestration
+├── workers/                      29 self-hosted FastAPI workers
+│   ├── infinity-void/            Encrypted secrets vault
+│   ├── api-gateway/              API gateway + rate limiting
+│   ├── the-grid/                 Digital Grid compute mesh
+│   └── ...                       26 additional workers
+├── shared_core/                  Shared utilities (bus, models, security)
+├── web/                          React + Vite frontend
+├── cloudflare/                   Cloudflare Workers (legacy fallback)
+├── tests/                        Test suite (966 tests)
+├── scripts/                      Training + utility scripts
+├── deploy/                       Deployment configs (Prometheus, Grafana, OTel)
+├── docker/                       Dockerfiles + nginx config
+├── docs/                         Documentation
+├── tranc3-bots/                  Bot integrations
+├── Dockerfile                    Production Docker image
+├── docker-compose.yml            Full-stack development
+├── docker-compose.production.yml Production deployment
+├── fly.toml                      Fly.io configuration
+├── pyproject.toml                Python project config (ruff, bandit)
+├── .pre-commit-config.yaml       Pre-commit hooks (ruff, bandit, semgrep, gitleaks)
+└── .forgejo/workflows/           CI/CD pipelines
+```
+
+---
+
+## Testing
+
+```bash
+# Full suite (966 tests)
+python -m pytest tests/ -q --tb=short
+
+# Quick smoke test
+python -m pytest tests/test_smoke.py -v
+
+# Security tests
+python -m pytest tests/test_security.py -v
+
+# With coverage
+python -m pytest tests/ --cov=src --cov-report=html
+```
+
+---
+
+## CI/CD Pipeline
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| CI | Push/PR | Smoke tests + lint + full suite |
+| Security Scan | Push/PR + weekly | pip-audit, bandit, safety, ruff, semgrep, gitleaks |
+| Dependency Audit | Weekly + PR | Python + Node vulnerability scanning |
+| Nightly Tests | Daily 03:00 UTC | Full test sweep + lint + type check |
+| Deploy Fly.io | Push to main | Backend + bots deployment |
+| Deploy Self-Hosted | Push to main (workers/) | Worker image builds + deployment |
+
+### Pre-commit Hooks
+
+Ruff, Black, isort, Bandit, Semgrep, Gitleaks, detect-secrets, Safety, and Typos run on every commit.
+
+---
+
+## Security
+
+- **Path traversal prevention** via `shared_core/path_validation.py`
+- **Log injection prevention** via `shared_core/sanitize.py`
+- **Safe error handling** via `shared_core/error_handlers.py`
+- **AES-256-GCM encryption** in Infinity Void with PBKDF2 key derivation
+- **Zero-trust authentication** with JWT + MFA
+- **80 justified nosec comments** (bandit suppressions with documented rationale)
+- **0 npm vulnerabilities** across all workspaces
+
+See [SECURITY.md](SECURITY.md) and [SECURITY-ASSESSMENT.md](SECURITY-ASSESSMENT.md) for details.
+
+---
+
 ## Adding a Personality
 
 Create a new JSON file in `src/personality/profiles/`:
@@ -101,48 +236,18 @@ It will be available immediately — no restart, no retraining.
 
 ---
 
-## Project Structure
+## Documentation
 
-```
-tranc3/
-├── src/
-│   ├── core/
-│   │   ├── model.py          Transformer architecture
-│   │   ├── tokenizer.py      BPE tokenizer
-│   │   └── config.py         All configuration
-│   ├── training/
-│   │   ├── trainer.py        Training loop
-│   │   └── dataset.py        Data loading
-│   ├── personality/
-│   │   ├── matrix.py         Personality engine
-│   │   └── profiles/         JSON personality files
-│   └── inference/
-│       └── engine.py         Runtime inference + CLI
-├── scripts/
-│   ├── prepare_data.py       Download + format training data
-│   ├── train_tokenizer.py    Train the tokenizer
-│   ├── train.py              Train the model
-│   └── chat.py               Local chat interface
-├── docker/
-│   ├── Dockerfile
-│   └── docker-compose.yml
-├── data/                     Training data (gitignored)
-├── models/                   Saved checkpoints (gitignored)
-└── requirements.txt
-```
+| Document | Description |
+|----------|-------------|
+| [Deployment Runbook](docs/DEPLOYMENT_RUNBOOK.md) | Full deployment guide |
+| [Architecture Threat Model](ARCHITECTURE_THREAT_MODEL.md) | Security architecture |
+| [CF Worker Migration Roadmap](CF_WORKER_MIGRATION_ROADMAP.md) | Cloudflare → self-hosted plan |
+| [Security Assessment](SECURITY-ASSESSMENT.md) | Vulnerability analysis |
+| [Project Pulse](PROJECT_PULSE.md) | Current status + metrics |
 
 ---
 
-## Roadmap
+## License
 
-- [ ] Phase 1: Local core (this codebase)
-- [ ] Phase 2: Governance layer (TIGA integration)
-- [ ] Phase 3: Cloud deployment (provider-agnostic worker interface)
-- [ ] Phase 4: Avatar bridge API
-
----
-
-## Notes
-
-Model weights and training data are excluded from version control.
-The architecture, training pipeline, and personality system are yours permanently.
+Proprietary. All rights reserved.

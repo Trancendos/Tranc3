@@ -24,7 +24,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -355,7 +355,7 @@ class WorkflowEngine:
             data = json.dumps(payload).encode()
             req = urllib.request.Request(notif_url, data=data, method="POST")
             req.add_header("Content-Type", "application/json")
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10):
                 return {"status": "completed", "output": {"notified": True}}
         except Exception as e:
             return {"status": "completed", "output": {"notified": False, "error": str(e)}}
@@ -481,9 +481,9 @@ async def execute_workflow(workflow_id: str, input_data: Dict[str, Any] = None):
         execution = await engine.execute(workflow_id, input_data)
         return {"ok": True, "execution_id": execution.execution_id, "status": execution.status.value}
     except ValueError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(404, str(e)) from None
     except Exception as e:
-        raise HTTPException(500, f"Execution failed: {e}")
+        raise HTTPException(500, f"Execution failed: {e}") from None
 
 
 @app.get("/executions")

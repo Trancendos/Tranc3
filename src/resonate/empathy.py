@@ -81,7 +81,7 @@ class Resonate:
         In production this would trigger a notification to the support team.
         """
         try:
-            from src.observability.observatory import observe, EventCategory, EventSeverity
+            from src.observability.observatory import EventCategory, EventSeverity, observe
             observe(
                 "resonate.human_escalation",
                 actor=f"user:{user_id}",

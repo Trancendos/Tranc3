@@ -2,10 +2,11 @@
 # Security headers middleware — 5 Whys #5 root cause fix
 # Wires SecurityHeaders into every FastAPI response
 
+import logging
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next) -> Response:
         import os
+
         from fastapi.responses import JSONResponse as _JSONResponse
 
         request_id = os.urandom(6).hex()

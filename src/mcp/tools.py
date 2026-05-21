@@ -853,9 +853,9 @@ class SparkToolRegistry:
         if template_name:
             try:
                 from src.workflow.builder import (  # noqa: PLC0415
-                    spark_ignition_workflow,
-                    self_healing_workflow,
                     ml_training_workflow,
+                    self_healing_workflow,
+                    spark_ignition_workflow,
                 )
             except ImportError:
                 return {"error": "Workflow builder not available (import failed)."}
@@ -1170,6 +1170,7 @@ class SparkToolRegistry:
     async def _handle_luminous_phi(self, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
             import numpy as np
+
             from src.bio_neural.consciousness_engine import IITCalculator
 
             state = params["state"]
@@ -1190,6 +1191,7 @@ class SparkToolRegistry:
     async def _handle_luminous_process(self, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
             import torch
+
             from src.bio_neural.neuromorphic import NeuromorphicProcessor
 
             input_data = params["input"]

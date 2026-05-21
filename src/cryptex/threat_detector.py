@@ -217,7 +217,7 @@ class Cryptex:
 
     def _emit(self, signal: ThreatSignal) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory, EventSeverity
+            from src.observability.observatory import EventCategory, EventSeverity, observe
             observe(
                 f"cryptex.threat.{signal.category.value}",
                 actor=signal.actor,

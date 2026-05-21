@@ -21,16 +21,15 @@ import logging
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import httpx
 
-from src.mesh.circuit_breaker import CircuitBreaker
 from shared_core.sanitize import sanitize_for_log
+from src.mesh.circuit_breaker import CircuitBreaker
 from src.mesh.types import (
-    CircuitBreakerConfig,
-    CircuitState,
     DEFAULT_MESH_CONFIG,
+    CircuitState,
     HealthStatus,
     ServiceCallOptions,
     ServiceCallResult,

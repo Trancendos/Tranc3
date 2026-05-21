@@ -20,7 +20,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from shared_core.sanitize import sanitize_for_log
 from src.event_bus.types import (
@@ -30,7 +30,6 @@ from src.event_bus.types import (
     EventBusConfig,
     EventCallback,
     EventEnvelope,
-    EventFilter,
     EventMetadata,
     EventSubscription,
 )

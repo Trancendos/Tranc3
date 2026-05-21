@@ -122,7 +122,7 @@ class TownHall:
 
             if result in (ComplianceResult.WARN, ComplianceResult.FAIL):
                 try:
-                    from src.observability.observatory import observe, EventCategory, EventSeverity
+                    from src.observability.observatory import EventCategory, EventSeverity, observe
                     observe(
                         f"governance.policy.{result.value}",
                         actor=actor,

@@ -12,13 +12,14 @@ Implements:
 Updated: 2025-07 — CVE Remediation
 """
 
-import os
-import re
 import hashlib
 import logging
-from pathlib import Path
-from typing import Any, Optional, Dict, List
+import os
+import re
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.security")

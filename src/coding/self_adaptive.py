@@ -3,11 +3,11 @@
 # Monitors its own code quality, detects regressions, applies targeted fixes
 
 import ast
+import logging
 import re
 import time
-import logging
-from typing import Dict, List, Optional
 from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

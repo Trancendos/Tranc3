@@ -18,10 +18,10 @@ import random
 from datetime import datetime, timezone
 
 from src.mesh.types import (
+    DEFAULT_CIRCUIT_BREAKER_CONFIG,
     CircuitBreakerConfig,
     CircuitBreakerState,
     CircuitState,
-    DEFAULT_CIRCUIT_BREAKER_CONFIG,
 )
 
 logger = logging.getLogger("tranc3.mesh.circuit_breaker")

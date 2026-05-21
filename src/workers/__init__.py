@@ -9,8 +9,8 @@ Components:
     bot_registry.py     — Bot registry: typed bots for inference, embedding, emotion
 """
 
-from .pool import WorkerPool, JobSpec, JobResult, JobStatus
-from .bot_registry import BotRegistry, InferenceBot, EmbeddingBot, EmotionBot
+from .bot_registry import BotRegistry, EmbeddingBot, EmotionBot, InferenceBot
+from .pool import JobResult, JobSpec, JobStatus, WorkerPool
 
 __all__ = [
     "WorkerPool",

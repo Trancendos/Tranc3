@@ -36,12 +36,11 @@ import os
 import time
 import uuid
 from collections import defaultdict
-from typing import Any
 
 import httpx
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
 
 # ── Configuration ───────────────────────────────────────────────
 
@@ -242,24 +241,20 @@ async def gateway(request: Request, path: str):
     target_service = None
     target_path = None
     breaker = None
-    requires_auth = True
 
     # Public routes (no auth)
     if path.startswith("api/auth"):
         target_service = USERS_SERVICE_URL
         target_path = "/" + path.replace("api/auth", "", 1).lstrip("/")
         breaker = circuit_breakers["users"]
-        requires_auth = False
     elif path.startswith("api/categories"):
         target_service = PRODUCTS_SERVICE_URL
         target_path = "/" + path.replace("api/categories", "/categories", 1).lstrip("/")
         breaker = circuit_breakers["products"]
-        requires_auth = False
     elif path.startswith("api/products") and request.method == "GET":
         target_service = PRODUCTS_SERVICE_URL
         target_path = "/" + path.replace("api/products", "/products", 1).lstrip("/")
         breaker = circuit_breakers["products"]
-        requires_auth = False
 
     # Auth-protected routes
     if not target_service:
@@ -305,9 +300,9 @@ async def gateway(request: Request, path: str):
             )
         except Exception as e:
             if "Circuit" in str(e):
-                raise HTTPException(status_code=503, detail="Service temporarily unavailable. Retry in 60s.")
+                raise HTTPException(status_code=503, detail="Service temporarily unavailable. Retry in 60s.") from None
             logger.error(f"Proxy failed: path=/{path} error={e}")
-            raise HTTPException(status_code=502, detail="Failed to reach upstream service.")
+            raise HTTPException(status_code=502, detail="Failed to reach upstream service.") from None
 
     raise HTTPException(status_code=404, detail=f"{request.method} /{path} not found")
 

@@ -2,12 +2,12 @@
 # TRANC3 Adaptive Foresight Engine
 # Predictive, probability-aware, self-adjusting intelligence layer
 
+import logging
 import math
 import time
-import logging
-from typing import Dict, List, Optional, Tuple
 from collections import deque
 from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

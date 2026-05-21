@@ -168,8 +168,8 @@ class OnnxExporter:
 
         # Numerical comparison
         try:
-            import onnxruntime as ort
             import numpy as np
+            import onnxruntime as ort
 
             model, cfg = self._load_model()
             dummy_ids = torch.randint(0, cfg.vocab_size, (1, 16), dtype=torch.long)
@@ -209,7 +209,7 @@ class OnnxExporter:
         Produces <stem>-int8.onnx alongside the FP32 model.
         """
         try:
-            from onnxruntime.quantization import quantize_dynamic, QuantType
+            from onnxruntime.quantization import QuantType, quantize_dynamic
         except ImportError:
             logger.warning("onnxruntime not installed — skipping quantization")
             return onnx_path

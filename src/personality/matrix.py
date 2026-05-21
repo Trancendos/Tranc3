@@ -14,9 +14,9 @@ Swap the profile JSON to get a different entity — no retraining needed.
 
 import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 
 @dataclass

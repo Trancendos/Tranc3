@@ -1,13 +1,14 @@
 # All node types for the workflow DAG
-from enum import Enum
-from typing import Any, Dict, List, Optional, Callable, Type
-from dataclasses import dataclass, field
 import asyncio
-import logging
-import time
 import io
+import logging
 import os
 import sys
+import time
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Type
+
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -84,7 +85,7 @@ class BaseNode:
         try:
             return await asyncio.wait_for(coro, timeout=timeout)
         except asyncio.TimeoutError:
-            raise TimeoutError(f"Node '{self.config.id}' timed out after {timeout}s")
+            raise TimeoutError(f"Node '{self.config.id}' timed out after {timeout}s") from None
 
     async def _retry(self, coro_factory: Callable, retries: int):
         """Execute coro_factory() up to `retries` times with exponential backoff."""
