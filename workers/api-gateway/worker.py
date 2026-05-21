@@ -32,6 +32,7 @@ import hashlib
 import hmac
 import json
 import logging
+import os
 import time
 import uuid
 from collections import defaultdict
@@ -120,7 +121,6 @@ circuit_breakers = {
 
 # ── JWT Auth Service ───────────────────────────────────────────
 
-import os
 
 
 class AuthService:

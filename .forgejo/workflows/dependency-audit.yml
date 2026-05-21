@@ -1,0 +1,252 @@
+# Tranc3 — Automated Dependency Audit
+# Runs weekly and on pull requests to detect vulnerable/outdated dependencies
+# Zero-cost: uses only free/open-source audit tools (pip-audit, safety, npm audit)
+# No GitHub Actions — pure Forgejo CI
+
+name: Dependency Audit
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday 06:00 UTC
+  pull_request:
+    paths:
+      - 'requirements*.txt'
+      - 'pyproject.toml'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.forgejo/workflows/dependency-audit.yml'
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  python-audit:
+    name: Python Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install audit tools
+        run: |
+          pip install --quiet pip-audit safety pip-outdated
+
+      - name: Audit production dependencies
+        run: |
+          echo "::group::pip-audit — Known vulnerability scan"
+          pip-audit --desc --format=json --output=pip-audit-report.json || true
+          pip-audit --desc || true
+          echo "::endgroup::"
+
+      - name: Safety vulnerability check
+        run: |
+          echo "::group::Safety — Vulnerability database check"
+          safety check --json --output safety-report.json || true
+          safety check --output text || true
+          echo "::endgroup::"
+
+      - name: Check for outdated packages
+        run: |
+          echo "::group::Outdated packages"
+          pip list --outdated --format=json > pip-outdated.json || true
+          pip list --outdated || true
+          echo "::endgroup::"
+
+      - name: Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-audit-reports
+          path: |
+            pip-audit-report.json
+            safety-report.json
+            pip-outdated.json
+          retention-days: 30
+
+  node-audit:
+    name: Node Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package.json ]; then
+            npm ci --ignore-scripts || npm install --ignore-scripts
+          else
+            echo "No package.json found — skipping Node audit"
+          fi
+
+      - name: npm audit
+        run: |
+          if [ -f package.json ]; then
+            echo "::group::npm audit — Vulnerability scan"
+            npm audit --json > npm-audit-report.json || true
+            npm audit || true
+            echo "::endgroup::"
+          else
+            echo "No package.json — creating empty report"
+            echo '{"vulnerabilities":{}}' > npm-audit-report.json
+          fi
+
+      - name: Check for outdated packages
+        run: |
+          if [ -f package.json ]; then
+            echo "::group::Outdated packages"
+            npm outdated --json > npm-outdated.json || true
+            npm outdated || true
+            echo "::endgroup::"
+          fi
+
+      - name: Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-audit-reports
+          path: |
+            npm-audit-report.json
+            npm-outdated.json
+          retention-days: 30
+
+  worker-dependency-scan:
+    name: Worker Dependency Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Scan all worker requirements
+        run: |
+          echo "# Worker Dependency Audit Report" > worker-audit-report.md
+          echo "" >> worker-audit-report.md
+          echo "Scanned: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> worker-audit-report.md
+          echo "" >> worker-audit-report.md
+
+          pip install --quiet pip-audit safety
+
+          FOUND_VULNS=0
+          for reqfile in $(find workers/ -name 'requirements.txt' -o -name 'requirements.prod.txt'); do
+            worker_name=$(dirname "$reqfile" | xargs basename)
+            echo "::group::Auditing ${worker_name}"
+            echo "" >> worker-audit-report.md
+            echo "## ${worker_name}" >> worker-audit-report.md
+            echo "Requirements: \`${reqfile}\`" >> worker-audit-report.md
+            echo "" >> worker-audit-report.md
+
+            # pip-audit
+            echo "### pip-audit" >> worker-audit-report.md
+            if pip-audit -r "$reqfile" --desc 2>&1 | tee -a worker-audit-report.md; then
+              echo "✅ No known vulnerabilities" >> worker-audit-report.md
+            else
+              echo "⚠️ Vulnerabilities found — see above" >> worker-audit-report.md
+              FOUND_VULNS=1
+            fi
+            echo "" >> worker-audit-report.md
+
+            # safety
+            echo "### Safety" >> worker-audit-report.md
+            if safety check -r "$reqfile" 2>&1 | tee -a worker-audit-report.md; then
+              echo "✅ No known vulnerabilities" >> worker-audit-report.md
+            else
+              echo "⚠️ Vulnerabilities found — see above" >> worker-audit-report.md
+              FOUND_VULNS=1
+            fi
+            echo "" >> worker-audit-report.md
+
+            echo "::endgroup::"
+          done
+
+          echo "" >> worker-audit-report.md
+          if [ "$FOUND_VULNS" -eq 1 ]; then
+            echo "## ⚠️ ACTION REQUIRED: Vulnerabilities detected" >> worker-audit-report.md
+          else
+            echo "## ✅ All clear — no vulnerabilities detected" >> worker-audit-report.md
+          fi
+
+          cat worker-audit-report.md
+
+      - name: Upload worker audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker-audit-report
+          path: worker-audit-report.md
+          retention-days: 30
+
+  audit-dashboard:
+    name: Audit Dashboard
+    runs-on: ubuntu-latest
+    needs: [python-audit, node-audit, worker-dependency-scan]
+    if: always()
+    steps:
+      - name: Download all reports
+        uses: actions/download-artifact@v4
+
+      - name: Generate summary
+        run: |
+          echo "# 🛡️ Dependency Audit Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "## Python Audit" >> $GITHUB_STEP_SUMMARY
+          if [ -f python-audit-reports/pip-audit-report.json ]; then
+            VULN_COUNT=$(python3 -c "
+              import json,sys
+              try:
+                d=json.load(open('python-audit-reports/pip-audit-report.json'))
+                print(len(d.get('vulnerabilities',[])))
+              except: print('parse-error')
+            ")
+            echo "- pip-audit vulnerabilities: ${VULN_COUNT}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ No pip-audit report found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f python-audit-reports/safety-report.json ]; then
+            echo "- Safety report: available" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ No Safety report found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Node Audit" >> $GITHUB_STEP_SUMMARY
+          if [ -f node-audit-reports/npm-audit-report.json ]; then
+            NPM_VULNS=$(python3 -c "
+              import json
+              try:
+                d=json.load(open('node-audit-reports/npm-audit-report.json'))
+                v=d.get('vulnerabilities',{})
+                print(len(v))
+              except: print('parse-error')
+            ")
+            echo "- npm audit vulnerabilities: ${NPM_VULNS}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ No npm audit report found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Worker Audit" >> $GITHUB_STEP_SUMMARY
+          if [ -f worker-audit-report/worker-audit-report.md ]; then
+            echo "Report available — see artifact" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ No worker audit report found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "_Zero-cost audit powered by pip-audit, Safety, npm audit_" >> $GITHUB_STEP_SUMMARY
