@@ -1,46 +1,23 @@
-# TSK-004 Enhancement: ML + MCP + Workflow Phase4 Bridge
+# Phase 5: Autonomous Agent Orchestration Layer
 
-## Branch: enhancement/ml-mcp-workflow-phase4-bridge
+## A. Merge PRs into Main
+- [x] A1. Merge all 7 open PRs (#1-#8) into main with conflict resolution
+- [x] A2. Push consolidated main to origin
+- [x] A3. Close all PRs
+- [x] A4. Verify test suite passes (199 passed, 10 skipped)
 
-### Phase A: New Spark MCP Tools (src/mcp/spark_phase4_tools.py)
-- [ ] neural_mesh_emit — emit signals through NeuralMesh
-- [ ] neural_mesh_topology — get mesh topology snapshot
-- [ ] collective_memory_store — store entry in CollectiveMemory
-- [ ] collective_memory_query — query CollectiveMemory by topic/tag
-- [ ] meta_learn_adapt — adapt task parameters via MetaLearner
-- [ ] attention_route — route request via AttentionRouter
-- [ ] causal_predict — predict effects via CausalReasoner
-- [ ] causal_diagnose — diagnose causes via CausalReasoner
-- [ ] causal_counterfactual — run counterfactual query
-- [ ] knowledge_graph_query — query SemanticKnowledgeGraph nodes
-- [ ] knowledge_graph_path — find shortest path in knowledge graph
-- [ ] knowledge_graph_expand — semantic expand from a node
-- [ ] foresight_predict — use AdaptiveForesight for trajectory prediction
-- [ ] analytics_intent — predict user intent via IntentPredictor
-- [ ] nanobot_dispatch — dispatch NanoCode repair bots
-- [ ] Register all new tools into SparkToolRegistry
-
-### Phase B: New Workflow Nodes (src/workflow/phase4_nodes.py)
-- [ ] NeuralMeshNode — emit/receive signals in workflows
-- [ ] CollectiveMemoryNode — store/retrieve from shared memory
-- [ ] MetaLearnNode — adapt parameters mid-workflow
-- [ ] AttentionRouteNode — select optimal service in workflow
-- [ ] CausalReasonNode — causal inference step in workflow
-- [ ] KnowledgeGraphNode — structured knowledge lookup in workflow
-- [ ] ForesightNode — predictive branching in workflow
-- [ ] Register all nodes in create_node() factory
-
-### Phase C: ML Pipeline Enhancements (src/core/ml_pipeline.py)
-- [ ] MLPipeline class — unified inference orchestration
-- [ ] Integrate AttentionRouter for model selection
-- [ ] Integrate MetaLearner for few-shot task adaptation
-- [ ] Integrate CollectiveMemory for cross-request context
-- [ ] 5-tier inference with Phase4 intelligence routing
-
-### Phase D: Integration & Registration
-- [ ] Wire spark_phase4_tools.py into src/mcp/tools.py (import + call register)
-- [ ] Wire phase4_nodes.py into src/workflow/nodes.py create_node()
-- [ ] Add ml_pipeline.py import to src/core/__init__.py
-- [ ] Commit all changes
-- [ ] Push branch
-- [ ] Create PR targeting claude/enhance-ml-mcp-workflow-LYXkX
+## B. Phase 5 Implementation
+- [x] B1. Create branch `modernization/phase5-agent-orchestration`
+- [x] B2. Design Phase 5 architecture (6 core modules)
+- [x] B3. Implement src/agents/agent_runtime.py — AgentRuntime orchestrator
+- [x] B4. Implement src/agents/task_decomposer.py — hierarchical task planner
+- [x] B5. Implement src/agents/tool_bridge.py — unified tool execution bridge
+- [x] B6. Implement src/agents/memory_stream.py — episodic agent memory
+- [x] B7. Implement src/agents/goal_manager.py — multi-goal tracking & prioritization
+- [x] B8. Implement src/agents/agent_types.py — specialist agent profiles
+- [x] B9. Implement src/mcp/spark_phase5_tools.py — 12 MCP agent tools
+- [x] B10. Implement src/workflow/phase5_nodes.py — agent workflow nodes
+- [x] B11. Update src/agents/__init__.py, src/mcp/server.py, src/workflow/nodes.py
+- [x] B12. Implement tests/test_phase5_agent_orchestration.py
+- [x] B13. Run full test suite — verify all passes (383 passed, 10 skipped, 0 failures)
+- [ ] B14. Commit, push, create PR for Phase 5
