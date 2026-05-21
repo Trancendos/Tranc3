@@ -36,13 +36,9 @@ if not _SECRET_KEY:
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
 
-# ── Internal imports ──────────────────────────────────────────────────────────
-from src.adaptive.foresight import foresight
-from src.analytics.predictive import analytics
+# ── Internal imports ──────────────────────────────────────────────────────────────────────────
+# Core imports (required — no guard)
 from src.auth.db_user_manager import DBUserManager
-from src.bio_neural.consciousness_engine import ConsciousnessModel
-from src.bio_neural.neuromorphic import NeuromorphicProcessor
-from src.compliance.magna_carta import compliance
 from src.core.advanced_model import AdvancedTransformerModel
 from src.core.context_compressor import compressor
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager
@@ -50,7 +46,6 @@ from src.core.multilingual_tokenizer import MultilingualTokenizer
 from src.database.schema import Conversation, DatabaseManager, Message
 from src.database.vector_store import vector_store
 from src.errors.error_catalog import ErrorCode, format_error_response
-from src.evolution.self_improving_core import SelfEvolvingArchitecture
 from src.monetisation.billing import TIERS
 from src.monetisation.billing import enforcer as tier_enforcer
 from src.observability.metrics import (
@@ -61,21 +56,63 @@ from src.observability.metrics import (
     record_quality,
     record_request,
 )
-from src.personality.matrix import EnhancedPersonalityMatrix
-
-try:
-    from src.quantum.quantum_core import QuantumNeuralCore
-except ImportError as _qiskit_err:
-    QuantumNeuralCore = None  # type: ignore[assignment,misc]
-    import logging as _log
-
-    _log.getLogger(__name__).warning("Quantum core unavailable (qiskit): %s", _qiskit_err)
 from auth import get_current_user, token_manager
 from src.registry.file_registry import registry as file_registry
 from src.security.ip_protection import abuse_detector, watermarker
 from src.security.middleware import GovernanceMiddleware, SecurityHeadersMiddleware
 from src.security.security_framework import InputSanitizer
 from src.validation.loop_validator import CIRCUITS, loop_validator, self_healer
+
+# Optional imports — guarded to prevent startup crash if dependencies are missing
+# These modules depend on heavy/optional libs (qiskit, torch, etc.)
+
+try:
+    from src.adaptive.foresight import foresight
+except ImportError as _e:
+    foresight = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("Adaptive foresight unavailable: %s", _e)
+
+try:
+    from src.analytics.predictive import analytics
+except ImportError as _e:
+    analytics = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("Predictive analytics unavailable: %s", _e)
+
+try:
+    from src.bio_neural.consciousness_engine import ConsciousnessModel
+except ImportError as _e:
+    ConsciousnessModel = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("ConsciousnessEngine unavailable: %s", _e)
+
+try:
+    from src.bio_neural.neuromorphic import NeuromorphicProcessor
+except ImportError as _e:
+    NeuromorphicProcessor = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("NeuromorphicProcessor unavailable: %s", _e)
+
+try:
+    from src.compliance.magna_carta import compliance
+except ImportError as _e:
+    compliance = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("Compliance module unavailable: %s", _e)
+
+try:
+    from src.evolution.self_improving_core import SelfEvolvingArchitecture
+except ImportError as _e:
+    SelfEvolvingArchitecture = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("SelfEvolvingArchitecture unavailable: %s", _e)
+
+try:
+    from src.personality.matrix import EnhancedPersonalityMatrix
+except ImportError as _e:
+    EnhancedPersonalityMatrix = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("EnhancedPersonalityMatrix unavailable: %s", _e)
+
+try:
+    from src.quantum.quantum_core import QuantumNeuralCore
+except ImportError as _qiskit_err:
+    QuantumNeuralCore = None  # type: ignore[assignment,misc]
+    logging.getLogger(__name__).warning("Quantum core unavailable (qiskit): %s", _qiskit_err)
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
