@@ -1,0 +1,43 @@
+# TRANC3 — Extended AI/ML Dependencies (optional)
+# Install when you need LangChain, Transformers, Qiskit, or observability hooks.
+# These are included in requirements.txt by default; split here for lean deploys.
+#
+# Usage:
+#   pip install -r requirements-ai.txt
+#
+# All versions EXACT-PINNED.
+
+# === NLP / Transformers ===
+# Fixes: CVE-2024-11394, CVE-2024-11393, CVE-2024-11392 (unsafe deserialisation),
+#        CVE-2026-1839 (pickle RCE), CVE-2025-6638 (path traversal),
+#        CVE-2025-2099 (model loading RCE), CVE-2025-6921 (arbitrary file write),
+#        CVE-2024-12720 (tokenisation overflow) + 7 others
+transformers==5.8.1
+tokenizers==0.22.2
+
+# === AI Orchestration ===
+# Fixes: CVE-2024-7042 (SQL injection), CVE-2024-7774 (SSRF),
+#        CVE-2024-58340 (deserialisation) + 5 others
+langchain==1.3.1
+langchain-community==0.4.1
+
+# === Vector Search ===
+sentence-transformers==5.5.0
+faiss-cpu==1.8.0
+
+# === Quantum Computing ===
+# Fixes: CVE-2025-2000 (RCE), CVE-2025-1403 (information disclosure)
+qiskit==2.4.1
+qiskit-aer==0.14.2
+qiskit-nature==0.7.2
+
+# === Reinforcement Learning / Planning ===
+gymnasium==0.29.1
+optuna==3.6.1
+
+# === Observability / LLM tracing ===
+# Fixes: CVE-2025-9799 (SSRF)
+langfuse==4.6.1
+
+# === ONNX Runtime (lighter inference on edge/worker nodes) ===
+onnxruntime==1.18.0

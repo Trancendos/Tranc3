@@ -1,0 +1,85 @@
+name: Deploy Cloudflare Workers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cloudflare/**"
+      - ".forgejo/workflows/deploy-cloudflare.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy-tranc3-ai:
+    name: Deploy tranc3-ai
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: cloudflare/tranc3-ai
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: cloudflare/tranc3-ai/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: e0214028cb64d31232f5662548a55e4e
+
+  deploy-infinity-void:
+    name: Deploy The Void
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: cloudflare/infinity-void
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: cloudflare/infinity-void/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: e0214028cb64d31232f5662548a55e4e
+
+  deploy-api-gateway:
+    name: Deploy API Gateway
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: cloudflare/trancendos-api-gateway
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: cloudflare/trancendos-api-gateway/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: e0214028cb64d31232f5662548a55e4e

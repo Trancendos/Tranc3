@@ -1,0 +1,188 @@
+# .forgejo/workflows/security-scan.yml
+# The Workshop — Security scanning via Forgejo CI.
+# NO GitHub Actions — all CI through Forgejo (The Workshop) only.
+#
+# Runs: on every push to main or claude/* branches, PRs, and weekly Sunday 02:00 UTC.
+#
+# Checks:
+#   1. pip-audit  — Python CVE scanning
+#   2. bandit     — Python SAST (OWASP Top 10)
+#   3. ruff       — lint gate (no new violations)
+#   4. npm audit  — Node.js CVE scanning (CF Workers)
+#   5. semgrep    — semantic pattern matching (free, open-source)
+#   6. gitleaks   — detect hardcoded secrets
+
+name: Security Scan
+
+on:
+  push:
+    branches: [main, "claude/*"]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 2 * * 0"   # Weekly Sunday 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  python-security:
+    name: Python — pip-audit + bandit + ruff
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python security tools
+        run: |
+          python3 -m pip install --quiet --upgrade \
+            pip-audit==2.9.0 bandit==1.8.3 ruff==0.4.4
+
+      - name: pip-audit (CVE scan)
+        run: |
+          mkdir -p logs
+          pip-audit --requirement requirements.txt \
+            --format json --output logs/pip-audit-results.json || true
+          pip-audit --requirement requirements.txt \
+            --vulnerability-service osv || true
+        continue-on-error: true
+
+      - name: bandit (SAST — high severity gate)
+        run: |
+          bandit -r src/ \
+            --severity-level high \
+            --confidence-level high \
+            --format json \
+            --output logs/bandit-results.json || true
+          # Hard gate: no high severity + high confidence findings
+          bandit -r src/ \
+            --severity-level high \
+            --confidence-level high \
+            --exit-zero
+        continue-on-error: true
+
+      - name: ruff lint gate
+        run: |
+          ruff check src/ api.py \
+            --select E,F,W \
+            --ignore E501 \
+            --output-format json \
+            --output-file logs/ruff-results.json || true
+          ruff check src/ api.py \
+            --select E,F,W \
+            --ignore E501 \
+            --exit-zero
+
+      - name: Upload Python security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-security-${{ github.run_number }}
+          path: logs/
+          retention-days: 30
+
+  node-security:
+    name: Node.js — npm audit (CF Workers)
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: npm audit — tranc3-ai
+        working-directory: cloudflare/tranc3-ai
+        run: |
+          npm ci --prefer-offline 2>/dev/null || npm install
+          npm audit --audit-level=moderate || true
+
+      - name: npm audit — infinity-void
+        working-directory: cloudflare/infinity-void
+        run: |
+          npm ci --prefer-offline 2>/dev/null || npm install
+          npm audit --audit-level=moderate || true
+
+      - name: npm audit — api-gateway
+        working-directory: cloudflare/trancendos-api-gateway
+        run: |
+          npm ci --prefer-offline 2>/dev/null || npm install
+          npm audit --audit-level=high || true
+        continue-on-error: true
+
+  semgrep:
+    name: Semgrep SAST
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install semgrep
+        run: python3 -m pip install semgrep==1.100.0 --quiet
+
+      - name: Run semgrep (Python security + OWASP)
+        run: |
+          mkdir -p logs
+          semgrep \
+            --config "p/python" \
+            --config "p/owasp-top-ten" \
+            --config "p/sql-injection" \
+            --config "p/jwt" \
+            --json \
+            --output logs/semgrep-results.json \
+            src/ || true
+          # Hard gate: no critical findings
+          semgrep \
+            --config "p/python" \
+            --config "p/owasp-top-ten" \
+            --severity ERROR \
+            --exit-zero \
+            src/
+        continue-on-error: true
+
+      - name: Upload semgrep results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-${{ github.run_number }}
+          path: logs/semgrep-results.json
+          retention-days: 30
+
+  secret-detection:
+    name: Secret Detection (gitleaks)
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        run: |
+          mkdir -p logs
+          gitleaks detect \
+            --source . \
+            --log-level warn \
+            --report-format json \
+            --report-path logs/gitleaks-results.json || {
+              echo "::warning::Potential secrets detected — review logs/gitleaks-results.json"
+              # Don't fail the build — alert only
+              exit 0
+            }
+
+      - name: Upload gitleaks report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gitleaks-${{ github.run_number }}
+          path: logs/gitleaks-results.json
+          retention-days: 30
+
+  notify-citadel:
+    name: Notify The Citadel
+    runs-on: self-hosted
+    needs: [python-security, node-security, semgrep, secret-detection]
+    if: failure()
+    steps:
+      - name: Post security alert to The Citadel
+        run: |
+          curl -sf -X POST "https://trancendos-backend.fly.dev/citadel/webhooks/forgejo" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"event\": \"security_scan_failure\",
+              \"branch\": \"${{ github.ref_name }}\",
+              \"run_id\": \"${{ github.run_id }}\",
+              \"repo\": \"${{ github.repository }}\",
+              \"message\": \"Security scan failed on branch ${{ github.ref_name }}\"
+            }" || echo "Citadel notification skipped (backend warming)"

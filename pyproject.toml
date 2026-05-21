@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=80", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "tranc3"
+version = "0.1.0"
+requires-python = ">=3.11"
+description = "Trancendos AI Platform — Luminous inference engine + MCP server"
+
+# ── Ruff (lint + format) ──────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "C", "B", "I"]
+ignore = [
+  "E501",   # line length — enforced by formatter, not lint
+  "B008",   # function calls in default args (FastAPI Depends pattern)
+  "C901",   # complexity — warned, not blocked
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*"  = ["S", "B"]
+"scripts/*" = ["T201"]   # print() allowed in scripts
+# api.py intentionally imports after load_dotenv() (env must be loaded before internal modules)
+# B904 (raise-without-from-cause) is pre-existing; address separately.
+"api.py"   = ["E402", "B904"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ── mypy ─────────────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+no_error_summary = true
+show_error_codes = true
+warn_unused_ignores = false
+
+# ── pytest ────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+log_cli = false
+log_level = "WARNING"
+addopts = "--strict-markers -q"
+markers = [
+  "slow: marks tests as slow (deselect with -m 'not slow')",
+  "integration: requires live external services",
+  "chaos: fault injection tests",
+]
+
+# ── bandit ────────────────────────────────────────────────────────────────────
+[tool.bandit]
+targets = ["src", "api.py"]
+exclude_dirs = ["tests", "scripts"]
+severity = "medium"
+confidence = "medium"
+skips = [
+  "B101",  # assert statements (acceptable in non-production paths)
+]
+
+# ── coverage ──────────────────────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*", "scripts/*", "*/migrations/*"]
+
+[tool.coverage.report]
+fail_under = 40
+show_missing = true
+
+# ── pip-audit ─────────────────────────────────────────────────────────────────
+[tool.pip-audit]
+strict = false
+desc = true

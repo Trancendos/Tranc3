@@ -1,0 +1,32 @@
+name = "tranc3-ai"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+account_id = "e0214028cb64d31232f5662548a55e4e"
+
+# Tranc3 uses its own self-hosted inference — no external AI APIs.
+# Set TRANC3_BACKEND_URL / TRANC3_NANO_URL via: wrangler secret put <NAME>
+
+[vars]
+ENVIRONMENT = "production"
+
+# ── KV: response cache (AI_CACHE — existing namespace) ───────────────────────
+[[kv_namespaces]]
+binding = "CACHE"
+id = "2a0e09cfd22741eeb3245607ce6e76fd"
+
+# ── KV: session store (TRANC3-SESSIONS — created 2026-05-08) ─────────────────
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "f321bee2495547ad9e224522f214defd"
+
+# ── Secrets (set via: wrangler secret put <NAME> --name tranc3-ai) ────────────
+# TRANC3_BACKEND_URL  → https://trancendos-backend.fly.dev   (after fly deploy)
+# TRANC3_NANO_URL     → https://trancendos-backend.fly.dev   (nanoservices on same host)
+# TRANC3_AUTH_URL     → https://infinity-auth-api.luminous-aimastermind.workers.dev
+# ALLOWED_ORIGINS     → https://trancendos.com (extra CORS, comma-separated)
+
+# ── Deploy steps ──────────────────────────────────────────────────────────────
+# 1. fly deploy                         (from Tranc3 repo root — app: trancendos-backend)
+# 2. cd cloudflare/tranc3-ai && npm ci
+# 3. wrangler secret put TRANC3_BACKEND_URL   (paste: https://trancendos-backend.fly.dev)
+# 4. wrangler deploy
