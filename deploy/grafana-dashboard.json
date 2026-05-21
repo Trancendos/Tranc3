@@ -1,0 +1,214 @@
+{
+    "title": "TRANC3 Platform Dashboard",
+    "uid": "tranc3-main",
+    "schemaVersion": 38,
+    "refresh": "10s",
+    "panels": [
+        {
+            "id": 1,
+            "title": "Request Rate",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "expr": "rate(tranc3_requests_total[1m])",
+                    "legendFormat": "{{endpoint}} {{status}}"
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "title": "p95 Latency (seconds)",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, rate(tranc3_request_duration_seconds_bucket[5m]))",
+                    "legendFormat": "p95 {{endpoint}}"
+                }
+            ]
+        },
+        {
+            "id": 3,
+            "title": "Emotion Distribution",
+            "type": "piechart",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 8
+            },
+            "targets": [
+                {
+                    "expr": "sum by (emotion) (increase(tranc3_emotions_total[1h]))",
+                    "legendFormat": "{{emotion}}"
+                }
+            ]
+        },
+        {
+            "id": 4,
+            "title": "Consciousness Φ Score",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 8
+            },
+            "targets": [
+                {
+                    "expr": "tranc3_consciousness_phi",
+                    "legendFormat": "Φ (phi)"
+                }
+            ],
+            "thresholds": {
+                "steps": [
+                    {
+                        "color": "red",
+                        "value": 0
+                    },
+                    {
+                        "color": "yellow",
+                        "value": 1.0
+                    },
+                    {
+                        "color": "green",
+                        "value": 2.0
+                    }
+                ]
+            }
+        },
+        {
+            "id": 5,
+            "title": "Churn Risk Distribution",
+            "type": "histogram",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 8
+            },
+            "targets": [
+                {
+                    "expr": "rate(tranc3_churn_risk_bucket[5m])",
+                    "legendFormat": "{{le}}"
+                }
+            ]
+        },
+        {
+            "id": 6,
+            "title": "Response Quality Score",
+            "type": "gauge",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 16
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.5, rate(tranc3_response_quality_bucket[5m]))",
+                    "legendFormat": "Median Quality"
+                }
+            ],
+            "options": {
+                "minValue": 0,
+                "maxValue": 1
+            }
+        },
+        {
+            "id": 7,
+            "title": "Revenue by Stream (GBP)",
+            "type": "bargauge",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 16
+            },
+            "targets": [
+                {
+                    "expr": "tranc3_revenue_gbp_total",
+                    "legendFormat": "{{stream}}"
+                }
+            ]
+        },
+        {
+            "id": 8,
+            "title": "Active Users",
+            "type": "stat",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 16
+            },
+            "targets": [
+                {
+                    "expr": "tranc3_active_users",
+                    "legendFormat": "Active Users"
+                }
+            ]
+        },
+        {
+            "id": 9,
+            "title": "Tokens Processed",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 24
+            },
+            "targets": [
+                {
+                    "expr": "rate(tranc3_tokens_total[5m])",
+                    "legendFormat": "{{tier}} {{language}}"
+                }
+            ]
+        },
+        {
+            "id": 10,
+            "title": "Error Rate %",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 24
+            },
+            "targets": [
+                {
+                    "expr": "rate(tranc3_requests_total{status='500'}[5m]) / rate(tranc3_requests_total[5m]) * 100",
+                    "legendFormat": "Error %"
+                }
+            ],
+            "thresholds": {
+                "steps": [
+                    {
+                        "color": "green",
+                        "value": 0
+                    },
+                    {
+                        "color": "yellow",
+                        "value": 0.5
+                    },
+                    {
+                        "color": "red",
+                        "value": 1
+                    }
+                ]
+            }
+        }
+    ]
+}

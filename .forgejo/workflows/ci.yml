@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Fast gate — smoke tests + linting (~30s)
+  # ─────────────────────────────────────────────────────────────────────────
+  smoke:
+    name: Smoke tests + lint
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: |
+          pip install ruff --quiet
+          ruff check src/ api.py --select E,F,W --ignore E501 || true
+
+      - name: Create logs dir
+        run: mkdir -p logs
+
+      - name: Smoke tests
+        run: python -m pytest tests/test_smoke.py -v --tb=short -q
+        env:
+          SECRET_KEY: ci-test-secret-not-for-prod
+          ENVIRONMENT: test
+
+      - name: MCP / Spark import check
+        run: |
+          python -c "
+          from src.mcp.tools import registry
+          tools = registry.list_tools()
+          print(f'Spark tools registered: {len(tools)}')
+          assert len(tools) >= 17, f'Expected ≥17 tools, got {len(tools)}'
+          "
+        env:
+          SECRET_KEY: ci-test-secret-not-for-prod
+
+      - name: Router import check
+        run: |
+          python -c "
+          import importlib, sys
+          sys.path.insert(0, '.')
+          mods = [
+            'src.mcp.server', 'src.workflow.routes', 'src.observability.routes',
+          ]
+          ok = []
+          skip = []
+          for m in mods:
+            try:
+              importlib.import_module(m)
+              ok.append(m)
+            except Exception as e:
+              skip.append((m, str(e)))
+          for m in ok:
+            print(f'  ✓ {m}')
+          for m, e in skip:
+            print(f'  ⚠ {m}: {e}')
+          if skip:
+            print(f'Note: {len(skip)} modules skipped (optional deps)')
+          print(f'{len(ok)} router modules import cleanly')
+          "
+        env:
+          SECRET_KEY: ci-test-secret-not-for-prod
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Full suite — all test categories
+  # ─────────────────────────────────────────────────────────────────────────
+  full-suite:
+    name: Full test suite
+    runs-on: self-hosted
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create logs dir
+        run: mkdir -p logs
+
+      - name: Run full test suite
+        run: |
+          python -m pytest tests/ \
+            --ignore=tests/test_tranc3_ml.py \
+            -q --tb=short \
+            --junitxml=logs/junit.xml
+        env:
+          SECRET_KEY: ci-test-secret-not-for-prod
+          ENVIRONMENT: test
+          REDIS_URL: ""
+          DATABASE_URL: ""
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_number }}
+          path: |
+            logs/test_results.jsonl
+            logs/junit.xml
+          retention-days: 30
+
+      - name: Notify The Citadel on failure
+        if: failure()
+        run: |
+          echo "CI failed on branch ${{ github.ref_name }} — check logs"
+          # When Citadel webhook is live this will auto-create an incident

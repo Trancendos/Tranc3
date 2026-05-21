@@ -1,0 +1,56 @@
+groups:
+  - name: tranc3_alerts
+    rules:
+      - alert: HighErrorRate
+        expr: rate(tranc3_requests_total{status="500"}[5m]) / rate(tranc3_requests_total[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TRANC3 error rate above 1%"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(tranc3_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TRANC3 p95 latency above 2s"
+          description: "p95 latency is {{ $value }}s."
+
+      - alert: ModelNotLoaded
+        expr: tranc3_requests_total{status="503"} > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TRANC3 model not loaded"
+          description: "Service returning 503 — model or tokenizer not ready."
+
+      - alert: RedisDown
+        expr: up{job="tranc3-redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis instance is unreachable — feature flags and caching disabled."
+
+      - alert: HighChurnRisk
+        expr: histogram_quantile(0.75, rate(tranc3_churn_risk_bucket[10m])) > 0.7
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High user churn risk detected"
+          description: "75th percentile churn risk is {{ $value }}."
+
+      - alert: LowResponseQuality
+        expr: histogram_quantile(0.5, rate(tranc3_response_quality_bucket[10m])) < 0.4
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Response quality degrading"
+          description: "Median quality score is {{ $value }} — consider triggering evolution."

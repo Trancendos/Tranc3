@@ -1,0 +1,13 @@
+# TRANC3 — Test-only dependencies
+# Install alongside requirements.txt for running the test suite:
+#   pip install -r requirements.txt -r requirements-test.txt
+# NOT installed in the production Docker image.
+# ──────────────────────────────────────────────────────────────────
+
+# Fixes: CVE-2025-71176 (tempfile race condition)
+pytest==9.0.3
+# IMPORTANT: pytest-asyncio <=0.26.0 all require pytest<9; incompatible with pytest==9.0.3.
+# Pin to a version released after the pytest-9 compat fix.
+# Verified working: 0.26.0 fails; update this pin when a compatible release is confirmed.
+pytest-asyncio>=0.27.0
+pytest-cov==5.0.0

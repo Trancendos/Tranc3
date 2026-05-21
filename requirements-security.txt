@@ -1,0 +1,19 @@
+# TRANC3 — Security Scanning Toolchain (dev / CI only)
+# Install: pip install -r requirements-security.txt
+# These are used by scripts/security_scan.sh and .forgejo/workflows/security-scan.yml
+# Do NOT include in production images.
+
+# === Dependency vulnerability scanning ===
+pip-audit==2.9.0       # Audit pip packages against OSV/NVD — zero-cost
+bandit==1.8.3          # Python SAST — OWASP Top 10
+
+# === Static analysis ===
+semgrep==1.100.0       # Pattern-based SAST (p/python, p/owasp-top-ten, p/jwt)
+ruff==0.4.4            # Fast lint gate (also used in pre-commit)
+
+# === Supply chain / SBOM ===
+cyclonedx-bom==7.0.0   # Generate CycloneDX SBOM from requirements/pip env
+pip-tools==7.4.0       # Pin and hash dependencies for reproducible builds
+
+# === Type checking ===
+mypy==1.10.0

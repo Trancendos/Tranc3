@@ -1,0 +1,101 @@
+# TRANC3 — Pinned Dependencies
+# Updated: 2026-05 — CVE Remediation + security hardening
+# All versions EXACT-PINNED. Do NOT use >=, ~=, or * — prevents supply-chain drift.
+# ──────────────────────────────────────────────────────────────────
+
+# Core web framework
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+pydantic==2.7.4
+# Fixes: CVE-2026-24486, CVE-2024-53981, CVE-2026-42561, CVE-2026-40347
+python-multipart==0.0.29
+websockets==12.0
+
+# AI / ML — Core
+# Fixes: CVE-2024-48063 (RCE deserialization), CVE-2025-32434 (torch.load RCE),
+#        CVE-2025-3730 (heap overflow), CVE-2025-2953 (type confusion)
+torch==2.12.0
+# Fixes: 15 CVEs including RCE and path traversal
+transformers==5.8.1
+numpy==1.26.4
+scipy==1.13.0
+langdetect==1.0.9
+
+# AI / ML — Enhanced (MCP + DeepMind)
+sentence-transformers==5.5.0
+sse-starlette==2.1.0
+tokenizers==0.22.2
+# Fixes: CVE-2024-7042 (SQL injection), SSRF/deserialization CVEs
+langchain==1.3.1
+# Fixes: 1 CVE
+langchain-community==0.4.1
+faiss-cpu==1.8.0
+jmespath==1.0.1
+# tensorflow==2.16.1  # optional — uncomment for TF hybrid engine
+# keras==3.3.3        # optional — required with tensorflow
+
+# Free-tier inference providers (all zero-cost)
+# Used by src/inference/llm_router.py
+# No additional packages required — uses httpx (already listed)
+# Set env vars to enable each:
+#   OLLAMA_URL          → Ollama local server
+#   OPENROUTER_API_KEY  → OpenRouter (free :free models)
+#   HF_API_KEY          → HuggingFace Inference API (free tier)
+#   GROQ_API_KEY        → Groq (free tier, 6k RPM, llama3-8b-8192)
+
+# DeepMind / Planning / RL
+gymnasium==0.29.1
+optuna==3.6.1
+
+# Quantum (core only — aer simulator not in prod; quantum routes degrade gracefully)
+# Fixes: CVE-2025-2000 (RCE)
+qiskit==2.4.1
+# qiskit-aer: incompatible with qiskit 2.x (requires qiskit<1.5). Omit until aer 0.16+ is stable.
+# qiskit-nature: not used in codebase; removed to avoid conflicting qiskit<1.0 constraint.
+
+# Logging / Observability
+python-json-logger==2.0.7
+opentelemetry-sdk==1.34.0
+opentelemetry-instrumentation-fastapi==0.55b0
+# Pinned to match sdk 1.34.x (exporter uses ~= so versions must align; 1.33.x doesn't exist)
+opentelemetry-exporter-otlp-proto-http==1.34.0
+prometheus-client==0.20.0
+prometheus-fastapi-instrumentator==7.0.0
+# Fixes: 1 CVE
+langfuse==4.6.1
+structlog==24.1.0
+
+# Database
+sqlalchemy==2.0.30
+alembic==1.13.1
+psycopg2-binary==2.9.9
+supabase==2.4.6
+qdrant-client==1.9.1
+
+# Cache
+redis==5.0.4
+upstash-redis==1.1.0
+
+# Auth & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+# Fixes: CVE-2026-26007 (key exchange), CVE-2024-12797, CVE-2026-34073
+cryptography==48.0.0
+
+# HTTP
+httpx==0.27.0
+# Fixes: 20 CVEs — request smuggling, DoS, header parsing
+aiohttp==3.13.5
+
+# Utilities
+# Fixes: CVE-2026-28684 (path traversal)
+python-dotenv==1.2.2
+pyyaml==6.0.1
+tenacity==8.3.0
+toml==0.10.2
+
+# Payments
+stripe==9.9.0
+
+# NOTE: Testing deps (pytest, pytest-asyncio, pytest-cov) are in requirements-test.txt
+# They are NOT installed in the production Docker image.
