@@ -71,7 +71,7 @@
 - [x] Test worker-to-worker communication via ServiceMesh — 27 tests passing
 
 ## Phase 9: Production Readiness
-- [ ] Merge PR #21 into main
-- [ ] Verify all existing tests still pass on main after merge
-- [ ] Create docker-compose integration test (spin up stack, verify health)
-- [ ] Document deployment runbook for production stack
+- [x] Merge PR #21 into main — merged as da0b779
+- [x] Verify all existing tests still pass on main after merge — 344 passed
+- [x] Create docker-compose integration test (spin up stack, verify health) — 36 services validated
+- [x] Document deployment runbook for production stack
