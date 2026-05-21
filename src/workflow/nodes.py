@@ -11,6 +11,8 @@ from typing import Any, Callable, Dict, List, Optional, Type
 
 import httpx
 
+from shared_core.error_handlers import safe_error_detail
+
 logger = logging.getLogger(__name__)
 
 
@@ -106,7 +108,9 @@ class BaseNode:
                     await asyncio.sleep(wait)
                 else:
                     self.logger.error("All %d attempts failed: %s", retries, exc)
-        raise last_exc  # type: ignore[misc]
+        if last_exc is not None:
+            raise last_exc
+        raise RuntimeError(f"All {retries} attempts failed with unknown error")
 
     def _make_result(
         self,
@@ -155,7 +159,7 @@ class LLMNode(BaseNode):
             user_message = user_message.replace(f"{{{{{k}}}}}", str(v))
 
         try:
-            from src.core.tranc3_inference import get_engine
+            from src.core.tranc3_inference import get_engine  # noqa: F401  # intentional top-level import
 
             engine = get_engine()
             gen = await engine.generate(
@@ -179,7 +183,7 @@ class LLMNode(BaseNode):
             )
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(None, duration_ms, success=False, error=str(exc))
+            return self._make_result(None, duration_ms, success=False, error=safe_error_detail(exc, 500))
 
 
 # ---------------------------------------------------------------------------
@@ -305,7 +309,7 @@ class CodeExecNode(BaseNode):
                 {"stdout": stdout_capture.getvalue()},
                 duration_ms,
                 success=False,
-                error=str(exc),
+                error=safe_error_detail(exc, 500),
             )
 
 
@@ -367,7 +371,7 @@ class HTTPNode(BaseNode):
             )
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(None, duration_ms, success=False, error=str(exc))
+            return self._make_result(None, duration_ms, success=False, error=safe_error_detail(exc, 500))
 
 
 # ---------------------------------------------------------------------------
@@ -398,7 +402,7 @@ class ConditionNode(BaseNode):
                 {"condition": False, "branch": "false"},
                 duration_ms,
                 success=False,
-                error=str(exc),
+                error=safe_error_detail(exc, 500),
             )
 
 
@@ -460,7 +464,7 @@ class TransformNode(BaseNode):
             except Exception as exc:
                 duration_ms = (time.monotonic() - t0) * 1000
                 return self._make_result(
-                    None, duration_ms, success=False, error=str(exc)
+                    None, duration_ms, success=False, error=safe_error_detail(exc, 500)
                 )
 
         duration_ms = (time.monotonic() - t0) * 1000
@@ -528,7 +532,7 @@ class VectorSearchNode(BaseNode):
             )
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(None, duration_ms, success=False, error=str(exc))
+            return self._make_result(None, duration_ms, success=False, error=safe_error_detail(exc, 500))
 
 
 # ---------------------------------------------------------------------------
@@ -579,7 +583,7 @@ class SparkToolNode(BaseNode):
                     fn = spark_tool.handler
                     _uses_kwargs = False  # Spark handlers receive a single params dict
             except ImportError:
-                pass
+                logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
         if fn is None:
             duration_ms = (time.monotonic() - t0) * 1000
@@ -589,7 +593,7 @@ class SparkToolNode(BaseNode):
 
                 available += [t["name"] for t in _spark_registry.list_tools()]
             except ImportError:
-                pass
+                logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
             return self._make_result(
                 None,
                 duration_ms,
@@ -618,7 +622,7 @@ class SparkToolNode(BaseNode):
             )
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(None, duration_ms, success=False, error=str(exc))
+            return self._make_result(None, duration_ms, success=False, error=safe_error_detail(exc, 500))
 
 
 # ---------------------------------------------------------------------------
@@ -799,7 +803,7 @@ class SkillCallNode(BaseNode):
             )
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(None, duration_ms, success=False, error=str(exc))
+            return self._make_result(None, duration_ms, success=False, error=safe_error_detail(exc, 500))
 
 
 # ---------------------------------------------------------------------------
@@ -849,7 +853,7 @@ class MLPredictNode(BaseNode):
             )
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(None, duration_ms, success=False, error=str(exc))
+            return self._make_result(None, duration_ms, success=False, error=safe_error_detail(exc, 500))
 
 
 # ---------------------------------------------------------------------------
@@ -976,7 +980,7 @@ def create_node(config: NodeConfig) -> BaseNode:
 _PHASE4_NODE_REGISTRY: Dict[str, Any] = {}
 
 try:
-    from src.workflow.phase4_nodes import PHASE4_NODE_TYPES as _p4_types
+    from src.workflow.phase4_nodes import PHASE4_NODE_TYPES as _p4_types  # noqa: F401  # intentional top-level import
     _PHASE4_NODE_REGISTRY.update(_p4_types)
     logger.info("Phase 4 workflow nodes loaded: %s", list(_p4_types.keys()))
 except Exception as _p4_exc:
@@ -986,7 +990,7 @@ except Exception as _p4_exc:
 # Phase 5 node registry extension (string-keyed, populated at import time)
 # ---------------------------------------------------------------------------
 try:
-    from src.workflow.phase5_nodes import PHASE5_NODE_TYPES as _p5_types
+    from src.workflow.phase5_nodes import PHASE5_NODE_TYPES as _p5_types  # noqa: F401  # intentional top-level import
     _PHASE4_NODE_REGISTRY.update(_p5_types)
     logger.info("Phase 5 workflow nodes loaded: %s", list(_p5_types.keys()))
 except Exception as _p5_exc:

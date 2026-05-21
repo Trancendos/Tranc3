@@ -14,6 +14,10 @@
 from __future__ import annotations
 
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
+
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -136,9 +140,9 @@ class ChronosSphere:
         self._emit("chronos.task.created", {"task_id": task.id, "name": name})
         logger.info(
             "chronos: task created id=%s name=%s type=%s",
-            task.id,
-            name,
-            schedule_type.value,
+            sanitize_for_log(task.id),
+            sanitize_for_log(name),
+            sanitize_for_log(schedule_type.value),
         )
         return task
 

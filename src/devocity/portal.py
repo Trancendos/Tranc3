@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
 import secrets
 import time
 import uuid
@@ -245,7 +248,7 @@ class DevOcity:
         self._emit(
             "devocity.account.created", {"account_id": account.id, "user_id": user_id}
         )
-        logger.info("devocity: account created id=%s user=%s", account.id, user_id)
+        logger.info("devocity: account created id=%s user=%s", sanitize_for_log(account.id), sanitize_for_log(user_id))
         return account
 
     def get_account(self, account_id: str) -> Optional[DeveloperAccount]:

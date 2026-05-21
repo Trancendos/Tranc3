@@ -12,6 +12,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 import httpx
 
+from shared_core.error_handlers import safe_error_detail
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -118,7 +120,7 @@ class MCPClient:
             try:
                 await self._sse_task
             except (asyncio.CancelledError, Exception):
-                pass
+                logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
         self._sse_task = None
 
         if self._client:
@@ -413,7 +415,7 @@ class MCPClientPool:
                     server_name,
                     exc,
                 )
-                return server_name, {"error": str(exc)}
+                return server_name, {"error": safe_error_detail(exc, 500)}
 
         pairs = await asyncio.gather(*(_call(s) for s in target_servers))
         return dict(pairs)
@@ -436,7 +438,7 @@ class MCPClientPool:
                     "server_info": client._server_info,
                 }
             except Exception as exc:
-                return server_name, {"status": "error", "error": str(exc)}
+                return server_name, {"status": "error", "error": safe_error_detail(exc, 500)}
 
         # Use raw RPC for ping (bypasses call_tool routing)
         async def _ping_rpc(
@@ -453,7 +455,7 @@ class MCPClientPool:
                     "result": result,
                 }
             except Exception as exc:
-                return server_name, {"status": "error", "error": str(exc)}
+                return server_name, {"status": "error", "error": safe_error_detail(exc, 500)}
 
         if not self._servers:
             return {

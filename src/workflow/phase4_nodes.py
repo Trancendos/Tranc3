@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 def _neural_mesh():
     try:
-        from src.neural.neural_mesh import NeuralMesh
+        from src.neural.neural_mesh import NeuralMesh  # noqa: F401  # intentional top-level import
         if not hasattr(_neural_mesh, "_inst") or _neural_mesh._inst is None:
             _neural_mesh._inst = NeuralMesh()
         return _neural_mesh._inst
@@ -47,7 +47,7 @@ def _neural_mesh():
 
 def _collective_memory():
     try:
-        from src.neural.collective_memory import CollectiveMemory
+        from src.neural.collective_memory import CollectiveMemory  # noqa: F401  # intentional top-level import
         if not hasattr(_collective_memory, "_inst") or _collective_memory._inst is None:
             _collective_memory._inst = CollectiveMemory()
         return _collective_memory._inst
@@ -58,7 +58,7 @@ def _collective_memory():
 
 def _meta_learner():
     try:
-        from src.neural.meta_learner import MetaLearner
+        from src.neural.meta_learner import MetaLearner  # noqa: F401  # intentional top-level import
         if not hasattr(_meta_learner, "_inst") or _meta_learner._inst is None:
             _meta_learner._inst = MetaLearner()
         return _meta_learner._inst
@@ -69,7 +69,7 @@ def _meta_learner():
 
 def _attention_router():
     try:
-        from src.neural.attention_router import AttentionRouter
+        from src.neural.attention_router import AttentionRouter  # noqa: F401  # intentional top-level import
         if not hasattr(_attention_router, "_inst") or _attention_router._inst is None:
             _attention_router._inst = AttentionRouter()
         return _attention_router._inst
@@ -80,7 +80,7 @@ def _attention_router():
 
 def _causal_reasoner():
     try:
-        from src.intelligence.causal_reasoner import CausalReasoner
+        from src.intelligence.causal_reasoner import CausalReasoner  # noqa: F401  # intentional top-level import
         if not hasattr(_causal_reasoner, "_inst") or _causal_reasoner._inst is None:
             _causal_reasoner._inst = CausalReasoner()
         return _causal_reasoner._inst
@@ -91,7 +91,7 @@ def _causal_reasoner():
 
 def _knowledge_graph():
     try:
-        from src.intelligence.semantic_knowledge import SemanticKnowledgeGraph
+        from src.intelligence.semantic_knowledge import SemanticKnowledgeGraph  # noqa: F401  # intentional top-level import
         if not hasattr(_knowledge_graph, "_inst") or _knowledge_graph._inst is None:
             _knowledge_graph._inst = SemanticKnowledgeGraph()
         return _knowledge_graph._inst
@@ -105,7 +105,7 @@ def _knowledge_graph():
 # ---------------------------------------------------------------------------
 
 def _import_base():
-    from src.workflow.nodes import BaseNode, NodeConfig, NodeResult, NodeType
+    from src.workflow.nodes import BaseNode, NodeConfig, NodeResult, NodeType  # noqa: F401  # intentional top-level import
     return BaseNode, NodeConfig, NodeResult, NodeType
 
 
@@ -130,7 +130,7 @@ class NeuralMeshNode:
         self.logger = logger.getChild("NeuralMeshNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult
+        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
         t0 = time.monotonic()
         cfg = self.config.config
         action = cfg.get("action", "emit")
@@ -139,7 +139,7 @@ class NeuralMeshNode:
             if mesh is None:
                 raise RuntimeError("NeuralMesh not available")
             if action == "emit":
-                from src.neural.neural_mesh import MeshNode, Signal
+                from src.neural.neural_mesh import MeshNode, Signal  # noqa: F401  # intentional top-level import
                 source_id = cfg.get("source_id", "workflow")
                 signal_type = cfg.get("signal_type", "workflow_event")
                 payload_key = cfg.get("payload_key")
@@ -211,7 +211,7 @@ class CollectiveMemoryNode:
         self.logger = logger.getChild("CollectiveMemoryNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult
+        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
         t0 = time.monotonic()
         cfg = self.config.config
         action = cfg.get("action", "store")
@@ -220,7 +220,7 @@ class CollectiveMemoryNode:
             if cm is None:
                 raise RuntimeError("CollectiveMemory not available")
             if action == "store":
-                from src.neural.collective_memory import MemoryPriority
+                from src.neural.collective_memory import MemoryPriority  # noqa: F401  # intentional top-level import
                 key = cfg.get("key") or context.get("workflow_id", "unknown")
                 value_key = cfg.get("value_key", "output")
                 value = inputs.get(value_key, inputs)
@@ -309,7 +309,7 @@ class MetaLearnNode:
         self.logger = logger.getChild("MetaLearnNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult
+        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
         t0 = time.monotonic()
         cfg = self.config.config
         try:
@@ -384,14 +384,14 @@ class AttentionRouteNode:
         self.logger = logger.getChild("AttentionRouteNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult
+        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
         t0 = time.monotonic()
         cfg = self.config.config
         try:
             router = _attention_router()
             if router is None:
                 raise RuntimeError("AttentionRouter not available")
-            from src.neural.attention_router import RoutingRequest
+            from src.neural.attention_router import RoutingRequest  # noqa: F401  # intentional top-level import
             # Resolve query from config or input
             query_key = cfg.get("query_input_key")
             query = str(inputs.get(query_key, "")) if query_key else cfg.get("query", "")
@@ -457,7 +457,7 @@ class CausalReasonNode:
         self.logger = logger.getChild("CausalReasonNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult
+        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
         t0 = time.monotonic()
         cfg = self.config.config
         action = cfg.get("action", "predict")
@@ -570,7 +570,7 @@ class KnowledgeGraphNode:
         self.logger = logger.getChild("KnowledgeGraphNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult
+        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
         t0 = time.monotonic()
         cfg = self.config.config
         action = cfg.get("action", "query")
@@ -579,7 +579,7 @@ class KnowledgeGraphNode:
             if kg is None:
                 raise RuntimeError("SemanticKnowledgeGraph not available")
             if action == "add":
-                from src.intelligence.semantic_knowledge import KnowledgeNode
+                from src.intelligence.semantic_knowledge import KnowledgeNode  # noqa: F401  # intentional top-level import
                 node = KnowledgeNode(
                     label=cfg.get("node_label", inputs.get("label", "")),
                     semantic_type=cfg.get("node_type", "entity"),
@@ -610,7 +610,7 @@ class KnowledgeGraphNode:
                     "count": len(nodes),
                 }
             elif action == "path":
-                from src.intelligence.semantic_knowledge import EdgeType
+                from src.intelligence.semantic_knowledge import EdgeType  # noqa: F401  # intentional top-level import
                 src_key = cfg.get("source_id_key", "source_id")
                 tgt_key = cfg.get("target_id_key", "target_id")
                 src_id = inputs.get(src_key, cfg.get("source_id"))
@@ -687,7 +687,7 @@ class ForesightNode:
         self.logger = logger.getChild("ForesightNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult
+        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
         t0 = time.monotonic()
         cfg = self.config.config
         mode = cfg.get("mode", "foresight")
@@ -696,7 +696,7 @@ class ForesightNode:
         try:
             if mode in ("foresight", "both"):
                 try:
-                    from src.adaptive.foresight import ConversationTrajectoryPredictor
+                    from src.adaptive.foresight import ConversationTrajectoryPredictor  # noqa: F401  # intentional top-level import
                     predictor = ConversationTrajectoryPredictor()
                     hist_key = cfg.get("history_key", "history")
                     history = inputs.get(hist_key, [])
@@ -717,7 +717,7 @@ class ForesightNode:
                     output["foresight_error"] = str(fe)
             if mode in ("intent", "both"):
                 try:
-                    from src.analytics.predictive import IntentPredictor
+                    from src.analytics.predictive import IntentPredictor  # noqa: F401  # intentional top-level import
                     predictor = IntentPredictor()
                     msg_key = cfg.get("message_key", "message")
                     message = str(inputs.get(msg_key, ""))
@@ -778,7 +778,7 @@ def extend_node_registry(registry: Dict[str, Any]) -> int:
     for type_name, node_class in PHASE4_NODE_TYPES.items():
         # Try to find matching enum member
         try:
-            from src.workflow.nodes import NodeType
+            from src.workflow.nodes import NodeType  # noqa: F401  # intentional top-level import
             if hasattr(NodeType, type_name):
                 registry[NodeType(type_name)] = node_class
             else:

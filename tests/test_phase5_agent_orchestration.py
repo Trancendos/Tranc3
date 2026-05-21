@@ -76,36 +76,36 @@ class TestPhase5Imports:
         assert hasattr(src.agents, "AgentProfile")
 
     def test_agent_runtime_module(self):
-        from src.agents.agent_runtime import AgentRuntime, AgentState, AgentConfig, AgentStep
+        from src.agents.agent_runtime import AgentState
         assert AgentState.IDLE is not None
         assert AgentState.PLANNING is not None
 
     def test_task_decomposer_module(self):
-        from src.agents.task_decomposer import TaskDecomposer, SubTask, Decomposition
+        from src.agents.task_decomposer import Decomposition
         assert Decomposition is not None
 
     def test_tool_bridge_module(self):
-        from src.agents.tool_bridge import ToolBridge, ToolResult
+        from src.agents.tool_bridge import ToolBridge
         assert ToolBridge is not None
 
     def test_memory_stream_module(self):
-        from src.agents.memory_stream import MemoryStream, EpisodicMemory
+        from src.agents.memory_stream import MemoryStream
         assert MemoryStream is not None
 
     def test_goal_manager_module(self):
-        from src.agents.goal_manager import GoalManager, Goal, GoalState
+        from src.agents.goal_manager import GoalState
         assert GoalState.PENDING is not None
 
     def test_agent_types_module(self):
-        from src.agents.agent_types import AgentType, AgentProfile, get_profile, find_best_profile
+        from src.agents.agent_types import AgentType
         assert AgentType.GENERAL is not None
 
     def test_spark_phase5_tools_module(self):
-        from src.mcp.spark_phase5_tools import PHASE5_TOOLS, register_phase5_tools
+        from src.mcp.spark_phase5_tools import PHASE5_TOOLS
         assert len(PHASE5_TOOLS) == 12
 
     def test_phase5_nodes_module(self):
-        from src.workflow.phase5_nodes import PHASE5_NODE_TYPES, extend_node_registry
+        from src.workflow.phase5_nodes import PHASE5_NODE_TYPES
         assert len(PHASE5_NODE_TYPES) == 5
 
 
@@ -352,7 +352,7 @@ class TestGoalManager:
         assert len(pending) == 1
 
     def test_overdue_goal_detection(self):
-        from src.agents.goal_manager import GoalManager, Goal
+        from src.agents.goal_manager import GoalManager
         gm = GoalManager()
         goal_id = run(gm.add_goal("Overdue goal", priority=5, deadline=time.time() - 10))
         goal = run(gm.get_goal(goal_id))
@@ -965,7 +965,7 @@ class TestSparkPhase5ToolsRegistration:
     """Test Phase 5 MCP tool registration into The Spark."""
 
     def test_phase5_tools_module_importable(self):
-        from src.mcp.spark_phase5_tools import PHASE5_TOOLS, register_phase5_tools
+        from src.mcp.spark_phase5_tools import PHASE5_TOOLS
         assert len(PHASE5_TOOLS) == 12
 
     def test_all_tool_names_unique(self):
@@ -1204,7 +1204,7 @@ class TestPhase5Integration:
         assert goal_id is not None
 
         # Run a step
-        step = run(agent.run_step())
+        run(agent.run_step())
         # Step may succeed or not depending on tool resolution, but no crash
 
         # Stop

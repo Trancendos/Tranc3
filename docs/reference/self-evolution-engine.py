@@ -1,13 +1,12 @@
+# Reference documentation — imports are illustrative
+# ruff: noqa: F401,F821
 # src/evolution/self_improving_core.py
 # TRANC3 Complete Self-Evolution Engine
 
-import torch
-import torch.nn as nn
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, field
 from datetime import datetime
-import copy, logging
+import logging
 
 logger = logging.getLogger(__name__)
 

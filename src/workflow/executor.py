@@ -8,6 +8,10 @@ when the grid bridge is active (see src/mcp/server._start_grid_bridge).
 
 import asyncio
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
+
 import time
 import uuid
 from collections import defaultdict, deque
@@ -99,7 +103,7 @@ class WorkflowEventBus:
                 else:
                     cb(payload)
             except Exception as exc:  # noqa: BLE001
-                logger.warning("Event handler error for '%s': %s", event, exc)
+                logger.warning("Event handler error for '%s': %s", sanitize_for_log(event), sanitize_for_log(exc))
 
         await asyncio.gather(*[_call(cb) for cb in targets], return_exceptions=True)
 
@@ -264,7 +268,7 @@ class WorkflowExecutor:
         )
 
         logger.info(
-            "Starting workflow '%s' (execution %s)", workflow.name, execution_id
+            "Starting workflow '%s' (execution %s)", sanitize_for_log(workflow.name), sanitize_for_log(execution_id)
         )
 
         try:
@@ -280,7 +284,7 @@ class WorkflowExecutor:
                     "error": state.error,
                 },
             )
-            logger.error("Topological sort failed: %s", exc)
+            logger.error("Topological sort failed: %s", sanitize_for_log(exc))
             return state
 
         # Seed initial outputs — root nodes will use initial_inputs
@@ -291,7 +295,7 @@ class WorkflowExecutor:
                 if cancel_flag.is_set():
                     state.status = "cancelled"
                     state.finished_at = time.monotonic()
-                    logger.info("Execution %s cancelled.", execution_id)
+                    logger.info("Execution %s cancelled.", sanitize_for_log(execution_id))
                     return state
 
                 await self._execute_layer(
@@ -348,7 +352,7 @@ class WorkflowExecutor:
                     "elapsed_ms": state.elapsed_ms,
                 },
             )
-            logger.error("Workflow '%s' failed: %s", workflow.name, exc, exc_info=True)
+            logger.error("Workflow '%s' failed: %s", sanitize_for_log(workflow.name), sanitize_for_log(exc), exc_info=True)
 
         finally:
             self._cancel_flags.pop(execution_id, None)
@@ -371,7 +375,7 @@ class WorkflowExecutor:
             state = self.executions.get(execution_id)
             return state is not None and state.status == "running"
         flag.set()
-        logger.info("Cancel requested for execution %s.", execution_id)
+        logger.info("Cancel requested for execution %s.", sanitize_for_log(execution_id))
         return True
 
     # ------------------------------------------------------------------

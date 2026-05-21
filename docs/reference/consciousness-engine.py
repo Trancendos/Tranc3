@@ -1,3 +1,5 @@
+# Reference documentation — imports are illustrative
+# ruff: noqa: F401,F821
 # src/bio_neural/consciousness_engine.py
 # TRANC3 Full Consciousness Engine (IIT-based)
 
@@ -5,7 +7,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from scipy.stats import entropy
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 import logging
 
 logger = logging.getLogger(__name__)

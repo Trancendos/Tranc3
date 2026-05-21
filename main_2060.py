@@ -2,7 +2,7 @@
 
 import asyncio
 import torch
-from typing import Dict, Optional
+from typing import Dict
 import logging
 
 # Import TRANC3 2060 modules

@@ -124,7 +124,7 @@ def load_custom_data(custom_dir: str, output_dir: str):
                     try:
                         records.append(json.loads(line))
                     except Exception:
-                        pass
+                        pass  # nosec B110 — graceful degradation
 
     if records:
         random.shuffle(records)

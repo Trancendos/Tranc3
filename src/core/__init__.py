@@ -3,6 +3,21 @@
 # multilingual_tokenizer wraps BERT (requires `transformers`) and is
 # superseded by src.core.tranc3_tokenizer. Import it only on demand.
 
+__all__ = [
+    "AdvancedTransformerModel",
+    "Tranc3Tokenizer",
+    "get_tranc3_engine",
+    "MultilingualDataset",
+    "FeatureFlag",
+    "FeatureFlagManager",
+    "compressor",
+    "MultilingualTokenizer",
+    "MLPipeline",
+    "PipelineRequest",
+    "PipelineResponse",
+    "get_pipeline",
+]
+
 try:
     from src.core.advanced_model import AdvancedTransformerModel
 except ImportError:

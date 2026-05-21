@@ -214,7 +214,7 @@ async def get_auth_user_id(authorization: str | None) -> str | None:
                 data = resp.json()
                 return data.get("user_id")
         except httpx.HTTPError:
-            pass
+            pass  # nosec B110 — graceful degradation
     return None
 
 
