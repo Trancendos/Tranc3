@@ -62,8 +62,8 @@ def validate_path(
             f"Path contains disallowed components (null byte or '..'): {raw!r}"
         )
 
-    base = Path(base_dir).resolve()
-    resolved = (base / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()
+    base = Path(base_dir).resolve()  # codeql[py/path-injection]
+    resolved = (base / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()  # codeql[py/path-injection]
 
     # Ensure the resolved path starts with the base directory
     try:
@@ -73,10 +73,10 @@ def validate_path(
             f"Path escapes base directory: {resolved} is not under {base}"
         ) from None
 
-    if must_exist and not resolved.exists():
+    if must_exist and not resolved.exists():  # codeql[py/path-injection]
         raise FileNotFoundError(f"Validated path does not exist: {resolved}")
 
-    if not allow_create and not resolved.exists():
+    if not allow_create and not resolved.exists():  # codeql[py/path-injection]
         raise FileNotFoundError(f"Path does not exist and creation is not allowed: {resolved}")
 
     return resolved
@@ -104,7 +104,7 @@ def safe_join(
         PathTraversalError: If any component would escape *base_dir*.
         ValueError: If any component is empty or contains malicious input.
     """
-    base = Path(base_dir).resolve()
+    base = Path(base_dir).resolve()  # codeql[py/path-injection]
 
     if not components:
         return base
@@ -126,7 +126,7 @@ def safe_join(
     for comp in components:
         candidate = candidate / comp
 
-    resolved = candidate.resolve()
+    resolved = candidate.resolve()  # codeql[py/path-injection]
 
     try:
         resolved.relative_to(base)
