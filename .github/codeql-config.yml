@@ -1,0 +1,22 @@
+# CodeQL custom configuration for Tranc3
+# Focuses on security-relevant paths and excludes test/fixture code
+
+name: "Tranc3 CodeQL Config"
+
+# Only analyze these paths
+paths:
+  - src
+  - api.py
+
+# Exclude test fixtures, generated code, and documentation
+paths-ignore:
+  - tests
+  - scripts
+  - docs
+  - "**/test_*.py"
+  - "**/*_test.py"
+  - "**/conftest.py"
+
+# Use security-extended queries plus custom queries
+queries:
+  - uses: security-and-quality
