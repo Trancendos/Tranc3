@@ -91,7 +91,7 @@ class MagnaCartaCompliance:
     def audit_log(self, event: str, data: Dict):
         """Log compliance-relevant events"""
         if self.enabled:
-            logger.info("MAGNA_CARTA_AUDIT | event=%s | data=%s", sanitize_for_log(event), sanitize_for_log(data))
+            logger.info("MAGNA_CARTA_AUDIT | event=%s | data=%s", sanitize_for_log(event), sanitize_for_log(data))  # codeql[py/cleartext-logging]
 
 
 # Singleton

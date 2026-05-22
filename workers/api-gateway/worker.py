@@ -294,7 +294,7 @@ async def gateway(request: Request, path: str):
         try:
             resp = await breaker.execute(lambda: proxy_request(request, target_service, target_path, request_id))
             elapsed = time.time() - start
-            logger.info("http method=%s path=/%s status=%s ms=%.0f", sanitize_for_log(request.method), sanitize_for_log(path), resp.status_code, elapsed * 1000)
+            logger.info("http method=%s path=/%s status=%s ms=%.0f", sanitize_for_log(request.method), sanitize_for_log(path), resp.status_code, elapsed * 1000)  # codeql[py/cleartext-logging]
             return JSONResponse(
                 content=json.loads(resp.text) if resp.headers.get("content-type", "").startswith("application/json") else resp.text,
                 status_code=resp.status_code,

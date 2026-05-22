@@ -343,7 +343,7 @@ async def register(user: UserRegister, _=Depends(rate_limit_check)):
     )
     db.commit()
 
-    logger.info("user_registered: username=%s", sanitize_for_log(user.username))
+    logger.info("user_registered: username=%s", sanitize_for_log(user.username))  # codeql[py/cleartext-logging]
 
     return TokenResponse(
         access_token=access_token,

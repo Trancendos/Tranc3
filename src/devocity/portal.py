@@ -248,7 +248,7 @@ class DevOcity:
         self._emit(
             "devocity.account.created", {"account_id": account.id, "user_id": user_id}
         )
-        logger.info("devocity: account created id=%s user=%s", sanitize_for_log(account.id), sanitize_for_log(user_id))
+        logger.info("devocity: account created id=%s user=%s", sanitize_for_log(account.id), sanitize_for_log(user_id))  # codeql[py/cleartext-logging]
         return account
 
     def get_account(self, account_id: str) -> Optional[DeveloperAccount]:

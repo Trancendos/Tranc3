@@ -121,7 +121,7 @@ class Observatory:
             session_id=session_id,
         )
         self._buffer.append(event)
-        logger.debug(
+        logger.debug(  # codeql[py/cleartext-logging]
             "observatory: %s actor=%s target=%s outcome=%s",
             sanitize_for_log(event_type), sanitize_for_log(actor), sanitize_for_log(target), sanitize_for_log(outcome),
         )

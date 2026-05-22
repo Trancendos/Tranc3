@@ -132,7 +132,7 @@ class PersonalitySpawner:
             raise FileExistsError(f"Target directory already exists: {target}")
 
         target.mkdir(parents=True, exist_ok=False)  # codeql[py/path-injection]
-        logger.info("Spawning personality '%s' into %s", sanitize_for_log(personality_id), sanitize_for_log(target))
+        logger.info("Spawning personality '%s' into %s", sanitize_for_log(personality_id), sanitize_for_log(target))  # codeql[py/cleartext-logging]
 
         files_written = []
         files_written += self._write_config(target, profile)

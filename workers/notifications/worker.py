@@ -28,6 +28,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from shared_core.sanitize import sanitize_for_log
+
 from shared_core.error_handlers import safe_error_detail
 from shared_core.url_validation import SSRFError, validate_webhook_url
 
@@ -320,20 +322,20 @@ class NotificationDispatcher:
     @staticmethod
     async def dispatch_email(user_id: str, subject: str, body: str, metadata: Dict[str, Any]) -> bool:
         """Email dispatch — in zero-cost mode, logs and marks as sent. Plug in SMTP or SES later."""
-        logger.info("📧 EMAIL → user=%s subject='%s'", user_id, subject)
+        logger.info("📧 EMAIL → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject))
         # In production: integrate with self-hosted mail or free-tier SMTP
         return True
 
     @staticmethod
     async def dispatch_sms(user_id: str, body: str, metadata: Dict[str, Any]) -> bool:
         """SMS dispatch — zero-cost mode logs only. Plug in Twilio free tier later."""
-        logger.info("📱 SMS → user=%s", user_id)
+        logger.info("📱 SMS → user=%s", sanitize_for_log(user_id))
         return True
 
     @staticmethod
     async def dispatch_push(user_id: str, subject: str, body: str, metadata: Dict[str, Any]) -> bool:
         """Push notification — zero-cost mode logs only. Plug in Web Push later."""
-        logger.info("🔔 PUSH → user=%s subject='%s'", user_id, subject)
+        logger.info("🔔 PUSH → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject))
         return True
 
     @staticmethod
@@ -361,7 +363,7 @@ class NotificationDispatcher:
             if hostname not in _WEBHOOK_ALLOWED_DOMAINS:
                 logger.warning(
                     "Webhook domain '%s' not in allowlist: %s",
-                    hostname, _WEBHOOK_ALLOWED_DOMAINS,
+                    sanitize_for_log(hostname), _WEBHOOK_ALLOWED_DOMAINS,
                 )
                 return False
 
@@ -378,7 +380,7 @@ class NotificationDispatcher:
     @staticmethod
     async def dispatch_in_app(user_id: str, subject: str, body: str, metadata: Dict[str, Any]) -> bool:
         """In-app notification — stored in DB, client polls or uses WebSocket."""
-        logger.info("💬 IN-APP → user=%s subject='%s'", user_id, subject)
+        logger.info("💬 IN-APP → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject))
         return True
 
 

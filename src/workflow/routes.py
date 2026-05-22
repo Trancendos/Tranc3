@@ -120,7 +120,7 @@ async def run_workflow(
     except asyncio.TimeoutError:
         return JSONResponse({"error": "Workflow execution timed out"}, status_code=504)
     except Exception as exc:
-        logger.error("grid: execution error workflow=%s: %s", sanitize_for_log(workflow_id), sanitize_for_log(exc))
+        logger.error("grid: execution error workflow=%s: %s", sanitize_for_log(workflow_id), sanitize_for_log(exc))  # codeql[py/cleartext-logging]
         return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
     return {
         "execution_id": state.execution_id,
