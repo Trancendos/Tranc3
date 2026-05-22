@@ -90,7 +90,6 @@ _SERVICE_INVENTORY: List[Dict[str, Any]] = [
 
 
 _DEPLOY_TTL = 30 * 86400  # 30 days
-_HEALTH_TTL = 7 * 86400   # 7 days
 
 
 class TheCitadel:

@@ -124,7 +124,7 @@ class Tranc3Config(BaseSettings):
 
 # Singleton — loaded once, importable everywhere
 try:
-    settings = Tranc3Config()
+    settings = Tranc3Config()  # codeql[py/unused-global]
 except Exception as e:
     import logging
     logging.getLogger(__name__).error(f"Configuration error: {e}")
