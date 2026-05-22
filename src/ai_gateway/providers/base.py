@@ -22,14 +22,14 @@ class AIProvider(abc.ABC):
     @abc.abstractmethod
     async def complete(self, request: AIRequest) -> AIResponse:
         """Generate a completion for the given request."""
-        ...
+        raise NotImplementedError
 
     @abc.abstractmethod
     async def health_check(self) -> ProviderHealth:
         """Check provider health."""
-        ...
+        raise NotImplementedError
 
     @abc.abstractmethod
     def get_models(self) -> list[str]:
         """List available models."""
-        ...
+        raise NotImplementedError

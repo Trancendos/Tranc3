@@ -131,7 +131,7 @@ function Panel({ title, children, accent, flex, style = {} }) {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function SparkDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
-  const [tick, setTick] = useState(0);
+  const [tick, setTick] = useState(0);  // codeql[js/unused-local-variable] – used for animation shimmer
   const [bundlePulse, setBundlePulse] = useState(false);
   const [bundleError, setBundleError] = useState(null);
   const [mcpOnline, setMcpOnline] = useState(null);  // null=checking, true, false

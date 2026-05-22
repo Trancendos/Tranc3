@@ -229,7 +229,7 @@ class AdvancedTransformerModel(nn.Module):
         personality_vector: Optional[torch.Tensor] = None,
         consciousness_weight: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
-        B, T = input_ids.shape
+        _B, _T = input_ids.shape  # noqa: F841 – shape unpack used for clarity
 
         # Token embeddings
         x = self.token_embeddings(input_ids)

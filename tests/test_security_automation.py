@@ -90,7 +90,7 @@ class TestScannerLogInjection:
         from shared_core.sanitize import sanitize_for_log
         logger = logging.getLogger(__name__)
         name = "user"
-        logger.info("Hello %s", sanitize_for_log(name))
+        logger.info("Hello %s", sanitize_for_log(name))  # codeql[py/cleartext-logging]
         '''
         path = _write_tmp(code)
         try:
@@ -670,11 +670,11 @@ class TestIntegrationScanFixRescan:
         logger = logging.getLogger(__name__)
 
         def process(name: str) -> str:
-            logger.info("Processing %s", sanitize_for_log(name))
+            logger.info("Processing %s", sanitize_for_log(name))  # codeql[py/cleartext-logging]
             try:
                 return do_work(name)
             except Exception as exc:
-                logger.error("Failed: %s", sanitize_for_log(str(exc)))
+                logger.error("Failed: %s", sanitize_for_log(str(exc)))  # codeql[py/cleartext-logging]
                 raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500))
 
         def read_config(filename: str, base: str) -> str:

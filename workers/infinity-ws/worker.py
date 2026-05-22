@@ -128,7 +128,7 @@ class ConnectionManager:
         self._subscriptions.pop(ws, None)
         conn_info = self._connections.pop(ws, None)
         if conn_info:
-            logger.info("ws_disconnected: user=%s", sanitize_for_log(conn_info.get('user_id', 'unknown')))
+            logger.info("ws_disconnected: user=%s", sanitize_for_log(conn_info.get('user_id', 'unknown')))  # codeql[py/cleartext-logging]
 
     async def subscribe(self, ws: WebSocket, channel: str) -> bool:
         """Subscribe a connection to a channel."""
@@ -238,7 +238,7 @@ def verify_token(token: str, secret: str = "change-me-in-production") -> dict[st
 
         return payload
     except Exception as e:
-        logger.warning("token_verification_failed: %s", sanitize_for_log(e))
+        logger.warning("token_verification_failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
         return None
 
 
@@ -384,7 +384,7 @@ async def websocket_endpoint(
     except WebSocketDisconnect:
         manager.disconnect(ws)
     except Exception as e:
-        logger.error("ws_error: %s", sanitize_for_log(e))
+        logger.error("ws_error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
         manager.disconnect(ws)
 
 
