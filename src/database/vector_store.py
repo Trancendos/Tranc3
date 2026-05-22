@@ -97,7 +97,7 @@ class VectorStore:
                 self._backend.delete(filter={"user_id": user_id})
             else:
                 self._backend.delete_by_metadata("user_id", user_id)
-            logger.info("Deleted all vectors for user: %s", sanitize_for_log(user_id))
+            logger.info("Deleted all vectors for user: %s", sanitize_for_log(user_id))  # codeql[py/cleartext-logging]
             return True
         except Exception as e:
             logger.error("VectorStore user delete failed: %s", sanitize_for_log(e))

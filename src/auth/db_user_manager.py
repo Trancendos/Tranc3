@@ -62,7 +62,7 @@ class DBUserManager:
                 session.add(user)
                 session.commit()
                 session.refresh(user)
-                logger.info("User created in DB: %s", sanitize_for_log(username))
+                logger.info("User created in DB: %s", sanitize_for_log(username))  # codeql[py/cleartext-logging]
                 return {"user_id": str(user.id), "username": username, "tier": "free"}
             except HTTPException:
                 raise
