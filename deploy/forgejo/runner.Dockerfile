@@ -25,7 +25,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
 
 # ── Node.js 20 (via NodeSource) ───────────────────────────────────────────────
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/* \
     && node --version && npm --version
 
@@ -62,3 +62,6 @@ RUN flyctl version \
     && ruff --version
 
 USER runner
+
+HEALTHCHECK --interval=60s --timeout=10s --retries=3 \
+  CMD which act_runner || exit 1
