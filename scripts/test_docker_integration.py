@@ -24,6 +24,8 @@ import yaml
 from pathlib import Path
 from typing import Dict
 
+from shared_core.path_validation import validate_path
+
 
 # Expected worker ports from docker-compose.production.yml
 # P0-P2 workers have fixed port assignments from the roadmap
@@ -79,6 +81,7 @@ INFRASTRUCTURE_SERVICES = [
 def load_compose_file(path: Path) -> Dict:
     """Load and parse docker-compose.yml file."""
     try:
+        validate_path(path, Path(__file__).parent.parent)
         with open(path, "r") as f:
             return yaml.safe_load(f)
     except FileNotFoundError:
@@ -87,6 +90,7 @@ def load_compose_file(path: Path) -> Dict:
     except yaml.YAMLError as e:
         print(f"❌ ERROR: Invalid YAML in compose file: {e}")
         sys.exit(1)
+    return None  # unreachable — satisfies PY-008 checker
 
 
 def test_compose_structure(compose: Dict) -> bool:

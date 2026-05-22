@@ -6,6 +6,8 @@ wrapping on user-controlled data.
 """
 import os
 
+from shared_core.path_validation import validate_path
+
 # Files and their fixes
 FIXES = {
     "shared_core/bus.py": [
@@ -128,6 +130,7 @@ FIXES = {
 
 def fix_file(filepath, replacements):
     """Apply all replacements to a file."""
+    validate_path(filepath, os.getcwd())
     with open(filepath, 'r') as f:
         content = f.read()
 
@@ -164,6 +167,7 @@ def fix_file(filepath, replacements):
                 print(f"  Added sanitize_for_log import at line {insert_idx}")
 
     if changed:
+        validate_path(filepath, os.getcwd())
         with open(filepath, 'w') as f:
             f.write(content)
         print(f"  Wrote {filepath}")

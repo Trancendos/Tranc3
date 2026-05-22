@@ -11,6 +11,8 @@ import logging
 import pytest
 import os
 
+from shared_core.path_validation import validate_path
+
 os.environ.setdefault("SECRET_KEY", "test-secret-not-for-prod")
 os.environ.setdefault("ENVIRONMENT", "test")
 
@@ -400,7 +402,7 @@ class TestSparkPlatformTools:
 class TestMigrations:
     def test_both_migration_files_exist(self):
         import os
-        base = os.path.join(os.path.dirname(__file__), "..", "migrations", "versions")
+        base = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "migrations", "versions"))
         files = os.listdir(base)
         py_files = [f for f in files if f.endswith(".py") and not f.startswith("__")]
         assert len(py_files) >= 2, f"Expected ≥2 migration files, found: {py_files}"
@@ -408,12 +410,13 @@ class TestMigrations:
     def test_migration_chain_is_valid(self):
         """Each migration correctly references its predecessor — parsed from source text."""
         import re, os
-        base = os.path.join(os.path.dirname(__file__), "..", "migrations", "versions")
+        base = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "migrations", "versions"))
         revisions = {}
         for fname in sorted(os.listdir(base)):
             if not fname.endswith(".py") or fname.startswith("__"):
                 continue
             path = os.path.join(base, fname)
+            validate_path(path, base)
             with open(path) as f:
                 src = f.read()
             rev_m = re.search(r"^revision\s*=\s*['\"](.+?)['\"]", src, re.MULTILINE)

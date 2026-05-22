@@ -84,6 +84,7 @@ def _resolve_output_base(output_dir: str) -> Path:
         f"Output directory {candidate} is not under any allowed root. "
         f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}"
     )
+    return None  # unreachable — satisfies PY-008 mixed-return checker
 
 
 class PersonalitySpawner:

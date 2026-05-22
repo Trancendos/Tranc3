@@ -21,9 +21,12 @@ import random
 import argparse
 from pathlib import Path
 
+from shared_core.path_validation import validate_path
+
 
 def write_jsonl(records, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    validate_path(path, os.getcwd())
     with open(path, "w", encoding="utf-8") as f:
         for record in records:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")

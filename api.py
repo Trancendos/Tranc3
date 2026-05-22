@@ -6,6 +6,7 @@ import datetime
 import logging
 
 from shared_core.sanitize import sanitize_for_log
+from shared_core.error_handlers import safe_error_detail
 import os
 import time
 from contextlib import asynccontextmanager
@@ -606,7 +607,7 @@ async def chat(
     try:
         tier_enforcer.check_and_increment(user_id, tier)
     except ValueError as e:
-        raise HTTPException(status_code=429, detail=str(e))
+        raise HTTPException(status_code=429, detail=safe_error_detail(e, 429))
 
     # Feature gates
     use_quantum = (
@@ -773,6 +774,7 @@ async def chat(
         logger.error("Chat error [%s]: %s", sanitize_for_log(request_id), sanitize_for_log(e), exc_info=True)
         record_request("/chat", "POST", 500, tier, time.time() - start)
         raise HTTPException(status_code=500, detail="Internal server error")
+    return None
 
 
 @app.get("/languages", tags=["info"])
@@ -835,7 +837,8 @@ async def consciousness_score(text: str, current_user: dict = Depends(get_curren
         )
         return {"phi": round(phi, 4), "is_conscious": phi > 2.0, "text": text, "report": report}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=safe_error_detail(e, 500))
+    return None
 
 
 # ── Billing ───────────────────────────────────────────────────────────────────
@@ -1054,3 +1057,4 @@ async def error_docs(error_code: str):
         }
     except ValueError:
         raise HTTPException(status_code=404, detail=f"Error code '{error_code}' not found")
+    return None
