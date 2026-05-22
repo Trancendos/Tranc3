@@ -55,14 +55,19 @@ def safe_error_detail(
 ) -> str:
     """Return a safe, user-facing error message for HTTP responses.
 
-    In production, this always returns a generic message based on the
-    status code, never exposing the exception details.  In development,
-    it includes a truncated version of the error for debugging, but
-    still strips potentially sensitive information like file paths.
+    Always returns a generic, non-revealing message based on the status
+    code.  The raw exception message is NEVER included in the return
+    value — it is only logged server-side with a reference ID so
+    developers can correlate client reports with server logs.
+
+    This prevents CWE-209 (Information Exposure Through an Exception):
+    even in development mode we avoid leaking internal details (file
+    paths, SQL queries, stack traces) because APIs are often exposed
+    to untrusted networks even during testing.
 
     Args:
         exc: The original exception (optional). If provided, its message
-            is logged server-side but never sent to the client in production.
+            is logged server-side but never sent to the client.
         status_code: The HTTP status code being returned.
         log_reference: If True, log the real error server-side with a
             reference ID for correlation.
@@ -70,37 +75,21 @@ def safe_error_detail(
     Returns:
         A safe string suitable for inclusion in an HTTP response body.
     """
+    import uuid
+
+    ref_id = uuid.uuid4().hex[:8]
+    safe_msg = _SAFE_MESSAGES.get(status_code, "An error occurred.")
+
     if exc is not None and log_reference:
-        # Log the real error server-side for debugging
-        import uuid
-        ref_id = uuid.uuid4().hex[:8]
-        # Use WARNING for 4xx client errors, ERROR for 5xx server errors
+        # Log the real error server-side for debugging — NEVER in the response
         log_fn = logger.warning if status_code < 500 else logger.error
         log_fn(
             "Error ref=%s status=%d: %s: %s",
             ref_id, status_code, type(exc).__name__, exc,
         )
-        if _IS_PROD:
-            return f"{_SAFE_MESSAGES.get(status_code, 'An error occurred.')} (ref: {ref_id})"
-    elif _IS_PROD:
-        return _SAFE_MESSAGES.get(status_code, "An error occurred.")
+        return f"{safe_msg} (ref: {ref_id})"
 
-    # Development mode: include truncated error but sanitize file paths
-    if exc is not None:
-        raw_msg = str(exc)
-        # Strip absolute file paths (common in Python tracebacks)
-        import re
-        sanitized = re.sub(
-            r'(?:/home/|/usr/|/opt/|/var/|/etc/|/tmp/|C:\\)\S+',
-            '[PATH]',
-            raw_msg,
-        )
-        # Truncate to prevent oversized responses
-        if len(sanitized) > 200:
-            sanitized = sanitized[:200] + "..."
-        return sanitized
-
-    return _SAFE_MESSAGES.get(status_code, "An error occurred.")
+    return f"{safe_msg} (ref: {ref_id})"
 
 
 class SafeHTTPException(HTTPException):

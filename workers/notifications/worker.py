@@ -28,6 +28,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from shared_core.error_handlers import safe_error_detail
 from shared_core.url_validation import SSRFError, validate_webhook_url
 
 # ---------------------------------------------------------------------------
@@ -493,9 +494,9 @@ async def send_notification(req: NotificationRequest):
             return {"ok": False, "notification_id": req.notification_id, "status": "failed"}
 
     except Exception as e:
-        db.update_status(req.notification_id, NotificationStatus.failed, error=str(e))
+        db.update_status(req.notification_id, NotificationStatus.failed, error=safe_error_detail(e, 500))
         logger.error("Notification dispatch error: %s", e)
-        return {"ok": False, "notification_id": req.notification_id, "status": "failed", "error": str(e)}
+        return {"ok": False, "notification_id": req.notification_id, "status": "failed", "error": safe_error_detail(e, 500)}
 
 
 # ---------------------------------------------------------------------------
