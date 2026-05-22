@@ -46,7 +46,7 @@ def _agent_runtime_cls():
 def _get_agent_registry():
     """Get the shared agent registry from spark_phase5_tools."""
     try:
-        from src.mcp.spark_phase5_tools import _agents
+        from src.mcp.spark_phase5_tools import _agents  # codeql[py/cyclic-import]
         return _agents
     except Exception:
         return {}
@@ -87,7 +87,7 @@ class AgentCreateNode:
         self.logger = logging.getLogger(f"{__name__}.AgentCreateNode.{_cid}")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult
+        from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
         t0 = time.monotonic()
         cfg = _get_cfg(self.config)
 
@@ -151,7 +151,7 @@ class AgentRunStepNode:
         self.logger = logging.getLogger(f"{__name__}.AgentRunStepNode.{_cid}")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult
+        from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
         t0 = time.monotonic()
         cfg = _get_cfg(self.config)
 
@@ -202,7 +202,7 @@ class AgentGoalNode:
         self.logger = logging.getLogger(f"{__name__}.AgentGoalNode.{_cid}")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult
+        from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
         t0 = time.monotonic()
         cfg = _get_cfg(self.config)
 
@@ -261,7 +261,7 @@ class AgentReflectNode:
         self.logger = logging.getLogger(f"{__name__}.AgentReflectNode.{_cid}")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult
+        from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
         t0 = time.monotonic()
         cfg = _get_cfg(self.config)
 
@@ -320,7 +320,7 @@ class AgentDecomposeNode:
         self.logger = logging.getLogger(f"{__name__}.AgentDecomposeNode.{_cid}")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult
+        from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
         t0 = time.monotonic()
         cfg = _get_cfg(self.config)
 
@@ -386,7 +386,7 @@ def register_phase5_nodes() -> int:
     # Phase 4's registry is stored in nodes.py as _PHASE4_NODE_REGISTRY
     # We'll also update it directly
     try:
-        from src.workflow.nodes import _PHASE4_NODE_REGISTRY
+        from src.workflow.nodes import _PHASE4_NODE_REGISTRY  # codeql[py/cyclic-import]
         return extend_node_registry(_PHASE4_NODE_REGISTRY)
     except Exception as exc:
         logger.warning("Could not register Phase 5 nodes: %s", exc)
