@@ -23,7 +23,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.auth.dependencies import get_current_user  # noqa: F401  # intentional top-level import
+from src.auth.dependencies import get_current_user  # codeql[py/cyclic-import]
 
 from .tools import registry
 

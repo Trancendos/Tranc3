@@ -96,7 +96,7 @@ def get_current_user(
 
     # Try DB-backed manager (imported lazily to avoid circular import)
     try:
-        import api as _api
+        import api as _api  # codeql[py/cyclic-import]
         mgr = getattr(_api, "db_user_manager", None)
         if mgr:
             user = mgr.get_user(username)
