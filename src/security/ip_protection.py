@@ -11,6 +11,8 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set
 
+from shared_core.sanitize import sanitize_for_log
+
 logger = logging.getLogger(__name__)
 
 _IP_KEY = os.getenv("IP_PROTECTION_KEY", os.getenv("SECRET_KEY", "tranc3-ip-key"))
@@ -37,7 +39,7 @@ def validate_file_header(content: str, path: str) -> bool:
     """Check that a file contains the required FID header."""
     if REQUIRED_HEADER_PATTERN.search(content):
         return True
-    logger.warning(f"IP_PROTECTION: Missing FID header in {path}")
+    logger.warning("IP_PROTECTION: Missing FID header in %s", sanitize_for_log(path))
     return False
 
 

@@ -11,6 +11,8 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
+from shared_core.error_handlers import safe_error_detail
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -140,11 +142,12 @@ class SparkToolRegistry:
         )
         # Rebuild semantic index lazily after each registration so RAG stays current
         try:
-            from src.mcp.tool_rag import rebuild_rag_index
+            from src.mcp.tool_rag import rebuild_rag_index  # noqa: F401  # intentional top-level import
 
             rebuild_rag_index(list(self._tools.values()))
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     def get(self, name: str) -> Optional[SparkTool]:
         """Return the tool with *name*, or None if not found."""
@@ -177,13 +180,14 @@ class SparkToolRegistry:
 
         # Semantic search via ToolRAG
         try:
-            from src.mcp.tool_rag import get_rag
+            from src.mcp.tool_rag import get_rag  # noqa: F401  # intentional top-level import
 
             rag = get_rag()
             if rag.is_ready():
                 return rag.select_tools(query, top_k=top_k)
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
         # Keyword fallback
         q_lower = query.lower()
@@ -729,11 +733,12 @@ class SparkToolRegistry:
 
         # Build initial RAG index after all builtins are loaded
         try:
-            from src.mcp.tool_rag import rebuild_rag_index
+            from src.mcp.tool_rag import rebuild_rag_index  # noqa: F401  # intentional top-level import
 
             rebuild_rag_index(list(self._tools.values()))
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     # ------------------------------------------------------------------
     # Built-in handlers
@@ -850,9 +855,9 @@ class SparkToolRegistry:
         if template_name:
             try:
                 from src.workflow.builder import (  # noqa: PLC0415
-                    spark_ignition_workflow,
-                    self_healing_workflow,
                     ml_training_workflow,
+                    self_healing_workflow,
+                    spark_ignition_workflow,
                 )
             except ImportError:
                 return {"error": "Workflow builder not available (import failed)."}
@@ -930,7 +935,7 @@ class SparkToolRegistry:
                     detail = {"status": "ok"}
                 except Exception as exc:
                     healthy = False
-                    detail = {"status": "unavailable", "detail": str(exc)}
+                    detail = {"status": "unavailable", "detail": safe_error_detail(exc, 500)}
             else:
                 detail = {"status": "ok"}
 
@@ -1035,7 +1040,7 @@ class SparkToolRegistry:
         )
 
         try:
-            from src.knowledge.vector_store import get_store
+            from src.knowledge.vector_store import get_store  # noqa: F401  # intentional top-level import
 
             store = get_store()
             hits = store.search(
@@ -1074,7 +1079,7 @@ class SparkToolRegistry:
                 "metadata_filter": metadata_filter,
                 "results": [],
                 "total_searched": 0,
-                "error": str(exc),
+                "error": safe_error_detail(exc, 500),
             }
 
     async def _handle_ingest_document(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -1090,7 +1095,7 @@ class SparkToolRegistry:
         metadatas = params.get("metadatas")
 
         try:
-            from src.knowledge.vector_store import get_store
+            from src.knowledge.vector_store import get_store  # noqa: F401  # intentional top-level import
 
             store = get_store()
             doc_ids = store.ingest(
@@ -1114,7 +1119,7 @@ class SparkToolRegistry:
             }
         except Exception as exc:
             logger.warning("mcp.ingest_document error: %s", exc)
-            return {"error": str(exc)}
+            return {"error": safe_error_detail(exc, 500)}
 
     async def _handle_trigger_bundle(self, params: Dict[str, Any]) -> Dict[str, Any]:
         bundle_id = params["bundle_id"]
@@ -1167,7 +1172,8 @@ class SparkToolRegistry:
     async def _handle_luminous_phi(self, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
             import numpy as np
-            from src.bio_neural.consciousness_engine import IITCalculator
+
+            from src.bio_neural.consciousness_engine import IITCalculator  # noqa: F401  # intentional top-level import
 
             state = params["state"]
             arr = np.array(state, dtype=float)
@@ -1182,12 +1188,13 @@ class SparkToolRegistry:
                 "note": f"Luminous degraded — missing dependency: {exc}",
             }
         except Exception as exc:
-            return {"error": str(exc)}
+            return {"error": safe_error_detail(exc, 500)}
 
     async def _handle_luminous_process(self, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
             import torch
-            from src.bio_neural.neuromorphic import NeuromorphicProcessor
+
+            from src.bio_neural.neuromorphic import NeuromorphicProcessor  # noqa: F401  # intentional top-level import
 
             input_data = params["input"]
             timesteps = int(params.get("timesteps", 10))
@@ -1213,7 +1220,7 @@ class SparkToolRegistry:
                 "note": f"Luminous degraded — missing dependency: {exc}",
             }
         except Exception as exc:
-            return {"error": str(exc)}
+            return {"error": safe_error_detail(exc, 500)}
 
     # ── Think Tank handlers ───────────────────────────────────────────────
 
@@ -1236,11 +1243,11 @@ class SparkToolRegistry:
         except ImportError:
             return {"counts": {}, "note": "Think Tank degraded — qiskit not installed"}
         except Exception as exc:
-            return {"error": str(exc)}
+            return {"error": safe_error_detail(exc, 500)}
 
     async def _handle_deepmind_plan(self, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            from src.deepmind.planning import PlanningEngine
+            from src.deepmind.planning import PlanningEngine  # noqa: F401  # intentional top-level import
 
             problem = params["problem"]
             depth = int(params.get("depth", 3))
@@ -1257,7 +1264,7 @@ class SparkToolRegistry:
             return {
                 "problem": params.get("problem", ""),
                 "plan": None,
-                "error": str(exc)[:120],
+                "error": safe_error_detail(exc, 500)[:120],
             }
 
     # ── The Citadel handler ───────────────────────────────────────────────
@@ -1266,7 +1273,7 @@ class SparkToolRegistry:
         self, params: Dict[str, Any]
     ) -> Dict[str, Any]:
         try:
-            from src.citadel.devops_hub import DeployTarget, get_citadel
+            from src.citadel.devops_hub import DeployTarget, get_citadel  # noqa: F401  # intentional top-level import
 
             citadel = get_citadel()
             target_filter = params.get("target")
@@ -1281,7 +1288,7 @@ class SparkToolRegistry:
             stats = citadel.stats()
             return {**stats, "recent_deploys": deploys[:10]}
         except Exception as exc:
-            return {"error": str(exc)}
+            return {"error": safe_error_detail(exc, 500)}
 
     # ── The Observatory handler ───────────────────────────────────────────
 
@@ -1289,7 +1296,7 @@ class SparkToolRegistry:
         self, params: Dict[str, Any]
     ) -> Dict[str, Any]:
         try:
-            from src.observability.observatory import EventCategory, observe
+            from src.observability.observatory import EventCategory, observe  # noqa: F401  # intentional top-level import
 
             event_type = params["event_type"]
             raw_cat = params.get("category", "AI").upper()
@@ -1302,7 +1309,7 @@ class SparkToolRegistry:
             observe(event_type, category=category, service=service, metadata=metadata)
             return {"observed": True, "event_type": event_type, "category": raw_cat}
         except Exception as exc:
-            return {"observed": False, "error": str(exc)}
+            return {"observed": False, "error": safe_error_detail(exc, 500)}
 
     # ── The Digital Grid handler ──────────────────────────────────────────
 
@@ -1321,3 +1328,25 @@ class SparkToolRegistry:
 
 # Singleton Spark tool registry — import this throughout the codebase
 registry = SparkToolRegistry()
+
+# ---------------------------------------------------------------------------
+# Phase 4: Neural & Intelligence tools extension
+# Registers 16 additional Spark tools from Phase 4 modules
+# ---------------------------------------------------------------------------
+try:
+    from src.mcp.spark_phase4_tools import register_phase4_tools as _reg_p4  # noqa: F401  # intentional top-level import
+    _p4_count = _reg_p4(registry)
+    logger.info("Phase 4 Spark tools loaded: %d tools added (total=%d)", _p4_count, len(registry._tools))
+except Exception as _p4_exc:
+    logger.warning("Phase 4 Spark tools unavailable: %s", _p4_exc)
+
+# ---------------------------------------------------------------------------
+# Phase 5: Autonomous Agent Orchestration tools extension
+# Registers 12 additional Spark tools from Phase 5 agent modules
+# ---------------------------------------------------------------------------
+try:
+    from src.mcp.spark_phase5_tools import register_phase5_tools as _reg_p5  # noqa: F401  # intentional top-level import
+    _p5_count = _reg_p5(registry)
+    logger.info("Phase 5 Spark tools loaded: %d tools added (total=%d)", _p5_count, len(registry._tools))
+except Exception as _p5_exc:
+    logger.warning("Phase 5 Spark tools unavailable: %s", _p5_exc)

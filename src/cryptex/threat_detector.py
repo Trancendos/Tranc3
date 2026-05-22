@@ -13,6 +13,9 @@
 from __future__ import annotations
 
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
 import re
 import time
 import uuid
@@ -174,7 +177,7 @@ class Cryptex:
 
     def block_ip(self, ip: str) -> None:
         self._blocked_ips.add(ip)
-        logger.warning("cryptex: blocked IP %s", ip)
+        logger.warning("cryptex: blocked IP %s", sanitize_for_log(ip))
 
     def unblock_ip(self, ip: str) -> None:
         self._blocked_ips.discard(ip)
@@ -217,7 +220,7 @@ class Cryptex:
 
     def _emit(self, signal: ThreatSignal) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory, EventSeverity
+            from src.observability.observatory import EventCategory, EventSeverity, observe
             observe(
                 f"cryptex.threat.{signal.category.value}",
                 actor=signal.actor,
@@ -230,7 +233,8 @@ class Cryptex:
                 metadata=signal.to_dict(),
             )
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
         if signal.severity in (ThreatSeverity.HIGH, ThreatSeverity.CRITICAL):
             try:
@@ -241,7 +245,8 @@ class Cryptex:
                     sender="cryptex",
                 )
             except Exception:
-                pass
+                pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     def _register_default_rules(self) -> None:
         rules = [

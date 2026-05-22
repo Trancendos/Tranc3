@@ -1,11 +1,14 @@
 # src/bio_neural/consciousness_engine.py
 # TRANC3 Full Consciousness Engine (IIT-based)
 
+import logging
+from typing import Any, Dict, List, Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-from typing import Any, Dict, List, Tuple
-import logging
+
+from shared_core.sanitize import sanitize_for_log
 
 try:
     from scipy.stats import entropy as _scipy_entropy
@@ -58,7 +61,7 @@ class IITCalculator:
 
             return float(phi)
         except Exception as e:
-            logger.warning(f"Phi calculation failed: {e}")
+            logger.warning("Phi calculation failed: %s", sanitize_for_log(e))
             return 0.0
 
     def _system_entropy(self, state: np.ndarray) -> float:

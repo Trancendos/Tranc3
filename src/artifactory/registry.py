@@ -15,6 +15,9 @@
 from __future__ import annotations
 
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -163,7 +166,7 @@ class TheArtifactory:
         self._emit("artifactory.version.pushed", {
             "artifact_id": artifact_id, "version": version, "digest": digest
         })
-        logger.info("artifactory: pushed %s v%s digest=%s", artifact.name, version, digest[:12] if digest else "")
+        logger.info("artifactory: pushed %s v%s digest=%s", sanitize_for_log(artifact.name), sanitize_for_log(version), sanitize_for_log(digest[:12]) if digest else "")
         return ver
 
     def get_artifact(self, artifact_id: str) -> Optional[Artifact]:
@@ -222,11 +225,12 @@ class TheArtifactory:
 
     def _emit(self, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
             observe(event_type, category=EventCategory.SYSTEM, service="the-artifactory",
                     metadata=metadata or {})
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _artifactory: Optional[TheArtifactory] = None

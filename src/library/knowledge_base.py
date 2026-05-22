@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import logging
+
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -160,7 +161,7 @@ class Library:
 
     def _emit_observatory_event(self, art: Article, event_type: str) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
             observe(
                 event_type,
                 actor=art.author,
@@ -170,7 +171,8 @@ class Library:
                 metadata={"title": art.title, "tags": art.tags},
             )
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     def _seed_platform_articles(self) -> None:
         """Seed initial platform documentation articles."""

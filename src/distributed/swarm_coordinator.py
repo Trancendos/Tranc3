@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional  # noqa: E402
 
 import aiohttp  # noqa: E402
 
+from shared_core.sanitize import sanitize_for_log
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
 
 
@@ -46,7 +47,7 @@ class SwarmCoordinator:
         try:
             return await self._coordinate_swarm(problem)
         except Exception as e:
-            logger.warning(f"Swarm reasoning failed: {e}")
+            logger.warning("Swarm reasoning failed: %s", sanitize_for_log(e))
             return None
 
     async def _coordinate_swarm(self, problem: Dict[str, Any]) -> Dict[str, Any]:

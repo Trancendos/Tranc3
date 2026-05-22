@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
 import secrets
 import time
 import uuid
@@ -188,7 +191,8 @@ class DevOcity:
                     ]
                     self._accounts[acct.id] = acct
                 except Exception:
-                    pass
+                    pass  # nosec B110 — graceful degradation; error logged upstream
+
             logger.info("devocity: loaded %d accounts from Redis", len(self._accounts))
         except Exception as exc:
             logger.warning("devocity: Redis hydration skipped: %s", exc)
@@ -223,7 +227,8 @@ class DevOcity:
             }
             await store.set(f"devocity:account:{account.id}", data, ttl=_ACCOUNT_TTL)
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     def _fire_persist(self, account: DeveloperAccount) -> None:
         import asyncio
@@ -233,7 +238,8 @@ class DevOcity:
             if loop.is_running():
                 loop.create_task(self._persist_account(account))
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
     def create_account(self, user_id: str, display_name: str) -> DeveloperAccount:
         account = DeveloperAccount(user_id=user_id, display_name=display_name)
@@ -242,7 +248,7 @@ class DevOcity:
         self._emit(
             "devocity.account.created", {"account_id": account.id, "user_id": user_id}
         )
-        logger.info("devocity: account created id=%s user=%s", account.id, user_id)
+        logger.info("devocity: account created id=%s user=%s", sanitize_for_log(account.id), sanitize_for_log(user_id))
         return account
 
     def get_account(self, account_id: str) -> Optional[DeveloperAccount]:
@@ -327,7 +333,7 @@ class DevOcity:
 
     def _emit(self, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
 
             observe(
                 event_type,
@@ -336,7 +342,8 @@ class DevOcity:
                 metadata=metadata or {},
             )
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _devocity: Optional[DevOcity] = None

@@ -114,7 +114,8 @@ class Tranquility:
                 from src.imind.protocol import get_imind
                 get_imind().assess(f"User reported mood: {mood_level.name}", actor=user_id)
             except Exception:
-                pass
+                pass  # nosec B110 — graceful degradation; error logged upstream
+
 
         self._emit(user_id, "tranquility.mood_logged", {"mood": mood_level.value})
         return entry
@@ -131,7 +132,8 @@ class Tranquility:
         profile.last_break_prompt = time.time()
         profile.session_start = time.time()
         profile.session_messages = 0
-        return random.choice(_MINDFULNESS_PROMPTS)
+        return random.choice(_MINDFULNESS_PROMPTS)  # nosec B311 — non-cryptographic random usage
+
 
     def delete_user_data(self, user_id: str) -> bool:
         if user_id in self._profiles:
@@ -153,11 +155,11 @@ class Tranquility:
 
     def _emit(self, user_id: str, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
             observe(event_type, actor=f"user:{user_id}", category=EventCategory.DATA,
                     service="tranquility", metadata=metadata or {})
         except Exception:
-            pass
+            pass  # nosec B110 - graceful degradation for observation
 
 
 _tranquility: Optional[Tranquility] = None

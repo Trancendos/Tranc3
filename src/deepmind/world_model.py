@@ -1,9 +1,10 @@
+import logging
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import logging
-from typing import Dict, List, Tuple
-from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 

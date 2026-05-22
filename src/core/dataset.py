@@ -2,11 +2,14 @@
 # MultilingualDataset — Gap G2 + Brainwriting R1 action
 
 import json
-import os
 import logging
+import os
 from typing import Dict, List, Optional
-from torch.utils.data import Dataset
+
 import torch
+from torch.utils.data import Dataset
+
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +55,7 @@ class MultilingualDataset(Dataset):
             logger.warning("No data files found — generating synthetic samples")
             self.samples = self._generate_synthetic()
 
-        logger.info(f"MultilingualDataset: {len(self.samples)} samples, split={split}")
+        logger.info("MultilingualDataset: %s samples, split=%s", sanitize_for_log(len(self.samples)), sanitize_for_log(split))
 
     def _load_data(self, data_dir: str):
         for lang in self.languages:
@@ -66,7 +69,7 @@ class MultilingualDataset(Dataset):
                                 self.samples.append(json.loads(line))
                             except json.JSONDecodeError:
                                 continue
-                logger.info(f"Loaded {lang} data from {path}")
+                logger.info("Loaded %s data from %s", sanitize_for_log(lang), sanitize_for_log(path))
 
     def _generate_synthetic(self) -> List[Dict]:
         """Generate minimal synthetic training samples for each personality."""

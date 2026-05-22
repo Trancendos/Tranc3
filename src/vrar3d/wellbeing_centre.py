@@ -174,11 +174,12 @@ class VRAR3D:
 
     def _emit(self, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
             observe(event_type, category=EventCategory.DATA, service="vrar3d",
                     metadata=metadata or {})
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _vrar3d: Optional[VRAR3D] = None

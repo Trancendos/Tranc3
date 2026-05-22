@@ -10,6 +10,9 @@
 from __future__ import annotations
 
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
@@ -55,9 +58,10 @@ class Resonate:
         parts = []
 
         if sensitivity_level in ("critical", "high"):
-            parts.append(random.choice(_EMPATHY_PREFIXES))
+            parts.append(random.choice(_EMPATHY_PREFIXES))  # nosec B311 — non-cryptographic random usage
+
         elif sensitivity_level == "medium" or (user_mood is not None and user_mood <= 2):
-            parts.append(random.choice(_EMPATHY_PREFIXES[:2]))
+            parts.append(random.choice(_EMPATHY_PREFIXES[:2]))  # nosec B311 — non-cryptographic empathy variation
 
         parts.append(response)
 
@@ -70,7 +74,7 @@ class Resonate:
                 "You don't have to face this alone. 💙"
             )
         elif sensitivity_level in ("medium", "high"):
-            parts.append(f"\n\n*{random.choice(_VALIDATION_PHRASES)}*")
+            parts.append(f"\n\n*{random.choice(_VALIDATION_PHRASES)}*")  # nosec B311 — non-cryptographic phrase variation
 
         return "\n\n".join(p.strip() for p in parts if p.strip())
 
@@ -80,7 +84,7 @@ class Resonate:
         In production this would trigger a notification to the support team.
         """
         try:
-            from src.observability.observatory import observe, EventCategory, EventSeverity
+            from src.observability.observatory import EventCategory, EventSeverity, observe
             observe(
                 "resonate.human_escalation",
                 actor=f"user:{user_id}",
@@ -91,8 +95,8 @@ class Resonate:
                 metadata={"context_preview": context[:100]},
             )
         except Exception:
-            pass
-        logger.warning("resonate: human escalation triggered for user=%s", user_id)
+            pass  # nosec B110 — observation failure must not block escalation
+        logger.warning("resonate: human escalation triggered for user=%s", sanitize_for_log(user_id))
         return {
             "escalated": True,
             "message": "A support team member has been notified. You are not alone.",

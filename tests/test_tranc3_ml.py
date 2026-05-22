@@ -9,7 +9,8 @@ import asyncio
 import sys
 import os
 import pytest
-import torch
+
+torch = pytest.importorskip("torch", reason="torch not installed — ML tests skipped")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -339,7 +340,6 @@ class TestTokenizerModelIntegration:
 
 class TestNoExternalAPI:
     def test_advanced_model_no_transformers(self):
-        import importlib
         import src.core.advanced_model as mod
         src_path = mod.__file__
         with open(src_path) as f:

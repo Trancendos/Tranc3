@@ -91,12 +91,13 @@ class Tranc3Tokenizer:
     def _train_with_hf(self, texts: List[str]) -> "Tranc3Tokenizer":
         from tokenizers import Tokenizer
         from tokenizers.models import BPE
-        from tokenizers.trainers import BpeTrainer
         from tokenizers.pre_tokenizers import ByteLevel
+        from tokenizers.trainers import BpeTrainer
 
         special_list = list(SPECIAL_TOKENS.keys())
 
-        tokenizer = Tokenizer(BPE(unk_token="<unk>"))
+        tokenizer = Tokenizer(BPE(unk_token="<unk>"))  # nosec B106 — false positive: <unk> is a tokenizer token, not a password
+
         tokenizer.pre_tokenizer = ByteLevel(add_prefix_space=False)
 
         trainer = BpeTrainer(

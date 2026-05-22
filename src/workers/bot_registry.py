@@ -27,7 +27,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-from src.workers.pool import JobSpec, JobType, JobResult, WorkerPool, get_pool
+from src.workers.pool import JobResult, JobSpec, JobType, WorkerPool, get_pool
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class Bot(ABC):
     @abstractmethod
     def _build_payload(self, **kwargs) -> Dict[str, Any]:
         """Convert keyword arguments into the job payload dict."""
-        ...
+        # ...  # removed: statement had no effect
 
     def _unwrap(self, result: JobResult) -> Dict[str, Any]:
         if result.result:

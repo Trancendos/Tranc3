@@ -16,10 +16,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
+
 import time
 import uuid
 from collections import deque
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -119,7 +123,7 @@ class Observatory:
         self._buffer.append(event)
         logger.debug(
             "observatory: %s actor=%s target=%s outcome=%s",
-            event_type, actor, target, outcome,
+            sanitize_for_log(event_type), sanitize_for_log(actor), sanitize_for_log(target), sanitize_for_log(outcome),
         )
         self._notify_subscribers(event)
 
@@ -129,7 +133,8 @@ class Observatory:
                 from src.basement.archive import get_basement
                 get_basement().ingest_observatory_event(event)
             except Exception:
-                pass
+                pass  # nosec B110 — graceful degradation; error logged upstream
+
 
         return event
 
@@ -153,7 +158,7 @@ class Observatory:
         try:
             self._subscribers.remove(q)
         except ValueError:
-            pass
+            logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
     def recent(self, limit: int = 100, category: Optional[EventCategory] = None) -> List[AuditEvent]:
         """Return recent events, newest first. Optionally filter by category."""

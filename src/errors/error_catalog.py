@@ -2,10 +2,10 @@
 # FID: TRANC3-ERR-001 | Version: 1.0.0 | Module: errors
 # TRANC3 Error Catalog — structured error codes, messages, guidance, and self-healing actions
 
-from enum import Enum
-from dataclasses import dataclass
-from typing import Optional, Dict
 import logging
+from dataclasses import dataclass
+from enum import Enum
+from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +17,18 @@ logger = logging.getLogger(__name__)
 
 class ErrorCode(str, Enum):
     # Auth
-    AUTH_TOKEN_EXPIRED = "TRANC3-AUTH-001"
-    AUTH_TOKEN_INVALID = "TRANC3-AUTH-002"
-    AUTH_TOKEN_MISSING = "TRANC3-AUTH-003"
+    AUTH_TOKEN_EXPIRED = "TRANC3-AUTH-001"  # nosec B105 — false positive: not a password
+
+    AUTH_TOKEN_INVALID = "TRANC3-AUTH-002"  # nosec B105 — false positive: not a password
+
+    AUTH_TOKEN_MISSING = "TRANC3-AUTH-003"  # nosec B105 — false positive: not a password
+
     AUTH_USER_NOT_FOUND = "TRANC3-AUTH-004"
-    AUTH_WRONG_PASSWORD = "TRANC3-AUTH-005"
+    AUTH_WRONG_PASSWORD = "TRANC3-AUTH-005"  # nosec B105 — false positive: not a password
+
     AUTH_ACCOUNT_DISABLED = "TRANC3-AUTH-006"
-    AUTH_WEAK_PASSWORD = "TRANC3-AUTH-007"
+    AUTH_WEAK_PASSWORD = "TRANC3-AUTH-007"  # nosec B105 — false positive: not a password
+
     AUTH_USER_EXISTS = "TRANC3-AUTH-008"
 
     # Rate limiting

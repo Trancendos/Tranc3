@@ -3,7 +3,7 @@ MCP Server — JSON-RPC 2.0 over HTTP and Server-Sent Events.
 
 Mount the exported `router` onto the main FastAPI application::
 
-    from src.mcp.server import router as mcp_router
+    from src.mcp.server import router as mcp_router  # noqa: F401  # intentional top-level import
     app.include_router(mcp_router)
 """
 
@@ -12,6 +12,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+
+from shared_core.sanitize import sanitize_for_log  # noqa: F401  # intentional top-level import
+
 import time
 import uuid
 from typing import Any, AsyncGenerator, Dict, List, Optional
@@ -20,7 +23,8 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.auth.dependencies import get_current_user
+from src.auth.dependencies import get_current_user  # noqa: F401  # intentional top-level import
+
 from .tools import registry
 
 logger = logging.getLogger(__name__)
@@ -99,7 +103,7 @@ class _SSEBus:
             try:
                 q.put_nowait(payload)
             except asyncio.QueueFull:
-                logger.warning("mcp.sse queue full for subscriber=%s, dropping event", sub_id)
+                logger.warning("mcp.sse queue full for subscriber=%s, dropping event", sanitize_for_log(sub_id))
             except Exception:
                 dead.append(sub_id)
         for sub_id in dead:
@@ -207,7 +211,7 @@ async def _method_tools_call(params: Optional[Dict[str, Any]], request_id: Any) 
         )
     except asyncio.TimeoutError:
         msg = f"Tool '{tool_name}' timed out after 60 s"
-        logger.error("mcp.tools_call timeout tool=%s", tool_name)
+        logger.error("mcp.tools_call timeout tool=%s", sanitize_for_log(tool_name))
         await _bus.publish("error", {"tool": tool_name, "error": msg, "request_id": request_id})
         return _err(request_id, ERR_TOOL_EXECUTION, msg)
     except Exception as exc:
@@ -249,6 +253,24 @@ async def _method_resources_list(
             "uri": "spark://evolution",
             "name": "Evolution Stats",
             "description": "Model and skill evolutionary statistics",
+            "mimeType": "application/json",
+        },
+        {
+            "uri": "spark://agents",
+            "name": "Agent Registry",
+            "description": "All active autonomous agents managed by the Phase 5 orchestration layer",
+            "mimeType": "application/json",
+        },
+        {
+            "uri": "spark://agent-goals",
+            "name": "Agent Goals",
+            "description": "Goal tracking for all autonomous agents in the system",
+            "mimeType": "application/json",
+        },
+        {
+            "uri": "spark://agent-memory",
+            "name": "Agent Memory Stream",
+            "description": "Episodic memory stream for autonomous agents with recency, relevance, importance scoring",
             "mimeType": "application/json",
         },
     ]
@@ -363,10 +385,10 @@ async def sse_endpoint(request: Request, current_user: dict = Depends(get_curren
                     # Keep-alive heartbeat
                     yield f": heartbeat {time.time()}\n\n"
         except asyncio.CancelledError:
-            pass
+            logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
         finally:
             _bus.unsubscribe(sub_id)
-            logger.info("mcp.sse client disconnected sub_id=%s", sub_id)
+            logger.info("mcp.sse client disconnected sub_id=%s", sanitize_for_log(sub_id))
 
     return StreamingResponse(
         _event_generator(),

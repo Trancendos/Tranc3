@@ -8,7 +8,7 @@ version = "0.1.0"
 requires-python = ">=3.11"
 description = "Trancendos AI Platform — Luminous inference engine + MCP server"
 
-# ── Ruff (lint + format) ──────────────────────────────────────────────────────
+# ── Ruff (lint + format) ──────────────────────────────────────────────
 [tool.ruff]
 line-length = 100
 target-version = "py311"
@@ -24,15 +24,13 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*"  = ["S", "B"]
 "scripts/*" = ["T201"]   # print() allowed in scripts
-# api.py intentionally imports after load_dotenv() (env must be loaded before internal modules)
-# B904 (raise-without-from-cause) is pre-existing; address separately.
 "api.py"   = ["E402", "B904"]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 
-# ── mypy ─────────────────────────────────────────────────────────────────────
+# ── mypy ──────────────────────────────────────────────────────────────
 [tool.mypy]
 python_version = "3.11"
 ignore_missing_imports = true
@@ -40,7 +38,7 @@ no_error_summary = true
 show_error_codes = true
 warn_unused_ignores = false
 
-# ── pytest ────────────────────────────────────────────────────────────────────
+# ── pytest ────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
@@ -53,17 +51,37 @@ markers = [
   "chaos: fault injection tests",
 ]
 
-# ── bandit ────────────────────────────────────────────────────────────────────
+# ── bandit ─────────────────────────────────────────────────────────────
 [tool.bandit]
 targets = ["src", "api.py"]
 exclude_dirs = ["tests", "scripts"]
-severity = "medium"
-confidence = "medium"
+severity = "low"
+confidence = "low"
 skips = [
   "B101",  # assert statements (acceptable in non-production paths)
 ]
 
-# ── coverage ──────────────────────────────────────────────────────────────────
+# ── semgrep ────────────────────────────────────────────────────────────────
+[tool.semgrep]
+config = "auto"
+
+# ── safety ─────────────────────────────────────────────────────────────────
+[tool.safety]
+ignore = [
+  { id = "PYSEC-2025-210", reason = "Profiler not used in Tranc3" },
+  { id = "PYSEC-2025-194", reason = "TorchScript JIT not used in Tranc3" },
+  { id = "PYSEC-2025-196", reason = "Flatbuffer loading not used in Tranc3" },
+  { id = "PYSEC-2025-195", reason = "Local-only; mitigated by input sanitization" },
+  { id = "PYSEC-2025-193", reason = "Local-only; mitigated by input sanitization" },
+  { id = "PYSEC-2025-192", reason = "Local-only; mitigated by input sanitization" },
+  { id = "PYSEC-2026-139", reason = "Mitigated by weights_only=True on all torch.load()" },
+  { id = "PYSEC-2025-191", reason = "Disputed; mkldnn not used in Tranc3" },
+  { id = "PYSEC-2025-197", reason = "Local-only; no direct CUDA allocator interaction" },
+  { id = "PYSEC-2025-189", reason = "Remote-capable but high complexity; profiler not used" },
+  { id = "PYSEC-2025-190", reason = "Local-only; quantized sigmoid not used in Tranc3" },
+]
+
+# ── coverage ──────────────────────────────────────────────────────────
 [tool.coverage.run]
 source = ["src"]
 omit = ["tests/*", "scripts/*", "*/migrations/*"]
@@ -72,7 +90,7 @@ omit = ["tests/*", "scripts/*", "*/migrations/*"]
 fail_under = 40
 show_missing = true
 
-# ── pip-audit ─────────────────────────────────────────────────────────────────
+# ── pip-audit ─────────────────────────────────────────────────────────
 [tool.pip-audit]
 strict = false
 desc = true

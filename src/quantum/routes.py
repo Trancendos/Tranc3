@@ -11,22 +11,26 @@ from typing import Any, Dict
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
 
+from shared_core.error_handlers import safe_error_detail
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/thinktank", tags=["think-tank"])
 
 
 def _quantum_status() -> Dict[str, Any]:
     try:
+        import qiskit  # noqa: F401 — check availability  # type: ignore[import-untyped]
         return {"quantum_core": "available", "backend": "qiskit-aer"}
-    except Exception as exc:
-        return {"quantum_core": "degraded", "note": str(exc)[:80]}
+    except ImportError:
+        return {"quantum_core": "unavailable", "note": "qiskit not installed"}
 
 
 def _deepmind_status() -> Dict[str, Any]:
     try:
+        from src.deepmind.planning import PlanningEngine  # noqa: F401 — check availability
         return {"mcts": "available"}
-    except Exception as exc:
-        return {"mcts": "degraded", "note": str(exc)[:80]}
+    except ImportError:
+        return {"mcts": "unavailable", "note": "deepmind module not installed"}
 
 
 @router.get("/status")
@@ -65,11 +69,11 @@ async def quantum_simulate(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         return {"qubits": qubits, "shots": shots, "counts": dict(counts)}
     except ImportError:
         return JSONResponse(
-            {"error": "Qiskit not installed — install qiskit qiskit-aer"},
+            {"error": "Required dependency not available"},
             status_code=503,
         )
     except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
+        return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
 
 
 @router.post("/deepmind/plan")
@@ -94,5 +98,5 @@ async def deepmind_plan(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         return {
             "problem": body.get("problem", ""),
             "plan": None,
-            "error": str(exc)[:120],
+            "error": safe_error_detail(exc, 500),
         }

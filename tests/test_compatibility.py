@@ -132,7 +132,6 @@ class TestMCPProtocolVersionCompatibility:
 
 class TestPydanticV2Compatibility:
     def test_spark_tool_is_pydantic_v2_model(self, caplog):
-        from src.mcp.tools import SparkTool
         import pydantic
         _log.info("compat.pydantic pydantic_version=%s", pydantic.__version__)
         assert int(pydantic.__version__.split(".")[0]) >= 2, "Pydantic v2+ required"
@@ -191,7 +190,7 @@ class TestEnumValueCompatibility:
 
     def test_error_code_values_are_strings(self, caplog):
         from src.errors.error_catalog import ErrorCode
-        bad = [e for e in ErrorCode if not isinstance(e.value, str)]
+        bad = [e for e in list(ErrorCode) if not isinstance(e.value, str)]
         _log.info("compat.enum error_code bad=%d", len(bad))
         assert not bad, f"Non-string ErrorCode values: {bad}"
 

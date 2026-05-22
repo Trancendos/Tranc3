@@ -1,12 +1,13 @@
 # src/core/advanced_model.py
 # TRANC3 Core AI Engine - Full Implementation
 
+import logging
+import math
+from typing import Dict, Optional, Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Dict, Tuple
-import math
-import logging
 
 logger = logging.getLogger(__name__)
 

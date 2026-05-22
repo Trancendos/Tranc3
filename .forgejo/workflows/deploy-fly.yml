@@ -46,7 +46,7 @@ jobs:
             UPSTASH_REDIS_REST_URL="${{ secrets.UPSTASH_REDIS_REST_URL }}" \
             UPSTASH_REDIS_REST_TOKEN="${{ secrets.UPSTASH_REDIS_REST_TOKEN }}" \
             CITADEL_WEBHOOK_SECRET="${{ secrets.CITADEL_WEBHOOK_SECRET }}" \
-            CF_ACCOUNT_ID="e0214028cb64d31232f5662548a55e4e" \
+            CF_ACCOUNT_ID="${{ secrets.CF_ACCOUNT_ID }}" \
             ENVIRONMENT="production" \
             TRANC3_BACKEND_URL="https://trancendos-backend.fly.dev" \
             TRANC3_BOTS_URL="https://trancendos-bots.fly.dev" \

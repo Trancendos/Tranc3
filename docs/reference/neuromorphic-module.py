@@ -1,3 +1,5 @@
+# Reference documentation — imports are illustrative
+# ruff: noqa: F401,F821
 # src/bio_neural/neuromorphic.py (COMPLETE)
 
 # ============================================================

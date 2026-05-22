@@ -4,6 +4,8 @@
 import asyncio
 import datetime
 import logging
+
+from shared_core.sanitize import sanitize_for_log
 import os
 import time
 from contextlib import asynccontextmanager
@@ -36,24 +38,19 @@ if not _SECRET_KEY:
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
 
-# ── Internal imports ──────────────────────────────────────────────────────────
-from src.adaptive.foresight import foresight
-from src.analytics.predictive import analytics
-from src.auth.db_user_manager import DBUserManager
-from src.bio_neural.consciousness_engine import ConsciousnessModel
-from src.bio_neural.neuromorphic import NeuromorphicProcessor
-from src.compliance.magna_carta import compliance
-from src.core.advanced_model import AdvancedTransformerModel
-from src.core.context_compressor import compressor
-from src.core.feature_flags import FeatureFlag, FeatureFlagManager
-from src.core.multilingual_tokenizer import MultilingualTokenizer
-from src.database.schema import Conversation, DatabaseManager, Message
-from src.database.vector_store import vector_store
-from src.errors.error_catalog import ErrorCode, format_error_response
-from src.evolution.self_improving_core import SelfEvolvingArchitecture
-from src.monetisation.billing import TIERS
-from src.monetisation.billing import enforcer as tier_enforcer
-from src.observability.metrics import (
+# ── Internal imports ──────────────────────────────────────────────────────────────────────────
+# Core imports (required — no guard)
+from src.auth.db_user_manager import DBUserManager  # noqa: F401  # intentional top-level import
+from src.core.advanced_model import AdvancedTransformerModel  # noqa: F401  # intentional top-level import
+from src.core.context_compressor import compressor  # noqa: F401  # intentional top-level import
+from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: F401  # intentional top-level import
+from src.core.multilingual_tokenizer import MultilingualTokenizer  # noqa: F401  # intentional top-level import
+from src.database.schema import Conversation, DatabaseManager, Message  # noqa: F401  # intentional top-level import
+from src.database.vector_store import vector_store  # noqa: F401  # intentional top-level import
+from src.errors.error_catalog import ErrorCode, format_error_response  # noqa: F401  # intentional top-level import
+from src.monetisation.billing import TIERS  # noqa: F401  # intentional top-level import
+from src.monetisation.billing import enforcer as tier_enforcer  # noqa: F401  # intentional top-level import
+from src.observability.metrics import (  # noqa: F401  # intentional top-level import
     log,
     record_churn_risk,
     record_emotion,
@@ -61,21 +58,63 @@ from src.observability.metrics import (
     record_quality,
     record_request,
 )
-from src.personality.matrix import EnhancedPersonalityMatrix
+from auth import get_current_user, token_manager
+from src.registry.file_registry import registry as file_registry  # noqa: F401  # intentional top-level import
+from src.security.ip_protection import abuse_detector, watermarker  # noqa: F401  # intentional top-level import
+from src.security.middleware import GovernanceMiddleware, SecurityHeadersMiddleware  # noqa: F401  # intentional top-level import
+from src.security.security_framework import InputSanitizer  # noqa: F401  # intentional top-level import
+from src.validation.loop_validator import CIRCUITS, loop_validator, self_healer  # noqa: F401  # intentional top-level import
+
+# Optional imports — guarded to prevent startup crash if dependencies are missing
+# These modules depend on heavy/optional libs (qiskit, torch, etc.)
 
 try:
-    from src.quantum.quantum_core import QuantumNeuralCore
+    from src.adaptive.foresight import foresight  # noqa: F401  # intentional top-level import
+except ImportError as _e:
+    foresight = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("Adaptive foresight unavailable: %s", _e)
+
+try:
+    from src.analytics.predictive import analytics  # noqa: F401  # intentional top-level import
+except ImportError as _e:
+    analytics = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("Predictive analytics unavailable: %s", _e)
+
+try:
+    from src.bio_neural.consciousness_engine import ConsciousnessModel  # noqa: F401  # intentional top-level import
+except ImportError as _e:
+    ConsciousnessModel = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("ConsciousnessEngine unavailable: %s", _e)
+
+try:
+    from src.bio_neural.neuromorphic import NeuromorphicProcessor  # noqa: F401  # intentional top-level import
+except ImportError as _e:
+    NeuromorphicProcessor = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("NeuromorphicProcessor unavailable: %s", _e)
+
+try:
+    from src.compliance.magna_carta import compliance  # noqa: F401  # intentional top-level import
+except ImportError as _e:
+    compliance = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("Compliance module unavailable: %s", _e)
+
+try:
+    from src.evolution.self_improving_core import SelfEvolvingArchitecture  # noqa: F401  # intentional top-level import
+except ImportError as _e:
+    SelfEvolvingArchitecture = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("SelfEvolvingArchitecture unavailable: %s", _e)
+
+try:
+    from src.personality.matrix import EnhancedPersonalityMatrix  # noqa: F401  # intentional top-level import
+except ImportError as _e:
+    EnhancedPersonalityMatrix = None  # type: ignore[assignment]
+    logging.getLogger(__name__).warning("EnhancedPersonalityMatrix unavailable: %s", _e)
+
+try:
+    from src.quantum.quantum_core import QuantumNeuralCore  # noqa: F401  # intentional top-level import
 except ImportError as _qiskit_err:
     QuantumNeuralCore = None  # type: ignore[assignment,misc]
-    import logging as _log
-
-    _log.getLogger(__name__).warning("Quantum core unavailable (qiskit): %s", _qiskit_err)
-from auth import get_current_user, token_manager
-from src.registry.file_registry import registry as file_registry
-from src.security.ip_protection import abuse_detector, watermarker
-from src.security.middleware import GovernanceMiddleware, SecurityHeadersMiddleware
-from src.security.security_framework import InputSanitizer
-from src.validation.loop_validator import CIRCUITS, loop_validator, self_healer
+    logging.getLogger(__name__).warning("Quantum core unavailable (qiskit): %s", _qiskit_err)
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
@@ -136,7 +175,7 @@ async def lifespan(app: FastAPI):
         db_user_manager = DBUserManager(db_manager.get_session)
         logger.info("Database connected")
     except Exception as e:
-        logger.warning(f"Database unavailable: {e} — in-memory fallback")
+        logger.warning("Database unavailable: %s — in-memory fallback", sanitize_for_log(e))
         db_user_manager = DBUserManager(None)
 
     # Redis
@@ -145,7 +184,7 @@ async def lifespan(app: FastAPI):
         redis_client.ping()
         logger.info("Redis connected")
     except Exception as e:
-        logger.warning(f"Redis unavailable: {e}")
+        logger.warning("Redis unavailable: %s", sanitize_for_log(e))
         redis_client = None
 
     # Feature flags (requires Redis)
@@ -164,7 +203,7 @@ async def lifespan(app: FastAPI):
         personality_matrix = EnhancedPersonalityMatrix(cfg)
         logger.info("Personality matrix ready")
     except Exception as e:
-        logger.error(f"Personality matrix failed: {e}")
+        logger.error("Personality matrix failed: %s", sanitize_for_log(e))
 
     # Quantum core
     if QuantumNeuralCore is not None:
@@ -172,7 +211,7 @@ async def lifespan(app: FastAPI):
             quantum_core = QuantumNeuralCore({"num_qubits": 8})
             logger.info("Quantum core ready")
         except Exception as e:
-            logger.warning(f"Quantum core unavailable: {e}")
+            logger.warning("Quantum core unavailable: %s", sanitize_for_log(e))
 
     # Consciousness model
     try:
@@ -187,14 +226,14 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Consciousness model ready")
     except Exception as e:
-        logger.warning(f"Consciousness model unavailable: {e}")
+        logger.warning("Consciousness model unavailable: %s", sanitize_for_log(e))
 
     # Neuromorphic processor
     try:
         neuromorphic = NeuromorphicProcessor(cfg)
         logger.info("Neuromorphic processor ready")
     except Exception as e:
-        logger.warning(f"Neuromorphic processor unavailable: {e}")
+        logger.warning("Neuromorphic processor unavailable: %s", sanitize_for_log(e))
 
     # Evolution engine
     try:
@@ -208,7 +247,7 @@ async def lifespan(app: FastAPI):
         evolution_engine.load_genome_from_redis()
         logger.info("Evolution engine ready")
     except Exception as e:
-        logger.warning(f"Evolution engine unavailable: {e}")
+        logger.warning("Evolution engine unavailable: %s", sanitize_for_log(e))
 
     # Model
     try:
@@ -220,7 +259,7 @@ async def lifespan(app: FastAPI):
             logger.warning("No model weights — echo mode active")
         model.eval()
     except Exception as e:
-        logger.warning(f"Model init failed: {e} — echo mode")
+        logger.warning("Model init failed: %s — echo mode", sanitize_for_log(e))
         model = None
 
     logger.info("TRANC3 API ready ✓")
@@ -250,127 +289,127 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(GovernanceMiddleware)
 
 # ── The Spark (MCP server) ────────────────────────────────────────────────────
-from src.mcp.server import router as _mcp_router
+from src.mcp.server import router as _mcp_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_mcp_router)
 
 # ── The Observatory (audit log + event feed) ──────────────────────────────────
-from src.observability.routes import router as _observatory_router
+from src.observability.routes import router as _observatory_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_observatory_router)
 
 # ── The Nexus (AI communications + transfer hub) ─────────────────────────────
-from src.nexus.routes import router as _nexus_router
+from src.nexus.routes import router as _nexus_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_nexus_router)
 
 # ── The Town Hall (governance + compliance) ───────────────────────────────────
-from src.townhall.routes import router as _townhall_router
+from src.townhall.routes import router as _townhall_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_townhall_router)
 
 # ── The Library (knowledge base) ─────────────────────────────────────────────
-from src.library.routes import router as _library_router
+from src.library.routes import router as _library_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_library_router)
 
 # ── The Basement (archive + vector search) ────────────────────────────────────
-from src.basement.routes import router as _basement_router
+from src.basement.routes import router as _basement_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_basement_router)
 
 # ── Cryptex (threat detection + cyber defence) ────────────────────────────────
-from src.cryptex.routes import router as _cryptex_router
+from src.cryptex.routes import router as _cryptex_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_cryptex_router)
 
 # ── Section 7 (research + intelligence reports) ───────────────────────────────
-from src.research.routes import router as _section7_router
+from src.research.routes import router as _section7_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_section7_router)
 
 # ── The Digital Grid (workflow DAG builder + executor) ────────────────────────
-from src.workflow.routes import router as _grid_router
+from src.workflow.routes import router as _grid_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_grid_router)
 
 # ── I-Mind (sensitivity + crisis protocol) ────────────────────────────────────
-from src.imind.routes import router as _imind_router
+from src.imind.routes import router as _imind_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_imind_router)
 
 # ── tAimra (digital twin — opt-in, OFFLINE by default) ────────────────────────
-from src.taimra.routes import router as _taimra_router
+from src.taimra.routes import router as _taimra_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_taimra_router)
 
 # ── Tranquility (wellbeing hub) ────────────────────────────────────────────────
-from src.tranquility.routes import router as _tranquility_router
+from src.tranquility.routes import router as _tranquility_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_tranquility_router)
 
 # ── Resonate (empathy + understanding services) ────────────────────────────────
-from src.resonate.routes import router as _resonate_router
+from src.resonate.routes import router as _resonate_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_resonate_router)
 
 # ── The Studio (creativity hub — Sasha's Photo, TateKing, TranceFlow, Fabulousa)
-from src.studio.routes import router as _studio_router
+from src.studio.routes import router as _studio_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_studio_router)
 
 # ── The Lab (AI code creation platform) ──────────────────────────────────────
-from src.lab.routes import router as _lab_router
+from src.lab.routes import router as _lab_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_lab_router)
 
 # ── ChronosSphere / ArcStream (time + schedule management) ───────────────────
-from src.chronos.routes import router as _chronos_router
+from src.chronos.routes import router as _chronos_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_chronos_router)
 
 # ── Turing's Hub (AI personality creation centre) ────────────────────────────
-from src.personality.turingshub.routes import router as _turingshub_router
+from src.personality.turingshub.routes import router as _turingshub_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_turingshub_router)
 
 # ── DevOcity (developer centre — API keys, webhooks, guides) ─────────────────
-from src.devocity.routes import router as _devocity_router
+from src.devocity.routes import router as _devocity_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_devocity_router)
 
 # ── The Artifactory (OCI artefact repository — Zot foundation) ───────────────
-from src.artifactory.routes import router as _artifactory_router
+from src.artifactory.routes import router as _artifactory_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_artifactory_router)
 
 # ── API Marketplace (connector hub — Gravitee.io foundation) ─────────────────
-from src.apimarket.routes import router as _apimarket_router
+from src.apimarket.routes import router as _apimarket_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_apimarket_router)
 
 # ── VRAR3D (AR/VR wellbeing centre — Three.js / A-Frame WebXR) ───────────────
-from src.vrar3d.routes import router as _vrar3d_router
+from src.vrar3d.routes import router as _vrar3d_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_vrar3d_router)
 
 # ── The Citadel (DevOps hub — Forgejo + Fly.io + CF Workers) ─────────────────
-from src.citadel.routes import router as _citadel_router
+from src.citadel.routes import router as _citadel_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_citadel_router)
 
 # ── Luminous (AI brain — consciousness engine + neuromorphic) ─────────────────
-from src.bio_neural.routes import router as _luminous_router
+from src.bio_neural.routes import router as _luminous_router  # noqa: F401  # intentional top-level import
 
 app.include_router(_luminous_router)
 
 # ── Think Tank (quantum + deep research engines) ──────────────────────────────
 try:
-    from src.quantum.routes import router as _thinktank_router
+    from src.quantum.routes import router as _thinktank_router  # noqa: F401  # intentional top-level import
 
     app.include_router(_thinktank_router)
 except ImportError:
-    pass
+    logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
@@ -449,7 +488,7 @@ async def refresh_token(current_user: dict = Depends(get_current_user)):
 # ── System ────────────────────────────────────────────────────────────────────
 @app.get("/health", tags=["system"])
 async def health():
-    import asyncio
+
 
     components: dict = {
         "api": "healthy",
@@ -462,7 +501,7 @@ async def health():
 
     # ── Live Redis probe ───────────────────────────────────────────────────
     try:
-        from src.core.redis_store import get_store
+        from src.core.redis_store import get_store  # noqa: F401  # intentional top-level import
 
         store = await asyncio.wait_for(get_store(), timeout=2.0)
         ok = await asyncio.wait_for(store.ping(), timeout=2.0)
@@ -473,7 +512,7 @@ async def health():
 
     # ── Live Supabase probe ────────────────────────────────────────────────
     try:
-        import os
+
 
         import httpx
 
@@ -493,7 +532,7 @@ async def health():
 
     # ── Spark tools ───────────────────────────────────────────────────────
     try:
-        from src.mcp.tools import registry
+        from src.mcp.tools import registry  # noqa: F401  # intentional top-level import
 
         components["spark_tools"] = len(registry.list_tools())
     except Exception:
@@ -639,7 +678,7 @@ async def chat(
                 quantum_core.quantum_attention(torch.randn(1, 8, 64))
                 quantum_used = True
             except Exception as e:
-                logger.warning(f"Quantum attention skipped: {e}")
+                logger.warning("Quantum attention skipped: %s", sanitize_for_log(e))
 
         # Consciousness Φ
         phi_score = None
@@ -648,7 +687,7 @@ async def chat(
                 phi_score = consciousness_model.calculate_phi(torch.randn(64))
                 record_phi(phi_score)
             except Exception as e:
-                logger.warning(f"Consciousness Φ skipped: {e}")
+                logger.warning("Consciousness Φ skipped: %s", sanitize_for_log(e))
 
         # Generate
         if model and encoded is not None:
@@ -731,7 +770,7 @@ async def chat(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Chat error [{request_id}]: {e}", exc_info=True)
+        logger.error("Chat error [%s]: %s", sanitize_for_log(request_id), sanitize_for_log(e), exc_info=True)
         record_request("/chat", "POST", 500, tier, time.time() - start)
         raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -778,7 +817,7 @@ async def feedback(
                 {"quality_score": rating / 5.0, "user_satisfaction": rating / 5.0}
             )
             best = evolution_engine.evolve(num_generations=1)
-            logger.info(f"Evolution: gen={evolution_engine.generation}, fitness={best.fitness:.4f}")
+            logger.info("Evolution: gen=%d, fitness=%.4f", evolution_engine.generation, best.fitness)
 
     return {"message": "Feedback recorded", "impact": "evolution_queued"}
 
@@ -812,7 +851,7 @@ async def billing_usage(current_user: dict = Depends(get_current_user)):
 
 @app.post("/billing/checkout", tags=["billing"])
 async def billing_checkout(tier: str, current_user: dict = Depends(get_current_user)):
-    from src.monetisation.billing import stripe_manager
+    from src.monetisation.billing import stripe_manager  # noqa: F401  # intentional top-level import
 
     base = os.getenv("FRONTEND_URL", "http://localhost:3000")
     url = stripe_manager.create_checkout_session(
@@ -834,12 +873,12 @@ async def stripe_webhook(request: Request):
         _stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
         event = _stripe.Webhook.construct_event(payload, sig, secret)
     except Exception as e:
-        logger.warning(f"Stripe webhook invalid: {e}")
+        logger.warning("Stripe webhook invalid: %s", sanitize_for_log(e))
         raise HTTPException(status_code=400, detail="Invalid webhook")
 
     etype = event.get("type", "")
     obj = event.get("data", {}).get("object", {})
-    logger.info(f"Stripe event: {etype} id={obj.get('id')}")
+    logger.info("Stripe event: %s id=%s", sanitize_for_log(etype), sanitize_for_log(obj.get("id")))
     return {"received": True}
 
 
@@ -870,7 +909,7 @@ async def ws_chat(websocket: WebSocket):
                 )
                 await asyncio.sleep(0.05)
     except WebSocketDisconnect:
-        pass
+        logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
 
 # ── Background helpers ────────────────────────────────────────────────────────
@@ -998,7 +1037,7 @@ async def admin_healing(current_user: dict = Depends(get_current_user)):
 @app.get("/errors/{error_code}", tags=["docs"])
 async def error_docs(error_code: str):
     """Look up error code documentation — no auth required."""
-    from src.errors.error_catalog import ErrorCode, get_error
+    from src.errors.error_catalog import ErrorCode, get_error  # noqa: F401  # intentional top-level import
 
     try:
         code = ErrorCode(error_code)

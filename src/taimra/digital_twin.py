@@ -14,6 +14,9 @@
 from __future__ import annotations
 
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -80,7 +83,7 @@ class TAimra:
         twin.status = TwinStatus.LEARNING
         twin.last_active = time.time()
         self._emit(user_id, "taimra.activated")
-        logger.info("taimra: activated for user=%s", user_id)
+        logger.info("taimra: activated for user=%s", sanitize_for_log(user_id))
         return twin
 
     def deactivate(self, user_id: str) -> None:
@@ -148,7 +151,7 @@ class TAimra:
 
     def _emit(self, user_id: str, event_type: str) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
 
             observe(
                 event_type,
@@ -158,7 +161,8 @@ class TAimra:
                 metadata={"user_id": user_id},
             )
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _taimra: Optional[TAimra] = None

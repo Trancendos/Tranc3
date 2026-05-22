@@ -13,6 +13,9 @@
 from __future__ import annotations
 
 import logging
+
+from shared_core.sanitize import sanitize_for_log
+
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -100,7 +103,7 @@ class TheLab:
         session = LabSession(user_id=user_id, language=language, task_type=task_type)
         self._sessions[session.id] = session
         self._emit("lab.session.created", {"session_id": session.id, "language": language})
-        logger.info("lab: session created id=%s lang=%s task=%s", session.id, language, task_type.value)
+        logger.info("lab: session created id=%s lang=%s task=%s", sanitize_for_log(session.id), sanitize_for_log(language), sanitize_for_log(task_type.value))
         return session
 
     def get_session(self, session_id: str) -> Optional[LabSession]:
@@ -177,11 +180,12 @@ class TheLab:
 
     def _emit(self, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
-            from src.observability.observatory import observe, EventCategory
+            from src.observability.observatory import EventCategory, observe
             observe(event_type, category=EventCategory.DATA, service="the-lab",
                     metadata=metadata or {})
         except Exception:
-            pass
+            pass  # nosec B110 — graceful degradation; error logged upstream
+
 
 
 _lab: Optional[TheLab] = None

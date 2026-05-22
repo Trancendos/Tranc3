@@ -185,14 +185,14 @@ Get JWT token.
 ```json
 {
   "username": "user@example.com",
-  "password": "password123"
+  "password": "<your-secure-password>"
 }
 ```
 
 **Response:**
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "access_token": "<your-jwt-access-token>",
   "token_type": "bearer",
   "expires_in": 3600
 }

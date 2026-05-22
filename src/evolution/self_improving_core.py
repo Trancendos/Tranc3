@@ -2,11 +2,14 @@
 # TRANC3 Self-Evolution Engine
 
 import logging
-import numpy as np
-import torch
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional
+
+import numpy as np
+import torch
+
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -156,9 +159,10 @@ class SelfEvolvingArchitecture:
     def _persist_genome(self, individual: Individual):
         """Save best genome to Redis for cross-restart continuity."""
         try:
-            import redis as _redis
             import json
             import os
+
+            import redis as _redis
 
             r = _redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
             r.set(
@@ -174,14 +178,15 @@ class SelfEvolvingArchitecture:
                 ex=86400 * 7,
             )  # 7-day TTL
         except Exception as e:
-            logger.debug(f"Genome persist skipped: {e}")
+            logger.debug("Genome persist skipped: %s", sanitize_for_log(e))
 
     def load_genome_from_redis(self) -> bool:
         """Restore best genome from Redis on startup."""
         try:
-            import redis as _redis
             import json
             import os
+
+            import redis as _redis
 
             r = _redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
             data = r.get("tranc3:evolution:best_genome")
@@ -195,7 +200,7 @@ class SelfEvolvingArchitecture:
                 )
                 return True
         except Exception as e:
-            logger.debug(f"Genome restore skipped: {e}")
+            logger.debug("Genome restore skipped: %s", sanitize_for_log(e))
         return False
 
     def get_best_genome(self) -> torch.Tensor:

@@ -8,6 +8,7 @@ from typing import Dict, List
 
 import torch
 
+from shared_core.sanitize import sanitize_for_log
 from src.distributed.intelligence_blockchain import (
     HomomorphicCrypto,
     IntelligenceBlockchain,
@@ -76,11 +77,11 @@ class DistributedIntelligenceSwarm:
 
     async def share_insight(self, thought: Dict):
         """Broadcast an insight to all registered nodes."""
-        logger.debug(f"Sharing insight to {len(self.nodes)} nodes")
+        logger.debug("Sharing insight to %s nodes", sanitize_for_log(len(self.nodes)))
 
     def register_node(self, node: SwarmNode):
         self.nodes[node.node_id] = node
-        logger.info(f"Node registered: {node.node_id} ({node.specialization})")
+        logger.info("Node registered: %s (%s)", sanitize_for_log(node.node_id), sanitize_for_log(node.specialization))
 
     def federated_learning_step(self, local_model: torch.nn.Module) -> torch.nn.Module:
         """Privacy-preserving federated learning step."""

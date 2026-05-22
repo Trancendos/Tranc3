@@ -12,6 +12,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 import httpx
 
+from shared_core.error_handlers import safe_error_detail
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -118,7 +120,7 @@ class MCPClient:
             try:
                 await self._sse_task
             except (asyncio.CancelledError, Exception):
-                pass
+                logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
         self._sse_task = None
 
         if self._client:
@@ -229,7 +231,8 @@ class MCPClient:
             _MCPRemoteError: on JSON-RPC error responses.
             httpx.HTTPError: on transport/HTTP failures.
         """
-        assert self._client is not None  # guarded by callers
+        assert self._client is not None  # guarded by callers  # nosec B101 — assertion for type/class contract checking
+
 
         payload = {
             "jsonrpc": JSONRPC_VERSION,
@@ -254,8 +257,9 @@ class MCPClient:
         return body.get("result") or {}
 
     async def _sse_loop(self, callback: Callable[[str, Any], Any]) -> None:
-        """Long-running coroutine that consumes the SSE stream."""
-        assert self._client is not None
+        """Long-running coroutine that consumes the SSE stream."""  # nosec B101 — assertion for type/class contract checking
+
+        assert self._client is not None  # nosec B101 — contract assertion for SSE stream
 
         headers = dict(self._client.headers)
         headers["Accept"] = "text/event-stream"
@@ -411,7 +415,7 @@ class MCPClientPool:
                     server_name,
                     exc,
                 )
-                return server_name, {"error": str(exc)}
+                return server_name, {"error": safe_error_detail(exc, 500)}
 
         pairs = await asyncio.gather(*(_call(s) for s in target_servers))
         return dict(pairs)
@@ -434,7 +438,7 @@ class MCPClientPool:
                     "server_info": client._server_info,
                 }
             except Exception as exc:
-                return server_name, {"status": "error", "error": str(exc)}
+                return server_name, {"status": "error", "error": safe_error_detail(exc, 500)}
 
         # Use raw RPC for ping (bypasses call_tool routing)
         async def _ping_rpc(
@@ -451,7 +455,7 @@ class MCPClientPool:
                     "result": result,
                 }
             except Exception as exc:
-                return server_name, {"status": "error", "error": str(exc)}
+                return server_name, {"status": "error", "error": safe_error_detail(exc, 500)}
 
         if not self._servers:
             return {

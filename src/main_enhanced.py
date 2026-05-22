@@ -6,9 +6,12 @@ import asyncio
 import logging
 import os
 import time
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
-import torch
+try:
+    import torch
+except ImportError:  # pragma: no cover — optional for CPU-only / test environments
+    torch = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +75,8 @@ class TRANC3Enhanced:
 
         # 2. Workflow executor
         try:
-            from src.workflow.executor import executor as workflow_executor, event_bus
+            from src.workflow.executor import event_bus
+            from src.workflow.executor import executor as workflow_executor
 
             self._subsystems["workflow_executor"] = workflow_executor
             self._subsystems["event_bus"] = event_bus
@@ -92,8 +96,8 @@ class TRANC3Enhanced:
         # 4. Self-healing monitor
         try:
             from src.healing.health_monitor import health_monitor
-            from src.healing.self_repair import repair_engine, config_tuner
             from src.healing.nanocode_bots import dispatcher
+            from src.healing.self_repair import config_tuner, repair_engine
 
             self._subsystems["health_monitor"] = health_monitor
             self._subsystems["repair_engine"] = repair_engine
@@ -155,10 +159,10 @@ class TRANC3Enhanced:
 
         # 8. Original 2060 systems
         try:
-            from src.quantum.quantum_core import QuantumNeuralCore
             from src.bio_neural.consciousness_engine import ConsciousnessModel
             from src.evolution.self_improving_core import SelfEvolvingArchitecture
             from src.holographic.memory_crystal import HolographicMemoryCrystal
+            from src.quantum.quantum_core import QuantumNeuralCore
 
             cfg = self._default_2060_config()
             self._subsystems["quantum"] = QuantumNeuralCore(cfg["quantum"])
@@ -286,7 +290,11 @@ class TRANC3Enhanced:
         result["duration_ms"] = round((time.time() - start) * 1000, 2)
         return result
 
-    def _encode(self, text: str) -> torch.Tensor:
+    def _encode(self, text: str):
+        """Encode text to tensor representation. Returns None if torch unavailable."""
+        if torch is None:  # pragma: no cover
+            tokens = [ord(c) % 768 for c in text[:768]]
+            return tokens
         tokens = [ord(c) % 768 for c in text[:768]]
         t = torch.tensor(tokens, dtype=torch.float32)
         if len(t) < 768:
