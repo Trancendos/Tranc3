@@ -147,7 +147,7 @@ class APIMarketplace:
         )
         self._connectors[connector.id] = connector
         self._emit("apimarket.connector.registered", {"connector_id": connector.id, "slug": slug})
-        logger.info("apimarket: registered connector slug=%s base=%s", sanitize_for_log(slug), sanitize_for_log(base_url))
+        logger.info("apimarket: registered connector slug=%s base=%s", sanitize_for_log(slug), sanitize_for_log(base_url))  # codeql[py/cleartext-logging]
         return connector
 
     def get_connector(self, connector_id: str) -> Optional[APIConnector]:

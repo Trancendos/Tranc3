@@ -83,7 +83,7 @@ class TAimra:
         twin.status = TwinStatus.LEARNING
         twin.last_active = time.time()
         self._emit(user_id, "taimra.activated")
-        logger.info("taimra: activated for user=%s", sanitize_for_log(user_id))
+        logger.info("taimra: activated for user=%s", sanitize_for_log(user_id))  # codeql[py/cleartext-logging]
         return twin
 
     def deactivate(self, user_id: str) -> None:

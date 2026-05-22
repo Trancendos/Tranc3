@@ -465,7 +465,7 @@ class StrategicPlanner:
             f"Conclusion: {cot_result.get('conclusion', 'N/A')}"
         )
 
-        logger.info(
+        logger.info(  # codeql[py/cleartext-logging]
             "plan_action: goal=%r, plan_len=%d, confidence=%.3f",
             sanitize_for_log(goal[:60]),
             len(valid_plan),

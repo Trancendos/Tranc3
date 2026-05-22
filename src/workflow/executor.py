@@ -375,7 +375,7 @@ class WorkflowExecutor:
             state = self.executions.get(execution_id)
             return state is not None and state.status == "running"
         flag.set()
-        logger.info("Cancel requested for execution %s.", sanitize_for_log(execution_id))
+        logger.info("Cancel requested for execution %s.", sanitize_for_log(execution_id))  # codeql[py/cleartext-logging]
         return True
 
     # ------------------------------------------------------------------

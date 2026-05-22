@@ -353,7 +353,7 @@ async def rpc_endpoint(request: Request, current_user: dict = Depends(get_curren
         result = await handler(params, req_id)
         return JSONResponse(content=result, status_code=200)
     except Exception as exc:
-        logger.exception("mcp.rpc unhandled error method=%s", method)
+        logger.exception("mcp.rpc unhandled error method=%s", sanitize_for_log(method))
         return JSONResponse(
             content=_err(req_id, ERR_INTERNAL_ERROR, f"Internal error: {type(exc).__name__}"),
             status_code=200,
@@ -543,5 +543,5 @@ async def handle_rpc(body: Dict[str, Any], enhanced: Any = None) -> Dict[str, An
     try:
         return await handler(params, rpc_id)
     except Exception as exc:
-        logger.exception("handle_rpc unhandled error method=%s", method)
+        logger.exception("handle_rpc unhandled error method=%s", sanitize_for_log(method))
         return _err(rpc_id, ERR_INTERNAL_ERROR, f"Internal error: {type(exc).__name__}: {exc}")
