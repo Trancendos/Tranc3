@@ -1,29 +1,61 @@
-# Tranc3 — Production Readiness (Continued)
+# Tranc3 — Comprehensive Forensic Assessment & Enhancement
 
-## Phase 13: Code Quality & Lint [DONE]
-- [x] Run ruff check --fix (357+ errors auto-fixed)
-- [x] Fix 16 B904 violations manually
-- [x] Fix test_tranc3_ml.py & test_full_suite.py (pytest.importorskip)
-- [x] Migrate infinity-void worker to lifespan pattern
-- [x] NPM dependency upgrades (0 vulnerabilities)
-- [x] All 966 tests pass, web builds with Vite 8
-- [x] PR #24 merged
+## Phase 1: Forensic Deep Dive Analysis
+- [x] Clone latest from GitHub and diff against local workspace
+- [x] Audit all source files for compilation errors, dead code, missing exports
+- [x] Audit shared_core Python modules for bugs, missing error handling, type safety
+- [x] Audit frontend React/TypeScript for issues (no significant issues found)
+- [x] Audit AI Gateway stack (gateway.py, types.py, all 4 providers)
+- [x] Audit Agent Runtime modules
+- [x] Audit API layer — CORS fixed, rate limiting and auth still needed
+- [x] Audit test coverage — identify untested modules and edge cases
+- [x] Audit security posture — secrets management, input validation, dependency vulnerabilities
+- [x] Audit documentation completeness and accuracy
 
-## Phase 14: CI/CD Validation [DONE]
-- [x] Verify Forgejo CI pipeline configuration (5 workflows reviewed)
-- [x] Verify pre-commit hooks work correctly
-- [x] Verify docker-compose files are valid
-- [x] Verify Dockerfile builds (reviewed — can't build without Docker daemon)
-- [x] Close PR #23 (dependabot) — superseded by PR #24
+### Identified Bugs & Issues (from forensic audit)
+- [x] Dead code: `return None` after `raise` in gateway.py (2x), openrouter.py (2x), huggingface.py (2x), ollama.py (2x)
+- [x] OllamaProvider references `done` field not in AIResponse — changed to `finish_reason`
+- [x] `import random` inside method bodies in enhanced_registry.py — moved to module-level
+- [x] `import hashlib` at bottom of sentinel.py — moved to top-level
+- [x] Unused `time.monotonic()` in gateway.py — now captures and reports elapsed ms
+- [x] `StorageFactory._sync_queue` not thread-safe — added threading.Lock()
+- [x] AuditLedger signing key weak — strengthened with PID+timestamp, added warning
+- [x] SentinelCheck.severity is string not enum — added SentinelSeverity enum
+- [x] Test failure test_health.py — converted to @pytest.mark.asyncio
+- [x] CORS `allow_origins=["*"]` — now env var based
+- [x] `import random` inside api_ecosystem.py — moved to module-level
+- [x] HybridStorageProvider.sync_to_cloud() never called automatically — added background asyncio sync
+- [x] Enhanced registry event log asymmetric trim (1000→500) — fixed to 1000→1000
 
-## Phase 15: Documentation & Deployment [DONE]
-- [x] Deployment runbook already exists (docs/DEPLOYMENT_RUNBOOK.md, 794 lines)
-- [x] Update README with final state (rewritten to reflect full platform)
-- [x] Verify .env.example is complete (added 30+ missing variables)
-- [x] Create git tag for release candidate (v2.1.0-rc1)
-- [x] Create GitHub release (https://github.com/Trancendos/Tranc3/releases/tag/v2.1.0-rc1)
+## Phase 2: GitHub Repository Intelligence
+- [x] Survey user's GitHub repos (50 repos listed)
+- [x] Examine key repos for reusable code, configs, patterns (shared-core, the-citadel, the-hive, secrets-portal)
+- [x] Check for existing CI/CD pipelines, Forgejo configs
+- [x] Check for existing infrastructure-as-code, Dockerfiles
 
-## Remaining (requires infrastructure access)
-- [ ] Deploy to staging environment
-- [ ] Run smoke tests against staging
-- [ ] Deploy to production
+## Phase 3: Research & Discovery
+- [x] Research zero-cost cloud tiers (Azure Free, GCP Always-Free, AWS Free Tier, Cloudflare, OCI)
+- [x] Research frontier AI orchestration (OpenRouter, Groq, DeepSeek, Qwen, HuggingFace)
+- [x] Research CI/CD zero-cost solutions (GitHub Actions free tier, Forgejo Actions)
+- [x] Research latest open-source observability, monitoring, and security tools
+- [x] Research AI agent frameworks and multi-agent orchestration patterns
+- [x] Research edge computing and CDN solutions (Cloudflare Workers, Deno Deploy)
+- [x] Compile research findings into RESEARCH_FINDINGS.md document
+
+## Phase 4: Remediation & Implementation
+- [x] Fix HybridStorageProvider — add background asyncio sync task
+- [x] Fix registry event log asymmetric trim (1000→500)
+- [x] Implement API authentication middleware (port from auth.py + JWT enforcement)
+- [x] Implement adaptive rate limiting middleware (port from the-citadel resilience-layer.ts)
+- [x] Implement request telemetry + trace propagation middleware
+- [x] Implement DefenseEngine in Python (port from the-citadel defense-engine.ts)
+- [x] Add zero-cost cloud provider adapters (Oracle Cloud, OCI Object Storage)
+- [x] Enhance AI gateway with multi-provider routing and zero-cost optimization
+- [x] Update AI gateway types.py — add GROQ and DEEPSEEK to ProviderName enum
+- [x] Update providers/__init__.py — export Groq and DeepSeek providers
+- [x] Update DEFAULT_TENANT_CONFIG and FREE_TIER_CONFIG to include Groq
+- [x] Add AI gateway API endpoints to api_ecosystem.py (model catalog, provider status)
+- [x] Implement proactive monitoring and alerting (HeartbeatAggregator ported from the-hive)
+- [x] Create RESEARCH_FINDINGS.md
+- [x] Create ARCHITECTURE_UPDATE.md
+- [x] Push all changes to GitHub branch

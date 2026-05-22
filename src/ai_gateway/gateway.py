@@ -307,7 +307,7 @@ class AIGateway:
         """Execute a provider call with optional latency limit."""
         import asyncio
 
-        time.monotonic()
+        start = time.monotonic()
 
         if max_latency_ms:
             try:
@@ -316,7 +316,10 @@ class AIGateway:
                     timeout=max_latency_ms / 1000.0,
                 )
             except asyncio.TimeoutError:
-                raise RuntimeError(f"Provider {provider.name} exceeded {max_latency_ms}ms latency") from None
+                elapsed_ms = (time.monotonic() - start) * 1000
+                raise RuntimeError(
+                    f"Provider {provider.name} exceeded {max_latency_ms}ms latency (took {elapsed_ms:.0f}ms)"
+                ) from None
         else:
             return await provider.complete(request)
         return None
