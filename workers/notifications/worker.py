@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sqlite3
 import threading
 import uuid
@@ -21,11 +22,13 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from shared_core.url_validation import SSRFError, validate_webhook_url
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -34,6 +37,15 @@ WORKER_PORT = 8008
 WORKER_NAME = "notifications-service"
 DB_PATH = Path(__file__).parent / "data" / "notifications.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+# Webhook domain allowlist — comma-separated domains from WEBHOOK_ALLOWED_DOMAINS env var.
+# If set, only these domains may receive webhook notifications.
+# If empty/unset, all domains passing SSRF validation are permitted.
+_WEBHOOK_ALLOWED_DOMAINS: Set[str] = {
+    d.strip().lower()
+    for d in os.environ.get("WEBHOOK_ALLOWED_DOMAINS", "").split(",")
+    if d.strip()
+}
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
@@ -325,8 +337,33 @@ class NotificationDispatcher:
 
     @staticmethod
     async def dispatch_webhook(url: str, payload: Dict[str, Any]) -> bool:
-        """Webhook dispatch — makes HTTP POST to configured URL."""
+        """Webhook dispatch — makes HTTP POST to a validated URL.
+
+        The URL is validated against SSRF protections before any network
+        request is made.  Only HTTPS URLs to public, non-reserved hosts
+        are permitted.  See shared_core.url_validation for details.
+        """
         import urllib.request
+        from urllib.parse import urlparse
+
+        # SSRF validation — blocks private IPs, metadata endpoints, non-HTTPS
+        try:
+            validate_webhook_url(url)
+        except SSRFError as e:
+            logger.warning("Webhook URL blocked by SSRF protection: %s", e)
+            return False
+
+        # Optional domain allowlist check
+        if _WEBHOOK_ALLOWED_DOMAINS:
+            parsed = urlparse(url)
+            hostname = (parsed.hostname or "").lower()
+            if hostname not in _WEBHOOK_ALLOWED_DOMAINS:
+                logger.warning(
+                    "Webhook domain '%s' not in allowlist: %s",
+                    hostname, _WEBHOOK_ALLOWED_DOMAINS,
+                )
+                return False
+
         try:
             data = json.dumps(payload).encode()
             req = urllib.request.Request(url, data=data, method="POST")
@@ -432,10 +469,19 @@ async def send_notification(req: NotificationRequest):
             success = await dispatcher.dispatch_push(req.user_id, req.subject, req.body, req.metadata)
         elif req.channel == NotificationChannel.webhook:
             webhook_url = req.metadata.get("webhook_url", "")
-            if webhook_url:
-                success = await dispatcher.dispatch_webhook(webhook_url, {
-                    "subject": req.subject, "body": req.body, "metadata": req.metadata,
-                })
+            if not webhook_url:
+                return {"ok": False, "reason": "webhook_url missing from metadata"}
+            # Validate webhook URL at the endpoint level (defense-in-depth)
+            try:
+                validate_webhook_url(webhook_url)
+            except SSRFError as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Webhook URL rejected: {e}",
+                )
+            success = await dispatcher.dispatch_webhook(webhook_url, {
+                "subject": req.subject, "body": req.body, "metadata": req.metadata,
+            })
         elif req.channel == NotificationChannel.in_app:
             success = await dispatcher.dispatch_in_app(req.user_id, req.subject, req.body, req.metadata)
 
