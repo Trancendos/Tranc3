@@ -1,61 +1,61 @@
-# Tranc3 — Comprehensive Forensic Assessment & Enhancement
+# Tranc3 — Naming Convention Repair, ID Registry & Adaptive Architecture
 
-## Phase 1: Forensic Deep Dive Analysis
-- [x] Clone latest from GitHub and diff against local workspace
-- [x] Audit all source files for compilation errors, dead code, missing exports
-- [x] Audit shared_core Python modules for bugs, missing error handling, type safety
-- [x] Audit frontend React/TypeScript for issues (no significant issues found)
-- [x] Audit AI Gateway stack (gateway.py, types.py, all 4 providers)
-- [x] Audit Agent Runtime modules
-- [x] Audit API layer — CORS fixed, rate limiting and auth still needed
-- [x] Audit test coverage — identify untested modules and edge cases
-- [x] Audit security posture — secrets management, input validation, dependency vulnerabilities
-- [x] Audit documentation completeness and accuracy
+## Phase 1: Naming Convention Audit & Repair [COMPLETE]
+- [x] Audit PLATFORM_ENTITIES.md for all naming inconsistencies
+- [x] Audit src/entities/platform.py for matching issues
+- [x] Fix tAImra → tAimra casing inconsistency (location vs Lead AI)
+- [x] Fix "The Digital Grid" vs "The DigitalGrid" inconsistency
+- [x] Standardize bot naming: all Title-Case-Bot format
+- [x] Resolve duplicate names across pillars (Wireframe, The Weaver, The Director)
+- [x] Decouple AI names from location names (The Nexus AI ≠ The Nexus location)
+- [x] Fix Guardian full title consistency (Marcus Magnolia vs Orb of Orisis)
+- [x] Ensure consistent capitalization and hyphenation across all entities
 
-### Identified Bugs & Issues (from forensic audit)
-- [x] Dead code: `return None` after `raise` in gateway.py (2x), openrouter.py (2x), huggingface.py (2x), ollama.py (2x)
-- [x] OllamaProvider references `done` field not in AIResponse — changed to `finish_reason`
-- [x] `import random` inside method bodies in enhanced_registry.py — moved to module-level
-- [x] `import hashlib` at bottom of sentinel.py — moved to top-level
-- [x] Unused `time.monotonic()` in gateway.py — now captures and reports elapsed ms
-- [x] `StorageFactory._sync_queue` not thread-safe — added threading.Lock()
-- [x] AuditLedger signing key weak — strengthened with PID+timestamp, added warning
-- [x] SentinelCheck.severity is string not enum — added SentinelSeverity enum
-- [x] Test failure test_health.py — converted to @pytest.mark.asyncio
-- [x] CORS `allow_origins=["*"]` — now env var based
-- [x] `import random` inside api_ecosystem.py — moved to module-level
-- [x] HybridStorageProvider.sync_to_cloud() never called automatically — added background asyncio sync
-- [x] Enhanced registry event log asymmetric trim (1000→500) — fixed to 1000→1000
+## Phase 2: Universal ID Taxonomy Implementation [COMPLETE]
+- [x] Design 3-letter abbreviation system for all 43 locations
+- [x] Assign PID-XXX IDs for all locations/applications
+- [x] Assign AID-XXX-NN IDs for all Tier 3 Lead AIs + Tier 2 Primes + Tier 1 Sovereign
+- [x] Assign SID-XXX-NN IDs for all Tier 4 Agents
+- [x] Assign NID-XXX-NN IDs for all Tier 5 Bots
+- [x] Resolve collisions with contextual suffixes
+- [x] Create master ID registry JSON (src/config/id_registry.json)
+- [x] Create master ID registry CSV for spreadsheet use
 
-## Phase 2: GitHub Repository Intelligence
-- [x] Survey user's GitHub repos (50 repos listed)
-- [x] Examine key repos for reusable code, configs, patterns (shared-core, the-citadel, the-hive, secrets-portal)
-- [x] Check for existing CI/CD pipelines, Forgejo configs
-- [x] Check for existing infrastructure-as-code, Dockerfiles
+## Phase 3: Repaired Matrix Documentation [COMPLETE]
+- [x] Create docs/matrix.md with full repaired pillar-by-pillar tables
+- [x] Update PLATFORM_ENTITIES.md with repaired names and IDs
+- [x] Add ID fields to src/entities/platform.py dataclass
+- [x] Update src/entities/__init__.py exports
 
-## Phase 3: Research & Discovery
-- [x] Research zero-cost cloud tiers (Azure Free, GCP Always-Free, AWS Free Tier, Cloudflare, OCI)
-- [x] Research frontier AI orchestration (OpenRouter, Groq, DeepSeek, Qwen, HuggingFace)
-- [x] Research CI/CD zero-cost solutions (GitHub Actions free tier, Forgejo Actions)
-- [x] Research latest open-source observability, monitoring, and security tools
-- [x] Research AI agent frameworks and multi-agent orchestration patterns
-- [x] Research edge computing and CDN solutions (Cloudflare Workers, Deno Deploy)
-- [x] Compile research findings into RESEARCH_FINDINGS.md document
+## Phase 4: Adaptive Smart ZFS Storage Providers [COMPLETE]
+- [x] Implement SmartStorageProvider with environment-aware switching
+- [x] Implement ZFS provider (snapshots, replication, compression)
+- [x] Implement HybridProvider (local cache + cloud fallback)
+- [x] Implement MinIO local S3-compatible provider
+- [x] Implement Ceph distributed storage provider
+- [x] Add auto-detection logic (NAS → Hybrid → Cloud)
+- [x] Add zero-cost capacity monitoring and proactive tiering
+- [x] Create ZFS snapshot scripts
+- [x] Create ZFS replication scripts with compression
+- [x] Create MinIO lifecycle policy scripts
+- [x] Update docker-compose.yml with MinIO + monitoring stack
 
-## Phase 4: Remediation & Implementation
-- [x] Fix HybridStorageProvider — add background asyncio sync task
-- [x] Fix registry event log asymmetric trim (1000→500)
-- [x] Implement API authentication middleware (port from auth.py + JWT enforcement)
-- [x] Implement adaptive rate limiting middleware (port from the-citadel resilience-layer.ts)
-- [x] Implement request telemetry + trace propagation middleware
-- [x] Implement DefenseEngine in Python (port from the-citadel defense-engine.ts)
-- [x] Add zero-cost cloud provider adapters (Oracle Cloud, OCI Object Storage)
-- [x] Enhance AI gateway with multi-provider routing and zero-cost optimization
-- [x] Update AI gateway types.py — add GROQ and DEEPSEEK to ProviderName enum
-- [x] Update providers/__init__.py — export Groq and DeepSeek providers
-- [x] Update DEFAULT_TENANT_CONFIG and FREE_TIER_CONFIG to include Groq
-- [x] Add AI gateway API endpoints to api_ecosystem.py (model catalog, provider status)
-- [x] Implement proactive monitoring and alerting (HeartbeatAggregator ported from the-hive)
-- [x] Create RESEARCH_FINDINGS.md
-- [x] Create ARCHITECTURE_UPDATE.md
-- [x] Push all changes to GitHub branch
+## Phase 5: Vault Security Implementation [COMPLETE]
+- [x] Implement VaultSecretLoader with memory zeroization
+- [x] Implement PKCS#11 HSM integration module
+- [x] Implement append-only audit ledger for vault access
+- [x] Research and document YubiHSM 2 integration
+- [x] Research and document SoftHSM2 development fallback
+- [x] Create vault security documentation
+
+## Phase 6: Cross-Repo Intelligence & Research [COMPLETE]
+- [x] Survey Trancendos repos for reusable code and patterns
+- [x] Research latest ZFS strategies, HSM tools, and storage tech
+- [x] Research frontier vault security implementations
+- [x] Document findings in RESEARCH_FINDINGS update
+
+## Phase 7: Git Commit & Push [PENDING]
+- [ ] Create feature branch for all changes
+- [ ] Commit all changes with descriptive messages
+- [ ] Push to GitHub
+- [ ] Create Pull Request
