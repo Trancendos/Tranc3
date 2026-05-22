@@ -1,0 +1,92 @@
+{
+  "Rules": [
+    {
+      "ID": "tranc3-hot-never-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "hot/" },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 30 }
+    },
+    {
+      "ID": "tranc3-warm-30d-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "warm/" },
+      "Expiration": { "Days": 30 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 30 }
+    },
+    {
+      "ID": "tranc3-cold-90d-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "cold/" },
+      "Expiration": { "Days": 90 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 14 }
+    },
+    {
+      "ID": "tranc3-archive-365d-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "archive/" },
+      "Expiration": { "Days": 365 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 30 }
+    },
+    {
+      "ID": "tranc3-temp-7d-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "temp/" },
+      "Expiration": { "Days": 7 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 3 }
+    },
+    {
+      "ID": "tranc3-work-14d-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "work/" },
+      "Expiration": { "Days": 14 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 7 }
+    },
+    {
+      "ID": "tranc3-models-90d-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "models/" },
+      "Expiration": { "Days": 90 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 30 }
+    },
+    {
+      "ID": "tranc3-logs-14d-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "logs/" },
+      "Expiration": { "Days": 14 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 7 }
+    },
+    {
+      "ID": "tranc3-config-180d-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "config/" },
+      "Expiration": { "Days": 180 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 30 }
+    },
+    {
+      "ID": "tranc3-data-never-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "data/" },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 30 }
+    },
+    {
+      "ID": "tranc3-repl-30d-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "repl/" },
+      "Expiration": { "Days": 30 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 7 }
+    },
+    {
+      "ID": "tranc3-backup-90d-expire",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "backup/" },
+      "Expiration": { "Days": 90 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 14 }
+    },
+    {
+      "ID": "tranc3-incomplete-upload-cleanup",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "" },
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 7 }
+    }
+  ]
+}

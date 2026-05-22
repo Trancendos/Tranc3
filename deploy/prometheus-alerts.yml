@@ -54,3 +54,94 @@ groups:
         annotations:
           summary: "Response quality degrading"
           description: "Median quality score is {{ $value }} — consider triggering evolution."
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # STORAGE CAPACITY ALERTS — Zero-Cost Auto-Migration Triggers
+  # Storage Tier Priority: ZFS(0) → MinIO(1) → Ceph(2) → R2(3) → OCI(4)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - name: tranc3_storage_alerts
+    rules:
+      # ── ZFS Pool Alerts (Tier 0) ──────────────────────────────────────────
+      - alert: ZFSPoolCapacityWarning
+        expr: (zfs_pool_capacity_percent or (node_filesystem_avail_bytes{mountpoint=~"/mnt/tank.*"} / node_filesystem_size_bytes{mountpoint=~"/mnt/tank.*"} * 100)) > 80
+        for: 5m
+        labels:
+          severity: warning
+          storage_tier: zfs
+        annotations:
+          summary: "ZFS pool approaching capacity limit"
+          description: "ZFS pool capacity is at {{ $value }}%. SmartStorageOrchestrator will begin proactive migration to MinIO/Ceph."
+
+      - alert: ZFSPoolCapacityCritical
+        expr: (zfs_pool_capacity_percent or (node_filesystem_avail_bytes{mountpoint=~"/mnt/tank.*"} / node_filesystem_size_bytes{mountpoint=~"/mnt/tank.*"} * 100)) > 95
+        for: 1m
+        labels:
+          severity: critical
+          storage_tier: zfs
+        annotations:
+          summary: "ZFS pool CRITICAL capacity"
+          description: "ZFS pool capacity is at {{ $value }}%. Immediate auto-migration required to maintain zero-cost."
+
+      # ── MinIO Storage Alerts (Tier 1) ─────────────────────────────────────
+      - alert: MinIODiskCapacityWarning
+        expr: (minio_cluster_disk_free_bytes / minio_cluster_disk_total_bytes * 100) < 20
+        for: 5m
+        labels:
+          severity: warning
+          storage_tier: minio
+        annotations:
+          summary: "MinIO storage approaching capacity"
+          description: "MinIO free disk space is {{ $value }}%. Lifecycle policies should prune cold data."
+
+      - alert: MinIODiskCapacityCritical
+        expr: (minio_cluster_disk_free_bytes / minio_cluster_disk_total_bytes * 100) < 5
+        for: 1m
+        labels:
+          severity: critical
+          storage_tier: minio
+        annotations:
+          summary: "MinIO storage CRITICAL"
+          description: "MinIO free disk space is {{ $value }}%. Auto-migrating cold data to Ceph/R2."
+
+      # ── MinIO Health Alerts ───────────────────────────────────────────────
+      - alert: MinIODown
+        expr: up{job="minio"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          storage_tier: minio
+        annotations:
+          summary: "MinIO is down"
+          description: "MinIO storage service is unreachable. Falling back to Ceph/ZFS."
+
+      - alert: MinIOHighErrorRate
+        expr: rate(minio_s3_requests_errors_total[5m]) / rate(minio_s3_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          storage_tier: minio
+        annotations:
+          summary: "MinIO error rate above 5%"
+          description: "MinIO S3 error rate is {{ $value | humanizePercentage }}. Check disk health."
+
+      # ── Cloud Free-Tier Alerts (R2/OCI) ───────────────────────────────────
+      - alert: CloudFreeTierApproachingLimit
+        expr: tranc3_cloud_storage_used_bytes > (10 * 1024 * 1024 * 1024 * 0.8)
+        for: 10m
+        labels:
+          severity: warning
+          storage_tier: cloud
+        annotations:
+          summary: "Cloud free-tier approaching 10GB limit"
+          description: "Cloud storage usage is {{ $value | humanize }}B. Zero-cost auto-migration will redistribute data."
+
+      - alert: CloudFreeTierCritical
+        expr: tranc3_cloud_storage_used_bytes > (10 * 1024 * 1024 * 1024 * 0.95)
+        for: 5m
+        labels:
+          severity: critical
+          storage_tier: cloud
+        annotations:
+          summary: "Cloud free-tier CRITICAL — approaching 10GB hard limit"
+          description: "Cloud storage usage is {{ $value | humanize }}B. Immediate migration required to avoid charges."

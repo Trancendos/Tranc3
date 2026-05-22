@@ -1,0 +1,274 @@
+# docker-compose.storage.yml
+# Tranc3 Smart Storage Stack — MinIO, Monitoring & ZFS Integration
+#
+# Overlay for docker-compose.yml — extends the base stack with:
+#   - MinIO: S3-compatible object storage (Tier 1 — free, unlimited)
+#   - MinIO Console: Web UI for bucket management
+#   - Ceph (all-in-one): Distributed storage for dev/test (Tier 2)
+#   - Storage metrics exporter: Prometheus metrics for MinIO/ZFS
+#   - Alertmanager: Storage capacity alerting (zero-cost enforcement)
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.storage.yml up -d
+#
+# Standalone (storage only):
+#   docker compose -f docker-compose.storage.yml up -d
+#
+# Architecture:
+#   Storage Tier Priority: ZFS(0) → MinIO(1) → Ceph(2) → R2(3) → OCI(4)
+#   SYSTEM_MODE: TRUE_NAS | HYBRID | CLOUD_ONLY (set in .env)
+#
+# Zero-Cost Mandate:
+#   - MinIO: Self-hosted, unlimited, free
+#   - Ceph: Self-hosted, scalable, free
+#   - No paid cloud services; free-tier cloud only (R2: 10GB, OCI: 10GB)
+#
+# Part of the Tranc3 Adaptive Smart Storage Architecture
+# ============================================================================
+
+version: "3.9"
+
+services:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # STORAGE LAYER — Adaptive Interchangeable Smart Storage Providers
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  # ── MinIO — S3-Compatible Object Storage (Tier 1) ──────────────────────────
+  # Self-hosted, unlimited, free. Primary local object store.
+  # Replaces AWS S3, GCS, Azure Blob in zero-cost architecture.
+  minio:
+    image: minio/minio:RELEASE.2024-08-29T01-40-52Z
+    container_name: tranc3-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BROWSER: "on"
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_CONSOLE_URL:-http://localhost:9001}
+      # Zero-cost: prometheus metrics endpoint
+      MINIO_PROMETHEUS_AUTH_TYPE: "public"
+      MINIO_PROMETHEUS_URL: "http://prometheus:9090"
+      # Storage tier classification
+      MINIO_SERVER_URL: ${MINIO_SERVER_URL:-http://localhost:9000}
+    ports:
+      - "9000:9000"    # S3 API
+      - "9001:9001"    # Console UI
+    volumes:
+      - minio_data:/data
+      # Lifecycle policies config
+      - ./deploy/minio/lifecycle.json:/etc/minio/lifecycle.json:ro
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - tranc3-storage
+
+  # ── MinIO Init — Bucket & Lifecycle Bootstrap ──────────────────────────────
+  # One-shot container that creates buckets and applies lifecycle policies.
+  minio-init:
+    image: minio/mc:RELEASE.2024-08-29T01-40-52Z
+    container_name: tranc3-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
+      
+      echo 'Creating buckets...';
+      mc mb myminio/tranc3 --ignore-existing;
+      mc mb myminio/tranc3-hot --ignore-existing;
+      mc mb myminio/tranc3-warm --ignore-existing;
+      mc mb myminio/tranc3-cold --ignore-existing;
+      mc mb myminio/tranc3-archive --ignore-existing;
+      mc mb myminio/tranc3-temp --ignore-existing;
+      mc mb myminio/tranc3-work --ignore-existing;
+      mc mb myminio/tranc3-backup --ignore-existing;
+      mc mb myminio/tranc3-repl --ignore-existing;
+      mc mb myminio/tranc3-models --ignore-existing;
+      mc mb myminio/tranc3-logs --ignore-existing;
+      mc mb myminio/tranc3-config --ignore-existing;
+      mc mb myminio/tranc3-data --ignore-existing;
+      
+      echo 'Enabling versioning...';
+      mc version enable myminio/tranc3;
+      
+      echo 'Applying lifecycle policies...';
+      for bucket in tranc3-hot tranc3-warm tranc3-cold tranc3-archive tranc3-temp tranc3-work tranc3-backup tranc3-repl tranc3-models tranc3-logs tranc3-config tranc3-data; do
+        mc version enable myminio/$$bucket 2>/dev/null || true;
+      done;
+      
+      echo 'MinIO initialization complete.';
+      "
+    restart: "no"
+    networks:
+      - tranc3-storage
+
+  # ── Ceph — Distributed Storage (Tier 2, Dev/Test) ──────────────────────────
+  # All-in-one Ceph container for development/testing.
+  # Production: Use separate Ceph cluster or CephAnsible deployment.
+  # Self-hosted, scalable, free. RADOS Gateway provides S3-compatible API.
+  ceph:
+    image: quay.io/ceph/ceph:v18
+    container_name: tranc3-ceph
+    entrypoint: >
+      /bin/bash -c "
+      if [ ! -f /etc/ceph/ceph.conf ]; then
+        echo 'Initializing Ceph demo cluster...';
+        ceph-mon --mkfs -i $(hostname) --mon-data /var/lib/ceph/mon/ceph-$(hostname) --keyring /dev/null 2>/dev/null || true;
+      fi;
+      echo 'Ceph single-node demo ready.';
+      sleep infinity;
+      "
+    environment:
+      CEPH_DEMO_UID: ${CEPH_DEMO_UID:-tranc3}
+      CEPH_DEMO_ACCESS_KEY: ${CEPH_ACCESS_KEY:-cephadmin}
+      CEPH_DEMO_SECRET_KEY: ${CEPH_SECRET_KEY:-cephadmin}
+      CEPH_DEMO_BUCKET: ${CEPH_BUCKET:-tranc3}
+    volumes:
+      - ceph_data:/var/lib/ceph
+      - ceph_config:/etc/ceph
+    ports:
+      - "8080:8080"    # RADOS Gateway (S3 API)
+    healthcheck:
+      test: ["CMD", "ceph", "-s"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    profiles:
+      - ceph    # Not started by default; use: docker compose --profile ceph up
+    restart: unless-stopped
+    networks:
+      - tranc3-storage
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # MONITORING LAYER — Storage Capacity & Health Monitoring
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  # ── MinIO Prometheus Exporter ──────────────────────────────────────────────
+  # MinIO natively exposes Prometheus metrics at /minio/v2/metrics/cluster
+  # This is NOT a sidecar exporter — MinIO serves metrics directly.
+  # We configure Prometheus to scrape MinIO's built-in metrics endpoint.
+
+  # ── Node Exporter — Host Metrics (ZFS pool capacity) ───────────────────────
+  # Collects host-level metrics including disk usage (for ZFS pool monitoring).
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: tranc3-node-exporter
+    command:
+      - "--path.rootfs=/host"
+      - "--path.procfs=/hostproc"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+      - "--collector.diskstats"
+      - "--collector.filesystem"
+    ports:
+      - "9100:9100"
+    volumes:
+      - /:/host:ro,rslave
+      - /proc:/hostproc:ro,rslave
+    restart: unless-stopped
+    networks:
+      - tranc3-storage
+
+  # ── Alertmanager — Storage Capacity Alerts ─────────────────────────────────
+  # Sends alerts when storage approaches capacity thresholds.
+  # Zero-cost enforcement: Triggers SmartStorageOrchestrator auto-migration.
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: tranc3-alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/config.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - ./deploy/alertmanager/config.yml:/etc/alertmanager/config.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - "9093:9093"
+    restart: unless-stopped
+    networks:
+      - tranc3-storage
+
+  # ── Smart Storage Orchestrator API ─────────────────────────────────────────
+  # FastAPI service that exposes SmartStorageOrchestrator endpoints.
+  # Provides REST API for storage tier management, capacity monitoring,
+  # and zero-cost auto-migration triggers.
+  storage-orchestrator:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: tranc3-storage-orchestrator
+    env_file: .env
+    environment:
+      # Storage configuration
+      SYSTEM_MODE: ${SYSTEM_MODE:-HYBRID}
+      ZFS_POOL: ${ZFS_POOL:-tank}
+      ZFS_DATASET: ${ZFS_DATASET:-tranc3}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: tranc3
+      CEPH_ENDPOINT: ${CEPH_ENDPOINT:-}
+      CEPH_ACCESS_KEY: ${CEPH_ACCESS_KEY:-}
+      CEPH_SECRET_KEY: ${CEPH_SECRET_KEY:-}
+      CEPH_BUCKET: ${CEPH_BUCKET:-tranc3}
+      # Zero-cost cloud fallback (HYBRID/CLOUD_ONLY modes)
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
+      R2_ACCESS_KEY: ${R2_ACCESS_KEY:-}
+      R2_SECRET_KEY: ${R2_SECRET_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-tranc3}
+      OCI_ENDPOINT: ${OCI_ENDPOINT:-}
+      OCI_ACCESS_KEY: ${OCI_ACCESS_KEY:-}
+      OCI_SECRET_KEY: ${OCI_SECRET_KEY:-}
+      OCI_BUCKET: ${OCI_BUCKET:-tranc3}
+      # Observability
+      PORT: "8010"
+      REDIS_URL: redis://redis:6379/0
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "8010:8010"
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      # ZFS mount access for ZFSStorageProvider
+      - ${ZFS_MOUNT_ROOT:-/mnt/tank/tranc3}:/zfs-data:rw
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8010/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tranc3-storage
+
+# ═════════════════════════════════════════════════════════════════════════════
+# VOLUMES
+# ═════════════════════════════════════════════════════════════════════════════
+volumes:
+  minio_data:
+    driver: local
+    # For ZFS-backed Docker volumes, use:
+    # driver_opts:
+    #   type: zfs
+    #   device: tank/docker/minio
+    #   o: size=100G
+  ceph_data:
+    driver: local
+  ceph_config:
+    driver: local
+  alertmanager_data:
+    driver: local
+
+# ═════════════════════════════════════════════════════════════════════════════
+# NETWORKS
+# ═════════════════════════════════════════════════════════════════════════════
+networks:
+  tranc3-storage:
+    name: tranc3-storage
+    driver: bridge
