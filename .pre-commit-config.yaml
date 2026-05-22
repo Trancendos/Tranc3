@@ -83,3 +83,26 @@ repos:
     hooks:
       - id: typos
         args: [--config, .typos.toml]
+
+  # ── Proactive Security Scanner (AST-based CodeQL pattern prevention) ────
+  # Blocks the exact patterns that caused ~297 CodeQL alerts from ever
+  # landing in the codebase again. Maps to CWE-022, CWE-117, CWE-209,
+  # CWE-327, PY-001–PY-009.
+  - repo: local
+    hooks:
+      - id: security-scanner
+        name: Proactive Security Scanner
+        entry: python -m shared_core.security_automation gate
+        language: system
+        types: [python]
+        pass_filenames: false
+        args: [--max-critical, "0", --max-high, "0", --max-medium, "20", src/ shared_core/ workers/]
+        verbose: true
+      - id: security-autofix
+        name: Security Auto-Fix (dry-run check)
+        entry: python -m shared_core.security_automation fix
+        language: system
+        types: [python]
+        pass_filenames: false
+        args: [--dry-run, src/ shared_core/ workers/]
+        verbose: true
