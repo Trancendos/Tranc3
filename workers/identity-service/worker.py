@@ -155,6 +155,13 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
+        "entity": {
+            "location": "The Lighthouse",
+            "pillar": "Security",
+            "lead_ai": "Rocking Ricki",
+            "primes": ["The Guardian (Marcus Magnolia)"],
+            "primary_function": "Cryptographic Token Applicator",
+        },
     }
 
 

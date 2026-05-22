@@ -48,6 +48,7 @@ Architecture:
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import os
 import threading
@@ -88,6 +89,15 @@ class SentinelState(Enum):
 # Data models
 # ---------------------------------------------------------------------------
 
+class SentinelSeverity(str, Enum):
+    """Severity levels for sentinel checks."""
+    INFO = "info"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
 @dataclass
 class SentinelCheck:
     """Result of a single sentinel check."""
@@ -95,12 +105,15 @@ class SentinelCheck:
     passed: bool
     timestamp: str = ""
     details: Dict[str, Any] = field(default_factory=dict)
-    severity: str = "info"
+    severity: SentinelSeverity = SentinelSeverity.INFO
     message: str = ""
 
     def __post_init__(self):
         if not self.timestamp:
             self.timestamp = datetime.now(timezone.utc).isoformat()
+        # Allow string values to be coerced into the enum
+        if isinstance(self.severity, str):
+            self.severity = SentinelSeverity(self.severity)
 
 
 @dataclass
@@ -592,5 +605,3 @@ class Sentinel:
         return state
 
 
-# We need hashlib for the config capture
-import hashlib

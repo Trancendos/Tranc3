@@ -4,6 +4,7 @@ Tests for src/observability/health.py — Health Aggregation & Service Registry
 Covers: HealthChecker, SERVICE_REGISTRY, SystemHealth enum, service health checks.
 """
 
+import asyncio
 import json
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -96,44 +97,42 @@ class TestHealthChecker:
         assert "test-svc" in checker.registry
         assert len(checker.registry) == 1
 
-    def test_check_unregistered_service(self):
+    @pytest.mark.asyncio
+    async def test_check_unregistered_service(self):
         checker = HealthChecker(registry={})
-        result = checker.check_service("nonexistent")
-        # This is an async method — need to await
-        import asyncio
-        r = asyncio.get_event_loop().run_until_complete(result)
-        assert r["status"] == "unknown"
-        assert "Not registered" in r["error"]
+        result = await checker.check_service("nonexistent")
+        assert result["status"] == "unknown"
+        assert "Not registered" in result["error"]
 
-    def test_check_service_connection_refused(self):
+    @pytest.mark.asyncio
+    async def test_check_service_connection_refused(self):
         """Service that's not running should be unhealthy."""
-        import asyncio
         custom = {
             "offline-svc": {"url": "http://localhost:1/health", "priority": "P0", "named": "Offline"},
         }
         checker = HealthChecker(registry=custom)
-        result = asyncio.get_event_loop().run_until_complete(checker.check_service("offline-svc"))
+        result = await checker.check_service("offline-svc")
         assert result["status"] == "unhealthy"
         assert result["service"] == "offline-svc"
 
-    def test_check_service_caches_result(self):
+    @pytest.mark.asyncio
+    async def test_check_service_caches_result(self):
         """Health check results are cached."""
-        import asyncio
         custom = {
             "offline-svc": {"url": "http://localhost:1/health", "priority": "P0", "named": "Offline"},
         }
         checker = HealthChecker(registry=custom)
-        asyncio.get_event_loop().run_until_complete(checker.check_service("offline-svc"))
+        await checker.check_service("offline-svc")
         assert "offline-svc" in checker._cache
 
-    def test_get_cached(self):
+    @pytest.mark.asyncio
+    async def test_get_cached(self):
         """get_cached returns last cached results."""
-        import asyncio
         custom = {
             "offline-svc": {"url": "http://localhost:1/health", "priority": "P0", "named": "Offline"},
         }
         checker = HealthChecker(registry=custom)
-        asyncio.get_event_loop().run_until_complete(checker.check_service("offline-svc"))
+        await checker.check_service("offline-svc")
         cached = checker.get_cached()
         assert "services" in cached
         assert "offline-svc" in cached["services"]

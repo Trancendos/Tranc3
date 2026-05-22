@@ -33,10 +33,12 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
 import shutil
+import threading
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from enum import Enum
@@ -343,14 +345,22 @@ class HybridStorageProvider(StorageProvider):
     Reads always come from local storage. If local is unavailable,
     falls back to cloud. This ensures low latency for reads while
     maintaining cloud redundancy.
+
+    Auto-sync: A background asyncio task runs every sync_interval_seconds
+    to flush the sync queue to cloud storage, ensuring eventual consistency
+    without requiring manual sync_to_cloud() calls.
     """
 
-    def __init__(self, root: Optional[Path] = None):
+    def __init__(self, root: Optional[Path] = None, sync_interval_seconds: int = 60):
         self._local = LocalStorageProvider(root)
         self._cloud = CloudStorageProvider()
         self._mode = SystemMode.HYBRID
         self._sync_queue: List[str] = []
+        self._sync_lock = threading.Lock()
         self._sync_enabled = bool(os.getenv("R2_ACCOUNT_ID"))
+        self._sync_interval = sync_interval_seconds
+        self._sync_task: Optional[asyncio.Task] = None
+        self._sync_stats = {"total_synced": 0, "total_failed": 0, "last_sync": None}
 
     async def read(self, path: str) -> bytes:
         # Try local first
@@ -370,7 +380,8 @@ class HybridStorageProvider(StorageProvider):
         await self._local.write(path, data)
         # Queue for cloud sync
         if self._sync_enabled:
-            self._sync_queue.append(path)
+            with self._sync_lock:
+                self._sync_queue.append(path)
 
     async def delete(self, path: str) -> None:
         await self._local.delete(path)
@@ -390,7 +401,10 @@ class HybridStorageProvider(StorageProvider):
         local_health = await self._local.health()
         local_health["mode"] = self._mode.value
         local_health["sync_enabled"] = self._sync_enabled
-        local_health["pending_sync"] = len(self._sync_queue)
+        local_health["auto_sync_active"] = self._sync_task is not None and not self._sync_task.done()
+        with self._sync_lock:
+            local_health["pending_sync"] = len(self._sync_queue)
+        local_health["sync_stats"] = self._sync_stats
         if self._sync_enabled:
             cloud_health = await self._cloud.health()
             local_health["cloud_status"] = cloud_health["status"]
@@ -406,8 +420,9 @@ class HybridStorageProvider(StorageProvider):
             return 0
 
         synced = 0
-        queue = list(self._sync_queue)
-        self._sync_queue.clear()
+        with self._sync_lock:
+            queue = list(self._sync_queue)
+            self._sync_queue.clear()
 
         for path in queue:
             try:
@@ -416,9 +431,61 @@ class HybridStorageProvider(StorageProvider):
                 synced += 1
             except Exception as e:
                 logger.error("Cloud sync failed for %s: %s", sanitize_for_log(path), e)
-                self._sync_queue.append(path)  # Re-queue
+                self._sync_stats["total_failed"] += 1
+                with self._sync_lock:
+                    self._sync_queue.append(path)  # Re-queue
 
+        self._sync_stats["total_synced"] += synced
+        self._sync_stats["last_sync"] = datetime.now(timezone.utc).isoformat()
         return synced
+
+    async def start_auto_sync(self) -> None:
+        """Start the background auto-sync task.
+
+        This ensures that write operations queued for cloud sync
+        are automatically flushed every sync_interval_seconds without
+        requiring manual sync_to_cloud() calls. The task runs as an
+        asyncio background task and will stop when stop_auto_sync() is
+        called or the event loop shuts down.
+        """
+        if self._sync_task is not None and not self._sync_task.done():
+            logger.warning("Auto-sync task already running")
+            return
+        self._sync_task = asyncio.create_task(self._auto_sync_loop())
+        logger.info("Auto-sync started (interval=%ds)", self._sync_interval)
+
+    async def stop_auto_sync(self) -> None:
+        """Stop the background auto-sync task gracefully."""
+        if self._sync_task and not self._sync_task.done():
+            self._sync_task.cancel()
+            try:
+                await self._sync_task
+            except asyncio.CancelledError:
+                pass
+            # Final sync before stopping
+            await self.sync_to_cloud()
+        self._sync_task = None
+        logger.info("Auto-sync stopped")
+
+    async def _auto_sync_loop(self) -> None:
+        """Background loop that periodically syncs queued writes to cloud."""
+        while True:
+            try:
+                await asyncio.sleep(self._sync_interval)
+                with self._sync_lock:
+                    pending = len(self._sync_queue)
+                if pending > 0:
+                    logger.debug("Auto-sync: %d files pending", pending)
+                    synced = await self.sync_to_cloud()
+                    if synced > 0:
+                        logger.info("Auto-sync: %d files synced to cloud", synced)
+            except asyncio.CancelledError:
+                logger.info("Auto-sync loop cancelled")
+                break
+            except Exception as e:
+                logger.error("Auto-sync loop error: %s", sanitize_for_log(str(e)))
+                # Continue running despite errors
+                await asyncio.sleep(self._sync_interval)
 
 
 # ---------------------------------------------------------------------------
@@ -452,6 +519,11 @@ class StorageFactory:
 
         Returns:
             A StorageProvider instance appropriate for the mode.
+
+        Cloud Provider Selection (CLOUD_ONLY / HYBRID):
+            - If OCI_COMPARTMENT_ID is set → OCI Object Storage (10GB free)
+            - Else if R2_ACCOUNT_ID is set → Cloudflare R2 (10GB free)
+            - Else → LocalStorageProvider (filesystem, always free)
         """
         effective_mode = mode or _get_system_mode()
 
@@ -462,17 +534,60 @@ class StorageFactory:
         if effective_mode == SystemMode.TRUE_NAS:
             provider = LocalStorageProvider()
         elif effective_mode == SystemMode.HYBRID:
-            provider = HybridStorageProvider()
+            # Choose cloud backend based on available credentials
+            cloud_provider = self._detect_cloud_provider()
+            if cloud_provider == "oci":
+                provider = self._create_hybrid_with_oci()
+            elif cloud_provider == "r2":
+                provider = HybridStorageProvider()
+            else:
+                # No cloud credentials — fall back to local-only
+                logger.warning("No cloud credentials found (OCI or R2), using local-only storage")
+                provider = LocalStorageProvider()
         elif effective_mode == SystemMode.CLOUD_ONLY:
-            provider = CloudStorageProvider()
+            cloud_provider = self._detect_cloud_provider()
+            if cloud_provider == "oci":
+                from shared_core.architecture.oci_storage import OCIObjectStorageProvider
+                provider = OCIObjectStorageProvider()
+            elif cloud_provider == "r2":
+                provider = CloudStorageProvider()
+            else:
+                logger.warning("No cloud credentials found, falling back to local storage")
+                provider = LocalStorageProvider()
         else:
             logger.warning("Unknown mode %s, falling back to TRUE_NAS", effective_mode)
             provider = LocalStorageProvider()
 
         self._instance = provider
         self._instance_mode = effective_mode
-        logger.info("Storage provider initialized: %s mode", effective_mode.value)
+        logger.info("Storage provider initialized: %s mode (cloud=%s)",
+                     effective_mode.value, self._detect_cloud_provider())
         return provider
+
+    def _detect_cloud_provider(self) -> str:
+        """Detect which cloud provider to use based on environment variables.
+
+        Priority: OCI > R2 > none
+        OCI has the most generous free tier (10GB + 10TB outbound).
+        """
+        if os.getenv("OCI_COMPARTMENT_ID"):
+            return "oci"
+        if os.getenv("R2_ACCOUNT_ID"):
+            return "r2"
+        return "none"
+
+    def _create_hybrid_with_oci(self) -> HybridStorageProvider:
+        """Create a hybrid provider with OCI as the cloud backend.
+
+        Since HybridStorageProvider currently uses CloudStorageProvider (R2),
+        we create it but override the cloud provider with OCI.
+        """
+        hybrid = HybridStorageProvider()
+        # Replace the cloud provider with OCI
+        from shared_core.architecture.oci_storage import OCIObjectStorageProvider
+        hybrid._cloud = OCIObjectStorageProvider()
+        hybrid._sync_enabled = True
+        return hybrid
 
     @classmethod
     def reset(cls) -> None:

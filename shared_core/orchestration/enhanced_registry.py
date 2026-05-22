@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import random
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -196,7 +197,7 @@ class EnhancedServiceRegistry:
         elif strat == RoutingStrategy.CAPABILITY_SCORE:
             selected = self._select_capability_score(capability, candidates)
         else:  # RANDOM
-            import random
+            # random imported at module level
             selected = random.choice(candidates)
 
         # Record the request
@@ -229,7 +230,7 @@ class EnhancedServiceRegistry:
 
     def _select_weighted_health(self, candidates: List[Dict]) -> Dict:
         """Select using adaptive weights that reflect health, latency, and error rate."""
-        import random
+        # random imported at module level
         weights = []
         for svc in candidates:
             m = self._metrics[svc["name"]]
@@ -464,9 +465,9 @@ class EnhancedServiceRegistry:
             details=details or {},
         )
         self._event_log.append(event)
-        # Keep only last 1000 events
+        # Keep only last 1000 events — symmetric trim to avoid allocation spikes
         if len(self._event_log) > 1000:
-            self._event_log = self._event_log[-500:]
+            self._event_log = self._event_log[-1000:]
         for watcher in self._discovery_watchers:
             try:
                 watcher(event)

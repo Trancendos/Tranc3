@@ -136,10 +136,21 @@ class AuditLedger:
             "AUDIT_SIGNING_KEY", ""
         )
         if not self._signing_key:
-            # Generate a stable key from the machine's hostname
+            # Generate a key from machine-specific entropy.
+            # WARNING: This key is not portable — ledger verification requires
+            # the AUDIT_SIGNING_KEY env var to be explicitly set for multi-node
+            # or disaster-recovery scenarios. The fallback key combines hostname,
+            # process ID, and boot time to reduce collision risk across machines.
             import socket
-            key_source = f"tranc3-audit-{socket.gethostname()}"
+            import time
+            key_source = f"tranc3-audit-{socket.gethostname()}-{os.getpid()}-{time.time()}"
             self._signing_key = hashlib.sha256(key_source.encode()).hexdigest()[:32]
+            import warnings
+            warnings.warn(
+                "AuditLedger: Using auto-generated signing key. Set AUDIT_SIGNING_KEY "
+                "env var for reproducible verification across restarts or multi-node deploys.",
+                stacklevel=2,
+            )
 
         # Load chain state
         self._last_hash = "genesis"  # Hash of the most recent record

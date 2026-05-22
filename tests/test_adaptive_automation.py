@@ -63,7 +63,9 @@ class TestAdaptiveScanner:
         code_file = tmp_path / "test_bare.py"
         code_file.write_text("try:\n    pass\nexcept:\n    pass\n")
 
-        scanner = AdaptiveScanner()
+        # Use isolated learning_dir to prevent cross-test pollution
+        learning_dir = str(tmp_path / ".security_learning")
+        scanner = AdaptiveScanner(learning_dir=learning_dir)
         violations = scanner.scan_path(str(tmp_path))
 
         assert len(violations) > 0, "Should detect bare except"
@@ -79,7 +81,9 @@ class TestAdaptiveScanner:
         code_file = tmp_path / "test_bare.py"
         code_file.write_text("try:\n    pass\nexcept:\n    pass\n")
 
-        scanner = AdaptiveScanner()
+        # Use isolated learning_dir to prevent cross-test pollution
+        learning_dir = str(tmp_path / ".security_learning")
+        scanner = AdaptiveScanner(learning_dir=learning_dir)
         violations = scanner.scan_path(str(tmp_path))
         assert len(violations) > 0
 
@@ -99,7 +103,9 @@ class TestAdaptiveScanner:
         code_file = tmp_path / "test_bare.py"
         code_file.write_text("try:\n    pass\nexcept:\n    pass\n")
 
-        scanner = AdaptiveScanner()
+        # Use isolated learning_dir to prevent cross-test pollution
+        learning_dir = str(tmp_path / ".security_learning")
+        scanner = AdaptiveScanner(learning_dir=learning_dir)
         violations = scanner.scan_path(str(tmp_path))
         if violations:
             # mark_false_positive(violation, reason='')
@@ -119,7 +125,9 @@ class TestAdaptiveScanner:
         test_file = tmp_path / "test_something.py"
         test_file.write_text("try:\n    pass\nexcept:\n    pass\n")
 
-        scanner = AdaptiveScanner()
+        # Use isolated learning_dir to prevent cross-test pollution
+        learning_dir = str(tmp_path / ".security_learning")
+        scanner = AdaptiveScanner(learning_dir=learning_dir)
         violations = scanner.scan_path(str(tmp_path))
         for v in violations:
             # Every AdaptiveViolation must have a valid confidence_level
