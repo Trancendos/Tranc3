@@ -269,6 +269,13 @@ async def health():
         "service": "infinity-ws",
         "connections": manager.total_connections,
         "channels": manager.total_channels,
+        "entity": {
+            "location": "The Nexus",
+            "pillar": "Architectural",
+            "lead_ai": "The Nexus",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "AI Communication Gateway & Transfer Hub",
+        },
     }
 
 

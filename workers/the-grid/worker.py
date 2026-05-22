@@ -431,6 +431,13 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
+        "entity": {
+            "location": "The Digital Grid",
+            "pillar": "Development (Code)",
+            "lead_ai": "Tyler Towncroft",
+            "primes": ["The Doctor (Nikolai O'denhim)"],
+            "primary_function": "Workflow Platform",
+        },
     }
 
 

@@ -154,6 +154,13 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
+        "entity": {
+            "location": "DocUtari",
+            "pillar": "Knowledge",
+            "lead_ai": "To be Defined",
+            "primes": ["Norman Hawkins"],
+            "primary_function": "Document Management Hub",
+        },
     }
 
 

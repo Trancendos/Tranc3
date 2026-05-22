@@ -488,6 +488,13 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": uptime,
         "version": "1.0.0",
+        "entity": {
+            "location": "The Observatory",
+            "pillar": "Knowledge",
+            "lead_ai": "Norman Hawkins",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Audit Log & Monitoring Platform",
+        },
     }
 
 
