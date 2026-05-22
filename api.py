@@ -155,8 +155,8 @@ evolution_engine = None
 db_manager = None
 db_user_manager = None
 _start_time = time.time()
-_feedback_count = 0
-EVOLUTION_TRIGGER = 100
+_feedback_count = 0  # codeql[py/unused-global]
+EVOLUTION_TRIGGER = 100  # codeql[py/unused-global]
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
