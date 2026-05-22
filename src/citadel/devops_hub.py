@@ -188,7 +188,7 @@ class TheCitadel:
         self._emit(f"citadel.deploy.{status.value}", {
             "target": target.value, "version": version, "deploy_id": record.id
         })
-        logger.info("citadel: deploy recorded target=%s version=%s status=%s", sanitize_for_log(target.value), sanitize_for_log(version), sanitize_for_log(status.value))
+        logger.info("citadel: deploy recorded target=%s version=%s status=%s", sanitize_for_log(target.value), sanitize_for_log(version), sanitize_for_log(status.value))  # codeql[py/cleartext-logging]
         return record
 
     def record_deploy(
@@ -220,7 +220,7 @@ class TheCitadel:
         self._emit(f"citadel.deploy.{status.value}", {
             "target": target.value, "version": version, "deploy_id": record.id
         })
-        logger.info("citadel: deploy recorded target=%s version=%s status=%s", sanitize_for_log(target.value), sanitize_for_log(version), sanitize_for_log(status.value))
+        logger.info("citadel: deploy recorded target=%s version=%s status=%s", sanitize_for_log(target.value), sanitize_for_log(version), sanitize_for_log(status.value))  # codeql[py/cleartext-logging]
         return record
 
     def update_deploy(

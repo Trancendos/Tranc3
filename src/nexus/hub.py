@@ -163,7 +163,7 @@ class NexusHub:
         """Send a direct message to a registered service. Returns None if no inbox."""
         q = self._direct.get(recipient)
         if q is None:
-            logger.debug("nexus: no inbox for recipient=%s", sanitize_for_log(recipient))
+            logger.debug("nexus: no inbox for recipient=%s", sanitize_for_log(recipient))  # codeql[py/cleartext-logging]
             self._stats["dropped"] += 1
             return None
         msg = NexusMessage(

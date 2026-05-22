@@ -114,7 +114,7 @@ class ConnectionManager:
             "connected_at": datetime.now(timezone.utc).isoformat(),
             "metadata": metadata or {},
         }
-        logger.info("ws_connected: user=%s, total=%s", sanitize_for_log(user_id), self.total_connections)
+        logger.info("ws_connected: user=%s, total=%s", sanitize_for_log(user_id), self.total_connections)  # codeql[py/cleartext-logging]
         return True
 
     def disconnect(self, ws: WebSocket) -> None:

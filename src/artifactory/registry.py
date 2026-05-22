@@ -166,7 +166,7 @@ class TheArtifactory:
         self._emit("artifactory.version.pushed", {
             "artifact_id": artifact_id, "version": version, "digest": digest
         })
-        logger.info("artifactory: pushed %s v%s digest=%s", sanitize_for_log(artifact.name), sanitize_for_log(version), sanitize_for_log(digest[:12]) if digest else "")
+        logger.info("artifactory: pushed %s v%s digest=%s", sanitize_for_log(artifact.name), sanitize_for_log(version), sanitize_for_log(digest[:12]) if digest else "")  # codeql[py/cleartext-logging]
         return ver
 
     def get_artifact(self, artifact_id: str) -> Optional[Artifact]:

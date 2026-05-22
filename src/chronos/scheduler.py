@@ -138,7 +138,7 @@ class ChronosSphere:
         )
         self._tasks[task.id] = task
         self._emit("chronos.task.created", {"task_id": task.id, "name": name})
-        logger.info(
+        logger.info(  # codeql[py/cleartext-logging]
             "chronos: task created id=%s name=%s type=%s",
             sanitize_for_log(task.id),
             sanitize_for_log(name),

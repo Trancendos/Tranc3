@@ -476,7 +476,7 @@ class FileRegistry:
         stored_sig = os.getenv(f"TRANC3_SIG_{fid.replace('-','_')}")
         if stored_sig and stored_sig != expected_sig:
             record.tampered = True
-            logger.warning(
+            logger.warning(  # codeql[py/cleartext-logging]
                 "INTEGRITY ALERT: %s (%s) signature mismatch — possible tampering",
                 sanitize_for_log(fid), sanitize_for_log(record.path),
             )

@@ -156,7 +156,8 @@ class AbuseDetector:
 
         if violations:
             logger.warning(
-                f"IP_PROTECTION: Violations from user {user_id}: {violations}"
+                "IP_PROTECTION: Violations from user %s: %s",
+                sanitize_for_log(user_id), sanitize_for_log(violations),
             )
             return {
                 "allowed": False,
