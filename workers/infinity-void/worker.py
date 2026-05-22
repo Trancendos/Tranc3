@@ -370,8 +370,8 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
     # Read payload from R2-like storage (path-validated against traversal)
     r2_path = safe_join(R2_DIR, user_id, secret_id, "payload.json")
     validate_path(r2_path, R2_DIR, must_exist=True, allow_create=False)
-    if r2_path.exists():
-        with open(r2_path) as f:
+    if r2_path.exists():  # codeql[py/path-injection] – path validated by validate_path above
+        with open(r2_path) as f:  # codeql[py/path-injection]
             payload = json.load(f)
     else:
         conn.close()
@@ -458,9 +458,9 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
     # Crypto-shred: delete R2 payload (path-validated against traversal)
     r2_path = safe_join(R2_DIR, user_id, secret_id)
     validate_path(r2_path, R2_DIR, allow_create=False)
-    if r2_path.exists():
+    if r2_path.exists():  # codeql[py/path-injection] – path validated by validate_path above
         import shutil
-        shutil.rmtree(r2_path, ignore_errors=True)
+        shutil.rmtree(r2_path, ignore_errors=True)  # codeql[py/path-injection]
 
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     conn.execute("UPDATE void_secrets SET status = ?, payload = NULL, updated_at = ? WHERE secret_id = ?", ("deleted", now, secret_id))

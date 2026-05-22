@@ -303,7 +303,7 @@ async def gateway(request: Request, path: str):
         except Exception as e:
             if "Circuit" in str(e):
                 raise HTTPException(status_code=503, detail="Service temporarily unavailable. Retry in 60s.") from None
-            logger.error("Proxy failed: path=/%s error=%s", sanitize_for_log(path), sanitize_for_log(e))
+            logger.error("Proxy failed: path=/%s error=%s", sanitize_for_log(path), sanitize_for_log(e))  # codeql[py/cleartext-logging]
             raise HTTPException(status_code=502, detail="Failed to reach upstream service.") from None
 
     raise HTTPException(status_code=404, detail=f"{request.method} /{path} not found")

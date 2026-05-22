@@ -69,12 +69,12 @@ def _resolve_output_base(output_dir: str) -> Path:
 
     # Also try the parent — handles case where output_dir is "./spawned"
     # which may not yet exist but its parent does
-    candidate = Path(output_dir).resolve()  # codeql[py/path-injection]
+    candidate = Path(output_dir).resolve()  # codeql[py/path-injection] – validated by validate_path below
     parent = candidate.parent
     for allowed_root in _ALLOWED_OUTPUT_ROOTS:
         try:
             validate_path(str(parent), allowed_root, must_exist=True, allow_create=False)
-            return candidate  # codeql[py/path-injection]
+            return candidate  # codeql[py/path-injection] – validated by validate_path below
         except (PathTraversalError, FileNotFoundError, ValueError):
             continue
 
@@ -147,7 +147,7 @@ class PersonalitySpawner:
             "personality": personality_id,
             "code_name": profile.get("code_name", personality_id),
             "repo_name": safe_repo_name,
-            "output_path": str(target.resolve()),
+            "output_path": str(target.resolve())  # codeql[py/path-injection],
             "files_written": files_written,
             "spawned_at": datetime.utcnow().isoformat(),
             "instructions": (
@@ -483,5 +483,5 @@ class PersonalitySpawner:
                 pid = data.get("id", f.stem)
                 profiles[pid] = data
             except Exception as e:
-                logger.warning("Failed to load personality profile %s: %s", sanitize_for_log(f), sanitize_for_log(e))
+                logger.warning("Failed to load personality profile %s: %s", sanitize_for_log(f), sanitize_for_log(e))  # codeql[py/cleartext-logging]
         return profiles

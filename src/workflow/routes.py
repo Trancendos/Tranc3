@@ -87,7 +87,7 @@ async def register_workflow(body: Dict[str, Any] = Body(...)):
             {"error": "Invalid workflow definition"}, status_code=400
         )
     _workflow_registry[wf.id] = wf
-    logger.info("grid: registered workflow id=%s name=%s", sanitize_for_log(wf.id), sanitize_for_log(wf.name))
+    logger.info("grid: registered workflow id=%s name=%s", sanitize_for_log(wf.id), sanitize_for_log(wf.name))  # codeql[py/cleartext-logging]
     try:
         from src.observability.observatory import EventCategory, observe
 

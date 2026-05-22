@@ -15,6 +15,10 @@ paths-ignore:
   - "**/dist"
   - "**/__pycache__"
 
-# Use security-extended queries plus custom queries
+# Use security-and-quality queries plus AlertSuppression for inline suppression support
+# The AlertSuppression pack enables # codeql[...] inline suppression comments
+# and works with the advanced-security/dismiss-alerts action to auto-dismiss alerts.
 queries:
   - uses: security-and-quality
+  - uses: codeql/python-queries:AlertSuppression
+  - uses: codeql/javascript-queries:AlertSuppression

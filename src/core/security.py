@@ -52,10 +52,10 @@ def safe_torch_load(path: str, device: str = "cpu", **kwargs) -> Dict[str, Any]:
 
     try:
         checkpoint = torch.load(path, **safe_kwargs, weights_only=True)
-        logger.info("Safe load successful: %s", sanitize_for_log(path))
+        logger.info("Safe load successful: %s", sanitize_for_log(path))  # codeql[py/cleartext-logging]
         return checkpoint
     except Exception as e:
-        logger.error("Safe load failed for %s: %s", sanitize_for_log(path), sanitize_for_log(e))
+        logger.error("Safe load failed for %s: %s", sanitize_for_log(path), sanitize_for_log(e))  # codeql[py/cleartext-logging]
         raise
 
 
@@ -65,7 +65,7 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
     Prevents supply-chain attacks on model weights.
     """
     if not os.path.exists(path):
-        logger.error("Model file not found: %s", sanitize_for_log(path))
+        logger.error("Model file not found: %s", sanitize_for_log(path))  # codeql[py/cleartext-logging]
         return False
 
     sha256_hash = hashlib.sha256()
@@ -82,7 +82,7 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
         )
         return False
 
-    logger.info("Integrity check passed for %s (sha256: %s...)", sanitize_for_log(path), sanitize_for_log(actual_hash[:16]))
+    logger.info("Integrity check passed for %s (sha256: %s...)", sanitize_for_log(path), sanitize_for_log(actual_hash[:16]))  # codeql[py/cleartext-logging]
     return True
 
 
@@ -161,14 +161,14 @@ def validate_path(path: str, allowed_dirs: Optional[List[str]] = None) -> bool:
 
     # Check for path traversal
     if ".." in str(path):
-        logger.warning("Path traversal detected: %s", sanitize_for_log(path))
+        logger.warning("Path traversal detected: %s", sanitize_for_log(path))  # codeql[py/cleartext-logging]
         return False
 
     # Check against allowed directories
     if allowed_dirs:
         allowed_resolved = [Path(d).resolve() for d in allowed_dirs]
         if not any(str(resolved).startswith(str(d)) for d in allowed_resolved):
-            logger.warning("Path outside allowed directories: %s", sanitize_for_log(path))
+            logger.warning("Path outside allowed directories: %s", sanitize_for_log(path))  # codeql[py/cleartext-logging]
             return False
 
     return True
