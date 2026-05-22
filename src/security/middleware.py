@@ -92,7 +92,7 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
                     )
 
                 # Re-attach body so FastAPI can read it normally
-                async def _body_override():
+                async def _body_override():  # noqa: F841 – reserved for future request body re-streaming
                     return body_bytes
 
                 request._body = body_bytes

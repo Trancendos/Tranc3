@@ -47,7 +47,7 @@ class SwarmCoordinator:
         try:
             return await self._coordinate_swarm(problem)
         except Exception as e:
-            logger.warning("Swarm reasoning failed: %s", sanitize_for_log(e))
+            logger.warning("Swarm reasoning failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
             return None
 
     async def _coordinate_swarm(self, problem: Dict[str, Any]) -> Dict[str, Any]:

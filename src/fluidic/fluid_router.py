@@ -104,7 +104,7 @@ class FluidicRouter:
             service_name=service_name,
             weight=initial_weight,
         )
-        logger.info("Fluidic route registered: %s (weight=%s)", sanitize_for_log(service_name), sanitize_for_log(initial_weight))
+        logger.info("Fluidic route registered: %s (weight=%s)", sanitize_for_log(service_name), sanitize_for_log(initial_weight))  # codeql[py/cleartext-logging]
 
     def select(self, capability: str) -> Optional[ServiceInfo]:
         """

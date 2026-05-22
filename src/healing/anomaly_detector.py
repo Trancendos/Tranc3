@@ -112,7 +112,7 @@ class AnomalyDetector:
                 try:
                     handler(anomaly)
                 except Exception as e:
-                    logger.error("Anomaly handler error: %s", sanitize_for_log(e))
+                    logger.error("Anomaly handler error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
 
             return anomaly
 

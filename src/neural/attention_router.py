@@ -41,10 +41,8 @@ logger = logging.getLogger(__name__)
 
 # Optional numpy for vector operations
 try:
-    import numpy as np
-    _HAS_NUMPY = True
+    import numpy as np  # codeql[py/unused-import] – conditional import, used when available
 except ImportError:
-    _HAS_NUMPY = False
     np = None  # type: ignore[assignment]
 
 

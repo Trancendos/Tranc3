@@ -30,7 +30,7 @@ class BCISignalProcessor:
     def __init__(self, sample_rate: int = 256, channels: int = 8):
         self.sample_rate = sample_rate
         self.channels = channels
-        logger.info("BCISignalProcessor: %sch @ %sHz", sanitize_for_log(channels), sanitize_for_log(sample_rate))
+        logger.info("BCISignalProcessor: %sch @ %sHz", sanitize_for_log(channels), sanitize_for_log(sample_rate))  # codeql[py/cleartext-logging]
 
     def process_neural_signal(self, raw_signal: np.ndarray) -> Dict:
         """

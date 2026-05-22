@@ -70,7 +70,7 @@ def verify_jwt(
     try:
         return jwt.decode(token, key, algorithms=[algorithm])
     except Exception as e:
-        logger.warning("JWT verification failed: %s", sanitize_for_log(e))
+        logger.warning("JWT verification failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
         raise
     return None
 

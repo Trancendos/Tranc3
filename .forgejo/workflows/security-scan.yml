@@ -188,6 +188,53 @@ jobs:
           retention-days: 30
 
   # ──────────────────────────────────────────────────────────────
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Trivy — Container & IaC misconfiguration scanning
+  # ──────────────────────────────────────────────────────────────────────
+  trivy:
+    name: Trivy — misconfig + vulnerability scan
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run: |
+          which trivy 2>/dev/null && exit 0
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.58.0
+
+      - name: Trivy config scan (Dockerfiles + K8s)
+        run: |
+          mkdir -p logs
+          trivy config \
+            --severity HIGH,CRITICAL \
+            --format json \
+            --output logs/trivy-config-results.json \
+            . || true
+          trivy config \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            . || {
+              echo "::warning::Trivy found HIGH/CRITICAL misconfigurations — see logs/trivy-config-results.json"
+              exit 0
+            }
+
+      - name: Trivy filesystem scan (Python deps)
+        run: |
+          trivy fs \
+            --severity HIGH,CRITICAL \
+            --format json \
+            --output logs/trivy-fs-results.json \
+            . || true
+
+      - name: Upload Trivy reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-${{ github.run_number }}
+          path: logs/trivy-*.json
+          retention-days: 30
+
   # Secret Detection (gitleaks)
   # ──────────────────────────────────────────────────────────────
   secret-detection:
@@ -225,7 +272,7 @@ jobs:
   security-dashboard:
     name: Security Dashboard Summary
     runs-on: self-hosted
-    needs: [python-security, node-security, semgrep, secret-detection]
+    needs: [python-security, node-security, semgrep, trivy, secret-detection]
     if: always()
     steps:
       - uses: actions/checkout@v4
@@ -242,7 +289,8 @@ jobs:
           echo "|---------|--------|" | tee -a logs/security-dashboard.txt
           echo "| Python Security | ${{ needs.python-security.result }} |" | tee -a logs/security-dashboard.txt
           echo "| Node Security | ${{ needs.node-security.result }} |" | tee -a logs/security-dashboard.txt
-          echo "| Semgrep (CodeQL replacement) | ${{ needs.semgrep.result }} |" | tee -a logs/security-dashboard.txt
+          echo "| Trivy | ${{ needs.trivy.result }} |
+| Semgrep (CodeQL replacement) | ${{ needs.semgrep.result }} |" | tee -a logs/security-dashboard.txt
           echo "| Secret Detection | ${{ needs.secret-detection.result }} |" | tee -a logs/security-dashboard.txt
           echo "" | tee -a logs/security-dashboard.txt
           echo "See individual job logs for detailed findings." | tee -a logs/security-dashboard.txt
@@ -261,7 +309,7 @@ jobs:
   notify-citadel:
     name: Notify The Citadel
     runs-on: self-hosted
-    needs: [python-security, node-security, semgrep, secret-detection]
+    needs: [python-security, node-security, semgrep, trivy, secret-detection]
     if: failure()
     steps:
       - name: Post security alert to The Citadel

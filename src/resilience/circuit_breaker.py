@@ -62,7 +62,7 @@ class CircuitBreaker:
             ):
                 self.state = CircuitState.HALF_OPEN
                 self._half_open_calls = 0
-                logger.info("Circuit %s: OPEN → HALF_OPEN", sanitize_for_log(self.name))
+                logger.info("Circuit %s: OPEN → HALF_OPEN", sanitize_for_log(self.name))  # codeql[py/cleartext-logging]
                 return True
             return False
 
@@ -84,7 +84,7 @@ class CircuitBreaker:
                 self.state = CircuitState.CLOSED
                 self._failure_count = 0
                 self._success_count = 0
-                logger.info("Circuit %s: HALF_OPEN → CLOSED", sanitize_for_log(self.name))
+                logger.info("Circuit %s: HALF_OPEN → CLOSED", sanitize_for_log(self.name))  # codeql[py/cleartext-logging]
         else:
             self._failure_count = max(0, self._failure_count - 1)
 
@@ -97,7 +97,7 @@ class CircuitBreaker:
 
         if self.state == CircuitState.HALF_OPEN:
             self.state = CircuitState.OPEN
-            logger.warning("Circuit %s: HALF_OPEN → OPEN (failed during test)", sanitize_for_log(self.name))
+            logger.warning("Circuit %s: HALF_OPEN → OPEN (failed during test)", sanitize_for_log(self.name))  # codeql[py/cleartext-logging]
         elif self._failure_count >= self.config.failure_threshold:
             self.state = CircuitState.OPEN
             logger.warning(

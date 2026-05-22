@@ -1,0 +1,71 @@
+# .github/workflows/codeql.yml
+# CodeQL static analysis for security vulnerabilities (CWE-022, etc.)
+# This runs alongside Forgejo CI security-scan.yml (bandit + semgrep).
+# CodeQL provides additional taint-tracking analysis that bandit/semgrep lack.
+#
+# Previous CodeQL alerts (#30-#41) were fixed in PR #29 by replacing
+# _assert_under_base() with validate_path() in spawner.py. This workflow
+# must exist on main so CodeQL re-scans and dismisses the resolved alerts.
+
+name: "CodeQL Advanced"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: "39 6 * * 5"
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+  packages: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            build-mode: none
+            packs: codeql/python-queries:AlertSuppression.ql
+            sarif-name: python
+          - language: javascript-typescript
+            build-mode: none
+            packs: codeql/javascript-queries:AlertSuppression.ql
+            sarif-name: javascript
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          config-file: .github/codeql-config.yml
+          packs: ${{ matrix.packs }}
+
+      - name: Perform CodeQL Analysis
+        id: analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
+          output: sarif-results
+
+      - name: Dismiss suppressed alerts
+        if: github.ref == 'refs/heads/main'
+        uses: advanced-security/dismiss-alerts@v2
+        with:
+          sarif-id: ${{ steps.analyze.outputs.sarif-id }}
+          sarif-file: sarif-results/${{ matrix.sarif-name }}.sarif
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

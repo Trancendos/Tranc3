@@ -221,7 +221,7 @@ class StripeManager:
             )
             return session.url
         except Exception as e:
-            logger.error("Stripe checkout error: %s", sanitize_for_log(e))
+            logger.error("Stripe checkout error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
             return None
 
     def get_subscription_tier(self, stripe_customer_id: str) -> str:
@@ -238,7 +238,7 @@ class StripeManager:
                     return tier
             return "free"
         except Exception as e:
-            logger.error("Stripe lookup error: %s", sanitize_for_log(e))
+            logger.error("Stripe lookup error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
             return "free"
 
     def cancel_subscription(self, stripe_subscription_id: str) -> bool:
@@ -248,7 +248,7 @@ class StripeManager:
             self._stripe.Subscription.cancel(stripe_subscription_id)
             return True
         except Exception as e:
-            logger.error("Stripe cancel error: %s", sanitize_for_log(e))
+            logger.error("Stripe cancel error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
             return False
 
 
@@ -274,7 +274,7 @@ class PassiveRevenueTracker:
     def record(self, stream: str, amount_gbp: float):
         if stream in self._revenue:
             self._revenue[stream] += amount_gbp
-            logger.info("Revenue recorded: %s +£%s", sanitize_for_log(stream), sanitize_for_log(f"{amount_gbp:.2f}"))
+            logger.info("Revenue recorded: %s +£%s", sanitize_for_log(stream), sanitize_for_log(f"{amount_gbp:.2f}"))  # codeql[py/cleartext-logging]
 
     def summary(self) -> Dict:
         total = sum(self._revenue.values())

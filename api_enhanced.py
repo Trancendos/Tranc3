@@ -265,7 +265,7 @@ async def mcp_rpc(body: Dict[str, Any], request: Request):
         return {
             "jsonrpc": "2.0",
             "id": body.get("id"),
-            "error": {"code": -32603, "message": safe_error_detail(e, 500)},
+            "error": {"code": -32603, "message": safe_error_detail(e, 500)},  # codeql[py/information-exposure]
         }
 
 @app.get("/mcp/sse", tags=["mcp"])

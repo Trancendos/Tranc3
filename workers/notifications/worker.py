@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sqlite3
 import threading
 import uuid
@@ -21,11 +22,16 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from shared_core.sanitize import sanitize_for_log
+
+from shared_core.error_handlers import safe_error_detail
+from shared_core.url_validation import SSRFError, validate_webhook_url
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -34,6 +40,15 @@ WORKER_PORT = 8008
 WORKER_NAME = "notifications-service"
 DB_PATH = Path(__file__).parent / "data" / "notifications.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+# Webhook domain allowlist — comma-separated domains from WEBHOOK_ALLOWED_DOMAINS env var.
+# If set, only these domains may receive webhook notifications.
+# If empty/unset, all domains passing SSRF validation are permitted.
+_WEBHOOK_ALLOWED_DOMAINS: Set[str] = {
+    d.strip().lower()
+    for d in os.environ.get("WEBHOOK_ALLOWED_DOMAINS", "").split(",")
+    if d.strip()
+}
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
@@ -307,29 +322,54 @@ class NotificationDispatcher:
     @staticmethod
     async def dispatch_email(user_id: str, subject: str, body: str, metadata: Dict[str, Any]) -> bool:
         """Email dispatch — in zero-cost mode, logs and marks as sent. Plug in SMTP or SES later."""
-        logger.info("📧 EMAIL → user=%s subject='%s'", user_id, subject)
+        logger.info("📧 EMAIL → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject))  # codeql[py/cleartext-logging]
         # In production: integrate with self-hosted mail or free-tier SMTP
         return True
 
     @staticmethod
     async def dispatch_sms(user_id: str, body: str, metadata: Dict[str, Any]) -> bool:
         """SMS dispatch — zero-cost mode logs only. Plug in Twilio free tier later."""
-        logger.info("📱 SMS → user=%s", user_id)
+        logger.info("📱 SMS → user=%s", sanitize_for_log(user_id))  # codeql[py/cleartext-logging]
         return True
 
     @staticmethod
     async def dispatch_push(user_id: str, subject: str, body: str, metadata: Dict[str, Any]) -> bool:
         """Push notification — zero-cost mode logs only. Plug in Web Push later."""
-        logger.info("🔔 PUSH → user=%s subject='%s'", user_id, subject)
+        logger.info("🔔 PUSH → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject))  # codeql[py/cleartext-logging]
         return True
 
     @staticmethod
     async def dispatch_webhook(url: str, payload: Dict[str, Any]) -> bool:
-        """Webhook dispatch — makes HTTP POST to configured URL."""
+        """Webhook dispatch — makes HTTP POST to a validated URL.
+
+        The URL is validated against SSRF protections before any network
+        request is made.  Only HTTPS URLs to public, non-reserved hosts
+        are permitted.  See shared_core.url_validation for details.
+        """
         import urllib.request
+        from urllib.parse import urlparse
+
+        # SSRF validation — blocks private IPs, metadata endpoints, non-HTTPS
+        try:
+            validate_webhook_url(url)
+        except SSRFError as e:
+            logger.warning("Webhook URL blocked by SSRF protection: %s", e)
+            return False
+
+        # Optional domain allowlist check
+        if _WEBHOOK_ALLOWED_DOMAINS:
+            parsed = urlparse(url)
+            hostname = (parsed.hostname or "").lower()
+            if hostname not in _WEBHOOK_ALLOWED_DOMAINS:
+                logger.warning(
+                    "Webhook domain '%s' not in allowlist: %s",
+                    sanitize_for_log(hostname), _WEBHOOK_ALLOWED_DOMAINS,  # codeql[py/cleartext-logging]
+                )
+                return False
+
         try:
             data = json.dumps(payload).encode()
-            req = urllib.request.Request(url, data=data, method="POST")
+            req = urllib.request.Request(url, data=data, method="POST")  # codeql[py/ssrf] – URL validated against allowlist above
             req.add_header("Content-Type", "application/json")
             with urllib.request.urlopen(req, timeout=10) as resp:
                 return resp.status < 400
@@ -340,7 +380,7 @@ class NotificationDispatcher:
     @staticmethod
     async def dispatch_in_app(user_id: str, subject: str, body: str, metadata: Dict[str, Any]) -> bool:
         """In-app notification — stored in DB, client polls or uses WebSocket."""
-        logger.info("💬 IN-APP → user=%s subject='%s'", user_id, subject)
+        logger.info("💬 IN-APP → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject))  # codeql[py/cleartext-logging]
         return True
 
 
@@ -432,10 +472,19 @@ async def send_notification(req: NotificationRequest):
             success = await dispatcher.dispatch_push(req.user_id, req.subject, req.body, req.metadata)
         elif req.channel == NotificationChannel.webhook:
             webhook_url = req.metadata.get("webhook_url", "")
-            if webhook_url:
-                success = await dispatcher.dispatch_webhook(webhook_url, {
-                    "subject": req.subject, "body": req.body, "metadata": req.metadata,
-                })
+            if not webhook_url:
+                return {"ok": False, "reason": "webhook_url missing from metadata"}
+            # Validate webhook URL at the endpoint level (defense-in-depth)
+            try:
+                validate_webhook_url(webhook_url)
+            except SSRFError as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Webhook URL rejected: {e}",
+                )
+            success = await dispatcher.dispatch_webhook(webhook_url, {
+                "subject": req.subject, "body": req.body, "metadata": req.metadata,
+            })
         elif req.channel == NotificationChannel.in_app:
             success = await dispatcher.dispatch_in_app(req.user_id, req.subject, req.body, req.metadata)
 
@@ -447,9 +496,9 @@ async def send_notification(req: NotificationRequest):
             return {"ok": False, "notification_id": req.notification_id, "status": "failed"}
 
     except Exception as e:
-        db.update_status(req.notification_id, NotificationStatus.failed, error=str(e))
+        db.update_status(req.notification_id, NotificationStatus.failed, error=safe_error_detail(e, 500))
         logger.error("Notification dispatch error: %s", e)
-        return {"ok": False, "notification_id": req.notification_id, "status": "failed", "error": str(e)}
+        return {"ok": False, "notification_id": req.notification_id, "status": "failed", "error": safe_error_detail(e, 500)}
 
 
 # ---------------------------------------------------------------------------

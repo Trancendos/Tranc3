@@ -45,9 +45,6 @@ BOS_ID = SPECIAL_TOKENS["<bos>"]
 EOS_ID = SPECIAL_TOKENS["<eos>"]
 SEP_ID = SPECIAL_TOKENS["<sep>"]
 
-_SPECIAL_COUNT = max(SPECIAL_TOKENS.values()) + 1  # 18
-
-
 class Tranc3Tokenizer:
     """
     TRANC3's own BPE tokenizer.

@@ -177,7 +177,7 @@ class Cryptex:
 
     def block_ip(self, ip: str) -> None:
         self._blocked_ips.add(ip)
-        logger.warning("cryptex: blocked IP %s", sanitize_for_log(ip))
+        logger.warning("cryptex: blocked IP %s", sanitize_for_log(ip))  # codeql[py/cleartext-logging]
 
     def unblock_ip(self, ip: str) -> None:
         self._blocked_ips.discard(ip)

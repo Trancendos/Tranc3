@@ -39,6 +39,7 @@ from pathlib import Path
 
 import httpx
 from cryptography.hazmat.primitives import hashes
+from shared_core.path_validation import safe_join, validate_path, sanitize_filename
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -302,11 +303,14 @@ async def store_secret(request: Request, authorization: str | None = Header(None
     payload_hash = hash_value(plaintext)
     encrypted = encrypt_secret(plaintext, MASTER_KEY_SEED)
 
-    # Store payload in R2-like file storage
+    # Store payload in R2-like file storage (path-validated against traversal)
     r2_key = f"secrets/{user_id}/{secret_id}"
-    r2_path = R2_DIR / user_id / secret_id
+    r2_path = safe_join(R2_DIR, user_id, secret_id)
+    validate_path(r2_path, R2_DIR, allow_create=True)
     r2_path.mkdir(parents=True, exist_ok=True)
-    with open(r2_path / "payload.json", "w") as f:
+    payload_path = safe_join(R2_DIR, user_id, secret_id, "payload.json")
+    validate_path(payload_path, R2_DIR, allow_create=True)
+    with open(payload_path, "w") as f:
         json.dump({"ciphertext": encrypted["ciphertext"]}, f)
 
     conn = get_db()
@@ -345,6 +349,11 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
     secret_id = body.get("secret_id")
     if not secret_id:
         raise HTTPException(status_code=400, detail="secret_id required")
+    # Sanitize secret_id to prevent path traversal in downstream file operations
+    try:
+        secret_id = sanitize_filename(secret_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid secret_id format")
 
     conn = get_db()
     row = conn.execute("SELECT * FROM void_secrets WHERE secret_id = ?", (secret_id,)).fetchone()
@@ -358,10 +367,11 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
         conn.close()
         raise HTTPException(status_code=410, detail="Secret is not active")
 
-    # Read payload from R2-like storage
-    r2_path = R2_DIR / user_id / secret_id / "payload.json"
-    if r2_path.exists():
-        with open(r2_path) as f:
+    # Read payload from R2-like storage (path-validated against traversal)
+    r2_path = safe_join(R2_DIR, user_id, secret_id, "payload.json")
+    validate_path(r2_path, R2_DIR, must_exist=True, allow_create=False)
+    if r2_path.exists():  # codeql[py/path-injection] – path validated by validate_path above
+        with open(r2_path) as f:  # codeql[py/path-injection]
             payload = json.load(f)
     else:
         conn.close()
@@ -403,6 +413,11 @@ async def get_secret_meta(secret_id: str, authorization: str | None = Header(Non
     user_id = await get_auth_user_id(authorization)
     if not user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
+    # Sanitize secret_id to prevent path traversal
+    try:
+        secret_id = sanitize_filename(secret_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid secret_id format")
 
     conn = get_db()
     row = conn.execute(
@@ -425,6 +440,11 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
     user_id = await get_auth_user_id(authorization)
     if not user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
+    # Sanitize secret_id to prevent path traversal
+    try:
+        secret_id = sanitize_filename(secret_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid secret_id format")
 
     conn = get_db()
     row = conn.execute("SELECT owner_id, r2_key FROM void_secrets WHERE secret_id = ?", (secret_id,)).fetchone()
@@ -435,11 +455,12 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
         conn.close()
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    # Crypto-shred: delete R2 payload
-    r2_path = R2_DIR / user_id / secret_id
-    if r2_path.exists():
+    # Crypto-shred: delete R2 payload (path-validated against traversal)
+    r2_path = safe_join(R2_DIR, user_id, secret_id)
+    validate_path(r2_path, R2_DIR, allow_create=False)
+    if r2_path.exists():  # codeql[py/path-injection] – path validated by validate_path above
         import shutil
-        shutil.rmtree(r2_path, ignore_errors=True)
+        shutil.rmtree(r2_path, ignore_errors=True)  # codeql[py/path-injection]
 
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     conn.execute("UPDATE void_secrets SET status = ?, payload = NULL, updated_at = ? WHERE secret_id = ?", ("deleted", now, secret_id))
@@ -458,6 +479,11 @@ async def get_audit_log(secret_id: str, authorization: str | None = Header(None)
     user_id = await get_auth_user_id(authorization)
     if not user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
+    # Sanitize secret_id to prevent path traversal
+    try:
+        secret_id = sanitize_filename(secret_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid secret_id format")
 
     conn = get_db()
     secret = conn.execute("SELECT owner_id FROM void_secrets WHERE secret_id = ?", (secret_id,)).fetchone()

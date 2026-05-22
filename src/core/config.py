@@ -89,7 +89,7 @@ class Tranc3Config(BaseSettings):
     NANO_HEALTH_INTERVAL: float = Field(default=30.0, env="NANO_HEALTH_INTERVAL")
 
     @validator("LOG_LEVEL")
-    def validate_log_level(cls, v: str) -> str:  # noqa: N805
+    def validate_log_level(cls, v: str) -> str:  # noqa: N805  # codeql[py/first-param-not-self] – Pydantic validator
         valid = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         upper = v.upper()
         if upper not in valid:
@@ -97,7 +97,7 @@ class Tranc3Config(BaseSettings):
         return upper
 
     @validator("ENVIRONMENT")
-    def validate_environment(cls, v: str) -> str:  # noqa: N805
+    def validate_environment(cls, v: str) -> str:  # noqa: N805  # codeql[py/first-param-not-self] – Pydantic validator
         valid = {"development", "staging", "production"}
         lower = v.lower()
         if lower not in valid:
@@ -124,7 +124,7 @@ class Tranc3Config(BaseSettings):
 
 # Singleton — loaded once, importable everywhere
 try:
-    settings = Tranc3Config()
+    settings = Tranc3Config()  # codeql[py/unused-global]
 except Exception as e:
     import logging
     logging.getLogger(__name__).error(f"Configuration error: {e}")

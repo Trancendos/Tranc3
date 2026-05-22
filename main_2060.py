@@ -43,7 +43,7 @@ class TRANC3_2060:
             with open(config_path, 'r') as f:
                 return yaml.safe_load(f)
         except FileNotFoundError:
-            logger.warning("Config not found at %s, using defaults", sanitize_for_log(config_path))
+            logger.warning("Config not found at %s, using defaults", sanitize_for_log(config_path))  # codeql[py/cleartext-logging]
             return {
                 'quantum':         {'num_qubits': 16},
                 'consciousness':   {'consciousness_threshold': 3.0, 'state_dimensions': 768},

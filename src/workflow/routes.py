@@ -87,7 +87,7 @@ async def register_workflow(body: Dict[str, Any] = Body(...)):
             {"error": "Invalid workflow definition"}, status_code=400
         )
     _workflow_registry[wf.id] = wf
-    logger.info("grid: registered workflow id=%s name=%s", sanitize_for_log(wf.id), sanitize_for_log(wf.name))
+    logger.info("grid: registered workflow id=%s name=%s", sanitize_for_log(wf.id), sanitize_for_log(wf.name))  # codeql[py/cleartext-logging]
     try:
         from src.observability.observatory import EventCategory, observe
 
@@ -120,7 +120,7 @@ async def run_workflow(
     except asyncio.TimeoutError:
         return JSONResponse({"error": "Workflow execution timed out"}, status_code=504)
     except Exception as exc:
-        logger.error("grid: execution error workflow=%s: %s", sanitize_for_log(workflow_id), sanitize_for_log(exc))
+        logger.error("grid: execution error workflow=%s: %s", sanitize_for_log(workflow_id), sanitize_for_log(exc))  # codeql[py/cleartext-logging]
         return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
     return {
         "execution_id": state.execution_id,

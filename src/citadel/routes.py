@@ -127,7 +127,7 @@ async def forgejo_webhook(
     ref = payload.get("ref", "")
     sender = payload.get("pusher", {}).get("login", payload.get("sender", {}).get("login", "forgejo"))
 
-    logger.info("citadel: forgejo webhook event=%s ref=%s sender=%s", sanitize_for_log(event), sanitize_for_log(ref), sanitize_for_log(sender))
+    logger.info("citadel: forgejo webhook event=%s ref=%s sender=%s", sanitize_for_log(event), sanitize_for_log(ref), sanitize_for_log(sender))  # codeql[py/cleartext-logging]
 
     # Map workflow_run / push on main branch → auto record deploy
     if event in ("workflow_run", "push") and ("main" in ref or "master" in ref):

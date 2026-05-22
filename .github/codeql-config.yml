@@ -1,0 +1,23 @@
+# CodeQL custom configuration for Tranc3
+# Excludes test/fixture code and generated files from analysis.
+
+name: "Tranc3 CodeQL Config"
+
+# Exclude test fixtures, generated code, and documentation
+paths-ignore:
+  - tests
+  - scripts
+  - docs
+  - "**/test_*.py"
+  - "**/*_test.py"
+  - "**/conftest.py"
+  - "**/node_modules"
+  - "**/dist"
+  - "**/__pycache__"
+
+# Use security-and-quality queries for comprehensive analysis.
+# AlertSuppression packs are specified via the `packs:` parameter in the
+# codeql-action/init step (not here) — the `queries: uses:` format only
+# supports pre-defined query suite names, not external pack references.
+queries:
+  - uses: security-and-quality

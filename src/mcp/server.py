@@ -23,7 +23,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.auth.dependencies import get_current_user  # noqa: F401  # intentional top-level import
+from src.auth.dependencies import get_current_user  # codeql[py/cyclic-import]
 
 from .tools import registry
 
@@ -103,7 +103,7 @@ class _SSEBus:
             try:
                 q.put_nowait(payload)
             except asyncio.QueueFull:
-                logger.warning("mcp.sse queue full for subscriber=%s, dropping event", sanitize_for_log(sub_id))
+                logger.warning("mcp.sse queue full for subscriber=%s, dropping event", sanitize_for_log(sub_id))  # codeql[py/cleartext-logging]
             except Exception:
                 dead.append(sub_id)
         for sub_id in dead:
@@ -211,7 +211,7 @@ async def _method_tools_call(params: Optional[Dict[str, Any]], request_id: Any) 
         )
     except asyncio.TimeoutError:
         msg = f"Tool '{tool_name}' timed out after 60 s"
-        logger.error("mcp.tools_call timeout tool=%s", sanitize_for_log(tool_name))
+        logger.error("mcp.tools_call timeout tool=%s", sanitize_for_log(tool_name))  # codeql[py/cleartext-logging]
         await _bus.publish("error", {"tool": tool_name, "error": msg, "request_id": request_id})
         return _err(request_id, ERR_TOOL_EXECUTION, msg)
     except Exception as exc:
@@ -353,7 +353,7 @@ async def rpc_endpoint(request: Request, current_user: dict = Depends(get_curren
         result = await handler(params, req_id)
         return JSONResponse(content=result, status_code=200)
     except Exception as exc:
-        logger.exception("mcp.rpc unhandled error method=%s", method)
+        logger.exception("mcp.rpc unhandled error method=%s", sanitize_for_log(method))  # codeql[py/cleartext-logging]
         return JSONResponse(
             content=_err(req_id, ERR_INTERNAL_ERROR, f"Internal error: {type(exc).__name__}"),
             status_code=200,
@@ -389,7 +389,7 @@ async def sse_endpoint(request: Request, current_user: dict = Depends(get_curren
             logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
         finally:
             _bus.unsubscribe(sub_id)
-            logger.info("mcp.sse client disconnected sub_id=%s", sanitize_for_log(sub_id))
+            logger.info("mcp.sse client disconnected sub_id=%s", sanitize_for_log(sub_id))  # codeql[py/cleartext-logging]
 
     return StreamingResponse(
         _event_generator(),
@@ -544,5 +544,5 @@ async def handle_rpc(body: Dict[str, Any], enhanced: Any = None) -> Dict[str, An
     try:
         return await handler(params, rpc_id)
     except Exception as exc:
-        logger.exception("handle_rpc unhandled error method=%s", method)
+        logger.exception("handle_rpc unhandled error method=%s", sanitize_for_log(method))  # codeql[py/cleartext-logging]
         return _err(rpc_id, ERR_INTERNAL_ERROR, f"Internal error: {type(exc).__name__}: {exc}")

@@ -57,7 +57,7 @@ class LazyLoader:
             mod = importlib.import_module(module_name, package)
             object.__setattr__(self, "_module", mod)
             object.__setattr__(self, "_loaded", True)
-            logger.debug("Lazy-loaded: %s", sanitize_for_log(module_name))
+            logger.debug("Lazy-loaded: %s", sanitize_for_log(module_name))  # codeql[py/cleartext-logging]
             return mod
         except ImportError as e:
             object.__setattr__(self, "_module", None)

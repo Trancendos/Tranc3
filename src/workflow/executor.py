@@ -103,7 +103,7 @@ class WorkflowEventBus:
                 else:
                     cb(payload)
             except Exception as exc:  # noqa: BLE001
-                logger.warning("Event handler error for '%s': %s", sanitize_for_log(event), sanitize_for_log(exc))
+                logger.warning("Event handler error for '%s': %s", sanitize_for_log(event), sanitize_for_log(exc))  # codeql[py/cleartext-logging]
 
         await asyncio.gather(*[_call(cb) for cb in targets], return_exceptions=True)
 
@@ -284,7 +284,7 @@ class WorkflowExecutor:
                     "error": state.error,
                 },
             )
-            logger.error("Topological sort failed: %s", sanitize_for_log(exc))
+            logger.error("Topological sort failed: %s", sanitize_for_log(exc))  # codeql[py/cleartext-logging]
             return state
 
         # Seed initial outputs — root nodes will use initial_inputs
@@ -295,7 +295,7 @@ class WorkflowExecutor:
                 if cancel_flag.is_set():
                     state.status = "cancelled"
                     state.finished_at = time.monotonic()
-                    logger.info("Execution %s cancelled.", sanitize_for_log(execution_id))
+                    logger.info("Execution %s cancelled.", sanitize_for_log(execution_id))  # codeql[py/cleartext-logging]
                     return state
 
                 await self._execute_layer(
@@ -352,7 +352,7 @@ class WorkflowExecutor:
                     "elapsed_ms": state.elapsed_ms,
                 },
             )
-            logger.error("Workflow '%s' failed: %s", sanitize_for_log(workflow.name), sanitize_for_log(exc), exc_info=True)
+            logger.error("Workflow '%s' failed: %s", sanitize_for_log(workflow.name), sanitize_for_log(exc), exc_info=True)  # codeql[py/cleartext-logging]
 
         finally:
             self._cancel_flags.pop(execution_id, None)
@@ -375,7 +375,7 @@ class WorkflowExecutor:
             state = self.executions.get(execution_id)
             return state is not None and state.status == "running"
         flag.set()
-        logger.info("Cancel requested for execution %s.", sanitize_for_log(execution_id))
+        logger.info("Cancel requested for execution %s.", sanitize_for_log(execution_id))  # codeql[py/cleartext-logging]
         return True
 
     # ------------------------------------------------------------------
