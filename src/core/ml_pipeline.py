@@ -41,7 +41,6 @@ _attention_router_inst = None
 _meta_learner_inst = None
 _collective_memory_inst = None
 _causal_reasoner_inst = None
-_knowledge_graph_inst = None
 
 
 def _get_attention_router():
