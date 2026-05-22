@@ -29,9 +29,22 @@ spec:
         app: tranc3-federation
     spec:
       serviceAccountName: tranc3-federation
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: controller
         image: tranc3:federation-controller-latest
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          runAsGroup: 10001
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         env:
         - name: PRIMARY_CLUSTER
           valueFrom:
@@ -72,7 +85,7 @@ rules:
   verbs: ["get", "list", "watch"]
 - apiGroups: [""]
   resources: ["configmaps"]
-  verbs: ["get", "list", "watch", "create", "update"]
+  verbs: ["get", "list", "watch"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
