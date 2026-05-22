@@ -94,7 +94,8 @@ class BCIInputAdapter:
     def connect(self, device_type: str = "openbci") -> bool:
         """Connect to BCI hardware. Returns True if successful."""
         logger.info(
-            f"BCI connect requested: {device_type} — stub mode, returning False"
+            "BCI connect requested: %s — stub mode, returning False",
+            sanitize_for_log(device_type),
         )
         return False  # Stub — implement when hardware available
 

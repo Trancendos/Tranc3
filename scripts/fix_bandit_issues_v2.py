@@ -8,12 +8,16 @@ import json
 import re
 from pathlib import Path
 
+from shared_core.path_validation import validate_path
+
 PROJECT_DIR = Path(__file__).parent.parent
 
 def read_file(path: Path) -> str:
+    validate_path(path, PROJECT_DIR)
     return path.read_text(encoding="utf-8")
 
 def write_file(path: Path, content: str) -> None:
+    validate_path(path, PROJECT_DIR)
     path.write_text(content, encoding="utf-8")
 
 def fix_all_b110():

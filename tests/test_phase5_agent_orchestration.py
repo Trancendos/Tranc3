@@ -731,6 +731,7 @@ class TestToolBridge:
         tb.register_tool("async_tool", handler=_handler)
         tools = tb.list_available_tools()
         assert "async_tool" in tools
+        return None
 
     def test_execute_direct_tool(self):
         from src.agents.tool_bridge import ToolBridge
@@ -743,6 +744,7 @@ class TestToolBridge:
         result = run(tb.execute("echo", {"msg": "hello"}))
         assert result.success is True
         assert result.data == {"echo": "hello"}
+        return None
 
     def test_execute_async_direct_tool(self):
         from src.agents.tool_bridge import ToolBridge
@@ -755,6 +757,7 @@ class TestToolBridge:
         result = run(tb.execute("async_echo", {"msg": "world"}))
         assert result.success is True
         assert result.data == {"async_echo": "world"}
+        return None
 
     def test_execute_nonexistent_tool(self):
         from src.agents.tool_bridge import ToolBridge

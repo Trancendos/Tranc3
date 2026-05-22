@@ -100,3 +100,4 @@ async def deepmind_plan(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
             "plan": None,
             "error": safe_error_detail(exc, 500),
         }
+    return None

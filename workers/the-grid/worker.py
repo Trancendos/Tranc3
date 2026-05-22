@@ -484,6 +484,7 @@ async def execute_workflow(workflow_id: str, input_data: Dict[str, Any] = None):
         raise HTTPException(404, str(e)) from None
     except Exception as e:
         raise HTTPException(500, f"Execution failed: {e}") from None
+    return None
 
 
 @app.get("/executions")

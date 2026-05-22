@@ -60,10 +60,11 @@ def safe_error_detail(
     value — it is only logged server-side with a reference ID so
     developers can correlate client reports with server logs.
 
-    This prevents CWE-209 (Information Exposure Through an Exception):
-    even in development mode we avoid leaking internal details (file
-    paths, SQL queries, stack traces) because APIs are often exposed
-    to untrusted networks even during testing.
+    In development mode (ENVIRONMENT != "production"), the exception
+    message is included but with path-like segments replaced by [PATH]
+    to prevent full filesystem disclosure.
+
+    This prevents CWE-209 (Information Exposure Through an Exception).
 
     Args:
         exc: The original exception (optional). If provided, its message
@@ -75,6 +76,7 @@ def safe_error_detail(
     Returns:
         A safe string suitable for inclusion in an HTTP response body.
     """
+    import re as _re
     import uuid
 
     ref_id = uuid.uuid4().hex[:8]
@@ -87,7 +89,28 @@ def safe_error_detail(
             "Error ref=%s status=%d: %s: %s",
             ref_id, status_code, type(exc).__name__, exc,
         )
+
+    # In production: always return generic message with reference
+    if _IS_PROD:
         return f"{safe_msg} (ref: {ref_id})"
+
+    # In development: include sanitized exception message for debugging
+    if exc is not None:
+        raw_msg = str(exc)
+        # Replace filesystem paths with [PATH] to prevent full disclosure
+        sanitized = _re.sub(
+            r'(?:/[a-zA-Z0-9_.-]+){2,}',  # Matches /path/to/something
+            '[PATH]',
+            raw_msg,
+        )
+        # Truncate long messages to prevent excessive response size
+        # Account for prefix "safe_msg — " and suffix " (ref: XXXXXXXX)"
+        max_sanitized_len = 200 - len(safe_msg) - 4 - 14  # 4 for " — ", 14 for " (ref: XXXXXXXX)"
+        if max_sanitized_len < 50:
+            max_sanitized_len = 50
+        if len(sanitized) > max_sanitized_len:
+            sanitized = sanitized[:max_sanitized_len - 3] + "..."
+        return f"{safe_msg} — {sanitized} (ref: {ref_id})"
 
     return f"{safe_msg} (ref: {ref_id})"
 

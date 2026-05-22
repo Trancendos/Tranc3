@@ -4,8 +4,10 @@
 import asyncio
 import logging
 import os
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+from shared_core.path_validation import validate_path
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -103,7 +105,8 @@ class HotConfig:
         """Parse a .env file into key-value pairs"""
         result = {}
         try:
-            with open(path, "r") as f:
+            validated = validate_path(path, Path.cwd(), must_exist=True)
+            with open(validated, "r") as f:
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith("#") and "=" in line:
@@ -122,7 +125,8 @@ class HotConfig:
         """Parse a JSON config file"""
         import json
         try:
-            with open(path, "r") as f:
+            validated = validate_path(path, Path.cwd(), must_exist=True)
+            with open(validated, "r") as f:
                 return json.load(f)
         except Exception as e:
             logger.error("Error parsing %s: %s", sanitize_for_log(path), sanitize_for_log(e))

@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from shared_core.path_validation import validate_path
+
 
 @dataclass
 class PersonalityProfile:
@@ -42,13 +44,15 @@ class PersonalityProfile:
 
     @classmethod
     def from_file(cls, path: str) -> "PersonalityProfile":
-        with open(path, "r", encoding="utf-8") as f:
+        validated = validate_path(path)
+        with open(validated, "r", encoding="utf-8") as f:
             data = json.load(f)
         return cls(**data)
 
     def to_file(self, path: str):
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
+        validated = validate_path(path)
+        os.makedirs(os.path.dirname(validated), exist_ok=True)
+        with open(validated, "w", encoding="utf-8") as f:
             json.dump(self.__dict__, f, indent=2)
 
     def build_system_prompt(self, user_context: Optional[Dict[str, Any]] = None) -> str:

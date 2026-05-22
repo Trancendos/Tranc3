@@ -312,6 +312,7 @@ async def memory(req: MemoryRequest):
             raise HTTPException(400, detail=f"Unknown memory action: {req.action}")
     except ImportError:
         return {"error": "Vector store not configured", "action": req.action}
+    return None
 
 
 @nano_app.get("/memory/health")
@@ -383,6 +384,7 @@ async def quantum(request: Request):
             raise HTTPException(400, detail=f"Unknown quantum action: {action}")
     except ImportError:
         return {"error": "Quantum module not available", "action": body.get("action")}
+    return None
 
 
 @nano_app.get("/quantum/health")
@@ -411,6 +413,7 @@ async def evolution(request: Request):
             raise HTTPException(400, detail=f"Unknown evolution action: {action}")
     except ImportError:
         return {"error": "Evolution module not available", "action": body.get("action")}
+    return None
 
 
 @nano_app.get("/evolution/health")

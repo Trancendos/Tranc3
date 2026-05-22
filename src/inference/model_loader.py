@@ -51,6 +51,7 @@ class LazyModelLoader:
             except Exception as e:
                 logger.error("Failed to load model '%s': %s", sanitize_for_log(name), sanitize_for_log(e))  # codeql[py/cleartext-logging]
                 raise
+        return None
 
     def is_loaded(self, name: str) -> bool:
         """Check if a model is currently loaded"""
@@ -134,6 +135,7 @@ class InferenceRouter:
                 continue
 
         raise RuntimeError(f"All inference providers failed. Last error: {last_error}")
+        return None
 
 
 # Singleton instances

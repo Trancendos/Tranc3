@@ -75,8 +75,9 @@ class EventBus:
                     handler(event)
             except Exception as e:
                 logger.error(
-                    f"Event handler error for {event.event_type}: {e}",
-                    extra={"handler": handler.__name__, "event": event.to_dict()},
+                    "Event handler error for %s: %s",
+                    sanitize_for_log(event.event_type),
+                    sanitize_for_log(e),
                 )
 
     async def replay(self, event_type: Optional[str] = None, handler: Optional[Callable] = None) -> List[EventMessage]:

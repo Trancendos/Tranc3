@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from shared_core.path_validation import validate_path as _validate_path_traversal
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.security")
@@ -57,6 +58,7 @@ def safe_torch_load(path: str, device: str = "cpu", **kwargs) -> Dict[str, Any]:
     except Exception as e:
         logger.error("Safe load failed for %s: %s", sanitize_for_log(path), sanitize_for_log(e))  # codeql[py/cleartext-logging]
         raise
+    return None
 
 
 def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> bool:
@@ -68,8 +70,11 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
         logger.error("Model file not found: %s", sanitize_for_log(path))  # codeql[py/cleartext-logging]
         return False
 
+    # Validate path stays under the current working directory (CWE-022)
+    validated = _validate_path_traversal(path, Path.cwd(), must_exist=True)
+
     sha256_hash = hashlib.sha256()
-    with open(path, "rb") as f:
+    with open(validated, "rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
             sha256_hash.update(chunk)
 
@@ -77,8 +82,10 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
 
     if expected_sha256 and actual_hash != expected_sha256:
         logger.error(
-            f"Integrity check FAILED for {path}. "
-            f"Expected: {expected_sha256}, Got: {actual_hash}"
+            "Integrity check FAILED for %s. Expected: %s, Got: %s",
+            sanitize_for_log(path),
+            sanitize_for_log(expected_sha256),
+            sanitize_for_log(actual_hash),
         )
         return False
 

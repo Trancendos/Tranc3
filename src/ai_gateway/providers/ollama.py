@@ -114,6 +114,7 @@ class OllamaProvider(AIProvider):
             raise RuntimeError(f"Ollama request timed out after {self.timeout}s") from None
         except httpx.HTTPStatusError as e:
             raise RuntimeError(f"Ollama HTTP error: {e.response.status_code}") from None
+        return None
 
     async def health_check(self) -> ProviderHealth:
         """Check if Ollama is running and responsive."""
@@ -144,6 +145,7 @@ class OllamaProvider(AIProvider):
                 healthy=False,
                 error=str(e),
             )
+        return None
 
     def get_models(self) -> list[str]:
         """List locally available models."""

@@ -142,6 +142,7 @@ class TestServiceMeshInProcessHandlers:
         assert result.data["authenticated"] is True
         assert result.data["user_id"] == "user-123"
         assert result.data["path"] == "/verify"
+        return None
 
     @pytest.mark.asyncio
     async def test_call_handler_failure(self):
@@ -178,6 +179,7 @@ class TestServiceMeshInProcessHandlers:
         await mesh.call("test-worker", "/test", {})
         cb = mesh.get_circuit_breaker("test-worker")
         assert cb.get_state().success_count == 1
+        return None
 
     @pytest.mark.asyncio
     async def test_call_records_failure_on_circuit_breaker(self):
@@ -256,6 +258,7 @@ class TestCircuitBreakerWorkerIntegration:
         result = await mesh.call("healthy-worker", "/test", {})
         assert result.success is True
         assert result.circuit_state == CircuitState.CLOSED
+        return None
 
     @pytest.mark.asyncio
     async def test_circuit_breaker_closes_after_successes(self):
@@ -294,6 +297,7 @@ class TestCircuitBreakerWorkerIntegration:
         await mesh.call("flaky-worker", "/test", {})
         await mesh.call("flaky-worker", "/test", {})
         assert mesh.get_circuit_breaker("flaky-worker").state == CircuitState.CLOSED
+        return None
 
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -324,6 +328,7 @@ class TestServiceMeshHealthChecks:
         result = await mesh.call("test-worker", "/health")
         assert result.success is True
         assert result.data["status"] == "healthy"
+        return None
 
     @pytest.mark.asyncio
     async def test_health_check_cached(self):
@@ -387,6 +392,7 @@ class TestServiceMeshHealthChecks:
             assert result.success is True
             assert result.data["status"] == "healthy"
             assert result.data["worker_id"] == i
+        return None
 
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -431,6 +437,7 @@ class TestServiceMeshRetryBehavior:
         # Circuit should be open now
         cb = mesh.get_circuit_breaker("flaky-worker")
         assert cb.state == CircuitState.OPEN
+        return None
 
     @pytest.mark.asyncio
     async def test_handler_succeeds_after_initial_failures(self):
@@ -464,6 +471,7 @@ class TestServiceMeshRetryBehavior:
         result3 = await mesh.call("flaky-worker", "/test", {})
         assert result3.success is True
         assert result3.data["attempt"] == 3
+        return None
 
     @pytest.mark.asyncio
     async def test_circuit_breaker_reset_after_opening(self):
@@ -533,6 +541,7 @@ class TestMultiWorkerCommunication:
         assert result.success is True
         assert result.data["user_id"] == "user-123"
         assert result.data["email"] == "test@example.com"
+        return None
 
     @pytest.mark.asyncio
     async def test_cascading_worker_calls(self):
@@ -567,6 +576,7 @@ class TestMultiWorkerCommunication:
         assert result.data["result"] == "A"
         assert result.data["upstream"]["result"] == "B"
         assert result.data["upstream"]["upstream"]["result"] == "C"
+        return None
 
     @pytest.mark.asyncio
     async def test_parallel_worker_calls(self):
@@ -597,6 +607,7 @@ class TestMultiWorkerCommunication:
 
         assert all(r.success for r in results)
         assert [r.data["worker"] for r in results] == [0, 1, 2]
+        return None
 
     @pytest.mark.asyncio
     async def test_dependency_graph(self):

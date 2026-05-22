@@ -88,6 +88,7 @@ class SwarmCoordinator:
             timeout=aiohttp.ClientTimeout(total=10),
         ) as response:
             return await response.json()
+        return None
 
     def _decompose_problem(self, problem: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Decompose complex problem into sub-problems"""
@@ -142,3 +143,4 @@ class SwarmCoordinator:
                 return await response.json()
         except Exception:
             return {"status": "unhealthy"}
+        return None

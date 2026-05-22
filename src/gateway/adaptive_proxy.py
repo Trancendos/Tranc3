@@ -99,7 +99,11 @@ class AdaptiveProxy:
                 last_error = e
                 self.router.record_error(service.name)
                 logger.warning(
-                    f"Call to {service.name} failed (attempt {attempt + 1}/{retries + 1}): {e}"
+                    "Call to %s failed (attempt %s/%s): %s",
+                    sanitize_for_log(service.name),
+                    sanitize_for_log(attempt + 1),
+                    sanitize_for_log(retries + 1),
+                    sanitize_for_log(e),
                 )
 
                 if attempt < retries:
@@ -108,6 +112,7 @@ class AdaptiveProxy:
         raise RuntimeError(
             f"All attempts failed for capability '{capability}': {last_error}"
         )
+        return None
 
     async def _make_request(
         self,
@@ -130,6 +135,7 @@ class AdaptiveProxy:
                 text = await resp.text()
                 raise RuntimeError(f"Service {service.name} returned {resp.status}: {text}")
             return await resp.json()
+        return None
 
     async def health_check(self) -> Dict[str, Any]:
         """Get overall proxy health"""

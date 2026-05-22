@@ -147,7 +147,8 @@ def configure_services(config=None) -> None:
     container.register_factory("quantum", _quantum_core)
 
     container._initialized = True
-    logger.info("Service container configured with %s services", sanitize_for_log(len(container.list_services())))  # codeql[py/cleartext-logging]
+    logger.info("Service container configured with %s services", sanitize_for_log(len(container.list_services())))
+    return None
 
 
 # ── FastAPI dependency helpers ────────────────────────────────────────────

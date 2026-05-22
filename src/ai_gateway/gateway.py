@@ -235,6 +235,7 @@ class AIGateway:
         self._metrics.errors += 1
         error_summary = "; ".join(f"{e['provider']}: {e['error']}" for e in errors)
         raise AIGatewayError("ALL_PROVIDERS_FAILED", f"All AI providers failed: {error_summary}")
+        return None
 
     # ── Health Checks ────────────────────────────────────────
 
@@ -318,6 +319,7 @@ class AIGateway:
                 raise RuntimeError(f"Provider {provider.name} exceeded {max_latency_ms}ms latency") from None
         else:
             return await provider.complete(request)
+        return None
 
     def _check_cache(self, request: AIRequest, config: TenantAIConfig) -> AIResponse | None:
         """Check the response cache."""

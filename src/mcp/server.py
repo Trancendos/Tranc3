@@ -358,6 +358,7 @@ async def rpc_endpoint(request: Request, current_user: dict = Depends(get_curren
             content=_err(req_id, ERR_INTERNAL_ERROR, f"Internal error: {type(exc).__name__}"),
             status_code=200,
         )
+    return None
 
 
 @router.get("/sse")

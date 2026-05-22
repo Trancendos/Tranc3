@@ -121,6 +121,7 @@ class CircuitBreaker:
         except Exception:
             self.record_failure()
             raise
+        return None
 
     @property
     def stats(self) -> Dict[str, Any]:

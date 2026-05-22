@@ -101,8 +101,11 @@ class AnomalyDetector:
             )
 
             logger.warning(
-                f"Anomaly detected: {metric_name}={sample.value:.2f} "
-                f"(z={z_score:.2f}, severity={severity})"
+                "Anomaly detected: %s=%s (z=%s, severity=%s)",
+                sanitize_for_log(metric_name),
+                sanitize_for_log(f"{sample.value:.2f}"),
+                sanitize_for_log(f"{z_score:.2f}"),
+                sanitize_for_log(severity),
             )
 
             for handler in self._handlers:

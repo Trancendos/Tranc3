@@ -131,6 +131,7 @@ class TestSparkToolNodeFallback:
             assert called_with, "Handler was never called"
         finally:
             tools_mod.registry = original
+        return None
 
     @pytest.mark.asyncio
     async def test_unknown_tool_returns_error(self):
@@ -191,6 +192,7 @@ class TestSparkToolNodeFallback:
         finally:
             tools_mod.registry = original
             _SPARK_TOOL_REGISTRY.pop("precedence_test_tool", None)
+        return None
 
 
 # ---------------------------------------------------------------------------

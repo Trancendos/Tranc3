@@ -106,6 +106,7 @@ class CircuitBreaker:
                 self.state = "OPEN"
                 self.next_attempt = time.time() + self.recovery
             raise
+        return None
 
     def get_state(self) -> str:
         return self.state
@@ -177,6 +178,7 @@ async def proxy_request(request: Request, target_base: str, target_path: str, re
             content=body,
             follow_redirects=False,
         )
+    return None
 
 
 # ── App ─────────────────────────────────────────────────────────
@@ -307,6 +309,7 @@ async def gateway(request: Request, path: str):
             raise HTTPException(status_code=502, detail="Failed to reach upstream service.") from None
 
     raise HTTPException(status_code=404, detail=f"{request.method} /{path} not found")
+    return None
 
 
 # ── Run ─────────────────────────────────────────────────────────

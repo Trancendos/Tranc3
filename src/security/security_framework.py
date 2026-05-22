@@ -89,6 +89,7 @@ class JWTManager:
             return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         except JWTError as e:
             raise HTTPException(status_code=401, detail=f"Invalid token: {e}") from None
+        return None
 
     @staticmethod
     def verify_token_type(payload: dict, expected_type: str):

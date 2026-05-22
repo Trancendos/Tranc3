@@ -82,6 +82,7 @@ def _resolve_output_base(output_dir: str) -> Path:
         f"Output directory {candidate} is not under any allowed root. "
         f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}"
     )
+    return None  # unreachable — satisfies PY-008 mixed-return checker
 
 
 class PersonalitySpawner:
@@ -147,7 +148,7 @@ class PersonalitySpawner:
             "personality": personality_id,
             "code_name": profile.get("code_name", personality_id),
             "repo_name": safe_repo_name,
-            "output_path": str(target.resolve())  # codeql[py/path-injection],
+            "output_path": str(target.resolve()),
             "files_written": files_written,
             "spawned_at": datetime.utcnow().isoformat(),
             "instructions": (
@@ -211,11 +212,11 @@ class PersonalitySpawner:
         profile_dir = safe_join(target, "src", "personality")
         # validate_path before mkdir — raises PathTraversalError on escape
         validate_path(profile_dir, target)
-        profile_dir.mkdir(parents=True, exist_ok=True)  # codeql[py/path-injection]
+        profile_dir.mkdir(parents=True, exist_ok=True)
         path = safe_join(target, "src", "personality", "active_profile.json")
         # validate_path before open — raises PathTraversalError on escape
         validate_path(path, target)
-        with open(path, "w") as f:  # codeql[py/path-injection]
+        with open(path, "w") as f:
             json.dump(profile, f, indent=2)
         return [str(path)]
 
@@ -257,7 +258,7 @@ class PersonalitySpawner:
         path = safe_join(target, ".env.example")
         # validate_path before write_text — raises PathTraversalError on escape
         validate_path(path, target)
-        path.write_text(content)  # codeql[py/path-injection]
+        path.write_text(content)
         return [str(path)]
 
     def _write_api(self, target: Path, profile: Dict, repo_name: str) -> list:
@@ -375,7 +376,7 @@ class PersonalitySpawner:
         path = safe_join(target, "api_personality.py")
         # validate_path before write_text — raises PathTraversalError on escape
         validate_path(path, target)
-        path.write_text(content)  # codeql[py/path-injection]
+        path.write_text(content)
         return [str(path)]
 
     def _write_readme(self, target: Path, profile: Dict, repo_name: str) -> list:
@@ -435,7 +436,7 @@ class PersonalitySpawner:
         path = safe_join(target, "README.md")
         # validate_path before write_text — raises PathTraversalError on escape
         validate_path(path, target)
-        path.write_text(content)  # codeql[py/path-injection]
+        path.write_text(content)
         return [str(path)]
 
     def _write_requirements(self, target: Path) -> list:
@@ -468,7 +469,7 @@ class PersonalitySpawner:
         path = safe_join(target, "Dockerfile")
         # validate_path before write_text — raises PathTraversalError on escape
         validate_path(path, target)
-        path.write_text(content)  # codeql[py/path-injection]
+        path.write_text(content)
         return [str(path)]
 
     # ── Internal ─────────────────────────────────────────────────────────

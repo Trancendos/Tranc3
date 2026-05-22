@@ -18,6 +18,8 @@ from typing import Dict, List
 import torch
 from torch.utils.data import DataLoader, Dataset
 
+from shared_core.path_validation import validate_path
+
 from ..core.tokenizer import Tranc3Tokenizer
 
 
@@ -54,7 +56,8 @@ class ConversationDataset(Dataset):
         samples = []
 
         for file_path in sorted(data_path.glob("*.jsonl")):
-            with open(file_path, "r", encoding="utf-8") as f:
+            validated = validate_path(file_path, data_path, must_exist=True)
+            with open(validated, "r", encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if not line:
@@ -83,7 +86,8 @@ class ConversationDataset(Dataset):
 
         # Also handle plain text files
         for file_path in sorted(data_path.glob("*.txt")):
-            text = file_path.read_text(encoding="utf-8")
+            validated = validate_path(file_path, data_path, must_exist=True)
+            text = validated.read_text(encoding="utf-8")
             ids = self.tokenizer.encode(text, add_bos=True, add_eos=True)
             for start in range(0, len(ids), self.max_seq_len):
                 chunk = ids[start: start + self.max_seq_len + 1]
