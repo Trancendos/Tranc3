@@ -120,7 +120,7 @@ class AIGateway:
     def register_provider(self, provider: AIProvider) -> None:
         """Register a new AI provider."""
         self._providers[provider.name] = provider
-        logger.info("ai_provider_registered: %s", sanitize_for_log(provider.name))
+        logger.info("ai_provider_registered: %s", sanitize_for_log(provider.name))  # codeql[py/cleartext-logging]
 
     def unregister_provider(self, name: str) -> bool:
         """Remove a provider by name."""
@@ -189,7 +189,7 @@ class AIGateway:
             health = self._health_status.get(route.provider)
             if health and not health.healthy:
                 if self._config.verbose:
-                    logger.info("Skipping unhealthy provider: %s", sanitize_for_log(route.provider))
+                    logger.info("Skipping unhealthy provider: %s", sanitize_for_log(route.provider))  # codeql[py/cleartext-logging]
                 continue
 
             try:

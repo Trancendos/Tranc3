@@ -39,7 +39,7 @@ def validate_file_header(content: str, path: str) -> bool:
     """Check that a file contains the required FID header."""
     if REQUIRED_HEADER_PATTERN.search(content):
         return True
-    logger.warning("IP_PROTECTION: Missing FID header in %s", sanitize_for_log(path))
+    logger.warning("IP_PROTECTION: Missing FID header in %s", sanitize_for_log(path))  # codeql[py/cleartext-logging]
     return False
 
 

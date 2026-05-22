@@ -224,11 +224,11 @@ function stubEmotion(text) {
   return { dominant, scores: norm, model: "tranc3-rule-based", backend: "tranc3-stub" };
 }
 
-function simpleHash(str) {
-  let h = 0x811c9dc5;
+function simpleHash(str) {  // codeql[js/useless-assignment] – FNV-1a hash: assignments are intentional
+  let h = 0x811c9dc5;  // codeql[js/useless-assignment]
   for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = (h * 0x01000193) >>> 0;
+    h ^= str.charCodeAt(i);  // codeql[js/useless-assignment]
+    h = (h * 0x01000193) >>> 0;  // codeql[js/useless-assignment]
   }
   return h;
 }

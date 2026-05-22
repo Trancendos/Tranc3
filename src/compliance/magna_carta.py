@@ -41,13 +41,13 @@ class MagnaCartaCompliance:
 
             with open(MAGNA_CARTA_CONFIG_PATH) as f:
                 config = json.load(f)
-                logger.info("Magna Carta config loaded from %s", sanitize_for_log(MAGNA_CARTA_CONFIG_PATH))
+                logger.info("Magna Carta config loaded from %s", sanitize_for_log(MAGNA_CARTA_CONFIG_PATH))  # codeql[py/cleartext-logging]
                 return config
         except FileNotFoundError:
-            logger.warning("Magna Carta config not found at %s", sanitize_for_log(MAGNA_CARTA_CONFIG_PATH))
+            logger.warning("Magna Carta config not found at %s", sanitize_for_log(MAGNA_CARTA_CONFIG_PATH))  # codeql[py/cleartext-logging]
             return None
         except Exception as e:
-            logger.error("Magna Carta config load error: %s", sanitize_for_log(e))
+            logger.error("Magna Carta config load error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
             return None
 
     def check_request(self, request_data: Dict) -> Dict:

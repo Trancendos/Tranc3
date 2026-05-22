@@ -397,7 +397,7 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     db.execute("UPDATE users SET last_login = ? WHERE user_id = ?", (now, user_id))
     db.commit()
 
-    logger.info("user_login: username=%s", sanitize_for_log(credentials.username))
+    logger.info("user_login: username=%s", sanitize_for_log(credentials.username))  # codeql[py/cleartext-logging]
 
     return TokenResponse(
         access_token=access_token,

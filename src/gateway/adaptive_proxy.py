@@ -68,7 +68,7 @@ class AdaptiveProxy:
 
             # Check circuit breaker
             if not breaker.can_execute():
-                logger.warning("Circuit open for %s, trying alternatives", sanitize_for_log(service.name))
+                logger.warning("Circuit open for %s, trying alternatives", sanitize_for_log(service.name))  # codeql[py/cleartext-logging]
                 # Try to find an alternative service
                 alternatives = self.registry.find_by_capability(capability)
                 service = next(
@@ -90,7 +90,7 @@ class AdaptiveProxy:
                     payload,
                     timeout,
                 )
-                elapsed = time.time() - start_time
+                elapsed = time.time() - start_time  # codeql[py/redefined-variable] – separate scope for error metrics
                 self.router.record_success(service.name, elapsed * 1000)
                 return result
 

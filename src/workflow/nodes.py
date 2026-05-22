@@ -987,7 +987,7 @@ def _ensure_phase4_nodes_loaded() -> None:
     global _PHASE4_LOADED
     if _PHASE4_LOADED:
         return
-    _PHASE4_LOADED = True
+    _PHASE4_LOADED = True  # codeql[py/unused-global] – used as lazy-load guard in _ensure_phase4_nodes_loaded
     try:
         from src.workflow.phase4_nodes import PHASE4_NODE_TYPES as _p4_types  # codeql[py/cyclic-import]
         _PHASE4_NODE_REGISTRY.update(_p4_types)

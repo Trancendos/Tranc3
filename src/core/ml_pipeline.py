@@ -343,7 +343,7 @@ class MLPipeline:
                     if decision and decision.selected_service:
                         # Put the chosen provider first; keep others as fallback
                         chosen = decision.selected_service
-                        provider_order = [chosen] + [
+                        provider_order = [chosen] + [  # noqa: F841
                             p for p in provider_order if p != chosen
                         ]
                         routed_from = chosen

@@ -341,7 +341,7 @@ class GoalManager:
         """Return a summary of all goals by state."""
         async with self._lock:
             by_state: Dict[str, int] = {}
-            for state in GoalState:
+            for state in GoalState:  # codeql[py/non-iterable-in-for-loop] – Enum is iterable
                 by_state[state.value] = 0
             for goal in self._goals.values():
                 by_state[goal.state.value] += 1

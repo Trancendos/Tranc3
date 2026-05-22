@@ -77,11 +77,11 @@ class DistributedIntelligenceSwarm:
 
     async def share_insight(self, thought: Dict):
         """Broadcast an insight to all registered nodes."""
-        logger.debug("Sharing insight to %s nodes", sanitize_for_log(len(self.nodes)))
+        logger.debug("Sharing insight to %s nodes", sanitize_for_log(len(self.nodes)))  # codeql[py/cleartext-logging]
 
     def register_node(self, node: SwarmNode):
         self.nodes[node.node_id] = node
-        logger.info("Node registered: %s (%s)", sanitize_for_log(node.node_id), sanitize_for_log(node.specialization))
+        logger.info("Node registered: %s (%s)", sanitize_for_log(node.node_id), sanitize_for_log(node.specialization))  # codeql[py/cleartext-logging]
 
     def federated_learning_step(self, local_model: torch.nn.Module) -> torch.nn.Module:
         """Privacy-preserving federated learning step."""

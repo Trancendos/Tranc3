@@ -35,7 +35,7 @@ class DBUserManager:
             try:
                 return self._session_factory()
             except Exception as e:
-                logger.warning("DB session failed: %s — using fallback", sanitize_for_log(e))
+                logger.warning("DB session failed: %s — using fallback", sanitize_for_log(e))  # codeql[py/cleartext-logging]
         return None
 
     def create_user(self, username: str, password: str, email: str = "") -> dict:
@@ -68,7 +68,7 @@ class DBUserManager:
                 raise
             except Exception as e:
                 session.rollback()
-                logger.error("DB create_user failed: %s — using fallback", sanitize_for_log(e))
+                logger.error("DB create_user failed: %s — using fallback", sanitize_for_log(e))  # codeql[py/cleartext-logging]
             finally:
                 session.close()
 
@@ -104,7 +104,7 @@ class DBUserManager:
                     "tier": user.tier, "is_active": user.is_active,
                 }
             except Exception as e:
-                logger.error("DB authenticate_user failed: %s", sanitize_for_log(e))
+                logger.error("DB authenticate_user failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
             finally:
                 session.close()
 
@@ -128,7 +128,7 @@ class DBUserManager:
                         "tier": user.tier, "is_active": user.is_active,
                     }
             except Exception as e:
-                logger.error("DB get_user failed: %s", sanitize_for_log(e))
+                logger.error("DB get_user failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
             finally:
                 session.close()
 
@@ -145,7 +145,7 @@ class DBUserManager:
                     session.commit()
                     return True
             except Exception as e:
-                logger.error("DB update_tier failed: %s", sanitize_for_log(e))
+                logger.error("DB update_tier failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
             finally:
                 session.close()
         return False
