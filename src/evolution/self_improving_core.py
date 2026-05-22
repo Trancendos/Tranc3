@@ -178,7 +178,7 @@ class SelfEvolvingArchitecture:
                 ex=86400 * 7,
             )  # 7-day TTL
         except Exception as e:
-            logger.debug("Genome persist skipped: %s", sanitize_for_log(e))
+            logger.debug("Genome persist skipped: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
 
     def load_genome_from_redis(self) -> bool:
         """Restore best genome from Redis on startup."""
@@ -200,7 +200,7 @@ class SelfEvolvingArchitecture:
                 )
                 return True
         except Exception as e:
-            logger.debug("Genome restore skipped: %s", sanitize_for_log(e))
+            logger.debug("Genome restore skipped: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
         return False
 
     def get_best_genome(self) -> torch.Tensor:

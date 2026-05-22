@@ -128,7 +128,7 @@ class VectorCollection:
             q = query_vec.astype("float32")
             norm = np.linalg.norm(q)
             if norm > 0:
-                q = q / norm
+                q = q / norm  # normalize in-place
             # Use zero embeddings when no encoder either
             candidates = [(0.5, doc) for doc in self._docs]
 

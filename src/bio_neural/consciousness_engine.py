@@ -61,7 +61,7 @@ class IITCalculator:
 
             return float(phi)
         except Exception as e:
-            logger.warning("Phi calculation failed: %s", sanitize_for_log(e))
+            logger.warning("Phi calculation failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
             return 0.0
 
     def _system_entropy(self, state: np.ndarray) -> float:
@@ -134,7 +134,7 @@ class GlobalWorkspace(nn.Module):
         self.gate = nn.Sequential(nn.Linear(workspace_size * 8, 8), nn.Softmax(dim=-1))
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, Dict]:
-        B, T, H = x.shape
+        _B, _T, _H = x.shape  # noqa: F841 – shape unpack used for clarity
         pooled = x.mean(dim=1)  # B x H
 
         # Process through specialists

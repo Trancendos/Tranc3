@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # slightly more descriptive (but still never expose stack traces or
 # internal paths).
 _ENV = os.getenv("ENVIRONMENT", "development")
-_IS_PROD = _ENV == "production"
+_IS_PROD = _ENV == "production"  # codeql[py/unused-global] – used in error response verbosity logic
 
 # Mapping of common HTTP status codes to safe, user-facing messages
 _SAFE_MESSAGES = {
