@@ -148,6 +148,14 @@ async def health():
         "buckets": bucket_count,
         "objects": obj_count,
         "total_bytes": total_size,
+        "entity": {
+            "location": "DocUtari",
+            "pillar": "Knowledge",
+            "lead_ai": "To be Defined",
+            "primes": ["Norman Hawkins"],
+            "primary_function": "Document Management Hub",
+            "layer": "supporting",
+        },
     }
 
 

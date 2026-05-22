@@ -226,6 +226,14 @@ async def health():
         "pending": pending,
         "sent": sent,
         "failed": failed,
+        "entity": {
+            "location": "Arcadia",
+            "pillar": "Commercial / Financial",
+            "lead_ai": "Lilli SC",
+            "primes": ["Dorris Fontaine"],
+            "primary_function": "Post-Login User Frontend, Forum & Email Hub",
+            "layer": "supporting",
+        },
     }
 
 

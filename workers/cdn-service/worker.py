@@ -170,6 +170,13 @@ async def health():
         "registered_assets": asset_count,
         "total_bytes": total_size,
         "total_serves": serve_count,
+        "entity": {
+            "location": "The Studio",
+            "pillar": "Creativity",
+            "lead_ai": "Voxx",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Central Hub of the Creativity Center",
+        },
     }
 
 

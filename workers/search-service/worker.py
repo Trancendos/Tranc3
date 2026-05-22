@@ -155,6 +155,13 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "indices": index_count,
         "documents": doc_count,
+        "entity": {
+            "location": "The Library",
+            "pillar": "Knowledge",
+            "lead_ai": "Zimik",
+            "primes": ["Norman Hawkins"],
+            "primary_function": "Knowledge Base & Wiki",
+        },
     }
 
 

@@ -154,6 +154,13 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "namespaces": ns_count,
         "config_keys": cfg_count,
+        "entity": {
+            "location": "The Void",
+            "pillar": "Security",
+            "lead_ai": "Prometheus",
+            "primes": ["The Guardian (Marcus Magnolia)"],
+            "primary_function": "Secrets Vault & Password Store",
+        },
     }
 
 

@@ -176,6 +176,13 @@ async def health():
         "pending": pending,
         "processing": processing,
         "dead_letters": dlq,
+        "entity": {
+            "location": "The HIVE",
+            "pillar": "Architectural",
+            "lead_ai": "The Queen",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Data Transport Hub",
+        },
     }
 
 

@@ -228,6 +228,13 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "total_jobs": total,
         "active_jobs": active,
+        "entity": {
+            "location": "ChronosSphere / ArcStream",
+            "pillar": "DevOps",
+            "lead_ai": "Chronos",
+            "primes": ["Trancendos"],
+            "primary_function": "Task, Time & Scheduling Management",
+        },
     }
 
 

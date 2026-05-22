@@ -195,6 +195,13 @@ async def health():
         "monitored_services": len(_latest),
         "healthy": healthy,
         "degraded_or_down": len(_latest) - healthy,
+        "entity": {
+            "location": "DevOcity",
+            "pillar": "DevOps",
+            "lead_ai": "Kitty",
+            "primes": ["Trancendos"],
+            "primary_function": "Development Operations",
+        },
     }
 
 

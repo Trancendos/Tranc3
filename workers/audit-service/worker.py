@@ -132,6 +132,14 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "total_entries": count,
         "chain_tip": last["chain_hash"] if last else GENESIS_HASH,
+        "entity": {
+            "location": "The Observatory",
+            "pillar": "Knowledge",
+            "lead_ai": "Norman Hawkins",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Audit Log & Monitoring Platform",
+            "layer": "supporting",
+        },
     }
 
 

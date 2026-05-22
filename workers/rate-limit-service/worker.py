@@ -163,6 +163,13 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "active_buckets": active_buckets,
+        "entity": {
+            "location": "Cryptex",
+            "pillar": "Security",
+            "lead_ai": "Renik",
+            "primes": ["The Guardian (Marcus Magnolia)"],
+            "primary_function": "Cyber Defense (Threat Intel, DDoS, CVE)",
+        },
     }
 
 

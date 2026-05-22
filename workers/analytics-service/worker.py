@@ -140,6 +140,14 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "event_count": event_count,
         "metric_count": metric_count,
+        "entity": {
+            "location": "The Observatory",
+            "pillar": "Knowledge",
+            "lead_ai": "Norman Hawkins",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Audit Log & Monitoring Platform",
+            "layer": "supporting",
+        },
     }
 
 

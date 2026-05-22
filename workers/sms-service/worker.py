@@ -192,6 +192,14 @@ async def health():
         "pending": pending,
         "sent": sent,
         "failed": failed,
+        "entity": {
+            "location": "The Nexus",
+            "pillar": "Architectural",
+            "lead_ai": "The Nexus",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "AI Communication Gateway & Transfer Hub",
+            "layer": "supporting",
+        },
     }
 
 

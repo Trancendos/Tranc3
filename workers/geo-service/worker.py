@@ -237,6 +237,13 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "cached_ips": cached,
+        "entity": {
+            "location": "The Dutchy",
+            "pillar": "DevOps",
+            "lead_ai": "Predictive lore",
+            "primes": ["Trancendos"],
+            "primary_function": "Intelligence & Market Analysis",
+        },
     }
 
 

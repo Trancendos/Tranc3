@@ -96,7 +96,19 @@ db = UsersDatabase()
 @app.get("/health")
 async def health():
     count = db.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
-    return {"status": "healthy", "service": "users-service", "user_count": count}
+    return {
+        "status": "healthy",
+        "service": "users-service",
+        "user_count": count,
+        "entity": {
+            "location": "Infinity",
+            "pillar": "Security",
+            "lead_ai": "The Guardian (Anchor: Orb of Orisis)",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Centralized Auth & OAuth 2.0",
+            "layer": "supporting",
+        },
+    }
 
 
 @app.post("/users", response_model=UserResponse, status_code=201)
