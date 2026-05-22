@@ -106,7 +106,7 @@ class OllamaProvider(AIProvider):
                 tokens_completion=data.get("eval_count", 0),
                 tokens_total=data.get("prompt_eval_count", 0) + data.get("eval_count", 0),
                 latency_ms=latency_ms,
-                done=data.get("done", True),
+                finish_reason="stop" if data.get("done", True) else "length",
             )
         except httpx.ConnectError:
             raise RuntimeError(f"Ollama not available at {self.base_url}") from None
