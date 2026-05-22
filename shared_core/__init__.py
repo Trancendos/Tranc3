@@ -20,6 +20,11 @@ from .path_validation import (
     sanitize_filename,
     validate_path,
 )
+from .url_validation import (
+    SSRFError,
+    validate_url,
+    validate_webhook_url,
+)
 from .registry import ServiceRegistry
 from .sanitize import (
     SafeLogger,
@@ -54,6 +59,10 @@ __all__ = [
     "validate_path",
     "safe_join",
     "sanitize_filename",
+    # URL / SSRF validation
+    "SSRFError",
+    "validate_url",
+    "validate_webhook_url",
     # Error handlers
     "safe_error_detail",
     "SafeHTTPException",
