@@ -98,6 +98,7 @@ class HuggingFaceProvider(AIProvider):
             raise RuntimeError(f"HuggingFace HTTP error: {e.response.status_code}") from None
         except Exception as e:
             raise RuntimeError(f"HuggingFace error: {e}") from None
+        return None
 
     async def health_check(self) -> ProviderHealth:
         """Check HuggingFace API availability."""
@@ -131,6 +132,7 @@ class HuggingFaceProvider(AIProvider):
                 healthy=False,
                 error=str(e),
             )
+        return None
 
     def get_models(self) -> list[str]:
         """List free models on HuggingFace."""

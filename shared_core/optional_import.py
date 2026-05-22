@@ -66,8 +66,10 @@ class LazyLoader:
 
             if object.__getattribute__(self, "_warn_on_fail"):
                 logger.warning(
-                    f"Optional dependency '{module_name}' not available: {e}. "
-                    f"Feature requiring {object.__getattribute__(self, '_description')} will be disabled."
+                    "Optional dependency '%s' not available: %s. Feature requiring %s will be disabled.",
+                    sanitize_for_log(module_name),
+                    sanitize_for_log(e),
+                    sanitize_for_log(object.__getattribute__(self, '_description')),
                 )
 
             fallback = object.__getattribute__(self, "_fallback")
@@ -78,6 +80,7 @@ class LazyLoader:
                 f"Optional dependency '{module_name}' is not installed. "
                 f"{object.__getattribute__(self, '_description')}"
             ) from e
+        return None
 
     def __getattr__(self, name: str) -> Any:
         mod = self._load()

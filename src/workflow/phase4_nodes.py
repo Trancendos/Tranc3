@@ -183,6 +183,7 @@ class NeuralMeshNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -282,6 +283,7 @@ class CollectiveMemoryNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -359,6 +361,7 @@ class MetaLearnNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -431,6 +434,7 @@ class AttentionRouteNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -538,6 +542,7 @@ class CausalReasonNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -662,6 +667,7 @@ class KnowledgeGraphNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -747,6 +753,7 @@ class ForesightNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------

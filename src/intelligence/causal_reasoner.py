@@ -285,11 +285,13 @@ class CausalReasoner:
         """Add a causal rule."""
         async with self._lock:
             return self._graph.add_rule(rule)
+        return None
 
     async def remove_rule(self, rule_id: str) -> bool:
         """Remove a causal rule."""
         async with self._lock:
             return self._graph.remove_rule(rule_id)
+        return None
 
     # ── Evidence management ────────────────────────────────────────
 

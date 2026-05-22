@@ -9,6 +9,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from shared_core.sanitize import sanitize_for_log
+
 logger = logging.getLogger(__name__)
 
 
@@ -206,7 +208,8 @@ class AdvancedTransformerModel(nn.Module):
         self.apply(self._init_weights)
 
         logger.info(
-            f"TRANC3 Model initialized: {self._count_parameters():,} parameters"
+            "TRANC3 Model initialized: %s parameters",
+            sanitize_for_log(f"{self._count_parameters():,}"),
         )
 
     def _init_weights(self, module):

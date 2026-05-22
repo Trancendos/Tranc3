@@ -4,11 +4,13 @@
 import json
 import logging
 import os
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import torch
 from torch.utils.data import Dataset
 
+from shared_core.path_validation import validate_path
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -58,10 +60,12 @@ class MultilingualDataset(Dataset):
         logger.info("MultilingualDataset: %s samples, split=%s", sanitize_for_log(len(self.samples)), sanitize_for_log(split))
 
     def _load_data(self, data_dir: str):
+        base = Path(data_dir).resolve()
         for lang in self.languages:
             path = os.path.join(data_dir, lang, f"{self.split}.jsonl")
             if os.path.exists(path):
-                with open(path, "r", encoding="utf-8") as f:
+                validated = validate_path(path, base)
+                with open(validated, "r", encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if line:

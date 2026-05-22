@@ -149,6 +149,7 @@ class InferenceWorker:
             return await self._do_predict(p)
         else:
             raise ValueError(f"Unknown job type: {jt}")
+        return None
 
     # ─── Task implementations ──────────────────────────────────────────────────
 
@@ -362,6 +363,7 @@ class InferenceWorker:
                 "dims": dim,
                 "model": "tranc3-hash-personality",
             }
+        return None
 
     async def _do_predict(self, p: dict) -> dict:
         text = p.get("text", "")

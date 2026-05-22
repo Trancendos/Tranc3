@@ -149,6 +149,7 @@ class MultiCloudFederationController:
                 return await self._send_to_cluster(cluster, request_data)
 
         raise Exception("No healthy clusters available")
+        return None
 
     async def _send_to_cluster(self, cluster: str, request_data: Dict) -> Dict:
         """Send request to specific cluster"""
@@ -164,6 +165,7 @@ class MultiCloudFederationController:
         except Exception as e:
             logger.error("Request to %s failed: %s", sanitize_for_log(cluster), sanitize_for_log(e))
             raise
+        return None
 
 
 # Global federation controller instance

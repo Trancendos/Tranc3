@@ -72,6 +72,7 @@ def verify_jwt(
     except Exception as e:
         logger.warning("JWT verification failed: %s", sanitize_for_log(e))
         raise
+    return None
 
 
 # ── Password hashing ────────────────────────────────────────────────────────

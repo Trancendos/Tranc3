@@ -64,6 +64,7 @@ class CircuitBreaker:
             if callable(fallback):
                 return fallback()
             raise
+        return None
 
     async def async_call(self, func: Callable, *args, fallback=None, **kwargs):
         if self.state == CircuitState.OPEN:
@@ -85,6 +86,7 @@ class CircuitBreaker:
             if callable(fallback):
                 return fallback()
             raise
+        return None
 
     def _on_success(self):
         if self._state == CircuitState.HALF_OPEN:
@@ -101,7 +103,11 @@ class CircuitBreaker:
         self._failure_count += 1
         self._last_failure = time.time()
         logger.warning(
-            f"Circuit {self.name}: failure {self._failure_count}/{self.failure_threshold} — {error}"
+            "Circuit %s: failure %s/%s — %s",
+            sanitize_for_log(self.name),
+            sanitize_for_log(self._failure_count),
+            sanitize_for_log(self.failure_threshold),
+            sanitize_for_log(error),
         )
         if self._failure_count >= self.failure_threshold:
             self._state = CircuitState.OPEN
@@ -154,13 +160,18 @@ class LoopValidator:
 
         if count > limit:
             logger.error(
-                f"LOOP_VALIDATOR: Loop '{key}' exceeded limit {limit} — breaking"
+                "LOOP_VALIDATOR: Loop '%s' exceeded limit %s — breaking",
+                sanitize_for_log(key),
+                sanitize_for_log(limit),
             )
             return False
 
         if count > limit * 0.9:
             logger.warning(
-                f"LOOP_VALIDATOR: Loop '{key}' at {count}/{limit} — approaching limit"
+                "LOOP_VALIDATOR: Loop '%s' at %s/%s — approaching limit",
+                sanitize_for_log(key),
+                sanitize_for_log(count),
+                sanitize_for_log(limit),
             )
 
         return True
@@ -175,7 +186,8 @@ class LoopValidator:
         history = list(self._history[loop_id])
         if len(history) >= 10 and len(set(history[-10:])) == 1:
             logger.warning(
-                f"LOOP_VALIDATOR: Stagnation detected in '{loop_id}' — value unchanged for 10 iterations"
+                "LOOP_VALIDATOR: Stagnation detected in '%s' — value unchanged for 10 iterations",
+                sanitize_for_log(loop_id),
             )
             return False
         return True
@@ -204,7 +216,12 @@ def with_retry(max_attempts: int = 3, backoff: float = 1.0, exceptions=(Exceptio
                         raise
                     wait = backoff * (2 ** (attempt - 1))
                     logger.warning(
-                        f"Retry {attempt}/{max_attempts} for {func.__name__}: {e} — waiting {wait}s"
+                        "Retry %s/%s for %s: %s — waiting %ss",
+                        sanitize_for_log(attempt),
+                        sanitize_for_log(max_attempts),
+                        sanitize_for_log(func.__name__),
+                        sanitize_for_log(e),
+                        sanitize_for_log(wait),
                     )
                     time.sleep(wait)
 

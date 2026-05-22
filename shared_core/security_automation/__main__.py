@@ -506,6 +506,7 @@ def cmd_watch(args: argparse.Namespace) -> int:
     except KeyboardInterrupt:
         print("\n👋 Watch stopped")
         return 0
+    return None
 
 
 # ---------------------------------------------------------------------------

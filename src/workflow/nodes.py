@@ -88,6 +88,7 @@ class BaseNode:
             return await asyncio.wait_for(coro, timeout=timeout)
         except asyncio.TimeoutError:
             raise TimeoutError(f"Node '{self.config.id}' timed out after {timeout}s") from None
+        return None
 
     async def _retry(self, coro_factory: Callable, retries: int):
         """Execute coro_factory() up to `retries` times with exponential backoff."""
@@ -111,6 +112,7 @@ class BaseNode:
         if last_exc is not None:
             raise last_exc
         raise RuntimeError(f"All {retries} attempts failed with unknown error")
+        return None
 
     def _make_result(
         self,
@@ -311,6 +313,7 @@ class CodeExecNode(BaseNode):
                 success=False,
                 error=safe_error_detail(exc, 500),
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -359,6 +362,7 @@ class HTTPNode(BaseNode):
                 if "application/json" in content_type:
                     return {"status_code": resp.status_code, "body": resp.json()}
                 return {"status_code": resp.status_code, "body": resp.text}
+            return None
 
         try:
             output = await self._retry(
@@ -404,6 +408,7 @@ class ConditionNode(BaseNode):
                 success=False,
                 error=safe_error_detail(exc, 500),
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -518,6 +523,7 @@ class VectorSearchNode(BaseNode):
                 resp = await client.post(url, json=payload)
                 resp.raise_for_status()
                 return resp.json().get("result", [])
+            return None
 
         try:
             results = await self._retry(
@@ -734,6 +740,7 @@ class LoopNode(BaseNode):
                     else:
                         return {"error": res.error, "item": item}
                 return item_result
+            return None
 
         tasks = [_run_item(item, idx) for idx, item in enumerate(items)]
         loop_results = await asyncio.gather(*tasks)
@@ -839,6 +846,7 @@ class MLPredictNode(BaseNode):
                 resp = await client.post(endpoint, json=payload, headers=headers)
                 resp.raise_for_status()
                 return resp.json()
+            return None
 
         try:
             result = await self._retry(

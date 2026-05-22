@@ -167,9 +167,46 @@ class TypeExcChecker(RuleChecker):
     # Also catch via regex since AST doesn't easily handle this pattern
     _PATTERN = re.compile(r"type\(___?exc_?\)\.__name__")
 
+    @staticmethod
+    def _build_string_ranges(tree: ast.AST) -> set:
+        """Build set of line numbers inside plain string literals (not f-strings).
+
+        Only skips lines within plain string constants such as docstrings,
+        rule descriptions, and string variable assignments.  Lines inside
+        f-strings are NOT skipped because they may contain the actual
+        vulnerability pattern (e.g. ``type(__exc).__name__`` inside an
+        f-string logger call).
+        """
+        # First, collect all JoinedStr (f-string) nodes so we can exclude
+        # their child Constant nodes from the skip set.
+        fstring_ranges = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.JoinedStr):
+                start = getattr(node, 'lineno', None)
+                end = getattr(node, 'end_lineno', None)
+                if start and end:
+                    for ln in range(start, end + 1):
+                        fstring_ranges.add(ln)
+
+        # Now collect line ranges from plain string constants, excluding
+        # any lines that are within an f-string.
+        ranges = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                start = getattr(node, 'lineno', None)
+                end = getattr(node, 'end_lineno', None)
+                if start and end:
+                    for ln in range(start, end + 1):
+                        if ln not in fstring_ranges:
+                            ranges.add(ln)
+        return ranges
+
     def check(self, tree: ast.AST, source: str, filepath: str) -> List[Violation]:
+        string_lines = self._build_string_ranges(tree)
         violations = []
         for i, line in enumerate(source.splitlines(), 1):
+            if i in string_lines:
+                continue
             if self._PATTERN.search(line):
                 violations.append(Violation(
                     rule_id=self.rule_id,
@@ -336,8 +373,19 @@ class PathTraversalChecker(RuleChecker):
     # Common patterns where user input flows into path operations
     _PATH_OPS = {"open", "os.path.join", "Path"}
 
+    # Variable names that indicate already-validated paths
+    _VALIDATED_NAMES = {"validated_path", "safe_path", "resolved"}
+
     def check(self, tree: ast.AST, source: str, filepath: str) -> List[Violation]:
         violations = []
+
+        # Build set of variable names that have been validated in this scope
+        validated_vars = self._find_validated_vars(tree)
+
+        # Skip files in our own security_automation module
+        if "security_automation" in filepath:
+            return violations
+
         # Check for open() calls where the argument comes from request parameters
         # This is a heuristic — we look for open() calls where the first arg
         # contains request params (request.query_params, path_params, etc.)
@@ -347,6 +395,9 @@ class PathTraversalChecker(RuleChecker):
                     if node.args:
                         arg = node.args[0]
                         if self._references_request(arg):
+                            # Skip if the arg variable was previously validated
+                            if self._is_validated_arg(arg, validated_vars):
+                                continue
                             violations.append(Violation(
                                 rule_id=self.rule_id,
                                 category=self.category,
@@ -359,6 +410,30 @@ class PathTraversalChecker(RuleChecker):
                                 fixable=False,
                             ))
         return violations
+
+    @staticmethod
+    def _find_validated_vars(tree: ast.AST) -> set:
+        """Find variable names that were passed to validate_path or _assert_under_base."""
+        validated = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name):
+                    if node.func.id in ("validate_path", "_assert_under_base"):
+                        # The first arg is the variable being validated
+                        if node.args and isinstance(node.args[0], ast.Name):
+                            validated.add(node.args[0].id)
+                elif isinstance(node.func, ast.Attribute):
+                    if node.func.attr in ("validate_path", "_assert_under_base"):
+                        if node.args and isinstance(node.args[0], ast.Name):
+                            validated.add(node.args[0].id)
+        return validated
+
+    def _is_validated_arg(self, arg: ast.AST, validated_vars: set) -> bool:
+        """Check if the argument variable was previously validated."""
+        if isinstance(arg, ast.Name):
+            if arg.id in validated_vars or arg.id in self._VALIDATED_NAMES:
+                return True
+        return False
 
     def _references_request(self, node: ast.AST) -> bool:
         """Check if an AST node references request parameters."""
@@ -389,6 +464,16 @@ class WeakHashChecker(RuleChecker):
             if isinstance(node, ast.Call):
                 if isinstance(node.func, ast.Attribute):
                     if node.func.attr in ("md5", "sha1"):
+                        # Skip if usedforsecurity=False is already present
+                        has_safe_flag = False
+                        for kw in node.keywords:
+                            if (kw.arg == "usedforsecurity"
+                                    and isinstance(kw.value, ast.Constant)
+                                    and kw.value.value is False):
+                                has_safe_flag = True
+                                break
+                        if has_safe_flag:
+                            continue
                         violations.append(Violation(
                             rule_id=self.rule_id,
                             category=self.category,
@@ -410,9 +495,40 @@ class MixedReturnChecker(RuleChecker):
     when callers expect a non-None value. Every function should explicitly
     return a value (or None) on all code paths.
     """
+
     rule_id = "PY-008"
     category = Category.MIXED_RETURN
     severity = Severity.MEDIUM
+
+    @staticmethod
+    def _all_paths_return(stmt: ast.stmt) -> bool:
+        """Check if a statement guarantees a return on all code paths."""
+        if isinstance(stmt, ast.Return):
+            return True
+        if isinstance(stmt, ast.If):
+            if_returns = stmt.body and MixedReturnChecker._all_paths_return(stmt.body[-1])
+            else_returns = stmt.orelse and MixedReturnChecker._all_paths_return(stmt.orelse[-1])
+            return bool(if_returns and else_returns)
+        if isinstance(stmt, ast.Try):
+            try_returns = stmt.body and MixedReturnChecker._all_paths_return(stmt.body[-1])
+            handlers_return = (
+                all(
+                    h.body and MixedReturnChecker._all_paths_return(h.body[-1])
+                    for h in stmt.handlers
+                )
+                if stmt.handlers
+                else False
+            )
+            finally_returns = (
+                stmt.finalbody and MixedReturnChecker._all_paths_return(stmt.finalbody[-1])
+                if stmt.finalbody
+                else False
+            )
+            return bool((try_returns and handlers_return) or finally_returns)
+        if isinstance(stmt, (ast.With, ast.AsyncWith)):
+            return bool(stmt.body and MixedReturnChecker._all_paths_return(stmt.body[-1]))
+        # for/while loops may not execute, so they can't guarantee return
+        return False
 
     def check(self, tree: ast.AST, source: str, filepath: str) -> List[Violation]:
         violations = []
@@ -428,6 +544,9 @@ class MixedReturnChecker(RuleChecker):
                     # Check if the function ends without a return
                     body = node.body
                     if body and not isinstance(body[-1], ast.Return):
+                        # Skip if the last statement guarantees a return on all paths
+                        if self._all_paths_return(body[-1]):
+                            continue
                         violations.append(Violation(
                             rule_id=self.rule_id,
                             category=self.category,

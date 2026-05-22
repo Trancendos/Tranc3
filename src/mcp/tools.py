@@ -847,6 +847,7 @@ class SparkToolRegistry:
                 "status": "timeout",
                 "error": f"Workflow did not complete within {timeout_seconds}s.",
             }
+        return None
 
     async def _handle_register_workflow(self, params: Dict[str, Any]) -> Dict[str, Any]:
         workflow_dict = params.get("workflow")
@@ -1081,6 +1082,7 @@ class SparkToolRegistry:
                 "total_searched": 0,
                 "error": safe_error_detail(exc, 500),
             }
+        return None
 
     async def _handle_ingest_document(self, params: Dict[str, Any]) -> Dict[str, Any]:
         texts = params.get("texts") or []
@@ -1266,6 +1268,7 @@ class SparkToolRegistry:
                 "plan": None,
                 "error": safe_error_detail(exc, 500)[:120],
             }
+        return None
 
     # ── The Citadel handler ───────────────────────────────────────────────
 

@@ -208,6 +208,7 @@ class NeuralMesh:
             self._nodes[node_id] = node
             logger.info("neural_mesh: registered node=%s channels=%s", node_id, list(ch_map))
             return node
+        return None
 
     async def deregister_node(self, node_id: str) -> None:
         """Gracefully remove a node from the mesh.
@@ -274,6 +275,7 @@ class NeuralMesh:
             self._edges[key] = edge
             logger.info("neural_mesh: connected %s -> %s (w=%.2f)", source, target, weight)
             return edge
+        return None
 
     async def disconnect(self, source: str, target: str) -> None:
         """Remove a directed edge."""

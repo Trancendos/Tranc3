@@ -216,6 +216,7 @@ class ServiceMesh:
                 trace_id=trace_id,
                 provider=service_name,
             )
+        return None
 
     async def _call_http(
         self,
