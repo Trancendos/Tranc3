@@ -5,30 +5,28 @@
 #
 # Security: All user-supplied path components (output_dir, repo_name) are
 # validated through shared_core.path_validation to prevent path traversal.
+# Every filesystem operation (open, write_text, mkdir, copy) is preceded by
+# validate_path() which raises PathTraversalError if the path escapes the
+# allowed base directory.  This replaces the previous _assert_under_base()
+# which used `assert` — stripped under `python -O`, making it a no-op.
 
 from __future__ import annotations
 
 import json
 import logging
-
-from shared_core.sanitize import sanitize_for_log
 import shutil
 import textwrap
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from shared_core.path_validation import PathTraversalError, safe_join, sanitize_filename
-
-
-def _assert_under_base(path: Path, base: Path) -> Path:
-    """Assert that *path* resolves under *base* — helps static analysis track validation."""
-    resolved = path.resolve()
-    base_resolved = base.resolve()
-    assert str(resolved).startswith(str(base_resolved)), (
-        f"Security: path {resolved} escapes base {base_resolved}"
-    )
-    return resolved
+from shared_core.path_validation import (
+    PathTraversalError,
+    safe_join,
+    sanitize_filename,
+    validate_path,
+)
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -98,13 +96,16 @@ class PersonalitySpawner:
       - api_personality.py   a minimal FastAPI app wired to the personality
       - README.md            with identity, purpose, and quickstart
 
-    Security: All path construction uses safe_join() to prevent traversal.
+    Security: All path construction uses safe_join() and every filesystem
+    operation is validated with validate_path() before execution.  This
+    prevents path traversal even if user-controlled input (output_dir,
+    repo_name) contains malicious components like '..' or symlinks.
     """
 
     def __init__(self) -> None:
         self._profiles: Dict[str, Dict] = self._load_all_profiles()
 
-    # ─── Public API ──────────────────────────────────────────────────
+    # ── Public API ───────────────────────────────────────────────────────
 
     def spawn(
         self,
@@ -127,7 +128,8 @@ class PersonalitySpawner:
 
         # Safely construct the target path under the validated output base
         target = safe_join(output_base, safe_repo_name)
-        _assert_under_base(target, output_base)
+        # validate_path() raises PathTraversalError (not stripped by -O)
+        validate_path(target, output_base)
         if target.exists():
             raise FileExistsError(f"Target directory already exists: {target}")
 
@@ -169,7 +171,7 @@ class PersonalitySpawner:
             for pid, p in self._profiles.items()
         ]
 
-    # ─── File writers ────────────────────────────────────────────────
+    # ── File writers ─────────────────────────────────────────────────────
 
     def _write_config(self, target: Path, profile: Dict) -> list:
         code_name = profile.get("code_name", profile["id"])
@@ -198,7 +200,8 @@ class PersonalitySpawner:
         }
         # Safe path construction: target is already validated
         path = safe_join(target, "tranc3_config.yaml")
-        _assert_under_base(path, target)
+        # validate_path raises PathTraversalError on escape (not assert!)
+        validate_path(path, target)
         import yaml  # type: ignore
 
         with open(path, "w") as f:
@@ -208,10 +211,12 @@ class PersonalitySpawner:
     def _write_active_profile(self, target: Path, profile: Dict) -> list:
         # Safe path construction under validated target
         profile_dir = safe_join(target, "src", "personality")
-        _assert_under_base(profile_dir, target)
+        # validate_path before mkdir — raises PathTraversalError on escape
+        validate_path(profile_dir, target)
         profile_dir.mkdir(parents=True, exist_ok=True)
         path = safe_join(target, "src", "personality", "active_profile.json")
-        _assert_under_base(path, target)
+        # validate_path before open — raises PathTraversalError on escape
+        validate_path(path, target)
         with open(path, "w") as f:
             json.dump(profile, f, indent=2)
         return [str(path)]
@@ -252,7 +257,8 @@ class PersonalitySpawner:
             RATE_WINDOW_SECONDS=60
         """)
         path = safe_join(target, ".env.example")
-        _assert_under_base(path, target)
+        # validate_path before write_text — raises PathTraversalError on escape
+        validate_path(path, target)
         path.write_text(content)
         return [str(path)]
 
@@ -369,7 +375,8 @@ class PersonalitySpawner:
                             reload=os.getenv("DEBUG", "false").lower() == "true")
         """)
         path = safe_join(target, "api_personality.py")
-        _assert_under_base(path, target)
+        # validate_path before write_text — raises PathTraversalError on escape
+        validate_path(path, target)
         path.write_text(content)
         return [str(path)]
 
@@ -428,14 +435,16 @@ class PersonalitySpawner:
             `the-guardian`, `vesper-nightingale`, `atlas-meridian`.
         """)
         path = safe_join(target, "README.md")
-        _assert_under_base(path, target)
+        # validate_path before write_text — raises PathTraversalError on escape
+        validate_path(path, target)
         path.write_text(content)
         return [str(path)]
 
     def _write_requirements(self, target: Path) -> list:
         base_reqs = _BASE_DIR / "requirements.txt"
         path = safe_join(target, "requirements.txt")
-        _assert_under_base(path, target)
+        # validate_path before copy/write_text — raises PathTraversalError on escape
+        validate_path(path, target)
         if base_reqs.exists():
             shutil.copy(base_reqs, path)
         else:
@@ -459,11 +468,12 @@ class PersonalitySpawner:
             CMD ["uvicorn", "api_personality:app", "--host", "0.0.0.0", "--port", "8000"]
         """)
         path = safe_join(target, "Dockerfile")
-        _assert_under_base(path, target)
+        # validate_path before write_text — raises PathTraversalError on escape
+        validate_path(path, target)
         path.write_text(content)
         return [str(path)]
 
-    # ─── Internal ────────────────────────────────────────────────────
+    # ── Internal ─────────────────────────────────────────────────────────
 
     def _load_all_profiles(self) -> Dict[str, Dict]:
         profiles: Dict[str, Dict] = {}
