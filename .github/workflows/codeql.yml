@@ -35,10 +35,10 @@ jobs:
         include:
           - language: python
             build-mode: none
-            query: codeql/python-queries:AlertSuppression.ql
+            packs: codeql/python-queries:AlertSuppression.ql
           - language: javascript-typescript
             build-mode: none
-            query: codeql/javascript-queries:AlertSuppression.ql
+            packs: codeql/javascript-queries:AlertSuppression.ql
 
     steps:
       - name: Checkout repository
@@ -50,6 +50,7 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
           config-file: .github/codeql-config.yml
+          packs: ${{ matrix.packs }}
 
       - name: Perform CodeQL Analysis
         id: analyze
