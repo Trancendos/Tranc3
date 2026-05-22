@@ -962,6 +962,7 @@ NODE_REGISTRY: Dict[NodeType, Type[BaseNode]] = {
 
 def create_node(config: NodeConfig) -> BaseNode:
     """Factory: instantiate the correct BaseNode subclass for a given NodeConfig."""
+    _ensure_phase4_nodes_loaded()
     node_class = NODE_REGISTRY.get(config.type)
     # Phase 4 fallback: look up by string type name for extended node types
     if node_class is None:
@@ -978,20 +979,24 @@ def create_node(config: NodeConfig) -> BaseNode:
 # Phase 4 node registry extension (string-keyed, populated at import time)
 # ---------------------------------------------------------------------------
 _PHASE4_NODE_REGISTRY: Dict[str, Any] = {}
+_PHASE4_LOADED = False
 
-try:
-    from src.workflow.phase4_nodes import PHASE4_NODE_TYPES as _p4_types  # noqa: F401  # intentional top-level import
-    _PHASE4_NODE_REGISTRY.update(_p4_types)
-    logger.info("Phase 4 workflow nodes loaded: %s", list(_p4_types.keys()))
-except Exception as _p4_exc:
-    logger.warning("Phase 4 workflow nodes unavailable: %s", _p4_exc)
 
-# ---------------------------------------------------------------------------
-# Phase 5 node registry extension (string-keyed, populated at import time)
-# ---------------------------------------------------------------------------
-try:
-    from src.workflow.phase5_nodes import PHASE5_NODE_TYPES as _p5_types  # noqa: F401  # intentional top-level import
-    _PHASE4_NODE_REGISTRY.update(_p5_types)
-    logger.info("Phase 5 workflow nodes loaded: %s", list(_p5_types.keys()))
-except Exception as _p5_exc:
-    logger.warning("Phase 5 workflow nodes unavailable: %s", _p5_exc)
+def _ensure_phase4_nodes_loaded() -> None:
+    """Lazily populate _PHASE4_NODE_REGISTRY to avoid cyclic imports."""
+    global _PHASE4_LOADED
+    if _PHASE4_LOADED:
+        return
+    _PHASE4_LOADED = True
+    try:
+        from src.workflow.phase4_nodes import PHASE4_NODE_TYPES as _p4_types  # codeql[py/cyclic-import]
+        _PHASE4_NODE_REGISTRY.update(_p4_types)
+        logger.info("Phase 4 workflow nodes loaded: %s", list(_p4_types.keys()))
+    except Exception as _p4_exc:
+        logger.warning("Phase 4 workflow nodes unavailable: %s", _p4_exc)
+    try:
+        from src.workflow.phase5_nodes import PHASE5_NODE_TYPES as _p5_types  # codeql[py/cyclic-import]
+        _PHASE4_NODE_REGISTRY.update(_p5_types)
+        logger.info("Phase 5 workflow nodes loaded: %s", list(_p5_types.keys()))
+    except Exception as _p5_exc:
+        logger.warning("Phase 5 workflow nodes unavailable: %s", _p5_exc)

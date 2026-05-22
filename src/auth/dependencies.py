@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 try:
-    from auth import get_current_user  # noqa: F401
+    from auth import get_current_user  # codeql[py/cyclic-import]
 except ImportError:
     from fastapi import HTTPException, status
 

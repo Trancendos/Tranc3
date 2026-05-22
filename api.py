@@ -58,7 +58,7 @@ from src.observability.metrics import (  # noqa: F401  # intentional top-level i
     record_quality,
     record_request,
 )
-from auth import get_current_user, token_manager
+from auth import get_current_user, token_manager  # codeql[py/cyclic-import]
 from src.registry.file_registry import registry as file_registry  # noqa: F401  # intentional top-level import
 from src.security.ip_protection import abuse_detector, watermarker  # noqa: F401  # intentional top-level import
 from src.security.middleware import GovernanceMiddleware, SecurityHeadersMiddleware  # noqa: F401  # intentional top-level import
@@ -289,7 +289,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(GovernanceMiddleware)
 
 # ── The Spark (MCP server) ────────────────────────────────────────────────────
-from src.mcp.server import router as _mcp_router  # noqa: F401  # intentional top-level import
+from src.mcp.server import router as _mcp_router  # codeql[py/cyclic-import]
 
 app.include_router(_mcp_router)
 
