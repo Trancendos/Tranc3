@@ -12,6 +12,13 @@ FROM nginx:alpine AS runtime
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
+# Security: run as non-root user
+RUN chown -R nginx:nginx /usr/share/nginx/html /etc/nginx/conf.d \
+    && touch /var/run/nginx.pid \
+    && chown nginx:nginx /var/run/nginx.pid
+
+USER nginx
+
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s \
