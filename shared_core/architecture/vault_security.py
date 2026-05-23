@@ -74,23 +74,20 @@ import json
 import logging
 import os
 import secrets
-import struct
 import threading
-import time
 from abc import ABC, abstractmethod
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
 # ── Platform Detection ────────────────────────────────────────────────────────
 
 _IS_LINUX = os.name == "posix"
-_IS_WINDOWS = os.name == "nt"
 
 # Attempt to load libc for mlock / memset
 _libc: Optional[ctypes.CDLL] = None
@@ -227,9 +224,7 @@ class SecureBytes:
         try:
             self.zeroize()
         except Exception:
-            pass
-
-    def __enter__(self) -> "SecureBytes":
+            pass  # __del__ must never raise — safe to ignore zeroization failure
         return self
 
     def __exit__(self, *args: Any) -> None:
@@ -248,8 +243,7 @@ class SecureBytes:
             return False
         return _constant_time_compare(self.reveal(), other.reveal())
 
-    def __hash__(self) -> int:
-        raise TypeError("SecureBytes is not hashable for security reasons")
+    __hash__ = None  # type: ignore[assignment]  # SecureBytes is not hashable for security reasons
 
 
 # ── Vault Audit Event ─────────────────────────────────────────────────────────
@@ -336,7 +330,7 @@ class VaultAuditLogger:
                         record = json.loads(last_line)
                         self._prev_hash = record.get("chain_hash", "genesis")
                     except json.JSONDecodeError:
-                        pass
+                        pass  # Corrupted audit line — use genesis hash as fallback
 
     def log(self, event: VaultAuditEvent) -> None:
         """Record a vault audit event."""
@@ -601,14 +595,12 @@ class SoftHSM2Provider(HSMProvider):
         if not self._initialized or self._session is None:
             return False
         try:
+            import pkcs11  # type: ignore
             # Try a simple operation
             self._session.get_key(object_class=pkcs11.ObjectClass.SECRET_KEY)
             return True
         except Exception:
-            # No keys is fine — the session is still valid
-            return self._initialized
-        except NameError:
-            # pkcs11 not imported
+            # No keys or pkcs11 not available — session still valid if initialized
             return self._initialized
 
     def generate_key(
@@ -808,7 +800,7 @@ class SoftHSM2Provider(HSMProvider):
                     "type": "secret_key",
                 })
         except Exception:
-            pass
+            pass  # Key enumeration failure — return partial list
         return keys
 
     def close(self) -> None:
@@ -817,7 +809,7 @@ class SoftHSM2Provider(HSMProvider):
             try:
                 self._session.close()
             except Exception:
-                pass
+                pass  # Session close failure — safe to ignore during cleanup
             self._session = None
 
         self._pin.zeroize()
@@ -981,7 +973,7 @@ class YubiHSM2Provider(HSMProvider):
 
         try:
             if key_type == HSMKeyType.RSA:
-                pub, priv = self._session.generate_keypair(
+                self._session.generate_keypair(
                     pkcs11_key_type,
                     key_size=key_size,
                     label=key_label,
@@ -989,7 +981,7 @@ class YubiHSM2Provider(HSMProvider):
                 )
                 handle = key_label
             else:
-                key = self._session.generate_key(
+                self._session.generate_key(
                     pkcs11_key_type,
                     key_size=key_size,
                     label=key_label,
@@ -1072,7 +1064,7 @@ class YubiHSM2Provider(HSMProvider):
         try:
             return key.verify(data, signature)
         except Exception:
-            return False
+            return False  # Verification failure — signature invalid
 
     def delete_key(self, key_handle: str) -> bool:
         """Delete a key from YubiHSM 2."""
@@ -1084,7 +1076,7 @@ class YubiHSM2Provider(HSMProvider):
             key.destroy()
             return True
         except Exception:
-            return False
+            return False  # Key deletion failure — key may not exist
 
     def list_keys(self) -> List[Dict[str, Any]]:
         """List all keys in YubiHSM 2."""
@@ -1100,7 +1092,7 @@ class YubiHSM2Provider(HSMProvider):
             }):
                 keys.append({"label": obj.label, "type": "secret_key"})
         except Exception:
-            pass
+            pass  # Key enumeration failure — return partial list
         return keys
 
     def close(self) -> None:
@@ -1109,7 +1101,7 @@ class YubiHSM2Provider(HSMProvider):
             try:
                 self._session.close()
             except Exception:
-                pass
+                pass  # Session close failure — safe to ignore during cleanup
             self._session = None
 
         self._auth_password.zeroize()

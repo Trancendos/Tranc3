@@ -1178,7 +1178,6 @@ def get_all_ids() -> List[Dict]:
     """Return a flat list of all entity IDs across the platform."""
     result = []
     for loc_name, entity in PLATFORM_ENTITIES.items():
-        abbrev = LOCATION_ABBREVS.get(loc_name, "???")
         result.append({
             "id": entity.pid, "tier": "Location", "name": loc_name,
             "pillar": entity.pillar.value,
