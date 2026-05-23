@@ -479,7 +479,7 @@ async def get_citadel_overview():
 async def get_security_posture():
     """Get the current security posture from the adaptive scanner and defense engine."""
     try:
-        results = _scanner.scan_path(".", max_depth=1)
+        results = _scanner.scan_path(".")
         violations = len(results)
         suppressed = sum(1 for r in results if getattr(r, "suppressed", False))
     except Exception:

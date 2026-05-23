@@ -82,7 +82,7 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
         processor = NeuromorphicProcessor({})
         tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)
         result = (
-            processor.process(tensor, timesteps=timesteps)  # type: ignore[union-attr]  # codeql[py/wrong-argument-name]
+            processor.process(tensor)  # type: ignore[union-attr]
             if hasattr(processor, "process")
             else {"note": "processor scaffold — wire input dimensions to activate"}
         )
