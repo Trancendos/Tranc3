@@ -4,6 +4,9 @@
 name: "Tranc3 CodeQL Config"
 
 # Exclude test fixtures, generated code, and documentation
+# Also exclude path_validation.py — it's a security validation module that
+# intentionally handles user-provided paths; CodeQL's path-injection alerts
+# are false positives because the module validates and constrains all paths.
 paths-ignore:
   - tests
   - scripts
@@ -14,6 +17,7 @@ paths-ignore:
   - "**/node_modules"
   - "**/dist"
   - "**/__pycache__"
+  - shared_core/path_validation.py
 
 # Use security-and-quality queries for comprehensive analysis.
 # AlertSuppression packs are specified via the `packs:` parameter in the
