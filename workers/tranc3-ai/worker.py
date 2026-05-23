@@ -58,7 +58,7 @@ TRANC3_MODELS: dict[str, dict[str, Any]] = {
         "capabilities": ["chat", "orchestration"],
     },
     "the-guardian": {
-        "name": "The Guardian",
+        "name": "The Guardian (Anchor: Orb of Orisis)",
         "backend": "tranc3-own",
         "capabilities": ["chat", "security"],
     },

@@ -767,7 +767,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Classified Data Enclave: Isolated storage for passwords.",
         ],
         primary_function="Secrets Vault, Password Store & Sensitive Data Store",
-        primes=["The Guardian"],
+        primes=["The Guardian (Marcus Magnolia)"],
         online_mode="Real-time credential syncing; classified data retrieval.",
         offline_mode="Encrypted local vault access; local secret storage.",
         agent_alpha=Agent(
@@ -798,7 +798,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Identity Anchoring: Cryptographic signature from birth.",
         ],
         primary_function="Cryptographic Token Applicator",
-        primes=["The Guardian"],
+        primes=["The Guardian (Marcus Magnolia)"],
         online_mode="Live token minting for new cloud entities/incoming data.",
         offline_mode="Offline token generation (syncs/validates upon reconnect).",
         agent_alpha=Agent(
@@ -831,7 +831,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Instant Quarantine Warping: Moves corrupted entities to Ice Box.",
         ],
         primary_function="Cryptographic Scanner & Automated Quarantine Transport",
-        primes=["The Guardian"],
+        primes=["The Guardian (Marcus Magnolia)"],
         online_mode="Real-time integrity scanning; instant quarantine triggers.",
         offline_mode="Local file integrity checks; isolated local holding.",
         agent_alpha=Agent(
@@ -864,7 +864,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Automated Pen-Testing: Assaults defenses to patch zero-days.",
         ],
         primary_function="Cyber Defense (Threat Intelligence, DDoS, CVE Scanning)",
-        primes=["The Guardian"],
+        primes=["The Guardian (Marcus Magnolia)"],
         online_mode="Real-time threat intel; live DDoS Mitigation; active scanning.",
         offline_mode="Offline threat log review; localized basic security scans.",
         agent_alpha=Agent(
@@ -896,7 +896,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Cryo-Quarantine Extraction: Deep-freezes threats for analysis.",
         ],
         primary_function="Inception-Layered Sandbox Threat Isolation & Quarantine Centre",
-        primes=["The Guardian"],
+        primes=["The Guardian (Marcus Magnolia)"],
         online_mode="Nested sandbox generation; active deep-freeze quarantine.",
         offline_mode="Local secure containment; offline malware freezing.",
         agent_alpha=Agent(
