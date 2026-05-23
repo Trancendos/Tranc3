@@ -1035,3 +1035,4 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | 15.3 | API Documentation | ✅ Complete | Created docs/API_REFERENCE.md with all endpoints documented (auth, system, inference, billing, MCP, workflow, deepmind, skills, code, healing, evolution, personality) |
 | 15.4 | Deployment Guide | ✅ Complete | Created docs/DEPLOYMENT_GUIDE.md covering local dev, Docker Compose, OCI, Cloudflare Workers, CI/CD, monitoring, security, scaling |
 | 15.5 | Security Audit | ✅ Complete | No real secrets in source code; vault_security.py demo default marked with noqa:S105 comment; GitGuardian config active on main |
+| 15.6 | Release Tag v0.1.0 | ✅ Complete | Created annotated tag v0.1.0 on main (commit 37ef60f); GitHub Release published at https://github.com/Trancendos/Tranc3/releases/tag/v0.1.0 |
