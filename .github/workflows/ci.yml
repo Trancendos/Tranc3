@@ -32,12 +32,14 @@ jobs:
         run: |
           ruff check --select E,F,W,B --ignore E501,B008,B904 \
             --exclude "docs/reference" \
+            --exclude ".forgejo" \
             .
 
       - name: Ruff format check
         run: |
           ruff format --check --diff \
             --exclude "docs/reference" \
+            --exclude ".forgejo" \
             .
 
   test:

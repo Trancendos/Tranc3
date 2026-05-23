@@ -12,6 +12,10 @@ description = "Trancendos AI Platform — Luminous inference engine + MCP server
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = [
+    ".forgejo",
+    "docs/reference",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "C", "B", "I"]
