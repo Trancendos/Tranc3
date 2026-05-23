@@ -99,7 +99,9 @@ async def generate(
             data = resp.json()
             content = data["choices"][0]["message"]["content"]
             usage = data.get("usage", {})
-            logger.debug("ollama.generate model=%s tokens=%s", chosen_model, usage.get("total_tokens", 0))
+            logger.debug(
+                "ollama.generate model=%s tokens=%s", chosen_model, usage.get("total_tokens", 0)
+            )
             return {
                 "response": content,
                 "model": chosen_model,

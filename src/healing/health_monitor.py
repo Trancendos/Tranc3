@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 # Enumerations
 # ---------------------------------------------------------------------------
 
+
 class HealthStatus(Enum):
     HEALTHY = "healthy"
     REVIEW = "review"
@@ -39,6 +40,7 @@ class HealthStatus(Enum):
 # ---------------------------------------------------------------------------
 # Data Classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ServiceMetrics:
@@ -120,6 +122,7 @@ class HealthRecord:
 # Monitor
 # ---------------------------------------------------------------------------
 
+
 class LogicCoreHealthMonitor:
     """
     Autonomous health monitor for the Tranc3 service mesh.
@@ -150,9 +153,7 @@ class LogicCoreHealthMonitor:
         # service_id → service metadata
         self._services: Dict[str, Dict] = {}
         # Sweep period — default 6 hours, overridable via env.
-        self.check_interval: float = float(
-            os.getenv("HEALTH_CHECK_INTERVAL_SEC", str(6 * 3600))
-        )
+        self.check_interval: float = float(os.getenv("HEALTH_CHECK_INTERVAL_SEC", str(6 * 3600)))
         # Alert subscribers
         self._alert_callbacks: List[Callable] = []
         # Shared async HTTP client (created lazily to avoid event-loop issues)
@@ -168,9 +169,11 @@ class LogicCoreHealthMonitor:
         name: str,
         endpoint: str,
         health_endpoint: str,
-        config: dict = {},
+        config: dict = None,
     ) -> None:
         """Register a service for continuous health monitoring."""
+        if config is None:
+            config = {}
         self._services[service_id] = {
             "name": name,
             "endpoint": endpoint,
@@ -266,10 +269,7 @@ class LogicCoreHealthMonitor:
             logger.debug("No services registered — skipping sweep.")
             return
 
-        tasks = {
-            sid: asyncio.create_task(self.check_service(sid))
-            for sid in self._services
-        }
+        tasks = {sid: asyncio.create_task(self.check_service(sid)) for sid in self._services}
 
         for service_id, task in tasks.items():
             try:
@@ -278,17 +278,13 @@ class LogicCoreHealthMonitor:
                 logger.error("Sweep task failed for %s: %s", service_id, exc)
                 continue
 
-            record = self._records.setdefault(
-                service_id, HealthRecord(service_id=service_id)
-            )
+            record = self._records.setdefault(service_id, HealthRecord(service_id=service_id))
             record.history.append(metrics)
             record.last_checked = metrics.timestamp
 
             new_status = self._classify_status(metrics.composite_score)
             if new_status != record.last_status:
-                self._emit_alert(
-                    service_id, record.last_status, new_status, metrics
-                )
+                self._emit_alert(service_id, record.last_status, new_status, metrics)
             record.last_status = new_status
 
             logger.info(
@@ -318,9 +314,7 @@ class LogicCoreHealthMonitor:
         Run sweeps indefinitely, sleeping check_interval seconds between runs.
         Designed to be executed as an asyncio background task.
         """
-        logger.info(
-            "LogicCoreHealthMonitor starting — interval=%.0f s", self.check_interval
-        )
+        logger.info("LogicCoreHealthMonitor starting — interval=%.0f s", self.check_interval)
         while True:
             try:
                 await self.sweep()
@@ -337,9 +331,7 @@ class LogicCoreHealthMonitor:
         services_out = {}
         for service_id, record in self._records.items():
             svc_meta = self._services.get(service_id, {})
-            latest: Optional[ServiceMetrics] = (
-                record.history[-1] if record.history else None
-            )
+            latest: Optional[ServiceMetrics] = record.history[-1] if record.history else None
             services_out[service_id] = {
                 "name": svc_meta.get("name", service_id),
                 "endpoint": svc_meta.get("endpoint", ""),
@@ -363,11 +355,7 @@ class LogicCoreHealthMonitor:
                 "history_length": len(record.history),
             }
 
-        healthy = sum(
-            1
-            for r in self._records.values()
-            if r.last_status == HealthStatus.HEALTHY
-        )
+        healthy = sum(1 for r in self._records.values() if r.last_status == HealthStatus.HEALTHY)
         return {
             "timestamp": time.time(),
             "total_services": len(self._records),

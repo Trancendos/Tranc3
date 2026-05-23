@@ -35,7 +35,9 @@ class DBUserManager:
             try:
                 return self._session_factory()
             except Exception as e:
-                logger.warning("DB session failed: %s — using fallback", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+                logger.warning(
+                    "DB session failed: %s — using fallback", sanitize_for_log(e)
+                )  # codeql[py/cleartext-logging]
         return None
 
     def create_user(self, username: str, password: str, email: str = "") -> dict:
@@ -46,6 +48,7 @@ class DBUserManager:
         if session:
             try:
                 from src.database.schema import User
+
                 existing = session.query(User).filter(User.username == username).first()
                 if existing:
                     raise HTTPException(status_code=400, detail="Username already exists")
@@ -62,13 +65,17 @@ class DBUserManager:
                 session.add(user)
                 session.commit()
                 session.refresh(user)
-                logger.info("User created in DB: %s", sanitize_for_log(username))  # codeql[py/cleartext-logging]
+                logger.info(
+                    "User created in DB: %s", sanitize_for_log(username)
+                )  # codeql[py/cleartext-logging]
                 return {"user_id": str(user.id), "username": username, "tier": "free"}
             except HTTPException:
                 raise
             except Exception as e:
                 session.rollback()
-                logger.error("DB create_user failed: %s — using fallback", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+                logger.error(
+                    "DB create_user failed: %s — using fallback", sanitize_for_log(e)
+                )  # codeql[py/cleartext-logging]
             finally:
                 session.close()
 
@@ -77,9 +84,11 @@ class DBUserManager:
             raise HTTPException(status_code=400, detail="Username already exists")
         user_id = str(uuid.uuid4())
         self._fallback[username] = {
-            "id": user_id, "username": username,
+            "id": user_id,
+            "username": username,
             "hashed_password": pwd_context.hash(password),
-            "tier": "free", "is_active": True,
+            "tier": "free",
+            "is_active": True,
             "created_at": datetime.datetime.utcnow(),
         }
         return {"user_id": user_id, "username": username, "tier": "free"}
@@ -89,6 +98,7 @@ class DBUserManager:
         if session:
             try:
                 from src.database.schema import User
+
                 user = session.query(User).filter(User.username == username).first()
                 if not user:
                     return None
@@ -100,11 +110,15 @@ class DBUserManager:
                 user.last_login = datetime.datetime.utcnow()
                 session.commit()
                 return {
-                    "id": str(user.id), "username": user.username,
-                    "tier": user.tier, "is_active": user.is_active,
+                    "id": str(user.id),
+                    "username": user.username,
+                    "tier": user.tier,
+                    "is_active": user.is_active,
                 }
             except Exception as e:
-                logger.error("DB authenticate_user failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+                logger.error(
+                    "DB authenticate_user failed: %s", sanitize_for_log(e)
+                )  # codeql[py/cleartext-logging]
             finally:
                 session.close()
 
@@ -121,14 +135,19 @@ class DBUserManager:
         if session:
             try:
                 from src.database.schema import User
+
                 user = session.query(User).filter(User.username == username).first()
                 if user:
                     return {
-                        "id": str(user.id), "username": user.username,
-                        "tier": user.tier, "is_active": user.is_active,
+                        "id": str(user.id),
+                        "username": user.username,
+                        "tier": user.tier,
+                        "is_active": user.is_active,
                     }
             except Exception as e:
-                logger.error("DB get_user failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+                logger.error(
+                    "DB get_user failed: %s", sanitize_for_log(e)
+                )  # codeql[py/cleartext-logging]
             finally:
                 session.close()
 
@@ -139,13 +158,16 @@ class DBUserManager:
         if session:
             try:
                 from src.database.schema import User
+
                 user = session.query(User).filter(User.username == username).first()
                 if user:
                     user.tier = new_tier
                     session.commit()
                     return True
             except Exception as e:
-                logger.error("DB update_tier failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+                logger.error(
+                    "DB update_tier failed: %s", sanitize_for_log(e)
+                )  # codeql[py/cleartext-logging]
             finally:
                 session.close()
         return False
@@ -162,6 +184,5 @@ class DBUserManager:
             errors.append("one number")
         if errors:
             raise HTTPException(
-                status_code=400,
-                detail=f"Password must contain: {', '.join(errors)}"
+                status_code=400, detail=f"Password must contain: {', '.join(errors)}"
             )

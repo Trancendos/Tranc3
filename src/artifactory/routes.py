@@ -30,7 +30,10 @@ async def list_artifacts(
         except ValueError:
             valid = [t.value for t in ArtifactType]
             return JSONResponse({"error": f"Unknown type. Valid: {valid}"}, status_code=400)
-    return [a.to_dict() for a in get_artifactory().list_artifacts(artifact_type=atype, namespace=namespace)]
+    return [
+        a.to_dict()
+        for a in get_artifactory().list_artifacts(artifact_type=atype, namespace=namespace)
+    ]
 
 
 @router.post("/artifacts")

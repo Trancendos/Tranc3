@@ -23,10 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 class MoodLevel(int, Enum):
-    VERY_LOW  = 1
-    LOW       = 2
-    NEUTRAL   = 3
-    GOOD      = 4
+    VERY_LOW = 1
+    LOW = 2
+    NEUTRAL = 3
+    GOOD = 4
     EXCELLENT = 5
 
 
@@ -99,8 +99,9 @@ class Tranquility:
             self._profiles[user_id] = WellbeingProfile(user_id=user_id)
         return self._profiles[user_id]
 
-    def log_mood(self, user_id: str, mood: int, notes: str = "",
-                 tags: Optional[List[str]] = None) -> MoodEntry:
+    def log_mood(
+        self, user_id: str, mood: int, notes: str = "", tags: Optional[List[str]] = None
+    ) -> MoodEntry:
         profile = self.get_or_create(user_id)
         try:
             mood_level = MoodLevel(max(1, min(5, mood)))
@@ -112,10 +113,10 @@ class Tranquility:
         if mood_level in (MoodLevel.VERY_LOW, MoodLevel.LOW):
             try:
                 from src.imind.protocol import get_imind
+
                 get_imind().assess(f"User reported mood: {mood_level.name}", actor=user_id)
             except Exception:
                 pass  # nosec B110 — graceful degradation; error logged upstream
-
 
         self._emit(user_id, "tranquility.mood_logged", {"mood": mood_level.value})
         return entry
@@ -129,11 +130,11 @@ class Tranquility:
         if not profile.needs_break():
             return None
         import random
+
         profile.last_break_prompt = time.time()
         profile.session_start = time.time()
         profile.session_messages = 0
         return random.choice(_MINDFULNESS_PROMPTS)  # nosec B311 — non-cryptographic random usage
-
 
     def delete_user_data(self, user_id: str) -> bool:
         if user_id in self._profiles:
@@ -156,8 +157,14 @@ class Tranquility:
     def _emit(self, user_id: str, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
             from src.observability.observatory import EventCategory, observe
-            observe(event_type, actor=f"user:{user_id}", category=EventCategory.DATA,
-                    service="tranquility", metadata=metadata or {})
+
+            observe(
+                event_type,
+                actor=f"user:{user_id}",
+                category=EventCategory.DATA,
+                service="tranquility",
+                metadata=metadata or {},
+            )
         except Exception:
             pass  # nosec B110 - graceful degradation for observation
 

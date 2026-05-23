@@ -118,7 +118,7 @@ class NeuralNetworkAdapter:
         # Default: derive actions from state if possible, else generic placeholders
         actions = self._default_actions(state)
         n = max(len(actions), 1)
-        priors = {a: 1.0 / n for a in actions}
+        priors = dict.fromkeys(actions, 1.0 / n)
         value = float(np.random.uniform(-0.1, 0.1))
         return priors, value
 
@@ -150,9 +150,7 @@ class MCTS:
         self.config = config
         self.nn = nn_adapter
 
-    async def search(
-        self, root_state: Any, valid_actions: List[str]
-    ) -> Dict[str, float]:
+    async def search(self, root_state: Any, valid_actions: List[str]) -> Dict[str, float]:
         """Run MCTS and return a policy over valid actions.
 
         Args:
@@ -167,9 +165,7 @@ class MCTS:
         # Initialise root with priors + Dirichlet noise for exploration
         priors, _ = self.nn.evaluate(root_state)
         # Only keep valid actions
-        filtered = {
-            a: priors.get(a, 1.0 / max(len(valid_actions), 1)) for a in valid_actions
-        }
+        filtered = {a: priors.get(a, 1.0 / max(len(valid_actions), 1)) for a in valid_actions}
         # Normalise
         total = sum(filtered.values())
         if total > 0:
@@ -278,7 +274,7 @@ class MCTS:
 
         noise = np.random.dirichlet([alpha] * len(actions))
         noisy: Dict[str, float] = {}
-        for action, eta in zip(actions, noise):
+        for action, eta in zip(actions, noise, strict=False):
             noisy[action] = (1.0 - epsilon) * priors[action] + epsilon * float(eta)
         return noisy
 
@@ -310,8 +306,6 @@ class MCTS:
             # Softmax over (visit_count)^(1/T)
             powered = np.power(counts, 1.0 / temperature)
             total = powered.sum()
-            policy = (
-                powered / total if total > 0 else np.ones_like(powered) / len(powered)
-            )
+            policy = powered / total if total > 0 else np.ones_like(powered) / len(powered)
 
-        return {action: float(prob) for action, prob in zip(actions, policy)}
+        return {action: float(prob) for action, prob in zip(actions, policy, strict=False)}

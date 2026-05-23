@@ -15,6 +15,7 @@ class FeatureFlag(Enum):
     SELF_EVOLUTION = "self_evolution"
     SWARM_INTELLIGENCE = "swarm_intelligence"
 
+
 class FeatureFlagManager:
     """
     Centralized feature flag management with Redis backend
@@ -28,10 +29,14 @@ class FeatureFlagManager:
     def _load_defaults(self):
         """Load default feature flag states from environment"""
         defaults = {
-            FeatureFlag.QUANTUM_OPTIMIZATION: os.getenv("ENABLE_QUANTUM_OPT", "false").lower() == "true",
-            FeatureFlag.CONSCIOUSNESS_ENGINE: os.getenv("ENABLE_CONSCIOUSNESS", "false").lower() == "true",
-            FeatureFlag.NEUROMORPHIC_PROCESSING: os.getenv("ENABLE_NEUROMORPHIC", "false").lower() == "true",
-            FeatureFlag.HOLOGRAPHIC_MEMORY: os.getenv("ENABLE_HOLOGRAPHIC", "false").lower() == "true",
+            FeatureFlag.QUANTUM_OPTIMIZATION: os.getenv("ENABLE_QUANTUM_OPT", "false").lower()
+            == "true",
+            FeatureFlag.CONSCIOUSNESS_ENGINE: os.getenv("ENABLE_CONSCIOUSNESS", "false").lower()
+            == "true",
+            FeatureFlag.NEUROMORPHIC_PROCESSING: os.getenv("ENABLE_NEUROMORPHIC", "false").lower()
+            == "true",
+            FeatureFlag.HOLOGRAPHIC_MEMORY: os.getenv("ENABLE_HOLOGRAPHIC", "false").lower()
+            == "true",
             FeatureFlag.SELF_EVOLUTION: os.getenv("ENABLE_EVOLUTION", "false").lower() == "true",
             FeatureFlag.SWARM_INTELLIGENCE: os.getenv("ENABLE_SWARM", "false").lower() == "true",
         }
@@ -74,8 +79,5 @@ class FeatureFlagManager:
         for flag in FeatureFlag:
             enabled = self.redis.get(f"feature:{flag.value}") == b"1"
             rollout = int(self.redis.get(f"rollout:{flag.value}") or 0)
-            flags[flag.value] = {
-                "enabled": enabled,
-                "rollout_percentage": rollout
-            }
+            flags[flag.value] = {"enabled": enabled, "rollout_percentage": rollout}
         return flags

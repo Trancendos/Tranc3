@@ -22,6 +22,7 @@ class RouteCell:
     Inspired by liquid time-constant networks — each cell maintains
     a time-decaying state that influences routing decisions.
     """
+
     service_name: str
     weight: float = 1.0
     decay_rate: float = 0.1  # How quickly weight decays under load
@@ -41,7 +42,7 @@ class RouteCell:
         # Error penalty
         if self.request_count > 0:
             error_rate = self.error_count / self.request_count
-            w *= (1.0 - error_rate)
+            w *= 1.0 - error_rate
 
         # Response time penalty (higher RT = lower weight)
         if self.response_times:
@@ -60,7 +61,7 @@ class RouteCell:
         self.last_used = time.time()
         self.response_times.append(response_time)
         if len(self.response_times) > self.max_history:
-            self.response_times = self.response_times[-self.max_history:]
+            self.response_times = self.response_times[-self.max_history :]
 
     def record_error(self) -> None:
         """Record a failed request"""
@@ -77,12 +78,12 @@ class RouteCell:
             "requests": self.request_count,
             "errors": self.error_count,
             "error_rate": (
-                round(self.error_count / self.request_count, 3)
-                if self.request_count > 0 else 0.0
+                round(self.error_count / self.request_count, 3) if self.request_count > 0 else 0.0
             ),
             "avg_response_time": (
                 round(sum(self.response_times[-20:]) / len(self.response_times[-20:]), 3)
-                if self.response_times else 0.0
+                if self.response_times
+                else 0.0
             ),
         }
 
@@ -104,7 +105,11 @@ class FluidicRouter:
             service_name=service_name,
             weight=initial_weight,
         )
-        logger.info("Fluidic route registered: %s (weight=%s)", sanitize_for_log(service_name), sanitize_for_log(initial_weight))  # codeql[py/cleartext-logging]
+        logger.info(
+            "Fluidic route registered: %s (weight=%s)",
+            sanitize_for_log(service_name),
+            sanitize_for_log(initial_weight),
+        )  # codeql[py/cleartext-logging]
 
     def select(self, capability: str) -> Optional[ServiceInfo]:
         """
@@ -132,10 +137,9 @@ class FluidicRouter:
         if total <= 0:
             return random.choice(available)  # nosec B311 — non-cryptographic random usage
 
-
         r = random.uniform(0, total)  # nosec B311 — non-cryptographic weighted routing
         cumulative = 0.0
-        for svc, w in zip(available, weights):
+        for svc, w in zip(available, weights, strict=False):
             cumulative += w
             if r <= cumulative:
                 return svc

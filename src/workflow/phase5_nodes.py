@@ -37,6 +37,7 @@ def _agent_runtime_cls():
     """Lazy-import AgentRuntime class."""
     try:
         from src.agents.agent_runtime import AgentRuntime
+
         return AgentRuntime
     except Exception as exc:
         logger.warning("AgentRuntime unavailable: %s", exc)
@@ -47,6 +48,7 @@ def _get_agent_registry():
     """Get the shared agent registry from spark_phase5_tools."""
     try:
         from src.mcp.spark_phase5_tools import _agents  # codeql[py/cyclic-import]
+
         return _agents
     except Exception:
         return {}
@@ -88,6 +90,7 @@ class AgentCreateNode:
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
         from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
+
         t0 = time.monotonic()
         cfg = _get_cfg(self.config)
 
@@ -100,11 +103,15 @@ class AgentCreateNode:
         if AgentRuntime is None:
             duration_ms = (time.monotonic() - t0) * 1000
             return NodeResult(
-                node_id=_get_node_id(self.config), success=False, output=None,
-                error="AgentRuntime unavailable", duration_ms=duration_ms,
+                node_id=_get_node_id(self.config),
+                success=False,
+                output=None,
+                error="AgentRuntime unavailable",
+                duration_ms=duration_ms,
             )
 
         from src.agents.agent_runtime import AgentConfig
+
         config = AgentConfig(
             name=name,
             agent_type=agent_type,
@@ -152,6 +159,7 @@ class AgentRunStepNode:
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
         from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
+
         t0 = time.monotonic()
         cfg = _get_cfg(self.config)
 
@@ -163,8 +171,11 @@ class AgentRunStepNode:
         if runtime is None:
             duration_ms = (time.monotonic() - t0) * 1000
             return NodeResult(
-                node_id=_get_node_id(self.config), success=False, output=None,
-                error=f"Agent '{agent_id}' not found", duration_ms=duration_ms,
+                node_id=_get_node_id(self.config),
+                success=False,
+                output=None,
+                error=f"Agent '{agent_id}' not found",
+                duration_ms=duration_ms,
             )
 
         steps_executed = await runtime.run_until_idle(max_steps=max_steps)
@@ -203,6 +214,7 @@ class AgentGoalNode:
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
         from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
+
         t0 = time.monotonic()
         cfg = _get_cfg(self.config)
 
@@ -215,15 +227,21 @@ class AgentGoalNode:
         if runtime is None:
             duration_ms = (time.monotonic() - t0) * 1000
             return NodeResult(
-                node_id=_get_node_id(self.config), success=False, output=None,
-                error=f"Agent '{agent_id}' not found", duration_ms=duration_ms,
+                node_id=_get_node_id(self.config),
+                success=False,
+                output=None,
+                error=f"Agent '{agent_id}' not found",
+                duration_ms=duration_ms,
             )
 
         if not description:
             duration_ms = (time.monotonic() - t0) * 1000
             return NodeResult(
-                node_id=_get_node_id(self.config), success=False, output=None,
-                error="Goal description is required", duration_ms=duration_ms,
+                node_id=_get_node_id(self.config),
+                success=False,
+                output=None,
+                error="Goal description is required",
+                duration_ms=duration_ms,
             )
 
         goal_id = await runtime.assign_goal(description=description, priority=priority)
@@ -262,6 +280,7 @@ class AgentReflectNode:
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
         from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
+
         t0 = time.monotonic()
         cfg = _get_cfg(self.config)
 
@@ -273,14 +292,18 @@ class AgentReflectNode:
         if runtime is None:
             duration_ms = (time.monotonic() - t0) * 1000
             return NodeResult(
-                node_id=_get_node_id(self.config), success=False, output=None,
-                error=f"Agent '{agent_id}' not found", duration_ms=duration_ms,
+                node_id=_get_node_id(self.config),
+                success=False,
+                output=None,
+                error=f"Agent '{agent_id}' not found",
+                duration_ms=duration_ms,
             )
 
         if runtime._memory_stream is None:
             duration_ms = (time.monotonic() - t0) * 1000
             return NodeResult(
-                node_id=_get_node_id(self.config), success=True,
+                node_id=_get_node_id(self.config),
+                success=True,
                 output={"reflections": [], "total": 0},
                 error=None,
                 duration_ms=duration_ms,
@@ -321,6 +344,7 @@ class AgentDecomposeNode:
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
         from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
+
         t0 = time.monotonic()
         cfg = _get_cfg(self.config)
 
@@ -328,19 +352,26 @@ class AgentDecomposeNode:
         if not goal_description:
             duration_ms = (time.monotonic() - t0) * 1000
             return NodeResult(
-                node_id=_get_node_id(self.config), success=False, output=None,
-                error="goal_description is required", duration_ms=duration_ms,
+                node_id=_get_node_id(self.config),
+                success=False,
+                output=None,
+                error="goal_description is required",
+                duration_ms=duration_ms,
             )
 
         try:
             from src.agents.task_decomposer import TaskDecomposer
+
             decomposer = TaskDecomposer()
             decomposition = await decomposer.decompose(goal_description)
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return NodeResult(
-                node_id=_get_node_id(self.config), success=False, output=None,
-                error=f"TaskDecomposer failed: {exc}", duration_ms=duration_ms,
+                node_id=_get_node_id(self.config),
+                success=False,
+                output=None,
+                error=f"TaskDecomposer failed: {exc}",
+                duration_ms=duration_ms,
             )
 
         duration_ms = (time.monotonic() - t0) * 1000
@@ -387,6 +418,7 @@ def register_phase5_nodes() -> int:
     # We'll also update it directly
     try:
         from src.workflow.nodes import _PHASE4_NODE_REGISTRY  # codeql[py/cyclic-import]
+
         return extend_node_registry(_PHASE4_NODE_REGISTRY)
     except Exception as exc:
         logger.warning("Could not register Phase 5 nodes: %s", exc)

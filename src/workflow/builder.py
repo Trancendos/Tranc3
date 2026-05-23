@@ -64,12 +64,8 @@ class WorkflowDefinition:
             "description": self.description,
             "version": self.version,
             "engine": GRID_ENGINE,
-            "nodes": {
-                nid: self._node_config_to_dict(nc) for nid, nc in self.nodes.items()
-            },
-            "edges": [
-                {"from": e[0], "to": e[1], "label": e[2]} for e in self.edges
-            ],
+            "nodes": {nid: self._node_config_to_dict(nc) for nid, nc in self.nodes.items()},
+            "edges": [{"from": e[0], "to": e[1], "label": e[2]} for e in self.edges],
             "triggers": self.triggers,
             "metadata": self.metadata,
         }
@@ -100,12 +96,10 @@ class WorkflowDefinition:
     @classmethod
     def from_dict(cls, d: dict) -> "WorkflowDefinition":
         nodes = {
-            nid: cls._node_config_from_dict(nc_dict)
-            for nid, nc_dict in d.get("nodes", {}).items()
+            nid: cls._node_config_from_dict(nc_dict) for nid, nc_dict in d.get("nodes", {}).items()
         }
         edges: List[Tuple[str, str, str]] = [
-            (e["from"], e["to"], e.get("label", "default"))
-            for e in d.get("edges", [])
+            (e["from"], e["to"], e.get("label", "default")) for e in d.get("edges", [])
         ]
         return cls(
             id=d.get("id", str(uuid.uuid4())),
@@ -130,6 +124,7 @@ class WorkflowDefinition:
 # ---------------------------------------------------------------------------
 # WorkflowBuilder — fluent API
 # ---------------------------------------------------------------------------
+
 
 class WorkflowBuilder:
     """Fluent builder for constructing WorkflowDefinitions programmatically."""
@@ -168,9 +163,7 @@ class WorkflowBuilder:
         )
         return nid
 
-    def connect(
-        self, from_id: str, to_id: str, label: str = "default"
-    ) -> "WorkflowBuilder":
+    def connect(self, from_id: str, to_id: str, label: str = "default") -> "WorkflowBuilder":
         """Add a directed edge from_id -> to_id with an optional label."""
         if from_id not in self._nodes:
             raise ValueError(f"Source node '{from_id}' not found in this workflow.")
@@ -223,7 +216,7 @@ class WorkflowBuilder:
         node_ids = set(self._nodes.keys())
 
         # --- Edge referential integrity ---
-        for from_id, to_id, label in self._edges:
+        for from_id, to_id, _label in self._edges:
             if from_id not in node_ids:
                 errors.append(f"Edge references unknown source node: '{from_id}'.")
             if to_id not in node_ids:
@@ -236,7 +229,7 @@ class WorkflowBuilder:
                 adj[from_id].append(to_id)
 
         WHITE, GRAY, BLACK = 0, 1, 2
-        color: Dict[str, int] = {nid: WHITE for nid in node_ids}
+        color: Dict[str, int] = dict.fromkeys(node_ids, WHITE)
 
         def dfs(v: str) -> bool:
             color[v] = GRAY
@@ -263,18 +256,13 @@ class WorkflowBuilder:
         # Single-node workflows are fine; only flag orphans in multi-node graphs
         if len(node_ids) > 1 and orphans:
             errors.append(
-                f"Orphan nodes (no edges): {sorted(orphans)}. "
-                "Connect them or remove them."
+                f"Orphan nodes (no edges): {sorted(orphans)}. Connect them or remove them."
             )
 
         # --- Trigger node presence ---
-        trigger_nodes = [
-            nid for nid, nc in self._nodes.items() if nc.type == NodeType.TRIGGER
-        ]
+        trigger_nodes = [nid for nid, nc in self._nodes.items() if nc.type == NodeType.TRIGGER]
         if self._triggers and not trigger_nodes:
-            errors.append(
-                "Workflow has triggers set but no TRIGGER-type node defined."
-            )
+            errors.append("Workflow has triggers set but no TRIGGER-type node defined.")
 
         return errors
 
@@ -282,6 +270,7 @@ class WorkflowBuilder:
 # ---------------------------------------------------------------------------
 # Pre-built workflow templates
 # ---------------------------------------------------------------------------
+
 
 def spark_ignition_workflow() -> WorkflowDefinition:
     """
@@ -352,9 +341,9 @@ def spark_ignition_workflow() -> WorkflowDefinition:
 
     (
         b.connect(trigger_id, condition_id)
-         .connect(condition_id, skill_id, label="true")
-         .connect(skill_id, llm_id)
-         .connect(llm_id, output_id)
+        .connect(condition_id, skill_id, label="true")
+        .connect(skill_id, llm_id)
+        .connect(llm_id, output_id)
     )
 
     b.set_metadata(
@@ -478,11 +467,11 @@ def self_healing_workflow() -> WorkflowDefinition:
 
     (
         b.connect(trigger_id, health_check_id)
-         .connect(health_check_id, condition_id)
-         .connect(condition_id, parallel_id, label="true")
-         .connect(parallel_id, heal_id)
-         .connect(heal_id, validate_id)
-         .connect(validate_id, output_id)
+        .connect(health_check_id, condition_id)
+        .connect(condition_id, parallel_id, label="true")
+        .connect(parallel_id, heal_id)
+        .connect(heal_id, validate_id)
+        .connect(validate_id, output_id)
     )
 
     b.set_metadata(
@@ -611,11 +600,11 @@ def ml_training_workflow() -> WorkflowDefinition:
 
     (
         b.connect(trigger_id, load_id)
-         .connect(load_id, preprocess_id)
-         .connect(preprocess_id, train_id)
-         .connect(train_id, evaluate_id)
-         .connect(evaluate_id, transform_id)
-         .connect(transform_id, output_id)
+        .connect(load_id, preprocess_id)
+        .connect(preprocess_id, train_id)
+        .connect(train_id, evaluate_id)
+        .connect(evaluate_id, transform_id)
+        .connect(transform_id, output_id)
     )
 
     b.set_metadata(

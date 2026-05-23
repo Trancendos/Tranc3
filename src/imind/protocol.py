@@ -23,20 +23,20 @@ logger = logging.getLogger(__name__)
 
 
 class SensitivityLevel(str, Enum):
-    NONE     = "none"
-    LOW      = "low"
-    MEDIUM   = "medium"
-    HIGH     = "high"
-    CRITICAL = "critical"   # Immediate human escalation
+    NONE = "none"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"  # Immediate human escalation
 
 
 class SensitivityCategory(str, Enum):
-    MENTAL_HEALTH  = "mental_health"
-    CRISIS         = "crisis"
-    SELF_HARM      = "self_harm"
-    PERSONAL_DATA  = "personal_data"
-    SAFEGUARDING   = "safeguarding"
-    TRAUMA         = "trauma"
+    MENTAL_HEALTH = "mental_health"
+    CRISIS = "crisis"
+    SELF_HARM = "self_harm"
+    PERSONAL_DATA = "personal_data"
+    SAFEGUARDING = "safeguarding"
+    TRAUMA = "trauma"
 
 
 _CRISIS_PATTERNS = [
@@ -58,7 +58,7 @@ class SensitivityAssessment:
     level: SensitivityLevel = SensitivityLevel.NONE
     categories: List[SensitivityCategory] = field(default_factory=list)
     escalate: bool = False
-    response_modifier: str = ""   # Instruction prefix to inject into AI response
+    response_modifier: str = ""  # Instruction prefix to inject into AI response
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -145,6 +145,7 @@ class IMind:
     def _emit(self, assessment: SensitivityAssessment, actor: Optional[str]) -> None:
         try:
             from src.observability.observatory import EventCategory, EventSeverity, observe
+
             observe(
                 f"imind.sensitivity.{assessment.level.value}",
                 actor=actor,
@@ -156,7 +157,6 @@ class IMind:
             )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
 
 _imind: Optional[IMind] = None

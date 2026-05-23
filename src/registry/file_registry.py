@@ -7,22 +7,18 @@ import hashlib
 import hmac
 import json
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-
-
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from shared_core.sanitize import sanitize_for_log
+
 logger = logging.getLogger(__name__)
 
 # Registry signing key — used to detect tampering
-_REGISTRY_KEY = os.getenv(
-    "REGISTRY_SIGNING_KEY", os.getenv("SECRET_KEY", "tranc3-registry-key")
-)
+_REGISTRY_KEY = os.getenv("REGISTRY_SIGNING_KEY", os.getenv("SECRET_KEY", "tranc3-registry-key"))
 
 
 @dataclass
@@ -473,12 +469,13 @@ class FileRegistry:
         record.signature = expected_sig
 
         # If a stored signature exists, compare
-        stored_sig = os.getenv(f"TRANC3_SIG_{fid.replace('-','_')}")
+        stored_sig = os.getenv(f"TRANC3_SIG_{fid.replace('-', '_')}")
         if stored_sig and stored_sig != expected_sig:
             record.tampered = True
             logger.warning(  # codeql[py/cleartext-logging]
                 "INTEGRITY ALERT: %s (%s) signature mismatch — possible tampering",
-                sanitize_for_log(fid), sanitize_for_log(record.path),
+                sanitize_for_log(fid),
+                sanitize_for_log(record.path),
             )
             return {
                 "fid": fid,
@@ -525,9 +522,7 @@ class FileRegistry:
             "fid": fid,
             "path": record.path,
             "version": record.version,
-            "deps": [
-                self.get_dependency_tree(d, depth + 1) for d in record.dependencies
-            ],
+            "deps": [self.get_dependency_tree(d, depth + 1) for d in record.dependencies],
         }
 
     def export_manifest(self) -> str:

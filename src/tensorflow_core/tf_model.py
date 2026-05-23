@@ -34,7 +34,7 @@ def _get_tf() -> Any:
         return tf
     except ImportError as exc:
         raise ImportError(
-            "TensorFlow is not installed.  Install it with: " "pip install tensorflow"
+            "TensorFlow is not installed.  Install it with: pip install tensorflow"
         ) from exc
     return None
 
@@ -116,9 +116,7 @@ class TFSequenceClassifier:
         )(x)
 
         # Second LSTM layer
-        lstm_units = (
-            self.config.hidden_dims[1] if len(self.config.hidden_dims) > 1 else 128
-        )
+        lstm_units = self.config.hidden_dims[1] if len(self.config.hidden_dims) > 1 else 128
         x = tf.keras.layers.LSTM(
             lstm_units,
             dropout=self.config.dropout_rate,
@@ -136,12 +134,8 @@ class TFSequenceClassifier:
             self.config.output_dim, activation="softmax", name="output"
         )(x)
 
-        self.model = tf.keras.Model(
-            inputs=inputs, outputs=outputs, name=self.config.name
-        )
-        self._optimizer = tf.keras.optimizers.Adam(
-            learning_rate=self.config.learning_rate
-        )
+        self.model = tf.keras.Model(inputs=inputs, outputs=outputs, name=self.config.name)
+        self._optimizer = tf.keras.optimizers.Adam(learning_rate=self.config.learning_rate)
         self._loss_fn = tf.keras.losses.SparseCategoricalCrossentropy()
 
         self.model.compile(
@@ -203,13 +197,13 @@ class TFSequenceClassifier:
                 loss = self._loss_fn(y, logits)
 
             grads = tape.gradient(loss, self.model.trainable_variables)
-            self._optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+            self._optimizer.apply_gradients(
+                zip(grads, self.model.trainable_variables, strict=False)
+            )
 
             # Compute batch accuracy
             preds = tf.argmax(logits, axis=-1, output_type=tf.int32)
-            accuracy = float(
-                tf.reduce_mean(tf.cast(tf.equal(preds, y), tf.float32)).numpy()
-            )
+            accuracy = float(tf.reduce_mean(tf.cast(tf.equal(preds, y), tf.float32)).numpy())
 
             return {"loss": float(loss.numpy()), "accuracy": accuracy}
 
@@ -260,20 +254,12 @@ class TFReinforcementAgent:
             model = tf.keras.Sequential(name=name)
             model.add(tf.keras.layers.InputLayer(input_shape=(self.state_dim,)))
             for i, units in enumerate(self.config.hidden_dims):
-                model.add(
-                    tf.keras.layers.Dense(units, activation="relu", name=f"dense_{i}")
-                )
+                model.add(tf.keras.layers.Dense(units, activation="relu", name=f"dense_{i}"))
                 if self.config.use_batch_norm:
                     model.add(tf.keras.layers.BatchNormalization(name=f"bn_{i}"))
                 if self.config.dropout_rate > 0:
-                    model.add(
-                        tf.keras.layers.Dropout(
-                            self.config.dropout_rate, name=f"drop_{i}"
-                        )
-                    )
-            model.add(
-                tf.keras.layers.Dense(self.action_dim, activation=None, name="q_values")
-            )
+                    model.add(tf.keras.layers.Dropout(self.config.dropout_rate, name=f"drop_{i}"))
+            model.add(tf.keras.layers.Dense(self.action_dim, activation=None, name="q_values"))
             return model
 
         self.q_network = _make_net(f"{self.config.name}_online")
@@ -369,7 +355,7 @@ class TFReinforcementAgent:
 
             grads = tape.gradient(loss, self.q_network.trainable_variables)
             self._optimizer.apply_gradients(
-                zip(grads, self.q_network.trainable_variables)
+                zip(grads, self.q_network.trainable_variables, strict=False)
             )
 
             # Soft-update target network: θ_target = τ·θ + (1-τ)·θ_target
@@ -379,7 +365,7 @@ class TFReinforcementAgent:
                 target_weights = self.target_network.get_weights()
                 new_weights = [
                     self._TAU * ow + (1 - self._TAU) * tw
-                    for ow, tw in zip(online_weights, target_weights)
+                    for ow, tw in zip(online_weights, target_weights, strict=False)
                 ]
                 self.target_network.set_weights(new_weights)
 

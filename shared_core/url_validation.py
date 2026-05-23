@@ -42,16 +42,16 @@ _PRIVATE_NETWORKS: list[ipaddress._BaseNetwork] = [
     ipaddress.ip_network("127.0.0.0/8"),
     ipaddress.ip_network("::1/128"),
     # Link-local
-    ipaddress.ip_network("169.254.0.0/16"),       # cloud metadata (AWS, GCP, Azure)
+    ipaddress.ip_network("169.254.0.0/16"),  # cloud metadata (AWS, GCP, Azure)
     ipaddress.ip_network("fe80::/10"),
     # Carrier-grade NAT
     ipaddress.ip_network("100.64.0.0/10"),
     # Benchmarking
     ipaddress.ip_network("198.18.0.0/15"),
     # Documentation
-    ipaddress.ip_network("192.0.2.0/24"),          # TEST-NET-1
-    ipaddress.ip_network("198.51.100.0/24"),       # TEST-NET-2
-    ipaddress.ip_network("203.0.113.0/24"),        # TEST-NET-3
+    ipaddress.ip_network("192.0.2.0/24"),  # TEST-NET-1
+    ipaddress.ip_network("198.51.100.0/24"),  # TEST-NET-2
+    ipaddress.ip_network("203.0.113.0/24"),  # TEST-NET-3
     # IPv6 documentation
     ipaddress.ip_network("2001:db8::/32"),
     # IETF protocol assignments
@@ -163,8 +163,7 @@ def validate_url(
     # --- Scheme check ---
     if parsed.scheme.lower() not in schemes:
         raise SSRFError(
-            f"URL scheme '{parsed.scheme}' is not allowed. "
-            f"Permitted schemes: {sorted(schemes)}"
+            f"URL scheme '{parsed.scheme}' is not allowed. Permitted schemes: {sorted(schemes)}"
         )
 
     # --- Hostname check ---
@@ -174,26 +173,23 @@ def validate_url(
 
     # Block known internal/metadata hostnames
     if _is_hostname_blocked(hostname):
-        raise SSRFError(
-            f"Hostname '{hostname}' is blocked (internal/metadata endpoint)"
-        )
+        raise SSRFError(f"Hostname '{hostname}' is blocked (internal/metadata endpoint)")
 
     # --- IP address checks ---
     # Try to resolve and check if the hostname is a direct IP address.
     # We check the hostname string directly for IP representations (decimal,
     # octal, hex) that resolve to private IPs.
     import socket
+
     try:
         # socket.getaddrinfo will resolve the hostname to IP addresses.
         # We check ALL resolved addresses (including AAAA records for IPv6).
-        addr_infos = socket.getaddrinfo(hostname, parsed.port or 443,
-                                         proto=socket.IPPROTO_TCP)
-        for family, _type, _proto, _canonname, sockaddr in addr_infos:
+        addr_infos = socket.getaddrinfo(hostname, parsed.port or 443, proto=socket.IPPROTO_TCP)
+        for _family, _type, _proto, _canonname, sockaddr in addr_infos:
             ip_str = sockaddr[0]
             if _is_ip_private(ip_str):
                 raise SSRFError(
-                    f"URL resolves to private/reserved IP address: {ip_str} "
-                    f"(hostname: {hostname})"
+                    f"URL resolves to private/reserved IP address: {ip_str} (hostname: {hostname})"
                 )
     except socket.gaierror:
         # DNS resolution failure — treat as invalid rather than risk
@@ -206,16 +202,13 @@ def validate_url(
     # Also check additional blocked networks if provided
     if blocked_networks:
         try:
-            addr_infos = socket.getaddrinfo(hostname, parsed.port or 443,
-                                             proto=socket.IPPROTO_TCP)
-            for family, _type, _proto, _canonname, sockaddr in addr_infos:
+            addr_infos = socket.getaddrinfo(hostname, parsed.port or 443, proto=socket.IPPROTO_TCP)
+            for _family, _type, _proto, _canonname, sockaddr in addr_infos:
                 ip_str = sockaddr[0]
                 addr = ipaddress.ip_address(ip_str)
                 for network in blocked_networks:
                     if addr in network:
-                        raise SSRFError(
-                            f"URL resolves to blocked IP range: {ip_str} in {network}"
-                        )
+                        raise SSRFError(f"URL resolves to blocked IP range: {ip_str} in {network}")
         except socket.gaierror:
             pass  # Already handled above
 

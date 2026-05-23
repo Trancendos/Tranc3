@@ -66,9 +66,7 @@ class PasswordManager:
 # ============================================================
 class JWTManager:
     @staticmethod
-    def create_access_token(
-        data: dict, expires_delta: Optional[timedelta] = None
-    ) -> str:
+    def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
         to_encode = data.copy()
         expire = datetime.utcnow() + (
             expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -192,10 +190,7 @@ class InputSanitizer:
 
     @classmethod
     def sanitize_dict(cls, data: dict) -> dict:
-        return {
-            k: cls.sanitize(str(v)) if isinstance(v, str) else v
-            for k, v in data.items()
-        }
+        return {k: cls.sanitize(str(v)) if isinstance(v, str) else v for k, v in data.items()}
 
 
 # ============================================================
@@ -217,7 +212,12 @@ class AuditLogger:
         }
         self.redis.lpush("audit_log", json.dumps(event))
         self.redis.ltrim("audit_log", 0, 99999)
-        logger.info("AUDIT: %s | user=%s | ip=%s", sanitize_for_log(event_type), sanitize_for_log(user_id), sanitize_for_log(ip))  # codeql[py/cleartext-logging]
+        logger.info(
+            "AUDIT: %s | user=%s | ip=%s",
+            sanitize_for_log(event_type),
+            sanitize_for_log(user_id),
+            sanitize_for_log(ip),
+        )  # codeql[py/cleartext-logging]
 
     def get_recent_events(self, limit: int = 100) -> List[Dict]:
         import json

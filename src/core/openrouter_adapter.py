@@ -100,7 +100,11 @@ async def generate(
                 data = resp.json()
                 content = data["choices"][0]["message"]["content"]
                 usage = data.get("usage", {})
-                logger.info("openrouter.generate model=%s tokens=%s", candidate_model, usage.get("total_tokens", 0))
+                logger.info(
+                    "openrouter.generate model=%s tokens=%s",
+                    candidate_model,
+                    usage.get("total_tokens", 0),
+                )
                 return {
                     "response": content,
                     "model": candidate_model,

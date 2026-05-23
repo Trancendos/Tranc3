@@ -67,9 +67,7 @@ class TRANC3Enhanced:
             from src.mcp.tools import registry as mcp_registry
 
             self._subsystems["mcp_registry"] = mcp_registry
-            logger.info(
-                "✓ MCP tool registry ready (%d tools)", len(mcp_registry._tools)
-            )
+            logger.info("✓ MCP tool registry ready (%d tools)", len(mcp_registry._tools))
         except Exception as e:
             logger.warning("MCP registry init failed (non-fatal): %s", e)
 
@@ -167,12 +165,8 @@ class TRANC3Enhanced:
             cfg = self._default_2060_config()
             self._subsystems["quantum"] = QuantumNeuralCore(cfg["quantum"])
             self._subsystems["consciousness"] = ConsciousnessModel(cfg["consciousness"])
-            self._subsystems["evolution"] = SelfEvolvingArchitecture(
-                cfg["ai_capabilities"]
-            )
-            self._subsystems["memory"] = HolographicMemoryCrystal(
-                cfg["memory"]["dimensions"]
-            )
+            self._subsystems["evolution"] = SelfEvolvingArchitecture(cfg["ai_capabilities"])
+            self._subsystems["memory"] = HolographicMemoryCrystal(cfg["memory"]["dimensions"])
             logger.info("✓ TRANC3 2060 core systems ready")
         except Exception as e:
             logger.warning("2060 core init failed (non-fatal): %s", e)
@@ -194,7 +188,7 @@ class TRANC3Enhanced:
     async def think(
         self,
         prompt: str,
-        context: Dict = {},
+        context: Dict = None,
         personality: str = "tranc3-base",
         system_prompt: Optional[str] = None,
         max_new_tokens: int = 256,
@@ -207,6 +201,8 @@ class TRANC3Enhanced:
         All other subsystems enrich the response with structured metadata.
         No external API is called.
         """
+        if context is None:
+            context = {}
         start = time.time()
         result: Dict[str, Any] = {
             "prompt": prompt,
@@ -230,13 +226,10 @@ class TRANC3Enhanced:
             result["tokens"] = gen.get("tokens", 0)
             if not gen.get("trained", True):
                 result["warning"] = gen.get("response", "")
-                result["action_required"] = gen.get(
-                    "action_required", "python train.py"
-                )
+                result["action_required"] = gen.get("action_required", "python train.py")
         else:
             result["response"] = (
-                "TRANC3 language engine not initialised. "
-                "Run `python train.py` then restart."
+                "TRANC3 language engine not initialised. Run `python train.py` then restart."
             )
             result["model"] = "none"
 
@@ -271,9 +264,7 @@ class TRANC3Enhanced:
         if consciousness:
             try:
                 encoded = self._encode(prompt)
-                cs_state = consciousness.simulate_consciousness_stream(
-                    encoded, time_steps=100
-                )
+                cs_state = consciousness.simulate_consciousness_stream(encoded, time_steps=100)
                 result["consciousness_phi"] = cs_state.get("average_phi", 0.0)
             except Exception as e:
                 logger.debug("Consciousness error (non-fatal): %s", e)
@@ -301,8 +292,10 @@ class TRANC3Enhanced:
             t = torch.nn.functional.pad(t, (0, 768 - len(t)))
         return t[:768].unsqueeze(0)
 
-    async def execute_workflow(self, workflow_def: Dict, inputs: Dict = {}) -> Dict:
+    async def execute_workflow(self, workflow_def: Dict, inputs: Dict = None) -> Dict:
         """Execute a workflow definition."""
+        if inputs is None:
+            inputs = {}
         executor = self._subsystems.get("workflow_executor")
         if not executor:
             return {"error": "Workflow executor not available"}
@@ -318,8 +311,10 @@ class TRANC3Enhanced:
             "error": state.error,
         }
 
-    async def call_mcp_tool(self, tool_name: str, params: Dict = {}) -> Dict:
+    async def call_mcp_tool(self, tool_name: str, params: Dict = None) -> Dict:
         """Call an MCP tool by name."""
+        if params is None:
+            params = {}
         registry = self._subsystems.get("mcp_registry")
         if not registry:
             return {"error": "MCP registry not available"}

@@ -3,10 +3,11 @@
 # src/personality/matrix.py
 # TRANC3 Full Personality Matrix System
 
-import torch
-import numpy as np
-from typing import Dict, List, Optional
 import logging
+from typing import Dict, List, Optional
+
+import numpy as np
+import torch
 
 logger = logging.getLogger(__name__)
 

@@ -15,15 +15,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-
-from shared_core.error_handlers import safe_error_detail
-from shared_core.sanitize import sanitize_for_log
-
 import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
+
+from shared_core.error_handlers import safe_error_detail
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -66,11 +65,11 @@ class NexusMessage:
     type: MessageType = MessageType.SERVICE_EVENT
     priority: MessagePriority = MessagePriority.NORMAL
     sender: str = "system"
-    recipient: Optional[str] = None     # None = broadcast
-    topic: Optional[str] = None         # pub/sub topic
+    recipient: Optional[str] = None  # None = broadcast
+    topic: Optional[str] = None  # pub/sub topic
     payload: Dict[str, Any] = field(default_factory=dict)
-    reply_to: Optional[str] = None      # message ID to reply to
-    ttl_seconds: float = 30.0           # discard if not consumed within TTL
+    reply_to: Optional[str] = None  # message ID to reply to
+    ttl_seconds: float = 30.0  # discard if not consumed within TTL
 
     def is_expired(self) -> bool:
         return time.time() > self.timestamp + self.ttl_seconds
@@ -105,7 +104,11 @@ class NexusHub:
         q: asyncio.Queue = asyncio.Queue(maxsize=maxsize)
         self._topics.setdefault(topic, []).append(q)
         self._stats["subscribers"] += 1
-        logger.debug("nexus: +subscriber topic=%s total=%d", sanitize_for_log(topic), len(self._topics[topic]))  # codeql[py/cleartext-logging]
+        logger.debug(
+            "nexus: +subscriber topic=%s total=%d",
+            sanitize_for_log(topic),
+            len(self._topics[topic]),
+        )  # codeql[py/cleartext-logging]
         return q
 
     def unsubscribe_topic(self, topic: str, q: asyncio.Queue) -> None:
@@ -116,9 +119,14 @@ class NexusHub:
         except ValueError:
             logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
-    def publish(self, topic: str, payload: Dict[str, Any], sender: str = "system",
-                priority: MessagePriority = MessagePriority.NORMAL,
-                ttl_seconds: float = 30.0) -> NexusMessage:
+    def publish(
+        self,
+        topic: str,
+        payload: Dict[str, Any],
+        sender: str = "system",
+        priority: MessagePriority = MessagePriority.NORMAL,
+        ttl_seconds: float = 30.0,
+    ) -> NexusMessage:
         """Publish a message to all subscribers on a topic."""
         msg = NexusMessage(
             type=MessageType.SERVICE_EVENT,
@@ -157,18 +165,28 @@ class NexusHub:
         self._direct[service_id] = q
         return q
 
-    async def send(self, recipient: str, payload: Dict[str, Any], sender: str = "system",
-                   msg_type: MessageType = MessageType.SERVICE_EVENT,
-                   priority: MessagePriority = MessagePriority.NORMAL) -> Optional[NexusMessage]:
+    async def send(
+        self,
+        recipient: str,
+        payload: Dict[str, Any],
+        sender: str = "system",
+        msg_type: MessageType = MessageType.SERVICE_EVENT,
+        priority: MessagePriority = MessagePriority.NORMAL,
+    ) -> Optional[NexusMessage]:
         """Send a direct message to a registered service. Returns None if no inbox."""
         q = self._direct.get(recipient)
         if q is None:
-            logger.debug("nexus: no inbox for recipient=%s", sanitize_for_log(recipient))  # codeql[py/cleartext-logging]
+            logger.debug(
+                "nexus: no inbox for recipient=%s", sanitize_for_log(recipient)
+            )  # codeql[py/cleartext-logging]
             self._stats["dropped"] += 1
             return None
         msg = NexusMessage(
-            type=msg_type, priority=priority,
-            sender=sender, recipient=recipient, payload=payload,
+            type=msg_type,
+            priority=priority,
+            sender=sender,
+            recipient=recipient,
+            payload=payload,
         )
         self._stats["sent"] += 1
         try:
@@ -180,17 +198,23 @@ class NexusHub:
 
     # ── AI routing ───────────────────────────────────────────────────────────
 
-    async def route_inference(self, prompt: str, personality: str = "tranc3-base",
-                              sender: str = "system") -> Dict[str, Any]:
+    async def route_inference(
+        self, prompt: str, personality: str = "tranc3-base", sender: str = "system"
+    ) -> Dict[str, Any]:
         """Route an inference request through Luminous (Tranc3Engine)."""
         try:
             from src.core.tranc3_inference import get_engine
+
             engine = get_engine()
             result = await engine.generate(prompt, personality=personality)
-            self.publish("ai.inference.complete", {"prompt_len": len(prompt), **result}, sender=sender)
+            self.publish(
+                "ai.inference.complete", {"prompt_len": len(prompt), **result}, sender=sender
+            )
             return result
         except Exception as exc:
-            logger.error("nexus.route_inference error: %s", sanitize_for_log(exc))  # codeql[py/cleartext-logging]
+            logger.error(
+                "nexus.route_inference error: %s", sanitize_for_log(exc)
+            )  # codeql[py/cleartext-logging]
             return {"response": "", "error": safe_error_detail(exc, 500)}
 
     # ── Status ───────────────────────────────────────────────────────────────

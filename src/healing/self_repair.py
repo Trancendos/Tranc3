@@ -87,18 +87,14 @@ class SelfRepairEngine:
             try:
                 triggered = strategy.condition(context)
             except Exception as exc:
-                logger.warning(
-                    "Condition error in strategy '%s': %s", strategy.name, exc
-                )
+                logger.warning("Condition error in strategy '%s': %s", strategy.name, exc)
                 triggered = False
 
             if not triggered:
                 continue
 
             if not strategy.is_ready():
-                remaining = strategy.cooldown_sec - (
-                    time.time() - strategy.last_applied
-                )
+                remaining = strategy.cooldown_sec - (time.time() - strategy.last_applied)
                 logger.debug(
                     "Strategy '%s' triggered but on cooldown (%.0f s remaining).",
                     strategy.name,
@@ -271,8 +267,7 @@ class SelfRepairEngine:
             RepairStrategy(
                 name="model_drift",
                 priority=4,
-                condition=lambda ctx: float(ctx.get("prediction_confidence", 1.0))
-                < 0.5,
+                condition=lambda ctx: float(ctx.get("prediction_confidence", 1.0)) < 0.5,
                 action=_model_drift_action,
                 cooldown_sec=900.0,
             )
@@ -353,9 +348,7 @@ class AdaptiveConfigTuner:
         """Store a metric observation with the current timestamp."""
         if name not in self._metric_series:
             self._metric_series[name] = []
-        self._metric_series[name].append(
-            _MetricPoint(value=value, timestamp=time.time())
-        )
+        self._metric_series[name].append(_MetricPoint(value=value, timestamp=time.time()))
         # Keep a bounded window (last 500 observations)
         if len(self._metric_series[name]) > 500:
             self._metric_series[name] = self._metric_series[name][-250:]
@@ -419,7 +412,7 @@ class AdaptiveConfigTuner:
         # OLS linear: y = a + b*x  →  optimal is the value at x=n (next step)
         x_mean = sum(xs) / n
         y_mean = sum(values) / n
-        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values))
+        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
         ss_xx = sum((x - x_mean) ** 2 for x in xs)
         if abs(ss_xx) < 1e-12:
             return y_mean
@@ -454,13 +447,13 @@ class AdaptiveConfigTuner:
             return 0.0
 
         x_mean = sum(xs) / n
-        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values))
+        ss_xy = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, values, strict=False))
         ss_xx = sum((x - x_mean) ** 2 for x in xs)
         if abs(ss_xx) < 1e-12:
             return 0.0
         b = ss_xy / ss_xx
         a = y_mean - b * x_mean
-        ss_res = sum((y - (a + b * x)) ** 2 for x, y in zip(xs, values))
+        ss_res = sum((y - (a + b * x)) ** 2 for x, y in zip(xs, values, strict=False))
         r2 = 1.0 - (ss_res / ss_tot)
 
         # Scale by sample adequacy (fully confident after 50+ samples)

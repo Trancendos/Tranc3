@@ -44,6 +44,7 @@ logger = logging.getLogger(WORKER_NAME)
 # Models
 # ---------------------------------------------------------------------------
 
+
 class HealthStatus(str, Enum):
     healthy = "healthy"
     degraded = "degraded"
@@ -124,6 +125,7 @@ class DashboardPanel(BaseModel):
 # Database
 # ---------------------------------------------------------------------------
 
+
 class MonitoringDatabase:
     """SQLite-backed storage for metrics, health reports, alerts, and rules."""
 
@@ -201,8 +203,12 @@ class MonitoringDatabase:
                     resolved_at TEXT
                 )
             """)
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_health_service ON health_reports(service_name)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_health_timestamp ON health_reports(timestamp)")
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_health_service ON health_reports(service_name)"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_health_timestamp ON health_reports(timestamp)"
+            )
             cur.execute("CREATE INDEX IF NOT EXISTS idx_metrics_name ON metrics(name)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_metrics_timestamp ON metrics(timestamp)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_alerts_state ON alerts(state)")
@@ -214,9 +220,15 @@ class MonitoringDatabase:
         with self._cursor() as cur:
             cur.execute(
                 "INSERT INTO health_reports (service_name, status, response_time_ms, error_rate, uptime_seconds, metadata, timestamp) VALUES (?,?,?,?,?,?,?)",
-                (report.service_name, report.status.value, report.response_time_ms,
-                 report.error_rate, report.uptime_seconds, json.dumps(report.metadata),
-                 report.timestamp.isoformat()),
+                (
+                    report.service_name,
+                    report.status.value,
+                    report.response_time_ms,
+                    report.error_rate,
+                    report.uptime_seconds,
+                    json.dumps(report.metadata),
+                    report.timestamp.isoformat(),
+                ),
             )
 
     def get_latest_health(self, service_name: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -247,18 +259,28 @@ class MonitoringDatabase:
         with self._cursor() as cur:
             cur.execute(
                 "INSERT INTO metrics (name, type, value, labels, timestamp) VALUES (?,?,?,?,?)",
-                (metric.name, metric.type.value, metric.value, json.dumps(metric.labels),
-                 metric.timestamp.isoformat()),
+                (
+                    metric.name,
+                    metric.type.value,
+                    metric.value,
+                    json.dumps(metric.labels),
+                    metric.timestamp.isoformat(),
+                ),
             )
 
     def store_metrics_batch(self, metrics: List[MetricPayload]):
         with self._cursor() as cur:
             cur.executemany(
                 "INSERT INTO metrics (name, type, value, labels, timestamp) VALUES (?,?,?,?,?)",
-                [(m.name, m.type.value, m.value, json.dumps(m.labels), m.timestamp.isoformat()) for m in metrics],
+                [
+                    (m.name, m.type.value, m.value, json.dumps(m.labels), m.timestamp.isoformat())
+                    for m in metrics
+                ],
             )
 
-    def query_metrics(self, name: str, hours: int = 1, labels: Optional[Dict[str, str]] = None) -> List[Dict[str, Any]]:
+    def query_metrics(
+        self, name: str, hours: int = 1, labels: Optional[Dict[str, str]] = None
+    ) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
         if labels:
@@ -291,16 +313,26 @@ class MonitoringDatabase:
         with self._cursor() as cur:
             cur.execute(
                 "INSERT INTO alert_rules (rule_id, name, metric_name, condition, threshold, severity, for_duration_seconds, labels, enabled) VALUES (?,?,?,?,?,?,?,?,?)",
-                (rule.rule_id, rule.name, rule.metric_name, rule.condition,
-                 rule.threshold, rule.severity.value, rule.for_duration_seconds,
-                 json.dumps(rule.labels), int(rule.enabled)),
+                (
+                    rule.rule_id,
+                    rule.name,
+                    rule.metric_name,
+                    rule.condition,
+                    rule.threshold,
+                    rule.severity.value,
+                    rule.for_duration_seconds,
+                    json.dumps(rule.labels),
+                    int(rule.enabled),
+                ),
             )
         return rule
 
     def get_alert_rules(self, enabled_only: bool = False) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         if enabled_only:
-            rows = conn.execute("SELECT * FROM alert_rules WHERE enabled=1 ORDER BY name").fetchall()
+            rows = conn.execute(
+                "SELECT * FROM alert_rules WHERE enabled=1 ORDER BY name"
+            ).fetchall()
         else:
             rows = conn.execute("SELECT * FROM alert_rules ORDER BY name").fetchall()
         return [dict(r) for r in rows]
@@ -316,14 +348,23 @@ class MonitoringDatabase:
         with self._cursor() as cur:
             cur.execute(
                 "INSERT INTO alerts (alert_id, rule_id, name, severity, state, message, labels, fired_at, resolved_at) VALUES (?,?,?,?,?,?,?,?,?)",
-                (alert.alert_id, alert.rule_id, alert.name, alert.severity.value,
-                 alert.state.value, alert.message, json.dumps(alert.labels),
-                 alert.fired_at.isoformat(),
-                 alert.resolved_at.isoformat() if alert.resolved_at else None),
+                (
+                    alert.alert_id,
+                    alert.rule_id,
+                    alert.name,
+                    alert.severity.value,
+                    alert.state.value,
+                    alert.message,
+                    json.dumps(alert.labels),
+                    alert.fired_at.isoformat(),
+                    alert.resolved_at.isoformat() if alert.resolved_at else None,
+                ),
             )
         return alert
 
-    def get_alerts(self, state: Optional[AlertState] = None, hours: int = 168) -> List[Dict[str, Any]]:
+    def get_alerts(
+        self, state: Optional[AlertState] = None, hours: int = 168
+    ) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
         if state:
@@ -352,12 +393,15 @@ class MonitoringDatabase:
 # Alert Engine
 # ---------------------------------------------------------------------------
 
+
 class AlertEngine:
     """Evaluates alert rules against incoming metrics and fires/resolves alerts."""
 
     def __init__(self, db: MonitoringDatabase):
         self.db = db
-        self._metric_buffer: Dict[str, List[tuple]] = defaultdict(list)  # rule_id -> [(value, timestamp)]
+        self._metric_buffer: Dict[str, List[tuple]] = defaultdict(
+            list
+        )  # rule_id -> [(value, timestamp)]
 
     def evaluate(self, metric: MetricPayload):
         """Evaluate all enabled rules against a new metric."""
@@ -419,6 +463,7 @@ class AlertEngine:
 # WebSocket Manager for Live Dashboard
 # ---------------------------------------------------------------------------
 
+
 class DashboardWSManager:
     """Manages WebSocket connections for live dashboard updates."""
 
@@ -439,7 +484,9 @@ class DashboardWSManager:
         logger.info("Dashboard WebSocket disconnected. Total: %d", len(self.connections))
 
     async def broadcast(self, event_type: str, data: Any):
-        msg = json.dumps({"type": event_type, "data": data, "timestamp": datetime.now(timezone.utc).isoformat()})
+        msg = json.dumps(
+            {"type": event_type, "data": data, "timestamp": datetime.now(timezone.utc).isoformat()}
+        )
         stale = []
         with self._lock:
             for ws in self.connections:
@@ -478,6 +525,7 @@ STARTED_AT = datetime.now(timezone.utc)
 # ---------------------------------------------------------------------------
 # Health & Info
 # ---------------------------------------------------------------------------
+
 
 @app.get("/health")
 async def health():
@@ -519,11 +567,14 @@ async def stats():
 # Health Reports
 # ---------------------------------------------------------------------------
 
+
 @app.post("/health/report")
 async def submit_health_report(report: HealthReport):
     """Submit a health report for a service."""
     db.store_health(report)
-    await ws_manager.broadcast("health_update", {"service": report.service_name, "status": report.status.value})
+    await ws_manager.broadcast(
+        "health_update", {"service": report.service_name, "status": report.status.value}
+    )
     return {"ok": True, "service": report.service_name, "status": report.status.value}
 
 
@@ -545,6 +596,7 @@ async def get_service_health(service_name: str, hours: int = Query(24, ge=1, le=
 # ---------------------------------------------------------------------------
 # Metrics
 # ---------------------------------------------------------------------------
+
 
 @app.post("/metrics")
 async def submit_metric(metric: MetricPayload):
@@ -587,6 +639,7 @@ async def query_metrics(
 # Alert Rules
 # ---------------------------------------------------------------------------
 
+
 @app.post("/alerts/rules")
 async def create_alert_rule(rule: AlertRule):
     """Create a new alert rule."""
@@ -613,6 +666,7 @@ async def delete_alert_rule(rule_id: str):
 # Alerts
 # ---------------------------------------------------------------------------
 
+
 @app.get("/alerts")
 async def list_alerts(
     state: Optional[AlertState] = None,
@@ -634,6 +688,7 @@ async def resolve_alert(alert_id: str):
 # ---------------------------------------------------------------------------
 # Dashboard WebSocket
 # ---------------------------------------------------------------------------
+
 
 @app.websocket("/ws/dashboard")
 async def dashboard_websocket(ws: WebSocket):
@@ -699,7 +754,9 @@ async def collect_health():
                 metadata={"error": safe_error_detail(e, 500)},
             )
             db.store_health(report)
-            results.append({"service": svc["name"], "status": "unhealthy", "error": safe_error_detail(e, 500)})
+            results.append(
+                {"service": svc["name"], "status": "unhealthy", "error": safe_error_detail(e, 500)}
+            )
 
     await ws_manager.broadcast("health_collection", {"results": results})
     return {"collected": len(results), "results": results}
@@ -711,4 +768,5 @@ async def collect_health():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

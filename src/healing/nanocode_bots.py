@@ -165,9 +165,7 @@ class ComplianceMetadataBot(NanoBot):
                 action = "Injected compliance metadata; validation endpoint unavailable"
 
         except httpx.HTTPStatusError as exc:
-            action = (
-                f"HTTP error during compliance injection: {exc.response.status_code}"
-            )
+            action = f"HTTP error during compliance injection: {exc.response.status_code}"
             logger.error("[ComplianceMetadataBot] %s — %s", service_id, action)
         except Exception as exc:
             action = f"Repair failed: {exc}"
@@ -240,7 +238,7 @@ class StaleEmbeddingBot(NanoBot):
                 embed_resp.raise_for_status()
                 vectors = embed_resp.json().get("embeddings", [])
 
-                for item, vec in zip(batch, vectors):
+                for item, vec in zip(batch, vectors, strict=False):
                     qdrant_points.append(
                         {
                             "id": item.get("id"),
@@ -315,9 +313,7 @@ class FreeTierBot(NanoBot):
                 },
             )
             if rate_resp.status_code < 300:
-                actions_taken.append(
-                    f"Rate limited to {self._CONSERVATION_RATE_LIMIT_RPS} RPS"
-                )
+                actions_taken.append(f"Rate limited to {self._CONSERVATION_RATE_LIMIT_RPS} RPS")
 
             # 2. Enable caching
             cache_resp = await client.post(
@@ -597,9 +593,11 @@ class NanoCodeBotDispatcher:
         self,
         failure_mode: FailureMode,
         service_id: str,
-        context: Dict = {},
+        context: Dict = None,
     ) -> BotResult:
         """Find the right bot for *failure_mode* and execute its repair."""
+        if context is None:
+            context = {}
         bot = self._bots.get(failure_mode)
         if bot is None:
             logger.warning("No bot registered for failure mode %s", failure_mode.value)

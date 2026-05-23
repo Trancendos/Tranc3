@@ -28,16 +28,18 @@ logger = logging.getLogger("tranc3.ai_gateway.zero_cost")
 
 class ProviderTier(str, Enum):
     """Cost tier for AI providers."""
-    FREE_UNLIMITED = "free_unlimited"     # Ollama (local)
-    FREE_TIER = "free_tier"              # Groq, OpenRouter free models
-    CHEAP = "cheap"                       # DeepSeek ($0.14/M input)
-    FREEMIUM = "freemium"                 # HuggingFace (rate-limited free)
-    OFFLINE = "offline"                   # OfflineProvider (deterministic)
+
+    FREE_UNLIMITED = "free_unlimited"  # Ollama (local)
+    FREE_TIER = "free_tier"  # Groq, OpenRouter free models
+    CHEAP = "cheap"  # DeepSeek ($0.14/M input)
+    FREEMIUM = "freemium"  # HuggingFace (rate-limited free)
+    OFFLINE = "offline"  # OfflineProvider (deterministic)
 
 
 @dataclass
 class FreeModelInfo:
     """Information about a free-tier AI model."""
+
     name: str
     provider: str
     tier: ProviderTier
@@ -204,15 +206,18 @@ class ZeroCostRoutingChain:
     def get_route_rules(self) -> List[Dict[str, Any]]:
         """Convert to RouteRule dicts for AIGateway."""
         from src.ai_gateway.types import RouteRule
+
         rules = []
         for priority, provider in enumerate(self.providers):
             model = self.models.get(provider, "")
-            rules.append(RouteRule(
-                provider=provider,
-                model=model,
-                priority=priority,
-                enabled=True,
-            ))
+            rules.append(
+                RouteRule(
+                    provider=provider,
+                    model=model,
+                    priority=priority,
+                    enabled=True,
+                )
+            )
         return rules
 
 
@@ -307,6 +312,7 @@ def _check_ollama_available(host: str) -> bool:
     """Quick check if Ollama is running locally."""
     try:
         import urllib.request
+
         urllib.request.urlopen(f"{host}/api/tags", timeout=2)
         return True
     except Exception:
@@ -328,7 +334,7 @@ def get_optimal_chain(chain_name: Optional[str] = None) -> ZeroCostRoutingChain:
     best_chain = None
     best_score = -1
 
-    for name, chain in ROUTING_CHAINS.items():
+    for _name, chain in ROUTING_CHAINS.items():
         # Count how many providers in this chain are available
         score = sum(1 for p in chain.providers if available.get(p, False))
         # Prefer chains with higher score (more providers available)

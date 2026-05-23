@@ -20,6 +20,7 @@ async def chronos_status() -> Dict[str, Any]:
 
 # ── Scheduled tasks ───────────────────────────────────────────────────────────
 
+
 @router.post("/tasks")
 async def create_task(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     name = body.get("name")
@@ -88,6 +89,7 @@ async def delete_task(task_id: str = Path(...)) -> Dict[str, Any]:
 
 # ── Calendar events ───────────────────────────────────────────────────────────
 
+
 @router.post("/events")
 async def create_event(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     user_id = body.get("user_id")
@@ -95,7 +97,9 @@ async def create_event(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     start_ts = body.get("start_ts")
     end_ts = body.get("end_ts")
     if not all([user_id, title, start_ts, end_ts]):
-        return JSONResponse({"error": "user_id, title, start_ts, end_ts are required"}, status_code=400)
+        return JSONResponse(
+            {"error": "user_id, title, start_ts, end_ts are required"}, status_code=400
+        )
     event = get_chronos().create_event(
         user_id=user_id,
         title=title,
@@ -116,7 +120,10 @@ async def list_events(
     from_ts: Optional[float] = Query(None),
     to_ts: Optional[float] = Query(None),
 ) -> list:
-    return [e.to_dict() for e in get_chronos().list_events(user_id=user_id, from_ts=from_ts, to_ts=to_ts)]
+    return [
+        e.to_dict()
+        for e in get_chronos().list_events(user_id=user_id, from_ts=from_ts, to_ts=to_ts)
+    ]
 
 
 @router.get("/events/{event_id}")

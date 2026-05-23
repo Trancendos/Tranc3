@@ -22,19 +22,12 @@ import sentencepiece as spm
 
 SPECIAL_TOKENS = {
     "pad_token": "<pad>",  # nosec B105 — false positive: not a password
-
     "bos_token": "<bos>",  # nosec B105 — false positive: not a password
-
     "eos_token": "<eos>",  # nosec B105 — false positive: not a password
-
     "unk_token": "<unk>",  # nosec B105 — false positive: not a password
-
     "sys_token": "<sys>",  # nosec B105 — false positive: not a password
-
     "usr_token": "<usr>",  # nosec B105 — false positive: not a password
-
     "ast_token": "<ast>",  # nosec B105 — false positive: not a password
-
 }
 
 PAD_ID = 0
@@ -117,6 +110,7 @@ class Tranc3Tokenizer:
 # ------------------------------------------------------------------
 # Tokenizer training (run once)
 # ------------------------------------------------------------------
+
 
 def train_tokenizer(
     data_dir: str,

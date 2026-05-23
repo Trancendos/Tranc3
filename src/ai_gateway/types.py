@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 class ProviderName(str, enum.Enum):
     """Well-known AI provider names."""
+
     OLLAMA = "ollama"
     OPENROUTER = "openrouter"
     HUGGINGFACE = "huggingface"
@@ -32,6 +33,7 @@ class ProviderName(str, enum.Enum):
 
 class AIRequest(BaseModel):
     """An AI inference request."""
+
     prompt: str = ""
     messages: list[dict[str, str]] = Field(default_factory=list)
     model: Optional[str] = None
@@ -44,6 +46,7 @@ class AIRequest(BaseModel):
 
 class AIResponse(BaseModel):
     """An AI inference response."""
+
     text: str = ""
     model: str = ""
     provider: str = ""
@@ -59,6 +62,7 @@ class AIResponse(BaseModel):
 
 class RouteRule(BaseModel):
     """A routing rule for AI requests."""
+
     provider: str
     model: Optional[str] = None
     priority: int = 0
@@ -70,6 +74,7 @@ class RouteRule(BaseModel):
 
 class TenantAIConfig(BaseModel):
     """Per-tenant AI configuration."""
+
     tenant_id: str
     routes: list[RouteRule] = Field(default_factory=list)
     daily_token_budget: Optional[int] = None
@@ -82,6 +87,7 @@ class TenantAIConfig(BaseModel):
 
 class ProviderHealth(BaseModel):
     """Health status of an AI provider."""
+
     provider: str
     healthy: bool = True
     latency_ms: float = 0.0
@@ -92,6 +98,7 @@ class ProviderHealth(BaseModel):
 
 class GatewayMetrics(BaseModel):
     """Aggregate metrics for the AI gateway."""
+
     total_requests: int = 0
     total_tokens: int = 0
     total_latency_ms: float = 0.0

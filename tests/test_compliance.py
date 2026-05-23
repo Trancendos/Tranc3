@@ -4,10 +4,12 @@ Compliance Tests — error catalog completeness, OWASP Top 10, GDPR codes, rate-
 Tests verify that the system's declared contracts (error taxonomy, security headers,
 compliance error codes) are fully implemented and structurally sound.
 """
+
 from __future__ import annotations
 
 import logging
 import re
+
 import pytest
 
 _log = logging.getLogger("tranc3.tests.compliance")
@@ -20,9 +22,11 @@ _CODE_PATTERN = re.compile(r"^TRANC3-[A-Z]+-\d{3}$")
 # Error catalog compliance
 # ---------------------------------------------------------------------------
 
+
 class TestErrorCatalogCompliance:
     def test_all_error_codes_match_format(self, caplog):
         from src.errors.error_catalog import ErrorCode
+
         violations = []
         for code in ErrorCode:
             if not _CODE_PATTERN.match(code.value):
@@ -32,6 +36,7 @@ class TestErrorCatalogCompliance:
 
     def test_all_required_domains_present(self, caplog):
         from src.errors.error_catalog import ErrorCode
+
         domains = {e.value.split("-")[1] for e in ErrorCode}
         required = {"AUTH", "RATE", "MODEL", "DB", "SEC", "COMP", "SYS"}
         missing = required - domains
@@ -41,20 +46,29 @@ class TestErrorCatalogCompliance:
     def test_auth_error_codes_complete(self, caplog):
         """AUTH domain must cover token lifecycle and user management."""
         from src.errors.error_catalog import ErrorCode
+
         auth = {e.name for e in ErrorCode if "AUTH" in e.value}
         _log.info("compliance.auth codes=%s", sorted(auth))
-        for required in ("AUTH_TOKEN_EXPIRED", "AUTH_TOKEN_INVALID", "AUTH_TOKEN_MISSING",
-                         "AUTH_USER_NOT_FOUND", "AUTH_WRONG_PASSWORD", "AUTH_WEAK_PASSWORD"):
+        for required in (
+            "AUTH_TOKEN_EXPIRED",
+            "AUTH_TOKEN_INVALID",
+            "AUTH_TOKEN_MISSING",
+            "AUTH_USER_NOT_FOUND",
+            "AUTH_WRONG_PASSWORD",
+            "AUTH_WEAK_PASSWORD",
+        ):
             assert required in auth, f"Missing auth code: {required}"
 
     def test_rate_limit_codes_present(self, caplog):
         from src.errors.error_catalog import ErrorCode
+
         rate = [e for e in ErrorCode if "RATE" in e.value]
         _log.info("compliance.rate codes=%d", len(rate))
         assert len(rate) >= 2, "Need at least HOURLY and DAILY rate codes"
 
     def test_gdpr_compliance_codes_present(self, caplog):
         from src.errors.error_catalog import ErrorCode
+
         comp = [e for e in ErrorCode if "COMP" in e.value]
         names = [e.name for e in comp]
         _log.info("compliance.gdpr codes=%s", names)
@@ -63,12 +77,13 @@ class TestErrorCatalogCompliance:
     def test_security_codes_cover_owasp_categories(self, caplog):
         """SEC codes must cover: input blocking (A03), CORS (A01), integrity (A08), IP blocking."""
         from src.errors.error_catalog import ErrorCode
+
         sec = {e.name for e in ErrorCode if "SEC" in e.value}
         _log.info("compliance.owasp sec_codes=%s", sorted(sec))
-        assert "SEC_INPUT_BLOCKED" in sec,   "A03: injection blocking code required"
-        assert "SEC_CORS_VIOLATION" in sec,   "A01: CORS violation code required"
+        assert "SEC_INPUT_BLOCKED" in sec, "A03: injection blocking code required"
+        assert "SEC_CORS_VIOLATION" in sec, "A01: CORS violation code required"
         assert "SEC_INTEGRITY_ALERT" in sec, "A08: integrity alert code required"
-        assert "SEC_IP_BLOCKED" in sec,       "IP blocking code required"
+        assert "SEC_IP_BLOCKED" in sec, "IP blocking code required"
 
     def test_error_catalog_has_guidance_for_all_codes(self, caplog):
         """Every error must have self-healing or resolution guidance."""
@@ -78,7 +93,8 @@ class TestErrorCatalogCompliance:
             pytest.skip("ERROR_DEFINITIONS not exported from error_catalog")  # type: ignore[unreachable]
             return  # unreachable, but helps static analysis
         missing_guidance = [
-            code for code, defn in ERROR_DEFINITIONS.items()
+            code
+            for code, defn in ERROR_DEFINITIONS.items()
             if not defn.get("guidance") and not defn.get("action")
         ]
         _log.info("compliance.guidance missing=%d", len(missing_guidance))
@@ -106,14 +122,23 @@ class TestErrorCatalogCompliance:
 # MCP / JSON-RPC protocol compliance
 # ---------------------------------------------------------------------------
 
+
 class TestMCPProtocolCompliance:
     @pytest.mark.asyncio
     async def test_initialize_returns_required_fields(self, caplog):
         from src.mcp.server import handle_rpc
-        resp = await handle_rpc({
-            "jsonrpc": "2.0", "id": 1, "method": "initialize",
-            "params": {"protocolVersion": "2024-11-05", "clientInfo": {"name": "compliance", "version": "0"}},
-        })
+
+        resp = await handle_rpc(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "clientInfo": {"name": "compliance", "version": "0"},
+                },
+            }
+        )
         _log.info("compliance.mcp init resp keys=%s", list(resp.get("result", {}).keys()))
         assert "result" in resp
         r = resp["result"]
@@ -126,6 +151,7 @@ class TestMCPProtocolCompliance:
     @pytest.mark.asyncio
     async def test_tools_list_schema_valid(self, caplog):
         from src.mcp.server import handle_rpc
+
         resp = await handle_rpc({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
         tools = resp["result"]["tools"]
         _log.info("compliance.mcp tools_count=%d", len(tools))
@@ -137,7 +163,10 @@ class TestMCPProtocolCompliance:
     @pytest.mark.asyncio
     async def test_unknown_method_returns_method_not_found(self, caplog):
         from src.mcp.server import handle_rpc
-        resp = await handle_rpc({"jsonrpc": "2.0", "id": 3, "method": "nonexistent_method", "params": {}})
+
+        resp = await handle_rpc(
+            {"jsonrpc": "2.0", "id": 3, "method": "nonexistent_method", "params": {}}
+        )
         _log.info("compliance.mcp unknown_method error=%s", resp.get("error", {}).get("code"))
         assert "error" in resp
         assert resp["error"]["code"] == -32601  # Method not found
@@ -145,6 +174,7 @@ class TestMCPProtocolCompliance:
     @pytest.mark.asyncio
     async def test_invalid_jsonrpc_version_rejected(self, caplog):
         from src.mcp.server import handle_rpc
+
         resp = await handle_rpc({"jsonrpc": "1.0", "id": 4, "method": "initialize", "params": {}})
         _log.info("compliance.mcp bad_version error_code=%s", resp.get("error", {}).get("code"))
         assert "error" in resp
@@ -153,7 +183,10 @@ class TestMCPProtocolCompliance:
     @pytest.mark.asyncio
     async def test_resources_have_spark_and_grid_uris(self, caplog):
         from src.mcp.server import handle_rpc
-        resp = await handle_rpc({"jsonrpc": "2.0", "id": 5, "method": "resources/list", "params": {}})
+
+        resp = await handle_rpc(
+            {"jsonrpc": "2.0", "id": 5, "method": "resources/list", "params": {}}
+        )
         uris = {r["uri"] for r in resp["result"]["resources"]}
         _log.info("compliance.mcp resource_uris=%s", sorted(uris))
         assert any(u.startswith("spark://") for u in uris)
@@ -164,17 +197,21 @@ class TestMCPProtocolCompliance:
 # Digital Grid workflow contract compliance
 # ---------------------------------------------------------------------------
 
+
 class TestDigitalGridContractCompliance:
     def test_workflow_dict_has_engine_field(self, caplog, sample_workflow_definitions):
         from src.workflow.builder import GRID_ENGINE
+
         for name, wf in sample_workflow_definitions.items():
             d = wf.to_dict()
             _log.info("compliance.grid wf=%s engine=%s", name, d.get("engine"))
             assert d.get("engine") == GRID_ENGINE, f"Workflow {name} missing engine field"
 
     def test_execution_state_fields_complete(self, caplog):
-        from src.workflow.executor import ExecutionState
         import uuid
+
+        from src.workflow.executor import ExecutionState
+
         state = ExecutionState(
             execution_id=str(uuid.uuid4()),
             workflow_id="test",
@@ -192,6 +229,7 @@ class TestDigitalGridContractCompliance:
 
     def test_node_result_fields_complete(self, caplog):
         from src.workflow.nodes import NodeResult
+
         r = NodeResult(node_id="n1", success=True, output={"x": 1}, error=None, duration_ms=5.0)
         _log.info("compliance.grid node_result success=%s duration=%.1f", r.success, r.duration_ms)
         assert r.node_id == "n1"
@@ -203,6 +241,7 @@ class TestDigitalGridContractCompliance:
 # ---------------------------------------------------------------------------
 # Billing / rate-limit compliance
 # ---------------------------------------------------------------------------
+
 
 class TestBillingCompliance:
     def test_free_tier_rate_limit_enforced(self, caplog):
@@ -222,5 +261,6 @@ class TestBillingCompliance:
         tier_names = [t.name for t in BillingTier]
         _log.info("compliance.billing tiers=%s", tier_names)
         for required in ("FREE", "PRO", "BUSINESS"):
-            assert required in tier_names or any(required.lower() in n.lower() for n in tier_names), \
-                f"Missing billing tier: {required}"
+            assert required in tier_names or any(
+                required.lower() in n.lower() for n in tier_names
+            ), f"Missing billing tier: {required}"

@@ -26,38 +26,48 @@ class BotClient:
 
     def __init__(self, base_url: str = _DEFAULT_URL, timeout: float = 60.0):
         self.base_url = base_url.rstrip("/")
-        self.timeout  = timeout
+        self.timeout = timeout
 
     async def _post(self, endpoint: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
             import httpx
+
             async with httpx.AsyncClient(timeout=self.timeout) as http:
                 r = await http.post(f"{self.base_url}{endpoint}", json=payload)
                 r.raise_for_status()
                 return r.json()
         except Exception as exc:
-        return None
             raise BotClientError(f"Bot call {endpoint} failed: {exc}") from exc
 
     async def _get(self, endpoint: str) -> Dict[str, Any]:
         try:
             import httpx
+
             async with httpx.AsyncClient(timeout=self.timeout) as http:
                 r = await http.get(f"{self.base_url}{endpoint}")
                 r.raise_for_status()
                 return r.json()
         except Exception as exc:
-        return None
             raise BotClientError(f"Bot GET {endpoint} failed: {exc}") from exc
 
     # ── Inference bots ─────────────────────────────────────────────────────────
 
-    async def generate(self, prompt: str, max_tokens: int = 256,
-                       temperature: float = 0.7, personality: Optional[str] = None) -> Dict[str, Any]:
-        return await self._post("/generate", {
-            "prompt": prompt, "max_tokens": max_tokens,
-            "temperature": temperature, "personality": personality,
-        })
+    async def generate(
+        self,
+        prompt: str,
+        max_tokens: int = 256,
+        temperature: float = 0.7,
+        personality: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        return await self._post(
+            "/generate",
+            {
+                "prompt": prompt,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "personality": personality,
+            },
+        )
 
     async def embed(self, text: str, dim: int = 128) -> List[float]:
         r = await self._post("/embed", {"text": text, "dim": dim})

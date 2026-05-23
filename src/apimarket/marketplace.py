@@ -15,37 +15,36 @@
 from __future__ import annotations
 
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-
 import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from shared_core.sanitize import sanitize_for_log
+
 logger = logging.getLogger(__name__)
 
 
 class ConnectorStatus(str, Enum):
-    ACTIVE      = "active"
-    INACTIVE    = "inactive"
+    ACTIVE = "active"
+    INACTIVE = "inactive"
     RATE_LIMITED = "rate_limited"
-    ERROR       = "error"
+    ERROR = "error"
 
 
 class AuthType(str, Enum):
-    NONE       = "none"
-    API_KEY    = "api_key"
-    BEARER     = "bearer"
-    OAUTH2     = "oauth2"
-    BASIC      = "basic"
+    NONE = "none"
+    API_KEY = "api_key"
+    BEARER = "bearer"
+    OAUTH2 = "oauth2"
+    BASIC = "basic"
 
 
 @dataclass
 class ConnectorEndpoint:
-    method: str    # GET / POST / PUT / DELETE / PATCH
-    path: str      # e.g. /users/{id}
+    method: str  # GET / POST / PUT / DELETE / PATCH
+    path: str  # e.g. /users/{id}
     description: str = ""
     params: List[Dict[str, Any]] = field(default_factory=list)
 
@@ -61,7 +60,7 @@ class ConnectorEndpoint:
 class APIConnector:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
-    slug: str = ""              # URL-safe identifier
+    slug: str = ""  # URL-safe identifier
     description: str = ""
     base_url: str = ""
     auth_type: AuthType = AuthType.NONE
@@ -106,23 +105,58 @@ class APIMarketplace:
 
     def _seed_defaults(self) -> None:
         import os
+
         _backend = os.getenv("TRANC3_BACKEND_URL", "http://localhost:8000")
         defaults = [
-            ("The Spark", "the-spark", f"{_backend}/mcp/rpc", AuthType.BEARER,
-             ["mcp", "ai", "tools"], "JSON-RPC 2.0 MCP tool registry"),
-            ("The Digital Grid", "the-grid", f"{_backend}/grid", AuthType.BEARER,
-             ["workflow", "automation"], "Workflow DAG builder and executor"),
-            ("The Observatory", "observatory", f"{_backend}/observatory", AuthType.BEARER,
-             ["audit", "events"], "Platform audit log and event stream"),
-            ("The Void", "the-void", "https://infinity-void.luminous-aimastermind.workers.dev", AuthType.API_KEY,
-             ["secrets", "vault"], "AES-GCM encrypted secrets vault"),
-            ("Infinity Auth", "infinity-auth", "https://infinity-auth-api.luminous-aimastermind.workers.dev", AuthType.OAUTH2,
-             ["auth", "sso", "identity"], "OAuth 2.0 / SSO via Infinity"),
+            (
+                "The Spark",
+                "the-spark",
+                f"{_backend}/mcp/rpc",
+                AuthType.BEARER,
+                ["mcp", "ai", "tools"],
+                "JSON-RPC 2.0 MCP tool registry",
+            ),
+            (
+                "The Digital Grid",
+                "the-grid",
+                f"{_backend}/grid",
+                AuthType.BEARER,
+                ["workflow", "automation"],
+                "Workflow DAG builder and executor",
+            ),
+            (
+                "The Observatory",
+                "observatory",
+                f"{_backend}/observatory",
+                AuthType.BEARER,
+                ["audit", "events"],
+                "Platform audit log and event stream",
+            ),
+            (
+                "The Void",
+                "the-void",
+                "https://infinity-void.luminous-aimastermind.workers.dev",
+                AuthType.API_KEY,
+                ["secrets", "vault"],
+                "AES-GCM encrypted secrets vault",
+            ),
+            (
+                "Infinity Auth",
+                "infinity-auth",
+                "https://infinity-auth-api.luminous-aimastermind.workers.dev",
+                AuthType.OAUTH2,
+                ["auth", "sso", "identity"],
+                "OAuth 2.0 / SSO via Infinity",
+            ),
         ]
         for name, slug, base_url, auth, tags, desc in defaults:
             connector = APIConnector(
-                name=name, slug=slug, base_url=base_url, auth_type=auth,
-                tags=tags, description=desc,
+                name=name,
+                slug=slug,
+                base_url=base_url,
+                auth_type=auth,
+                tags=tags,
+                description=desc,
             )
             self._connectors[connector.id] = connector
 
@@ -147,7 +181,11 @@ class APIMarketplace:
         )
         self._connectors[connector.id] = connector
         self._emit("apimarket.connector.registered", {"connector_id": connector.id, "slug": slug})
-        logger.info("apimarket: registered connector slug=%s base=%s", sanitize_for_log(slug), sanitize_for_log(base_url))  # codeql[py/cleartext-logging]
+        logger.info(
+            "apimarket: registered connector slug=%s base=%s",
+            sanitize_for_log(slug),
+            sanitize_for_log(base_url),
+        )  # codeql[py/cleartext-logging]
         return connector
 
     def get_connector(self, connector_id: str) -> Optional[APIConnector]:
@@ -206,11 +244,15 @@ class APIMarketplace:
     def _emit(self, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
             from src.observability.observatory import EventCategory, observe
-            observe(event_type, category=EventCategory.DATA, service="api-marketplace",
-                    metadata=metadata or {})
+
+            observe(
+                event_type,
+                category=EventCategory.DATA,
+                service="api-marketplace",
+                metadata=metadata or {},
+            )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
 
 _marketplace: Optional[APIMarketplace] = None

@@ -8,11 +8,10 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any, Dict, Optional
 
+from bots.registry import BotRegistry, get_registry
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from bots.registry import BotRegistry, get_registry
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +54,10 @@ def _reg() -> BotRegistry:
 
 # ── Request / response models ──────────────────────────────────────────────────
 
+
 class GenericRequest(BaseModel):
     payload: Dict[str, Any] = {}
+
 
 class GenerateRequest(BaseModel):
     prompt: str
@@ -64,39 +65,49 @@ class GenerateRequest(BaseModel):
     temperature: float = 0.7
     personality: Optional[str] = None
 
+
 class EmbedRequest(BaseModel):
     text: str
     dim: int = 128
 
+
 class EmotionRequest(BaseModel):
     text: str
+
 
 class TokenizeRequest(BaseModel):
     text: str
 
+
 class ConsciousnessRequest(BaseModel):
     text: str
 
+
 class PersonalityRequest(BaseModel):
     text: str
+
 
 class PredictRequest(BaseModel):
     context: str
     steps: int = 1
 
+
 class CodeRequest(BaseModel):
     task: str
     language: str = "python"
+
 
 class MemoryRequest(BaseModel):
     action: str  # store | retrieve | list
     key: str = ""
     value: Any = None
 
+
 class SearchRequest(BaseModel):
     query: str
     limit: int = 5
     source: str = "local"
+
 
 class SummariseRequest(BaseModel):
     text: str
@@ -104,6 +115,7 @@ class SummariseRequest(BaseModel):
 
 
 # ── Route registration ─────────────────────────────────────────────────────────
+
 
 def _register_routes(app: FastAPI):
 
@@ -165,11 +177,9 @@ def _register_routes(app: FastAPI):
         try:
             return await _reg().run(bot_type, timeout=60.0, **req.payload)
         except ValueError as exc:
-            raise HTTPException(404, str(exc))
+            raise HTTPException(404, str(exc)) from None
         except RuntimeError as exc:
-        return None
-    return None
-            raise HTTPException(500, str(exc))
+            raise HTTPException(500, str(exc)) from None
 
 
 app = create_app()

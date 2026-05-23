@@ -34,7 +34,6 @@ Usage:
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import shutil
@@ -54,8 +53,10 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ---------------------------------------------------------------------------
 
+
 class SystemMode(Enum):
     """Deployment environment mode."""
+
     TRUE_NAS = "TRUE_NAS"
     HYBRID = "HYBRID"
     CLOUD_ONLY = "CLOUD_ONLY"
@@ -80,6 +81,7 @@ def _get_storage_root() -> Path:
 # ---------------------------------------------------------------------------
 # Abstract storage provider
 # ---------------------------------------------------------------------------
+
 
 class StorageProvider(ABC):
     """Abstract base class for storage providers.
@@ -163,6 +165,7 @@ class StorageProvider(ABC):
 # TRUE_NAS provider — local filesystem
 # ---------------------------------------------------------------------------
 
+
 class LocalStorageProvider(StorageProvider):
     """Local filesystem storage provider for TRUE_NAS mode.
 
@@ -229,13 +232,14 @@ class LocalStorageProvider(StorageProvider):
         try:
             resolved.relative_to(self._root.resolve())
         except ValueError:
-            raise ValueError(f"Path escapes storage root: {path}")
+            raise ValueError(f"Path escapes storage root: {path}") from None
         return resolved
 
 
 # ---------------------------------------------------------------------------
 # CLOUD_ONLY provider — Cloudflare R2 (free tier)
 # ---------------------------------------------------------------------------
+
 
 class CloudStorageProvider(StorageProvider):
     """Cloud storage provider using Cloudflare R2 (S3-compatible, free tier).
@@ -258,6 +262,7 @@ class CloudStorageProvider(StorageProvider):
         if self._client is None:
             try:
                 import boto3
+
                 self._client = boto3.client(
                     "s3",
                     endpoint_url=f"https://{self._account_id}.r2.cloudflarestorage.com",
@@ -267,9 +272,8 @@ class CloudStorageProvider(StorageProvider):
                 )
             except ImportError:
                 raise RuntimeError(
-                    "boto3 is required for CLOUD_ONLY mode. "
-                    "Install it with: pip install boto3"
-                )
+                    "boto3 is required for CLOUD_ONLY mode. Install it with: pip install boto3"
+                ) from None
         return self._client
 
     async def read(self, path: str) -> bytes:
@@ -279,13 +283,15 @@ class CloudStorageProvider(StorageProvider):
             return response["Body"].read()
         except Exception as e:
             if "NoSuchKey" in str(e) or "404" in str(e):
-                raise FileNotFoundError(f"Storage path not found: {path}")
+                raise FileNotFoundError(f"Storage path not found: {path}") from e
             raise
 
     async def write(self, path: str, data: bytes) -> None:
         client = self._get_client()
         client.put_object(Bucket=self._bucket, Key=path, Body=data)
-        logger.debug("Wrote %d bytes to R2://%s/%s", len(data), self._bucket, sanitize_for_log(path))
+        logger.debug(
+            "Wrote %d bytes to R2://%s/%s", len(data), self._bucket, sanitize_for_log(path)
+        )
 
     async def delete(self, path: str) -> None:
         client = self._get_client()
@@ -293,7 +299,7 @@ class CloudStorageProvider(StorageProvider):
             client.delete_object(Bucket=self._bucket, Key=path)
         except Exception as e:
             if "NoSuchKey" in str(e) or "404" in str(e):
-                raise FileNotFoundError(f"Storage path not found: {path}")
+                raise FileNotFoundError(f"Storage path not found: {path}") from e
             raise
 
     async def list(self, prefix: str = "") -> List[str]:
@@ -337,6 +343,7 @@ class CloudStorageProvider(StorageProvider):
 # ---------------------------------------------------------------------------
 # HYBRID provider — local primary + cloud sync
 # ---------------------------------------------------------------------------
+
 
 class HybridStorageProvider(StorageProvider):
     """Hybrid storage provider — local primary with cloud sync.
@@ -401,7 +408,9 @@ class HybridStorageProvider(StorageProvider):
         local_health = await self._local.health()
         local_health["mode"] = self._mode.value
         local_health["sync_enabled"] = self._sync_enabled
-        local_health["auto_sync_active"] = self._sync_task is not None and not self._sync_task.done()
+        local_health["auto_sync_active"] = (
+            self._sync_task is not None and not self._sync_task.done()
+        )
         with self._sync_lock:
             local_health["pending_sync"] = len(self._sync_queue)
         local_health["sync_stats"] = self._sync_stats
@@ -492,6 +501,7 @@ class HybridStorageProvider(StorageProvider):
 # StorageFactory
 # ---------------------------------------------------------------------------
 
+
 class StorageFactory:
     """Factory that provides the correct storage provider based on SYSTEM_MODE.
 
@@ -548,6 +558,7 @@ class StorageFactory:
             cloud_provider = self._detect_cloud_provider()
             if cloud_provider == "oci":
                 from shared_core.architecture.oci_storage import OCIObjectStorageProvider
+
                 provider = OCIObjectStorageProvider()
             elif cloud_provider == "r2":
                 provider = CloudStorageProvider()
@@ -560,8 +571,11 @@ class StorageFactory:
 
         self._instance = provider
         self._instance_mode = effective_mode
-        logger.info("Storage provider initialized: %s mode (cloud=%s)",
-                     effective_mode.value, self._detect_cloud_provider())
+        logger.info(
+            "Storage provider initialized: %s mode (cloud=%s)",
+            effective_mode.value,
+            self._detect_cloud_provider(),
+        )
         return provider
 
     def _detect_cloud_provider(self) -> str:
@@ -585,6 +599,7 @@ class StorageFactory:
         hybrid = HybridStorageProvider()
         # Replace the cloud provider with OCI
         from shared_core.architecture.oci_storage import OCIObjectStorageProvider
+
         hybrid._cloud = OCIObjectStorageProvider()
         hybrid._sync_enabled = True
         return hybrid

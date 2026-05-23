@@ -38,8 +38,10 @@ logger = logging.getLogger(__name__)
 
 # ── Data structures ────────────────────────────────────────────────
 
+
 class MemoryPriority(str, Enum):
     """Priority levels for memory entries."""
+
     LOW = "low"
     NORMAL = "normal"
     HIGH = "high"
@@ -73,6 +75,7 @@ class MemoryEntry:
     tags : Set[str]
         Additional tags for flexible retrieval.
     """
+
     key: str
     value: Any
     topic: str = "general"
@@ -144,6 +147,7 @@ class MemoryEntry:
 
 # ── Collective Memory ──────────────────────────────────────────────
 
+
 class CollectiveMemory:
     """Shared, decay-based working memory for nanoservice coordination.
 
@@ -168,7 +172,7 @@ class CollectiveMemory:
     ) -> None:
         self._entries: OrderedDict[str, MemoryEntry] = OrderedDict()
         self._topic_index: Dict[str, Set[str]] = {}  # topic -> set of keys
-        self._tag_index: Dict[str, Set[str]] = {}    # tag -> set of keys
+        self._tag_index: Dict[str, Set[str]] = {}  # tag -> set of keys
         self._source_index: Dict[str, Set[str]] = {}  # source -> set of keys
         self._max_entries = max_entries
         self._default_ttl = default_ttl
@@ -250,7 +254,9 @@ class CollectiveMemory:
 
         logger.debug(
             "collective_memory: stored key=%s topic=%s source=%s",
-            key, topic, source,
+            key,
+            topic,
+            source,
         )
         return entry
 
@@ -461,7 +467,9 @@ class CollectiveMemory:
             return
         self._running = True
         self._gc_task = asyncio.create_task(self._gc_loop())
-        logger.info("collective_memory: started (max=%d, ttl=%.0fs)", self._max_entries, self._default_ttl)
+        logger.info(
+            "collective_memory: started (max=%d, ttl=%.0fs)", self._max_entries, self._default_ttl
+        )
 
     async def stop(self) -> None:
         """Stop the background GC task."""

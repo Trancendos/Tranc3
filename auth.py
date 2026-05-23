@@ -12,11 +12,11 @@ from passlib.context import CryptContext
 
 # SECRET_KEY must be set in environment — api.py fails fast if missing
 SECRET_KEY = os.environ["SECRET_KEY"]
-ALGORITHM  = "HS256"
+ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security    = HTTPBearer()
+security = HTTPBearer()
 
 
 class UserManager:
@@ -33,9 +33,11 @@ class UserManager:
             raise HTTPException(status_code=400, detail="Username already exists")
         uid = str(len(self.users) + 1)
         self.users[username] = {
-            "id": uid, "username": username,
+            "id": uid,
+            "username": username,
             "hashed_password": pwd_context.hash(password),
-            "tier": "free", "is_active": True,
+            "tier": "free",
+            "is_active": True,
         }
         return {"user_id": uid, "username": username}
 
@@ -58,7 +60,7 @@ class TokenManager:
         expires_delta: Optional[datetime.timedelta] = None,
     ) -> str:
         payload = data.copy()
-        expire  = datetime.datetime.utcnow() + (
+        expire = datetime.datetime.utcnow() + (
             expires_delta or datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         )
         payload.update({"exp": expire, "iat": datetime.datetime.utcnow(), "type": "access"})
@@ -69,16 +71,16 @@ class TokenManager:
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="Token has expired")
+            raise HTTPException(status_code=401, detail="Token has expired") from None
         except jwt.InvalidTokenError:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise HTTPException(status_code=401, detail="Invalid token") from None
         if payload.get("type") != "access":
             raise HTTPException(status_code=401, detail="Invalid token type")
         return payload
 
 
 # Singletons
-user_manager  = UserManager()
+user_manager = UserManager()
 token_manager = TokenManager()
 
 
@@ -89,7 +91,7 @@ def get_current_user(
     FastAPI dependency — validates JWT and returns the current user.
     Tries DB-backed manager first, falls back to in-memory.
     """
-    payload  = token_manager.decode_token(credentials.credentials)
+    payload = token_manager.decode_token(credentials.credentials)
     username = payload.get("sub")
     if not username:
         raise HTTPException(status_code=401, detail="Invalid token payload")
@@ -97,6 +99,7 @@ def get_current_user(
     # Try DB-backed manager (imported lazily to avoid circular import)
     try:
         import api as _api  # codeql[py/cyclic-import]
+
         mgr = getattr(_api, "db_user_manager", None)
         if mgr:
             user = mgr.get_user(username)

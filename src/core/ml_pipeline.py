@@ -48,28 +48,26 @@ def _get_attention_router():
     if _attention_router_inst is None:
         try:
             from src.neural.attention_router import AttentionRouter
+
             router = AttentionRouter()
             # Register the 5 inference providers as routable services using the
             # correct register_service(service_id, capability_tags=...) API.
             providers = [
-                ("tranc3",      {"llm", "local", "custom", "fast"}),
-                ("ollama",      {"llm", "local", "open-source"}),
-                ("openrouter",  {"llm", "cloud", "free-tier"}),
+                ("tranc3", {"llm", "local", "custom", "fast"}),
+                ("ollama", {"llm", "local", "open-source"}),
+                ("openrouter", {"llm", "cloud", "free-tier"}),
                 ("huggingface", {"llm", "cloud", "free-tier", "open-source"}),
-                ("groq",        {"llm", "cloud", "fast", "free-tier"}),
+                ("groq", {"llm", "cloud", "fast", "free-tier"}),
             ]
             import asyncio
+
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 for svc_id, tags in providers:
-                    asyncio.ensure_future(
-                        router.register_service(svc_id, capability_tags=tags)
-                    )
+                    asyncio.ensure_future(router.register_service(svc_id, capability_tags=tags))
             else:
                 for svc_id, tags in providers:
-                    loop.run_until_complete(
-                        router.register_service(svc_id, capability_tags=tags)
-                    )
+                    loop.run_until_complete(router.register_service(svc_id, capability_tags=tags))
             _attention_router_inst = router
         except Exception as exc:
             logger.debug("AttentionRouter unavailable: %s", exc)
@@ -81,6 +79,7 @@ def _get_meta_learner():
     if _meta_learner_inst is None:
         try:
             from src.neural.meta_learner import MetaLearner
+
             _meta_learner_inst = MetaLearner()
         except Exception as exc:
             logger.debug("MetaLearner unavailable: %s", exc)
@@ -92,6 +91,7 @@ def _get_collective_memory():
     if _collective_memory_inst is None:
         try:
             from src.neural.collective_memory import CollectiveMemory
+
             _collective_memory_inst = CollectiveMemory()
         except Exception as exc:
             logger.debug("CollectiveMemory unavailable: %s", exc)
@@ -105,6 +105,7 @@ def _get_causal_reasoner():
             import asyncio
 
             from src.intelligence.causal_reasoner import CausalReasoner, CausalRule, CausalStrength
+
             cr = CausalReasoner()
             # Seed with inference failure causal rules.
             # CausalRule uses `confidence=` (not `probability=`) and has no
@@ -158,6 +159,7 @@ def _get_causal_reasoner():
 # ---------------------------------------------------------------------------
 # Request / Response types
 # ---------------------------------------------------------------------------
+
 
 class PipelineRequest:
     """Enriched ML inference request with Phase 4 metadata."""
@@ -238,6 +240,7 @@ class PipelineResponse:
 # Main MLPipeline
 # ---------------------------------------------------------------------------
 
+
 class MLPipeline:
     """
     Unified ML inference pipeline with Phase 4 intelligence integration.
@@ -281,7 +284,9 @@ class MLPipeline:
                     entry = await cm.retrieve(ctx_key)
                     if entry and isinstance(entry.value, str):
                         prior_context = entry.value
-                        logger.debug("Pipeline: retrieved prior context (session=%s)", request.session_id)
+                        logger.debug(
+                            "Pipeline: retrieved prior context (session=%s)", request.session_id
+                        )
             except Exception as exc:
                 logger.debug("Pipeline stage1 (memory retrieve) error: %s", exc)
 
@@ -316,7 +321,9 @@ class MLPipeline:
                         if "max_tokens" in adapted_params:
                             m = int(adapted_params["max_tokens"])
                             request.max_tokens = max(64, min(4096, m))
-                        logger.debug("Pipeline: adapted params (confidence=%.2f)", result.confidence)
+                        logger.debug(
+                            "Pipeline: adapted params (confidence=%.2f)", result.confidence
+                        )
             except Exception as exc:
                 logger.debug("Pipeline stage2 (meta_learn) error: %s", exc)
 
@@ -331,9 +338,14 @@ class MLPipeline:
                     import uuid
 
                     from src.neural.attention_router import RoutingRequest
+
                     # RoutingRequest uses request_id and required_tags (Set[str]),
                     # not query/required_capabilities/preferred_tags/top_k.
-                    caps = set(request.required_capabilities) if request.required_capabilities else {"llm"}
+                    caps = (
+                        set(request.required_capabilities)
+                        if request.required_capabilities
+                        else {"llm"}
+                    )
                     rreq = RoutingRequest(
                         request_id=uuid.uuid4().hex[:12],
                         required_tags=caps,
@@ -355,6 +367,7 @@ class MLPipeline:
         # Stage 4: Inference via LLMRouter
         # ------------------------------------------------------------------
         from src.inference.llm_router import LLMRequest, get_router
+
         llm_router = get_router()
 
         # Optionally prepend prior context to prompt
@@ -371,7 +384,11 @@ class MLPipeline:
             top_p=request.top_p,
         )
         llm_response = await llm_router.generate(llm_request)
-        provider_name = llm_response.provider.value if hasattr(llm_response.provider, "value") else str(llm_response.provider)
+        provider_name = (
+            llm_response.provider.value
+            if hasattr(llm_response.provider, "value")
+            else str(llm_response.provider)
+        )
 
         # ------------------------------------------------------------------
         # Stage 5: Causal diagnosis on failure
@@ -397,9 +414,7 @@ class MLPipeline:
                     # InferenceResult has .causes: List[Tuple[str, float]]
                     causal_diagnosis = {
                         "root_causes": [c for c, _ in diagnosis.causes[:3]],
-                        "probabilities": {
-                            c: round(p, 3) for c, p in diagnosis.causes[:3]
-                        },
+                        "probabilities": {c: round(p, 3) for c, p in diagnosis.causes[:3]},
                     }
                     await cr.reset_evidence()
                     logger.debug("Pipeline: causal diagnosis complete")
@@ -414,6 +429,7 @@ class MLPipeline:
                 cm = _get_collective_memory()
                 if cm:
                     from src.neural.collective_memory import MemoryPriority
+
                     ctx_key = f"session:{request.session_id}:context"
                     # Keep last 500 chars of response as context seed
                     await cm.store(
@@ -444,7 +460,6 @@ class MLPipeline:
             except Exception:
                 pass  # nosec B110 — graceful degradation; error logged upstream
 
-
         total_ms = (time.monotonic() - t0) * 1000
         self._total_latency_ms += total_ms
 
@@ -469,14 +484,15 @@ class MLPipeline:
     async def stats(self) -> Dict[str, Any]:
         """Return pipeline health and performance statistics."""
         from src.inference.llm_router import get_router
+
         llm_stats = await get_router().health()
         success_rate = (
             round((self._call_count - self._failure_count) / self._call_count * 100, 1)
-            if self._call_count > 0 else None
+            if self._call_count > 0
+            else None
         )
         avg_latency = (
-            round(self._total_latency_ms / self._call_count, 1)
-            if self._call_count > 0 else None
+            round(self._total_latency_ms / self._call_count, 1) if self._call_count > 0 else None
         )
         phase4_status = {}
         if self.enable_phase4:
@@ -500,6 +516,7 @@ class MLPipeline:
 # ---------------------------------------------------------------------------
 # Module-level singleton
 # ---------------------------------------------------------------------------
+
 
 def get_pipeline() -> MLPipeline:
     """Return the process-level MLPipeline singleton."""

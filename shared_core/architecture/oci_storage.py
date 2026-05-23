@@ -12,8 +12,7 @@ from __future__ import annotations
 
 import logging
 import os
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from shared_core.architecture.storage_factory import StorageProvider, SystemMode
 from shared_core.sanitize import sanitize_for_log
@@ -58,9 +57,8 @@ class OCIObjectStorageProvider(StorageProvider):
             import oci
         except ImportError:
             raise RuntimeError(
-                "oci package is required for OCI Object Storage. "
-                "Install it with: pip install oci"
-            )
+                "oci package is required for OCI Object Storage. Install it with: pip install oci"
+            ) from None
 
         # Load OCI config
         config_file = os.getenv("OCI_CONFIG_FILE", os.path.expanduser("~/.oci/config"))
@@ -80,7 +78,7 @@ class OCIObjectStorageProvider(StorageProvider):
                     "OCI authentication failed. Either provide a config file at "
                     f"{config_file} or run on an OCI compute instance with "
                     "instance principals enabled."
-                )
+                ) from None
             return self._client
 
         self._client = oci.object_storage.ObjectStorageClient(self._config)
@@ -108,12 +106,13 @@ class OCIObjectStorageProvider(StorageProvider):
         except Exception as e:
             error_str = str(e)
             if "ObjectNotFound" in error_str or "404" in error_str:
-                raise FileNotFoundError(f"Storage path not found: {path}")
+                raise FileNotFoundError(f"Storage path not found: {path}") from e
             raise
 
     async def write(self, path: str, data: bytes) -> None:
         client = self._get_client()
         import io
+
         client.put_object(
             namespace_name=self._namespace,
             bucket_name=self._bucket_name,
@@ -121,7 +120,9 @@ class OCIObjectStorageProvider(StorageProvider):
             put_object_body=io.BytesIO(data),
             content_length=len(data),
         )
-        logger.debug("Wrote %d bytes to OCI://%s/%s", len(data), self._bucket_name, sanitize_for_log(path))
+        logger.debug(
+            "Wrote %d bytes to OCI://%s/%s", len(data), self._bucket_name, sanitize_for_log(path)
+        )
 
     async def delete(self, path: str) -> None:
         client = self._get_client()
@@ -133,7 +134,7 @@ class OCIObjectStorageProvider(StorageProvider):
             )
         except Exception as e:
             if "ObjectNotFound" in str(e):
-                raise FileNotFoundError(f"Storage path not found: {path}")
+                raise FileNotFoundError(f"Storage path not found: {path}") from e
             raise
 
     async def list(self, prefix: str = "") -> List[str]:

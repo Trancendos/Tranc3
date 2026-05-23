@@ -61,7 +61,9 @@ class IITCalculator:
 
             return float(phi)
         except Exception as e:
-            logger.warning("Phi calculation failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Phi calculation failed: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return 0.0
 
     def _system_entropy(self, state: np.ndarray) -> float:
@@ -86,9 +88,9 @@ class IITCalculator:
             part1 = connectivity[:split, :split]
             part2 = connectivity[split:, split:]
 
-            mi_parts = self._mutual_information_matrix(
-                part1
-            ) + self._mutual_information_matrix(part2)
+            mi_parts = self._mutual_information_matrix(part1) + self._mutual_information_matrix(
+                part2
+            )
 
             phi = whole_mi - mi_parts
             min_phi = min(min_phi, phi)
@@ -120,9 +122,7 @@ class GlobalWorkspace(nn.Module):
         self.workspace_size = workspace_size
 
         # Specialist processors
-        self.processors = nn.ModuleList(
-            [nn.Linear(hidden_size, workspace_size) for _ in range(8)]
-        )
+        self.processors = nn.ModuleList([nn.Linear(hidden_size, workspace_size) for _ in range(8)])
 
         # Global workspace
         self.workspace = nn.Linear(workspace_size, workspace_size)
@@ -142,7 +142,7 @@ class GlobalWorkspace(nn.Module):
         stacked = torch.stack(specialist_outputs, dim=1)  # B x 8 x W
 
         # Competition for workspace access
-        concat = stacked.view(B, -1)
+        concat = stacked.view(_B, -1)
         gates = self.gate(concat)  # B x 8
 
         # Weighted combination
@@ -290,12 +290,8 @@ class ConsciousnessModel(nn.Module):
             "current_phi": self.phi_history[-1] if self.phi_history else 0.0,
             "average_phi": np.mean(self.phi_history) if self.phi_history else 0.0,
             "max_phi": max(self.phi_history) if self.phi_history else 0.0,
-            "current_awareness": self.awareness_history[-1]
-            if self.awareness_history
-            else 0.0,
-            "average_awareness": np.mean(self.awareness_history)
-            if self.awareness_history
-            else 0.0,
+            "current_awareness": self.awareness_history[-1] if self.awareness_history else 0.0,
+            "average_awareness": np.mean(self.awareness_history) if self.awareness_history else 0.0,
             "consciousness_events": sum(1 for p in self.phi_history if p > 2.0),
             "total_observations": len(self.phi_history),
         }
@@ -323,7 +319,9 @@ class EmotionDetector(nn.Module):
         pooled = x.mean(dim=1)
         probs = self.classifier(pooled)
 
-        return {emotion: float(prob) for emotion, prob in zip(self.EMOTIONS, probs[0])}
+        return {
+            emotion: float(prob) for emotion, prob in zip(self.EMOTIONS, probs[0], strict=False)
+        }
 
     def detect_emotion(self, text: str) -> Dict[str, float]:
         """Detect emotion from text (mock implementation)"""

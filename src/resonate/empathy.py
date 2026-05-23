@@ -10,10 +10,9 @@
 from __future__ import annotations
 
 import logging
+from typing import Any, Dict, Optional
 
 from shared_core.sanitize import sanitize_for_log
-
-from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +54,7 @@ class Resonate:
             return response
 
         import random
+
         parts = []
 
         if sensitivity_level in ("critical", "high"):
@@ -85,6 +85,7 @@ class Resonate:
         """
         try:
             from src.observability.observatory import EventCategory, EventSeverity, observe
+
             observe(
                 "resonate.human_escalation",
                 actor=f"user:{user_id}",
@@ -96,7 +97,9 @@ class Resonate:
             )
         except Exception:
             pass  # nosec B110 — observation failure must not block escalation
-        logger.warning("resonate: human escalation triggered for user=%s", sanitize_for_log(user_id))  # codeql[py/cleartext-logging]
+        logger.warning(
+            "resonate: human escalation triggered for user=%s", sanitize_for_log(user_id)
+        )  # codeql[py/cleartext-logging]
         return {
             "escalated": True,
             "message": "A support team member has been notified. You are not alone.",

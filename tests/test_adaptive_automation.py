@@ -14,7 +14,6 @@
 #   - ConfigDriftDetector: baseline capture, drift detection
 #   - SmartDependencyGraph: edges, impact analysis, cycle detection
 
-import json
 import os
 import tempfile
 import time
@@ -23,10 +22,10 @@ from textwrap import dedent
 
 import pytest
 
-
 # ===========================================================================
 # Helpers
 # ===========================================================================
+
 
 def _write_tmp(content: str, suffix: str = ".py", directory: str = None) -> Path:
     """Write content to a temp file and return the path."""
@@ -48,6 +47,7 @@ def _create_temp_dir() -> Path:
 # ===========================================================================
 # AdaptiveScanner Tests
 # ===========================================================================
+
 
 class TestAdaptiveScanner:
     """Tests for AdaptiveScanner — confidence scoring and learning."""
@@ -158,6 +158,7 @@ class TestAdaptiveScanner:
 # AutoRemediatorV2 Tests
 # ===========================================================================
 
+
 class TestAutoRemediatorV2:
     """Tests for AutoRemediatorV2 — preview and remediate."""
 
@@ -177,7 +178,7 @@ class TestAutoRemediatorV2:
         remediator = AutoRemediatorV2(dry_run=True)
         # preview() takes violations and shows what would be fixed
         if violations:
-            results = remediator.preview(violations)
+            remediator.preview(violations)
 
         # File should be unchanged
         assert code_file.read_text() == original
@@ -220,6 +221,7 @@ class TestAutoRemediatorV2:
 # ViolationPredictor Tests
 # ===========================================================================
 
+
 class TestViolationPredictor:
     """Tests for ViolationPredictor — risk prediction."""
 
@@ -239,7 +241,9 @@ class TestViolationPredictor:
         signals = []
         for p in predictions:
             signals.extend(p.signals)
-        assert any("hashlib" in s or "CWE-327" in s for s in signals), f"Should detect import risk signal, got: {signals}"
+        assert any("hashlib" in s or "CWE-327" in s for s in signals), (
+            f"Should detect import risk signal, got: {signals}"
+        )
 
     def test_safe_pattern_reduces_risk(self, tmp_path):
         """Files with safe patterns should have lower risk."""
@@ -286,13 +290,15 @@ class TestViolationPredictor:
 # StorageFactory Tests
 # ===========================================================================
 
+
 class TestStorageFactory:
     """Tests for StorageFactory — environment-aware storage."""
 
     def test_local_storage_provider(self, tmp_path):
         """LocalStorageProvider should read/write files correctly."""
-        from shared_core.architecture.storage_factory import LocalStorageProvider
         import asyncio
+
+        from shared_core.architecture.storage_factory import LocalStorageProvider
 
         root = Path(tmp_path) / "storage"
 
@@ -319,7 +325,6 @@ class TestStorageFactory:
     def test_factory_creates_provider(self, tmp_path):
         """Factory should create a storage provider."""
         from shared_core.architecture.storage_factory import StorageFactory
-        import asyncio
 
         # StorageFactory is instantiated and get_provider is an instance method
         factory = StorageFactory()
@@ -331,8 +336,9 @@ class TestStorageFactory:
 
     def test_local_storage_path_traversal_protection(self, tmp_path):
         """LocalStorageProvider should prevent path traversal attacks."""
-        from shared_core.architecture.storage_factory import LocalStorageProvider
         import asyncio
+
+        from shared_core.architecture.storage_factory import LocalStorageProvider
 
         root = Path(tmp_path) / "storage"
         provider = LocalStorageProvider(root=root)
@@ -347,6 +353,7 @@ class TestStorageFactory:
 # ===========================================================================
 # VaultSecretLoader Tests
 # ===========================================================================
+
 
 class TestVaultSecretLoader:
     """Tests for VaultSecretLoader — secure secret handling."""
@@ -425,6 +432,7 @@ class TestVaultSecretLoader:
 # AuditLedger Tests
 # ===========================================================================
 
+
 class TestAuditLedger:
     """Tests for AuditLedger — append-only signed records."""
 
@@ -483,19 +491,20 @@ class TestAuditLedger:
 # Sentinel Tests
 # ===========================================================================
 
+
 class TestSentinel:
     """Tests for Sentinel — continuous verification daemon."""
 
     def test_sentinel_creation(self, tmp_path):
         """Should create a Sentinel instance."""
-        from shared_core.architecture.sentinel import Sentinel, SentinelState
+        from shared_core.architecture.sentinel import Sentinel
 
         sentinel = Sentinel(check_interval=300)
         assert sentinel.get_state().value == "stopped"
 
     def test_sentinel_check_now(self, tmp_path):
         """Should execute a check and return a report."""
-        from shared_core.architecture.sentinel import Sentinel, SentinelState
+        from shared_core.architecture.sentinel import Sentinel
 
         sentinel = Sentinel(
             check_interval=300,
@@ -519,6 +528,7 @@ class TestSentinel:
 # EnhancedServiceRegistry Tests
 # ===========================================================================
 
+
 class TestEnhancedServiceRegistry:
     """Tests for EnhancedServiceRegistry — routing and metrics."""
 
@@ -526,7 +536,6 @@ class TestEnhancedServiceRegistry:
         """Should register services and resolve capabilities."""
         from shared_core.orchestration.enhanced_registry import (
             EnhancedServiceRegistry,
-            RoutingStrategy,
         )
 
         registry = EnhancedServiceRegistry()
@@ -551,11 +560,15 @@ class TestEnhancedServiceRegistry:
 
         registry = EnhancedServiceRegistry()
         registry.register(
-            name="svc-a", endpoint="http://a:8000", health_url="http://a:8000/health",
+            name="svc-a",
+            endpoint="http://a:8000",
+            health_url="http://a:8000/health",
             capabilities=[{"name": "compute", "version": "1.0"}],
         )
         registry.register(
-            name="svc-b", endpoint="http://b:8000", health_url="http://b:8000/health",
+            name="svc-b",
+            endpoint="http://b:8000",
+            health_url="http://b:8000/health",
             capabilities=[{"name": "compute", "version": "2.0"}],
         )
         registry.update_health("svc-a", "healthy")
@@ -563,7 +576,7 @@ class TestEnhancedServiceRegistry:
 
         # Round-robin should alternate
         result1 = registry.resolve("compute", strategy=RoutingStrategy.ROUND_ROBIN)
-        result2 = registry.resolve("compute", strategy=RoutingStrategy.ROUND_ROBIN)
+        registry.resolve("compute", strategy=RoutingStrategy.ROUND_ROBIN)
         # At least one should work
         assert result1 is not None
 
@@ -573,7 +586,9 @@ class TestEnhancedServiceRegistry:
 
         registry = EnhancedServiceRegistry()
         registry.register(
-            name="metric-svc", endpoint="http://m:8000", health_url="http://m:8000/health",
+            name="metric-svc",
+            endpoint="http://m:8000",
+            health_url="http://m:8000/health",
             capabilities=[{"name": "test-cap"}],
         )
         registry.update_health("metric-svc", "healthy")
@@ -595,7 +610,9 @@ class TestEnhancedServiceRegistry:
 
         registry = EnhancedServiceRegistry()
         registry.register(
-            name="event-svc", endpoint="http://e:8000", health_url="http://e:8000/health",
+            name="event-svc",
+            endpoint="http://e:8000",
+            health_url="http://e:8000/health",
             capabilities=[{"name": "events"}],
         )
 
@@ -609,7 +626,9 @@ class TestEnhancedServiceRegistry:
 
         registry = EnhancedServiceRegistry()
         registry.register(
-            name="topo-a", endpoint="http://a:8000", health_url="http://a:8000/health",
+            name="topo-a",
+            endpoint="http://a:8000",
+            health_url="http://a:8000/health",
             capabilities=[{"name": "api"}],
         )
 
@@ -621,6 +640,7 @@ class TestEnhancedServiceRegistry:
 # ===========================================================================
 # AdaptiveHealthMonitor / CircuitBreaker Tests
 # ===========================================================================
+
 
 class TestCircuitBreaker:
     """Tests for CircuitBreaker — state transitions."""
@@ -671,7 +691,9 @@ class TestCircuitBreaker:
         """Circuit should CLOSE after successes in HALF_OPEN."""
         from shared_core.orchestration.health_monitor import CircuitBreaker, CircuitState
 
-        cb = CircuitBreaker(name="test-cb", failure_threshold=2, cooldown_seconds=0.05, success_threshold=2)
+        cb = CircuitBreaker(
+            name="test-cb", failure_threshold=2, cooldown_seconds=0.05, success_threshold=2
+        )
         cb.record_failure()
         cb.record_failure()
         time.sleep(0.1)
@@ -695,7 +717,9 @@ class TestCircuitBreaker:
         """Cooldown should increase with repeated openings."""
         from shared_core.orchestration.health_monitor import CircuitBreaker
 
-        cb = CircuitBreaker(name="test-cb", failure_threshold=2, cooldown_seconds=10.0, max_cooldown=300.0)
+        cb = CircuitBreaker(
+            name="test-cb", failure_threshold=2, cooldown_seconds=10.0, max_cooldown=300.0
+        )
         # First opening
         cb.record_failure()
         cb.record_failure()
@@ -784,6 +808,7 @@ class TestAdaptiveHealthMonitor:
 # ConfigDriftDetector Tests
 # ===========================================================================
 
+
 class TestConfigDriftDetector:
     """Tests for ConfigDriftDetector — baseline and drift detection."""
 
@@ -807,7 +832,7 @@ class TestConfigDriftDetector:
 
     def test_detect_file_drift(self, tmp_path):
         """Should detect when a config file changes."""
-        from shared_core.orchestration.config_drift import ConfigDriftDetector, DriftSeverity
+        from shared_core.orchestration.config_drift import ConfigDriftDetector
 
         # Create initial file
         env_file = tmp_path / ".env"
@@ -844,7 +869,9 @@ class TestConfigDriftDetector:
             os.environ["DRIFT_TEST_VAR"] = "changed"
 
             report = detector.detect_drift()
-            env_drifts = [d for d in report.items if d.category == "env" and d.key == "DRIFT_TEST_VAR"]
+            env_drifts = [
+                d for d in report.items if d.category == "env" and d.key == "DRIFT_TEST_VAR"
+            ]
             assert len(env_drifts) > 0, "Should detect env drift"
         finally:
             os.environ.pop("DRIFT_TEST_VAR", None)
@@ -903,6 +930,7 @@ class TestConfigDriftDetector:
 # ===========================================================================
 # SmartDependencyGraph Tests
 # ===========================================================================
+
 
 class TestSmartDependencyGraph:
     """Tests for SmartDependencyGraph — edges, impact, cycles."""
@@ -969,9 +997,9 @@ class TestSmartDependencyGraph:
         graph.add_node("auth")
         graph.add_node("api")
 
-        graph.add_edge("auth", "db")    # auth depends on db
-        graph.add_edge("auth", "cache") # auth depends on cache
-        graph.add_edge("api", "auth")   # api depends on auth
+        graph.add_edge("auth", "db")  # auth depends on db
+        graph.add_edge("auth", "cache")  # auth depends on cache
+        graph.add_edge("api", "auth")  # api depends on auth
 
         order = graph.topological_sort()
         # In this implementation, dependents come before dependencies

@@ -57,7 +57,11 @@ class MultilingualDataset(Dataset):
             logger.warning("No data files found — generating synthetic samples")
             self.samples = self._generate_synthetic()
 
-        logger.info("MultilingualDataset: %s samples, split=%s", sanitize_for_log(len(self.samples)), sanitize_for_log(split))  # codeql[py/cleartext-logging]
+        logger.info(
+            "MultilingualDataset: %s samples, split=%s",
+            sanitize_for_log(len(self.samples)),
+            sanitize_for_log(split),
+        )  # codeql[py/cleartext-logging]
 
     def _load_data(self, data_dir: str):
         base = Path(data_dir).resolve()
@@ -73,7 +77,9 @@ class MultilingualDataset(Dataset):
                                 self.samples.append(json.loads(line))
                             except json.JSONDecodeError:
                                 continue
-                logger.info("Loaded %s data from %s", sanitize_for_log(lang), sanitize_for_log(path))  # codeql[py/cleartext-logging]
+                logger.info(
+                    "Loaded %s data from %s", sanitize_for_log(lang), sanitize_for_log(path)
+                )  # codeql[py/cleartext-logging]
 
     def _generate_synthetic(self) -> List[Dict]:
         """Generate minimal synthetic training samples for each personality."""
@@ -121,15 +127,15 @@ class MultilingualDataset(Dataset):
         sample = self.samples[idx]
         system = sample.get(
             "system",
-            PERSONALITY_SYSTEM_PROMPTS.get(
-                sample.get("personality", "tranc3-base"), ""
-            ),
+            PERSONALITY_SYSTEM_PROMPTS.get(sample.get("personality", "tranc3-base"), ""),
         )
         instruction = sample.get("instruction", "")
         response = sample.get("response", "")
 
         # Format as chat template
-        text = f"<|system|>{system}<|end|><|user|>{instruction}<|end|><|assistant|>{response}<|end|>"
+        text = (
+            f"<|system|>{system}<|end|><|user|>{instruction}<|end|><|assistant|>{response}<|end|>"
+        )
 
         if self.tokenizer is None:
             # Mock encoding

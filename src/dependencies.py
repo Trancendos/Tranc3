@@ -79,29 +79,35 @@ def configure_services(config=None) -> None:
     Called once during application startup.
     """
     from src.core.config import settings as _settings
+
     config = config or _settings
 
     # ── Core services ─────────────────────────────────────────────────────
     def _redis_client():
         import redis as redis_lib
+
         return redis_lib.from_url(config.REDIS_URL, decode_responses=True)
 
     def _db_manager():
         from src.database.schema import DatabaseManager
+
         return DatabaseManager(config.DATABASE_URL)
 
     def _feature_flags():
         from src.core.feature_flags import FeatureFlagManager
+
         return FeatureFlagManager()
 
     def _vector_store():
         from src.database.vector_store import vector_store as _vs
+
         return _vs
 
     # ── Optional services (graceful degradation) ─────────────────────────
     def _personality_matrix():
         try:
             from src.personality.matrix import EnhancedPersonalityMatrix
+
             return EnhancedPersonalityMatrix(config)
         except ImportError:
             logger.warning("Personality matrix unavailable — missing dependencies")
@@ -110,6 +116,7 @@ def configure_services(config=None) -> None:
     def _consciousness_model():
         try:
             from src.bio_neural.consciousness_engine import ConsciousnessModel
+
             return ConsciousnessModel(config)
         except ImportError:
             logger.warning("Consciousness model unavailable — missing dependencies")
@@ -118,6 +125,7 @@ def configure_services(config=None) -> None:
     def _evolution_engine():
         try:
             from src.evolution.self_improving_core import SelfEvolvingArchitecture
+
             engine = SelfEvolvingArchitecture(
                 redis_url=config.REDIS_URL,
                 mutation_rate=0.1,
@@ -131,6 +139,7 @@ def configure_services(config=None) -> None:
     def _quantum_core():
         try:
             from src.quantum.quantum_core import QuantumNeuralCore
+
             return QuantumNeuralCore(config)
         except ImportError:
             logger.warning("Quantum core unavailable — missing dependencies")
@@ -147,11 +156,15 @@ def configure_services(config=None) -> None:
     container.register_factory("quantum", _quantum_core)
 
     container._initialized = True
-    logger.info("Service container configured with %s services", sanitize_for_log(len(container.list_services())))
+    logger.info(
+        "Service container configured with %s services",
+        sanitize_for_log(len(container.list_services())),
+    )
     return None
 
 
 # ── FastAPI dependency helpers ────────────────────────────────────────────
+
 
 def get_config(request: Request) -> Any:
     """FastAPI dependency: inject config"""

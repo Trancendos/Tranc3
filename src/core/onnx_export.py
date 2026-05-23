@@ -102,9 +102,7 @@ class OnnxExporter:
 
         if quantize:
             q_path = self._quantize(self._onnx_path)
-            logger.info(
-                "Quantized model: %s (%.2f MB)", q_path, q_path.stat().st_size / 1e6
-            )
+            logger.info("Quantized model: %s (%.2f MB)", q_path, q_path.stat().st_size / 1e6)
 
         return self._onnx_path
 
@@ -324,23 +322,17 @@ class OnnxInferenceEngine:
 
 
 def _cli():
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     parser = argparse.ArgumentParser(description="Export Tranc3 model to ONNX")
     parser.add_argument("--pt", default=_DEFAULT_PT_PATH, help="Input .pt checkpoint")
     parser.add_argument("--out", default=_DEFAULT_ONNX_PATH, help="Output .onnx path")
     parser.add_argument("--opset", default=_DEFAULT_OPSET, type=int, help="ONNX opset")
-    parser.add_argument(
-        "--quantize", action="store_true", help="Also export INT8 variant"
-    )
+    parser.add_argument("--quantize", action="store_true", help="Also export INT8 variant")
     parser.add_argument(
         "--embeddings", action="store_true", help="Also export embeddings-only graph"
     )
-    parser.add_argument(
-        "--validate", action="store_true", help="Validate ONNX output numerically"
-    )
+    parser.add_argument("--validate", action="store_true", help="Validate ONNX output numerically")
     args = parser.parse_args()
 
     exporter = OnnxExporter(pt_path=args.pt, onnx_path=args.out, opset=args.opset)

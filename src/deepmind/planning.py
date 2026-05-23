@@ -1,15 +1,13 @@
 import asyncio
 import hashlib
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-
-
 import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 import numpy as np
+
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -89,12 +87,10 @@ class BeamSearchPlanner:
             candidates: List[ThoughtNode] = []
 
             # Expand every node currently in the beam
-            expansion_tasks = [
-                self._async_expand(node, goal, context, depth) for node in beam
-            ]
+            expansion_tasks = [self._async_expand(node, goal, context, depth) for node in beam]
             expanded_groups = await asyncio.gather(*expansion_tasks)
 
-            for parent_node, children in zip(beam, expanded_groups):
+            for parent_node, children in zip(beam, expanded_groups, strict=False):
                 for child in children:
                     parent_node.add_child(child)
                     candidates.append(child)
@@ -234,12 +230,10 @@ class BeamSearchPlanner:
         ]
 
         # Seed selection from thought content for deterministic variety
-        seed = int(
-            hashlib.md5(thought.encode(), usedforsecurity=False).hexdigest(), 16
-        ) % len(templates)
-        selected = (
-            templates[seed : seed + 4] + templates[: max(0, seed - len(templates) + 4)]
+        seed = int(hashlib.md5(thought.encode(), usedforsecurity=False).hexdigest(), 16) % len(
+            templates
         )
+        selected = templates[seed : seed + 4] + templates[: max(0, seed - len(templates) + 4)]
         selected = selected[: self.beam_width]
 
         expansions = []
@@ -277,7 +271,7 @@ class ChainOfThoughtReasoner:
             "Synthesise sub-results into a unified answer.",
         ]
 
-    async def reason(self, problem: str, examples: List[Dict] = []) -> Dict:
+    async def reason(self, problem: str, examples: List[Dict] = None) -> Dict:
         """Perform chain-of-thought reasoning on a problem.
 
         Args:
@@ -294,11 +288,12 @@ class ChainOfThoughtReasoner:
         """
         # Build few-shot context string (not used in heuristic mode but
         # captured so LLM overrides can pass it to a model)
+        if examples is None:
+            examples = []
         few_shot_ctx = ""
         for ex in examples:
             few_shot_ctx += (
-                f"Problem: {ex.get('problem', '')}\n"
-                f"Solution: {ex.get('solution', '')}\n\n"
+                f"Problem: {ex.get('problem', '')}\nSolution: {ex.get('solution', '')}\n\n"
             )
 
         steps = self._extract_steps(problem)
@@ -339,12 +334,8 @@ class ChainOfThoughtReasoner:
             Ordered list of reasoning step strings.
         """
         # Extract key noun phrases (simple heuristic: capitalised or quoted)
-        key_terms = re.findall(
-            r'"([^"]+)"|\'([^\']+)\'|([A-Z][a-z]+ [A-Z][a-z]+)', text
-        )
-        flat_terms = [
-            next(t for t in group if t) for group in key_terms if any(key_terms)
-        ]
+        key_terms = re.findall(r'"([^"]+)"|\'([^\']+)\'|([A-Z][a-z]+ [A-Z][a-z]+)', text)
+        flat_terms = [next(t for t in group if t) for group in key_terms if any(key_terms)]
 
         steps: List[str] = []
         for rule in self._inference_rules:
@@ -387,9 +378,7 @@ class ChainOfThoughtReasoner:
         avg_len = np.mean([len(s.split()) for s in steps])
         length_factor = min(1.0, avg_len / 15.0)
         # Combine with slight random perturbation representing epistemic uncertainty
-        confidence = (
-            0.5 * coverage + 0.4 * length_factor + 0.1 * np.random.uniform(0.8, 1.0)
-        )
+        confidence = 0.5 * coverage + 0.4 * length_factor + 0.1 * np.random.uniform(0.8, 1.0)
         return float(np.clip(confidence, 0.0, 1.0))
 
 
@@ -413,7 +402,7 @@ class StrategicPlanner:
         self,
         goal: str,
         state: Dict,
-        constraints: List[str] = [],
+        constraints: List[str] = None,
     ) -> Dict:
         """Produce a structured plan for achieving ``goal`` given current state.
 
@@ -429,6 +418,8 @@ class StrategicPlanner:
               alternatives – list of alternative action sequences
               reasoning   – textual justification
         """
+        if constraints is None:
+            constraints = []
         context = {"state": state, "constraints": constraints}
 
         # Run beam search and chain-of-thought concurrently
@@ -450,9 +441,7 @@ class StrategicPlanner:
             alternatives.append(node.lineage())
 
         # Fuse confidence scores
-        beam_confidence = (
-            float(np.mean([n.score for n in beam_nodes])) if beam_nodes else 0.5
-        )
+        beam_confidence = float(np.mean([n.score for n in beam_nodes])) if beam_nodes else 0.5
         cot_confidence = cot_result.get("confidence", 0.5)
         combined_confidence = 0.55 * beam_confidence + 0.45 * cot_confidence
 
@@ -530,9 +519,7 @@ class StrategicPlanner:
         last_step = plan[-1]
         alignment = BeamSearchPlanner(1)._score_thought(last_step, goal)
 
-        score = (
-            0.35 * completeness + 0.25 * coherence + 0.2 * feasibility + 0.2 * alignment
-        )
+        score = 0.35 * completeness + 0.25 * coherence + 0.2 * feasibility + 0.2 * alignment
 
         feedback_parts = []
         if completeness < 0.5:

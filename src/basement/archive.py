@@ -198,16 +198,14 @@ class Basement:
         except Exception as exc:
             logger.debug("basement: faiss add failed: %s", exc)
 
-    def _faiss_search(
-        self, query: str, top_k: int
-    ) -> List[Tuple[ArchiveRecord, float]]:
+    def _faiss_search(self, query: str, top_k: int) -> List[Tuple[ArchiveRecord, float]]:
         try:
             vec = self._embedder.encode([query], normalize_embeddings=True)
             scores, indices = self._faiss_index.search(
                 vec.astype("float32"), min(top_k, len(self._faiss_ids))
             )
             results = []
-            for score, idx in zip(scores[0], indices[0]):
+            for score, idx in zip(scores[0], indices[0], strict=False):
                 if idx < 0 or idx >= len(self._faiss_ids):
                     continue
                 rid = self._faiss_ids[idx]
@@ -218,9 +216,7 @@ class Basement:
             logger.debug("basement: faiss search failed: %s", exc)
             return self._keyword_search(query, top_k)
 
-    def _keyword_search(
-        self, query: str, top_k: int
-    ) -> List[Tuple[ArchiveRecord, float]]:
+    def _keyword_search(self, query: str, top_k: int) -> List[Tuple[ArchiveRecord, float]]:
         terms = set(query.lower().split())
         scored = []
         for record in self._records.values():

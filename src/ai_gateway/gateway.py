@@ -120,7 +120,9 @@ class AIGateway:
     def register_provider(self, provider: AIProvider) -> None:
         """Register a new AI provider."""
         self._providers[provider.name] = provider
-        logger.info("ai_provider_registered: %s", sanitize_for_log(provider.name))  # codeql[py/cleartext-logging]
+        logger.info(
+            "ai_provider_registered: %s", sanitize_for_log(provider.name)
+        )  # codeql[py/cleartext-logging]
 
     def unregister_provider(self, name: str) -> bool:
         """Remove a provider by name."""
@@ -174,7 +176,9 @@ class AIGateway:
             ]
 
         if not routes:
-            raise AIGatewayError("NO_ROUTES", "No applicable routes found and no providers registered")
+            raise AIGatewayError(
+                "NO_ROUTES", "No applicable routes found and no providers registered"
+            )
 
         # 4. Try each route in priority order
         errors: list[dict[str, str]] = []
@@ -189,18 +193,24 @@ class AIGateway:
             health = self._health_status.get(route.provider)
             if health and not health.healthy:
                 if self._config.verbose:
-                    logger.info("Skipping unhealthy provider: %s", sanitize_for_log(route.provider))  # codeql[py/cleartext-logging]
+                    logger.info(
+                        "Skipping unhealthy provider: %s", sanitize_for_log(route.provider)
+                    )  # codeql[py/cleartext-logging]
                 continue
 
             try:
                 # Apply route-specific model
-                routed_request = request.model_copy(update={
-                    "model": route.model or request.model,
-                })
+                routed_request = request.model_copy(
+                    update={
+                        "model": route.model or request.model,
+                    }
+                )
 
                 # Execute with optional timeout
                 response = await self._execute_with_timeout(
-                    provider, routed_request, route.max_latency_ms,
+                    provider,
+                    routed_request,
+                    route.max_latency_ms,
                 )
 
                 # Track failover
@@ -333,7 +343,9 @@ class AIGateway:
             return cached
         return None
 
-    def _cache_response(self, request: AIRequest, config: TenantAIConfig, response: AIResponse) -> None:
+    def _cache_response(
+        self, request: AIRequest, config: TenantAIConfig, response: AIResponse
+    ) -> None:
         """Cache a response."""
         cache_key = self._make_cache_key(request, config)
         self._cache.put(cache_key, response)

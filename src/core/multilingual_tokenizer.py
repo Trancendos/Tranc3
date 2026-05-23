@@ -87,9 +87,13 @@ class MultilingualTokenizer:
             self.tokenizer = AutoTokenizer.from_pretrained(  # nosec B615 — revision pinning via cache_dir; model pinned in config
                 model_name, cache_dir=self.cache_dir
             )
-            logger.info("Tokenizer loaded: %s", sanitize_for_log(model_name))  # codeql[py/cleartext-logging]
+            logger.info(
+                "Tokenizer loaded: %s", sanitize_for_log(model_name)
+            )  # codeql[py/cleartext-logging]
         except Exception as e:
-            logger.warning("Tokenizer load failed: %s, using mock", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Tokenizer load failed: %s, using mock", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             self.tokenizer = None
 
         # Language detection
@@ -98,9 +102,7 @@ class MultilingualTokenizer:
         # Translation cache
         self._translation_cache: Dict[str, str] = {}
 
-    def encode(
-        self, text: str, language: str = "en", return_tensors: bool = True
-    ) -> Dict:
+    def encode(self, text: str, language: str = "en", return_tensors: bool = True) -> Dict:
         """Encode text to token IDs"""
         if self.tokenizer is None:
             return self._mock_encode(text)
@@ -123,9 +125,7 @@ class MultilingualTokenizer:
         """Decode token IDs to text"""
         if self.tokenizer is None:
             return "Mock decoded text"
-        return self.tokenizer.decode(
-            token_ids[0], skip_special_tokens=skip_special_tokens
-        )
+        return self.tokenizer.decode(token_ids[0], skip_special_tokens=skip_special_tokens)
 
     def detect_language(self, text: str) -> str:
         """Detect language of input text"""
@@ -149,7 +149,7 @@ class MultilingualTokenizer:
 
     def batch_encode(self, texts: List[str], languages: List[str]) -> Dict:
         """Batch encode multiple texts"""
-        results = [self.encode(t, lang) for t, lang in zip(texts, languages)]
+        results = [self.encode(t, lang) for t, lang in zip(texts, languages, strict=False)]
         return {
             "input_ids": torch.cat([r["input_ids"] for r in results]),
             "attention_mask": torch.cat([r["attention_mask"] for r in results]),

@@ -15,10 +15,10 @@ Output structure:
   data/processed/val/*.jsonl
 """
 
-import os
-import json
-import random
 import argparse
+import json
+import os
+import random
 from pathlib import Path
 
 from shared_core.path_validation import validate_path
@@ -58,11 +58,11 @@ def download_empathetic_dialogues(output_dir: str):
                 convs[cid] = []
             convs[cid].append(row)
 
-        for cid, rows in convs.items():
+        for _cid, rows in convs.items():
             rows.sort(key=lambda r: r["utterance_idx"])
             turns = []
-            for i, row in enumerate(rows):
-                role = "user" if i % 2 == 0 else "assistant"
+            for _i, row in enumerate(rows):
+                role = "user" if _i % 2 == 0 else "assistant"
                 turns.append({"role": role, "content": row["utterance"].strip()})
             if len(turns) >= 2:
                 records.append({"source": "empathetic_dialogues", "turns": turns})
@@ -141,8 +141,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_dir", default="data/processed")
     parser.add_argument("--raw_dir", default="data/raw")
-    parser.add_argument("--skip_download", action="store_true",
-                        help="Skip downloading public datasets (use custom data only)")
+    parser.add_argument(
+        "--skip_download",
+        action="store_true",
+        help="Skip downloading public datasets (use custom data only)",
+    )
     args = parser.parse_args()
 
     print("\n=== TRANC3 Data Preparation ===\n")

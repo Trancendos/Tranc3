@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional  # noqa: E402
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
-from shared_core.sanitize import sanitize_for_log
+from shared_core.sanitize import sanitize_for_log  # noqa: E402
 from src.bio_neural.consciousness_engine import ConsciousnessModel  # noqa: E402
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
 
@@ -43,7 +43,9 @@ class ConsciousnessAwareGenerator:
         try:
             return self._conscious_generate(input_text, personality_vector)
         except Exception as e:
-            logger.warning("Consciousness generation failed, falling back: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Consciousness generation failed, falling back: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return self._classical_generate(input_text, personality_vector)
 
     def _conscious_generate(

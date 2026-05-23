@@ -201,7 +201,9 @@ class AgentRuntime:
     # Goal management
     # -----------------------------------------------------------------------
 
-    async def assign_goal(self, description: str, priority: int = 5, metadata: Optional[Dict] = None) -> str:
+    async def assign_goal(
+        self, description: str, priority: int = 5, metadata: Optional[Dict] = None
+    ) -> str:
         """
         Assign a new goal to the agent. Returns the goal ID.
 
@@ -374,9 +376,12 @@ class AgentRuntime:
                 if attempt < self.config.max_retries:
                     logger.warning(
                         "Step %s failed (attempt %d/%d): %s",
-                        step.step_id, attempt + 1, self.config.max_retries + 1, exc,
+                        step.step_id,
+                        attempt + 1,
+                        self.config.max_retries + 1,
+                        exc,
                     )
-                    await asyncio.sleep(0.5 * (2 ** attempt))
+                    await asyncio.sleep(0.5 * (2**attempt))
                 else:
                     step.status = "failed"
                     self._total_errors += 1
@@ -420,6 +425,7 @@ class AgentRuntime:
         if self._task_decomposer is None:
             try:
                 from .task_decomposer import TaskDecomposer
+
                 self._task_decomposer = TaskDecomposer()
             except Exception as exc:
                 logger.warning("TaskDecomposer unavailable: %s", exc)
@@ -427,6 +433,7 @@ class AgentRuntime:
         if self._tool_bridge is None:
             try:
                 from .tool_bridge import ToolBridge
+
                 self._tool_bridge = ToolBridge()
             except Exception as exc:
                 logger.warning("ToolBridge unavailable: %s", exc)
@@ -434,6 +441,7 @@ class AgentRuntime:
         if self._memory_stream is None:
             try:
                 from .memory_stream import MemoryStream
+
                 self._memory_stream = MemoryStream(capacity=self.config.memory_capacity)
             except Exception as exc:
                 logger.warning("MemoryStream unavailable: %s", exc)
@@ -441,6 +449,7 @@ class AgentRuntime:
         if self._goal_manager is None:
             try:
                 from .goal_manager import GoalManager
+
                 self._goal_manager = GoalManager()
             except Exception as exc:
                 logger.warning("GoalManager unavailable: %s", exc)

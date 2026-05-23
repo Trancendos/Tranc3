@@ -1,8 +1,9 @@
 # tests/test_api.py
 
 import os
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 # This test file requires the full production stack (torch, transformers, etc.)
 # and a SECRET_KEY env var. Skip gracefully when either is absent.
@@ -13,6 +14,7 @@ if not os.getenv("SECRET_KEY"):
 else:
     try:
         from fastapi.testclient import TestClient
+
         with patch("redis.from_url", return_value=MagicMock(ping=lambda: True)):
             from api import app
         client = TestClient(app, raise_server_exceptions=False)

@@ -1,0 +1,17 @@
+# GitGuardian configuration — ignore known false positives
+# Test fixtures use dummy API keys that are not real secrets
+# Vault.py contains regex patterns for secret detection (not actual secrets)
+# Auth middleware contains example API keys in docstrings
+
+version: 2
+
+secret:
+  ignored_paths:
+    - "tests/**"
+    - "docs/reference/**"
+
+  ignored_matches:
+    - name: OpenAI test key fixture in test_adaptive_automation.py
+      match: "sk-proj-abc123def456ghi789jkl012mno345pqr678stu901vwx234"
+    - name: API key test fixture in test_security_remediation.py
+      match: "sk-12345"

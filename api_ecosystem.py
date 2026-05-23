@@ -10,7 +10,6 @@
 #   - Prometheus-compatible /metrics endpoint
 #   - Background cloud sync for hybrid storage
 
-import asyncio
 import logging
 import os
 import random
@@ -19,13 +18,14 @@ from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("tranc3.ecosystem")
 
 # ─── Lifespan: Startup/Shutdown ──────────────────────────────────────────────
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,7 +34,8 @@ async def lifespan(app: FastAPI):
     logger.info("Tranc3 Ecosystem API starting up...")
 
     # Start hybrid storage auto-sync if in HYBRID mode
-    from shared_core.architecture.storage_factory import StorageFactory, _get_system_mode, SystemMode
+    from shared_core.architecture.storage_factory import SystemMode, _get_system_mode
+
     mode = _get_system_mode()
     if mode == SystemMode.HYBRID:
         try:
@@ -97,10 +98,12 @@ app.add_middleware(
 
 # Telemetry — request tracing + metrics collection
 from shared_core.middleware.telemetry import TelemetryMiddleware
+
 app.add_middleware(TelemetryMiddleware)
 
 # Rate Limiting — IAM-tier adaptive
-from shared_core.middleware.rate_limiter import RateLimitMiddleware, RateLimitConfig
+from shared_core.middleware.rate_limiter import RateLimitConfig, RateLimitMiddleware
+
 rate_config = RateLimitConfig(
     window_seconds=int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60")),
     max_requests=int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "100")),
@@ -109,21 +112,26 @@ app.add_middleware(RateLimitMiddleware, config=rate_config)
 
 # Auth — JWT + API Key enforcement
 from shared_core.middleware.auth import AuthMiddleware
+
 app.add_middleware(AuthMiddleware)
 
 # ─── Shared Core Imports ─────────────────────────────────────────────────────
 
-from shared_core.orchestration.enhanced_registry import EnhancedServiceRegistry
-from shared_core.orchestration.health_monitor import CircuitBreaker, AdaptiveHealthMonitor, HealthStatus
-from shared_core.orchestration.dependency_graph import SmartDependencyGraph
-from shared_core.orchestration.config_drift import ConfigDriftDetector
-from shared_core.architecture.storage_factory import StorageFactory
 from shared_core.architecture.audit_ledger import AuditLedger
-from shared_core.architecture.vault import VaultSecretLoader
+from shared_core.architecture.storage_factory import StorageFactory
+from shared_core.middleware.telemetry import TelemetryCollector
+from shared_core.orchestration.config_drift import ConfigDriftDetector
+from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+from shared_core.orchestration.enhanced_registry import EnhancedServiceRegistry
+from shared_core.orchestration.health_monitor import AdaptiveHealthMonitor
+from shared_core.orchestration.heartbeat_aggregator import (
+    Heartbeat,
+    HeartbeatAggregator,
+    HeartbeatMetrics,
+    ServiceStatus,
+)
 from shared_core.security_automation.adaptive_scanner import AdaptiveScanner
 from shared_core.security_automation.defense_engine import DefenseEngine, ThreatLevel
-from shared_core.middleware.telemetry import TelemetryCollector
-from shared_core.orchestration.heartbeat_aggregator import HeartbeatAggregator, Heartbeat, HeartbeatMetrics, ServiceStatus
 
 # ─── Singleton Instances ─────────────────────────────────────────────────────
 
@@ -141,42 +149,107 @@ _heartbeat_aggregator = HeartbeatAggregator()
 # ─── Pillar & Hub Configuration ──────────────────────────────────────────────
 
 PILLARS = [
-    {"id": "architectural", "name": "Architectural", "color": "#3B82F6",
-     "hubs": ["the-nexus", "infinity", "the-void", "the-lighthouse", "the-warp-tunnel", "the-ice-box"]},
-    {"id": "development", "name": "Development", "color": "#10B981",
-     "hubs": ["devocity", "turings-hub", "the-workshop", "the-lab"]},
-    {"id": "creativity", "name": "Creativity", "color": "#F59E0B",
-     "hubs": ["the-studio", "imaginarium", "fablousa"]},
-    {"id": "commercial", "name": "Commercial & Financial", "color": "#F97316",
-     "hubs": ["the-dutchy", "royal-bank", "arcadian-exchange", "the-artifactory", "api-marketplace", "the-digital-grid"]},
-    {"id": "knowledge", "name": "Knowledge", "color": "#8B5CF6",
-     "hubs": ["the-observatory", "the-library", "the-basement"]},
-    {"id": "security", "name": "Security", "color": "#EF4444",
-     "hubs": ["the-citadel", "the-chaos-party"]},
-    {"id": "devops", "name": "DevOps", "color": "#06B6D4",
-     "hubs": ["the-hive", "the-swarm"]},
-    {"id": "wellbeing", "name": "Wellbeing", "color": "#EC4899",
-     "hubs": ["tranquility", "i-mind", "taimra"]},
-    {"id": "foresight", "name": "Foresight", "color": "#A78BFA",
-     "hubs": ["chronosphere", "luminous"]},
-    {"id": "governance", "name": "Governance", "color": "#6366F1",
-     "hubs": ["the-town-hall"]},
-    {"id": "immersive", "name": "Immersive", "color": "#F472B6",
-     "hubs": ["vrar3d", "resonate"]},
+    {
+        "id": "architectural",
+        "name": "Architectural",
+        "color": "#3B82F6",
+        "hubs": [
+            "the-nexus",
+            "infinity",
+            "the-void",
+            "the-lighthouse",
+            "the-warp-tunnel",
+            "the-ice-box",
+        ],
+    },
+    {
+        "id": "development",
+        "name": "Development",
+        "color": "#10B981",
+        "hubs": ["devocity", "turings-hub", "the-workshop", "the-lab"],
+    },
+    {
+        "id": "creativity",
+        "name": "Creativity",
+        "color": "#F59E0B",
+        "hubs": ["the-studio", "imaginarium", "fablousa"],
+    },
+    {
+        "id": "commercial",
+        "name": "Commercial & Financial",
+        "color": "#F97316",
+        "hubs": [
+            "the-dutchy",
+            "royal-bank",
+            "arcadian-exchange",
+            "the-artifactory",
+            "api-marketplace",
+            "the-digital-grid",
+        ],
+    },
+    {
+        "id": "knowledge",
+        "name": "Knowledge",
+        "color": "#8B5CF6",
+        "hubs": ["the-observatory", "the-library", "the-basement"],
+    },
+    {
+        "id": "security",
+        "name": "Security",
+        "color": "#EF4444",
+        "hubs": ["the-citadel", "the-chaos-party"],
+    },
+    {"id": "devops", "name": "DevOps", "color": "#06B6D4", "hubs": ["the-hive", "the-swarm"]},
+    {
+        "id": "wellbeing",
+        "name": "Wellbeing",
+        "color": "#EC4899",
+        "hubs": ["tranquility", "i-mind", "taimra"],
+    },
+    {
+        "id": "foresight",
+        "name": "Foresight",
+        "color": "#A78BFA",
+        "hubs": ["chronosphere", "luminous"],
+    },
+    {"id": "governance", "name": "Governance", "color": "#6366F1", "hubs": ["the-town-hall"]},
+    {"id": "immersive", "name": "Immersive", "color": "#F472B6", "hubs": ["vrar3d", "resonate"]},
 ]
 
 HUB_COLORS = {
-    "the-nexus": "#3B82F6", "the-observatory": "#8B5CF6", "infinity": "#F59E0B",
-    "the-void": "#6366F1", "the-lighthouse": "#FBBF24", "the-warp-tunnel": "#06B6D4",
-    "the-ice-box": "#67E8F9", "devocity": "#10B981", "turings-hub": "#34D399",
-    "chronosphere": "#A78BFA", "the-citadel": "#EF4444", "the-dutchy": "#F97316",
-    "the-studio": "#F59E0B", "imaginarium": "#FBBF24", "tranquility": "#EC4899",
-    "i-mind": "#8B5CF6", "taimra": "#C084FC", "vrar3d": "#F472B6",
-    "resonate": "#FB923C", "royal-bank": "#F97316", "arcadian-exchange": "#FB923C",
-    "the-artifactory": "#10B981", "api-marketplace": "#34D399", "the-digital-grid": "#06B6D4",
-    "the-lab": "#10B981", "the-workshop": "#34D399", "the-chaos-party": "#EF4444",
-    "the-library": "#8B5CF6", "the-basement": "#6366F1", "the-hive": "#F59E0B",
-    "the-swarm": "#FBBF24", "the-town-hall": "#6366F1", "fablousa": "#EC4899",
+    "the-nexus": "#3B82F6",
+    "the-observatory": "#8B5CF6",
+    "infinity": "#F59E0B",
+    "the-void": "#6366F1",
+    "the-lighthouse": "#FBBF24",
+    "the-warp-tunnel": "#06B6D4",
+    "the-ice-box": "#67E8F9",
+    "devocity": "#10B981",
+    "turings-hub": "#34D399",
+    "chronosphere": "#A78BFA",
+    "the-citadel": "#EF4444",
+    "the-dutchy": "#F97316",
+    "the-studio": "#F59E0B",
+    "imaginarium": "#FBBF24",
+    "tranquility": "#EC4899",
+    "i-mind": "#8B5CF6",
+    "taimra": "#C084FC",
+    "vrar3d": "#F472B6",
+    "resonate": "#FB923C",
+    "royal-bank": "#F97316",
+    "arcadian-exchange": "#FB923C",
+    "the-artifactory": "#10B981",
+    "api-marketplace": "#34D399",
+    "the-digital-grid": "#06B6D4",
+    "the-lab": "#10B981",
+    "the-workshop": "#34D399",
+    "the-chaos-party": "#EF4444",
+    "the-library": "#8B5CF6",
+    "the-basement": "#6366F1",
+    "the-hive": "#F59E0B",
+    "the-swarm": "#FBBF24",
+    "the-town-hall": "#6366F1",
+    "fablousa": "#EC4899",
     "luminous": "#A78BFA",
 }
 
@@ -185,9 +258,11 @@ HUB_COLORS = {
 _hub_state_cache: Dict[str, Dict[str, Any]] = {}
 _last_hub_update: float = 0.0
 
+
 def _get_system_mode() -> str:
     """Determine current SYSTEM_MODE from environment."""
     return os.getenv("SYSTEM_MODE", "CLOUD_ONLY").upper()
+
 
 def _refresh_hub_states() -> Dict[str, Dict[str, Any]]:
     """Build hub states from registry + health monitor, with fallback simulation."""
@@ -212,14 +287,30 @@ def _refresh_hub_states() -> Dict[str, Dict[str, Any]]:
                 healthy = sum(1 for s in hub_services if s.get("status") == "healthy")
                 total = len(hub_services)
                 health_pct = int((healthy / total) * 100) if total else 0
-                status = "online" if health_pct >= 85 else "degraded" if health_pct >= 50 else "offline"
-                cb_state = "closed" if health_pct >= 70 else "half_open" if health_pct >= 40 else "open"
+                status = (
+                    "online" if health_pct >= 85 else "degraded" if health_pct >= 50 else "offline"
+                )
+                cb_state = (
+                    "closed" if health_pct >= 70 else "half_open" if health_pct >= 40 else "open"
+                )
                 agents = sum(s.get("active_agents", 0) for s in hub_services)
             else:
                 # Simulated data when no real services are registered
                 status = random.choice(["online", "online", "online", "degraded", "offline"])
-                health_pct = random.randint(60, 99) if status == "online" else random.randint(30, 70) if status == "degraded" else random.randint(5, 30)
-                cb_state = "closed" if status == "online" else "half_open" if status == "degraded" else "open"
+                health_pct = (
+                    random.randint(60, 99)
+                    if status == "online"
+                    else random.randint(30, 70)
+                    if status == "degraded"
+                    else random.randint(5, 30)
+                )
+                cb_state = (
+                    "closed"
+                    if status == "online"
+                    else "half_open"
+                    if status == "degraded"
+                    else "open"
+                )
                 hub_services_count = random.randint(2, 24)
                 agents = random.randint(0, 12)
             states[hub_id] = {
@@ -244,7 +335,9 @@ def _refresh_hub_states() -> Dict[str, Dict[str, Any]]:
     _last_hub_update = now
     return states
 
+
 # ─── Response Models ─────────────────────────────────────────────────────────
+
 
 class HubStateResponse(BaseModel):
     hubs: List[Dict[str, Any]]
@@ -255,6 +348,7 @@ class HubStateResponse(BaseModel):
     avgHealth: float
     totalAlerts: int
     systemMode: str
+
 
 class SecurityPostureResponse(BaseModel):
     violations: int
@@ -268,6 +362,7 @@ class SecurityPostureResponse(BaseModel):
     blocked_requests: int = 0
     open_incidents: int = 0
 
+
 class CitadelOverviewResponse(BaseModel):
     total_services: int
     total_agents: int
@@ -277,8 +372,10 @@ class CitadelOverviewResponse(BaseModel):
     system_mode: str
     threat_level: str = "none"
 
+
 class ModeChangeRequest(BaseModel):
     mode: str = Field(..., pattern="^(TRUE_NAS|HYBRID|CLOUD_ONLY)$")
+
 
 class IncidentCreateRequest(BaseModel):
     title: str
@@ -287,7 +384,9 @@ class IncidentCreateRequest(BaseModel):
     source: str = ""
     affected_services: List[str] = []
 
+
 # ─── API Routes ──────────────────────────────────────────────────────────────
+
 
 @app.get("/api/ecosystem/hubs", response_model=HubStateResponse)
 async def get_hub_states(pillar: Optional[str] = None):
@@ -329,9 +428,11 @@ async def get_hub_detail(hub_id: str):
     try:
         node = _dependency_graph.get_node(hub_id)
         if node:
-            hub["dependencies"] = [e.target for e in node.edges] if hasattr(node, 'edges') else []
+            hub["dependencies"] = [e.target for e in node.edges] if hasattr(node, "edges") else []
             impact = _dependency_graph.analyze_impact(hub_id)
-            hub["dependents"] = [d.name for d in impact.affected_nodes] if hasattr(impact, 'affected_nodes') else []
+            hub["dependents"] = (
+                [d.name for d in impact.affected_nodes] if hasattr(impact, "affected_nodes") else []
+            )
         else:
             hub["dependencies"] = []
             hub["dependents"] = []
@@ -378,7 +479,7 @@ async def get_citadel_overview():
 async def get_security_posture():
     """Get the current security posture from the adaptive scanner and defense engine."""
     try:
-        results = _scanner.scan_path(".", max_depth=1)
+        results = _scanner.scan_path(".")
         violations = len(results)
         suppressed = sum(1 for r in results if getattr(r, "suppressed", False))
     except Exception:
@@ -400,7 +501,9 @@ async def get_security_posture():
         audit_chain_valid=chain_valid,
         secret_leaks=0,
         vault_status="Sealed",
-        last_scan_time=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) if violations > 0 else None,
+        last_scan_time=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        if violations > 0
+        else None,
         threat_level=defense_stats.current_threat_level.value,
         firewall_rules=defense_stats.firewall_rules,
         blocked_requests=defense_stats.blocked_requests,
@@ -417,15 +520,17 @@ async def get_pillars():
         pillar_hubs = [states[h] for h in p["hubs"] if h in states]
         alerts = sum(h["alerts"] for h in pillar_hubs)
         online = sum(1 for h in pillar_hubs if h["status"] == "online")
-        result.append({
-            "id": p["id"],
-            "name": p["name"],
-            "color": p["color"],
-            "hubCount": len(p["hubs"]),
-            "onlineHubs": online,
-            "alerts": alerts,
-            "hubs": p["hubs"],
-        })
+        result.append(
+            {
+                "id": p["id"],
+                "name": p["name"],
+                "color": p["color"],
+                "hubCount": len(p["hubs"]),
+                "onlineHubs": online,
+                "alerts": alerts,
+                "hubs": p["hubs"],
+            }
+        )
     return result
 
 
@@ -439,16 +544,19 @@ async def get_neural_bus():
     for hub in online_hubs:
         try:
             node = _dependency_graph.get_node(hub["id"])
-            if node and hasattr(node, 'edges'):
+            if node and hasattr(node, "edges"):
                 for edge in node.edges:
-                    target = edge.target if hasattr(edge, 'target') else str(edge)
+                    target = edge.target if hasattr(edge, "target") else str(edge)
                     connections.append({"from": hub["id"], "to": target})
         except Exception:
             pass
 
     return {
         "activeNodes": len(online_hubs),
-        "nodes": [{"id": h["id"], "name": h["name"], "color": h["hubColor"], "health": h["healthScore"]} for h in online_hubs],
+        "nodes": [
+            {"id": h["id"], "name": h["name"], "color": h["hubColor"], "health": h["healthScore"]}
+            for h in online_hubs
+        ],
         "connections": connections,
         "protocol": "Neural-Bus/v1",
         "status": "active" if online_hubs else "idle",
@@ -501,6 +609,7 @@ async def health_check():
 
 # ─── New: Prometheus Metrics Endpoint ────────────────────────────────────────
 
+
 @app.get("/metrics")
 async def prometheus_metrics():
     """Prometheus-compatible metrics endpoint for monitoring."""
@@ -512,10 +621,11 @@ async def prometheus_metrics():
 
 # ─── New: Defense Engine Endpoints ───────────────────────────────────────────
 
+
 @app.get("/api/ecosystem/defense/firewall")
 async def get_firewall_rules():
     """Get all firewall rules from the defense engine."""
-    user = getattr(Request, "state", None)
+    getattr(Request, "state", None)
     return {"rules": _defense_engine.get_rules(), "stats": _defense_engine.get_stats().to_dict()}
 
 
@@ -537,6 +647,7 @@ async def create_security_incident(req: IncidentCreateRequest):
 async def get_security_incidents(status: Optional[str] = None):
     """Get security incidents, optionally filtered by status."""
     from shared_core.security_automation.defense_engine import IncidentStatus
+
     status_enum = IncidentStatus(status) if status else None
     return {"incidents": _defense_engine.get_incidents(status_enum)}
 
@@ -548,6 +659,7 @@ async def get_defense_stats():
 
 
 # ─── New: Storage Health Endpoint ────────────────────────────────────────────
+
 
 @app.get("/api/ecosystem/storage")
 async def get_storage_health():
@@ -562,6 +674,7 @@ async def get_storage_health():
 
 # ─── New: AI Gateway Endpoints ─────────────────────────────────────────────────────
 
+
 @app.get("/api/ecosystem/ai/catalog")
 async def get_ai_model_catalog(provider: Optional[str] = None):
     """Get the free-tier AI model catalog.
@@ -571,6 +684,7 @@ async def get_ai_model_catalog(provider: Optional[str] = None):
     """
     try:
         from src.ai_gateway.zero_cost_config import get_free_model_catalog
+
         catalog = get_free_model_catalog()
         if provider:
             catalog = {provider: catalog.get(provider, [])}
@@ -593,6 +707,7 @@ async def get_ai_provider_status():
     """
     try:
         from src.ai_gateway.zero_cost_config import discover_available_providers
+
         available = discover_available_providers()
         active = {k: v for k, v in available.items() if v}
         inactive = {k: v for k, v in available.items() if not v}
@@ -626,24 +741,29 @@ async def get_ai_routing_chains():
     """
     try:
         from src.ai_gateway.zero_cost_config import ROUTING_CHAINS, discover_available_providers
+
         available = discover_available_providers()
         chains = []
         for name, chain in ROUTING_CHAINS.items():
             chain_available = sum(1 for p in chain.providers if available.get(p, False))
-            chains.append({
-                "name": name,
-                "description": chain.description,
-                "providers": chain.providers,
-                "models": chain.models,
-                "estimated_cost": chain.estimated_cost_per_1k_requests,
-                "available_providers": chain_available,
-                "total_providers": len(chain.providers),
-                "viability": (
-                    "full" if chain_available == len(chain.providers)
-                    else "partial" if chain_available >= 2
-                    else "degraded"
-                ),
-            })
+            chains.append(
+                {
+                    "name": name,
+                    "description": chain.description,
+                    "providers": chain.providers,
+                    "models": chain.models,
+                    "estimated_cost": chain.estimated_cost_per_1k_requests,
+                    "available_providers": chain_available,
+                    "total_providers": len(chain.providers),
+                    "viability": (
+                        "full"
+                        if chain_available == len(chain.providers)
+                        else "partial"
+                        if chain_available >= 2
+                        else "degraded"
+                    ),
+                }
+            )
         return {
             "total_chains": len(chains),
             "available_providers": available,
@@ -664,6 +784,7 @@ async def get_optimal_routing_chain(chain_name: Optional[str] = None):
     """
     try:
         from src.ai_gateway.zero_cost_config import get_optimal_chain
+
         chain = get_optimal_chain(chain_name)
         return {
             "name": chain.name,
@@ -680,8 +801,10 @@ async def get_optimal_routing_chain(chain_name: Optional[str] = None):
 
 # ─── New: Heartbeat Monitoring Endpoints ────────────────────────────────────
 
+
 class HeartbeatRequest(BaseModel):
     """Request body for submitting a heartbeat."""
+
     service_id: str
     service_name: str
     status: str = Field(..., pattern="^(healthy|degraded|critical|offline|unknown)$")
@@ -699,6 +822,7 @@ class HeartbeatRequest(BaseModel):
 async def submit_heartbeat(req: HeartbeatRequest):
     """Submit a heartbeat from a service. Updates health tracking and triggers alerts if needed."""
     from datetime import datetime, timezone
+
     hb = Heartbeat(
         service_id=req.service_id,
         service_name=req.service_name,
@@ -770,7 +894,9 @@ async def resolve_heartbeat_alert(alert_id: str):
     """Mark a health alert as resolved."""
     success = _heartbeat_aggregator.resolve_alert(alert_id)
     if not success:
-        raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found or already resolved")
+        raise HTTPException(
+            status_code=404, detail=f"Alert '{alert_id}' not found or already resolved"
+        )
     return {"status": "resolved", "alert_id": alert_id}
 
 
@@ -784,4 +910,5 @@ async def get_heartbeat_stats():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8001)

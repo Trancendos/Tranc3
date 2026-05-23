@@ -173,12 +173,14 @@ class EventBus:
         """Emit without awaiting delivery. Fire-and-forget pattern."""
         try:
             loop = asyncio.get_event_loop()
-            loop.create_task(self.emit(
-                event_type=event_type,
-                data=data,
-                source=source,
-                tenant_id=tenant_id,
-            ))
+            loop.create_task(
+                self.emit(
+                    event_type=event_type,
+                    data=data,
+                    source=source,
+                    tenant_id=tenant_id,
+                )
+            )
         except RuntimeError:
             logger.warning("emit_async_no_loop", extra={"event_type": event_type})
 
@@ -235,7 +237,8 @@ class EventBus:
     def get_matching_subscriptions(self, event_type: str) -> list[EventSubscription]:
         """Get subscriptions matching an event type."""
         return [
-            sub for sub in self._subscriptions.values()
+            sub
+            for sub in self._subscriptions.values()
             if sub.enabled and self._matches_pattern(sub.event_pattern, event_type)
         ]
 
@@ -249,7 +252,9 @@ class EventBus:
         """Flush the event buffer. Returns number of events flushed."""
         events = self._buffer.copy()
         self._buffer.clear()
-        logger.info("event_buffer_flushed: %s events", sanitize_for_log(len(events)))  # codeql[py/cleartext-logging]
+        logger.info(
+            "event_buffer_flushed: %s events", sanitize_for_log(len(events))
+        )  # codeql[py/cleartext-logging]
         return len(events)
 
     # ── Private ──────────────────────────────────────────────
@@ -327,6 +332,7 @@ class EventBus:
                 elif sub.delivery_type == "webhook" and sub.endpoint:
                     # Webhook delivery — would use httpx here
                     import httpx
+
                     async with httpx.AsyncClient() as client:
                         resp = await client.post(
                             sub.endpoint,
@@ -399,4 +405,6 @@ class EventBus:
             )
             self._db.commit()
         except sqlite3.Error as e:
-            logger.error("sqlite_persist_error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.error(
+                "sqlite_persist_error: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]

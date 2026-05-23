@@ -35,9 +35,9 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 ASSETS_ROOT.mkdir(parents=True, exist_ok=True)
 
 # Cache control header templates (seconds)
-CACHE_IMMUTABLE = "public, max-age=31536000, immutable"   # 1 year — hashed assets
-CACHE_LONG = "public, max-age=86400"                       # 24h — versioned assets
-CACHE_SHORT = "public, max-age=300"                        # 5m — dynamic assets
+CACHE_IMMUTABLE = "public, max-age=31536000, immutable"  # 1 year — hashed assets
+CACHE_LONG = "public, max-age=86400"  # 24h — versioned assets
+CACHE_SHORT = "public, max-age=300"  # 5m — dynamic assets
 CACHE_NONE = "no-store"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
@@ -47,6 +47,7 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+
 
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
@@ -113,6 +114,7 @@ def _register_file(conn: sqlite3.Connection, asset_path: str, full_path: Path) -
 # Models
 # ---------------------------------------------------------------------------
 
+
 class AssetRegister(BaseModel):
     path: str
     cache_policy: Optional[str] = None
@@ -121,6 +123,7 @@ class AssetRegister(BaseModel):
 # ---------------------------------------------------------------------------
 # Lifespan
 # ---------------------------------------------------------------------------
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -144,7 +147,12 @@ async def lifespan(app: FastAPI):
 
 STARTED_AT = datetime.now(timezone.utc)
 
-app = FastAPI(title="cdn-service", description="Static asset CDN origin with ETag/cache headers (self-hosted)", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="cdn-service",
+    description="Static asset CDN origin with ETag/cache headers (self-hosted)",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -248,9 +256,14 @@ async def serve_asset(
             )
         conn.execute(
             "INSERT INTO serve_log (path, status, cache_hit, ip, user_agent, served_at) VALUES (?,?,?,?,?,?)",
-            (asset_path, 304 if if_none_match == etag else 200, 0,
-             request.client.host if request.client else None,
-             request.headers.get("user-agent", "")[:200], time.time()),
+            (
+                asset_path,
+                304 if if_none_match == etag else 200,
+                0,
+                request.client.host if request.client else None,
+                request.headers.get("user-agent", "")[:200],
+                time.time(),
+            ),
         )
         conn.commit()
 
@@ -279,7 +292,9 @@ async def register_asset(req: AssetRegister):
     with get_conn() as conn:
         meta = _register_file(conn, req.path, full_path)
         if req.cache_policy:
-            conn.execute("UPDATE assets SET cache_policy=? WHERE path=?", (req.cache_policy, req.path))
+            conn.execute(
+                "UPDATE assets SET cache_policy=? WHERE path=?", (req.cache_policy, req.path)
+            )
         conn.commit()
     return {"registered": req.path, **meta}
 
@@ -297,4 +312,5 @@ async def serve_log(path: str, limit: int = 50):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

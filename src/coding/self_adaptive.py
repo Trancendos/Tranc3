@@ -44,9 +44,7 @@ class CodeQualityMetric:
             )
 
         functions = [
-            n
-            for n in ast.walk(tree)
-            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
         ]
         classes = [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
         try_nodes = [n for n in ast.walk(tree) if isinstance(n, ast.Try)]
@@ -63,8 +61,7 @@ class CodeQualityMetric:
         hint_count = sum(
             1
             for fn in functions
-            if fn.returns is not None
-            or any(a.annotation is not None for a in fn.args.args)
+            if fn.returns is not None or any(a.annotation is not None for a in fn.args.args)
         )
         hint_cov = hint_count / fn_count if fn_count > 0 else 1.0
 
@@ -129,9 +126,7 @@ class RegressionDetector:
             }
         return None
 
-    def _find_causes(
-        self, baseline: CodeQualityMetric, current: CodeQualityMetric
-    ) -> List[str]:
+    def _find_causes(self, baseline: CodeQualityMetric, current: CodeQualityMetric) -> List[str]:
         causes = []
         if current.docstring_coverage < baseline.docstring_coverage - 0.1:
             causes.append("docstring_coverage_dropped")
@@ -231,9 +226,9 @@ class AdaptiveCodingEngine:
         """Add -> None to functions that have no return annotation."""
         return re.sub(
             r"(def \w+\([^)]*\))(\s*:)",
-            lambda m: m.group(1) + " -> None" + m.group(2)
-            if "->" not in m.group(0)
-            else m.group(0),
+            lambda m: (
+                m.group(1) + " -> None" + m.group(2) if "->" not in m.group(0) else m.group(0)
+            ),
             code,
         )
 

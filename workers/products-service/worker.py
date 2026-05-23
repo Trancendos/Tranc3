@@ -32,6 +32,7 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
 
+
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
@@ -117,8 +118,10 @@ class ProductsDatabase:
     def delete(self, id_field: str, id_value: str, soft: bool = True) -> bool:
         if soft:
             with self._cursor() as cur:
-                cur.execute(f"UPDATE products SET is_active=0, updated_at=? WHERE {id_field}=?",
-                            (datetime.now(timezone.utc).isoformat(), id_value))
+                cur.execute(
+                    f"UPDATE products SET is_active=0, updated_at=? WHERE {id_field}=?",
+                    (datetime.now(timezone.utc).isoformat(), id_value),
+                )
                 return cur.rowcount > 0
         else:
             with self._cursor() as cur:
@@ -160,6 +163,7 @@ async def health():
 # TODO: Add specific CRUD endpoints for products-service
 # The database class above provides create(), get(), list(), update(), delete() methods
 # Implement domain-specific endpoints based on business requirements
+
 
 @app.get("/")
 async def list_all(limit: int = 50, offset: int = 0):
@@ -203,4 +207,5 @@ async def delete_by_id(product_id: str):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

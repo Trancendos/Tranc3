@@ -6,15 +6,13 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-
 import os
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Header, Path, Query, Request
 from fastapi.responses import JSONResponse
 
+from shared_core.sanitize import sanitize_for_log
 from src.citadel.devops_hub import DeployStatus, DeployTarget, ServiceHealthStatus, get_citadel
 
 logger = logging.getLogger(__name__)
@@ -125,9 +123,16 @@ async def forgejo_webhook(
 
     event = request.headers.get("X-Gitea-Event", request.headers.get("X-Forgejo-Event", "unknown"))
     ref = payload.get("ref", "")
-    sender = payload.get("pusher", {}).get("login", payload.get("sender", {}).get("login", "forgejo"))
+    sender = payload.get("pusher", {}).get(
+        "login", payload.get("sender", {}).get("login", "forgejo")
+    )
 
-    logger.info("citadel: forgejo webhook event=%s ref=%s sender=%s", sanitize_for_log(event), sanitize_for_log(ref), sanitize_for_log(sender))  # codeql[py/cleartext-logging]
+    logger.info(
+        "citadel: forgejo webhook event=%s ref=%s sender=%s",
+        sanitize_for_log(event),
+        sanitize_for_log(ref),
+        sanitize_for_log(sender),
+    )  # codeql[py/cleartext-logging]
 
     # Map workflow_run / push on main branch → auto record deploy
     if event in ("workflow_run", "push") and ("main" in ref or "master" in ref):

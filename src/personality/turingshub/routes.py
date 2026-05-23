@@ -55,9 +55,7 @@ async def list_personalities() -> list:
             if hasattr(spawner, "list_profiles")
             else list(spawner._profiles.keys())
         )
-        return [
-            {"id": pid, "profile": spawner._profiles.get(pid, {})} for pid in profiles
-        ]
+        return [{"id": pid, "profile": spawner._profiles.get(pid, {})} for pid in profiles]
     except Exception as exc:
         return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
 
@@ -81,9 +79,7 @@ async def spawn_personality(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     personality_id = body.get("personality_id")
     repo_name = body.get("repo_name")
     if not personality_id or not repo_name:
-        return JSONResponse(
-            {"error": "personality_id and repo_name are required"}, status_code=400
-        )
+        return JSONResponse({"error": "personality_id and repo_name are required"}, status_code=400)
     output_dir = body.get("output_dir", "./spawned")
     try:
         result = _spawner().spawn(personality_id, repo_name, output_dir=output_dir)

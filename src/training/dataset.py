@@ -34,7 +34,7 @@ class ConversationDataset(Dataset):
         self,
         data_dir: str,
         tokenizer: Tranc3Tokenizer,
-        split: str = "train",           # "train" | "val"
+        split: str = "train",  # "train" | "val"
         max_seq_len: int = 1024,
         system_prompt: str = "",
     ):
@@ -45,8 +45,7 @@ class ConversationDataset(Dataset):
         data_path = Path(data_dir) / split
         if not data_path.exists():
             raise FileNotFoundError(
-                f"Data split not found: {data_path}\n"
-                f"Run: python scripts/prepare_data.py"
+                f"Data split not found: {data_path}\nRun: python scripts/prepare_data.py"
             )
 
         self.samples = self._load_and_tokenize(data_path)
@@ -79,8 +78,8 @@ class ConversationDataset(Dataset):
 
                     # Split long conversations into max_seq_len chunks
                     for start in range(0, len(ids), self.max_seq_len):
-                        chunk = ids[start: start + self.max_seq_len + 1]
-                        if len(chunk) < 8:   # skip tiny fragments
+                        chunk = ids[start : start + self.max_seq_len + 1]
+                        if len(chunk) < 8:  # skip tiny fragments
                             continue
                         samples.append(chunk)
 
@@ -90,7 +89,7 @@ class ConversationDataset(Dataset):
             text = validated.read_text(encoding="utf-8")
             ids = self.tokenizer.encode(text, add_bos=True, add_eos=True)
             for start in range(0, len(ids), self.max_seq_len):
-                chunk = ids[start: start + self.max_seq_len + 1]
+                chunk = ids[start : start + self.max_seq_len + 1]
                 if len(chunk) < 8:
                     continue
                 samples.append(chunk)
@@ -107,15 +106,15 @@ class ConversationDataset(Dataset):
         # Pad or truncate to max_seq_len + 1
         target_len = self.max_seq_len + 1
         if len(ids) < target_len:
-            ids = ids + [0] * (target_len - len(ids))   # 0 = PAD_ID
+            ids = ids + [0] * (target_len - len(ids))  # 0 = PAD_ID
         else:
             ids = ids[:target_len]
 
         ids_tensor = torch.tensor(ids, dtype=torch.long)
 
         return {
-            "input_ids": ids_tensor[:-1],   # (max_seq_len,)
-            "targets": ids_tensor[1:],       # (max_seq_len,) shifted by 1
+            "input_ids": ids_tensor[:-1],  # (max_seq_len,)
+            "targets": ids_tensor[1:],  # (max_seq_len,) shifted by 1
         }
 
 

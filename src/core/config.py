@@ -70,14 +70,10 @@ class Tranc3Config(BaseSettings):
 
     # ── Languages ─────────────────────────────────────────────────────────
     PRIMARY_LANGUAGE: str = Field(default="en", env="PRIMARY_LANGUAGE")
-    SUPPORTED_LANGUAGES: str = Field(
-        default="en,es,fr,de,zh,ja", env="SUPPORTED_LANGUAGES"
-    )
+    SUPPORTED_LANGUAGES: str = Field(default="en,es,fr,de,zh,ja", env="SUPPORTED_LANGUAGES")
 
     # ── Personality ───────────────────────────────────────────────────────
-    PERSONALITY_DIR: str = Field(
-        default="./src/personality/profiles", env="PERSONALITY_DIR"
-    )
+    PERSONALITY_DIR: str = Field(default="./src/personality/profiles", env="PERSONALITY_DIR")
 
     # ── Observability ─────────────────────────────────────────────────────
     LANGFUSE_PUBLIC_KEY: Optional[str] = Field(default=None, env="LANGFUSE_PUBLIC_KEY")
@@ -110,7 +106,7 @@ class Tranc3Config(BaseSettings):
 
     @property
     def supported_languages_list(self) -> List[str]:
-        return [l.strip() for l in self.SUPPORTED_LANGUAGES.split(",")]
+        return [lang.strip() for lang in self.SUPPORTED_LANGUAGES.split(",")]
 
     @property
     def fallback_providers_list(self) -> List[str]:
@@ -127,8 +123,8 @@ try:
     settings = Tranc3Config()  # codeql[py/unused-global]
 except Exception as e:
     import logging
+
     logging.getLogger(__name__).error(f"Configuration error: {e}")
     raise RuntimeError(
-        f"Tranc3 configuration failed: {e}. "
-        "Check your environment variables and .env file."
+        f"Tranc3 configuration failed: {e}. Check your environment variables and .env file."
     ) from e

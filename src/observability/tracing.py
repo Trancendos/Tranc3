@@ -58,11 +58,18 @@ def new_span_id() -> str:
 # Span
 # ---------------------------------------------------------------------------
 
+
 class Span:
     """A single span within a distributed trace."""
 
-    def __init__(self, trace_id: str, span_id: str, operation: str,
-                 service: str = "", parent_span_id: Optional[str] = None):
+    def __init__(
+        self,
+        trace_id: str,
+        span_id: str,
+        operation: str,
+        service: str = "",
+        parent_span_id: Optional[str] = None,
+    ):
         self.trace_id = trace_id
         self.span_id = span_id
         self.operation = operation
@@ -75,22 +82,26 @@ class Span:
         self.status = "ok"
 
     def add_event(self, name: str, **attrs):
-        self.events.append({
-            "name": name,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "attributes": attrs,
-        })
+        self.events.append(
+            {
+                "name": name,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "attributes": attrs,
+            }
+        )
 
     def set_attribute(self, key: str, value: Any):
         self.attributes[key] = value
 
     def set_error(self, error_type: str, message: str):
         self.status = "error"
-        self.events.append({
-            "name": "exception",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "attributes": {"exception.type": error_type, "exception.message": message},
-        })
+        self.events.append(
+            {
+                "name": "exception",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "attributes": {"exception.type": error_type, "exception.message": message},
+            }
+        )
 
     @property
     def duration_ms(self) -> float:
@@ -114,6 +125,7 @@ class Span:
 # ---------------------------------------------------------------------------
 # Tracer (SQLite-backed)
 # ---------------------------------------------------------------------------
+
 
 class Tracer:
     """Distributed tracer with SQLite persistence."""
@@ -166,10 +178,18 @@ class Tracer:
         try:
             conn.execute(
                 "INSERT INTO spans (trace_id, span_id, parent_span_id, operation, service, status, start_time, duration_ms, events, attributes) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (span.trace_id, span.span_id, span.parent_span_id,
-                 span.operation, span.service, span.status,
-                 span.start_ts, span.duration_ms,
-                 json.dumps(span.events), json.dumps(span.attributes)),
+                (
+                    span.trace_id,
+                    span.span_id,
+                    span.parent_span_id,
+                    span.operation,
+                    span.service,
+                    span.status,
+                    span.start_ts,
+                    span.duration_ms,
+                    json.dumps(span.events),
+                    json.dumps(span.attributes),
+                ),
             )
             conn.commit()
         except Exception as e:
@@ -180,7 +200,9 @@ class Tracer:
         conn = self._get_conn()
         if not conn:
             return []
-        rows = conn.execute("SELECT * FROM spans WHERE trace_id=? ORDER BY start_time", (trace_id,)).fetchall()
+        rows = conn.execute(
+            "SELECT * FROM spans WHERE trace_id=? ORDER BY start_time", (trace_id,)
+        ).fetchall()
         return [dict(r) for r in rows]
 
     def get_recent_traces(self, limit: int = 50) -> List[Dict[str, Any]]:
@@ -188,12 +210,15 @@ class Tracer:
         conn = self._get_conn()
         if not conn:
             return []
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT trace_id, MIN(start_time) as started, COUNT(*) as span_count,
                    GROUP_CONCAT(DISTINCT service) as services,
                    CASE WHEN SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) > 0 THEN 'error' ELSE 'ok' END as status
             FROM spans GROUP BY trace_id ORDER BY started DESC LIMIT ?
-        """, (limit,)).fetchall()
+        """,
+            (limit,),
+        ).fetchall()
         return [dict(r) for r in rows]
 
     @contextmanager

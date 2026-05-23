@@ -15,7 +15,6 @@ Zero-cost: FastAPI + SQLite + httpx, no mandatory paid deps.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import sqlite3
@@ -23,7 +22,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
@@ -35,7 +34,7 @@ WORKER_NAME = "sms-service"
 DB_PATH = Path(__file__).parent / "data" / "sms.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-SMS_PROVIDER = os.getenv("SMS_PROVIDER", "log")       # log | webhook | textbelt
+SMS_PROVIDER = os.getenv("SMS_PROVIDER", "log")  # log | webhook | textbelt
 WEBHOOK_URL = os.getenv("SMS_WEBHOOK_URL", "")
 TEXTBELT_KEY = os.getenv("TEXTBELT_KEY", "textbelt")  # "textbelt" = free (1/day)
 DRAIN_INTERVAL = int(os.getenv("SMS_DRAIN_INTERVAL", "15"))
@@ -48,6 +47,7 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+
 
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
@@ -144,6 +144,7 @@ async def _drain_loop() -> None:
 # Models
 # ---------------------------------------------------------------------------
 
+
 class SendIn(BaseModel):
     to: str
     message: str
@@ -157,6 +158,7 @@ class BatchSendIn(BaseModel):
 # ---------------------------------------------------------------------------
 # Lifespan
 # ---------------------------------------------------------------------------
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -173,7 +175,12 @@ async def lifespan(app: FastAPI):
 
 STARTED_AT = datetime.now(timezone.utc)
 
-app = FastAPI(title="sms-service", description="SMS outbox queue with pluggable providers (self-hosted)", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="sms-service",
+    description="SMS outbox queue with pluggable providers (self-hosted)",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -237,7 +244,8 @@ async def list_outbox(
 ):
     clauses, params = [], []
     if status:
-        clauses.append("status = ?"); params.append(status)
+        clauses.append("status = ?")
+        params.append(status)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM outbox {where}", params).fetchone()[0]
@@ -253,7 +261,9 @@ async def retry_sms(sms_id: int):
     with get_conn() as conn:
         if not conn.execute("SELECT id FROM outbox WHERE id = ?", (sms_id,)).fetchone():
             raise HTTPException(status_code=404, detail="SMS not found")
-        conn.execute("UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (sms_id,))
+        conn.execute(
+            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (sms_id,)
+        )
         conn.commit()
     return {"retrying": sms_id}
 
@@ -275,4 +285,5 @@ async def stats():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

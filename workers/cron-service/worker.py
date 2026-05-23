@@ -19,7 +19,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
@@ -38,6 +38,7 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+
 
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
@@ -83,6 +84,7 @@ def init_db() -> None:
 # Cron expression parser (simplified 5-field: min hour dom mon dow)
 # ---------------------------------------------------------------------------
 
+
 def _matches_field(value: int, field: str) -> bool:
     if field == "*":
         return True
@@ -126,7 +128,9 @@ async def _execute_job(job: dict) -> None:
             headers = json.loads(job["headers"] or "{}")
             payload = json.loads(job["payload"] or "{}")
             async with httpx.AsyncClient(timeout=30) as client:
-                resp = await client.request(job["method"], job["url"], json=payload, headers=headers)
+                resp = await client.request(
+                    job["method"], job["url"], json=payload, headers=headers
+                )
             response_body = resp.text[:500]
             if resp.status_code >= 400:
                 status = "failed"
@@ -172,6 +176,7 @@ async def _scheduler_loop() -> None:
 # Models
 # ---------------------------------------------------------------------------
 
+
 class JobCreate(BaseModel):
     id: Optional[str] = None
     name: str
@@ -197,6 +202,7 @@ class JobUpdate(BaseModel):
 # Lifespan
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -212,7 +218,12 @@ async def lifespan(app: FastAPI):
 
 STARTED_AT = datetime.now(timezone.utc)
 
-app = FastAPI(title="cron-service", description="Asyncio cron scheduler with SQLite persistence (self-hosted)", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="cron-service",
+    description="Asyncio cron scheduler with SQLite persistence (self-hosted)",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -242,7 +253,9 @@ async def health():
 async def list_jobs(enabled: Optional[bool] = None):
     with get_conn() as conn:
         if enabled is not None:
-            rows = conn.execute("SELECT * FROM jobs WHERE enabled = ? ORDER BY name", (int(enabled),)).fetchall()
+            rows = conn.execute(
+                "SELECT * FROM jobs WHERE enabled = ? ORDER BY name", (int(enabled),)
+            ).fetchall()
         else:
             rows = conn.execute("SELECT * FROM jobs ORDER BY name").fetchall()
     return {"jobs": [dict(r) for r in rows]}
@@ -251,6 +264,7 @@ async def list_jobs(enabled: Optional[bool] = None):
 @app.post("/jobs", status_code=201)
 async def create_job(req: JobCreate):
     import uuid
+
     job_id = req.id or str(uuid.uuid4())
     now = time.time()
     with get_conn() as conn:
@@ -258,8 +272,17 @@ async def create_job(req: JobCreate):
             raise HTTPException(status_code=409, detail="Job ID already exists")
         conn.execute(
             "INSERT INTO jobs (id, name, schedule, url, method, payload, headers, enabled, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-            (job_id, req.name, req.schedule, req.url, req.method,
-             json.dumps(req.payload), json.dumps(req.headers), int(req.enabled), now),
+            (
+                job_id,
+                req.name,
+                req.schedule,
+                req.url,
+                req.method,
+                json.dumps(req.payload),
+                json.dumps(req.headers),
+                int(req.enabled),
+                now,
+            ),
         )
         conn.commit()
     return {"id": job_id, "name": req.name, "schedule": req.schedule}
@@ -328,4 +351,5 @@ async def job_runs(job_id: str, limit: int = Query(20, le=200)):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

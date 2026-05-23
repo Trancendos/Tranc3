@@ -185,7 +185,9 @@ class GoalManager:
 
             logger.debug(
                 "Goal added: %s (id=%s, priority=%d)",
-                description, goal.goal_id, priority,
+                description,
+                goal.goal_id,
+                priority,
             )
             return goal.goal_id
         return None
@@ -263,7 +265,9 @@ class GoalManager:
     # Progress tracking
     # -------------------------------------------------------------------
 
-    async def update_progress(self, goal_id: str, increment: float = 0.0, absolute: Optional[float] = None) -> bool:
+    async def update_progress(
+        self, goal_id: str, increment: float = 0.0, absolute: Optional[float] = None
+    ) -> bool:
         """
         Update a goal's progress. Use increment for relative updates or
         absolute to set a specific value. Progress is clamped to [0.0, 1.0].
@@ -391,9 +395,7 @@ class GoalManager:
     def _evict_one(self) -> None:
         """Evict the lowest-priority terminal goal. If none, evict the lowest-priority pending goal."""
         # First try to evict terminal goals (completed, failed, cancelled)
-        terminal = [
-            g for g in self._goals.values() if g.is_terminal
-        ]
+        terminal = [g for g in self._goals.values() if g.is_terminal]
         if terminal:
             victim = min(terminal, key=lambda g: g.priority)
             del self._goals[victim.goal_id]

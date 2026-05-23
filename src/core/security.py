@@ -53,10 +53,14 @@ def safe_torch_load(path: str, device: str = "cpu", **kwargs) -> Dict[str, Any]:
 
     try:
         checkpoint = torch.load(path, **safe_kwargs, weights_only=True)
-        logger.info("Safe load successful: %s", sanitize_for_log(path))  # codeql[py/cleartext-logging]
+        logger.info(
+            "Safe load successful: %s", sanitize_for_log(path)
+        )  # codeql[py/cleartext-logging]
         return checkpoint
     except Exception as e:
-        logger.error("Safe load failed for %s: %s", sanitize_for_log(path), sanitize_for_log(e))  # codeql[py/cleartext-logging]
+        logger.error(
+            "Safe load failed for %s: %s", sanitize_for_log(path), sanitize_for_log(e)
+        )  # codeql[py/cleartext-logging]
         raise
     return None
 
@@ -67,7 +71,9 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
     Prevents supply-chain attacks on model weights.
     """
     if not os.path.exists(path):
-        logger.error("Model file not found: %s", sanitize_for_log(path))  # codeql[py/cleartext-logging]
+        logger.error(
+            "Model file not found: %s", sanitize_for_log(path)
+        )  # codeql[py/cleartext-logging]
         return False
 
     # Validate path stays under the current working directory (CWE-022)
@@ -89,7 +95,11 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
         )
         return False
 
-    logger.info("Integrity check passed for %s (sha256: %s...)", sanitize_for_log(path), sanitize_for_log(actual_hash[:16]))  # codeql[py/cleartext-logging]
+    logger.info(
+        "Integrity check passed for %s (sha256: %s...)",
+        sanitize_for_log(path),
+        sanitize_for_log(actual_hash[:16]),
+    )  # codeql[py/cleartext-logging]
     return True
 
 
@@ -100,15 +110,15 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
 # Patterns that indicate potential injection attacks
 DANGEROUS_PATTERNS = [
     r"<script[^>]*>.*?</script>",  # XSS
-    r"javascript:",                # JS protocol
-    r"on\w+\s*=",                  # Event handlers
-    r"eval\s*\(",                  # eval() calls
-    r"exec\s*\(",                  # exec() calls
-    r"__import__\s*\(",            # Python imports
-    r"subprocess",                 # Subprocess calls
-    r"os\.system",                 # System calls
-    r"open\s*\(",                  # File operations
-    r"\.\./",                      # Path traversal
+    r"javascript:",  # JS protocol
+    r"on\w+\s*=",  # Event handlers
+    r"eval\s*\(",  # eval() calls
+    r"exec\s*\(",  # exec() calls
+    r"__import__\s*\(",  # Python imports
+    r"subprocess",  # Subprocess calls
+    r"os\.system",  # System calls
+    r"open\s*\(",  # File operations
+    r"\.\./",  # Path traversal
 ]
 
 MAX_INPUT_LENGTH = 8192  # Maximum input length in characters
@@ -168,14 +178,18 @@ def validate_path(path: str, allowed_dirs: Optional[List[str]] = None) -> bool:
 
     # Check for path traversal
     if ".." in str(path):
-        logger.warning("Path traversal detected: %s", sanitize_for_log(path))  # codeql[py/cleartext-logging]
+        logger.warning(
+            "Path traversal detected: %s", sanitize_for_log(path)
+        )  # codeql[py/cleartext-logging]
         return False
 
     # Check against allowed directories
     if allowed_dirs:
         allowed_resolved = [Path(d).resolve() for d in allowed_dirs]
         if not any(str(resolved).startswith(str(d)) for d in allowed_resolved):
-            logger.warning("Path outside allowed directories: %s", sanitize_for_log(path))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Path outside allowed directories: %s", sanitize_for_log(path)
+            )  # codeql[py/cleartext-logging]
             return False
 
     return True
@@ -185,9 +199,11 @@ def validate_path(path: str, allowed_dirs: Optional[List[str]] = None) -> bool:
 # Rate Limiting
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class RateLimitConfig:
     """Rate limiting configuration for API endpoints."""
+
     max_requests: int = 100
     window_seconds: int = 60
     burst_size: int = 10
@@ -217,6 +233,7 @@ SECURITY_HEADERS = {
 # ---------------------------------------------------------------------------
 # Secure Defaults
 # ---------------------------------------------------------------------------
+
 
 class SecureDefaults:
     """

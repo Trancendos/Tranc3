@@ -34,9 +34,11 @@ logger = logging.getLogger(__name__)
 # Lazy component accessors (same pattern as spark_phase4_tools)
 # ---------------------------------------------------------------------------
 
+
 def _neural_mesh():
     try:
         from src.neural.neural_mesh import NeuralMesh  # noqa: F401  # intentional top-level import
+
         if not hasattr(_neural_mesh, "_inst") or _neural_mesh._inst is None:
             _neural_mesh._inst = NeuralMesh()
         return _neural_mesh._inst
@@ -47,7 +49,10 @@ def _neural_mesh():
 
 def _collective_memory():
     try:
-        from src.neural.collective_memory import CollectiveMemory  # noqa: F401  # intentional top-level import
+        from src.neural.collective_memory import (
+            CollectiveMemory,  # noqa: F401  # intentional top-level import
+        )
+
         if not hasattr(_collective_memory, "_inst") or _collective_memory._inst is None:
             _collective_memory._inst = CollectiveMemory()
         return _collective_memory._inst
@@ -58,7 +63,10 @@ def _collective_memory():
 
 def _meta_learner():
     try:
-        from src.neural.meta_learner import MetaLearner  # noqa: F401  # intentional top-level import
+        from src.neural.meta_learner import (
+            MetaLearner,  # noqa: F401  # intentional top-level import
+        )
+
         if not hasattr(_meta_learner, "_inst") or _meta_learner._inst is None:
             _meta_learner._inst = MetaLearner()
         return _meta_learner._inst
@@ -69,7 +77,10 @@ def _meta_learner():
 
 def _attention_router():
     try:
-        from src.neural.attention_router import AttentionRouter  # noqa: F401  # intentional top-level import
+        from src.neural.attention_router import (
+            AttentionRouter,  # noqa: F401  # intentional top-level import
+        )
+
         if not hasattr(_attention_router, "_inst") or _attention_router._inst is None:
             _attention_router._inst = AttentionRouter()
         return _attention_router._inst
@@ -80,7 +91,10 @@ def _attention_router():
 
 def _causal_reasoner():
     try:
-        from src.intelligence.causal_reasoner import CausalReasoner  # noqa: F401  # intentional top-level import
+        from src.intelligence.causal_reasoner import (
+            CausalReasoner,  # noqa: F401  # intentional top-level import
+        )
+
         if not hasattr(_causal_reasoner, "_inst") or _causal_reasoner._inst is None:
             _causal_reasoner._inst = CausalReasoner()
         return _causal_reasoner._inst
@@ -91,7 +105,10 @@ def _causal_reasoner():
 
 def _knowledge_graph():
     try:
-        from src.intelligence.semantic_knowledge import SemanticKnowledgeGraph  # noqa: F401  # intentional top-level import
+        from src.intelligence.semantic_knowledge import (
+            SemanticKnowledgeGraph,  # noqa: F401  # intentional top-level import
+        )
+
         if not hasattr(_knowledge_graph, "_inst") or _knowledge_graph._inst is None:
             _knowledge_graph._inst = SemanticKnowledgeGraph()
         return _knowledge_graph._inst
@@ -104,14 +121,22 @@ def _knowledge_graph():
 # Import base types from nodes.py (late import to avoid circular deps)
 # ---------------------------------------------------------------------------
 
+
 def _import_base():
-    from src.workflow.nodes import BaseNode, NodeConfig, NodeResult, NodeType  # codeql[py/cyclic-import]
+    from src.workflow.nodes import (  # codeql[py/cyclic-import]
+        BaseNode,
+        NodeConfig,
+        NodeResult,
+        NodeType,
+    )
+
     return BaseNode, NodeConfig, NodeResult, NodeType
 
 
 # ---------------------------------------------------------------------------
 # NeuralMeshNode
 # ---------------------------------------------------------------------------
+
 
 class NeuralMeshNode:
     """
@@ -131,6 +156,7 @@ class NeuralMeshNode:
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
         from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
+
         t0 = time.monotonic()
         cfg = self.config.config
         action = cfg.get("action", "emit")
@@ -139,7 +165,11 @@ class NeuralMeshNode:
             if mesh is None:
                 raise RuntimeError("NeuralMesh not available")
             if action == "emit":
-                from src.neural.neural_mesh import MeshNode, Signal  # noqa: F401  # intentional top-level import
+                from src.neural.neural_mesh import (  # noqa: F401  # intentional top-level import
+                    MeshNode,
+                    Signal,
+                )
+
                 source_id = cfg.get("source_id", "workflow")
                 signal_type = cfg.get("signal_type", "workflow_event")
                 payload_key = cfg.get("payload_key")
@@ -190,6 +220,7 @@ class NeuralMeshNode:
 # CollectiveMemoryNode
 # ---------------------------------------------------------------------------
 
+
 class CollectiveMemoryNode:
     """
     Store or retrieve entries from the Tranc3 CollectiveMemory.
@@ -213,6 +244,7 @@ class CollectiveMemoryNode:
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
         from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
+
         t0 = time.monotonic()
         cfg = self.config.config
         action = cfg.get("action", "store")
@@ -221,7 +253,10 @@ class CollectiveMemoryNode:
             if cm is None:
                 raise RuntimeError("CollectiveMemory not available")
             if action == "store":
-                from src.neural.collective_memory import MemoryPriority  # noqa: F401  # intentional top-level import
+                from src.neural.collective_memory import (
+                    MemoryPriority,  # noqa: F401  # intentional top-level import
+                )
+
                 key = cfg.get("key") or context.get("workflow_id", "unknown")
                 value_key = cfg.get("value_key", "output")
                 value = inputs.get(value_key, inputs)
@@ -229,11 +264,20 @@ class CollectiveMemoryNode:
                 tags = set(cfg.get("tags", []))
                 ttl = float(cfg.get("ttl", 3600))
                 pstr = cfg.get("priority", "NORMAL").upper()
-                priority = MemoryPriority[pstr] if pstr in MemoryPriority.__members__ else MemoryPriority.NORMAL
+                priority = (
+                    MemoryPriority[pstr]
+                    if pstr in MemoryPriority.__members__
+                    else MemoryPriority.NORMAL
+                )
                 source = cfg.get("source", context.get("workflow_id", "workflow"))
                 entry_id = await cm.store(
-                    key=key, value=value, topic=topic, tags=tags,
-                    ttl=ttl, priority=priority, source=source,
+                    key=key,
+                    value=value,
+                    topic=topic,
+                    tags=tags,
+                    ttl=ttl,
+                    priority=priority,
+                    source=source,
                 )
                 output = {"action": "store", "key": key, "entry_id": entry_id}
             elif action == "retrieve":
@@ -290,6 +334,7 @@ class CollectiveMemoryNode:
 # MetaLearnNode
 # ---------------------------------------------------------------------------
 
+
 class MetaLearnNode:
     """
     Adapt workflow task parameters using the MetaLearner few-shot engine.
@@ -312,6 +357,7 @@ class MetaLearnNode:
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
         from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
+
         t0 = time.monotonic()
         cfg = self.config.config
         try:
@@ -329,8 +375,8 @@ class MetaLearnNode:
             result = await ml.adapt(
                 domain=domain,
                 task_type=task_type,
-                input_signature={k: "str" for k in input_schema},
-                output_signature={k: "str" for k in output_schema},
+                input_signature=dict.fromkeys(input_schema, "str"),
+                output_signature=dict.fromkeys(output_schema, "str"),
                 tags=tags,
                 current_parameters=base_params,
             )
@@ -344,7 +390,9 @@ class MetaLearnNode:
             if cfg.get("record_outcome") and result:
                 outcome_key = cfg.get("outcome_key", "success")
                 success = bool(inputs.get(outcome_key, True))
-                await ml.record_outcome(result.prototype_id, success=success, parameters=base_params)
+                await ml.record_outcome(
+                    result.prototype_id, success=success, parameters=base_params
+                )
             return NodeResult(
                 node_id=self.config.id,
                 success=True,
@@ -368,6 +416,7 @@ class MetaLearnNode:
 # AttentionRouteNode
 # ---------------------------------------------------------------------------
 
+
 class AttentionRouteNode:
     """
     Select the optimal downstream service using transformer-style attention routing.
@@ -388,13 +437,17 @@ class AttentionRouteNode:
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
         from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
+
         t0 = time.monotonic()
         cfg = self.config.config
         try:
             router = _attention_router()
             if router is None:
                 raise RuntimeError("AttentionRouter not available")
-            from src.neural.attention_router import RoutingRequest  # noqa: F401  # intentional top-level import
+            from src.neural.attention_router import (
+                RoutingRequest,  # noqa: F401  # intentional top-level import
+            )
+
             # Resolve query from config or input
             query_key = cfg.get("query_input_key")
             query = str(inputs.get(query_key, "")) if query_key else cfg.get("query", "")
@@ -441,6 +494,7 @@ class AttentionRouteNode:
 # CausalReasonNode
 # ---------------------------------------------------------------------------
 
+
 class CausalReasonNode:
     """
     Apply causal inference in a workflow step: predict, diagnose, or counterfactual.
@@ -462,6 +516,7 @@ class CausalReasonNode:
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
         from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
+
         t0 = time.monotonic()
         cfg = self.config.config
         action = cfg.get("action", "predict")
@@ -470,8 +525,10 @@ class CausalReasonNode:
             if cr is None:
                 raise RuntimeError("CausalReasoner not available")
             obs_key = cfg.get("observations_key", "observations")
-            observations = {**dict(cfg.get("static_observations", {})),
-                            **dict(inputs.get(obs_key, {}))}
+            observations = {
+                **dict(cfg.get("static_observations", {})),
+                **dict(inputs.get(obs_key, {})),
+            }
             # All CausalReasoner methods are async — must await each call.
             for var, val in observations.items():
                 await cr.observe(var, float(val) if isinstance(val, (int, float)) else 1.0)
@@ -502,16 +559,15 @@ class CausalReasonNode:
                 }
             elif action == "counterfactual":
                 int_key = cfg.get("interventions_key", "interventions")
-                interventions = {**dict(cfg.get("static_interventions", {})),
-                                 **dict(inputs.get(int_key, {}))}
+                interventions = {
+                    **dict(cfg.get("static_interventions", {})),
+                    **dict(inputs.get(int_key, {})),
+                }
                 target_vars = list(cfg.get("target_variables", []))
                 observed_effects = target_vars or list(observations.keys())
                 # counterfactual(observed_effects, intervention, max_results)
                 # The API takes a single intervention string; use first key if dict
-                intervention_str = (
-                    next(iter(interventions.keys()), "")
-                    if interventions else ""
-                )
+                intervention_str = next(iter(interventions.keys()), "") if interventions else ""
                 result = await cr.counterfactual(
                     observed_effects=observed_effects,
                     intervention=intervention_str,
@@ -549,6 +605,7 @@ class CausalReasonNode:
 # KnowledgeGraphNode
 # ---------------------------------------------------------------------------
 
+
 class KnowledgeGraphNode:
     """
     Interact with the Tranc3 Semantic Knowledge Graph in a workflow step.
@@ -576,6 +633,7 @@ class KnowledgeGraphNode:
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
         from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
+
         t0 = time.monotonic()
         cfg = self.config.config
         action = cfg.get("action", "query")
@@ -584,7 +642,10 @@ class KnowledgeGraphNode:
             if kg is None:
                 raise RuntimeError("SemanticKnowledgeGraph not available")
             if action == "add":
-                from src.intelligence.semantic_knowledge import KnowledgeNode  # noqa: F401  # intentional top-level import
+                from src.intelligence.semantic_knowledge import (
+                    KnowledgeNode,  # noqa: F401  # intentional top-level import
+                )
+
                 node = KnowledgeNode(
                     label=cfg.get("node_label", inputs.get("label", "")),
                     semantic_type=cfg.get("node_type", "entity"),
@@ -595,8 +656,12 @@ class KnowledgeGraphNode:
                 )
                 node_id = await kg.add_node(node)
                 stats = await kg.stats()
-                output = {"action": "add", "node_id": node_id,
-                          "fingerprint": node.fingerprint, "stats": stats}
+                output = {
+                    "action": "add",
+                    "node_id": node_id,
+                    "fingerprint": node.fingerprint,
+                    "stats": stats,
+                }
             elif action == "query":
                 criteria = {}
                 for k in ("semantic_type", "tag", "label", "min_confidence", "provenance"):
@@ -609,13 +674,22 @@ class KnowledgeGraphNode:
                 nodes = await kg.query_nodes(**criteria)
                 output = {
                     "action": "query",
-                    "nodes": [{"id": n.id, "label": n.label,
-                               "semantic_type": n.semantic_type,
-                               "confidence": n.confidence} for n in nodes[:limit]],
+                    "nodes": [
+                        {
+                            "id": n.id,
+                            "label": n.label,
+                            "semantic_type": n.semantic_type,
+                            "confidence": n.confidence,
+                        }
+                        for n in nodes[:limit]
+                    ],
                     "count": len(nodes),
                 }
             elif action == "path":
-                from src.intelligence.semantic_knowledge import EdgeType  # noqa: F401  # intentional top-level import
+                from src.intelligence.semantic_knowledge import (
+                    EdgeType,  # noqa: F401  # intentional top-level import
+                )
+
                 src_key = cfg.get("source_id_key", "source_id")
                 tgt_key = cfg.get("target_id_key", "target_id")
                 src_id = inputs.get(src_key, cfg.get("source_id"))
@@ -623,28 +697,29 @@ class KnowledgeGraphNode:
                 etype_str = cfg.get("edge_type", "").upper()
                 etype = EdgeType[etype_str] if etype_str in EdgeType.__members__ else None
                 if cfg.get("all_paths"):
-                    paths = await kg.all_paths(src_id, tgt_id,
-                                               max_depth=int(cfg.get("max_depth", 6)),
-                                               edge_type=etype)
-                    output = {"action": "path", "mode": "all", "paths": paths,
-                              "count": len(paths)}
+                    paths = await kg.all_paths(
+                        src_id, tgt_id, max_depth=int(cfg.get("max_depth", 6)), edge_type=etype
+                    )
+                    output = {"action": "path", "mode": "all", "paths": paths, "count": len(paths)}
                 else:
                     path = await kg.shortest_path(src_id, tgt_id, edge_type=etype)
-                    output = {"action": "path", "mode": "shortest", "path": path,
-                              "length": len(path) - 1 if path else None}
+                    output = {
+                        "action": "path",
+                        "mode": "shortest",
+                        "path": path,
+                        "length": len(path) - 1 if path else None,
+                    }
             elif action == "expand":
                 src_key = cfg.get("source_id_key", "node_id")
                 node_id = inputs.get(src_key, cfg.get("node_id"))
                 depth = int(cfg.get("depth", 2))
                 min_conf = float(cfg.get("min_confidence", 0.0))
-                expanded = await kg.semantic_expand(node_id, depth=depth,
-                                                    min_confidence=min_conf)
+                expanded = await kg.semantic_expand(node_id, depth=depth, min_confidence=min_conf)
                 output = {
                     "action": "expand",
                     "seed": node_id,
                     "expanded": [
-                        {"id": nid, "label": n.label,
-                         "confidence": round(c, 4)}
+                        {"id": nid, "label": n.label, "confidence": round(c, 4)}
                         for nid, (n, c) in expanded.items()
                     ],
                     "count": len(expanded),
@@ -674,6 +749,7 @@ class KnowledgeGraphNode:
 # ForesightNode
 # ---------------------------------------------------------------------------
 
+
 class ForesightNode:
     """
     Adaptive trajectory / intent prediction step in a workflow.
@@ -694,6 +770,7 @@ class ForesightNode:
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
         from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
+
         t0 = time.monotonic()
         cfg = self.config.config
         mode = cfg.get("mode", "foresight")
@@ -702,7 +779,10 @@ class ForesightNode:
         try:
             if mode in ("foresight", "both"):
                 try:
-                    from src.adaptive.foresight import ConversationTrajectoryPredictor  # noqa: F401  # intentional top-level import
+                    from src.adaptive.foresight import (
+                        ConversationTrajectoryPredictor,  # noqa: F401  # intentional top-level import
+                    )
+
                     predictor = ConversationTrajectoryPredictor()
                     hist_key = cfg.get("history_key", "history")
                     history = inputs.get(hist_key, [])
@@ -723,7 +803,10 @@ class ForesightNode:
                     output["foresight_error"] = str(fe)
             if mode in ("intent", "both"):
                 try:
-                    from src.analytics.predictive import IntentPredictor  # noqa: F401  # intentional top-level import
+                    from src.analytics.predictive import (
+                        IntentPredictor,  # noqa: F401  # intentional top-level import
+                    )
+
                     predictor = IntentPredictor()
                     msg_key = cfg.get("message_key", "message")
                     message = str(inputs.get(msg_key, ""))
@@ -786,6 +869,7 @@ def extend_node_registry(registry: Dict[str, Any]) -> int:
         # Try to find matching enum member
         try:
             from src.workflow.nodes import NodeType  # codeql[py/cyclic-import]
+
             if hasattr(NodeType, type_name):
                 registry[NodeType(type_name)] = node_class
             else:

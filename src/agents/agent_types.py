@@ -66,9 +66,9 @@ class AgentProfile:
     description: str
     capability_tags: FrozenSet[str]
     preferred_tools: FrozenSet[str]
-    creativity: float = 0.5       # 0.0 (conservative) to 1.0 (creative)
-    caution: float = 0.5          # 0.0 (aggressive) to 1.0 (cautious)
-    thoroughness: float = 0.5     # 0.0 (quick) to 1.0 (thorough)
+    creativity: float = 0.5  # 0.0 (conservative) to 1.0 (creative)
+    caution: float = 0.5  # 0.0 (aggressive) to 1.0 (cautious)
+    thoroughness: float = 0.5  # 0.0 (quick) to 1.0 (thorough)
     max_concurrent_tasks: int = 3
     default_priority: int = 5
     reflection_enabled: bool = True
@@ -118,14 +118,25 @@ PROFILES: Dict[AgentType, AgentProfile] = {
             "Balanced creativity, caution, and thoroughness. Good default choice "
             "when no specialist is required."
         ),
-        capability_tags=frozenset({
-            "general", "reasoning", "communication", "planning",
-            "tool-use", "adaptation",
-        }),
-        preferred_tools=frozenset({
-            "execute_code", "search_skills", "query_vector_store",
-            "run_workflow", "get_system_health",
-        }),
+        capability_tags=frozenset(
+            {
+                "general",
+                "reasoning",
+                "communication",
+                "planning",
+                "tool-use",
+                "adaptation",
+            }
+        ),
+        preferred_tools=frozenset(
+            {
+                "execute_code",
+                "search_skills",
+                "query_vector_store",
+                "run_workflow",
+                "get_system_health",
+            }
+        ),
         creativity=0.5,
         caution=0.5,
         thoroughness=0.5,
@@ -139,15 +150,28 @@ PROFILES: Dict[AgentType, AgentProfile] = {
             "searching knowledge bases, analyzing documents, and synthesizing "
             "findings into coherent reports. High thoroughness, moderate caution."
         ),
-        capability_tags=frozenset({
-            "research", "search", "analysis", "synthesis", "knowledge",
-            "document-processing", "summarization",
-        }),
-        preferred_tools=frozenset({
-            "query_vector_store", "search_skills", "ingest_document",
-            "knowledge_graph_query", "knowledge_graph_path",
-            "knowledge_graph_expand", "collective_memory_query",
-        }),
+        capability_tags=frozenset(
+            {
+                "research",
+                "search",
+                "analysis",
+                "synthesis",
+                "knowledge",
+                "document-processing",
+                "summarization",
+            }
+        ),
+        preferred_tools=frozenset(
+            {
+                "query_vector_store",
+                "search_skills",
+                "ingest_document",
+                "knowledge_graph_query",
+                "knowledge_graph_path",
+                "knowledge_graph_expand",
+                "collective_memory_query",
+            }
+        ),
         creativity=0.4,
         caution=0.6,
         thoroughness=0.8,
@@ -161,14 +185,26 @@ PROFILES: Dict[AgentType, AgentProfile] = {
             "Skilled at writing clean code, fixing bugs, adding tests, and "
             "refactoring for performance and maintainability."
         ),
-        capability_tags=frozenset({
-            "coding", "debugging", "refactoring", "testing", "code-review",
-            "implementation", "optimization",
-        }),
-        preferred_tools=frozenset({
-            "execute_code", "search_skills", "run_workflow",
-            "neural_mesh_emit", "attention_route",
-        }),
+        capability_tags=frozenset(
+            {
+                "coding",
+                "debugging",
+                "refactoring",
+                "testing",
+                "code-review",
+                "implementation",
+                "optimization",
+            }
+        ),
+        preferred_tools=frozenset(
+            {
+                "execute_code",
+                "search_skills",
+                "run_workflow",
+                "neural_mesh_emit",
+                "attention_route",
+            }
+        ),
         creativity=0.6,
         caution=0.7,
         thoroughness=0.7,
@@ -182,14 +218,26 @@ PROFILES: Dict[AgentType, AgentProfile] = {
             "into manageable subtasks, determines optimal execution order, and "
             "allocates resources. High thoroughness, strong planning capabilities."
         ),
-        capability_tags=frozenset({
-            "planning", "decomposition", "scheduling", "resource-allocation",
-            "prioritization", "workflow-design", "estimation",
-        }),
-        preferred_tools=frozenset({
-            "run_workflow", "register_workflow", "grid_list_workflows",
-            "attention_route", "causal_predict",
-        }),
+        capability_tags=frozenset(
+            {
+                "planning",
+                "decomposition",
+                "scheduling",
+                "resource-allocation",
+                "prioritization",
+                "workflow-design",
+                "estimation",
+            }
+        ),
+        preferred_tools=frozenset(
+            {
+                "run_workflow",
+                "register_workflow",
+                "grid_list_workflows",
+                "attention_route",
+                "causal_predict",
+            }
+        ),
         creativity=0.3,
         caution=0.6,
         thoroughness=0.9,
@@ -203,14 +251,27 @@ PROFILES: Dict[AgentType, AgentProfile] = {
             "statistical reasoning, anomaly detection, trend identification, "
             "and generating data-driven insights."
         ),
-        capability_tags=frozenset({
-            "analysis", "statistics", "anomaly-detection", "pattern-recognition",
-            "data-processing", "visualization", "insight-generation",
-        }),
-        preferred_tools=frozenset({
-            "execute_code", "query_vector_store", "collective_memory_query",
-            "causal_predict", "causal_diagnose", "meta_learn_adapt",
-        }),
+        capability_tags=frozenset(
+            {
+                "analysis",
+                "statistics",
+                "anomaly-detection",
+                "pattern-recognition",
+                "data-processing",
+                "visualization",
+                "insight-generation",
+            }
+        ),
+        preferred_tools=frozenset(
+            {
+                "execute_code",
+                "query_vector_store",
+                "collective_memory_query",
+                "causal_predict",
+                "causal_diagnose",
+                "meta_learn_adapt",
+            }
+        ),
         creativity=0.3,
         caution=0.7,
         thoroughness=0.8,
@@ -224,14 +285,27 @@ PROFILES: Dict[AgentType, AgentProfile] = {
             "Orchestrates teams of agents, manages inter-agent communication, "
             "and ensures coherent execution of complex multi-step plans."
         ),
-        capability_tags=frozenset({
-            "orchestration", "coordination", "communication", "delegation",
-            "monitoring", "workflow-management", "agent-routing",
-        }),
-        preferred_tools=frozenset({
-            "run_workflow", "register_workflow", "grid_list_workflows",
-            "neural_mesh_emit", "attention_route", "collective_memory_store",
-        }),
+        capability_tags=frozenset(
+            {
+                "orchestration",
+                "coordination",
+                "communication",
+                "delegation",
+                "monitoring",
+                "workflow-management",
+                "agent-routing",
+            }
+        ),
+        preferred_tools=frozenset(
+            {
+                "run_workflow",
+                "register_workflow",
+                "grid_list_workflows",
+                "neural_mesh_emit",
+                "attention_route",
+                "collective_memory_store",
+            }
+        ),
         creativity=0.4,
         caution=0.7,
         thoroughness=0.7,
@@ -245,14 +319,26 @@ PROFILES: Dict[AgentType, AgentProfile] = {
             "enforces safety constraints, validates outputs, and ensures system "
             "integrity. Very high caution and thoroughness."
         ),
-        capability_tags=frozenset({
-            "security", "compliance", "anomaly-detection", "safety",
-            "validation", "audit", "risk-assessment",
-        }),
-        preferred_tools=frozenset({
-            "get_system_health", "causal_diagnose", "collective_memory_query",
-            "observatory_observe", "attention_route",
-        }),
+        capability_tags=frozenset(
+            {
+                "security",
+                "compliance",
+                "anomaly-detection",
+                "safety",
+                "validation",
+                "audit",
+                "risk-assessment",
+            }
+        ),
+        preferred_tools=frozenset(
+            {
+                "get_system_health",
+                "causal_diagnose",
+                "collective_memory_query",
+                "observatory_observe",
+                "attention_route",
+            }
+        ),
         creativity=0.1,
         caution=0.95,
         thoroughness=0.95,

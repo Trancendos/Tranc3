@@ -32,6 +32,7 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
 
+
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
@@ -117,8 +118,10 @@ class OrdersDatabase:
         # orders table doesn't have is_active column; use status-based soft delete
         if soft:
             with self._cursor() as cur:
-                cur.execute(f"UPDATE orders SET status='cancelled', updated_at=? WHERE {id_field}=?",
-                            (datetime.now(timezone.utc).isoformat(), id_value))
+                cur.execute(
+                    f"UPDATE orders SET status='cancelled', updated_at=? WHERE {id_field}=?",
+                    (datetime.now(timezone.utc).isoformat(), id_value),
+                )
                 return cur.rowcount > 0
         else:
             with self._cursor() as cur:
@@ -168,6 +171,7 @@ async def health():
 # The database class above provides create(), get(), list(), update(), delete() methods
 # Implement domain-specific endpoints based on business requirements
 
+
 @app.get("/")
 async def list_all(limit: int = 50, offset: int = 0):
     """List all orders."""
@@ -210,4 +214,5 @@ async def delete_by_id(order_id: str):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

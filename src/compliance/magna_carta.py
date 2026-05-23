@@ -11,9 +11,7 @@ from shared_core.sanitize import sanitize_for_log
 logger = logging.getLogger(__name__)
 
 MAGNA_CARTA_ENABLED = os.getenv("MAGNA_CARTA_ENABLED", "false").lower() == "true"
-MAGNA_CARTA_CONFIG_PATH = os.getenv(
-    "MAGNA_CARTA_CONFIG_PATH", "./magna_carta_config.json"
-)
+MAGNA_CARTA_CONFIG_PATH = os.getenv("MAGNA_CARTA_CONFIG_PATH", "./magna_carta_config.json")
 
 
 class MagnaCartaCompliance:
@@ -29,9 +27,7 @@ class MagnaCartaCompliance:
         if self.enabled:
             logger.info("Magna Carta compliance framework ACTIVE")
         else:
-            logger.info(
-                "Magna Carta compliance framework INACTIVE — provide config to enable"
-            )
+            logger.info("Magna Carta compliance framework INACTIVE — provide config to enable")
 
     def _load_config(self) -> Optional[Dict]:
         if not self.enabled:
@@ -41,13 +37,19 @@ class MagnaCartaCompliance:
 
             with open(MAGNA_CARTA_CONFIG_PATH) as f:
                 config = json.load(f)
-                logger.info("Magna Carta config loaded from %s", sanitize_for_log(MAGNA_CARTA_CONFIG_PATH))  # codeql[py/cleartext-logging]
+                logger.info(
+                    "Magna Carta config loaded from %s", sanitize_for_log(MAGNA_CARTA_CONFIG_PATH)
+                )  # codeql[py/cleartext-logging]
                 return config
         except FileNotFoundError:
-            logger.warning("Magna Carta config not found at %s", sanitize_for_log(MAGNA_CARTA_CONFIG_PATH))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Magna Carta config not found at %s", sanitize_for_log(MAGNA_CARTA_CONFIG_PATH)
+            )  # codeql[py/cleartext-logging]
             return None
         except Exception as e:
-            logger.error("Magna Carta config load error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.error(
+                "Magna Carta config load error: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return None
 
     def check_request(self, request_data: Dict) -> Dict:
@@ -91,7 +93,11 @@ class MagnaCartaCompliance:
     def audit_log(self, event: str, data: Dict):
         """Log compliance-relevant events"""
         if self.enabled:
-            logger.info("MAGNA_CARTA_AUDIT | event=%s | data=%s", sanitize_for_log(event), sanitize_for_log(data))  # codeql[py/cleartext-logging]
+            logger.info(
+                "MAGNA_CARTA_AUDIT | event=%s | data=%s",
+                sanitize_for_log(event),
+                sanitize_for_log(data),
+            )  # codeql[py/cleartext-logging]
 
 
 # Singleton

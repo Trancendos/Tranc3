@@ -109,19 +109,19 @@ class AutoRemediator:
                 with open(filepath, "w", encoding="utf-8") as f:
                     f.write(content)
 
-            self.applied_fixes.append({
-                "file": filepath,
-                "violations_fixed": len(violations),
-                "dry_run": self.dry_run,
-            })
+            self.applied_fixes.append(
+                {
+                    "file": filepath,
+                    "violations_fixed": len(violations),
+                    "dry_run": self.dry_run,
+                }
+            )
 
     # -----------------------------------------------------------------------
     # Individual fix implementations
     # -----------------------------------------------------------------------
 
-    def _fix_log_injection(
-        self, content: str, violations: List[Violation], filepath: str
-    ) -> str:
+    def _fix_log_injection(self, content: str, violations: List[Violation], filepath: str) -> str:
         """Convert f-string logger calls to %-style with sanitize_for_log().
 
         Before:  logger.info(f"User {username} logged in")
@@ -146,7 +146,9 @@ class AutoRemediator:
                     if args:
                         args_str = ", ".join(f"sanitize_for_log({a})" for a in args)
                         if extra_args:
-                            new_line = f'{indent}{logger_call}("{new_format}", {args_str}, {extra_args})'
+                            new_line = (
+                                f'{indent}{logger_call}("{new_format}", {args_str}, {extra_args})'
+                            )
                         else:
                             new_line = f'{indent}{logger_call}("{new_format}", {args_str})'
                         lines[v.line - 1] = new_line
@@ -187,9 +189,7 @@ class AutoRemediator:
                 result = result.replace(match.group(0), "%s", 1)
         return result, args
 
-    def _fix_info_exposure(
-        self, content: str, violations: List[Violation], filepath: str
-    ) -> str:
+    def _fix_info_exposure(self, content: str, violations: List[Violation], filepath: str) -> str:
         """Replace str(exc) in error details with safe_error_detail().
 
         Before:  detail=str(exc)
@@ -197,13 +197,16 @@ class AutoRemediator:
         """
         # Pattern: detail=str(exc) or error=str(exc) or message=str(exc)
         content = re.sub(
-            r'(detail|error|message)=str\((\w+)\)',
-            r'\1=safe_error_detail(\2, 500)',
+            r"(detail|error|message)=str\((\w+)\)",
+            r"\1=safe_error_detail(\2, 500)",
             content,
         )
 
         # Add import if needed
-        if "safe_error_detail(" in content and "from shared_core.error_handlers import safe_error_detail" not in content:
+        if (
+            "safe_error_detail(" in content
+            and "from shared_core.error_handlers import safe_error_detail" not in content
+        ):
             content = self._add_import(
                 content,
                 "from shared_core.error_handlers import safe_error_detail",
@@ -211,9 +214,7 @@ class AutoRemediator:
 
         return content
 
-    def _fix_bare_except(
-        self, content: str, violations: List[Violation], filepath: str
-    ) -> str:
+    def _fix_bare_except(self, content: str, violations: List[Violation], filepath: str) -> str:
         """Replace bare 'except:' with 'except Exception:'.
 
         Before:  except:
@@ -223,27 +224,23 @@ class AutoRemediator:
         for v in violations:
             if v.line - 1 < len(lines):
                 line = lines[v.line - 1]
-                lines[v.line - 1] = re.sub(r'except\s*:', 'except Exception:', line, count=1)
+                lines[v.line - 1] = re.sub(r"except\s*:", "except Exception:", line, count=1)
         return "\n".join(lines)
 
-    def _fix_type_exc(
-        self, content: str, violations: List[Violation], filepath: str
-    ) -> str:
+    def _fix_type_exc(self, content: str, violations: List[Violation], filepath: str) -> str:
         """Replace type(__exc).__name__ with 'unknown'.
 
         Before:  type(__exc).__name__
         After:   "unknown"
         """
         content = re.sub(
-            r'type\(___?exc_?\)\.__name__',
+            r"type\(___?exc_?\)\.__name__",
             '"unknown"',
             content,
         )
         return content
 
-    def _fix_unclosed_file(
-        self, content: str, violations: List[Violation], filepath: str
-    ) -> str:
+    def _fix_unclosed_file(self, content: str, violations: List[Violation], filepath: str) -> str:
         """Convert open().read() to context manager pattern.
 
         Before:  data = open(path).read()
@@ -253,14 +250,14 @@ class AutoRemediator:
         """
         # Pattern: var = open(path).read()
         content = re.sub(
-            r'(\s*)(\w+)\s*=\s*open\(([^)]+)\)\.read\(\)',
-            r'\1with open(\3) as _f:\n\1    \2 = _f.read()',
+            r"(\s*)(\w+)\s*=\s*open\(([^)]+)\)\.read\(\)",
+            r"\1with open(\3) as _f:\n\1    \2 = _f.read()",
             content,
         )
         # Pattern: open(path).read() as standalone expression
         content = re.sub(
-            r'(\s*)open\(([^)]+)\)\.read\(\)',
-            r'\1with open(\2) as _f: _f.read()',
+            r"(\s*)open\(([^)]+)\)\.read\(\)",
+            r"\1with open(\2) as _f: _f.read()",
             content,
         )
         return content

@@ -15,10 +15,10 @@ from src.auth.zero_trust import (
     ZeroTrustOptions,
 )
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # ZeroTrustContext Model Tests
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestZeroTrustContext:
     """Pydantic model for Zero Trust context."""
@@ -69,6 +69,7 @@ class TestZeroTrustContext:
 # ZeroTrustOptions Model Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestZeroTrustOptions:
     """Pydantic model for Zero Trust configuration."""
 
@@ -100,6 +101,7 @@ class TestZeroTrustOptions:
 # DevicePostureStatus & AccessPolicy Enums
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestEnums:
     """Enum values for device posture and access policy."""
 
@@ -117,6 +119,7 @@ class TestEnums:
 # ─────────────────────────────────────────────────────────────────────────────
 # Context Extraction Tests
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestExtractContext:
     """Extract Zero Trust context from request headers."""
@@ -200,10 +203,12 @@ class TestExtractContext:
     def test_ip_address_prefers_x_client_ip(self):
         """X-Client-IP takes precedence over X-Forwarded-For."""
         mw = ZeroTrustMiddleware()
-        ctx = mw.extract_context({
-            "X-Client-IP": "192.168.1.1",
-            "X-Forwarded-For": "10.0.0.1",
-        })
+        ctx = mw.extract_context(
+            {
+                "X-Client-IP": "192.168.1.1",
+                "X-Forwarded-For": "10.0.0.1",
+            }
+        )
         assert ctx.ip_address == "192.168.1.1"
 
     def test_user_agent_extraction(self):
@@ -220,20 +225,24 @@ class TestExtractContext:
         """Risk score should be calculated during extraction."""
         mw = ZeroTrustMiddleware()
         # Unhealthy device + no MFA → high risk
-        ctx = mw.extract_context({
-            "X-Device-Posture": "unhealthy",
-            "X-MFA-Verified": "false",
-        })
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "unhealthy",
+                "X-MFA-Verified": "false",
+            }
+        )
         assert ctx.risk_score > 0
 
     def test_access_policy_determined(self):
         """Access policy should be determined during extraction."""
         mw = ZeroTrustMiddleware()
         # Healthy device + MFA verified → ALLOW
-        ctx = mw.extract_context({
-            "X-Device-Posture": "healthy",
-            "X-MFA-Verified": "true",
-        })
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "healthy",
+                "X-MFA-Verified": "true",
+            }
+        )
         assert ctx.access_policy == AccessPolicy.ALLOW
 
 
@@ -241,70 +250,86 @@ class TestExtractContext:
 # Risk Score Calculation Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestRiskScoring:
     """Risk score calculation from device posture and MFA status."""
 
     def test_healthy_device_mfa_verified_low_risk(self):
         mw = ZeroTrustMiddleware()
-        ctx = mw.extract_context({
-            "X-Device-Posture": "healthy",
-            "X-MFA-Verified": "true",
-        })
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "healthy",
+                "X-MFA-Verified": "true",
+            }
+        )
         assert ctx.risk_score == 0  # No risk factors
 
     def test_healthy_device_no_mfa(self):
         mw = ZeroTrustMiddleware()
-        ctx = mw.extract_context({
-            "X-Device-Posture": "healthy",
-            "X-MFA-Verified": "false",
-        })
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "healthy",
+                "X-MFA-Verified": "false",
+            }
+        )
         assert ctx.risk_score == 10  # +10 for no MFA
 
     def test_unknown_device_no_mfa(self):
         mw = ZeroTrustMiddleware()
-        ctx = mw.extract_context({
-            "X-Device-Posture": "unknown",
-        })
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "unknown",
+            }
+        )
         # +20 for unknown device, +10 for no MFA = 30
         assert ctx.risk_score == 30
 
     def test_unhealthy_device_no_mfa(self):
         mw = ZeroTrustMiddleware()
-        ctx = mw.extract_context({
-            "X-Device-Posture": "unhealthy",
-        })
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "unhealthy",
+            }
+        )
         # +40 for unhealthy device, +10 for no MFA = 50
         assert ctx.risk_score == 50
 
     def test_unhealthy_device_mfa_verified(self):
         mw = ZeroTrustMiddleware()
-        ctx = mw.extract_context({
-            "X-Device-Posture": "unhealthy",
-            "X-MFA-Verified": "true",
-        })
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "unhealthy",
+                "X-MFA-Verified": "true",
+            }
+        )
         assert ctx.risk_score == 40  # +40 for unhealthy only
 
     def test_unknown_device_mfa_verified(self):
         mw = ZeroTrustMiddleware()
-        ctx = mw.extract_context({
-            "X-Device-Posture": "unknown",
-            "X-MFA-Verified": "true",
-        })
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "unknown",
+                "X-MFA-Verified": "true",
+            }
+        )
         assert ctx.risk_score == 20  # +20 for unknown only
 
     def test_risk_score_capped_at_100(self):
         """Risk score should never exceed 100."""
         mw = ZeroTrustMiddleware()
-        ctx = mw.extract_context({
-            "X-Device-Posture": "unhealthy",
-            "X-MFA-Verified": "false",
-        })
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "unhealthy",
+                "X-MFA-Verified": "false",
+            }
+        )
         assert ctx.risk_score <= 100
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Policy Evaluation Tests
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestEvaluate:
     """Evaluate Zero Trust context against policies for a path."""
@@ -331,10 +356,12 @@ class TestEvaluate:
         assert result.access_policy in (AccessPolicy.MFA_REQUIRED, AccessPolicy.DENY)
 
     def test_mfa_required_for_mfa_route_without_mfa(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            mfa_routes=["/admin"],
-            mfa_bypass_for_healthy=False,  # Disable bypass so healthy device still needs MFA
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                mfa_routes=["/admin"],
+                mfa_bypass_for_healthy=False,  # Disable bypass so healthy device still needs MFA
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.HEALTHY,
             mfa_verified=False,
@@ -344,9 +371,11 @@ class TestEvaluate:
         assert result.access_policy == AccessPolicy.MFA_REQUIRED
 
     def test_mfa_route_allowed_with_mfa(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            mfa_routes=["/admin"],
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                mfa_routes=["/admin"],
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.HEALTHY,
             mfa_verified=True,
@@ -357,10 +386,12 @@ class TestEvaluate:
 
     def test_mfa_bypass_for_healthy_device(self):
         """By default, healthy devices bypass MFA on MFA routes."""
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            mfa_routes=["/admin"],
-            mfa_bypass_for_healthy=True,
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                mfa_routes=["/admin"],
+                mfa_bypass_for_healthy=True,
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.HEALTHY,
             mfa_verified=False,
@@ -372,10 +403,12 @@ class TestEvaluate:
 
     def test_no_mfa_bypass_when_disabled(self):
         """When mfa_bypass_for_healthy=False, even healthy devices need MFA."""
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            mfa_routes=["/admin"],
-            mfa_bypass_for_healthy=False,
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                mfa_routes=["/admin"],
+                mfa_bypass_for_healthy=False,
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.HEALTHY,
             mfa_verified=False,
@@ -385,9 +418,11 @@ class TestEvaluate:
         assert result.access_policy == AccessPolicy.MFA_REQUIRED
 
     def test_healthy_device_required_for_protected_route(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            healthy_device_routes=["/api/internal"],
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                healthy_device_routes=["/api/internal"],
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.UNKNOWN,
             mfa_verified=True,
@@ -397,9 +432,11 @@ class TestEvaluate:
         assert result.access_policy == AccessPolicy.DENY
 
     def test_healthy_device_passes_protected_route(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            healthy_device_routes=["/api/internal"],
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                healthy_device_routes=["/api/internal"],
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.HEALTHY,
             mfa_verified=True,
@@ -409,10 +446,12 @@ class TestEvaluate:
         assert result.access_policy == AccessPolicy.ALLOW
 
     def test_non_matching_path_no_restrictions(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            mfa_routes=["/admin"],
-            healthy_device_routes=["/api/internal"],
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                mfa_routes=["/admin"],
+                healthy_device_routes=["/api/internal"],
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.HEALTHY,
             mfa_verified=True,
@@ -426,13 +465,16 @@ class TestEvaluate:
 # Geographic Policy Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestGeographicPolicies:
     """Country-based access controls."""
 
     def test_blocked_country_denied(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            blocked_countries=["XX"],
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                blocked_countries=["XX"],
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.HEALTHY,
             mfa_verified=True,
@@ -444,9 +486,11 @@ class TestGeographicPolicies:
         assert result.risk_score == 100
 
     def test_allowed_country_permitted(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            allowed_countries=["US", "GB"],
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                allowed_countries=["US", "GB"],
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.HEALTHY,
             mfa_verified=True,
@@ -457,9 +501,11 @@ class TestGeographicPolicies:
         assert result.access_policy == AccessPolicy.ALLOW
 
     def test_disallowed_country_denied(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            allowed_countries=["US", "GB"],
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                allowed_countries=["US", "GB"],
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.HEALTHY,
             mfa_verified=True,
@@ -471,15 +517,17 @@ class TestGeographicPolicies:
 
     def test_no_country_with_allowed_list(self):
         """When allowed_countries is set but country is None, access is allowed.
-        
+
         The evaluate code checks: `if context.country and context.country not in allowed_countries`
         When country is None, the first condition is False, so the check is skipped.
         This means requests without a country header are allowed through even with an allowlist.
         This is a known behavior — consider it a design choice or add a separate check.
         """
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            allowed_countries=["US"],
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                allowed_countries=["US"],
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.HEALTHY,
             mfa_verified=True,
@@ -492,10 +540,12 @@ class TestGeographicPolicies:
 
     def test_blocked_takes_precedence_over_allowed(self):
         """Blocked countries are checked before allowed countries."""
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            allowed_countries=["US", "XX"],
-            blocked_countries=["XX"],
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                allowed_countries=["US", "XX"],
+                blocked_countries=["XX"],
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.HEALTHY,
             mfa_verified=True,
@@ -523,13 +573,16 @@ class TestGeographicPolicies:
 # Enforce On All Routes Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestEnforceOnAllRoutes:
     """enforce_on_all_routes denies unhealthy devices on any route."""
 
     def test_unhealthy_device_denied_on_any_route(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            enforce_on_all_routes=True,
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                enforce_on_all_routes=True,
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.UNHEALTHY,
             mfa_verified=True,
@@ -539,9 +592,11 @@ class TestEnforceOnAllRoutes:
         assert result.access_policy == AccessPolicy.DENY
 
     def test_unhealthy_device_not_denied_when_not_enforced(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            enforce_on_all_routes=False,
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                enforce_on_all_routes=False,
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.UNHEALTHY,
             mfa_verified=True,
@@ -558,13 +613,16 @@ class TestEnforceOnAllRoutes:
 # Path Pattern Matching Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestPathPatternMatching:
     """Glob-style path matching for route policies."""
 
     def test_exact_path_match(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            mfa_routes=["/admin"],
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                mfa_routes=["/admin"],
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.UNKNOWN,
             mfa_verified=False,
@@ -574,9 +632,11 @@ class TestPathPatternMatching:
         assert result.access_policy == AccessPolicy.MFA_REQUIRED
 
     def test_glob_path_match(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            mfa_routes=["/admin/*"],
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                mfa_routes=["/admin/*"],
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.UNKNOWN,
             mfa_verified=False,
@@ -586,9 +646,11 @@ class TestPathPatternMatching:
         assert result.access_policy == AccessPolicy.MFA_REQUIRED
 
     def test_glob_no_match(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            mfa_routes=["/admin/*"],
-        ))
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                mfa_routes=["/admin/*"],
+            )
+        )
         ctx = ZeroTrustContext(
             device_posture=DevicePostureStatus.HEALTHY,
             mfa_verified=True,
@@ -601,6 +663,7 @@ class TestPathPatternMatching:
 # ─────────────────────────────────────────────────────────────────────────────
 # High Risk Score Tests
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestHighRiskScore:
     """Risk score thresholds for access policy."""
@@ -640,52 +703,67 @@ class TestHighRiskScore:
 # Integration: Full Request Flow Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestFullRequestFlow:
     """End-to-end: extract context from headers then evaluate."""
 
     def test_healthy_device_mfa_admin_access(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            mfa_routes=["/admin"],
-        ))
-        ctx = mw.extract_context({
-            "X-Device-Posture": "healthy",
-            "X-MFA-Verified": "true",
-            "X-Client-Country": "US",
-        })
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                mfa_routes=["/admin"],
+            )
+        )
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "healthy",
+                "X-MFA-Verified": "true",
+                "X-Client-Country": "US",
+            }
+        )
         result = mw.evaluate(ctx, "/admin")
         assert result.access_policy == AccessPolicy.ALLOW
 
     def test_no_mfa_admin_access(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            mfa_routes=["/admin"],
-            mfa_bypass_for_healthy=False,
-        ))
-        ctx = mw.extract_context({
-            "X-Device-Posture": "healthy",
-            "X-MFA-Verified": "false",
-            "X-Client-Country": "US",
-        })
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                mfa_routes=["/admin"],
+                mfa_bypass_for_healthy=False,
+            )
+        )
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "healthy",
+                "X-MFA-Verified": "false",
+                "X-Client-Country": "US",
+            }
+        )
         result = mw.evaluate(ctx, "/admin")
         assert result.access_policy == AccessPolicy.MFA_REQUIRED
 
     def test_blocked_country_overrides_healthy_device(self):
-        mw = ZeroTrustMiddleware(ZeroTrustOptions(
-            blocked_countries=["XX"],
-        ))
-        ctx = mw.extract_context({
-            "X-Device-Posture": "healthy",
-            "X-MFA-Verified": "true",
-            "X-Client-Country": "XX",
-        })
+        mw = ZeroTrustMiddleware(
+            ZeroTrustOptions(
+                blocked_countries=["XX"],
+            )
+        )
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "healthy",
+                "X-MFA-Verified": "true",
+                "X-Client-Country": "XX",
+            }
+        )
         result = mw.evaluate(ctx, "/api/data")
         assert result.access_policy == AccessPolicy.DENY
         assert result.risk_score == 100
 
     def test_unhealthy_device_denied(self):
         mw = ZeroTrustMiddleware()
-        ctx = mw.extract_context({
-            "X-Device-Posture": "unhealthy",
-            "X-MFA-Verified": "false",
-        })
+        ctx = mw.extract_context(
+            {
+                "X-Device-Posture": "unhealthy",
+                "X-MFA-Verified": "false",
+            }
+        )
         # Unhealthy device + no MFA → DENY (from _determine_policy during extraction)
         assert ctx.access_policy == AccessPolicy.DENY

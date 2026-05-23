@@ -13,9 +13,7 @@ import torch
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MODEL_PATH = os.getenv(
-    "TRANC3_MODEL_PATH", "./models/tranc3-v1/tranc3-final.pt"
-)
+_DEFAULT_MODEL_PATH = os.getenv("TRANC3_MODEL_PATH", "./models/tranc3-v1/tranc3-final.pt")
 _DEFAULT_TOKENIZER_PATH = os.getenv("TRANC3_TOKENIZER_PATH", "./models/tokenizer")
 
 # Generation defaults (overridable per-call)
@@ -49,9 +47,7 @@ class Tranc3Engine:
     ):
         self._model_path = Path(model_path or _DEFAULT_MODEL_PATH)
         self._tokenizer_path = Path(tokenizer_path or _DEFAULT_TOKENIZER_PATH)
-        self._device = torch.device(
-            device or ("cuda" if torch.cuda.is_available() else "cpu")
-        )
+        self._device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         self._model = None
         self._tokenizer = None
         self._loaded = False
@@ -104,9 +100,7 @@ class Tranc3Engine:
             vocab_size = state_dict["token_embeddings.weight"].shape[0]
             hidden_size = state_dict["token_embeddings.weight"].shape[1]
             num_layers = sum(
-                1
-                for k in state_dict
-                if k.startswith("layers.") and k.endswith(".norm1.weight")
+                1 for k in state_dict if k.startswith("layers.") and k.endswith(".norm1.weight")
             )
             num_heads = hidden_size // 64  # convention: head_dim = 64
 
@@ -142,9 +136,7 @@ class Tranc3Engine:
             self._bootstrap_mode = True
 
     def _resolve_checkpoint(self) -> Optional[Path]:
-        base = (
-            self._model_path if self._model_path.is_dir() else self._model_path.parent
-        )
+        base = self._model_path if self._model_path.is_dir() else self._model_path.parent
 
         for name in ("tranc3-final.pt", "tranc3-best.pt"):
             candidate = base / name
@@ -152,9 +144,7 @@ class Tranc3Engine:
                 return candidate
 
         # Find latest numbered checkpoint
-        checkpoints = sorted(
-            base.glob("checkpoint-*.pt"), key=lambda p: int(p.stem.split("-")[1])
-        )
+        checkpoints = sorted(base.glob("checkpoint-*.pt"), key=lambda p: int(p.stem.split("-")[1]))
         if checkpoints:
             return checkpoints[-1]
 
@@ -187,9 +177,7 @@ class Tranc3Engine:
             self.load()
 
         if self._bootstrap_mode:
-            return await self._bootstrap_response_async(
-                prompt, personality, system_prompt
-            )
+            return await self._bootstrap_response_async(prompt, personality, system_prompt)
 
         # Build chat-formatted input
         sys_text = system_prompt or self._default_system(personality)
@@ -220,9 +208,7 @@ class Tranc3Engine:
 
         # Decode only the newly generated tokens (after the input)
         new_ids = generated[0, input_tensor.shape[1] :].tolist()
-        response_text = self._tokenizer.decode(
-            new_ids, skip_special_tokens=True
-        ).strip()
+        response_text = self._tokenizer.decode(new_ids, skip_special_tokens=True).strip()
 
         return {
             "response": response_text,

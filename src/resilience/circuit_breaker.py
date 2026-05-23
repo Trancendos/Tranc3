@@ -14,14 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 class CircuitState(str, Enum):
-    CLOSED = "closed"       # Normal operation
-    OPEN = "open"           # Failing — reject requests
-    HALF_OPEN = "half_open" # Testing if service recovered
+    CLOSED = "closed"  # Normal operation
+    OPEN = "open"  # Failing — reject requests
+    HALF_OPEN = "half_open"  # Testing if service recovered
 
 
 @dataclass
 class CircuitBreakerConfig:
     """Circuit breaker configuration"""
+
     failure_threshold: int = 5
     recovery_timeout: float = 30.0
     half_open_max_calls: int = 3
@@ -62,7 +63,9 @@ class CircuitBreaker:
             ):
                 self.state = CircuitState.HALF_OPEN
                 self._half_open_calls = 0
-                logger.info("Circuit %s: OPEN → HALF_OPEN", sanitize_for_log(self.name))  # codeql[py/cleartext-logging]
+                logger.info(
+                    "Circuit %s: OPEN → HALF_OPEN", sanitize_for_log(self.name)
+                )  # codeql[py/cleartext-logging]
                 return True
             return False
 
@@ -84,7 +87,9 @@ class CircuitBreaker:
                 self.state = CircuitState.CLOSED
                 self._failure_count = 0
                 self._success_count = 0
-                logger.info("Circuit %s: HALF_OPEN → CLOSED", sanitize_for_log(self.name))  # codeql[py/cleartext-logging]
+                logger.info(
+                    "Circuit %s: HALF_OPEN → CLOSED", sanitize_for_log(self.name)
+                )  # codeql[py/cleartext-logging]
         else:
             self._failure_count = max(0, self._failure_count - 1)
 
@@ -97,7 +102,9 @@ class CircuitBreaker:
 
         if self.state == CircuitState.HALF_OPEN:
             self.state = CircuitState.OPEN
-            logger.warning("Circuit %s: HALF_OPEN → OPEN (failed during test)", sanitize_for_log(self.name))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Circuit %s: HALF_OPEN → OPEN (failed during test)", sanitize_for_log(self.name)
+            )  # codeql[py/cleartext-logging]
         elif self._failure_count >= self.config.failure_threshold:
             self.state = CircuitState.OPEN
             logger.warning(
@@ -110,12 +117,14 @@ class CircuitBreaker:
     async def call(self, fn: Callable, *args, **kwargs) -> Any:
         """Execute a function with circuit breaker protection"""
         if not self.can_execute():
-            raise RuntimeError(
-                "Circuit breaker is OPEN — requests rejected"
-            )
+            raise RuntimeError("Circuit breaker is OPEN — requests rejected")
 
         try:
-            result = await fn(*args, **kwargs) if asyncio.iscoroutinefunction(fn) else fn(*args, **kwargs)
+            result = (
+                await fn(*args, **kwargs)
+                if asyncio.iscoroutinefunction(fn)
+                else fn(*args, **kwargs)
+            )
             self.record_success()
             return result
         except Exception:
@@ -195,7 +204,9 @@ class ResilienceManager:
         self._breakers: Dict[str, CircuitBreaker] = {}
         self._bulkheads: Dict[str, Bulkhead] = {}
 
-    def get_breaker(self, name: str, config: Optional[CircuitBreakerConfig] = None) -> CircuitBreaker:
+    def get_breaker(
+        self, name: str, config: Optional[CircuitBreakerConfig] = None
+    ) -> CircuitBreaker:
         """Get or create a circuit breaker"""
         if name not in self._breakers:
             self._breakers[name] = CircuitBreaker(name, config)

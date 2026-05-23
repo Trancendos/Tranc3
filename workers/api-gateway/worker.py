@@ -32,8 +32,6 @@ import hashlib
 import hmac
 import json
 import logging
-
-from shared_core.sanitize import sanitize_for_log
 import os
 import time
 import uuid
@@ -43,6 +41,8 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+from shared_core.sanitize import sanitize_for_log
 
 # ── Configuration ───────────────────────────────────────────────
 
@@ -59,6 +59,7 @@ logger = logging.getLogger("api-gateway")
 
 
 # ── Rate Limiter (in-memory, replaces Cloudflare KV) ───────────
+
 
 class RateLimiter:
     def __init__(self, max_requests: int = 1000, window_ms: int = 60_000) -> None:
@@ -80,6 +81,7 @@ rate_limiter = RateLimiter()
 
 
 # ── Circuit Breaker ────────────────────────────────────────────
+
 
 class CircuitBreaker:
     def __init__(self, name: str, failure_threshold: int = 5, recovery_timeout: int = 60) -> None:
@@ -124,7 +126,6 @@ circuit_breakers = {
 # ── JWT Auth Service ───────────────────────────────────────────
 
 
-
 class AuthService:
     def __init__(self, secret: str) -> None:
         self.secret = secret
@@ -159,7 +160,10 @@ auth_service = AuthService(JWT_SECRET)
 
 # ── Proxy ──────────────────────────────────────────────────────
 
-async def proxy_request(request: Request, target_base: str, target_path: str, request_id: str) -> httpx.Response:
+
+async def proxy_request(
+    request: Request, target_base: str, target_path: str, request_id: str
+) -> httpx.Response:
     """Proxy request to upstream service."""
     url = f"{target_base}{target_path}{request.url.query and '?' + str(request.url.query) or ''}"
     headers = dict(request.headers)
@@ -200,6 +204,7 @@ app.add_middleware(
 
 
 # ── Routes ──────────────────────────────────────────────────────
+
 
 @app.get("/health")
 async def health():
@@ -294,19 +299,35 @@ async def gateway(request: Request, path: str):
 
     if target_service and target_path is not None and breaker:
         try:
-            resp = await breaker.execute(lambda: proxy_request(request, target_service, target_path, request_id))
+            resp = await breaker.execute(
+                lambda: proxy_request(request, target_service, target_path, request_id)
+            )
             elapsed = time.time() - start
-            logger.info("http method=%s path=/%s status=%s ms=%.0f", sanitize_for_log(request.method), sanitize_for_log(path), resp.status_code, elapsed * 1000)  # codeql[py/cleartext-logging]
+            logger.info(
+                "http method=%s path=/%s status=%s ms=%.0f",
+                sanitize_for_log(request.method),
+                sanitize_for_log(path),
+                resp.status_code,
+                elapsed * 1000,
+            )  # codeql[py/cleartext-logging]
             return JSONResponse(
-                content=json.loads(resp.text) if resp.headers.get("content-type", "").startswith("application/json") else resp.text,
+                content=json.loads(resp.text)
+                if resp.headers.get("content-type", "").startswith("application/json")
+                else resp.text,
                 status_code=resp.status_code,
                 headers={"X-Request-ID": request_id},
             )
         except Exception as e:
             if "Circuit" in str(e):
-                raise HTTPException(status_code=503, detail="Service temporarily unavailable. Retry in 60s.") from None
-            logger.error("Proxy failed: path=/%s error=%s", sanitize_for_log(path), sanitize_for_log(e))  # codeql[py/cleartext-logging]
-            raise HTTPException(status_code=502, detail="Failed to reach upstream service.") from None
+                raise HTTPException(
+                    status_code=503, detail="Service temporarily unavailable. Retry in 60s."
+                ) from None
+            logger.error(
+                "Proxy failed: path=/%s error=%s", sanitize_for_log(path), sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
+            raise HTTPException(
+                status_code=502, detail="Failed to reach upstream service."
+            ) from None
 
     raise HTTPException(status_code=404, detail=f"{request.method} /{path} not found")
     return None

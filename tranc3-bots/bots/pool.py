@@ -11,8 +11,8 @@ from bots.types import JobResult, JobSpec, JobStatus
 
 logger = logging.getLogger(__name__)
 
-_REDIS_URL  = os.getenv("REDIS_URL", "redis://localhost:6379")
-_QUEUE_KEY  = "tranc3:bots:tasks"
+_REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+_QUEUE_KEY = "tranc3:bots:tasks"
 _RESULT_PFX = "tranc3:bots:result:"
 _RESULT_TTL = 300
 
@@ -33,17 +33,17 @@ class BotPool:
 
     def __init__(self, num_workers: int = 2, worker_fn: Callable = None):
         self._num_workers = num_workers
-        self._worker_fn   = worker_fn
-        self._redis       = None
+        self._worker_fn = worker_fn
+        self._redis = None
         self._tasks: List[asyncio.Task] = []
-        self._running     = False
+        self._running = False
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     async def start(self):
         if self._running:
             return
-        self._redis   = await self._connect()
+        self._redis = await self._connect()
         self._running = True
         if self._worker_fn:
             for i in range(self._num_workers):
@@ -74,7 +74,7 @@ class BotPool:
 
     async def get_result(self, job_id: str, timeout: float = 30.0) -> Optional[JobResult]:
         key = f"{_RESULT_PFX}{job_id}"
-        dl  = time.monotonic() + timeout
+        dl = time.monotonic() + timeout
         while time.monotonic() < dl:
             raw = await self._redis.get(key)
             if raw:
@@ -86,8 +86,9 @@ class BotPool:
         await self.submit(job)
         r = await self.get_result(job.job_id, timeout=timeout)
         if r is None:
-            return JobResult(job_id=job.job_id, status=JobStatus.FAILED,
-                             error=f"Timeout after {timeout}s")
+            return JobResult(
+                job_id=job.job_id, status=JobStatus.FAILED, error=f"Timeout after {timeout}s"
+            )
         return r
 
     async def queue_len(self) -> int:
@@ -116,7 +117,7 @@ class BotPool:
     async def _execute(self, job: JobSpec, wid: str):
         t0, error, data = time.monotonic(), None, None
         try:
-            ret  = self._worker_fn(job)
+            ret = self._worker_fn(job)
             data = (await ret) if asyncio.iscoroutine(ret) else ret
             status = JobStatus.DONE
         except Exception as exc:
@@ -124,12 +125,12 @@ class BotPool:
             logger.exception("Job %s failed: %s", job.job_id, exc)
 
         result = JobResult(
-            job_id      = job.job_id,
-            status      = status,
-            result      = data,
-            error       = error,
-            duration_ms = (time.monotonic() - t0) * 1000,
-            bot_id      = wid,
+            job_id=job.job_id,
+            status=status,
+            result=data,
+            error=error,
+            duration_ms=(time.monotonic() - t0) * 1000,
+            bot_id=wid,
         )
         await self._redis.set(f"{_RESULT_PFX}{job.job_id}", result.to_json(), ex=_RESULT_TTL)
 
@@ -139,6 +140,7 @@ class BotPool:
     async def _connect():
         try:
             import redis.asyncio as ar
+
             c = ar.from_url(_REDIS_URL, decode_responses=True)
             await c.ping()
             logger.info("Redis connected: %s", _REDIS_URL)
@@ -150,6 +152,7 @@ class BotPool:
 
 class _MemQueue:
     """Minimal in-memory Redis substitute (dev / no-Redis environments)."""
+
     def __init__(self):
         self._q: asyncio.Queue = asyncio.Queue()
         self._s: Dict[str, str] = {}

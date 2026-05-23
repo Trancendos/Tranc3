@@ -35,6 +35,7 @@ class AdaptiveProxy:
         """Lazy-initialize aiohttp session"""
         if self._session is None:
             import aiohttp
+
             self._session = aiohttp.ClientSession()
         return self._session
 
@@ -68,11 +69,17 @@ class AdaptiveProxy:
 
             # Check circuit breaker
             if not breaker.can_execute():
-                logger.warning("Circuit open for %s, trying alternatives", sanitize_for_log(service.name))  # codeql[py/cleartext-logging]
+                logger.warning(
+                    "Circuit open for %s, trying alternatives", sanitize_for_log(service.name)
+                )  # codeql[py/cleartext-logging]
                 # Try to find an alternative service
                 alternatives = self.registry.find_by_capability(capability)
                 service = next(
-                    (s for s in alternatives if s.name != service.name and s.health != ServiceHealth.UNHEALTHY),
+                    (
+                        s
+                        for s in alternatives
+                        if s.name != service.name and s.health != ServiceHealth.UNHEALTHY
+                    ),
                     None,
                 )
                 if not service:
@@ -90,7 +97,9 @@ class AdaptiveProxy:
                     payload,
                     timeout,
                 )
-                elapsed = time.time() - start_time  # codeql[py/redefined-variable] – separate scope for error metrics
+                elapsed = (
+                    time.time() - start_time
+                )  # codeql[py/redefined-variable] – separate scope for error metrics
                 self.router.record_success(service.name, elapsed * 1000)
                 return result
 
@@ -109,9 +118,7 @@ class AdaptiveProxy:
                 if attempt < retries:
                     await asyncio.sleep(0.5 * (attempt + 1))  # Exponential backoff
 
-        raise RuntimeError(
-            f"All attempts failed for capability '{capability}': {last_error}"
-        )
+        raise RuntimeError(f"All attempts failed for capability '{capability}': {last_error}")
         return None
 
     async def _make_request(

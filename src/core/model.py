@@ -23,11 +23,13 @@ from .config import ModelConfig
 # Rotary Positional Embeddings (RoPE)
 # ---------------------------------------------------------------------------
 
+
 class RotaryEmbedding(nn.Module):
     """
     Encodes position information directly into the attention query/key vectors.
     More generalizable than learned absolute position embeddings.
     """
+
     def __init__(self, dim: int, max_seq_len: int = 2048):
         super().__init__()
         inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2).float() / dim))
@@ -47,10 +49,7 @@ class RotaryEmbedding(nn.Module):
         return torch.cat([-x2, x1], dim=-1)
 
     def forward(
-        self,
-        q: torch.Tensor,
-        k: torch.Tensor,
-        seq_len: int
+        self, q: torch.Tensor, k: torch.Tensor, seq_len: int
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         cos = self.cos_cache[:, :, :seq_len, :]
         sin = self.sin_cache[:, :, :seq_len, :]
@@ -62,6 +61,7 @@ class RotaryEmbedding(nn.Module):
 # ---------------------------------------------------------------------------
 # Multi-Head Causal Self-Attention
 # ---------------------------------------------------------------------------
+
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, config: ModelConfig):
@@ -78,11 +78,7 @@ class MultiHeadAttention(nn.Module):
 
         self.rope = RotaryEmbedding(config.d_head, config.max_seq_len)
 
-    def forward(
-        self,
-        x: torch.Tensor,
-        mask: Optional[torch.Tensor] = None
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         B, T, C = x.shape
 
         # Project and split Q, K, V
@@ -120,11 +116,13 @@ class MultiHeadAttention(nn.Module):
 # SwiGLU Feed-Forward Network
 # ---------------------------------------------------------------------------
 
+
 class FeedForward(nn.Module):
     """
     SwiGLU activation: better gradient flow and representation capacity
     than standard ReLU/GELU for language modelling.
     """
+
     def __init__(self, config: ModelConfig):
         super().__init__()
         # SwiGLU uses 2/3 of d_ff for the gate — keep parameter count consistent
@@ -146,6 +144,7 @@ class FeedForward(nn.Module):
 # Transformer Block
 # ---------------------------------------------------------------------------
 
+
 class TransformerBlock(nn.Module):
     def __init__(self, config: ModelConfig):
         super().__init__()
@@ -154,11 +153,7 @@ class TransformerBlock(nn.Module):
         self.norm2 = nn.LayerNorm(config.d_model)
         self.ffn = FeedForward(config)
 
-    def forward(
-        self,
-        x: torch.Tensor,
-        mask: Optional[torch.Tensor] = None
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         # Pre-norm residual connections
         x = x + self.attn(self.norm1(x), mask)
         x = x + self.ffn(self.norm2(x))
@@ -168,6 +163,7 @@ class TransformerBlock(nn.Module):
 # ---------------------------------------------------------------------------
 # Full Tranc3 Model
 # ---------------------------------------------------------------------------
+
 
 class Tranc3Model(nn.Module):
     """
@@ -179,6 +175,7 @@ class Tranc3Model(nn.Module):
       d_model=512, n_layers=6  ->  ~50M params  (GPU recommended)
       d_model=768, n_layers=12 ->  ~150M params (serious GPU / Slough)
     """
+
     def __init__(self, config: ModelConfig):
         super().__init__()
         self.config = config
@@ -186,9 +183,7 @@ class Tranc3Model(nn.Module):
         self.token_embed = nn.Embedding(config.vocab_size, config.d_model)
         self.embed_dropout = nn.Dropout(config.dropout)
 
-        self.layers = nn.ModuleList([
-            TransformerBlock(config) for _ in range(config.n_layers)
-        ])
+        self.layers = nn.ModuleList([TransformerBlock(config) for _ in range(config.n_layers)])
 
         self.norm_out = nn.LayerNorm(config.d_model)
         self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
@@ -213,11 +208,13 @@ class Tranc3Model(nn.Module):
         self,
         input_ids: torch.Tensor,
         targets: Optional[torch.Tensor] = None,
-        mask: Optional[torch.Tensor] = None
+        mask: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         B, T = input_ids.shape
         # nosec B101 — assertion for type/class contract checking
-        assert T <= self.config.max_seq_len, f"Sequence length {T} exceeds model max {self.config.max_seq_len}"
+        assert T <= self.config.max_seq_len, (
+            f"Sequence length {T} exceeds model max {self.config.max_seq_len}"
+        )
 
         x = self.embed_dropout(self.token_embed(input_ids))
 
@@ -233,7 +230,7 @@ class Tranc3Model(nn.Module):
             loss = F.cross_entropy(
                 logits.view(-1, self.config.vocab_size),
                 targets.view(-1),
-                ignore_index=-1   # padding tokens ignored
+                ignore_index=-1,  # padding tokens ignored
             )
 
         return logits, loss
@@ -257,7 +254,7 @@ class Tranc3Model(nn.Module):
 
         for _ in range(max_new_tokens):
             # Crop context to max_seq_len
-            context = generated[:, -self.config.max_seq_len:]
+            context = generated[:, -self.config.max_seq_len :]
             logits, _ = self.forward(context)
             logits = logits[:, -1, :]  # last token only
 

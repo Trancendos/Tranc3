@@ -45,26 +45,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # ─── Model size presets ────────────────────────────────────────────────────────
 
 MODEL_SIZES = {
-    "tiny":   {"hidden_size": 384,  "num_layers": 6,  "num_heads": 6,  "ffn_mult": 4},
-    "small":  {"hidden_size": 512,  "num_layers": 8,  "num_heads": 8,  "ffn_mult": 4},
-    "base":   {"hidden_size": 768,  "num_layers": 12, "num_heads": 12, "ffn_mult": 4},
+    "tiny": {"hidden_size": 384, "num_layers": 6, "num_heads": 6, "ffn_mult": 4},
+    "small": {"hidden_size": 512, "num_layers": 8, "num_heads": 8, "ffn_mult": 4},
+    "base": {"hidden_size": 768, "num_layers": 12, "num_heads": 12, "ffn_mult": 4},
     "medium": {"hidden_size": 1024, "num_layers": 16, "num_heads": 16, "ffn_mult": 4},
 }
 
 
 # ─── Chat dataset ─────────────────────────────────────────────────────────────
 
+
 class ChatDataset(Dataset):
     """Wraps MultilingualDataset samples into tokenised tensors using Tranc3Tokenizer."""
 
-    def __init__(self, tokenizer, data_dir: str, max_length: int = 512,
-                 languages: Optional[List[str]] = None):
+    def __init__(
+        self, tokenizer, data_dir: str, max_length: int = 512, languages: Optional[List[str]] = None
+    ):
         from src.core.dataset import MultilingualDataset
+
         self.tokenizer = tokenizer
         self.max_length = max_length
 
         self.raw = MultilingualDataset(
-            tokenizer=None,    # we handle tokenisation ourselves
+            tokenizer=None,  # we handle tokenisation ourselves
             data_dir=data_dir,
             max_length=max_length,
             languages=languages or ["en"],
@@ -78,40 +81,42 @@ class ChatDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         sample = self.raw.samples[idx]
         instruction = sample.get("instruction", sample.get("text", ""))
-        response     = sample.get("response", "")
-        personality  = sample.get("personality", "tranc3-base")
-        system_prompt = sample.get("system_prompt",
-                                   f"You are TRANC3, an advanced AI with {personality} personality.")
+        response = sample.get("response", "")
+        personality = sample.get("personality", "tranc3-base")
+        system_prompt = sample.get(
+            "system_prompt", f"You are TRANC3, an advanced AI with {personality} personality."
+        )
 
         # Encode as a single training sequence:
         # <bos> <p:personality> <sys> system <sep> <usr> instruction <sep> <ast> response <eos>
         ids = self.tokenizer.encode_chat(
             system=system_prompt,
             turns=[
-                {"role": "user",      "content": instruction},
+                {"role": "user", "content": instruction},
                 {"role": "assistant", "content": response},
             ],
             personality=personality,
             max_length=self.max_length,
         )
 
-        input_ids  = torch.tensor(ids[:-1], dtype=torch.long)
-        labels     = torch.tensor(ids[1:],  dtype=torch.long)
+        input_ids = torch.tensor(ids[:-1], dtype=torch.long)
+        labels = torch.tensor(ids[1:], dtype=torch.long)
 
         # Pad / truncate to max_length-1
         L = self.max_length - 1
         if len(input_ids) < L:
             pad_len = L - len(input_ids)
             input_ids = torch.cat([input_ids, torch.full((pad_len,), self.tokenizer.pad_token_id)])
-            labels    = torch.cat([labels,    torch.full((pad_len,), -100)])
+            labels = torch.cat([labels, torch.full((pad_len,), -100)])
         else:
             input_ids = input_ids[:L]
-            labels    = labels[:L]
+            labels = labels[:L]
 
         return {"input_ids": input_ids, "labels": labels}
 
 
 # ─── Training loop ─────────────────────────────────────────────────────────────
+
 
 def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -121,21 +126,26 @@ def train(args):
     tok_dir = Path(args.tokenizer_dir)
     if tok_dir.exists() and (tok_dir / "tokenizer_meta.json").exists():
         from src.core.tranc3_tokenizer import Tranc3Tokenizer
+
         tokenizer = Tranc3Tokenizer.load(tok_dir)
         logger.info("Loaded tokenizer from %s (vocab=%d)", tok_dir, len(tokenizer))
     else:
         logger.info("Training tokenizer from scratch ...")
         from src.core.tranc3_tokenizer import Tranc3Tokenizer
+
         # Collect corpus text for tokenizer training
         corpus_texts: List[str] = []
         data_root = Path(args.data_dir)
         if data_root.exists():
             for jsonl in data_root.rglob("*.jsonl"):
                 import json
+
                 for line in jsonl.read_text(encoding="utf-8", errors="replace").splitlines():
                     try:
                         rec = json.loads(line)
-                        corpus_texts.append(rec.get("instruction", "") + " " + rec.get("response", ""))
+                        corpus_texts.append(
+                            rec.get("instruction", "") + " " + rec.get("response", "")
+                        )
                     except Exception:
                         logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
             for txt in data_root.rglob("*.txt"):
@@ -152,16 +162,16 @@ def train(args):
     size_cfg = MODEL_SIZES[args.model_size]
 
     class ModelConfig:
-        vocab_size           = len(tokenizer)
-        hidden_size          = size_cfg["hidden_size"]
-        num_layers           = size_cfg["num_layers"]
-        num_heads            = size_cfg["num_heads"]
-        intermediate_size    = size_cfg["hidden_size"] * size_cfg["ffn_mult"]
-        max_sequence_length  = args.max_length
-        dropout              = args.dropout
+        vocab_size = len(tokenizer)
+        hidden_size = size_cfg["hidden_size"]
+        num_layers = size_cfg["num_layers"]
+        num_heads = size_cfg["num_heads"]
+        intermediate_size = size_cfg["hidden_size"] * size_cfg["ffn_mult"]
+        max_sequence_length = args.max_length
+        dropout = args.dropout
 
+    from shared_core.path_validation import validate_path
     from src.core.advanced_model import AdvancedTransformerModel
-from shared_core.path_validation import validate_path
 
     if args.resume:
         logger.info("Resuming from checkpoint: %s", args.resume)
@@ -214,13 +224,18 @@ from shared_core.path_validation import validate_path
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
 
+    output_dir = Path(args.output_dir)
     # ── Output dir ────────────────────────────────────────────────────────────
     validate_path(output_dir)  # CWE-022 guard
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # ── Training ──────────────────────────────────────────────────────────────
-    logger.info("Starting training: %d epochs, %d steps/epoch, %d total steps",
-                args.epochs, len(loader), total_steps)
+    logger.info(
+        "Starting training: %d epochs, %d steps/epoch, %d total steps",
+        args.epochs,
+        len(loader),
+        total_steps,
+    )
 
     global_step = start_step
     best_loss = float("inf")
@@ -230,9 +245,9 @@ from shared_core.path_validation import validate_path
         epoch_loss = 0.0
         t0 = time.time()
 
-        for batch_idx, batch in enumerate(loader):
+        for _batch_idx, batch in enumerate(loader):
             input_ids = batch["input_ids"].to(device)
-            labels    = batch["labels"].to(device)
+            labels = batch["labels"].to(device)
 
             # Build causal mask
             B, T = input_ids.shape
@@ -240,7 +255,7 @@ from shared_core.path_validation import validate_path
 
             # Forward
             outputs = model(input_ids=input_ids, attention_mask=causal_mask)
-            logits  = outputs["logits"]  # [B, T, vocab]
+            logits = outputs["logits"]  # [B, T, vocab]
 
             # Compute loss
             loss = loss_fn(logits.view(-1, logits.size(-1)), labels.view(-1))
@@ -253,14 +268,18 @@ from shared_core.path_validation import validate_path
             scheduler.step()
 
             global_step += 1
-            epoch_loss  += loss.item()
+            epoch_loss += loss.item()
 
             if global_step % args.log_every == 0:
                 elapsed = time.time() - t0
-                lr_now  = scheduler.get_last_lr()[0]
+                lr_now = scheduler.get_last_lr()[0]
                 logger.info(
                     "epoch=%d step=%d loss=%.4f lr=%.2e elapsed=%.1fs",
-                    epoch + 1, global_step, loss.item(), lr_now, elapsed,
+                    epoch + 1,
+                    global_step,
+                    loss.item(),
+                    lr_now,
+                    elapsed,
                 )
 
             # Checkpoint
@@ -281,13 +300,14 @@ from shared_core.path_validation import validate_path
     return None
 
 
-def _save_checkpoint(model, optimizer, scheduler, step, out_dir: Path,
-                     best: bool = False, final: bool = False):
+def _save_checkpoint(
+    model, optimizer, scheduler, step, out_dir: Path, best: bool = False, final: bool = False
+):
     state = {
-        "step":                  step,
-        "model_state_dict":      model.state_dict(),
-        "optimizer_state_dict":  optimizer.state_dict(),
-        "scheduler_state_dict":  scheduler.state_dict(),
+        "step": step,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "scheduler_state_dict": scheduler.state_dict(),
     }
     if final:
         path = out_dir / "tranc3-final.pt"
@@ -302,24 +322,25 @@ def _save_checkpoint(model, optimizer, scheduler, step, out_dir: Path,
 
 # ─── CLI ──────────────────────────────────────────────────────────────────────
 
+
 def parse_args():
     p = argparse.ArgumentParser(description="Train TRANC3 from scratch")
-    p.add_argument("--model-size",     default="small",            choices=list(MODEL_SIZES))
-    p.add_argument("--data-dir",       default="./data")
-    p.add_argument("--output-dir",     default="./models/tranc3-v1")
-    p.add_argument("--tokenizer-dir",  default="./models/tokenizer")
-    p.add_argument("--vocab-size",     type=int,   default=8192)
-    p.add_argument("--epochs",         type=int,   default=3)
-    p.add_argument("--batch-size",     type=int,   default=8)
-    p.add_argument("--max-length",     type=int,   default=256)
-    p.add_argument("--lr",             type=float, default=3e-4)
-    p.add_argument("--dropout",        type=float, default=0.1)
-    p.add_argument("--grad-clip",      type=float, default=1.0)
-    p.add_argument("--warmup-steps",   type=int,   default=100)
-    p.add_argument("--log-every",      type=int,   default=50)
-    p.add_argument("--save-every",     type=int,   default=500)
-    p.add_argument("--languages",      default="en")
-    p.add_argument("--resume",         default=None, help="Resume from checkpoint .pt file")
+    p.add_argument("--model-size", default="small", choices=list(MODEL_SIZES))
+    p.add_argument("--data-dir", default="./data")
+    p.add_argument("--output-dir", default="./models/tranc3-v1")
+    p.add_argument("--tokenizer-dir", default="./models/tokenizer")
+    p.add_argument("--vocab-size", type=int, default=8192)
+    p.add_argument("--epochs", type=int, default=3)
+    p.add_argument("--batch-size", type=int, default=8)
+    p.add_argument("--max-length", type=int, default=256)
+    p.add_argument("--lr", type=float, default=3e-4)
+    p.add_argument("--dropout", type=float, default=0.1)
+    p.add_argument("--grad-clip", type=float, default=1.0)
+    p.add_argument("--warmup-steps", type=int, default=100)
+    p.add_argument("--log-every", type=int, default=50)
+    p.add_argument("--save-every", type=int, default=500)
+    p.add_argument("--languages", default="en")
+    p.add_argument("--resume", default=None, help="Resume from checkpoint .pt file")
     return p.parse_args()
 
 

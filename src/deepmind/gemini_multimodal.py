@@ -102,9 +102,7 @@ class VisionEncoder(nn.Module):
             array = np.stack([array] * 3, axis=-1)
         img = torch.from_numpy(array.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
         if img.shape[2] != 224 or img.shape[3] != 224:
-            img = F.interpolate(
-                img, size=(224, 224), mode="bilinear", align_corners=False
-            )
+            img = F.interpolate(img, size=(224, 224), mode="bilinear", align_corners=False)
         with torch.no_grad():
             return self.forward(img)
 
@@ -192,9 +190,7 @@ class GeminiMultiModalModel(nn.Module):
         self.vision_encoder = VisionEncoder(out_dim=self.EMBED_DIM)
         self.structured_encoder = StructuredEncoder(out_dim=self.EMBED_DIM)
         self.cross_attn = CrossModalAttention(self.EMBED_DIM)
-        self.latent = nn.Sequential(
-            nn.Linear(self.EMBED_DIM, 128), nn.GELU(), nn.Linear(128, 64)
-        )
+        self.latent = nn.Sequential(nn.Linear(self.EMBED_DIM, 128), nn.GELU(), nn.Linear(128, 64))
 
     def forward(self, modal_embeddings: Dict[str, torch.Tensor]) -> FusedRepresentation:
         if not modal_embeddings:
@@ -208,16 +204,14 @@ class GeminiMultiModalModel(nn.Module):
             )
 
         modalities = list(modal_embeddings.keys())
-        stack = torch.stack(
-            [modal_embeddings[m] for m in modalities], dim=1
-        )  # (1, M, D)
+        stack = torch.stack([modal_embeddings[m] for m in modalities], dim=1)  # (1, M, D)
 
         fused, attn_w = self.cross_attn(stack)  # (D,), (1, M)
         latent = self.latent(fused)
 
         # Normalize attention weights for interpretability
         weights_np = attn_w[0].detach().numpy()
-        attn_dict = {m: float(w) for m, w in zip(modalities, weights_np)}
+        attn_dict = {m: float(w) for m, w in zip(modalities, weights_np, strict=False)}
 
         confidence = float(torch.max(attn_w).item())
 
@@ -285,9 +279,7 @@ class MultiModalPipeline:
         logger.warning("Unknown modality: %s", inp.modality)
         return None
 
-    async def cross_modal_similarity(
-        self, input_a: ModalInput, input_b: ModalInput
-    ) -> float:
+    async def cross_modal_similarity(self, input_a: ModalInput, input_b: ModalInput) -> float:
         """Compute cosine similarity between two different modal inputs."""
         rep_a = await self.process([input_a])
         rep_b = await self.process([input_b])

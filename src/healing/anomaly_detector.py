@@ -49,7 +49,9 @@ class AnomalyDetector:
     def add_handler(self, handler: Callable[[Anomaly], None]) -> None:
         self._handlers.append(handler)
 
-    def record(self, metric_name: str, value: float, metadata: Optional[Dict] = None) -> Optional[Anomaly]:
+    def record(
+        self, metric_name: str, value: float, metadata: Optional[Dict] = None
+    ) -> Optional[Anomaly]:
         import time
 
         sample = MetricSample(value=value, timestamp=time.time(), metadata=metadata or {})
@@ -60,7 +62,7 @@ class AnomalyDetector:
         self._metrics[metric_name].append(sample)
 
         if len(self._metrics[metric_name]) > self.window_size:
-            self._metrics[metric_name] = self._metrics[metric_name][-self.window_size:]
+            self._metrics[metric_name] = self._metrics[metric_name][-self.window_size :]
 
         return self._check(metric_name, sample)
 
@@ -112,7 +114,9 @@ class AnomalyDetector:
                 try:
                     handler(anomaly)
                 except Exception as e:
-                    logger.error("Anomaly handler error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+                    logger.error(
+                        "Anomaly handler error: %s", sanitize_for_log(e)
+                    )  # codeql[py/cleartext-logging]
 
             return anomaly
 

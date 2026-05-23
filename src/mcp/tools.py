@@ -20,9 +20,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _SAFE_BUILTINS = {
-    k: __builtins__[k]
-    if isinstance(__builtins__, dict)
-    else getattr(__builtins__, k, None)
+    k: __builtins__[k] if isinstance(__builtins__, dict) else getattr(__builtins__, k, None)
     for k in (
         "abs",
         "all",
@@ -88,9 +86,7 @@ class GridWorkflowRegistry:
     def register(self, workflow: Any) -> None:
         """Register a WorkflowDefinition; overwrites any existing entry with the same ID."""
         self._workflows[workflow.id] = workflow
-        logger.debug(
-            "grid.registry registered id=%s name=%s", workflow.id, workflow.name
-        )
+        logger.debug("grid.registry registered id=%s name=%s", workflow.id, workflow.name)
 
     def get(self, workflow_id: str) -> Optional[Any]:
         return self._workflows.get(workflow_id)
@@ -137,9 +133,7 @@ class SparkToolRegistry:
         if tool.name in self._tools:
             logger.warning("mcp.registry overwriting tool=%s", tool.name)
         self._tools[tool.name] = tool
-        logger.debug(
-            "mcp.registry registered tool=%s category=%s", tool.name, tool.category
-        )
+        logger.debug("mcp.registry registered tool=%s category=%s", tool.name, tool.category)
         # Rebuild semantic index lazily after each registration so RAG stays current
         try:
             from src.mcp.tool_rag import rebuild_rag_index  # codeql[py/cyclic-import]
@@ -147,7 +141,6 @@ class SparkToolRegistry:
             rebuild_rag_index(list(self._tools.values()))
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
     def get(self, name: str) -> Optional[SparkTool]:
         """Return the tool with *name*, or None if not found."""
@@ -187,7 +180,6 @@ class SparkToolRegistry:
                 return rag.select_tools(query, top_k=top_k)
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
         # Keyword fallback
         q_lower = query.lower()
@@ -739,7 +731,6 @@ class SparkToolRegistry:
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
-
     # ------------------------------------------------------------------
     # Built-in handlers
     # ------------------------------------------------------------------
@@ -775,11 +766,7 @@ class SparkToolRegistry:
         node_id = params.get("node_id")
         include_metrics = bool(params.get("include_metrics", False))
 
-        node_ids = (
-            [node_id]
-            if node_id
-            else ["spark-node-01", "spark-node-02", "spark-node-03"]
-        )
+        node_ids = [node_id] if node_id else ["spark-node-01", "spark-node-02", "spark-node-03"]
         nodes = []
         for nid in node_ids:
             node: Dict[str, Any] = {
@@ -927,9 +914,7 @@ class SparkToolRegistry:
                 try:
                     import redis.asyncio as aioredis  # noqa: PLC0415
 
-                    redis_url = __import__("os").environ.get(
-                        "REDIS_URL", "redis://localhost:6379"
-                    )
+                    redis_url = __import__("os").environ.get("REDIS_URL", "redis://localhost:6379")
                     client = aioredis.from_url(redis_url, socket_connect_timeout=1)
                     await asyncio.wait_for(client.ping(), timeout=1.0)
                     await client.aclose()
@@ -1024,9 +1009,7 @@ class SparkToolRegistry:
             "language": "python",
         }
 
-    async def _handle_query_vector_store(
-        self, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _handle_query_vector_store(self, params: Dict[str, Any]) -> Dict[str, Any]:
         query = params["query"]
         collection = params.get("collection", "default")
         top_k = int(params.get("top_k", 5))
@@ -1041,7 +1024,9 @@ class SparkToolRegistry:
         )
 
         try:
-            from src.knowledge.vector_store import get_store  # noqa: F401  # intentional top-level import
+            from src.knowledge.vector_store import (
+                get_store,  # noqa: F401  # intentional top-level import
+            )
 
             store = get_store()
             hits = store.search(
@@ -1097,7 +1082,9 @@ class SparkToolRegistry:
         metadatas = params.get("metadatas")
 
         try:
-            from src.knowledge.vector_store import get_store  # noqa: F401  # intentional top-level import
+            from src.knowledge.vector_store import (
+                get_store,  # noqa: F401  # intentional top-level import
+            )
 
             store = get_store()
             doc_ids = store.ingest(
@@ -1147,9 +1134,7 @@ class SparkToolRegistry:
             "queued_at": time.time(),
         }
 
-    async def _handle_get_evolution_stats(
-        self, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _handle_get_evolution_stats(self, params: Dict[str, Any]) -> Dict[str, Any]:
         target_id = params["target_id"]
         target_type = params.get("target_type", "skill")
         generations = int(params.get("generations", 10))
@@ -1175,7 +1160,9 @@ class SparkToolRegistry:
         try:
             import numpy as np
 
-            from src.bio_neural.consciousness_engine import IITCalculator  # noqa: F401  # intentional top-level import
+            from src.bio_neural.consciousness_engine import (
+                IITCalculator,  # noqa: F401  # intentional top-level import
+            )
 
             state = params["state"]
             arr = np.array(state, dtype=float)
@@ -1196,7 +1183,9 @@ class SparkToolRegistry:
         try:
             import torch
 
-            from src.bio_neural.neuromorphic import NeuromorphicProcessor  # noqa: F401  # intentional top-level import
+            from src.bio_neural.neuromorphic import (
+                NeuromorphicProcessor,  # noqa: F401  # intentional top-level import
+            )
 
             input_data = params["input"]
             timesteps = int(params.get("timesteps", 10))
@@ -1205,9 +1194,7 @@ class SparkToolRegistry:
             result = (
                 processor.process(tensor, timesteps=timesteps)
                 if hasattr(processor, "process")
-                else {
-                    "note": "neuromorphic scaffold — wire input dimensions to activate"
-                }
+                else {"note": "neuromorphic scaffold — wire input dimensions to activate"}
             )
             if hasattr(result, "tolist"):
                 result = result.tolist()
@@ -1249,7 +1236,9 @@ class SparkToolRegistry:
 
     async def _handle_deepmind_plan(self, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            from src.deepmind.planning import PlanningEngine  # noqa: F401  # intentional top-level import
+            from src.deepmind.planning import (
+                PlanningEngine,  # noqa: F401  # intentional top-level import
+            )
 
             problem = params["problem"]
             depth = int(params.get("depth", 3))
@@ -1257,9 +1246,7 @@ class SparkToolRegistry:
             plan = (
                 engine.plan(problem, depth=depth)
                 if hasattr(engine, "plan")
-                else {
-                    "note": "planning engine scaffold — wire problem space to activate"
-                }
+                else {"note": "planning engine scaffold — wire problem space to activate"}
             )
             return {"problem": problem, "depth": depth, "plan": plan}
         except Exception as exc:
@@ -1272,11 +1259,12 @@ class SparkToolRegistry:
 
     # ── The Citadel handler ───────────────────────────────────────────────
 
-    async def _handle_citadel_deploy_status(
-        self, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _handle_citadel_deploy_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            from src.citadel.devops_hub import DeployTarget, get_citadel  # noqa: F401  # intentional top-level import
+            from src.citadel.devops_hub import (  # noqa: F401  # intentional top-level import
+                DeployTarget,
+                get_citadel,
+            )
 
             citadel = get_citadel()
             target_filter = params.get("target")
@@ -1295,11 +1283,12 @@ class SparkToolRegistry:
 
     # ── The Observatory handler ───────────────────────────────────────────
 
-    async def _handle_observatory_observe(
-        self, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _handle_observatory_observe(self, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            from src.observability.observatory import EventCategory, observe  # noqa: F401  # intentional top-level import
+            from src.observability.observatory import (  # noqa: F401  # intentional top-level import
+                EventCategory,
+                observe,
+            )
 
             event_type = params["event_type"]
             raw_cat = params.get("category", "AI").upper()
@@ -1316,9 +1305,7 @@ class SparkToolRegistry:
 
     # ── The Digital Grid handler ──────────────────────────────────────────
 
-    async def _handle_grid_list_workflows(
-        self, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _handle_grid_list_workflows(self, params: Dict[str, Any]) -> Dict[str, Any]:
         status_filter = params.get("status")
         workflows = _grid_registry.list_all()
         if status_filter:
@@ -1337,9 +1324,14 @@ registry = SparkToolRegistry()
 # Registers 16 additional Spark tools from Phase 4 modules
 # ---------------------------------------------------------------------------
 try:
-    from src.mcp.spark_phase4_tools import register_phase4_tools as _reg_p4  # codeql[py/cyclic-import]
+    from src.mcp.spark_phase4_tools import (
+        register_phase4_tools as _reg_p4,  # codeql[py/cyclic-import]
+    )
+
     _p4_count = _reg_p4(registry)
-    logger.info("Phase 4 Spark tools loaded: %d tools added (total=%d)", _p4_count, len(registry._tools))
+    logger.info(
+        "Phase 4 Spark tools loaded: %d tools added (total=%d)", _p4_count, len(registry._tools)
+    )
 except Exception as _p4_exc:
     logger.warning("Phase 4 Spark tools unavailable: %s", _p4_exc)
 
@@ -1348,8 +1340,13 @@ except Exception as _p4_exc:
 # Registers 12 additional Spark tools from Phase 5 agent modules
 # ---------------------------------------------------------------------------
 try:
-    from src.mcp.spark_phase5_tools import register_phase5_tools as _reg_p5  # codeql[py/cyclic-import]
+    from src.mcp.spark_phase5_tools import (
+        register_phase5_tools as _reg_p5,  # codeql[py/cyclic-import]
+    )
+
     _p5_count = _reg_p5(registry)
-    logger.info("Phase 5 Spark tools loaded: %d tools added (total=%d)", _p5_count, len(registry._tools))
+    logger.info(
+        "Phase 5 Spark tools loaded: %d tools added (total=%d)", _p5_count, len(registry._tools)
+    )
 except Exception as _p5_exc:
     logger.warning("Phase 5 Spark tools unavailable: %s", _p5_exc)

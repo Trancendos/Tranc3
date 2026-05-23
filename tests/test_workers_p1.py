@@ -36,15 +36,24 @@ def _import_worker(module_dotted: str, file_path: Path):
     return mod
 
 
-users_mod = _import_worker("users_service_worker", _TRANC3_ROOT / "workers" / "users-service" / "worker.py")
-monitoring_mod = _import_worker("monitoring_worker", _TRANC3_ROOT / "workers" / "monitoring" / "worker.py")
-notifications_mod = _import_worker("notifications_worker", _TRANC3_ROOT / "workers" / "notifications" / "worker.py")
-ai_mod = _import_worker("infinity_ai_worker", _TRANC3_ROOT / "workers" / "infinity-ai" / "worker.py")
+users_mod = _import_worker(
+    "users_service_worker", _TRANC3_ROOT / "workers" / "users-service" / "worker.py"
+)
+monitoring_mod = _import_worker(
+    "monitoring_worker", _TRANC3_ROOT / "workers" / "monitoring" / "worker.py"
+)
+notifications_mod = _import_worker(
+    "notifications_worker", _TRANC3_ROOT / "workers" / "notifications" / "worker.py"
+)
+ai_mod = _import_worker(
+    "infinity_ai_worker", _TRANC3_ROOT / "workers" / "infinity-ai" / "worker.py"
+)
 
 
 # ────────────────────────────────────────────────────────────────────────────────
 # users-service — User Management CRUD API
 # ────────────────────────────────────────────────────────────────────────────────
+
 
 class TestUsersServiceModels:
     """Test Pydantic models for the users service."""
@@ -155,12 +164,15 @@ class TestUsersServiceHTTPEndpoints:
         assert "user_count" in data
 
     def test_create_user(self, users_client):
-        response = users_client.post("/users", json={
-            "username": "newuser",
-            "email": "newuser@example.com",
-            "display_name": "New User",
-            "role": "user",
-        })
+        response = users_client.post(
+            "/users",
+            json={
+                "username": "newuser",
+                "email": "newuser@example.com",
+                "display_name": "New User",
+                "role": "user",
+            },
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["username"] == "newuser"
@@ -168,21 +180,30 @@ class TestUsersServiceHTTPEndpoints:
         assert "user_id" in data
 
     def test_create_duplicate_username(self, users_client):
-        users_client.post("/users", json={
-            "username": "dupuser",
-            "email": "first@example.com",
-        })
-        response = users_client.post("/users", json={
-            "username": "dupuser",
-            "email": "second@example.com",
-        })
+        users_client.post(
+            "/users",
+            json={
+                "username": "dupuser",
+                "email": "first@example.com",
+            },
+        )
+        response = users_client.post(
+            "/users",
+            json={
+                "username": "dupuser",
+                "email": "second@example.com",
+            },
+        )
         assert response.status_code == 409
 
     def test_get_user(self, users_client):
-        create = users_client.post("/users", json={
-            "username": "getuser",
-            "email": "get@example.com",
-        })
+        create = users_client.post(
+            "/users",
+            json={
+                "username": "getuser",
+                "email": "get@example.com",
+            },
+        )
         user_id = create.json()["user_id"]
 
         response = users_client.get(f"/users/{user_id}")
@@ -212,26 +233,35 @@ class TestUsersServiceHTTPEndpoints:
         assert data["per_page"] == 10
 
     def test_update_user(self, users_client):
-        create = users_client.post("/users", json={
-            "username": "updateuser",
-            "email": "update@example.com",
-        })
+        create = users_client.post(
+            "/users",
+            json={
+                "username": "updateuser",
+                "email": "update@example.com",
+            },
+        )
         user_id = create.json()["user_id"]
 
-        response = users_client.patch(f"/users/{user_id}", json={
-            "display_name": "Updated Name",
-            "role": "admin",
-        })
+        response = users_client.patch(
+            f"/users/{user_id}",
+            json={
+                "display_name": "Updated Name",
+                "role": "admin",
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["display_name"] == "Updated Name"
         assert data["role"] == "admin"
 
     def test_delete_user(self, users_client):
-        create = users_client.post("/users", json={
-            "username": "deleteuser",
-            "email": "delete@example.com",
-        })
+        create = users_client.post(
+            "/users",
+            json={
+                "username": "deleteuser",
+                "email": "delete@example.com",
+            },
+        )
         user_id = create.json()["user_id"]
 
         response = users_client.delete(f"/users/{user_id}")
@@ -246,6 +276,7 @@ class TestUsersServiceHTTPEndpoints:
 # ────────────────────────────────────────────────────────────────────────────────
 # monitoring (The Observatory) — Health, Metrics, Alerting
 # ────────────────────────────────────────────────────────────────────────────────
+
 
 class TestMonitoringModels:
     """Test Pydantic models for the monitoring service."""
@@ -405,25 +436,34 @@ class TestMonitoringHTTPEndpoints:
         assert "firing_alerts" in data
 
     def test_submit_health_report(self, monitoring_client):
-        response = monitoring_client.post("/health/report", json={
-            "service_name": "test-service",
-            "status": "healthy",
-            "response_time_ms": 100.0,
-        })
+        response = monitoring_client.post(
+            "/health/report",
+            json={
+                "service_name": "test-service",
+                "status": "healthy",
+                "response_time_ms": 100.0,
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["ok"] is True
         assert data["service"] == "test-service"
 
     def test_list_service_health(self, monitoring_client):
-        monitoring_client.post("/health/report", json={
-            "service_name": "svc1",
-            "status": "healthy",
-        })
-        monitoring_client.post("/health/report", json={
-            "service_name": "svc2",
-            "status": "degraded",
-        })
+        monitoring_client.post(
+            "/health/report",
+            json={
+                "service_name": "svc1",
+                "status": "healthy",
+            },
+        )
+        monitoring_client.post(
+            "/health/report",
+            json={
+                "service_name": "svc2",
+                "status": "degraded",
+            },
+        )
 
         response = monitoring_client.get("/health/services")
         assert response.status_code == 200
@@ -431,10 +471,13 @@ class TestMonitoringHTTPEndpoints:
         assert len(data["services"]) >= 2
 
     def test_get_service_health_history(self, monitoring_client):
-        monitoring_client.post("/health/report", json={
-            "service_name": "history-service",
-            "status": "healthy",
-        })
+        monitoring_client.post(
+            "/health/report",
+            json={
+                "service_name": "history-service",
+                "status": "healthy",
+            },
+        )
 
         response = monitoring_client.get("/health/services/history-service")
         assert response.status_code == 200
@@ -443,26 +486,35 @@ class TestMonitoringHTTPEndpoints:
         assert "history" in data
 
     def test_submit_metric(self, monitoring_client):
-        response = monitoring_client.post("/metrics", json={
-            "name": "test_metric",
-            "type": "counter",
-            "value": 42.0,
-        })
+        response = monitoring_client.post(
+            "/metrics",
+            json={
+                "name": "test_metric",
+                "type": "counter",
+                "value": 42.0,
+            },
+        )
         assert response.status_code == 200
 
     def test_submit_metrics_batch(self, monitoring_client):
-        response = monitoring_client.post("/metrics/batch", json=[
-            {"name": "metric1", "type": "counter", "value": 1.0},
-            {"name": "metric2", "type": "gauge", "value": 2.0},
-        ])
+        response = monitoring_client.post(
+            "/metrics/batch",
+            json=[
+                {"name": "metric1", "type": "counter", "value": 1.0},
+                {"name": "metric2", "type": "gauge", "value": 2.0},
+            ],
+        )
         assert response.status_code == 200
 
     def test_list_metric_names(self, monitoring_client):
-        monitoring_client.post("/metrics", json={
-            "name": "unique_metric",
-            "type": "counter",
-            "value": 1.0,
-        })
+        monitoring_client.post(
+            "/metrics",
+            json={
+                "name": "unique_metric",
+                "type": "counter",
+                "value": 1.0,
+            },
+        )
 
         response = monitoring_client.get("/metrics/names")
         assert response.status_code == 200
@@ -470,11 +522,14 @@ class TestMonitoringHTTPEndpoints:
         assert "unique_metric" in data["names"]
 
     def test_query_metrics(self, monitoring_client):
-        monitoring_client.post("/metrics", json={
-            "name": "query_metric",
-            "type": "gauge",
-            "value": 99.9,
-        })
+        monitoring_client.post(
+            "/metrics",
+            json={
+                "name": "query_metric",
+                "type": "gauge",
+                "value": 99.9,
+            },
+        )
 
         response = monitoring_client.get("/metrics/query?name=query_metric")
         assert response.status_code == 200
@@ -482,13 +537,16 @@ class TestMonitoringHTTPEndpoints:
         assert len(data["metrics"]) >= 1
 
     def test_create_alert_rule(self, monitoring_client):
-        response = monitoring_client.post("/alerts/rules", json={
-            "name": "Test Alert Rule",
-            "metric_name": "test_metric",
-            "condition": ">",
-            "threshold": 10.0,
-            "severity": "warning",
-        })
+        response = monitoring_client.post(
+            "/alerts/rules",
+            json={
+                "name": "Test Alert Rule",
+                "metric_name": "test_metric",
+                "condition": ">",
+                "threshold": 10.0,
+                "severity": "warning",
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["ok"] is True
@@ -496,12 +554,15 @@ class TestMonitoringHTTPEndpoints:
         assert "rule_id" in data["rule"]
 
     def test_list_alert_rules(self, monitoring_client):
-        monitoring_client.post("/alerts/rules", json={
-            "name": "Rule 1",
-            "metric_name": "metric1",
-            "condition": ">",
-            "threshold": 5.0,
-        })
+        monitoring_client.post(
+            "/alerts/rules",
+            json={
+                "name": "Rule 1",
+                "metric_name": "metric1",
+                "condition": ">",
+                "threshold": 5.0,
+            },
+        )
 
         response = monitoring_client.get("/alerts/rules")
         assert response.status_code == 200
@@ -509,12 +570,15 @@ class TestMonitoringHTTPEndpoints:
         assert len(data["rules"]) >= 1
 
     def test_delete_alert_rule(self, monitoring_client):
-        create = monitoring_client.post("/alerts/rules", json={
-            "name": "Delete Me",
-            "metric_name": "metric",
-            "condition": ">",
-            "threshold": 1.0,
-        })
+        create = monitoring_client.post(
+            "/alerts/rules",
+            json={
+                "name": "Delete Me",
+                "metric_name": "metric",
+                "condition": ">",
+                "threshold": 1.0,
+            },
+        )
         rule_id = create.json()["rule"]["rule_id"]
 
         response = monitoring_client.delete(f"/alerts/rules/{rule_id}")
@@ -542,6 +606,7 @@ class TestMonitoringHTTPEndpoints:
 # ────────────────────────────────────────────────────────────────────────────────
 # notifications — Multi-channel notification dispatch
 # ────────────────────────────────────────────────────────────────────────────────
+
 
 class TestNotificationsModels:
     """Test Pydantic models for the notifications service."""
@@ -679,12 +744,15 @@ class TestNotificationsHTTPEndpoints:
         assert data["service"] == "notifications-service"
 
     def test_send_notification(self, notifications_client):
-        response = notifications_client.post("/notifications/send", json={
-            "user_id": "user-123",
-            "channel": "in_app",
-            "subject": "Test",
-            "body": "Test notification",
-        })
+        response = notifications_client.post(
+            "/notifications/send",
+            json={
+                "user_id": "user-123",
+                "channel": "in_app",
+                "subject": "Test",
+                "body": "Test notification",
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["ok"] is True
@@ -692,30 +760,39 @@ class TestNotificationsHTTPEndpoints:
 
     def test_send_notification_with_template(self, notifications_client):
         # Create template first and capture its template_id
-        create_resp = notifications_client.post("/templates", json={
-            "name": "Test Template",
-            "channel": "email",
-            "subject_template": "Hello {{name}}",
-            "body_template": "Welcome {{name}}!",
-        })
+        create_resp = notifications_client.post(
+            "/templates",
+            json={
+                "name": "Test Template",
+                "channel": "email",
+                "subject_template": "Hello {{name}}",
+                "body_template": "Welcome {{name}}!",
+            },
+        )
         template_id = create_resp.json()["template_id"]
 
-        response = notifications_client.post("/notifications/send", json={
-            "user_id": "user-123",
-            "channel": "email",
-            "template_id": template_id,
-            "template_vars": {"name": "Alice"},
-            "body": "fallback body",
-        })
+        response = notifications_client.post(
+            "/notifications/send",
+            json={
+                "user_id": "user-123",
+                "channel": "email",
+                "template_id": template_id,
+                "template_vars": {"name": "Alice"},
+                "body": "fallback body",
+            },
+        )
         # Should succeed with template expansion or fail gracefully
         assert response.status_code in [200, 404]
 
     def test_list_notifications(self, notifications_client):
-        notifications_client.post("/notifications/send", json={
-            "user_id": "user-123",
-            "channel": "in_app",
-            "body": "Test",
-        })
+        notifications_client.post(
+            "/notifications/send",
+            json={
+                "user_id": "user-123",
+                "channel": "in_app",
+                "body": "Test",
+            },
+        )
 
         response = notifications_client.get("/notifications?user_id=user-123")
         assert response.status_code == 200
@@ -723,11 +800,14 @@ class TestNotificationsHTTPEndpoints:
         assert len(data["notifications"]) >= 1
 
     def test_get_notification(self, notifications_client):
-        send = notifications_client.post("/notifications/send", json={
-            "user_id": "user-123",
-            "channel": "in_app",
-            "body": "Test",
-        })
+        send = notifications_client.post(
+            "/notifications/send",
+            json={
+                "user_id": "user-123",
+                "channel": "in_app",
+                "body": "Test",
+            },
+        )
         notification_id = send.json()["notification_id"]
 
         response = notifications_client.get(f"/notifications/{notification_id}")
@@ -736,22 +816,28 @@ class TestNotificationsHTTPEndpoints:
         assert data["notification_id"] == notification_id
 
     def test_create_template(self, notifications_client):
-        response = notifications_client.post("/templates", json={
-            "name": "Welcome Template",
-            "channel": "email",
-            "subject_template": "Welcome!",
-            "body_template": "Hello {{name}}",
-        })
+        response = notifications_client.post(
+            "/templates",
+            json={
+                "name": "Welcome Template",
+                "channel": "email",
+                "subject_template": "Welcome!",
+                "body_template": "Hello {{name}}",
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert "template_id" in data
 
     def test_list_templates(self, notifications_client):
-        notifications_client.post("/templates", json={
-            "name": "Template 1",
-            "channel": "email",
-            "body_template": "Body 1",
-        })
+        notifications_client.post(
+            "/templates",
+            json={
+                "name": "Template 1",
+                "channel": "email",
+                "body_template": "Body 1",
+            },
+        )
 
         response = notifications_client.get("/templates")
         assert response.status_code == 200
@@ -759,22 +845,28 @@ class TestNotificationsHTTPEndpoints:
         assert len(data["templates"]) >= 1
 
     def test_get_template(self, notifications_client):
-        create = notifications_client.post("/templates", json={
-            "name": "Get Me",
-            "channel": "email",
-            "body_template": "Body",
-        })
+        create = notifications_client.post(
+            "/templates",
+            json={
+                "name": "Get Me",
+                "channel": "email",
+                "body_template": "Body",
+            },
+        )
         template_id = create.json()["template_id"]
 
         response = notifications_client.get(f"/templates/{template_id}")
         assert response.status_code == 200
 
     def test_delete_template(self, notifications_client):
-        create = notifications_client.post("/templates", json={
-            "name": "Delete Me",
-            "channel": "email",
-            "body_template": "Body",
-        })
+        create = notifications_client.post(
+            "/templates",
+            json={
+                "name": "Delete Me",
+                "channel": "email",
+                "body_template": "Body",
+            },
+        )
         template_id = create.json()["template_id"]
 
         response = notifications_client.delete(f"/templates/{template_id}")
@@ -787,11 +879,14 @@ class TestNotificationsHTTPEndpoints:
         assert data["user_id"] == "user-123"
 
     def test_set_preferences(self, notifications_client):
-        response = notifications_client.put("/preferences/user-123", json={
-            "user_id": "user-123",
-            "max_per_hour": 50,
-            "max_per_day": 200,
-        })
+        response = notifications_client.put(
+            "/preferences/user-123",
+            json={
+                "user_id": "user-123",
+                "max_per_hour": 50,
+                "max_per_day": 200,
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["ok"] is True
@@ -800,6 +895,7 @@ class TestNotificationsHTTPEndpoints:
 # ────────────────────────────────────────────────────────────────────────────────
 # infinity-ai — AI API Gateway with OpenAI-compatible API
 # ────────────────────────────────────────────────────────────────────────────────
+
 
 class TestAIModels:
     """Test Pydantic models for the AI gateway."""
@@ -968,13 +1064,16 @@ class TestAIHTTPEndpoints:
 
     def test_chat_completions_offline_fallback(self, ai_client):
         """Test chat completions with offline fallback (no Ollama)."""
-        response = ai_client.post("/v1/chat/completions", json={
-            "model": "llama3.2",
-            "messages": [
-                {"role": "user", "content": "Hello"},
-            ],
-            "max_tokens": 50,
-        })
+        response = ai_client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "llama3.2",
+                "messages": [
+                    {"role": "user", "content": "Hello"},
+                ],
+                "max_tokens": 50,
+            },
+        )
         # Should succeed with offline fallback
         assert response.status_code == 200
         data = response.json()
@@ -984,11 +1083,14 @@ class TestAIHTTPEndpoints:
 
     def test_chat_completions_without_v1_prefix(self, ai_client):
         """Test chat completions without /v1 prefix."""
-        response = ai_client.post("/chat/completions", json={
-            "model": "llama3.2",
-            "messages": [{"role": "user", "content": "Hi"}],
-            "max_tokens": 20,
-        })
+        response = ai_client.post(
+            "/chat/completions",
+            json={
+                "model": "llama3.2",
+                "messages": [{"role": "user", "content": "Hi"}],
+                "max_tokens": 20,
+            },
+        )
         assert response.status_code == 200
 
     def test_get_usage(self, ai_client):

@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 class PlatformEventType(str, enum.Enum):
     """Well-known platform event types."""
+
     # User events
     USER_CREATED = "user.created"
     USER_UPDATED = "user.updated"
@@ -67,6 +68,7 @@ class PlatformEventType(str, enum.Enum):
 
 class DeliveryStatus(str, enum.Enum):
     """Event delivery status."""
+
     DELIVERED = "delivered"
     PENDING = "pending"
     FAILED = "failed"
@@ -84,6 +86,7 @@ EventCallback = Callable[..., Coroutine[Any, Any, Any]]
 
 class EventMetadata(BaseModel):
     """Metadata attached to every event."""
+
     event_id: str
     correlation_id: Optional[str] = None
     causation_id: Optional[str] = None
@@ -95,6 +98,7 @@ class EventMetadata(BaseModel):
 
 class EventEnvelope(BaseModel):
     """Complete event envelope with metadata and payload."""
+
     event_type: str
     data: dict[str, Any] = Field(default_factory=dict)
     metadata: EventMetadata
@@ -102,6 +106,7 @@ class EventEnvelope(BaseModel):
 
 class EventFilter(BaseModel):
     """Filter for event subscriptions."""
+
     tenant_id: Optional[str] = None
     source: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
@@ -110,6 +115,7 @@ class EventFilter(BaseModel):
 
 class EventSubscription(BaseModel):
     """A subscription for event delivery."""
+
     id: str
     subscriber: str
     event_pattern: str
@@ -124,6 +130,7 @@ class EventSubscription(BaseModel):
 
 class DeliveryResult(BaseModel):
     """Result of delivering an event to a subscriber."""
+
     subscription_id: str
     status: DeliveryStatus = DeliveryStatus.PENDING
     error: Optional[str] = None
@@ -133,6 +140,7 @@ class DeliveryResult(BaseModel):
 
 class EventBusConfig(BaseModel):
     """Event bus configuration."""
+
     persist_events: bool = False
     max_payload_size: int = 1048576  # 1MB
     batch_size: int = 100

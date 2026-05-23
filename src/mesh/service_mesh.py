@@ -168,14 +168,10 @@ class ServiceMesh:
         # Try direct handler first (in-process call)
         handler = self._call_handlers.get(service_name)
         if handler:
-            return await self._call_handler(
-                handler, service_name, path, payload, opts, trace_id
-            )
+            return await self._call_handler(handler, service_name, path, payload, opts, trace_id)
 
         # HTTP call with retries
-        return await self._call_http(
-            descriptor, service_name, path, payload, opts, trace_id
-        )
+        return await self._call_http(descriptor, service_name, path, payload, opts, trace_id)
 
     async def _call_handler(
         self,
@@ -254,7 +250,9 @@ class ServiceMesh:
                     timeout=options.timeout_ms / 1000.0,
                 )
 
-                latency_ms = (time.monotonic() - start) * 1000  # codeql[py/redefined-variable] – separate scope for error metrics
+                latency_ms = (
+                    time.monotonic() - start
+                ) * 1000  # codeql[py/redefined-variable] – separate scope for error metrics
 
                 if response.status_code < 400:
                     # Success
@@ -293,10 +291,13 @@ class ServiceMesh:
             # Check if we should retry
             if attempt < max_retries:
                 # Exponential backoff with jitter
-                delay = min(
-                    self.config.retry_base_delay_ms * (2 ** attempt),
-                    self.config.retry_max_delay_ms,
-                ) / 1000.0
+                delay = (
+                    min(
+                        self.config.retry_base_delay_ms * (2**attempt),
+                        self.config.retry_max_delay_ms,
+                    )
+                    / 1000.0
+                )
                 # Add jitter (±25%)
                 jitter = delay * 0.25 * (2 * (0.5 - asyncio.get_event_loop().time() % 1))
                 await asyncio.sleep(max(0.1, delay + jitter))
@@ -357,9 +358,7 @@ class ServiceMesh:
     async def health_check_all(self) -> dict[str, ServiceHealth]:
         """Run health checks on all registered services concurrently."""
         results = {}
-        tasks = {
-            name: self.health_check(name) for name in self._services
-        }
+        tasks = {name: self.health_check(name) for name in self._services}
         for name, task in tasks.items():
             results[name] = await task
         return results
@@ -384,10 +383,7 @@ class ServiceMesh:
 
     def get_dependency_graph(self) -> dict[str, list[str]]:
         """Build a dependency graph from service registrations."""
-        return {
-            name: desc.dependencies
-            for name, desc in self._services.items()
-        }
+        return {name: desc.dependencies for name, desc in self._services.items()}
 
     # ── Background Health Monitoring ─────────────────────────
 
@@ -401,5 +397,7 @@ class ServiceMesh:
             try:
                 await self.health_check_all()
             except Exception as e:
-                logger.error("health_monitor_error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+                logger.error(
+                    "health_monitor_error: %s", sanitize_for_log(e)
+                )  # codeql[py/cleartext-logging]
             await asyncio.sleep(self.config.health_check_interval_ms / 1000.0)

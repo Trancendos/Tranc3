@@ -36,6 +36,7 @@ logger = logging.getLogger(WORKER_NAME)
 # Database — policy storage
 # ---------------------------------------------------------------------------
 
+
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -73,7 +74,7 @@ def _get_policy(name: str) -> Optional[dict]:
 # Token-bucket in-memory state
 # ---------------------------------------------------------------------------
 
-_buckets: Dict[str, dict] = {}   # key → {tokens, last_refill, policy}
+_buckets: Dict[str, dict] = {}  # key → {tokens, last_refill, policy}
 _lock = threading.Lock()
 
 
@@ -113,6 +114,7 @@ def _check_and_consume(key: str, policy_name: str, tokens_requested: int = 1) ->
 # Models
 # ---------------------------------------------------------------------------
 
+
 class CheckIn(BaseModel):
     key: str
     policy: str = "default"
@@ -136,6 +138,7 @@ class PolicyUpdate(BaseModel):
 # Lifespan
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -149,7 +152,12 @@ async def lifespan(app: FastAPI):
 
 STARTED_AT = datetime.now(timezone.utc)
 
-app = FastAPI(title="rate-limit-service", description="Token-bucket rate limiter (self-hosted)", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="rate-limit-service",
+    description="Token-bucket rate limiter (self-hosted)",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -240,10 +248,12 @@ async def update_policy(name: str, req: PolicyUpdate):
         row = conn.execute("SELECT * FROM policies WHERE name = ?", (name,)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Policy not found")
-        updates = {k: v for k, v in req.model_dump(exclude_none=True).items()}
+        updates = dict(req.model_dump(exclude_none=True).items())
         if updates:
             set_clause = ", ".join(f"{k} = ?" for k in updates)
-            conn.execute(f"UPDATE policies SET {set_clause} WHERE name = ?", [*updates.values(), name])
+            conn.execute(
+                f"UPDATE policies SET {set_clause} WHERE name = ?", [*updates.values(), name]
+            )
             conn.commit()
     # Evict cached buckets for this policy
     with _lock:
@@ -274,4 +284,5 @@ async def stats():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

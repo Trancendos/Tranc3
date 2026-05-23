@@ -43,6 +43,7 @@ logger = logging.getLogger(WORKER_NAME)
 # Models
 # ---------------------------------------------------------------------------
 
+
 class WorkflowStatus(str, Enum):
     pending = "pending"
     running = "running"
@@ -96,6 +97,7 @@ class WorkflowExecution(BaseModel):
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+
 
 class GridDatabase:
     """SQLite-backed storage for workflow definitions and executions."""
@@ -151,28 +153,39 @@ class GridDatabase:
                     created_at TEXT NOT NULL
                 )
             """)
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_exec_workflow ON workflow_executions(workflow_id)")
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_exec_workflow ON workflow_executions(workflow_id)"
+            )
             cur.execute("CREATE INDEX IF NOT EXISTS idx_exec_status ON workflow_executions(status)")
 
     def save_definition(self, wf: WorkflowDefinition) -> WorkflowDefinition:
         with self._cursor() as cur:
             cur.execute(
                 "INSERT OR REPLACE INTO workflow_definitions (workflow_id, name, description, steps, metadata, version, created_at) VALUES (?,?,?,?,?,?,?)",
-                (wf.workflow_id, wf.name, wf.description,
-                 json.dumps([s.model_dump() for s in wf.steps]),
-                 json.dumps(wf.metadata), wf.version,
-                 datetime.now(timezone.utc).isoformat()),
+                (
+                    wf.workflow_id,
+                    wf.name,
+                    wf.description,
+                    json.dumps([s.model_dump() for s in wf.steps]),
+                    json.dumps(wf.metadata),
+                    wf.version,
+                    datetime.now(timezone.utc).isoformat(),
+                ),
             )
         return wf
 
     def get_definition(self, workflow_id: str) -> Optional[Dict[str, Any]]:
         conn = self._get_conn()
-        row = conn.execute("SELECT * FROM workflow_definitions WHERE workflow_id=?", (workflow_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM workflow_definitions WHERE workflow_id=?", (workflow_id,)
+        ).fetchone()
         return dict(row) if row else None
 
     def list_definitions(self, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
         conn = self._get_conn()
-        rows = conn.execute("SELECT * FROM workflow_definitions ORDER BY name LIMIT ? OFFSET ?", (limit, offset)).fetchall()
+        rows = conn.execute(
+            "SELECT * FROM workflow_definitions ORDER BY name LIMIT ? OFFSET ?", (limit, offset)
+        ).fetchall()
         return [dict(r) for r in rows]
 
     def delete_definition(self, workflow_id: str) -> bool:
@@ -184,22 +197,35 @@ class GridDatabase:
         with self._cursor() as cur:
             cur.execute(
                 "INSERT OR REPLACE INTO workflow_executions (execution_id, workflow_id, status, input_data, output_data, step_results, error_message, started_at, completed_at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (execn.execution_id, execn.workflow_id, execn.status.value,
-                 json.dumps(execn.input_data), json.dumps(execn.output_data),
-                 json.dumps(execn.step_results), execn.error_message,
-                 execn.started_at.isoformat() if execn.started_at else None,
-                 execn.completed_at.isoformat() if execn.completed_at else None,
-                 execn.created_at.isoformat()),
+                (
+                    execn.execution_id,
+                    execn.workflow_id,
+                    execn.status.value,
+                    json.dumps(execn.input_data),
+                    json.dumps(execn.output_data),
+                    json.dumps(execn.step_results),
+                    execn.error_message,
+                    execn.started_at.isoformat() if execn.started_at else None,
+                    execn.completed_at.isoformat() if execn.completed_at else None,
+                    execn.created_at.isoformat(),
+                ),
             )
         return execn
 
     def get_execution(self, execution_id: str) -> Optional[Dict[str, Any]]:
         conn = self._get_conn()
-        row = conn.execute("SELECT * FROM workflow_executions WHERE execution_id=?", (execution_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM workflow_executions WHERE execution_id=?", (execution_id,)
+        ).fetchone()
         return dict(row) if row else None
 
-    def list_executions(self, workflow_id: Optional[str] = None, status: Optional[str] = None,
-                        limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+    def list_executions(
+        self,
+        workflow_id: Optional[str] = None,
+        status: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         query = "SELECT * FROM workflow_executions WHERE 1=1"
         params: list = []
@@ -218,6 +244,7 @@ class GridDatabase:
 # ---------------------------------------------------------------------------
 # Workflow Engine
 # ---------------------------------------------------------------------------
+
 
 class WorkflowEngine:
     """Executes workflow steps in dependency order (topological sort)."""
@@ -253,7 +280,10 @@ class WorkflowEngine:
                     if dep_id in step_results
                 )
                 if not deps_met and step.depends_on:
-                    step_results[step.step_id] = {"status": "skipped", "reason": "Dependencies not met"}
+                    step_results[step.step_id] = {
+                        "status": "skipped",
+                        "reason": "Dependencies not met",
+                    }
                     continue
 
                 # Execute step
@@ -262,7 +292,9 @@ class WorkflowEngine:
 
                 if result.get("status") == "failed":
                     execution.status = WorkflowStatus.failed
-                    execution.error_message = f"Step '{step.name}' failed: {result.get('error', 'unknown')}"
+                    execution.error_message = (
+                        f"Step '{step.name}' failed: {result.get('error', 'unknown')}"
+                    )
                     execution.step_results = step_results
                     execution.completed_at = datetime.now(timezone.utc)
                     self.db.save_execution(execution)
@@ -282,8 +314,9 @@ class WorkflowEngine:
             self.db.save_execution(execution)
             return execution
 
-    async def _execute_step(self, step: WorkflowStep, step_results: Dict[str, Any],
-                            input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_step(
+        self, step: WorkflowStep, step_results: Dict[str, Any], input_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Execute a single workflow step."""
         logger.info("Executing step: %s (action: %s)", step.name, step.action)
         try:
@@ -297,16 +330,23 @@ class WorkflowEngine:
                 return await self._action_script(step, step_results, input_data)
             elif step.action == "delay":
                 import asyncio
+
                 delay = step.config.get("seconds", 1)
                 await asyncio.sleep(delay)
                 return {"status": "completed", "output": {"delayed": delay}}
             else:
-                return {"status": "completed", "output": {"message": f"Action '{step.action}' acknowledged"}}
+                return {
+                    "status": "completed",
+                    "output": {"message": f"Action '{step.action}' acknowledged"},
+                }
         except Exception as e:
             return {"status": "failed", "error": str(e)}
 
-    async def _action_http_call(self, step: WorkflowStep, step_results: Dict, input_data: Dict) -> Dict[str, Any]:
+    async def _action_http_call(
+        self, step: WorkflowStep, step_results: Dict, input_data: Dict
+    ) -> Dict[str, Any]:
         import urllib.request
+
         url = step.config.get("url", "")
         method = step.config.get("method", "GET").upper()
         try:
@@ -314,18 +354,26 @@ class WorkflowEngine:
                 req = urllib.request.Request(url, method="GET")
                 with urllib.request.urlopen(req, timeout=30) as resp:
                     body = resp.read().decode()
-                    return {"status": "completed", "output": {"status_code": resp.status, "body": body[:5000]}}
+                    return {
+                        "status": "completed",
+                        "output": {"status_code": resp.status, "body": body[:5000]},
+                    }
             else:
                 data = json.dumps(step.config.get("body", {})).encode()
                 req = urllib.request.Request(url, data=data, method=method)
                 req.add_header("Content-Type", "application/json")
                 with urllib.request.urlopen(req, timeout=30) as resp:
                     body = resp.read().decode()
-                    return {"status": "completed", "output": {"status_code": resp.status, "body": body[:5000]}}
+                    return {
+                        "status": "completed",
+                        "output": {"status_code": resp.status, "body": body[:5000]},
+                    }
         except Exception as e:
             return {"status": "failed", "error": str(e)}
 
-    async def _action_transform(self, step: WorkflowStep, step_results: Dict, input_data: Dict) -> Dict[str, Any]:
+    async def _action_transform(
+        self, step: WorkflowStep, step_results: Dict, input_data: Dict
+    ) -> Dict[str, Any]:
         """Transform data using simple mappings."""
         mapping = step.config.get("mapping", {})
         source = step.config.get("source", "input")
@@ -341,9 +389,12 @@ class WorkflowEngine:
             result[target_key] = val
         return {"status": "completed", "output": result}
 
-    async def _action_notify(self, step: WorkflowStep, step_results: Dict, input_data: Dict) -> Dict[str, Any]:
+    async def _action_notify(
+        self, step: WorkflowStep, step_results: Dict, input_data: Dict
+    ) -> Dict[str, Any]:
         """Send a notification (via the notifications service)."""
         import urllib.request
+
         notif_url = step.config.get("notifications_url", "http://localhost:8008/notifications/send")
         payload = {
             "user_id": step.config.get("user_id", "system"),
@@ -360,7 +411,9 @@ class WorkflowEngine:
         except Exception as e:
             return {"status": "completed", "output": {"notified": False, "error": str(e)}}
 
-    async def _action_script(self, step: WorkflowStep, step_results: Dict, input_data: Dict) -> Dict[str, Any]:
+    async def _action_script(
+        self, step: WorkflowStep, step_results: Dict, input_data: Dict
+    ) -> Dict[str, Any]:
         """Execute a simple inline Python script (sandboxed)."""
         script = step.config.get("code", "result = input_data")
         local_vars = {"input_data": input_data, "step_results": step_results, "result": None}
@@ -445,6 +498,7 @@ async def health():
 # Workflow Definitions
 # ---------------------------------------------------------------------------
 
+
 @app.post("/workflows")
 async def create_workflow(wf: WorkflowDefinition):
     """Create a new workflow definition."""
@@ -479,6 +533,7 @@ async def delete_workflow(workflow_id: str):
 # Workflow Executions
 # ---------------------------------------------------------------------------
 
+
 @app.post("/workflows/{workflow_id}/execute")
 async def execute_workflow(workflow_id: str, input_data: Dict[str, Any] = None):
     """Execute a workflow with the given input data."""
@@ -486,7 +541,11 @@ async def execute_workflow(workflow_id: str, input_data: Dict[str, Any] = None):
         input_data = {}
     try:
         execution = await engine.execute(workflow_id, input_data)
-        return {"ok": True, "execution_id": execution.execution_id, "status": execution.status.value}
+        return {
+            "ok": True,
+            "execution_id": execution.execution_id,
+            "status": execution.status.value,
+        }
     except ValueError as e:
         raise HTTPException(404, str(e)) from None
     except Exception as e:
@@ -502,7 +561,11 @@ async def list_executions(
     offset: int = 0,
 ):
     """List workflow executions."""
-    return {"executions": db.list_executions(workflow_id=workflow_id, status=status, limit=limit, offset=offset)}
+    return {
+        "executions": db.list_executions(
+            workflow_id=workflow_id, status=status, limit=limit, offset=offset
+        )
+    }
 
 
 @app.get("/executions/{execution_id}")
@@ -516,4 +579,5 @@ async def get_execution(execution_id: str):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

@@ -8,15 +8,13 @@ when the grid bridge is active (see src/mcp/server._start_grid_bridge).
 
 import asyncio
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-
-
 import time
 import uuid
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
+
+from shared_core.sanitize import sanitize_for_log
 
 from .builder import WorkflowDefinition
 from .nodes import NodeConfig, NodeResult, create_node
@@ -103,7 +101,11 @@ class WorkflowEventBus:
                 else:
                     cb(payload)
             except Exception as exc:  # noqa: BLE001
-                logger.warning("Event handler error for '%s': %s", sanitize_for_log(event), sanitize_for_log(exc))  # codeql[py/cleartext-logging]
+                logger.warning(
+                    "Event handler error for '%s': %s",
+                    sanitize_for_log(event),
+                    sanitize_for_log(exc),
+                )  # codeql[py/cleartext-logging]
 
         await asyncio.gather(*[_call(cb) for cb in targets], return_exceptions=True)
 
@@ -268,7 +270,9 @@ class WorkflowExecutor:
         )
 
         logger.info(
-            "Starting workflow '%s' (execution %s)", sanitize_for_log(workflow.name), sanitize_for_log(execution_id)
+            "Starting workflow '%s' (execution %s)",
+            sanitize_for_log(workflow.name),
+            sanitize_for_log(execution_id),
         )
 
         try:
@@ -284,7 +288,9 @@ class WorkflowExecutor:
                     "error": state.error,
                 },
             )
-            logger.error("Topological sort failed: %s", sanitize_for_log(exc))  # codeql[py/cleartext-logging]
+            logger.error(
+                "Topological sort failed: %s", sanitize_for_log(exc)
+            )  # codeql[py/cleartext-logging]
             return state
 
         # Seed initial outputs — root nodes will use initial_inputs
@@ -295,7 +301,9 @@ class WorkflowExecutor:
                 if cancel_flag.is_set():
                     state.status = "cancelled"
                     state.finished_at = time.monotonic()
-                    logger.info("Execution %s cancelled.", sanitize_for_log(execution_id))  # codeql[py/cleartext-logging]
+                    logger.info(
+                        "Execution %s cancelled.", sanitize_for_log(execution_id)
+                    )  # codeql[py/cleartext-logging]
                     return state
 
                 await self._execute_layer(
@@ -314,9 +322,7 @@ class WorkflowExecutor:
 
                 # Stop on first node failure (fail-fast)
                 if any(state.node_statuses.get(nid) == "failed" for nid in layer):
-                    raise RuntimeError(
-                        f"Layer {layer} had a node failure; aborting workflow."
-                    )
+                    raise RuntimeError(f"Layer {layer} had a node failure; aborting workflow.")
 
             state.status = "completed"
             state.finished_at = time.monotonic()
@@ -330,9 +336,7 @@ class WorkflowExecutor:
                     "elapsed_ms": state.elapsed_ms,
                 },
             )
-            logger.info(
-                "Workflow '%s' completed in %.1fms.", workflow.name, state.elapsed_ms
-            )
+            logger.info("Workflow '%s' completed in %.1fms.", workflow.name, state.elapsed_ms)
 
         except asyncio.CancelledError:
             state.status = "cancelled"
@@ -352,7 +356,12 @@ class WorkflowExecutor:
                     "elapsed_ms": state.elapsed_ms,
                 },
             )
-            logger.error("Workflow '%s' failed: %s", sanitize_for_log(workflow.name), sanitize_for_log(exc), exc_info=True)  # codeql[py/cleartext-logging]
+            logger.error(
+                "Workflow '%s' failed: %s",
+                sanitize_for_log(workflow.name),
+                sanitize_for_log(exc),
+                exc_info=True,
+            )  # codeql[py/cleartext-logging]
 
         finally:
             self._cancel_flags.pop(execution_id, None)
@@ -375,7 +384,9 @@ class WorkflowExecutor:
             state = self.executions.get(execution_id)
             return state is not None and state.status == "running"
         flag.set()
-        logger.info("Cancel requested for execution %s.", sanitize_for_log(execution_id))  # codeql[py/cleartext-logging]
+        logger.info(
+            "Cancel requested for execution %s.", sanitize_for_log(execution_id)
+        )  # codeql[py/cleartext-logging]
         return True
 
     # ------------------------------------------------------------------
@@ -446,9 +457,7 @@ class WorkflowExecutor:
                         "execution_id": context.get("execution_id"),
                     },
                 )
-                logger.debug(
-                    "Node '%s' completed in %.1fms.", node_id, result.duration_ms
-                )
+                logger.debug("Node '%s' completed in %.1fms.", node_id, result.duration_ms)
             else:
                 state.node_statuses[node_id] = "failed"
                 node_outputs[node_id] = None

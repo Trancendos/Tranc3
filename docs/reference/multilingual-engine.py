@@ -3,11 +3,12 @@
 # src/core/multilingual_tokenizer.py
 # TRANC3 Full Multilingual Engine
 
+import logging
+from typing import Dict, List
+
+import langdetect
 import torch
 from transformers import AutoTokenizer
-from typing import Dict, List
-import langdetect
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +99,7 @@ class MultilingualTokenizer:
 
     def batch_encode(self, texts: List[str], languages: List[str]) -> Dict:
         """Batch encode multiple texts"""
-        results = [self.encode(t, l) for t, l in zip(texts, languages)]
+        results = [self.encode(t, l) for t, l in zip(texts, languages, strict=False)]
         return {
             'input_ids': torch.cat([r['input_ids'] for r in results]),
             'attention_mask': torch.cat([r['attention_mask'] for r in results]),

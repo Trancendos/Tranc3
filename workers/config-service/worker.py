@@ -17,7 +17,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,6 +35,7 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+
 
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
@@ -99,6 +100,7 @@ def _coerce(value: str, value_type: str) -> Any:
 # Models
 # ---------------------------------------------------------------------------
 
+
 class NamespaceCreate(BaseModel):
     name: str
     description: Optional[str] = None
@@ -125,6 +127,7 @@ class BulkSetIn(BaseModel):
 # Lifespan
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -138,7 +141,12 @@ async def lifespan(app: FastAPI):
 
 STARTED_AT = datetime.now(timezone.utc)
 
-app = FastAPI(title="config-service", description="Namespaced configuration store (self-hosted)", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="config-service",
+    description="Namespaced configuration store (self-hosted)",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -165,6 +173,7 @@ async def health():
 
 
 # --- Namespaces ---
+
 
 @app.get("/namespaces")
 async def list_namespaces():
@@ -200,6 +209,7 @@ async def delete_namespace(namespace: str):
 
 
 # --- Config operations ---
+
 
 def _ensure_ns(namespace: str) -> None:
     with get_conn() as conn:
@@ -276,7 +286,9 @@ async def set_key(namespace: str, key: str, req: ConfigSet):
 async def delete_key(namespace: str, key: str):
     _ensure_ns(namespace)
     with get_conn() as conn:
-        if not conn.execute("SELECT id FROM configs WHERE namespace = ? AND key = ?", (namespace, key)).fetchone():
+        if not conn.execute(
+            "SELECT id FROM configs WHERE namespace = ? AND key = ?", (namespace, key)
+        ).fetchone():
             raise HTTPException(status_code=404, detail="Config key not found")
         conn.execute("DELETE FROM configs WHERE namespace = ? AND key = ?", (namespace, key))
         conn.commit()
@@ -292,7 +304,8 @@ async def bulk_set(namespace: str, req: BulkSetIn):
         for item in req.entries:
             str_value = json.dumps(item.value) if item.value_type == "json" else str(item.value)
             existing = conn.execute(
-                "SELECT version, value FROM configs WHERE namespace = ? AND key = ?", (namespace, item.key)
+                "SELECT version, value FROM configs WHERE namespace = ? AND key = ?",
+                (namespace, item.key),
             ).fetchone()
             if existing:
                 version = existing["version"] + 1
@@ -302,7 +315,15 @@ async def bulk_set(namespace: str, req: BulkSetIn):
                 )
                 conn.execute(
                     "UPDATE configs SET value=?, value_type=?, description=?, version=?, updated_at=? WHERE namespace=? AND key=?",
-                    (str_value, item.value_type, item.description, version, now, namespace, item.key),
+                    (
+                        str_value,
+                        item.value_type,
+                        item.description,
+                        version,
+                        now,
+                        namespace,
+                        item.key,
+                    ),
                 )
             else:
                 conn.execute(
@@ -327,4 +348,5 @@ async def key_history(namespace: str, key: str, limit: int = Query(20, le=100)):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

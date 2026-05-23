@@ -22,11 +22,11 @@ import pytest
 from src.mesh import (
     CircuitBreakerConfig,
     CircuitState,
+    HealthStatus,
+    ServiceCategory,
     ServiceDescriptor,
     ServiceMesh,
     ServiceMeshConfig,
-    ServiceCategory,
-    HealthStatus,
 )
 
 _TRANC3_ROOT = Path(__file__).resolve().parent.parent
@@ -44,6 +44,7 @@ def _import_worker(module_dotted: str, file_path: Path):
 # ───────────────────────────────────────────────────────────────────────────────
 # ServiceMesh Registration Tests
 # ───────────────────────────────────────────────────────────────────────────────
+
 
 class TestServiceMeshWorkerRegistration:
     """Test registering workers in the service mesh."""
@@ -73,12 +74,14 @@ class TestServiceMeshWorkerRegistration:
             ("infinity-ai", 8009, ServiceCategory.AI),
         ]
         for name, port, category in workers:
-            mesh.register(ServiceDescriptor(
-                name=name,
-                url="http://localhost",
-                port=port,
-                category=category,
-            ))
+            mesh.register(
+                ServiceDescriptor(
+                    name=name,
+                    url="http://localhost",
+                    port=port,
+                    category=category,
+                )
+            )
         assert len(mesh.get_services()) == 4
         for name, port, category in workers:
             service = mesh.get_service(name)
@@ -108,12 +111,14 @@ class TestServiceMeshWorkerRegistration:
             half_open_request_percentage=20.0,
         )
         mesh = ServiceMesh()
-        mesh.register(ServiceDescriptor(
-            name="test-worker",
-            url="http://localhost",
-            port=8000,
-            circuit_breaker_config=custom_config,
-        ))
+        mesh.register(
+            ServiceDescriptor(
+                name="test-worker",
+                url="http://localhost",
+                port=8000,
+                circuit_breaker_config=custom_config,
+            )
+        )
         cb = mesh.get_circuit_breaker("test-worker")
         assert cb.config.failure_threshold == 10
         assert cb.config.reset_timeout_ms == 60000
@@ -123,6 +128,7 @@ class TestServiceMeshWorkerRegistration:
 # ───────────────────────────────────────────────────────────────────────────────
 # In-Process Handler Tests
 # ───────────────────────────────────────────────────────────────────────────────
+
 
 class TestServiceMeshInProcessHandlers:
     """Test in-process call handlers (bypassing HTTP)."""
@@ -199,6 +205,7 @@ class TestServiceMeshInProcessHandlers:
 # ───────────────────────────────────────────────────────────────────────────────
 # Circuit Breaker Integration Tests
 # ───────────────────────────────────────────────────────────────────────────────
+
 
 class TestCircuitBreakerWorkerIntegration:
     """Test circuit breaker behavior with worker calls."""
@@ -304,6 +311,7 @@ class TestCircuitBreakerWorkerIntegration:
 # Health Check Tests
 # ───────────────────────────────────────────────────────────────────────────────
 
+
 class TestServiceMeshHealthChecks:
     """Test health check functionality across workers."""
 
@@ -311,12 +319,14 @@ class TestServiceMeshHealthChecks:
     async def test_health_check_single_worker(self):
         """Check health of a single worker using in-process handler."""
         mesh = ServiceMesh()
-        mesh.register(ServiceDescriptor(
-            name="test-worker",
-            url="http://localhost",
-            port=8000,
-            health_endpoint="/health",
-        ))
+        mesh.register(
+            ServiceDescriptor(
+                name="test-worker",
+                url="http://localhost",
+                port=8000,
+                health_endpoint="/health",
+            )
+        )
 
         # Register a handler that simulates health check
         async def health_handler(path, payload):
@@ -334,12 +344,14 @@ class TestServiceMeshHealthChecks:
     async def test_health_check_cached(self):
         """Test cached health status after registration."""
         mesh = ServiceMesh()
-        mesh.register(ServiceDescriptor(
-            name="test-worker",
-            url="http://localhost",
-            port=8000,
-            health_endpoint="/health",
-        ))
+        mesh.register(
+            ServiceDescriptor(
+                name="test-worker",
+                url="http://localhost",
+                port=8000,
+                health_endpoint="/health",
+            )
+        )
 
         # Initial health should be UNKNOWN
         health = mesh.get_health("test-worker")
@@ -350,16 +362,19 @@ class TestServiceMeshHealthChecks:
     async def test_health_check_connection_error(self):
         """Check health when worker is unreachable via HTTP."""
         mesh = ServiceMesh()
-        mesh.register(ServiceDescriptor(
-            name="unreachable-worker",
-            url="http://localhost",
-            port=19999,
-            health_endpoint="/health",
-        ))
+        mesh.register(
+            ServiceDescriptor(
+                name="unreachable-worker",
+                url="http://localhost",
+                port=19999,
+                health_endpoint="/health",
+            )
+        )
 
         # This will actually try to connect and fail (no server on 19999)
         # Use a very short timeout
         from unittest.mock import AsyncMock, patch
+
         with patch.object(mesh, "_get_client") as mock_get_client:
             mock_client = AsyncMock()
             mock_client.get.side_effect = ConnectionError("connection refused")
@@ -374,12 +389,14 @@ class TestServiceMeshHealthChecks:
         """Check health of all registered workers via in-process handlers."""
         mesh = ServiceMesh()
         for i in range(3):
-            mesh.register(ServiceDescriptor(
-                name=f"worker-{i}",
-                url="http://localhost",
-                port=8000 + i,
-                health_endpoint="/health",
-            ))
+            mesh.register(
+                ServiceDescriptor(
+                    name=f"worker-{i}",
+                    url="http://localhost",
+                    port=8000 + i,
+                    health_endpoint="/health",
+                )
+            )
 
             async def health_handler(path, payload, wid=i):
                 return {"status": "healthy", "worker_id": wid}
@@ -398,6 +415,7 @@ class TestServiceMeshHealthChecks:
 # ───────────────────────────────────────────────────────────────────────────────
 # Retry Behavior Tests
 # ───────────────────────────────────────────────────────────────────────────────
+
 
 class TestServiceMeshRetryBehavior:
     """Test retry behavior with transient failures.
@@ -504,6 +522,7 @@ class TestServiceMeshRetryBehavior:
 # Multi-Worker Communication Tests
 # ───────────────────────────────────────────────────────────────────────────────
 
+
 class TestMultiWorkerCommunication:
     """Test communication patterns between multiple workers."""
 
@@ -513,20 +532,24 @@ class TestMultiWorkerCommunication:
         mesh = ServiceMesh()
 
         # Register auth worker
-        mesh.register(ServiceDescriptor(
-            name="infinity-auth",
-            url="http://localhost",
-            port=8002,
-            category=ServiceCategory.AUTH,
-        ))
+        mesh.register(
+            ServiceDescriptor(
+                name="infinity-auth",
+                url="http://localhost",
+                port=8002,
+                category=ServiceCategory.AUTH,
+            )
+        )
 
         # Register users worker
-        mesh.register(ServiceDescriptor(
-            name="users-service",
-            url="http://localhost",
-            port=8003,
-            category=ServiceCategory.CORE,
-        ))
+        mesh.register(
+            ServiceDescriptor(
+                name="users-service",
+                url="http://localhost",
+                port=8003,
+                category=ServiceCategory.CORE,
+            )
+        )
 
         # Mock users worker handler
         async def users_handler(path, payload):
@@ -584,14 +607,17 @@ class TestMultiWorkerCommunication:
         mesh = ServiceMesh()
 
         for i in range(3):
-            mesh.register(ServiceDescriptor(
-                name=f"worker-{i}",
-                url="http://localhost",
-                port=8000 + i,
-            ))
+            mesh.register(
+                ServiceDescriptor(
+                    name=f"worker-{i}",
+                    url="http://localhost",
+                    port=8000 + i,
+                )
+            )
 
         async def worker_handler(path, payload):
             import asyncio
+
             await asyncio.sleep(0.1)  # Simulate work
             return {"worker": payload.get("worker_id")}
 
@@ -599,10 +625,7 @@ class TestMultiWorkerCommunication:
             mesh.register_handler(f"worker-{i}", worker_handler)
 
         # Call all workers in parallel
-        tasks = [
-            mesh.call(f"worker-{i}", "/process", {"worker_id": i})
-            for i in range(3)
-        ]
+        tasks = [mesh.call(f"worker-{i}", "/process", {"worker_id": i}) for i in range(3)]
         results = await asyncio.gather(*tasks)
 
         assert all(r.success for r in results)
@@ -615,24 +638,30 @@ class TestMultiWorkerCommunication:
         mesh = ServiceMesh()
 
         # Register workers with dependencies
-        mesh.register(ServiceDescriptor(
-            name="api-gateway",
-            url="http://localhost",
-            port=8000,
-            dependencies=["infinity-auth", "users-service"],
-        ))
-        mesh.register(ServiceDescriptor(
-            name="infinity-auth",
-            url="http://localhost",
-            port=8002,
-            dependencies=[],
-        ))
-        mesh.register(ServiceDescriptor(
-            name="users-service",
-            url="http://localhost",
-            port=8003,
-            dependencies=["infinity-auth"],
-        ))
+        mesh.register(
+            ServiceDescriptor(
+                name="api-gateway",
+                url="http://localhost",
+                port=8000,
+                dependencies=["infinity-auth", "users-service"],
+            )
+        )
+        mesh.register(
+            ServiceDescriptor(
+                name="infinity-auth",
+                url="http://localhost",
+                port=8002,
+                dependencies=[],
+            )
+        )
+        mesh.register(
+            ServiceDescriptor(
+                name="users-service",
+                url="http://localhost",
+                port=8003,
+                dependencies=["infinity-auth"],
+            )
+        )
 
         graph = mesh.get_dependency_graph()
         assert graph["api-gateway"] == ["infinity-auth", "users-service"]
@@ -643,6 +672,7 @@ class TestMultiWorkerCommunication:
 # ───────────────────────────────────────────────────────────────────────────────
 # ServiceMesh Cleanup Tests
 # ───────────────────────────────────────────────────────────────────────────────
+
 
 class TestServiceMeshCleanup:
     """Test ServiceMesh resource cleanup."""

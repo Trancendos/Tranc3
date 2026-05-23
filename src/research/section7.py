@@ -22,12 +22,12 @@ logger = logging.getLogger(__name__)
 
 
 class ReportType(str, Enum):
-    SECURITY_SUMMARY  = "security_summary"
-    COMPLIANCE_AUDIT  = "compliance_audit"
+    SECURITY_SUMMARY = "security_summary"
+    COMPLIANCE_AUDIT = "compliance_audit"
     PERFORMANCE_TREND = "performance_trend"
-    THREAT_ANALYSIS   = "threat_analysis"
-    USAGE_REPORT      = "usage_report"
-    PLATFORM_HEALTH   = "platform_health"
+    THREAT_ANALYSIS = "threat_analysis"
+    USAGE_REPORT = "usage_report"
+    PLATFORM_HEALTH = "platform_health"
 
 
 @dataclass
@@ -78,6 +78,7 @@ class Section7:
         # Observatory stats
         try:
             from src.observability.observatory import get_observatory
+
             obs_stats = get_observatory().stats()
             findings.append({"source": "observatory", "data": obs_stats})
             sources.append("observatory")
@@ -89,33 +90,39 @@ class Section7:
         # Town Hall compliance
         try:
             from src.townhall.governance import get_townhall
+
             th_status = get_townhall().status()
             findings.append({"source": "townhall", "data": th_status})
             sources.append("townhall")
             score = th_status.get("overall_score", 1.0)
             if score < 0.9:
-                recommendations.append(f"Compliance score {score:.0%} is below 90% threshold — review policy gaps.")
+                recommendations.append(
+                    f"Compliance score {score:.0%} is below 90% threshold — review policy gaps."
+                )
         except Exception as exc:
             logger.debug("section7: townhall unavailable: %s", exc)
 
         # Cryptex threat signals
         try:
             from src.cryptex.threat_detector import ThreatSeverity, get_cryptex
+
             cx_stats = get_cryptex().stats()
             findings.append({"source": "cryptex", "data": cx_stats})
             sources.append("cryptex")
-            high_signals = (
-                cx_stats.get("by_severity", {}).get(ThreatSeverity.HIGH.value, 0) +
-                cx_stats.get("by_severity", {}).get(ThreatSeverity.CRITICAL.value, 0)
-            )
+            high_signals = cx_stats.get("by_severity", {}).get(
+                ThreatSeverity.HIGH.value, 0
+            ) + cx_stats.get("by_severity", {}).get(ThreatSeverity.CRITICAL.value, 0)
             if high_signals > 0:
-                recommendations.append(f"Cryptex has {high_signals} HIGH/CRITICAL threat signals — investigate.")
+                recommendations.append(
+                    f"Cryptex has {high_signals} HIGH/CRITICAL threat signals — investigate."
+                )
         except Exception as exc:
             logger.debug("section7: cryptex unavailable: %s", exc)
 
         # Basement archive
         try:
             from src.basement.archive import get_basement
+
             bm_stats = get_basement().stats()
             findings.append({"source": "basement", "data": bm_stats})
             sources.append("basement")
@@ -125,6 +132,7 @@ class Section7:
         # Nexus message bus
         try:
             from src.nexus.hub import get_nexus
+
             nx_status = get_nexus().status()
             findings.append({"source": "nexus", "data": nx_status})
             sources.append("nexus")
@@ -156,26 +164,34 @@ class Section7:
 
         try:
             from src.cryptex.threat_detector import ThreatSeverity, get_cryptex
+
             cx = get_cryptex()
             recent = cx.recent_signals(limit=20, min_severity=ThreatSeverity.MEDIUM)
-            findings.append({
-                "source": "cryptex",
-                "recent_signals": [s.to_dict() for s in recent],
-                "stats": cx.stats(),
-            })
+            findings.append(
+                {
+                    "source": "cryptex",
+                    "recent_signals": [s.to_dict() for s in recent],
+                    "stats": cx.stats(),
+                }
+            )
             if cx.stats().get("blocked_ips", 0) > 0:
-                recommendations.append(f"{cx.stats()['blocked_ips']} IPs currently blocked by Cryptex.")
+                recommendations.append(
+                    f"{cx.stats()['blocked_ips']} IPs currently blocked by Cryptex."
+                )
         except Exception as exc:
             logger.debug("section7: cryptex unavailable: %s", exc)
 
         try:
             from src.observability.observatory import EventCategory, get_observatory
+
             obs = get_observatory()
             security_events = obs.recent(limit=20, category=EventCategory.SECURITY)
-            findings.append({
-                "source": "observatory",
-                "security_events": [e.to_dict() for e in security_events],
-            })
+            findings.append(
+                {
+                    "source": "observatory",
+                    "security_events": [e.to_dict() for e in security_events],
+                }
+            )
         except Exception as exc:
             logger.debug("section7: observatory unavailable: %s", exc)
 
@@ -195,7 +211,9 @@ class Section7:
     def get(self, report_id: str) -> Optional[ResearchReport]:
         return self._reports.get(report_id)
 
-    def recent(self, limit: int = 10, report_type: Optional[ReportType] = None) -> List[ResearchReport]:
+    def recent(
+        self, limit: int = 10, report_type: Optional[ReportType] = None
+    ) -> List[ResearchReport]:
         reports = list(self._reports.values())
         if report_type:
             reports = [r for r in reports if r.report_type == report_type]
@@ -204,7 +222,10 @@ class Section7:
     def stats(self) -> Dict[str, Any]:
         return {
             "total_reports": len(self._reports),
-            "by_type": {rt.value: sum(1 for r in self._reports.values() if r.report_type == rt) for rt in ReportType},
+            "by_type": {
+                rt.value: sum(1 for r in self._reports.values() if r.report_type == rt)
+                for rt in ReportType
+            },
         }
 
     # ── Internal ──────────────────────────────────────────────────────────────
@@ -215,6 +236,7 @@ class Section7:
         # Publish to The Library
         try:
             from src.library.knowledge_base import get_library
+
             get_library().create(
                 title=report.title,
                 body=report.summary + "\n\n" + "\n".join(f"- {r}" for r in report.recommendations),
@@ -225,10 +247,10 @@ class Section7:
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
-
         # Emit Observatory event
         try:
             from src.observability.observatory import EventCategory, observe
+
             observe(
                 f"section7.report.{report.report_type.value}",
                 actor="section7",
@@ -240,14 +262,15 @@ class Section7:
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
-
         logger.info("section7: report generated type=%s id=%s", report.report_type.value, report.id)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _ts_human(ts: float) -> str:
     import datetime
+
     return datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M UTC")
 
 

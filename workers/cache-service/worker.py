@@ -15,7 +15,7 @@ import json
 import logging
 import sqlite3
 import time
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -36,6 +36,7 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+
 
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
@@ -69,7 +70,8 @@ def _load_from_db() -> None:
     now = time.time()
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT key, value, expires_at FROM cache WHERE expires_at IS NULL OR expires_at > ?", (now,)
+            "SELECT key, value, expires_at FROM cache WHERE expires_at IS NULL OR expires_at > ?",
+            (now,),
         ).fetchall()
     for row in rows:
         _store[row["key"]] = (json.loads(row["value"]), row["expires_at"])
@@ -115,6 +117,7 @@ async def _eviction_loop() -> None:
 # Models
 # ---------------------------------------------------------------------------
 
+
 class SetRequest(BaseModel):
     value: Any
     ttl: Optional[int] = Field(None, description="TTL in seconds; omit for no expiry")
@@ -146,6 +149,7 @@ class KeysResponse(BaseModel):
 # Lifespan
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -162,7 +166,12 @@ async def lifespan(app: FastAPI):
 
 STARTED_AT = datetime.now(timezone.utc)
 
-app = FastAPI(title="cache-service", description="Distributed TTL cache (self-hosted)", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="cache-service",
+    description="Distributed TTL cache (self-hosted)",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -198,7 +207,9 @@ async def set_key(key: str, req: SetRequest):
     expires_at = (time.time() + req.ttl) if req.ttl else None
     _store[key] = (req.value, expires_at)
     _persist(key, req.value, expires_at)
-    exp_str = datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat() if expires_at else None
+    exp_str = (
+        datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat() if expires_at else None
+    )
     return SetResponse(key=key, ttl=req.ttl, expires_at=exp_str)
 
 
@@ -278,4 +289,5 @@ async def stats():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

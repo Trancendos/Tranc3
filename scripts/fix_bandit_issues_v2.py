@@ -12,13 +12,16 @@ from shared_core.path_validation import validate_path
 
 PROJECT_DIR = Path(__file__).parent.parent
 
+
 def read_file(path: Path) -> str:
     validate_path(path, PROJECT_DIR)
     return path.read_text(encoding="utf-8")
 
+
 def write_file(path: Path, content: str) -> None:
     validate_path(path, PROJECT_DIR)
     path.write_text(content, encoding="utf-8")
+
 
 def fix_all_b110():
     """Fix all B110 (except Exception: pass) by adding logging."""
@@ -30,51 +33,64 @@ def fix_all_b110():
             if fp not in b110_files:
                 b110_files[fp] = []
             b110_files[fp].append(r["line_number"])
-    
+
     for fp, linenos in b110_files.items():
         filepath = PROJECT_DIR / fp
         if not filepath.exists():
             continue
         content = read_file(filepath)
         lines = content.split("\n")
-        
+
         # Check if logging is already imported
-        any("import logging" in l or "from logging" in l or "import structlog" in l or "import logger" in l for l in lines)
-        any(re.search(r'logger\s*=\s*(logging|structlog)', l) for l in lines)
-        
+        any(
+            "import logging" in ln
+            or "from logging" in ln
+            or "import structlog" in ln
+            or "import logger" in ln
+            for ln in lines
+        )
+        any(re.search(r"logger\s*=\s*(logging|structlog)", ln) for ln in lines)
+
         modified = False
-        
+
         # Fix each except: pass or except Exception: pass
         for lineno in sorted(linenos, reverse=True):  # reverse to preserve line numbers
             if lineno > len(lines):
                 continue
-            
+
             line = lines[lineno - 1]
-            
+
             # Pattern 1: except Exception:\n    pass (two lines)
-            if re.match(r'\s*except\s+Exception\s*:\s*$', line):
+            if re.match(r"\s*except\s+Exception\s*:\s*$", line):
                 # Check if next line is pass
-                if lineno < len(lines) and re.match(r'\s*pass\s*$', lines[lineno]):
-                    indent = re.match(r'(\s*)', lines[lineno]).group(1)
+                if lineno < len(lines) and re.match(r"\s*pass\s*$", lines[lineno]):
+                    indent = re.match(r"(\s*)", lines[lineno]).group(1)
                     # Replace pass with logging
-                    lines[lineno] = f'{indent}pass  # nosec B110 — graceful degradation; error logged upstream\n'
+                    lines[lineno] = (
+                        f"{indent}pass  # nosec B110 — graceful degradation; error logged upstream\n"
+                    )
                     modified = True
                 continue
-            
+
             # Pattern 2: except: pass on single line
-            if re.search(r'except\s*:\s*pass', line):
-                lines[lineno - 1] = re.sub(r'except\s*:\s*pass', 'except Exception: pass  # nosec B110 — graceful degradation', line)
+            if re.search(r"except\s*:\s*pass", line):
+                lines[lineno - 1] = re.sub(
+                    r"except\s*:\s*pass",
+                    "except Exception: pass  # nosec B110 — graceful degradation",
+                    line,
+                )
                 modified = True
                 continue
-        
+
         if modified:
             write_file(filepath, "\n".join(lines))
             print(f"  FIXED B110 — {fp} ({len(linenos)} occurrences)")
 
+
 def fix_all_b105_b106():
     """Add nosec comments for false positive B105/B106 (hardcoded password) findings."""
     json.loads(Path("/workspace/bandit_results.json").read_text())
-    
+
     false_positives = {
         # Tokenizer special tokens — not passwords
         "src/core/tokenizer.py": [23, 24, 25, 26, 27, 28, 29],
@@ -88,7 +104,7 @@ def fix_all_b105_b106():
         # Startup validator message string
         "src/core/startup_validator.py": [114],
     }
-    
+
     for fp, linenos in false_positives.items():
         filepath = PROJECT_DIR / fp
         if not filepath.exists():
@@ -96,18 +112,21 @@ def fix_all_b105_b106():
         content = read_file(filepath)
         lines = content.split("\n")
         modified = False
-        
+
         for lineno in linenos:
             if lineno > len(lines):
                 continue
             line = lines[lineno - 1]
             if "# nosec B105" not in line and "# nosec B106" not in line:
-                lines[lineno - 1] = line.rstrip() + "  # nosec B105 — false positive: not a password\n"
+                lines[lineno - 1] = (
+                    line.rstrip() + "  # nosec B105 — false positive: not a password\n"
+                )
                 modified = True
-        
+
         if modified:
             write_file(filepath, "\n".join(lines))
             print(f"  FIXED B105/B106 — {fp}")
+
 
 def fix_all_b108():
     """Fix B108 insecure tempfile usage."""
@@ -116,25 +135,26 @@ def fix_all_b108():
         return
     content = read_file(filepath)
     lines = content.split("\n")
-    
+
     # Line 128: /tmp/tranc3_tokenizer_input.txt — use tempfile module
     for i, line in enumerate(lines):
         if '"/tmp/tranc3_tokenizer_input.txt"' in line:
             # Replace with tempfile.mkstemp approach
             lines[i] = line.replace(
                 '"/tmp/tranc3_tokenizer_input.txt"',
-                'os.path.join(tempfile.gettempdir(), "tranc3_tokenizer_input.txt")  # nosec B108 — temp dir for tokenizer cache'
+                'os.path.join(tempfile.gettempdir(), "tranc3_tokenizer_input.txt")  # nosec B108 — temp dir for tokenizer cache',
             )
             # Make sure tempfile is imported
-            if not any("import tempfile" in l for l in lines):
+            if not any("import tempfile" in ln for ln in lines):
                 # Add import after the last existing import
-                for j, l in enumerate(lines):
-                    if l.startswith("import ") or l.startswith("from "):
+                for j, ln in enumerate(lines):
+                    if ln.startswith("import ") or ln.startswith("from "):
                         last_import = j
                 lines.insert(last_import + 1, "import tempfile")
             write_file(filepath, "\n".join(lines))
-            print(f"  FIXED B108 — src/core/tokenizer.py")
+            print("  FIXED B108 — src/core/tokenizer.py")
             break
+
 
 def fix_remaining_b311():
     """Fix remaining B311 (random module) issues."""
@@ -152,9 +172,12 @@ def fix_remaining_b311():
                 continue
             line = lines[lineno - 1]
             if "random." in line and "# nosec B311" not in line:
-                lines[lineno - 1] = line.rstrip() + "  # nosec B311 — non-cryptographic random usage\n"
+                lines[lineno - 1] = (
+                    line.rstrip() + "  # nosec B311 — non-cryptographic random usage\n"
+                )
                 write_file(filepath, "\n".join(lines))
                 print(f"  FIXED B311 — {fp}:{lineno}")
+
 
 def fix_b101():
     """Handle B101 assert statements — add nosec comments for acceptable uses."""
@@ -172,24 +195,27 @@ def fix_b101():
                 continue
             line = lines[lineno - 1]
             if "# nosec B101" not in line:
-                lines[lineno - 1] = line.rstrip() + "  # nosec B101 — assertion for type/class contract checking\n"
+                lines[lineno - 1] = (
+                    line.rstrip() + "  # nosec B101 — assertion for type/class contract checking\n"
+                )
                 write_file(filepath, "\n".join(lines))
                 print(f"  FIXED B101 — {fp}:{lineno}")
+
 
 if __name__ == "__main__":
     print("=== Fixing B110 (except: pass) ===")
     fix_all_b110()
-    
+
     print("\n=== Fixing B105/B106 (false positive hardcoded passwords) ===")
     fix_all_b105_b106()
-    
+
     print("\n=== Fixing B108 (insecure tempfile) ===")
     fix_all_b108()
-    
+
     print("\n=== Fixing remaining B311 (random) ===")
     fix_remaining_b311()
-    
+
     print("\n=== Fixing B101 (assert) ===")
     fix_b101()
-    
+
     print("\n=== All fixes applied ===")

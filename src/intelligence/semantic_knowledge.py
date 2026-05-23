@@ -34,8 +34,10 @@ logger = logging.getLogger(__name__)
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class EdgeType(Enum):
     """Semantic relationship types for knowledge graph edges."""
+
     IS_A = "is_a"
     PART_OF = "part_of"
     RELATED_TO = "related_to"
@@ -49,6 +51,7 @@ class EdgeType(Enum):
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class KnowledgeNode:
@@ -67,6 +70,7 @@ class KnowledgeNode:
         updated_at: Epoch seconds when the node was last updated.
         _access_at: Internal LRU tracking timestamp.
     """
+
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     semantic_type: str = "entity"
     label: str = ""
@@ -123,6 +127,7 @@ class KnowledgeEdge:
         attributes: Arbitrary key-value metadata.
         created_at: Epoch seconds when the edge was created.
     """
+
     source_id: str = ""
     target_id: str = ""
     edge_type: EdgeType = EdgeType.RELATED_TO
@@ -146,6 +151,7 @@ class GraphPattern:
     Matching resolves variable bindings so that all node and edge constraints
     are simultaneously satisfied in the graph.
     """
+
     node_constraints: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     edge_constraints: List[Tuple[str, str, Optional[EdgeType]]] = field(default_factory=list)
     variable_bindings: Dict[str, str] = field(default_factory=dict)
@@ -162,6 +168,7 @@ class PatternMatch:
         edges:      List of KnowledgeEdge objects satisfying edge constraints.
         score:      Aggregate confidence of the match.
     """
+
     bindings: Dict[str, str] = field(default_factory=dict)
     nodes: Dict[str, KnowledgeNode] = field(default_factory=dict)
     edges: List[KnowledgeEdge] = field(default_factory=list)
@@ -171,6 +178,7 @@ class PatternMatch:
 # ---------------------------------------------------------------------------
 # Semantic Knowledge Graph
 # ---------------------------------------------------------------------------
+
 
 class SemanticKnowledgeGraph:
     """
@@ -202,9 +210,9 @@ class SemanticKnowledgeGraph:
         self._in: Dict[str, List[KnowledgeEdge]] = defaultdict(list)
 
         # --- indices ---
-        self._tag_index: Dict[str, Set[str]] = defaultdict(set)        # tag → node_ids
-        self._type_index: Dict[str, Set[str]] = defaultdict(set)       # type → node_ids
-        self._source_index: Dict[str, Set[str]] = defaultdict(set)     # provenance → node_ids
+        self._tag_index: Dict[str, Set[str]] = defaultdict(set)  # tag → node_ids
+        self._type_index: Dict[str, Set[str]] = defaultdict(set)  # type → node_ids
+        self._source_index: Dict[str, Set[str]] = defaultdict(set)  # provenance → node_ids
 
         # --- LRU order (oldest first) ---
         self._lru_order: deque = deque()
@@ -212,7 +220,8 @@ class SemanticKnowledgeGraph:
         self._lock = asyncio.Lock() if asyncio.get_event_loop().is_running() else None
         logger.info(
             "SemanticKnowledgeGraph initialised (max_nodes=%d, max_paths=%d)",
-            self.max_nodes, self.max_paths,
+            self.max_nodes,
+            self.max_paths,
         )
 
     # -- helper: deterministic edge id --------------------------------------
@@ -636,20 +645,20 @@ class SemanticKnowledgeGraph:
                         return
                 # Build match
                 nodes_matched = {
-                    v: self._nodes[bindings[v]]
-                    for v in var_names
-                    if bindings.get(v) in self._nodes
+                    v: self._nodes[bindings[v]] for v in var_names if bindings.get(v) in self._nodes
                 }
                 node_confs = [n.confidence for n in nodes_matched.values()]
                 edge_confs = [e.confidence for e in edges_ok]
                 all_confs = node_confs + edge_confs
                 score = sum(all_confs) / len(all_confs) if all_confs else 0.0
-                matches.append(PatternMatch(
-                    bindings=dict(bindings),
-                    nodes=nodes_matched,
-                    edges=edges_ok,
-                    score=score,
-                ))
+                matches.append(
+                    PatternMatch(
+                        bindings=dict(bindings),
+                        nodes=nodes_matched,
+                        edges=edges_ok,
+                        score=score,
+                    )
+                )
                 return
             var = var_names[idx]
             for nid in candidates[var]:
@@ -671,30 +680,34 @@ class SemanticKnowledgeGraph:
         """Export the full graph as a JSON-serialisable dict."""
         nodes = []
         for n in self._nodes.values():
-            nodes.append({
-                "id": n.id,
-                "semantic_type": n.semantic_type,
-                "label": n.label,
-                "tags": sorted(n.tags),
-                "attributes": n.attributes,
-                "confidence": n.confidence,
-                "provenance": n.provenance,
-                "fingerprint": n.fingerprint,
-                "created_at": n.created_at,
-                "updated_at": n.updated_at,
-            })
+            nodes.append(
+                {
+                    "id": n.id,
+                    "semantic_type": n.semantic_type,
+                    "label": n.label,
+                    "tags": sorted(n.tags),
+                    "attributes": n.attributes,
+                    "confidence": n.confidence,
+                    "provenance": n.provenance,
+                    "fingerprint": n.fingerprint,
+                    "created_at": n.created_at,
+                    "updated_at": n.updated_at,
+                }
+            )
         edges = []
         for e in self._edges.values():
-            edges.append({
-                "source_id": e.source_id,
-                "target_id": e.target_id,
-                "edge_type": e.edge_type.value,
-                "confidence": e.confidence,
-                "weight": e.weight,
-                "provenance": e.provenance,
-                "attributes": e.attributes,
-                "created_at": e.created_at,
-            })
+            edges.append(
+                {
+                    "source_id": e.source_id,
+                    "target_id": e.target_id,
+                    "edge_type": e.edge_type.value,
+                    "confidence": e.confidence,
+                    "weight": e.weight,
+                    "provenance": e.provenance,
+                    "attributes": e.attributes,
+                    "created_at": e.created_at,
+                }
+            )
         return {
             "nodes": nodes,
             "edges": edges,

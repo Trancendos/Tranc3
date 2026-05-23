@@ -39,11 +39,12 @@ from pathlib import Path
 
 import httpx
 from cryptography.hazmat.primitives import hashes
-from shared_core.path_validation import safe_join, validate_path, sanitize_filename
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+
+from shared_core.path_validation import safe_join, sanitize_filename, validate_path
 
 # ── Configuration ───────────────────────────────────────────────
 
@@ -62,6 +63,7 @@ ALLOWED_ORIGINS = [
 ]
 
 # ── Rate Limiter (in-memory, replaces Cloudflare KV) ───────────
+
 
 class RateLimiter:
     """In-memory rate limiter — replaces Cloudflare KV-based rate limiting."""
@@ -82,6 +84,7 @@ class RateLimiter:
 rate_limiter = RateLimiter()
 
 # ── Crypto ──────────────────────────────────────────────────────
+
 
 def derive_key(seed: str, salt: bytes) -> bytes:
     """PBKDF2 key derivation — 100k iterations, SHA-256."""
@@ -125,6 +128,7 @@ def hash_value(value: str) -> str:
 
 
 # ── Database (SQLite, replaces Cloudflare D1) ──────────────────
+
 
 def get_db() -> sqlite3.Connection:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -191,6 +195,7 @@ def init_schema() -> None:
 
 # ── Auth ────────────────────────────────────────────────────────
 
+
 async def get_auth_user_id(authorization: str | None) -> str | None:
     if not authorization or not authorization.startswith("Bearer "):
         return None
@@ -221,6 +226,7 @@ async def get_auth_user_id(authorization: str | None) -> str | None:
 
 # ── App ─────────────────────────────────────────────────────────
 
+
 @asynccontextmanager
 async def lifespan(app_instance: FastAPI):
     """Startup: initialize DB schema. Shutdown: cleanup (if needed)."""
@@ -240,18 +246,31 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-MFA-Token", "X-Hardware-Key", "X-Lighthouse-Token", "X-Internal-Secret"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-Request-ID",
+        "X-MFA-Token",
+        "X-Hardware-Key",
+        "X-Lighthouse-Token",
+        "X-Internal-Secret",
+    ],
     max_age=86400,
 )
 
 
 # ── Routes ──────────────────────────────────────────────────────
 
+
 @app.get("/health")
 async def health():
     conn = get_db()
-    sealed = conn.execute("SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'").fetchone()
-    count = conn.execute("SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'").fetchone()
+    sealed = conn.execute(
+        "SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'"
+    ).fetchone()
+    count = conn.execute(
+        "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'"
+    ).fetchone()
     conn.close()
     return {
         "status": "healthy",
@@ -272,8 +291,12 @@ async def vault_status(authorization: str | None = Header(None)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
     conn = get_db()
-    sealed = conn.execute("SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'").fetchone()
-    count = conn.execute("SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'").fetchone()
+    sealed = conn.execute(
+        "SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'"
+    ).fetchone()
+    count = conn.execute(
+        "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'"
+    ).fetchone()
     conn.close()
     return {
         "sealed": sealed["state_value"] == "true" if sealed else False,
@@ -321,19 +344,37 @@ async def store_secret(request: Request, authorization: str | None = Header(None
             access_policy, rotation_config, metadata, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
-            secret_id, name, body.get("description"), body.get("type", "generic"),
-            body.get("classification", "confidential"), "active", 1,
-            body.get("path"), json.dumps(body.get("tags", [])), user_id,
-            r2_key, payload_hash, encrypted["iv"], encrypted["salt"],
+            secret_id,
+            name,
+            body.get("description"),
+            body.get("type", "generic"),
+            body.get("classification", "confidential"),
+            "active",
+            1,
+            body.get("path"),
+            json.dumps(body.get("tags", [])),
+            user_id,
+            r2_key,
+            payload_hash,
+            encrypted["iv"],
+            encrypted["salt"],
             json.dumps(body.get("access_policy", {})),
             json.dumps(body.get("rotation_config", {})),
-            json.dumps(body.get("metadata", {})), now, now,
+            json.dumps(body.get("metadata", {})),
+            now,
+            now,
         ),
     )
     conn.commit()
     conn.close()
 
-    return {"secret_id": secret_id, "name": name, "status": "active", "version": 1, "created_at": now}
+    return {
+        "secret_id": secret_id,
+        "name": name,
+        "status": "active",
+        "version": 1,
+        "created_at": now,
+    }
 
 
 @app.post("/secrets/retrieve")
@@ -353,7 +394,7 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
     try:
         secret_id = sanitize_filename(secret_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid secret_id format")
+        raise HTTPException(status_code=400, detail="Invalid secret_id format") from None
 
     conn = get_db()
     row = conn.execute("SELECT * FROM void_secrets WHERE secret_id = ?", (secret_id,)).fetchone()
@@ -379,7 +420,9 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
 
     plaintext = decrypt_secret(payload["ciphertext"], row["iv"], row["salt"], MASTER_KEY_SEED)
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    conn.execute("UPDATE void_secrets SET last_accessed_at = ? WHERE secret_id = ?", (now, secret_id))
+    conn.execute(
+        "UPDATE void_secrets SET last_accessed_at = ? WHERE secret_id = ?", (now, secret_id)
+    )
     conn.execute(
         "INSERT INTO void_audit_log (audit_id, secret_id, action, actor_id, actor_type, success, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (str(uuid.uuid4()), secret_id, "retrieve", user_id, "user", 1, "{}", now),
@@ -417,7 +460,7 @@ async def get_secret_meta(secret_id: str, authorization: str | None = Header(Non
     try:
         secret_id = sanitize_filename(secret_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid secret_id format")
+        raise HTTPException(status_code=400, detail="Invalid secret_id format") from None
 
     conn = get_db()
     row = conn.execute(
@@ -444,10 +487,12 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
     try:
         secret_id = sanitize_filename(secret_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid secret_id format")
+        raise HTTPException(status_code=400, detail="Invalid secret_id format") from None
 
     conn = get_db()
-    row = conn.execute("SELECT owner_id, r2_key FROM void_secrets WHERE secret_id = ?", (secret_id,)).fetchone()
+    row = conn.execute(
+        "SELECT owner_id, r2_key FROM void_secrets WHERE secret_id = ?", (secret_id,)
+    ).fetchone()
     if not row:
         conn.close()
         raise HTTPException(status_code=404, detail="Secret not found")
@@ -460,10 +505,14 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
     validate_path(r2_path, R2_DIR, allow_create=False)
     if r2_path.exists():  # codeql[py/path-injection] – path validated by validate_path above
         import shutil
+
         shutil.rmtree(r2_path, ignore_errors=True)  # codeql[py/path-injection]
 
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    conn.execute("UPDATE void_secrets SET status = ?, payload = NULL, updated_at = ? WHERE secret_id = ?", ("deleted", now, secret_id))
+    conn.execute(
+        "UPDATE void_secrets SET status = ?, payload = NULL, updated_at = ? WHERE secret_id = ?",
+        ("deleted", now, secret_id),
+    )
     conn.execute(
         "INSERT INTO void_audit_log (audit_id, secret_id, action, actor_id, actor_type, success, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (str(uuid.uuid4()), secret_id, "crypto_shred", user_id, "user", 1, "{}", now),
@@ -483,10 +532,12 @@ async def get_audit_log(secret_id: str, authorization: str | None = Header(None)
     try:
         secret_id = sanitize_filename(secret_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid secret_id format")
+        raise HTTPException(status_code=400, detail="Invalid secret_id format") from None
 
     conn = get_db()
-    secret = conn.execute("SELECT owner_id FROM void_secrets WHERE secret_id = ?", (secret_id,)).fetchone()
+    secret = conn.execute(
+        "SELECT owner_id FROM void_secrets WHERE secret_id = ?", (secret_id,)
+    ).fetchone()
     if not secret:
         conn.close()
         raise HTTPException(status_code=404, detail="Secret not found")

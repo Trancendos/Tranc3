@@ -64,9 +64,13 @@ class QuantumNeuralCore:
 
         try:
             self.backend = AerSimulator(method="statevector")
-            logger.info("QuantumNeuralCore initialised: %s qubits", sanitize_for_log(self.num_qubits))  # codeql[py/cleartext-logging]
+            logger.info(
+                "QuantumNeuralCore initialised: %s qubits", sanitize_for_log(self.num_qubits)
+            )  # codeql[py/cleartext-logging]
         except Exception as e:
-            logger.warning("AerSimulator init failed: %s — falling back to classical", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "AerSimulator init failed: %s — falling back to classical", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             self.backend = None
 
         self.neuromorphic_bridge = NeuromorphicInterface(config)
@@ -111,7 +115,9 @@ class QuantumNeuralCore:
             return torch.tensor(out, dtype=torch.float32).reshape(input_state.shape)
 
         except Exception as e:
-            logger.warning("Quantum attention failed: %s — using classical fallback", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Quantum attention failed: %s — using classical fallback", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return self._classical_attention_fallback(input_state)
 
     def _classical_attention_fallback(self, x: torch.Tensor) -> torch.Tensor:

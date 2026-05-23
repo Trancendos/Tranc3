@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 import logging
-
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -24,9 +23,9 @@ logger = logging.getLogger(__name__)
 
 
 class ArticleStatus(str, Enum):
-    DRAFT     = "draft"
+    DRAFT = "draft"
     PUBLISHED = "published"
-    ARCHIVED  = "archived"
+    ARCHIVED = "archived"
 
 
 @dataclass
@@ -39,8 +38,8 @@ class Article:
     author: str = "system"
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
-    source: str = "internal"             # "internal" | "outline" | "observatory"
-    outline_id: Optional[str] = None     # ID in external Outline instance
+    source: str = "internal"  # "internal" | "outline" | "observatory"
+    outline_id: Optional[str] = None  # ID in external Outline instance
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -67,7 +66,7 @@ class Library:
 
     def __init__(self):
         self._articles: Dict[str, Article] = {}
-        self._tag_index: Dict[str, List[str]] = {}     # tag → [article_id]
+        self._tag_index: Dict[str, List[str]] = {}  # tag → [article_id]
         self._seed_platform_articles()
 
     # ── CRUD ─────────────────────────────────────────────────────────────────
@@ -93,7 +92,9 @@ class Library:
         self._articles[art.id] = art
         for tag in art.tags:
             self._tag_index.setdefault(tag, []).append(art.id)
-        logger.debug("library: created article id=%s title=%r", art.id, sanitize_for_log(title))  # codeql[py/cleartext-logging]
+        logger.debug(
+            "library: created article id=%s title=%r", art.id, sanitize_for_log(title)
+        )  # codeql[py/cleartext-logging]
         self._emit_observatory_event(art, "article.created")
         return art
 
@@ -128,8 +129,7 @@ class Library:
         """Simple in-process substring search. Replaced by FAISS for semantic."""
         q = query.lower()
         results = [
-            a for a in self._articles.values()
-            if q in a.title.lower() or q in a.body.lower()
+            a for a in self._articles.values() if q in a.title.lower() or q in a.body.lower()
         ]
         return sorted(results, key=lambda a: a.updated_at, reverse=True)[:limit]
 
@@ -164,6 +164,7 @@ class Library:
     def _emit_observatory_event(self, art: Article, event_type: str) -> None:
         try:
             from src.observability.observatory import EventCategory, observe
+
             observe(
                 event_type,
                 actor=art.author,
@@ -174,7 +175,6 @@ class Library:
             )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
     def _seed_platform_articles(self) -> None:
         """Seed initial platform documentation articles."""

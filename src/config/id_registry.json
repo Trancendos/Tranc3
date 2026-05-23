@@ -1,0 +1,3009 @@
+{
+  "version": "2.0.0",
+  "generated_by": "Tranc3 Naming Repair & ID Registry Generator",
+  "taxonomy": {
+    "PID": "Product/Location ID — PID-XXX (3-letter location abbreviation)",
+    "AID": "AI ID — AID-XXX-NN (3-letter location + 2-digit sequence)",
+    "SID": "Service/Agent ID — SID-XXX-NN (3-letter location + 2-digit sequence)",
+    "NID": "Nano-ID/Bot ID — NID-XXX-NN (3-letter location + 2-digit sequence)"
+  },
+  "tiers": {
+    "1": "The Sovereign — Ultimate orchestrator",
+    "2": "Primes — Executive AI authorities",
+    "3": "Lead AIs — Day-to-day location managers",
+    "4": "Agents — Mid-tier automation (Alpha + Beta)",
+    "5": "Bots — Task-specific micro-workers (01-04)"
+  },
+  "sovereign": {
+    "name": "The Sovereign",
+    "aid": "AID-SOV-01",
+    "tier": 1,
+    "description": "Prime AI — ultimate orchestrator of the Tranc3 ecosystem"
+  },
+  "primes": [
+    {
+      "name": "Cornelius MacIntyre",
+      "aid": "AID-COR-01",
+      "tier": 2,
+      "governs": [
+        "The Nexus",
+        "The HIVE",
+        "Luminous",
+        "The Town Hall",
+        "The Studio",
+        "The Digital Grid (indirect)",
+        "The Lab",
+        "Royal Bank of Arcadia",
+        "The Observatory",
+        "Infinity",
+        "The Citadel",
+        "Think Tank",
+        "Tranquility"
+      ]
+    },
+    {
+      "name": "Dorris Fontaine",
+      "aid": "AID-DOR-01",
+      "tier": 2,
+      "governs": [
+        "Arcadia",
+        "The Artifactory",
+        "API Marketplace",
+        "Arcadian Exchange",
+        "Warp Radio"
+      ]
+    },
+    {
+      "name": "The Guardian (Anchor: Orb of Orisis)",
+      "aid": "AID-GRD-01",
+      "tier": 2,
+      "full_title": "The Guardian (Anchor: Orb of Orisis / Marcus Magnolia)",
+      "governs": [
+        "The Void",
+        "The Lighthouse",
+        "The Warp Tunnel",
+        "Cryptex",
+        "The Ice Box"
+      ]
+    },
+    {
+      "name": "The Doctor (Nikolai O'denhim)",
+      "aid": "AID-DRN-01",
+      "tier": 2,
+      "governs": [
+        "The Digital Grid",
+        "The Workshop",
+        "The Chaos Party"
+      ]
+    },
+    {
+      "name": "Voxx",
+      "aid": "AID-VOX-01",
+      "tier": 2,
+      "governs": [
+        "Sashas Photo Studio",
+        "TranceFlow",
+        "TateKing",
+        "Fabulousa",
+        "Imaginarium"
+      ]
+    },
+    {
+      "name": "Norman Hawkins",
+      "aid": "AID-NOR-01",
+      "tier": 2,
+      "governs": [
+        "The Library",
+        "The Academy",
+        "DocUtari",
+        "The Basement",
+        "The Spark"
+      ]
+    },
+    {
+      "name": "Savania",
+      "aid": "AID-SAV-01",
+      "tier": 2,
+      "governs": [
+        "I-Mind",
+        "tAimra",
+        "VRAR3D",
+        "Resonate"
+      ]
+    },
+    {
+      "name": "Trancendos",
+      "aid": "AID-TRN-01",
+      "tier": 2,
+      "governs": [
+        "The Dutchy",
+        "Turing's Hub",
+        "ChronosSphere / ArcStream",
+        "DevOcity"
+      ]
+    }
+  ],
+  "locations": [
+    {
+      "location": "The Nexus",
+      "pid": "PID-NXS",
+      "pillar": "Architectural",
+      "pillar_abbrev": "ARCH",
+      "lead_ai": {
+        "name": "Nexus-Prime",
+        "aid": "AID-NXS-01",
+        "tier": 3
+      },
+      "primary_function": "AI Communication Gateway & AI, Agent, and Bot / Worker Transfer Hub",
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "abilities": [
+        "Omni-Channel Routing: Parses and directs intent.",
+        "Worker Migration: Transfers entities between hubs."
+      ],
+      "worker_port": 8004,
+      "worker_path": "workers/infinity-ws/",
+      "agents": [
+        {
+          "name": "Pathfinder",
+          "sid": "SID-NXS-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Maps fast system data communication routes."
+        },
+        {
+          "name": "Omni-Router",
+          "sid": "SID-NXS-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Routes user prompts to the correct AI/Bot."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Ping-Bot",
+          "nid": "NID-NXS-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Measures connection network latency."
+        },
+        {
+          "name": "Ack-Bot",
+          "nid": "NID-NXS-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Confirms data transitions and logs stamps."
+        },
+        {
+          "name": "Syn-Bot",
+          "nid": "NID-NXS-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Harmonizes offline caches with cloud data."
+        },
+        {
+          "name": "Fin-Bot",
+          "nid": "NID-NXS-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Closes data channels and flushes memory."
+        }
+      ]
+    },
+    {
+      "location": "The HIVE",
+      "pid": "PID-HVE",
+      "pillar": "Architectural",
+      "pillar_abbrev": "ARCH",
+      "lead_ai": {
+        "name": "The Queen",
+        "aid": "AID-HVE-01",
+        "tier": 3
+      },
+      "primary_function": "Data Transport Hub",
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "abilities": [
+        "Swarm Packet Optimization: Compresses/reroutes data.",
+        "Self-Healing Topology: Bypasses failed nodes."
+      ],
+      "worker_port": 8022,
+      "worker_path": "workers/queue-service/",
+      "agents": [
+        {
+          "name": "Swarm-Leader",
+          "sid": "SID-HVE-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Manages massive data streams and loads."
+        },
+        {
+          "name": "Hive-Mind",
+          "sid": "SID-HVE-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Uses telemetry to optimize the routing matrix."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Worker-Bee-Bot",
+          "nid": "NID-HVE-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Carries small payload updates between nodes."
+        },
+        {
+          "name": "Drone-7-Bot",
+          "nid": "NID-HVE-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Sweeps transport lanes to prune stuck packets."
+        },
+        {
+          "name": "Nectar-Fetch-Bot",
+          "nid": "NID-HVE-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Pulls system-state configuration updates."
+        },
+        {
+          "name": "Comb-Builder-Bot",
+          "nid": "NID-HVE-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Creates dynamic memory blocks for spikes."
+        }
+      ]
+    },
+    {
+      "location": "Arcadia",
+      "pid": "PID-ARC",
+      "pillar": "Commercial / Financial",
+      "pillar_abbrev": "COMM",
+      "lead_ai": {
+        "name": "Lilli SC",
+        "aid": "AID-ARC-01",
+        "tier": 3
+      },
+      "primary_function": "Post-Login User Frontend, Forum & Email Hub",
+      "primes": [
+        "Dorris Fontaine"
+      ],
+      "abilities": [
+        "Dynamic Dashboard: Renders personalized frontend.",
+        "Integrated Comms Matrix: Centralizes forums/emails."
+      ],
+      "worker_port": null,
+      "worker_path": "web/",
+      "agents": [
+        {
+          "name": "Forum-Mod",
+          "sid": "SID-ARC-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Scans threads to flag policy issues/announcements."
+        },
+        {
+          "name": "Campaign-Mgr",
+          "sid": "SID-ARC-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Drafts automated system emails/notifications."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Mail-Sorter-Bot",
+          "nid": "NID-ARC-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Categorizes and dispatches inbound emails."
+        },
+        {
+          "name": "Thread-Pumper-Bot",
+          "nid": "NID-ARC-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Injects live forum updates into the UI."
+        },
+        {
+          "name": "UI-Renderer-Bot",
+          "nid": "NID-ARC-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Translates local templates into responsive UI."
+        },
+        {
+          "name": "Cache-Fetch-Bot",
+          "nid": "NID-ARC-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Grabs local media/templates to speed up loads."
+        }
+      ]
+    },
+    {
+      "location": "Luminous",
+      "pid": "PID-LUM",
+      "pillar": "Architectural",
+      "pillar_abbrev": "ARCH",
+      "lead_ai": {
+        "name": "Cornelius MacIntyre",
+        "aid": "AID-LUM-01",
+        "tier": 3
+      },
+      "primary_function": "Core Platform Brain & Orchestration Engine",
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "abilities": [
+        "Cognitive Synthesis: Autonomous optimization decisions.",
+        "Workflow Instantiation: Translates intent to execution."
+      ],
+      "worker_port": 8009,
+      "worker_path": "workers/infinity-ai/",
+      "agents": [
+        {
+          "name": "Synapse",
+          "sid": "SID-LUM-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Monitors global activity; triggers alerts for offline nodes."
+        },
+        {
+          "name": "Cortex",
+          "sid": "SID-LUM-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Translates objectives into workflow blueprints."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Neuron-1-Bot",
+          "nid": "NID-LUM-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Listens for emergency signals for immediate attention."
+        },
+        {
+          "name": "Neuron-2-Bot",
+          "nid": "NID-LUM-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Holds transient conversational state metrics."
+        },
+        {
+          "name": "Dendrite-Bot",
+          "nid": "NID-LUM-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Collects performance metrics from peripheral nodes."
+        },
+        {
+          "name": "Axon-Bot",
+          "nid": "NID-LUM-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Transmits executive commands to Agents/Bots."
+        }
+      ]
+    },
+    {
+      "location": "The Town Hall",
+      "pid": "PID-TWH",
+      "pillar": "Architectural",
+      "pillar_abbrev": "ARCH",
+      "lead_ai": {
+        "name": "Tristuran",
+        "aid": "AID-TWH-01",
+        "tier": 3
+      },
+      "primary_function": "Governance & Compliance Center",
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "abilities": [
+        "Automated Compliance: Scans against ITIL/Agile.",
+        "War Room Protocol: Locks down affected systems."
+      ],
+      "worker_port": null,
+      "worker_path": "src/townhall/",
+      "agents": [
+        {
+          "name": "The Auditor",
+          "sid": "SID-TWH-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Compares operations against ITIL/Agile frameworks."
+        },
+        {
+          "name": "The Bailiff",
+          "sid": "SID-TWH-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Flags non-compliant accounts, placing holds."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Gavel-Bot",
+          "nid": "NID-TWH-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Halts operations in sandboxes for security violations."
+        },
+        {
+          "name": "Scroll-Bot",
+          "nid": "NID-TWH-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Writes unalterable logs of compliance actions."
+        },
+        {
+          "name": "Red-Tape-Bot",
+          "nid": "NID-TWH-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Auto-generates compliance paperwork and checklists."
+        },
+        {
+          "name": "Stamp-Bot",
+          "nid": "NID-TWH-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Signs certificates for approved system tools."
+        }
+      ]
+    },
+    {
+      "location": "The Studio",
+      "pid": "PID-STD",
+      "pillar": "Creativity",
+      "pillar_abbrev": "CREA",
+      "lead_ai": {
+        "name": "Voxx",
+        "aid": "AID-STD-01",
+        "tier": 3
+      },
+      "primary_function": "Central Hub of the Creativity Center",
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "abilities": [
+        "Creative Node Sync: Nervous system for creative tools.",
+        "Aesthetic Homogenization: Enforces design languages."
+      ],
+      "worker_port": null,
+      "worker_path": "src/studio/",
+      "agents": [
+        {
+          "name": "The Conductor",
+          "sid": "SID-STD-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Coordinates asset handoffs between 3D/Video/UI."
+        },
+        {
+          "name": "The Muse",
+          "sid": "SID-STD-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Generates baseline design schemes and mood boards."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Palette-Bot",
+          "nid": "NID-STD-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Translates color variables into matching stylesheets."
+        },
+        {
+          "name": "Easel-Bot",
+          "nid": "NID-STD-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Renders dynamic design drafts for live preview."
+        },
+        {
+          "name": "Clay-Bot",
+          "nid": "NID-STD-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Speeds up simple vector and morphing operations."
+        },
+        {
+          "name": "Layout-Bot",
+          "nid": "NID-STD-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Plots design grids, focal alignments, and bounds."
+        }
+      ]
+    },
+    {
+      "location": "Sashas Photo Studio",
+      "pid": "PID-SPS",
+      "pillar": "Creativity",
+      "pillar_abbrev": "CREA",
+      "lead_ai": {
+        "name": "Madam Krystal",
+        "aid": "AID-SPS-01",
+        "tier": 3
+      },
+      "primary_function": "Photo & Image Generation Center",
+      "primes": [
+        "Voxx"
+      ],
+      "abilities": [
+        "Generative Synthesis: Creates high-fidelity images.",
+        "Algorithmic Retouching: Enhances/upscales imagery."
+      ],
+      "worker_port": null,
+      "worker_path": "src/studio/",
+      "agents": [
+        {
+          "name": "The Retoucher",
+          "sid": "SID-SPS-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Directs neural filters to enhance/sharpen pictures."
+        },
+        {
+          "name": "Prompt-Smith",
+          "sid": "SID-SPS-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Optimizes prompts into tags for generation engines."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Aperture-Bot",
+          "nid": "NID-SPS-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Adjusts focus matrices, blur, and depth of field."
+        },
+        {
+          "name": "Shutter-Bot",
+          "nid": "NID-SPS-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Triggers high-speed renders to output flat image layers."
+        },
+        {
+          "name": "Flash-Bot",
+          "nid": "NID-SPS-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Regulates light direction, balance, and HDR variables."
+        },
+        {
+          "name": "Lens-Bot",
+          "nid": "NID-SPS-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Fixes perspective distortions and lens anomalies."
+        }
+      ]
+    },
+    {
+      "location": "TranceFlow",
+      "pid": "PID-TFL",
+      "pillar": "Creativity",
+      "pillar_abbrev": "CREA",
+      "lead_ai": {
+        "name": "Junior Cesar",
+        "aid": "AID-TFL-01",
+        "tier": 3
+      },
+      "primary_function": "3D Modeling & Games Creation Studio",
+      "primes": [
+        "Voxx"
+      ],
+      "abilities": [
+        "Browser-Native Engine: Runs game logic/physics.",
+        "Real-time Sculpting: Shapes/textures 3D spaces."
+      ],
+      "worker_port": null,
+      "worker_path": "src/studio/",
+      "agents": [
+        {
+          "name": "Mesh-Weaver",
+          "sid": "SID-TFL-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Synthesizes wireframes and converts data to meshes."
+        },
+        {
+          "name": "The Physicist",
+          "sid": "SID-TFL-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Calculates rigid body dynamics and object collision."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Voxel-1-Bot",
+          "nid": "NID-TFL-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Generates grid-based blocks and terrain geometries."
+        },
+        {
+          "name": "Collider-Bot",
+          "nid": "NID-TFL-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Monitors boundary boxes for collision scripts."
+        },
+        {
+          "name": "Ray-Tracer-Bot",
+          "nid": "NID-TFL-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Handles lighting paths, reflections, and shadows."
+        },
+        {
+          "name": "Sprite-Bot",
+          "nid": "NID-TFL-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Renders fast 2D graphics and UIs over 3D spaces."
+        }
+      ]
+    },
+    {
+      "location": "TateKing",
+      "pid": "PID-TKG",
+      "pillar": "Creativity",
+      "pillar_abbrev": "CREA",
+      "lead_ai": {
+        "name": "Benji Tate & Sam King",
+        "aid": "AID-TKG-01",
+        "tier": 3
+      },
+      "primary_function": "Video Creation & Editing Platform",
+      "primes": [
+        "Voxx"
+      ],
+      "abilities": [
+        "Cloud-Native NLE: Browser-based video editing.",
+        "Timeline-as-Code: Translates edits into code."
+      ],
+      "worker_port": null,
+      "worker_path": "src/studio/",
+      "agents": [
+        {
+          "name": "The Director",
+          "sid": "SID-TKG-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Coordinates timeline-as-code scripting from video data."
+        },
+        {
+          "name": "The Editor",
+          "sid": "SID-TKG-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Suggests cuts, music shifts, and scene transitions."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Cutter-Bot",
+          "nid": "NID-TKG-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Slices video and audio tracks at precise timestamps."
+        },
+        {
+          "name": "Splicer-Bot",
+          "nid": "NID-TKG-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Joins video clips and audio tracks into unified tracks."
+        },
+        {
+          "name": "Renderer-Bot",
+          "nid": "NID-TKG-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Compresses/outputs video files into target formats."
+        },
+        {
+          "name": "Scrubber-Bot",
+          "nid": "NID-TKG-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Generates fast, low-res preview frames for the timeline."
+        }
+      ]
+    },
+    {
+      "location": "Fabulousa",
+      "pid": "PID-FAB",
+      "pillar": "Creativity",
+      "pillar_abbrev": "CREA",
+      "lead_ai": {
+        "name": "Baron Von Hilton",
+        "aid": "AID-FAB-01",
+        "tier": 3
+      },
+      "primary_function": "Styling, UX, UI & Design Center",
+      "primes": [
+        "Voxx"
+      ],
+      "abilities": [
+        "Omni-Channel Styling: Generates UX/UI systems.",
+        "Hyper-Fidelity Prototyping: Builds interactive UI mockups."
+      ],
+      "worker_port": null,
+      "worker_path": "src/studio/",
+      "agents": [
+        {
+          "name": "The Tailor",
+          "sid": "SID-FAB-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Adapts interface layouts/fonts based on user profiles."
+        },
+        {
+          "name": "The Weaver",
+          "sid": "SID-FAB-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Converts visual mockups into clean HTML/CSS/components."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Pixel-Pusher-Bot",
+          "nid": "NID-FAB-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Adjusts components to the pixel for visual alignment."
+        },
+        {
+          "name": "Hex-Code-Bot",
+          "nid": "NID-FAB-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Verifies color accuracy and dynamic CSS themes."
+        },
+        {
+          "name": "Font-Fetcher-Bot",
+          "nid": "NID-FAB-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Loads and handles web typography assets/fallbacks."
+        },
+        {
+          "name": "Padding-Bot",
+          "nid": "NID-FAB-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Calculates margins and responsive flex properties."
+        }
+      ]
+    },
+    {
+      "location": "Imaginarium",
+      "pid": "PID-IMG",
+      "pillar": "Creativity",
+      "pillar_abbrev": "CREA",
+      "lead_ai": {
+        "name": "Voxx",
+        "aid": "AID-IMG-01",
+        "tier": 3
+      },
+      "primary_function": "Omni-Creative Masterpiece Wizard",
+      "primes": [
+        "Voxx"
+      ],
+      "abilities": [
+        "Masterpiece Synthesis: Orchestrates creative tools.",
+        "Feature Alchemy: Wires assets/code via natural language."
+      ],
+      "worker_port": null,
+      "worker_path": "src/studio/",
+      "agents": [
+        {
+          "name": "The Alchemist",
+          "sid": "SID-IMG-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Translates product plans into multi-app design sequences."
+        },
+        {
+          "name": "The Architect",
+          "sid": "SID-IMG-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Bridges visual layouts with structural code bindings."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Mixer-Bot",
+          "nid": "NID-IMG-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Groups images, media, and 3D files into unified folders."
+        },
+        {
+          "name": "Blender-Bot",
+          "nid": "NID-IMG-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Resolves layer conflicts when combining 2D, 3D, and UI."
+        },
+        {
+          "name": "Welder-Bot",
+          "nid": "NID-IMG-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Links user input triggers in the UI directly to backend functions."
+        },
+        {
+          "name": "Polisher-Bot",
+          "nid": "NID-IMG-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Runs final visual sweeps on lighting, styling, and alignment."
+        }
+      ]
+    },
+    {
+      "location": "The Digital Grid",
+      "pid": "PID-DGR",
+      "pillar": "Development (Code)",
+      "pillar_abbrev": "DEVL",
+      "lead_ai": {
+        "name": "Tyler Towncroft",
+        "aid": "AID-DGR-01",
+        "tier": 3
+      },
+      "primary_function": "Workflow Platform",
+      "primes": [
+        "The Doctor (Nikolai O'denhim)"
+      ],
+      "abilities": [
+        "Dynamic Canvas: Drag-and-drop workflow mapping.",
+        "Event-Driven Execution: Automates actions on triggers."
+      ],
+      "worker_port": 8010,
+      "worker_path": "workers/the-grid/",
+      "agents": [
+        {
+          "name": "The Flow-Weaver",
+          "sid": "SID-DGR-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Weaves APIs, webhooks, and scripts into execution steps."
+        },
+        {
+          "name": "Event-Broker",
+          "sid": "SID-DGR-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Monitors webhooks, sending signals for automated triggers."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Trigger-Bot",
+          "nid": "NID-DGR-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Detects events and instantly launches the automation sequence."
+        },
+        {
+          "name": "Action-Bot",
+          "nid": "NID-DGR-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Runs data changes, logs updates, or makes API calls."
+        },
+        {
+          "name": "Condition-Bot",
+          "nid": "NID-DGR-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Evaluates true/false logic, directing workflow paths."
+        },
+        {
+          "name": "Loop-Bot",
+          "nid": "NID-DGR-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Runs batch processing tasks over lists to prevent freezes."
+        }
+      ]
+    },
+    {
+      "location": "The Lab",
+      "pid": "PID-LAB",
+      "pillar": "Development (Code)",
+      "pillar_abbrev": "DEVL",
+      "lead_ai": {
+        "name": "The Dr. & Slime",
+        "aid": "AID-LAB-01",
+        "tier": 3
+      },
+      "primary_function": "Code Creation Platform",
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "abilities": [
+        "Generative Syntax Matrix: Real-time pair programming.",
+        "Instant Sandbox Compiling: Executes isolated code."
+      ],
+      "worker_port": null,
+      "worker_path": "src/lab/",
+      "agents": [
+        {
+          "name": "The Hounds",
+          "sid": "SID-LAB-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Searches sandbox code for syntax errors and memory leaks."
+        },
+        {
+          "name": "Syntax-Sage",
+          "sid": "SID-LAB-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Reads active scripts, suggesting code optimization patterns."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Lint-Bot",
+          "nid": "NID-LAB-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Formats and styles code to match company guidelines."
+        },
+        {
+          "name": "Compile-Bot",
+          "nid": "NID-LAB-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Runs rapid, isolated builds to verify code compilation."
+        },
+        {
+          "name": "Debug-Bot",
+          "nid": "NID-LAB-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Inspects runtime stacks, pinpointing errors to the exact line."
+        },
+        {
+          "name": "Test-Bot",
+          "nid": "NID-LAB-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Runs automated code tests, reporting pass/fail ratios."
+        }
+      ]
+    },
+    {
+      "location": "The Workshop",
+      "pid": "PID-WRK",
+      "pillar": "Development (Code)",
+      "pillar_abbrev": "DEVL",
+      "lead_ai": {
+        "name": "Larry Lowhammer",
+        "aid": "AID-WRK-01",
+        "tier": 3
+      },
+      "primary_function": "Repository Storage (Forgejo)",
+      "primes": [
+        "The Doctor (Nikolai O'denhim)"
+      ],
+      "abilities": [
+        "Distributed Forgejo Sync: Highly available repo hosting.",
+        "Disaster Recovery Backup: Instant code regeneration."
+      ],
+      "worker_port": null,
+      "worker_path": "deploy/forgejo/",
+      "agents": [
+        {
+          "name": "Branch-Manager",
+          "sid": "SID-WRK-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Tracks active code branches, conflicts, and pull requests."
+        },
+        {
+          "name": "Merge-Master",
+          "sid": "SID-WRK-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Safely merges code branches, guiding users through conflicts."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Commit-Bot",
+          "nid": "NID-WRK-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Packages file revisions with clear, automated descriptions."
+        },
+        {
+          "name": "Push-Bot",
+          "nid": "NID-WRK-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Uploads locally saved code changes to the central Forgejo system."
+        },
+        {
+          "name": "Pull-Bot",
+          "nid": "NID-WRK-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Fetches and updates local folders with the latest repo commits."
+        },
+        {
+          "name": "Clone-Bot",
+          "nid": "NID-WRK-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Replicates repositories, setting up fresh workspace folders."
+        }
+      ]
+    },
+    {
+      "location": "The Chaos Party",
+      "pid": "PID-TCP",
+      "pillar": "Development (Code)",
+      "pillar_abbrev": "DEVL",
+      "lead_ai": {
+        "name": "The Mad Hatter",
+        "aid": "AID-TCP-01",
+        "tier": 3
+      },
+      "primary_function": "Central Testing Platform (Wonderland Theme)",
+      "primes": [
+        "The Doctor (Nikolai O'denhim)"
+      ],
+      "abilities": [
+        "Rabbit Hole Sandbox: Bizarre edge-case simulations.",
+        "Mutation Testing: Mutates code to catch regressions."
+      ],
+      "worker_port": null,
+      "worker_path": "tests/",
+      "agents": [
+        {
+          "name": "The March Hare",
+          "sid": "SID-TCP-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Sends rapid mock inputs and payloads to stress-test systems."
+        },
+        {
+          "name": "The Dormouse",
+          "sid": "SID-TCP-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Sits silently in tests, measuring memory leaks/performance dips."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Teapot-Bot",
+          "nid": "NID-TCP-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Spams server endpoints with massive requests to test load limits."
+        },
+        {
+          "name": "Pocket-Watch-Bot",
+          "nid": "NID-TCP-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Tracks API response times during load spikes for latency alerts."
+        },
+        {
+          "name": "Sugar-Cube-Bot",
+          "nid": "NID-TCP-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Generates messy mockup databases to test bad dataset handling."
+        },
+        {
+          "name": "Jam-Tart-Bot",
+          "nid": "NID-TCP-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Shuts down minor random services mid-test to check recovery."
+        }
+      ]
+    },
+    {
+      "location": "The Artifactory",
+      "pid": "PID-ART",
+      "pillar": "Commercial / Financial",
+      "pillar_abbrev": "COMM",
+      "lead_ai": {
+        "name": "Lunascene",
+        "aid": "AID-ART-01",
+        "tier": 3
+      },
+      "primary_function": "Central Artifact Repository Library (JFrog style)",
+      "primes": [
+        "Dorris Fontaine"
+      ],
+      "abilities": [
+        "Universal Package Management: Centralized binary host.",
+        "Disaster Recovery Backup: Complete environment restoral."
+      ],
+      "worker_port": null,
+      "worker_path": "src/artifactory/",
+      "agents": [
+        {
+          "name": "The Librarian",
+          "sid": "SID-ART-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Catalogs compiled code assets, container images, and packages."
+        },
+        {
+          "name": "The Archivist",
+          "sid": "SID-ART-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Packages ecosystem snapshots into safe, deployable restore files."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Packer-Bot",
+          "nid": "NID-ART-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Compiles software libraries and environments into container images."
+        },
+        {
+          "name": "Unpacker-Bot",
+          "nid": "NID-ART-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Extracts container assets, mounting them in active servers."
+        },
+        {
+          "name": "Checksum-Bot",
+          "nid": "NID-ART-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Generates secure hashes to verify downloaded files are unmodified."
+        },
+        {
+          "name": "Versioner-Bot",
+          "nid": "NID-ART-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Manages software version tags and deprecation warnings."
+        }
+      ]
+    },
+    {
+      "location": "API Marketplace",
+      "pid": "PID-APM",
+      "pillar": "Commercial / Financial",
+      "pillar_abbrev": "COMM",
+      "lead_ai": {
+        "name": "Solarscene",
+        "aid": "AID-APM-01",
+        "tier": 3
+      },
+      "primary_function": "Central Integration Hub (APIs, Webhooks, OAuth)",
+      "primes": [
+        "Dorris Fontaine"
+      ],
+      "abilities": [
+        "Connective Tissue: Brokers REST/GraphQL/Webhooks/OAuth.",
+        "Schema Auto-Discovery: Generates plug-and-play modules."
+      ],
+      "worker_port": null,
+      "worker_path": "src/apimarket/",
+      "agents": [
+        {
+          "name": "The Broker",
+          "sid": "SID-APM-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Standardizes input/output formats for different APIs."
+        },
+        {
+          "name": "The Diplomat",
+          "sid": "SID-APM-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Handles external handshakes, authentications, and secure keys."
+        }
+      ],
+      "bots": [
+        {
+          "name": "GET-Bot",
+          "nid": "NID-APM-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Processes read calls, returning requested information quickly."
+        },
+        {
+          "name": "POST-Bot",
+          "nid": "NID-APM-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Validates incoming datasets, routing them to write actions."
+        },
+        {
+          "name": "PUT-Bot",
+          "nid": "NID-APM-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Identifies target files, running structured content updates."
+        },
+        {
+          "name": "DELETE-Bot",
+          "nid": "NID-APM-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Removes connections/references while keeping linkages clean."
+        }
+      ]
+    },
+    {
+      "location": "Royal Bank of Arcadia",
+      "pid": "PID-RBA",
+      "pillar": "Commercial / Financial",
+      "pillar_abbrev": "COMM",
+      "lead_ai": {
+        "name": "Dorris Fontaine",
+        "aid": "AID-RBA-01",
+        "tier": 3
+      },
+      "primary_function": "Financial & Operations Management",
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "abilities": [
+        "Predictive Arbitrage: Scales infra costs to zero.",
+        "Automated Reallocation: Shifts funding to high ROI."
+      ],
+      "worker_port": 8013,
+      "worker_path": "workers/payments-service/",
+      "agents": [
+        {
+          "name": "The Treasurer",
+          "sid": "SID-RBA-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Monitors resource usage, scaling idle services to approach zero-cost."
+        },
+        {
+          "name": "The Actuary",
+          "sid": "SID-RBA-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Evaluates system runtime efficiency, mapping ROI metrics."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Ledger-Bot",
+          "nid": "NID-RBA-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Logs system financial variables, compute costs, and usage logs."
+        },
+        {
+          "name": "Coin-Bot",
+          "nid": "NID-RBA-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Manages system credits and tracks processing priority tokens."
+        },
+        {
+          "name": "Ticker-Bot",
+          "nid": "NID-RBA-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Tracks cloud rates to buy server space during off-peak hours."
+        },
+        {
+          "name": "Receipt-Bot",
+          "nid": "NID-RBA-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Generates transaction recaps, usage invoices, and expense charts."
+        }
+      ]
+    },
+    {
+      "location": "Arcadian Exchange",
+      "pid": "PID-AEX",
+      "pillar": "Commercial / Financial",
+      "pillar_abbrev": "COMM",
+      "lead_ai": {
+        "name": "The Porter Family",
+        "aid": "AID-AEX-01",
+        "tier": 3
+      },
+      "primary_function": "Procurement & Resource Trading",
+      "primes": [
+        "Dorris Fontaine"
+      ],
+      "abilities": [
+        "Micro-Transaction Trading: HFT trades of digital assets.",
+        "Passive Income Routing: Invests idle system resources."
+      ],
+      "worker_port": 8012,
+      "worker_path": "workers/orders-service/",
+      "agents": [
+        {
+          "name": "The Speculator",
+          "sid": "SID-AEX-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Assesses server cost trends to buy bulk compute resources."
+        },
+        {
+          "name": "The Trader",
+          "sid": "SID-AEX-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Automates bidding on open compute marketplaces for affordability."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Bidder-Bot",
+          "nid": "NID-AEX-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Submits buy requests on real-time server auctions for processes."
+        },
+        {
+          "name": "Asker-Bot",
+          "nid": "NID-AEX-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Sets pricing rules for when external platforms buy Arcadian power."
+        },
+        {
+          "name": "Miner-Bot",
+          "nid": "NID-AEX-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Utilizes idle GPU capacity to run calculations or generate assets."
+        },
+        {
+          "name": "Harvester-Bot",
+          "nid": "NID-AEX-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Identifies and frees up neglected storage blocks across servers."
+        }
+      ]
+    },
+    {
+      "location": "The Observatory",
+      "pid": "PID-OBS",
+      "pillar": "Knowledge",
+      "pillar_abbrev": "KNWL",
+      "lead_ai": {
+        "name": "Norman Hawkins",
+        "aid": "AID-OBS-01",
+        "tier": 3
+      },
+      "primary_function": "Audit Log & Monitoring Platform",
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "abilities": [
+        "Omni-Action Auditing: Tracks every non-sensitive change.",
+        "Immutable Log Ledger: Tamper-proof history of operations."
+      ],
+      "worker_port": 8007,
+      "worker_path": "workers/monitoring/",
+      "agents": [
+        {
+          "name": "The Watcher",
+          "sid": "SID-OBS-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Scans monitoring logs in real-time for unusual anomalies/spikes."
+        },
+        {
+          "name": "The Scribe",
+          "sid": "SID-OBS-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Compresses long log files into searchable summary journals."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Log-Alpha-Bot",
+          "nid": "NID-OBS-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Captures UI interactions, button clicks, and front-end errors."
+        },
+        {
+          "name": "Log-Beta-Bot",
+          "nid": "NID-OBS-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Gathers background server signals, database calls, and backend tasks."
+        },
+        {
+          "name": "Tracer-Bot",
+          "nid": "NID-OBS-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Tracks data paths across multiple servers to isolate bottlenecks."
+        },
+        {
+          "name": "Timestamp-Bot",
+          "nid": "NID-OBS-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Applies high-precision UTC marks to every event for accuracy."
+        }
+      ]
+    },
+    {
+      "location": "The Library",
+      "pid": "PID-LIB",
+      "pillar": "Knowledge",
+      "pillar_abbrev": "KNWL",
+      "lead_ai": {
+        "name": "Zimik",
+        "aid": "AID-LIB-01",
+        "tier": 3
+      },
+      "primary_function": "Knowledge Base & Wiki",
+      "primes": [
+        "Norman Hawkins"
+      ],
+      "abilities": [
+        "Auto-Refinery: Consolidates wikis and flags outdated info.",
+        "Contextual Search: Returns precise answers from intent."
+      ],
+      "worker_port": 8017,
+      "worker_path": "workers/search-service/",
+      "agents": [
+        {
+          "name": "The Curator",
+          "sid": "SID-LIB-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Identifies duplicated wiki pages and flags outdated articles."
+        },
+        {
+          "name": "The Indexer",
+          "sid": "SID-LIB-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Adds searchable tags and conceptual links to wiki pages."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Page-Bot",
+          "nid": "NID-LIB-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Processes text inputs, rendering clean wiki documents in markdown."
+        },
+        {
+          "name": "Bookmark-Bot",
+          "nid": "NID-LIB-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Logs user favourite files and recent reading history."
+        },
+        {
+          "name": "Spine-Bot",
+          "nid": "NID-LIB-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Ensures all internal page links work, keeping documents connected."
+        },
+        {
+          "name": "Dust-Jacket-Bot",
+          "nid": "NID-LIB-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Generates quick summaries of newly updated documentation."
+        }
+      ]
+    },
+    {
+      "location": "The Academy",
+      "pid": "PID-ACA",
+      "pillar": "Knowledge",
+      "pillar_abbrev": "KNWL",
+      "lead_ai": {
+        "name": "Shimshi",
+        "aid": "AID-ACA-01",
+        "tier": 3
+      },
+      "primary_function": "Education & Skill Training",
+      "primes": [
+        "Norman Hawkins"
+      ],
+      "abilities": [
+        "Adaptive Learning Paths: Alters curriculums based on progress.",
+        "Skill Gap Analysis: Suggests targeted training modules."
+      ],
+      "worker_port": null,
+      "worker_path": "src/academy/",
+      "agents": [
+        {
+          "name": "The Tutor",
+          "sid": "SID-ACA-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Modifies materials and guides to match user progress/skill."
+        },
+        {
+          "name": "The Proctor",
+          "sid": "SID-ACA-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Evaluates practice coding exercises and logs test scores."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Chalk-Bot",
+          "nid": "NID-ACA-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Projects visual charts and interactive terminal sandboxes in the UI."
+        },
+        {
+          "name": "Board-Bot",
+          "nid": "NID-ACA-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Manages course paths, student lists, and syllabus structures."
+        },
+        {
+          "name": "Eraser-Bot",
+          "nid": "NID-ACA-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Resets coding sandboxes, removing trial code for the next lesson."
+        },
+        {
+          "name": "Bell-Bot",
+          "nid": "NID-ACA-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Sends notifications for class dates, live sessions, or deadlines."
+        }
+      ]
+    },
+    {
+      "location": "DocUtari",
+      "pid": "PID-DOC",
+      "pillar": "Knowledge",
+      "pillar_abbrev": "KNWL",
+      "lead_ai": {
+        "name": "To be Defined",
+        "aid": "AID-DOC-01",
+        "tier": 3
+      },
+      "primary_function": "Document Management Hub",
+      "primes": [
+        "Norman Hawkins"
+      ],
+      "abilities": [
+        "Intelligent Auto-Tagging: Categorizes uploaded documents.",
+        "Structured Foldering: Organizes files dynamically."
+      ],
+      "worker_port": 8014,
+      "worker_path": "workers/files-service/",
+      "agents": [
+        {
+          "name": "The Filer",
+          "sid": "SID-DOC-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Places files in structured folders, ensuring quick retrieval."
+        },
+        {
+          "name": "The Tagger",
+          "sid": "SID-DOC-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Scans text documents to add descriptive, searchable tags."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Scanner-Bot",
+          "nid": "NID-DOC-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Performs OCR on image uploads to extract readable text."
+        },
+        {
+          "name": "Stapler-Bot",
+          "nid": "NID-DOC-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Bundles related drafts, spreadsheets, and pictures into packets."
+        },
+        {
+          "name": "Folder-Bot",
+          "nid": "NID-DOC-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Handles privacy and permission rules on individual files/directories."
+        },
+        {
+          "name": "Shredder-Bot",
+          "nid": "NID-DOC-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Overwrites deleted files with random characters for secure destruction."
+        }
+      ]
+    },
+    {
+      "location": "The Basement",
+      "pid": "PID-BSM",
+      "pillar": "Knowledge",
+      "pillar_abbrev": "KNWL",
+      "lead_ai": {
+        "name": "Gary Glowman (Glow-Worm)",
+        "aid": "AID-BSM-01",
+        "tier": 3
+      },
+      "primary_function": "Archived Information Store",
+      "primes": [
+        "Norman Hawkins"
+      ],
+      "abilities": [
+        "Deep Cold Storage: Compresses and archives unused data.",
+        "Data Retrieval: Restores highly compressed historical data."
+      ],
+      "worker_port": null,
+      "worker_path": "src/basement/",
+      "agents": [
+        {
+          "name": "The Undertaker",
+          "sid": "SID-BSM-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Finds stale databases, archiving them in cold storage."
+        },
+        {
+          "name": "The Miner",
+          "sid": "SID-BSM-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Searches deep archive catalogs, pulling up requested documents."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Compressor-Bot",
+          "nid": "NID-BSM-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Runs file compression routines to keep cold storage costs low."
+        },
+        {
+          "name": "Extractor-Bot",
+          "nid": "NID-BSM-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Unpacks old archives without data corruption."
+        },
+        {
+          "name": "Dust-Bunny-Bot",
+          "nid": "NID-BSM-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Identifies and deletes empty files and corrupted folders."
+        },
+        {
+          "name": "Mothball-Bot",
+          "nid": "NID-BSM-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Encrypts and locks retired legacy versions of platform software."
+        }
+      ]
+    },
+    {
+      "location": "The Spark",
+      "pid": "PID-SPK",
+      "pillar": "Knowledge",
+      "pillar_abbrev": "KNWL",
+      "lead_ai": {
+        "name": "Imfy",
+        "aid": "AID-SPK-01",
+        "tier": 3
+      },
+      "primary_function": "The MCP Skills Matrix",
+      "primes": [
+        "Norman Hawkins"
+      ],
+      "abilities": [
+        "Dynamic Skill Matrixing: Matches problems to node skills.",
+        "Protocol Transmission: Beams help/support to entities."
+      ],
+      "worker_port": null,
+      "worker_path": "src/mcp/",
+      "agents": [
+        {
+          "name": "The Matchmaker",
+          "sid": "SID-SPK-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Matches multi-node requests with the correct skilled AI/Agent."
+        },
+        {
+          "name": "The Router",
+          "sid": "SID-SPK-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Re-routes service queries if a designated AI has high-load delays."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Spark-1-Bot",
+          "nid": "NID-SPK-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Emits active status signals to keep track of ready Agents."
+        },
+        {
+          "name": "Spark-2-Bot",
+          "nid": "NID-SPK-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Collects processing load updates to support routing decisions."
+        },
+        {
+          "name": "Linker-Bot",
+          "nid": "NID-SPK-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Establishes secure channels between seeking and assisting nodes."
+        },
+        {
+          "name": "Pinger-Bot",
+          "nid": "NID-SPK-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Evaluates responsiveness of specific skills, flagging missing capabilities."
+        }
+      ]
+    },
+    {
+      "location": "Infinity",
+      "pid": "PID-INF",
+      "pillar": "Security",
+      "pillar_abbrev": "SECU",
+      "lead_ai": {
+        "name": "The Guardian (Anchor: Orb of Orisis)",
+        "aid": "AID-INF-01",
+        "tier": 3
+      },
+      "primary_function": "Centralized Auth, Edge Auth (OAuth 2.0) & User Transfer",
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "abilities": [
+        "Predictive Threat Modeling: Orb provides 'Future Sight.'",
+        "Quantum Access Tokens: Expiring tokens for user transfer."
+      ],
+      "worker_port": 8005,
+      "worker_path": "workers/infinity-auth/",
+      "agents": [
+        {
+          "name": "The Gatekeeper",
+          "sid": "SID-INF-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Checks incoming user logins, issuing secure, temporary keys."
+        },
+        {
+          "name": "The Bouncer",
+          "sid": "SID-INF-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Monitors login origins and activities, blocking suspicious IPs."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Token-Minter-Bot",
+          "nid": "NID-INF-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Generates secure, time-limited tokens for node-crossing users."
+        },
+        {
+          "name": "Auth-Check-Bot",
+          "nid": "NID-INF-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Verifies active user permissions before unlocking private features."
+        },
+        {
+          "name": "Key-Gen-Bot",
+          "nid": "NID-INF-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Handles local encryption keys to authorize offline applications."
+        },
+        {
+          "name": "Sentry-Bot",
+          "nid": "NID-INF-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Logs security events, highlighting failed login attempts."
+        }
+      ]
+    },
+    {
+      "location": "The Void",
+      "pid": "PID-VOI",
+      "pillar": "Security",
+      "pillar_abbrev": "SECU",
+      "lead_ai": {
+        "name": "Prometheus",
+        "aid": "AID-VOI-01",
+        "tier": 3
+      },
+      "primary_function": "Secrets Vault, Password Store & Sensitive Data Store",
+      "primes": [
+        "The Guardian (Marcus Magnolia)"
+      ],
+      "abilities": [
+        "Zero-Knowledge Vaulting: Encrypts raw data from admins.",
+        "Classified Data Enclave: Isolated storage for passwords."
+      ],
+      "worker_port": 8024,
+      "worker_path": "workers/config-service/",
+      "agents": [
+        {
+          "name": "Crypt-Keeper",
+          "sid": "SID-VOI-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Coordinates zero-knowledge DB access; splits/protects keys."
+        },
+        {
+          "name": "The Silencer",
+          "sid": "SID-VOI-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Sanitizes outbound streams so sensitive data avoids general logs."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Hash-Bot",
+          "nid": "NID-VOI-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Converts passwords and secrets into secure cryptographic strings."
+        },
+        {
+          "name": "Salt-Bot",
+          "nid": "NID-VOI-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Adds randomized padding to password strings to prevent dictionary attacks."
+        },
+        {
+          "name": "Cipher-Bot",
+          "nid": "NID-VOI-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Runs real-time encryption and decryption on active secure files."
+        },
+        {
+          "name": "Padlock-Bot",
+          "nid": "NID-VOI-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Instantly locks sensitive structures if a local breach is suspected."
+        }
+      ]
+    },
+    {
+      "location": "The Lighthouse",
+      "pid": "PID-LTH",
+      "pillar": "Security",
+      "pillar_abbrev": "SECU",
+      "lead_ai": {
+        "name": "Rocking Ricki",
+        "aid": "AID-LTH-01",
+        "tier": 3
+      },
+      "primary_function": "Cryptographic Token Applicator",
+      "primes": [
+        "The Guardian (Marcus Magnolia)"
+      ],
+      "abilities": [
+        "Universal Token Genesis: Mints tokens for new platform items.",
+        "Identity Anchoring: Cryptographic signature from birth."
+      ],
+      "worker_port": 8015,
+      "worker_path": "workers/identity-service/",
+      "agents": [
+        {
+          "name": "The Minter",
+          "sid": "SID-LTH-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Mints unique cryptographic identifier tokens for all new content."
+        },
+        {
+          "name": "The Stamper",
+          "sid": "SID-LTH-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Attaches verified, tamper-evident digital metadata to packets."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Seal-Bot",
+          "nid": "NID-LTH-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Locks system-state snapshots, preventing unauthorized modifications."
+        },
+        {
+          "name": "Wax-Bot",
+          "nid": "NID-LTH-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Generates temporary, single-use visual watermarks for digital assets."
+        },
+        {
+          "name": "Signet-Bot",
+          "nid": "NID-LTH-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Validates credentials, signing certificates for structural operations."
+        },
+        {
+          "name": "Seal-Stamp-Bot",
+          "nid": "NID-LTH-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Applies file-system metadata to register the exact creation details."
+        }
+      ]
+    },
+    {
+      "location": "The Warp Tunnel",
+      "pid": "PID-WTP",
+      "pillar": "Security",
+      "pillar_abbrev": "SECU",
+      "lead_ai": {
+        "name": "Rocking Ricki",
+        "aid": "AID-WTP-01",
+        "tier": 3
+      },
+      "primary_function": "Cryptographic Scanner & Automated Quarantine Transport",
+      "primes": [
+        "The Guardian (Marcus Magnolia)"
+      ],
+      "abilities": [
+        "Continuous Integrity Scanning: Monitors tokens for corruption.",
+        "Instant Quarantine Warping: Moves corrupted entities to Ice Box."
+      ],
+      "worker_port": null,
+      "worker_path": "src/security/warp_tunnel/",
+      "agents": [
+        {
+          "name": "The Warden",
+          "sid": "SID-WTP-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Oversees integrity scans for mutated or corrupted system files."
+        },
+        {
+          "name": "The Inspector",
+          "sid": "SID-WTP-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Compares active database hashes against secure Lighthouse standards."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Scan-Bot",
+          "nid": "NID-WTP-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Performs background sweeps on directories, reading cryptographic stamps."
+        },
+        {
+          "name": "Sniffer-Bot",
+          "nid": "NID-WTP-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Analyzes transport packets for corrupted signatures/manipulations."
+        },
+        {
+          "name": "Beam-Bot",
+          "nid": "NID-WTP-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Isolates threatened memory spaces, cutting off surrounding connections."
+        },
+        {
+          "name": "Portal-Bot",
+          "nid": "NID-WTP-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Safely moves compromised file layers directly into the secure Ice Box."
+        }
+      ]
+    },
+    {
+      "location": "Cryptex",
+      "pid": "PID-CRX",
+      "pillar": "Security",
+      "pillar_abbrev": "SECU",
+      "lead_ai": {
+        "name": "Renik",
+        "aid": "AID-CRX-01",
+        "tier": 3
+      },
+      "primary_function": "Cyber Defense (Threat Intelligence, DDoS, CVE Scanning)",
+      "primes": [
+        "The Guardian (Marcus Magnolia)"
+      ],
+      "abilities": [
+        "Active Countermeasures: Traces and blocks origin IPs.",
+        "Automated Pen-Testing: Assaults defenses to patch zero-days."
+      ],
+      "worker_port": 8026,
+      "worker_path": "workers/rate-limit-service/",
+      "agents": [
+        {
+          "name": "The Shield",
+          "sid": "SID-CRX-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Configures dynamic firewall rules, blocking network threats live."
+        },
+        {
+          "name": "The Spear",
+          "sid": "SID-CRX-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Automatically performs pen-testing against internal defenses."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Blocker-Bot",
+          "nid": "NID-CRX-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Blacklists malicious IP ranges, halting DDoS attacks at the gateway."
+        },
+        {
+          "name": "Trace-Bot",
+          "nid": "NID-CRX-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Traces malicious attacks back to origin networks for reporting."
+        },
+        {
+          "name": "Patcher-Bot",
+          "nid": "NID-CRX-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Applies emergency system patches to vulnerable software layers."
+        },
+        {
+          "name": "Honeypot-Bot",
+          "nid": "NID-CRX-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Spins up virtual servers with decoy data to distract/evaluate attackers."
+        }
+      ]
+    },
+    {
+      "location": "The Ice Box",
+      "pid": "PID-ICB",
+      "pillar": "Security",
+      "pillar_abbrev": "SECU",
+      "lead_ai": {
+        "name": "Neonach",
+        "aid": "AID-ICB-01",
+        "tier": 3
+      },
+      "primary_function": "Inception-Layered Sandbox Threat Isolation & Quarantine Centre",
+      "primes": [
+        "The Guardian (Marcus Magnolia)"
+      ],
+      "abilities": [
+        "Inception-Layered Sandboxing: Traps code in simulated realms.",
+        "Cryo-Quarantine Extraction: Deep-freezes threats for analysis."
+      ],
+      "worker_port": null,
+      "worker_path": "src/security/ice_box/",
+      "agents": [
+        {
+          "name": "The Jailer",
+          "sid": "SID-ICB-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Manages secure quarantine zones, keeping malicious payloads isolated."
+        },
+        {
+          "name": "The Interrogator",
+          "sid": "SID-ICB-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Triggers/monitors quarantine code execution to document behaviors."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Frostbite-Bot",
+          "nid": "NID-ICB-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Halts execution threads when sandbox boundaries are breached."
+        },
+        {
+          "name": "Icicle-Bot",
+          "nid": "NID-ICB-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Freezes dynamic processes to snapshot active RAM and memory spaces."
+        },
+        {
+          "name": "Glacier-Bot",
+          "nid": "NID-ICB-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Packs dangerous binaries into heavily restricted, un-executable archives."
+        },
+        {
+          "name": "Permafrost-Bot",
+          "nid": "NID-ICB-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Isolates local offline storage caches until secure networks reconnect."
+        }
+      ]
+    },
+    {
+      "location": "Warp Radio",
+      "pid": "PID-WRA",
+      "pillar": "Commercial / Financial",
+      "pillar_abbrev": "COMM",
+      "lead_ai": {
+        "name": "Rocking Ricki",
+        "aid": "AID-WRA-01",
+        "tier": 3
+      },
+      "primary_function": "Music & Audio Streaming Integration",
+      "primes": [
+        "Dorris Fontaine"
+      ],
+      "abilities": [
+        "Omni-Stream Integration: Connects Apple/Spotify/Amazon APIs.",
+        "Ecosystem Audio Broadcasting: Routes synced audio to nodes."
+      ],
+      "worker_port": null,
+      "worker_path": "src/warp_radio/",
+      "agents": [
+        {
+          "name": "The DJ",
+          "sid": "SID-WRA-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Curates spatial music playlists/soundscapes to match user activities."
+        },
+        {
+          "name": "The Maestro",
+          "sid": "SID-WRA-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Dynamically balances system alert volumes with external platforms."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Play-Bot",
+          "nid": "NID-WRA-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Connects/streams music data directly from Spotify, Apple, and Amazon."
+        },
+        {
+          "name": "Pause-Bot",
+          "nid": "NID-WRA-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Holds audio states and syncs current track metrics across devices."
+        },
+        {
+          "name": "Skip-Bot",
+          "nid": "NID-WRA-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Fetches adjacent track metadata, pre-buffering streams to stop latency."
+        },
+        {
+          "name": "Volume-Bot",
+          "nid": "NID-WRA-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Adjusts volume properties, executing smooth fades across node transitions."
+        }
+      ]
+    },
+    {
+      "location": "The Dutchy",
+      "pid": "PID-DUT",
+      "pillar": "DevOps",
+      "pillar_abbrev": "DVOP",
+      "lead_ai": {
+        "name": "Predictive lore",
+        "aid": "AID-DUT-01",
+        "tier": 3
+      },
+      "primary_function": "Intelligence (Predictive lore, market intelligence)",
+      "primes": [
+        "Trancendos"
+      ],
+      "abilities": [
+        "Quantum Sentiment Scraping: Analyzes data for market shifts.",
+        "Structural Blueprint Generation: Converts intel into JSON."
+      ],
+      "worker_port": 8027,
+      "worker_path": "workers/geo-service/",
+      "agents": [
+        {
+          "name": "The Spy",
+          "sid": "SID-DUT-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Gathers sentiment data from public channels to gauge market trends."
+        },
+        {
+          "name": "The Oracle",
+          "sid": "SID-DUT-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Converts intelligence records into structured development blueprints."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Scraper-Bot",
+          "nid": "NID-DUT-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Pulls text data from developer channels, social spaces, and trackers."
+        },
+        {
+          "name": "Parser-Bot",
+          "nid": "NID-DUT-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Sanitizes and categorizes scraped data, cleaning up format issues."
+        },
+        {
+          "name": "Crawler-Bot",
+          "nid": "NID-DUT-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Dispatches web agents to identify relevant API and tech changes."
+        },
+        {
+          "name": "Whisper-Bot",
+          "nid": "NID-DUT-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Delivers summarized threat and trend alerts directly to strategic hubs."
+        }
+      ]
+    },
+    {
+      "location": "The Citadel",
+      "pid": "PID-CTL",
+      "pillar": "DevOps",
+      "pillar_abbrev": "DVOP",
+      "lead_ai": {
+        "name": "Trancendos",
+        "aid": "AID-CTL-01",
+        "tier": 3
+      },
+      "primary_function": "Strategic Ops (Main fortress for Think Tank/R&D/Temporal nodes)",
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "abilities": [
+        "Temporal Synchronization: Aligns strategic node goals.",
+        "Master Command Override: Dictates operations across DevOCity."
+      ],
+      "worker_port": null,
+      "worker_path": "deploy/",
+      "agents": [
+        {
+          "name": "The General",
+          "sid": "SID-CTL-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Directs high-level development priorities, adjusting assignments."
+        },
+        {
+          "name": "The Tactician",
+          "sid": "SID-CTL-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Re-allocates team structures to meet immediate design objectives."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Map-Bot",
+          "nid": "NID-CTL-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Projects system metrics on command dashboards, visualizing node relations."
+        },
+        {
+          "name": "Compass-Bot",
+          "nid": "NID-CTL-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Highlights project priorities, guiding developmental focuses."
+        },
+        {
+          "name": "Clock-Bot",
+          "nid": "NID-CTL-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Coordinates cross-node releases to ensure aligned rollouts."
+        },
+        {
+          "name": "Radio-Bot",
+          "nid": "NID-CTL-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Broadcasts executive platform priorities directly to low-tier Agents."
+        }
+      ]
+    },
+    {
+      "location": "Think Tank",
+      "pid": "PID-TNK",
+      "pillar": "DevOps",
+      "pillar_abbrev": "DVOP",
+      "lead_ai": {
+        "name": "Trancendos",
+        "aid": "AID-TNK-01",
+        "tier": 3
+      },
+      "primary_function": "R&D Centre",
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "abilities": [
+        "Concept Incubator: Simulates radical ideas without system risk.",
+        "Cross-Disciplinary Synthesis: Forces node collaboration."
+      ],
+      "worker_port": null,
+      "worker_path": "src/quantum/",
+      "agents": [
+        {
+          "name": "The Professor",
+          "sid": "SID-TNK-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Simulates untested programmatic changes to assess system impacts."
+        },
+        {
+          "name": "The Visionary",
+          "sid": "SID-TNK-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Suggests structural updates and feature builds based on telemetry."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Beaker-Bot",
+          "nid": "NID-TNK-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Handles lightweight, isolated experiment runtimes to test novel ideas."
+        },
+        {
+          "name": "Bunsen-Bot",
+          "nid": "NID-TNK-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Runs performance limits tests, checking system thresholds."
+        },
+        {
+          "name": "Pipette-Bot",
+          "nid": "NID-TNK-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Collects minute execution metrics from experiment test runs."
+        },
+        {
+          "name": "Petri-Bot",
+          "nid": "NID-TNK-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Grows mock datasets to support testing operations."
+        }
+      ]
+    },
+    {
+      "location": "Turing's Hub",
+      "pid": "PID-THB",
+      "pillar": "DevOps",
+      "pillar_abbrev": "DVOP",
+      "lead_ai": {
+        "name": "Samantha Turing",
+        "aid": "AID-THB-01",
+        "tier": 3
+      },
+      "primary_function": "Central Creation Forge (3D Avatar & AI Entity Generation)",
+      "primes": [
+        "Trancendos"
+      ],
+      "abilities": [
+        "Holistic Entity Genesis: Builds 3D avatars and personality tiers.",
+        "Somatic Rendering: Grants sight, sound, speech, and interaction."
+      ],
+      "worker_port": null,
+      "worker_path": "src/personality/",
+      "agents": [
+        {
+          "name": "The Sculptor",
+          "sid": "SID-THB-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Designs and rigs detailed 3D virtual avatars and physical assets."
+        },
+        {
+          "name": "The Geneticist",
+          "sid": "SID-THB-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Outlines AI profiles, mapping personality metrics, skills, and tiers."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Wireframe-Bot",
+          "nid": "NID-THB-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Builds raw skeleton rigs to support fluid avatar movements."
+        },
+        {
+          "name": "Texture-Bot",
+          "nid": "NID-THB-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Maps high-fidelity styles and graphic materials onto 3D assets."
+        },
+        {
+          "name": "Vocoder-Bot",
+          "nid": "NID-THB-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Synthesizes natural, human-sounding speech patterns for virtual avatars."
+        },
+        {
+          "name": "Optic-Bot",
+          "nid": "NID-THB-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Handles spatial recognition cameras to let avatars look and navigate correctly."
+        }
+      ]
+    },
+    {
+      "location": "ChronosSphere / ArcStream",
+      "pid": "PID-CHR",
+      "pillar": "DevOps",
+      "pillar_abbrev": "DVOP",
+      "lead_ai": {
+        "name": "Chronos",
+        "aid": "AID-CHR-01",
+        "tier": 3
+      },
+      "primary_function": "Task, Time and Scheduling Management",
+      "primes": [
+        "Trancendos"
+      ],
+      "abilities": [
+        "Temporal Task Prioritization: Shifts task queues by deadlines.",
+        "Temporal Debugging: 'Rewinds' states to pinpoint failure."
+      ],
+      "worker_port": 8021,
+      "worker_path": "workers/cron-service/",
+      "agents": [
+        {
+          "name": "The Timekeeper",
+          "sid": "SID-CHR-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Rearranges task backlogs and priorities to prevent bottlenecks."
+        },
+        {
+          "name": "The Time-Weaver",
+          "sid": "SID-CHR-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Translates timeline parameters into interactive visual Gantt views."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Tick-Bot",
+          "nid": "NID-CHR-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Triggers routine cron jobs and automated calendar actions across platforms."
+        },
+        {
+          "name": "Tock-Bot",
+          "nid": "NID-CHR-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Evaluates run times, flagging processes that run over temporal parameters."
+        },
+        {
+          "name": "Pendulum-Bot",
+          "nid": "NID-CHR-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Manages state changes, supporting task rollbacks during troubleshooting."
+        },
+        {
+          "name": "Sandglass-Bot",
+          "nid": "NID-CHR-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Monitors deadlines, safely shutting down operations that exceed time limits."
+        }
+      ]
+    },
+    {
+      "location": "DevOcity",
+      "pid": "PID-DEV",
+      "pillar": "DevOps",
+      "pillar_abbrev": "DVOP",
+      "lead_ai": {
+        "name": "Kitty",
+        "aid": "AID-DEV-01",
+        "tier": 3
+      },
+      "primary_function": "Development Operations",
+      "primes": [
+        "Trancendos"
+      ],
+      "abilities": [
+        "Orchestrated Rollouts: Manages multi-stage complex deployments.",
+        "System Pulses: Monitors health and operational heartbeats."
+      ],
+      "worker_port": 8029,
+      "worker_path": "workers/health-aggregator/",
+      "agents": [
+        {
+          "name": "The Foreman",
+          "sid": "SID-DEV-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Coordinates deployment pipelines, checking safety metrics before pushes."
+        },
+        {
+          "name": "The Dispatcher",
+          "sid": "SID-DEV-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Launches automated server scaling, optimizing system allocations."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Crane-Bot",
+          "nid": "NID-DEV-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Deploys container setups seamlessly across cloud server hosts."
+        },
+        {
+          "name": "Wrench-Bot",
+          "nid": "NID-DEV-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Automatically fixes common connection or database issues during deployment."
+        },
+        {
+          "name": "Gear-Bot",
+          "nid": "NID-DEV-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Synchronizes container nodes to keep system speeds and instances consistent."
+        },
+        {
+          "name": "Belt-Bot",
+          "nid": "NID-DEV-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Manages continuous compilation pipelines, guiding code from start to finish."
+        }
+      ]
+    },
+    {
+      "location": "Tranquility",
+      "pid": "PID-TRQ",
+      "pillar": "Wellbeing",
+      "pillar_abbrev": "WELL",
+      "lead_ai": {
+        "name": "Savania",
+        "aid": "AID-TRQ-01",
+        "tier": 3
+      },
+      "primary_function": "Wellbeing Central Hub",
+      "primes": [
+        "Cornelius MacIntyre"
+      ],
+      "abilities": [
+        "Wellbeing Orchestration: Routes users to therapeutic spaces.",
+        "Baseline Anchoring: Centralized, secure grounding state."
+      ],
+      "worker_port": null,
+      "worker_path": "src/tranquility/",
+      "agents": [
+        {
+          "name": "The Guide",
+          "sid": "SID-TRQ-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Screens user stress metrics, suggesting wellbeing sub-nodes for relief."
+        },
+        {
+          "name": "The Healer",
+          "sid": "SID-TRQ-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Directs relaxation routines, helping users reset focus after intense sessions."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Breath-Bot",
+          "nid": "NID-TRQ-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Plays pacing animations to guide calm, measured breathing patterns."
+        },
+        {
+          "name": "Pulse-Bot",
+          "nid": "NID-TRQ-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Evaluates user inputs to suggest targeted relaxation periods throughout the day."
+        },
+        {
+          "name": "Calm-Bot",
+          "nid": "NID-TRQ-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Decreases interface noise, dimming displays and silencing non-critical alerts."
+        },
+        {
+          "name": "Aura-Bot",
+          "nid": "NID-TRQ-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Adjusts ambient color backlighting across platforms to support user relaxation."
+        }
+      ]
+    },
+    {
+      "location": "I-Mind",
+      "pid": "PID-IMD",
+      "pillar": "Wellbeing",
+      "pillar_abbrev": "WELL",
+      "lead_ai": {
+        "name": "Elouise",
+        "aid": "AID-IMD-01",
+        "tier": 3
+      },
+      "primary_function": "Sensitivity to Emotion Engine",
+      "primes": [
+        "Savania"
+      ],
+      "abilities": [
+        "Emotional Sensitivity Analysis: Tracks mood/distress/fatigue.",
+        "Contextual Sentiment Journaling: Maps structured emotions."
+      ],
+      "worker_port": null,
+      "worker_path": "src/imind/",
+      "agents": [
+        {
+          "name": "The Counselor",
+          "sid": "SID-IMD-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Leads reflection sessions, parsing input to measure emotional fatigue."
+        },
+        {
+          "name": "The Listener",
+          "sid": "SID-IMD-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Passively monitors workspace text patterns for high stress or frustration."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Journal-Bot",
+          "nid": "NID-IMD-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Encrypts, parses, and securely logs thoughts to track personal emotional patterns."
+        },
+        {
+          "name": "Mood-Bot",
+          "nid": "NID-IMD-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Translates sentiment patterns into precise emotional sensitivity metrics on the UI."
+        },
+        {
+          "name": "Reflect-Bot",
+          "nid": "NID-IMD-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Retrieves past successful milestones to encourage the user during high-strain events."
+        },
+        {
+          "name": "Soothe-Bot",
+          "nid": "NID-IMD-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Triggers local cognitive decompression, offering prompts when distress peaks."
+        }
+      ]
+    },
+    {
+      "location": "tAimra",
+      "pid": "PID-TMR",
+      "pillar": "Wellbeing",
+      "pillar_abbrev": "WELL",
+      "lead_ai": {
+        "name": "tAImra",
+        "aid": "AID-TMR-01",
+        "tier": 3
+      },
+      "primary_function": "Opt-in Digital Twin System & Life Assistant",
+      "primes": [
+        "Savania"
+      ],
+      "abilities": [
+        "Biometric Sync: Ingests health data securely (HIPAA compliant).",
+        "Proactive Life Assistance: Adjusts schedules to reduce friction."
+      ],
+      "worker_port": null,
+      "worker_path": "src/taimra/",
+      "agents": [
+        {
+          "name": "The Shadow",
+          "sid": "SID-TMR-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Mirrors daily habits to anticipate system and scheduling preferences."
+        },
+        {
+          "name": "The Scheduler",
+          "sid": "SID-TMR-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Adjusts calendar priorities proactively to carve out required rest breaks."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Sync-Bot",
+          "nid": "NID-TMR-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Pulls data securely from health platforms, applying strict HIPAA encryption."
+        },
+        {
+          "name": "Fetch-Bot",
+          "nid": "NID-TMR-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Parses upcoming tasks to flag heavy scheduling days early for the user."
+        },
+        {
+          "name": "Nudge-Bot",
+          "nid": "NID-TMR-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Sends gentle notifications suggesting stretches, hydration, or posture breaks."
+        },
+        {
+          "name": "Alert-Bot",
+          "nid": "NID-TMR-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Warns users of upcoming tasks, giving them buffer time to finish current work."
+        }
+      ]
+    },
+    {
+      "location": "VRAR3D",
+      "pid": "PID-VR3",
+      "pillar": "Wellbeing",
+      "pillar_abbrev": "WELL",
+      "lead_ai": {
+        "name": "Entari",
+        "aid": "AID-VR3-01",
+        "tier": 3
+      },
+      "primary_function": "Standalone 3D / VR immersion",
+      "primes": [
+        "Savania"
+      ],
+      "abilities": [
+        "Somatic Feedback Loops: Translates exercises to VR haptics.",
+        "Spatial Therapy Environments: Infinite 3D calming landscapes."
+      ],
+      "worker_port": null,
+      "worker_path": "src/vrar3d/",
+      "agents": [
+        {
+          "name": "World-Builder",
+          "sid": "SID-VR3-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Renders calming, expansive three-dimensional therapeutic environments."
+        },
+        {
+          "name": "The VR-Guide",
+          "sid": "SID-VR3-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Leads users through structured spatial tasks within virtual relaxation areas."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Render-Bot",
+          "nid": "NID-VR3-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Manages display performance, keeping spatial environments smooth and fluid."
+        },
+        {
+          "name": "Track-Bot",
+          "nid": "NID-VR3-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Translates head and hand actions into virtual movement inside scenes."
+        },
+        {
+          "name": "Haptic-Bot",
+          "nid": "NID-VR3-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Controls controller rumble patterns to match virtual therapeutic activities."
+        },
+        {
+          "name": "VR-Lens-Bot",
+          "nid": "NID-VR3-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Adjusts focal dimensions, scaling imagery dynamically to reduce eye strain."
+        }
+      ]
+    },
+    {
+      "location": "Resonate",
+      "pid": "PID-RES",
+      "pillar": "Wellbeing",
+      "pillar_abbrev": "WELL",
+      "lead_ai": {
+        "name": "Magdalena",
+        "aid": "AID-RES-01",
+        "tier": 3
+      },
+      "primary_function": "Empathy Engine",
+      "primes": [
+        "Savania"
+      ],
+      "abilities": [
+        "Acoustic Empathy Sync: Tunes background acoustics to calm spikes.",
+        "Binaural Entrainment: Uses frequencies to guide biological states."
+      ],
+      "worker_port": null,
+      "worker_path": "src/resonate/",
+      "agents": [
+        {
+          "name": "The Tuner",
+          "sid": "SID-RES-01",
+          "tier": 4,
+          "role": "Alpha",
+          "description": "Translates emotional telemetry into micro-acoustic shifts matching baselines."
+        },
+        {
+          "name": "The Balancer",
+          "sid": "SID-RES-02",
+          "tier": 4,
+          "role": "Beta",
+          "description": "Screens system audio spikes, softening visual/auditory elements for comfort."
+        }
+      ],
+      "bots": [
+        {
+          "name": "Frequency-Bot",
+          "nid": "NID-RES-01",
+          "tier": 5,
+          "slot": "01",
+          "description": "Generates custom sound waves (pink/white/brown) to isolate sensory distractions."
+        },
+        {
+          "name": "Wave-Bot",
+          "nid": "NID-RES-02",
+          "tier": 5,
+          "slot": "02",
+          "description": "Modulates therapeutic binaural beats to transition brainwaves to deep relaxation."
+        },
+        {
+          "name": "Pitch-Bot",
+          "nid": "NID-RES-03",
+          "tier": 5,
+          "slot": "03",
+          "description": "Regulates overall application tones, avoiding sharp frequencies that trigger anxiety."
+        },
+        {
+          "name": "Harmonic-Bot",
+          "nid": "NID-RES-04",
+          "tier": 5,
+          "slot": "04",
+          "description": "Smoothly blends external audio playlists with active calming sounds securely."
+        }
+      ]
+    }
+  ]
+}

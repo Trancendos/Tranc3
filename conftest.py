@@ -4,6 +4,7 @@ Root conftest.py — shared fixtures, logging config, and environment setup.
 Sets SECRET_KEY before any test module is collected so test_api.py's module-level
 guard has a value. All test files get structured logging via pytest's caplog.
 """
+
 from __future__ import annotations
 
 import json
@@ -26,6 +27,7 @@ _log = logging.getLogger("tranc3.tests")
 
 
 # ── JSON test-result log ──────────────────────────────────────────────────────
+
 
 class _TestResultLogger:
     """Appends one JSON line per test to logs/test_results.jsonl."""
@@ -58,13 +60,14 @@ def pytest_runtest_makereport(item, call):
         duration_ms = (rep.duration or 0) * 1000
         _result_logger.record(
             name=item.nodeid,
-            outcome=rep.outcome,            # passed / failed / skipped
+            outcome=rep.outcome,  # passed / failed / skipped
             duration_ms=duration_ms,
             reason=str(rep.longrepr) if rep.failed else "",
         )
 
 
 # ── Shared sample data fixtures ───────────────────────────────────────────────
+
 
 @pytest.fixture(scope="session")
 def sample_workflow_definitions():
@@ -90,7 +93,8 @@ def sample_workflow_definitions():
     b = WorkflowBuilder("sample-spark-pipeline")
     t = b.add_node(NodeType.TRIGGER, "start", config={}, node_id="trigger")
     s = b.add_node(
-        NodeType.SPARK_TOOL, "call",
+        NodeType.SPARK_TOOL,
+        "call",
         config={"tool_name": "get_system_health", "args": {"subsystems": []}},
         node_id="spark",
     )
@@ -126,7 +130,10 @@ def sample_spark_tools():
         "add": SparkTool(
             name="test_add",
             description="Add two numbers",
-            input_schema={"type": "object", "properties": {"a": {"type": "number"}, "b": {"type": "number"}}},
+            input_schema={
+                "type": "object",
+                "properties": {"a": {"type": "number"}, "b": {"type": "number"}},
+            },
             handler=add,
             category="test",
         ),
@@ -147,7 +154,11 @@ def sample_error_payloads():
     return {
         "sql_injection": ["' OR '1'='1", "'; DROP TABLE users;--", "1; SELECT * FROM secrets"],
         "path_traversal": ["../../../etc/passwd", "..\\..\\windows\\system32", "%2e%2e%2f"],
-        "xss": ['<script>alert(1)</script>', '"><img src=x onerror=alert(1)>', "javascript:alert(1)"],
+        "xss": [
+            "<script>alert(1)</script>",
+            '"><img src=x onerror=alert(1)>',
+            "javascript:alert(1)",
+        ],
         "command_injection": ["; ls -la", "| cat /etc/passwd", "`id`", "$(whoami)"],
         "null_bytes": [null + "admin", "test" + null + "injection", null * 3],
         "oversized": ["A" * 100_001, "B" * 1_000_000],
@@ -161,6 +172,7 @@ def sample_error_payloads():
 def spark_registry():
     """A clean SparkToolRegistry for integration tests."""
     from src.mcp.tools import SparkToolRegistry
+
     return SparkToolRegistry()
 
 
@@ -168,4 +180,5 @@ def spark_registry():
 def grid_executor():
     """A fresh WorkflowExecutor."""
     from src.workflow.executor import WorkflowExecutor
+
     return WorkflowExecutor()

@@ -20,12 +20,12 @@ actually spin up containers (requires Docker daemon).
 """
 
 import sys
-import yaml
 from pathlib import Path
 from typing import Dict
 
-from shared_core.path_validation import validate_path
+import yaml
 
+from shared_core.path_validation import validate_path
 
 # Expected worker ports from docker-compose.production.yml
 # P0-P2 workers have fixed port assignments from the roadmap
@@ -188,7 +188,9 @@ def test_worker_services(compose: Dict) -> bool:
             print(f"  ... and {len(errors) - 10} more errors")
         return False
 
-    print(f"  ✅ All {len(EXPECTED_WORKERS)} P0-P2 workers + {len(P3_STUB_WORKERS)} P3 stubs defined correctly")
+    print(
+        f"  ✅ All {len(EXPECTED_WORKERS)} P0-P2 workers + {len(P3_STUB_WORKERS)} P3 stubs defined correctly"
+    )
     return True
 
 
@@ -302,7 +304,7 @@ def test_environment_variables(compose: Dict) -> bool:
     env_vars = set()
 
     # Collect all environment variables
-    for name, service in services.items():
+    for _name, service in services.items():
         env_list = service.get("environment", [])
         if isinstance(env_list, dict):
             env_vars.update(env_list.keys())
@@ -326,7 +328,7 @@ def test_environment_variables(compose: Dict) -> bool:
 
     if missing_critical:
         print(f"  ⚠️  Warning: Critical env vars not found: {', '.join(missing_critical)}")
-        print(f"     (These may be defined in .env.production file)")
+        print("     (These may be defined in .env.production file)")
 
     print(f"  ✅ Environment variables configured ({len(env_vars)} unique vars)")
     return True
@@ -348,19 +350,19 @@ def generate_report(compose: Dict) -> None:
     print(f"\n🌐 Networks: {len(compose.get('networks', {}))}")
     print(f"💾 Volumes: {len(compose.get('volumes', {}))}")
 
-    print(f"\n🔧 Worker Port Allocation (P0-P2):")
+    print("\n🔧 Worker Port Allocation (P0-P2):")
     for name, port in sorted(EXPECTED_WORKERS.items()):
         status = "✓" if name in services else "✗"
         print(f"   {status} {name:25s} → {port}")
 
-    print(f"\n🔧 P3 Stub Workers:")
+    print("\n🔧 P3 Stub Workers:")
     for name in sorted(P3_STUB_WORKERS):
         status = "✓" if name in services else "✗"
         svc = services.get(name, {})
         ports = svc.get("ports", ["?"])
         print(f"   {status} {name:25s} → {ports}")
 
-    print(f"\n🏗️  Infrastructure Services:")
+    print("\n🏗️  Infrastructure Services:")
     for name in INFRASTRUCTURE_SERVICES:
         status = "✓" if name in services else "✗"
         print(f"   {status} {name}")

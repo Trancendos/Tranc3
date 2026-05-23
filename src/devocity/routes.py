@@ -52,9 +52,7 @@ async def issue_api_key(
         scopes = [ApiKeyScope(s) for s in raw_scopes]
     except ValueError:
         valid = [s.value for s in ApiKeyScope]
-        return JSONResponse(
-            {"error": f"Invalid scope. Valid: {valid}"}, status_code=400
-        )
+        return JSONResponse({"error": f"Invalid scope. Valid: {valid}"}, status_code=400)
     result = get_devocity().issue_api_key(account_id, name=name, scopes=scopes)
     if result is None:
         return JSONResponse({"error": "Account not found"}, status_code=404)
@@ -75,9 +73,7 @@ async def list_keys(account_id: str = Path(...)) -> list:
 
 
 @router.delete("/accounts/{account_id}/keys/{key_id}")
-async def revoke_key(
-    account_id: str = Path(...), key_id: str = Path(...)
-) -> Dict[str, Any]:
+async def revoke_key(account_id: str = Path(...), key_id: str = Path(...)) -> Dict[str, Any]:
     ok = get_devocity().revoke_api_key(account_id, key_id)
     if not ok:
         return JSONResponse({"error": "Account or key not found"}, status_code=404)

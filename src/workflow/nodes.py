@@ -77,9 +77,7 @@ class BaseNode:
         self.config = config
         self.logger = logging.getLogger(f"{__name__}.{config.type}.{config.id}")
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:  # noqa: E501
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:  # noqa: E501
         raise NotImplementedError(f"{self.__class__.__name__} must implement execute()")
 
     async def _with_timeout(self, coro, timeout: float):
@@ -140,9 +138,7 @@ class BaseNode:
 class LLMNode(BaseNode):
     """Generates text using the local TRANC3 model. No external API required."""
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         cfg = self.config.config
 
@@ -161,7 +157,9 @@ class LLMNode(BaseNode):
             user_message = user_message.replace(f"{{{{{k}}}}}", str(v))
 
         try:
-            from src.core.tranc3_inference import get_engine  # noqa: F401  # intentional top-level import
+            from src.core.tranc3_inference import (
+                get_engine,  # noqa: F401  # intentional top-level import
+            )
 
             engine = get_engine()
             gen = await engine.generate(
@@ -185,7 +183,9 @@ class LLMNode(BaseNode):
             )
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(None, duration_ms, success=False, error=safe_error_detail(exc, 500))
+            return self._make_result(
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -249,9 +249,7 @@ class CodeExecNode(BaseNode):
         "None",
     }
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         code = self.config.config.get("code", "")
         if not code:
@@ -272,9 +270,7 @@ class CodeExecNode(BaseNode):
             }
             if isinstance(__builtins__, dict)
             else {
-                k: getattr(__builtins__, k)
-                for k in self._SAFE_BUILTINS
-                if hasattr(__builtins__, k)
+                k: getattr(__builtins__, k) for k in self._SAFE_BUILTINS if hasattr(__builtins__, k)
             },
             "math": __import__("math"),
             "json": __import__("json"),
@@ -324,9 +320,7 @@ class CodeExecNode(BaseNode):
 class HTTPNode(BaseNode):
     """Makes HTTP requests (GET/POST/PUT) and returns parsed JSON or text."""
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         cfg = self.config.config
         method = cfg.get("method", "GET").upper()
@@ -341,19 +335,13 @@ class HTTPNode(BaseNode):
                 if method == "GET":
                     resp = await client.get(url, headers=headers, params=params)
                 elif method == "POST":
-                    resp = await client.post(
-                        url, headers=headers, params=params, json=body
-                    )
+                    resp = await client.post(url, headers=headers, params=params, json=body)
                 elif method == "PUT":
-                    resp = await client.put(
-                        url, headers=headers, params=params, json=body
-                    )
+                    resp = await client.put(url, headers=headers, params=params, json=body)
                 elif method == "DELETE":
                     resp = await client.delete(url, headers=headers, params=params)
                 elif method == "PATCH":
-                    resp = await client.patch(
-                        url, headers=headers, params=params, json=body
-                    )
+                    resp = await client.patch(url, headers=headers, params=params, json=body)
                 else:
                     raise ValueError(f"Unsupported HTTP method: {method}")
 
@@ -370,12 +358,12 @@ class HTTPNode(BaseNode):
                 self.config.retry_count,
             )
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(
-                output, duration_ms, metadata={"method": method, "url": url}
-            )
+            return self._make_result(output, duration_ms, metadata={"method": method, "url": url})
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(None, duration_ms, success=False, error=safe_error_detail(exc, 500))
+            return self._make_result(
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -386,9 +374,7 @@ class HTTPNode(BaseNode):
 class ConditionNode(BaseNode):
     """Evaluates a Python expression against inputs; branches on true/false."""
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         expression = self.config.config.get("expression", "True")
         local_ns: Dict[str, Any] = {"inputs": inputs, "context": context, **inputs}
@@ -438,9 +424,7 @@ def _deep_get(obj: Any, path: str) -> Any:
 class TransformNode(BaseNode):
     """Transforms data using a mapping spec (dot-path extraction or simple template)."""
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         cfg = self.config.config
         mapping: Dict[str, str] = cfg.get("mapping", {})
@@ -461,11 +445,7 @@ class TransformNode(BaseNode):
             try:
                 local_ns = {"data": output, "inputs": inputs, "context": context}
                 eval_result = eval(expression, {"__builtins__": {}}, local_ns)  # noqa: S307  # nosec B307
-                output = (
-                    eval_result
-                    if isinstance(eval_result, dict)
-                    else {"result": eval_result}
-                )
+                output = eval_result if isinstance(eval_result, dict) else {"result": eval_result}
             except Exception as exc:
                 duration_ms = (time.monotonic() - t0) * 1000
                 return self._make_result(
@@ -486,14 +466,10 @@ class TransformNode(BaseNode):
 class VectorSearchNode(BaseNode):
     """Performs a nearest-neighbour search against a Qdrant collection."""
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         cfg = self.config.config
-        qdrant_url = cfg.get("qdrant_url") or os.environ.get(
-            "QDRANT_URL", "http://localhost:6333"
-        )
+        qdrant_url = cfg.get("qdrant_url") or os.environ.get("QDRANT_URL", "http://localhost:6333")
         collection = cfg.get("collection", inputs.get("collection", "default"))
         top_k = int(cfg.get("top_k", 5))
         vector = inputs.get("vector") or cfg.get("vector")
@@ -538,7 +514,9 @@ class VectorSearchNode(BaseNode):
             )
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(None, duration_ms, success=False, error=safe_error_detail(exc, 500))
+            return self._make_result(
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -558,9 +536,7 @@ def register_spark_tool(name: str, fn: Callable) -> None:
 class SparkToolNode(BaseNode):
     """A Digital Grid node that calls a registered Spark (MCP) tool by name."""
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         tool_name = self.config.config.get("tool_name", "")
         tool_args = {**self.config.config.get("args", {}), **inputs}
@@ -623,12 +599,12 @@ class SparkToolNode(BaseNode):
                 self.config.retry_count,
             )
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(
-                result, duration_ms, metadata={"tool_name": tool_name}
-            )
+            return self._make_result(result, duration_ms, metadata={"tool_name": tool_name})
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(None, duration_ms, success=False, error=safe_error_detail(exc, 500))
+            return self._make_result(
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -639,16 +615,12 @@ class SparkToolNode(BaseNode):
 class ParallelNode(BaseNode):
     """Runs a list of child NodeConfigs concurrently and merges their results."""
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         child_configs_raw: List[Dict] = self.config.config.get("nodes", [])
         if not child_configs_raw:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(
-                {"results": []}, duration_ms, metadata={"parallel_count": 0}
-            )
+            return self._make_result({"results": []}, duration_ms, metadata={"parallel_count": 0})
 
         child_configs = [
             NodeConfig(
@@ -665,9 +637,7 @@ class ParallelNode(BaseNode):
         ]
 
         tasks = [create_node(cc).execute(inputs, context) for cc in child_configs]
-        results: List[NodeResult] = await asyncio.gather(
-            *tasks, return_exceptions=False
-        )
+        results: List[NodeResult] = await asyncio.gather(*tasks, return_exceptions=False)
 
         merged: Dict[str, Any] = {}
         errors: List[str] = []
@@ -696,9 +666,7 @@ class ParallelNode(BaseNode):
 class LoopNode(BaseNode):
     """Iterates over inputs['items'], running inner node configs for each element."""
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         items: List[Any] = inputs.get("items", self.config.config.get("items", []))
         inner_configs_raw: List[Dict] = self.config.config.get("nodes", [])
@@ -706,9 +674,7 @@ class LoopNode(BaseNode):
 
         if not inner_configs_raw:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(
-                {"loop_results": []}, duration_ms, metadata={"item_count": 0}
-            )
+            return self._make_result({"loop_results": []}, duration_ms, metadata={"item_count": 0})
 
         inner_configs = [
             NodeConfig(
@@ -769,9 +735,7 @@ def register_skill(name: str, fn: Callable) -> None:
 class SkillCallNode(BaseNode):
     """Looks up a skill in the registry and executes it."""
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         skill_name = self.config.config.get("skill_name", inputs.get("skill_name", ""))
         skill_args = {**self.config.config.get("args", {}), **inputs}
@@ -805,12 +769,12 @@ class SkillCallNode(BaseNode):
                 self.config.retry_count,
             )
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(
-                result, duration_ms, metadata={"skill_name": skill_name}
-            )
+            return self._make_result(result, duration_ms, metadata={"skill_name": skill_name})
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(None, duration_ms, success=False, error=safe_error_detail(exc, 500))
+            return self._make_result(
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -823,9 +787,7 @@ class MLPredictNode(BaseNode):
 
     _DEFAULT_ENDPOINT = "http://localhost:8080/predict"
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         cfg = self.config.config
         endpoint = cfg.get("endpoint") or os.environ.get(
@@ -861,7 +823,9 @@ class MLPredictNode(BaseNode):
             )
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
-            return self._make_result(None, duration_ms, success=False, error=safe_error_detail(exc, 500))
+            return self._make_result(
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -872,9 +836,7 @@ class MLPredictNode(BaseNode):
 class MergeNode(BaseNode):
     """Merges all incoming inputs into a single dict output."""
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         strategy = self.config.config.get("strategy", "merge")  # merge | first | last
         if strategy == "first":
@@ -901,9 +863,7 @@ class MergeNode(BaseNode):
 class OutputNode(BaseNode):
     """Terminal node — collects and formats the final workflow output."""
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         cfg = self.config.config
         keys = cfg.get("keys")  # Optional list of keys to pick from inputs
@@ -923,9 +883,7 @@ class OutputNode(BaseNode):
 class TriggerNode(BaseNode):
     """Workflow entry-point that validates and passes through trigger data."""
 
-    async def execute(
-        self, inputs: Dict[str, Any], context: Dict[str, Any]
-    ) -> NodeResult:
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
         t0 = time.monotonic()
         cfg = self.config.config
         required_fields: List[str] = cfg.get("required_fields", [])
@@ -995,15 +953,23 @@ def _ensure_phase4_nodes_loaded() -> None:
     global _PHASE4_LOADED
     if _PHASE4_LOADED:
         return
-    _PHASE4_LOADED = True  # codeql[py/unused-global] – used as lazy-load guard in _ensure_phase4_nodes_loaded
+    _PHASE4_LOADED = (
+        True  # codeql[py/unused-global] – used as lazy-load guard in _ensure_phase4_nodes_loaded
+    )
     try:
-        from src.workflow.phase4_nodes import PHASE4_NODE_TYPES as _p4_types  # codeql[py/cyclic-import]
+        from src.workflow.phase4_nodes import (
+            PHASE4_NODE_TYPES as _p4_types,  # codeql[py/cyclic-import]
+        )
+
         _PHASE4_NODE_REGISTRY.update(_p4_types)
         logger.info("Phase 4 workflow nodes loaded: %s", list(_p4_types.keys()))
     except Exception as _p4_exc:
         logger.warning("Phase 4 workflow nodes unavailable: %s", _p4_exc)
     try:
-        from src.workflow.phase5_nodes import PHASE5_NODE_TYPES as _p5_types  # codeql[py/cyclic-import]
+        from src.workflow.phase5_nodes import (
+            PHASE5_NODE_TYPES as _p5_types,  # codeql[py/cyclic-import]
+        )
+
         _PHASE4_NODE_REGISTRY.update(_p5_types)
         logger.info("Phase 5 workflow nodes loaded: %s", list(_p5_types.keys()))
     except Exception as _p5_exc:

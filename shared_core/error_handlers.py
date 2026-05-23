@@ -87,7 +87,10 @@ def safe_error_detail(
         log_fn = logger.warning if status_code < 500 else logger.error
         log_fn(
             "Error ref=%s status=%d: %s: %s",
-            ref_id, status_code, type(exc).__name__, exc,
+            ref_id,
+            status_code,
+            type(exc).__name__,
+            exc,
         )
 
     # In production: always return generic message with reference
@@ -99,8 +102,8 @@ def safe_error_detail(
         raw_msg = str(exc)
         # Replace filesystem paths with [PATH] to prevent full disclosure
         sanitized = _re.sub(
-            r'(?:/[a-zA-Z0-9_.-]+){2,}',  # Matches /path/to/something
-            '[PATH]',
+            r"(?:/[a-zA-Z0-9_.-]+){2,}",  # Matches /path/to/something
+            "[PATH]",
             raw_msg,
         )
         # Truncate long messages to prevent excessive response size
@@ -109,7 +112,7 @@ def safe_error_detail(
         if max_sanitized_len < 50:
             max_sanitized_len = 50
         if len(sanitized) > max_sanitized_len:
-            sanitized = sanitized[:max_sanitized_len - 3] + "..."
+            sanitized = sanitized[: max_sanitized_len - 3] + "..."
         return f"{safe_msg} — {sanitized} (ref: {ref_id})"
 
     return f"{safe_msg} (ref: {ref_id})"
@@ -129,6 +132,7 @@ class SafeHTTPException(HTTPException):
         except SomeError as e:
             raise SafeHTTPException(status_code=500, exc=e)
     """
+
     def __init__(
         self,
         status_code: int = 500,

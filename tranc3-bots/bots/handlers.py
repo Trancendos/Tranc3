@@ -18,10 +18,12 @@ _ENGINE_URL = os.getenv("TRANC3_ENGINE_URL", "")
 
 # ── Shared HTTP helper ─────────────────────────────────────────────────────────
 
+
 async def _engine_post(endpoint: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     """POST to the Tranc3 engine nanoservice. Raises on failure."""
     try:
         import httpx
+
         url = _ENGINE_URL.rstrip("/") + endpoint
         async with httpx.AsyncClient(timeout=60.0) as client:
             r = await client.post(url, json=payload)
@@ -36,6 +38,7 @@ def _engine_available() -> bool:
 
 
 # ── Inference bots ─────────────────────────────────────────────────────────────
+
 
 async def handle_generate(payload: Dict[str, Any]) -> Dict[str, Any]:
     if _engine_available():
@@ -63,11 +66,11 @@ async def handle_emotion(payload: Dict[str, Any]) -> Dict[str, Any]:
         return await _engine_post("/emotion", payload)
     text = str(payload.get("text", "")).lower()
     scores = {
-        "joy":     sum(1 for w in ("happy", "great", "love", "wonderful") if w in text),
+        "joy": sum(1 for w in ("happy", "great", "love", "wonderful") if w in text),
         "sadness": sum(1 for w in ("sad", "cry", "miss", "hurt") if w in text),
-        "anger":   sum(1 for w in ("angry", "hate", "furious", "mad") if w in text),
-        "fear":    sum(1 for w in ("scared", "fear", "afraid", "terrified") if w in text),
-        "surprise":sum(1 for w in ("wow", "amazing", "unbelievable", "shocked") if w in text),
+        "anger": sum(1 for w in ("angry", "hate", "furious", "mad") if w in text),
+        "fear": sum(1 for w in ("scared", "fear", "afraid", "terrified") if w in text),
+        "surprise": sum(1 for w in ("wow", "amazing", "unbelievable", "shocked") if w in text),
         "neutral": 1,
     }
     dominant = max(scores, key=lambda k: scores[k])
@@ -91,7 +94,7 @@ async def handle_consciousness(payload: Dict[str, Any]) -> Dict[str, Any]:
     if _engine_available():
         return await _engine_post("/consciousness", payload)
     text = str(payload.get("text", ""))
-    h = int(hashlib.md5(text.encode(, usedforsecurity=False)).hexdigest(), 16)
+    h = int(hashlib.md5(text.encode("utf-8"), usedforsecurity=False).hexdigest(), 16)
     return {
         "state": "aware",
         "coherence": round(0.5 + (h % 50) / 100, 3),
@@ -104,10 +107,12 @@ async def handle_personality(payload: Dict[str, Any]) -> Dict[str, Any]:
     if _engine_available():
         return await _engine_post("/personality", payload)
     text = str(payload.get("text", ""))
-    h = int(hashlib.sha1(text.encode(, usedforsecurity=False)).hexdigest(), 16)
+    h = int(hashlib.sha1(text.encode("utf-8"), usedforsecurity=False).hexdigest(), 16)
     dims = ["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"]
     return {
-        "profile": {d: round(0.2 + ((h >> (i * 8)) & 0xFF) / 255.0 * 0.8, 3) for i, d in enumerate(dims)},
+        "profile": {
+            d: round(0.2 + ((h >> (i * 8)) & 0xFF) / 255.0 * 0.8, 3) for i, d in enumerate(dims)
+        },
         "model": "tranc3-stub",
     }
 
@@ -123,13 +128,14 @@ async def handle_predict(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 # ── Utility bots (standalone — no ML) ─────────────────────────────────────────
 
+
 async def handle_code(payload: Dict[str, Any]) -> Dict[str, Any]:
     task = payload.get("task", "")
     lang = payload.get("language", "python")
     templates = {
-        "python": f'def solution():\n    """Auto-generated stub for: {task[:60]}\"\"\"\n    pass\n',
-        "javascript": f'function solution() {{\n  // Auto-generated stub for: {task[:60]}\n}}\n',
-        "typescript": f'function solution(): void {{\n  // Auto-generated stub for: {task[:60]}\n}}\n',
+        "python": f'def solution():\n    """Auto-generated stub for: {task[:60]}"""\n    pass\n',
+        "javascript": f"function solution() {{\n  // Auto-generated stub for: {task[:60]}\n}}\n",
+        "typescript": f"function solution(): void {{\n  // Auto-generated stub for: {task[:60]}\n}}\n",
     }
     return {
         "code": templates.get(lang, templates["python"]),
@@ -141,8 +147,8 @@ async def handle_code(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 async def handle_memory(payload: Dict[str, Any]) -> Dict[str, Any]:
     action = payload.get("action", "store")
-    key    = payload.get("key", "")
-    value  = payload.get("value", "")
+    key = payload.get("key", "")
+    value = payload.get("value", "")
     # Simple in-process dict — connect a VectorStore/Redis for persistent memory
     _STORE: Dict[str, Any] = {}
     if action == "store":
@@ -157,27 +163,30 @@ async def handle_memory(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def handle_monitor(payload: Dict[str, Any]) -> Dict[str, Any]:
-    import platform, psutil  # type: ignore
+    import platform
+
+    import psutil  # type: ignore
+
     try:
-        cpu    = psutil.cpu_percent(interval=0.1)
-        mem    = psutil.virtual_memory()
-        disk   = psutil.disk_usage("/")
+        cpu = psutil.cpu_percent(interval=0.1)
+        mem = psutil.virtual_memory()
+        disk = psutil.disk_usage("/")
         return {
-            "cpu_pct":     cpu,
-            "mem_pct":     mem.percent,
+            "cpu_pct": cpu,
+            "mem_pct": mem.percent,
             "mem_used_mb": round(mem.used / 1_048_576, 1),
-            "disk_pct":    disk.percent,
-            "platform":    platform.system(),
-            "uptime_s":    round(time.time() - psutil.boot_time(), 1),
+            "disk_pct": disk.percent,
+            "platform": platform.system(),
+            "uptime_s": round(time.time() - psutil.boot_time(), 1),
         }
     except ImportError:
         return {"cpu_pct": 0, "mem_pct": 0, "disk_pct": 0, "note": "psutil not installed"}
 
 
 async def handle_search(payload: Dict[str, Any]) -> Dict[str, Any]:
-    query   = str(payload.get("query", ""))
-    limit   = int(payload.get("limit", 5))
-    source  = payload.get("source", "local")
+    query = str(payload.get("query", ""))
+    limit = int(payload.get("limit", 5))
+    source = payload.get("source", "local")
     if source == "web":
         return {
             "results": [],
@@ -185,20 +194,26 @@ async def handle_search(payload: Dict[str, Any]) -> Dict[str, Any]:
             "query": query,
         }
     h = int(hashlib.sha256(query.encode()).hexdigest(), 16)
-    results = [{"id": i, "score": round(1.0 - i * 0.1, 2), "text": f"[stub result {i}] {query}"} for i in range(min(limit, 5))]
+    results = [
+        {"id": i, "score": round(1.0 - i * 0.1, 2), "text": f"[stub result {i}] {query}"}
+        for i in range(min(limit, 5))
+    ]
     return {"results": results, "total": h % 1000, "query": query, "source": "stub"}
 
 
 async def handle_summarise(payload: Dict[str, Any]) -> Dict[str, Any]:
     if _engine_available():
-        return await _engine_post("/generate", {
-            "prompt": f"Summarise the following in 3 sentences:\n\n{payload.get('text', '')}",
-            "max_tokens": 150,
-        })
-    text  = str(payload.get("text", ""))
+        return await _engine_post(
+            "/generate",
+            {
+                "prompt": f"Summarise the following in 3 sentences:\n\n{payload.get('text', '')}",
+                "max_tokens": 150,
+            },
+        )
+    text = str(payload.get("text", ""))
     words = text.split()
     ratio = float(payload.get("ratio", 0.3))
-    keep  = max(1, int(len(words) * ratio))
+    keep = max(1, int(len(words) * ratio))
     summary = " ".join(words[:keep]) + ("..." if len(words) > keep else "")
     return {"summary": summary, "original_words": len(words), "summary_words": keep}
 
@@ -206,16 +221,16 @@ async def handle_summarise(payload: Dict[str, Any]) -> Dict[str, Any]:
 # ── Dispatch table ─────────────────────────────────────────────────────────────
 
 HANDLERS = {
-    "generate":     handle_generate,
-    "embed":        handle_embed,
-    "emotion":      handle_emotion,
-    "tokenize":     handle_tokenize,
-    "consciousness":handle_consciousness,
-    "personality":  handle_personality,
-    "predict":      handle_predict,
-    "code":         handle_code,
-    "memory":       handle_memory,
-    "monitor":      handle_monitor,
-    "search":       handle_search,
-    "summarise":    handle_summarise,
+    "generate": handle_generate,
+    "embed": handle_embed,
+    "emotion": handle_emotion,
+    "tokenize": handle_tokenize,
+    "consciousness": handle_consciousness,
+    "personality": handle_personality,
+    "predict": handle_predict,
+    "code": handle_code,
+    "memory": handle_memory,
+    "monitor": handle_monitor,
+    "search": handle_search,
+    "summarise": handle_summarise,
 }

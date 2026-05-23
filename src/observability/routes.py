@@ -13,14 +13,12 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-
 from typing import Optional
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from shared_core.sanitize import sanitize_for_log
 from src.observability.observatory import (
     EventCategory,
     EventSeverity,
@@ -143,5 +141,7 @@ async def observatory_record(request: Request):
         metadata=body.get("metadata", {}),
         session_id=body.get("session_id"),
     )
-    logger.debug("observatory.record via HTTP: %s", sanitize_for_log(event_type))  # codeql[py/cleartext-logging]
+    logger.debug(
+        "observatory.record via HTTP: %s", sanitize_for_log(event_type)
+    )  # codeql[py/cleartext-logging]
     return {"id": event.id, "timestamp": event.timestamp}

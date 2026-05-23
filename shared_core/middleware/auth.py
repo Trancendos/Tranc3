@@ -160,12 +160,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
             try:
                 # Import here to avoid circular imports and missing dependency issues
                 from auth import token_manager
+
                 payload = token_manager.decode_token(bearer_token)
                 username = payload.get("sub")
                 if username:
                     # Try to get full user info
                     try:
                         from auth import user_manager
+
                         user = user_manager.get_user(username)
                     except Exception:
                         pass
@@ -199,7 +201,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         # Check if auth is required for this path
         is_enforced = _is_enforced_path(path)
-        is_optional = _is_optional_auth(path)
+        _is_optional_auth(path)
 
         if is_enforced and not user:
             raise HTTPException(

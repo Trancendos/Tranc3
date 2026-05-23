@@ -36,9 +36,9 @@ _PROFILES_DIR = Path(__file__).parent / "profiles"
 # Allowed output directory roots — spawn targets must land under one of these.
 # In production, restrict this to a dedicated sandbox directory.
 _ALLOWED_OUTPUT_ROOTS = [
-    Path.cwd().resolve(),          # current working directory
-    Path("/tmp").resolve(),        # nosec B108 — system temp, validated by safe_join below
-    Path.home().resolve(),         # user home
+    Path.cwd().resolve(),  # current working directory
+    Path("/tmp").resolve(),  # nosec B108 — system temp, validated by safe_join below
+    Path.home().resolve(),  # user home
 ]
 
 
@@ -69,7 +69,9 @@ def _resolve_output_base(output_dir: str) -> Path:
 
     # Also try the parent — handles case where output_dir is "./spawned"
     # which may not yet exist but its parent does
-    candidate = Path(output_dir).resolve()  # codeql[py/path-injection] – validated by validate_path below
+    candidate = Path(
+        output_dir
+    ).resolve()  # codeql[py/path-injection] – validated by validate_path below
     parent = candidate.parent
     for allowed_root in _ALLOWED_OUTPUT_ROOTS:
         try:
@@ -115,9 +117,7 @@ class PersonalitySpawner:
         profile = self._profiles.get(personality_id)
         if not profile:
             available = list(self._profiles.keys())
-            raise ValueError(
-                f"Unknown personality '{personality_id}'. Available: {available}"
-            )
+            raise ValueError(f"Unknown personality '{personality_id}'. Available: {available}")
 
         # Validate and sanitize repo_name — prevents directory traversal
         safe_repo_name = sanitize_filename(repo_name)
@@ -133,7 +133,11 @@ class PersonalitySpawner:
             raise FileExistsError(f"Target directory already exists: {target}")
 
         target.mkdir(parents=True, exist_ok=False)  # codeql[py/path-injection]
-        logger.info("Spawning personality '%s' into %s", sanitize_for_log(personality_id), sanitize_for_log(target))  # codeql[py/cleartext-logging]
+        logger.info(
+            "Spawning personality '%s' into %s",
+            sanitize_for_log(personality_id),
+            sanitize_for_log(target),
+        )  # codeql[py/cleartext-logging]
 
         files_written = []
         files_written += self._write_config(target, profile)
@@ -484,5 +488,9 @@ class PersonalitySpawner:
                 pid = data.get("id", f.stem)
                 profiles[pid] = data
             except Exception as e:
-                logger.warning("Failed to load personality profile %s: %s", sanitize_for_log(f), sanitize_for_log(e))  # codeql[py/cleartext-logging]
+                logger.warning(
+                    "Failed to load personality profile %s: %s",
+                    sanitize_for_log(f),
+                    sanitize_for_log(e),
+                )  # codeql[py/cleartext-logging]
         return profiles

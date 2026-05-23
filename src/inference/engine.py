@@ -105,7 +105,7 @@ class Tranc3Engine:
         )
 
         # Decode only the newly generated tokens
-        new_tokens = output[0][len(input_ids):].tolist()
+        new_tokens = output[0][len(input_ids) :].tolist()
         response = self.tokenizer.decode(new_tokens, skip_special=True)
         return response.strip()
 
@@ -114,9 +114,12 @@ class Tranc3Engine:
 # Simple CLI for local testing
 # ------------------------------------------------------------------
 
+
 def run_cli(engine: Tranc3Engine):
-    print(f"\nTranc3 [{engine.active_profile.name}] — type 'exit' to quit, "
-          f"'switch <profile>' to change personality\n")
+    print(
+        f"\nTranc3 [{engine.active_profile.name}] — type 'exit' to quit, "
+        f"'switch <profile>' to change personality\n"
+    )
 
     history = []
 
@@ -137,7 +140,7 @@ def run_cli(engine: Tranc3Engine):
             profile_name = user_input[7:].strip()
             try:
                 engine.switch_profile(profile_name)
-                history = []   # clear history on profile switch
+                history = []  # clear history on profile switch
                 print(f"[Switched to {profile_name}. History cleared.]\n")
             except KeyError as e:
                 print(f"[Error: {e}]\n")

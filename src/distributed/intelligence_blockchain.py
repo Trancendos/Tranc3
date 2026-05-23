@@ -52,15 +52,11 @@ class IntelligenceBlockchain:
         logger.info("IntelligenceBlockchain initialised")
 
     def _create_genesis(self):
-        genesis = Block(
-            index=0, timestamp=time.time(), computations=[], proof=1, previous_hash="0"
-        )
+        genesis = Block(index=0, timestamp=time.time(), computations=[], proof=1, previous_hash="0")
         genesis.hash = genesis.compute_hash()
         self.chain.append(genesis)
 
-    def add_computation(
-        self, problem: Dict, result: Any, participants: List[str]
-    ) -> int:
+    def add_computation(self, problem: Dict, result: Any, participants: List[str]) -> int:
         computation = {
             "problem_hash": self._hash_dict(problem),
             "result_hash": self._hash_dict(result)
@@ -89,23 +85,21 @@ class IntelligenceBlockchain:
         block.hash = block.compute_hash()
         self.chain.append(block)
         self.pending.clear()
-        logger.info("Block mined: #%s, hash=%s...", sanitize_for_log(block.index), sanitize_for_log(block.hash[:16]))  # codeql[py/cleartext-logging]
+        logger.info(
+            "Block mined: #%s, hash=%s...",
+            sanitize_for_log(block.index),
+            sanitize_for_log(block.hash[:16]),
+        )  # codeql[py/cleartext-logging]
 
     def _proof_of_work(self, last_proof: int, difficulty: int = 2) -> int:
         proof = 0
         target = "0" * difficulty
-        while (
-            not hashlib.sha256(f"{last_proof}{proof}".encode())
-            .hexdigest()
-            .startswith(target)
-        ):
+        while not hashlib.sha256(f"{last_proof}{proof}".encode()).hexdigest().startswith(target):
             proof += 1
         return proof
 
     def _hash_dict(self, d: Dict) -> str:
-        return hashlib.sha256(
-            json.dumps(d, sort_keys=True, default=str).encode()
-        ).hexdigest()[:32]
+        return hashlib.sha256(json.dumps(d, sort_keys=True, default=str).encode()).hexdigest()[:32]
 
     def is_valid(self) -> bool:
         for i in range(1, len(self.chain)):
@@ -134,7 +128,9 @@ class HomomorphicCrypto:
 
     def __init__(self, epsilon: float = 1.0):
         self.epsilon = epsilon  # Privacy budget
-        logger.info("HomomorphicCrypto initialised (ε=%s)", sanitize_for_log(epsilon))  # codeql[py/cleartext-logging]
+        logger.info(
+            "HomomorphicCrypto initialised (ε=%s)", sanitize_for_log(epsilon)
+        )  # codeql[py/cleartext-logging]
 
     def encrypt_gradients(self, model) -> Dict:
         """Add Gaussian noise to gradients (differential privacy)."""

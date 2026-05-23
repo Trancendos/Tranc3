@@ -64,9 +64,7 @@ try:
         "Response quality score distribution",
         buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
     )
-    REVENUE_GAUGE = Gauge(
-        "tranc3_revenue_gbp_total", "Total revenue in GBP", ["stream"]
-    )
+    REVENUE_GAUGE = Gauge("tranc3_revenue_gbp_total", "Total revenue in GBP", ["stream"])
 
     PROMETHEUS_AVAILABLE = True
 
@@ -78,14 +76,10 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # METRIC HELPERS
 # ---------------------------------------------------------------------------
-def record_request(
-    endpoint: str, method: str, status: int, tier: str, duration_s: float
-):
+def record_request(endpoint: str, method: str, status: int, tier: str, duration_s: float):
     if not PROMETHEUS_AVAILABLE:
         return
-    REQUEST_COUNT.labels(
-        endpoint=endpoint, method=method, status=str(status), tier=tier
-    ).inc()
+    REQUEST_COUNT.labels(endpoint=endpoint, method=method, status=str(status), tier=tier).inc()
     REQUEST_LATENCY.labels(endpoint=endpoint).observe(duration_s)
 
 

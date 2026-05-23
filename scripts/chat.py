@@ -9,20 +9,20 @@ Usage:
 """
 
 import argparse
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.core.config import ModelConfig, InferenceConfig
+from src.core.config import InferenceConfig, ModelConfig
 from src.core.tokenizer import Tranc3Tokenizer
-from src.personality.matrix import PersonalityMatrix
 from src.inference.engine import Tranc3Engine, run_cli
+from src.personality.matrix import PersonalityMatrix
 
 MODEL_SIZES = {
-    "small": dict(d_model=256, n_layers=4, n_heads=4, d_ff=1024),
-    "medium": dict(d_model=512, n_layers=6, n_heads=8, d_ff=2048),
-    "large": dict(d_model=768, n_layers=12, n_heads=12, d_ff=3072),
+    "small": {"d_model": 256, "n_layers": 4, "n_heads": 4, "d_ff": 1024},
+    "medium": {"d_model": 512, "n_layers": 6, "n_heads": 8, "d_ff": 2048},
+    "large": {"d_model": 768, "n_layers": 12, "n_heads": 12, "d_ff": 3072},
 }
 
 if __name__ == "__main__":

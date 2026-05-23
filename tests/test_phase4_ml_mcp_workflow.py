@@ -22,8 +22,9 @@ All tests use in-process, zero-dependency execution (no external APIs required).
 from __future__ import annotations
 
 import asyncio
-import sys
 import os
+import sys
+
 import pytest
 
 # Make sure the project root is on sys.path
@@ -34,27 +35,40 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def run(coro):
     """Run a coroutine synchronously for tests that aren't async."""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coro)
 
 
 # ---------------------------------------------------------------------------
 # Phase 4 Spark tools registration
 # ---------------------------------------------------------------------------
 
+
 class TestSparkPhase4ToolsRegistration:
     def test_phase4_tools_module_importable(self):
         from src.mcp.spark_phase4_tools import PHASE4_TOOLS
+
         assert len(PHASE4_TOOLS) == 16, f"Expected 16 phase4 tools, got {len(PHASE4_TOOLS)}"
 
     def test_all_tool_names_unique(self):
         from src.mcp.spark_phase4_tools import PHASE4_TOOLS
+
         names = [t["name"] for t in PHASE4_TOOLS]
         assert len(names) == len(set(names)), "Duplicate tool names in PHASE4_TOOLS"
 
     def test_all_tools_have_required_keys(self):
         from src.mcp.spark_phase4_tools import PHASE4_TOOLS
+
         for tool in PHASE4_TOOLS:
             assert "name" in tool
             assert "description" in tool
@@ -63,8 +77,9 @@ class TestSparkPhase4ToolsRegistration:
             assert callable(tool["handler"])
 
     def test_registration_into_fresh_registry(self):
-        from src.mcp.tools import SparkToolRegistry
         from src.mcp.spark_phase4_tools import register_phase4_tools
+        from src.mcp.tools import SparkToolRegistry
+
         fresh = SparkToolRegistry()
         baseline = len(fresh._tools)
         count = register_phase4_tools(fresh)
@@ -73,22 +88,30 @@ class TestSparkPhase4ToolsRegistration:
 
     def test_global_registry_has_phase4_tools(self):
         from src.mcp.tools import registry
+
         tool_names = list(registry._tools.keys())
         # Check a selection of Phase 4 tools are present
-        for expected in ["neural_mesh_emit", "causal_predict", "knowledge_graph_query",
-                         "meta_learn_adapt", "attention_route", "nanobot_dispatch",
-                         "foresight_predict", "analytics_intent"]:
+        for expected in [
+            "neural_mesh_emit",
+            "causal_predict",
+            "knowledge_graph_query",
+            "meta_learn_adapt",
+            "attention_route",
+            "nanobot_dispatch",
+            "foresight_predict",
+            "analytics_intent",
+        ]:
             assert expected in tool_names, f"Missing tool: {expected}"
 
     def test_total_tool_count_at_least_33(self):
         from src.mcp.tools import registry
+
         # 17 original + 16 phase4 = 33
-        assert len(registry._tools) >= 33, (
-            f"Expected ≥33 tools, got {len(registry._tools)}"
-        )
+        assert len(registry._tools) >= 33, f"Expected ≥33 tools, got {len(registry._tools)}"
 
     def test_tool_categories(self):
         from src.mcp.tools import registry
+
         categories = {t.category for t in registry._tools.values() if hasattr(t, "category")}
         # Should include at least neural, intelligence, adaptive, healing
         for expected_cat in ("neural", "intelligence", "adaptive", "healing"):
@@ -99,26 +122,37 @@ class TestSparkPhase4ToolsRegistration:
 # Phase 4 workflow nodes
 # ---------------------------------------------------------------------------
 
+
 class TestPhase4WorkflowNodes:
     def test_phase4_nodes_module_importable(self):
         from src.workflow.phase4_nodes import PHASE4_NODE_TYPES
+
         assert len(PHASE4_NODE_TYPES) == 7
 
     def test_all_node_types_present(self):
         from src.workflow.phase4_nodes import PHASE4_NODE_TYPES
+
         expected = {
-            "NEURAL_MESH", "COLLECTIVE_MEM", "META_LEARN",
-            "ATTENTION_ROUTE", "CAUSAL_REASON", "KNOWLEDGE_GRAPH", "FORESIGHT"
+            "NEURAL_MESH",
+            "COLLECTIVE_MEM",
+            "META_LEARN",
+            "ATTENTION_ROUTE",
+            "CAUSAL_REASON",
+            "KNOWLEDGE_GRAPH",
+            "FORESIGHT",
         }
         assert set(PHASE4_NODE_TYPES.keys()) == expected
 
     def test_nodes_extend_workflow_registry(self):
-        from src.workflow.nodes import _PHASE4_NODE_REGISTRY
+        from src.workflow.nodes import _PHASE4_NODE_REGISTRY, _ensure_phase4_nodes_loaded
+
+        _ensure_phase4_nodes_loaded()
         assert len(_PHASE4_NODE_REGISTRY) >= 7
 
     def test_create_node_fallback(self):
         """create_node() should find Phase 4 node types by string key."""
         from src.workflow.nodes import NodeConfig, create_node
+
         cfg = NodeConfig(
             id="test_kg",
             type="KNOWLEDGE_GRAPH",
@@ -127,10 +161,12 @@ class TestPhase4WorkflowNodes:
         )
         node = create_node(cfg)
         from src.workflow.phase4_nodes import KnowledgeGraphNode
+
         assert isinstance(node, KnowledgeGraphNode)
 
     def test_collective_memory_node_instantiation(self):
         from src.workflow.nodes import NodeConfig, create_node
+
         cfg = NodeConfig(
             id="cm_test",
             type="COLLECTIVE_MEM",
@@ -145,14 +181,17 @@ class TestPhase4WorkflowNodes:
 # ML Pipeline
 # ---------------------------------------------------------------------------
 
+
 class TestMLPipeline:
     def test_pipeline_importable(self):
         from src.core.ml_pipeline import MLPipeline, get_pipeline
+
         pipeline = get_pipeline()
         assert isinstance(pipeline, MLPipeline)
 
     def test_pipeline_request_creation(self):
         from src.core.ml_pipeline import PipelineRequest
+
         req = PipelineRequest(
             prompt="Hello world",
             task_domain="general",
@@ -165,8 +204,9 @@ class TestMLPipeline:
 
     def test_pipeline_stats(self):
         from src.core.ml_pipeline import get_pipeline
+
         pipeline = get_pipeline()
-        stats = asyncio.get_event_loop().run_until_complete(pipeline.stats())
+        stats = run(pipeline.stats())
         assert "call_count" in stats
         assert "phase4_enabled" in stats
         assert stats["phase4_enabled"] is True
@@ -176,9 +216,11 @@ class TestMLPipeline:
 # Collective Memory (direct unit tests)
 # ---------------------------------------------------------------------------
 
+
 class TestCollectiveMemory:
     def test_store_and_retrieve(self):
         from src.neural.collective_memory import CollectiveMemory, MemoryPriority
+
         cm = CollectiveMemory()
 
         async def _test():
@@ -202,6 +244,7 @@ class TestCollectiveMemory:
 
     def test_query_by_topic(self):
         from src.neural.collective_memory import CollectiveMemory
+
         cm = CollectiveMemory()
 
         async def _test():
@@ -214,6 +257,7 @@ class TestCollectiveMemory:
 
     def test_query_by_tag(self):
         from src.neural.collective_memory import CollectiveMemory
+
         cm = CollectiveMemory()
 
         async def _test():
@@ -226,6 +270,7 @@ class TestCollectiveMemory:
 
     def test_critical_priority_never_evicted(self):
         from src.neural.collective_memory import CollectiveMemory, MemoryPriority
+
         # Create a very small memory to force evictions
         cm = CollectiveMemory(max_entries=3)
 
@@ -245,11 +290,11 @@ class TestCollectiveMemory:
 # Semantic Knowledge Graph (direct unit tests)
 # ---------------------------------------------------------------------------
 
+
 class TestSemanticKnowledgeGraph:
     def test_add_and_query_node(self):
-        from src.intelligence.semantic_knowledge import (
-            SemanticKnowledgeGraph, KnowledgeNode
-        )
+        from src.intelligence.semantic_knowledge import KnowledgeNode, SemanticKnowledgeGraph
+
         kg = SemanticKnowledgeGraph()
 
         async def _test():
@@ -275,8 +320,11 @@ class TestSemanticKnowledgeGraph:
 
     def test_add_edge_and_path(self):
         from src.intelligence.semantic_knowledge import (
-            SemanticKnowledgeGraph, KnowledgeNode, EdgeType
+            EdgeType,
+            KnowledgeNode,
+            SemanticKnowledgeGraph,
         )
+
         kg = SemanticKnowledgeGraph()
 
         async def _test():
@@ -296,8 +344,11 @@ class TestSemanticKnowledgeGraph:
 
     def test_semantic_expand(self):
         from src.intelligence.semantic_knowledge import (
-            SemanticKnowledgeGraph, KnowledgeNode, EdgeType
+            EdgeType,
+            KnowledgeNode,
+            SemanticKnowledgeGraph,
         )
+
         kg = SemanticKnowledgeGraph()
 
         async def _test():
@@ -318,15 +369,21 @@ class TestSemanticKnowledgeGraph:
 
     def test_pattern_matching(self):
         from src.intelligence.semantic_knowledge import (
-            SemanticKnowledgeGraph, KnowledgeNode, EdgeType, GraphPattern
+            EdgeType,
+            GraphPattern,
+            KnowledgeNode,
+            SemanticKnowledgeGraph,
         )
+
         kg = SemanticKnowledgeGraph()
 
         async def _test():
-            svc = KnowledgeNode(label="ServiceA", semantic_type="service",
-                                tags={"api"}, confidence=0.9)
-            dep = KnowledgeNode(label="Database", semantic_type="storage",
-                                tags={"db"}, confidence=0.85)
+            svc = KnowledgeNode(
+                label="ServiceA", semantic_type="service", tags={"api"}, confidence=0.9
+            )
+            dep = KnowledgeNode(
+                label="Database", semantic_type="storage", tags={"db"}, confidence=0.85
+            )
             sid = await kg.add_node(svc)
             did = await kg.add_node(dep)
             await kg.add_edge(sid, did, EdgeType.DEPENDS_ON)
@@ -349,23 +406,31 @@ class TestSemanticKnowledgeGraph:
 # Causal Reasoner (direct unit tests)
 # ---------------------------------------------------------------------------
 
+
 class TestCausalReasoner:
     def test_predict_forward(self):
-        from src.intelligence.causal_reasoner import (
-            CausalReasoner, CausalRule, CausalStrength
-        )
+        from src.intelligence.causal_reasoner import CausalReasoner, CausalRule, CausalStrength
+
         cr = CausalReasoner()
 
         async def _test():
             # add_rule is async; confidence field (not 'probability')
-            await cr.add_rule(CausalRule(
-                cause="rain", effect="wet_road",
-                strength=CausalStrength.SUFFICIENT, confidence=0.95,
-            ))
-            await cr.add_rule(CausalRule(
-                cause="wet_road", effect="accident_risk",
-                strength=CausalStrength.CONTRIBUTING, confidence=0.6,
-            ))
+            await cr.add_rule(
+                CausalRule(
+                    cause="rain",
+                    effect="wet_road",
+                    strength=CausalStrength.SUFFICIENT,
+                    confidence=0.95,
+                )
+            )
+            await cr.add_rule(
+                CausalRule(
+                    cause="wet_road",
+                    effect="accident_risk",
+                    strength=CausalStrength.CONTRIBUTING,
+                    confidence=0.6,
+                )
+            )
             # observe(event, probability) — async
             await cr.observe("rain", 1.0)
             # predict(causes=[...]) — async; result has .effects list of (event, prob) tuples
@@ -377,16 +442,19 @@ class TestCausalReasoner:
         run(_test())
 
     def test_diagnose_backward(self):
-        from src.intelligence.causal_reasoner import (
-            CausalReasoner, CausalRule, CausalStrength
-        )
+        from src.intelligence.causal_reasoner import CausalReasoner, CausalRule, CausalStrength
+
         cr = CausalReasoner()
 
         async def _test():
-            await cr.add_rule(CausalRule(
-                cause="overheat", effect="crash",
-                strength=CausalStrength.SUFFICIENT, confidence=0.9,
-            ))
+            await cr.add_rule(
+                CausalRule(
+                    cause="overheat",
+                    effect="crash",
+                    strength=CausalStrength.SUFFICIENT,
+                    confidence=0.9,
+                )
+            )
             await cr.observe("crash", 1.0)
             # diagnose(effects=[...]) — async; result has .causes list of (event, prob) tuples
             result = await cr.diagnose(effects=["crash"])
@@ -396,9 +464,8 @@ class TestCausalReasoner:
         run(_test())
 
     def test_cycle_detection(self):
-        from src.intelligence.causal_reasoner import (
-            CausalRule, CausalStrength, CausalGraph
-        )
+        from src.intelligence.causal_reasoner import CausalGraph, CausalRule, CausalStrength
+
         # Cycle detection lives in CausalGraph._graph (sync), test via the underlying graph
         g = CausalGraph()
         g.add_rule(CausalRule(cause="A", effect="B", strength=CausalStrength.CONTRIBUTING))
@@ -412,9 +479,11 @@ class TestCausalReasoner:
 # Meta Learner (direct unit tests)
 # ---------------------------------------------------------------------------
 
+
 class TestMetaLearner:
     def test_register_and_adapt(self):
         from src.neural.meta_learner import MetaLearner, TaskPrototype
+
         ml = MetaLearner(similarity_threshold=0.1)  # Low threshold for test matching
 
         async def _test():
@@ -450,6 +519,7 @@ class TestMetaLearner:
 
     def test_no_prototype_returns_none(self):
         from src.neural.meta_learner import MetaLearner
+
         ml = MetaLearner()  # Fresh, empty learner
 
         async def _test():
@@ -468,9 +538,11 @@ class TestMetaLearner:
 # Attention Router (direct unit tests)
 # ---------------------------------------------------------------------------
 
+
 class TestAttentionRouter:
     def test_register_and_route(self):
         from src.neural.attention_router import AttentionRouter, RoutingRequest
+
         router = AttentionRouter()
 
         async def _test():
@@ -493,6 +565,7 @@ class TestAttentionRouter:
 
     def test_empty_registry_returns_none(self):
         from src.neural.attention_router import AttentionRouter, RoutingRequest
+
         router = AttentionRouter()
 
         async def _test():
@@ -509,9 +582,11 @@ class TestAttentionRouter:
 # Foresight (direct unit tests)
 # ---------------------------------------------------------------------------
 
+
 class TestForesight:
     def test_predict_trajectory(self):
         from src.adaptive.foresight import ConversationTrajectoryPredictor
+
         predictor = ConversationTrajectoryPredictor()
         # record_turn(session_id, emotion, intent) is the correct API
         predictor.record_turn("sess1", "happy", "question")
@@ -527,9 +602,11 @@ class TestForesight:
 # Analytics Intent (direct unit tests)
 # ---------------------------------------------------------------------------
 
+
 class TestAnalyticsIntent:
     def test_classify_question(self):
         from src.analytics.predictive import IntentPredictor
+
         predictor = IntentPredictor()
         # predict(text, emotion) is the correct API — returns Dict[str, float]
         results = predictor.predict("What is the weather like today?", emotion="neutral")
@@ -539,6 +616,7 @@ class TestAnalyticsIntent:
 
     def test_classify_request(self):
         from src.analytics.predictive import IntentPredictor
+
         predictor = IntentPredictor()
         results = predictor.predict("Please help me create a new account", emotion="neutral")
         assert len(results) > 0
@@ -550,40 +628,58 @@ class TestAnalyticsIntent:
 # Spark Phase 4 handler smoke tests
 # ---------------------------------------------------------------------------
 
+
 class TestSparkHandlerSmoke:
     """Smoke test each handler with minimal valid params — no real inference needed."""
 
     def test_collective_memory_store_handler(self):
         from src.mcp.spark_phase4_tools import _handle_collective_memory_store
-        result = run(_handle_collective_memory_store({
-            "key": "smoke:test:1",
-            "value": {"x": 42},
-            "topic": "smoke",
-        }))
+
+        result = run(
+            _handle_collective_memory_store(
+                {
+                    "key": "smoke:test:1",
+                    "value": {"x": 42},
+                    "topic": "smoke",
+                }
+            )
+        )
         assert result.get("ok") or result.get("error")  # Either ok or graceful error
 
     def test_collective_memory_query_missing_filter(self):
         from src.mcp.spark_phase4_tools import _handle_collective_memory_query
+
         result = run(_handle_collective_memory_query({}))
         # Should return an error about missing filter
         assert "error" in result
 
     def test_causal_predict_handler(self):
         from src.mcp.spark_phase4_tools import _handle_causal_predict
-        result = run(_handle_causal_predict({
-            "observations": {"rain": True},
-        }))
+
+        result = run(
+            _handle_causal_predict(
+                {
+                    "observations": {"rain": True},
+                }
+            )
+        )
         assert result.get("ok") or result.get("error")
 
     def test_knowledge_graph_add_handler(self):
         from src.mcp.spark_phase4_tools import _handle_knowledge_graph_add
-        result = run(_handle_knowledge_graph_add({
-            "node": {"label": "Test Node", "semantic_type": "test"},
-        }))
+
+        result = run(
+            _handle_knowledge_graph_add(
+                {
+                    "node": {"label": "Test Node", "semantic_type": "test"},
+                }
+            )
+        )
         assert result.get("ok") or result.get("error")
 
     def test_knowledge_graph_query_empty(self):
         from src.mcp.spark_phase4_tools import _handle_knowledge_graph_query
+
         result = run(_handle_knowledge_graph_query({"semantic_type": "nonexistent_xyz"}))
         assert result.get("ok") or result.get("error")
         if result.get("ok"):
@@ -592,6 +688,7 @@ class TestSparkHandlerSmoke:
     def test_attention_route_no_services(self):
         """With no services registered, route should return routed=False."""
         from src.mcp.spark_phase4_tools import _handle_attention_route
+
         result = run(_handle_attention_route({"query": "some task"}))
         # Either ok with routed=False, or error
         assert "ok" in result or "error" in result

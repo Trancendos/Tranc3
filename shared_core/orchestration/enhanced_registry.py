@@ -3,15 +3,13 @@
 # load-aware selection, and proactive rebalancing.
 
 import asyncio
-import hashlib
-import json
 import logging
 import random
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional
 
 from shared_core.sanitize import sanitize_for_log
 
@@ -20,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class RoutingStrategy(str, Enum):
     """Strategy for selecting among multiple capable services."""
+
     ROUND_ROBIN = "round_robin"
     LEAST_LOADED = "least_loaded"
     WEIGHTED_HEALTH = "weighted_health"
@@ -30,6 +29,7 @@ class RoutingStrategy(str, Enum):
 @dataclass
 class ServiceDiscoveryEvent:
     """Event emitted when a service is discovered or changes state."""
+
     event_type: str  # "discovered", "lost", "health_change", "capability_change"
     service_name: str
     timestamp: float = field(default_factory=time.time)
@@ -47,6 +47,7 @@ class ServiceDiscoveryEvent:
 @dataclass
 class _ServiceMetrics:
     """Internal tracking metrics for a registered service."""
+
     request_count: int = 0
     error_count: int = 0
     total_latency_ms: float = 0.0
@@ -152,8 +153,17 @@ class EnhancedServiceRegistry:
             if name not in self._capabilities[cap_name]:
                 self._capabilities[cap_name].append(name)
 
-        logger.info("Registered service: %s @ %s", sanitize_for_log(name), sanitize_for_log(endpoint))
-        self._emit_discovery_event("discovered", name, {"endpoint": endpoint, "capabilities": [c if isinstance(c, str) else c.get("name") for c in capabilities]})
+        logger.info(
+            "Registered service: %s @ %s", sanitize_for_log(name), sanitize_for_log(endpoint)
+        )
+        self._emit_discovery_event(
+            "discovered",
+            name,
+            {
+                "endpoint": endpoint,
+                "capabilities": [c if isinstance(c, str) else c.get("name") for c in capabilities],
+            },
+        )
 
     def deregister(self, name: str) -> Optional[Dict[str, Any]]:
         """Remove a service from the registry."""
@@ -174,7 +184,9 @@ class EnhancedServiceRegistry:
 
     # ── Capability-Based Routing ─────────────────────────────────
 
-    def resolve(self, capability: str, strategy: Optional[RoutingStrategy] = None) -> Optional[Dict[str, Any]]:
+    def resolve(
+        self, capability: str, strategy: Optional[RoutingStrategy] = None
+    ) -> Optional[Dict[str, Any]]:
         """
         Resolve the best service endpoint for a given capability.
         Uses the configured routing strategy or an override.
@@ -183,7 +195,9 @@ class EnhancedServiceRegistry:
         candidates = self._get_healthy_candidates(capability)
 
         if not candidates:
-            logger.warning("No healthy service found for capability: %s", sanitize_for_log(capability))
+            logger.warning(
+                "No healthy service found for capability: %s", sanitize_for_log(capability)
+            )
             return None
 
         if len(candidates) == 1:
@@ -235,7 +249,13 @@ class EnhancedServiceRegistry:
         for svc in candidates:
             m = self._metrics[svc["name"]]
             # Health multiplier
-            health_mult = 1.0 if svc.get("health") == "healthy" else 0.5 if svc.get("health") == "degraded" else 0.1
+            health_mult = (
+                1.0
+                if svc.get("health") == "healthy"
+                else 0.5
+                if svc.get("health") == "degraded"
+                else 0.1
+            )
             # Latency factor (lower is better, invert)
             latency_factor = 1.0 / (1.0 + m.avg_latency_ms / 1000.0)
             # Error rate penalty
@@ -277,10 +297,10 @@ class EnhancedServiceRegistry:
                 version = cap.get("version", "1.0.0")
                 try:
                     parts = version.split(".")
-                    version_score = sum(int(p) * (0.1 ** i) for i, p in enumerate(parts[:3]))
+                    version_score = sum(int(p) * (0.1**i) for i, p in enumerate(parts[:3]))
                 except (ValueError, IndexError):
                     version_score = 1.0
-                base *= (0.5 + version_score * 0.5)
+                base *= 0.5 + version_score * 0.5
         return base
 
     # ── Metrics & Adaptive Weight ─────────────────────────────────
@@ -309,9 +329,13 @@ class EnhancedServiceRegistry:
         # Adaptive: decrease weight on failure
         penalty = 1.0 - self._weight_adaptation_rate * (1.0 + m.consecutive_failures * 0.5)
         m.weight = max(self._min_weight, m.weight * penalty)
-        logger.warning("Service %s failure #%d (weight→%.3f): %s",
-                       sanitize_for_log(service_name), m.consecutive_failures,
-                       m.weight, sanitize_for_log(error or "unknown"))
+        logger.warning(
+            "Service %s failure #%d (weight→%.3f): %s",
+            sanitize_for_log(service_name),
+            m.consecutive_failures,
+            m.weight,
+            sanitize_for_log(error or "unknown"),
+        )
 
     def update_health(self, name: str, health: str) -> None:
         """Update a service's health status."""
@@ -366,7 +390,9 @@ class EnhancedServiceRegistry:
                             self.update_health(name, "degraded")
 
                 for name in stale:
-                    logger.warning("Service %s heartbeat timeout — marking unhealthy", sanitize_for_log(name))
+                    logger.warning(
+                        "Service %s heartbeat timeout — marking unhealthy", sanitize_for_log(name)
+                    )
                     self.update_health(name, "unhealthy")
 
             except asyncio.CancelledError:
@@ -430,7 +456,9 @@ class EnhancedServiceRegistry:
             topology[cap] = [
                 {
                     "name": n,
-                    "health": self._services[n].get("health", "unknown") if n in self._services else "unknown",
+                    "health": self._services[n].get("health", "unknown")
+                    if n in self._services
+                    else "unknown",
                     "weight": round(self._metrics[n].weight, 4) if n in self._metrics else 0.0,
                     "active": self._metrics[n].active_connections if n in self._metrics else 0,
                 }
@@ -457,7 +485,9 @@ class EnhancedServiceRegistry:
             except Exception as e:
                 logger.error("Watcher error: %s", sanitize_for_log(str(e)))
 
-    def _emit_discovery_event(self, event_type: str, service_name: str, details: Dict[str, Any] = None) -> None:
+    def _emit_discovery_event(
+        self, event_type: str, service_name: str, details: Dict[str, Any] = None
+    ) -> None:
         """Emit a discovery event to watchers and log."""
         event = ServiceDiscoveryEvent(
             event_type=event_type,

@@ -40,12 +40,14 @@ logger = logging.getLogger(__name__)
 
 # ── Data structures ────────────────────────────────────────────────
 
+
 class CausalStrength(str, Enum):
     """Classification of causal link strength."""
-    NECESSARY = "necessary"       # Effect cannot occur without cause
-    SUFFICIENT = "sufficient"     # Cause always produces effect
-    CONTRIBUTING = "contributing" # Cause contributes but is not alone sufficient
-    INHIBITING = "inhibiting"     # Cause prevents or reduces effect
+
+    NECESSARY = "necessary"  # Effect cannot occur without cause
+    SUFFICIENT = "sufficient"  # Cause always produces effect
+    CONTRIBUTING = "contributing"  # Cause contributes but is not alone sufficient
+    INHIBITING = "inhibiting"  # Cause prevents or reduces effect
 
 
 @dataclass
@@ -73,6 +75,7 @@ class CausalRule:
     metadata : Dict[str, Any]
         Additional metadata.
     """
+
     rule_id: str = ""
     cause: str = ""
     effect: str = ""
@@ -92,6 +95,7 @@ class CausalRule:
 @dataclass
 class InferenceResult:
     """Result of a causal inference query."""
+
     query_type: str  # "predict", "diagnose", "counterfactual", "intervene"
     causes: List[Tuple[str, float]]  # [(event, probability), ...]
     effects: List[Tuple[str, float]]  # [(event, probability), ...]
@@ -100,6 +104,7 @@ class InferenceResult:
 
 
 # ── Causal Graph ───────────────────────────────────────────────────
+
 
 class CausalGraph:
     """Directed Acyclic Graph of causal relationships.
@@ -113,7 +118,7 @@ class CausalGraph:
 
     def __init__(self) -> None:
         self._rules: Dict[str, CausalRule] = {}
-        self._adj_forward: Dict[str, List[str]] = defaultdict(list)   # cause -> [effect rule_ids]
+        self._adj_forward: Dict[str, List[str]] = defaultdict(list)  # cause -> [effect rule_ids]
         self._adj_backward: Dict[str, List[str]] = defaultdict(list)  # effect -> [cause rule_ids]
         self._nodes: Set[str] = set()
 
@@ -242,6 +247,7 @@ class CausalGraph:
 
 
 # ── Causal Reasoner ────────────────────────────────────────────────
+
 
 class CausalReasoner:
     """Lightweight causal inference engine.
@@ -396,7 +402,8 @@ class CausalReasoner:
             sorted_effects = sorted(effects.items(), key=lambda x: -abs(x[1]))[:max_results]
             overall_confidence = (
                 sum(abs(p) for _, p in sorted_effects) / len(sorted_effects)
-                if sorted_effects else 0.0
+                if sorted_effects
+                else 0.0
             )
 
         return InferenceResult(
@@ -449,15 +456,13 @@ class CausalReasoner:
                         # Combine multiple explanations (noisy-OR)
                         causes[rule.cause] = 1.0 - (1.0 - existing) * (1.0 - cause_prob)
                         chain.append(
-                            f"{rule.cause} -> {event} "
-                            f"(p={cause_prob:.2f}, {rule.strength.value})"
+                            f"{rule.cause} -> {event} (p={cause_prob:.2f}, {rule.strength.value})"
                         )
                         queue.append((rule.cause, cause_prob, depth + 1))
 
             sorted_causes = sorted(causes.items(), key=lambda x: -x[1])[:max_results]
             overall_confidence = (
-                sum(p for _, p in sorted_causes) / len(sorted_causes)
-                if sorted_causes else 0.0
+                sum(p for _, p in sorted_causes) / len(sorted_causes) if sorted_causes else 0.0
             )
 
         return InferenceResult(
@@ -506,9 +511,13 @@ class CausalReasoner:
             self._evidence = old_evidence
             self._interventions = old_interventions
 
-        chain = [
-            f"COUNTERFACTUAL: If we do({intervention}) instead of what caused {observed_effects}",
-        ] + diagnosis.reasoning_chain + prediction.reasoning_chain
+        chain = (
+            [
+                f"COUNTERFACTUAL: If we do({intervention}) instead of what caused {observed_effects}",
+            ]
+            + diagnosis.reasoning_chain
+            + prediction.reasoning_chain
+        )
 
         return InferenceResult(
             query_type="counterfactual",
@@ -524,7 +533,9 @@ class CausalReasoner:
         """Return statistics about the causal graph."""
         return self._graph.stats()
 
-    def list_rules(self, cause: Optional[str] = None, effect: Optional[str] = None) -> List[CausalRule]:
+    def list_rules(
+        self, cause: Optional[str] = None, effect: Optional[str] = None
+    ) -> List[CausalRule]:
         """List causal rules, optionally filtered."""
         rules = list(self._graph.rules.values())
         if cause:

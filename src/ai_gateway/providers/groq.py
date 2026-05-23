@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from src.ai_gateway.providers.base import AIProvider
 from src.ai_gateway.types import AIRequest, AIResponse, ProviderHealth
@@ -70,6 +70,7 @@ class GroqProvider(AIProvider):
 
         try:
             from groq import Groq
+
             self._client = Groq(api_key=self.api_key)
         except ImportError:
             # Fallback to httpx-based implementation
@@ -96,7 +97,7 @@ class GroqProvider(AIProvider):
 
         try:
             # Use the groq SDK or httpx fallback
-            if hasattr(client, 'chat'):
+            if hasattr(client, "chat"):
                 # Official groq SDK
                 response = await asyncio.to_thread(
                     client.chat.completions.create,
@@ -146,12 +147,13 @@ class GroqProvider(AIProvider):
             client = self._get_client()
             start = time.monotonic()
 
-            if hasattr(client, 'models'):
+            if hasattr(client, "models"):
                 # Official SDK
                 import asyncio
+
                 models = await asyncio.to_thread(client.models.list)
                 latency = (time.monotonic() - start) * 1000
-                model_ids = [m.id for m in models.data] if hasattr(models, 'data') else GROQ_MODELS
+                model_ids = [m.id for m in models.data] if hasattr(models, "data") else GROQ_MODELS
             else:
                 # httpx fallback — just check connectivity
                 latency = (time.monotonic() - start) * 1000
@@ -187,6 +189,7 @@ class _GroqHttpxClient:
         if self._httpx is None:
             try:
                 import httpx
+
                 self._httpx = httpx.AsyncClient(
                     base_url=self._base_url,
                     headers={
@@ -199,7 +202,7 @@ class _GroqHttpxClient:
                 raise RuntimeError(
                     "Either 'groq' or 'httpx' package is required for Groq provider. "
                     "Install with: pip install groq  OR  pip install httpx"
-                )
+                ) from None
         return self._httpx
 
     async def complete(
@@ -211,7 +214,6 @@ class _GroqHttpxClient:
         start_time: float,
     ) -> AIResponse:
         client = self._get_httpx()
-        import json
 
         payload = {
             "model": model,

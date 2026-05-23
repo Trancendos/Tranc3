@@ -45,6 +45,7 @@ BOS_ID = SPECIAL_TOKENS["<bos>"]
 EOS_ID = SPECIAL_TOKENS["<eos>"]
 SEP_ID = SPECIAL_TOKENS["<sep>"]
 
+
 class Tranc3Tokenizer:
     """
     TRANC3's own BPE tokenizer.
@@ -71,9 +72,7 @@ class Tranc3Tokenizer:
 
     # ─── Training ──────────────────────────────────────────────────────────────
 
-    def train(
-        self, texts: List[str], vocab_size: Optional[int] = None
-    ) -> "Tranc3Tokenizer":
+    def train(self, texts: List[str], vocab_size: Optional[int] = None) -> "Tranc3Tokenizer":
         """Train BPE on a list of strings. Uses HuggingFace tokenizers (Rust) if available,
         falls back to pure-Python implementation."""
         if vocab_size:
@@ -82,9 +81,7 @@ class Tranc3Tokenizer:
         try:
             return self._train_with_hf(texts)
         except ImportError:
-            logger.info(
-                "tokenizers library not installed — using pure-Python BPE trainer"
-            )
+            logger.info("tokenizers library not installed — using pure-Python BPE trainer")
             return self._train_python_bpe(texts)
 
     def _train_with_hf(self, texts: List[str]) -> "Tranc3Tokenizer":
@@ -152,7 +149,7 @@ class Tranc3Tokenizer:
             # Count pairs
             pair_freq: Dict[Tuple[str, str], int] = {}
             for word in corpus:
-                for a, b in zip(word, word[1:]):
+                for a, b in zip(word, word[1:], strict=False):
                     pair_freq[(a, b)] = pair_freq.get((a, b), 0) + 1
 
             if not pair_freq:
@@ -172,11 +169,7 @@ class Tranc3Tokenizer:
                 new_word: List[str] = []
                 i = 0
                 while i < len(word):
-                    if (
-                        i < len(word) - 1
-                        and word[i] == best[0]
-                        and word[i + 1] == best[1]
-                    ):
+                    if i < len(word) - 1 and word[i] == best[0] and word[i + 1] == best[1]:
                         new_word.append(new_token)
                         i += 2
                     else:
@@ -252,9 +245,7 @@ class Tranc3Tokenizer:
     def decode(self, ids: List[int], skip_special_tokens: bool = True) -> str:
         """Decode token IDs back to text."""
         if hasattr(self, "_hf_tokenizer"):
-            return self._hf_tokenizer.decode(
-                ids, skip_special_tokens=skip_special_tokens
-            )
+            return self._hf_tokenizer.decode(ids, skip_special_tokens=skip_special_tokens)
 
         tokens = []
         for i in ids:
