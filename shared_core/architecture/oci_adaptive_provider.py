@@ -750,7 +750,9 @@ class OciAdaptiveProvider:
                 tenancy_ocid=os.environ["OCI_TENANCY_OCID"],
                 user_ocid=os.environ["OCI_USER_OCID"],
                 fingerprint=os.environ["OCI_FINGERPRINT"],
-                private_key_pem=os.environ["OCI_PRIVATE_KEY_PEM"].replace("\\n", "\n"),
+                private_key_pem=os.environ["OCI_PRIVATE_KEY_PEM"].replace(
+                    "\\n", "\n"
+                ),  # pragma: allowlist secret
                 compartment_id=os.environ["OCI_COMPARTMENT_ID"],
             )
             if os.getenv("OCI_NAMESPACE")
@@ -758,7 +760,7 @@ class OciAdaptiveProvider:
             r2=R2Config(
                 account_id=os.environ["CF_ACCOUNT_ID"],
                 access_key=os.environ["CF_R2_ACCESS_KEY"],
-                secret_key=os.environ["CF_R2_SECRET_KEY"],
+                secret_key=os.environ["CF_R2_SECRET_KEY"],  # pragma: allowlist secret
                 bucket=os.getenv("CF_R2_BUCKET", "tranc3-fallback"),
             )
             if os.getenv("CF_ACCOUNT_ID")
@@ -766,7 +768,7 @@ class OciAdaptiveProvider:
             minio=MinioConfig(
                 endpoint=os.getenv("MINIO_ENDPOINT", "http://localhost:9000"),
                 access_key=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
-                secret_key=os.getenv("MINIO_SECRET_KEY", "minioadmin"),
+                secret_key=os.getenv("MINIO_SECRET_KEY", "minioadmin"),  # pragma: allowlist secret
                 bucket=os.getenv("MINIO_BUCKET", "tranc3-local"),
                 secure=os.getenv("MINIO_SECURE", "true").lower() == "true",
             ),
@@ -787,7 +789,7 @@ class OciAdaptiveProvider:
             self._tiers[StorageTier.OCI] = _S3CompatTier(
                 endpoint=cfg.oci.endpoint,
                 access_key=cfg.oci.user_ocid,  # OCI uses OCID as access key
-                secret_key=cfg.oci.private_key_pem,
+                secret_key=cfg.oci.private_key_pem,  # pragma: allowlist secret
                 bucket=cfg.oci.bucket,
                 region=cfg.oci.region,
                 service="objectstorage",
@@ -802,7 +804,7 @@ class OciAdaptiveProvider:
             self._tiers[StorageTier.CLOUDFLARE] = _S3CompatTier(
                 endpoint=cfg.r2.endpoint,
                 access_key=cfg.r2.access_key,
-                secret_key=cfg.r2.secret_key,
+                secret_key=cfg.r2.secret_key,  # pragma: allowlist secret
                 bucket=cfg.r2.bucket,
                 region="auto",
             )
@@ -812,7 +814,7 @@ class OciAdaptiveProvider:
             self._tiers[StorageTier.MINIO] = _S3CompatTier(
                 endpoint=cfg.minio.endpoint,
                 access_key=cfg.minio.access_key,
-                secret_key=cfg.minio.secret_key,
+                secret_key=cfg.minio.secret_key,  # pragma: allowlist secret
                 bucket=cfg.minio.bucket,
                 region="us-east-1",  # MinIO default
             )
