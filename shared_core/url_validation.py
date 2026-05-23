@@ -188,7 +188,7 @@ def validate_url(
         # We check ALL resolved addresses (including AAAA records for IPv6).
         addr_infos = socket.getaddrinfo(hostname, parsed.port or 443,
                                          proto=socket.IPPROTO_TCP)
-        for family, _type, _proto, _canonname, sockaddr in addr_infos:
+        for _family, _type, _proto, _canonname, sockaddr in addr_infos:
             ip_str = sockaddr[0]
             if _is_ip_private(ip_str):
                 raise SSRFError(
@@ -208,7 +208,7 @@ def validate_url(
         try:
             addr_infos = socket.getaddrinfo(hostname, parsed.port or 443,
                                              proto=socket.IPPROTO_TCP)
-            for family, _type, _proto, _canonname, sockaddr in addr_infos:
+            for _family, _type, _proto, _canonname, sockaddr in addr_infos:
                 ip_str = sockaddr[0]
                 addr = ipaddress.ip_address(ip_str)
                 for network in blocked_networks:

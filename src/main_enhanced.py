@@ -194,7 +194,7 @@ class TRANC3Enhanced:
     async def think(
         self,
         prompt: str,
-        context: Dict = {},
+        context: Dict = None,
         personality: str = "tranc3-base",
         system_prompt: Optional[str] = None,
         max_new_tokens: int = 256,
@@ -207,6 +207,8 @@ class TRANC3Enhanced:
         All other subsystems enrich the response with structured metadata.
         No external API is called.
         """
+        if context is None:
+            context = {}
         start = time.time()
         result: Dict[str, Any] = {
             "prompt": prompt,
@@ -301,8 +303,10 @@ class TRANC3Enhanced:
             t = torch.nn.functional.pad(t, (0, 768 - len(t)))
         return t[:768].unsqueeze(0)
 
-    async def execute_workflow(self, workflow_def: Dict, inputs: Dict = {}) -> Dict:
+    async def execute_workflow(self, workflow_def: Dict, inputs: Dict = None) -> Dict:
         """Execute a workflow definition."""
+        if inputs is None:
+            inputs = {}
         executor = self._subsystems.get("workflow_executor")
         if not executor:
             return {"error": "Workflow executor not available"}
@@ -318,8 +322,10 @@ class TRANC3Enhanced:
             "error": state.error,
         }
 
-    async def call_mcp_tool(self, tool_name: str, params: Dict = {}) -> Dict:
+    async def call_mcp_tool(self, tool_name: str, params: Dict = None) -> Dict:
         """Call an MCP tool by name."""
+        if params is None:
+            params = {}
         registry = self._subsystems.get("mcp_registry")
         if not registry:
             return {"error": "MCP registry not available"}

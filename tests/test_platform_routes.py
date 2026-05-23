@@ -8,8 +8,9 @@ no TestClient (avoids requiring torch/transformers/qiskit in CI).
 from __future__ import annotations
 
 import logging
-import pytest
 import os
+
+import pytest
 
 from shared_core.path_validation import validate_path
 
@@ -40,6 +41,7 @@ class TestRedisStore:
     @pytest.mark.asyncio
     async def test_ttl_eviction(self):
         import time
+
         from src.core.redis_store import _InMemoryFallback
         store = _InMemoryFallback()
         await store.set("expiring", "gone", ttl=1)
@@ -92,7 +94,7 @@ class TestCitadel:
         dh._citadel = None  # fresh instance per test
 
     def test_record_and_list_deploy(self):
-        from src.citadel.devops_hub import get_citadel, DeployTarget, DeployStatus
+        from src.citadel.devops_hub import DeployStatus, DeployTarget, get_citadel
         c = get_citadel()
         rec = c.record_deploy(
             target=DeployTarget.BACKEND,
@@ -106,7 +108,12 @@ class TestCitadel:
         assert any(d.id == rec.id for d in deploys)
 
     def test_update_deploy_to_success(self):
-        from src.citadel.devops_hub import get_citadel, DeployTarget, DeployStatus, ServiceHealthStatus
+        from src.citadel.devops_hub import (
+            DeployStatus,
+            DeployTarget,
+            ServiceHealthStatus,
+            get_citadel,
+        )
         c = get_citadel()
         rec = c.record_deploy(DeployTarget.BOTS, "v2", status=DeployStatus.IN_PROGRESS)
         updated = c.update_deploy(rec.id, DeployStatus.SUCCESS)
@@ -115,7 +122,7 @@ class TestCitadel:
         assert c._service_health["tranc3-bots"] == ServiceHealthStatus.HEALTHY
 
     def test_update_nonexistent_deploy(self):
-        from src.citadel.devops_hub import get_citadel, DeployStatus
+        from src.citadel.devops_hub import DeployStatus, get_citadel
         c = get_citadel()
         assert c.update_deploy("nonexistent-id", DeployStatus.FAILED) is None
 
@@ -134,13 +141,13 @@ class TestCitadel:
         assert "healthy_services" in stats
 
     def test_health_update(self):
-        from src.citadel.devops_hub import get_citadel, ServiceHealthStatus
+        from src.citadel.devops_hub import ServiceHealthStatus, get_citadel
         c = get_citadel()
         c.update_health("tranc3-backend", ServiceHealthStatus.DEGRADED)
         assert c._service_health["tranc3-backend"] == ServiceHealthStatus.DEGRADED
 
     def test_deploy_to_dict_has_required_keys(self):
-        from src.citadel.devops_hub import get_citadel, DeployTarget
+        from src.citadel.devops_hub import DeployTarget, get_citadel
         c = get_citadel()
         rec = c.record_deploy(DeployTarget.TRANC3_AI, "edge-0a1b")
         d = rec.to_dict()
@@ -163,7 +170,7 @@ class TestDevOcity:
         assert acct.user_id == "user-001"
 
     def test_issue_api_key_has_trx_prefix(self):
-        from src.devocity.portal import get_devocity, ApiKeyScope
+        from src.devocity.portal import ApiKeyScope, get_devocity
         dv = get_devocity()
         acct = dv.create_account("user-002", "Key Dev")
         result = dv.issue_api_key(acct.id, "my-key", [ApiKeyScope.READ])
@@ -174,7 +181,7 @@ class TestDevOcity:
         assert key.key_hash  # SHA-256 stored, never plain
 
     def test_revoke_api_key(self):
-        from src.devocity.portal import get_devocity, ApiKeyScope
+        from src.devocity.portal import ApiKeyScope, get_devocity
         dv = get_devocity()
         acct = dv.create_account("user-003", "Revoke Test")
         _, key = dv.issue_api_key(acct.id, "to-revoke", [ApiKeyScope.WRITE])
@@ -203,7 +210,7 @@ class TestChronos:
         cs._chronos = None
 
     def test_create_cron_task(self):
-        from src.chronos.scheduler import get_chronos, ScheduleType
+        from src.chronos.scheduler import ScheduleType, get_chronos
         c = get_chronos()
         task = c.create_task(
             name="daily-report",
@@ -214,7 +221,7 @@ class TestChronos:
         assert task.schedule_type == ScheduleType.CRON
 
     def test_list_tasks(self):
-        from src.chronos.scheduler import get_chronos, ScheduleType
+        from src.chronos.scheduler import ScheduleType, get_chronos
         c = get_chronos()
         c.create_task("job-a", ScheduleType.INTERVAL, interval_seconds=3600)
         c.create_task("job-b", ScheduleType.ONCE, fire_at=1800000000.0)
@@ -222,7 +229,7 @@ class TestChronos:
         assert len(tasks) >= 2
 
     def test_toggle_task(self):
-        from src.chronos.scheduler import get_chronos, ScheduleType, ScheduleStatus
+        from src.chronos.scheduler import ScheduleStatus, ScheduleType, get_chronos
         c = get_chronos()
         task = c.create_task("toggle-me", ScheduleType.CRON, cron_expression="*/5 * * * *")
         assert task.status == ScheduleStatus.ACTIVE
@@ -246,7 +253,7 @@ class TestArtifactory:
         assert "tranc3-backend" in names
 
     def test_push_artifact(self):
-        from src.artifactory.registry import get_artifactory, ArtifactType
+        from src.artifactory.registry import ArtifactType, get_artifactory
         reg = get_artifactory()
         art = reg.create_artifact(
             name="test-package",
@@ -258,7 +265,7 @@ class TestArtifactory:
         assert ver.version == "0.1.0"
 
     def test_get_artifact_by_name(self):
-        from src.artifactory.registry import get_artifactory, ArtifactType
+        from src.artifactory.registry import ArtifactType, get_artifactory
         reg = get_artifactory()
         reg.create_artifact("lookup-me", ArtifactType.GENERIC)
         found = reg.find_by_name("lookup-me")
@@ -303,7 +310,7 @@ class TestVRAR3D:
         assert len(scenes) >= 6
 
     def test_crisis_calm_recommended_on_critical(self):
-        from src.vrar3d.wellbeing_centre import get_vrar3d, SceneType
+        from src.vrar3d.wellbeing_centre import SceneType, get_vrar3d
         centre = get_vrar3d()
         rec = centre.recommend_scene(sensitivity_level="critical")
         assert rec is not None
@@ -367,8 +374,8 @@ class TestSparkPlatformTools:
 
     @pytest.mark.asyncio
     async def test_citadel_tool_returns_stats(self):
-        from src.mcp.tools import SparkToolRegistry
         import src.citadel.devops_hub as dh
+        from src.mcp.tools import SparkToolRegistry
         dh._citadel = None
         reg = SparkToolRegistry()
         tool = reg.get("citadel_deploy_status")
@@ -409,7 +416,8 @@ class TestMigrations:
 
     def test_migration_chain_is_valid(self):
         """Each migration correctly references its predecessor — parsed from source text."""
-        import re, os
+        import os
+        import re
         base = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "migrations", "versions"))
         revisions = {}
         for fname in sorted(os.listdir(base)):

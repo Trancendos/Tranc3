@@ -240,7 +240,7 @@ class StaleEmbeddingBot(NanoBot):
                 embed_resp.raise_for_status()
                 vectors = embed_resp.json().get("embeddings", [])
 
-                for item, vec in zip(batch, vectors):
+                for item, vec in zip(batch, vectors, strict=False):
                     qdrant_points.append(
                         {
                             "id": item.get("id"),
@@ -597,9 +597,11 @@ class NanoCodeBotDispatcher:
         self,
         failure_mode: FailureMode,
         service_id: str,
-        context: Dict = {},
+        context: Dict = None,
     ) -> BotResult:
         """Find the right bot for *failure_mode* and execute its repair."""
+        if context is None:
+            context = {}
         bot = self._bots.get(failure_mode)
         if bot is None:
             logger.warning("No bot registered for failure mode %s", failure_mode.value)

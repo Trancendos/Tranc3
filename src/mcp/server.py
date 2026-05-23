@@ -12,9 +12,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-
-from shared_core.sanitize import sanitize_for_log  # noqa: F401  # intentional top-level import
-
 import time
 import uuid
 from typing import Any, AsyncGenerator, Dict, List, Optional
@@ -23,6 +20,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from shared_core.sanitize import sanitize_for_log  # noqa: F401  # intentional top-level import
 from src.auth.dependencies import get_current_user  # codeql[py/cyclic-import]
 
 from .tools import registry

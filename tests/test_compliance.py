@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
+
 import pytest
 
 _log = logging.getLogger("tranc3.tests.compliance")
@@ -173,8 +174,9 @@ class TestDigitalGridContractCompliance:
             assert d.get("engine") == GRID_ENGINE, f"Workflow {name} missing engine field"
 
     def test_execution_state_fields_complete(self, caplog):
-        from src.workflow.executor import ExecutionState
         import uuid
+
+        from src.workflow.executor import ExecutionState
         state = ExecutionState(
             execution_id=str(uuid.uuid4()),
             workflow_id="test",

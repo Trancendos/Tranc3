@@ -328,7 +328,7 @@ def get_optimal_chain(chain_name: Optional[str] = None) -> ZeroCostRoutingChain:
     best_chain = None
     best_score = -1
 
-    for name, chain in ROUTING_CHAINS.items():
+    for _name, chain in ROUTING_CHAINS.items():
         # Count how many providers in this chain are available
         score = sum(1 for p in chain.providers if available.get(p, False))
         # Prefer chains with higher score (more providers available)

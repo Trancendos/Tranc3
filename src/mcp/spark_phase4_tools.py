@@ -58,7 +58,9 @@ def _get_neural_mesh():
     global _neural_mesh
     if _neural_mesh is None:
         try:
-            from src.neural.neural_mesh import NeuralMesh  # noqa: F401  # intentional top-level import
+            from src.neural.neural_mesh import (
+                NeuralMesh,  # noqa: F401  # intentional top-level import
+            )
             _neural_mesh = NeuralMesh()
         except Exception as exc:
             logger.warning("NeuralMesh unavailable: %s", exc)
@@ -69,7 +71,9 @@ def _get_collective_memory():
     global _collective_memory
     if _collective_memory is None:
         try:
-            from src.neural.collective_memory import CollectiveMemory  # noqa: F401  # intentional top-level import
+            from src.neural.collective_memory import (
+                CollectiveMemory,  # noqa: F401  # intentional top-level import
+            )
             _collective_memory = CollectiveMemory()
         except Exception as exc:
             logger.warning("CollectiveMemory unavailable: %s", exc)
@@ -80,7 +84,9 @@ def _get_meta_learner():
     global _meta_learner
     if _meta_learner is None:
         try:
-            from src.neural.meta_learner import MetaLearner  # noqa: F401  # intentional top-level import
+            from src.neural.meta_learner import (
+                MetaLearner,  # noqa: F401  # intentional top-level import
+            )
             _meta_learner = MetaLearner()
         except Exception as exc:
             logger.warning("MetaLearner unavailable: %s", exc)
@@ -91,7 +97,9 @@ def _get_attention_router():
     global _attention_router
     if _attention_router is None:
         try:
-            from src.neural.attention_router import AttentionRouter  # noqa: F401  # intentional top-level import
+            from src.neural.attention_router import (
+                AttentionRouter,  # noqa: F401  # intentional top-level import
+            )
             _attention_router = AttentionRouter()
         except Exception as exc:
             logger.warning("AttentionRouter unavailable: %s", exc)
@@ -102,7 +110,9 @@ def _get_causal_reasoner():
     global _causal_reasoner
     if _causal_reasoner is None:
         try:
-            from src.intelligence.causal_reasoner import CausalReasoner  # noqa: F401  # intentional top-level import
+            from src.intelligence.causal_reasoner import (
+                CausalReasoner,  # noqa: F401  # intentional top-level import
+            )
             _causal_reasoner = CausalReasoner()
         except Exception as exc:
             logger.warning("CausalReasoner unavailable: %s", exc)
@@ -113,7 +123,9 @@ def _get_knowledge_graph():
     global _knowledge_graph
     if _knowledge_graph is None:
         try:
-            from src.intelligence.semantic_knowledge import SemanticKnowledgeGraph  # noqa: F401  # intentional top-level import
+            from src.intelligence.semantic_knowledge import (
+                SemanticKnowledgeGraph,  # noqa: F401  # intentional top-level import
+            )
             _knowledge_graph = SemanticKnowledgeGraph()
         except Exception as exc:
             logger.warning("SemanticKnowledgeGraph unavailable: %s", exc)
@@ -153,7 +165,10 @@ async def _handle_neural_mesh_emit(params: Dict[str, Any]) -> Dict[str, Any]:
     payload = params.get("payload", {})
     ttl = int(params.get("ttl", 5))
     try:
-        from src.neural.neural_mesh import MeshNode, Signal  # noqa: F401  # intentional top-level import
+        from src.neural.neural_mesh import (  # noqa: F401  # intentional top-level import
+            MeshNode,
+            Signal,
+        )
         # Auto-register source node if absent
         if source_id not in mesh._nodes:
             node = MeshNode(id=source_id, service_name="spark", host="internal", port=0)
@@ -213,7 +228,9 @@ async def _handle_collective_memory_store(params: Dict[str, Any]) -> Dict[str, A
     if cm is None:
         return _err("CollectiveMemory not initialised")
     try:
-        from src.neural.collective_memory import MemoryPriority  # noqa: F401  # intentional top-level import
+        from src.neural.collective_memory import (
+            MemoryPriority,  # noqa: F401  # intentional top-level import
+        )
         key = params.get("key")
         if not key:
             return _err("'key' is required")
@@ -353,7 +370,9 @@ async def _handle_attention_route(params: Dict[str, Any]) -> Dict[str, Any]:
     try:
         import uuid
 
-        from src.neural.attention_router import RoutingRequest  # noqa: F401  # intentional top-level import
+        from src.neural.attention_router import (
+            RoutingRequest,  # noqa: F401  # intentional top-level import
+        )
         request_id = params.get("request_id", uuid.uuid4().hex[:12])
         required_tags = set(params.get("required_tags", []))
         context_vector = list(params.get("context_vector", []))
@@ -490,7 +509,10 @@ async def _handle_knowledge_graph_add(params: Dict[str, Any]) -> Dict[str, Any]:
     if kg is None:
         return _err("SemanticKnowledgeGraph not initialised")
     try:
-        from src.intelligence.semantic_knowledge import EdgeType, KnowledgeNode  # noqa: F401  # intentional top-level import
+        from src.intelligence.semantic_knowledge import (  # noqa: F401  # intentional top-level import
+            EdgeType,
+            KnowledgeNode,
+        )
         node_data = params.get("node", {})
         node = KnowledgeNode(
             label=node_data.get("label", ""),
@@ -572,7 +594,9 @@ async def _handle_knowledge_graph_path(params: Dict[str, Any]) -> Dict[str, Any]
     if kg is None:
         return _err("SemanticKnowledgeGraph not initialised")
     try:
-        from src.intelligence.semantic_knowledge import EdgeType  # noqa: F401  # intentional top-level import
+        from src.intelligence.semantic_knowledge import (
+            EdgeType,  # noqa: F401  # intentional top-level import
+        )
         source_id = params.get("source_id")
         target_id = params.get("target_id")
         if not source_id or not target_id:
@@ -607,7 +631,9 @@ async def _handle_knowledge_graph_expand(params: Dict[str, Any]) -> Dict[str, An
     if kg is None:
         return _err("SemanticKnowledgeGraph not initialised")
     try:
-        from src.intelligence.semantic_knowledge import EdgeType  # noqa: F401  # intentional top-level import
+        from src.intelligence.semantic_knowledge import (
+            EdgeType,  # noqa: F401  # intentional top-level import
+        )
         node_id = params.get("node_id")
         if not node_id:
             return _err("'node_id' is required")
@@ -650,7 +676,9 @@ async def _handle_foresight_predict(params: Dict[str, Any]) -> Dict[str, Any]:
         top_n (int, optional): Top N outcomes to return (default 3).
     """
     try:
-        from src.adaptive.foresight import ConversationTrajectoryPredictor  # noqa: F401  # intentional top-level import
+        from src.adaptive.foresight import (
+            ConversationTrajectoryPredictor,  # noqa: F401  # intentional top-level import
+        )
         predictor = ConversationTrajectoryPredictor()
         session_id = str(params.get("session_id", "default"))
         emotion = str(params.get("emotion", "neutral"))
@@ -692,7 +720,9 @@ async def _handle_analytics_intent(params: Dict[str, Any]) -> Dict[str, Any]:
         emotion (str, optional): Detected emotion for context (default "neutral").
     """
     try:
-        from src.analytics.predictive import IntentPredictor  # noqa: F401  # intentional top-level import
+        from src.analytics.predictive import (
+            IntentPredictor,  # noqa: F401  # intentional top-level import
+        )
         predictor = IntentPredictor()
         message = str(params.get("message", ""))
         emotion = str(params.get("emotion", "neutral"))
@@ -726,7 +756,10 @@ async def _handle_nanobot_dispatch(params: Dict[str, Any]) -> Dict[str, Any]:
         target_service_url (str, optional): Override service URL for the bot.
     """
     try:
-        from src.healing.nanocode_bots import FailureMode, NanoCodeBotDispatcher  # noqa: F401  # intentional top-level import
+        from src.healing.nanocode_bots import (  # noqa: F401  # intentional top-level import
+            FailureMode,
+            NanoCodeBotDispatcher,
+        )
         dispatcher = NanoCodeBotDispatcher()
         failure_mode_str = params.get("failure_mode")
         metrics = dict(params.get("metrics", {}))

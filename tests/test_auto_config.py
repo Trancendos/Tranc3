@@ -7,7 +7,6 @@ DetectionResult, EnvironmentDetector, AutoConfigManager.
 
 from __future__ import annotations
 
-
 from shared_core.architecture.auto_config import (
     AutoConfigManager,
     ConfigItem,
@@ -17,7 +16,6 @@ from shared_core.architecture.auto_config import (
     EnvironmentDetector,
     EnvironmentType,
 )
-
 
 # ---------------------------------------------------------------------------
 # Enum tests

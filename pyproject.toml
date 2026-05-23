@@ -25,6 +25,10 @@ ignore = [
 "tests/*"  = ["S", "B"]
 "scripts/*" = ["T201"]   # print() allowed in scripts
 "api.py"   = ["E402", "B904"]
+"api_ecosystem.py" = ["E402", "B904"]  # middleware imports must come after app creation
+"migrations/*" = ["E402"]
+"train.py" = ["E402"]
+"tranc3-bots/*" = ["E402", "E702"]
 
 [tool.ruff.format]
 quote-style = "double"

@@ -223,7 +223,7 @@ class WorkflowBuilder:
         node_ids = set(self._nodes.keys())
 
         # --- Edge referential integrity ---
-        for from_id, to_id, label in self._edges:
+        for from_id, to_id, _label in self._edges:
             if from_id not in node_ids:
                 errors.append(f"Edge references unknown source node: '{from_id}'.")
             if to_id not in node_ids:
@@ -236,7 +236,7 @@ class WorkflowBuilder:
                 adj[from_id].append(to_id)
 
         WHITE, GRAY, BLACK = 0, 1, 2
-        color: Dict[str, int] = {nid: WHITE for nid in node_ids}
+        color: Dict[str, int] = dict.fromkeys(node_ids, WHITE)
 
         def dfs(v: str) -> bool:
             color[v] = GRAY

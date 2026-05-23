@@ -47,7 +47,9 @@ def _neural_mesh():
 
 def _collective_memory():
     try:
-        from src.neural.collective_memory import CollectiveMemory  # noqa: F401  # intentional top-level import
+        from src.neural.collective_memory import (
+            CollectiveMemory,  # noqa: F401  # intentional top-level import
+        )
         if not hasattr(_collective_memory, "_inst") or _collective_memory._inst is None:
             _collective_memory._inst = CollectiveMemory()
         return _collective_memory._inst
@@ -58,7 +60,9 @@ def _collective_memory():
 
 def _meta_learner():
     try:
-        from src.neural.meta_learner import MetaLearner  # noqa: F401  # intentional top-level import
+        from src.neural.meta_learner import (
+            MetaLearner,  # noqa: F401  # intentional top-level import
+        )
         if not hasattr(_meta_learner, "_inst") or _meta_learner._inst is None:
             _meta_learner._inst = MetaLearner()
         return _meta_learner._inst
@@ -69,7 +73,9 @@ def _meta_learner():
 
 def _attention_router():
     try:
-        from src.neural.attention_router import AttentionRouter  # noqa: F401  # intentional top-level import
+        from src.neural.attention_router import (
+            AttentionRouter,  # noqa: F401  # intentional top-level import
+        )
         if not hasattr(_attention_router, "_inst") or _attention_router._inst is None:
             _attention_router._inst = AttentionRouter()
         return _attention_router._inst
@@ -80,7 +86,9 @@ def _attention_router():
 
 def _causal_reasoner():
     try:
-        from src.intelligence.causal_reasoner import CausalReasoner  # noqa: F401  # intentional top-level import
+        from src.intelligence.causal_reasoner import (
+            CausalReasoner,  # noqa: F401  # intentional top-level import
+        )
         if not hasattr(_causal_reasoner, "_inst") or _causal_reasoner._inst is None:
             _causal_reasoner._inst = CausalReasoner()
         return _causal_reasoner._inst
@@ -91,7 +99,9 @@ def _causal_reasoner():
 
 def _knowledge_graph():
     try:
-        from src.intelligence.semantic_knowledge import SemanticKnowledgeGraph  # noqa: F401  # intentional top-level import
+        from src.intelligence.semantic_knowledge import (
+            SemanticKnowledgeGraph,  # noqa: F401  # intentional top-level import
+        )
         if not hasattr(_knowledge_graph, "_inst") or _knowledge_graph._inst is None:
             _knowledge_graph._inst = SemanticKnowledgeGraph()
         return _knowledge_graph._inst
@@ -105,7 +115,12 @@ def _knowledge_graph():
 # ---------------------------------------------------------------------------
 
 def _import_base():
-    from src.workflow.nodes import BaseNode, NodeConfig, NodeResult, NodeType  # codeql[py/cyclic-import]
+    from src.workflow.nodes import (  # codeql[py/cyclic-import]
+        BaseNode,
+        NodeConfig,
+        NodeResult,
+        NodeType,
+    )
     return BaseNode, NodeConfig, NodeResult, NodeType
 
 
@@ -139,7 +154,10 @@ class NeuralMeshNode:
             if mesh is None:
                 raise RuntimeError("NeuralMesh not available")
             if action == "emit":
-                from src.neural.neural_mesh import MeshNode, Signal  # noqa: F401  # intentional top-level import
+                from src.neural.neural_mesh import (  # noqa: F401  # intentional top-level import
+                    MeshNode,
+                    Signal,
+                )
                 source_id = cfg.get("source_id", "workflow")
                 signal_type = cfg.get("signal_type", "workflow_event")
                 payload_key = cfg.get("payload_key")
@@ -221,7 +239,9 @@ class CollectiveMemoryNode:
             if cm is None:
                 raise RuntimeError("CollectiveMemory not available")
             if action == "store":
-                from src.neural.collective_memory import MemoryPriority  # noqa: F401  # intentional top-level import
+                from src.neural.collective_memory import (
+                    MemoryPriority,  # noqa: F401  # intentional top-level import
+                )
                 key = cfg.get("key") or context.get("workflow_id", "unknown")
                 value_key = cfg.get("value_key", "output")
                 value = inputs.get(value_key, inputs)
@@ -329,8 +349,8 @@ class MetaLearnNode:
             result = await ml.adapt(
                 domain=domain,
                 task_type=task_type,
-                input_signature={k: "str" for k in input_schema},
-                output_signature={k: "str" for k in output_schema},
+                input_signature=dict.fromkeys(input_schema, "str"),
+                output_signature=dict.fromkeys(output_schema, "str"),
                 tags=tags,
                 current_parameters=base_params,
             )
@@ -394,7 +414,9 @@ class AttentionRouteNode:
             router = _attention_router()
             if router is None:
                 raise RuntimeError("AttentionRouter not available")
-            from src.neural.attention_router import RoutingRequest  # noqa: F401  # intentional top-level import
+            from src.neural.attention_router import (
+                RoutingRequest,  # noqa: F401  # intentional top-level import
+            )
             # Resolve query from config or input
             query_key = cfg.get("query_input_key")
             query = str(inputs.get(query_key, "")) if query_key else cfg.get("query", "")
@@ -584,7 +606,9 @@ class KnowledgeGraphNode:
             if kg is None:
                 raise RuntimeError("SemanticKnowledgeGraph not available")
             if action == "add":
-                from src.intelligence.semantic_knowledge import KnowledgeNode  # noqa: F401  # intentional top-level import
+                from src.intelligence.semantic_knowledge import (
+                    KnowledgeNode,  # noqa: F401  # intentional top-level import
+                )
                 node = KnowledgeNode(
                     label=cfg.get("node_label", inputs.get("label", "")),
                     semantic_type=cfg.get("node_type", "entity"),
@@ -615,7 +639,9 @@ class KnowledgeGraphNode:
                     "count": len(nodes),
                 }
             elif action == "path":
-                from src.intelligence.semantic_knowledge import EdgeType  # noqa: F401  # intentional top-level import
+                from src.intelligence.semantic_knowledge import (
+                    EdgeType,  # noqa: F401  # intentional top-level import
+                )
                 src_key = cfg.get("source_id_key", "source_id")
                 tgt_key = cfg.get("target_id_key", "target_id")
                 src_id = inputs.get(src_key, cfg.get("source_id"))
@@ -702,7 +728,9 @@ class ForesightNode:
         try:
             if mode in ("foresight", "both"):
                 try:
-                    from src.adaptive.foresight import ConversationTrajectoryPredictor  # noqa: F401  # intentional top-level import
+                    from src.adaptive.foresight import (
+                        ConversationTrajectoryPredictor,  # noqa: F401  # intentional top-level import
+                    )
                     predictor = ConversationTrajectoryPredictor()
                     hist_key = cfg.get("history_key", "history")
                     history = inputs.get(hist_key, [])
@@ -723,7 +751,9 @@ class ForesightNode:
                     output["foresight_error"] = str(fe)
             if mode in ("intent", "both"):
                 try:
-                    from src.analytics.predictive import IntentPredictor  # noqa: F401  # intentional top-level import
+                    from src.analytics.predictive import (
+                        IntentPredictor,  # noqa: F401  # intentional top-level import
+                    )
                     predictor = IntentPredictor()
                     msg_key = cfg.get("message_key", "message")
                     message = str(inputs.get(msg_key, ""))

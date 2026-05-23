@@ -269,7 +269,7 @@ class PassiveRevenueTracker:
     ]
 
     def __init__(self):
-        self._revenue: Dict[str, float] = {s: 0.0 for s in self.STREAMS}
+        self._revenue: Dict[str, float] = dict.fromkeys(self.STREAMS, 0.0)
 
     def record(self, stream: str, amount_gbp: float):
         if stream in self._revenue:

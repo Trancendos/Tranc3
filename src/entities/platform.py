@@ -20,7 +20,7 @@ Tier System:
   Tier 5 - Bots (task-specific micro-workers: 01-04)
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional
 

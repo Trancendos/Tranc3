@@ -19,8 +19,6 @@ from __future__ import annotations
 
 import json
 import logging
-
-from shared_core.sanitize import sanitize_for_log
 import time
 import uuid
 from collections import defaultdict
@@ -30,6 +28,8 @@ from typing import Any, Optional
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.workers.infinity-ws")
 

@@ -343,7 +343,7 @@ class ToolBridge:
         successful = sum(1 for r in self._invocation_history if r.success)
         failed = len(self._invocation_history) - successful
         avg_duration = sum(r.duration_ms for r in self._invocation_history) / len(self._invocation_history)
-        tools_used = sorted(set(r.tool_name for r in self._invocation_history))
+        tools_used = sorted({r.tool_name for r in self._invocation_history})
 
         return {
             "total_invocations": len(self._invocation_history),

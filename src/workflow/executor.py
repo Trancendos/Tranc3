@@ -8,15 +8,13 @@ when the grid bridge is active (see src/mcp/server._start_grid_bridge).
 
 import asyncio
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-
-
 import time
 import uuid
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
+
+from shared_core.sanitize import sanitize_for_log
 
 from .builder import WorkflowDefinition
 from .nodes import NodeConfig, NodeResult, create_node

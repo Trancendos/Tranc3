@@ -12,17 +12,17 @@ These tests exercise the wiring added in the "enhance-ml-mcp-workflow" branch:
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
-from src.mcp.tools import SparkToolRegistry, SparkTool, GridWorkflowRegistry
+from src.mcp.tools import GridWorkflowRegistry, SparkTool, SparkToolRegistry
+from src.workflow.builder import WorkflowBuilder, WorkflowDefinition
 from src.workflow.nodes import (
+    _SPARK_TOOL_REGISTRY,
     NodeConfig,
     NodeType,
     SparkToolNode,
-    _SPARK_TOOL_REGISTRY,
 )
-from src.workflow.builder import WorkflowBuilder, WorkflowDefinition
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -357,7 +357,7 @@ class TestSparkSystemHealth:
 class TestSparkIdentity:
     @pytest.mark.asyncio
     async def test_server_name_is_the_spark(self):
-        from src.mcp.server import SERVER_NAME, ENGINE_LABEL
+        from src.mcp.server import ENGINE_LABEL, SERVER_NAME
         assert SERVER_NAME == "the-spark"
         assert "Spark" in ENGINE_LABEL
 

@@ -135,7 +135,7 @@ class FluidicRouter:
 
         r = random.uniform(0, total)  # nosec B311 — non-cryptographic weighted routing
         cumulative = 0.0
-        for svc, w in zip(available, weights):
+        for svc, w in zip(available, weights, strict=False):
             cumulative += w
             if r <= cumulative:
                 return svc

@@ -217,7 +217,7 @@ class GeminiMultiModalModel(nn.Module):
 
         # Normalize attention weights for interpretability
         weights_np = attn_w[0].detach().numpy()
-        attn_dict = {m: float(w) for m, w in zip(modalities, weights_np)}
+        attn_dict = {m: float(w) for m, w in zip(modalities, weights_np, strict=False)}
 
         confidence = float(torch.max(attn_w).item())
 

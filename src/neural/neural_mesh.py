@@ -423,7 +423,7 @@ class NeuralMesh:
 
         # Build undirected adjacency
         adj: Dict[str, Set[str]] = defaultdict(set)
-        for key, edge in self._edges.items():
+        for _key, edge in self._edges.items():
             adj[edge.source].add(edge.target)
             adj[edge.target].add(edge.source)
 

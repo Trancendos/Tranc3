@@ -150,7 +150,7 @@ def _dot_product(a: List[float], b: List[float]) -> float:
     """Compute dot product of two vectors."""
     if len(a) != len(b):
         return 0.0
-    return sum(x * y for x, y in zip(a, b))
+    return sum(x * y for x, y in zip(a, b, strict=False))
 
 
 def _vector_norm(v: List[float]) -> float:
@@ -388,9 +388,7 @@ class AttentionRouter:
             weights = _softmax(raw_scores, temperature=self._temperature)
 
             # Build attention weight map
-            weight_map = {
-                sid: w for sid, w in zip(service_ids, weights)
-            }
+            weight_map = dict(zip(service_ids, weights, strict=False))
 
             # Select service (highest weight)
             best_idx = weights.index(max(weights))

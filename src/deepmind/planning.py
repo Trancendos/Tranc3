@@ -1,15 +1,13 @@
 import asyncio
 import hashlib
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-
-
 import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 import numpy as np
+
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +92,7 @@ class BeamSearchPlanner:
             ]
             expanded_groups = await asyncio.gather(*expansion_tasks)
 
-            for parent_node, children in zip(beam, expanded_groups):
+            for parent_node, children in zip(beam, expanded_groups, strict=False):
                 for child in children:
                     parent_node.add_child(child)
                     candidates.append(child)
@@ -277,7 +275,7 @@ class ChainOfThoughtReasoner:
             "Synthesise sub-results into a unified answer.",
         ]
 
-    async def reason(self, problem: str, examples: List[Dict] = []) -> Dict:
+    async def reason(self, problem: str, examples: List[Dict] = None) -> Dict:
         """Perform chain-of-thought reasoning on a problem.
 
         Args:
@@ -294,6 +292,8 @@ class ChainOfThoughtReasoner:
         """
         # Build few-shot context string (not used in heuristic mode but
         # captured so LLM overrides can pass it to a model)
+        if examples is None:
+            examples = []
         few_shot_ctx = ""
         for ex in examples:
             few_shot_ctx += (
@@ -413,7 +413,7 @@ class StrategicPlanner:
         self,
         goal: str,
         state: Dict,
-        constraints: List[str] = [],
+        constraints: List[str] = None,
     ) -> Dict:
         """Produce a structured plan for achieving ``goal`` given current state.
 
@@ -429,6 +429,8 @@ class StrategicPlanner:
               alternatives – list of alternative action sequences
               reasoning   – textual justification
         """
+        if constraints is None:
+            constraints = []
         context = {"state": state, "constraints": constraints}
 
         # Run beam search and chain-of-thought concurrently

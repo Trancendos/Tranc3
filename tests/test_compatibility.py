@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+
 import pytest
 
 _log = logging.getLogger("tranc3.tests.compatibility")
@@ -159,8 +160,9 @@ class TestPydanticV2Compatibility:
         assert isinstance(d, dict)
 
     def test_execution_state_field_types(self, caplog):
-        from src.workflow.executor import ExecutionState
         import uuid
+
+        from src.workflow.executor import ExecutionState
         state = ExecutionState(
             execution_id=str(uuid.uuid4()),
             workflow_id="compat-wf",
@@ -195,7 +197,7 @@ class TestEnumValueCompatibility:
         assert not bad, f"Non-string ErrorCode values: {bad}"
 
     def test_node_type_in_node_registry(self, caplog):
-        from src.workflow.nodes import NodeType, NODE_REGISTRY
+        from src.workflow.nodes import NODE_REGISTRY, NodeType
         _log.info("compat.enum node_registry keys=%s", list(NODE_REGISTRY.keys()))
         assert NodeType.SPARK_TOOL in NODE_REGISTRY
         assert NodeType.OUTPUT in NODE_REGISTRY
@@ -244,8 +246,8 @@ class TestGridSparkEngineAgreement:
     @pytest.mark.asyncio
     async def test_grid_engine_constant_matches_server_info(self, caplog):
         """GRID_ENGINE constant from builder must equal the grid field in server's serverInfo."""
-        from src.workflow.builder import GRID_ENGINE
         from src.mcp.server import handle_rpc
+        from src.workflow.builder import GRID_ENGINE
 
         resp = await handle_rpc({
             "jsonrpc": "2.0", "id": 1, "method": "initialize",
@@ -258,7 +260,7 @@ class TestGridSparkEngineAgreement:
     @pytest.mark.asyncio
     async def test_spark_registry_knows_about_grid_workflows(self, caplog):
         import src.mcp.tools as tools_mod
-        from src.mcp.tools import SparkToolRegistry, GridWorkflowRegistry
+        from src.mcp.tools import GridWorkflowRegistry, SparkToolRegistry
         orig = tools_mod._grid_registry
         tools_mod._grid_registry = GridWorkflowRegistry()
         try:

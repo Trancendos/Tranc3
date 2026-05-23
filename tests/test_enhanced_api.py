@@ -3,8 +3,9 @@
 # Uses TestClient with mocked subsystems so no real Redis/DB/AI needed.
 
 import os
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Disable auth and set safe test defaults before importing app
 os.environ.setdefault("ENVIRONMENT", "test")
@@ -40,6 +41,7 @@ def client():
         patch("src.main_enhanced.enhanced", enhanced_mock),
     ):
         from fastapi.testclient import TestClient
+
         from api_enhanced import app
         # Manually inject mock into app state (lifespan won't run in TestClient)
         app.state.enhanced = enhanced_mock

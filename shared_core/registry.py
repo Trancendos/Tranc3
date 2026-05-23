@@ -3,10 +3,10 @@
 
 import asyncio
 import logging
-
-from shared_core.sanitize import sanitize_for_log
 import time
 from typing import Callable, Dict, List, Optional
+
+from shared_core.sanitize import sanitize_for_log
 
 from .models import ServiceHealth, ServiceInfo
 

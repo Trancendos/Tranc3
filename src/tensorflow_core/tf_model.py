@@ -203,7 +203,7 @@ class TFSequenceClassifier:
                 loss = self._loss_fn(y, logits)
 
             grads = tape.gradient(loss, self.model.trainable_variables)
-            self._optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+            self._optimizer.apply_gradients(zip(grads, self.model.trainable_variables, strict=False))
 
             # Compute batch accuracy
             preds = tf.argmax(logits, axis=-1, output_type=tf.int32)
@@ -369,7 +369,7 @@ class TFReinforcementAgent:
 
             grads = tape.gradient(loss, self.q_network.trainable_variables)
             self._optimizer.apply_gradients(
-                zip(grads, self.q_network.trainable_variables)
+                zip(grads, self.q_network.trainable_variables, strict=False)
             )
 
             # Soft-update target network: θ_target = τ·θ + (1-τ)·θ_target
@@ -379,7 +379,7 @@ class TFReinforcementAgent:
                 target_weights = self.target_network.get_weights()
                 new_weights = [
                     self._TAU * ow + (1 - self._TAU) * tw
-                    for ow, tw in zip(online_weights, target_weights)
+                    for ow, tw in zip(online_weights, target_weights, strict=False)
                 ]
                 self.target_network.set_weights(new_weights)
 

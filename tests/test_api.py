@@ -1,8 +1,9 @@
 # tests/test_api.py
 
 import os
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 # This test file requires the full production stack (torch, transformers, etc.)
 # and a SECRET_KEY env var. Skip gracefully when either is absent.

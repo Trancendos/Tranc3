@@ -4,8 +4,8 @@ Revision ID: 002_platform_services
 Revises: 001_initial
 Create Date: 2026-05-19
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = '002_platform_services'

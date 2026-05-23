@@ -13,15 +13,14 @@
 from __future__ import annotations
 
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-
 import re
 import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
+
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -159,8 +158,10 @@ class Cryptex:
 
         return signals
 
-    def analyse_request(self, path: str, body: str = "", headers: Dict[str, str] = {},
+    def analyse_request(self, path: str, body: str = "", headers: Dict[str, str] = None,
                         actor: Optional[str] = None, ip: Optional[str] = None) -> List[ThreatSignal]:
+        if headers is None:
+            headers = {}
         return self.analyse(
             {"input": f"{path} {body}", "payload": body, "headers": str(headers), "target": path},
             actor=actor, source_ip=ip,

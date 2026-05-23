@@ -47,7 +47,6 @@ Architecture:
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import logging
 import os
@@ -59,10 +58,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+from shared_core.architecture.audit_ledger import AuditLedger
 from shared_core.security_automation.adaptive_scanner import AdaptiveScanner
 from shared_core.security_automation.scanner import Severity
-from shared_core.architecture.audit_ledger import AuditLedger
-from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -335,7 +333,7 @@ class Sentinel:
     def _run_checks(self) -> SentinelReport:
         """Run all checks and compile a report."""
         checks: List[SentinelCheck] = []
-        start_time = time.time()
+        time.time()
 
         # Check 1: Security scan
         scan_check = self._check_security_scan()

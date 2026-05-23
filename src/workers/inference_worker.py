@@ -393,7 +393,7 @@ class InferenceWorker:
 
         top_k_result = [
             {"token": tok.id_to_token(int(i)), "prob": round(float(p), 4)}
-            for i, p in zip(topk_ids.tolist(), topk_probs.tolist())
+            for i, p in zip(topk_ids.tolist(), topk_probs.tolist(), strict=False)
         ]
         return {
             "prediction": top_k_result[0]["token"] if top_k_result else "",

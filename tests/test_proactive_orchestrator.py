@@ -31,7 +31,6 @@ from shared_core.architecture.proactive_orchestrator import (
     ZeroCostStatus,
 )
 
-
 # ---------------------------------------------------------------------------
 # Enum tests
 # ---------------------------------------------------------------------------

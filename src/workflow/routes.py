@@ -18,8 +18,8 @@ from typing import Any, Dict
 from fastapi import APIRouter, Body, Path
 from fastapi.responses import JSONResponse
 
-from shared_core.sanitize import sanitize_for_log
 from shared_core.error_handlers import safe_error_detail
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/grid", tags=["digital-grid"])

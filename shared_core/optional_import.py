@@ -3,10 +3,10 @@
 
 import importlib
 import logging
-
-from shared_core.sanitize import sanitize_for_log
 from types import ModuleType
 from typing import Any, Optional
+
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

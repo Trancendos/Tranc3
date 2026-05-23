@@ -28,7 +28,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel
 
 WORKER_PORT = 8018
 WORKER_NAME = "email-service"
@@ -273,7 +273,8 @@ async def list_outbox(
 ):
     clauses, params = [], []
     if status:
-        clauses.append("status = ?"); params.append(status)
+        clauses.append("status = ?")
+        params.append(status)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM outbox {where}", params).fetchone()[0]

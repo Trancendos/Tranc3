@@ -3,15 +3,24 @@
 # src/database/schema.py
 # TRANC3 Complete Database Schema (SQLAlchemy + Alembic)
 
-from sqlalchemy import (
-    create_engine, Column, String, Integer, Float,
-    Boolean, DateTime, Text, ForeignKey,
-    Index, BigInteger
-)
-from sqlalchemy.orm import declarative_base, relationship, Session
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
-from datetime import datetime
 import uuid
+from datetime import datetime
+
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    create_engine,
+)
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlalchemy.orm import Session, declarative_base, relationship
 
 Base = declarative_base()
 

@@ -7,6 +7,7 @@ initialises, request models validate, and the FastAPI nano_app is wired correctl
 from __future__ import annotations
 
 import logging
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -59,8 +60,9 @@ class TestNanoRequestModels:
         assert 1 <= req.max_tokens <= 4096
 
     def test_generate_request_max_tokens_bounds(self, caplog):
-        from src.nanoservices.nano_server import GenerateRequest
         import pydantic
+
+        from src.nanoservices.nano_server import GenerateRequest
         with pytest.raises((pydantic.ValidationError, ValueError)):
             GenerateRequest(prompt="x", max_tokens=0)  # below minimum
         with pytest.raises((pydantic.ValidationError, ValueError)):
@@ -68,8 +70,9 @@ class TestNanoRequestModels:
         _log.info("nano.generate_request bounds validated")
 
     def test_generate_request_temperature_bounds(self, caplog):
-        from src.nanoservices.nano_server import GenerateRequest
         import pydantic
+
+        from src.nanoservices.nano_server import GenerateRequest
         with pytest.raises((pydantic.ValidationError, ValueError)):
             GenerateRequest(prompt="x", temperature=-0.1)
         with pytest.raises((pydantic.ValidationError, ValueError)):
@@ -84,8 +87,9 @@ class TestNanoRequestModels:
         assert 8 <= req.dims <= 4096
 
     def test_embed_request_dims_bounds(self, caplog):
-        from src.nanoservices.nano_server import EmbedRequest
         import pydantic
+
+        from src.nanoservices.nano_server import EmbedRequest
         with pytest.raises((pydantic.ValidationError, ValueError)):
             EmbedRequest(text="x", dims=4)  # below minimum (8)
         with pytest.raises((pydantic.ValidationError, ValueError)):

@@ -36,7 +36,6 @@ class BotClient:
                 r.raise_for_status()
                 return r.json()
         except Exception as exc:
-        return None
             raise BotClientError(f"Bot call {endpoint} failed: {exc}") from exc
 
     async def _get(self, endpoint: str) -> Dict[str, Any]:
@@ -47,7 +46,6 @@ class BotClient:
                 r.raise_for_status()
                 return r.json()
         except Exception as exc:
-        return None
             raise BotClientError(f"Bot GET {endpoint} failed: {exc}") from exc
 
     # ── Inference bots ─────────────────────────────────────────────────────────

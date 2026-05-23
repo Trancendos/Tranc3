@@ -989,3 +989,15 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | 11.3 | Phase 10 Tests | ✅ Complete | 173 tests across 6 test files for all proactive system modules |
 | 11.4 | Architecture Docs | ✅ Complete | DOC-02 updated to v3.0, PROACTIVE_SYSTEMS.md created |
 | 11.5 | Verification & Commit | ✅ Complete | ruff zero errors, pytest 173/173, PR #48 created |
+
+## Phase 12 — Test Suite Stabilization
+
+| Phase | Component | Status | Description |
+|-------|-----------|--------|-------------|
+| 12.1 | Diagnosis | ✅ Complete | Cataloged 166 test failures across 5 test files — 4 distinct root causes identified |
+| 12.2 | adaptive_automation | ✅ Complete | Created 7 missing modules (adaptive_scanner, remediator_v2, predictor, health_monitor, config_drift, dependency_graph, vault); fixed AdaptiveViolation property delegation |
+| 12.3 | phase5_orchestration | ✅ Complete | Fixed _PHASE4_NODE_REGISTRY lazy-loading; fixed event loop pollution from asyncio.run() |
+| 12.4 | phase4_ml_mcp | ✅ Complete | Fixed _PHASE4_NODE_REGISTRY lazy-loading; fixed event loop pollution in run() helper and test_pipeline_stats |
+| 12.5 | workers_health | ✅ Complete | Added LIFESPAN_DB_WORKERS category with DB_PATH patching + init_db(); fixed SQL semicolons in analytics-service and email-service |
+| 12.6 | smoke | ✅ Complete | EventBus shared state issue resolved by prior fixes |
+| 12.7 | Full Verification | ✅ Complete | 1231 passed, 0 failed, 12 skipped; ruff clean on all new/modified files |

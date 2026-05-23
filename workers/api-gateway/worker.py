@@ -32,8 +32,6 @@ import hashlib
 import hmac
 import json
 import logging
-
-from shared_core.sanitize import sanitize_for_log
 import os
 import time
 import uuid
@@ -43,6 +41,8 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+from shared_core.sanitize import sanitize_for_log
 
 # ── Configuration ───────────────────────────────────────────────
 

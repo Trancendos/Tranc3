@@ -23,10 +23,10 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -259,7 +259,7 @@ async def lookup(ip: str):
 @app.post("/lookup/batch")
 async def lookup_batch(req: BatchIpIn):
     results = await asyncio.gather(*[lookup_ip(ip) for ip in req.ips[:100]])
-    return {"results": [{"ip": ip, **r} for ip, r in zip(req.ips, results)]}
+    return {"results": [{"ip": ip, **r} for ip, r in zip(req.ips, results, strict=False)]}
 
 
 @app.post("/distance")

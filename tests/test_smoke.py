@@ -7,6 +7,7 @@ All tests produce structured log output via pytest caplog.
 from __future__ import annotations
 
 import logging
+
 import pytest
 
 _log = logging.getLogger("tranc3.tests.smoke")
@@ -28,12 +29,12 @@ class TestSparkSmoke:
 
     def test_spark_module_singleton_is_spark_tool_registry(self, caplog):
         with caplog.at_level(logging.DEBUG):
-            from src.mcp.tools import registry, SparkToolRegistry
+            from src.mcp.tools import SparkToolRegistry, registry
             _log.info("spark.smoke singleton_type=%s", type(registry).__name__)
         assert isinstance(registry, SparkToolRegistry)
 
     def test_spark_grid_constants_correct(self, caplog):
-        from src.mcp.server import SERVER_NAME, ENGINE_LABEL
+        from src.mcp.server import ENGINE_LABEL, SERVER_NAME
         from src.workflow.builder import GRID_ENGINE
         _log.info("spark.smoke server_name=%s engine=%s", SERVER_NAME, GRID_ENGINE)
         assert SERVER_NAME == "the-spark"
@@ -76,6 +77,7 @@ class TestDigitalGridSmoke:
 
     def test_event_bus_subscribe_publish(self, caplog):
         import asyncio
+
         from src.workflow.executor import WorkflowEventBus
 
         bus = WorkflowEventBus()
@@ -101,7 +103,7 @@ class TestDigitalGridSmoke:
         assert state.elapsed_ms >= 0
 
     def test_node_type_spark_tool_registered(self, caplog):
-        from src.workflow.nodes import NodeType, NODE_REGISTRY, SparkToolNode
+        from src.workflow.nodes import NODE_REGISTRY, NodeType, SparkToolNode
         _log.info("grid.smoke node_registry size=%d", len(NODE_REGISTRY))
         assert NodeType.SPARK_TOOL in NODE_REGISTRY
         assert NODE_REGISTRY[NodeType.SPARK_TOOL] is SparkToolNode

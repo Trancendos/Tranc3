@@ -277,7 +277,7 @@ class MemoryStream:
 
             # Return top-k, touching each for access tracking
             results = []
-            for score, memory in scored[:top_k]:
+            for _score, memory in scored[:top_k]:
                 memory.touch()
                 results.append(memory)
 

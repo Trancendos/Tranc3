@@ -22,11 +22,11 @@ import pytest
 from src.mesh import (
     CircuitBreakerConfig,
     CircuitState,
+    HealthStatus,
+    ServiceCategory,
     ServiceDescriptor,
     ServiceMesh,
     ServiceMeshConfig,
-    ServiceCategory,
-    HealthStatus,
 )
 
 _TRANC3_ROOT = Path(__file__).resolve().parent.parent

@@ -13,7 +13,6 @@ Universal ID Taxonomy:
 """
 
 import sys
-import time as _time
 
 # Track results
 PASSED = 0
@@ -48,19 +47,17 @@ def main() -> int:
 
     try:
         from shared_core.architecture.proactive_orchestrator import (
-            ProactiveAction,
-            ActionPriority,
-            OrchestratorMode,
-            MetricSample,
-            HealthPrediction,
-            ActionPlan,
-            SystemHealthProfile,
-            ZeroCostStatus,
-            PredictiveHealthAnalyzer,
-            AutoHealingEngine,
-            ZeroCostModulator,
             ActionDispatcher,
+            ActionPlan,
+            ActionPriority,
+            AutoHealingEngine,
+            HealthPrediction,
+            MetricSample,
+            OrchestratorMode,
+            PredictiveHealthAnalyzer,
+            ProactiveAction,
             ProactiveOrchestrator,
+            ZeroCostModulator,
             proactive_orchestrator,
         )
         PASSED += 1
@@ -89,13 +86,13 @@ def main() -> int:
 
         # Dataclass instantiation — use actual field names
         try:
-            ms = MetricSample(name="test.cpu", value=0.5, timestamp=0.0)
+            MetricSample(name="test.cpu", value=0.5, timestamp=0.0)
             verify(True, "MetricSample can be instantiated")
         except Exception as e:
             verify(False, f"MetricSample instantiation: {e}")
 
         try:
-            hp = HealthPrediction(
+            HealthPrediction(
                 subsystem="test", current_score=1.0, predicted_score=0.9,
                 trend="stable", confidence=0.8, time_to_degradation=None,
                 horizon_seconds=300
@@ -106,7 +103,7 @@ def main() -> int:
 
         try:
             import uuid
-            ap = ActionPlan(
+            ActionPlan(
                 id=str(uuid.uuid4()),
                 action=ProactiveAction.ALERT, target="test",
                 description="test action", priority=ActionPriority.LOW
@@ -117,25 +114,25 @@ def main() -> int:
 
         # Core classes
         try:
-            pha = PredictiveHealthAnalyzer()
+            PredictiveHealthAnalyzer()
             verify(True, "PredictiveHealthAnalyzer can be instantiated")
         except Exception as e:
             verify(False, f"PredictiveHealthAnalyzer instantiation: {e}")
 
         try:
-            ahe = AutoHealingEngine()
+            AutoHealingEngine()
             verify(True, "AutoHealingEngine can be instantiated")
         except Exception as e:
             verify(False, f"AutoHealingEngine instantiation: {e}")
 
         try:
-            zcm = ZeroCostModulator()
+            ZeroCostModulator()
             verify(True, "ZeroCostModulator can be instantiated")
         except Exception as e:
             verify(False, f"ZeroCostModulator instantiation: {e}")
 
         try:
-            ad = ActionDispatcher()
+            ActionDispatcher()
             verify(True, "ActionDispatcher can be instantiated")
         except Exception as e:
             verify(False, f"ActionDispatcher instantiation: {e}")
@@ -160,11 +157,9 @@ def main() -> int:
 
     try:
         from shared_core.architecture.adaptive_pulse import (
-            PulseMode,
-            PulseConfig,
-            PulseTransition,
-            PulseMetrics,
             AdaptivePulseController,
+            PulseConfig,
+            PulseMode,
             adaptive_pulse,
         )
         PASSED += 1
@@ -202,14 +197,12 @@ def main() -> int:
 
     try:
         from src.adaptive.predictive_scaler import (
+            LoadForecaster,
+            LoadSample,
+            PredictiveAutoscaler,
+            ScalerConfig,
             ScalingDirection,
             ScalingReason,
-            LoadSample,
-            LoadForecast,
-            ScalingDecision,
-            ScalerConfig,
-            LoadForecaster,
-            PredictiveAutoscaler,
             predictive_scaler,
         )
         PASSED += 1
@@ -224,13 +217,13 @@ def main() -> int:
         verify(hasattr(ScalingReason, "CURRENT_LOAD"), "ScalingReason.CURRENT_LOAD exists")
 
         try:
-            ls = LoadSample(timestamp=0.0, value=0.5)
+            LoadSample(timestamp=0.0, value=0.5)
             verify(True, "LoadSample can be instantiated")
         except Exception as e:
             verify(False, f"LoadSample instantiation: {e}")
 
         try:
-            sc = ScalerConfig(name="test_scaler")
+            ScalerConfig(name="test_scaler")
             verify(True, "ScalerConfig can be instantiated with name")
         except Exception as e:
             verify(False, f"ScalerConfig instantiation: {e}")
@@ -242,7 +235,7 @@ def main() -> int:
             verify(False, f"LoadForecaster instantiation: {e}")
 
         try:
-            pa = PredictiveAutoscaler()
+            PredictiveAutoscaler()
             verify(True, "PredictiveAutoscaler can be instantiated")
         except Exception as e:
             verify(False, f"PredictiveAutoscaler instantiation: {e}")
@@ -261,13 +254,10 @@ def main() -> int:
 
     try:
         from shared_core.architecture.auto_config import (
-            EnvironmentType,
-            ConfigStatus,
-            DetectionResult,
-            ConfigItem,
-            ConfigProfile,
-            EnvironmentDetector,
             AutoConfigManager,
+            ConfigStatus,
+            EnvironmentDetector,
+            EnvironmentType,
             auto_config,
         )
         PASSED += 1
@@ -286,7 +276,7 @@ def main() -> int:
         verify(hasattr(ConfigStatus, "ROLLED_BACK"), "ConfigStatus.ROLLED_BACK exists")
 
         try:
-            ed = EnvironmentDetector()
+            EnvironmentDetector()
             verify(True, "EnvironmentDetector can be instantiated")
         except Exception as e:
             verify(False, f"EnvironmentDetector instantiation: {e}")
@@ -311,10 +301,9 @@ def main() -> int:
 
     try:
         from shared_core.architecture.proactive_wiring import (
-            WiringStatus,
             BridgeType,
-            BridgeConnection,
             ProactiveSystemBootstrap,
+            WiringStatus,
             proactive_bootstrap,
         )
         PASSED += 1
@@ -358,11 +347,8 @@ def main() -> int:
 
     try:
         from shared_core.architecture.proactive_metrics import (
-            MetricType,
             HealthTrend,
-            SubsystemMetrics,
-            SystemVitals,
-            MetricsSnapshot,
+            MetricType,
             ProactiveMetricsCollector,
             proactive_metrics,
         )
@@ -411,44 +397,33 @@ def main() -> int:
 
     try:
         from shared_core.architecture import (
-            AdaptivePulseController,
-            PulseConfig,
-            PulseMetrics,
-            PulseMode,
-            PulseTransition,
-            adaptive_pulse,
-            AutoConfigManager,
-            ConfigItem,
-            ConfigProfile,
-            ConfigStatus,
-            DetectionResult,
-            EnvironmentDetector,
-            EnvironmentType,
-            auto_config,
             ActionDispatcher,
             ActionPlan,
             ActionPriority,
+            AdaptivePulseController,
+            AutoConfigManager,
             AutoHealingEngine,
+            BridgeType,
+            ConfigStatus,
+            EnvironmentDetector,
+            EnvironmentType,
+            HealthTrend,
             MetricSample,
             OrchestratorMode,
             PredictiveHealthAnalyzer,
             ProactiveAction,
-            ProactiveOrchestrator,
-            SystemHealthProfile,
-            ZeroCostModulator,
-            ZeroCostStatus,
-            proactive_orchestrator,
-            HealthTrend,
-            MetricsSnapshot,
             ProactiveMetricsCollector,
-            SubsystemMetrics,
-            SystemVitals,
-            proactive_metrics,
-            BridgeConnection,
-            BridgeType,
+            ProactiveOrchestrator,
             ProactiveSystemBootstrap,
+            PulseConfig,
+            PulseMode,
             WiringStatus,
+            ZeroCostModulator,
+            adaptive_pulse,
+            auto_config,
             proactive_bootstrap,
+            proactive_metrics,
+            proactive_orchestrator,
         )
         PASSED += 1
         print("  ✓ All 36 architecture __init__.py exports importable")
@@ -464,14 +439,12 @@ def main() -> int:
 
     try:
         from src.adaptive import (
-            LoadForecast,
-            LoadSample,
             LoadForecaster,
+            LoadSample,
             PredictiveAutoscaler,
-            ScalingDecision,
+            ScalerConfig,
             ScalingDirection,
             ScalingReason,
-            ScalerConfig,
             predictive_scaler,
         )
         PASSED += 1
@@ -508,8 +481,8 @@ def main() -> int:
     try:
         from shared_core.architecture.adaptive_pulse import (
             AdaptivePulseController,
-            PulseMode,
             PulseConfig,
+            PulseMode,
         )
         apc = AdaptivePulseController()
         # register() takes keyword args: name, baseline_interval, etc.

@@ -14,13 +14,12 @@
 from __future__ import annotations
 
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-
 import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
+
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

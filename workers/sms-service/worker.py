@@ -15,7 +15,6 @@ Zero-cost: FastAPI + SQLite + httpx, no mandatory paid deps.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import sqlite3
@@ -23,7 +22,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
@@ -237,7 +236,8 @@ async def list_outbox(
 ):
     clauses, params = [], []
     if status:
-        clauses.append("status = ?"); params.append(status)
+        clauses.append("status = ?")
+        params.append(status)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM outbox {where}", params).fetchone()[0]

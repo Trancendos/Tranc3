@@ -3,10 +3,11 @@
 # src/evolution/self_improving_core.py
 # TRANC3 Complete Self-Evolution Engine
 
-import numpy as np
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-import logging
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 

@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
+
 from shared_core.error_handlers import safe_error_detail
 
 logging.basicConfig(level=logging.INFO)
@@ -317,9 +318,9 @@ async def workflow_templates():
     """Public — returns built-in workflow templates."""
     try:
         from src.workflow.builder import (
-            spark_ignition_workflow,
-            self_healing_workflow,
             ml_training_workflow,
+            self_healing_workflow,
+            spark_ignition_workflow,
         )
         return {
             "templates": [
@@ -425,7 +426,7 @@ async def detect_bundle(req: ThinkRequest):
 @app.post("/code/generate", tags=["code"], dependencies=[Depends(protected)])
 async def generate_code(req: CodeGenRequest):
     try:
-        from src.skills.code_generator import code_generator, CodeGenerationRequest
+        from src.skills.code_generator import CodeGenerationRequest, code_generator
         request = CodeGenerationRequest(
             language=req.language,
             description=req.description,

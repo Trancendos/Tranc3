@@ -7,15 +7,13 @@ import hashlib
 import hmac
 import json
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-
-
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

@@ -4,10 +4,9 @@ Tests for src/observability/health.py — Health Aggregation & Service Registry
 Covers: HealthChecker, SERVICE_REGISTRY, SystemHealth enum, service health checks.
 """
 
-import asyncio
 import json
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
 
@@ -16,7 +15,6 @@ from src.observability.health import (
     HealthChecker,
     SystemHealth,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SystemHealth Enum Tests

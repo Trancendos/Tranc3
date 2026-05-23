@@ -15,7 +15,6 @@ from src.auth.zero_trust import (
     ZeroTrustOptions,
 )
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # ZeroTrustContext Model Tests
 # ─────────────────────────────────────────────────────────────────────────────
@@ -471,7 +470,7 @@ class TestGeographicPolicies:
 
     def test_no_country_with_allowed_list(self):
         """When allowed_countries is set but country is None, access is allowed.
-        
+
         The evaluate code checks: `if context.country and context.country not in allowed_countries`
         When country is None, the first condition is False, so the check is skipped.
         This means requests without a country header are allowed through even with an allowlist.

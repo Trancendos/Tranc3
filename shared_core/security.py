@@ -2,12 +2,12 @@
 # Shared security utilities — JWT, password hashing, input validation
 
 import logging
-
-from shared_core.sanitize import sanitize_for_log
 import os
 import secrets
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
+
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

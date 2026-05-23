@@ -28,9 +28,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from shared_core.sanitize import sanitize_for_log
-
 from shared_core.error_handlers import safe_error_detail
+from shared_core.sanitize import sanitize_for_log
 from shared_core.url_validation import SSRFError, validate_webhook_url
 
 # ---------------------------------------------------------------------------

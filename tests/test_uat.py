@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+
 import pytest
 
 _log = logging.getLogger("tranc3.tests.uat")
@@ -22,7 +23,7 @@ class TestWorkflowJourneyViaTheSpark:
     async def test_register_and_run_ml_training_template(self, caplog):
         """As a user I can register the ml_training template and execute it."""
         import src.mcp.tools as tools_mod
-        from src.mcp.tools import SparkToolRegistry, GridWorkflowRegistry
+        from src.mcp.tools import GridWorkflowRegistry, SparkToolRegistry
 
         orig = tools_mod._grid_registry
         tools_mod._grid_registry = GridWorkflowRegistry()
@@ -56,7 +57,7 @@ class TestWorkflowJourneyViaTheSpark:
     async def test_register_custom_workflow_and_run(self, caplog, sample_workflow_definitions):
         """As a user I can register my own WorkflowDefinition dict and execute it."""
         import src.mcp.tools as tools_mod
-        from src.mcp.tools import SparkToolRegistry, GridWorkflowRegistry
+        from src.mcp.tools import GridWorkflowRegistry, SparkToolRegistry
 
         orig = tools_mod._grid_registry
         tools_mod._grid_registry = GridWorkflowRegistry()
@@ -196,7 +197,7 @@ class TestErrorHandlingAcceptance:
     async def test_run_nonexistent_workflow_returns_useful_error(self, caplog):
         """A user running an unknown workflow must receive an actionable error, not a crash."""
         import src.mcp.tools as tools_mod
-        from src.mcp.tools import SparkToolRegistry, GridWorkflowRegistry
+        from src.mcp.tools import GridWorkflowRegistry, SparkToolRegistry
         orig = tools_mod._grid_registry
         tools_mod._grid_registry = GridWorkflowRegistry()
         try:

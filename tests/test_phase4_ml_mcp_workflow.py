@@ -22,8 +22,9 @@ All tests use in-process, zero-dependency execution (no external APIs required).
 from __future__ import annotations
 
 import asyncio
-import sys
 import os
+import sys
+
 import pytest
 
 # Make sure the project root is on sys.path
@@ -36,7 +37,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 def run(coro):
     """Run a coroutine synchronously for tests that aren't async."""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coro)
 
 
 # ---------------------------------------------------------------------------
@@ -63,8 +72,8 @@ class TestSparkPhase4ToolsRegistration:
             assert callable(tool["handler"])
 
     def test_registration_into_fresh_registry(self):
-        from src.mcp.tools import SparkToolRegistry
         from src.mcp.spark_phase4_tools import register_phase4_tools
+        from src.mcp.tools import SparkToolRegistry
         fresh = SparkToolRegistry()
         baseline = len(fresh._tools)
         count = register_phase4_tools(fresh)
@@ -113,7 +122,8 @@ class TestPhase4WorkflowNodes:
         assert set(PHASE4_NODE_TYPES.keys()) == expected
 
     def test_nodes_extend_workflow_registry(self):
-        from src.workflow.nodes import _PHASE4_NODE_REGISTRY
+        from src.workflow.nodes import _PHASE4_NODE_REGISTRY, _ensure_phase4_nodes_loaded
+        _ensure_phase4_nodes_loaded()
         assert len(_PHASE4_NODE_REGISTRY) >= 7
 
     def test_create_node_fallback(self):
@@ -166,7 +176,7 @@ class TestMLPipeline:
     def test_pipeline_stats(self):
         from src.core.ml_pipeline import get_pipeline
         pipeline = get_pipeline()
-        stats = asyncio.get_event_loop().run_until_complete(pipeline.stats())
+        stats = run(pipeline.stats())
         assert "call_count" in stats
         assert "phase4_enabled" in stats
         assert stats["phase4_enabled"] is True
@@ -247,9 +257,7 @@ class TestCollectiveMemory:
 
 class TestSemanticKnowledgeGraph:
     def test_add_and_query_node(self):
-        from src.intelligence.semantic_knowledge import (
-            SemanticKnowledgeGraph, KnowledgeNode
-        )
+        from src.intelligence.semantic_knowledge import KnowledgeNode, SemanticKnowledgeGraph
         kg = SemanticKnowledgeGraph()
 
         async def _test():
@@ -275,7 +283,9 @@ class TestSemanticKnowledgeGraph:
 
     def test_add_edge_and_path(self):
         from src.intelligence.semantic_knowledge import (
-            SemanticKnowledgeGraph, KnowledgeNode, EdgeType
+            EdgeType,
+            KnowledgeNode,
+            SemanticKnowledgeGraph,
         )
         kg = SemanticKnowledgeGraph()
 
@@ -296,7 +306,9 @@ class TestSemanticKnowledgeGraph:
 
     def test_semantic_expand(self):
         from src.intelligence.semantic_knowledge import (
-            SemanticKnowledgeGraph, KnowledgeNode, EdgeType
+            EdgeType,
+            KnowledgeNode,
+            SemanticKnowledgeGraph,
         )
         kg = SemanticKnowledgeGraph()
 
@@ -318,7 +330,10 @@ class TestSemanticKnowledgeGraph:
 
     def test_pattern_matching(self):
         from src.intelligence.semantic_knowledge import (
-            SemanticKnowledgeGraph, KnowledgeNode, EdgeType, GraphPattern
+            EdgeType,
+            GraphPattern,
+            KnowledgeNode,
+            SemanticKnowledgeGraph,
         )
         kg = SemanticKnowledgeGraph()
 
@@ -351,9 +366,7 @@ class TestSemanticKnowledgeGraph:
 
 class TestCausalReasoner:
     def test_predict_forward(self):
-        from src.intelligence.causal_reasoner import (
-            CausalReasoner, CausalRule, CausalStrength
-        )
+        from src.intelligence.causal_reasoner import CausalReasoner, CausalRule, CausalStrength
         cr = CausalReasoner()
 
         async def _test():
@@ -377,9 +390,7 @@ class TestCausalReasoner:
         run(_test())
 
     def test_diagnose_backward(self):
-        from src.intelligence.causal_reasoner import (
-            CausalReasoner, CausalRule, CausalStrength
-        )
+        from src.intelligence.causal_reasoner import CausalReasoner, CausalRule, CausalStrength
         cr = CausalReasoner()
 
         async def _test():
@@ -396,9 +407,7 @@ class TestCausalReasoner:
         run(_test())
 
     def test_cycle_detection(self):
-        from src.intelligence.causal_reasoner import (
-            CausalRule, CausalStrength, CausalGraph
-        )
+        from src.intelligence.causal_reasoner import CausalGraph, CausalRule, CausalStrength
         # Cycle detection lives in CausalGraph._graph (sync), test via the underlying graph
         g = CausalGraph()
         g.add_rule(CausalRule(cause="A", effect="B", strength=CausalStrength.CONTRIBUTING))

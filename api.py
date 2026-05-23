@@ -4,9 +4,6 @@
 import asyncio
 import datetime
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-from shared_core.error_handlers import safe_error_detail
 import os
 import time
 from contextlib import asynccontextmanager
@@ -29,6 +26,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
+from shared_core.error_handlers import safe_error_detail
+from shared_core.sanitize import sanitize_for_log
+
 load_dotenv()
 
 # ── Fail fast on missing SECRET_KEY ──────────────────────────────────────────
@@ -41,16 +41,33 @@ if not _SECRET_KEY:
 
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────
 # Core imports (required — no guard)
+from auth import get_current_user, token_manager  # codeql[py/cyclic-import]
 from src.auth.db_user_manager import DBUserManager  # noqa: F401  # intentional top-level import
-from src.core.advanced_model import AdvancedTransformerModel  # noqa: F401  # intentional top-level import
+from src.core.advanced_model import (
+    AdvancedTransformerModel,  # noqa: F401  # intentional top-level import
+)
 from src.core.context_compressor import compressor  # noqa: F401  # intentional top-level import
-from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: F401  # intentional top-level import
-from src.core.multilingual_tokenizer import MultilingualTokenizer  # noqa: F401  # intentional top-level import
-from src.database.schema import Conversation, DatabaseManager, Message  # noqa: F401  # intentional top-level import
+from src.core.feature_flags import (  # noqa: F401  # intentional top-level import
+    FeatureFlag,
+    FeatureFlagManager,
+)
+from src.core.multilingual_tokenizer import (
+    MultilingualTokenizer,  # noqa: F401  # intentional top-level import
+)
+from src.database.schema import (  # noqa: F401  # intentional top-level import
+    Conversation,
+    DatabaseManager,
+    Message,
+)
 from src.database.vector_store import vector_store  # noqa: F401  # intentional top-level import
-from src.errors.error_catalog import ErrorCode, format_error_response  # noqa: F401  # intentional top-level import
+from src.errors.error_catalog import (  # noqa: F401  # intentional top-level import
+    ErrorCode,
+    format_error_response,
+)
 from src.monetisation.billing import TIERS  # noqa: F401  # intentional top-level import
-from src.monetisation.billing import enforcer as tier_enforcer  # noqa: F401  # intentional top-level import
+from src.monetisation.billing import (
+    enforcer as tier_enforcer,  # noqa: F401  # intentional top-level import
+)
 from src.observability.metrics import (  # noqa: F401  # intentional top-level import
     log,
     record_churn_risk,
@@ -59,12 +76,25 @@ from src.observability.metrics import (  # noqa: F401  # intentional top-level i
     record_quality,
     record_request,
 )
-from auth import get_current_user, token_manager  # codeql[py/cyclic-import]
-from src.registry.file_registry import registry as file_registry  # noqa: F401  # intentional top-level import
-from src.security.ip_protection import abuse_detector, watermarker  # noqa: F401  # intentional top-level import
-from src.security.middleware import GovernanceMiddleware, SecurityHeadersMiddleware  # noqa: F401  # intentional top-level import
-from src.security.security_framework import InputSanitizer  # noqa: F401  # intentional top-level import
-from src.validation.loop_validator import CIRCUITS, loop_validator, self_healer  # noqa: F401  # intentional top-level import
+from src.registry.file_registry import (
+    registry as file_registry,  # noqa: F401  # intentional top-level import
+)
+from src.security.ip_protection import (  # noqa: F401  # intentional top-level import
+    abuse_detector,
+    watermarker,
+)
+from src.security.middleware import (  # noqa: F401  # intentional top-level import
+    GovernanceMiddleware,
+    SecurityHeadersMiddleware,
+)
+from src.security.security_framework import (
+    InputSanitizer,  # noqa: F401  # intentional top-level import
+)
+from src.validation.loop_validator import (  # noqa: F401  # intentional top-level import
+    CIRCUITS,
+    loop_validator,
+    self_healer,
+)
 
 # Optional imports — guarded to prevent startup crash if dependencies are missing
 # These modules depend on heavy/optional libs (qiskit, torch, etc.)
@@ -82,13 +112,17 @@ except ImportError as _e:
     logging.getLogger(__name__).warning("Predictive analytics unavailable: %s", _e)
 
 try:
-    from src.bio_neural.consciousness_engine import ConsciousnessModel  # noqa: F401  # intentional top-level import
+    from src.bio_neural.consciousness_engine import (
+        ConsciousnessModel,  # noqa: F401  # intentional top-level import
+    )
 except ImportError as _e:
     ConsciousnessModel = None  # type: ignore[assignment]
     logging.getLogger(__name__).warning("ConsciousnessEngine unavailable: %s", _e)
 
 try:
-    from src.bio_neural.neuromorphic import NeuromorphicProcessor  # noqa: F401  # intentional top-level import
+    from src.bio_neural.neuromorphic import (
+        NeuromorphicProcessor,  # noqa: F401  # intentional top-level import
+    )
 except ImportError as _e:
     NeuromorphicProcessor = None  # type: ignore[assignment]
     logging.getLogger(__name__).warning("NeuromorphicProcessor unavailable: %s", _e)
@@ -100,19 +134,25 @@ except ImportError as _e:
     logging.getLogger(__name__).warning("Compliance module unavailable: %s", _e)
 
 try:
-    from src.evolution.self_improving_core import SelfEvolvingArchitecture  # noqa: F401  # intentional top-level import
+    from src.evolution.self_improving_core import (
+        SelfEvolvingArchitecture,  # noqa: F401  # intentional top-level import
+    )
 except ImportError as _e:
     SelfEvolvingArchitecture = None  # type: ignore[assignment]
     logging.getLogger(__name__).warning("SelfEvolvingArchitecture unavailable: %s", _e)
 
 try:
-    from src.personality.matrix import EnhancedPersonalityMatrix  # noqa: F401  # intentional top-level import
+    from src.personality.matrix import (
+        EnhancedPersonalityMatrix,  # noqa: F401  # intentional top-level import
+    )
 except ImportError as _e:
     EnhancedPersonalityMatrix = None  # type: ignore[assignment]
     logging.getLogger(__name__).warning("EnhancedPersonalityMatrix unavailable: %s", _e)
 
 try:
-    from src.quantum.quantum_core import QuantumNeuralCore  # noqa: F401  # intentional top-level import
+    from src.quantum.quantum_core import (
+        QuantumNeuralCore,  # noqa: F401  # intentional top-level import
+    )
 except ImportError as _qiskit_err:
     QuantumNeuralCore = None  # type: ignore[assignment,misc]
     logging.getLogger(__name__).warning("Quantum core unavailable (qiskit): %s", _qiskit_err)
@@ -295,7 +335,9 @@ from src.mcp.server import router as _mcp_router  # codeql[py/cyclic-import]
 app.include_router(_mcp_router)
 
 # ── The Observatory (audit log + event feed) ──────────────────────────────────
-from src.observability.routes import router as _observatory_router  # noqa: F401  # intentional top-level import
+from src.observability.routes import (
+    router as _observatory_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_observatory_router)
 
@@ -305,27 +347,37 @@ from src.nexus.routes import router as _nexus_router  # noqa: F401  # intentiona
 app.include_router(_nexus_router)
 
 # ── The Town Hall (governance + compliance) ───────────────────────────────────
-from src.townhall.routes import router as _townhall_router  # noqa: F401  # intentional top-level import
+from src.townhall.routes import (
+    router as _townhall_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_townhall_router)
 
 # ── The Library (knowledge base) ─────────────────────────────────────────────
-from src.library.routes import router as _library_router  # noqa: F401  # intentional top-level import
+from src.library.routes import (
+    router as _library_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_library_router)
 
 # ── The Basement (archive + vector search) ────────────────────────────────────
-from src.basement.routes import router as _basement_router  # noqa: F401  # intentional top-level import
+from src.basement.routes import (
+    router as _basement_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_basement_router)
 
 # ── Cryptex (threat detection + cyber defence) ────────────────────────────────
-from src.cryptex.routes import router as _cryptex_router  # noqa: F401  # intentional top-level import
+from src.cryptex.routes import (
+    router as _cryptex_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_cryptex_router)
 
 # ── Section 7 (research + intelligence reports) ───────────────────────────────
-from src.research.routes import router as _section7_router  # noqa: F401  # intentional top-level import
+from src.research.routes import (
+    router as _section7_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_section7_router)
 
@@ -345,12 +397,16 @@ from src.taimra.routes import router as _taimra_router  # noqa: F401  # intentio
 app.include_router(_taimra_router)
 
 # ── Tranquility (wellbeing hub) ────────────────────────────────────────────────
-from src.tranquility.routes import router as _tranquility_router  # noqa: F401  # intentional top-level import
+from src.tranquility.routes import (
+    router as _tranquility_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_tranquility_router)
 
 # ── Resonate (empathy + understanding services) ────────────────────────────────
-from src.resonate.routes import router as _resonate_router  # noqa: F401  # intentional top-level import
+from src.resonate.routes import (
+    router as _resonate_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_resonate_router)
 
@@ -365,27 +421,37 @@ from src.lab.routes import router as _lab_router  # noqa: F401  # intentional to
 app.include_router(_lab_router)
 
 # ── ChronosSphere / ArcStream (time + schedule management) ───────────────────
-from src.chronos.routes import router as _chronos_router  # noqa: F401  # intentional top-level import
+from src.chronos.routes import (
+    router as _chronos_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_chronos_router)
 
 # ── Turing's Hub (AI personality creation centre) ────────────────────────────
-from src.personality.turingshub.routes import router as _turingshub_router  # noqa: F401  # intentional top-level import
+from src.personality.turingshub.routes import (
+    router as _turingshub_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_turingshub_router)
 
 # ── DevOcity (developer centre — API keys, webhooks, guides) ─────────────────
-from src.devocity.routes import router as _devocity_router  # noqa: F401  # intentional top-level import
+from src.devocity.routes import (
+    router as _devocity_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_devocity_router)
 
 # ── The Artifactory (OCI artefact repository — Zot foundation) ───────────────
-from src.artifactory.routes import router as _artifactory_router  # noqa: F401  # intentional top-level import
+from src.artifactory.routes import (
+    router as _artifactory_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_artifactory_router)
 
 # ── API Marketplace (connector hub — Gravitee.io foundation) ─────────────────
-from src.apimarket.routes import router as _apimarket_router  # noqa: F401  # intentional top-level import
+from src.apimarket.routes import (
+    router as _apimarket_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_apimarket_router)
 
@@ -395,18 +461,24 @@ from src.vrar3d.routes import router as _vrar3d_router  # noqa: F401  # intentio
 app.include_router(_vrar3d_router)
 
 # ── The Citadel (DevOps hub — Forgejo + Fly.io + CF Workers) ─────────────────
-from src.citadel.routes import router as _citadel_router  # noqa: F401  # intentional top-level import
+from src.citadel.routes import (
+    router as _citadel_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_citadel_router)
 
 # ── Luminous (AI brain — consciousness engine + neuromorphic) ─────────────────
-from src.bio_neural.routes import router as _luminous_router  # noqa: F401  # intentional top-level import
+from src.bio_neural.routes import (
+    router as _luminous_router,  # noqa: F401  # intentional top-level import
+)
 
 app.include_router(_luminous_router)
 
 # ── Think Tank (quantum + deep research engines) ──────────────────────────────
 try:
-    from src.quantum.routes import router as _thinktank_router  # noqa: F401  # intentional top-level import
+    from src.quantum.routes import (
+        router as _thinktank_router,  # noqa: F401  # intentional top-level import
+    )
 
     app.include_router(_thinktank_router)
 except ImportError:
@@ -854,7 +926,9 @@ async def billing_usage(current_user: dict = Depends(get_current_user)):
 
 @app.post("/billing/checkout", tags=["billing"])
 async def billing_checkout(tier: str, current_user: dict = Depends(get_current_user)):
-    from src.monetisation.billing import stripe_manager  # noqa: F401  # intentional top-level import
+    from src.monetisation.billing import (
+        stripe_manager,  # noqa: F401  # intentional top-level import
+    )
 
     base = os.getenv("FRONTEND_URL", "http://localhost:3000")
     url = stripe_manager.create_checkout_session(
@@ -1040,7 +1114,10 @@ async def admin_healing(current_user: dict = Depends(get_current_user)):
 @app.get("/errors/{error_code}", tags=["docs"])
 async def error_docs(error_code: str):
     """Look up error code documentation — no auth required."""
-    from src.errors.error_catalog import ErrorCode, get_error  # noqa: F401  # intentional top-level import
+    from src.errors.error_catalog import (  # noqa: F401  # intentional top-level import
+        ErrorCode,
+        get_error,
+    )
 
     try:
         code = ErrorCode(error_code)

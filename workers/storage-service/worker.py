@@ -12,7 +12,6 @@ Zero-cost: FastAPI + SQLite + local filesystem, no cloud storage needed.
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import mimetypes
 import os

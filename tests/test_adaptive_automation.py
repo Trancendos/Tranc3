@@ -14,7 +14,6 @@
 #   - ConfigDriftDetector: baseline capture, drift detection
 #   - SmartDependencyGraph: edges, impact analysis, cycle detection
 
-import json
 import os
 import tempfile
 import time
@@ -22,7 +21,6 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
-
 
 # ===========================================================================
 # Helpers
@@ -177,7 +175,7 @@ class TestAutoRemediatorV2:
         remediator = AutoRemediatorV2(dry_run=True)
         # preview() takes violations and shows what would be fixed
         if violations:
-            results = remediator.preview(violations)
+            remediator.preview(violations)
 
         # File should be unchanged
         assert code_file.read_text() == original
@@ -291,8 +289,9 @@ class TestStorageFactory:
 
     def test_local_storage_provider(self, tmp_path):
         """LocalStorageProvider should read/write files correctly."""
-        from shared_core.architecture.storage_factory import LocalStorageProvider
         import asyncio
+
+        from shared_core.architecture.storage_factory import LocalStorageProvider
 
         root = Path(tmp_path) / "storage"
 
@@ -319,7 +318,6 @@ class TestStorageFactory:
     def test_factory_creates_provider(self, tmp_path):
         """Factory should create a storage provider."""
         from shared_core.architecture.storage_factory import StorageFactory
-        import asyncio
 
         # StorageFactory is instantiated and get_provider is an instance method
         factory = StorageFactory()
@@ -331,8 +329,9 @@ class TestStorageFactory:
 
     def test_local_storage_path_traversal_protection(self, tmp_path):
         """LocalStorageProvider should prevent path traversal attacks."""
-        from shared_core.architecture.storage_factory import LocalStorageProvider
         import asyncio
+
+        from shared_core.architecture.storage_factory import LocalStorageProvider
 
         root = Path(tmp_path) / "storage"
         provider = LocalStorageProvider(root=root)
@@ -488,14 +487,14 @@ class TestSentinel:
 
     def test_sentinel_creation(self, tmp_path):
         """Should create a Sentinel instance."""
-        from shared_core.architecture.sentinel import Sentinel, SentinelState
+        from shared_core.architecture.sentinel import Sentinel
 
         sentinel = Sentinel(check_interval=300)
         assert sentinel.get_state().value == "stopped"
 
     def test_sentinel_check_now(self, tmp_path):
         """Should execute a check and return a report."""
-        from shared_core.architecture.sentinel import Sentinel, SentinelState
+        from shared_core.architecture.sentinel import Sentinel
 
         sentinel = Sentinel(
             check_interval=300,
@@ -526,7 +525,6 @@ class TestEnhancedServiceRegistry:
         """Should register services and resolve capabilities."""
         from shared_core.orchestration.enhanced_registry import (
             EnhancedServiceRegistry,
-            RoutingStrategy,
         )
 
         registry = EnhancedServiceRegistry()
@@ -563,7 +561,7 @@ class TestEnhancedServiceRegistry:
 
         # Round-robin should alternate
         result1 = registry.resolve("compute", strategy=RoutingStrategy.ROUND_ROBIN)
-        result2 = registry.resolve("compute", strategy=RoutingStrategy.ROUND_ROBIN)
+        registry.resolve("compute", strategy=RoutingStrategy.ROUND_ROBIN)
         # At least one should work
         assert result1 is not None
 
@@ -807,7 +805,7 @@ class TestConfigDriftDetector:
 
     def test_detect_file_drift(self, tmp_path):
         """Should detect when a config file changes."""
-        from shared_core.orchestration.config_drift import ConfigDriftDetector, DriftSeverity
+        from shared_core.orchestration.config_drift import ConfigDriftDetector
 
         # Create initial file
         env_file = tmp_path / ".env"

@@ -22,7 +22,6 @@ Features:
 from __future__ import annotations
 
 import logging
-import math
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -622,7 +621,7 @@ class HeartbeatAggregator:
         }
 
         for period in TrendPeriod:
-            cutoff = time.time() - period_seconds[period]
+            time.time() - period_seconds[period]
 
             # Collect metrics within this period (simplified: use historical_metrics)
             all_metrics: List[HeartbeatMetrics] = []

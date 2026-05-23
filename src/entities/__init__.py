@@ -3,15 +3,15 @@ Trancendos Platform Entity Registry
 """
 
 from .platform import (
-    Agent,
-    Bot,
     LOCATION_ABBREVS,
     PILLAR_ABBREVS,
+    PLATFORM_ENTITIES,
     PRIME_ABBREVS,
+    WORKER_ENTITY_MAP,
+    Agent,
+    Bot,
     LocationEntity,
     Pillar,
-    PLATFORM_ENTITIES,
-    WORKER_ENTITY_MAP,
     get_all_ids,
     get_entity_by_aid,
     get_entity_by_pid,

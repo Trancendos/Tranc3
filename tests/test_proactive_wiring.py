@@ -8,14 +8,12 @@ from __future__ import annotations
 
 import asyncio
 
-
 from shared_core.architecture.proactive_wiring import (
     BridgeConnection,
     BridgeType,
     ProactiveSystemBootstrap,
     WiringStatus,
 )
-
 
 # ---------------------------------------------------------------------------
 # Enum tests

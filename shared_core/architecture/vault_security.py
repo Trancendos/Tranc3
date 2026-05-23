@@ -83,6 +83,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Union
 
+# Optional PKCS#11 support — only available when python-pkcs11 is installed
+try:
+    import pkcs11  # type: ignore[import-untyped]
+except ImportError:
+    pkcs11 = None  # type: ignore[assignment]
+
 logger = logging.getLogger(__name__)
 
 # ── Platform Detection ────────────────────────────────────────────────────────
@@ -613,7 +619,6 @@ class SoftHSM2Provider(HSMProvider):
         if not self._initialized:
             raise RuntimeError("HSM not initialized. Call initialize() first.")
 
-        import pkcs11  # type: ignore
         from pkcs11 import KeyType as PKCS11KeyType
 
         key_type_map = {
@@ -678,7 +683,6 @@ class SoftHSM2Provider(HSMProvider):
             raise RuntimeError("HSM not initialized.")
 
         import pkcs11  # type: ignore
-        from pkcs11 import Mechanism
 
         key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)
         iv = self._session.generate_random(16)
@@ -701,7 +705,6 @@ class SoftHSM2Provider(HSMProvider):
             raise RuntimeError("HSM not initialized.")
 
         import pkcs11  # type: ignore
-        from pkcs11 import Mechanism
 
         key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)
         iv = ciphertext[:16]
@@ -959,7 +962,6 @@ class YubiHSM2Provider(HSMProvider):
         if not self._initialized:
             raise RuntimeError("HSM not initialized.")
 
-        import pkcs11  # type: ignore
         from pkcs11 import KeyType as PKCS11KeyType
 
         key_type_map = {
@@ -1211,12 +1213,12 @@ class VaultSecretLoader:
         """Load multiple secrets as SecureBytes with automatic zeroization."""
         loaded: Dict[str, SecureBytes] = {}
         try:
-            for key in keys:
-                loaded[key] = self._load_secret(key)
+            for _key in keys:
+                loaded[_key] = self._load_secret(_key)
             yield loaded
         finally:
             # Zeroize ALL secrets on exit
-            for key, secure_data in loaded.items():
+            for _key, secure_data in loaded.items():
                 secure_data.zeroize()
             with self._cache_lock:
                 for key in keys:
@@ -1508,7 +1510,7 @@ class VaultSecretLoader:
     def close(self) -> None:
         """Close the secret loader and zeroize all cached secrets."""
         with self._cache_lock:
-            for key, secure_data in self._cache.items():
+            for _key, secure_data in self._cache.items():
                 secure_data.zeroize()
             self._cache.clear()
 

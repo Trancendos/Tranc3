@@ -3,11 +3,12 @@
 # Full test suite with sample data, logic validation, and error code verification
 
 import json
+
 import pytest
 
 torch = pytest.importorskip("torch", reason="torch not installed — ML tests skipped")
 np = pytest.importorskip("numpy", reason="numpy not installed — ML tests skipped")
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock  # noqa: E402
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -48,12 +49,12 @@ def sample_emotions():
 
 class TestErrorCatalog:
     def test_all_error_codes_have_definitions(self):
-        from src.errors.error_catalog import ErrorCode, CATALOG
+        from src.errors.error_catalog import CATALOG, ErrorCode
         for code in list(ErrorCode):
             assert code in CATALOG, f"ErrorCode {code} has no definition in CATALOG"
 
     def test_error_format_response(self):
-        from src.errors.error_catalog import format_error_response, ErrorCode
+        from src.errors.error_catalog import ErrorCode, format_error_response
         resp = format_error_response(ErrorCode.AUTH_TOKEN_EXPIRED)
         assert "error" in resp
         assert resp["error"]["code"] == "TRANC3-AUTH-001"
@@ -259,7 +260,7 @@ class TestBilling:
         assert result["allowed"] is True
 
     def test_free_tier_blocks_at_limit(self):
-        from src.monetisation.billing import TierEnforcer, TIERS
+        from src.monetisation.billing import TIERS, TierEnforcer
         e = TierEnforcer()
         limit = TIERS["free"]["req_per_hour"]
         for _ in range(limit):
@@ -446,8 +447,9 @@ class TestIntelligenceBlockchain:
         assert bc.is_valid() is True
 
     def test_homomorphic_crypto_aggregation(self):
-        from src.distributed.intelligence_blockchain import HomomorphicCrypto
         import torch.nn as nn
+
+        from src.distributed.intelligence_blockchain import HomomorphicCrypto
         crypto = HomomorphicCrypto(epsilon=1.0)
         model  = nn.Linear(4, 4)
         model.weight.grad = torch.randn(4, 4)
@@ -486,7 +488,12 @@ class TestVectorStore:
 def _api_available() -> bool:
     """True only when the full production stack (torch, transformers, etc.) is installed."""
     try:
-        import fastapi, redis, passlib, sqlalchemy, transformers, torch  # noqa: F401
+        import fastapi  # noqa: F401
+        import passlib  # noqa: F401
+        import redis  # noqa: F401
+        import sqlalchemy  # noqa: F401
+        import torch  # noqa: F401
+        import transformers  # noqa: F401
         return True
     except ImportError:
         return False
@@ -505,6 +512,7 @@ class TestAPIIntegration:
         from unittest.mock import patch
         with patch("redis.from_url", return_value=MagicMock(ping=lambda: True, get=lambda k: None, set=lambda *a, **kw: True)):
             from fastapi.testclient import TestClient
+
             from api import app
             return TestClient(app, raise_server_exceptions=False)
 

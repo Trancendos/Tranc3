@@ -32,9 +32,10 @@ All tests use in-process, zero-dependency execution (no external APIs required).
 from __future__ import annotations
 
 import asyncio
-import sys
 import os
+import sys
 import time
+
 import pytest
 
 # Make sure the project root is on sys.path
@@ -47,7 +48,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 def run(coro):
     """Run a coroutine synchronously for tests that aren't async."""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
 
 
 # ===========================================================================
@@ -154,7 +164,7 @@ class TestAgentTypes:
             profile.creativity = 0.9  # type: ignore[misc]
 
     def test_matches_tags_perfect(self):
-        from src.agents.agent_types import get_profile, AgentType
+        from src.agents.agent_types import AgentType, get_profile
         profile = get_profile(AgentType.CODER)
         # Jaccard similarity: when all required tags are in capability_tags,
         # the score depends on the overlap ratio
@@ -165,33 +175,33 @@ class TestAgentTypes:
         # If "coding" is in capability_tags, intersection >= 1
 
     def test_matches_tags_partial(self):
-        from src.agents.agent_types import get_profile, AgentType
+        from src.agents.agent_types import AgentType, get_profile
         profile = get_profile(AgentType.GENERAL)
         # Use tags that partially overlap with GENERAL's capabilities
         score = profile.matches_tags({"nonexistent_tag"})
         assert 0.0 <= score <= 1.0
 
     def test_matches_tags_empty(self):
-        from src.agents.agent_types import get_profile, AgentType
+        from src.agents.agent_types import AgentType, get_profile
         profile = get_profile(AgentType.GENERAL)
         # Empty required_tags returns 1.0 per the implementation
         score = profile.matches_tags(set())
         assert score == 1.0  # empty required = always matches
 
     def test_get_profile_returns_correct_type(self):
-        from src.agents.agent_types import get_profile, AgentType
+        from src.agents.agent_types import AgentType, get_profile
         for at in AgentType:
             profile = get_profile(at)
             assert profile.agent_type == at
 
     def test_get_profile_by_name(self):
-        from src.agents.agent_types import get_profile_by_name, AgentType
+        from src.agents.agent_types import AgentType, get_profile_by_name
         profile = get_profile_by_name("CODER")
         assert profile is not None
         assert profile.agent_type == AgentType.CODER
 
     def test_get_profile_by_name_case_insensitive(self):
-        from src.agents.agent_types import get_profile_by_name, AgentType
+        from src.agents.agent_types import AgentType, get_profile_by_name
         profile = get_profile_by_name("coder")
         assert profile is not None
         assert profile.agent_type == AgentType.CODER
@@ -211,7 +221,7 @@ class TestAgentTypes:
         assert "coding" in profile.capability_tags or "debugging" in profile.capability_tags
 
     def test_profile_to_dict(self):
-        from src.agents.agent_types import get_profile, AgentType
+        from src.agents.agent_types import AgentType, get_profile
         profile = get_profile(AgentType.RESEARCHER)
         d = profile.to_dict()
         assert "agent_type" in d
@@ -612,7 +622,7 @@ class TestTaskDecomposer:
         assert d["suggested_tool"] == "execute_code"
 
     def test_decomposition_get_execution_order(self):
-        from src.agents.task_decomposer import SubTask, Decomposition
+        from src.agents.task_decomposer import Decomposition, SubTask
         st1 = SubTask(subtask_id="a", description="Step 1", order=0)
         st2 = SubTask(subtask_id="b", description="Step 2", dependencies={"a"}, order=1)
         st3 = SubTask(subtask_id="c", description="Step 3", dependencies={"b"}, order=2)
@@ -627,7 +637,7 @@ class TestTaskDecomposer:
         assert ids.index("a") < ids.index("b") < ids.index("c")
 
     def test_decomposition_to_dict(self):
-        from src.agents.task_decomposer import SubTask, Decomposition
+        from src.agents.task_decomposer import Decomposition, SubTask
         decomp = Decomposition(
             goal_description="Test",
             subtasks=[SubTask(description="Step 1")],
@@ -831,7 +841,7 @@ class TestAgentRuntime:
     """Test the agent lifecycle, goal assignment, and step execution."""
 
     def test_create_agent(self):
-        from src.agents.agent_runtime import AgentRuntime, AgentConfig
+        from src.agents.agent_runtime import AgentConfig, AgentRuntime
         config = AgentConfig(name="test-agent", agent_type="general")
         agent = AgentRuntime(config)
         assert agent.config.name == "test-agent"
@@ -986,8 +996,8 @@ class TestSparkPhase5ToolsRegistration:
             assert callable(tool["handler"]), f"Handler not callable for tool: {tool['name']}"
 
     def test_registration_into_fresh_registry(self):
-        from src.mcp.tools import SparkToolRegistry
         from src.mcp.spark_phase5_tools import register_phase5_tools
+        from src.mcp.tools import SparkToolRegistry
         fresh = SparkToolRegistry()
         baseline = len(fresh._tools)
         count = register_phase5_tools(fresh)
@@ -1141,7 +1151,8 @@ class TestPhase5WorkflowNodes:
         assert "AGENT_CREATE" in target
 
     def test_phase5_nodes_registered_in_global_registry(self):
-        from src.workflow.nodes import _PHASE4_NODE_REGISTRY
+        from src.workflow.nodes import _PHASE4_NODE_REGISTRY, _ensure_phase4_nodes_loaded
+        _ensure_phase4_nodes_loaded()
         expected = {"AGENT_CREATE", "AGENT_RUN_STEP", "AGENT_GOAL",
                     "AGENT_REFLECT", "AGENT_DECOMPOSE"}
         for name in expected:
@@ -1194,7 +1205,7 @@ class TestPhase5Integration:
 
     def test_agent_lifecycle_with_goal(self):
         """Full agent lifecycle: create, start, assign goal, run, stop."""
-        from src.agents.agent_runtime import AgentRuntime, AgentState, AgentConfig
+        from src.agents.agent_runtime import AgentConfig, AgentRuntime, AgentState
         config = AgentConfig(name="integration-agent", agent_type="general")
         agent = AgentRuntime(config)
 
@@ -1259,7 +1270,7 @@ class TestPhase5Integration:
 
     def test_multiple_agents_with_profiles(self):
         """Create agents with different profiles and verify their configs."""
-        from src.agents.agent_runtime import AgentRuntime, AgentConfig
+        from src.agents.agent_runtime import AgentConfig, AgentRuntime
         from src.agents.agent_types import AgentType, get_profile
 
         profiles_to_test = [AgentType.CODER, AgentType.RESEARCHER, AgentType.PLANNER]
@@ -1301,7 +1312,7 @@ class TestPhase5Integration:
 
     def test_find_best_profile_for_coding_task(self):
         """find_best_profile should return CODER for coding-heavy tags."""
-        from src.agents.agent_types import find_best_profile, AgentType
+        from src.agents.agent_types import AgentType, find_best_profile
         profile = find_best_profile({"coding", "debugging", "implementation"})
         # The best match should have coding-related capabilities
         assert "coding" in profile.capability_tags or profile.agent_type == AgentType.CODER

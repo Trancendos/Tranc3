@@ -13,14 +13,12 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-
-from shared_core.sanitize import sanitize_for_log
-
 from typing import Optional
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from shared_core.sanitize import sanitize_for_log
 from src.observability.observatory import (
     EventCategory,
     EventSeverity,

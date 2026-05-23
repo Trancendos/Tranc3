@@ -12,7 +12,9 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from shared_core.error_handlers import safe_error_detail  # noqa: F401 – used in generated code template  # codeql[py/unused-import]
+from shared_core.error_handlers import (
+    safe_error_detail,  # noqa: F401 – used in generated code template  # codeql[py/unused-import]
+)
 
 logger = logging.getLogger(__name__)
 
@@ -360,7 +362,7 @@ class CodeSelfImprover:
         modified = False
         inserts: List[Tuple[int, str]] = []
 
-        for i, (start, name, indent_lvl) in enumerate(fn_starts):
+        for _i, (start, name, indent_lvl) in enumerate(fn_starts):
             end = len(lines)
             for j in range(start + 1, len(lines)):
                 m2 = re.match(r"^(\s*)(?:async\s+)?def\s+", lines[j])

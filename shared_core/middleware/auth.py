@@ -199,7 +199,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         # Check if auth is required for this path
         is_enforced = _is_enforced_path(path)
-        is_optional = _is_optional_auth(path)
+        _is_optional_auth(path)
 
         if is_enforced and not user:
             raise HTTPException(

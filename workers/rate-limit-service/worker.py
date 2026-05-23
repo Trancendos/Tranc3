@@ -240,7 +240,7 @@ async def update_policy(name: str, req: PolicyUpdate):
         row = conn.execute("SELECT * FROM policies WHERE name = ?", (name,)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Policy not found")
-        updates = {k: v for k, v in req.model_dump(exclude_none=True).items()}
+        updates = dict(req.model_dump(exclude_none=True).items())
         if updates:
             set_clause = ", ".join(f"{k} = ?" for k in updates)
             conn.execute(f"UPDATE policies SET {set_clause} WHERE name = ?", [*updates.values(), name])

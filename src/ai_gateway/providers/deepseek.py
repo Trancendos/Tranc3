@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from src.ai_gateway.providers.base import AIProvider
 from src.ai_gateway.types import AIRequest, AIResponse, ProviderHealth

@@ -160,8 +160,8 @@ def train(args):
         max_sequence_length  = args.max_length
         dropout              = args.dropout
 
+    from shared_core.path_validation import validate_path
     from src.core.advanced_model import AdvancedTransformerModel
-from shared_core.path_validation import validate_path
 
     if args.resume:
         logger.info("Resuming from checkpoint: %s", args.resume)
@@ -214,6 +214,7 @@ from shared_core.path_validation import validate_path
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
 
+    output_dir = Path(args.output_dir)
     # ── Output dir ────────────────────────────────────────────────────────────
     validate_path(output_dir)  # CWE-022 guard
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -230,7 +231,7 @@ from shared_core.path_validation import validate_path
         epoch_loss = 0.0
         t0 = time.time()
 
-        for batch_idx, batch in enumerate(loader):
+        for _batch_idx, batch in enumerate(loader):
             input_ids = batch["input_ids"].to(device)
             labels    = batch["labels"].to(device)
 

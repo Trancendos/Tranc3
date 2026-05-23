@@ -152,7 +152,7 @@ def fix_file(filepath, replacements):
                     'import logging',
                     'import logging\n\nfrom shared_core.sanitize import sanitize_for_log'
                 )
-                print(f"  Added sanitize_for_log import")
+                print("  Added sanitize_for_log import")
             else:
                 # Add at the top after any docstring/imports
                 lines = content.split('\n')

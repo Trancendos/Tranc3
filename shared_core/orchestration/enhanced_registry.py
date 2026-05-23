@@ -3,15 +3,13 @@
 # load-aware selection, and proactive rebalancing.
 
 import asyncio
-import hashlib
-import json
 import logging
 import random
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional
 
 from shared_core.sanitize import sanitize_for_log
 

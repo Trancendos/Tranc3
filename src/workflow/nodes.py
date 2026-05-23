@@ -161,7 +161,9 @@ class LLMNode(BaseNode):
             user_message = user_message.replace(f"{{{{{k}}}}}", str(v))
 
         try:
-            from src.core.tranc3_inference import get_engine  # noqa: F401  # intentional top-level import
+            from src.core.tranc3_inference import (
+                get_engine,  # noqa: F401  # intentional top-level import
+            )
 
             engine = get_engine()
             gen = await engine.generate(
@@ -997,13 +999,17 @@ def _ensure_phase4_nodes_loaded() -> None:
         return
     _PHASE4_LOADED = True  # codeql[py/unused-global] – used as lazy-load guard in _ensure_phase4_nodes_loaded
     try:
-        from src.workflow.phase4_nodes import PHASE4_NODE_TYPES as _p4_types  # codeql[py/cyclic-import]
+        from src.workflow.phase4_nodes import (
+            PHASE4_NODE_TYPES as _p4_types,  # codeql[py/cyclic-import]
+        )
         _PHASE4_NODE_REGISTRY.update(_p4_types)
         logger.info("Phase 4 workflow nodes loaded: %s", list(_p4_types.keys()))
     except Exception as _p4_exc:
         logger.warning("Phase 4 workflow nodes unavailable: %s", _p4_exc)
     try:
-        from src.workflow.phase5_nodes import PHASE5_NODE_TYPES as _p5_types  # codeql[py/cyclic-import]
+        from src.workflow.phase5_nodes import (
+            PHASE5_NODE_TYPES as _p5_types,  # codeql[py/cyclic-import]
+        )
         _PHASE4_NODE_REGISTRY.update(_p5_types)
         logger.info("Phase 5 workflow nodes loaded: %s", list(_p5_types.keys()))
     except Exception as _p5_exc:

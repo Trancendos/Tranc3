@@ -118,7 +118,7 @@ class NeuralNetworkAdapter:
         # Default: derive actions from state if possible, else generic placeholders
         actions = self._default_actions(state)
         n = max(len(actions), 1)
-        priors = {a: 1.0 / n for a in actions}
+        priors = dict.fromkeys(actions, 1.0 / n)
         value = float(np.random.uniform(-0.1, 0.1))
         return priors, value
 
@@ -278,7 +278,7 @@ class MCTS:
 
         noise = np.random.dirichlet([alpha] * len(actions))
         noisy: Dict[str, float] = {}
-        for action, eta in zip(actions, noise):
+        for action, eta in zip(actions, noise, strict=False):
             noisy[action] = (1.0 - epsilon) * priors[action] + epsilon * float(eta)
         return noisy
 
@@ -314,4 +314,4 @@ class MCTS:
                 powered / total if total > 0 else np.ones_like(powered) / len(powered)
             )
 
-        return {action: float(prob) for action, prob in zip(actions, policy)}
+        return {action: float(prob) for action, prob in zip(actions, policy, strict=False)}

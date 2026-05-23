@@ -15,10 +15,10 @@ from __future__ import annotations
 import logging
 import os
 import time
-from collections import defaultdict
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
 import uuid
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint

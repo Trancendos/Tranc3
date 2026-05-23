@@ -43,7 +43,7 @@ class BCISignalProcessor:
         features = {}
 
         # Band power extraction (simplified — use scipy.signal in production)
-        for band, (low, high) in self.FREQUENCY_BANDS.items():
+        for band, (_low, _high) in self.FREQUENCY_BANDS.items():
             # Mock band power — replace with actual FFT bandpass
             features[f"{band}_power"] = float(np.random.exponential(1.0))
 

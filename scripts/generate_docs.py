@@ -6,19 +6,17 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.entities.platform import (
-    PLATFORM_ENTITIES, LOCATION_ABBREVS, PILLAR_ABBREVS, PRIME_ABBREVS, Pillar
-)
+from src.entities.platform import LOCATION_ABBREVS, PLATFORM_ENTITIES, PRIME_ABBREVS
 
 
 def generate_platform_entities_md():
     """Generate the full repaired PLATFORM_ENTITIES.md."""
-    
+
     pillar_order = [
         "Architectural", "Commercial / Financial", "Creativity",
         "Development (Code)", "Knowledge", "Security", "DevOps", "Wellbeing"
     ]
-    
+
     lines = []
     lines.append("# Trancendos Platform Entity Hierarchy")
     lines.append("")
@@ -35,7 +33,7 @@ def generate_platform_entities_md():
     lines.append("")
     lines.append("---")
     lines.append("")
-    
+
     # Universal ID Taxonomy
     lines.append("## Universal ID Taxonomy")
     lines.append("")
@@ -48,7 +46,7 @@ def generate_platform_entities_md():
     lines.append("")
     lines.append("---")
     lines.append("")
-    
+
     # Naming Conventions (Resolved)
     lines.append("## Naming Conventions (Resolved)")
     lines.append("")
@@ -70,13 +68,13 @@ def generate_platform_entities_md():
     lines.append("")
     lines.append("---")
     lines.append("")
-    
+
     # Worker Port → Entity Mapping
     lines.append("## Worker Port → Entity Mapping")
     lines.append("")
     lines.append("| Port | Worker | Location | Lead AI | PID | Role |")
     lines.append("|------|--------|----------|---------|-----|------|")
-    
+
     worker_map = [
         (8004, "infinity-ws", "The Nexus", "Nexus-Prime", "PID-NXS", "Primary worker"),
         (8005, "infinity-auth", "Infinity", "The Guardian (Anchor: Orb of Orisis)", "PID-INF", "Primary worker"),
@@ -107,17 +105,17 @@ def generate_platform_entities_md():
     ]
     for port, worker, location, lead_ai, pid, role in worker_map:
         lines.append(f"| {port} | `{worker}` | {location} | {lead_ai} | {pid} | {role} |")
-    
+
     lines.append("")
     lines.append("---")
     lines.append("")
-    
+
     # Full Entity Table with IDs
     lines.append("## Full Entity Table")
     lines.append("")
     lines.append("| PID | Location | Pillar | Lead AI (AID) | Primes | Agent α (SID) | Agent β (SID) | Bot 01 (NID) | Bot 02 (NID) | Bot 03 (NID) | Bot 04 (NID) |")
     lines.append("|-----|----------|--------|---------------|--------|---------------|---------------|--------------|--------------|--------------|--------------|")
-    
+
     # Sort by pillar order then by location name
     for pillar_name in pillar_order:
         for loc_name, entity in PLATFORM_ENTITIES.items():
@@ -135,46 +133,46 @@ def generate_platform_entities_md():
                 f"{entity.bot_03.code_name} ({entity.bot_03.nid}) | "
                 f"{entity.bot_04.code_name} ({entity.bot_04.nid}) |"
             )
-    
+
     lines.append("")
     lines.append("---")
     lines.append("")
-    
+
     # Tier 2 Prime Authorities
     lines.append("## Tier 2 Prime Authorities")
     lines.append("")
     lines.append("| AID | Prime | Governs Locations |")
     lines.append("|-----|-------|-------------------|")
-    
+
     prime_govs = {}
     for loc_name, entity in PLATFORM_ENTITIES.items():
         for p in entity.primes:
             if p not in prime_govs:
                 prime_govs[p] = []
             prime_govs[p].append(loc_name)
-    
+
     for prime_name, locs in prime_govs.items():
         abbrev = PRIME_ABBREVS.get(prime_name, "???")
         aid = f"AID-{abbrev}-01"
         lines.append(f"| **{aid}** | **{prime_name}** | {', '.join(locs)} |")
-    
+
     lines.append("")
     lines.append("---")
     lines.append("")
-    
+
     # Key Abilities by Location
     lines.append("## Key Abilities by Location")
     lines.append("")
     lines.append("| PID | Location | Ability 1 | Ability 2 |")
     lines.append("|-----|----------|-----------|-----------|")
-    
+
     for loc_name, entity in PLATFORM_ENTITIES.items():
         ab1 = entity.abilities[0].split(":")[0] if entity.abilities else ""
         ab2 = entity.abilities[1].split(":")[0] if len(entity.abilities) > 1 else ""
         lines.append(f"| {entity.pid} | {loc_name} | {ab1} | {ab2} |")
-    
+
     lines.append("")
-    
+
     # Internal personality profiles note
     lines.append("---")
     lines.append("")
@@ -185,13 +183,13 @@ def generate_platform_entities_md():
     lines.append("")
     lines.append("These are **not** named locations and should not be referenced as platform entities until explicitly assigned.")
     lines.append("")
-    
+
     return "\n".join(lines)
 
 
 def generate_matrix_md():
     """Generate docs/matrix.md with pillar-by-pillar tables."""
-    
+
     pillar_order = [
         ("Architectural", "ARCH"),
         ("Commercial / Financial", "COMM"),
@@ -202,7 +200,7 @@ def generate_matrix_md():
         ("DevOps", "DVOP"),
         ("Wellbeing", "WELL"),
     ]
-    
+
     lines = []
     lines.append("# Tranc3 Repaired Entity Matrix — by Pillar")
     lines.append("")
@@ -219,18 +217,18 @@ def generate_matrix_md():
     lines.append("")
     lines.append("---")
     lines.append("")
-    
+
     for pillar_name, pillar_abbrev in pillar_order:
         locations_in_pillar = [
             (name, entity) for name, entity in PLATFORM_ENTITIES.items()
             if entity.pillar.value == pillar_name
         ]
-        
+
         lines.append(f"## {pillar_name} ({pillar_abbrev})")
         lines.append("")
         lines.append(f"**{len(locations_in_pillar)} locations** in this pillar.")
         lines.append("")
-        
+
         for loc_name, entity in locations_in_pillar:
             lines.append(f"### {loc_name} (`{entity.pid}`)")
             lines.append("")
@@ -246,23 +244,23 @@ def generate_matrix_md():
             lines.append(f"| — | Primes | {', '.join(entity.primes)} | — | — |")
             lines.append(f"| — | Port | {entity.worker_port or 'N/A'} | — | {entity.worker_path or 'N/A'} |")
             lines.append("")
-        
+
         lines.append("---")
         lines.append("")
-    
+
     # ID Reference Table
     lines.append("## Full ID Reference")
     lines.append("")
     lines.append("| ID | Tier | Name | Location |")
     lines.append("|----|------|------|----------|")
-    
+
     # Sovereign
     lines.append("| AID-SOV-01 | 1 | The Sovereign | — |")
-    
+
     # Primes
     for prime_name, abbrev in PRIME_ABBREVS.items():
         lines.append(f"| AID-{abbrev}-01 | 2 | {prime_name} | — |")
-    
+
     # Per-location
     for loc_name, entity in PLATFORM_ENTITIES.items():
         lines.append(f"| {entity.aid} | 3 | {entity.lead_ai} | {loc_name} |")
@@ -272,9 +270,9 @@ def generate_matrix_md():
         lines.append(f"| {entity.bot_02.nid} | 5 | {entity.bot_02.code_name} | {loc_name} |")
         lines.append(f"| {entity.bot_03.nid} | 5 | {entity.bot_03.code_name} | {loc_name} |")
         lines.append(f"| {entity.bot_04.nid} | 5 | {entity.bot_04.code_name} | {loc_name} |")
-    
+
     lines.append("")
-    
+
     return "\n".join(lines)
 
 
@@ -285,7 +283,7 @@ if __name__ == "__main__":
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(md_content)
     print(f"✅ PLATFORM_ENTITIES.md written ({len(md_content)} chars)")
-    
+
     # Generate docs/matrix.md
     matrix_content = generate_matrix_md()
     docs_dir = os.path.join(os.path.dirname(__file__), '..', 'docs')

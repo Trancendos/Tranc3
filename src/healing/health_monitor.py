@@ -168,9 +168,11 @@ class LogicCoreHealthMonitor:
         name: str,
         endpoint: str,
         health_endpoint: str,
-        config: dict = {},
+        config: dict = None,
     ) -> None:
         """Register a service for continuous health monitoring."""
+        if config is None:
+            config = {}
         self._services[service_id] = {
             "name": name,
             "endpoint": endpoint,

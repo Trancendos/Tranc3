@@ -202,15 +202,20 @@ async def list_entries(
 ):
     clauses, params = [], []
     if actor:
-        clauses.append("actor = ?"); params.append(actor)
+        clauses.append("actor = ?")
+        params.append(actor)
     if action:
-        clauses.append("action = ?"); params.append(action)
+        clauses.append("action = ?")
+        params.append(action)
     if outcome:
-        clauses.append("outcome = ?"); params.append(outcome)
+        clauses.append("outcome = ?")
+        params.append(outcome)
     if since:
-        clauses.append("timestamp >= ?"); params.append(since)
+        clauses.append("timestamp >= ?")
+        params.append(since)
     if until:
-        clauses.append("timestamp <= ?"); params.append(until)
+        clauses.append("timestamp <= ?")
+        params.append(until)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM audit_log {where}", params).fetchone()[0]

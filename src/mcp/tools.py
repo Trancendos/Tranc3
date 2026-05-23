@@ -1041,7 +1041,9 @@ class SparkToolRegistry:
         )
 
         try:
-            from src.knowledge.vector_store import get_store  # noqa: F401  # intentional top-level import
+            from src.knowledge.vector_store import (
+                get_store,  # noqa: F401  # intentional top-level import
+            )
 
             store = get_store()
             hits = store.search(
@@ -1097,7 +1099,9 @@ class SparkToolRegistry:
         metadatas = params.get("metadatas")
 
         try:
-            from src.knowledge.vector_store import get_store  # noqa: F401  # intentional top-level import
+            from src.knowledge.vector_store import (
+                get_store,  # noqa: F401  # intentional top-level import
+            )
 
             store = get_store()
             doc_ids = store.ingest(
@@ -1175,7 +1179,9 @@ class SparkToolRegistry:
         try:
             import numpy as np
 
-            from src.bio_neural.consciousness_engine import IITCalculator  # noqa: F401  # intentional top-level import
+            from src.bio_neural.consciousness_engine import (
+                IITCalculator,  # noqa: F401  # intentional top-level import
+            )
 
             state = params["state"]
             arr = np.array(state, dtype=float)
@@ -1196,7 +1202,9 @@ class SparkToolRegistry:
         try:
             import torch
 
-            from src.bio_neural.neuromorphic import NeuromorphicProcessor  # noqa: F401  # intentional top-level import
+            from src.bio_neural.neuromorphic import (
+                NeuromorphicProcessor,  # noqa: F401  # intentional top-level import
+            )
 
             input_data = params["input"]
             timesteps = int(params.get("timesteps", 10))
@@ -1249,7 +1257,9 @@ class SparkToolRegistry:
 
     async def _handle_deepmind_plan(self, params: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            from src.deepmind.planning import PlanningEngine  # noqa: F401  # intentional top-level import
+            from src.deepmind.planning import (
+                PlanningEngine,  # noqa: F401  # intentional top-level import
+            )
 
             problem = params["problem"]
             depth = int(params.get("depth", 3))
@@ -1276,7 +1286,10 @@ class SparkToolRegistry:
         self, params: Dict[str, Any]
     ) -> Dict[str, Any]:
         try:
-            from src.citadel.devops_hub import DeployTarget, get_citadel  # noqa: F401  # intentional top-level import
+            from src.citadel.devops_hub import (  # noqa: F401  # intentional top-level import
+                DeployTarget,
+                get_citadel,
+            )
 
             citadel = get_citadel()
             target_filter = params.get("target")
@@ -1299,7 +1312,10 @@ class SparkToolRegistry:
         self, params: Dict[str, Any]
     ) -> Dict[str, Any]:
         try:
-            from src.observability.observatory import EventCategory, observe  # noqa: F401  # intentional top-level import
+            from src.observability.observatory import (  # noqa: F401  # intentional top-level import
+                EventCategory,
+                observe,
+            )
 
             event_type = params["event_type"]
             raw_cat = params.get("category", "AI").upper()
@@ -1337,7 +1353,9 @@ registry = SparkToolRegistry()
 # Registers 16 additional Spark tools from Phase 4 modules
 # ---------------------------------------------------------------------------
 try:
-    from src.mcp.spark_phase4_tools import register_phase4_tools as _reg_p4  # codeql[py/cyclic-import]
+    from src.mcp.spark_phase4_tools import (
+        register_phase4_tools as _reg_p4,  # codeql[py/cyclic-import]
+    )
     _p4_count = _reg_p4(registry)
     logger.info("Phase 4 Spark tools loaded: %d tools added (total=%d)", _p4_count, len(registry._tools))
 except Exception as _p4_exc:
@@ -1348,7 +1366,9 @@ except Exception as _p4_exc:
 # Registers 12 additional Spark tools from Phase 5 agent modules
 # ---------------------------------------------------------------------------
 try:
-    from src.mcp.spark_phase5_tools import register_phase5_tools as _reg_p5  # codeql[py/cyclic-import]
+    from src.mcp.spark_phase5_tools import (
+        register_phase5_tools as _reg_p5,  # codeql[py/cyclic-import]
+    )
     _p5_count = _reg_p5(registry)
     logger.info("Phase 5 Spark tools loaded: %d tools added (total=%d)", _p5_count, len(registry._tools))
 except Exception as _p5_exc:

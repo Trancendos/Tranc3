@@ -10,7 +10,6 @@
 #   - Prometheus-compatible /metrics endpoint
 #   - Background cloud sync for hybrid storage
 
-import asyncio
 import logging
 import os
 import random
@@ -19,8 +18,8 @@ from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("tranc3.ecosystem")
@@ -34,7 +33,7 @@ async def lifespan(app: FastAPI):
     logger.info("Tranc3 Ecosystem API starting up...")
 
     # Start hybrid storage auto-sync if in HYBRID mode
-    from shared_core.architecture.storage_factory import StorageFactory, _get_system_mode, SystemMode
+    from shared_core.architecture.storage_factory import SystemMode, _get_system_mode
     mode = _get_system_mode()
     if mode == SystemMode.HYBRID:
         try:
@@ -97,10 +96,12 @@ app.add_middleware(
 
 # Telemetry — request tracing + metrics collection
 from shared_core.middleware.telemetry import TelemetryMiddleware
+
 app.add_middleware(TelemetryMiddleware)
 
 # Rate Limiting — IAM-tier adaptive
-from shared_core.middleware.rate_limiter import RateLimitMiddleware, RateLimitConfig
+from shared_core.middleware.rate_limiter import RateLimitConfig, RateLimitMiddleware
+
 rate_config = RateLimitConfig(
     window_seconds=int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60")),
     max_requests=int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "100")),
@@ -109,21 +110,26 @@ app.add_middleware(RateLimitMiddleware, config=rate_config)
 
 # Auth — JWT + API Key enforcement
 from shared_core.middleware.auth import AuthMiddleware
+
 app.add_middleware(AuthMiddleware)
 
 # ─── Shared Core Imports ─────────────────────────────────────────────────────
 
-from shared_core.orchestration.enhanced_registry import EnhancedServiceRegistry
-from shared_core.orchestration.health_monitor import CircuitBreaker, AdaptiveHealthMonitor, HealthStatus
-from shared_core.orchestration.dependency_graph import SmartDependencyGraph
-from shared_core.orchestration.config_drift import ConfigDriftDetector
-from shared_core.architecture.storage_factory import StorageFactory
 from shared_core.architecture.audit_ledger import AuditLedger
-from shared_core.architecture.vault import VaultSecretLoader
+from shared_core.architecture.storage_factory import StorageFactory
+from shared_core.middleware.telemetry import TelemetryCollector
+from shared_core.orchestration.config_drift import ConfigDriftDetector
+from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+from shared_core.orchestration.enhanced_registry import EnhancedServiceRegistry
+from shared_core.orchestration.health_monitor import AdaptiveHealthMonitor
+from shared_core.orchestration.heartbeat_aggregator import (
+    Heartbeat,
+    HeartbeatAggregator,
+    HeartbeatMetrics,
+    ServiceStatus,
+)
 from shared_core.security_automation.adaptive_scanner import AdaptiveScanner
 from shared_core.security_automation.defense_engine import DefenseEngine, ThreatLevel
-from shared_core.middleware.telemetry import TelemetryCollector
-from shared_core.orchestration.heartbeat_aggregator import HeartbeatAggregator, Heartbeat, HeartbeatMetrics, ServiceStatus
 
 # ─── Singleton Instances ─────────────────────────────────────────────────────
 
@@ -515,7 +521,7 @@ async def prometheus_metrics():
 @app.get("/api/ecosystem/defense/firewall")
 async def get_firewall_rules():
     """Get all firewall rules from the defense engine."""
-    user = getattr(Request, "state", None)
+    getattr(Request, "state", None)
     return {"rules": _defense_engine.get_rules(), "stats": _defense_engine.get_stats().to_dict()}
 
 

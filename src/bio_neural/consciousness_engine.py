@@ -142,7 +142,7 @@ class GlobalWorkspace(nn.Module):
         stacked = torch.stack(specialist_outputs, dim=1)  # B x 8 x W
 
         # Competition for workspace access
-        concat = stacked.view(B, -1)
+        concat = stacked.view(_B, -1)
         gates = self.gate(concat)  # B x 8
 
         # Weighted combination
@@ -323,7 +323,7 @@ class EmotionDetector(nn.Module):
         pooled = x.mean(dim=1)
         probs = self.classifier(pooled)
 
-        return {emotion: float(prob) for emotion, prob in zip(self.EMOTIONS, probs[0])}
+        return {emotion: float(prob) for emotion, prob in zip(self.EMOTIONS, probs[0], strict=False)}
 
     def detect_emotion(self, text: str) -> Dict[str, float]:
         """Detect emotion from text (mock implementation)"""

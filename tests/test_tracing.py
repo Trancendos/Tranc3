@@ -12,20 +12,19 @@ from pathlib import Path
 import pytest
 
 from src.observability.tracing import (
-    Tracer,
     Span,
+    Tracer,
     clear_trace,
     current_span_id,
     current_trace_id,
     extract_trace_context,
     get_tracer,
-    inject_trace_context,
     init_tracing,
+    inject_trace_context,
     new_span_id,
     new_trace_id,
     set_trace,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Trace Context (Thread-Local) Tests

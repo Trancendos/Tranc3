@@ -1,18 +1,19 @@
 # src/main_2060.py
 
 import asyncio
-import torch
-from typing import Dict
 import logging
+from typing import Dict
+
+import torch
 
 from shared_core.sanitize import sanitize_for_log
+from src.bio_neural.consciousness_engine import ConsciousnessModel
+from src.distributed.swarm_intelligence import DistributedIntelligenceSwarm
+from src.evolution.self_improving_core import SelfEvolvingArchitecture
+from src.holographic.memory_crystal import HolographicMemoryCrystal
 
 # Import TRANC3 2060 modules
 from src.quantum.quantum_core import QuantumNeuralCore
-from src.bio_neural.consciousness_engine import ConsciousnessModel
-from src.evolution.self_improving_core import SelfEvolvingArchitecture
-from src.distributed.swarm_intelligence import DistributedIntelligenceSwarm
-from src.holographic.memory_crystal import HolographicMemoryCrystal
 
 logger = logging.getLogger(__name__)
 

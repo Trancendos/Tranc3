@@ -7,8 +7,6 @@ AdaptivePulseController.
 
 from __future__ import annotations
 
-
-
 from shared_core.architecture.adaptive_pulse import (
     AdaptivePulseController,
     PulseConfig,
@@ -16,7 +14,6 @@ from shared_core.architecture.adaptive_pulse import (
     PulseMode,
     PulseTransition,
 )
-
 
 # ---------------------------------------------------------------------------
 # Enum tests

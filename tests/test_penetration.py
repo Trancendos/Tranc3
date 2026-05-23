@@ -12,6 +12,7 @@ None of these tests make real HTTP calls; they exercise the Spark + Grid layers 
 from __future__ import annotations
 
 import logging
+
 import pytest
 
 _log = logging.getLogger("tranc3.tests.penetration")
@@ -32,7 +33,7 @@ class TestInjectionPrevention:
     ])
     async def test_sql_and_template_injection_in_tool_name(self, payload, caplog, sample_error_payloads):
         """Malicious tool_name values must produce a 'not found' error, not execute anything."""
-        from src.workflow.nodes import SparkToolNode, NodeConfig, NodeType
+        from src.workflow.nodes import NodeConfig, NodeType, SparkToolNode
         nc = NodeConfig(
             id="pen1", type=NodeType.SPARK_TOOL, name="pen",
             config={"tool_name": payload},
@@ -52,7 +53,7 @@ class TestInjectionPrevention:
         "/etc/shadow",
     ])
     async def test_path_traversal_in_tool_name(self, path, caplog):
-        from src.workflow.nodes import SparkToolNode, NodeConfig, NodeType
+        from src.workflow.nodes import NodeConfig, NodeType, SparkToolNode
         nc = NodeConfig(
             id="pen2", type=NodeType.SPARK_TOOL, name="pen",
             config={"tool_name": path},
@@ -71,7 +72,7 @@ class TestInjectionPrevention:
         "&& rm -rf /",
     ])
     async def test_command_injection_in_tool_name(self, cmd, caplog):
-        from src.workflow.nodes import SparkToolNode, NodeConfig, NodeType
+        from src.workflow.nodes import NodeConfig, NodeType, SparkToolNode
         nc = NodeConfig(
             id="pen3", type=NodeType.SPARK_TOOL, name="pen",
             config={"tool_name": cmd},
@@ -89,7 +90,7 @@ class TestInjectionPrevention:
 class TestOversizedInputs:
     @pytest.mark.asyncio
     async def test_oversized_tool_name_returns_error(self, caplog):
-        from src.workflow.nodes import SparkToolNode, NodeConfig, NodeType
+        from src.workflow.nodes import NodeConfig, NodeType, SparkToolNode
         huge = "A" * 100_001
         nc = NodeConfig(
             id="pen4", type=NodeType.SPARK_TOOL, name="pen",
@@ -102,7 +103,7 @@ class TestOversizedInputs:
 
     @pytest.mark.asyncio
     async def test_null_byte_in_tool_name(self, caplog):
-        from src.workflow.nodes import SparkToolNode, NodeConfig, NodeType
+        from src.workflow.nodes import NodeConfig, NodeType, SparkToolNode
         nc = NodeConfig(
             id="pen5", type=NodeType.SPARK_TOOL, name="pen",
             config={"tool_name": "\x00admin"},
@@ -114,7 +115,7 @@ class TestOversizedInputs:
 
     @pytest.mark.asyncio
     async def test_empty_tool_name_returns_descriptive_error(self, caplog):
-        from src.workflow.nodes import SparkToolNode, NodeConfig, NodeType
+        from src.workflow.nodes import NodeConfig, NodeType, SparkToolNode
         for empty in ("", "   ", "\t"):
             nc = NodeConfig(
                 id="pen6", type=NodeType.SPARK_TOOL, name="pen",
@@ -135,7 +136,7 @@ class TestSecurityLogging:
     @pytest.mark.asyncio
     async def test_error_result_does_not_include_traceback_object(self, caplog):
         """NodeResult.error should be a plain string, never an exception object."""
-        from src.workflow.nodes import SparkToolNode, NodeConfig, NodeType
+        from src.workflow.nodes import NodeConfig, NodeType, SparkToolNode
         nc = NodeConfig(
             id="pen7", type=NodeType.SPARK_TOOL, name="pen",
             config={"tool_name": "__no_such__"},
@@ -149,8 +150,8 @@ class TestSecurityLogging:
     async def test_workflow_failure_state_error_is_string(self, caplog):
         """WorkflowExecutor failure state error must be a plain string."""
         from src.workflow.builder import WorkflowBuilder
-        from src.workflow.nodes import NodeType, BaseNode
         from src.workflow.executor import WorkflowExecutor
+        from src.workflow.nodes import BaseNode, NodeType
 
         class RaisingNode(BaseNode):
             async def execute(self, inputs, context):

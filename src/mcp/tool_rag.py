@@ -116,7 +116,7 @@ class ToolRAG:
             k = min(top_k, self._index.ntotal)
             scores, indices = self._index.search(q_vec, k)
             results = []
-            for score, idx in zip(scores[0], indices[0]):
+            for score, idx in zip(scores[0], indices[0], strict=False):
                 if idx < 0:
                     continue
                 tool = self._tools[int(idx)]

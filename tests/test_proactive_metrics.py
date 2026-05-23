@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import time
 
-
 from shared_core.architecture.proactive_metrics import (
     HealthTrend,
     MetricsSnapshot,
@@ -18,7 +17,6 @@ from shared_core.architecture.proactive_metrics import (
     SubsystemMetrics,
     SystemVitals,
 )
-
 
 # ---------------------------------------------------------------------------
 # Enum tests

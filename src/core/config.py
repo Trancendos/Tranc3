@@ -110,7 +110,7 @@ class Tranc3Config(BaseSettings):
 
     @property
     def supported_languages_list(self) -> List[str]:
-        return [l.strip() for l in self.SUPPORTED_LANGUAGES.split(",")]
+        return [lang.strip() for lang in self.SUPPORTED_LANGUAGES.split(",")]
 
     @property
     def fallback_providers_list(self) -> List[str]:

@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+
 import pytest
 
 _log = logging.getLogger("tranc3.tests.chaos")
@@ -90,8 +91,8 @@ class TestWorkflowChaos:
     async def test_failing_node_aborts_workflow(self, caplog):
         """A node that raises should mark workflow as failed."""
         from src.workflow.builder import WorkflowBuilder
-        from src.workflow.nodes import NodeType, BaseNode
         from src.workflow.executor import WorkflowExecutor
+        from src.workflow.nodes import BaseNode, NodeType
 
         class BoomNode(BaseNode):
             async def execute(self, inputs, context):
@@ -118,8 +119,8 @@ class TestWorkflowChaos:
     async def test_cancel_in_flight_execution(self, caplog):
         """Cancelling an execution should mark it cancelled."""
         from src.workflow.builder import WorkflowBuilder
-        from src.workflow.nodes import NodeType
         from src.workflow.executor import WorkflowExecutor
+        from src.workflow.nodes import NodeType
 
         b = WorkflowBuilder("cancel-wf")
         b.add_node(NodeType.OUTPUT, "out", config={}, node_id="out")
@@ -141,8 +142,8 @@ class TestWorkflowChaos:
     async def test_concurrent_executions_isolated(self, caplog):
         """Two concurrent executions of the same workflow must not share state."""
         from src.workflow.builder import WorkflowBuilder
-        from src.workflow.nodes import NodeType
         from src.workflow.executor import WorkflowExecutor
+        from src.workflow.nodes import NodeType
 
         b = WorkflowBuilder("concurrent-wf")
         b.add_node(NodeType.OUTPUT, "out", config={"keys": ["x"]}, node_id="out")
@@ -165,8 +166,8 @@ class TestWorkflowChaos:
     @pytest.mark.asyncio
     async def test_cyclic_workflow_fails_gracefully(self, caplog):
         """A workflow definition with a cycle should fail at execution, not crash."""
+        from src.workflow.executor import NodeConfig, _topological_sort
         from src.workflow.nodes import NodeType
-        from src.workflow.executor import _topological_sort, NodeConfig
 
         # Build two nodes and manually wire a cycle
         nc_a = NodeConfig(id="a", type=NodeType.OUTPUT, name="a", config={})
@@ -227,9 +228,9 @@ class TestSparkToolNodeChaos:
     @pytest.mark.asyncio
     async def test_hanging_tool_times_out(self, caplog):
         """A SparkToolNode with a very short timeout must return error, not hang."""
-        from src.mcp.tools import SparkTool
-        from src.workflow.nodes import SparkToolNode, NodeConfig, NodeType
         import src.mcp.tools as tools_mod
+        from src.mcp.tools import SparkTool
+        from src.workflow.nodes import NodeConfig, NodeType, SparkToolNode
 
         async def hang(_params):
             await asyncio.sleep(60)  # would hang forever

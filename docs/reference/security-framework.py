@@ -3,15 +3,18 @@
 # src/security/security_framework.py
 # TRANC3 Complete Security Framework
 
-import os, secrets, hashlib
+import hashlib
+import logging
+import os
+import secrets
 from datetime import datetime, timedelta
-from typing import Optional, Dict, List
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+from typing import Dict, List, Optional
+
+import redis
 from fastapi import HTTPException
 from fastapi.security import HTTPBearer
-import redis
-import logging
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 
 logger = logging.getLogger(__name__)
 

@@ -91,7 +91,7 @@ async def handle_consciousness(payload: Dict[str, Any]) -> Dict[str, Any]:
     if _engine_available():
         return await _engine_post("/consciousness", payload)
     text = str(payload.get("text", ""))
-    h = int(hashlib.md5(text.encode(, usedforsecurity=False)).hexdigest(), 16)
+    h = int(hashlib.md5(text.encode("utf-8"), usedforsecurity=False).hexdigest(), 16)
     return {
         "state": "aware",
         "coherence": round(0.5 + (h % 50) / 100, 3),
@@ -104,7 +104,7 @@ async def handle_personality(payload: Dict[str, Any]) -> Dict[str, Any]:
     if _engine_available():
         return await _engine_post("/personality", payload)
     text = str(payload.get("text", ""))
-    h = int(hashlib.sha1(text.encode(, usedforsecurity=False)).hexdigest(), 16)
+    h = int(hashlib.sha1(text.encode("utf-8"), usedforsecurity=False).hexdigest(), 16)
     dims = ["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"]
     return {
         "profile": {d: round(0.2 + ((h >> (i * 8)) & 0xFF) / 255.0 * 0.8, 3) for i, d in enumerate(dims)},
@@ -157,7 +157,9 @@ async def handle_memory(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def handle_monitor(payload: Dict[str, Any]) -> Dict[str, Any]:
-    import platform, psutil  # type: ignore
+    import platform
+
+    import psutil  # type: ignore
     try:
         cpu    = psutil.cpu_percent(interval=0.1)
         mem    = psutil.virtual_memory()

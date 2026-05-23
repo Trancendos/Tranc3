@@ -4,9 +4,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional
 
-from bots.types import JobSpec, JobResult, JobStatus
-from bots.pool import BotPool
 from bots.handlers import HANDLERS
+from bots.pool import BotPool
+from bots.types import JobResult, JobSpec, JobStatus
 
 logger = logging.getLogger(__name__)
 

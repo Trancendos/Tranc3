@@ -17,12 +17,11 @@ from src.mesh.types import (
     CircuitBreakerState,
     CircuitState,
     HealthStatus,
+    ServiceCallResult,
     ServiceCategory,
     ServiceDescriptor,
     ServiceMeshConfig,
-    ServiceCallResult,
 )
-
 
 # ──────────────────────────────────────────────────────────────────────
 # CircuitBreaker Tests

@@ -12,6 +12,7 @@ Covers:
 from __future__ import annotations
 
 import logging
+
 import pytest
 
 _log = logging.getLogger("tranc3.tests.validation")
@@ -24,6 +25,7 @@ _log = logging.getLogger("tranc3.tests.validation")
 class TestNodeConfigValidation:
     def test_node_config_requires_id(self, caplog):
         import pydantic
+
         from src.workflow.nodes import NodeConfig, NodeType
         with pytest.raises((pydantic.ValidationError, TypeError, ValueError)):
             NodeConfig(type=NodeType.OUTPUT, name="out", config={})  # missing id
@@ -31,6 +33,7 @@ class TestNodeConfigValidation:
 
     def test_node_config_requires_type(self, caplog):
         import pydantic
+
         from src.workflow.nodes import NodeConfig
         with pytest.raises((pydantic.ValidationError, TypeError, ValueError)):
             NodeConfig(id="n1", name="out", config={})  # missing type
@@ -38,6 +41,7 @@ class TestNodeConfigValidation:
 
     def test_node_config_requires_name(self, caplog):
         import pydantic
+
         from src.workflow.nodes import NodeConfig, NodeType
         with pytest.raises((pydantic.ValidationError, TypeError, ValueError)):
             NodeConfig(id="n1", type=NodeType.OUTPUT, config={})  # missing name
@@ -108,7 +112,7 @@ class TestWorkflowBuilderValidation:
             _log.info("val.builder dup_id raised %s", type(exc).__name__)
 
     def test_workflow_has_engine_field_after_build(self, caplog):
-        from src.workflow.builder import WorkflowBuilder, GRID_ENGINE
+        from src.workflow.builder import GRID_ENGINE, WorkflowBuilder
         from src.workflow.nodes import NodeType
         b = WorkflowBuilder("engine-wf")
         b.add_node(NodeType.OUTPUT, "out", config={}, node_id="out")
@@ -118,7 +122,7 @@ class TestWorkflowBuilderValidation:
         assert d.get("engine") == GRID_ENGINE
 
     def test_topological_sort_detects_cycle(self, caplog):
-        from src.workflow.executor import _topological_sort, NodeConfig
+        from src.workflow.executor import NodeConfig, _topological_sort
         from src.workflow.nodes import NodeType
         nc_a = NodeConfig(id="a", type=NodeType.OUTPUT, name="a", config={})
         nc_b = NodeConfig(id="b", type=NodeType.OUTPUT, name="b", config={})
@@ -130,7 +134,7 @@ class TestWorkflowBuilderValidation:
         _log.info("val.builder topological_sort cycle detected as expected")
 
     def test_topological_sort_linear_chain(self, caplog):
-        from src.workflow.executor import _topological_sort, NodeConfig
+        from src.workflow.executor import NodeConfig, _topological_sort
         from src.workflow.nodes import NodeType
         nc_a = NodeConfig(id="a", type=NodeType.TRIGGER, name="a", config={})
         nc_b = NodeConfig(id="b", type=NodeType.OUTPUT, name="b", config={})
@@ -150,6 +154,7 @@ class TestWorkflowBuilderValidation:
 class TestSparkToolValidation:
     def test_spark_tool_requires_name(self, caplog):
         import pydantic
+
         from src.mcp.tools import SparkTool
 
         async def _handler(params): return {}
@@ -165,6 +170,7 @@ class TestSparkToolValidation:
 
     def test_spark_tool_requires_handler(self, caplog):
         import pydantic
+
         from src.mcp.tools import SparkTool
         with pytest.raises((pydantic.ValidationError, TypeError)):
             SparkTool(
@@ -258,8 +264,8 @@ class TestWorkflowExecutorStateValidation:
     @pytest.mark.asyncio
     async def test_completed_workflow_has_elapsed_ms(self, caplog):
         from src.workflow.builder import WorkflowBuilder
-        from src.workflow.nodes import NodeType
         from src.workflow.executor import WorkflowExecutor
+        from src.workflow.nodes import NodeType
 
         b = WorkflowBuilder("elapsed-wf")
         b.add_node(NodeType.OUTPUT, "out", config={}, node_id="out")
@@ -272,8 +278,8 @@ class TestWorkflowExecutorStateValidation:
     @pytest.mark.asyncio
     async def test_execution_id_is_unique_across_runs(self, caplog):
         from src.workflow.builder import WorkflowBuilder
-        from src.workflow.nodes import NodeType
         from src.workflow.executor import WorkflowExecutor
+        from src.workflow.nodes import NodeType
 
         b = WorkflowBuilder("unique-id-wf")
         b.add_node(NodeType.OUTPUT, "out", config={}, node_id="out")
@@ -288,8 +294,8 @@ class TestWorkflowExecutorStateValidation:
     @pytest.mark.asyncio
     async def test_workflow_id_propagated_to_state(self, caplog):
         from src.workflow.builder import WorkflowBuilder
-        from src.workflow.nodes import NodeType
         from src.workflow.executor import WorkflowExecutor
+        from src.workflow.nodes import NodeType
 
         b = WorkflowBuilder("id-check-wf")
         b.add_node(NodeType.OUTPUT, "out", config={}, node_id="out")
@@ -300,10 +306,10 @@ class TestWorkflowExecutorStateValidation:
 
     @pytest.mark.asyncio
     async def test_failed_state_has_error_string(self, caplog):
-        from src.workflow.builder import WorkflowBuilder
-        from src.workflow.nodes import NodeType, BaseNode
-        from src.workflow.executor import WorkflowExecutor
         from src.workflow import nodes as _nodes
+        from src.workflow.builder import WorkflowBuilder
+        from src.workflow.executor import WorkflowExecutor
+        from src.workflow.nodes import BaseNode, NodeType
 
         class FailNode(BaseNode):
             async def execute(self, inputs, context):
@@ -333,7 +339,7 @@ class TestErrorCodeValidation:
         values = [e.value for e in ErrorCode]
         unique = set(values)
         _log.info("val.error_codes total=%d unique=%d", len(values), len(unique))
-        assert len(values) == len(unique), f"Duplicate ErrorCode values: {set(v for v in values if values.count(v) > 1)}"
+        assert len(values) == len(unique), f"Duplicate ErrorCode values: { {v for v in values if values.count(v) > 1} }"
 
     def test_error_code_names_unique(self, caplog):
         from src.errors.error_catalog import ErrorCode
@@ -344,6 +350,7 @@ class TestErrorCodeValidation:
 
     def test_error_codes_have_three_digit_suffix(self, caplog):
         import re
+
         from src.errors.error_catalog import ErrorCode
         pattern = re.compile(r"^TRANC3-[A-Z]+-\d{3}$")
         bad = [e.value for e in ErrorCode if not pattern.match(e.value)]

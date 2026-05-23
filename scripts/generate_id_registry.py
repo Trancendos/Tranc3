@@ -6,8 +6,8 @@ Applies all naming convention fixes and generates the master ID Registry.
 This is the canonical repair script. Run once to apply all fixes.
 """
 
-import json
 import csv
+import json
 import os
 import sys
 
@@ -294,8 +294,8 @@ GUARDIAN_FULL_TITLES = {
 
 def generate_id_registry():
     """Generate the complete ID Registry for all Tranc3 entities."""
-    from src.entities.platform import PLATFORM_ENTITIES, Pillar
-    
+    from src.entities.platform import PLATFORM_ENTITIES
+
     registry = {
         "version": "2.0.0",
         "generated_by": "Tranc3 Naming Repair & ID Registry Generator",
@@ -316,7 +316,7 @@ def generate_id_registry():
         "primes": [],
         "locations": [],
     }
-    
+
     # --- Tier 2: Primes ---
     prime_data = [
         {"name": "Cornelius MacIntyre", "aid": "AID-COR-01", "tier": 2,
@@ -340,18 +340,18 @@ def generate_id_registry():
          "governs": ["The Dutchy", "Turing's Hub", "ChronosSphere / ArcStream", "DevOcity"]},
     ]
     registry["primes"] = prime_data
-    
+
     # --- Tier 3-5: Per-location entities ---
     for loc_name, entity in PLATFORM_ENTITIES.items():
         abbrev = LOCATION_ABBREVS.get(loc_name, "???")
         pillar_name = entity.pillar.value
         pillar_abbrev = PILLAR_ABBREVS.get(pillar_name, "???")
-        
+
         # Lead AI name (with repairs applied)
         lead_ai_name = entity.lead_ai
         if loc_name in LEAD_AI_REPAIRS:
             lead_ai_name = LEAD_AI_REPAIRS[loc_name]
-        
+
         # Primes (with Guardian harmonization — preserve full canonical titles)
         primes_repaired = []
         for p in entity.primes:
@@ -359,7 +359,7 @@ def generate_id_registry():
                 primes_repaired.append("The Guardian (Marcus Magnolia)")
             else:
                 primes_repaired.append(p)
-        
+
         loc_entry = {
             "location": loc_name,
             "pid": f"PID-{abbrev}",
@@ -378,7 +378,7 @@ def generate_id_registry():
             "agents": [],
             "bots": [],
         }
-        
+
         # Agents (Tier 4)
         for idx, (field, agent) in enumerate([
             ("agent_alpha", entity.agent_alpha),
@@ -388,7 +388,7 @@ def generate_id_registry():
             # Apply duplicate resolution
             if (loc_name, field) in DUPLICATE_RENAMES:
                 agent_name = DUPLICATE_RENAMES[(loc_name, field)]
-            
+
             loc_entry["agents"].append({
                 "name": agent_name,
                 "sid": f"SID-{abbrev}-{idx:02d}",
@@ -396,7 +396,7 @@ def generate_id_registry():
                 "role": "Alpha" if idx == 1 else "Beta",
                 "description": agent.description,
             })
-        
+
         # Bots (Tier 5)
         for idx, (field, bot) in enumerate([
             ("bot_01", entity.bot_01),
@@ -405,7 +405,7 @@ def generate_id_registry():
             ("bot_04", entity.bot_04)
         ], start=1):
             bot_name = bot.code_name
-            
+
             # Apply duplicate resolution first (takes priority)
             if (loc_name, field) in DUPLICATE_RENAMES:
                 bot_name = DUPLICATE_RENAMES[(loc_name, field)]
@@ -414,7 +414,7 @@ def generate_id_registry():
                 bot_name = BOT_SUFFIX_REPAIRS[bot_name]
             # Also check if the name already ends with -Bot (from duplicate rename)
             # If the name was renamed by DUPLICATE_RENAMES, it might already have -Bot
-            
+
             loc_entry["bots"].append({
                 "name": bot_name,
                 "nid": f"NID-{abbrev}-{idx:02d}",
@@ -422,9 +422,9 @@ def generate_id_registry():
                 "slot": f"0{idx}",
                 "description": bot.description,
             })
-        
+
         registry["locations"].append(loc_entry)
-    
+
     return registry
 
 
@@ -440,7 +440,7 @@ def save_registry_csv(registry, filepath):
     """Save the ID registry as CSV (flat format)."""
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     rows = []
-    
+
     # Sovereign
     rows.append({
         "ID": registry["sovereign"]["aid"],
@@ -451,7 +451,7 @@ def save_registry_csv(registry, filepath):
         "Pillar": "",
         "Description": registry["sovereign"]["description"],
     })
-    
+
     # Primes
     for prime in registry["primes"]:
         rows.append({
@@ -463,7 +463,7 @@ def save_registry_csv(registry, filepath):
             "Pillar": "",
             "Description": f"Governs: {', '.join(prime['governs'])}",
         })
-    
+
     # Per-location entities
     for loc in registry["locations"]:
         # Lead AI
@@ -498,7 +498,7 @@ def save_registry_csv(registry, filepath):
                 "Pillar": loc["pillar"],
                 "Description": bot["description"],
             })
-    
+
     fieldnames = ["ID", "Tier", "Type", "Name", "Location", "Pillar", "Description"]
     with open(filepath, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -510,16 +510,16 @@ def save_registry_csv(registry, filepath):
 if __name__ == "__main__":
     print("🔧 Generating Tranc3 ID Registry with naming repairs applied...")
     registry = generate_id_registry()
-    
+
     base_dir = os.path.join(os.path.dirname(__file__), '..')
     save_registry_json(registry, os.path.join(base_dir, 'src', 'config', 'id_registry.json'))
     save_registry_csv(registry, os.path.join(base_dir, 'src', 'config', 'id_registry.csv'))
-    
+
     # Print summary
     total_entities = 1 + len(registry["primes"])  # sovereign + primes
     for loc in registry["locations"]:
         total_entities += 1 + len(loc["agents"]) + len(loc["bots"])  # lead_ai + agents + bots
-    
+
     print("\n📊 Registry Summary:")
     print(f"   Locations: {len(registry['locations'])}")
     print(f"   Primes: {len(registry['primes'])}")

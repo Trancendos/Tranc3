@@ -207,7 +207,7 @@ class Basement:
                 vec.astype("float32"), min(top_k, len(self._faiss_ids))
             )
             results = []
-            for score, idx in zip(scores[0], indices[0]):
+            for score, idx in zip(scores[0], indices[0], strict=False):
                 if idx < 0 or idx >= len(self._faiss_ids):
                     continue
                 rid = self._faiss_ids[idx]

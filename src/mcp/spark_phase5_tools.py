@@ -389,7 +389,7 @@ async def _handle_agent_list_all(params: Dict[str, Any]) -> Dict[str, Any]:
     Params: none required.
     """
     agents_info = []
-    for agent_id, runtime in _agents.items():
+    for _agent_id, runtime in _agents.items():
         agents_info.append({
             "agent_id": runtime.agent_id,
             "name": runtime.name,

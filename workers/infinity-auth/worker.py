@@ -23,8 +23,6 @@ import hashlib
 import hmac
 import json
 import logging
-
-from shared_core.sanitize import sanitize_for_log
 import os
 import secrets
 import sqlite3
@@ -38,6 +36,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
+
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.workers.infinity-auth")
 

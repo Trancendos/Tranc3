@@ -35,19 +35,19 @@ def fix_b110(filepath: Path, lineno: int) -> bool:
     """Replace `except: pass` → `except Exception: pass` and add logging where possible."""
     content = read_file(filepath)
     lines = content.split("\n")
-    
+
     if lineno > len(lines):
         return False
-    
+
     line = lines[lineno - 1]
-    
+
     # Pattern: except: pass  (with possible whitespace)
     if re.search(r'except\s*:\s*pass\s*$', line):
         # Replace with except Exception: pass
         lines[lineno - 1] = re.sub(r'except\s*:\s*pass', 'except Exception: pass', line)
         write_file(filepath, "\n".join(lines))
         return True
-    
+
     # Pattern: except: on its own line, pass on next line
     if re.search(r'except\s*:\s*$', line):
         # Check if next line is pass
@@ -56,7 +56,7 @@ def fix_b110(filepath: Path, lineno: int) -> bool:
             lines[lineno - 1] = re.sub(r'except\s*:', 'except Exception:', line)
             write_file(filepath, "\n".join(lines))
             return True
-    
+
     # Pattern: except SomeError: pass — this is fine, not B110
     return False
 
@@ -66,10 +66,10 @@ def fix_b104(filepath: Path, lineno: int) -> bool:
     """Replace 0.0.0.0 with 127.0.0.1 for development defaults."""
     content = read_file(filepath)
     lines = content.split("\n")
-    
+
     if lineno > len(lines):
         return False
-    
+
     line = lines[lineno - 1]
     if "0.0.0.0" in line:
         lines[lineno - 1] = line.replace("0.0.0.0", "127.0.0.1")
@@ -83,10 +83,10 @@ def fix_b108(filepath: Path, lineno: int) -> bool:
     """Replace tempfile.mktemp with tempfile.mkstemp or NamedTemporaryFile."""
     content = read_file(filepath)
     lines = content.split("\n")
-    
+
     if lineno > len(lines):
         return False
-    
+
     line = lines[lineno - 1]
     # Replace mktemp with mkstemp
     if "mktemp" in line:
@@ -105,10 +105,10 @@ def fix_b311(filepath: Path, lineno: int) -> bool:
     """Add # nosec B311 where random is used for non-security purposes."""
     content = read_file(filepath)
     lines = content.split("\n")
-    
+
     if lineno > len(lines):
         return False
-    
+
     line = lines[lineno - 1]
     # Check if it's random.choice, random.randint, random.random etc.
     # These are often used for non-crypto purposes (shuffle, sampling, etc.)
@@ -125,10 +125,10 @@ def fix_b614(filepath: Path, lineno: int) -> bool:
     """Add weights_only=True to torch.load calls."""
     content = read_file(filepath)
     lines = content.split("\n")
-    
+
     if lineno > len(lines):
         return False
-    
+
     line = lines[lineno - 1]
     # Add weights_only=True to torch.load
     if "torch.load(" in line:
@@ -155,10 +155,10 @@ def fix_b615(filepath: Path, lineno: int) -> bool:
     """Add revision parameter to from_pretrained calls."""
     content = read_file(filepath)
     lines = content.split("\n")
-    
+
     if lineno > len(lines):
         return False
-    
+
     line = lines[lineno - 1]
     if "from_pretrained(" in line and "revision" not in line:
         # Add revision="main" as default (pins to a branch at minimum)
@@ -178,10 +178,10 @@ def main():
     if not results_file.exists():
         print("Error: bandit_results.json not found. Run bandit first.")
         sys.exit(1)
-    
+
     data = json.loads(results_file.read_text())
     results = data.get("results", [])
-    
+
     # Group fixes by type
     fixers = {
         "B110": fix_b110,
@@ -191,21 +191,21 @@ def main():
         "B614": fix_b614,
         "B615": fix_b615,
     }
-    
+
     stats = {}
-    
+
     for r in results:
         test_id = r["test_id"]
         if test_id not in fixers:
             print(f"  SKIP {test_id} (no auto-fixer) — {r['filename']}:{r['line_number']}")
             stats[test_id] = stats.get(test_id, "skipped")
             continue
-        
+
         filepath = PROJECT_DIR / r["filename"]
         if not filepath.exists():
             print(f"  SKIP {test_id} — file not found: {filepath}")
             continue
-        
+
         try:
             fixed = fixers[test_id](filepath, r["line_number"])
             status = "FIXED" if fixed else "NO-CHANGE"
@@ -215,8 +215,8 @@ def main():
             print(f"  {status} {test_id} — {r['filename']}:{r['line_number']}")
         except Exception as e:
             print(f"  ERROR {test_id} — {r['filename']}:{r['line_number']}: {e}")
-    
-    print(f"\n=== Fix Summary ===")
+
+    print("\n=== Fix Summary ===")
     for k, v in sorted(stats.items()):
         print(f"  {k}: {v} fixes applied")
 

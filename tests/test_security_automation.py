@@ -6,30 +6,25 @@
 # They serve as a permanent regression safety net — if any of these patterns
 # re-enter the codebase, the scanner will flag them and the tests will fail.
 
-import json
 import tempfile
 from pathlib import Path
 from textwrap import dedent
-from typing import List
 
 import pytest
 
+from shared_core.security_automation.remediator import AutoRemediator
 from shared_core.security_automation.scanner import (
     Category,
     SecurityScanner,
     Severity,
     Violation,
 )
-from shared_core.security_automation.remediator import AutoRemediator
 from shared_core.security_automation.telemetry import (
-    GateResult,
     QualityGate,
-    ScanDiff,
     ScanResult,
     SecurityTelemetry,
     TrendPoint,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helper — write sample code to a temp file for scanning

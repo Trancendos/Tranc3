@@ -9,10 +9,9 @@ from __future__ import annotations
 
 import time
 
-
 from src.adaptive.predictive_scaler import (
-    LoadForecaster,
     LoadForecast,
+    LoadForecaster,
     LoadSample,
     PredictiveAutoscaler,
     ScalerConfig,
@@ -20,7 +19,6 @@ from src.adaptive.predictive_scaler import (
     ScalingDirection,
     ScalingReason,
 )
-
 
 # ---------------------------------------------------------------------------
 # Enum tests

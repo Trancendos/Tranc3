@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -191,13 +191,17 @@ async def query_events(
 ):
     clauses, params = [], []
     if event_type:
-        clauses.append("event_type = ?"); params.append(event_type)
+        clauses.append("event_type = ?")
+        params.append(event_type)
     if user_id:
-        clauses.append("user_id = ?"); params.append(user_id)
+        clauses.append("user_id = ?")
+        params.append(user_id)
     if since:
-        clauses.append("timestamp >= ?"); params.append(since)
+        clauses.append("timestamp >= ?")
+        params.append(since)
     if until:
-        clauses.append("timestamp <= ?"); params.append(until)
+        clauses.append("timestamp <= ?")
+        params.append(until)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_conn() as conn:
         total = conn.execute(f"SELECT COUNT(*) FROM events {where}", params).fetchone()[0]
@@ -230,9 +234,11 @@ async def funnel(req: FunnelIn):
             q = "SELECT COUNT(DISTINCT user_id) FROM events WHERE event_type = ? AND user_id IS NOT NULL"
             params: list = [step]
             if req.user_id:
-                q += " AND user_id = ?"; params.append(req.user_id)
+                q += " AND user_id = ?"
+                params.append(req.user_id)
             if req.since:
-                q += " AND timestamp >= ?"; params.append(req.since)
+                q += " AND timestamp >= ?"
+                params.append(req.since)
             c = conn.execute(q, params).fetchone()[0]
             counts.append({"step": step, "users": c})
     return {"funnel": counts}
@@ -261,9 +267,11 @@ async def get_metric(
     clauses = ["name = ?"]
     params: list = [name]
     if since:
-        clauses.append("timestamp >= ?"); params.append(since)
+        clauses.append("timestamp >= ?")
+        params.append(since)
     if until:
-        clauses.append("timestamp <= ?"); params.append(until)
+        clauses.append("timestamp <= ?")
+        params.append(until)
     where = "WHERE " + " AND ".join(clauses)
     agg_fn = {"avg": "AVG", "sum": "SUM", "min": "MIN", "max": "MAX", "count": "COUNT"}[agg]
     with get_conn() as conn:
@@ -285,9 +293,11 @@ async def metric_timeseries(
     clauses = ["name = ?"]
     params: list = [name]
     if since:
-        clauses.append("timestamp >= ?"); params.append(since)
+        clauses.append("timestamp >= ?")
+        params.append(since)
     if until:
-        clauses.append("timestamp <= ?"); params.append(until)
+        clauses.append("timestamp <= ?")
+        params.append(until)
     where = "WHERE " + " AND ".join(clauses)
     with get_conn() as conn:
         rows = conn.execute(

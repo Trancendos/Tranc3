@@ -3,12 +3,13 @@
 # src/core/advanced_model.py
 # TRANC3 Core AI Engine - Full Implementation
 
+import logging
+import math
+from typing import Dict, Optional, Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Dict, Tuple
-import math
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -43,42 +44,42 @@ class AdvancedMultiHeadAttention(nn.Module):
         self.hidden_size = hidden_size
         self.num_heads = num_heads
         self.head_dim = hidden_size // num_heads
-        
+
         self.q_proj = nn.Linear(hidden_size, hidden_size)
         self.k_proj = nn.Linear(hidden_size, hidden_size)
         self.v_proj = nn.Linear(hidden_size, hidden_size)
         self.out_proj = nn.Linear(hidden_size, hidden_size)
-        
+
         self.dropout = nn.Dropout(dropout)
         self.rotary_emb = RotaryEmbedding(self.head_dim)
-        
+
         self.scale = math.sqrt(self.head_dim)
 
     def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None,
                 consciousness_weight: Optional[torch.Tensor] = None) -> torch.Tensor:
         B, T, C = x.shape
-        
+
         q = self.q_proj(x).view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
         k = self.k_proj(x).view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
         v = self.v_proj(x).view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
-        
+
         # Apply rotary embeddings
         cos, sin = self.rotary_emb(T, x.device)
         q, k = apply_rotary_pos_emb(q, k, cos, sin)
-        
+
         # Scaled dot-product attention
         attn = torch.matmul(q, k.transpose(-2, -1)) / self.scale
-        
+
         if mask is not None:
             attn = attn.masked_fill(mask == 0, float('-inf'))
-        
+
         # Apply consciousness weighting if provided
         if consciousness_weight is not None:
             attn = attn * consciousness_weight.unsqueeze(1).unsqueeze(1)
-        
+
         attn = F.softmax(attn, dim=-1)
         attn = self.dropout(attn)
-        
+
         out = torch.matmul(attn, v)
         out = out.transpose(1, 2).contiguous().view(B, T, C)
         return self.out_proj(out)
@@ -120,13 +121,13 @@ class TransformerBlock(nn.Module):
         x = self.norm1(x)
         x = self.attn(x, mask, consciousness_weight)
         x = self.dropout(x) + residual
-        
+
         # Pre-norm FFN
         residual = x
         x = self.norm2(x)
         x = self.ffn(x)
         x = self.dropout(x) + residual
-        
+
         return x
 
 # ============================================================
@@ -145,7 +146,7 @@ class AdvancedTransformerModel(nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        
+
         self.vocab_size = getattr(config, 'vocab_size', 119547)
         self.hidden_size = getattr(config, 'hidden_size', 768)
         self.num_layers = getattr(config, 'num_layers', 12)
@@ -153,11 +154,11 @@ class AdvancedTransformerModel(nn.Module):
         self.intermediate_size = self.hidden_size * 4
         self.max_seq_len = getattr(config, 'max_sequence_length', 512)
         self.dropout_rate = getattr(config, 'dropout', 0.1)
-        
+
         # Embeddings
         self.token_embeddings = nn.Embedding(self.vocab_size, self.hidden_size)
         self.dropout = nn.Dropout(self.dropout_rate)
-        
+
         # Transformer blocks
         self.layers = nn.ModuleList([
             TransformerBlock(
@@ -168,20 +169,20 @@ class AdvancedTransformerModel(nn.Module):
             )
             for _ in range(self.num_layers)
         ])
-        
+
         # Output
         self.norm = nn.LayerNorm(self.hidden_size)
         self.lm_head = nn.Linear(self.hidden_size, self.vocab_size, bias=False)
-        
+
         # Personality injection
         self.personality_proj = nn.Linear(64, self.hidden_size)
-        
+
         # Language embedding
         self.language_embedding = nn.Embedding(50, self.hidden_size)
-        
+
         # Initialize weights
         self.apply(self._init_weights)
-        
+
         logger.info(f"TRANC3 Model initialized: {self._count_parameters():,} parameters")
 
     def _init_weights(self, module):
@@ -205,37 +206,37 @@ class AdvancedTransformerModel(nn.Module):
         consciousness_weight: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
         B, T = input_ids.shape
-        
+
         # Token embeddings
         x = self.token_embeddings(input_ids)
-        
+
         # Add language embedding
         if language_ids is not None:
             lang_emb = self.language_embedding(language_ids)
             x = x + lang_emb.unsqueeze(1)
-        
+
         # Inject personality vector
         if personality_vector is not None:
             pers_emb = self.personality_proj(personality_vector)
             x = x + pers_emb.unsqueeze(1)
-        
+
         x = self.dropout(x)
-        
+
         # Build attention mask
         if attention_mask is not None:
             mask = attention_mask.unsqueeze(1).unsqueeze(2)
         else:
             mask = None
-        
+
         # Forward through transformer layers
         hidden_states = []
         for layer in self.layers:
             x = layer(x, mask, consciousness_weight)
             hidden_states.append(x)
-        
+
         x = self.norm(x)
         logits = self.lm_head(x)
-        
+
         return {
             'logits': logits,
             'last_hidden_state': x,
@@ -254,28 +255,28 @@ class AdvancedTransformerModel(nn.Module):
         **kwargs
     ) -> torch.Tensor:
         """Autoregressive generation with sampling"""
-        
+
         generated = input_ids.clone()
         past_tokens = set()
-        
+
         with torch.no_grad():
             for _ in range(max_new_tokens):
                 # Forward pass
                 outputs = self.forward(generated, **kwargs)
                 logits = outputs['logits'][:, -1, :]
-                
+
                 # Temperature scaling
                 logits = logits / temperature
-                
+
                 # Repetition penalty
                 for token_id in past_tokens:
                     logits[:, token_id] /= repetition_penalty
-                
+
                 # Top-k filtering
                 if top_k > 0:
                     top_k_vals = torch.topk(logits, top_k).values[:, -1, None]
                     logits[logits < top_k_vals] = float('-inf')
-                
+
                 # Top-p (nucleus) filtering
                 if top_p < 1.0:
                     sorted_logits, sorted_idx = torch.sort(logits, descending=True)
@@ -283,16 +284,16 @@ class AdvancedTransformerModel(nn.Module):
                     sorted_idx_to_remove = cumulative_probs - F.softmax(sorted_logits, dim=-1) > top_p
                     sorted_logits[sorted_idx_to_remove] = float('-inf')
                     logits = torch.scatter(logits, 1, sorted_idx, sorted_logits)
-                
+
                 # Sample
                 probs = F.softmax(logits, dim=-1)
                 next_token = torch.multinomial(probs, num_samples=1)
-                
+
                 past_tokens.add(next_token.item())
                 generated = torch.cat([generated, next_token], dim=-1)
-                
+
                 # EOS check
                 if next_token.item() == 102:  # [SEP] token
                     break
-        
+
         return generated

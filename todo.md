@@ -12,35 +12,11 @@
 - [x] Audit security posture — secrets management, input validation, dependency vulnerabilities
 - [x] Audit documentation completeness and accuracy
 
-### Identified Bugs & Issues (from forensic audit)
-- [x] Dead code: `return None` after `raise` in gateway.py (2x), openrouter.py (2x), huggingface.py (2x), ollama.py (2x)
-- [x] OllamaProvider references `done` field not in AIResponse — changed to `finish_reason`
-- [x] `import random` inside method bodies in enhanced_registry.py — moved to module-level
-- [x] `import hashlib` at bottom of sentinel.py — moved to top-level
-- [x] Unused `time.monotonic()` in gateway.py — now captures and reports elapsed ms
-- [x] `StorageFactory._sync_queue` not thread-safe — added threading.Lock()
-- [x] AuditLedger signing key weak — strengthened with PID+timestamp, added warning
-- [x] SentinelCheck.severity is string not enum — added SentinelSeverity enum
-- [x] Test failure test_health.py — converted to @pytest.mark.asyncio
-- [x] CORS `allow_origins=["*"]` — now env var based
-- [x] `import random` inside api_ecosystem.py — moved to module-level
-- [x] HybridStorageProvider.sync_to_cloud() never called automatically — added background asyncio sync
-- [x] Enhanced registry event log asymmetric trim (1000→500) — fixed to 1000→1000
-
 ## Phase 2: GitHub Repository Intelligence (COMPLETE)
-- [x] Survey user's GitHub repos (50 repos listed)
-- [x] Examine key repos for reusable code, configs, patterns
-- [x] Check for existing CI/CD pipelines, Forgejo configs
-- [x] Check for existing infrastructure-as-code, Dockerfiles
+- [x] All Phase 2 items completed
 
 ## Phase 3: Research & Discovery (COMPLETE)
-- [x] Research zero-cost cloud tiers
-- [x] Research frontier AI orchestration
-- [x] Research CI/CD zero-cost solutions
-- [x] Research latest open-source observability, monitoring, and security tools
-- [x] Research AI agent frameworks and multi-agent orchestration patterns
-- [x] Research edge computing and CDN solutions
-- [x] Compile research findings into RESEARCH_FINDINGS.md
+- [x] All Phase 3 items completed
 
 ## Phase 4: Remediation & Implementation (COMPLETE)
 - [x] All Phase 4 items completed
@@ -54,41 +30,45 @@
 ## Phase 10: Intelligent Adaptive Proactive Systems (COMPLETE)
 - [x] All Phase 10 items completed (10.1–10.8)
 
-## Phase 11: Codebase Quality & CI/CD Hardening
+## Phase 11: Codebase Quality & CI/CD Hardening (COMPLETE)
+- [x] All Phase 11 items completed (11.1–11.5)
 
-### 11.1 Lint Error Remediation (282 non-E501 errors)
-- [x] Auto-fix with ruff --fix (F401 unused imports, E401, W291)
-- [x] Fix remaining F401 unused imports manually
-- [x] Fix F821 undefined names (pkcs11, B, validate_path/filepath, output_dir)
-- [x] Fix F841 unused variables
-- [x] Fix B007 unused loop variables
-- [x] Fix B006 mutable default arguments
-- [x] Fix B905 zip() without strict=
-- [x] Fix E741 ambiguous variable name `l`
-- [x] Fix E702 multiple statements on one line
-- [x] Fix E402 module level import not at top of file
-- [x] Fix invalid-syntax errors (train.py, tranc3-bots)
+## Phase 12: Test Suite Stabilization (COMPLETE)
 
-### 11.2 GitHub Actions CI Pipeline
-- [x] Create .github/workflows/ci.yml — ruff lint + pytest on PR
-- [x] Create .github/workflows/test.yml — full test suite on main push
-- [x] Verify workflows trigger correctly
+### 12.1 Diagnose & Catalog All Test Failures
+- [x] Run full test suite and categorize all 166 failures
+- [x] Identify root causes: missing modules, import path mismatches, shared mutable state, missing DB tables
 
-### 11.3 Phase 10 Test Coverage
-- [x] Create tests/test_proactive_orchestrator.py
-- [x] Create tests/test_adaptive_pulse.py
-- [x] Create tests/test_auto_config.py
-- [x] Create tests/test_predictive_scaler.py
-- [x] Create tests/test_proactive_metrics.py
-- [x] Create tests/test_proactive_wiring.py
+### 12.2 Fix test_adaptive_automation.py (52 failures) ✅
+- [x] Analyze actual API signatures for existing modules (scanner, remediator, vault_security, sentinel, audit_ledger, storage_factory, enhanced_registry)
+- [x] Fix import paths: created adaptive_scanner, remediator_v2, vault modules with proper APIs
+- [x] Create missing modules: predictor, health_monitor, config_drift, dependency_graph
+- [x] Add property delegation on AdaptiveViolation for rule_id/file/etc
+- [x] Verify all 63 tests pass in isolation
 
-### 11.4 Architecture Documentation Update
-- [x] Update docs/DOC-02-System-Architecture.md with Phase 9+10 architecture
-- [x] Create docs/architecture/PROACTIVE_SYSTEMS.md
-- [x] Update docs/matrix.md with Phase 11 entries
+### 12.3 Fix test_phase5_agent_orchestration.py (81 failures in full suite, 1 in isolation) ✅
+- [x] Fix the _PHASE4_NODE_REGISTRY test (call _ensure_phase4_nodes_loaded())
+- [x] Fix event loop pollution from test_adaptive_automation.py asyncio.run() calls
+- [x] Verify all tests pass in full suite context
 
-### 11.5 Verification & Commit
-- [x] Run ruff check — zero errors on all source files (excluding E501, B008, B904)
-- [x] Run pytest — all Phase 10 tests pass (173/173)
-- [x] Commit and push Phase 11
-- [x] Create PR for Phase 11 (#48)
+### 12.4 Fix test_phase4_ml_mcp_workflow.py (21 failures) ✅
+- [x] Fix _PHASE4_NODE_REGISTRY lazy-loading test (call _ensure_phase4_nodes_loaded())
+- [x] Fix event loop pollution — update run() helper to handle closed/missing loops
+- [x] Fix direct asyncio.get_event_loop() call in test_pipeline_stats to use run() helper
+- [x] Verify all tests pass in full suite context
+
+### 12.5 Fix test_all_workers_health.py (11 failures) ✅
+- [x] Add LIFESPAN_DB_WORKERS category for workers using DB_PATH + init_db() + lifespan pattern
+- [x] Patch DB_PATH to temp dir and call init_db() before TestClient for these workers
+- [x] Fix missing SQL semicolons in analytics-service and email-service init_db()
+- [x] Verify all 34 worker health tests pass
+
+### 12.6 Fix test_smoke.py (1 failure) ✅
+- [x] EventBus shared state issue resolved by other fixes (no separate fix needed)
+- [x] Verified all smoke tests pass in full suite
+
+### 12.7 Full Suite Verification & Commit ✅
+- [x] Run full pytest suite — 1231 passed, 0 failed, 12 skipped
+- [x] Run ruff lint check — all new/modified files clean (1 B007 fix applied)
+- [x] Commit, push, update PR #48
+- [x] Update docs/matrix.md with Phase 12 status
