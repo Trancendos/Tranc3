@@ -208,3 +208,149 @@ groups:
         annotations:
           summary: "AWS DynamoDB CRITICAL — approaching 25GB hard limit"
           description: "AWS DynamoDB storage usage is {{ $value | humanize }}B. Immediate migration required to avoid charges."
+
+  # ══════════════════════════════════════════════════════════════════════
+  # PROACTIVE SYSTEM ALERTS — Intelligent Adaptive Proactive Systems (Phase 10)
+  # ProactiveOrchestrator + AdaptivePulseController + PredictiveAutoscaler
+  # ══════════════════════════════════════════════════════════════════════
+
+  - name: tranc3_proactive_alerts
+    rules:
+      # ── Composite Health Alerts ─────────────────────────────────────────
+      - alert: ProactiveSystemHealthDegraded
+        expr: tranc3_proactive_composite_health < 0.6
+        for: 3m
+        labels:
+          severity: warning
+          component: proactive_orchestrator
+        annotations:
+          summary: "Proactive system composite health degraded"
+          description: "Composite health score is {{ $value | printf \"%.2f\" }}. Auto-healing should be active. Check subsystem breakdown."
+
+      - alert: ProactiveSystemHealthCritical
+        expr: tranc3_proactive_composite_health < 0.3
+        for: 1m
+        labels:
+          severity: critical
+          component: proactive_orchestrator
+        annotations:
+          summary: "Proactive system composite health CRITICAL"
+          description: "Composite health score is {{ $value | printf \"%.2f\" }}. Emergency mode should be active. Immediate investigation required."
+
+      # ── Subsystem Health Alerts ─────────────────────────────────────────
+      - alert: SubsystemHealthDegraded
+        expr: tranc3_proactive_subsystem_health < 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: proactive_orchestrator
+        annotations:
+          summary: "Subsystem {{ $labels.subsystem }} health degraded"
+          description: "Subsystem health score is {{ $value | printf \"%.2f\" }}. Auto-healing may be in progress."
+
+      - alert: SubsystemHealthCritical
+        expr: tranc3_proactive_subsystem_health < 0.2
+        for: 2m
+        labels:
+          severity: critical
+          component: proactive_orchestrator
+        annotations:
+          summary: "Subsystem {{ $labels.subsystem }} health CRITICAL"
+          description: "Subsystem health score is {{ $value | printf \"%.2f\" }}. Manual intervention may be required."
+
+      # ── Zero-Cost Compliance Alerts ─────────────────────────────────────
+      - alert: ZeroCostViolation
+        expr: tranc3_proactive_zero_cost_compliant == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: proactive_orchestrator
+        annotations:
+          summary: "Zero-cost compliance VIOLATION"
+          description: "A storage tier has exceeded its free-tier limit. Immediate migration required to avoid charges."
+
+      - alert: ZeroCostApproachingLimit
+        expr: tranc3_proactive_zero_cost_approaching_limit > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: proactive_orchestrator
+        annotations:
+          summary: "Zero-cost approaching limit on {{ $value }} tier(s)"
+          description: "One or more storage tiers are approaching their free-tier limits. Proactive migration should be in progress."
+
+      # ── Orchestrator Mode Alerts ────────────────────────────────────────
+      - alert: ProactiveSystemInEmergencyMode
+        expr: tranc3_proactive_orchestrator_mode{mode="emergency"} > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: proactive_orchestrator
+        annotations:
+          summary: "Proactive orchestrator in EMERGENCY mode"
+          description: "The orchestrator has entered emergency mode. All subsystems are under maximum monitoring and healing is accelerated."
+
+      # ── Pulse Mode Alerts ──────────────────────────────────────────────
+      - alert: PulseInEmergencyMode
+        expr: tranc3_proactive_pulse_mode{mode="emergency"} > 0
+        for: 2m
+        labels:
+          severity: warning
+          component: adaptive_pulse
+        annotations:
+          summary: "Adaptive pulse in EMERGENCY mode"
+          description: "Daemon intervals are compressed to emergency levels. System health is critically degraded."
+
+      # ── Healing Alerts ─────────────────────────────────────────────────
+      - alert: HighHealingActivity
+        expr: tranc3_proactive_healing_active > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: proactive_orchestrator
+        annotations:
+          summary: "High healing activity detected"
+          description: "{{ $value }} concurrent healing actions are active. System may be experiencing persistent issues."
+
+      - alert: StalePendingActions
+        expr: tranc3_proactive_pending_actions > 10
+        for: 10m
+        labels:
+          severity: warning
+          component: proactive_orchestrator
+        annotations:
+          summary: "Stale pending actions accumulating"
+          description: "{{ $value }} actions are pending dispatch. The action dispatcher may be backlogged."
+
+      # ── Predictive Alerts ──────────────────────────────────────────────
+      - alert: PredictedDegradation
+        expr: tranc3_proactive_predictions_degrading > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: proactive_orchestrator
+        annotations:
+          summary: "Predicted degradation in {{ $value }} subsystem(s)"
+          description: "The predictive health analyzer forecasts degradation. Proactive actions should be generated."
+
+      # ── Scaling Alerts ─────────────────────────────────────────────────
+      - alert: ScalingUp
+        expr: tranc3_proactive_scaling_direction{direction="up"} > 0
+        for: 2m
+        labels:
+          severity: informational
+          component: predictive_scaler
+        annotations:
+          summary: "System is scaling up"
+          description: "The predictive autoscaler is scaling resources up based on predicted demand."
+
+      # ── Circuit Breaker Alerts ─────────────────────────────────────────
+      - alert: CircuitBreakersOpen
+        expr: tranc3_proactive_circuits_open > 0
+        for: 3m
+        labels:
+          severity: warning
+          component: resilience
+        annotations:
+          summary: "{{ $value }} circuit breaker(s) are OPEN"
+          description: "Circuit breakers are open, indicating service failures. Auto-healing should be attempting recovery."

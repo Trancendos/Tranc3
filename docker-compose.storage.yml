@@ -273,6 +273,91 @@ services:
     networks:
       - tranc3-storage
 
+  # ── Proactive Orchestrator ──────────────────────────────────────────
+  # Intelligent adaptive proactive system that unifies all subsystems
+  # into a self-healing, zero-cost, predictive platform.
+  #
+  # Phase 10: ProactiveOrchestrator + AdaptivePulseController +
+  #   AutoConfigManager + PredictiveAutoscaler + ProactiveMetricsCollector
+  #
+  # Features:
+  #   - Predictive health analysis (EMA + linear regression)
+  #   - Auto-healing with safety constraints (max concurrent, cooldown, rollback)
+  #   - Zero-cost modulation (proactive tier migration)
+  #   - Adaptive pulse control (dynamic daemon intervals)
+  #   - Predictive autoscaling (Holt's double exponential smoothing)
+  #   - Auto-configuration (environment detection + hot-reload)
+  #   - Prometheus metrics export at /metrics
+  proactive-orchestrator:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: tranc3-proactive-orchestrator
+    env_file: .env
+    environment:
+      # Core orchestration
+      SYSTEM_MODE: ${SYSTEM_MODE:-HYBRID}
+      TRANC3_PROACTIVE_MODE: ${TRANC3_PROACTIVE_MODE:-autonomous}
+      TRANC3_ORCHESTRATION_INTERVAL: ${TRANC3_ORCHESTRATION_INTERVAL:-15}
+      TRANC3_HEALING_ENABLED: ${TRANC3_HEALING_ENABLED:-true}
+      TRANC3_MAX_CONCURRENT_HEALS: ${TRANC3_MAX_CONCURRENT_HEALS:-3}
+      # Adaptive pulse
+      TRANC3_PULSE_ACCELERATION_FACTOR: ${TRANC3_PULSE_ACCELERATION_FACTOR:-3.0}
+      TRANC3_PULSE_EMERGENCY_FACTOR: ${TRANC3_PULSE_EMERGENCY_FACTOR:-10.0}
+      TRANC3_PULSE_RECOVERY_RATE: ${TRANC3_PULSE_RECOVERY_RATE:-0.1}
+      # Predictive scaler
+      TRANC3_SCALER_UP_THRESHOLD: ${TRANC3_SCALER_UP_THRESHOLD:-0.75}
+      TRANC3_SCALER_DOWN_THRESHOLD: ${TRANC3_SCALER_DOWN_THRESHOLD:-0.25}
+      TRANC3_SCALER_COOLDOWN: ${TRANC3_SCALER_COOLDOWN:-120}
+      # Storage (reuses storage-orchestrator config)
+      ZFS_POOL: ${ZFS_POOL:-tank}
+      ZFS_DATASET: ${ZFS_DATASET:-tranc3}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set in .env}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set in .env}
+      MINIO_BUCKET: tranc3
+      # Zero-cost cloud providers
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
+      R2_ACCESS_KEY: ${R2_ACCESS_KEY:-}
+      R2_SECRET_KEY: ${R2_SECRET_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-tranc3}
+      OCI_ENDPOINT: ${OCI_ENDPOINT:-}
+      OCI_ACCESS_KEY: ${OCI_ACCESS_KEY:-}
+      OCI_SECRET_KEY: ${OCI_SECRET_KEY:-}
+      OCI_BUCKET: ${OCI_BUCKET:-tranc3}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
+      GCP_BUCKET_NAME: ${GCP_BUCKET_NAME:-tranc3}
+      GCP_CREDENTIALS_PATH: ${GCP_CREDENTIALS_PATH:-}
+      AZURE_COSMOS_ENDPOINT: ${AZURE_COSMOS_ENDPOINT:-}
+      AZURE_COSMOS_KEY: ${AZURE_COSMOS_KEY:-}
+      AZURE_COSMOS_DATABASE: ${AZURE_COSMOS_DATABASE:-tranc3}
+      AZURE_COSMOS_CONTAINER: ${AZURE_COSMOS_CONTAINER:-storage}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_DYNAMO_TABLE: ${AWS_DYNAMO_TABLE:-tranc3-storage}
+      # Observability
+      PORT: "8001"
+      REDIS_URL: redis://redis:6379/0
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "8001:8001"
+    depends_on:
+      minio:
+        condition: service_healthy
+      storage-orchestrator:
+        condition: service_healthy
+    volumes:
+      - ${ZFS_MOUNT_ROOT:-/mnt/tank/tranc3}:/zfs-data:rw
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8001/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tranc3-storage
+
 # ═════════════════════════════════════════════════════════════════════════════
 # VOLUMES
 # ═════════════════════════════════════════════════════════════════════════════
