@@ -1036,3 +1036,100 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | 15.4 | Deployment Guide | ✅ Complete | Created docs/DEPLOYMENT_GUIDE.md covering local dev, Docker Compose, OCI, Cloudflare Workers, CI/CD, monitoring, security, scaling |
 | 15.5 | Security Audit | ✅ Complete | No real secrets in source code; vault_security.py demo default marked with noqa:S105 comment; GitGuardian config active on main |
 | 15.6 | Release Tag v0.1.0 | ✅ Complete | Created annotated tag v0.1.0 on main (commit 37ef60f); GitHub Release published at https://github.com/Trancendos/Tranc3/releases/tag/v0.1.0 |
+
+## Phase 16 — Infrastructure Layer: Oracle Cloud, MicroCeph, Rust Nanoservices, K3s Operator
+
+### Phase 16 Summary
+
+| Phase | Component | Status | Description |
+|-------|-----------|--------|-------------|
+| 16.1 | Oracle Cloud Always Free | ✅ Complete | Verified 2025 free-tier limits; designed quota enforcement and keepalive anti-reclamation |
+| 16.2 | Terraform OCI IaC | ✅ Complete | `main.tf`, `variables.tf`, `outputs.tf`, `oci-network.tf`, `oci-storage.tf`, `oci-free-tier.tf` with precondition guards |
+| 16.3 | Cloud-Init Templates | ✅ Complete | `nanoservice.yaml.tpl`, `ceph-node.yaml.tpl`, `k3s-edge.yaml.tpl` for instance bootstrapping |
+| 16.4 | MicroCeph Provider | ✅ Complete | 1,586-line single-node Ceph provider with CRUSH map, OSD lifecycle, RGW S3 gateway, pool manager |
+| 16.5 | OCI Adaptive Provider | ✅ Complete | 1,173-line Oracle Cloud adaptive storage with circuit-breakers, quota tracking, keepalive worker |
+| 16.6 | Rust Nanoservice | ✅ Complete | `main.rs`, `hsm.rs`, `storage.rs`, `adaptive.rs`, `crush.rs` — 0 compile errors, 45 dead_code warnings |
+| 16.7 | K3s Operator Helm Chart | ✅ Complete | `Chart.yaml`, `crd.yaml` (4 CRDs), `deployment.yaml`, `rbac.yaml`, `storage.yaml`, `_helpers.tpl` |
+| 16.8 | CRUSH Map Design | ✅ Complete | rjenkins1 hash + straw2 selection implemented in both Python and Rust |
+| 16.9 | Phase 16 Documentation | ✅ Complete | matrix.md updated; id_registry.json updated with infrastructure entity types |
+
+---
+
+### Phase 16 — Infrastructure Entity Taxonomy (PID/AID/SID/NID)
+
+In Phase 16 the PID/AID/SID/NID taxonomy is extended to cover infrastructure entities
+alongside the existing AI entity taxonomy established in Phase 1.
+
+| Prefix | Infrastructure Meaning | Example |
+|--------|----------------------|---------|
+| `PID`  | Persistent Infrastructure Datum — immutable once written (config files, audit records) | `PID/config/oci-region-v1.json` |
+| `AID`  | Adaptive Instance Datum — mutable, version-tracked (health state, adaptive thresholds) | `AID/thresholds/cpu-v1717000000` |
+| `SID`  | Storage Identity — names a bucket, pool, or endpoint | `SID-OCI-01` (OCI primary bucket) |
+| `NID`  | Network Identity — names an endpoint, port, or region descriptor | `NID-RGW-01` (RGW S3 gateway) |
+
+#### Infrastructure SID Registry (Phase 16)
+
+| SID | Name | Tier | Backend | Description |
+|-----|------|------|---------|-------------|
+| `SID-OCI-01` | OCI Primary Bucket | Infra | Oracle Cloud Object Storage | 20 GB free-tier primary object store |
+| `SID-R2-01`  | CF R2 Fallback     | Infra | Cloudflare R2 | 10 GB free-tier fallback |
+| `SID-MIO-01` | MinIO Local        | Infra | MinIO (self-hosted) | Local block volume object store |
+| `SID-CPH-01` | MicroCeph Meta     | Infra | MicroCeph / RGW | `tranc3-meta` pool — PID/AID metadata |
+| `SID-CPH-02` | MicroCeph Data     | Infra | MicroCeph / RGW | `tranc3-data` pool — bulk object data |
+| `SID-CPH-03` | MicroCeph Archive  | Infra | MicroCeph / RGW | `tranc3-archive` pool — cold/audit storage |
+
+#### Infrastructure NID Registry (Phase 16)
+
+| NID | Name | Port | Description |
+|-----|------|------|-------------|
+| `NID-RGW-01` | RGW S3 Gateway   | 7480 | RADOS Gateway S3-compatible endpoint (local) |
+| `NID-NSV-01` | Rust Nanoservice | 3000 | Tokio/hyper HTTP server (OCI compute instance) |
+| `NID-K3S-01` | K3s API Server   | 6443 | Lightweight Kubernetes API (edge node) |
+| `NID-OCI-01` | OCI Object Store | 443  | `{namespace}.compat.objectstorage.{region}.oraclecloud.com` |
+| `NID-HSM-01` | HSM PKCS#11      | —    | SoftHSM2 (dev) / YubiHSM2 (prod) slot 0 |
+
+---
+
+### Phase 16 — Rust Nanoservice Modules
+
+| Module | Lines | Purpose |
+|--------|-------|---------|
+| `main.rs`     | ~220 | Tokio entry-point, hyper 1.x HTTP server, health/metrics/storage routes |
+| `hsm.rs`      | ~850 | PKCS#11 HSM integration (cryptoki 0.7), AES-256-CBC, RSA-PSS signing |
+| `storage.rs`  | ~670 | Adaptive storage router, CRUSH placement, AWS Sig4, multi-tier fallback |
+| `adaptive.rs` | ~300 | System mode detection, free-tier quota monitoring, circuit-breaker logic |
+| `crush.rs`    | ~200 | rjenkins1 hash, straw2 bucket selection, PG placement simulation |
+
+### Phase 16 — MicroCeph CRUSH Map Architecture
+
+```
+root "default"
+  └── host "tranc3-node-0"   (straw2, tunables=optimal)
+        ├── osd.0  class=nvme  weight=1.000  (primary NVMe)
+        ├── osd.1  class=ssd   weight=0.800  (SSD cache)
+        └── osd.2  class=hdd   weight=0.500  (HDD bulk — loop-file on OCI block vol)
+
+CRUSH Rules:
+  Rule 0: replicated_rule — chooseleaf host, min_size=1, max_size=10
+  Rule 1: tranc3_replicated — chooseleaf host (custom, application-tagged)
+
+Pools:
+  .mgr            pg=8   size=1  app=mgr      (internal)
+  tranc3-meta     pg=8   size=1  app=tranc3   (PID/AID metadata)
+  tranc3-data     pg=32  size=1  app=tranc3   (bulk objects)
+  tranc3-archive  pg=8   size=1  app=tranc3   (cold/audit)
+```
+
+### Phase 16 — OCI Always Free Quota Limits (2025 Verified)
+
+| Resource | Free Limit | Enforced By |
+|----------|-----------|-------------|
+| Object Storage | 20 GB | `OciQuotaTracker` hard-stop |
+| API Requests | 50,000 / month | `OciQuotaTracker` |
+| Egress | 10 TB / month | `OciQuotaTracker` (monitored) |
+| Vault Secrets | 150 | Documented (not auto-tracked) |
+| HSM Key Versions | 20 | Documented |
+| ARM Compute | 4 OCPU / 24 GB RAM (up to 4 instances) | Terraform precondition |
+| AMD Micro | 2 × VM.Standard.E2.1.Micro | Terraform precondition |
+| Block Volume | 200 GB total | Terraform precondition |
+
