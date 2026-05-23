@@ -976,7 +976,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "tAimra": LocationEntity(
         location="tAimra",
         pillar=Pillar.WELLBEING,
-        lead_ai="tAimra",
+        lead_ai="tAImra",
         abilities=[
             "Biometric Sync: Ingests health data securely (HIPAA compliant).",
             "Proactive Life Assistance: Adjusts schedules to reduce friction.",

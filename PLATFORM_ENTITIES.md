@@ -134,7 +134,7 @@ Canonical reference for all 43 platform locations and their entity hierarchies.
 | **AID-COR-01** | **Cornelius MacIntyre** | The Nexus, The HIVE, Luminous, The Town Hall, The Studio, The Lab, Royal Bank of Arcadia, The Observatory, Infinity, The Citadel, Think Tank, Tranquility |
 | **AID-DOR-01** | **Dorris Fontaine** | Arcadia, The Artifactory, API Marketplace, Arcadian Exchange, Warp Radio |
 | **AID-VOX-01** | **Voxx** | Sashas Photo Studio, TranceFlow, TateKing, Fabulousa, Imaginarium |
-| **AID-DOC-01** | **The Doctor (Nikolai O'denhim)** | The Digital Grid, The Workshop, The Chaos Party |
+| **AID-DRN-01** | **The Doctor (Nikolai O'denhim)** | The Digital Grid, The Workshop, The Chaos Party |
 | **AID-NOR-01** | **Norman Hawkins** | The Library, The Academy, DocUtari, The Basement, The Spark |
 | **AID-GRD-01** | **The Guardian** | The Void, The Lighthouse, The Warp Tunnel, Cryptex, The Ice Box |
 | **AID-TRN-01** | **Trancendos** | The Dutchy, Turing's Hub, ChronosSphere / ArcStream, DevOcity |

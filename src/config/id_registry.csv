@@ -3,7 +3,7 @@ AID-SOV-01,1,Sovereign,The Sovereign,,,Prime AI — ultimate orchestrator of the
 AID-COR-01,2,Prime,Cornelius MacIntyre,,,"Governs: The Nexus, The HIVE, Luminous, The Town Hall, The Studio, The Digital Grid (indirect), The Lab, Royal Bank of Arcadia, The Observatory, Infinity, The Citadel, Think Tank, Tranquility"
 AID-DOR-01,2,Prime,Dorris Fontaine,,,"Governs: Arcadia, The Artifactory, API Marketplace, Arcadian Exchange, Warp Radio"
 AID-GRD-01,2,Prime,The Guardian,,,"Governs: The Void, The Lighthouse, The Warp Tunnel, Cryptex, The Ice Box"
-AID-DOC-01,2,Prime,The Doctor (Nikolai O'denhim),,,"Governs: The Digital Grid, The Workshop, The Chaos Party"
+AID-DRN-01,2,Prime,The Doctor (Nikolai O'denhim),,,"Governs: The Digital Grid, The Workshop, The Chaos Party"
 AID-VOX-01,2,Prime,Voxx,,,"Governs: Sashas Photo Studio, TranceFlow, TateKing, Fabulousa, Imaginarium"
 AID-NOR-01,2,Prime,Norman Hawkins,,,"Governs: The Library, The Academy, DocUtari, The Basement, The Spark"
 AID-SAV-01,2,Prime,Savania,,,"Governs: I-Mind, tAimra, VRAR3D, Resonate"
@@ -288,7 +288,7 @@ NID-IMD-01,5,Bot 01,Journal-Bot,I-Mind,Wellbeing,"Encrypts, parses, and securely
 NID-IMD-02,5,Bot 02,Mood-Bot,I-Mind,Wellbeing,Translates sentiment patterns into precise emotional sensitivity metrics on the UI.
 NID-IMD-03,5,Bot 03,Reflect-Bot,I-Mind,Wellbeing,Retrieves past successful milestones to encourage the user during high-strain events.
 NID-IMD-04,5,Bot 04,Soothe-Bot,I-Mind,Wellbeing,"Triggers local cognitive decompression, offering prompts when distress peaks."
-AID-TMR-01,3,Lead AI,tAimra,tAimra,Wellbeing,Opt-in Digital Twin System & Life Assistant
+AID-TMR-01,3,Lead AI,tAImra,tAimra,Wellbeing,Opt-in Digital Twin System & Life Assistant
 SID-TMR-01,4,Agent Alpha,The Shadow,tAimra,Wellbeing,Mirrors daily habits to anticipate system and scheduling preferences.
 SID-TMR-02,4,Agent Beta,The Scheduler,tAimra,Wellbeing,Adjusts calendar priorities proactively to carve out required rest breaks.
 NID-TMR-01,5,Bot 01,Sync-Bot,tAimra,Wellbeing,"Pulls data securely from health platforms, applying strict HIPAA encryption."

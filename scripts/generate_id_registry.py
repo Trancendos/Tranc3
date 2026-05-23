@@ -328,7 +328,7 @@ def generate_id_registry():
         {"name": "The Guardian", "aid": "AID-GRD-01", "tier": 2,
          "full_title": "The Guardian (Anchor: Orb of Orisis / Marcus Magnolia)",
          "governs": ["The Void", "The Lighthouse", "The Warp Tunnel", "Cryptex", "The Ice Box"]},
-        {"name": "The Doctor (Nikolai O'denhim)", "aid": "AID-DOC-01", "tier": 2,
+        {"name": "The Doctor (Nikolai O'denhim)", "aid": "AID-DRN-01", "tier": 2,
          "governs": ["The Digital Grid", "The Workshop", "The Chaos Party"]},
         {"name": "Voxx", "aid": "AID-VOX-01", "tier": 2,
          "governs": ["Sashas Photo Studio", "TranceFlow", "TateKing", "Fabulousa", "Imaginarium"]},

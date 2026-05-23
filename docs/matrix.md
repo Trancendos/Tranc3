@@ -671,7 +671,7 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | AID-COR-01 | 2 | Cornelius MacIntyre | — |
 | AID-DOR-01 | 2 | Dorris Fontaine | — |
 | AID-GRD-01 | 2 | The Guardian | — |
-| AID-DOC-01 | 2 | The Doctor (Nikolai O'denhim) | — |
+| AID-DRN-01 | 2 | The Doctor (Nikolai O'denhim) | — |
 | AID-VOX-01 | 2 | Voxx | — |
 | AID-NOR-01 | 2 | Norman Hawkins | — |
 | AID-SAV-01 | 2 | Savania | — |

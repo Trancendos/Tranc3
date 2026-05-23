@@ -42,8 +42,10 @@ services:
     container_name: tranc3-minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # SECURITY: MINIO_ROOT_USER and MINIO_ROOT_PASSWORD must be set in .env
+      # Do NOT use the default 'minioadmin' credentials in production.
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set in .env}
       MINIO_BROWSER: "on"
       MINIO_BROWSER_REDIRECT_URL: ${MINIO_CONSOLE_URL:-http://localhost:9001}
       # Zero-cost: prometheus metrics endpoint
@@ -78,7 +80,7 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
+      mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set} ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set};
       
       echo 'Creating buckets...';
       mc mb myminio/tranc3 --ignore-existing;
@@ -98,10 +100,19 @@ services:
       echo 'Enabling versioning...';
       mc version enable myminio/tranc3;
       
-      echo 'Applying lifecycle policies...';
+      echo 'Enabling versioning on all buckets...';
       for bucket in tranc3-hot tranc3-warm tranc3-cold tranc3-archive tranc3-temp tranc3-work tranc3-backup tranc3-repl tranc3-models tranc3-logs tranc3-config tranc3-data; do
         mc version enable myminio/$$bucket 2>/dev/null || true;
       done;
+      
+      echo 'Applying lifecycle policies...';
+      if [ -f /etc/minio/lifecycle.json ]; then
+        for bucket in tranc3-hot tranc3-warm tranc3-cold tranc3-archive tranc3-temp; do
+          mc ilm import myminio/$$bucket < /etc/minio/lifecycle.json 2>/dev/null || echo "  (lifecycle for $$bucket skipped — may already exist)";
+        done;
+      else
+        echo '  (No lifecycle.json found at /etc/minio/lifecycle.json — skipping)';
+      fi;
       
       echo 'MinIO initialization complete.';
       "
@@ -127,8 +138,9 @@ services:
       "
     environment:
       CEPH_DEMO_UID: ${CEPH_DEMO_UID:-tranc3}
-      CEPH_DEMO_ACCESS_KEY: ${CEPH_ACCESS_KEY:-cephadmin}
-      CEPH_DEMO_SECRET_KEY: ${CEPH_SECRET_KEY:-cephadmin}
+      # SECURITY: Ceph credentials must be set in .env — no default fallbacks
+      CEPH_DEMO_ACCESS_KEY: ${CEPH_ACCESS_KEY:?CEPH_ACCESS_KEY must be set in .env}
+      CEPH_DEMO_SECRET_KEY: ${CEPH_SECRET_KEY:?CEPH_SECRET_KEY must be set in .env}
       CEPH_DEMO_BUCKET: ${CEPH_BUCKET:-tranc3}
     volumes:
       - ceph_data:/var/lib/ceph
@@ -210,8 +222,8 @@ services:
       ZFS_POOL: ${ZFS_POOL:-tank}
       ZFS_DATASET: ${ZFS_DATASET:-tranc3}
       MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set in .env}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set in .env}
       MINIO_BUCKET: tranc3
       CEPH_ENDPOINT: ${CEPH_ENDPOINT:-}
       CEPH_ACCESS_KEY: ${CEPH_ACCESS_KEY:-}

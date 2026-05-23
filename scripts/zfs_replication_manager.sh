@@ -35,7 +35,9 @@ set -euo pipefail
 
 # ── Configuration ────────────────────────────────────────────────────────────
 readonly SCRIPT_NAME="$(basename "$0")"
-readonly LOCK_FILE="/tmp/${SCRIPT_NAME}.lock"
+readonly LOCK_FILE="/var/run/${SCRIPT_NAME}.lock"
+# Fallback to /run if /var/run doesn't exist (modern systems use /run)
+[ -d /var/run ] || LOCK_FILE="/run/${SCRIPT_NAME}.lock"
 readonly LOG_TAG="tranc3-zfs-repl"
 
 # Default compression
@@ -78,32 +80,37 @@ acquire_lock() {
 
 # ── Compression Configuration ────────────────────────────────────────────────
 # Maps compression names to zfs send/recv flags
-get_send_compression() {
+get_send_compression_pipe() {
+    # Returns an external compression pipeline command for zfs send output.
+    # NOTE: zfs send does NOT support --compress flags. Compression is handled:
+    #   1. Via ZFS dataset compression property (see set_dataset_compression)
+    #   2. Via external pipe compression for S3/remote replication (this function)
+    # For local ZFS-to-ZFS replication, dataset compression property is sufficient.
     local comp="$1"
     case "$comp" in
         zstd|zstd-fast)
-            # zstd-fast is the default zstd level (3), good balance
-            echo "--compress=zstd"
+            # zstd level 3 — good balance of speed and ratio
+            echo "| zstd -3"
             ;;
         zstd-slow|zstd-max)
-            # Higher compression level (19), for WAN/limited bandwidth
-            echo "--compress=zstd-19"
+            # zstd level 19 — maximum compression for WAN/limited bandwidth
+            echo "| zstd -19"
             ;;
         lz4)
-            echo "--compress=lz4"
+            echo "| lz4 -1"
             ;;
         gzip|gzip-6)
-            echo "--compress=gzip-6"
+            echo "| gzip -6"
             ;;
         gzip-9|gzip-max)
-            echo "--compress=gzip-9"
+            echo "| gzip -9"
             ;;
         none|raw)
             echo ""
             ;;
         *)
             warn "Unknown compression '$comp', defaulting to zstd"
-            echo "--compress=zstd"
+            echo "| zstd -3"
             ;;
     esac
 }
@@ -135,19 +142,22 @@ set_dataset_compression() {
 }
 
 # ── Bandwidth Throttling ────────────────────────────────────────────────────
-get_bandwidth_limit() {
-    if [ -n "$BANDWIDTH" ]; then
-        # pv or mbuffer for throttling
-        if command -v pv &>/dev/null; then
-            echo "| pv -L $BANDWIDTH"
-        elif command -v mbuffer &>/dev/null; then
-            echo "| mbuffer -r $BANDWIDTH"
-        else
-            warn "Neither pv nor mbuffer found — bandwidth limiting not available"
-            echo ""
-        fi
+get_bandwidth_pipe() {
+    # Returns the bandwidth-throttling pipe segment if BANDWIDTH is set.
+    # Usage: zfs send ... $(get_bandwidth_pipe) | zfs recv ...
+    # NOTE: The pipe must be placed between zfs send and zfs recv.
+    if [ -z "$BANDWIDTH" ]; then
+        return 1  # No bandwidth limit configured
+    fi
+    if command -v pv &>/dev/null; then
+        echo "pv -L $BANDWIDTH"
+        return 0
+    elif command -v mbuffer &>/dev/null; then
+        echo "mbuffer -r $BANDWIDTH"
+        return 0
     else
-        echo ""
+        warn "Neither pv nor mbuffer found — bandwidth limiting not available"
+        return 1
     fi
 }
 
@@ -213,23 +223,33 @@ replicate_full() {
     local send_flags="-Rv"
     local recv_flags="-suvF"
 
-    # Apply compression
-    local comp_flag
-    comp_flag="$(get_send_compression "$COMPRESSION")"
-    [ -n "$comp_flag" ] && send_flags="$send_flags $comp_flag"
+    # Note: Compression is applied via the ZFS dataset property, not zfs send flags.
+    # The dataset property was already set by set_dataset_compression() in main().
 
     if [ "$DRY_RUN" = true ]; then
         log "[DRY-RUN] Would execute: zfs send $send_flags $latest_snap | zfs recv $recv_flags $target"
         return 0
     fi
 
-    log "Sending: $latest_snap → $target (full, $COMPRESSION)"
+    log "Sending: $latest_snap → $target (full, dataset compression=$COMPRESSION)"
 
-    # Execute replication
+    # Execute replication (with optional bandwidth throttling)
+    local bw_pipe
+    bw_pipe="$(get_bandwidth_pipe)" || true
+
     if [ "$RECURSIVE" = true ]; then
-        zfs send $send_flags "$latest_snap" | zfs recv $recv_flags "$target"
+        if [ -n "$bw_pipe" ]; then
+            log "Bandwidth throttling: $BANDWIDTH via ${bw_pipe%% *}"
+            zfs send $send_flags "$latest_snap" | $bw_pipe | zfs recv $recv_flags "$target"
+        else
+            zfs send $send_flags "$latest_snap" | zfs recv $recv_flags "$target"
+        fi
     else
-        zfs send -v $comp_flag "$latest_snap" | zfs recv -u "$target"
+        if [ -n "$bw_pipe" ]; then
+            zfs send -v "$latest_snap" | $bw_pipe | zfs recv -u "$target"
+        else
+            zfs send -v "$latest_snap" | zfs recv -u "$target"
+        fi
     fi
 
     local rc=$?
@@ -297,26 +317,38 @@ replicate_incremental() {
         return 0
     fi
 
-    local send_flags="-Rvi"
+    local send_flags="-Rv"
     local recv_flags="-suv"
 
-    # Apply compression
-    local comp_flag
-    comp_flag="$(get_send_compression "$COMPRESSION")"
-    [ -n "$comp_flag" ] && send_flags="$send_flags $comp_flag"
+    # Note: Compression is applied via the ZFS dataset property, not zfs send flags.
+    # -I flag: send all intermediary snapshots from $from_snap to $latest_snap
+    # This is correct for recursive replication to ensure child datasets are
+    # properly replicated with all intermediates included.
 
     if [ "$DRY_RUN" = true ]; then
         log "[DRY-RUN] Would execute: zfs send $send_flags -I $from_snap $latest_snap | zfs recv $recv_flags $target"
         return 0
     fi
 
-    log "Sending incremental: $from_snap → $latest_snap ($COMPRESSION)"
+    log "Sending incremental: $from_snap → $latest_snap (dataset compression=$COMPRESSION)"
 
-    # Execute incremental replication
+    # Execute incremental replication (with optional bandwidth throttling)
+    local bw_pipe
+    bw_pipe="$(get_bandwidth_pipe)" || true
+
     if [ "$RECURSIVE" = true ]; then
-        zfs send $send_flags -I "$from_snap" "$latest_snap" | zfs recv $recv_flags "$target"
+        if [ -n "$bw_pipe" ]; then
+            log "Bandwidth throttling: $BANDWIDTH via ${bw_pipe%% *}"
+            zfs send $send_flags -I "$from_snap" "$latest_snap" | $bw_pipe | zfs recv $recv_flags "$target"
+        else
+            zfs send $send_flags -I "$from_snap" "$latest_snap" | zfs recv $recv_flags "$target"
+        fi
     else
-        zfs send -vi $comp_flag -I "$from_snap" "$latest_snap" | zfs recv -u "$target"
+        if [ -n "$bw_pipe" ]; then
+            zfs send -v -I "$from_snap" "$latest_snap" | $bw_pipe | zfs recv -u "$target"
+        else
+            zfs send -v -I "$from_snap" "$latest_snap" | zfs recv -u "$target"
+        fi
     fi
 
     local rc=$?
@@ -353,15 +385,14 @@ replicate_differential() {
         return 1
     fi
 
-    local comp_flag
-    comp_flag="$(get_send_compression "$COMPRESSION")"
+    # Note: Compression is applied via the ZFS dataset property
 
     if [ "$DRY_RUN" = true ]; then
-        log "[DRY-RUN] Would execute: zfs send -Rvi $comp_flag -I $from_snap $latest_snap | zfs recv -suv $target"
+        log "[DRY-RUN] Would execute: zfs send -Rv -I $from_snap $latest_snap | zfs recv -suv $target"
         return 0
     fi
 
-    zfs send -Rvi $comp_flag -I "$from_snap" "$latest_snap" | zfs recv -suv "$target"
+    zfs send -Rv -I "$from_snap" "$latest_snap" | zfs recv -suv "$target"
 
     local rc=$?
     if [ $rc -eq 0 ]; then
@@ -533,7 +564,7 @@ Examples:
   # Show status
   $SCRIPT_NAME --source tank/tranc3 --status
 EOF
-    exit 0
+    exit "${1:-0}"
 }
 
 parse_args() {
@@ -554,13 +585,13 @@ parse_args() {
             --dry-run)       DRY_RUN=true; shift ;;
             --verbose)       VERBOSE=true; shift ;;
             -h|--help)       usage ;;
-            *)               err "Unknown option: $1"; usage ;;
+            *)               err "Unknown option: $1"; usage 1 ;;
         esac
     done
 
     if [ -z "$SOURCE" ]; then
         err "--source is required"
-        usage
+        usage 1
     fi
 }
 

@@ -678,6 +678,7 @@ class SoftHSM2Provider(HSMProvider):
         if not self._initialized:
             raise RuntimeError("HSM not initialized.")
 
+        import pkcs11  # type: ignore
         from pkcs11 import Mechanism
 
         key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)
@@ -700,6 +701,7 @@ class SoftHSM2Provider(HSMProvider):
         if not self._initialized:
             raise RuntimeError("HSM not initialized.")
 
+        import pkcs11  # type: ignore
         from pkcs11 import Mechanism
 
         key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)
@@ -1322,6 +1324,9 @@ class VaultSecretLoader:
         that replaces Cloudflare D1 + R2-based secret storage.
         It provides AES-256-GCM encryption with SQLite backend.
         """
+        if not self._infinity_void_url or not self._infinity_void_secret:
+            return None
+
         try:
             import httpx
 
@@ -1358,9 +1363,22 @@ class VaultSecretLoader:
             logger.warning("Error accessing Infinity Void: %s", e)
             return None
 
+    @staticmethod
+    def _sanitize_key(key: str) -> str:
+        """Sanitize a secret key to prevent path traversal in file paths.
+
+        Only allows alphanumeric characters, hyphens, underscores, and dots.
+        Rejects any key containing path separators or traversal sequences.
+        """
+        import re
+        if not re.match(r'^[a-zA-Z0-9._-]+$', key):
+            raise ValueError(f"Invalid secret key: {key!r} — only alphanumeric, hyphens, underscores, and dots allowed")
+        return key
+
     def _read_hsm_encrypted(self, key: str) -> Optional[bytes]:
         """Read and decrypt a secret from an HSM-encrypted file."""
-        encrypted_path = Path(f"secrets/hsm/{key}.enc")
+        safe_key = self._sanitize_key(key)
+        encrypted_path = Path(f"secrets/hsm/{safe_key}.enc")
         if not encrypted_path.exists():
             return None
 
@@ -1373,7 +1391,9 @@ class VaultSecretLoader:
                 return None
 
             key_handle = lines[0].decode("utf-8")
-            actual_ciphertext = lines[1]
+            # Decode base64 ciphertext that was written by store_secret
+            import base64
+            actual_ciphertext = base64.b64decode(lines[1])
 
             plaintext = self._hsm.decrypt(key_handle, actual_ciphertext)
             return plaintext
@@ -1400,10 +1420,11 @@ class VaultSecretLoader:
             # Encrypt the value
             ciphertext = self._hsm.encrypt(key_handle, value)
 
-            # Store to file
+            # Store to file (with sanitized key for path safety)
+            safe_key = self._sanitize_key(key)
             secrets_dir = Path("secrets/hsm")
             secrets_dir.mkdir(parents=True, exist_ok=True)
-            encrypted_path = secrets_dir / f"{key}.enc"
+            encrypted_path = secrets_dir / f"{safe_key}.enc"
 
             # Format: key_handle\nbase64_ciphertext
             import base64

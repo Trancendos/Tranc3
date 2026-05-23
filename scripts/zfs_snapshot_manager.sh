@@ -36,7 +36,9 @@ set -euo pipefail
 # ── Configuration ────────────────────────────────────────────────────────────
 readonly SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-readonly LOCK_FILE="/tmp/${SCRIPT_NAME}.lock"
+readonly LOCK_FILE="/var/run/${SCRIPT_NAME}.lock"
+# Fallback to /run if /var/run doesn't exist (modern systems use /run)
+[ -d /var/run ] || LOCK_FILE="/run/${SCRIPT_NAME}.lock"
 readonly LOG_TAG="tranc3-zfs-snap"
 
 # Retention policy (number of snapshots to keep per schedule type)
@@ -106,17 +108,28 @@ get_pool_available() {
     echo "${avail:-0}"
 }
 
-# ── Dataset Discovery ────────────────────────────────────────────────────────
 get_datasets() {
-    # List all datasets under the pool with the given prefix
+    # List the top-level dataset for snapshot creation.
+    # When RECURSIVE=true, only the top-level dataset is returned because
+    # `zfs snapshot -r` automatically covers all children.
+    # This prevents double recursion (snapshots on children already captured
+    # by the parent's -r snapshot).
     local dataset_prefix="${POOL}/${PREFIX}"
     if zfs list -o name -H "$dataset_prefix" &>/dev/null; then
         echo "$dataset_prefix"
-        if [ "$RECURSIVE" = true ]; then
-            zfs list -o name -H -r "$dataset_prefix" 2>/dev/null | grep -v "^${dataset_prefix}$" || true
-        fi
     else
         warn "Dataset '$dataset_prefix' not found. Using pool root."
+        echo "$POOL"
+    fi
+}
+
+get_all_datasets() {
+    # List all datasets explicitly (for per-dataset operations like prune/bookmark)
+    local dataset_prefix="${POOL}/${PREFIX}"
+    if zfs list -o name -H "$dataset_prefix" &>/dev/null; then
+        echo "$dataset_prefix"
+        zfs list -o name -H -r "$dataset_prefix" 2>/dev/null | grep -v "^${dataset_prefix}$" || true
+    else
         echo "$POOL"
     fi
 }
@@ -141,11 +154,14 @@ create_snapshot() {
     # Pre-snapshot hook: quiesce applications if needed
     run_hook "$dataset" "pre-snapshot" "$schedule" || true
 
-    # Create the snapshot (recursive if enabled)
+    # Create the snapshot
+    # NOTE: When RECURSIVE=true, we only create the snapshot on the top-level
+    # dataset with -r flag. This automatically covers all children.
+    # We must NOT iterate over child datasets AND use -r (double recursion).
     if [ "$RECURSIVE" = true ]; then
-        zfs snapshot -r "$snap_name" 2>/dev/null
+        zfs snapshot -r "$snap_name" 2>/dev/null || true
     else
-        zfs snapshot "$snap_name" 2>/dev/null
+        zfs snapshot "$snap_name" 2>/dev/null || true
     fi
 
     local rc=$?
@@ -291,7 +307,7 @@ capacity_aware_prune() {
         # Reduce retention by half during capacity pressure
         export "ZFS_SNAP_KEEP_${schedule^^}=$(( keep_original / 2 ))"
 
-        for dataset in $(get_datasets); do
+        for dataset in $(get_all_datasets); do
             prune_snapshots "$dataset" "$schedule"
         done
 
@@ -368,6 +384,7 @@ list_snapshots() {
 
 # ── Main Execution ───────────────────────────────────────────────────────────
 usage() {
+    local exit_code="${1:-0}"
     cat <<EOF
 Tranc3 ZFS Auto-Snapshot Manager
 
@@ -393,7 +410,7 @@ Examples:
   $SCRIPT_NAME --pool tank --prefix tranc3 --bookmark
   $SCRIPT_NAME --pool tank --prefix tranc3 --list
 EOF
-    exit 0
+    exit "$exit_code"
 }
 
 parse_args() {
@@ -410,13 +427,13 @@ parse_args() {
             --dry-run)      DRY_RUN=true; shift ;;
             --verbose)      VERBOSE=true; shift ;;
             -h|--help)      usage ;;
-            *)              err "Unknown option: $1"; usage ;;
+            *)              err "Unknown option: $1"; usage 1 ;;
         esac
     done
 
     if [ -z "$POOL" ]; then
         err "--pool is required"
-        usage
+        usage 1
     fi
 }
 
@@ -437,12 +454,12 @@ main() {
             done
             # Also create bookmark for replication stability
             if [ "$SCHEDULE" = "daily" ] || [ "$SCHEDULE" = "weekly" ]; then
-                for dataset in $(get_datasets); do
+                for dataset in $(get_all_datasets); do
                     create_bookmark "$dataset"
                 done
             fi
             # Auto-prune after creating new snapshot
-            for dataset in $(get_datasets); do
+            for dataset in $(get_all_datasets); do
                 prune_snapshots "$dataset" "$SCHEDULE"
             done
             ;;
@@ -452,7 +469,7 @@ main() {
                 exit 1
             fi
             log "Pruning ${SCHEDULE} snapshots for ${POOL}/${PREFIX}"
-            for dataset in $(get_datasets); do
+            for dataset in $(get_all_datasets); do
                 prune_snapshots "$dataset" "$SCHEDULE"
             done
             ;;
@@ -462,7 +479,7 @@ main() {
             ;;
         bookmark)
             log "Creating bookmarks for ${POOL}/${PREFIX}"
-            for dataset in $(get_datasets); do
+            for dataset in $(get_all_datasets); do
                 create_bookmark "$dataset"
             done
             ;;

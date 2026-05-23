@@ -204,8 +204,15 @@ class ZFSStorageProvider(SmartStorageProvider):
         return f"ZFS({self._pool_name}/{self._dataset_prefix})"
 
     def _resolve_path(self, path: str) -> Path:
-        """Resolve a relative storage path to a filesystem path."""
-        resolved = self._mount_root / path.lstrip("/")
+        """Resolve a relative storage path to a filesystem path.
+
+        Enforces that the resolved path stays within the mount root
+        to prevent path traversal attacks (e.g. '../../../etc/passwd').
+        """
+        resolved = (self._mount_root / path.lstrip("/")).resolve()
+        mount_resolved = self._mount_root.resolve()
+        if not str(resolved).startswith(str(mount_resolved)):
+            raise ValueError(f"Path traversal blocked: {path} escapes mount root {self._mount_root}")
         resolved.parent.mkdir(parents=True, exist_ok=True)
         return resolved
 
@@ -741,9 +748,234 @@ class CephStorageProvider(SmartStorageProvider):
         }
 
 
+
+# ---------------------------------------------------------------------------
+# OCI Object Storage Provider (Smart adapter)
+# ---------------------------------------------------------------------------
+
+class OCISmartProvider(SmartStorageProvider):
+    """OCI Object Storage provider adapted for SmartStorageOrchestrator.
+
+    Wraps the existing OCIObjectStorageProvider from oci_storage.py
+    and adds the SmartStorageProvider interface (capacity monitoring, tier).
+    OCI Always-Free tier: 10 GB Object Storage + 10 TB outbound/month.
+    """
+
+    def __init__(self):
+        from shared_core.architecture.oci_storage import OCIObjectStorageProvider
+        self._oci = OCIObjectStorageProvider()
+
+    @property
+    def tier(self) -> StorageTier:
+        return StorageTier.OCI
+
+    @property
+    def name(self) -> str:
+        return "OCI Object Storage"
+
+    async def read(self, path: str) -> bytes:
+        return await self._oci.read(path)
+
+    async def write(self, path: str, data: bytes) -> None:
+        await self._oci.write(path, data)
+
+    async def delete(self, path: str) -> None:
+        await self._oci.delete(path)
+
+    async def list(self, prefix: str = "") -> List[str]:
+        return await self._oci.list(prefix)
+
+    async def exists(self, path: str) -> bool:
+        return await self._oci.exists(path)
+
+    async def get_capacity(self) -> TierCapacity:
+        """OCI free tier: 10 GB Object Storage."""
+        now = time.time()
+        try:
+            health = await self._oci.health()
+            if health.get("status") != "healthy":
+                return TierCapacity(
+                    tier=StorageTier.OCI,
+                    is_available=False,
+                    last_checked=now,
+                )
+            # OCI doesn't expose simple capacity via the health endpoint;
+            # return nominal free-tier capacity
+            free_tier_bytes = 10 * 1024 ** 3  # 10 GB
+            return TierCapacity(
+                tier=StorageTier.OCI,
+                is_available=True,
+                total_bytes=free_tier_bytes,
+                used_bytes=0,  # Actual usage requires list+sum
+                usage_pct=0.0,
+                is_critical=False,
+                last_checked=now,
+            )
+        except Exception as e:
+            logger.warning("OCI capacity check failed: %s", e)
+            return TierCapacity(
+                tier=StorageTier.OCI,
+                is_available=False,
+                last_checked=now,
+            )
+
+    async def health(self) -> Dict[str, Any]:
+        return await self._oci.health()
+
+
 # ---------------------------------------------------------------------------
 # Smart Storage Orchestrator
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Cloudflare R2 Storage Provider (S3-compatible, free tier)
+# ---------------------------------------------------------------------------
+
+class CloudflareR2Provider(SmartStorageProvider):
+    """Cloudflare R2 storage provider — S3-compatible, zero egress fees.
+
+    Free tier: 10 GB storage, 10M class A ops, 1M class B ops/month.
+    Implements the SmartStorageProvider interface for use with
+    SmartStorageOrchestrator in CLOUD_ONLY and HYBRID modes.
+    """
+
+    def __init__(
+        self,
+        account_id: str = "",
+        access_key: str = "",
+        secret_key: str = "",
+        bucket: str = "tranc3",
+        endpoint_url: str = "",
+    ):
+        self._account_id = account_id or os.getenv("R2_ACCOUNT_ID", "")
+        self._access_key = access_key or os.getenv("R2_ACCESS_KEY_ID", "")
+        self._secret_key = secret_key or os.getenv("R2_SECRET_ACCESS_KEY", "")
+        self._bucket = bucket
+        self._endpoint_url = endpoint_url or f"https://{self._account_id}.r2.cloudflarestorage.com"
+        self._client = None
+
+    @property
+    def tier(self) -> StorageTier:
+        return StorageTier.R2
+
+    @property
+    def name(self) -> str:
+        return "Cloudflare R2"
+
+    def _get_client(self):
+        """Lazy-initialize the S3 client for R2."""
+        if self._client is None:
+            try:
+                import boto3
+                self._client = boto3.client(
+                    "s3",
+                    endpoint_url=self._endpoint_url,
+                    aws_access_key_id=self._access_key,
+                    aws_secret_access_key=self._secret_key,
+                    region_name="auto",
+                )
+            except ImportError:
+                raise RuntimeError(
+                    "boto3 is required for R2 storage. Install: pip install boto3"
+                )
+        return self._client
+
+    async def read(self, path: str) -> bytes:
+        client = self._get_client()
+        try:
+            response = client.get_object(Bucket=self._bucket, Key=path)
+            return response["Body"].read()
+        except Exception as e:
+            if "NoSuchKey" in str(e) or "404" in str(e):
+                raise FileNotFoundError(f"R2 path not found: {path}")
+            raise
+
+    async def write(self, path: str, data: bytes) -> None:
+        client = self._get_client()
+        client.put_object(Bucket=self._bucket, Key=path, Body=data)
+        logger.debug("Wrote %d bytes to R2://%s/%s", len(data), self._bucket, path)
+
+    async def delete(self, path: str) -> None:
+        client = self._get_client()
+        try:
+            client.delete_object(Bucket=self._bucket, Key=path)
+        except Exception as e:
+            if "NoSuchKey" in str(e) or "404" in str(e):
+                raise FileNotFoundError(f"R2 path not found: {path}")
+            raise
+
+    async def list(self, prefix: str = "") -> List[str]:
+        client = self._get_client()
+        results = []
+        paginator = client.get_paginator("list_objects_v2")
+        pages = paginator.paginate(Bucket=self._bucket, Prefix=prefix)
+        for page in pages:
+            for obj in page.get("Contents", []):
+                results.append(obj["Key"])
+        return sorted(results)
+
+    async def exists(self, path: str) -> bool:
+        client = self._get_client()
+        try:
+            client.head_object(Bucket=self._bucket, Key=path)
+            return True
+        except Exception:
+            return False
+
+    async def get_capacity(self) -> TierCapacity:
+        """R2 free tier: 10 GB storage."""
+        now = time.time()
+        try:
+            # R2 doesn't expose capacity via API; estimate from object listing
+            client = self._get_client()
+            total_bytes = 0
+            paginator = client.get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket=self._bucket):
+                for obj in page.get("Contents", []):
+                    total_bytes += obj.get("Size", 0)
+
+            free_tier_gb = 10.0
+            used_gb = total_bytes / (1024 ** 3)
+            usage_pct = min(used_gb / free_tier_gb, 1.0)
+
+            return TierCapacity(
+                tier=StorageTier.R2,
+                is_available=True,
+                total_bytes=int(free_tier_gb * 1024 ** 3),
+                used_bytes=total_bytes,
+                usage_pct=usage_pct,
+                is_critical=usage_pct > 0.95,
+                last_checked=now,
+            )
+        except Exception as e:
+            logger.warning("R2 capacity check failed: %s", e)
+            return TierCapacity(
+                tier=StorageTier.R2,
+                is_available=False,
+                last_checked=now,
+            )
+
+    async def health(self) -> Dict[str, Any]:
+        try:
+            client = self._get_client()
+            client.head_bucket(Bucket=self._bucket)
+            cap = await self.get_capacity()
+            return {
+                "status": "healthy",
+                "provider": self.name,
+                "tier": self.tier.name,
+                "bucket": self._bucket,
+                "capacity_used_pct": f"{cap.usage_pct * 100:.1f}%",
+            }
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "provider": self.name,
+                "tier": self.tier.name,
+                "error": str(e),
+            }
+
 
 class SmartStorageOrchestrator:
     """Intelligent storage orchestrator that manages multiple providers.
@@ -934,19 +1166,29 @@ class SmartStorageOrchestrator:
     # --- Public API (delegates to selected provider) ---
 
     async def read(self, path: str) -> bytes:
-        """Read data, trying providers in priority order."""
+        """Read data, trying all providers in priority order.
+
+        If the selected provider doesn't have the data, we try ALL other
+        providers (not just lower-priority ones), because data may exist on
+        any tier due to capacity-aware migration or previous writes when a
+        higher-priority provider was unavailable.
+        """
         provider, tier = await self._select_provider()
         try:
             return await provider.read(path)
         except FileNotFoundError:
-            # Try lower-priority tiers (data may have been migrated)
+            # Try ALL other providers in priority order
             order = self._get_priority_order()
-            start_idx = order.index(tier)
-            for alt_tier in order[start_idx + 1:]:
+            for alt_tier in order:
+                if alt_tier == tier:
+                    continue  # Already tried
                 if alt_tier in self._providers:
                     try:
                         return await self._providers[alt_tier].read(path)
                     except FileNotFoundError:
+                        continue
+                    except Exception as e:
+                        logger.warning("Read failed on %s for %s: %s", alt_tier.name, path, e)
                         continue
             raise
 
@@ -1067,9 +1309,40 @@ def create_smart_storage(
             bucket=kwargs.get("ceph_bucket", os.getenv("CEPH_BUCKET", "tranc3")),
         )
 
+    # Cloud providers (R2/OCI) — available in HYBRID and CLOUD_ONLY modes
+    r2_provider = None
+    oci_provider = None
+
+    r2_account_id = kwargs.get("r2_account_id", os.getenv("R2_ACCOUNT_ID", ""))
+    r2_access_key = kwargs.get("r2_access_key", os.getenv("R2_ACCESS_KEY_ID", ""))
+    r2_secret_key = kwargs.get("r2_secret_key", os.getenv("R2_SECRET_ACCESS_KEY", ""))
+    oci_compartment = kwargs.get("oci_compartment", os.getenv("OCI_COMPARTMENT_ID", ""))
+
+    if r2_account_id and r2_access_key and r2_secret_key:
+        r2_provider = CloudflareR2Provider(
+            account_id=r2_account_id,
+            access_key=r2_access_key,
+            secret_key=r2_secret_key,
+            bucket=kwargs.get("r2_bucket", os.getenv("R2_BUCKET_NAME", "tranc3")),
+        )
+
+    if oci_compartment:
+        try:
+            oci_provider = OCISmartProvider()
+        except ImportError:
+            logger.warning("OCI provider not available — install oci-sdk")
+
+    if mode == SystemMode.CLOUD_ONLY and not r2_provider and not oci_provider:
+        logger.warning(
+            "CLOUD_ONLY mode but no cloud providers configured! "
+            "Set R2_ACCOUNT_ID or OCI_COMPARTMENT_ID environment variables."
+        )
+
     return SmartStorageOrchestrator(
         system_mode=mode,
         zfs_provider=zfs_provider,
         minio_provider=minio_provider,
         ceph_provider=ceph_provider,
+        r2_provider=r2_provider,
+        oci_provider=oci_provider,
     )

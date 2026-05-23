@@ -64,7 +64,7 @@ groups:
     rules:
       # ── ZFS Pool Alerts (Tier 0) ──────────────────────────────────────────
       - alert: ZFSPoolCapacityWarning
-        expr: (zfs_pool_capacity_percent or (node_filesystem_avail_bytes{mountpoint=~"/mnt/tank.*"} / node_filesystem_size_bytes{mountpoint=~"/mnt/tank.*"} * 100)) > 80
+        expr: (zfs_pool_capacity_percent or ((1 - node_filesystem_avail_bytes{mountpoint=~"/mnt/tank.*"} / node_filesystem_size_bytes{mountpoint=~"/mnt/tank.*"}) * 100)) > 80
         for: 5m
         labels:
           severity: warning
@@ -74,7 +74,7 @@ groups:
           description: "ZFS pool capacity is at {{ $value }}%. SmartStorageOrchestrator will begin proactive migration to MinIO/Ceph."
 
       - alert: ZFSPoolCapacityCritical
-        expr: (zfs_pool_capacity_percent or (node_filesystem_avail_bytes{mountpoint=~"/mnt/tank.*"} / node_filesystem_size_bytes{mountpoint=~"/mnt/tank.*"} * 100)) > 95
+        expr: (zfs_pool_capacity_percent or ((1 - node_filesystem_avail_bytes{mountpoint=~"/mnt/tank.*"} / node_filesystem_size_bytes{mountpoint=~"/mnt/tank.*"}) * 100)) > 95
         for: 1m
         labels:
           severity: critical

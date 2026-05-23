@@ -2,23 +2,23 @@
   "version": "2.0.0",
   "generated_by": "Tranc3 Naming Repair & ID Registry Generator",
   "taxonomy": {
-    "PID": "Product/Location ID — PID-XXX (3-letter location abbreviation)",
-    "AID": "AI ID — AID-XXX-NN (3-letter location + 2-digit sequence)",
-    "SID": "Service/Agent ID — SID-XXX-NN (3-letter location + 2-digit sequence)",
-    "NID": "Nano-ID/Bot ID — NID-XXX-NN (3-letter location + 2-digit sequence)"
+    "PID": "Product/Location ID \u2014 PID-XXX (3-letter location abbreviation)",
+    "AID": "AI ID \u2014 AID-XXX-NN (3-letter location + 2-digit sequence)",
+    "SID": "Service/Agent ID \u2014 SID-XXX-NN (3-letter location + 2-digit sequence)",
+    "NID": "Nano-ID/Bot ID \u2014 NID-XXX-NN (3-letter location + 2-digit sequence)"
   },
   "tiers": {
-    "1": "The Sovereign — Ultimate orchestrator",
-    "2": "Primes — Executive AI authorities",
-    "3": "Lead AIs — Day-to-day location managers",
-    "4": "Agents — Mid-tier automation (Alpha + Beta)",
-    "5": "Bots — Task-specific micro-workers (01-04)"
+    "1": "The Sovereign \u2014 Ultimate orchestrator",
+    "2": "Primes \u2014 Executive AI authorities",
+    "3": "Lead AIs \u2014 Day-to-day location managers",
+    "4": "Agents \u2014 Mid-tier automation (Alpha + Beta)",
+    "5": "Bots \u2014 Task-specific micro-workers (01-04)"
   },
   "sovereign": {
     "name": "The Sovereign",
     "aid": "AID-SOV-01",
     "tier": 1,
-    "description": "Prime AI — ultimate orchestrator of the Tranc3 ecosystem"
+    "description": "Prime AI \u2014 ultimate orchestrator of the Tranc3 ecosystem"
   },
   "primes": [
     {
@@ -68,7 +68,7 @@
     },
     {
       "name": "The Doctor (Nikolai O'denhim)",
-      "aid": "AID-DOC-01",
+      "aid": "AID-DRN-01",
       "tier": 2,
       "governs": [
         "The Digital Grid",
@@ -2810,7 +2810,7 @@
       "pillar": "Wellbeing",
       "pillar_abbrev": "WELL",
       "lead_ai": {
-        "name": "tAimra",
+        "name": "tAImra",
         "aid": "AID-TMR-01",
         "tier": 3
       },
