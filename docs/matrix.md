@@ -977,3 +977,15 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | NID-RES-02 | 5 | Wave-Bot | Resonate |
 | NID-RES-03 | 5 | Pitch-Bot | Resonate |
 | NID-RES-04 | 5 | Harmonic-Bot | Resonate |
+
+---
+
+## Phase 11 — Codebase Quality & CI/CD Hardening
+
+| Phase | Component | Status | Description |
+|-------|-----------|--------|-------------|
+| 11.1 | Lint Remediation | ✅ Complete | 282 ruff errors fixed (F401, F821, F841, B007, B006, B905, E741, E702, E402) |
+| 11.2 | CI Pipeline | ✅ Complete | ci.yml (PR lint+test), test.yml (main push full suite+coverage) |
+| 11.3 | Phase 10 Tests | ✅ Complete | 173 tests across 6 test files for all proactive system modules |
+| 11.4 | Architecture Docs | ✅ Complete | DOC-02 updated to v3.0, PROACTIVE_SYSTEMS.md created |
+| 11.5 | Verification & Commit | 🔄 In Progress | ruff zero errors, pytest all pass, commit and PR pending |
