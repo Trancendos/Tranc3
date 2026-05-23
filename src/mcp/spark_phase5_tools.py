@@ -59,6 +59,7 @@ def _get_or_create_agent_runtime():
     """Lazy-import AgentRuntime class."""
     try:
         from src.agents.agent_runtime import AgentRuntime
+
         return AgentRuntime
     except Exception as exc:
         logger.warning("AgentRuntime unavailable: %s", exc)
@@ -69,6 +70,7 @@ def _get_goal_manager():
     """Lazy-import GoalManager class."""
     try:
         from src.agents.goal_manager import GoalManager
+
         return GoalManager
     except Exception as exc:
         logger.warning("GoalManager unavailable: %s", exc)
@@ -79,6 +81,7 @@ def _get_task_decomposer():
     """Lazy-import TaskDecomposer class."""
     try:
         from src.agents.task_decomposer import TaskDecomposer
+
         return TaskDecomposer
     except Exception as exc:
         logger.warning("TaskDecomposer unavailable: %s", exc)
@@ -89,6 +92,7 @@ def _get_memory_stream():
     """Lazy-import MemoryStream class."""
     try:
         from src.agents.memory_stream import MemoryStream
+
         return MemoryStream
     except Exception as exc:
         logger.warning("MemoryStream unavailable: %s", exc)
@@ -144,12 +148,14 @@ async def _handle_agent_create(params: Dict[str, Any]) -> Dict[str, Any]:
     runtime = AgentRuntime(config=config)
     _agents[runtime.agent_id] = runtime
 
-    return _ok({
-        "agent_id": runtime.agent_id,
-        "name": runtime.name,
-        "agent_type": runtime.agent_type,
-        "state": runtime.state.value,
-    })
+    return _ok(
+        {
+            "agent_id": runtime.agent_id,
+            "name": runtime.name,
+            "agent_type": runtime.agent_type,
+            "state": runtime.state.value,
+        }
+    )
 
 
 async def _handle_agent_start(params: Dict[str, Any]) -> Dict[str, Any]:
@@ -163,10 +169,12 @@ async def _handle_agent_start(params: Dict[str, Any]) -> Dict[str, Any]:
         return _err(f"Agent not found: {params.get('agent_id')}")
 
     await runtime.start()
-    return _ok({
-        "agent_id": runtime.agent_id,
-        "state": runtime.state.value,
-    })
+    return _ok(
+        {
+            "agent_id": runtime.agent_id,
+            "state": runtime.state.value,
+        }
+    )
 
 
 async def _handle_agent_stop(params: Dict[str, Any]) -> Dict[str, Any]:
@@ -182,11 +190,13 @@ async def _handle_agent_stop(params: Dict[str, Any]) -> Dict[str, Any]:
     await runtime.stop()
     # Remove from registry
     _agents.pop(runtime.agent_id, None)
-    return _ok({
-        "agent_id": runtime.agent_id,
-        "state": runtime.state.value,
-        "metrics": runtime.metrics,
-    })
+    return _ok(
+        {
+            "agent_id": runtime.agent_id,
+            "state": runtime.state.value,
+            "metrics": runtime.metrics,
+        }
+    )
 
 
 async def _handle_agent_status(params: Dict[str, Any]) -> Dict[str, Any]:
@@ -251,12 +261,14 @@ async def _handle_agent_assign_goal(params: Dict[str, Any]) -> Dict[str, Any]:
         },
     )
 
-    return _ok({
-        "agent_id": runtime.agent_id,
-        "goal_id": goal_id,
-        "description": description,
-        "priority": priority,
-    })
+    return _ok(
+        {
+            "agent_id": runtime.agent_id,
+            "goal_id": goal_id,
+            "description": description,
+            "priority": priority,
+        }
+    )
 
 
 async def _handle_agent_list_goals(params: Dict[str, Any]) -> Dict[str, Any]:
@@ -278,11 +290,13 @@ async def _handle_agent_list_goals(params: Dict[str, Any]) -> Dict[str, Any]:
     if state_filter:
         goals = [g for g in goals if g.get("state") == state_filter]
 
-    return _ok({
-        "agent_id": runtime.agent_id,
-        "goals": goals,
-        "total": len(goals),
-    })
+    return _ok(
+        {
+            "agent_id": runtime.agent_id,
+            "goals": goals,
+            "total": len(goals),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -308,12 +322,14 @@ async def _handle_agent_decompose_task(params: Dict[str, Any]) -> Dict[str, Any]
     decomposer = TaskDecomposer()
     decomposition = await decomposer.decompose(goal_description)
 
-    return _ok({
-        "goal_description": decomposition.goal_description,
-        "strategy": decomposition.strategy,
-        "subtasks": [st.to_dict() for st in decomposition.subtasks],
-        "total_complexity": decomposition.estimated_total_complexity,
-    })
+    return _ok(
+        {
+            "goal_description": decomposition.goal_description,
+            "strategy": decomposition.strategy,
+            "subtasks": [st.to_dict() for st in decomposition.subtasks],
+            "total_complexity": decomposition.estimated_total_complexity,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -347,11 +363,13 @@ async def _handle_agent_retrieve_memory(params: Dict[str, Any]) -> Dict[str, Any
         top_k=top_k,
     )
 
-    return _ok({
-        "agent_id": runtime.agent_id,
-        "memories": [m.to_dict() for m in memories],
-        "total": len(memories),
-    })
+    return _ok(
+        {
+            "agent_id": runtime.agent_id,
+            "memories": [m.to_dict() for m in memories],
+            "total": len(memories),
+        }
+    )
 
 
 async def _handle_agent_reflect(params: Dict[str, Any]) -> Dict[str, Any]:
@@ -371,11 +389,13 @@ async def _handle_agent_reflect(params: Dict[str, Any]) -> Dict[str, Any]:
     top_k = int(params.get("top_k", 20))
     reflections = await runtime._memory_stream.reflect(top_k=top_k)
 
-    return _ok({
-        "agent_id": runtime.agent_id,
-        "reflections": reflections,
-        "total": len(reflections),
-    })
+    return _ok(
+        {
+            "agent_id": runtime.agent_id,
+            "reflections": reflections,
+            "total": len(reflections),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -390,18 +410,22 @@ async def _handle_agent_list_all(params: Dict[str, Any]) -> Dict[str, Any]:
     """
     agents_info = []
     for _agent_id, runtime in _agents.items():
-        agents_info.append({
-            "agent_id": runtime.agent_id,
-            "name": runtime.name,
-            "agent_type": runtime.agent_type,
-            "state": runtime.state.value,
-            "is_running": runtime.is_running,
-        })
+        agents_info.append(
+            {
+                "agent_id": runtime.agent_id,
+                "name": runtime.name,
+                "agent_type": runtime.agent_type,
+                "state": runtime.state.value,
+                "is_running": runtime.is_running,
+            }
+        )
 
-    return _ok({
-        "agents": agents_info,
-        "total": len(agents_info),
-    })
+    return _ok(
+        {
+            "agents": agents_info,
+            "total": len(agents_info),
+        }
+    )
 
 
 async def _handle_agent_find_best(params: Dict[str, Any]) -> Dict[str, Any]:
@@ -421,11 +445,13 @@ async def _handle_agent_find_best(params: Dict[str, Any]) -> Dict[str, Any]:
 
     profile = find_best_profile(required_tags)
 
-    return _ok({
-        "best_match": profile.to_dict(),
-        "required_tags": sorted(required_tags),
-        "match_score": round(profile.matches_tags(required_tags), 4),
-    })
+    return _ok(
+        {
+            "best_match": profile.to_dict(),
+            "required_tags": sorted(required_tags),
+            "match_score": round(profile.matches_tags(required_tags), 4),
+        }
+    )
 
 
 async def _handle_agent_profiles(params: Dict[str, Any]) -> Dict[str, Any]:
@@ -440,10 +466,12 @@ async def _handle_agent_profiles(params: Dict[str, Any]) -> Dict[str, Any]:
 
     profiles = list_profiles()
 
-    return _ok({
-        "profiles": profiles,
-        "total": len(profiles),
-    })
+    return _ok(
+        {
+            "profiles": profiles,
+            "total": len(profiles),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -469,8 +497,15 @@ PHASE5_TOOLS: List[Dict[str, Any]] = [
                 "agent_type": {
                     "type": "string",
                     "description": "Specialist agent type.",
-                    "enum": ["general", "researcher", "coder", "planner",
-                             "analyzer", "orchestrator", "guardian"],
+                    "enum": [
+                        "general",
+                        "researcher",
+                        "coder",
+                        "planner",
+                        "analyzer",
+                        "orchestrator",
+                        "guardian",
+                    ],
                     "default": "general",
                 },
                 "max_concurrent_tasks": {

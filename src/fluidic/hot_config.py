@@ -47,7 +47,9 @@ class HotConfig:
                 self._file_mtimes[path] = os.path.getmtime(path)
 
         self._task = asyncio.create_task(self._watch_loop())
-        logger.info("HotConfig watching: %s", sanitize_for_log(self._watch_paths))  # codeql[py/cleartext-logging]
+        logger.info(
+            "HotConfig watching: %s", sanitize_for_log(self._watch_paths)
+        )  # codeql[py/cleartext-logging]
 
     async def stop(self) -> None:
         """Stop watching"""
@@ -63,7 +65,9 @@ class HotConfig:
                 await asyncio.sleep(self._poll_interval)
                 changes = self._detect_changes()
                 if changes:
-                    logger.info("Config changed: %s", sanitize_for_log(list(changes.keys())))  # codeql[py/cleartext-logging]
+                    logger.info(
+                        "Config changed: %s", sanitize_for_log(list(changes.keys()))
+                    )  # codeql[py/cleartext-logging]
                     self._config_cache.update(changes)
                     for callback in self._callbacks:
                         try:
@@ -72,11 +76,15 @@ class HotConfig:
                             else:
                                 callback(changes)
                         except Exception as e:
-                            logger.error("Config callback error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+                            logger.error(
+                                "Config callback error: %s", sanitize_for_log(e)
+                            )  # codeql[py/cleartext-logging]
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error("HotConfig watch error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+                logger.error(
+                    "HotConfig watch error: %s", sanitize_for_log(e)
+                )  # codeql[py/cleartext-logging]
 
     def _detect_changes(self) -> Dict[str, Any]:
         """Detect file changes and return updated values"""
@@ -118,12 +126,15 @@ class HotConfig:
                             # Also update os.environ
                             os.environ[key] = value
         except Exception as e:
-            logger.error("Error parsing %s: %s", sanitize_for_log(path), sanitize_for_log(e))  # codeql[py/cleartext-logging]  # codeql[py/cleartext-logging]
+            logger.error(
+                "Error parsing %s: %s", sanitize_for_log(path), sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]  # codeql[py/cleartext-logging]
         return result
 
     def _parse_json_file(self, path: str) -> Dict[str, Any]:
         """Parse a JSON config file"""
         import json
+
         try:
             validated = validate_path(path, Path.cwd(), must_exist=True)
             with open(validated, "r") as f:

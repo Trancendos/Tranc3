@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 class CircuitState(str, enum.Enum):
     """Circuit breaker states — closed (healthy), open (failing), half-open (testing)."""
+
     CLOSED = "closed"
     OPEN = "open"
     HALF_OPEN = "half-open"
@@ -25,6 +26,7 @@ class CircuitState(str, enum.Enum):
 
 class HealthStatus(str, enum.Enum):
     """Service health states."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -33,6 +35,7 @@ class HealthStatus(str, enum.Enum):
 
 class ServiceCategory(str, enum.Enum):
     """Service category for routing and dependency management."""
+
     CORE = "core"
     AI = "ai"
     AUTH = "auth"
@@ -48,10 +51,15 @@ class ServiceCategory(str, enum.Enum):
 
 class CircuitBreakerConfig(BaseModel):
     """Circuit breaker configuration — controls failure detection and recovery."""
+
     failure_threshold: int = Field(default=5, description="Failures before opening circuit")
     reset_timeout_ms: int = Field(default=30000, description="Time before half-open retry (ms)")
-    half_open_request_percentage: float = Field(default=10.0, description="% of requests allowed in half-open")
-    half_open_success_threshold: int = Field(default=3, description="Successes needed to close circuit")
+    half_open_request_percentage: float = Field(
+        default=10.0, description="% of requests allowed in half-open"
+    )
+    half_open_success_threshold: int = Field(
+        default=3, description="Successes needed to close circuit"
+    )
     request_timeout_ms: int = Field(default=10000, description="Per-request timeout (ms)")
 
     model_config = {"frozen": True}
@@ -59,8 +67,11 @@ class CircuitBreakerConfig(BaseModel):
 
 class ServiceMeshConfig(BaseModel):
     """Service mesh global configuration."""
+
     max_retries: int = Field(default=3, description="Max retry attempts per call")
-    retry_base_delay_ms: int = Field(default=1000, description="Base delay for exponential backoff (ms)")
+    retry_base_delay_ms: int = Field(
+        default=1000, description="Base delay for exponential backoff (ms)"
+    )
     retry_max_delay_ms: int = Field(default=30000, description="Max delay between retries (ms)")
     health_check_interval_ms: int = Field(default=30000, description="Health check interval (ms)")
     health_check_timeout_ms: int = Field(default=5000, description="Health check timeout (ms)")
@@ -75,6 +86,7 @@ class ServiceMeshConfig(BaseModel):
 
 class CircuitBreakerState(BaseModel):
     """Current state of a circuit breaker for a service."""
+
     state: CircuitState = CircuitState.CLOSED
     failure_count: int = 0
     success_count: int = 0
@@ -86,6 +98,7 @@ class CircuitBreakerState(BaseModel):
 
 class ServiceDescriptor(BaseModel):
     """Registration info for a service in the mesh."""
+
     name: str
     url: str
     port: int = 8000
@@ -100,6 +113,7 @@ class ServiceDescriptor(BaseModel):
 
 class ServiceHealth(BaseModel):
     """Health status of a registered service."""
+
     name: str
     status: HealthStatus = HealthStatus.UNKNOWN
     latency_ms: float = 0.0
@@ -110,6 +124,7 @@ class ServiceHealth(BaseModel):
 
 class ServiceCallOptions(BaseModel):
     """Options for a service-to-service call."""
+
     timeout_ms: int = Field(default=10000, description="Request timeout (ms)")
     retries: int = Field(default=3, description="Number of retry attempts")
     headers: dict[str, str] = Field(default_factory=dict)
@@ -120,6 +135,7 @@ class ServiceCallOptions(BaseModel):
 
 class ServiceCallResult(BaseModel):
     """Result of a service-to-service call."""
+
     success: bool
     status_code: int = 0
     data: Any = None
@@ -133,6 +149,7 @@ class ServiceCallResult(BaseModel):
 
 class RPCMethodDescriptor(BaseModel):
     """Descriptor for an RPC method exposed by a service."""
+
     name: str
     path: str
     method: str = "POST"

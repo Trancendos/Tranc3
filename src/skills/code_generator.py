@@ -85,9 +85,7 @@ class CodeAnalyzer:
                             else False
                         ),
                         "line_count": (
-                            node.end_lineno - node.lineno + 1
-                            if hasattr(node, "end_lineno")
-                            else 0
+                            node.end_lineno - node.lineno + 1 if hasattr(node, "end_lineno") else 0
                         ),
                     }
                 )
@@ -98,9 +96,7 @@ class CodeAnalyzer:
                     for alias in node.names:
                         result["imports"].append(alias.name)
                 else:
-                    result["imports"].append(
-                        f"{'.' * (node.level or 0)}{node.module or ''}"
-                    )
+                    result["imports"].append(f"{'.' * (node.level or 0)}{node.module or ''}")
 
         result["complexity"] = self.compute_complexity(code)
 
@@ -151,13 +147,9 @@ class CodeAnalyzer:
             tree = ast.parse(code)
             for node in ast.walk(tree):
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    unannotated = [
-                        a.arg for a in node.args.args if a.annotation is None
-                    ]
+                    unannotated = [a.arg for a in node.args.args if a.annotation is None]
                     if unannotated and node.name != "__init__":
-                        smells.append(
-                            f"Missing type hints on '{node.name}': {unannotated}"
-                        )
+                        smells.append(f"Missing type hints on '{node.name}': {unannotated}")
         except SyntaxError:
             logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
@@ -254,9 +246,7 @@ class CodeSelfImprover:
         if added:
             applied.append("Added type hints")
 
-        if feedback and (
-            "docstring" in feedback.lower() or "document" in feedback.lower()
-        ):
+        if feedback and ("docstring" in feedback.lower() or "document" in feedback.lower()):
             improved, added_doc = self._add_docstrings(improved, analysis)
             if added_doc:
                 applied.append("Added docstrings")
@@ -318,9 +308,7 @@ class CodeSelfImprover:
         """Insert a stub docstring for functions missing one."""
         modified = False
         lines = code.splitlines()
-        insert_positions: List[
-            Tuple[int, str, str]
-        ] = []  # (lineno_after_def, indent, fn_name)
+        insert_positions: List[Tuple[int, str, str]] = []  # (lineno_after_def, indent, fn_name)
 
         for fn in analysis.get("functions", []):
             if not fn.get("has_docstring"):
@@ -351,9 +339,7 @@ class CodeSelfImprover:
         for i, line in enumerate(lines):
             m = re.match(r"^(\s*(?:async\s+)?def\s+(\w+))", line)
             if m:
-                fn_starts.append(
-                    (i, m.group(2), len(m.group(1)) - len(m.group(1).lstrip()))
-                )
+                fn_starts.append((i, m.group(2), len(m.group(1)) - len(m.group(1).lstrip())))
 
         if not fn_starts:
             return code, False
@@ -613,11 +599,7 @@ def _generate_pytest_tests(code: str, description: str) -> str:
 
             prefix = "async " if is_async else ""
             decorator = "@pytest.mark.asyncio\n" if is_async else ""
-            call = (
-                f"await {fn}({', '.join(params)})"
-                if is_async
-                else f"{fn}({', '.join(params)})"
-            )
+            call = f"await {fn}({', '.join(params)})" if is_async else f"{fn}({', '.join(params)})"
             lines += [
                 f"{decorator}{prefix}def test_{fn}() -> None:",
                 f'    """Test {fn}."""',
@@ -705,9 +687,7 @@ class AdvancedCodeGenerator:
                 raise NotImplementedError
             """)
 
-    def _apply_substitutions(
-        self, template: str, request: CodeGenerationRequest
-    ) -> str:
+    def _apply_substitutions(self, template: str, request: CodeGenerationRequest) -> str:
         """Fill in template placeholders from the request description."""
         words = re.findall(r"[A-Za-z]+", request.description)
         resource = words[0].lower() if words else "resource"
@@ -729,9 +709,7 @@ class AdvancedCodeGenerator:
     # LLM enhancement
     # ------------------------------------------------------------------
 
-    async def _llm_enhance(
-        self, base_code: str, request: CodeGenerationRequest
-    ) -> Optional[str]:
+    async def _llm_enhance(self, base_code: str, request: CodeGenerationRequest) -> Optional[str]:
         """
         Use the local TRANC3 inference engine to refine template-generated code.
         Returns None on any failure so the caller falls back to the template.
@@ -743,9 +721,7 @@ class AdvancedCodeGenerator:
             engine = get_engine()
 
             constraints_text = (
-                "\n".join(f"- {c}" for c in request.constraints)
-                if request.constraints
-                else "None"
+                "\n".join(f"- {c}" for c in request.constraints) if request.constraints else "None"
             )
 
             prompt = (
@@ -811,13 +787,9 @@ class AdvancedCodeGenerator:
         explanation = await self.explain_code(final_code)
 
         # 6. Quality score
-        self._analyzer.analyze_python(
-            final_code
-        ) if request.language == "python" else {}
+        self._analyzer.analyze_python(final_code) if request.language == "python" else {}
         smells = (
-            self._analyzer.detect_code_smells(final_code)
-            if request.language == "python"
-            else []
+            self._analyzer.detect_code_smells(final_code) if request.language == "python" else []
         )
         quality = improved_result.quality_score
 

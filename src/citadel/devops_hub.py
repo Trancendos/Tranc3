@@ -25,26 +25,26 @@ logger = logging.getLogger(__name__)
 
 
 class DeployTarget(str, Enum):
-    BACKEND      = "tranc3-backend"       # Fly.io
-    BOTS         = "tranc3-bots"          # Fly.io
-    TRANC3_AI    = "tranc3-ai"            # CF Worker
-    INFINITY_VOID = "infinity-void"       # CF Worker
-    API_GATEWAY  = "trancendos-api-gateway"  # CF Worker
+    BACKEND = "tranc3-backend"  # Fly.io
+    BOTS = "tranc3-bots"  # Fly.io
+    TRANC3_AI = "tranc3-ai"  # CF Worker
+    INFINITY_VOID = "infinity-void"  # CF Worker
+    API_GATEWAY = "trancendos-api-gateway"  # CF Worker
 
 
 class DeployStatus(str, Enum):
-    PENDING    = "pending"
+    PENDING = "pending"
     IN_PROGRESS = "in_progress"
-    SUCCESS    = "success"
-    FAILED     = "failed"
+    SUCCESS = "success"
+    FAILED = "failed"
     ROLLED_BACK = "rolled_back"
 
 
 class ServiceHealthStatus(str, Enum):
-    HEALTHY   = "healthy"
-    DEGRADED  = "degraded"
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
-    UNKNOWN   = "unknown"
+    UNKNOWN = "unknown"
 
 
 @dataclass
@@ -76,15 +76,60 @@ class DeployRecord:
 
 # Static service inventory — reflects deployed services from CLAUDE.md
 _SERVICE_INVENTORY: List[Dict[str, Any]] = [
-    {"name": "tranc3-backend",            "type": "fly.io",          "region": "lhr", "url": "https://tranc3-backend.fly.dev"},
-    {"name": "tranc3-bots",               "type": "fly.io",          "region": "lhr", "url": "https://tranc3-bots.fly.dev"},
-    {"name": "tranc3-ai",                 "type": "cloudflare-worker","region": "edge", "url": "https://tranc3-ai.luminous-aimastermind.workers.dev"},
-    {"name": "infinity-void",             "type": "cloudflare-worker","region": "edge", "url": "https://infinity-void.luminous-aimastermind.workers.dev"},
-    {"name": "infinity-auth-api",         "type": "cloudflare-worker","region": "edge", "url": "https://infinity-auth-api.luminous-aimastermind.workers.dev"},
-    {"name": "infinity-ai-api",           "type": "cloudflare-worker","region": "edge", "url": "https://infinity-ai-api.luminous-aimastermind.workers.dev"},
-    {"name": "trancendos-api-gateway",    "type": "cloudflare-worker","region": "edge", "url": "https://api.trancendos.com"},
-    {"name": "tranc3-backend-db",         "type": "supabase",        "region": "eu-west-2", "url": "db.ijizzeycvmqlobszojhf.supabase.co"},
-    {"name": "forgejo-the-workshop",      "type": "self-hosted",     "region": "trancendos.com", "url": "trancendos.com/the-workshop"},
+    {
+        "name": "tranc3-backend",
+        "type": "fly.io",
+        "region": "lhr",
+        "url": "https://tranc3-backend.fly.dev",
+    },
+    {
+        "name": "tranc3-bots",
+        "type": "fly.io",
+        "region": "lhr",
+        "url": "https://tranc3-bots.fly.dev",
+    },
+    {
+        "name": "tranc3-ai",
+        "type": "cloudflare-worker",
+        "region": "edge",
+        "url": "https://tranc3-ai.luminous-aimastermind.workers.dev",
+    },
+    {
+        "name": "infinity-void",
+        "type": "cloudflare-worker",
+        "region": "edge",
+        "url": "https://infinity-void.luminous-aimastermind.workers.dev",
+    },
+    {
+        "name": "infinity-auth-api",
+        "type": "cloudflare-worker",
+        "region": "edge",
+        "url": "https://infinity-auth-api.luminous-aimastermind.workers.dev",
+    },
+    {
+        "name": "infinity-ai-api",
+        "type": "cloudflare-worker",
+        "region": "edge",
+        "url": "https://infinity-ai-api.luminous-aimastermind.workers.dev",
+    },
+    {
+        "name": "trancendos-api-gateway",
+        "type": "cloudflare-worker",
+        "region": "edge",
+        "url": "https://api.trancendos.com",
+    },
+    {
+        "name": "tranc3-backend-db",
+        "type": "supabase",
+        "region": "eu-west-2",
+        "url": "db.ijizzeycvmqlobszojhf.supabase.co",
+    },
+    {
+        "name": "forgejo-the-workshop",
+        "type": "self-hosted",
+        "region": "trancendos.com",
+        "url": "trancendos.com/the-workshop",
+    },
 ]
 
 
@@ -109,6 +154,7 @@ class TheCitadel:
         self._loaded = True
         try:
             from src.core.redis_store import get_store
+
             store = await get_store()
             # Load deploy records
             keys = await store.keys("citadel:deploy:*")
@@ -144,24 +190,27 @@ class TheCitadel:
     async def _persist_deploy(self, record: DeployRecord) -> None:
         try:
             from src.core.redis_store import get_store
+
             store = await get_store()
             await store.set(f"citadel:deploy:{record.id}", record.to_dict(), ttl=_DEPLOY_TTL)
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
-
     async def _persist_health(self, service_name: str, status: ServiceHealthStatus) -> None:
         try:
             from src.core.redis_store import get_store
+
             store = await get_store()
             await store.hset("citadel:health", {service_name: status.value})
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
-
     def inventory(self) -> List[Dict[str, Any]]:
         return [
-            {**svc, "health": self._service_health.get(svc["name"], ServiceHealthStatus.UNKNOWN).value}
+            {
+                **svc,
+                "health": self._service_health.get(svc["name"], ServiceHealthStatus.UNKNOWN).value,
+            }
             for svc in _SERVICE_INVENTORY
         ]
 
@@ -173,6 +222,7 @@ class TheCitadel:
         status: DeployStatus = DeployStatus.PENDING,
     ) -> DeployRecord:
         import uuid
+
         await self._ensure_loaded()
         record = DeployRecord(
             id=str(uuid.uuid4()),
@@ -183,10 +233,16 @@ class TheCitadel:
         )
         self._deploys[record.id] = record
         await self._persist_deploy(record)
-        self._emit(f"citadel.deploy.{status.value}", {
-            "target": target.value, "version": version, "deploy_id": record.id
-        })
-        logger.info("citadel: deploy recorded target=%s version=%s status=%s", sanitize_for_log(target.value), sanitize_for_log(version), sanitize_for_log(status.value))  # codeql[py/cleartext-logging]
+        self._emit(
+            f"citadel.deploy.{status.value}",
+            {"target": target.value, "version": version, "deploy_id": record.id},
+        )
+        logger.info(
+            "citadel: deploy recorded target=%s version=%s status=%s",
+            sanitize_for_log(target.value),
+            sanitize_for_log(version),
+            sanitize_for_log(status.value),
+        )  # codeql[py/cleartext-logging]
         return record
 
     def record_deploy(
@@ -199,6 +255,7 @@ class TheCitadel:
         """Sync wrapper — persists async via fire-and-forget."""
         import asyncio
         import uuid
+
         record = DeployRecord(
             id=str(uuid.uuid4()),
             target=target,
@@ -215,10 +272,16 @@ class TheCitadel:
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
-        self._emit(f"citadel.deploy.{status.value}", {
-            "target": target.value, "version": version, "deploy_id": record.id
-        })
-        logger.info("citadel: deploy recorded target=%s version=%s status=%s", sanitize_for_log(target.value), sanitize_for_log(version), sanitize_for_log(status.value))  # codeql[py/cleartext-logging]
+        self._emit(
+            f"citadel.deploy.{status.value}",
+            {"target": target.value, "version": version, "deploy_id": record.id},
+        )
+        logger.info(
+            "citadel: deploy recorded target=%s version=%s status=%s",
+            sanitize_for_log(target.value),
+            sanitize_for_log(version),
+            sanitize_for_log(status.value),
+        )  # codeql[py/cleartext-logging]
         return record
 
     def update_deploy(
@@ -228,6 +291,7 @@ class TheCitadel:
         error: Optional[str] = None,
     ) -> Optional[DeployRecord]:
         import asyncio
+
         record = self._deploys.get(deploy_id)
         if not record:
             return None
@@ -251,6 +315,7 @@ class TheCitadel:
 
     def update_health(self, service_name: str, status: ServiceHealthStatus) -> None:
         import asyncio
+
         self._service_health[service_name] = status
         try:
             loop = asyncio.get_event_loop()
@@ -258,7 +323,6 @@ class TheCitadel:
                 loop.create_task(self._persist_health(service_name, status))
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
     def list_deploys(self, target: Optional[DeployTarget] = None) -> List[DeployRecord]:
         deploys = list(self._deploys.values())
@@ -269,8 +333,7 @@ class TheCitadel:
     def stats(self) -> Dict[str, Any]:
         healthy = sum(1 for v in self._service_health.values() if v == ServiceHealthStatus.HEALTHY)
         total = len(self._service_health)
-        recent = [d for d in self._deploys.values()
-                  if (time.time() - d.started_at) < 86400]
+        recent = [d for d in self._deploys.values() if (time.time() - d.started_at) < 86400]
         return {
             "service": "the-citadel",
             "total_services": total,
@@ -282,11 +345,15 @@ class TheCitadel:
     def _emit(self, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
             from src.observability.observatory import EventCategory, observe
-            observe(event_type, category=EventCategory.SYSTEM, service="the-citadel",
-                    metadata=metadata or {})
+
+            observe(
+                event_type,
+                category=EventCategory.SYSTEM,
+                service="the-citadel",
+                metadata=metadata or {},
+            )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
 
 _citadel: Optional[TheCitadel] = None

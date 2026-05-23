@@ -59,8 +59,8 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ---------------------------------------------------------------------------
 
-_METRICS_HISTORY_SIZE = 1440       # 24h at 1-minute intervals
-_VITALS_SNAPSHOT_INTERVAL = 60.0   # seconds between vitals snapshots
+_METRICS_HISTORY_SIZE = 1440  # 24h at 1-minute intervals
+_VITALS_SNAPSHOT_INTERVAL = 60.0  # seconds between vitals snapshots
 _PROMETHEUS_PREFIX = "tranc3_proactive_"
 
 
@@ -68,8 +68,10 @@ _PROMETHEUS_PREFIX = "tranc3_proactive_"
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class MetricType(str, Enum):
     """Type of metric being collected."""
+
     GAUGE = "gauge"
     COUNTER = "counter"
     HISTOGRAM = "histogram"
@@ -78,6 +80,7 @@ class MetricType(str, Enum):
 
 class HealthTrend(str, Enum):
     """Trend direction for a health metric."""
+
     IMPROVING = "improving"
     STABLE = "stable"
     DEGRADING = "degrading"
@@ -89,9 +92,11 @@ class HealthTrend(str, Enum):
 # Data Models
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SubsystemMetrics:
     """Metrics snapshot for a single subsystem."""
+
     name: str
     health_score: float = 0.0
     status: str = "unknown"
@@ -123,6 +128,7 @@ class SystemVitals:
     Aggregates health across all subsystems into a single composite score
     with per-subsystem breakdowns, trend analysis, and zero-cost compliance.
     """
+
     timestamp: float = field(default_factory=time.time)
     composite_health: float = 0.0
     subsystem_health: Dict[str, float] = field(default_factory=dict)
@@ -149,9 +155,7 @@ class SystemVitals:
         return {
             "timestamp": self.timestamp,
             "composite_health": round(self.composite_health, 4),
-            "subsystem_health": {
-                k: round(v, 4) for k, v in self.subsystem_health.items()
-            },
+            "subsystem_health": {k: round(v, 4) for k, v in self.subsystem_health.items()},
             "health_trend": self.health_trend.value,
             "orchestrator_mode": self.orchestrator_mode,
             "pulse_mode": self.pulse_mode,
@@ -176,6 +180,7 @@ class SystemVitals:
 @dataclass
 class MetricsSnapshot:
     """A point-in-time snapshot of all proactive system metrics."""
+
     timestamp: float = field(default_factory=time.time)
     vitals: SystemVitals = field(default_factory=SystemVitals)
     subsystems: Dict[str, SubsystemMetrics] = field(default_factory=dict)
@@ -188,9 +193,7 @@ class MetricsSnapshot:
         return {
             "timestamp": self.timestamp,
             "vitals": self.vitals.to_dict(),
-            "subsystems": {
-                k: v.to_dict() for k, v in self.subsystems.items()
-            },
+            "subsystems": {k: v.to_dict() for k, v in self.subsystems.items()},
             "action_stats": self.action_stats,
             "zero_cost_details": self.zero_cost_details,
             "pulse_details": self.pulse_details,
@@ -201,6 +204,7 @@ class MetricsSnapshot:
 # ---------------------------------------------------------------------------
 # Proactive Metrics Collector
 # ---------------------------------------------------------------------------
+
 
 class ProactiveMetricsCollector:
     """Unified metrics collector for the Tranc3 proactive system.
@@ -345,10 +349,7 @@ class ProactiveMetricsCollector:
     def get_vitals(self) -> SystemVitals:
         """Get the current system vitals (collects if stale)."""
         now = time.time()
-        if (
-            not self._vitals_history
-            or (now - self._last_snapshot_time) > self._snapshot_interval
-        ):
+        if not self._vitals_history or (now - self._last_snapshot_time) > self._snapshot_interval:
             snapshot = self.collect()
             return snapshot.vitals
         return self._vitals_history[-1]
@@ -445,10 +446,12 @@ class ProactiveMetricsCollector:
                     storage_bridge = bridges.get("storage", {})
                     if storage_bridge.get("status") in ("connected", "active"):
                         vitals.storage_tiers_healthy = status.get(
-                            "subsystems_connected", 0,
+                            "subsystems_connected",
+                            0,
                         )
                         vitals.storage_tiers_total = status.get(
-                            "subsystems_total", 0,
+                            "subsystems_total",
+                            0,
                         )
             except Exception:
                 pass
@@ -600,9 +603,7 @@ class ProactiveMetricsCollector:
             return HealthTrend.UNKNOWN
 
         # Get the last 3 composite health scores
-        recent_scores = [
-            v.composite_health for v in list(self._vitals_history)[-3:]
-        ]
+        recent_scores = [v.composite_health for v in list(self._vitals_history)[-3:]]
 
         # Check for consistent degradation
         if all(s < 0.4 for s in recent_scores):
@@ -644,7 +645,7 @@ class ProactiveMetricsCollector:
 
             # Composite health
             lines.append(f"# TYPE {prefix}composite_health gauge")
-            lines.append(f'{prefix}composite_health {vitals.composite_health:.4f}')
+            lines.append(f"{prefix}composite_health {vitals.composite_health:.4f}")
 
             # Health trend (as numeric: improving=1.0, stable=0.7, degrading=0.3, critical=0.1, unknown=0.5)
             trend_scores = {
@@ -663,9 +664,7 @@ class ProactiveMetricsCollector:
             # Subsystem health scores
             lines.append(f"# TYPE {prefix}subsystem_health gauge")
             for name, score in vitals.subsystem_health.items():
-                lines.append(
-                    f'{prefix}subsystem_health{{subsystem="{name}"}} {score:.4f}'
-                )
+                lines.append(f'{prefix}subsystem_health{{subsystem="{name}"}} {score:.4f}')
 
             # Orchestrator mode
             lines.append(f"# TYPE {prefix}orchestrator_mode gauge")
@@ -686,7 +685,7 @@ class ProactiveMetricsCollector:
             # Zero-cost compliance
             lines.append(f"# TYPE {prefix}zero_cost_compliant gauge")
             lines.append(
-                f'{prefix}zero_cost_compliant {1.0 if vitals.zero_cost_compliant else 0.0}'
+                f"{prefix}zero_cost_compliant {1.0 if vitals.zero_cost_compliant else 0.0}"
             )
 
             # Action counts
@@ -746,19 +745,14 @@ class ProactiveMetricsCollector:
 
             # Subsystem-specific metrics
             for name, sub_metrics in snapshot.subsystems.items():
-                lines.append(
-                    f'# TYPE {prefix}subsystem_events_total counter'
-                )
+                lines.append(f"# TYPE {prefix}subsystem_events_total counter")
                 lines.append(
                     f'{prefix}subsystem_events_total{{subsystem="{name}"}} '
                     f"{sub_metrics.events_processed}"
                 )
+                lines.append(f"# TYPE {prefix}subsystem_errors_total counter")
                 lines.append(
-                    f'# TYPE {prefix}subsystem_errors_total counter'
-                )
-                lines.append(
-                    f'{prefix}subsystem_errors_total{{subsystem="{name}"}} '
-                    f"{sub_metrics.errors}"
+                    f'{prefix}subsystem_errors_total{{subsystem="{name}"}} {sub_metrics.errors}'
                 )
 
             # Action stats
@@ -772,16 +766,12 @@ class ProactiveMetricsCollector:
                 approaching = zc.get("approaching_limit", [])
                 if isinstance(approaching, list):
                     lines.append(f"# TYPE {prefix}zero_cost_approaching_limit gauge")
-                    lines.append(
-                        f"{prefix}zero_cost_approaching_limit {len(approaching)}"
-                    )
+                    lines.append(f"{prefix}zero_cost_approaching_limit {len(approaching)}")
 
                 critical = zc.get("critical_tiers", [])
                 if isinstance(critical, list):
                     lines.append(f"# TYPE {prefix}zero_cost_critical_tiers gauge")
-                    lines.append(
-                        f"{prefix}zero_cost_critical_tiers {len(critical)}"
-                    )
+                    lines.append(f"{prefix}zero_cost_critical_tiers {len(critical)}")
 
             # Collections counter
             lines.append(f"# TYPE {prefix}collections_total counter")
@@ -837,9 +827,7 @@ class ProactiveMetricsCollector:
         """
         cutoff = time.time() - duration_seconds
         return [
-            (v.timestamp, v.composite_health)
-            for v in self._vitals_history
-            if v.timestamp >= cutoff
+            (v.timestamp, v.composite_health) for v in self._vitals_history if v.timestamp >= cutoff
         ]
 
     def get_subsystem_health_timeline(

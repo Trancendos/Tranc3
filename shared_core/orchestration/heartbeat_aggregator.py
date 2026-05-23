@@ -34,8 +34,10 @@ logger = logging.getLogger("tranc3.heartbeat")
 
 # ── Enums ──────────────────────────────────────────────────────────────────────
 
+
 class ServiceStatus(str, Enum):
     """Service health status levels."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     CRITICAL = "critical"
@@ -45,6 +47,7 @@ class ServiceStatus(str, Enum):
 
 class HealthCategory(str, Enum):
     """Health monitoring categories."""
+
     AVAILABILITY = "availability"
     PERFORMANCE = "performance"
     ERRORS = "errors"
@@ -54,6 +57,7 @@ class HealthCategory(str, Enum):
 
 class AlertSeverity(str, Enum):
     """Alert severity levels."""
+
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"
@@ -61,6 +65,7 @@ class AlertSeverity(str, Enum):
 
 class TrendStatus(str, Enum):
     """Health trend direction."""
+
     IMPROVING = "improving"
     STABLE = "stable"
     DEGRADING = "degrading"
@@ -68,6 +73,7 @@ class TrendStatus(str, Enum):
 
 class TrendPeriod(str, Enum):
     """Trend analysis time windows."""
+
     ONE_HOUR = "1h"
     SIX_HOURS = "6h"
     ONE_DAY = "24h"
@@ -77,21 +83,24 @@ class TrendPeriod(str, Enum):
 
 class IncidentStatus(str, Enum):
     """Incident lifecycle status."""
+
     ACTIVE = "active"
     RESOLVED = "resolved"
 
 
 # ── Data Models ────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class HeartbeatMetrics:
     """Quantitative metrics from a service heartbeat."""
-    uptime: float = 0.0                  # seconds
-    response_time: float = 0.0           # milliseconds
-    error_rate: float = 0.0              # percentage (0-100)
-    cpu_usage: float = 0.0               # percentage (0-100)
-    memory_usage: float = 0.0            # percentage (0-100)
-    disk_usage: float = 0.0              # percentage (0-100)
+
+    uptime: float = 0.0  # seconds
+    response_time: float = 0.0  # milliseconds
+    error_rate: float = 0.0  # percentage (0-100)
+    cpu_usage: float = 0.0  # percentage (0-100)
+    memory_usage: float = 0.0  # percentage (0-100)
+    disk_usage: float = 0.0  # percentage (0-100)
     active_connections: int = 0
     requests_per_minute: float = 0.0
 
@@ -99,6 +108,7 @@ class HeartbeatMetrics:
 @dataclass
 class Heartbeat:
     """A single heartbeat signal from a service."""
+
     service_id: str
     service_name: str
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -113,6 +123,7 @@ class Heartbeat:
 @dataclass
 class HealthAlert:
     """An alert generated from heartbeat analysis."""
+
     severity: AlertSeverity
     category: HealthCategory
     service_id: str
@@ -127,6 +138,7 @@ class HealthAlert:
 @dataclass
 class HealthIncident:
     """An incident tracking a service's critical state."""
+
     service_id: str
     start_time: datetime
     severity: ServiceStatus
@@ -140,12 +152,13 @@ class HealthIncident:
 @dataclass
 class ServiceHealth:
     """Computed health state for a tracked service."""
+
     service_id: str
     service_name: str
     status: ServiceStatus = ServiceStatus.UNKNOWN
     score: float = 100.0
     last_heartbeat: Optional[datetime] = None
-    heartbeat_interval: float = 60.0       # seconds, smoothed average
+    heartbeat_interval: float = 60.0  # seconds, smoothed average
     missed_heartbeats: int = 0
     current_metrics: Optional[HeartbeatMetrics] = None
     historical_metrics: List[HeartbeatMetrics] = field(default_factory=list)
@@ -156,6 +169,7 @@ class ServiceHealth:
 @dataclass
 class CategoryHealth:
     """Aggregated health for a category across services."""
+
     category: HealthCategory
     status: ServiceStatus = ServiceStatus.UNKNOWN
     score: float = 0.0
@@ -169,6 +183,7 @@ class CategoryHealth:
 @dataclass
 class HealthTrend:
     """Trend analysis for a time period."""
+
     period: TrendPeriod
     status: TrendStatus = TrendStatus.STABLE
     score_change: float = 0.0
@@ -180,6 +195,7 @@ class HealthTrend:
 @dataclass
 class AggregatedHealth:
     """Full aggregated health snapshot of the ecosystem."""
+
     overall_status: ServiceStatus = ServiceStatus.UNKNOWN
     overall_score: float = 0.0
     services: List[ServiceHealth] = field(default_factory=list)
@@ -193,29 +209,32 @@ class AggregatedHealth:
 @dataclass
 class AlertThresholds:
     """Configurable thresholds for alert generation."""
-    critical_response_time: float = 5000.0    # ms
-    critical_error_rate: float = 10.0          # %
-    critical_cpu_usage: float = 90.0           # %
-    critical_memory_usage: float = 90.0        # %
-    warning_response_time: float = 2000.0      # ms
-    warning_error_rate: float = 5.0            # %
-    warning_cpu_usage: float = 75.0            # %
-    warning_memory_usage: float = 75.0         # %
+
+    critical_response_time: float = 5000.0  # ms
+    critical_error_rate: float = 10.0  # %
+    critical_cpu_usage: float = 90.0  # %
+    critical_memory_usage: float = 90.0  # %
+    warning_response_time: float = 2000.0  # ms
+    warning_error_rate: float = 5.0  # %
+    warning_cpu_usage: float = 75.0  # %
+    warning_memory_usage: float = 75.0  # %
 
 
 @dataclass
 class HeartbeatConfig:
     """Configuration for the heartbeat aggregator."""
-    retention_period: int = 7 * 24 * 3600     # 7 days in seconds
-    aggregation_interval: int = 60             # 1 minute
+
+    retention_period: int = 7 * 24 * 3600  # 7 days in seconds
+    aggregation_interval: int = 60  # 1 minute
     max_historical_metrics: int = 1000
     max_status_history: int = 100
-    alert_dedup_window_seconds: int = 300      # 5 minutes
+    alert_dedup_window_seconds: int = 300  # 5 minutes
     max_recommendations: int = 10
     thresholds: AlertThresholds = field(default_factory=AlertThresholds)
 
 
 # ── HeartbeatAggregator ───────────────────────────────────────────────────────
+
 
 class HeartbeatAggregator:
     """Collects and aggregates heartbeat signals for ecosystem health monitoring.
@@ -242,7 +261,9 @@ class HeartbeatAggregator:
         self._alerts: List[HealthAlert] = []
         self._incidents: Dict[str, HealthIncident] = {}
         self._last_aggregation: Optional[datetime] = None
-        logger.info("HeartbeatAggregator initialized (retention=%ds)", self._config.retention_period)
+        logger.info(
+            "HeartbeatAggregator initialized (retention=%ds)", self._config.retention_period
+        )
 
     # ── Heartbeat Ingestion ────────────────────────────────────────────────
 
@@ -270,7 +291,9 @@ class HeartbeatAggregator:
 
         logger.debug(
             "Heartbeat received: service=%s status=%s score=%.1f",
-            sid, heartbeat.status.value, self._calculate_service_score(heartbeat),
+            sid,
+            heartbeat.status.value,
+            self._calculate_service_score(heartbeat),
         )
 
     def _cleanup_heartbeats(self, service_id: str) -> None:
@@ -281,8 +304,7 @@ class HeartbeatAggregator:
 
         cutoff = time.time() - self._config.retention_period
         self._heartbeats[service_id] = [
-            hb for hb in heartbeats
-            if hb.timestamp.timestamp() > cutoff
+            hb for hb in heartbeats if hb.timestamp.timestamp() > cutoff
         ]
 
     # ── Service Health Calculation ─────────────────────────────────────────
@@ -304,14 +326,18 @@ class HeartbeatAggregator:
                 missed_heartbeats=0,
                 current_metrics=heartbeat.metrics,
                 historical_metrics=[heartbeat.metrics],
-                status_history=[{"timestamp": heartbeat.timestamp, "status": heartbeat.status.value}],
+                status_history=[
+                    {"timestamp": heartbeat.timestamp, "status": heartbeat.status.value}
+                ],
                 incidents=[],
             )
             return
 
         # Update existing service health
         now = time.time()
-        time_since_last = now - existing.last_heartbeat.timestamp() if existing.last_heartbeat else 0
+        time_since_last = (
+            now - existing.last_heartbeat.timestamp() if existing.last_heartbeat else 0
+        )
 
         # Detect missed heartbeats
         if time_since_last > existing.heartbeat_interval * 2:
@@ -321,23 +347,25 @@ class HeartbeatAggregator:
 
         # Smooth heartbeat interval (exponential moving average)
         if existing.last_heartbeat and time_since_last > 0:
-            existing.heartbeat_interval = (
-                existing.heartbeat_interval * 0.9 + time_since_last * 0.1
-            )
+            existing.heartbeat_interval = existing.heartbeat_interval * 0.9 + time_since_last * 0.1
 
         # Update metrics
         existing.current_metrics = heartbeat.metrics
         existing.historical_metrics.append(heartbeat.metrics)
         if len(existing.historical_metrics) > self._config.max_historical_metrics:
-            existing.historical_metrics = existing.historical_metrics[-self._config.max_historical_metrics:]
+            existing.historical_metrics = existing.historical_metrics[
+                -self._config.max_historical_metrics :
+            ]
 
         # Update status history
-        existing.status_history.append({
-            "timestamp": heartbeat.timestamp,
-            "status": heartbeat.status.value,
-        })
+        existing.status_history.append(
+            {
+                "timestamp": heartbeat.timestamp,
+                "status": heartbeat.status.value,
+            }
+        )
         if len(existing.status_history) > self._config.max_status_history:
-            existing.status_history = existing.status_history[-self._config.max_status_history:]
+            existing.status_history = existing.status_history[-self._config.max_status_history :]
 
         # Recalculate status and score
         existing.status = heartbeat.status
@@ -419,7 +447,8 @@ class HeartbeatAggregator:
             service_health.incidents.append(incident)
             logger.warning(
                 "Critical incident started: id=%s service=%s",
-                incident.id, service_health.service_id,
+                incident.id,
+                service_health.service_id,
             )
 
         # Resolve existing incident
@@ -430,7 +459,8 @@ class HeartbeatAggregator:
                     incident.status = IncidentStatus.RESOLVED
                     logger.info(
                         "Critical incident resolved: id=%s service=%s",
-                        incident.id, service_health.service_id,
+                        incident.id,
+                        service_health.service_id,
                     )
 
     def _get_affected_metrics(self, heartbeat: Heartbeat) -> List[str]:
@@ -458,31 +488,63 @@ class HeartbeatAggregator:
 
         # Critical alerts
         if m.response_time > t.critical_response_time:
-            self._create_alert(AlertSeverity.CRITICAL, HealthCategory.AVAILABILITY,
-                               heartbeat, f"Critical response time: {m.response_time:.0f}ms")
+            self._create_alert(
+                AlertSeverity.CRITICAL,
+                HealthCategory.AVAILABILITY,
+                heartbeat,
+                f"Critical response time: {m.response_time:.0f}ms",
+            )
         if m.error_rate > t.critical_error_rate:
-            self._create_alert(AlertSeverity.CRITICAL, HealthCategory.ERRORS,
-                               heartbeat, f"Critical error rate: {m.error_rate:.1f}%")
+            self._create_alert(
+                AlertSeverity.CRITICAL,
+                HealthCategory.ERRORS,
+                heartbeat,
+                f"Critical error rate: {m.error_rate:.1f}%",
+            )
         if m.cpu_usage > t.critical_cpu_usage:
-            self._create_alert(AlertSeverity.CRITICAL, HealthCategory.RESOURCES,
-                               heartbeat, f"Critical CPU usage: {m.cpu_usage:.1f}%")
+            self._create_alert(
+                AlertSeverity.CRITICAL,
+                HealthCategory.RESOURCES,
+                heartbeat,
+                f"Critical CPU usage: {m.cpu_usage:.1f}%",
+            )
         if m.memory_usage > t.critical_memory_usage:
-            self._create_alert(AlertSeverity.CRITICAL, HealthCategory.RESOURCES,
-                               heartbeat, f"Critical memory usage: {m.memory_usage:.1f}%")
+            self._create_alert(
+                AlertSeverity.CRITICAL,
+                HealthCategory.RESOURCES,
+                heartbeat,
+                f"Critical memory usage: {m.memory_usage:.1f}%",
+            )
 
         # Warning alerts
         if t.warning_response_time < m.response_time <= t.critical_response_time:
-            self._create_alert(AlertSeverity.WARNING, HealthCategory.PERFORMANCE,
-                               heartbeat, f"High response time: {m.response_time:.0f}ms")
+            self._create_alert(
+                AlertSeverity.WARNING,
+                HealthCategory.PERFORMANCE,
+                heartbeat,
+                f"High response time: {m.response_time:.0f}ms",
+            )
         if t.warning_error_rate < m.error_rate <= t.critical_error_rate:
-            self._create_alert(AlertSeverity.WARNING, HealthCategory.ERRORS,
-                               heartbeat, f"High error rate: {m.error_rate:.1f}%")
+            self._create_alert(
+                AlertSeverity.WARNING,
+                HealthCategory.ERRORS,
+                heartbeat,
+                f"High error rate: {m.error_rate:.1f}%",
+            )
         if t.warning_cpu_usage < m.cpu_usage <= t.critical_cpu_usage:
-            self._create_alert(AlertSeverity.WARNING, HealthCategory.RESOURCES,
-                               heartbeat, f"High CPU usage: {m.cpu_usage:.1f}%")
+            self._create_alert(
+                AlertSeverity.WARNING,
+                HealthCategory.RESOURCES,
+                heartbeat,
+                f"High CPU usage: {m.cpu_usage:.1f}%",
+            )
         if t.warning_memory_usage < m.memory_usage <= t.critical_memory_usage:
-            self._create_alert(AlertSeverity.WARNING, HealthCategory.RESOURCES,
-                               heartbeat, f"High memory usage: {m.memory_usage:.1f}%")
+            self._create_alert(
+                AlertSeverity.WARNING,
+                HealthCategory.RESOURCES,
+                heartbeat,
+                f"High memory usage: {m.memory_usage:.1f}%",
+            )
 
     def _create_alert(
         self,
@@ -514,8 +576,13 @@ class HeartbeatAggregator:
             timestamp=heartbeat.timestamp,
         )
         self._alerts.append(alert)
-        logger.warning("Health alert: id=%s severity=%s service=%s msg=%s",
-                        alert.id, severity.value, heartbeat.service_id, message)
+        logger.warning(
+            "Health alert: id=%s severity=%s service=%s msg=%s",
+            alert.id,
+            severity.value,
+            heartbeat.service_id,
+            message,
+        )
 
     # ── Aggregation ────────────────────────────────────────────────────────
 
@@ -528,9 +595,7 @@ class HeartbeatAggregator:
         services = list(self._service_health.values())
         categories = self._aggregate_categories(services)
         overall_status = self._calculate_overall_status(services)
-        overall_score = (
-            sum(s.score for s in services) / len(services) if services else 100.0
-        )
+        overall_score = sum(s.score for s in services) / len(services) if services else 100.0
         trends = self._calculate_trends(services)
         active_alerts = [a for a in self._alerts if not a.resolved]
         recommendations = self._generate_recommendations(services, categories)
@@ -561,35 +626,51 @@ class HeartbeatAggregator:
         result = []
         for category, cat_services in category_map.items():
             n = len(cat_services)
-            avg_rt = sum(s.current_metrics.response_time for s in cat_services if s.current_metrics) / n
-            avg_er = sum(s.current_metrics.error_rate for s in cat_services if s.current_metrics) / n
-            avg_cpu = sum(s.current_metrics.cpu_usage for s in cat_services if s.current_metrics) / n
-            avg_mem = sum(s.current_metrics.memory_usage for s in cat_services if s.current_metrics) / n
+            avg_rt = (
+                sum(s.current_metrics.response_time for s in cat_services if s.current_metrics) / n
+            )
+            avg_er = (
+                sum(s.current_metrics.error_rate for s in cat_services if s.current_metrics) / n
+            )
+            avg_cpu = (
+                sum(s.current_metrics.cpu_usage for s in cat_services if s.current_metrics) / n
+            )
+            avg_mem = (
+                sum(s.current_metrics.memory_usage for s in cat_services if s.current_metrics) / n
+            )
             avg_score = sum(s.score for s in cat_services) / n
 
             status = (
-                ServiceStatus.HEALTHY if avg_score >= 80
-                else ServiceStatus.DEGRADED if avg_score >= 50
+                ServiceStatus.HEALTHY
+                if avg_score >= 80
+                else ServiceStatus.DEGRADED
+                if avg_score >= 50
                 else ServiceStatus.CRITICAL
             )
 
-            result.append(CategoryHealth(
-                category=category,
-                status=status,
-                score=round(avg_score),
-                affected_services=[s.service_id for s in cat_services],
-                avg_response_time=round(avg_rt),
-                avg_error_rate=round(avg_er, 1),
-                avg_cpu_usage=round(avg_cpu, 1),
-                avg_memory_usage=round(avg_mem, 1),
-            ))
+            result.append(
+                CategoryHealth(
+                    category=category,
+                    status=status,
+                    score=round(avg_score),
+                    affected_services=[s.service_id for s in cat_services],
+                    avg_response_time=round(avg_rt),
+                    avg_error_rate=round(avg_er, 1),
+                    avg_cpu_usage=round(avg_cpu, 1),
+                    avg_memory_usage=round(avg_mem, 1),
+                )
+            )
 
         return result
 
     def _get_categories_for_service(self, service: ServiceHealth) -> List[HealthCategory]:
         """Determine which health categories apply to a service."""
-        cats = [HealthCategory.AVAILABILITY, HealthCategory.PERFORMANCE,
-                HealthCategory.ERRORS, HealthCategory.RESOURCES]
+        cats = [
+            HealthCategory.AVAILABILITY,
+            HealthCategory.PERFORMANCE,
+            HealthCategory.ERRORS,
+            HealthCategory.RESOURCES,
+        ]
         if service.current_metrics and service.current_metrics.active_connections > 0:
             cats.append(HealthCategory.DEPENDENCIES)
         return cats
@@ -637,18 +718,22 @@ class HeartbeatAggregator:
             # Determine trend direction based on current scores
             avg_score = sum(s.score for s in services) / len(services) if services else 100
             trend_status = (
-                TrendStatus.STABLE if avg_score >= 80
-                else TrendStatus.DEGRADING if avg_score >= 50
+                TrendStatus.STABLE
+                if avg_score >= 80
+                else TrendStatus.DEGRADING
+                if avg_score >= 50
                 else TrendStatus.IMPROVING
             )
 
-            trends.append(HealthTrend(
-                period=period,
-                status=trend_status,
-                avg_response_time=round(avg_rt),
-                avg_error_rate=round(avg_er, 1),
-                avg_uptime=round(avg_uptime),
-            ))
+            trends.append(
+                HealthTrend(
+                    period=period,
+                    status=trend_status,
+                    avg_response_time=round(avg_rt),
+                    avg_error_rate=round(avg_er, 1),
+                    avg_uptime=round(avg_uptime),
+                )
+            )
 
         return trends
 
@@ -774,11 +859,15 @@ class HeartbeatAggregator:
                     "last_heartbeat": s.last_heartbeat.isoformat() if s.last_heartbeat else None,
                     "missed_heartbeats": s.missed_heartbeats,
                     "metrics": {
-                        "response_time": s.current_metrics.response_time if s.current_metrics else 0,
+                        "response_time": s.current_metrics.response_time
+                        if s.current_metrics
+                        else 0,
                         "error_rate": s.current_metrics.error_rate if s.current_metrics else 0,
                         "cpu_usage": s.current_metrics.cpu_usage if s.current_metrics else 0,
                         "memory_usage": s.current_metrics.memory_usage if s.current_metrics else 0,
-                    } if s.current_metrics else {},
+                    }
+                    if s.current_metrics
+                    else {},
                 }
                 for s in health.services
             ],

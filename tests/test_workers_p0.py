@@ -36,8 +36,12 @@ def _import_worker(module_dotted: str, file_path: Path):
     return mod
 
 
-ws_mod = _import_worker("infinity_ws_worker", _TRANC3_ROOT / "workers" / "infinity-ws" / "worker.py")
-auth_mod = _import_worker("infinity_auth_worker", _TRANC3_ROOT / "workers" / "infinity-auth" / "worker.py")
+ws_mod = _import_worker(
+    "infinity_ws_worker", _TRANC3_ROOT / "workers" / "infinity-ws" / "worker.py"
+)
+auth_mod = _import_worker(
+    "infinity_auth_worker", _TRANC3_ROOT / "workers" / "infinity-auth" / "worker.py"
+)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -135,8 +139,12 @@ class TestVerifyToken:
     def test_valid_jwt_structure(self):
         import base64
 
-        header = base64.urlsafe_b64encode(json.dumps({"alg": "HS256"}).encode()).decode().rstrip("=")
-        payload = base64.urlsafe_b64encode(json.dumps({"sub": "user123"}).encode()).decode().rstrip("=")
+        header = (
+            base64.urlsafe_b64encode(json.dumps({"alg": "HS256"}).encode()).decode().rstrip("=")
+        )
+        payload = (
+            base64.urlsafe_b64encode(json.dumps({"sub": "user123"}).encode()).decode().rstrip("=")
+        )
         signature = "fakesig"
         token = f"{header}.{payload}.{signature}"
 
@@ -262,11 +270,15 @@ class TestInfinityWSWebSocket:
                 ws1.receive_json()
 
                 # ws1 sends a message
-                ws1.send_text(json.dumps({
-                    "type": "message",
-                    "channel": "broadcast-test",
-                    "data": "hello everyone",
-                }))
+                ws1.send_text(
+                    json.dumps(
+                        {
+                            "type": "message",
+                            "channel": "broadcast-test",
+                            "data": "hello everyone",
+                        }
+                    )
+                )
 
                 # ws2 should receive the broadcast
                 received = ws2.receive_json()
@@ -481,12 +493,15 @@ class TestInfinityAuthHTTPEndpoints:
         assert data["service"] == "infinity-auth"
 
     def test_register_new_user(self, auth_client):
-        response = auth_client.post("/auth/register", json={
-            "username": "newuser",
-            "email": "newuser@example.com",
-            "password": "securepassword123",
-            "display_name": "New User",
-        })
+        response = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "newuser",
+                "email": "newuser@example.com",
+                "password": "securepassword123",
+                "display_name": "New User",
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
@@ -497,59 +512,83 @@ class TestInfinityAuthHTTPEndpoints:
         assert "expires_in" in data
 
     def test_register_duplicate_username(self, auth_client):
-        auth_client.post("/auth/register", json={
-            "username": "dupuser",
-            "email": "first@example.com",
-            "password": "password123",
-        })
-        response = auth_client.post("/auth/register", json={
-            "username": "dupuser",
-            "email": "second@example.com",
-            "password": "password123",
-        })
+        auth_client.post(
+            "/auth/register",
+            json={
+                "username": "dupuser",
+                "email": "first@example.com",
+                "password": "password123",
+            },
+        )
+        response = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "dupuser",
+                "email": "second@example.com",
+                "password": "password123",
+            },
+        )
         assert response.status_code == 409
 
     def test_register_duplicate_email(self, auth_client):
-        auth_client.post("/auth/register", json={
-            "username": "user1",
-            "email": "same@example.com",
-            "password": "password123",
-        })
-        response = auth_client.post("/auth/register", json={
-            "username": "user2",
-            "email": "same@example.com",
-            "password": "password123",
-        })
+        auth_client.post(
+            "/auth/register",
+            json={
+                "username": "user1",
+                "email": "same@example.com",
+                "password": "password123",
+            },
+        )
+        response = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "user2",
+                "email": "same@example.com",
+                "password": "password123",
+            },
+        )
         assert response.status_code == 409
 
     def test_register_short_password(self, auth_client):
-        response = auth_client.post("/auth/register", json={
-            "username": "shortpw",
-            "email": "short@example.com",
-            "password": "short",
-        })
+        response = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "shortpw",
+                "email": "short@example.com",
+                "password": "short",
+            },
+        )
         assert response.status_code == 422  # Validation error (min_length=8)
 
     def test_register_short_username(self, auth_client):
-        response = auth_client.post("/auth/register", json={
-            "username": "ab",
-            "email": "shortuser@example.com",
-            "password": "password123",
-        })
+        response = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "ab",
+                "email": "shortuser@example.com",
+                "password": "password123",
+            },
+        )
         assert response.status_code == 422  # Validation error (min_length=3)
 
     def test_login_success(self, auth_client):
         # Register first
-        auth_client.post("/auth/register", json={
-            "username": "loginuser",
-            "email": "login@example.com",
-            "password": "loginpassword",
-        })
+        auth_client.post(
+            "/auth/register",
+            json={
+                "username": "loginuser",
+                "email": "login@example.com",
+                "password": "loginpassword",
+            },
+        )
         # Login
-        response = auth_client.post("/auth/login", json={
-            "username": "loginuser",
-            "password": "loginpassword",
-        })
+        response = auth_client.post(
+            "/auth/login",
+            json={
+                "username": "loginuser",
+                "password": "loginpassword",
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
@@ -557,31 +596,43 @@ class TestInfinityAuthHTTPEndpoints:
         assert data["username"] == "loginuser"
 
     def test_login_wrong_password(self, auth_client):
-        auth_client.post("/auth/register", json={
-            "username": "wrongpw",
-            "email": "wrongpw@example.com",
-            "password": "correctpassword",
-        })
-        response = auth_client.post("/auth/login", json={
-            "username": "wrongpw",
-            "password": "wrongpassword",
-        })
+        auth_client.post(
+            "/auth/register",
+            json={
+                "username": "wrongpw",
+                "email": "wrongpw@example.com",
+                "password": "correctpassword",
+            },
+        )
+        response = auth_client.post(
+            "/auth/login",
+            json={
+                "username": "wrongpw",
+                "password": "wrongpassword",
+            },
+        )
         assert response.status_code == 401
 
     def test_login_nonexistent_user(self, auth_client):
-        response = auth_client.post("/auth/login", json={
-            "username": "ghost",
-            "password": "doesntmatter",
-        })
+        response = auth_client.post(
+            "/auth/login",
+            json={
+                "username": "ghost",
+                "password": "doesntmatter",
+            },
+        )
         assert response.status_code == 401
 
     def test_get_profile(self, auth_client):
         # Register and get token
-        reg = auth_client.post("/auth/register", json={
-            "username": "profileuser",
-            "email": "profile@example.com",
-            "password": "profilepassword",
-        })
+        reg = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "profileuser",
+                "email": "profile@example.com",
+                "password": "profilepassword",
+            },
+        )
         token = reg.json()["access_token"]
 
         response = auth_client.get(
@@ -602,11 +653,14 @@ class TestInfinityAuthHTTPEndpoints:
         assert response.status_code == 401
 
     def test_verify_token_endpoint(self, auth_client):
-        reg = auth_client.post("/auth/register", json={
-            "username": "verifyuser",
-            "email": "verify@example.com",
-            "password": "verifypassword",
-        })
+        reg = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "verifyuser",
+                "email": "verify@example.com",
+                "password": "verifypassword",
+            },
+        )
         token = reg.json()["access_token"]
 
         response = auth_client.get(
@@ -619,17 +673,23 @@ class TestInfinityAuthHTTPEndpoints:
         assert data["username"] == "verifyuser"
 
     def test_refresh_token(self, auth_client):
-        reg = auth_client.post("/auth/register", json={
-            "username": "refreshuser",
-            "email": "refresh@example.com",
-            "password": "refreshpassword",
-        })
+        reg = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "refreshuser",
+                "email": "refresh@example.com",
+                "password": "refreshpassword",
+            },
+        )
         reg_data = reg.json()
         refresh_token = reg_data["refresh_token"]
 
-        response = auth_client.post("/auth/refresh", json={
-            "refresh_token": refresh_token,
-        })
+        response = auth_client.post(
+            "/auth/refresh",
+            json={
+                "refresh_token": refresh_token,
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
@@ -639,11 +699,14 @@ class TestInfinityAuthHTTPEndpoints:
 
     def test_refresh_token_twice_fails(self, auth_client):
         """Using a rotated refresh token again should fail."""
-        reg = auth_client.post("/auth/register", json={
-            "username": "rotuser",
-            "email": "rot@example.com",
-            "password": "rotpassword",
-        })
+        reg = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "rotuser",
+                "email": "rot@example.com",
+                "password": "rotpassword",
+            },
+        )
         rt = reg.json()["refresh_token"]
 
         # First refresh works
@@ -654,11 +717,14 @@ class TestInfinityAuthHTTPEndpoints:
         assert response.status_code == 401
 
     def test_logout(self, auth_client):
-        reg = auth_client.post("/auth/register", json={
-            "username": "logoutuser",
-            "email": "logout@example.com",
-            "password": "logoutpassword",
-        })
+        reg = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "logoutuser",
+                "email": "logout@example.com",
+                "password": "logoutpassword",
+            },
+        )
         token = reg.json()["access_token"]
 
         response = auth_client.post(
@@ -669,11 +735,14 @@ class TestInfinityAuthHTTPEndpoints:
         assert "Logged out" in response.json()["message"]
 
     def test_mfa_setup(self, auth_client):
-        reg = auth_client.post("/auth/register", json={
-            "username": "mfauser",
-            "email": "mfa@example.com",
-            "password": "mfapassword",
-        })
+        reg = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "mfauser",
+                "email": "mfa@example.com",
+                "password": "mfapassword",
+            },
+        )
         token = reg.json()["access_token"]
 
         response = auth_client.post(
@@ -688,11 +757,14 @@ class TestInfinityAuthHTTPEndpoints:
         assert len(data["backup_codes"]) == 10
 
     def test_mfa_enable(self, auth_client):
-        reg = auth_client.post("/auth/register", json={
-            "username": "mfaenable",
-            "email": "mfaenable@example.com",
-            "password": "mfaenablepassword",
-        })
+        reg = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "mfaenable",
+                "email": "mfaenable@example.com",
+                "password": "mfaenablepassword",
+            },
+        )
         token = reg.json()["access_token"]
 
         # Setup first
@@ -711,11 +783,14 @@ class TestInfinityAuthHTTPEndpoints:
         assert profile.json()["mfa_enabled"] is True
 
     def test_mfa_disable(self, auth_client):
-        reg = auth_client.post("/auth/register", json={
-            "username": "mfadisable",
-            "email": "mfadisable@example.com",
-            "password": "mfadisablepassword",
-        })
+        reg = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "mfadisable",
+                "email": "mfadisable@example.com",
+                "password": "mfadisablepassword",
+            },
+        )
         token = reg.json()["access_token"]
 
         # Setup and enable
@@ -732,11 +807,14 @@ class TestInfinityAuthHTTPEndpoints:
 
     def test_login_with_mfa_requires_code(self, auth_client):
         """When MFA is enabled, login without TOTP code should fail."""
-        reg = auth_client.post("/auth/register", json={
-            "username": "mfalogin",
-            "email": "mfalogin@example.com",
-            "password": "mfaloginpassword",
-        })
+        reg = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "mfalogin",
+                "email": "mfalogin@example.com",
+                "password": "mfaloginpassword",
+            },
+        )
         token = reg.json()["access_token"]
 
         # Setup and enable MFA
@@ -744,20 +822,26 @@ class TestInfinityAuthHTTPEndpoints:
         auth_client.post("/auth/mfa/enable", headers={"Authorization": f"Bearer {token}"})
 
         # Login without MFA code should require it
-        response = auth_client.post("/auth/login", json={
-            "username": "mfalogin",
-            "password": "mfaloginpassword",
-        })
+        response = auth_client.post(
+            "/auth/login",
+            json={
+                "username": "mfalogin",
+                "password": "mfaloginpassword",
+            },
+        )
         assert response.status_code == 403
         assert "MFA" in response.json()["detail"]
 
     def test_login_with_mfa_valid_code(self, auth_client):
         """Login with MFA code (6-digit) should succeed."""
-        reg = auth_client.post("/auth/register", json={
-            "username": "mfacode",
-            "email": "mfacode@example.com",
-            "password": "mfacodepassword",
-        })
+        reg = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "mfacode",
+                "email": "mfacode@example.com",
+                "password": "mfacodepassword",
+            },
+        )
         token = reg.json()["access_token"]
 
         # Setup and enable MFA
@@ -765,20 +849,26 @@ class TestInfinityAuthHTTPEndpoints:
         auth_client.post("/auth/mfa/enable", headers={"Authorization": f"Bearer {token}"})
 
         # Login with TOTP code
-        response = auth_client.post("/auth/login", json={
-            "username": "mfacode",
-            "password": "mfacodepassword",
-            "totp_code": "123456",
-        })
+        response = auth_client.post(
+            "/auth/login",
+            json={
+                "username": "mfacode",
+                "password": "mfacodepassword",
+                "totp_code": "123456",
+            },
+        )
         assert response.status_code == 200
 
     def test_login_with_mfa_invalid_code(self, auth_client):
         """Login with non-6-digit MFA code should fail."""
-        reg = auth_client.post("/auth/register", json={
-            "username": "mfabad",
-            "email": "mfabad@example.com",
-            "password": "mfabadpassword",
-        })
+        reg = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "mfabad",
+                "email": "mfabad@example.com",
+                "password": "mfabadpassword",
+            },
+        )
         token = reg.json()["access_token"]
 
         # Setup and enable MFA
@@ -786,29 +876,38 @@ class TestInfinityAuthHTTPEndpoints:
         auth_client.post("/auth/mfa/enable", headers={"Authorization": f"Bearer {token}"})
 
         # Login with bad TOTP code
-        response = auth_client.post("/auth/login", json={
-            "username": "mfabad",
-            "password": "mfabadpassword",
-            "totp_code": "abc",
-        })
+        response = auth_client.post(
+            "/auth/login",
+            json={
+                "username": "mfabad",
+                "password": "mfabadpassword",
+                "totp_code": "abc",
+            },
+        )
         assert response.status_code == 403
 
     def test_register_invalid_email(self, auth_client):
-        response = auth_client.post("/auth/register", json={
-            "username": "bademail",
-            "email": "not-an-email",
-            "password": "password123",
-        })
+        response = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "bademail",
+                "email": "not-an-email",
+                "password": "password123",
+            },
+        )
         assert response.status_code == 422  # EmailStr validation
 
     def test_full_auth_flow(self, auth_client):
         """Complete registration -> login -> profile -> logout flow."""
         # Register
-        reg = auth_client.post("/auth/register", json={
-            "username": "flowuser",
-            "email": "flow@example.com",
-            "password": "flowpassword",
-        })
+        reg = auth_client.post(
+            "/auth/register",
+            json={
+                "username": "flowuser",
+                "email": "flow@example.com",
+                "password": "flowpassword",
+            },
+        )
         assert reg.status_code == 200
         token = reg.json()["access_token"]
         refresh = reg.json()["refresh_token"]

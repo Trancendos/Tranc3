@@ -127,9 +127,7 @@ class Decomposition:
                     in_degree[st.subtask_id] += 1
 
         # Kahn's algorithm
-        queue = [
-            sid for sid, deg in in_degree.items() if deg == 0
-        ]
+        queue = [sid for sid, deg in in_degree.items() if deg == 0]
         queue.sort(key=lambda sid: subtask_map[sid].order)
 
         ordered: List[SubTask] = []
@@ -412,10 +410,14 @@ class TaskDecomposer:
             if pattern.search(goal_description):
                 logger.debug(
                     "Decomposing goal with strategy '%s': %s",
-                    strategy, goal_description[:80],
+                    strategy,
+                    goal_description[:80],
                 )
                 return self._build_decomposition(
-                    goal_description, strategy, template, context,
+                    goal_description,
+                    strategy,
+                    template,
+                    context,
                 )
 
         # Fall back to generic decomposition
@@ -437,7 +439,7 @@ class TaskDecomposer:
         subtasks: List[SubTask] = []
         prev_id: Optional[str] = None
 
-        for i, step in enumerate(template[:self._max_subtasks]):
+        for i, step in enumerate(template[: self._max_subtasks]):
             subtask = SubTask(
                 description=step.get("description", f"Step {i + 1}"),
                 suggested_tool=step.get("tool", ""),
@@ -491,5 +493,8 @@ class TaskDecomposer:
         ]
 
         return self._build_decomposition(
-            goal_description, "generic", generic_template, context,
+            goal_description,
+            "generic",
+            generic_template,
+            context,
         )

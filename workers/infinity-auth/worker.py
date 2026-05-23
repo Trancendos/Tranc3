@@ -182,6 +182,7 @@ def create_access_token(user_id: str, username: str, extra_claims: dict | None =
     except ImportError:
         # Fallback: simple base64-encoded token (for development)
         import base64
+
         payload = {
             "sub": user_id,
             "username": username,
@@ -212,6 +213,7 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
     """Decode and validate a JWT access token."""
     try:
         from jose import JWTError, jwt
+
         try:
             payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
             return payload
@@ -221,6 +223,7 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
         # Fallback: decode base64 token
         try:
             import base64
+
             payload = json.loads(base64.urlsafe_b64decode(token + "=="))
             if payload.get("exp", 0) < time.time():
                 return None
@@ -282,7 +285,9 @@ security = HTTPBearer()
 # ── Dependencies ─────────────────────────────────────────────
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict[str, Any]:
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> dict[str, Any]:
     """Validate JWT token and return user payload."""
     payload = decode_access_token(credentials.credentials)
     if not payload:
@@ -320,7 +325,9 @@ async def health():
 async def register(user: UserRegister, _=Depends(rate_limit_check)):
     """Register a new user account."""
     # Check if username exists
-    existing = db.execute("SELECT user_id FROM users WHERE username = ?", (user.username,)).fetchone()
+    existing = db.execute(
+        "SELECT user_id FROM users WHERE username = ?", (user.username,)
+    ).fetchone()
     if existing:
         raise HTTPException(status_code=409, detail="Username already exists")
 
@@ -353,7 +360,9 @@ async def register(user: UserRegister, _=Depends(rate_limit_check)):
     )
     db.commit()
 
-    logger.info("user_registered: username=%s", sanitize_for_log(user.username))  # codeql[py/cleartext-logging]
+    logger.info(
+        "user_registered: username=%s", sanitize_for_log(user.username)
+    )  # codeql[py/cleartext-logging]
 
     return TokenResponse(
         access_token=access_token,
@@ -407,7 +416,9 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     db.execute("UPDATE users SET last_login = ? WHERE user_id = ?", (now, user_id))
     db.commit()
 
-    logger.info("user_login: username=%s", sanitize_for_log(credentials.username))  # codeql[py/cleartext-logging]
+    logger.info(
+        "user_login: username=%s", sanitize_for_log(credentials.username)
+    )  # codeql[py/cleartext-logging]
 
     return TokenResponse(
         access_token=access_token,
@@ -537,7 +548,9 @@ async def enable_mfa(user: dict = Depends(get_current_user)):
 @app.post("/auth/mfa/disable")
 async def disable_mfa(user: dict = Depends(get_current_user)):
     """Disable MFA for the current user."""
-    db.execute("UPDATE users SET mfa_enabled = 0, totp_secret = NULL WHERE user_id = ?", (user["sub"],))
+    db.execute(
+        "UPDATE users SET mfa_enabled = 0, totp_secret = NULL WHERE user_id = ?", (user["sub"],)
+    )
     db.commit()
     return {"message": "MFA disabled"}
 
@@ -554,4 +567,5 @@ async def verify_token_endpoint(user: dict = Depends(get_current_user)):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8005)

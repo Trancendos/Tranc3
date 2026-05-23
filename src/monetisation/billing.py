@@ -17,24 +17,30 @@ logger = logging.getLogger(__name__)
 # BILLING TIER ENUM
 # ---------------------------------------------------------------------------
 
+
 class BillingTier(str, Enum):
-    FREE       = "free"
-    PRO        = "pro"
-    BUSINESS   = "business"
+    FREE = "free"
+    PRO = "pro"
+    BUSINESS = "business"
     ENTERPRISE = "enterprise"
 
 
-def check_rate_limit(user_id: str, tier: "BillingTier", request_count: int) -> Tuple[bool, Optional[str]]:
+def check_rate_limit(
+    user_id: str, tier: "BillingTier", request_count: int
+) -> Tuple[bool, Optional[str]]:
     """
     Check whether request_count exceeds the hourly rate limit for the given tier.
     Returns (allowed: bool, error_message: str | None).
     """
-    tier_key  = tier.value if isinstance(tier, BillingTier) else str(tier)
-    limits    = TIERS.get(tier_key, TIERS["free"])
-    hourly    = limits.get("req_per_hour", 100)
+    tier_key = tier.value if isinstance(tier, BillingTier) else str(tier)
+    limits = TIERS.get(tier_key, TIERS["free"])
+    hourly = limits.get("req_per_hour", 100)
 
     if hourly != -1 and request_count > hourly:
-        return False, f"Hourly rate limit exceeded ({request_count} > {hourly} req/hr for {tier_key} tier)"
+        return (
+            False,
+            f"Hourly rate limit exceeded ({request_count} > {hourly} req/hr for {tier_key} tier)",
+        )
     return True, None
 
 
@@ -43,57 +49,62 @@ def check_rate_limit(user_id: str, tier: "BillingTier", request_count: int) -> T
 # ---------------------------------------------------------------------------
 TIERS: Dict[str, Dict] = {
     "free": {
-        "price_gbp":        0,
-        "req_per_hour":     100,
-        "req_per_day":      500,
-        "personalities":    ["tranc3-base"],
-        "languages":        ["en"],
-        "quantum":          False,
-        "consciousness":    False,
-        "websocket":        False,
-        "support":          "community",
-        "stripe_price_id":  None,
+        "price_gbp": 0,
+        "req_per_hour": 100,
+        "req_per_day": 500,
+        "personalities": ["tranc3-base"],
+        "languages": ["en"],
+        "quantum": False,
+        "consciousness": False,
+        "websocket": False,
+        "support": "community",
+        "stripe_price_id": None,
     },
     "pro": {
-        "price_gbp":        29,
-        "req_per_hour":     1_000,
-        "req_per_day":      10_000,
-        "personalities":    ["tranc3-base", "tranc3-creative", "tranc3-analytical",
-                             "tranc3-empathetic", "tranc3-multilingual"],
-        "languages":        "all",
-        "quantum":          True,
-        "consciousness":    True,
-        "websocket":        True,
-        "support":          "email",
-        "stripe_price_id":  os.getenv("STRIPE_PRO_PRICE_ID", "price_pro_placeholder"),
+        "price_gbp": 29,
+        "req_per_hour": 1_000,
+        "req_per_day": 10_000,
+        "personalities": [
+            "tranc3-base",
+            "tranc3-creative",
+            "tranc3-analytical",
+            "tranc3-empathetic",
+            "tranc3-multilingual",
+        ],
+        "languages": "all",
+        "quantum": True,
+        "consciousness": True,
+        "websocket": True,
+        "support": "email",
+        "stripe_price_id": os.getenv("STRIPE_PRO_PRICE_ID", "price_pro_placeholder"),
     },
     "business": {
-        "price_gbp":        149,
-        "req_per_hour":     10_000,
-        "req_per_day":      100_000,
-        "personalities":    "all",
-        "languages":        "all",
-        "quantum":          True,
-        "consciousness":    True,
-        "websocket":        True,
-        "white_label":      True,
-        "support":          "priority",
-        "stripe_price_id":  os.getenv("STRIPE_BUSINESS_PRICE_ID", "price_business_placeholder"),
+        "price_gbp": 149,
+        "req_per_hour": 10_000,
+        "req_per_day": 100_000,
+        "personalities": "all",
+        "languages": "all",
+        "quantum": True,
+        "consciousness": True,
+        "websocket": True,
+        "white_label": True,
+        "support": "priority",
+        "stripe_price_id": os.getenv("STRIPE_BUSINESS_PRICE_ID", "price_business_placeholder"),
     },
     "enterprise": {
-        "price_gbp":        None,  # Custom
-        "req_per_hour":     -1,    # Unlimited
-        "req_per_day":      -1,
-        "personalities":    "all",
-        "languages":        "all",
-        "quantum":          True,
-        "consciousness":    True,
-        "websocket":        True,
-        "white_label":      True,
-        "on_premise":       True,
-        "sla":              "99.9%",
-        "support":          "dedicated",
-        "stripe_price_id":  None,
+        "price_gbp": None,  # Custom
+        "req_per_hour": -1,  # Unlimited
+        "req_per_day": -1,
+        "personalities": "all",
+        "languages": "all",
+        "quantum": True,
+        "consciousness": True,
+        "websocket": True,
+        "white_label": True,
+        "on_premise": True,
+        "sla": "99.9%",
+        "support": "dedicated",
+        "stripe_price_id": None,
     },
 }
 
@@ -162,7 +173,9 @@ class TierEnforcer:
             "tier": tier,
             "requests_this_hour": record.requests_this_hour,
             "hourly_limit": hourly_limit,
-            "remaining_hour": max(0, hourly_limit - record.requests_this_hour) if hourly_limit != -1 else -1,
+            "remaining_hour": max(0, hourly_limit - record.requests_this_hour)
+            if hourly_limit != -1
+            else -1,
         }
 
     def can_use_feature(self, tier: str, feature: str) -> bool:
@@ -194,6 +207,7 @@ class StripeManager:
         if self._enabled:
             try:
                 import stripe
+
                 stripe.api_key = self._stripe_key
                 self._stripe = stripe
                 logger.info("Stripe integration enabled")
@@ -203,7 +217,9 @@ class StripeManager:
         else:
             logger.info("Stripe not configured — running in free-only mode")
 
-    def create_checkout_session(self, user_id: str, tier: str, success_url: str, cancel_url: str) -> Optional[str]:
+    def create_checkout_session(
+        self, user_id: str, tier: str, success_url: str, cancel_url: str
+    ) -> Optional[str]:
         """Create a Stripe checkout session. Returns checkout URL."""
         if not self._enabled:
             return None
@@ -221,7 +237,9 @@ class StripeManager:
             )
             return session.url
         except Exception as e:
-            logger.error("Stripe checkout error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.error(
+                "Stripe checkout error: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return None
 
     def get_subscription_tier(self, stripe_customer_id: str) -> str:
@@ -229,7 +247,9 @@ class StripeManager:
         if not self._enabled:
             return "free"
         try:
-            subs = self._stripe.Subscription.list(customer=stripe_customer_id, status="active", limit=1)
+            subs = self._stripe.Subscription.list(
+                customer=stripe_customer_id, status="active", limit=1
+            )
             if not subs.data:
                 return "free"
             price_id = subs.data[0]["items"]["data"][0]["price"]["id"]
@@ -238,7 +258,9 @@ class StripeManager:
                     return tier
             return "free"
         except Exception as e:
-            logger.error("Stripe lookup error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.error(
+                "Stripe lookup error: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return "free"
 
     def cancel_subscription(self, stripe_subscription_id: str) -> bool:
@@ -248,7 +270,9 @@ class StripeManager:
             self._stripe.Subscription.cancel(stripe_subscription_id)
             return True
         except Exception as e:
-            logger.error("Stripe cancel error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.error(
+                "Stripe cancel error: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return False
 
 
@@ -274,7 +298,11 @@ class PassiveRevenueTracker:
     def record(self, stream: str, amount_gbp: float):
         if stream in self._revenue:
             self._revenue[stream] += amount_gbp
-            logger.info("Revenue recorded: %s +£%s", sanitize_for_log(stream), sanitize_for_log(f"{amount_gbp:.2f}"))  # codeql[py/cleartext-logging]
+            logger.info(
+                "Revenue recorded: %s +£%s",
+                sanitize_for_log(stream),
+                sanitize_for_log(f"{amount_gbp:.2f}"),
+            )  # codeql[py/cleartext-logging]
 
     def summary(self) -> Dict:
         total = sum(self._revenue.values())

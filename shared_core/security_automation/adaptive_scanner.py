@@ -30,6 +30,7 @@ from shared_core.security_automation.scanner import (
 
 class Confidence(Enum):
     """Confidence levels for adaptive violation assessment."""
+
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
@@ -38,6 +39,7 @@ class Confidence(Enum):
 @dataclass
 class AdaptiveViolation:
     """A security violation with confidence scoring."""
+
     violation: Violation
     confidence_level: Confidence = Confidence.MEDIUM
     suppressed: bool = False
@@ -168,12 +170,14 @@ class AdaptiveScanner:
             line_pattern: Optional line pattern.
             reason: Reason for suppression.
         """
-        self._suppressions.append({
-            "rule_id": rule_id,
-            "file_pattern": file_pattern,
-            "line_pattern": line_pattern,
-            "reason": reason,
-        })
+        self._suppressions.append(
+            {
+                "rule_id": rule_id,
+                "file_pattern": file_pattern,
+                "line_pattern": line_pattern,
+                "reason": reason,
+            }
+        )
 
     def mark_false_positive(
         self,
@@ -188,11 +192,13 @@ class AdaptiveScanner:
         """
         rule_id = violation.rule_id
         file_path = violation.file
-        self._false_positives.append({
-            "rule_id": rule_id,
-            "file": file_path,
-            "reason": reason,
-        })
+        self._false_positives.append(
+            {
+                "rule_id": rule_id,
+                "file": file_path,
+                "reason": reason,
+            }
+        )
         self.suppress(rule_id, file_path, reason=reason or "false positive")
         self._stats["total_false_positives"] += 1
 

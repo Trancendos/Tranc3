@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RequestRecord:
     """Record of a single request for metrics calculation."""
+
     timestamp: float
     latency_ms: float
     status_code: int
@@ -82,7 +83,7 @@ class TelemetryCollector:
         hist = self._histograms[name]
         hist.append(value)
         if len(hist) > self._max_records:
-            self._histograms[name] = hist[-self._max_records:]
+            self._histograms[name] = hist[-self._max_records :]
 
     def record_request(
         self,
@@ -93,16 +94,18 @@ class TelemetryCollector:
         is_error: bool = False,
     ) -> None:
         now = time.time()
-        self._request_records.append(RequestRecord(
-            timestamp=now,
-            latency_ms=latency_ms,
-            status_code=status_code,
-            method=method,
-            path=path,
-        ))
+        self._request_records.append(
+            RequestRecord(
+                timestamp=now,
+                latency_ms=latency_ms,
+                status_code=status_code,
+                method=method,
+                path=path,
+            )
+        )
         # Trim old records
         if len(self._request_records) > self._max_records:
-            self._request_records = self._request_records[-self._max_records:]
+            self._request_records = self._request_records[-self._max_records :]
 
         self.observe("http_request_duration_ms", latency_ms)
         self.increment("http_requests_total")
@@ -112,9 +115,7 @@ class TelemetryCollector:
     def _clean_window(self) -> None:
         """Remove records outside the sliding window."""
         cutoff = time.time() - self._window_seconds
-        self._request_records = [
-            r for r in self._request_records if r.timestamp > cutoff
-        ]
+        self._request_records = [r for r in self._request_records if r.timestamp > cutoff]
 
     def get_rps(self) -> float:
         self._clean_window()
@@ -140,6 +141,7 @@ class TelemetryCollector:
         """Get all current metrics as a dictionary."""
         try:
             import resource
+
             memory_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
         except Exception:
             memory_mb = 0.0
@@ -183,13 +185,17 @@ class TelemetryCollector:
             sorted_vals = sorted(values)
             for p in [50, 95, 99]:
                 idx = max(0, min(len(sorted_vals) - 1, int(len(sorted_vals) * p / 100)))
-                lines.append(f'{prom_name}{{service="{svc}",quantile="0.{p:02d}"}} {sorted_vals[idx]:.2f}')
+                lines.append(
+                    f'{prom_name}{{service="{svc}",quantile="0.{p:02d}"}} {sorted_vals[idx]:.2f}'
+                )
             lines.append(f'{prom_name}_count{{service="{svc}"}} {len(values)}')
             lines.append(f'{prom_name}_sum{{service="{svc}"}} {sum(values):.2f}')
 
         # Built-in gauges
         metrics = self.get_metrics()
-        lines.append(f'tranc3_requests_per_second{{service="{svc}"}} {metrics["requests_per_second"]}')
+        lines.append(
+            f'tranc3_requests_per_second{{service="{svc}"}} {metrics["requests_per_second"]}'
+        )
         lines.append(f'tranc3_error_rate{{service="{svc}"}} {metrics["error_rate"]}')
         lines.append(f'tranc3_uptime_seconds{{service="{svc}"}} {metrics["uptime_seconds"]}')
 
@@ -240,7 +246,9 @@ class TelemetryMiddleware(BaseHTTPMiddleware):
         response.headers["X-Trace-Id"] = trace_id
         response.headers["X-Trancendos-Service"] = os.getenv("SERVICE_NAME", "tranc3-api")
         response.headers["X-Trancendos-Version"] = os.getenv("SERVICE_VERSION", "1.0.0")
-        response.headers["X-Trancendos-Mesh-Protocol"] = os.getenv("MESH_ROUTING_PROTOCOL", "static_port")
+        response.headers["X-Trancendos-Mesh-Protocol"] = os.getenv(
+            "MESH_ROUTING_PROTOCOL", "static_port"
+        )
         response.headers["X-Response-Time-Ms"] = f"{latency_ms:.2f}"
 
         return response

@@ -43,12 +43,14 @@ def client():
         from fastapi.testclient import TestClient
 
         from api_enhanced import app
+
         # Manually inject mock into app state (lifespan won't run in TestClient)
         app.state.enhanced = enhanced_mock
         yield TestClient(app, raise_server_exceptions=False)
 
 
 # ─── Core ──────────────────────────────────────────────────────────────────────
+
 
 class TestCoreEndpoints:
     def test_root_returns_200(self, client):
@@ -77,11 +79,14 @@ class TestCoreEndpoints:
         assert r.status_code == 422
 
     def test_think_with_personality(self, client):
-        r = client.post("/think", json={"prompt": "Analyse portfolio risk", "personality": "dorris-fontaine"})
+        r = client.post(
+            "/think", json={"prompt": "Analyse portfolio risk", "personality": "dorris-fontaine"}
+        )
         assert r.status_code == 200
 
 
 # ─── MCP ───────────────────────────────────────────────────────────────────────
+
 
 class TestMCPEndpoints:
     def test_list_tools_public(self, client):
@@ -89,33 +94,42 @@ class TestMCPEndpoints:
         assert r.status_code in (200, 503)  # 503 if registry not loaded
 
     def test_mcp_rpc_initialize(self, client):
-        r = client.post("/mcp/rpc", json={
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {"clientInfo": {"name": "test", "version": "0.1"}},
-        })
+        r = client.post(
+            "/mcp/rpc",
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {"clientInfo": {"name": "test", "version": "0.1"}},
+            },
+        )
         assert r.status_code == 200
         data = r.json()
         assert "result" in data or "error" in data
 
     def test_mcp_rpc_invalid_method(self, client):
-        r = client.post("/mcp/rpc", json={
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "nonexistent/method",
-            "params": {},
-        })
+        r = client.post(
+            "/mcp/rpc",
+            json={
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "nonexistent/method",
+                "params": {},
+            },
+        )
         assert r.status_code == 200
         data = r.json()
         assert "error" in data
 
     def test_mcp_rpc_bad_json_version(self, client):
-        r = client.post("/mcp/rpc", json={
-            "jsonrpc": "1.0",
-            "id": 3,
-            "method": "ping",
-        })
+        r = client.post(
+            "/mcp/rpc",
+            json={
+                "jsonrpc": "1.0",
+                "id": 3,
+                "method": "ping",
+            },
+        )
         assert r.status_code == 200
         assert "error" in r.json()
 
@@ -126,21 +140,25 @@ class TestMCPEndpoints:
 
 # ─── Workflow ──────────────────────────────────────────────────────────────────
 
+
 class TestWorkflowEndpoints:
     def test_templates_public(self, client):
         r = client.get("/workflow/templates")
         assert r.status_code in (200, 503)
 
     def test_execute_workflow_valid(self, client):
-        r = client.post("/workflow/execute", json={
-            "workflow": {
-                "id": "test-wf",
-                "name": "Test",
-                "nodes": [],
-                "edges": [],
+        r = client.post(
+            "/workflow/execute",
+            json={
+                "workflow": {
+                    "id": "test-wf",
+                    "name": "Test",
+                    "nodes": [],
+                    "edges": [],
+                },
+                "inputs": {},
             },
-            "inputs": {},
-        })
+        )
         assert r.status_code in (200, 500, 503)
 
     def test_workflow_status_not_found(self, client):
@@ -149,6 +167,7 @@ class TestWorkflowEndpoints:
 
 
 # ─── Skills ────────────────────────────────────────────────────────────────────
+
 
 class TestSkillsEndpoints:
     def test_search_valid(self, client):
@@ -174,12 +193,16 @@ class TestSkillsEndpoints:
 
 # ─── Code Generation ───────────────────────────────────────────────────────────
 
+
 class TestCodeGenEndpoints:
     def test_generate_valid(self, client):
-        r = client.post("/code/generate", json={
-            "description": "A function to compute fibonacci numbers",
-            "language": "python",
-        })
+        r = client.post(
+            "/code/generate",
+            json={
+                "description": "A function to compute fibonacci numbers",
+                "language": "python",
+            },
+        )
         assert r.status_code in (200, 503)
 
     def test_generate_empty_description_rejected(self, client):
@@ -187,10 +210,13 @@ class TestCodeGenEndpoints:
         assert r.status_code == 422
 
     def test_generate_invalid_language_rejected(self, client):
-        r = client.post("/code/generate", json={
-            "description": "test",
-            "language": "../../etc/passwd",
-        })
+        r = client.post(
+            "/code/generate",
+            json={
+                "description": "test",
+                "language": "../../etc/passwd",
+            },
+        )
         assert r.status_code == 422
 
     def test_improve_valid(self, client):
@@ -207,6 +233,7 @@ class TestCodeGenEndpoints:
 
 
 # ─── Healing ───────────────────────────────────────────────────────────────────
+
 
 class TestHealingEndpoints:
     def test_dashboard_public(self, client):
@@ -225,35 +252,46 @@ class TestHealingEndpoints:
 
 # ─── Evolution ─────────────────────────────────────────────────────────────────
 
+
 class TestEvolutionEndpoints:
     def test_stats_public(self, client):
         r = client.get("/evolution/stats")
         assert r.status_code in (200, 503)
 
     def test_feedback_valid(self, client):
-        r = client.post("/evolution/feedback", json={
-            "quality_score": 0.85,
-            "user_satisfaction": 0.9,
-            "session_id": "test-session",
-        })
+        r = client.post(
+            "/evolution/feedback",
+            json={
+                "quality_score": 0.85,
+                "user_satisfaction": 0.9,
+                "session_id": "test-session",
+            },
+        )
         assert r.status_code in (200, 503)
 
     def test_feedback_out_of_range_rejected(self, client):
-        r = client.post("/evolution/feedback", json={
-            "quality_score": 1.5,   # > 1.0
-            "user_satisfaction": 0.9,
-        })
+        r = client.post(
+            "/evolution/feedback",
+            json={
+                "quality_score": 1.5,  # > 1.0
+                "user_satisfaction": 0.9,
+            },
+        )
         assert r.status_code == 422
 
     def test_feedback_negative_rejected(self, client):
-        r = client.post("/evolution/feedback", json={
-            "quality_score": -0.1,
-            "user_satisfaction": 0.9,
-        })
+        r = client.post(
+            "/evolution/feedback",
+            json={
+                "quality_score": -0.1,
+                "user_satisfaction": 0.9,
+            },
+        )
         assert r.status_code == 422
 
 
 # ─── Personality ───────────────────────────────────────────────────────────────
+
 
 class TestPersonalityEndpoints:
     def test_list_personalities(self, client):
@@ -276,7 +314,7 @@ class TestPersonalityEndpoints:
         if r.status_code == 200:
             data = r.json()
             assert "vector" in data
-            assert len(data["vector"]) == 12   # 12 trait dimensions
+            assert len(data["vector"]) == 12  # 12 trait dimensions
 
     def test_get_vector_unknown_falls_back(self, client):
         r = client.post("/personality/vector", json={"name": "does-not-exist"})
@@ -284,14 +322,18 @@ class TestPersonalityEndpoints:
         assert r.status_code in (200, 503)
 
     def test_spawn_invalid_personality(self, client):
-        r = client.post("/personality/spawn", json={
-            "personality_id": "nonexistent",
-            "repo_name": "test-repo",
-        })
+        r = client.post(
+            "/personality/spawn",
+            json={
+                "personality_id": "nonexistent",
+                "repo_name": "test-repo",
+            },
+        )
         assert r.status_code in (503,)  # ValueError propagated as 503
 
 
 # ─── Auth & Rate Limiting ──────────────────────────────────────────────────────
+
 
 class TestAuthAndRateLimiting:
     def test_auth_disabled_by_default_in_test(self, client):
@@ -302,9 +344,11 @@ class TestAuthAndRateLimiting:
     def test_rate_limit_in_memory_tracking(self):
         """Verify _rate_store tracks requests per IP."""
         import api_enhanced as api
+
         initial = len(api._rate_store)
         # Make a request — the store should have grown
         from fastapi.testclient import TestClient
+
         c = TestClient(api.app, raise_server_exceptions=False)
         c.get("/health")
         assert len(api._rate_store) >= initial
@@ -318,8 +362,11 @@ class TestAuthAndRateLimiting:
     def test_repo_name_regex_blocks_path_traversal(self, client):
         """Ensure repo_name field only allows safe chars."""
         for bad in ["../etc", "name with space", "name;echo"]:
-            r = client.post("/personality/spawn", json={
-                "personality_id": "the-guardian",
-                "repo_name": bad,
-            })
+            r = client.post(
+                "/personality/spawn",
+                json={
+                    "personality_id": "the-guardian",
+                    "repo_name": bad,
+                },
+            )
             assert r.status_code == 422, f"Expected 422 for repo_name='{bad}'"

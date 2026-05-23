@@ -108,6 +108,5 @@ class MultiCloudCostOptimizer:
                 "Consider reserved instances for 30% savings",
             ],
             "estimated_annual_cost": total_monthly * 12,
-            "potential_savings_with_optimization": total_monthly
-            * 0.35,  # 35% potential savings
+            "potential_savings_with_optimization": total_monthly * 0.35,  # 35% potential savings
         }

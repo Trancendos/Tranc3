@@ -14,6 +14,7 @@ if not os.getenv("SECRET_KEY"):
 else:
     try:
         from fastapi.testclient import TestClient
+
         with patch("redis.from_url", return_value=MagicMock(ping=lambda: True)):
             from api import app
         client = TestClient(app, raise_server_exceptions=False)

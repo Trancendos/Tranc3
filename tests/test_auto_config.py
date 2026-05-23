@@ -21,13 +21,18 @@ from shared_core.architecture.auto_config import (
 # Enum tests
 # ---------------------------------------------------------------------------
 
+
 class TestConfigStatus:
     """Tests for ConfigStatus enum."""
 
     def test_all_statuses_exist(self):
         expected = [
-            "DEFAULT", "DETECTED", "OVERRIDDEN",
-            "HOT_RELOADED", "VALIDATED", "ROLLED_BACK",
+            "DEFAULT",
+            "DETECTED",
+            "OVERRIDDEN",
+            "HOT_RELOADED",
+            "VALIDATED",
+            "ROLLED_BACK",
         ]
         for name in expected:
             assert hasattr(ConfigStatus, name), f"Missing ConfigStatus.{name}"
@@ -43,8 +48,12 @@ class TestEnvironmentType:
 
     def test_all_types_exist(self):
         expected = [
-            "TRUE_NAS", "HYBRID", "CLOUD_ONLY",
-            "DEVELOPMENT", "PRODUCTION", "UNKNOWN",
+            "TRUE_NAS",
+            "HYBRID",
+            "CLOUD_ONLY",
+            "DEVELOPMENT",
+            "PRODUCTION",
+            "UNKNOWN",
         ]
         for name in expected:
             assert hasattr(EnvironmentType, name), f"Missing EnvironmentType.{name}"
@@ -60,6 +69,7 @@ class TestEnvironmentType:
 # ---------------------------------------------------------------------------
 # Dataclass tests
 # ---------------------------------------------------------------------------
+
 
 class TestConfigItem:
     """Tests for ConfigItem dataclass."""
@@ -139,6 +149,7 @@ class TestDetectionResult:
 # EnvironmentDetector tests
 # ---------------------------------------------------------------------------
 
+
 class TestEnvironmentDetector:
     """Tests for the EnvironmentDetector."""
 
@@ -161,6 +172,7 @@ class TestEnvironmentDetector:
 # ---------------------------------------------------------------------------
 # AutoConfigManager tests
 # ---------------------------------------------------------------------------
+
 
 class TestAutoConfigManager:
     """Tests for the AutoConfigManager."""

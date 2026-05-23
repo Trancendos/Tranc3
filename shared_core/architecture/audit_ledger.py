@@ -63,6 +63,7 @@ _CHAIN_FILE = "chain_state.json"
 # Data models
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class AuditRecord:
     """A single record in the audit ledger.
@@ -70,6 +71,7 @@ class AuditRecord:
     Each record is immutable once created. The chain_hash links it to
     the previous record, creating a tamper-evident chain.
     """
+
     record_id: str
     timestamp: str
     event_type: str
@@ -94,6 +96,7 @@ class AuditRecord:
 # ---------------------------------------------------------------------------
 # AuditLedger
 # ---------------------------------------------------------------------------
+
 
 class AuditLedger:
     """Append-only signed audit ledger for compliance.
@@ -131,9 +134,7 @@ class AuditLedger:
         self._chain_path = self._storage_dir / _CHAIN_FILE
 
         # Signing key for HMAC
-        self._signing_key = signing_key or os.getenv(
-            "AUDIT_SIGNING_KEY", ""
-        )
+        self._signing_key = signing_key or os.getenv("AUDIT_SIGNING_KEY", "")
         if not self._signing_key:
             # Generate a key from machine-specific entropy.
             # WARNING: This key is not portable — ledger verification requires
@@ -142,9 +143,11 @@ class AuditLedger:
             # process ID, and boot time to reduce collision risk across machines.
             import socket
             import time
+
             key_source = f"tranc3-audit-{socket.gethostname()}-{os.getpid()}-{time.time()}"
             self._signing_key = hashlib.sha256(key_source.encode()).hexdigest()[:32]
             import warnings
+
             warnings.warn(
                 "AuditLedger: Using auto-generated signing key. Set AUDIT_SIGNING_KEY "
                 "env var for reproducible verification across restarts or multi-node deploys.",
@@ -234,7 +237,8 @@ class AuditLedger:
             if record.sequence_number != i + 1:
                 logger.error(
                     "Chain integrity violation: expected sequence %d, got %d",
-                    i + 1, record.sequence_number,
+                    i + 1,
+                    record.sequence_number,
                 )
                 return False
 
@@ -337,14 +341,19 @@ class AuditLedger:
     def _compute_record_hash(record: AuditRecord) -> str:
         """Compute SHA-256 hash of a record's content."""
         # Hash the immutable fields (exclude hashes themselves)
-        content = json.dumps({
-            "record_id": record.record_id,
-            "timestamp": record.timestamp,
-            "event_type": record.event_type,
-            "actor": record.actor,
-            "details": record.details,
-            "sequence_number": record.sequence_number,
-        }, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+        content = json.dumps(
+            {
+                "record_id": record.record_id,
+                "timestamp": record.timestamp,
+                "event_type": record.event_type,
+                "actor": record.actor,
+                "details": record.details,
+                "sequence_number": record.sequence_number,
+            },
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
         return hashlib.sha256(content.encode()).hexdigest()
 
     def _compute_chain_hash(self, record: AuditRecord, previous_hash: str) -> str:

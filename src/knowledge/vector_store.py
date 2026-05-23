@@ -35,16 +35,20 @@ def _get_encoder():
     global _encoder, _encoder_lock
     if _encoder_lock is None:
         import threading
+
         _encoder_lock = threading.Lock()
     if _encoder is None:
         with _encoder_lock:
             if _encoder is None:
                 try:
                     from sentence_transformers import SentenceTransformer
+
                     _encoder = SentenceTransformer(_EMBED_MODEL)
                     logger.info("vector_store: encoder loaded model=%s", _EMBED_MODEL)
                 except Exception as exc:
-                    logger.warning("vector_store: encoder unavailable (%s) — returning zero embeddings", exc)
+                    logger.warning(
+                        "vector_store: encoder unavailable (%s) — returning zero embeddings", exc
+                    )
                     _encoder = _NullEncoder()
     return _encoder
 
@@ -75,6 +79,7 @@ class SearchResult:
 def _faiss_available() -> bool:
     try:
         import faiss  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -91,14 +96,19 @@ class VectorCollection:
 
         if _faiss_available():
             import faiss
+
             self._index = faiss.IndexFlatIP(dim)
         else:
-            logger.warning("vector_store: faiss not installed — collection '%s' using in-memory brute-force", name)
+            logger.warning(
+                "vector_store: faiss not installed — collection '%s' using in-memory brute-force",
+                name,
+            )
 
     def add(self, docs: List[Document], embeddings: np.ndarray) -> None:
         self._docs.extend(docs)
         if self._index is not None:
             import faiss
+
             vecs = embeddings.astype("float32")
             faiss.normalize_L2(vecs)
             self._index.add(vecs)
@@ -116,6 +126,7 @@ class VectorCollection:
 
         if self._index is not None:
             import faiss
+
             q = query_vec.astype("float32").reshape(1, -1)
             faiss.normalize_L2(q)
             k = min(top_k * 4, self._index.ntotal)
@@ -189,7 +200,7 @@ class VectorStore:
         doc_ids: List[str] = []
         docs: List[Document] = []
         for i, text in enumerate(texts):
-            doc_id = (ids[i] if ids else None) or f"{collection}-{int(time.time()*1000)}-{i}"
+            doc_id = (ids[i] if ids else None) or f"{collection}-{int(time.time() * 1000)}-{i}"
             doc = Document(
                 id=doc_id,
                 text=text,
@@ -244,6 +255,7 @@ class VectorStore:
 
         if coll._index is not None:
             import faiss
+
             faiss.write_index(coll._index, str(validated / "index.faiss"))
 
         docs_json = [
@@ -268,6 +280,7 @@ class VectorStore:
         index_path = src / "index.faiss"
         if index_path.exists() and _faiss_available():
             import faiss
+
             coll._index = faiss.read_index(str(index_path))
 
         coll._docs = [

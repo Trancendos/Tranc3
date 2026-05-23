@@ -31,6 +31,7 @@ from shared_core.architecture.vault_security import (
 @dataclass
 class AccessLogEntry:
     """Record of a secret access."""
+
     key: str
     timestamp: str = ""
     source: str = "env"
@@ -42,10 +43,10 @@ class AccessLogEntry:
 # Patterns that indicate leaked secrets in environment variables
 _LEAK_PATTERNS = [
     re.compile(r"sk-proj-[a-zA-Z0-9]{40,}"),  # OpenAI API key
-    re.compile(r"sk-[a-zA-Z0-9]{32,}"),        # Generic API key
-    re.compile(r"ghp_[a-zA-Z0-9]{36}"),         # GitHub PAT
-    re.compile(r"AKIA[A-Z0-9]{16}"),            # AWS access key
-    re.compile(r"[a-f0-9]{32}-[a-f0-9]{16}"),   # Generic hex token
+    re.compile(r"sk-[a-zA-Z0-9]{32,}"),  # Generic API key
+    re.compile(r"ghp_[a-zA-Z0-9]{36}"),  # GitHub PAT
+    re.compile(r"AKIA[A-Z0-9]{16}"),  # AWS access key
+    re.compile(r"[a-f0-9]{32}-[a-f0-9]{16}"),  # Generic hex token
 ]
 
 
@@ -153,10 +154,12 @@ class VaultSecretLoader:
         for env_key, env_value in os.environ.items():
             for pattern in _LEAK_PATTERNS:
                 if pattern.search(env_value):
-                    leaks.append({
-                        "key": env_key,
-                        "pattern": pattern.pattern[:30],
-                    })
+                    leaks.append(
+                        {
+                            "key": env_key,
+                            "pattern": pattern.pattern[:30],
+                        }
+                    )
                     break
         return leaks
 
@@ -180,6 +183,7 @@ class VaultSecretLoader:
         if self._dotenv_path:
             try:
                 from pathlib import Path
+
                 env_path = Path(self._dotenv_path)
                 if env_path.exists():
                     for line in env_path.read_text().splitlines():
@@ -205,6 +209,7 @@ class VaultSecretLoader:
         if self._audit_logger:
             try:
                 from shared_core.architecture.vault_security import VaultAuditEvent
+
                 event = VaultAuditEvent(
                     event_type=VaultEventType.READ,
                     key=key,

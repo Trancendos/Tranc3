@@ -36,9 +36,7 @@ logger = logging.getLogger("tranc3.worker")
 
 _WORKER_ID = os.getenv("TRANC3_WORKER_ID", "0")
 _REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-_CONCURRENCY = int(
-    os.getenv("TRANC3_CONCURRENCY", "1")
-)  # tasks in parallel per process
+_CONCURRENCY = int(os.getenv("TRANC3_CONCURRENCY", "1"))  # tasks in parallel per process
 
 
 class InferenceWorker:
@@ -219,16 +217,13 @@ class InferenceWorker:
                     for w in ["happy", "great", "excellent", "wonderful", "love", "yay"]
                 ),
                 "sadness": any(
-                    w in text_lower
-                    for w in ["sad", "unhappy", "terrible", "awful", "cry", "miss"]
+                    w in text_lower for w in ["sad", "unhappy", "terrible", "awful", "cry", "miss"]
                 ),
                 "anger": any(
-                    w in text_lower
-                    for w in ["angry", "furious", "hate", "rage", "frustrated"]
+                    w in text_lower for w in ["angry", "furious", "hate", "rage", "frustrated"]
                 ),
                 "fear": any(
-                    w in text_lower
-                    for w in ["scared", "afraid", "fear", "worried", "anxious"]
+                    w in text_lower for w in ["scared", "afraid", "fear", "worried", "anxious"]
                 ),
                 "surprise": any(
                     w in text_lower
@@ -271,9 +266,7 @@ class InferenceWorker:
         for emotion, anchor_text in EMOTION_ANCHORS.items():
             anchor_emb = await self._do_embed({"text": anchor_text, "pooling": "mean"})
             av = torch.tensor(anchor_emb["embedding"])
-            sim = torch.nn.functional.cosine_similarity(
-                vec.unsqueeze(0), av.unsqueeze(0)
-            ).item()
+            sim = torch.nn.functional.cosine_similarity(vec.unsqueeze(0), av.unsqueeze(0)).item()
             scores[emotion] = round(max(0.0, sim), 4)
 
         total = sum(scores.values()) or 1.0
@@ -375,7 +368,6 @@ class InferenceWorker:
                 "prediction": "continue",
                 "confidence": 0.5,
                 "top_k": [{"token": "the", "prob": 0.1}] * top_k,  # nosec B105 — false positive: not a password
-
                 "model": "tranc3-bootstrap",
             }
 

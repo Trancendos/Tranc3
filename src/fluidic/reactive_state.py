@@ -44,7 +44,7 @@ class ReactiveState(Generic[T]):
             self._value = new_value
             self._history.append(new_value)
             if len(self._history) > self._max_history:
-                self._history = self._history[-self._max_history:]
+                self._history = self._history[-self._max_history :]
 
         if old_value != new_value:
             await self._notify(new_value, old_value)

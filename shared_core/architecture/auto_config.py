@@ -51,8 +51,10 @@ logger = logging.getLogger(__name__)
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class EnvironmentType(str, Enum):
     """Detected runtime environment type."""
+
     TRUE_NAS = "TRUE_NAS"
     HYBRID = "HYBRID"
     CLOUD_ONLY = "CLOUD_ONLY"
@@ -63,6 +65,7 @@ class EnvironmentType(str, Enum):
 
 class ConfigStatus(str, Enum):
     """Status of a configuration item."""
+
     DEFAULT = "default"
     DETECTED = "detected"
     OVERRIDDEN = "overridden"
@@ -75,14 +78,16 @@ class ConfigStatus(str, Enum):
 # Data Models
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ConfigItem:
     """A single configuration item with metadata."""
+
     key: str
     value: Any
     status: ConfigStatus = ConfigStatus.DEFAULT
-    source: str = "default"         # Where the value came from
-    previous_value: Any = None      # For rollback
+    source: str = "default"  # Where the value came from
+    previous_value: Any = None  # For rollback
     last_updated: float = field(default_factory=time.time)
     validator: Optional[Callable] = None
     description: str = ""
@@ -102,6 +107,7 @@ class ConfigItem:
 @dataclass
 class ConfigProfile:
     """A named configuration profile for a specific environment."""
+
     name: str
     environment: EnvironmentType
     description: str = ""
@@ -123,6 +129,7 @@ class ConfigProfile:
 @dataclass
 class DetectionResult:
     """Result of an environment or service detection."""
+
     name: str
     detected: bool
     value: Any = None
@@ -144,6 +151,7 @@ class DetectionResult:
 # ---------------------------------------------------------------------------
 # Environment Detector
 # ---------------------------------------------------------------------------
+
 
 class EnvironmentDetector:
     """
@@ -206,10 +214,12 @@ class EnvironmentDetector:
 
         # Infer from available services
         has_zfs = self._detect_zfs().detected
-        has_cloud = any([
-            self._detect_r2().detected,
-            self._detect_oci().detected,
-        ])
+        has_cloud = any(
+            [
+                self._detect_r2().detected,
+                self._detect_oci().detected,
+            ]
+        )
 
         if has_zfs and not has_cloud:
             inferred = "TRUE_NAS"
@@ -259,16 +269,23 @@ class EnvironmentDetector:
 
         try:
             import redis
+
             r = redis.from_url(url)
             r.ping()
             return DetectionResult(
-                name="redis", detected=True, value=url,
-                confidence=1.0, method="connection_test",
+                name="redis",
+                detected=True,
+                value=url,
+                confidence=1.0,
+                method="connection_test",
             )
         except Exception:
             return DetectionResult(
-                name="redis", detected=False, value=url,
-                confidence=0.5, method="connection_test",
+                name="redis",
+                detected=False,
+                value=url,
+                confidence=0.5,
+                method="connection_test",
             )
 
     def _detect_minio(self) -> DetectionResult:
@@ -278,8 +295,11 @@ class EnvironmentDetector:
             return DetectionResult(name="minio", detected=False, method="env_var")
 
         return DetectionResult(
-            name="minio", detected=True, value=endpoint,
-            confidence=0.8, method="env_var",
+            name="minio",
+            detected=True,
+            value=endpoint,
+            confidence=0.8,
+            method="env_var",
         )
 
     def _detect_postgresql(self) -> DetectionResult:
@@ -289,8 +309,11 @@ class EnvironmentDetector:
             return DetectionResult(name="postgresql", detected=False, method="env_var")
 
         return DetectionResult(
-            name="postgresql", detected=True, value="configured",
-            confidence=0.8, method="env_var",
+            name="postgresql",
+            detected=True,
+            value="configured",
+            confidence=0.8,
+            method="env_var",
         )
 
     def _detect_api_server(self) -> DetectionResult:
@@ -304,13 +327,16 @@ class EnvironmentDetector:
             result = sock.connect_ex((host, port))
             sock.close()
             return DetectionResult(
-                name="api_server", detected=(result == 0),
+                name="api_server",
+                detected=(result == 0),
                 value=f"{host}:{port}",
-                confidence=1.0, method="tcp_connect",
+                confidence=1.0,
+                method="tcp_connect",
             )
         except Exception:
             return DetectionResult(
-                name="api_server", detected=False,
+                name="api_server",
+                detected=False,
                 value=f"{host}:{port}",
                 method="tcp_connect",
             )
@@ -323,16 +349,20 @@ class EnvironmentDetector:
 
         if zfs_path and zpool_path:
             return DetectionResult(
-                name="zfs_available", detected=True,
-                confidence=0.9, method="filesystem_check",
+                name="zfs_available",
+                detected=True,
+                confidence=0.9,
+                method="filesystem_check",
             )
 
         # Check for ZFS env var
         if os.getenv("ZFS_POOL"):
             return DetectionResult(
-                name="zfs_available", detected=True,
+                name="zfs_available",
+                detected=True,
                 value=os.getenv("ZFS_POOL"),
-                confidence=0.8, method="env_var",
+                confidence=0.8,
+                method="env_var",
             )
 
         return DetectionResult(name="zfs_available", detected=False, method="filesystem_check")
@@ -348,7 +378,8 @@ class EnvironmentDetector:
             pass
 
         return DetectionResult(
-            name="docker_available", detected=(dockerenv or cgroup),
+            name="docker_available",
+            detected=(dockerenv or cgroup),
             confidence=0.9 if (dockerenv or cgroup) else 0.3,
             method="filesystem_check",
         )
@@ -359,26 +390,38 @@ class EnvironmentDetector:
         # OCI
         if os.getenv("OCI_COMPARTMENT_ID") or os.getenv("OCI_TENANCY_ID"):
             return DetectionResult(
-                name="cloud_provider", detected=True,
-                value="oci", confidence=0.9, method="env_var",
+                name="cloud_provider",
+                detected=True,
+                value="oci",
+                confidence=0.9,
+                method="env_var",
             )
         # GCP
         if os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCP_PROJECT_ID"):
             return DetectionResult(
-                name="cloud_provider", detected=True,
-                value="gcp", confidence=0.9, method="env_var",
+                name="cloud_provider",
+                detected=True,
+                value="gcp",
+                confidence=0.9,
+                method="env_var",
             )
         # Azure
         if os.getenv("AZURE_SUBSCRIPTION_ID") or os.getenv("AZURE_COSMOS_ENDPOINT"):
             return DetectionResult(
-                name="cloud_provider", detected=True,
-                value="azure", confidence=0.9, method="env_var",
+                name="cloud_provider",
+                detected=True,
+                value="azure",
+                confidence=0.9,
+                method="env_var",
             )
         # AWS
         if os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION"):
             return DetectionResult(
-                name="cloud_provider", detected=True,
-                value="aws", confidence=0.9, method="env_var",
+                name="cloud_provider",
+                detected=True,
+                value="aws",
+                confidence=0.9,
+                method="env_var",
             )
 
         return DetectionResult(name="cloud_provider", detected=False, method="env_var")
@@ -387,7 +430,8 @@ class EnvironmentDetector:
         """Detect if Cloudflare R2 is configured."""
         has_creds = bool(os.getenv("R2_ACCESS_KEY_ID") and os.getenv("R2_SECRET_ACCESS_KEY"))
         return DetectionResult(
-            name="r2_available", detected=has_creds,
+            name="r2_available",
+            detected=has_creds,
             confidence=0.8 if has_creds else 0.0,
             method="env_var",
         )
@@ -402,7 +446,8 @@ class EnvironmentDetector:
             and os.getenv("OCI_PRIVATE_KEY_PATH")
         )
         return DetectionResult(
-            name="oci_available", detected=has_creds,
+            name="oci_available",
+            detected=has_creds,
             confidence=0.8 if has_creds else 0.0,
             method="env_var",
         )
@@ -411,7 +456,8 @@ class EnvironmentDetector:
         """Detect if GCP Cloud Storage is configured."""
         has_creds = bool(os.getenv("GCP_PROJECT_ID") and os.getenv("GCP_CREDENTIALS_PATH"))
         return DetectionResult(
-            name="gcp_available", detected=has_creds,
+            name="gcp_available",
+            detected=has_creds,
             confidence=0.8 if has_creds else 0.0,
             method="env_var",
         )
@@ -420,18 +466,18 @@ class EnvironmentDetector:
         """Detect if Azure Cosmos DB is configured."""
         has_creds = bool(os.getenv("AZURE_COSMOS_ENDPOINT") and os.getenv("AZURE_COSMOS_KEY"))
         return DetectionResult(
-            name="azure_available", detected=has_creds,
+            name="azure_available",
+            detected=has_creds,
             confidence=0.8 if has_creds else 0.0,
             method="env_var",
         )
 
     def _detect_aws(self) -> DetectionResult:
         """Detect if AWS DynamoDB is configured."""
-        has_creds = bool(
-            os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY")
-        )
+        has_creds = bool(os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY"))
         return DetectionResult(
-            name="aws_available", detected=has_creds,
+            name="aws_available",
+            detected=has_creds,
             confidence=0.8 if has_creds else 0.0,
             method="env_var",
         )
@@ -444,6 +490,7 @@ class EnvironmentDetector:
 # ---------------------------------------------------------------------------
 # Auto Config Manager
 # ---------------------------------------------------------------------------
+
 
 class AutoConfigManager:
     """
@@ -500,170 +547,184 @@ class AutoConfigManager:
     def _seed_profiles(self) -> None:
         """Seed built-in configuration profiles for each environment."""
         # TRUE_NAS Profile — local-first, maximum performance
-        self.register_profile(ConfigProfile(
-            name="true_nas_production",
-            environment=EnvironmentType.TRUE_NAS,
-            description="TRUE_NAS production profile — local-first, ZFS primary, no cloud",
-            settings={
-                "storage.primary_tier": "ZFS",
-                "storage.enable_cloud_fallback": False,
-                "storage.capacity_check_interval": 60,
-                "sentinel.check_interval": 300,
-                "sentinel.auto_remediate": True,
-                "orchestrator.mode": "AUTONOMOUS",
-                "orchestrator.interval": 30,
-                "pulse.baseline_interval": 30,
-                "pulse.acceleration_factor": 3.0,
-                "pulse.emergency_factor": 10.0,
-                "router.strategy": "weighted_health",
-                "registry.discovery_interval": 60,
-                "registry.heartbeat_timeout": 90,
-                "defense.default_action": "allow",
-                "defense.rate_limit_enabled": True,
-                "scaling.forecast_horizon": 300,
-                "scaling.free_tier_limit": 999,  # No cloud limit in TRUE_NAS
-                "scaling.smoothing_alpha": 0.3,
-            },
-            rules=[
-                {
-                    "condition": "zfs_available == true",
-                    "settings": {"storage.zfs_compression": "lz4", "storage.zfs_snapshot_interval": 3600},
+        self.register_profile(
+            ConfigProfile(
+                name="true_nas_production",
+                environment=EnvironmentType.TRUE_NAS,
+                description="TRUE_NAS production profile — local-first, ZFS primary, no cloud",
+                settings={
+                    "storage.primary_tier": "ZFS",
+                    "storage.enable_cloud_fallback": False,
+                    "storage.capacity_check_interval": 60,
+                    "sentinel.check_interval": 300,
+                    "sentinel.auto_remediate": True,
+                    "orchestrator.mode": "AUTONOMOUS",
+                    "orchestrator.interval": 30,
+                    "pulse.baseline_interval": 30,
+                    "pulse.acceleration_factor": 3.0,
+                    "pulse.emergency_factor": 10.0,
+                    "router.strategy": "weighted_health",
+                    "registry.discovery_interval": 60,
+                    "registry.heartbeat_timeout": 90,
+                    "defense.default_action": "allow",
+                    "defense.rate_limit_enabled": True,
+                    "scaling.forecast_horizon": 300,
+                    "scaling.free_tier_limit": 999,  # No cloud limit in TRUE_NAS
+                    "scaling.smoothing_alpha": 0.3,
                 },
-                {
-                    "condition": "minio_available == true",
-                    "settings": {"storage.minio_versioning": True, "storage.minio_replication": False},
-                },
-            ],
-        ))
+                rules=[
+                    {
+                        "condition": "zfs_available == true",
+                        "settings": {
+                            "storage.zfs_compression": "lz4",
+                            "storage.zfs_snapshot_interval": 3600,
+                        },
+                    },
+                    {
+                        "condition": "minio_available == true",
+                        "settings": {
+                            "storage.minio_versioning": True,
+                            "storage.minio_replication": False,
+                        },
+                    },
+                ],
+            )
+        )
 
         # HYBRID Profile — local primary, cloud fallback
-        self.register_profile(ConfigProfile(
-            name="hybrid_balanced",
-            environment=EnvironmentType.HYBRID,
-            description="HYBRID balanced profile — local primary, cloud free-tier fallback",
-            settings={
-                "storage.primary_tier": "ZFS",
-                "storage.enable_cloud_fallback": True,
-                "storage.capacity_check_interval": 30,
-                "storage.migration_threshold": 0.85,
-                "sentinel.check_interval": 180,
-                "sentinel.auto_remediate": True,
-                "orchestrator.mode": "AUTONOMOUS",
-                "orchestrator.interval": 20,
-                "pulse.baseline_interval": 20,
-                "pulse.acceleration_factor": 4.0,
-                "pulse.emergency_factor": 12.0,
-                "router.strategy": "weighted_health",
-                "registry.discovery_interval": 45,
-                "registry.heartbeat_timeout": 75,
-                "defense.default_action": "rate_limit",
-                "defense.rate_limit_enabled": True,
-                "scaling.forecast_horizon": 300,
-                "scaling.free_tier_limit": 5,
-                "scaling.smoothing_alpha": 0.25,
-            },
-            rules=[
-                {
-                    "condition": "r2_available == true",
-                    "settings": {"storage.r2_tier_priority": 3, "storage.r2_egress_free": True},
+        self.register_profile(
+            ConfigProfile(
+                name="hybrid_balanced",
+                environment=EnvironmentType.HYBRID,
+                description="HYBRID balanced profile — local primary, cloud free-tier fallback",
+                settings={
+                    "storage.primary_tier": "ZFS",
+                    "storage.enable_cloud_fallback": True,
+                    "storage.capacity_check_interval": 30,
+                    "storage.migration_threshold": 0.85,
+                    "sentinel.check_interval": 180,
+                    "sentinel.auto_remediate": True,
+                    "orchestrator.mode": "AUTONOMOUS",
+                    "orchestrator.interval": 20,
+                    "pulse.baseline_interval": 20,
+                    "pulse.acceleration_factor": 4.0,
+                    "pulse.emergency_factor": 12.0,
+                    "router.strategy": "weighted_health",
+                    "registry.discovery_interval": 45,
+                    "registry.heartbeat_timeout": 75,
+                    "defense.default_action": "rate_limit",
+                    "defense.rate_limit_enabled": True,
+                    "scaling.forecast_horizon": 300,
+                    "scaling.free_tier_limit": 5,
+                    "scaling.smoothing_alpha": 0.25,
                 },
-                {
-                    "condition": "oci_available == true",
-                    "settings": {"storage.oci_tier_priority": 4, "storage.oci_free_gb": 20},
-                },
-                {
-                    "condition": "gcp_available == true",
-                    "settings": {"storage.gcp_tier_priority": 5, "storage.gcp_free_gb": 5},
-                },
-                {
-                    "condition": "azure_available == true",
-                    "settings": {"storage.azure_tier_priority": 6, "storage.azure_free_gb": 25},
-                },
-                {
-                    "condition": "aws_available == true",
-                    "settings": {"storage.aws_tier_priority": 7, "storage.aws_free_gb": 25},
-                },
-            ],
-        ))
+                rules=[
+                    {
+                        "condition": "r2_available == true",
+                        "settings": {"storage.r2_tier_priority": 3, "storage.r2_egress_free": True},
+                    },
+                    {
+                        "condition": "oci_available == true",
+                        "settings": {"storage.oci_tier_priority": 4, "storage.oci_free_gb": 20},
+                    },
+                    {
+                        "condition": "gcp_available == true",
+                        "settings": {"storage.gcp_tier_priority": 5, "storage.gcp_free_gb": 5},
+                    },
+                    {
+                        "condition": "azure_available == true",
+                        "settings": {"storage.azure_tier_priority": 6, "storage.azure_free_gb": 25},
+                    },
+                    {
+                        "condition": "aws_available == true",
+                        "settings": {"storage.aws_tier_priority": 7, "storage.aws_free_gb": 25},
+                    },
+                ],
+            )
+        )
 
         # CLOUD_ONLY Profile — cloud-first, zero-cost only
-        self.register_profile(ConfigProfile(
-            name="cloud_only_zero_cost",
-            environment=EnvironmentType.CLOUD_ONLY,
-            description="CLOUD_ONLY zero-cost profile — cloud free-tier primary and fallback",
-            settings={
-                "storage.primary_tier": "R2",
-                "storage.enable_cloud_fallback": True,
-                "storage.capacity_check_interval": 15,
-                "storage.migration_threshold": 0.80,
-                "sentinel.check_interval": 120,
-                "sentinel.auto_remediate": True,
-                "orchestrator.mode": "AUTONOMOUS",
-                "orchestrator.interval": 15,
-                "pulse.baseline_interval": 15,
-                "pulse.acceleration_factor": 5.0,
-                "pulse.emergency_factor": 15.0,
-                "router.strategy": "capability_score",
-                "registry.discovery_interval": 30,
-                "registry.heartbeat_timeout": 60,
-                "defense.default_action": "deny",
-                "defense.rate_limit_enabled": True,
-                "scaling.forecast_horizon": 300,
-                "scaling.free_tier_limit": 3,  # Conservative for cloud
-                "scaling.smoothing_alpha": 0.2,
-            },
-            rules=[
-                {
-                    "condition": "r2_available == true",
-                    "settings": {"storage.r2_tier_priority": 0, "storage.r2_egress_free": True},
+        self.register_profile(
+            ConfigProfile(
+                name="cloud_only_zero_cost",
+                environment=EnvironmentType.CLOUD_ONLY,
+                description="CLOUD_ONLY zero-cost profile — cloud free-tier primary and fallback",
+                settings={
+                    "storage.primary_tier": "R2",
+                    "storage.enable_cloud_fallback": True,
+                    "storage.capacity_check_interval": 15,
+                    "storage.migration_threshold": 0.80,
+                    "sentinel.check_interval": 120,
+                    "sentinel.auto_remediate": True,
+                    "orchestrator.mode": "AUTONOMOUS",
+                    "orchestrator.interval": 15,
+                    "pulse.baseline_interval": 15,
+                    "pulse.acceleration_factor": 5.0,
+                    "pulse.emergency_factor": 15.0,
+                    "router.strategy": "capability_score",
+                    "registry.discovery_interval": 30,
+                    "registry.heartbeat_timeout": 60,
+                    "defense.default_action": "deny",
+                    "defense.rate_limit_enabled": True,
+                    "scaling.forecast_horizon": 300,
+                    "scaling.free_tier_limit": 3,  # Conservative for cloud
+                    "scaling.smoothing_alpha": 0.2,
                 },
-                {
-                    "condition": "oci_available == true",
-                    "settings": {"storage.oci_tier_priority": 1, "storage.oci_free_gb": 20},
-                },
-                {
-                    "condition": "gcp_available == true",
-                    "settings": {"storage.gcp_tier_priority": 2, "storage.gcp_free_gb": 5},
-                },
-                {
-                    "condition": "azure_available == true",
-                    "settings": {"storage.azure_tier_priority": 3, "storage.azure_free_gb": 25},
-                },
-                {
-                    "condition": "aws_available == true",
-                    "settings": {"storage.aws_tier_priority": 4, "storage.aws_free_gb": 25},
-                },
-            ],
-        ))
+                rules=[
+                    {
+                        "condition": "r2_available == true",
+                        "settings": {"storage.r2_tier_priority": 0, "storage.r2_egress_free": True},
+                    },
+                    {
+                        "condition": "oci_available == true",
+                        "settings": {"storage.oci_tier_priority": 1, "storage.oci_free_gb": 20},
+                    },
+                    {
+                        "condition": "gcp_available == true",
+                        "settings": {"storage.gcp_tier_priority": 2, "storage.gcp_free_gb": 5},
+                    },
+                    {
+                        "condition": "azure_available == true",
+                        "settings": {"storage.azure_tier_priority": 3, "storage.azure_free_gb": 25},
+                    },
+                    {
+                        "condition": "aws_available == true",
+                        "settings": {"storage.aws_tier_priority": 4, "storage.aws_free_gb": 25},
+                    },
+                ],
+            )
+        )
 
         # Development Profile — fast iterations, verbose logging
-        self.register_profile(ConfigProfile(
-            name="development",
-            environment=EnvironmentType.DEVELOPMENT,
-            description="Development profile — fast checks, verbose logging, relaxed security",
-            settings={
-                "storage.primary_tier": "ZFS",
-                "storage.enable_cloud_fallback": False,
-                "storage.capacity_check_interval": 120,
-                "sentinel.check_interval": 600,
-                "sentinel.auto_remediate": False,
-                "orchestrator.mode": "ASSIST",
-                "orchestrator.interval": 60,
-                "pulse.baseline_interval": 60,
-                "pulse.acceleration_factor": 2.0,
-                "pulse.emergency_factor": 5.0,
-                "router.strategy": "round_robin",
-                "registry.discovery_interval": 120,
-                "registry.heartbeat_timeout": 180,
-                "defense.default_action": "allow",
-                "defense.rate_limit_enabled": False,
-                "scaling.forecast_horizon": 600,
-                "scaling.free_tier_limit": 999,
-                "scaling.smoothing_alpha": 0.4,
-                "logging.level": "DEBUG",
-            },
-            rules=[],
-        ))
+        self.register_profile(
+            ConfigProfile(
+                name="development",
+                environment=EnvironmentType.DEVELOPMENT,
+                description="Development profile — fast checks, verbose logging, relaxed security",
+                settings={
+                    "storage.primary_tier": "ZFS",
+                    "storage.enable_cloud_fallback": False,
+                    "storage.capacity_check_interval": 120,
+                    "sentinel.check_interval": 600,
+                    "sentinel.auto_remediate": False,
+                    "orchestrator.mode": "ASSIST",
+                    "orchestrator.interval": 60,
+                    "pulse.baseline_interval": 60,
+                    "pulse.acceleration_factor": 2.0,
+                    "pulse.emergency_factor": 5.0,
+                    "router.strategy": "round_robin",
+                    "registry.discovery_interval": 120,
+                    "registry.heartbeat_timeout": 180,
+                    "defense.default_action": "allow",
+                    "defense.rate_limit_enabled": False,
+                    "scaling.forecast_horizon": 600,
+                    "scaling.free_tier_limit": 999,
+                    "scaling.smoothing_alpha": 0.4,
+                    "logging.level": "DEBUG",
+                },
+                rules=[],
+            )
+        )
 
     # ------------------------------------------------------------------
     # Profile Management
@@ -672,7 +733,11 @@ class AutoConfigManager:
     def register_profile(self, profile: ConfigProfile) -> None:
         """Register a configuration profile."""
         self._profiles[profile.name] = profile
-        logger.info("Config profile registered: %s (%s)", sanitize_for_log(profile.name), profile.environment.value)
+        logger.info(
+            "Config profile registered: %s (%s)",
+            sanitize_for_log(profile.name),
+            profile.environment.value,
+        )
 
     def get_profile(self, name: str) -> Optional[ConfigProfile]:
         """Get a configuration profile by name."""
@@ -713,7 +778,11 @@ class AutoConfigManager:
                     logger.warning("Config validation failed for %s", sanitize_for_log(key))
                     return False
             except Exception as e:
-                logger.error("Config validator error for %s: %s", sanitize_for_log(key), sanitize_for_log(str(e)))
+                logger.error(
+                    "Config validator error for %s: %s",
+                    sanitize_for_log(key),
+                    sanitize_for_log(str(e)),
+                )
                 return False
 
         # Store previous value for rollback
@@ -763,7 +832,9 @@ class AutoConfigManager:
         item.last_updated = time.time()
         self._total_rollbacks += 1
 
-        logger.info("Config rolled back: %s (%s → %s)", sanitize_for_log(key), old_value, item.value)
+        logger.info(
+            "Config rolled back: %s (%s → %s)", sanitize_for_log(key), old_value, item.value
+        )
         return True
 
     # ------------------------------------------------------------------
@@ -877,7 +948,11 @@ class AutoConfigManager:
                     return str(result.detected).lower() != expected.lower()
 
         except Exception as e:
-            logger.error("Condition evaluation error for '%s': %s", sanitize_for_log(condition), sanitize_for_log(str(e)))
+            logger.error(
+                "Condition evaluation error for '%s': %s",
+                sanitize_for_log(condition),
+                sanitize_for_log(str(e)),
+            )
 
         return False
 
@@ -933,7 +1008,9 @@ class AutoConfigManager:
 
     def remove_listener(self, callback: Callable) -> None:
         """Remove a configuration change listener."""
-        self._change_listeners = [listener for listener in self._change_listeners if listener != callback]
+        self._change_listeners = [
+            listener for listener in self._change_listeners if listener != callback
+        ]
 
     # ------------------------------------------------------------------
     # Introspection

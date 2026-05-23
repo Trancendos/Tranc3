@@ -87,9 +87,18 @@ def sanitize_dict_for_log(
     """
     if sensitive_keys is None:
         sensitive_keys = {
-            "password", "secret", "token", "api_key", "private_key",
-            "authorization", "cookie", "session_id", "credit_card",
-            "ssn", "social_security", "bank_account",
+            "password",
+            "secret",
+            "token",
+            "api_key",
+            "private_key",
+            "authorization",
+            "cookie",
+            "session_id",
+            "credit_card",
+            "ssn",
+            "social_security",
+            "bank_account",
         }
 
     sanitized = {}

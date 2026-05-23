@@ -30,8 +30,8 @@ WORKER_NAME = "queue-service"
 DB_PATH = Path(__file__).parent / "data" / "queue.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-VISIBILITY_TIMEOUT = 30   # seconds before unacked message returns to pending
-MAX_RETRIES = 3            # attempts before moving to dead-letter
+VISIBILITY_TIMEOUT = 30  # seconds before unacked message returns to pending
+MAX_RETRIES = 3  # attempts before moving to dead-letter
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
@@ -40,6 +40,7 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+
 
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
@@ -97,10 +98,19 @@ async def _visibility_restore_loop() -> None:
             for row in timed_out:
                 if row["retry_count"] + 1 >= MAX_RETRIES:
                     # promote to DLQ
-                    msg = conn.execute("SELECT * FROM messages WHERE id = ?", (row["id"],)).fetchone()
+                    msg = conn.execute(
+                        "SELECT * FROM messages WHERE id = ?", (row["id"],)
+                    ).fetchone()
                     conn.execute(
                         "INSERT OR REPLACE INTO dead_letters (id, topic, payload, retry_count, moved_at, last_error) VALUES (?,?,?,?,?,?)",
-                        (msg["id"], msg["topic"], msg["payload"], msg["retry_count"], now, "max_retries_exceeded"),
+                        (
+                            msg["id"],
+                            msg["topic"],
+                            msg["payload"],
+                            msg["retry_count"],
+                            now,
+                            "max_retries_exceeded",
+                        ),
                     )
                     conn.execute("DELETE FROM messages WHERE id = ?", (row["id"],))
                 else:
@@ -116,6 +126,7 @@ async def _visibility_restore_loop() -> None:
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
+
 
 class TopicCreate(BaseModel):
     name: str
@@ -143,6 +154,7 @@ class ConsumeResponse(BaseModel):
 # Lifespan
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -158,7 +170,12 @@ async def lifespan(app: FastAPI):
 
 STARTED_AT = datetime.now(timezone.utc)
 
-app = FastAPI(title="queue-service", description="Persistent message queue with topics and DLQ (self-hosted)", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="queue-service",
+    description="Persistent message queue with topics and DLQ (self-hosted)",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -166,7 +183,9 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 async def health():
     with get_conn() as conn:
         pending = conn.execute("SELECT COUNT(*) FROM messages WHERE status='pending'").fetchone()[0]
-        processing = conn.execute("SELECT COUNT(*) FROM messages WHERE status='processing'").fetchone()[0]
+        processing = conn.execute(
+            "SELECT COUNT(*) FROM messages WHERE status='processing'"
+        ).fetchone()[0]
         dlq = conn.execute("SELECT COUNT(*) FROM dead_letters").fetchone()[0]
     return {
         "status": "healthy",
@@ -187,6 +206,7 @@ async def health():
 
 
 # --- Topics ---
+
 
 @app.post("/topics", status_code=201)
 async def create_topic(req: TopicCreate):
@@ -228,6 +248,7 @@ def _ensure_topic(topic: str) -> None:
 
 # --- Publish ---
 
+
 @app.post("/topics/{topic}/publish", status_code=201)
 async def publish(topic: str, req: PublishIn):
     _ensure_topic(topic)
@@ -262,6 +283,7 @@ async def publish_batch(topic: str, req: BatchPublishIn):
 
 # --- Consume ---
 
+
 @app.get("/topics/{topic}/consume")
 async def consume(
     topic: str,
@@ -288,8 +310,13 @@ async def consume(
         conn.commit()
     return {
         "messages": [
-            {"id": r["id"], "topic": topic, "payload": json.loads(r["payload"]),
-             "retry_count": r["retry_count"], "enqueued_at": r["enqueued_at"]}
+            {
+                "id": r["id"],
+                "topic": topic,
+                "payload": json.loads(r["payload"]),
+                "retry_count": r["retry_count"],
+                "enqueued_at": r["enqueued_at"],
+            }
             for r in rows
         ]
     }
@@ -304,7 +331,9 @@ async def ack(topic: str, message_id: str):
             (message_id, topic),
         ).fetchone()
         if not row:
-            raise HTTPException(status_code=404, detail="Message not found or not in processing state")
+            raise HTTPException(
+                status_code=404, detail="Message not found or not in processing state"
+            )
         conn.execute(
             "UPDATE messages SET status='acknowledged', acked_at=? WHERE id=?",
             (now, message_id),
@@ -322,7 +351,9 @@ async def nack(topic: str, message_id: str):
             (message_id, topic),
         ).fetchone()
         if not row:
-            raise HTTPException(status_code=404, detail="Message not found or not in processing state")
+            raise HTTPException(
+                status_code=404, detail="Message not found or not in processing state"
+            )
         if row["retry_count"] + 1 >= MAX_RETRIES:
             conn.execute(
                 "INSERT OR REPLACE INTO dead_letters (id, topic, payload, retry_count, moved_at, last_error) VALUES (?,?,?,?,?,?)",
@@ -353,13 +384,28 @@ async def dead_letters(topic: str, limit: int = Query(50, le=500)):
 async def topic_stats(topic: str):
     _ensure_topic(topic)
     with get_conn() as conn:
-        pending = conn.execute("SELECT COUNT(*) FROM messages WHERE topic=? AND status='pending'", (topic,)).fetchone()[0]
-        processing = conn.execute("SELECT COUNT(*) FROM messages WHERE topic=? AND status='processing'", (topic,)).fetchone()[0]
-        acked = conn.execute("SELECT COUNT(*) FROM messages WHERE topic=? AND status='acknowledged'", (topic,)).fetchone()[0]
-        dlq = conn.execute("SELECT COUNT(*) FROM dead_letters WHERE topic=?", (topic,)).fetchone()[0]
-    return {"topic": topic, "pending": pending, "processing": processing, "acknowledged": acked, "dead_letters": dlq}
+        pending = conn.execute(
+            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='pending'", (topic,)
+        ).fetchone()[0]
+        processing = conn.execute(
+            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='processing'", (topic,)
+        ).fetchone()[0]
+        acked = conn.execute(
+            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='acknowledged'", (topic,)
+        ).fetchone()[0]
+        dlq = conn.execute("SELECT COUNT(*) FROM dead_letters WHERE topic=?", (topic,)).fetchone()[
+            0
+        ]
+    return {
+        "topic": topic,
+        "pending": pending,
+        "processing": processing,
+        "acknowledged": acked,
+        "dead_letters": dlq,
+    }
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

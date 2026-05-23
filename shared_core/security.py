@@ -20,6 +20,7 @@ def _get_jose():
     global _jose
     if _jose is None:
         from jose import jwt
+
         _jose = jwt
     return _jose
 
@@ -28,11 +29,13 @@ def _get_passlib():
     global _passlib
     if _passlib is None:
         from passlib.context import CryptContext
+
         _passlib = CryptContext(schemes=["bcrypt"], deprecated="auto")
     return _passlib
 
 
 # ── JWT ──────────────────────────────────────────────────────────────────────
+
 
 def generate_jwt(
     payload: Dict[str, Any],
@@ -48,10 +51,12 @@ def generate_jwt(
         raise RuntimeError("JWT_SECRET is not set")
 
     to_encode = payload.copy()
-    to_encode.update({
-        "iat": datetime.utcnow(),
-        "exp": datetime.utcnow() + timedelta(minutes=expires_minutes),
-    })
+    to_encode.update(
+        {
+            "iat": datetime.utcnow(),
+            "exp": datetime.utcnow() + timedelta(minutes=expires_minutes),
+        }
+    )
     return jwt.encode(to_encode, key, algorithm=algorithm)
 
 
@@ -70,12 +75,15 @@ def verify_jwt(
     try:
         return jwt.decode(token, key, algorithms=[algorithm])
     except Exception as e:
-        logger.warning("JWT verification failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+        logger.warning(
+            "JWT verification failed: %s", sanitize_for_log(e)
+        )  # codeql[py/cleartext-logging]
         raise
     return None
 
 
 # ── Password hashing ────────────────────────────────────────────────────────
+
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt"""
@@ -90,6 +98,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 # ── Input sanitization ──────────────────────────────────────────────────────
+
 
 def sanitize_input(text: str, max_length: int = 4096) -> str:
     """Basic input sanitization — strip control chars, limit length"""

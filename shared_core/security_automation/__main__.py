@@ -46,34 +46,36 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="security_automation",
         description="Proactive Security Automation Framework — "
-                    "prevents recurrence of CodeQL security violations",
+        "prevents recurrence of CodeQL security violations",
     )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # --- scan ---
     scan_parser = subparsers.add_parser("scan", help="Scan for security violations")
+    scan_parser.add_argument("paths", nargs="+", help="Paths to scan (files or directories)")
     scan_parser.add_argument(
-        "paths", nargs="+", help="Paths to scan (files or directories)"
-    )
-    scan_parser.add_argument(
-        "--severity", "-s",
+        "--severity",
+        "-s",
         choices=["critical", "high", "medium", "low", "info"],
         default="low",
         help="Minimum severity to report (default: low)",
     )
     scan_parser.add_argument(
-        "--category", "-c",
+        "--category",
+        "-c",
         choices=[c.value for c in Category],
         help="Filter by category (e.g., CWE-117, PY-001)",
     )
     scan_parser.add_argument(
-        "--format", "-f",
+        "--format",
+        "-f",
         choices=["text", "json"],
         default="text",
         help="Output format (default: text)",
     )
     scan_parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         help="Write output to file instead of stdout",
     )
     scan_parser.add_argument(
@@ -89,11 +91,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # --- fix ---
     fix_parser = subparsers.add_parser("fix", help="Auto-fix security violations")
+    fix_parser.add_argument("paths", nargs="+", help="Paths to fix (files or directories)")
     fix_parser.add_argument(
-        "paths", nargs="+", help="Paths to fix (files or directories)"
-    )
-    fix_parser.add_argument(
-        "--dry-run", "-n",
+        "--dry-run",
+        "-n",
         action="store_true",
         default=True,
         help="Report fixes without modifying files (default: True)",
@@ -109,7 +110,8 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Don't create .bak files before fixing",
     )
     fix_parser.add_argument(
-        "--severity", "-s",
+        "--severity",
+        "-s",
         choices=["critical", "high", "medium", "low", "info"],
         default="low",
         help="Minimum severity to fix (default: low)",
@@ -117,17 +119,17 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # --- report ---
     report_parser = subparsers.add_parser("report", help="Generate compliance report")
+    report_parser.add_argument("paths", nargs="+", help="Paths to scan for report")
     report_parser.add_argument(
-        "paths", nargs="+", help="Paths to scan for report"
-    )
-    report_parser.add_argument(
-        "--format", "-f",
+        "--format",
+        "-f",
         choices=["text", "json", "markdown"],
         default="markdown",
         help="Report format (default: markdown)",
     )
     report_parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         help="Write report to file instead of stdout",
     )
     report_parser.add_argument(
@@ -143,27 +145,35 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # --- gate ---
     gate_parser = subparsers.add_parser("gate", help="Run quality gate check")
+    gate_parser.add_argument("paths", nargs="+", help="Paths to scan for gate check")
     gate_parser.add_argument(
-        "paths", nargs="+", help="Paths to scan for gate check"
-    )
-    gate_parser.add_argument(
-        "--max-critical", type=int, default=0,
+        "--max-critical",
+        type=int,
+        default=0,
         help="Max allowed critical violations (default: 0)",
     )
     gate_parser.add_argument(
-        "--max-high", type=int, default=0,
+        "--max-high",
+        type=int,
+        default=0,
         help="Max allowed high violations (default: 0)",
     )
     gate_parser.add_argument(
-        "--max-medium", type=int, default=50,
+        "--max-medium",
+        type=int,
+        default=50,
         help="Max allowed medium violations (default: 50)",
     )
     gate_parser.add_argument(
-        "--max-low", type=int, default=100,
+        "--max-low",
+        type=int,
+        default=100,
         help="Max allowed low violations (default: 100)",
     )
     gate_parser.add_argument(
-        "--max-total", type=int, default=150,
+        "--max-total",
+        type=int,
+        default=150,
         help="Max allowed total violations (default: 150)",
     )
     gate_parser.add_argument(
@@ -178,20 +188,18 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     # --- watch ---
-    watch_parser = subparsers.add_parser(
-        "watch", help="Watch for file changes and re-scan"
-    )
+    watch_parser = subparsers.add_parser("watch", help="Watch for file changes and re-scan")
+    watch_parser.add_argument("paths", nargs="+", help="Paths to watch")
     watch_parser.add_argument(
-        "paths", nargs="+", help="Paths to watch"
-    )
-    watch_parser.add_argument(
-        "--interval", "-i",
+        "--interval",
+        "-i",
         type=float,
         default=30.0,
         help="Scan interval in seconds (default: 30)",
     )
     watch_parser.add_argument(
-        "--severity", "-s",
+        "--severity",
+        "-s",
         choices=["critical", "high", "medium", "low", "info"],
         default="low",
         help="Minimum severity to report (default: low)",
@@ -217,8 +225,11 @@ def _filter_violations(
 ) -> List[Violation]:
     """Filter violations by severity and category."""
     severity_order = [
-        Severity.INFO, Severity.LOW, Severity.MEDIUM,
-        Severity.HIGH, Severity.CRITICAL,
+        Severity.INFO,
+        Severity.LOW,
+        Severity.MEDIUM,
+        Severity.HIGH,
+        Severity.CRITICAL,
     ]
     min_idx = severity_order.index(min_severity)
 
@@ -253,12 +264,14 @@ def _format_violations_json(violations: List[Violation]) -> str:
     """Format violations as JSON."""
     import json
     from dataclasses import asdict
+
     return json.dumps([asdict(v) for v in violations], indent=2, default=str)
 
 
 # ---------------------------------------------------------------------------
 # Command handlers
 # ---------------------------------------------------------------------------
+
 
 def cmd_scan(args: argparse.Namespace) -> int:
     """Handle the 'scan' command."""
@@ -304,8 +317,10 @@ def cmd_scan(args: argparse.Namespace) -> int:
         print(f"Telemetry saved to {saved_path}")
 
     # Print summary
-    print(f"\nScan complete: {len(violations)} violations found "
-          f"(of {len(all_violations)} total before filtering)")
+    print(
+        f"\nScan complete: {len(violations)} violations found "
+        f"(of {len(all_violations)} total before filtering)"
+    )
 
     # Return exit code based on findings
     critical_high = [v for v in violations if v.severity in (Severity.CRITICAL, Severity.HIGH)]
@@ -448,16 +463,20 @@ def cmd_gate(args: argparse.Namespace) -> int:
     # Print gate status
     if gate_result.passed:
         print("✅ Quality gate PASSED")
-        print(f"   Total violations: {result.total_violations} "
-              f"(C:{result.critical} H:{result.high} M:{result.medium} "
-              f"L:{result.low} I:{result.info})")
+        print(
+            f"   Total violations: {result.total_violations} "
+            f"(C:{result.critical} H:{result.high} M:{result.medium} "
+            f"L:{result.low} I:{result.info})"
+        )
     else:
         print("❌ Quality gate FAILED")
         for failure in gate_result.failures:
             print(f"   {failure}")
-        print(f"   Total violations: {result.total_violations} "
-              f"(C:{result.critical} H:{result.high} M:{result.medium} "
-              f"L:{result.low} I:{result.info})")
+        print(
+            f"   Total violations: {result.total_violations} "
+            f"(C:{result.critical} H:{result.high} M:{result.medium} "
+            f"L:{result.low} I:{result.info})"
+        )
 
     # Save telemetry
     if args.save:
@@ -489,8 +508,7 @@ def cmd_watch(args: argparse.Namespace) -> int:
 
             if violations:
                 critical_high = [
-                    v for v in violations
-                    if v.severity in (Severity.CRITICAL, Severity.HIGH)
+                    v for v in violations if v.severity in (Severity.CRITICAL, Severity.HIGH)
                 ]
                 print(
                     f"[{time.strftime('%H:%M:%S')}] "
@@ -512,6 +530,7 @@ def cmd_watch(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> int:
     """Main CLI entry point."""

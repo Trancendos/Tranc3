@@ -21,8 +21,8 @@ logger = logging.getLogger("tranc3.ai_gateway.deepseek")
 
 DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
 DEEPSEEK_MODELS = [
-    "deepseek-chat",          # $0.14/M input, $0.28/M output
-    "deepseek-reasoner",      # $0.55/M input, $2.19/M output (R1 reasoning)
+    "deepseek-chat",  # $0.14/M input, $0.28/M output
+    "deepseek-reasoner",  # $0.55/M input, $2.19/M output (R1 reasoning)
 ]
 
 
@@ -67,6 +67,7 @@ class DeepSeekProvider(AIProvider):
 
         try:
             from openai import OpenAI
+
             self._client = OpenAI(
                 api_key=self.api_key,
                 base_url=self.base_url,
@@ -94,7 +95,7 @@ class DeepSeekProvider(AIProvider):
             messages = [{"role": "user", "content": request.prompt}]
 
         try:
-            if hasattr(client, 'chat'):
+            if hasattr(client, "chat"):
                 # OpenAI SDK
                 response = await asyncio.to_thread(
                     client.chat.completions.create,
@@ -169,6 +170,7 @@ class _DeepSeekHttpxClient:
         if self._httpx is None:
             try:
                 import httpx
+
                 self._httpx = httpx.AsyncClient(
                     base_url=self._base_url,
                     headers={
@@ -181,7 +183,7 @@ class _DeepSeekHttpxClient:
                 raise RuntimeError(
                     "Either 'openai' or 'httpx' package is required. "
                     "Install with: pip install openai  OR  pip install httpx"
-                )
+                ) from None
         return self._httpx
 
     async def complete(

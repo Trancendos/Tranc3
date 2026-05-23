@@ -70,13 +70,9 @@ class SpikingLayer(nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         B = input_spikes.shape[0]
         if membrane_potential is None:
-            membrane_potential = torch.zeros(
-                B, self.output_size, device=input_spikes.device
-            )
+            membrane_potential = torch.zeros(B, self.output_size, device=input_spikes.device)
         if synaptic_current is None:
-            synaptic_current = torch.zeros(
-                B, self.output_size, device=input_spikes.device
-            )
+            synaptic_current = torch.zeros(B, self.output_size, device=input_spikes.device)
         input_current = torch.matmul(input_spikes.float(), self.weights)
         return self.neurons(input_current, membrane_potential, synaptic_current)
 
@@ -135,9 +131,7 @@ class SpikingNeuralNetwork(nn.Module):
         self.spike_rates: List[float] = []
         logger.info("SNN initialised: %s", sanitize_for_log(sizes))  # codeql[py/cleartext-logging]
 
-    def forward(
-        self, x: torch.Tensor, use_stdp: bool = False
-    ) -> Dict[str, torch.Tensor]:
+    def forward(self, x: torch.Tensor, use_stdp: bool = False) -> Dict[str, torch.Tensor]:
         B, T, H = x.shape
         spike_trains = self._rate_encode(x)
         states = [(None, None) for _ in self.layers]
@@ -182,9 +176,7 @@ class SpikingNeuralNetwork(nn.Module):
         return {
             "timesteps": self.timesteps,
             "num_layers": len(self.layers),
-            "avg_spike_rate": float(np.mean(self.spike_rates))
-            if self.spike_rates
-            else 0.0,
+            "avg_spike_rate": float(np.mean(self.spike_rates)) if self.spike_rates else 0.0,
             "total_neurons": sum(layer.output_size for layer in self.layers),
         }
 
@@ -210,7 +202,9 @@ class NeuromorphicProcessor:
         try:
             return self.snn(x, use_stdp=learn)
         except Exception as e:
-            logger.warning("Neuromorphic processing failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Neuromorphic processing failed: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return {"output": x, "spike_rate": 0.0, "energy_estimate": 0.0}
 
     def get_stats(self) -> Dict:

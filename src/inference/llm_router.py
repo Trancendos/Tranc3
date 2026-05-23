@@ -81,9 +81,7 @@ class LLMResponse:
 # ---------------------------------------------------------------------------
 
 
-async def _try_tranc3(
-    cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient
-) -> str:
+async def _try_tranc3(cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient) -> str:
     """Call the local Tranc3Engine via the nanoservices proxy."""
     url = os.getenv("TRANC3_ENGINE_URL", "http://localhost:8000/v1/chat")
     resp = await client.post(
@@ -103,9 +101,7 @@ async def _try_tranc3(
     return data.get("response") or data["choices"][0]["message"]["content"]
 
 
-async def _try_ollama(
-    cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient
-) -> str:
+async def _try_ollama(cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient) -> str:
     base = os.getenv("OLLAMA_URL", "http://localhost:11434")
     model = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
     resp = await client.post(
@@ -125,9 +121,7 @@ async def _try_ollama(
     return resp.json()["message"]["content"]
 
 
-async def _try_openrouter(
-    cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient
-) -> str:
+async def _try_openrouter(cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient) -> str:
     api_key = os.getenv("OPENROUTER_API_KEY", "")
     if not api_key:
         raise ValueError("OPENROUTER_API_KEY not set")
@@ -154,9 +148,7 @@ async def _try_openrouter(
     return resp.json()["choices"][0]["message"]["content"]
 
 
-async def _try_huggingface(
-    cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient
-) -> str:
+async def _try_huggingface(cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient) -> str:
     api_key = os.getenv("HF_API_KEY", "")
     if not api_key:
         raise ValueError("HF_API_KEY not set")
@@ -182,9 +174,7 @@ async def _try_huggingface(
     return str(data)
 
 
-async def _try_groq(
-    cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient
-) -> str:
+async def _try_groq(cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncClient) -> str:
     api_key = os.getenv("GROQ_API_KEY", "")
     if not api_key:
         raise ValueError("GROQ_API_KEY not set")
@@ -287,9 +277,7 @@ class LLMRouter:
                 latency_ms = (time.monotonic() - t0) * 1000
                 self._stats[provider]["failures"] += 1
                 self._stats[provider]["last_error"] = str(exc)
-                logger.debug(
-                    "LLMRouter: %s failed (%.0fms): %s", provider, latency_ms, exc
-                )
+                logger.debug("LLMRouter: %s failed (%.0fms): %s", provider, latency_ms, exc)
 
         # All failed — honest stub
         return LLMResponse(

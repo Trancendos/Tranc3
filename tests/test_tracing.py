@@ -30,6 +30,7 @@ from src.observability.tracing import (
 # Trace Context (Thread-Local) Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestTraceContext:
     """Thread-local trace context management."""
 
@@ -108,6 +109,7 @@ class TestTraceIdGeneration:
 # Span Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestSpan:
     """Span lifecycle: creation, events, attributes, errors, serialization."""
 
@@ -163,6 +165,7 @@ class TestSpan:
     def test_duration_ms(self):
         span = Span(trace_id="t1", span_id="s1", operation="op")
         import time
+
         time.sleep(0.01)  # 10ms
         duration = span.duration_ms
         assert duration >= 8  # At least ~10ms with some tolerance
@@ -193,6 +196,7 @@ class TestSpan:
 # ─────────────────────────────────────────────────────────────────────────────
 # Tracer Tests
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestTracer:
     """Tracer with SQLite persistence."""
@@ -314,6 +318,7 @@ class TestTracer:
 # W3C TraceContext Propagation Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestW3CTraceContext:
     """W3C TraceContext header extraction and injection."""
 
@@ -372,12 +377,14 @@ class TestW3CTraceContext:
 # Convenience Functions Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestConvenienceFunctions:
     """init_tracing and get_tracer global instances."""
 
     def setup_method(self):
         # Reset global tracer
         import src.observability.tracing as mod
+
         mod._global_tracer = None
 
     def test_get_tracer_creates_default(self):

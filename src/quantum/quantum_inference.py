@@ -45,7 +45,9 @@ class QuantumInferenceEngine:
         try:
             return self._quantum_attention_core(input_tensor)
         except Exception as e:
-            logger.warning("Quantum attention failed, falling back to classical: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Quantum attention failed, falling back to classical: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return self._classical_attention(input_tensor)
 
     def _quantum_attention_core(self, input_tensor: torch.Tensor) -> torch.Tensor:
@@ -126,5 +128,7 @@ class QuantumInferenceEngine:
             return torch.randn_like(query) * 0.1  # Placeholder for retrieved memory
 
         except Exception as e:
-            logger.warning("Quantum memory recall failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Quantum memory recall failed: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return None

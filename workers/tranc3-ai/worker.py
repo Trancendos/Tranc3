@@ -36,14 +36,42 @@ from fastapi.middleware.cors import CORSMiddleware
 # ── Constants ──────────────────────────────────────────────────
 
 TRANC3_MODELS: dict[str, dict[str, Any]] = {
-    "tranc3-base":         {"name": "Tranc3 Base",        "backend": "tranc3-own", "capabilities": ["chat", "emotion", "consciousness"]},
-    "tranc3-fast":         {"name": "Tranc3 Fast",         "backend": "tranc3-own", "capabilities": ["chat"]},
-    "tranc3-embeddings":   {"name": "Tranc3 Embeddings",   "backend": "tranc3-own", "capabilities": ["embeddings"]},
-    "dorris-fontaine":     {"name": "Dorris Fontaine",     "backend": "tranc3-own", "capabilities": ["chat", "finance"]},
-    "cornelius-macintyre": {"name": "Cornelius MacIntyre", "backend": "tranc3-own", "capabilities": ["chat", "orchestration"]},
-    "the-guardian":        {"name": "The Guardian",        "backend": "tranc3-own", "capabilities": ["chat", "security"]},
-    "vesper-nightingale":  {"name": "Vesper Nightingale",  "backend": "tranc3-own", "capabilities": ["chat", "healthcare"]},
-    "atlas-meridian":      {"name": "Atlas Meridian",      "backend": "tranc3-own", "capabilities": ["chat", "infrastructure"]},
+    "tranc3-base": {
+        "name": "Tranc3 Base",
+        "backend": "tranc3-own",
+        "capabilities": ["chat", "emotion", "consciousness"],
+    },
+    "tranc3-fast": {"name": "Tranc3 Fast", "backend": "tranc3-own", "capabilities": ["chat"]},
+    "tranc3-embeddings": {
+        "name": "Tranc3 Embeddings",
+        "backend": "tranc3-own",
+        "capabilities": ["embeddings"],
+    },
+    "dorris-fontaine": {
+        "name": "Dorris Fontaine",
+        "backend": "tranc3-own",
+        "capabilities": ["chat", "finance"],
+    },
+    "cornelius-macintyre": {
+        "name": "Cornelius MacIntyre",
+        "backend": "tranc3-own",
+        "capabilities": ["chat", "orchestration"],
+    },
+    "the-guardian": {
+        "name": "The Guardian",
+        "backend": "tranc3-own",
+        "capabilities": ["chat", "security"],
+    },
+    "vesper-nightingale": {
+        "name": "Vesper Nightingale",
+        "backend": "tranc3-own",
+        "capabilities": ["chat", "healthcare"],
+    },
+    "atlas-meridian": {
+        "name": "Atlas Meridian",
+        "backend": "tranc3-own",
+        "capabilities": ["chat", "infrastructure"],
+    },
 }
 
 BACKEND_URL = os.getenv("TRANC3_BACKEND_URL", "")
@@ -77,7 +105,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS + [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()],
+    allow_origins=ALLOWED_ORIGINS
+    + [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
@@ -86,6 +115,7 @@ app.add_middleware(
 
 
 # ── Backend call (self-owned) ──────────────────────────────────
+
 
 async def call_nano(endpoint: str, payload: dict) -> dict | None:
     """Call self-owned backend or nanoservice — priority: backend → nano → None."""
@@ -121,6 +151,7 @@ async def call_nano(endpoint: str, payload: dict) -> dict | None:
 
 # ── Stub responses (no external AI — honest, useful) ───────────
 
+
 def stub_chat(messages: list[dict], model: str = "tranc3-base") -> dict:
     last_msg = messages[-1].get("content", "") if messages else ""
     return {
@@ -130,19 +161,21 @@ def stub_chat(messages: list[dict], model: str = "tranc3-base") -> dict:
         "backend": "tranc3-stub",
         "trained": False,
         "message": "TRANC3 model weights not yet trained. Run: python train.py",
-        "choices": [{
-            "index": 0,
-            "message": {
-                "role": "assistant",
-                "content": (
-                    f"TRANC3 ({model}) is initialising. "
-                    "Model weights are not yet trained. "
-                    "Run `python train.py` on your Tranc3 backend to produce weights. "
-                    f"Your message: \"{last_msg[:80]}\""
-                ),
-            },
-            "finish_reason": "stop",
-        }],
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": (
+                        f"TRANC3 ({model}) is initialising. "
+                        "Model weights are not yet trained. "
+                        "Run `python train.py` on your Tranc3 backend to produce weights. "
+                        f'Your message: "{last_msg[:80]}"'
+                    ),
+                },
+                "finish_reason": "stop",
+            }
+        ],
         "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
     }
 
@@ -180,10 +213,16 @@ def stub_emotion(text: str) -> dict:
     total = sum(scores.values()) or 1
     norm = {k: round(v / total, 4) for k, v in scores.items()}
     dominant = max(norm, key=norm.get)  # type: ignore[arg-type]
-    return {"dominant": dominant, "scores": norm, "model": "tranc3-rule-based", "backend": "tranc3-stub"}
+    return {
+        "dominant": dominant,
+        "scores": norm,
+        "model": "tranc3-rule-based",
+        "backend": "tranc3-stub",
+    }
 
 
 # ── Auth ───────────────────────────────────────────────────────
+
 
 async def verify_auth(authorization: str | None) -> dict | None:
     if not authorization or not authorization.startswith("Bearer "):
@@ -201,13 +240,18 @@ async def verify_auth(authorization: str | None) -> dict | None:
             )
             if resp.status_code == 200:
                 user = resp.json()
-                return {"userId": user.get("id"), "role": user.get("role"), "email": user.get("email")}
+                return {
+                    "userId": user.get("id"),
+                    "role": user.get("role"),
+                    "email": user.get("email"),
+                }
         except httpx.HTTPError:
             pass  # nosec B110 — graceful degradation
     return None
 
 
 # ── Routes ─────────────────────────────────────────────────────
+
 
 @app.get("/")
 async def root():
@@ -307,14 +351,17 @@ async def chat(request: Request, authorization: str | None = Header(None)):
     last_user = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
     system_msg = next((m["content"] for m in messages if m.get("role") == "system"), None)
 
-    nano = await call_nano("generate", {
-        "prompt": last_user,
-        "personality": body.get("personality", model),
-        "system_prompt": system_msg,
-        "max_tokens": body.get("max_tokens", 256),
-        "temperature": body.get("temperature", 0.8),
-        "top_p": body.get("top_p", 0.9),
-    })
+    nano = await call_nano(
+        "generate",
+        {
+            "prompt": last_user,
+            "personality": body.get("personality", model),
+            "system_prompt": system_msg,
+            "max_tokens": body.get("max_tokens", 256),
+            "temperature": body.get("temperature", 0.8),
+            "top_p": body.get("top_p", 0.9),
+        },
+    )
 
     if nano and nano.get("response"):
         return {
@@ -322,12 +369,18 @@ async def chat(request: Request, authorization: str | None = Header(None)):
             "object": "chat.completion",
             "model": model,
             "backend": "tranc3-own",
-            "choices": [{
-                "index": 0,
-                "message": {"role": "assistant", "content": nano["response"]},
-                "finish_reason": "stop",
-            }],
-            "usage": {"prompt_tokens": 0, "completion_tokens": nano.get("tokens", 0), "total_tokens": nano.get("tokens", 0)},
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": nano["response"]},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 0,
+                "completion_tokens": nano.get("tokens", 0),
+                "total_tokens": nano.get("tokens", 0),
+            },
             "personality": nano.get("personality"),
         }
 
@@ -354,7 +407,10 @@ async def embeddings(request: Request, authorization: str | None = Header(None))
             "object": "list",
             "model": "tranc3-embeddings",
             "backend": "tranc3-own",
-            "data": [{"object": "embedding", "index": i, "embedding": nano["embedding"]} for i in range(len(texts))],
+            "data": [
+                {"object": "embedding", "index": i, "embedding": nano["embedding"]}
+                for i in range(len(texts))
+            ],
             "usage": {"prompt_tokens": 0, "total_tokens": 0},
         }
 
@@ -413,12 +469,15 @@ async def tokenize(request: Request, authorization: str | None = Header(None)):
         raise HTTPException(status_code=401, detail="Valid Bearer token required")
 
     body = await request.json()
-    nano = await call_nano("tokenize", {
-        "action": body.get("action", "encode"),
-        "text": body.get("text", ""),
-        "ids": body.get("ids", []),
-        "skip_special": body.get("skip_special", True),
-    })
+    nano = await call_nano(
+        "tokenize",
+        {
+            "action": body.get("action", "encode"),
+            "text": body.get("text", ""),
+            "ids": body.get("ids", []),
+            "skip_special": body.get("skip_special", True),
+        },
+    )
     if nano:
         return nano
 
@@ -440,11 +499,14 @@ async def predict(request: Request, authorization: str | None = Header(None)):
     if not text:
         raise HTTPException(status_code=400, detail="text is required")
 
-    nano = await call_nano("predict", {
-        "text": text,
-        "top_k": body.get("top_k", 5),
-        "predict_type": body.get("predict_type", "next_token"),
-    })
+    nano = await call_nano(
+        "predict",
+        {
+            "text": text,
+            "top_k": body.get("top_k", 5),
+            "predict_type": body.get("predict_type", "next_token"),
+        },
+    )
     if nano:
         return nano
 

@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 class CircuitState(str, Enum):
     """Circuit breaker states."""
+
     CLOSED = "closed"
     OPEN = "open"
     HALF_OPEN = "half_open"
@@ -25,6 +26,7 @@ class CircuitState(str, Enum):
 
 class HealthStatus(str, Enum):
     """Service health statuses."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -150,6 +152,7 @@ class CircuitBreaker:
 @dataclass
 class LatencyStats:
     """Latency statistics for a service."""
+
     samples: int = 0
     avg_ms: float = 0.0
     min_ms: float = 0.0

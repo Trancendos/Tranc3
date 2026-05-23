@@ -260,7 +260,9 @@ class ToolBridge:
                 metadata={"agent_id": agent_id, "source": descriptor.source},
             )
             logger.warning(
-                "ToolBridge: tool '%s' failed: %s", tool_name, exc,
+                "ToolBridge: tool '%s' failed: %s",
+                tool_name,
+                exc,
             )
 
         self._record_invocation(result)
@@ -277,6 +279,7 @@ class ToolBridge:
         # Discover MCP tools
         try:
             from src.mcp.tools import registry as _spark_registry
+
             tools.update(t.name for t in _spark_registry._tools.values())
         except Exception:
             logger.debug("Graceful degradation in Exception")  # nosec B110
@@ -299,6 +302,7 @@ class ToolBridge:
         # Check MCP tools
         try:
             from src.mcp.tools import registry as _spark_registry
+
             tool = _spark_registry.get(tool_name)
             if tool:
                 return {
@@ -319,7 +323,9 @@ class ToolBridge:
     # Invocation history
     # -------------------------------------------------------------------
 
-    def get_invocation_history(self, tool_name: Optional[str] = None, limit: int = 50) -> List[ToolResult]:
+    def get_invocation_history(
+        self, tool_name: Optional[str] = None, limit: int = 50
+    ) -> List[ToolResult]:
         """
         Return recent invocation history, optionally filtered by tool name.
         Returns the most recent invocations first.
@@ -342,7 +348,9 @@ class ToolBridge:
 
         successful = sum(1 for r in self._invocation_history if r.success)
         failed = len(self._invocation_history) - successful
-        avg_duration = sum(r.duration_ms for r in self._invocation_history) / len(self._invocation_history)
+        avg_duration = sum(r.duration_ms for r in self._invocation_history) / len(
+            self._invocation_history
+        )
         tools_used = sorted({r.tool_name for r in self._invocation_history})
 
         return {
@@ -361,6 +369,7 @@ class ToolBridge:
         """Resolve a tool from The Spark's MCP registry."""
         try:
             from src.mcp.tools import registry as _spark_registry
+
             tool = _spark_registry.get(tool_name)
             if tool is not None:
                 return _ToolDescriptor(
@@ -378,6 +387,7 @@ class ToolBridge:
         """Resolve a tool from the Digital Grid's workflow registry."""
         try:
             from src.workflow.nodes import _SPARK_TOOL_REGISTRY
+
             handler = _SPARK_TOOL_REGISTRY.get(tool_name)
             if handler is not None:
                 return _ToolDescriptor(

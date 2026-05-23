@@ -465,4 +465,6 @@ if __name__ == "__main__":
         write_worker_files(name, code, config["port"])
         print(f"✅ Generated P3 stub: {name} (port {config['port']})")
 
-    print(f"\n🎉 Total: {len(WORKERS)} P2 workers + {len(P3_WORKERS)} P3 stubs = {len(WORKERS) + len(P3_WORKERS)} workers generated")
+    print(
+        f"\n🎉 Total: {len(WORKERS)} P2 workers + {len(P3_WORKERS)} P3 stubs = {len(WORKERS) + len(P3_WORKERS)} workers generated"
+    )

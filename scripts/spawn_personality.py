@@ -20,11 +20,14 @@ def main():
     parser = argparse.ArgumentParser(description="Spawn a Tranc3 personality repo")
     parser.add_argument("--personality", "-p", help="Personality ID to spawn")
     parser.add_argument("--repo-name", "-n", help="Name for the new repo directory")
-    parser.add_argument("--output", "-o", default="./spawned", help="Output parent directory (default: ./spawned)")
+    parser.add_argument(
+        "--output", "-o", default="./spawned", help="Output parent directory (default: ./spawned)"
+    )
     parser.add_argument("--list", "-l", action="store_true", help="List available personalities")
     args = parser.parse_args()
 
     from src.personality.spawner import PersonalitySpawner
+
     spawner = PersonalitySpawner()
 
     if args.list:

@@ -220,14 +220,12 @@ class DevOcity:
                     for k in account.api_keys
                 ],
                 "webhooks": [
-                    {"id": w.id, "url": w.url, "events": w.events}
-                    for w in account.webhooks
+                    {"id": w.id, "url": w.url, "events": w.events} for w in account.webhooks
                 ],
             }
             await store.set(f"devocity:account:{account.id}", data, ttl=_ACCOUNT_TTL)
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
     def _fire_persist(self, account: DeveloperAccount) -> None:
         import asyncio
@@ -239,15 +237,16 @@ class DevOcity:
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
-
     def create_account(self, user_id: str, display_name: str) -> DeveloperAccount:
         account = DeveloperAccount(user_id=user_id, display_name=display_name)
         self._accounts[account.id] = account
         self._fire_persist(account)
-        self._emit(
-            "devocity.account.created", {"account_id": account.id, "user_id": user_id}
-        )
-        logger.info("devocity: account created id=%s user=%s", sanitize_for_log(account.id), sanitize_for_log(user_id))  # codeql[py/cleartext-logging]
+        self._emit("devocity.account.created", {"account_id": account.id, "user_id": user_id})
+        logger.info(
+            "devocity: account created id=%s user=%s",
+            sanitize_for_log(account.id),
+            sanitize_for_log(user_id),
+        )  # codeql[py/cleartext-logging]
         return account
 
     def get_account(self, account_id: str) -> Optional[DeveloperAccount]:
@@ -282,9 +281,7 @@ class DevOcity:
         )
         account.api_keys.append(api_key)
         self._fire_persist(account)
-        self._emit(
-            "devocity.apikey.issued", {"account_id": account_id, "key_id": api_key.id}
-        )
+        self._emit("devocity.apikey.issued", {"account_id": account_id, "key_id": api_key.id})
         return plain, api_key
 
     def revoke_api_key(self, account_id: str, key_id: str) -> bool:
@@ -320,8 +317,7 @@ class DevOcity:
 
     def stats(self) -> Dict[str, Any]:
         total_keys = sum(
-            len([k for k in a.api_keys if not k.revoked])
-            for a in self._accounts.values()
+            len([k for k in a.api_keys if not k.revoked]) for a in self._accounts.values()
         )
         return {
             "service": "devocity",
@@ -342,7 +338,6 @@ class DevOcity:
             )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
 
 _devocity: Optional[DevOcity] = None

@@ -52,6 +52,7 @@ logger = logging.getLogger(WORKER_NAME)
 # Models
 # ---------------------------------------------------------------------------
 
+
 class ProviderName(str, Enum):
     ollama = "ollama"
     openrouter = "openrouter"
@@ -106,6 +107,7 @@ class TokenBudget(BaseModel):
 # LRU Cache
 # ---------------------------------------------------------------------------
 
+
 class LRUCache:
     """Simple LRU cache for AI responses."""
 
@@ -138,6 +140,7 @@ class LRUCache:
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+
 
 class AIDatabase:
     """SQLite-backed storage for token budgets, usage, and request logs."""
@@ -219,7 +222,12 @@ class AIDatabase:
         with self._cursor() as cur:
             cur.execute(
                 "INSERT OR REPLACE INTO token_budgets (tenant_id, daily_limit, used_today, last_reset) VALUES (?,?,?,?)",
-                (budget.tenant_id, budget.daily_limit, budget.used_today, budget.last_reset.isoformat()),
+                (
+                    budget.tenant_id,
+                    budget.daily_limit,
+                    budget.used_today,
+                    budget.last_reset.isoformat(),
+                ),
             )
 
     def record_usage(self, tenant_id: str, tokens_used: int):
@@ -231,15 +239,34 @@ class AIDatabase:
         budget = self.get_budget(tenant_id)
         return (budget.used_today + tokens_requested) <= budget.daily_limit
 
-    def log_request(self, request_id: str, tenant_id: Optional[str], model: str, provider: str,
-                    prompt_tokens: int, completion_tokens: int, latency_ms: Optional[int],
-                    success: bool, error: Optional[str] = None):
+    def log_request(
+        self,
+        request_id: str,
+        tenant_id: Optional[str],
+        model: str,
+        provider: str,
+        prompt_tokens: int,
+        completion_tokens: int,
+        latency_ms: Optional[int],
+        success: bool,
+        error: Optional[str] = None,
+    ):
         with self._cursor() as cur:
             cur.execute(
                 "INSERT INTO request_log (request_id, tenant_id, model, provider, prompt_tokens, completion_tokens, total_tokens, latency_ms, success, error_message, timestamp) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                (request_id, tenant_id, model, provider, prompt_tokens, completion_tokens,
-                 prompt_tokens + completion_tokens, latency_ms, int(success), error or "",
-                 datetime.now(timezone.utc).isoformat()),
+                (
+                    request_id,
+                    tenant_id,
+                    model,
+                    provider,
+                    prompt_tokens,
+                    completion_tokens,
+                    prompt_tokens + completion_tokens,
+                    latency_ms,
+                    int(success),
+                    error or "",
+                    datetime.now(timezone.utc).isoformat(),
+                ),
             )
 
     def get_usage_stats(self, tenant_id: Optional[str] = None, hours: int = 24) -> Dict[str, Any]:
@@ -262,6 +289,7 @@ class AIDatabase:
 # Provider Clients (zero-cost — no paid APIs)
 # ---------------------------------------------------------------------------
 
+
 class OllamaClient:
     """Ollama local inference client — primary zero-cost provider."""
 
@@ -269,9 +297,12 @@ class OllamaClient:
         self.base_url = base_url.rstrip("/")
         self._available: Optional[bool] = None
 
-    async def complete(self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float) -> Optional[Dict[str, Any]]:
+    async def complete(
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
+    ) -> Optional[Dict[str, Any]]:
         import urllib.error
         import urllib.request
+
         try:
             payload = {
                 "model": model,
@@ -296,6 +327,7 @@ class OllamaClient:
 
     async def health_check(self) -> bool:
         import urllib.request
+
         try:
             req = urllib.request.Request(f"{self.base_url}/api/tags", method="GET")
             with urllib.request.urlopen(req, timeout=5) as resp:
@@ -319,9 +351,12 @@ class OpenRouterClient:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
 
-    async def complete(self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float) -> Optional[Dict[str, Any]]:
+    async def complete(
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
+    ) -> Optional[Dict[str, Any]]:
         import urllib.error
         import urllib.request
+
         try:
             # Use free model if the requested model isn't free
             actual_model = model
@@ -368,12 +403,18 @@ class HuggingFaceClient:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
 
-    async def complete(self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float) -> Optional[Dict[str, Any]]:
+    async def complete(
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
+    ) -> Optional[Dict[str, Any]]:
         import urllib.error
         import urllib.request
+
         try:
             prompt = "\n".join(f"{m.role}: {m.content}" for m in messages) + "\nassistant:"
-            payload = {"inputs": prompt, "parameters": {"max_new_tokens": max_tokens, "temperature": temperature}}
+            payload = {
+                "inputs": prompt,
+                "parameters": {"max_new_tokens": max_tokens, "temperature": temperature},
+            }
             data = json.dumps(payload).encode()
             actual_model = model if "/" in model else self.FREE_MODELS[0]
             req = urllib.request.Request(
@@ -413,7 +454,9 @@ class OfflineClient:
         "error": "I apologize, but I'm unable to process your request at this time due to service unavailability. Your request has been logged and will be processed once services are restored.",
     }
 
-    async def complete(self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float) -> Dict[str, Any]:
+    async def complete(
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
+    ) -> Dict[str, Any]:
         # Simple keyword matching for offline responses
         last_msg = messages[-1].content.lower() if messages else ""
         if any(w in last_msg for w in ["hello", "hi", "hey", "greet"]):
@@ -428,6 +471,7 @@ class OfflineClient:
 # ---------------------------------------------------------------------------
 # AI Gateway Router
 # ---------------------------------------------------------------------------
+
 
 class AIGatewayRouter:
     """Routes AI requests through provider priority chain with caching and budget tracking."""
@@ -447,7 +491,14 @@ class AIGatewayRouter:
             (ProviderName.offline, self.offline),
         ]
 
-    def _make_cache_key(self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float, tenant_id: Optional[str]) -> str:
+    def _make_cache_key(
+        self,
+        model: str,
+        messages: List[ChatMessage],
+        max_tokens: int,
+        temperature: float,
+        tenant_id: Optional[str],
+    ) -> str:
         msg_str = "|".join(f"{m.role}:{m.content}" for m in messages)
         raw = f"{tenant_id or 'default'}:{model}:{msg_str}:{max_tokens}:{temperature}"
         return hashlib.sha256(raw.encode()).hexdigest()[:32]
@@ -458,12 +509,18 @@ class AIGatewayRouter:
         start_time = time.time()
 
         # Check token budget
-        estimated_tokens = request.max_tokens + sum(len(m.content.split()) for m in request.messages)
+        estimated_tokens = request.max_tokens + sum(
+            len(m.content.split()) for m in request.messages
+        )
         if not self.db.check_budget(tenant_id, estimated_tokens):
-            raise HTTPException(429, "Token budget exceeded for today. Try again tomorrow or contact admin.")
+            raise HTTPException(
+                429, "Token budget exceeded for today. Try again tomorrow or contact admin."
+            )
 
         # Check cache
-        cache_key = self._make_cache_key(request.model, request.messages, request.max_tokens, request.temperature, tenant_id)
+        cache_key = self._make_cache_key(
+            request.model, request.messages, request.max_tokens, request.temperature, tenant_id
+        )
         cached = self.cache.get(cache_key)
         if cached:
             cached.provider = "cache"
@@ -474,8 +531,10 @@ class AIGatewayRouter:
         for provider_name, provider in self.providers:
             try:
                 result = await provider.complete(
-                    request.model, request.messages,
-                    request.max_tokens, request.temperature,
+                    request.model,
+                    request.messages,
+                    request.max_tokens,
+                    request.temperature,
                 )
                 if result is None:
                     continue
@@ -537,17 +596,29 @@ class AIGatewayRouter:
                 continue
 
         # All providers failed — use offline as last resort
-        result = await self.offline.complete(request.model, request.messages, request.max_tokens, request.temperature)
+        result = await self.offline.complete(
+            request.model, request.messages, request.max_tokens, request.temperature
+        )
         content = result.get("content", "")
         latency_ms = int((time.time() - start_time) * 1000)
         self.db.log_request(
-            request_id=request_id, tenant_id=tenant_id, model=request.model,
-            provider="offline", prompt_tokens=0, completion_tokens=len(content) // 4,
-            latency_ms=latency_ms, success=False, error=last_error,
+            request_id=request_id,
+            tenant_id=tenant_id,
+            model=request.model,
+            provider="offline",
+            prompt_tokens=0,
+            completion_tokens=len(content) // 4,
+            latency_ms=latency_ms,
+            success=False,
+            error=last_error,
         )
         return ChatCompletionResponse(
             model=request.model,
-            choices=[ChatCompletionChoice(message=ChatMessage(role="assistant", content=content), finish_reason="stop")],
+            choices=[
+                ChatCompletionChoice(
+                    message=ChatMessage(role="assistant", content=content), finish_reason="stop"
+                )
+            ],
             usage=ChatCompletionUsage(total_tokens=len(content) // 4),
             provider="offline",
         )
@@ -580,6 +651,7 @@ STARTED_AT = datetime.now(timezone.utc)
 # Health & Info
 # ---------------------------------------------------------------------------
 
+
 @app.get("/health")
 async def health():
     ollama_ok = await router.ollama.health_check()
@@ -611,7 +683,11 @@ async def list_models():
         {"id": "gemma2", "object": "model", "owned_by": "ollama"},
         {"id": "qwen2", "object": "model", "owned_by": "ollama"},
         {"id": "codellama", "object": "model", "owned_by": "ollama"},
-        {"id": "meta-llama/llama-3.2-3b-instruct:free", "object": "model", "owned_by": "openrouter"},
+        {
+            "id": "meta-llama/llama-3.2-3b-instruct:free",
+            "object": "model",
+            "owned_by": "openrouter",
+        },
         {"id": "qwen/qwen-2.5-72b-instruct:free", "object": "model", "owned_by": "openrouter"},
         {"id": "offline-fallback", "object": "model", "owned_by": "local"},
     ]
@@ -621,6 +697,7 @@ async def list_models():
 # ---------------------------------------------------------------------------
 # Chat Completions (OpenAI-compatible)
 # ---------------------------------------------------------------------------
+
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: ChatCompletionRequest):
@@ -638,6 +715,7 @@ async def chat_completions_no_v1(request: ChatCompletionRequest):
 # ---------------------------------------------------------------------------
 # Token Budget & Usage
 # ---------------------------------------------------------------------------
+
 
 @app.get("/usage/{tenant_id}")
 async def get_usage(tenant_id: str):
@@ -662,6 +740,7 @@ async def get_usage_stats(tenant_id: str, hours: int = Query(24, ge=1, le=168)):
 # Admin
 # ---------------------------------------------------------------------------
 
+
 @app.post("/admin/budget")
 async def set_budget(tenant_id: str, daily_limit: int = 100_000):
     """Set the daily token budget for a tenant."""
@@ -684,4 +763,5 @@ async def clear_cache():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

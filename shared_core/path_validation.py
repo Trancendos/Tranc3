@@ -63,7 +63,9 @@ def validate_path(
         )
 
     base = Path(base_dir).resolve()  # codeql[py/path-injection]
-    resolved = (base / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()  # codeql[py/path-injection]
+    resolved = (
+        (base / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()
+    )  # codeql[py/path-injection]
 
     # Ensure the resolved path starts with the base directory
     try:
@@ -113,14 +115,10 @@ def safe_join(
         if not comp:
             raise ValueError("Empty path component provided")
         if _TRAVERSAL_PATTERN.search(comp):
-            raise PathTraversalError(
-                f"Path component contains disallowed characters: {comp!r}"
-            )
+            raise PathTraversalError(f"Path component contains disallowed characters: {comp!r}")
         # Reject absolute components (leading slash or drive letter on Windows)
         if PurePosixPath(comp).is_absolute() or os.path.isabs(comp):
-            raise PathTraversalError(
-                f"Absolute path component not allowed: {comp!r}"
-            )
+            raise PathTraversalError(f"Absolute path component not allowed: {comp!r}")
 
     candidate = base
     for comp in components:

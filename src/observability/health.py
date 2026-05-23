@@ -21,6 +21,7 @@ logger = logging.getLogger("tranc3.health")
 # Models
 # ---------------------------------------------------------------------------
 
+
 class SystemHealth(str, Enum):
     healthy = "healthy"
     degraded = "degraded"
@@ -35,29 +36,58 @@ class SystemHealth(str, Enum):
 # All known services with their default health check URLs
 SERVICE_REGISTRY = {
     # P0 — Critical Path
-    "tranc3-ai":       {"url": "http://localhost:8001/health", "priority": "P0", "named": "The Spark"},
-    "infinity-void":   {"url": "http://localhost:8002/health", "priority": "P0", "named": "The Void"},
-    "api-gateway":     {"url": "http://localhost:8003/health", "priority": "P0", "named": "The Citadel"},
-    "infinity-ws":     {"url": "http://localhost:8004/health", "priority": "P0", "named": "The Nexus"},
-    "infinity-auth":   {"url": "http://localhost:8005/health", "priority": "P0", "named": "Infinity"},
+    "tranc3-ai": {"url": "http://localhost:8001/health", "priority": "P0", "named": "The Spark"},
+    "infinity-void": {"url": "http://localhost:8002/health", "priority": "P0", "named": "The Void"},
+    "api-gateway": {
+        "url": "http://localhost:8003/health",
+        "priority": "P0",
+        "named": "The Citadel",
+    },
+    "infinity-ws": {"url": "http://localhost:8004/health", "priority": "P0", "named": "The Nexus"},
+    "infinity-auth": {"url": "http://localhost:8005/health", "priority": "P0", "named": "Infinity"},
     # P1 — Core Services
-    "users-service":   {"url": "http://localhost:8006/health", "priority": "P1", "named": "Users"},
-    "monitoring":      {"url": "http://localhost:8007/health", "priority": "P1", "named": "The Observatory"},
-    "notifications":   {"url": "http://localhost:8008/health", "priority": "P1", "named": "Notifications"},
-    "infinity-ai":     {"url": "http://localhost:8009/health", "priority": "P1", "named": "AI Gateway"},
+    "users-service": {"url": "http://localhost:8006/health", "priority": "P1", "named": "Users"},
+    "monitoring": {
+        "url": "http://localhost:8007/health",
+        "priority": "P1",
+        "named": "The Observatory",
+    },
+    "notifications": {
+        "url": "http://localhost:8008/health",
+        "priority": "P1",
+        "named": "Notifications",
+    },
+    "infinity-ai": {"url": "http://localhost:8009/health", "priority": "P1", "named": "AI Gateway"},
     # P2 — Domain Services
-    "the-grid":        {"url": "http://localhost:8010/health", "priority": "P2", "named": "The Digital Grid"},
-    "products-service":{"url": "http://localhost:8011/health", "priority": "P2", "named": "Products"},
-    "orders-service":  {"url": "http://localhost:8012/health", "priority": "P2", "named": "Orders"},
-    "payments-service":{"url": "http://localhost:8013/health", "priority": "P2", "named": "Payments"},
-    "files-service":   {"url": "http://localhost:8014/health", "priority": "P2", "named": "Files"},
-    "identity-service":{"url": "http://localhost:8015/health", "priority": "P2", "named": "Identity"},
+    "the-grid": {
+        "url": "http://localhost:8010/health",
+        "priority": "P2",
+        "named": "The Digital Grid",
+    },
+    "products-service": {
+        "url": "http://localhost:8011/health",
+        "priority": "P2",
+        "named": "Products",
+    },
+    "orders-service": {"url": "http://localhost:8012/health", "priority": "P2", "named": "Orders"},
+    "payments-service": {
+        "url": "http://localhost:8013/health",
+        "priority": "P2",
+        "named": "Payments",
+    },
+    "files-service": {"url": "http://localhost:8014/health", "priority": "P2", "named": "Files"},
+    "identity-service": {
+        "url": "http://localhost:8015/health",
+        "priority": "P2",
+        "named": "Identity",
+    },
 }
 
 
 # ---------------------------------------------------------------------------
 # Health Checker
 # ---------------------------------------------------------------------------
+
 
 class HealthChecker:
     """Checks the health of all registered services."""
@@ -124,7 +154,8 @@ class HealthChecker:
 
         # Overall status based on P0 services first
         p0_unhealthy = sum(
-            1 for r in results.values()
+            1
+            for r in results.values()
             if r.get("priority") == "P0" and r["status"] in ("unhealthy", "unknown")
         )
 
@@ -157,7 +188,11 @@ class HealthChecker:
     def get_service_list(self) -> List[Dict[str, str]]:
         """Return the list of all registered services."""
         return [
-            {"name": name, "url": svc["url"], "priority": svc.get("priority", ""),
-             "named": svc.get("named", "")}
+            {
+                "name": name,
+                "url": svc["url"],
+                "priority": svc.get("priority", ""),
+                "named": svc.get("named", ""),
+            }
             for name, svc in self.registry.items()
         ]

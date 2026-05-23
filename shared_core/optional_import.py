@@ -57,7 +57,9 @@ class LazyLoader:
             mod = importlib.import_module(module_name, package)
             object.__setattr__(self, "_module", mod)
             object.__setattr__(self, "_loaded", True)
-            logger.debug("Lazy-loaded: %s", sanitize_for_log(module_name))  # codeql[py/cleartext-logging]
+            logger.debug(
+                "Lazy-loaded: %s", sanitize_for_log(module_name)
+            )  # codeql[py/cleartext-logging]
             return mod
         except ImportError as e:
             object.__setattr__(self, "_module", None)
@@ -69,7 +71,7 @@ class LazyLoader:
                     "Optional dependency '%s' not available: %s. Feature requiring %s will be disabled.",
                     sanitize_for_log(module_name),
                     sanitize_for_log(e),
-                    sanitize_for_log(object.__getattribute__(self, '_description')),
+                    sanitize_for_log(object.__getattribute__(self, "_description")),
                 )
 
             fallback = object.__getattribute__(self, "_fallback")

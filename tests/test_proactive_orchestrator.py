@@ -35,11 +35,19 @@ from shared_core.architecture.proactive_orchestrator import (
 # Enum tests
 # ---------------------------------------------------------------------------
 
+
 class TestProactiveAction:
     def test_all_actions_exist(self):
         expected = [
-            "HEAL", "SCALE_UP", "SCALE_DOWN", "MIGRATE_STORAGE",
-            "REBALANCE", "HARDEN", "ALERT", "RECONFIGURE", "QUARANTINE",
+            "HEAL",
+            "SCALE_UP",
+            "SCALE_DOWN",
+            "MIGRATE_STORAGE",
+            "REBALANCE",
+            "HARDEN",
+            "ALERT",
+            "RECONFIGURE",
+            "QUARANTINE",
         ]
         for name in expected:
             assert hasattr(ProactiveAction, name), f"Missing ProactiveAction.{name}"
@@ -74,9 +82,16 @@ class TestActionStatus:
 class TestSystemVitalSign:
     def test_all_vital_signs(self):
         expected = [
-            "CPU_LOAD", "MEMORY_USAGE", "STORAGE_CAPACITY", "SERVICE_HEALTH",
-            "ERROR_RATE", "LATENCY", "THROUGHPUT", "THREAT_LEVEL",
-            "CIRCUIT_HEALTH", "REGISTRY_HEALTH",
+            "CPU_LOAD",
+            "MEMORY_USAGE",
+            "STORAGE_CAPACITY",
+            "SERVICE_HEALTH",
+            "ERROR_RATE",
+            "LATENCY",
+            "THROUGHPUT",
+            "THREAT_LEVEL",
+            "CIRCUIT_HEALTH",
+            "REGISTRY_HEALTH",
         ]
         for name in expected:
             assert hasattr(SystemVitalSign, name), f"Missing SystemVitalSign.{name}"
@@ -97,6 +112,7 @@ class TestOrchestratorMode:
 # ---------------------------------------------------------------------------
 # Dataclass tests
 # ---------------------------------------------------------------------------
+
 
 class TestMetricSample:
     def test_create_sample(self):
@@ -200,6 +216,7 @@ class TestZeroCostStatus:
 # PredictiveHealthAnalyzer tests
 # ---------------------------------------------------------------------------
 
+
 class TestPredictiveHealthAnalyzer:
     def setup_method(self):
         self.analyzer = PredictiveHealthAnalyzer(window_size=20, smoothing_alpha=0.3)
@@ -255,6 +272,7 @@ class TestPredictiveHealthAnalyzer:
 # ---------------------------------------------------------------------------
 # AutoHealingEngine tests
 # ---------------------------------------------------------------------------
+
 
 class TestAutoHealingEngine:
     def setup_method(self):
@@ -334,6 +352,7 @@ class TestAutoHealingEngine:
 # ZeroCostModulator tests
 # ---------------------------------------------------------------------------
 
+
 class TestZeroCostModulator:
     def setup_method(self):
         self.modulator = ZeroCostModulator(safety_margin=0.85)
@@ -366,6 +385,7 @@ class TestZeroCostModulator:
 # ActionDispatcher tests
 # ---------------------------------------------------------------------------
 
+
 class TestActionDispatcher:
     def setup_method(self):
         self.dispatcher = ActionDispatcher()
@@ -385,12 +405,18 @@ class TestActionDispatcher:
 
     def test_submit_sorted_by_priority(self):
         low_plan = ActionPlan(
-            id="low", action=ProactiveAction.ALERT,
-            priority=ActionPriority.LOW, target="t", description="low",
+            id="low",
+            action=ProactiveAction.ALERT,
+            priority=ActionPriority.LOW,
+            target="t",
+            description="low",
         )
         critical_plan = ActionPlan(
-            id="critical", action=ProactiveAction.HEAL,
-            priority=ActionPriority.CRITICAL, target="t", description="crit",
+            id="critical",
+            action=ProactiveAction.HEAL,
+            priority=ActionPriority.CRITICAL,
+            target="t",
+            description="crit",
         )
         self.dispatcher.submit(low_plan)
         self.dispatcher.submit(critical_plan)
@@ -441,6 +467,7 @@ class TestActionDispatcher:
 # ---------------------------------------------------------------------------
 # ProactiveOrchestrator tests
 # ---------------------------------------------------------------------------
+
 
 class TestProactiveOrchestrator:
     def setup_method(self):

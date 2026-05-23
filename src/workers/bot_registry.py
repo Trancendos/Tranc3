@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 # ─── Base Bot ─────────────────────────────────────────────────────────────────
 
+
 class Bot(ABC):
     """Abstract base class for all TRANC3 worker bots."""
 
@@ -47,14 +48,14 @@ class Bot(ABC):
     async def run(self, **kwargs) -> Dict[str, Any]:
         """Execute this bot with the given keyword arguments."""
         payload = self._build_payload(**kwargs)
-        job     = JobSpec(job_type=self.job_type, payload=payload)
-        result  = await self._pool.submit_and_wait(job, timeout=self.timeout)
+        job = JobSpec(job_type=self.job_type, payload=payload)
+        result = await self._pool.submit_and_wait(job, timeout=self.timeout)
         return self._unwrap(result)
 
     async def submit(self, **kwargs) -> str:
         """Submit without waiting. Returns job_id."""
         payload = self._build_payload(**kwargs)
-        job     = JobSpec(job_type=self.job_type, payload=payload)
+        job = JobSpec(job_type=self.job_type, payload=payload)
         return await self._pool.submit(job)
 
     @abstractmethod
@@ -66,9 +67,9 @@ class Bot(ABC):
         if result.result:
             return result.result
         return {
-            "error":    result.error or "unknown error",
-            "status":   result.status,
-            "job_id":   result.job_id,
+            "error": result.error or "unknown error",
+            "status": result.status,
+            "job_id": result.job_id,
             "duration": result.duration_ms,
         }
 
@@ -77,6 +78,7 @@ class Bot(ABC):
 
 
 # ─── Concrete Bots ────────────────────────────────────────────────────────────
+
 
 class InferenceBot(Bot):
     """
@@ -91,18 +93,19 @@ class InferenceBot(Bot):
         )
         print(result["response"])
     """
-    name     = "generate"
+
+    name = "generate"
     job_type = JobType.GENERATE
-    timeout  = 60.0
+    timeout = 60.0
 
     def _build_payload(self, **kw) -> dict:
         return {
-            "prompt":       kw.get("prompt", ""),
-            "personality":  kw.get("personality", "tranc3-base"),
-            "system_prompt":kw.get("system_prompt"),
-            "max_tokens":   kw.get("max_tokens", 256),
-            "temperature":  kw.get("temperature", 0.8),
-            "top_p":        kw.get("top_p", 0.9),
+            "prompt": kw.get("prompt", ""),
+            "personality": kw.get("personality", "tranc3-base"),
+            "system_prompt": kw.get("system_prompt"),
+            "max_tokens": kw.get("max_tokens", 256),
+            "temperature": kw.get("temperature", 0.8),
+            "top_p": kw.get("top_p", 0.9),
         }
 
 
@@ -114,15 +117,16 @@ class EmbeddingBot(Bot):
         result = await bot.run(text="Hello world", pooling="mean")
         vec = result["embedding"]   # List[float]
     """
-    name     = "embed"
+
+    name = "embed"
     job_type = JobType.EMBED
-    timeout  = 10.0
+    timeout = 10.0
 
     def _build_payload(self, **kw) -> dict:
         return {
-            "text":    kw.get("text", ""),
+            "text": kw.get("text", ""),
             "pooling": kw.get("pooling", "mean"),  # mean | cls | max
-            "dims":    kw.get("dims", 256),
+            "dims": kw.get("dims", 256),
         }
 
 
@@ -135,9 +139,10 @@ class EmotionBot(Bot):
         print(result["dominant"])  # "joy"
         print(result["scores"])    # {"joy": 0.72, "sadness": 0.05, ...}
     """
-    name     = "emotion"
+
+    name = "emotion"
     job_type = JobType.EMOTION
-    timeout  = 15.0
+    timeout = 15.0
 
     def _build_payload(self, **kw) -> dict:
         return {"text": kw.get("text", "")}
@@ -151,16 +156,17 @@ class TokenizeBot(Bot):
         enc = await bot.run(action="encode", text="Hello world")
         dec = await bot.run(action="decode", ids=[1, 2, 3])
     """
-    name     = "tokenize"
+
+    name = "tokenize"
     job_type = JobType.TOKENIZE
-    timeout  = 5.0
+    timeout = 5.0
 
     def _build_payload(self, **kw) -> dict:
         return {
-            "action":        kw.get("action", "encode"),
-            "text":          kw.get("text", ""),
-            "ids":           kw.get("ids", []),
-            "skip_special":  kw.get("skip_special", True),
+            "action": kw.get("action", "encode"),
+            "text": kw.get("text", ""),
+            "ids": kw.get("ids", []),
+            "skip_special": kw.get("skip_special", True),
         }
 
 
@@ -173,9 +179,10 @@ class ConsciousnessBot(Bot):
         print(result["phi"])        # 0.74
         print(result["awareness"])  # "high"
     """
-    name     = "consciousness"
+
+    name = "consciousness"
     job_type = JobType.CONSCIOUSNESS
-    timeout  = 20.0
+    timeout = 20.0
 
     def _build_payload(self, **kw) -> dict:
         return {"text": kw.get("text", "")}
@@ -189,14 +196,15 @@ class PersonalityBot(Bot):
         result = await bot.run(profile="dorris-fontaine", dim=128)
         vec = result["vector"]  # List[float]
     """
-    name     = "personality"
+
+    name = "personality"
     job_type = JobType.PERSONALITY
-    timeout  = 5.0
+    timeout = 5.0
 
     def _build_payload(self, **kw) -> dict:
         return {
             "profile": kw.get("profile", "tranc3-base"),
-            "dim":     kw.get("dim", 128),
+            "dim": kw.get("dim", 128),
         }
 
 
@@ -209,14 +217,15 @@ class PredictBot(Bot):
         print(result["prediction"])  # "sunny"
         print(result["top_k"])       # [{"token": "sunny", "prob": 0.34}, ...]
     """
-    name     = "predict"
+
+    name = "predict"
     job_type = JobType.PREDICT
-    timeout  = 10.0
+    timeout = 10.0
 
     def _build_payload(self, **kw) -> dict:
         return {
-            "text":         kw.get("text", ""),
-            "top_k":        kw.get("top_k", 5),
+            "text": kw.get("text", ""),
+            "top_k": kw.get("top_k", 5),
             "predict_type": kw.get("predict_type", "next_token"),
         }
 
@@ -281,8 +290,8 @@ class BotRegistry:
     async def health(self) -> Dict[str, Any]:
         pool_health = await self._pool.health()
         return {
-            "bots":   self.list_bots(),
-            "pool":   pool_health,
+            "bots": self.list_bots(),
+            "pool": pool_health,
         }
 
 

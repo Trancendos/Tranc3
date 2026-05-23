@@ -3,7 +3,6 @@ Tests for src/ai_gateway/ — AIGateway router, LRU cache, provider failover
 ============================================================================
 """
 
-
 import pytest
 
 from src.ai_gateway.gateway import AIGateway, AIGatewayConfig, AIGatewayError, LRUCache
@@ -22,6 +21,7 @@ from src.ai_gateway.types import (
 # ─────────────────────────────────────────────────────────────────────────────
 # LRU Cache Tests
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestLRUCache:
     """LRU cache for AI responses."""
@@ -92,6 +92,7 @@ class TestLRUCache:
 # OfflineProvider Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestOfflineProvider:
     """Offline provider — deterministic fallback."""
 
@@ -145,6 +146,7 @@ class TestOfflineProvider:
 # Mock Provider for Gateway Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class MockProvider(AIProvider):
     """Mock AI provider for testing."""
 
@@ -192,6 +194,7 @@ class MockProvider(AIProvider):
 # AIGatewayConfig Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestAIGatewayConfig:
     """AIGateway configuration."""
 
@@ -212,6 +215,7 @@ class TestAIGatewayConfig:
 # AIGateway Routing Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestAIGatewayRouting:
     """AIGateway provider routing and failover."""
 
@@ -220,9 +224,11 @@ class TestAIGatewayRouting:
         """When tenant config specifies routes, the first healthy provider is used."""
         ollama = MockProvider(name="ollama", response_text="from ollama")
         offline = OfflineProvider()
-        gateway = AIGateway(config=AIGatewayConfig(
-            providers={"ollama": ollama, "offline": offline},
-        ))
+        gateway = AIGateway(
+            config=AIGatewayConfig(
+                providers={"ollama": ollama, "offline": offline},
+            )
+        )
         request = AIRequest(prompt="Hello")
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -240,9 +246,11 @@ class TestAIGatewayRouting:
         """When the first provider fails, the gateway falls over to the next."""
         failing = MockProvider(name="ollama", should_fail=True)
         working = MockProvider(name="openrouter", response_text="from openrouter")
-        gateway = AIGateway(config=AIGatewayConfig(
-            providers={"ollama": failing, "openrouter": working},
-        ))
+        gateway = AIGateway(
+            config=AIGatewayConfig(
+                providers={"ollama": failing, "openrouter": working},
+            )
+        )
         request = AIRequest(prompt="Hello")
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -262,9 +270,11 @@ class TestAIGatewayRouting:
         failing1 = MockProvider(name="ollama", should_fail=True)
         failing2 = MockProvider(name="openrouter", should_fail=True)
         offline = OfflineProvider()
-        gateway = AIGateway(config=AIGatewayConfig(
-            providers={"ollama": failing1, "openrouter": failing2, "offline": offline},
-        ))
+        gateway = AIGateway(
+            config=AIGatewayConfig(
+                providers={"ollama": failing1, "openrouter": failing2, "offline": offline},
+            )
+        )
         request = AIRequest(prompt="Hello")
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -293,9 +303,11 @@ class TestAIGatewayRouting:
     async def test_route_with_default_tenant_config(self):
         """When no tenant config is passed, DEFAULT_TENANT_CONFIG routes are used."""
         ollama = MockProvider(name="ollama", response_text="local inference")
-        gateway = AIGateway(config=AIGatewayConfig(
-            providers={"ollama": ollama},
-        ))
+        gateway = AIGateway(
+            config=AIGatewayConfig(
+                providers={"ollama": ollama},
+            )
+        )
         request = AIRequest(prompt="Hello")
         # DEFAULT_TENANT_CONFIG has ollama at priority 0
         response = await gateway.route(request)
@@ -307,9 +319,11 @@ class TestAIGatewayRouting:
         """Unhealthy providers (from previous failures) are skipped."""
         failing = MockProvider(name="ollama", should_fail=True)
         working = MockProvider(name="openrouter", response_text="cloud inference")
-        gateway = AIGateway(config=AIGatewayConfig(
-            providers={"ollama": failing, "openrouter": working},
-        ))
+        gateway = AIGateway(
+            config=AIGatewayConfig(
+                providers={"ollama": failing, "openrouter": working},
+            )
+        )
         # First call marks ollama as unhealthy
         request = AIRequest(prompt="Hello")
         tenant_config = TenantAIConfig(
@@ -330,6 +344,7 @@ class TestAIGatewayRouting:
 # AIGateway Caching Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestAIGatewayCaching:
     """AIGateway response caching."""
 
@@ -337,10 +352,12 @@ class TestAIGatewayCaching:
     async def test_cached_response_returned(self):
         """Second identical request is served from cache."""
         provider = MockProvider(name="mock", response_text="cached result")
-        gateway = AIGateway(config=AIGatewayConfig(
-            providers={"mock": provider},
-            cache_size=100,
-        ))
+        gateway = AIGateway(
+            config=AIGatewayConfig(
+                providers={"mock": provider},
+                cache_size=100,
+            )
+        )
 
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -361,9 +378,11 @@ class TestAIGatewayCaching:
     async def test_cache_disabled(self):
         """When cache_enabled=False, every request hits the provider."""
         provider = MockProvider(name="mock", response_text="no cache")
-        gateway = AIGateway(config=AIGatewayConfig(
-            providers={"mock": provider},
-        ))
+        gateway = AIGateway(
+            config=AIGatewayConfig(
+                providers={"mock": provider},
+            )
+        )
         tenant_config = TenantAIConfig(
             tenant_id="test",
             routes=[RouteRule(provider="mock", priority=0)],
@@ -379,6 +398,7 @@ class TestAIGatewayCaching:
 # AIGateway Token Budget Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestAIGatewayTokenBudget:
     """Token budget enforcement."""
 
@@ -386,9 +406,11 @@ class TestAIGatewayTokenBudget:
     async def test_token_budget_exceeded(self):
         """When token budget is exceeded, an error is raised."""
         provider = MockProvider(name="mock", response_text="result")
-        gateway = AIGateway(config=AIGatewayConfig(
-            providers={"mock": provider},
-        ))
+        gateway = AIGateway(
+            config=AIGatewayConfig(
+                providers={"mock": provider},
+            )
+        )
         tenant_config = TenantAIConfig(
             tenant_id="test",
             routes=[RouteRule(provider="mock", priority=0)],
@@ -404,9 +426,11 @@ class TestAIGatewayTokenBudget:
     async def test_token_budget_not_exceeded(self):
         """When under budget, request proceeds normally."""
         provider = MockProvider(name="mock", response_text="result")
-        gateway = AIGateway(config=AIGatewayConfig(
-            providers={"mock": provider},
-        ))
+        gateway = AIGateway(
+            config=AIGatewayConfig(
+                providers={"mock": provider},
+            )
+        )
         tenant_config = TenantAIConfig(
             tenant_id="test",
             routes=[RouteRule(provider="mock", priority=0)],
@@ -423,6 +447,7 @@ class TestAIGatewayTokenBudget:
 # ─────────────────────────────────────────────────────────────────────────────
 # AIGateway Provider Management Tests
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestAIGatewayProviderManagement:
     """Registering and unregistering providers."""
@@ -450,15 +475,18 @@ class TestAIGatewayProviderManagement:
 # AIGateway Metrics Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestAIGatewayMetrics:
     """Gateway metrics tracking."""
 
     @pytest.mark.asyncio
     async def test_metrics_track_requests(self):
         provider = MockProvider(name="mock", response_text="result")
-        gateway = AIGateway(config=AIGatewayConfig(
-            providers={"mock": provider},
-        ))
+        gateway = AIGateway(
+            config=AIGatewayConfig(
+                providers={"mock": provider},
+            )
+        )
         tenant_config = TenantAIConfig(
             tenant_id="test",
             routes=[RouteRule(provider="mock", priority=0)],
@@ -472,9 +500,11 @@ class TestAIGatewayMetrics:
     @pytest.mark.asyncio
     async def test_metrics_track_tokens(self):
         provider = MockProvider(name="mock", response_text="result")
-        gateway = AIGateway(config=AIGatewayConfig(
-            providers={"mock": provider},
-        ))
+        gateway = AIGateway(
+            config=AIGatewayConfig(
+                providers={"mock": provider},
+            )
+        )
         tenant_config = TenantAIConfig(
             tenant_id="test",
             routes=[RouteRule(provider="mock", priority=0)],
@@ -489,9 +519,11 @@ class TestAIGatewayMetrics:
     async def test_metrics_track_failover(self):
         failing = MockProvider(name="ollama", should_fail=True)
         working = MockProvider(name="openrouter", response_text="fallback")
-        gateway = AIGateway(config=AIGatewayConfig(
-            providers={"ollama": failing, "openrouter": working},
-        ))
+        gateway = AIGateway(
+            config=AIGatewayConfig(
+                providers={"ollama": failing, "openrouter": working},
+            )
+        )
         tenant_config = TenantAIConfig(
             tenant_id="test",
             routes=[
@@ -516,6 +548,7 @@ class TestAIGatewayMetrics:
 # ─────────────────────────────────────────────────────────────────────────────
 # AIGateway Health Check Tests
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestAIGatewayHealthCheck:
     """Gateway health check aggregation."""
@@ -547,6 +580,7 @@ class TestAIGatewayHealthCheck:
 # ─────────────────────────────────────────────────────────────────────────────
 # AIGateway Type Tests
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestAIGatewayTypes:
     """Pydantic model validation for AI gateway types."""

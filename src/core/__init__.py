@@ -58,4 +58,3 @@ try:
     from src.core.ml_pipeline import MLPipeline, PipelineRequest, PipelineResponse, get_pipeline
 except Exception:
     pass  # nosec B110 — graceful degradation; error logged upstream
-

@@ -89,7 +89,13 @@ class UsersDatabase:
 
 
 app = FastAPI(title="Trancendos Users Service", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 db = UsersDatabase()
 
 
@@ -118,14 +124,29 @@ async def create_user(user: UserCreate):
     try:
         db.execute(
             "INSERT INTO users (user_id, username, email, display_name, role, preferences, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (user_id, user.username, user.email, user.display_name, user.role, str(user.preferences), now),
+            (
+                user_id,
+                user.username,
+                user.email,
+                user.display_name,
+                user.role,
+                str(user.preferences),
+                now,
+            ),
         )
         db.commit()
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=409, detail="Username or email already exists") from None
-    return UserResponse(user_id=user_id, username=user.username, email=user.email,
-                        display_name=user.display_name, role=user.role,
-                        preferences=user.preferences, is_active=True, created_at=now)
+    return UserResponse(
+        user_id=user_id,
+        username=user.username,
+        email=user.email,
+        display_name=user.display_name,
+        role=user.role,
+        preferences=user.preferences,
+        is_active=True,
+        created_at=now,
+    )
 
 
 @app.get("/users/{user_id}", response_model=UserResponse)
@@ -137,13 +158,19 @@ async def get_user(user_id: str):
 
 
 @app.get("/users", response_model=UserListResponse)
-async def list_users(page: int = Query(default=1, ge=1), per_page: int = Query(default=20, ge=1, le=100)):
+async def list_users(
+    page: int = Query(default=1, ge=1), per_page: int = Query(default=20, ge=1, le=100)
+):
     offset = (page - 1) * per_page
     total = db.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
-    rows = db.execute("SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?", (per_page, offset)).fetchall()
+    rows = db.execute(
+        "SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?", (per_page, offset)
+    ).fetchall()
     return UserListResponse(
         users=[_row_to_response(r) for r in rows],
-        total=total, page=page, per_page=per_page,
+        total=total,
+        page=page,
+        per_page=per_page,
     )
 
 
@@ -176,8 +203,10 @@ async def update_user(user_id: str, update: UserUpdate):
 
 @app.delete("/users/{user_id}")
 async def delete_user(user_id: str):
-    result = db.execute("UPDATE users SET is_active = 0, updated_at = ? WHERE user_id = ?",
-                        (datetime.now(timezone.utc).isoformat(), user_id))
+    result = db.execute(
+        "UPDATE users SET is_active = 0, updated_at = ? WHERE user_id = ?",
+        (datetime.now(timezone.utc).isoformat(), user_id),
+    )
     db.commit()
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="User not found")
@@ -189,16 +218,24 @@ def _row_to_response(row: sqlite3.Row) -> UserResponse:
     if isinstance(prefs, str):
         try:
             import json
+
             prefs = json.loads(prefs)
         except Exception:
             prefs = {}
     return UserResponse(
-        user_id=row["user_id"], username=row["username"], email=row["email"],
-        display_name=row["display_name"], role=row["role"], preferences=prefs,
-        is_active=bool(row["is_active"]), created_at=row["created_at"], updated_at=row["updated_at"],
+        user_id=row["user_id"],
+        username=row["username"],
+        email=row["email"],
+        display_name=row["display_name"],
+        role=row["role"],
+        preferences=prefs,
+        is_active=bool(row["is_active"]),
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
     )
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8006)

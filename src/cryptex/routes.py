@@ -52,7 +52,9 @@ async def analyse_request(request: Request, actor: Optional[str] = Query(None)):
         body = ""
     headers = dict(request.headers)
     ip = request.client.host if request.client else None
-    signals = get_cryptex().analyse_request(path=path, body=body, headers=headers, actor=actor, ip=ip)
+    signals = get_cryptex().analyse_request(
+        path=path, body=body, headers=headers, actor=actor, ip=ip
+    )
     return {
         "threats_detected": len(signals),
         "blocked": get_cryptex().is_blocked(actor=actor, ip=ip),

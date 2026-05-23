@@ -44,6 +44,7 @@ logger = logging.getLogger(WORKER_NAME)
 # Database
 # ---------------------------------------------------------------------------
 
+
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -76,6 +77,7 @@ def init_db() -> None:
 # Lookup
 # ---------------------------------------------------------------------------
 
+
 def _get_cached(ip: str) -> Optional[dict]:
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM ip_cache WHERE ip = ?", (ip,)).fetchone()
@@ -89,9 +91,20 @@ def _save_cache(ip: str, data: dict, source: str) -> None:
         conn.execute(
             "INSERT OR REPLACE INTO ip_cache (ip, country, country_code, region, city, lat, lon, timezone, isp, org, source, cached_at) "
             "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-            (ip, data.get("country"), data.get("country_code"), data.get("region"),
-             data.get("city"), data.get("lat"), data.get("lon"), data.get("timezone"),
-             data.get("isp"), data.get("org"), source, time.time()),
+            (
+                ip,
+                data.get("country"),
+                data.get("country_code"),
+                data.get("region"),
+                data.get("city"),
+                data.get("lat"),
+                data.get("lon"),
+                data.get("timezone"),
+                data.get("isp"),
+                data.get("org"),
+                source,
+                time.time(),
+            ),
         )
         conn.commit()
 
@@ -181,6 +194,7 @@ async def lookup_ip(ip: str) -> dict:
 # Utilities
 # ---------------------------------------------------------------------------
 
+
 def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Returns distance in km between two coordinates."""
     R = 6371.0
@@ -194,6 +208,7 @@ def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
+
 
 class DistanceIn(BaseModel):
     lat1: float
@@ -210,6 +225,7 @@ class BatchIpIn(BaseModel):
 # Lifespan
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -223,7 +239,12 @@ async def lifespan(app: FastAPI):
 
 STARTED_AT = datetime.now(timezone.utc)
 
-app = FastAPI(title="geo-service", description="IP geolocation with SQLite cache and free API fallback (self-hosted)", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="geo-service",
+    description="IP geolocation with SQLite cache and free API fallback (self-hosted)",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -250,8 +271,17 @@ async def health():
 @app.get("/lookup/{ip}")
 async def lookup(ip: str):
     if ip in ("localhost", "127.0.0.1", "::1"):
-        return {"ip": ip, "country": "Local", "country_code": "LO", "city": "Localhost",
-                "lat": 0.0, "lon": 0.0, "timezone": "UTC", "source": "local", "cached": True}
+        return {
+            "ip": ip,
+            "country": "Local",
+            "country_code": "LO",
+            "city": "Localhost",
+            "lat": 0.0,
+            "lon": 0.0,
+            "timezone": "UTC",
+            "source": "local",
+            "cached": True,
+        }
     result = await lookup_ip(ip)
     return {"ip": ip, **result}
 
@@ -278,7 +308,9 @@ async def cache_stats():
     now = time.time()
     with get_conn() as conn:
         total = conn.execute("SELECT COUNT(*) FROM ip_cache").fetchone()[0]
-        fresh = conn.execute("SELECT COUNT(*) FROM ip_cache WHERE cached_at > ?", (now - CACHE_TTL,)).fetchone()[0]
+        fresh = conn.execute(
+            "SELECT COUNT(*) FROM ip_cache WHERE cached_at > ?", (now - CACHE_TTL,)
+        ).fetchone()[0]
         by_source = conn.execute(
             "SELECT source, COUNT(*) as c FROM ip_cache GROUP BY source"
         ).fetchall()
@@ -300,4 +332,5 @@ async def evict(ip: str):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

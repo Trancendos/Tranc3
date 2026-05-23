@@ -36,6 +36,7 @@ from typing import Any, Dict, List, Optional, Sequence, Set
 # Data model
 # ---------------------------------------------------------------------------
 
+
 class Severity(Enum):
     CRITICAL = "critical"
     HIGH = "high"
@@ -64,6 +65,7 @@ class Category(Enum):
 @dataclass
 class Violation:
     """A single security violation found by the scanner."""
+
     rule_id: str
     category: Category
     severity: Severity
@@ -85,8 +87,10 @@ class Violation:
 # Individual rule checkers
 # ---------------------------------------------------------------------------
 
+
 class RuleChecker:
     """Base class for AST-based rule checkers."""
+
     rule_id: str = ""
     category: Category = Category.BARE_EXCEPT
     severity: Severity = Severity.MEDIUM
@@ -101,6 +105,7 @@ class BareExceptChecker(RuleChecker):
     These were flagged as ~15 CodeQL B110 alerts. Bare except catches
     SystemExit, KeyboardInterrupt, and GeneratorExit which should propagate.
     """
+
     rule_id = "PY-001"
     category = Category.BARE_EXCEPT
     severity = Severity.MEDIUM
@@ -110,17 +115,19 @@ class BareExceptChecker(RuleChecker):
         for node in ast.walk(tree):
             if isinstance(node, ast.ExceptHandler):
                 if node.type is None:
-                    violations.append(Violation(
-                        rule_id=self.rule_id,
-                        category=self.category,
-                        severity=self.severity,
-                        file=filepath,
-                        line=node.lineno,
-                        col=node.col_offset,
-                        message="Bare 'except:' catches SystemExit/KeyboardInterrupt",
-                        suggestion="Replace with 'except Exception:' to avoid catching base exceptions",
-                        fixable=True,
-                    ))
+                    violations.append(
+                        Violation(
+                            rule_id=self.rule_id,
+                            category=self.category,
+                            severity=self.severity,
+                            file=filepath,
+                            line=node.lineno,
+                            col=node.col_offset,
+                            message="Bare 'except:' catches SystemExit/KeyboardInterrupt",
+                            suggestion="Replace with 'except Exception:' to avoid catching base exceptions",
+                            fixable=True,
+                        )
+                    )
         return violations
 
 
@@ -130,6 +137,7 @@ class ExcVarChecker(RuleChecker):
     These caused ~14 NameError-at-runtime CodeQL alerts. In Python 3,
     the current exception is available as 'e' in 'except Exception as e'.
     """
+
     rule_id = "PY-002"
     category = Category.EXC_VAR
     severity = Severity.HIGH
@@ -139,17 +147,19 @@ class ExcVarChecker(RuleChecker):
         for node in ast.walk(tree):
             if isinstance(node, ast.Name) and node.id.startswith("__exc"):
                 if node.id in ("__exc__", "__exc"):
-                    violations.append(Violation(
-                        rule_id=self.rule_id,
-                        category=self.category,
-                        severity=self.severity,
-                        file=filepath,
-                        line=node.lineno,
-                        col=node.col_offset,
-                        message=f"Reference to '{node.id}' — not available in Python 3.11+",
-                        suggestion="Use the 'as e' variable from 'except Exception as e' instead",
-                        fixable=True,
-                    ))
+                    violations.append(
+                        Violation(
+                            rule_id=self.rule_id,
+                            category=self.category,
+                            severity=self.severity,
+                            file=filepath,
+                            line=node.lineno,
+                            col=node.col_offset,
+                            message=f"Reference to '{node.id}' — not available in Python 3.11+",
+                            suggestion="Use the 'as e' variable from 'except Exception as e' instead",
+                            fixable=True,
+                        )
+                    )
         return violations
 
 
@@ -160,6 +170,7 @@ class TypeExcChecker(RuleChecker):
     The pattern type(__exc).__name__ should be replaced with 'unknown' or
     the actual exception variable name.
     """
+
     rule_id = "PY-003"
     category = Category.TYPE_EXC
     severity = Severity.HIGH
@@ -182,8 +193,8 @@ class TypeExcChecker(RuleChecker):
         fstring_ranges = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.JoinedStr):
-                start = getattr(node, 'lineno', None)
-                end = getattr(node, 'end_lineno', None)
+                start = getattr(node, "lineno", None)
+                end = getattr(node, "end_lineno", None)
                 if start and end:
                     for ln in range(start, end + 1):
                         fstring_ranges.add(ln)
@@ -193,8 +204,8 @@ class TypeExcChecker(RuleChecker):
         ranges = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.Constant) and isinstance(node.value, str):
-                start = getattr(node, 'lineno', None)
-                end = getattr(node, 'end_lineno', None)
+                start = getattr(node, "lineno", None)
+                end = getattr(node, "end_lineno", None)
                 if start and end:
                     for ln in range(start, end + 1):
                         if ln not in fstring_ranges:
@@ -208,17 +219,19 @@ class TypeExcChecker(RuleChecker):
             if i in string_lines:
                 continue
             if self._PATTERN.search(line):
-                violations.append(Violation(
-                    rule_id=self.rule_id,
-                    category=self.category,
-                    severity=self.severity,
-                    file=filepath,
-                    line=i,
-                    col=0,
-                    message="type(__exc).__name__ — variable not available in Python 3.11+",
-                    suggestion='Replace with the exception variable name or literal "unknown"',
-                    fixable=True,
-                ))
+                violations.append(
+                    Violation(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        severity=self.severity,
+                        file=filepath,
+                        line=i,
+                        col=0,
+                        message="type(__exc).__name__ — variable not available in Python 3.11+",
+                        suggestion='Replace with the exception variable name or literal "unknown"',
+                        fixable=True,
+                    )
+                )
         return violations
 
 
@@ -228,6 +241,7 @@ class UnclosedFileChecker(RuleChecker):
     CodeQL flagged these as resource leak alerts. Every open() should use
     a 'with' statement to ensure the file is closed even if an exception occurs.
     """
+
     rule_id = "PY-004"
     category = Category.UNCLOSED_FILE
     severity = Severity.MEDIUM
@@ -243,17 +257,19 @@ class UnclosedFileChecker(RuleChecker):
                         inner_func = func.value.func
                         if isinstance(inner_func, ast.Name) and inner_func.id == "open":
                             # Check if NOT inside a 'with' statement
-                            violations.append(Violation(
-                                rule_id=self.rule_id,
-                                category=self.category,
-                                severity=self.severity,
-                                file=filepath,
-                                line=node.lineno,
-                                col=node.col_offset,
-                                message="open() without context manager — file may not be closed",
-                                suggestion="Use 'with open(path) as f: data = f.read()'",
-                                fixable=True,
-                            ))
+                            violations.append(
+                                Violation(
+                                    rule_id=self.rule_id,
+                                    category=self.category,
+                                    severity=self.severity,
+                                    file=filepath,
+                                    line=node.lineno,
+                                    col=node.col_offset,
+                                    message="open() without context manager — file may not be closed",
+                                    suggestion="Use 'with open(path) as f: data = f.read()'",
+                                    fixable=True,
+                                )
+                            )
         return violations
 
 
@@ -264,6 +280,7 @@ class LogInjectionChecker(RuleChecker):
     characters into log output, enabling log forgery attacks. All logger
     calls should use %-style formatting with sanitize_for_log() wrapping.
     """
+
     rule_id = "CWE-117"
     category = Category.LOG_INJECTION
     severity = Severity.HIGH
@@ -281,27 +298,28 @@ class LogInjectionChecker(RuleChecker):
                     obj = node.func.value
                     if method in self._LOGGER_METHODS:
                         is_logger = (
-                            (isinstance(obj, ast.Name) and obj.id in self._LOGGER_NAMES)
-                            or (isinstance(obj, ast.Attribute) and obj.attr in self._LOGGER_NAMES)
-                        )
+                            isinstance(obj, ast.Name) and obj.id in self._LOGGER_NAMES
+                        ) or (isinstance(obj, ast.Attribute) and obj.attr in self._LOGGER_NAMES)
                         if is_logger and node.args:
                             first_arg = node.args[0]
                             if isinstance(first_arg, ast.JoinedStr):
                                 # f-string in logger call
-                                violations.append(Violation(
-                                    rule_id=self.rule_id,
-                                    category=self.category,
-                                    severity=self.severity,
-                                    file=filepath,
-                                    line=node.lineno,
-                                    col=node.col_offset,
-                                    message="f-string in logger call — vulnerable to log injection (CWE-117)",
-                                    suggestion=(
-                                        "Use %-style formatting with sanitize_for_log():\n"
-                                        '  logger.info("User %s logged in", sanitize_for_log(username))'
-                                    ),
-                                    fixable=True,
-                                ))
+                                violations.append(
+                                    Violation(
+                                        rule_id=self.rule_id,
+                                        category=self.category,
+                                        severity=self.severity,
+                                        file=filepath,
+                                        line=node.lineno,
+                                        col=node.col_offset,
+                                        message="f-string in logger call — vulnerable to log injection (CWE-117)",
+                                        suggestion=(
+                                            "Use %-style formatting with sanitize_for_log():\n"
+                                            '  logger.info("User %s logged in", sanitize_for_log(username))'
+                                        ),
+                                        fixable=True,
+                                    )
+                                )
         return violations
 
 
@@ -312,6 +330,7 @@ class InfoExposureChecker(RuleChecker):
     like file paths, database schemas, and stack traces. Use safe_error_detail()
     instead.
     """
+
     rule_id = "CWE-209"
     category = Category.INFO_EXPOSURE
     severity = Severity.HIGH
@@ -322,25 +341,26 @@ class InfoExposureChecker(RuleChecker):
             if isinstance(node, ast.Call):
                 # Look for HTTPException or dict with detail=str(exc) or error=str(exc)
                 func = node.func
-                is_http_exc = (
-                    (isinstance(func, ast.Name) and func.id == "HTTPException")
-                    or (isinstance(func, ast.Attribute) and func.attr == "HTTPException")
+                is_http_exc = (isinstance(func, ast.Name) and func.id == "HTTPException") or (
+                    isinstance(func, ast.Attribute) and func.attr == "HTTPException"
                 )
                 if is_http_exc or self._is_error_dict(node):
                     for keyword in node.keywords:
                         if keyword.arg in ("detail", "error", "message"):
                             if self._is_str_call(keyword.value):
-                                violations.append(Violation(
-                                    rule_id=self.rule_id,
-                                    category=self.category,
-                                    severity=self.severity,
-                                    file=filepath,
-                                    line=node.lineno,
-                                    col=node.col_offset,
-                                    message="str(exc) in error response — exposes internal details (CWE-209)",
-                                    suggestion="Use safe_error_detail(exc, status_code) instead of str(exc)",
-                                    fixable=True,
-                                ))
+                                violations.append(
+                                    Violation(
+                                        rule_id=self.rule_id,
+                                        category=self.category,
+                                        severity=self.severity,
+                                        file=filepath,
+                                        line=node.lineno,
+                                        col=node.col_offset,
+                                        message="str(exc) in error response — exposes internal details (CWE-209)",
+                                        suggestion="Use safe_error_detail(exc, status_code) instead of str(exc)",
+                                        fixable=True,
+                                    )
+                                )
         return violations
 
     def _is_error_dict(self, node: ast.Call) -> bool:
@@ -376,14 +396,18 @@ class PathTraversalChecker(RuleChecker):
     All such paths must be validated via validate_path() or safe_join()
     from shared_core.path_validation BEFORE the filesystem operation.
     """
+
     rule_id = "CWE-022"
     category = Category.PATH_TRAVERSAL
     severity = Severity.CRITICAL
 
     # Variable names that indicate already-validated paths
     _VALIDATED_NAMES = {
-        "validated_path", "safe_path", "resolved",
-        "validated", "safe_target",
+        "validated_path",
+        "safe_path",
+        "resolved",
+        "validated",
+        "safe_target",
     }
 
     # Method calls on Path objects that write to the filesystem
@@ -417,17 +441,19 @@ class PathTraversalChecker(RuleChecker):
                 if node.args:
                     arg = node.args[0]
                     if self._is_unvalidated_path(arg, validated_vars, safe_join_vars):
-                        violations.append(Violation(
-                            rule_id=self.rule_id,
-                            category=self.category,
-                            severity=self.severity,
-                            file=filepath,
-                            line=node.lineno,
-                            col=node.col_offset,
-                            message="open() with unvalidated path — potential path traversal (CWE-022)",
-                            suggestion="Use validate_path(user_path, base_dir) from shared_core.path_validation",
-                            fixable=False,
-                        ))
+                        violations.append(
+                            Violation(
+                                rule_id=self.rule_id,
+                                category=self.category,
+                                severity=self.severity,
+                                file=filepath,
+                                line=node.lineno,
+                                col=node.col_offset,
+                                message="open() with unvalidated path — potential path traversal (CWE-022)",
+                                suggestion="Use validate_path(user_path, base_dir) from shared_core.path_validation",
+                                fixable=False,
+                            )
+                        )
 
             # 2. Path.write_text() / Path.write_bytes() / Path.mkdir()
             elif isinstance(node.func, ast.Attribute):
@@ -436,17 +462,19 @@ class PathTraversalChecker(RuleChecker):
 
                 if method in self._PATH_WRITE_METHODS:
                     if self._is_unvalidated_path(obj, validated_vars, safe_join_vars):
-                        violations.append(Violation(
-                            rule_id=self.rule_id,
-                            category=self.category,
-                            severity=self.severity,
-                            file=filepath,
-                            line=node.lineno,
-                            col=node.col_offset,
-                            message=f"Path.{method}() with unvalidated path — potential path traversal (CWE-022)",
-                            suggestion="Use validate_path(path, base_dir) from shared_core.path_validation before this call",
-                            fixable=False,
-                        ))
+                        violations.append(
+                            Violation(
+                                rule_id=self.rule_id,
+                                category=self.category,
+                                severity=self.severity,
+                                file=filepath,
+                                line=node.lineno,
+                                col=node.col_offset,
+                                message=f"Path.{method}() with unvalidated path — potential path traversal (CWE-022)",
+                                suggestion="Use validate_path(path, base_dir) from shared_core.path_validation before this call",
+                                fixable=False,
+                            )
+                        )
 
                 # 3. shutil.copy() / shutil.copy2() / shutil.move() etc.
                 elif method in self._SHUTIL_OPS:
@@ -455,17 +483,19 @@ class PathTraversalChecker(RuleChecker):
                         if len(node.args) >= 2:
                             dst_arg = node.args[1]
                             if self._is_unvalidated_path(dst_arg, validated_vars, safe_join_vars):
-                                violations.append(Violation(
-                                    rule_id=self.rule_id,
-                                    category=self.category,
-                                    severity=self.severity,
-                                    file=filepath,
-                                    line=node.lineno,
-                                    col=node.col_offset,
-                                    message=f"shutil.{method}() with unvalidated destination — potential path traversal (CWE-022)",
-                                    suggestion="Use validate_path(dst, base_dir) from shared_core.path_validation before this call",
-                                    fixable=False,
-                                ))
+                                violations.append(
+                                    Violation(
+                                        rule_id=self.rule_id,
+                                        category=self.category,
+                                        severity=self.severity,
+                                        file=filepath,
+                                        line=node.lineno,
+                                        col=node.col_offset,
+                                        message=f"shutil.{method}() with unvalidated destination — potential path traversal (CWE-022)",
+                                        suggestion="Use validate_path(dst, base_dir) from shared_core.path_validation before this call",
+                                        fixable=False,
+                                    )
+                                )
 
                 # 4. os.mkdir() / os.makedirs()
                 elif method in self._OS_MKDIR_OPS:
@@ -473,17 +503,19 @@ class PathTraversalChecker(RuleChecker):
                         if node.args:
                             arg = node.args[0]
                             if self._is_unvalidated_path(arg, validated_vars, safe_join_vars):
-                                violations.append(Violation(
-                                    rule_id=self.rule_id,
-                                    category=self.category,
-                                    severity=self.severity,
-                                    file=filepath,
-                                    line=node.lineno,
-                                    col=node.col_offset,
-                                    message=f"os.{method}() with unvalidated path — potential path traversal (CWE-022)",
-                                    suggestion="Use validate_path(path, base_dir) from shared_core.path_validation",
-                                    fixable=False,
-                                ))
+                                violations.append(
+                                    Violation(
+                                        rule_id=self.rule_id,
+                                        category=self.category,
+                                        severity=self.severity,
+                                        file=filepath,
+                                        line=node.lineno,
+                                        col=node.col_offset,
+                                        message=f"os.{method}() with unvalidated path — potential path traversal (CWE-022)",
+                                        suggestion="Use validate_path(path, base_dir) from shared_core.path_validation",
+                                        fixable=False,
+                                    )
+                                )
 
         return violations
 
@@ -527,8 +559,7 @@ class PathTraversalChecker(RuleChecker):
         safe_vars = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign):
-                if (len(node.targets) == 1
-                        and isinstance(node.targets[0], ast.Name)):
+                if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
                     var_name = node.targets[0].id
                     if isinstance(node.value, ast.Call):
                         func = node.value.func
@@ -571,9 +602,18 @@ class PathTraversalChecker(RuleChecker):
                 return False
             # Heuristic: variable names suggesting user-controlled data
             user_controlled = {
-                "filename", "filepath", "path", "file_path",
-                "output_dir", "repo_name", "user_path", "upload_path",
-                "dest", "destination", "dir_name", "folder",
+                "filename",
+                "filepath",
+                "path",
+                "file_path",
+                "output_dir",
+                "repo_name",
+                "user_path",
+                "upload_path",
+                "dest",
+                "destination",
+                "dir_name",
+                "folder",
             }
             if name in user_controlled:
                 return True
@@ -609,6 +649,7 @@ class WeakHashChecker(RuleChecker):
     security purposes (password hashing, signatures, integrity checks).
     Use hashlib.sha256 or higher.
     """
+
     rule_id = "CWE-327"
     category = Category.WEAK_HASH
     severity = Severity.HIGH
@@ -622,24 +663,28 @@ class WeakHashChecker(RuleChecker):
                         # Skip if usedforsecurity=False is already present
                         has_safe_flag = False
                         for kw in node.keywords:
-                            if (kw.arg == "usedforsecurity"
-                                    and isinstance(kw.value, ast.Constant)
-                                    and kw.value.value is False):
+                            if (
+                                kw.arg == "usedforsecurity"
+                                and isinstance(kw.value, ast.Constant)
+                                and kw.value.value is False
+                            ):
                                 has_safe_flag = True
                                 break
                         if has_safe_flag:
                             continue
-                        violations.append(Violation(
-                            rule_id=self.rule_id,
-                            category=self.category,
-                            severity=self.severity,
-                            file=filepath,
-                            line=node.lineno,
-                            col=node.col_offset,
-                            message=f"hashlib.{node.func.attr}() — weak hash algorithm (CWE-327)",
-                            suggestion="Use hashlib.sha256() or higher, or add usedforsecurity=False if non-security",
-                            fixable=False,
-                        ))
+                        violations.append(
+                            Violation(
+                                rule_id=self.rule_id,
+                                category=self.category,
+                                severity=self.severity,
+                                file=filepath,
+                                line=node.lineno,
+                                col=node.col_offset,
+                                message=f"hashlib.{node.func.attr}() — weak hash algorithm (CWE-327)",
+                                suggestion="Use hashlib.sha256() or higher, or add usedforsecurity=False if non-security",
+                                fixable=False,
+                            )
+                        )
         return violations
 
 
@@ -702,23 +747,26 @@ class MixedReturnChecker(RuleChecker):
                         # Skip if the last statement guarantees a return on all paths
                         if self._all_paths_return(body[-1]):
                             continue
-                        violations.append(Violation(
-                            rule_id=self.rule_id,
-                            category=self.category,
-                            severity=self.severity,
-                            file=filepath,
-                            line=node.lineno,
-                            col=node.col_offset,
-                            message=f"Function '{node.name}' returns value in some paths but implicitly returns None",
-                            suggestion="Add explicit 'return None' at end of function",
-                            fixable=True,
-                        ))
+                        violations.append(
+                            Violation(
+                                rule_id=self.rule_id,
+                                category=self.category,
+                                severity=self.severity,
+                                file=filepath,
+                                line=node.lineno,
+                                col=node.col_offset,
+                                message=f"Function '{node.name}' returns value in some paths but implicitly returns None",
+                                suggestion="Add explicit 'return None' at end of function",
+                                fixable=True,
+                            )
+                        )
         return violations
 
 
 # ---------------------------------------------------------------------------
 # Scanner engine
 # ---------------------------------------------------------------------------
+
 
 class SecurityScanner:
     """Proactive security scanner that prevents CodeQL alert regression.

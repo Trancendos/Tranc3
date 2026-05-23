@@ -40,31 +40,31 @@ class EventSeverity(str, Enum):
 
 
 class EventCategory(str, Enum):
-    AUTH = "auth"               # login, logout, token refresh, SSO
-    DATA = "data"               # create, read, update, delete
-    SECRETS = "secrets"         # The Void access
-    WORKFLOW = "workflow"       # The Digital Grid runs
-    AI = "ai"                   # inference, embedding, generation
-    BILLING = "billing"         # payments, tier changes
-    SECURITY = "security"       # Cryptex, The Ice Box, The Lighthouse
-    GOVERNANCE = "governance"   # The Town Hall policy changes
-    SYSTEM = "system"           # startup, shutdown, config changes
-    AUDIT = "audit"             # admin actions
+    AUTH = "auth"  # login, logout, token refresh, SSO
+    DATA = "data"  # create, read, update, delete
+    SECRETS = "secrets"  # The Void access
+    WORKFLOW = "workflow"  # The Digital Grid runs
+    AI = "ai"  # inference, embedding, generation
+    BILLING = "billing"  # payments, tier changes
+    SECURITY = "security"  # Cryptex, The Ice Box, The Lighthouse
+    GOVERNANCE = "governance"  # The Town Hall policy changes
+    SYSTEM = "system"  # startup, shutdown, config changes
+    AUDIT = "audit"  # admin actions
 
 
 @dataclass
 class AuditEvent:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: float = field(default_factory=time.time)
-    event_type: str = ""                    # e.g. "user.login", "secret.retrieve"
+    event_type: str = ""  # e.g. "user.login", "secret.retrieve"
     category: EventCategory = EventCategory.SYSTEM
     severity: EventSeverity = EventSeverity.INFO
-    actor: Optional[str] = None             # "user:42", "system", "bot:CODE"
+    actor: Optional[str] = None  # "user:42", "system", "bot:CODE"
     actor_ip: Optional[str] = None
-    target: Optional[str] = None            # "auth", "secret:abc", "workflow:xyz"
-    service: str = "tranc3-backend"         # which Trancendos service
-    location: Optional[str] = None          # The Spark, The Void, Royal Bank, etc.
-    outcome: str = "success"                # "success" | "failure" | "partial"
+    target: Optional[str] = None  # "auth", "secret:abc", "workflow:xyz"
+    service: str = "tranc3-backend"  # which Trancendos service
+    location: Optional[str] = None  # The Spark, The Void, Royal Bank, etc.
+    outcome: str = "success"  # "success" | "failure" | "partial"
     metadata: Dict[str, Any] = field(default_factory=dict)
     session_id: Optional[str] = None
 
@@ -121,7 +121,10 @@ class Observatory:
         self._buffer.append(event)
         logger.debug(  # codeql[py/cleartext-logging]
             "observatory: %s actor=%s target=%s outcome=%s",
-            sanitize_for_log(event_type), sanitize_for_log(actor), sanitize_for_log(target), sanitize_for_log(outcome),
+            sanitize_for_log(event_type),
+            sanitize_for_log(actor),
+            sanitize_for_log(target),
+            sanitize_for_log(outcome),
         )
         self._notify_subscribers(event)
 
@@ -129,10 +132,10 @@ class Observatory:
         if severity in (EventSeverity.SECURITY, EventSeverity.CRITICAL):
             try:
                 from src.basement.archive import get_basement
+
                 get_basement().ingest_observatory_event(event)
             except Exception:
                 pass  # nosec B110 — graceful degradation; error logged upstream
-
 
         return event
 
@@ -158,15 +161,18 @@ class Observatory:
         except ValueError:
             logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
-    def recent(self, limit: int = 100, category: Optional[EventCategory] = None) -> List[AuditEvent]:
+    def recent(
+        self, limit: int = 100, category: Optional[EventCategory] = None
+    ) -> List[AuditEvent]:
         """Return recent events, newest first. Optionally filter by category."""
         events = list(self._buffer)
         if category:
             events = [e for e in events if e.category == category]
         return list(reversed(events))[-limit:]
 
-    def search(self, actor: Optional[str] = None, event_type: Optional[str] = None,
-               limit: int = 50) -> List[AuditEvent]:
+    def search(
+        self, actor: Optional[str] = None, event_type: Optional[str] = None, limit: int = 50
+    ) -> List[AuditEvent]:
         results = []
         for e in reversed(self._buffer):
             if actor and e.actor != actor:

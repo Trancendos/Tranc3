@@ -23,6 +23,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from src.database.schema import Base  # noqa
+
 target_metadata = Base.metadata
 
 

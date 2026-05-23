@@ -44,22 +44,24 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ---------------------------------------------------------------------------
 
-_DEFAULT_FORECAST_HORIZON = 300.0      # 5 minutes ahead
-_DEFAULT_SMOOTHING_ALPHA = 0.3         # EMA smoothing factor
-_DEFAULT_SCALE_UP_THRESHOLD = 0.75     # Scale up when predicted load > 75%
-_DEFAULT_SCALE_DOWN_THRESHOLD = 0.25   # Scale down when predicted load < 25%
-_DEFAULT_MIN_CAPACITY_UNITS = 1        # Minimum units (always at least 1)
-_DEFAULT_MAX_CAPACITY_UNITS = 10       # Maximum units (respect free-tier)
-_DEFAULT_COOLDOWN_SECONDS = 120.0      # Minimum time between scaling actions
-_DEFAULT_FREE_TIER_LIMIT = 5           # Maximum free-tier capacity units
+_DEFAULT_FORECAST_HORIZON = 300.0  # 5 minutes ahead
+_DEFAULT_SMOOTHING_ALPHA = 0.3  # EMA smoothing factor
+_DEFAULT_SCALE_UP_THRESHOLD = 0.75  # Scale up when predicted load > 75%
+_DEFAULT_SCALE_DOWN_THRESHOLD = 0.25  # Scale down when predicted load < 25%
+_DEFAULT_MIN_CAPACITY_UNITS = 1  # Minimum units (always at least 1)
+_DEFAULT_MAX_CAPACITY_UNITS = 10  # Maximum units (respect free-tier)
+_DEFAULT_COOLDOWN_SECONDS = 120.0  # Minimum time between scaling actions
+_DEFAULT_FREE_TIER_LIMIT = 5  # Maximum free-tier capacity units
 
 
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class ScalingDirection(str, Enum):
     """Direction of a scaling decision."""
+
     UP = "up"
     DOWN = "down"
     MAINTAIN = "maintain"
@@ -67,6 +69,7 @@ class ScalingDirection(str, Enum):
 
 class ScalingReason(str, Enum):
     """Reason for a scaling decision."""
+
     PREDICTED_DEMAND = "predicted_demand"
     CURRENT_LOAD = "current_load"
     ZERO_COST_LIMIT = "zero_cost_limit"
@@ -80,23 +83,26 @@ class ScalingReason(str, Enum):
 # Data Models
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class LoadSample:
     """A single load measurement."""
+
     timestamp: float
-    value: float            # 0.0 to 1.0 (normalized load)
-    source: str = ""        # Where the measurement came from
+    value: float  # 0.0 to 1.0 (normalized load)
+    source: str = ""  # Where the measurement came from
     tags: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
 class LoadForecast:
     """Predicted load with confidence intervals."""
-    predicted_load: float       # 0.0 to 1.0
-    confidence: float           # 0.0 to 1.0
-    lower_bound: float          # P10 prediction
-    upper_bound: float          # P90 prediction
-    horizon_seconds: float      # How far ahead the prediction is
+
+    predicted_load: float  # 0.0 to 1.0
+    confidence: float  # 0.0 to 1.0
+    lower_bound: float  # P10 prediction
+    upper_bound: float  # P90 prediction
+    horizon_seconds: float  # How far ahead the prediction is
     timestamp: float = field(default_factory=time.time)
     method: str = "exponential_smoothing"
 
@@ -115,6 +121,7 @@ class LoadForecast:
 @dataclass
 class ScalingDecision:
     """A scaling decision with justification."""
+
     direction: ScalingDirection
     current_units: int
     target_units: int
@@ -142,6 +149,7 @@ class ScalingDecision:
 @dataclass
 class ScalerConfig:
     """Configuration for a scalable resource."""
+
     name: str
     current_units: int = 1
     min_units: int = _DEFAULT_MIN_CAPACITY_UNITS
@@ -175,6 +183,7 @@ class ScalerConfig:
 # Load Forecaster
 # ---------------------------------------------------------------------------
 
+
 class LoadForecaster:
     """
     Time-series load forecaster using exponential smoothing.
@@ -191,8 +200,8 @@ class LoadForecaster:
     def __init__(
         self,
         alpha: float = _DEFAULT_SMOOTHING_ALPHA,
-        beta: float = 0.1,       # Trend smoothing factor
-        window_size: int = 200,   # Max samples to keep
+        beta: float = 0.1,  # Trend smoothing factor
+        window_size: int = 200,  # Max samples to keep
     ):
         self._alpha = alpha
         self._beta = beta
@@ -309,6 +318,7 @@ class LoadForecaster:
 # ---------------------------------------------------------------------------
 # Predictive Autoscaler
 # ---------------------------------------------------------------------------
+
 
 class PredictiveAutoscaler:
     """
@@ -457,7 +467,10 @@ class PredictiveAutoscaler:
 
         # Check cooldown
         now = time.time()
-        if config.last_scale_action > 0 and (now - config.last_scale_action) < config.cooldown_seconds:
+        if (
+            config.last_scale_action > 0
+            and (now - config.last_scale_action) < config.cooldown_seconds
+        ):
             return ScalingDecision(
                 direction=ScalingDirection.MAINTAIN,
                 current_units=config.current_units,
@@ -503,7 +516,9 @@ class PredictiveAutoscaler:
                 direction=ScalingDirection.UP,
                 current_units=config.current_units,
                 target_units=target_units,
-                reason=ScalingReason.PREDICTED_DEMAND if forecast.confidence > 0.3 else ScalingReason.CURRENT_LOAD,
+                reason=ScalingReason.PREDICTED_DEMAND
+                if forecast.confidence > 0.3
+                else ScalingReason.CURRENT_LOAD,
                 forecast=forecast,
                 zero_cost_compliant=zero_cost_compliant,
                 metadata={"predicted_load": round(predicted, 4)},
@@ -581,10 +596,7 @@ class PredictiveAutoscaler:
 
     def get_all_status(self) -> Dict[str, Dict[str, Any]]:
         """Get the status of all registered resources."""
-        return {
-            name: self.get_resource_status(name) or {}
-            for name in self._resources
-        }
+        return {name: self.get_resource_status(name) or {} for name in self._resources}
 
     def get_recent_decisions(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Get recent scaling decisions."""
@@ -599,13 +611,9 @@ class PredictiveAutoscaler:
             "total_scale_downs": self._total_scale_downs,
             "total_maintains": self._total_maintains,
             "zero_cost_violations_prevented": self._zero_cost_violations_prevented,
-            "resources": {
-                name: config.to_dict()
-                for name, config in self._resources.items()
-            },
+            "resources": {name: config.to_dict() for name, config in self._resources.items()},
             "forecasters": {
-                name: forecaster.get_stats()
-                for name, forecaster in self._forecasters.items()
+                name: forecaster.get_stats() for name, forecaster in self._forecasters.items()
             },
         }
 

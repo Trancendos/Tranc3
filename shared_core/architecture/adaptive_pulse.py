@@ -59,12 +59,12 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ---------------------------------------------------------------------------
 
-_DEFAULT_BASELINE_INTERVAL = 30.0    # seconds — steady-state interval
-_DEFAULT_MIN_INTERVAL = 1.0          # seconds — absolute minimum
-_DEFAULT_MAX_INTERVAL = 300.0        # seconds — absolute maximum (5 min)
-_DEFAULT_ACCELERATION_FACTOR = 3.0   # how much to compress in ACCELERATED
-_DEFAULT_EMERGENCY_FACTOR = 10.0     # how much to compress in EMERGENCY
-_DEFAULT_RECOVERY_RATE = 0.1         # how quickly to return to baseline
+_DEFAULT_BASELINE_INTERVAL = 30.0  # seconds — steady-state interval
+_DEFAULT_MIN_INTERVAL = 1.0  # seconds — absolute minimum
+_DEFAULT_MAX_INTERVAL = 300.0  # seconds — absolute maximum (5 min)
+_DEFAULT_ACCELERATION_FACTOR = 3.0  # how much to compress in ACCELERATED
+_DEFAULT_EMERGENCY_FACTOR = 10.0  # how much to compress in EMERGENCY
+_DEFAULT_RECOVERY_RATE = 0.1  # how quickly to return to baseline
 _DEFAULT_HEALTH_THRESHOLD_ACCEL = 0.7  # health score below this → ACCELERATED
 _DEFAULT_HEALTH_THRESHOLD_EMERG = 0.4  # health score below this → EMERGENCY
 
@@ -73,8 +73,10 @@ _DEFAULT_HEALTH_THRESHOLD_EMERG = 0.4  # health score below this → EMERGENCY
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class PulseMode(str, Enum):
     """Operational cadence for daemon intervals."""
+
     STEADY = "steady"
     ACCELERATED = "accelerated"
     EMERGENCY = "emergency"
@@ -85,9 +87,11 @@ class PulseMode(str, Enum):
 # Data Models
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class PulseConfig:
     """Configuration for a single daemon's pulse."""
+
     name: str
     baseline_interval: float = _DEFAULT_BASELINE_INTERVAL
     min_interval: float = _DEFAULT_MIN_INTERVAL
@@ -113,13 +117,16 @@ class PulseConfig:
             "last_fired": self.last_fired,
             "fire_count": self.fire_count,
             "adaptive_enabled": self.adaptive_enabled,
-            "compression_ratio": round(self.baseline_interval / max(self.current_interval, 0.001), 2),
+            "compression_ratio": round(
+                self.baseline_interval / max(self.current_interval, 0.001), 2
+            ),
         }
 
 
 @dataclass
 class PulseTransition:
     """Record of a pulse mode transition."""
+
     from_mode: PulseMode
     to_mode: PulseMode
     reason: str
@@ -139,6 +146,7 @@ class PulseTransition:
 @dataclass
 class PulseMetrics:
     """Aggregate metrics for the pulse controller."""
+
     current_mode: PulseMode = PulseMode.STEADY
     total_transitions: int = 0
     time_in_steady: float = 0.0
@@ -166,6 +174,7 @@ class PulseMetrics:
 # ---------------------------------------------------------------------------
 # Adaptive Pulse Controller
 # ---------------------------------------------------------------------------
+
 
 class AdaptivePulseController:
     """
@@ -510,10 +519,7 @@ class AdaptivePulseController:
         configs = list(self._daemons.values())
         avg_compression = 1.0
         if configs:
-            compressions = [
-                c.baseline_interval / max(c.current_interval, 0.001)
-                for c in configs
-            ]
+            compressions = [c.baseline_interval / max(c.current_interval, 0.001) for c in configs]
             avg_compression = sum(compressions) / len(compressions)
 
         return PulseMetrics(

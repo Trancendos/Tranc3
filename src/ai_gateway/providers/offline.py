@@ -35,7 +35,9 @@ class OfflineProvider(AIProvider):
         start = time.monotonic()
 
         # Build a helpful offline response
-        prompt_preview = request.prompt[:100] + "..." if len(request.prompt) > 100 else request.prompt
+        prompt_preview = (
+            request.prompt[:100] + "..." if len(request.prompt) > 100 else request.prompt
+        )
         response_text = (
             f"[OFFLINE MODE] I'm currently unable to connect to any AI providers. "
             f"Your request has been logged and will be processed when connectivity is restored.\n\n"

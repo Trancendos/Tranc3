@@ -65,8 +65,10 @@ logger = logging.getLogger(__name__)
 # Wiring Status
 # ---------------------------------------------------------------------------
 
+
 class WiringStatus(str, Enum):
     """Status of a subsystem wiring connection."""
+
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     CONNECTED = "connected"
@@ -77,6 +79,7 @@ class WiringStatus(str, Enum):
 
 class BridgeType(str, Enum):
     """Type of integration bridge."""
+
     EVENT_BUS = "event_bus"
     STORAGE = "storage"
     SENTINEL = "sentinel"
@@ -93,6 +96,7 @@ class BridgeType(str, Enum):
 @dataclass
 class BridgeConnection:
     """Tracks the state of a single subsystem bridge connection."""
+
     bridge_type: BridgeType
     subsystem_name: str
     status: WiringStatus = WiringStatus.DISCONNECTED
@@ -145,6 +149,7 @@ class BridgeConnection:
 # ---------------------------------------------------------------------------
 # Proactive System Bootstrap
 # ---------------------------------------------------------------------------
+
 
 class ProactiveSystemBootstrap:
     """Wires all Tranc3 intelligent subsystems into the ProactiveOrchestrator.
@@ -264,7 +269,8 @@ class ProactiveSystemBootstrap:
         self._wired = True
         elapsed = time.time() - start_time
         active_count = sum(
-            1 for b in self._bridges.values()
+            1
+            for b in self._bridges.values()
             if b.status in (WiringStatus.CONNECTED, WiringStatus.ACTIVE)
         )
         logger.info(
@@ -393,11 +399,14 @@ class ProactiveSystemBootstrap:
 
             # Publish wiring event
             from shared_core.models import EventMessage
-            await event_bus.publish(EventMessage(
-                event_type="proactive.system_wired",
-                source="ProactiveSystemBootstrap",
-                data={"component": "event_bus", "status": "connected"},
-            ))
+
+            await event_bus.publish(
+                EventMessage(
+                    event_type="proactive.system_wired",
+                    source="ProactiveSystemBootstrap",
+                    data={"component": "event_bus", "status": "connected"},
+                )
+            )
 
             bridge.mark_connected()
             self._bridges[BridgeType.EVENT_BUS] = bridge
@@ -627,6 +636,7 @@ class ProactiveSystemBootstrap:
 
             # Subscribe to discovery events from the registry
             if hasattr(registry, "add_discovery_watcher"):
+
                 def _on_discovery_event(event: Any) -> None:
                     bridge.record_event()
                     event_type = getattr(event, "event_type", "unknown")
@@ -762,6 +772,7 @@ class ProactiveSystemBootstrap:
 
             # Subscribe to config changes
             if hasattr(self._config, "add_change_listener"):
+
                 def _on_config_change(key: str, old_value: Any, new_value: Any) -> None:
                     bridge.record_event()
                     # Propagate config changes to orchestrator
@@ -814,11 +825,11 @@ class ProactiveSystemBootstrap:
                 from shared_core.architecture.smart_storage import StorageTier
 
                 tier_limits = {
-                    StorageTier.R2: 10,      # 10GB free
-                    StorageTier.OCI: 20,      # 20GB free
-                    StorageTier.GCP: 5,       # 5GB free
-                    StorageTier.AZURE: 25,    # 25GB free
-                    StorageTier.AWS: 25,      # 25GB free
+                    StorageTier.R2: 10,  # 10GB free
+                    StorageTier.OCI: 20,  # 20GB free
+                    StorageTier.GCP: 5,  # 5GB free
+                    StorageTier.AZURE: 25,  # 25GB free
+                    StorageTier.AWS: 25,  # 25GB free
                 }
                 for tier, free_limit in tier_limits.items():
                     try:
@@ -934,29 +945,40 @@ class ProactiveSystemBootstrap:
     # ------------------------------------------------------------------
 
     async def _handle_storage_event(
-        self, event_type: str, source: str, data: Dict[str, Any],
+        self,
+        event_type: str,
+        source: str,
+        data: Dict[str, Any],
     ) -> None:
         """Route storage events to the orchestrator."""
         if "capacity_critical" in event_type or "migration_needed" in event_type:
             # Record metric for health prediction
             self._orchestrator._health_analyzer.record(
-                "storage", 0.3, tags={"event": event_type},
+                "storage",
+                0.3,
+                tags={"event": event_type},
             )
         elif "migration_complete" in event_type:
             self._orchestrator._health_analyzer.record(
-                "storage", 0.8, tags={"event": event_type},
+                "storage",
+                0.8,
+                tags={"event": event_type},
             )
         elif event_type == "storage.tier_health":
             health_score = data.get("health_score", 0.5)
             self._orchestrator._health_analyzer.record("storage", health_score)
 
     async def _handle_security_event(
-        self, event_type: str, source: str, data: Dict[str, Any],
+        self,
+        event_type: str,
+        source: str,
+        data: Dict[str, Any],
     ) -> None:
         """Route security events to the orchestrator."""
         threat_level = data.get("threat_level", "low")
         threat_score = {"critical": 0.1, "high": 0.3, "medium": 0.6, "low": 0.9}.get(
-            threat_level, 0.5,
+            threat_level,
+            0.5,
         )
         self._orchestrator._health_analyzer.record("security", threat_score)
 
@@ -965,7 +987,10 @@ class ProactiveSystemBootstrap:
             self._pulse.update(threat_score)
 
     async def _handle_service_event(
-        self, event_type: str, source: str, data: Dict[str, Any],
+        self,
+        event_type: str,
+        source: str,
+        data: Dict[str, Any],
     ) -> None:
         """Route service discovery/health events to the orchestrator."""
         if "lost" in event_type or "unhealthy" in event_type:
@@ -977,7 +1002,10 @@ class ProactiveSystemBootstrap:
             self._orchestrator._health_analyzer.record("service", health)
 
     async def _handle_circuit_event(
-        self, event_type: str, source: str, data: Dict[str, Any],
+        self,
+        event_type: str,
+        source: str,
+        data: Dict[str, Any],
     ) -> None:
         """Route circuit breaker events to the orchestrator."""
         state = data.get("state", "closed")
@@ -985,7 +1013,10 @@ class ProactiveSystemBootstrap:
         self._orchestrator._health_analyzer.record("resilience", state_score)
 
     async def _handle_health_event(
-        self, event_type: str, source: str, data: Dict[str, Any],
+        self,
+        event_type: str,
+        source: str,
+        data: Dict[str, Any],
     ) -> None:
         """Route general health events to the orchestrator."""
         subsystem = data.get("subsystem", "unknown")
@@ -1085,20 +1116,23 @@ class ProactiveSystemBootstrap:
         event_bus = self._subsystems.get("event_bus")
         if event_bus and hasattr(event_bus, "publish"):
             from shared_core.models import EventMessage
-            await event_bus.publish(EventMessage(
-                event_type="proactive.alert",
-                source="ProactiveSystemBootstrap",
-                data={
-                    "alert_type": getattr(plan, "action", "unknown").value
-                    if hasattr(getattr(plan, "action", None), "value")
-                    else str(getattr(plan, "action", "unknown")),
-                    "target": getattr(plan, "target", "unknown"),
-                    "priority": getattr(plan, "priority", "unknown").value
-                    if hasattr(getattr(plan, "priority", None), "value")
-                    else str(getattr(plan, "priority", "medium")),
-                    "description": getattr(plan, "description", ""),
-                },
-            ))
+
+            await event_bus.publish(
+                EventMessage(
+                    event_type="proactive.alert",
+                    source="ProactiveSystemBootstrap",
+                    data={
+                        "alert_type": getattr(plan, "action", "unknown").value
+                        if hasattr(getattr(plan, "action", None), "value")
+                        else str(getattr(plan, "action", "unknown")),
+                        "target": getattr(plan, "target", "unknown"),
+                        "priority": getattr(plan, "priority", "unknown").value
+                        if hasattr(getattr(plan, "priority", None), "value")
+                        else str(getattr(plan, "priority", "medium")),
+                        "description": getattr(plan, "description", ""),
+                    },
+                )
+            )
 
     async def _handle_reconfigure(self, plan: Any) -> None:
         """Handle RECONFIGURE actions by routing to AutoConfigManager."""
@@ -1143,6 +1177,7 @@ class ProactiveSystemBootstrap:
 
         if key == "proactive.mode":
             from shared_core.architecture.proactive_orchestrator import OrchestratorMode
+
             try:
                 mode = OrchestratorMode(value) if isinstance(value, str) else value
                 self._orchestrator.set_mode(mode)
@@ -1197,19 +1232,14 @@ class ProactiveSystemBootstrap:
             "started": self._started,
             "bridges": self.bridge_status,
             "subsystems_connected": sum(
-                1 for b in self._bridges.values()
+                1
+                for b in self._bridges.values()
                 if b.status in (WiringStatus.CONNECTED, WiringStatus.ACTIVE)
             ),
             "subsystems_total": len(self._bridges),
-            "total_events_processed": sum(
-                b.events_processed for b in self._bridges.values()
-            ),
-            "total_actions_dispatched": sum(
-                b.actions_dispatched for b in self._bridges.values()
-            ),
-            "total_errors": sum(
-                b.errors for b in self._bridges.values()
-            ),
+            "total_events_processed": sum(b.events_processed for b in self._bridges.values()),
+            "total_actions_dispatched": sum(b.actions_dispatched for b in self._bridges.values()),
+            "total_errors": sum(b.errors for b in self._bridges.values()),
         }
 
     def get_dashboard(self) -> Dict[str, Any]:

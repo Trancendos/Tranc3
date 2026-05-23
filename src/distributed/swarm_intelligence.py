@@ -77,11 +77,17 @@ class DistributedIntelligenceSwarm:
 
     async def share_insight(self, thought: Dict):
         """Broadcast an insight to all registered nodes."""
-        logger.debug("Sharing insight to %s nodes", sanitize_for_log(len(self.nodes)))  # codeql[py/cleartext-logging]
+        logger.debug(
+            "Sharing insight to %s nodes", sanitize_for_log(len(self.nodes))
+        )  # codeql[py/cleartext-logging]
 
     def register_node(self, node: SwarmNode):
         self.nodes[node.node_id] = node
-        logger.info("Node registered: %s (%s)", sanitize_for_log(node.node_id), sanitize_for_log(node.specialization))  # codeql[py/cleartext-logging]
+        logger.info(
+            "Node registered: %s (%s)",
+            sanitize_for_log(node.node_id),
+            sanitize_for_log(node.specialization),
+        )  # codeql[py/cleartext-logging]
 
     def federated_learning_step(self, local_model: torch.nn.Module) -> torch.nn.Module:
         """Privacy-preserving federated learning step."""
@@ -109,20 +115,14 @@ class DistributedIntelligenceSwarm:
         if isinstance(msg, torch.Tensor):
             return [{"chunk": msg, "index": 0}]
         sentences = str(msg).split(".")
-        return [
-            {"chunk": s.strip(), "index": i}
-            for i, s in enumerate(sentences)
-            if s.strip()
-        ]
+        return [{"chunk": s.strip(), "index": i} for i, s in enumerate(sentences) if s.strip()]
 
     def _assign_tasks(self, sub_tasks: List[Dict]):
         """Assign sub-tasks to nodes round-robin."""
         node_list = list(self.nodes.values())
         if not node_list:
             return []
-        return [
-            (task, node_list[i % len(node_list)]) for i, task in enumerate(sub_tasks)
-        ]
+        return [(task, node_list[i % len(node_list)]) for i, task in enumerate(sub_tasks)]
 
     async def _execute_on_node(self, task: Dict, node: SwarmNode) -> torch.Tensor:
         """Execute a task on a node (simulated locally)."""

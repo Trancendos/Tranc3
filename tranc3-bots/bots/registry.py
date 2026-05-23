@@ -56,9 +56,9 @@ class BotRegistry:
 
     async def health(self) -> Dict[str, Any]:
         return {
-            "status":       "ok",
+            "status": "ok",
             "queue_length": await self._pool.queue_len(),
-            "handlers":     list(HANDLERS.keys()),
+            "handlers": list(HANDLERS.keys()),
         }
 
     # ── Internal dispatcher ────────────────────────────────────────────────────

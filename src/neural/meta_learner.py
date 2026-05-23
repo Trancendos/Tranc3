@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 # Optional numpy for vector operations
 try:
     import numpy as np
+
     _HAS_NUMPY = True
 except ImportError:
     _HAS_NUMPY = False
@@ -48,6 +49,7 @@ except ImportError:
 
 
 # ── Data structures ────────────────────────────────────────────────
+
 
 @dataclass
 class TaskPrototype:
@@ -84,6 +86,7 @@ class TaskPrototype:
     embedding : Optional[List[float]]
         Optional vector embedding for similarity matching.
     """
+
     prototype_id: str = ""
     domain: str = ""
     task_type: str = ""
@@ -116,7 +119,7 @@ class TaskPrototype:
         has lower confidence than one with many successful uses.
         """
         prior_strength = 5.0  # Virtual prior observations
-        prior_success = 0.5   # Prior success rate
+        prior_success = 0.5  # Prior success rate
         total = self.success_count + self.failure_count + prior_strength
         successes = self.success_count + prior_strength * prior_success
         return successes / total
@@ -125,6 +128,7 @@ class TaskPrototype:
 @dataclass
 class AdaptationResult:
     """Result of a meta-learning adaptation attempt."""
+
     prototype_id: str
     adapted_parameters: Dict[str, float]
     confidence: float
@@ -133,6 +137,7 @@ class AdaptationResult:
 
 
 # ── Similarity functions ───────────────────────────────────────────
+
 
 def _cosine_similarity(a: List[float], b: List[float]) -> float:
     """Compute cosine similarity between two vectors."""
@@ -175,6 +180,7 @@ def _signature_similarity(
 
 
 # ── Meta Learner ───────────────────────────────────────────────────
+
 
 class MetaLearner:
     """Few-shot task adaptation through prototype matching.
@@ -229,7 +235,9 @@ class MetaLearner:
             self._prototypes[prototype.prototype_id] = prototype
             logger.info(
                 "meta_learner: registered prototype %s domain=%s type=%s",
-                prototype.prototype_id, prototype.domain, prototype.task_type,
+                prototype.prototype_id,
+                prototype.domain,
+                prototype.task_type,
             )
         return prototype.prototype_id
 
@@ -267,9 +275,8 @@ class MetaLearner:
                         old = proto.parameter_deltas.get(key, 0.0)
                         # Exponential moving average toward successful values
                         proto.parameter_deltas[key] = (
-                            (1 - self._adaptation_rate) * old
-                            + self._adaptation_rate * value
-                        )
+                            1 - self._adaptation_rate
+                        ) * old + self._adaptation_rate * value
             else:
                 proto.failure_count += 1
                 if parameter_feedback:
@@ -277,9 +284,8 @@ class MetaLearner:
                         old = proto.parameter_deltas.get(key, 0.0)
                         # Move away from failing values
                         proto.parameter_deltas[key] = (
-                            (1 - self._adaptation_rate) * old
-                            - self._adaptation_rate * value
-                        )
+                            1 - self._adaptation_rate
+                        ) * old - self._adaptation_rate * value
             proto.last_used = time.monotonic()
 
     # ── Adaptation ─────────────────────────────────────────────────
@@ -320,8 +326,13 @@ class MetaLearner:
             scores: List[Tuple[str, float]] = []
             for pid, proto in self._prototypes.items():
                 score = self._compute_match_score(
-                    proto, domain, task_type, input_signature,
-                    output_signature, tags, embedding,
+                    proto,
+                    domain,
+                    task_type,
+                    input_signature,
+                    output_signature,
+                    tags,
+                    embedding,
                 )
                 scores.append((pid, score))
 
@@ -330,8 +341,8 @@ class MetaLearner:
 
             # Exploration: occasionally pick a random top-5 prototype
             import random
-            if random.random() < self._exploration_rate and len(scores) > 1:  # nosec B311 — non-cryptographic random usage
 
+            if random.random() < self._exploration_rate and len(scores) > 1:  # nosec B311 — non-cryptographic random usage
                 top_n = min(5, len(scores))
                 choice_idx = random.randint(0, top_n - 1)  # nosec B311 — non-cryptographic exploration sampling
                 best_pid, best_score = scores[choice_idx]

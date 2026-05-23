@@ -1,10 +1,11 @@
 """
 Generate the repaired PLATFORM_ENTITIES.md and docs/matrix.md
 """
+
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.entities.platform import LOCATION_ABBREVS, PLATFORM_ENTITIES, PRIME_ABBREVS
 
@@ -13,8 +14,14 @@ def generate_platform_entities_md():
     """Generate the full repaired PLATFORM_ENTITIES.md."""
 
     pillar_order = [
-        "Architectural", "Commercial / Financial", "Creativity",
-        "Development (Code)", "Knowledge", "Security", "DevOps", "Wellbeing"
+        "Architectural",
+        "Commercial / Financial",
+        "Creativity",
+        "Development (Code)",
+        "Knowledge",
+        "Security",
+        "DevOps",
+        "Wellbeing",
     ]
 
     lines = []
@@ -24,12 +31,18 @@ def generate_platform_entities_md():
     lines.append("")
     lines.append("**Tier structure:**")
     lines.append("- **Tier 1 - The Sovereign**: Ultimate orchestrator of the Tranc3 ecosystem")
-    lines.append("- **Tier 2 - Primes**: Executive AI authorities that govern one or more locations")
+    lines.append(
+        "- **Tier 2 - Primes**: Executive AI authorities that govern one or more locations"
+    )
     lines.append("- **Tier 3 - Lead AI**: The named AI that runs each location day-to-day")
-    lines.append("- **Tier 4 - Agents**: Agent Alpha and Agent Beta - mid-tier automation per location")
+    lines.append(
+        "- **Tier 4 - Agents**: Agent Alpha and Agent Beta - mid-tier automation per location"
+    )
     lines.append("- **Tier 5 - Bots**: Bot 01-04 - task-specific micro-workers per location")
     lines.append("")
-    lines.append("**Pillars:** Architectural · Commercial/Financial · Creativity · Development (Code) · Knowledge · Security · DevOps · Wellbeing")
+    lines.append(
+        "**Pillars:** Architectural · Commercial/Financial · Creativity · Development (Code) · Knowledge · Security · DevOps · Wellbeing"
+    )
     lines.append("")
     lines.append("---")
     lines.append("")
@@ -52,19 +65,45 @@ def generate_platform_entities_md():
     lines.append("")
     lines.append("| Rule | Resolved Form | Original Issue |")
     lines.append("|---|---|---|")
-    lines.append('| Platform brain | The Digital Grid (with space) | The DigitalGrid (no space — typo) |')
-    lines.append('| Location vs AI | tAimra (location) / tAImra (Lead AI) | tAImra vs tAimra casing mismatch |')
-    lines.append("| Photo studio | Sashas Photo Studio (no apostrophe) | Sasha's Photo Studio (apostrophe) |")
-    lines.append("| Guardian title | The Guardian (Anchor: Orb of Orisis) | The Guardian (Anchor: Orb of Orisis) vs The Guardian (Marcus Magnolia) |")
-    lines.append("| Nexus AI | Nexus-Prime (Lead AI) | The Nexus (same name as location — tight coupling) |")
-    lines.append("| Bot naming | All bots: Title-Case-Bot format | Inconsistent: some had -Bot suffix, some didn't |")
-    lines.append("| Wireframe collision | Layout-Bot (Studio) / Wireframe-Bot (Turing's Hub) | Same name in two locations |")
-    lines.append("| The Weaver collision | The Flow-Weaver (Digital Grid) / The Time-Weaver (ChronosSphere) / The Weaver (Fabulousa) | Same agent name in three locations |")
-    lines.append("| The Guide collision | The Guide (Tranquility) / The VR-Guide (VRAR3D) | Same agent name in two locations |")
-    lines.append("| Stamp collision | Stamp-Bot (Town Hall) / Seal-Stamp-Bot (Lighthouse) | Same bot name in two locations |")
-    lines.append("| Scanner collision | Scanner-Bot (DocUtari) / Scan-Bot (Warp Tunnel) | Same bot name in two locations |")
-    lines.append("| Tracer collision | Tracer-Bot (Observatory) / Trace-Bot (Cryptex) | Same bot name in two locations |")
-    lines.append("| Lens collision | Lens-Bot (Sashas Photo Studio) / VR-Lens-Bot (VRAR3D) | Same bot name in two locations |")
+    lines.append(
+        "| Platform brain | The Digital Grid (with space) | The DigitalGrid (no space — typo) |"
+    )
+    lines.append(
+        "| Location vs AI | tAimra (location) / tAImra (Lead AI) | tAImra vs tAimra casing mismatch |"
+    )
+    lines.append(
+        "| Photo studio | Sashas Photo Studio (no apostrophe) | Sasha's Photo Studio (apostrophe) |"
+    )
+    lines.append(
+        "| Guardian title | The Guardian (Anchor: Orb of Orisis) | The Guardian (Anchor: Orb of Orisis) vs The Guardian (Marcus Magnolia) |"
+    )
+    lines.append(
+        "| Nexus AI | Nexus-Prime (Lead AI) | The Nexus (same name as location — tight coupling) |"
+    )
+    lines.append(
+        "| Bot naming | All bots: Title-Case-Bot format | Inconsistent: some had -Bot suffix, some didn't |"
+    )
+    lines.append(
+        "| Wireframe collision | Layout-Bot (Studio) / Wireframe-Bot (Turing's Hub) | Same name in two locations |"
+    )
+    lines.append(
+        "| The Weaver collision | The Flow-Weaver (Digital Grid) / The Time-Weaver (ChronosSphere) / The Weaver (Fabulousa) | Same agent name in three locations |"
+    )
+    lines.append(
+        "| The Guide collision | The Guide (Tranquility) / The VR-Guide (VRAR3D) | Same agent name in two locations |"
+    )
+    lines.append(
+        "| Stamp collision | Stamp-Bot (Town Hall) / Seal-Stamp-Bot (Lighthouse) | Same bot name in two locations |"
+    )
+    lines.append(
+        "| Scanner collision | Scanner-Bot (DocUtari) / Scan-Bot (Warp Tunnel) | Same bot name in two locations |"
+    )
+    lines.append(
+        "| Tracer collision | Tracer-Bot (Observatory) / Trace-Bot (Cryptex) | Same bot name in two locations |"
+    )
+    lines.append(
+        "| Lens collision | Lens-Bot (Sashas Photo Studio) / VR-Lens-Bot (VRAR3D) | Same bot name in two locations |"
+    )
     lines.append("")
     lines.append("---")
     lines.append("")
@@ -77,18 +116,60 @@ def generate_platform_entities_md():
 
     worker_map = [
         (8004, "infinity-ws", "The Nexus", "Nexus-Prime", "PID-NXS", "Primary worker"),
-        (8005, "infinity-auth", "Infinity", "The Guardian (Anchor: Orb of Orisis)", "PID-INF", "Primary worker"),
-        (8006, "users-service", "Infinity", "The Guardian (Anchor: Orb of Orisis)", "PID-INF", "Supporting layer"),
+        (
+            8005,
+            "infinity-auth",
+            "Infinity",
+            "The Guardian (Anchor: Orb of Orisis)",
+            "PID-INF",
+            "Primary worker",
+        ),
+        (
+            8006,
+            "users-service",
+            "Infinity",
+            "The Guardian (Anchor: Orb of Orisis)",
+            "PID-INF",
+            "Supporting layer",
+        ),
         (8007, "monitoring", "The Observatory", "Norman Hawkins", "PID-OBS", "Primary worker"),
         (8008, "notifications", "Arcadia", "Lilli SC", "PID-ARC", "Supporting layer"),
         (8009, "infinity-ai", "Luminous", "Cornelius MacIntyre", "PID-LUM", "Primary worker"),
         (8010, "the-grid", "The Digital Grid", "Tyler Towncroft", "PID-DGR", "Primary worker"),
-        (8011, "products-service", "Arcadian Exchange", "The Porter Family", "PID-AEX", "Supporting layer"),
-        (8012, "orders-service", "Arcadian Exchange", "The Porter Family", "PID-AEX", "Primary worker"),
-        (8013, "payments-service", "Royal Bank of Arcadia", "Dorris Fontaine", "PID-RBA", "Primary worker"),
+        (
+            8011,
+            "products-service",
+            "Arcadian Exchange",
+            "The Porter Family",
+            "PID-AEX",
+            "Supporting layer",
+        ),
+        (
+            8012,
+            "orders-service",
+            "Arcadian Exchange",
+            "The Porter Family",
+            "PID-AEX",
+            "Primary worker",
+        ),
+        (
+            8013,
+            "payments-service",
+            "Royal Bank of Arcadia",
+            "Dorris Fontaine",
+            "PID-RBA",
+            "Primary worker",
+        ),
         (8014, "files-service", "DocUtari", "To be Defined", "PID-DOC", "Primary worker"),
         (8015, "identity-service", "The Lighthouse", "Rocking Ricki", "PID-LTH", "Primary worker"),
-        (8016, "analytics-service", "The Observatory", "Norman Hawkins", "PID-OBS", "Supporting layer"),
+        (
+            8016,
+            "analytics-service",
+            "The Observatory",
+            "Norman Hawkins",
+            "PID-OBS",
+            "Supporting layer",
+        ),
         (8017, "search-service", "The Library", "Zimik", "PID-LIB", "Primary worker"),
         (8018, "email-service", "Arcadia", "Lilli SC", "PID-ARC", "Supporting layer"),
         (8019, "sms-service", "The Nexus", "Nexus-Prime", "PID-NXS", "Supporting layer"),
@@ -113,8 +194,12 @@ def generate_platform_entities_md():
     # Full Entity Table with IDs
     lines.append("## Full Entity Table")
     lines.append("")
-    lines.append("| PID | Location | Pillar | Lead AI (AID) | Primes | Agent α (SID) | Agent β (SID) | Bot 01 (NID) | Bot 02 (NID) | Bot 03 (NID) | Bot 04 (NID) |")
-    lines.append("|-----|----------|--------|---------------|--------|---------------|---------------|--------------|--------------|--------------|--------------|")
+    lines.append(
+        "| PID | Location | Pillar | Lead AI (AID) | Primes | Agent α (SID) | Agent β (SID) | Bot 01 (NID) | Bot 02 (NID) | Bot 03 (NID) | Bot 04 (NID) |"
+    )
+    lines.append(
+        "|-----|----------|--------|---------------|--------|---------------|---------------|--------------|--------------|--------------|--------------|"
+    )
 
     # Sort by pillar order then by location name
     for pillar_name in pillar_order:
@@ -177,11 +262,15 @@ def generate_platform_entities_md():
     lines.append("---")
     lines.append("")
     lines.append("### Internal personality profiles not in entity table")
-    lines.append("The following profiles exist in `src/personality/profiles/` but have no entry in the platform entity hierarchy. They are legacy/internal profiles predating the entity table:")
+    lines.append(
+        "The following profiles exist in `src/personality/profiles/` but have no entry in the platform entity hierarchy. They are legacy/internal profiles predating the entity table:"
+    )
     lines.append("- `vesper-nightingale` — internal profile, unmapped")
     lines.append("- `atlas-meridian` — internal profile, unmapped")
     lines.append("")
-    lines.append("These are **not** named locations and should not be referenced as platform entities until explicitly assigned.")
+    lines.append(
+        "These are **not** named locations and should not be referenced as platform entities until explicitly assigned."
+    )
     lines.append("")
 
     return "\n".join(lines)
@@ -204,7 +293,9 @@ def generate_matrix_md():
     lines = []
     lines.append("# Tranc3 Repaired Entity Matrix — by Pillar")
     lines.append("")
-    lines.append("Auto-generated from `src/entities/platform.py` with all naming convention repairs applied.")
+    lines.append(
+        "Auto-generated from `src/entities/platform.py` with all naming convention repairs applied."
+    )
     lines.append("")
     lines.append("## Summary")
     lines.append("")
@@ -220,7 +311,8 @@ def generate_matrix_md():
 
     for pillar_name, pillar_abbrev in pillar_order:
         locations_in_pillar = [
-            (name, entity) for name, entity in PLATFORM_ENTITIES.items()
+            (name, entity)
+            for name, entity in PLATFORM_ENTITIES.items()
             if entity.pillar.value == pillar_name
         ]
 
@@ -234,15 +326,31 @@ def generate_matrix_md():
             lines.append("")
             lines.append("| Tier | Role | Name | ID | Description |")
             lines.append("|------|------|------|----|-------------|")
-            lines.append(f"| 3 | Lead AI | **{entity.lead_ai}** | `{entity.aid}` | {entity.primary_function} |")
-            lines.append(f"| 4 | Agent α | {entity.agent_alpha.code_name} | `{entity.agent_alpha.sid}` | {entity.agent_alpha.description} |")
-            lines.append(f"| 4 | Agent β | {entity.agent_beta.code_name} | `{entity.agent_beta.sid}` | {entity.agent_beta.description} |")
-            lines.append(f"| 5 | Bot 01 | {entity.bot_01.code_name} | `{entity.bot_01.nid}` | {entity.bot_01.description} |")
-            lines.append(f"| 5 | Bot 02 | {entity.bot_02.code_name} | `{entity.bot_02.nid}` | {entity.bot_02.description} |")
-            lines.append(f"| 5 | Bot 03 | {entity.bot_03.code_name} | `{entity.bot_03.nid}` | {entity.bot_03.description} |")
-            lines.append(f"| 5 | Bot 04 | {entity.bot_04.code_name} | `{entity.bot_04.nid}` | {entity.bot_04.description} |")
+            lines.append(
+                f"| 3 | Lead AI | **{entity.lead_ai}** | `{entity.aid}` | {entity.primary_function} |"
+            )
+            lines.append(
+                f"| 4 | Agent α | {entity.agent_alpha.code_name} | `{entity.agent_alpha.sid}` | {entity.agent_alpha.description} |"
+            )
+            lines.append(
+                f"| 4 | Agent β | {entity.agent_beta.code_name} | `{entity.agent_beta.sid}` | {entity.agent_beta.description} |"
+            )
+            lines.append(
+                f"| 5 | Bot 01 | {entity.bot_01.code_name} | `{entity.bot_01.nid}` | {entity.bot_01.description} |"
+            )
+            lines.append(
+                f"| 5 | Bot 02 | {entity.bot_02.code_name} | `{entity.bot_02.nid}` | {entity.bot_02.description} |"
+            )
+            lines.append(
+                f"| 5 | Bot 03 | {entity.bot_03.code_name} | `{entity.bot_03.nid}` | {entity.bot_03.description} |"
+            )
+            lines.append(
+                f"| 5 | Bot 04 | {entity.bot_04.code_name} | `{entity.bot_04.nid}` | {entity.bot_04.description} |"
+            )
             lines.append(f"| — | Primes | {', '.join(entity.primes)} | — | — |")
-            lines.append(f"| — | Port | {entity.worker_port or 'N/A'} | — | {entity.worker_path or 'N/A'} |")
+            lines.append(
+                f"| — | Port | {entity.worker_port or 'N/A'} | — | {entity.worker_path or 'N/A'} |"
+            )
             lines.append("")
 
         lines.append("---")
@@ -264,8 +372,12 @@ def generate_matrix_md():
     # Per-location
     for loc_name, entity in PLATFORM_ENTITIES.items():
         lines.append(f"| {entity.aid} | 3 | {entity.lead_ai} | {loc_name} |")
-        lines.append(f"| {entity.agent_alpha.sid} | 4 | {entity.agent_alpha.code_name} | {loc_name} |")
-        lines.append(f"| {entity.agent_beta.sid} | 4 | {entity.agent_beta.code_name} | {loc_name} |")
+        lines.append(
+            f"| {entity.agent_alpha.sid} | 4 | {entity.agent_alpha.code_name} | {loc_name} |"
+        )
+        lines.append(
+            f"| {entity.agent_beta.sid} | 4 | {entity.agent_beta.code_name} | {loc_name} |"
+        )
         lines.append(f"| {entity.bot_01.nid} | 5 | {entity.bot_01.code_name} | {loc_name} |")
         lines.append(f"| {entity.bot_02.nid} | 5 | {entity.bot_02.code_name} | {loc_name} |")
         lines.append(f"| {entity.bot_03.nid} | 5 | {entity.bot_03.code_name} | {loc_name} |")
@@ -279,16 +391,16 @@ def generate_matrix_md():
 if __name__ == "__main__":
     # Generate PLATFORM_ENTITIES.md
     md_content = generate_platform_entities_md()
-    output_path = os.path.join(os.path.dirname(__file__), '..', 'PLATFORM_ENTITIES.md')
-    with open(output_path, 'w', encoding='utf-8') as f:
+    output_path = os.path.join(os.path.dirname(__file__), "..", "PLATFORM_ENTITIES.md")
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(md_content)
     print(f"✅ PLATFORM_ENTITIES.md written ({len(md_content)} chars)")
 
     # Generate docs/matrix.md
     matrix_content = generate_matrix_md()
-    docs_dir = os.path.join(os.path.dirname(__file__), '..', 'docs')
+    docs_dir = os.path.join(os.path.dirname(__file__), "..", "docs")
     os.makedirs(docs_dir, exist_ok=True)
-    matrix_path = os.path.join(docs_dir, 'matrix.md')
-    with open(matrix_path, 'w', encoding='utf-8') as f:
+    matrix_path = os.path.join(docs_dir, "matrix.md")
+    with open(matrix_path, "w", encoding="utf-8") as f:
         f.write(matrix_content)
     print(f"✅ docs/matrix.md written ({len(matrix_content)} chars)")

@@ -48,9 +48,7 @@ class QuantumCircuitBuilder:
         return qc
 
     @staticmethod
-    def build_grover_search_circuit(
-        num_qubits: int, target_state: int
-    ) -> QuantumCircuit:
+    def build_grover_search_circuit(num_qubits: int, target_state: int) -> QuantumCircuit:
         """Build Grover's search circuit"""
         qr = QuantumRegister(num_qubits, "q")
         cr = ClassicalRegister(num_qubits, "c")
@@ -141,9 +139,7 @@ class QuantumMemorySystem:
         self.stored_patterns.append(normalized)
         return True
 
-    def recall_pattern(
-        self, query: np.ndarray, shots: int = 1024
-    ) -> Optional[np.ndarray]:
+    def recall_pattern(self, query: np.ndarray, shots: int = 1024) -> Optional[np.ndarray]:
         """Recall closest pattern using quantum search"""
         if not self.stored_patterns:
             return None
@@ -156,9 +152,7 @@ class QuantumMemorySystem:
             return self.stored_patterns[best_idx]
         return None
 
-    def quantum_associative_recall(
-        self, partial_pattern: np.ndarray
-    ) -> Optional[np.ndarray]:
+    def quantum_associative_recall(self, partial_pattern: np.ndarray) -> Optional[np.ndarray]:
         """Quantum associative memory recall"""
         if not self.stored_patterns:
             return None
@@ -201,9 +195,7 @@ class QuantumOptimizationEngine:
         self.circuit_builder = QuantumCircuitBuilder()
         self.memory = QuantumMemorySystem(num_qubits)
 
-    def quantum_attention_scores(
-        self, query: torch.Tensor, key: torch.Tensor
-    ) -> torch.Tensor:
+    def quantum_attention_scores(self, query: torch.Tensor, key: torch.Tensor) -> torch.Tensor:
         """Compute attention scores using quantum circuits"""
         B, H, T, D = query.shape
 
@@ -227,24 +219,19 @@ class QuantumOptimizationEngine:
             weights = weights / (weights.sum() + 1e-8)
 
             return (
-                torch.tensor(weights, dtype=torch.float32)
-                .unsqueeze(0)
-                .unsqueeze(0)
-                .unsqueeze(-1)
+                torch.tensor(weights, dtype=torch.float32).unsqueeze(0).unsqueeze(0).unsqueeze(-1)
             )
         except Exception as e:
-            logger.warning("Quantum attention failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Quantum attention failed: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return torch.ones(B, H, T, 1) / T
 
-    def quantum_parameter_optimization(
-        self, loss: float, params: np.ndarray
-    ) -> np.ndarray:
+    def quantum_parameter_optimization(self, loss: float, params: np.ndarray) -> np.ndarray:
         """Optimize parameters using quantum annealing simulation"""
 
         # Build VQE circuit
-        qc = self.circuit_builder.build_vqe_circuit(
-            self.num_qubits, params[: self.num_qubits * 3]
-        )
+        qc = self.circuit_builder.build_vqe_circuit(self.num_qubits, params[: self.num_qubits * 3])
         qc.measure_all()
 
         try:
@@ -261,7 +248,9 @@ class QuantumOptimizationEngine:
 
             return params + updates
         except Exception as e:
-            logger.warning("Quantum optimization failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Quantum optimization failed: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return params
 
     def get_quantum_state_info(self) -> Dict:

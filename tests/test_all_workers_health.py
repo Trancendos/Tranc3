@@ -124,6 +124,7 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
         db_path = tmp_path / f"test_{module_name}.db"
         test_db = db_class(db_path=db_path)
         from unittest.mock import patch
+
         patches.append(patch.object(mod, "db", test_db))
 
         if module_name in ENGINE_WORKERS:
@@ -140,13 +141,17 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
             test_void_dir = tmp_path / "void-data"
             test_void_dir.mkdir(parents=True, exist_ok=True)
             test_db_path = test_void_dir / "void.db"
-            with _patch.object(mod, "DB_PATH", test_db_path), \
-                 _patch.object(mod, "DATA_DIR", test_void_dir), \
-                 _patch.object(mod, "R2_DIR", test_void_dir / "secrets"):
+            with (
+                _patch.object(mod, "DB_PATH", test_db_path),
+                _patch.object(mod, "DATA_DIR", test_void_dir),
+                _patch.object(mod, "R2_DIR", test_void_dir / "secrets"),
+            ):
                 mod.init_schema()
                 client = TestClient(mod.app)
                 response = client.get("/health")
-                assert response.status_code == 200, f"Worker {module_name} /health returned {response.status_code}"
+                assert response.status_code == 200, (
+                    f"Worker {module_name} /health returned {response.status_code}"
+                )
                 data = response.json()
                 assert "status" in data, f"Worker {module_name} /health missing 'status' field"
             return
@@ -163,19 +168,24 @@ def _check_worker_health(module_name: str, file_path: Path, tmp_path: Path):
             mod.init_db()
             client = TestClient(mod.app)
             response = client.get("/health")
-            assert response.status_code == 200, f"Worker {module_name} /health returned {response.status_code}"
+            assert response.status_code == 200, (
+                f"Worker {module_name} /health returned {response.status_code}"
+            )
             data = response.json()
             assert "status" in data, f"Worker {module_name} /health missing 'status' field"
         return
 
     import contextlib
+
     with contextlib.ExitStack() as stack:
         for p in patches:
             stack.enter_context(p)
 
         client = TestClient(mod.app)
         response = client.get("/health")
-        assert response.status_code == 200, f"Worker {module_name} /health returned {response.status_code}"
+        assert response.status_code == 200, (
+            f"Worker {module_name} /health returned {response.status_code}"
+        )
 
         data = response.json()
         assert "status" in data, f"Worker {module_name} /health missing 'status' field"
@@ -221,10 +231,26 @@ class TestWorkerCounts:
 
     def test_p1_worker_count(self):
         """Verify P1 workers (users-service, monitoring, notifications, infinity-ai)."""
-        p1_workers = [w for w in ALL_WORKERS if w[0] in ("users_service", "monitoring", "notifications", "infinity_ai")]
+        p1_workers = [
+            w
+            for w in ALL_WORKERS
+            if w[0] in ("users_service", "monitoring", "notifications", "infinity_ai")
+        ]
         assert len(p1_workers) == 4
 
     def test_p2_worker_count(self):
         """Verify P2 workers (the-grid, products, orders, payments, files, identity)."""
-        p2_workers = [w for w in ALL_WORKERS if w[0] in ("the_grid", "products_service", "orders_service", "payments_service", "files_service", "identity_service")]
+        p2_workers = [
+            w
+            for w in ALL_WORKERS
+            if w[0]
+            in (
+                "the_grid",
+                "products_service",
+                "orders_service",
+                "payments_service",
+                "files_service",
+                "identity_service",
+            )
+        ]
         assert len(p2_workers) == 6

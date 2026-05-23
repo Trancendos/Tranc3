@@ -100,9 +100,9 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ---------------------------------------------------------------------------
 
-_DEFAULT_ORCHESTRATION_INTERVAL = 30.0   # seconds between proactive cycles
-_DEFAULT_HEALTH_WINDOW = 100             # metrics history depth
-_DEFAULT_PREDICTION_HORIZON = 300        # seconds ahead to predict
+_DEFAULT_ORCHESTRATION_INTERVAL = 30.0  # seconds between proactive cycles
+_DEFAULT_HEALTH_WINDOW = 100  # metrics history depth
+_DEFAULT_PREDICTION_HORIZON = 300  # seconds ahead to predict
 _DEFAULT_AUTO_HEAL_ENABLED = True
 _DEFAULT_ZERO_COST_SAFETY_MARGIN = 0.85  # migrate at 85% of free-tier limit
 
@@ -111,8 +111,10 @@ _DEFAULT_ZERO_COST_SAFETY_MARGIN = 0.85  # migrate at 85% of free-tier limit
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class ProactiveAction(str, Enum):
     """Taxonomy of proactive actions the orchestrator can take."""
+
     HEAL = "heal"
     SCALE_UP = "scale_up"
     SCALE_DOWN = "scale_down"
@@ -126,15 +128,17 @@ class ProactiveAction(str, Enum):
 
 class ActionPriority(int, Enum):
     """Priority levels for proactive actions."""
-    CRITICAL = 0   # Immediate execution required (system at risk)
-    HIGH = 1       # Execute within seconds (degradation detected)
-    MEDIUM = 2     # Execute within minutes (optimization opportunity)
-    LOW = 3        # Execute when convenient (housekeeping)
+
+    CRITICAL = 0  # Immediate execution required (system at risk)
+    HIGH = 1  # Execute within seconds (degradation detected)
+    MEDIUM = 2  # Execute within minutes (optimization opportunity)
+    LOW = 3  # Execute when convenient (housekeeping)
     INFORMATIONAL = 4  # Log only, no action needed
 
 
 class ActionStatus(str, Enum):
     """Status of a proactive action."""
+
     PENDING = "pending"
     EXECUTING = "executing"
     COMPLETED = "completed"
@@ -145,6 +149,7 @@ class ActionStatus(str, Enum):
 
 class SystemVitalSign(str, Enum):
     """Vital signs monitored by the orchestrator."""
+
     CPU_LOAD = "cpu_load"
     MEMORY_USAGE = "memory_usage"
     STORAGE_CAPACITY = "storage_capacity"
@@ -159,19 +164,22 @@ class SystemVitalSign(str, Enum):
 
 class OrchestratorMode(str, Enum):
     """Operational mode of the ProactiveOrchestrator."""
-    OBSERVE = "observe"        # Monitor only, no automatic actions
-    ASSIST = "assist"          # Suggest actions, require approval
+
+    OBSERVE = "observe"  # Monitor only, no automatic actions
+    ASSIST = "assist"  # Suggest actions, require approval
     AUTONOMOUS = "autonomous"  # Execute actions automatically
-    EMERGENCY = "emergency"    # Maximum automation, override safety limits
+    EMERGENCY = "emergency"  # Maximum automation, override safety limits
 
 
 # ---------------------------------------------------------------------------
 # Data Models
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class MetricSample:
     """A single metric sample with timestamp."""
+
     name: str
     value: float
     timestamp: float = field(default_factory=time.time)
@@ -189,11 +197,12 @@ class MetricSample:
 @dataclass
 class HealthPrediction:
     """Predicted health state for a subsystem."""
+
     subsystem: str
-    current_score: float           # 0.0 (failing) to 1.0 (healthy)
-    predicted_score: float         # predicted score at horizon
-    trend: str                     # "improving", "stable", "degrading", "critical"
-    confidence: float              # 0.0 to 1.0
+    current_score: float  # 0.0 (failing) to 1.0 (healthy)
+    predicted_score: float  # predicted score at horizon
+    trend: str  # "improving", "stable", "degrading", "critical"
+    confidence: float  # 0.0 to 1.0
     time_to_degradation: Optional[float] = None  # seconds until score < 0.5
     horizon_seconds: float = 300.0
     timestamp: float = field(default_factory=time.time)
@@ -206,9 +215,7 @@ class HealthPrediction:
             "trend": self.trend,
             "confidence": round(self.confidence, 4),
             "time_to_degradation": (
-                round(self.time_to_degradation, 1)
-                if self.time_to_degradation is not None
-                else None
+                round(self.time_to_degradation, 1) if self.time_to_degradation is not None else None
             ),
             "horizon_seconds": self.horizon_seconds,
             "timestamp": self.timestamp,
@@ -218,10 +225,11 @@ class HealthPrediction:
 @dataclass
 class ActionPlan:
     """A structured proactive action with priority, execution details, and rollback."""
+
     id: str
     action: ProactiveAction
     priority: ActionPriority
-    target: str                     # subsystem or resource to act on
+    target: str  # subsystem or resource to act on
     description: str
     status: ActionStatus = ActionStatus.PENDING
     created_at: float = field(default_factory=time.time)
@@ -256,7 +264,8 @@ class ActionPlan:
 @dataclass
 class SystemHealthProfile:
     """Composite health profile across all subsystems."""
-    overall_score: float = 1.0       # 0.0 (failing) to 1.0 (healthy)
+
+    overall_score: float = 1.0  # 0.0 (failing) to 1.0 (healthy)
     storage_health: float = 1.0
     service_health: float = 1.0
     security_health: float = 1.0
@@ -289,12 +298,13 @@ class SystemHealthProfile:
 @dataclass
 class ZeroCostStatus:
     """Zero-cost compliance status across all storage tiers."""
-    compliant: bool = True           # True if all tiers are within free limits
-    total_free_gb: float = 0.0       # Total free-tier capacity across providers
-    total_used_gb: float = 0.0       # Total used across providers
-    utilization_pct: float = 0.0     # Overall utilization percentage
+
+    compliant: bool = True  # True if all tiers are within free limits
+    total_free_gb: float = 0.0  # Total free-tier capacity across providers
+    total_used_gb: float = 0.0  # Total used across providers
+    utilization_pct: float = 0.0  # Overall utilization percentage
     approaching_limit: List[str] = field(default_factory=list)  # Tiers near limit
-    critical_tiers: List[str] = field(default_factory=list)     # Tiers at critical
+    critical_tiers: List[str] = field(default_factory=list)  # Tiers at critical
     migration_in_progress: bool = False
     last_migration_at: Optional[float] = None
     timestamp: float = field(default_factory=time.time)
@@ -316,6 +326,7 @@ class ZeroCostStatus:
 # ---------------------------------------------------------------------------
 # Predictive Health Analyzer
 # ---------------------------------------------------------------------------
+
 
 class PredictiveHealthAnalyzer:
     """
@@ -438,7 +449,11 @@ class PredictiveHealthAnalyzer:
     def get_degrading(self, threshold: float = 0.7) -> List[HealthPrediction]:
         """Get predictions for subsystems currently degrading or below threshold."""
         predictions = self.get_all_predictions()
-        return [p for p in predictions if p.current_score < threshold or p.trend in ("degrading", "critical")]
+        return [
+            p
+            for p in predictions
+            if p.current_score < threshold or p.trend in ("degrading", "critical")
+        ]
 
     def get_stats(self) -> Dict[str, Any]:
         """Get analyzer statistics."""
@@ -455,6 +470,7 @@ class PredictiveHealthAnalyzer:
 # ---------------------------------------------------------------------------
 # Auto-Healing Engine
 # ---------------------------------------------------------------------------
+
 
 class AutoHealingEngine:
     """
@@ -658,7 +674,8 @@ class AutoHealingEngine:
             "rolled_back_heals": self._rolled_back_heals,
             "success_rate": (
                 round(self._successful_heals / self._total_heals, 4)
-                if self._total_heals > 0 else 1.0
+                if self._total_heals > 0
+                else 1.0
             ),
         }
 
@@ -666,6 +683,7 @@ class AutoHealingEngine:
 # ---------------------------------------------------------------------------
 # Zero-Cost Modulator
 # ---------------------------------------------------------------------------
+
 
 class ZeroCostModulator:
     """
@@ -744,11 +762,13 @@ class ZeroCostModulator:
             status.total_free_gb = total_free
             status.utilization_pct = (
                 round(total_used / (total_used + total_free) * 100, 2)
-                if (total_used + total_free) > 0 else 0.0
+                if (total_used + total_free) > 0
+                else 0.0
             )
             status.migration_in_progress = (
                 time.time() - self._last_migration_time < 60.0
-                if self._last_migration_time > 0 else False
+                if self._last_migration_time > 0
+                else False
             )
             status.last_migration_at = (
                 self._last_migration_time if self._last_migration_time > 0 else None
@@ -767,7 +787,10 @@ class ZeroCostModulator:
 
         # Check cooldown
         now = time.time()
-        if self._last_migration_time > 0 and (now - self._last_migration_time) < self._migration_cooldown:
+        if (
+            self._last_migration_time > 0
+            and (now - self._last_migration_time) < self._migration_cooldown
+        ):
             return False
 
         # Check rate limit
@@ -798,13 +821,15 @@ class ZeroCostModulator:
         self._last_migration_time = time.time()
         self._recent_migrations.append(self._last_migration_time)
 
-        self._migration_history.append({
-            "source": source,
-            "destination": destination,
-            "success": success,
-            "bytes_migrated": bytes_migrated,
-            "timestamp": self._last_migration_time,
-        })
+        self._migration_history.append(
+            {
+                "source": source,
+                "destination": destination,
+                "success": success,
+                "bytes_migrated": bytes_migrated,
+                "timestamp": self._last_migration_time,
+            }
+        )
 
         # Keep history manageable
         if len(self._migration_history) > 100:
@@ -848,7 +873,8 @@ class ZeroCostModulator:
             "successful_migrations": self._successful_migrations,
             "success_rate": (
                 round(self._successful_migrations / self._total_migrations, 4)
-                if self._total_migrations > 0 else 1.0
+                if self._total_migrations > 0
+                else 1.0
             ),
             "last_migration_at": self._last_migration_time or None,
             "migration_history_size": len(self._migration_history),
@@ -859,6 +885,7 @@ class ZeroCostModulator:
 # ---------------------------------------------------------------------------
 # Action Dispatcher
 # ---------------------------------------------------------------------------
+
 
 class ActionDispatcher:
     """
@@ -925,6 +952,7 @@ class ActionDispatcher:
         if self._event_bus:
             try:
                 from shared_core.models import EventMessage
+
                 event = EventMessage(
                     event_type=f"proactive.{plan.action.value}",
                     source="proactive_orchestrator",
@@ -979,8 +1007,7 @@ class ActionDispatcher:
             "pending_count": len(self._pending),
             "completed_count": len(self._completed),
             "registered_handlers": {
-                action.value: len(handlers)
-                for action, handlers in self._action_handlers.items()
+                action.value: len(handlers) for action, handlers in self._action_handlers.items()
             },
         }
 
@@ -988,6 +1015,7 @@ class ActionDispatcher:
 # ---------------------------------------------------------------------------
 # Proactive Orchestrator
 # ---------------------------------------------------------------------------
+
 
 class ProactiveOrchestrator:
     """
@@ -1159,10 +1187,13 @@ class ProactiveOrchestrator:
         )
 
         # Publish start event
-        await self._publish_event("orchestrator.start", {
-            "mode": self._mode.value,
-            "subsystems_attached": self._get_attached_subsystem_names(),
-        })
+        await self._publish_event(
+            "orchestrator.start",
+            {
+                "mode": self._mode.value,
+                "subsystems_attached": self._get_attached_subsystem_names(),
+            },
+        )
 
         # Start the orchestration loop
         self._orchestration_task = asyncio.create_task(self._orchestration_loop())
@@ -1179,10 +1210,13 @@ class ProactiveOrchestrator:
                 pass
             self._orchestration_task = None
 
-        await self._publish_event("orchestrator.stop", {
-            "cycles_completed": self._cycle_count,
-            "uptime_seconds": time.time() - (self._started_at or time.time()),
-        })
+        await self._publish_event(
+            "orchestrator.stop",
+            {
+                "cycles_completed": self._cycle_count,
+                "uptime_seconds": time.time() - (self._started_at or time.time()),
+            },
+        )
 
         logger.info("ProactiveOrchestrator stopped after %d cycles", self._cycle_count)
 
@@ -1438,9 +1472,9 @@ class ProactiveOrchestrator:
             active_actions=len(self._healing_engine.get_active_heals()),
             pending_actions=len(self._action_dispatcher.get_pending()),
             failed_actions_24h=sum(
-                1 for p in self._healing_engine._heal_history
-                if p.status == ActionStatus.FAILED
-                and time.time() - p.completed_at < 86400.0
+                1
+                for p in self._healing_engine._heal_history
+                if p.status == ActionStatus.FAILED and time.time() - p.completed_at < 86400.0
                 if p.completed_at
             ),
         )
@@ -1479,18 +1513,20 @@ class ProactiveOrchestrator:
             elif prediction.trend == "degrading" and prediction.confidence > 0.5:
                 # In ASSIST mode, just alert; in AUTONOMOUS, take action
                 if self._mode == OrchestratorMode.ASSIST:
-                    self._action_dispatcher.submit(ActionPlan(
-                        id=f"alert-{uuid.uuid4().hex[:8]}",
-                        action=ProactiveAction.ALERT,
-                        priority=ActionPriority.MEDIUM,
-                        target=prediction.subsystem,
-                        description=(
-                            f"Subsystem '{prediction.subsystem}' is degrading "
-                            f"(current={prediction.current_score:.2f}, "
-                            f"predicted={prediction.predicted_score:.2f})"
-                        ),
-                        metadata={"prediction": prediction.to_dict()},
-                    ))
+                    self._action_dispatcher.submit(
+                        ActionPlan(
+                            id=f"alert-{uuid.uuid4().hex[:8]}",
+                            action=ProactiveAction.ALERT,
+                            priority=ActionPriority.MEDIUM,
+                            target=prediction.subsystem,
+                            description=(
+                                f"Subsystem '{prediction.subsystem}' is degrading "
+                                f"(current={prediction.current_score:.2f}, "
+                                f"predicted={prediction.predicted_score:.2f})"
+                            ),
+                            metadata={"prediction": prediction.to_dict()},
+                        )
+                    )
                 elif self._mode in (OrchestratorMode.AUTONOMOUS, OrchestratorMode.EMERGENCY):
                     await self._create_degradation_action(prediction)
 
@@ -1507,14 +1543,18 @@ class ProactiveOrchestrator:
             try:
                 threat_level = self._defense_engine.get_current_threat_level()
                 if threat_level.value in ("high", "critical"):
-                    self._action_dispatcher.submit(ActionPlan(
-                        id=f"harden-{uuid.uuid4().hex[:8]}",
-                        action=ProactiveAction.HARDEN,
-                        priority=ActionPriority.CRITICAL if threat_level.value == "critical" else ActionPriority.HIGH,
-                        target="defense",
-                        description=f"Security threat level: {threat_level.value} — hardening defenses",
-                        metadata={"threat_level": threat_level.value},
-                    ))
+                    self._action_dispatcher.submit(
+                        ActionPlan(
+                            id=f"harden-{uuid.uuid4().hex[:8]}",
+                            action=ProactiveAction.HARDEN,
+                            priority=ActionPriority.CRITICAL
+                            if threat_level.value == "critical"
+                            else ActionPriority.HIGH,
+                            target="defense",
+                            description=f"Security threat level: {threat_level.value} — hardening defenses",
+                            metadata={"threat_level": threat_level.value},
+                        )
+                    )
             except Exception as e:
                 logger.error("Security threat assessment error: %s", sanitize_for_log(str(e)))
 
@@ -1524,38 +1564,39 @@ class ProactiveOrchestrator:
                 health = self._resilience_manager.health()
                 for name, stats in health.get("circuit_breakers", {}).items():
                     if stats.get("state") == "open":
-                        self._action_dispatcher.submit(ActionPlan(
-                            id=f"quarantine-{uuid.uuid4().hex[:8]}",
-                            action=ProactiveAction.QUARANTINE,
-                            priority=ActionPriority.HIGH,
-                            target=name,
-                            description=f"Circuit breaker '{name}' is OPEN — quarantining to prevent cascade",
-                            metadata={"circuit_stats": stats},
-                        ))
+                        self._action_dispatcher.submit(
+                            ActionPlan(
+                                id=f"quarantine-{uuid.uuid4().hex[:8]}",
+                                action=ProactiveAction.QUARANTINE,
+                                priority=ActionPriority.HIGH,
+                                target=name,
+                                description=f"Circuit breaker '{name}' is OPEN — quarantining to prevent cascade",
+                                metadata={"circuit_stats": stats},
+                            )
+                        )
             except Exception as e:
                 logger.error("Circuit breaker assessment error: %s", sanitize_for_log(str(e)))
 
         # 5. Rebalance routing if routing health is degraded
-        if routing_health := next(
-            (p for p in predictions if p.subsystem == "routing"), None
-        ):
+        if routing_health := next((p for p in predictions if p.subsystem == "routing"), None):
             if routing_health.current_score < 0.7:
-                self._action_dispatcher.submit(ActionPlan(
-                    id=f"rebalance-{uuid.uuid4().hex[:8]}",
-                    action=ProactiveAction.REBALANCE,
-                    priority=ActionPriority.MEDIUM,
-                    target="routing",
-                    description="Routing health degraded — rebalancing fluidic weights",
-                    metadata={"routing_health": routing_health.current_score},
-                ))
+                self._action_dispatcher.submit(
+                    ActionPlan(
+                        id=f"rebalance-{uuid.uuid4().hex[:8]}",
+                        action=ProactiveAction.REBALANCE,
+                        priority=ActionPriority.MEDIUM,
+                        target="routing",
+                        description="Routing health degraded — rebalancing fluidic weights",
+                        metadata={"routing_health": routing_health.current_score},
+                    )
+                )
 
     async def _create_degradation_action(self, prediction: HealthPrediction) -> None:
         """Create a healing action for a degrading subsystem."""
         subsystem = prediction.subsystem
         _action_type = ProactiveAction.HEAL  # noqa: F841 — explicit action classification
         priority = (
-            ActionPriority.CRITICAL if prediction.trend == "critical"
-            else ActionPriority.HIGH
+            ActionPriority.CRITICAL if prediction.trend == "critical" else ActionPriority.HIGH
         )
 
         # Map subsystem to healing strategy
@@ -1592,23 +1633,29 @@ class ProactiveOrchestrator:
                 await self._healing_engine.execute_heal(plan)
         else:
             # OBSERVE or ASSIST — just create an alert
-            self._action_dispatcher.submit(ActionPlan(
-                id=f"alert-{uuid.uuid4().hex[:8]}",
-                action=ProactiveAction.ALERT,
-                priority=priority,
-                target=subsystem,
-                description=(
-                    f"Subsystem '{subsystem}' {prediction.trend} — "
-                    f"healing recommended (mode={self._mode.value})"
-                ),
-                metadata={"prediction": prediction.to_dict()},
-            ))
+            self._action_dispatcher.submit(
+                ActionPlan(
+                    id=f"alert-{uuid.uuid4().hex[:8]}",
+                    action=ProactiveAction.ALERT,
+                    priority=priority,
+                    target=subsystem,
+                    description=(
+                        f"Subsystem '{subsystem}' {prediction.trend} — "
+                        f"healing recommended (mode={self._mode.value})"
+                    ),
+                    metadata={"prediction": prediction.to_dict()},
+                )
+            )
 
     async def _create_migration_action(self, tier_name: str, critical: bool) -> None:
         """Create a storage migration action to maintain zero-cost compliance."""
         # Check if migration is appropriate
         try:
-            capacities = self._storage_orchestrator.get_all_capacities() if self._storage_orchestrator else {}
+            capacities = (
+                self._storage_orchestrator.get_all_capacities()
+                if self._storage_orchestrator
+                else {}
+            )
             usage_pct = capacities.get(tier_name, {}).get("usage_pct", 0.0)
         except Exception:
             usage_pct = 100.0 if critical else 0.0
@@ -1620,16 +1667,18 @@ class ProactiveOrchestrator:
 
         if not destination:
             # No alternative — alert only
-            self._action_dispatcher.submit(ActionPlan(
-                id=f"alert-{uuid.uuid4().hex[:8]}",
-                action=ProactiveAction.ALERT,
-                priority=ActionPriority.CRITICAL if critical else ActionPriority.HIGH,
-                target=tier_name,
-                description=(
-                    f"Storage tier '{tier_name}' approaching free-tier limit "
-                    f"with no migration alternative available"
-                ),
-            ))
+            self._action_dispatcher.submit(
+                ActionPlan(
+                    id=f"alert-{uuid.uuid4().hex[:8]}",
+                    action=ProactiveAction.ALERT,
+                    priority=ActionPriority.CRITICAL if critical else ActionPriority.HIGH,
+                    target=tier_name,
+                    description=(
+                        f"Storage tier '{tier_name}' approaching free-tier limit "
+                        f"with no migration alternative available"
+                    ),
+                )
+            )
             return
 
         async def migrate():
@@ -1648,20 +1697,24 @@ class ProactiveOrchestrator:
                     return {"migrated": success, "from": tier_name, "to": destination}
                 except Exception as e:
                     self._zero_cost_modulator.record_migration(
-                        source=tier_name, destination=destination, success=False,
+                        source=tier_name,
+                        destination=destination,
+                        success=False,
                     )
                     raise RuntimeError(f"Migration failed: {e}") from None
             return {"migrated": False, "reason": "no storage orchestrator"}
 
-        self._action_dispatcher.submit(ActionPlan(
-            id=f"migrate-{uuid.uuid4().hex[:8]}",
-            action=ProactiveAction.MIGRATE_STORAGE,
-            priority=ActionPriority.CRITICAL if critical else ActionPriority.HIGH,
-            target=tier_name,
-            description=f"Migrate data from '{tier_name}' to '{destination}' (zero-cost compliance)",
-            executor=migrate,
-            metadata={"destination": destination, "critical": critical},
-        ))
+        self._action_dispatcher.submit(
+            ActionPlan(
+                id=f"migrate-{uuid.uuid4().hex[:8]}",
+                action=ProactiveAction.MIGRATE_STORAGE,
+                priority=ActionPriority.CRITICAL if critical else ActionPriority.HIGH,
+                target=tier_name,
+                description=f"Migrate data from '{tier_name}' to '{destination}' (zero-cost compliance)",
+                executor=migrate,
+                metadata={"destination": destination, "critical": critical},
+            )
+        )
 
     # ------------------------------------------------------------------
     # Healing Strategies
@@ -1723,7 +1776,9 @@ class ProactiveOrchestrator:
                     if stats.get("state") == "open":
                         breaker = self._resilience_manager.get_breaker(name)
                         if breaker:
-                            breaker.state = type(breaker.state).HALF_OPEN if hasattr(breaker, "state") else None
+                            breaker.state = (
+                                type(breaker.state).HALF_OPEN if hasattr(breaker, "state") else None
+                            )
                             opened.append(name)
 
                 return {"action": "resilience_heal", "transitioned_to_half_open": opened}
@@ -1785,22 +1840,28 @@ class ProactiveOrchestrator:
     def _register_default_handlers(self) -> None:
         """Register default action handlers for the dispatcher."""
         self._action_dispatcher.register_handler(
-            ProactiveAction.HEAL, self._handle_heal_action,
+            ProactiveAction.HEAL,
+            self._handle_heal_action,
         )
         self._action_dispatcher.register_handler(
-            ProactiveAction.MIGRATE_STORAGE, self._handle_migration_action,
+            ProactiveAction.MIGRATE_STORAGE,
+            self._handle_migration_action,
         )
         self._action_dispatcher.register_handler(
-            ProactiveAction.ALERT, self._handle_alert_action,
+            ProactiveAction.ALERT,
+            self._handle_alert_action,
         )
         self._action_dispatcher.register_handler(
-            ProactiveAction.HARDEN, self._handle_harden_action,
+            ProactiveAction.HARDEN,
+            self._handle_harden_action,
         )
         self._action_dispatcher.register_handler(
-            ProactiveAction.QUARANTINE, self._handle_quarantine_action,
+            ProactiveAction.QUARANTINE,
+            self._handle_quarantine_action,
         )
         self._action_dispatcher.register_handler(
-            ProactiveAction.REBALANCE, self._handle_rebalance_action,
+            ProactiveAction.REBALANCE,
+            self._handle_rebalance_action,
         )
 
     async def _handle_heal_action(self, plan: ActionPlan) -> None:
@@ -1813,7 +1874,10 @@ class ProactiveOrchestrator:
 
     async def _handle_migration_action(self, plan: ActionPlan) -> None:
         """Handle a MIGRATE_STORAGE action."""
-        if plan.executor and self._mode in (OrchestratorMode.AUTONOMOUS, OrchestratorMode.EMERGENCY):
+        if plan.executor and self._mode in (
+            OrchestratorMode.AUTONOMOUS,
+            OrchestratorMode.EMERGENCY,
+        ):
             try:
                 if asyncio.iscoroutinefunction(plan.executor):
                     result = await plan.executor()
@@ -1882,6 +1946,7 @@ class ProactiveOrchestrator:
 
         try:
             from shared_core.models import EventMessage
+
             event = EventMessage(
                 event_type=event_type,
                 source="proactive_orchestrator",
@@ -1973,9 +2038,7 @@ class ProactiveOrchestrator:
             "zero_cost": self._zero_cost_modulator.check_compliance().to_dict(),
             "predictions": [p.to_dict() for p in self.get_predictions()],
             "pending_actions": self.get_pending_actions(),
-            "degrading_subsystems": [
-                p.to_dict() for p in self.get_degrading_subsystems()
-            ],
+            "degrading_subsystems": [p.to_dict() for p in self.get_degrading_subsystems()],
             "heal_stats": self._healing_engine.get_stats(),
             "migration_stats": self._zero_cost_modulator.get_stats(),
             "dispatcher_stats": self._action_dispatcher.get_stats(),

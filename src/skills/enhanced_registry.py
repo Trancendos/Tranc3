@@ -131,21 +131,13 @@ class EnhancedSkillRegistry:
             seen = set(self._tokenize(corpus))
             for tok in seen:
                 doc_freq[tok] += 1
-        self._idf = {
-            tok: math.log((N + 1) / (df + 1)) + 1.0 for tok, df in doc_freq.items()
-        }
+        self._idf = {tok: math.log((N + 1) / (df + 1)) + 1.0 for tok, df in doc_freq.items()}
         self._idf_dirty = False
 
     def _tfidf_score(self, query_tokens: List[str], skill: Skill) -> float:
         """Compute a simple TF-IDF dot-product score for a query against a skill."""
         corpus = (
-            skill.name
-            + " "
-            + skill.description
-            + " "
-            + skill.content
-            + " "
-            + " ".join(skill.tags)
+            skill.name + " " + skill.description + " " + skill.content + " " + " ".join(skill.tags)
         )
         doc_tokens = self._tokenize(corpus)
         tf: Dict[str, float] = defaultdict(float)
@@ -169,9 +161,7 @@ class EnhancedSkillRegistry:
         try:
             from sentence_transformers import SentenceTransformer  # type: ignore
 
-            model_name = os.getenv(
-                "EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
-            )
+            model_name = os.getenv("EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
             self._embedder = SentenceTransformer(model_name)
             logger.info("Loaded sentence-transformer: %s", model_name)
         except Exception as exc:
@@ -200,9 +190,7 @@ class EnhancedSkillRegistry:
             # Compute and cache embedding for this skill
             loop = asyncio.get_event_loop()
             corpus = skill.name + ". " + skill.description
-            vec = await loop.run_in_executor(
-                None, lambda: self._embedder.encode(corpus).tolist()
-            )
+            vec = await loop.run_in_executor(None, lambda: self._embedder.encode(corpus).tolist())
             skill.embedding = vec
         return self._cosine(query_vec, skill.embedding)
 
@@ -230,11 +218,7 @@ class EnhancedSkillRegistry:
                 None, lambda: self._embedder.encode(query).tolist()
             )
 
-        candidates = [
-            s
-            for s in self.skills.values()
-            if category is None or s.category == category
-        ]
+        candidates = [s for s in self.skills.values() if category is None or s.category == category]
 
         results: List[SkillSearchResult] = []
         for skill in candidates:
@@ -252,9 +236,7 @@ class EnhancedSkillRegistry:
             popularity_boost = 1.0 + 0.05 * math.log1p(skill.usage_count)
             combined *= skill.avg_quality * popularity_boost
 
-            results.append(
-                SkillSearchResult(skill=skill, score=combined, match_reason=reason)
-            )
+            results.append(SkillSearchResult(skill=skill, score=combined, match_reason=reason))
 
         results.sort(key=lambda r: r.score, reverse=True)
         return results[:top_k]
@@ -307,9 +289,9 @@ class EnhancedSkillRegistry:
             "total_skills": len(self.skills),
             "total_bundles": len(self.bundles),
             "categories": dict(categories),
-            "most_used": sorted(
-                self.skills.values(), key=lambda s: s.usage_count, reverse=True
-            )[:5][0].id
+            "most_used": sorted(self.skills.values(), key=lambda s: s.usage_count, reverse=True)[
+                :5
+            ][0].id
             if self.skills
             else None,
         }
@@ -369,10 +351,7 @@ class EnhancedSkillRegistry:
                         v = v.strip()
                         # Handle inline lists: [a, b, c]
                         if v.startswith("[") and v.endswith("]"):
-                            v = [
-                                i.strip().strip('"').strip("'")
-                                for i in v[1:-1].split(",")
-                            ]
+                            v = [i.strip().strip('"').strip("'") for i in v[1:-1].split(",")]
                         else:
                             v = v.strip('"').strip("'")
                         meta[k] = v

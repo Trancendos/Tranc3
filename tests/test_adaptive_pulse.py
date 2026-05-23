@@ -19,6 +19,7 @@ from shared_core.architecture.adaptive_pulse import (
 # Enum tests
 # ---------------------------------------------------------------------------
 
+
 class TestPulseMode:
     def test_all_modes(self):
         assert PulseMode.STEADY.value == "steady"
@@ -30,6 +31,7 @@ class TestPulseMode:
 # ---------------------------------------------------------------------------
 # Dataclass tests
 # ---------------------------------------------------------------------------
+
 
 class TestPulseConfig:
     def test_create_config(self):
@@ -101,6 +103,7 @@ class TestPulseMetrics:
 # ---------------------------------------------------------------------------
 # AdaptivePulseController tests
 # ---------------------------------------------------------------------------
+
 
 class TestAdaptivePulseController:
     def setup_method(self):

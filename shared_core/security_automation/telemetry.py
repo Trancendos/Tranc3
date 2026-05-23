@@ -30,9 +30,11 @@ from shared_core.security_automation.scanner import Severity, Violation
 # Data model
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ScanResult:
     """A single scan result with metadata."""
+
     timestamp: str
     commit: str
     branch: str
@@ -96,6 +98,7 @@ class QualityGate:
     All thresholds are maximum allowed counts. A scan passes the gate
     if all counts are at or below the configured thresholds.
     """
+
     max_critical: int = 0
     max_high: int = 0
     max_medium: int = 50
@@ -107,25 +110,15 @@ class QualityGate:
         failures = []
 
         if result.critical > self.max_critical:
-            failures.append(
-                f"Critical violations: {result.critical} > max {self.max_critical}"
-            )
+            failures.append(f"Critical violations: {result.critical} > max {self.max_critical}")
         if result.high > self.max_high:
-            failures.append(
-                f"High violations: {result.high} > max {self.max_high}"
-            )
+            failures.append(f"High violations: {result.high} > max {self.max_high}")
         if result.medium > self.max_medium:
-            failures.append(
-                f"Medium violations: {result.medium} > max {self.max_medium}"
-            )
+            failures.append(f"Medium violations: {result.medium} > max {self.max_medium}")
         if result.low > self.max_low:
-            failures.append(
-                f"Low violations: {result.low} > max {self.max_low}"
-            )
+            failures.append(f"Low violations: {result.low} > max {self.max_low}")
         if result.total_violations > self.max_total:
-            failures.append(
-                f"Total violations: {result.total_violations} > max {self.max_total}"
-            )
+            failures.append(f"Total violations: {result.total_violations} > max {self.max_total}")
 
         return GateResult(
             passed=len(failures) == 0,
@@ -137,6 +130,7 @@ class QualityGate:
 @dataclass
 class GateResult:
     """Result of quality gate evaluation."""
+
     passed: bool
     failures: List[str]
     gate_config: Dict[str, Any]
@@ -146,9 +140,11 @@ class GateResult:
 # Trend analysis
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ScanDiff:
     """Difference between two scans — new, fixed, and persistent violations."""
+
     new_violations: List[Dict[str, Any]]
     fixed_violations: List[Dict[str, Any]]
     persistent_violations: List[Dict[str, Any]]
@@ -166,6 +162,7 @@ class ScanDiff:
 @dataclass
 class TrendPoint:
     """A single data point in a trend series."""
+
     timestamp: str
     total: int
     critical: int
@@ -178,6 +175,7 @@ class TrendPoint:
 # ---------------------------------------------------------------------------
 # SecurityTelemetry — main class
 # ---------------------------------------------------------------------------
+
 
 class SecurityTelemetry:
     """Security telemetry collector and analyzer.
@@ -287,7 +285,8 @@ class SecurityTelemetry:
             all_results = self.load_all()
             if len(all_results) < 2:
                 return ScanDiff(
-                    new_violations=[], fixed_violations=[],
+                    new_violations=[],
+                    fixed_violations=[],
                     persistent_violations=[],
                 )
             before = before or all_results[-2]
@@ -380,17 +379,13 @@ class SecurityTelemetry:
 
         if result.by_category:
             lines.append("By Category:")
-            for cat, count in sorted(
-                result.by_category.items(), key=lambda x: -x[1]
-            ):
+            for cat, count in sorted(result.by_category.items(), key=lambda x: -x[1]):
                 lines.append(f"  {cat:12s} : {count}")
             lines.append("-" * 70)
 
         if result.by_file:
             lines.append("By File (top 10):")
-            sorted_files = sorted(
-                result.by_file.items(), key=lambda x: -x[1]
-            )[:10]
+            sorted_files = sorted(result.by_file.items(), key=lambda x: -x[1])[:10]
             for filepath, count in sorted_files:
                 lines.append(f"  {count:3d} : {filepath}")
             lines.append("-" * 70)
@@ -467,9 +462,7 @@ class SecurityTelemetry:
             lines.append("")
             lines.append("| Category | Count |")
             lines.append("|----------|-------|")
-            for cat, count in sorted(
-                result.by_category.items(), key=lambda x: -x[1]
-            ):
+            for cat, count in sorted(result.by_category.items(), key=lambda x: -x[1]):
                 lines.append(f"| {cat} | {count} |")
             lines.append("")
 
@@ -479,9 +472,7 @@ class SecurityTelemetry:
             lines.append("")
             lines.append("| File | Violations |")
             lines.append("|------|-----------|")
-            sorted_files = sorted(
-                result.by_file.items(), key=lambda x: -x[1]
-            )[:10]
+            sorted_files = sorted(result.by_file.items(), key=lambda x: -x[1])[:10]
             for filepath, count in sorted_files:
                 lines.append(f"| `{filepath}` | {count} |")
             lines.append("")
@@ -498,7 +489,7 @@ class SecurityTelemetry:
                 msg = v.get("message", "")
                 suggestion = v.get("suggestion", "")
                 lines.append(
-                    f"### {i+1}. [{cat}] {sev.value.upper() if hasattr(sev, 'value') else str(sev).upper()} — `{fpath}:{line}`"
+                    f"### {i + 1}. [{cat}] {sev.value.upper() if hasattr(sev, 'value') else str(sev).upper()} — `{fpath}:{line}`"
                 )
                 lines.append("")
                 if msg:
@@ -508,9 +499,7 @@ class SecurityTelemetry:
                 lines.append("")
 
             if len(result.violations) > 50:
-                lines.append(
-                    f"_...and {len(result.violations) - 50} more violations_"
-                )
+                lines.append(f"_...and {len(result.violations) - 50} more violations_")
                 lines.append("")
 
         return "\n".join(lines)
@@ -547,6 +536,7 @@ class SecurityTelemetry:
         """Get the current git commit SHA."""
         try:
             import subprocess
+
             result = subprocess.run(
                 ["git", "rev-parse", "HEAD"],
                 capture_output=True,
@@ -564,6 +554,7 @@ class SecurityTelemetry:
         """Get the current git branch name."""
         try:
             import subprocess
+
             result = subprocess.run(
                 ["git", "rev-parse", "--abbrev-ref", "HEAD"],
                 capture_output=True,

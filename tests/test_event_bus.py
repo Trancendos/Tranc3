@@ -85,7 +85,9 @@ class TestEventBusPatternMatching:
     async def test_exact_match(self):
         bus = EventBus()
         sub = EventSubscription(
-            id="sub1", subscriber="w1", event_pattern="user.created",
+            id="sub1",
+            subscriber="w1",
+            event_pattern="user.created",
         )
         bus.subscribe(sub)
 
@@ -99,7 +101,9 @@ class TestEventBusPatternMatching:
     async def test_wildcard_match(self):
         bus = EventBus()
         sub = EventSubscription(
-            id="sub1", subscriber="w1", event_pattern="user.*",
+            id="sub1",
+            subscriber="w1",
+            event_pattern="user.*",
         )
         bus.subscribe(sub)
 
@@ -116,7 +120,9 @@ class TestEventBusPatternMatching:
     async def test_double_wildcard_matches_all(self):
         bus = EventBus()
         sub = EventSubscription(
-            id="sub1", subscriber="w1", event_pattern="**",
+            id="sub1",
+            subscriber="w1",
+            event_pattern="**",
         )
         bus.subscribe(sub)
 
@@ -130,7 +136,9 @@ class TestEventBusPatternMatching:
     async def test_glob_pattern(self):
         bus = EventBus()
         sub = EventSubscription(
-            id="sub1", subscriber="w1", event_pattern="order.*.completed",
+            id="sub1",
+            subscriber="w1",
+            event_pattern="order.*.completed",
         )
         bus.subscribe(sub)
 
@@ -155,7 +163,10 @@ class TestEventBusPatternMatching:
     async def test_disabled_subscription_not_matched(self):
         bus = EventBus()
         sub = EventSubscription(
-            id="sub1", subscriber="w1", event_pattern="user.*", enabled=False,
+            id="sub1",
+            subscriber="w1",
+            event_pattern="user.*",
+            enabled=False,
         )
         bus.subscribe(sub)
 

@@ -32,6 +32,7 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 logger = logging.getLogger(WORKER_NAME)
 
+
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
@@ -118,8 +119,10 @@ class IdentitiesDatabase:
     def delete(self, id_field: str, id_value: str, soft: bool = True) -> bool:
         if soft:
             with self._cursor() as cur:
-                cur.execute(f"UPDATE identities SET verified=0, updated_at=? WHERE {id_field}=?",
-                            (datetime.now(timezone.utc).isoformat(), id_value))
+                cur.execute(
+                    f"UPDATE identities SET verified=0, updated_at=? WHERE {id_field}=?",
+                    (datetime.now(timezone.utc).isoformat(), id_value),
+                )
                 return cur.rowcount > 0
         else:
             with self._cursor() as cur:
@@ -169,6 +172,7 @@ async def health():
 # The database class above provides create(), get(), list(), update(), delete() methods
 # Implement domain-specific endpoints based on business requirements
 
+
 @app.get("/")
 async def list_all(limit: int = 50, offset: int = 0):
     """List all identities."""
@@ -211,4 +215,5 @@ async def delete_by_id(identity_id: str):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

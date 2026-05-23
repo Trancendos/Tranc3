@@ -24,17 +24,17 @@ logger = logging.getLogger(__name__)
 
 
 class SceneType(str, Enum):
-    MEDITATION   = "meditation"
-    BREATHING    = "breathing"
-    NATURE       = "nature"
-    FOCUS        = "focus"
-    SLEEP        = "sleep"
-    CRISIS_CALM  = "crisis_calm"  # Reserved for I-Mind CRITICAL escalation
+    MEDITATION = "meditation"
+    BREATHING = "breathing"
+    NATURE = "nature"
+    FOCUS = "focus"
+    SLEEP = "sleep"
+    CRISIS_CALM = "crisis_calm"  # Reserved for I-Mind CRITICAL escalation
 
 
 class SceneStatus(str, Enum):
-    AVAILABLE  = "available"
-    ACTIVE     = "active"      # User currently in session
+    AVAILABLE = "available"
+    ACTIVE = "active"  # User currently in session
     DEPRECATED = "deprecated"
 
 
@@ -46,7 +46,7 @@ class WellbeingScene:
     description: str = ""
     duration_seconds: int = 300
     status: SceneStatus = SceneStatus.AVAILABLE
-    aframe_url: Optional[str] = None    # Path to A-Frame scene HTML
+    aframe_url: Optional[str] = None  # Path to A-Frame scene HTML
     thumbnail_url: Optional[str] = None
     tags: List[str] = field(default_factory=list)
     created_at: float = field(default_factory=time.time)
@@ -95,12 +95,48 @@ class VRSession:
 
 
 _DEFAULT_SCENES = [
-    ("Forest Sanctuary", SceneType.NATURE, "A peaceful forest glade with birdsong and dappled light.", 600, ["nature", "calming"]),
-    ("Ocean Horizon", SceneType.NATURE, "Gently rolling waves at sunrise — feel the rhythm.", 600, ["nature", "sleep"]),
-    ("Breathing Space", SceneType.BREATHING, "4-7-8 breathing guide in a soft geometric space.", 300, ["breathing", "anxiety"]),
-    ("Mountain Stillness", SceneType.MEDITATION, "High-altitude stillness — clear sky, no distraction.", 900, ["meditation", "focus"]),
-    ("Focus Chamber", SceneType.FOCUS, "Minimal environment with Pomodoro timer integration.", 1500, ["focus", "productivity"]),
-    ("Crisis Calm", SceneType.CRISIS_CALM, "A safe, warm space — gentle light, supportive presence.", 300, ["crisis", "safety"]),
+    (
+        "Forest Sanctuary",
+        SceneType.NATURE,
+        "A peaceful forest glade with birdsong and dappled light.",
+        600,
+        ["nature", "calming"],
+    ),
+    (
+        "Ocean Horizon",
+        SceneType.NATURE,
+        "Gently rolling waves at sunrise — feel the rhythm.",
+        600,
+        ["nature", "sleep"],
+    ),
+    (
+        "Breathing Space",
+        SceneType.BREATHING,
+        "4-7-8 breathing guide in a soft geometric space.",
+        300,
+        ["breathing", "anxiety"],
+    ),
+    (
+        "Mountain Stillness",
+        SceneType.MEDITATION,
+        "High-altitude stillness — clear sky, no distraction.",
+        900,
+        ["meditation", "focus"],
+    ),
+    (
+        "Focus Chamber",
+        SceneType.FOCUS,
+        "Minimal environment with Pomodoro timer integration.",
+        1500,
+        ["focus", "productivity"],
+    ),
+    (
+        "Crisis Calm",
+        SceneType.CRISIS_CALM,
+        "A safe, warm space — gentle light, supportive presence.",
+        300,
+        ["crisis", "safety"],
+    ),
 ]
 
 
@@ -114,8 +150,9 @@ class VRAR3D:
 
     def _seed_scenes(self) -> None:
         for name, stype, desc, dur, tags in _DEFAULT_SCENES:
-            scene = WellbeingScene(name=name, scene_type=stype, description=desc,
-                                   duration_seconds=dur, tags=tags)
+            scene = WellbeingScene(
+                name=name, scene_type=stype, description=desc, duration_seconds=dur, tags=tags
+            )
             self._scenes[scene.id] = scene
 
     def list_scenes(self, scene_type: Optional[SceneType] = None) -> List[WellbeingScene]:
@@ -127,7 +164,9 @@ class VRAR3D:
     def get_scene(self, scene_id: str) -> Optional[WellbeingScene]:
         return self._scenes.get(scene_id)
 
-    def start_session(self, user_id: str, scene_id: str, mood_before: Optional[int] = None) -> Optional[VRSession]:
+    def start_session(
+        self, user_id: str, scene_id: str, mood_before: Optional[int] = None
+    ) -> Optional[VRSession]:
         if scene_id not in self._scenes:
             return None
         session = VRSession(user_id=user_id, scene_id=scene_id, mood_before=mood_before)
@@ -142,14 +181,19 @@ class VRAR3D:
         session.ended_at = time.time()
         session.completed = True
         session.mood_after = mood_after
-        self._emit("vrar3d.session.completed", {
-            "user_id": session.user_id,
-            "scene_id": session.scene_id,
-            "duration_seconds": round(session.duration_seconds, 1),
-        })
+        self._emit(
+            "vrar3d.session.completed",
+            {
+                "user_id": session.user_id,
+                "scene_id": session.scene_id,
+                "duration_seconds": round(session.duration_seconds, 1),
+            },
+        )
         return session
 
-    def recommend_scene(self, mood: Optional[int] = None, sensitivity_level: str = "none") -> Optional[WellbeingScene]:
+    def recommend_scene(
+        self, mood: Optional[int] = None, sensitivity_level: str = "none"
+    ) -> Optional[WellbeingScene]:
         """Recommend a scene based on mood or I-Mind sensitivity level."""
         if sensitivity_level == "critical":
             for s in self._scenes.values():
@@ -175,11 +219,12 @@ class VRAR3D:
     def _emit(self, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
             from src.observability.observatory import EventCategory, observe
-            observe(event_type, category=EventCategory.DATA, service="vrar3d",
-                    metadata=metadata or {})
+
+            observe(
+                event_type, category=EventCategory.DATA, service="vrar3d", metadata=metadata or {}
+            )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
 
 _vrar3d: Optional[VRAR3D] = None

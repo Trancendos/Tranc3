@@ -74,9 +74,7 @@ class ModelEnsemble:
         torch_task = loop.run_in_executor(None, self._torch_predict, inputs)
         tf_task = loop.run_in_executor(None, self._tf_predict, inputs)
 
-        torch_out, tf_out = await asyncio.gather(
-            torch_task, tf_task, return_exceptions=True
-        )
+        torch_out, tf_out = await asyncio.gather(torch_task, tf_task, return_exceptions=True)
 
         w_torch, w_tf = self._weights
         torch_ok = isinstance(torch_out, np.ndarray)
@@ -267,16 +265,12 @@ class HybridInferenceEngine:
         if model_hint in ("torch", "tf"):
             preferred = model_hint
         else:
-            preferred = _TASK_ROUTING.get(
-                task, "torch" if self.config.prefer_torch else "tf"
-            )
+            preferred = _TASK_ROUTING.get(task, "torch" if self.config.prefer_torch else "tf")
 
         output, backend = await self._route(task, inputs, preferred)
         return {"output": output, "backend": backend, "task": task}
 
-    async def _route(
-        self, task: str, inputs: Dict, preferred: str
-    ) -> Tuple[np.ndarray, str]:
+    async def _route(self, task: str, inputs: Dict, preferred: str) -> Tuple[np.ndarray, str]:
         """Internal routing with fallback logic.
 
         Args:
@@ -300,9 +294,7 @@ class HybridInferenceEngine:
                 out = await _try_torch()
                 return out, "torch"
             except Exception as exc:
-                logger.warning(
-                    "Torch dispatch failed (%s), falling back to TF: %s", task, exc
-                )
+                logger.warning("Torch dispatch failed (%s), falling back to TF: %s", task, exc)
                 if self.config.tf_fallback:
                     try:
                         out = await _try_tf()
@@ -314,9 +306,7 @@ class HybridInferenceEngine:
                 out = await _try_tf()
                 return out, "tf"
             except Exception as exc:
-                logger.warning(
-                    "TF dispatch failed (%s), falling back to Torch: %s", task, exc
-                )
+                logger.warning("TF dispatch failed (%s), falling back to Torch: %s", task, exc)
                 if self.config.prefer_torch or self.config.tf_fallback:
                     try:
                         out = await _try_torch()
@@ -348,9 +338,7 @@ class HybridInferenceEngine:
 
         data = torch.from_numpy(np.array(arr, dtype=np.float32)).to(self._device)
 
-        model = self._torch_models.get(task) or next(
-            iter(self._torch_models.values()), None
-        )
+        model = self._torch_models.get(task) or next(iter(self._torch_models.values()), None)
 
         if model is not None:
             with torch.no_grad():
@@ -434,9 +422,7 @@ class HybridInferenceEngine:
         for i, res in enumerate(results):
             if isinstance(res, Exception):
                 logger.error("batch_infer task %d failed: %s", i, res)
-                output.append(
-                    {"output": None, "error": str(res), "task": tasks[i].get("task")}
-                )
+                output.append({"output": None, "error": str(res), "task": tasks[i].get("task")})
             else:
                 output.append(res)
 

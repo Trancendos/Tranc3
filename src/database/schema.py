@@ -81,9 +81,7 @@ class User(Base):
     conversations = relationship(
         "Conversation", back_populates="user", cascade="all, delete-orphan"
     )
-    api_keys = relationship(
-        "APIKey", back_populates="user", cascade="all, delete-orphan"
-    )
+    api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
     feedback = relationship("Feedback", back_populates="user")
 
     __table_args__ = (
@@ -110,9 +108,7 @@ class Conversation(Base):
 
     # Relationships
     user = relationship("User", back_populates="conversations")
-    messages = relationship(
-        "Message", back_populates="conversation", cascade="all, delete-orphan"
-    )
+    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_conversations_user_id", "user_id"),
@@ -241,9 +237,7 @@ class SystemMetric(Base):
     labels = Column(JSON, default={})
     recorded_at = Column(DateTime, default=datetime.utcnow)
 
-    __table_args__ = (
-        Index("ix_system_metrics_name_time", "metric_name", "recorded_at"),
-    )
+    __table_args__ = (Index("ix_system_metrics_name_time", "metric_name", "recorded_at"),)
 
 
 # ============================================================

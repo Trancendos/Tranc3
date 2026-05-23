@@ -216,7 +216,9 @@ async def lifespan(app: FastAPI):
         db_user_manager = DBUserManager(db_manager.get_session)
         logger.info("Database connected")
     except Exception as e:
-        logger.warning("Database unavailable: %s — in-memory fallback", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+        logger.warning(
+            "Database unavailable: %s — in-memory fallback", sanitize_for_log(e)
+        )  # codeql[py/cleartext-logging]
         db_user_manager = DBUserManager(None)
 
     # Redis
@@ -244,7 +246,9 @@ async def lifespan(app: FastAPI):
         personality_matrix = EnhancedPersonalityMatrix(cfg)
         logger.info("Personality matrix ready")
     except Exception as e:
-        logger.error("Personality matrix failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+        logger.error(
+            "Personality matrix failed: %s", sanitize_for_log(e)
+        )  # codeql[py/cleartext-logging]
 
     # Quantum core
     if QuantumNeuralCore is not None:
@@ -252,7 +256,9 @@ async def lifespan(app: FastAPI):
             quantum_core = QuantumNeuralCore({"num_qubits": 8})
             logger.info("Quantum core ready")
         except Exception as e:
-            logger.warning("Quantum core unavailable: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Quantum core unavailable: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
 
     # Consciousness model
     try:
@@ -267,14 +273,18 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Consciousness model ready")
     except Exception as e:
-        logger.warning("Consciousness model unavailable: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+        logger.warning(
+            "Consciousness model unavailable: %s", sanitize_for_log(e)
+        )  # codeql[py/cleartext-logging]
 
     # Neuromorphic processor
     try:
         neuromorphic = NeuromorphicProcessor(cfg)
         logger.info("Neuromorphic processor ready")
     except Exception as e:
-        logger.warning("Neuromorphic processor unavailable: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+        logger.warning(
+            "Neuromorphic processor unavailable: %s", sanitize_for_log(e)
+        )  # codeql[py/cleartext-logging]
 
     # Evolution engine
     try:
@@ -288,7 +298,9 @@ async def lifespan(app: FastAPI):
         evolution_engine.load_genome_from_redis()
         logger.info("Evolution engine ready")
     except Exception as e:
-        logger.warning("Evolution engine unavailable: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+        logger.warning(
+            "Evolution engine unavailable: %s", sanitize_for_log(e)
+        )  # codeql[py/cleartext-logging]
 
     # Model
     try:
@@ -300,7 +312,9 @@ async def lifespan(app: FastAPI):
             logger.warning("No model weights — echo mode active")
         model.eval()
     except Exception as e:
-        logger.warning("Model init failed: %s — echo mode", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+        logger.warning(
+            "Model init failed: %s — echo mode", sanitize_for_log(e)
+        )  # codeql[py/cleartext-logging]
         model = None
 
     logger.info("TRANC3 API ready ✓")
@@ -562,7 +576,6 @@ async def refresh_token(current_user: dict = Depends(get_current_user)):
 @app.get("/health", tags=["system"])
 async def health():
 
-
     components: dict = {
         "api": "healthy",
         "model": "healthy" if model else "echo_mode",
@@ -585,8 +598,6 @@ async def health():
 
     # ── Live Supabase probe ────────────────────────────────────────────────
     try:
-
-
         import httpx
 
         sb_url = os.environ.get("SUPABASE_URL", "")
@@ -751,7 +762,9 @@ async def chat(
                 quantum_core.quantum_attention(torch.randn(1, 8, 64))
                 quantum_used = True
             except Exception as e:
-                logger.warning("Quantum attention skipped: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+                logger.warning(
+                    "Quantum attention skipped: %s", sanitize_for_log(e)
+                )  # codeql[py/cleartext-logging]
 
         # Consciousness Φ
         phi_score = None
@@ -760,7 +773,9 @@ async def chat(
                 phi_score = consciousness_model.calculate_phi(torch.randn(64))
                 record_phi(phi_score)
             except Exception as e:
-                logger.warning("Consciousness Φ skipped: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+                logger.warning(
+                    "Consciousness Φ skipped: %s", sanitize_for_log(e)
+                )  # codeql[py/cleartext-logging]
 
         # Generate
         if model and encoded is not None:
@@ -843,7 +858,9 @@ async def chat(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Chat error [%s]: %s", sanitize_for_log(request_id), sanitize_for_log(e), exc_info=True)  # codeql[py/cleartext-logging]
+        logger.error(
+            "Chat error [%s]: %s", sanitize_for_log(request_id), sanitize_for_log(e), exc_info=True
+        )  # codeql[py/cleartext-logging]
         record_request("/chat", "POST", 500, tier, time.time() - start)
         raise HTTPException(status_code=500, detail="Internal server error")
     return None
@@ -891,7 +908,9 @@ async def feedback(
                 {"quality_score": rating / 5.0, "user_satisfaction": rating / 5.0}
             )
             best = evolution_engine.evolve(num_generations=1)
-            logger.info("Evolution: gen=%d, fitness=%.4f", evolution_engine.generation, best.fitness)
+            logger.info(
+                "Evolution: gen=%d, fitness=%.4f", evolution_engine.generation, best.fitness
+            )
 
     return {"message": "Feedback recorded", "impact": "evolution_queued"}
 
@@ -950,12 +969,16 @@ async def stripe_webhook(request: Request):
         _stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
         event = _stripe.Webhook.construct_event(payload, sig, secret)
     except Exception as e:
-        logger.warning("Stripe webhook invalid: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+        logger.warning(
+            "Stripe webhook invalid: %s", sanitize_for_log(e)
+        )  # codeql[py/cleartext-logging]
         raise HTTPException(status_code=400, detail="Invalid webhook")
 
     etype = event.get("type", "")
     obj = event.get("data", {}).get("object", {})
-    logger.info("Stripe event: %s id=%s", sanitize_for_log(etype), sanitize_for_log(obj.get("id")))  # codeql[py/cleartext-logging]
+    logger.info(
+        "Stripe event: %s id=%s", sanitize_for_log(etype), sanitize_for_log(obj.get("id"))
+    )  # codeql[py/cleartext-logging]
     return {"received": True}
 
 

@@ -80,7 +80,9 @@ def _check_database_url() -> None:
 def _check_redis_url() -> None:
     if not os.getenv("REDIS_URL"):
         if _IS_PROD:
-            raise RuntimeError("REDIS_URL is required in production (used for rate limiting and caching).")
+            raise RuntimeError(
+                "REDIS_URL is required in production (used for rate limiting and caching)."
+            )
         logger.warning(
             "REDIS_URL not set — in-memory rate limiting active. "
             "This does NOT persist across restarts or scale across replicas."
@@ -99,21 +101,20 @@ def _check_cors_origins() -> None:
 def _check_api_key() -> None:
     require_auth = os.getenv("REQUIRE_AUTH", "false").lower() == "true"
     if _IS_PROD and require_auth and not os.getenv("TRANC3_API_KEY"):
-        raise RuntimeError(
-            "TRANC3_API_KEY must be set in production when REQUIRE_AUTH=true."
-        )
+        raise RuntimeError("TRANC3_API_KEY must be set in production when REQUIRE_AUTH=true.")
     if require_auth and not os.getenv("TRANC3_API_KEY") and not os.getenv("JWT_SECRET"):
-        logger.warning("REQUIRE_AUTH=true but neither TRANC3_API_KEY nor JWT_SECRET is set — all requests will fail auth.")
+        logger.warning(
+            "REQUIRE_AUTH=true but neither TRANC3_API_KEY nor JWT_SECRET is set — all requests will fail auth."
+        )
 
 
 def _warn_optional() -> None:
     optional = {
-        "TRANC3_MODEL_PATH":     "Custom model path not set — using default ./models/tranc3-v1/tranc3-final.pt",
+        "TRANC3_MODEL_PATH": "Custom model path not set — using default ./models/tranc3-v1/tranc3-final.pt",
         "TRANC3_TOKENIZER_PATH": "Custom tokenizer path not set — using default ./models/tokenizer",
-        "PINECONE_API_KEY":      "Pinecone vector search will be unavailable; falling back to local FAISS.",
-        "STRIPE_SECRET_KEY":     "Payments/billing endpoints will be unavailable.",  # nosec B105 — false positive: not a password
-
-        "LANGFUSE_PUBLIC_KEY":   "LLM observability via Langfuse will be inactive.",
+        "PINECONE_API_KEY": "Pinecone vector search will be unavailable; falling back to local FAISS.",
+        "STRIPE_SECRET_KEY": "Payments/billing endpoints will be unavailable.",  # nosec B105 — false positive: not a password
+        "LANGFUSE_PUBLIC_KEY": "LLM observability via Langfuse will be inactive.",
         "OTEL_EXPORTER_OTLP_ENDPOINT": "OpenTelemetry tracing will be inactive.",
     }
     for key, msg in optional.items():

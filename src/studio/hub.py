@@ -175,7 +175,6 @@ class TheStudio:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
 
-
 _studio: Optional[TheStudio] = None
 
 

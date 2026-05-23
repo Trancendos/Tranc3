@@ -39,7 +39,9 @@ def validate_file_header(content: str, path: str) -> bool:
     """Check that a file contains the required FID header."""
     if REQUIRED_HEADER_PATTERN.search(content):
         return True
-    logger.warning("IP_PROTECTION: Missing FID header in %s", sanitize_for_log(path))  # codeql[py/cleartext-logging]
+    logger.warning(
+        "IP_PROTECTION: Missing FID header in %s", sanitize_for_log(path)
+    )  # codeql[py/cleartext-logging]
     return False
 
 
@@ -100,12 +102,8 @@ class AbuseDetector:
     def __init__(self):
         self._records: Dict[str, AbuseRecord] = {}
         self._blocked: Set[str] = set()
-        self._compiled_injection = [
-            re.compile(p, re.I) for p in self.INJECTION_PATTERNS
-        ]
-        self._compiled_extraction = [
-            re.compile(p, re.I) for p in self.EXTRACTION_PATTERNS
-        ]
+        self._compiled_injection = [re.compile(p, re.I) for p in self.INJECTION_PATTERNS]
+        self._compiled_extraction = [re.compile(p, re.I) for p in self.EXTRACTION_PATTERNS]
 
     def check_ip(self, ip: str) -> Dict:
         """Check if an IP is blocked or rate-abusing."""
@@ -146,15 +144,11 @@ class AbuseDetector:
 
         for pattern in self._compiled_injection:
             if pattern.search(message):
-                violations.append(
-                    {"type": "prompt_injection", "pattern": pattern.pattern[:40]}
-                )
+                violations.append({"type": "prompt_injection", "pattern": pattern.pattern[:40]})
 
         for pattern in self._compiled_extraction:
             if pattern.search(message):
-                violations.append(
-                    {"type": "model_extraction", "pattern": pattern.pattern[:40]}
-                )
+                violations.append({"type": "model_extraction", "pattern": pattern.pattern[:40]})
 
         if violations:
             logger.warning(

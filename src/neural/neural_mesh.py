@@ -40,8 +40,10 @@ logger = logging.getLogger(__name__)
 
 # ── Data structures ────────────────────────────────────────────────
 
+
 class NodeState(str, Enum):
     """Lifecycle states for a mesh node."""
+
     INITIALIZING = "initializing"
     ACTIVE = "active"
     DRAINING = "draining"
@@ -69,6 +71,7 @@ class MeshNode:
     error_count : int
         Number of errors encountered.
     """
+
     node_id: str
     channels: Dict[str, asyncio.Queue] = field(default_factory=dict)
     state: NodeState = NodeState.INITIALIZING
@@ -93,6 +96,7 @@ class MeshEdge:
     signal deliveries strengthen the edge, while failures or timeouts
     weaken it.
     """
+
     source: str
     target: str
     weight: float = 1.0
@@ -119,6 +123,7 @@ class MeshEdge:
 @dataclass
 class Signal:
     """A message propagated through the neural mesh."""
+
     signal_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     source: str = ""
     channel: str = "default"
@@ -128,6 +133,7 @@ class Signal:
 
 
 # ── Neural Mesh ────────────────────────────────────────────────────
+
 
 class NeuralMesh:
     """Distributed neural computation mesh.
@@ -197,7 +203,7 @@ class NeuralMesh:
             if node_id in self._nodes:
                 raise ValueError(f"Node '{node_id}' already registered")
             ch_map: Dict[str, asyncio.Queue] = {}
-            for ch in (channels or ["default"]):
+            for ch in channels or ["default"]:
                 ch_map[ch] = asyncio.Queue(maxsize=self._max_channel_size)
             node = MeshNode(
                 node_id=node_id,
@@ -227,8 +233,7 @@ class NeuralMesh:
             node.state = NodeState.OFFLINE
             # Remove edges involving this node
             keys_to_remove = [
-                k for k in self._edges
-                if k.startswith(f"{node_id}->") or k.endswith(f"->{node_id}")
+                k for k in self._edges if k.startswith(f"{node_id}->") or k.endswith(f"->{node_id}")
             ]
             for k in keys_to_remove:
                 del self._edges[k]
@@ -332,6 +337,7 @@ class NeuralMesh:
                 # We put a copy with ttl-1 to avoid mutating the original signal
                 # (which may be forwarded to multiple neighbors in the same call).
                 import dataclasses
+
                 forwarded = dataclasses.replace(signal, ttl=signal.ttl - 1)
                 queue.put_nowait(forwarded)
                 delivered += 1
@@ -346,8 +352,9 @@ class NeuralMesh:
                 edge = self._edges.get(edge_key)
                 if edge:
                     edge.penalize()
-                logger.warning("neural_mesh: back-pressure on %s->%s/%s",
-                               source_id, target_id, channel)
+                logger.warning(
+                    "neural_mesh: back-pressure on %s->%s/%s", source_id, target_id, channel
+                )
 
         # Notify registered handlers
         for handler in self._handlers.get(signal.channel, []):

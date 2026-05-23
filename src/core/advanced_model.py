@@ -23,9 +23,7 @@ class RotaryEmbedding(nn.Module):
         inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2).float() / dim))
         self.register_buffer("inv_freq", inv_freq)
 
-    def forward(
-        self, seq_len: int, device: torch.device
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, seq_len: int, device: torch.device) -> Tuple[torch.Tensor, torch.Tensor]:
         t = torch.arange(seq_len, device=device).type_as(self.inv_freq)
         freqs = torch.einsum("i,j->ij", t, self.inv_freq)
         emb = torch.cat((freqs, freqs), dim=-1)
@@ -307,9 +305,7 @@ class AdvancedTransformerModel(nn.Module):
                 # Top-p (nucleus) filtering
                 if top_p < 1.0:
                     sorted_logits, sorted_idx = torch.sort(logits, descending=True)
-                    cumulative_probs = torch.cumsum(
-                        F.softmax(sorted_logits, dim=-1), dim=-1
-                    )
+                    cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
                     sorted_idx_to_remove = (
                         cumulative_probs - F.softmax(sorted_logits, dim=-1) > top_p
                     )

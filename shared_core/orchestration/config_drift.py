@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class DriftItem:
     """A single detected drift."""
+
     category: str  # "file", "env", "service_param"
     key: str
     old_value: str
@@ -46,6 +47,7 @@ class DriftItem:
 @dataclass
 class DriftReport:
     """Report of configuration drift from baseline."""
+
     drift_count: int = 0
     items: List[DriftItem] = field(default_factory=list)
     checked_at: str = ""
@@ -102,9 +104,7 @@ class ConfigDriftDetector:
             filepath = self._root_dir / config_file
             if filepath.exists():
                 content = filepath.read_text()
-                self._baseline[f"file:{config_file}"] = hashlib.sha256(
-                    content.encode()
-                ).hexdigest()
+                self._baseline[f"file:{config_file}"] = hashlib.sha256(content.encode()).hexdigest()
 
         # Capture environment variables
         for var in self._env_vars:
@@ -138,17 +138,17 @@ class ConfigDriftDetector:
             key = f"file:{config_file}"
             filepath = self._root_dir / config_file
             if filepath.exists():
-                current_hash = hashlib.sha256(
-                    filepath.read_text().encode()
-                ).hexdigest()
+                current_hash = hashlib.sha256(filepath.read_text().encode()).hexdigest()
                 baseline_hash = self._baseline.get(key, "")
                 if current_hash != baseline_hash:
-                    items.append(DriftItem(
-                        category="file",
-                        key=config_file,
-                        old_value=baseline_hash[:16],
-                        new_value=current_hash[:16],
-                    ))
+                    items.append(
+                        DriftItem(
+                            category="file",
+                            key=config_file,
+                            old_value=baseline_hash[:16],
+                            new_value=current_hash[:16],
+                        )
+                    )
 
         # Check environment variable drift
         for var in self._env_vars:
@@ -156,12 +156,14 @@ class ConfigDriftDetector:
             current = os.environ.get(var, "")
             baseline_val = self._baseline.get(key, "")
             if current != baseline_val:
-                items.append(DriftItem(
-                    category="env",
-                    key=var,
-                    old_value=baseline_val,
-                    new_value=current,
-                ))
+                items.append(
+                    DriftItem(
+                        category="env",
+                        key=var,
+                        old_value=baseline_val,
+                        new_value=current,
+                    )
+                )
 
         # Check service parameter drift
         for key, value in self._service_params.items():
@@ -169,12 +171,14 @@ class ConfigDriftDetector:
             current = str(value)
             baseline_val = self._baseline.get(bkey, "")
             if current != baseline_val:
-                items.append(DriftItem(
-                    category="service_param",
-                    key=key,
-                    old_value=baseline_val,
-                    new_value=current,
-                ))
+                items.append(
+                    DriftItem(
+                        category="service_param",
+                        key=key,
+                        old_value=baseline_val,
+                        new_value=current,
+                    )
+                )
 
         return DriftReport(drift_count=len(items), items=items)
 

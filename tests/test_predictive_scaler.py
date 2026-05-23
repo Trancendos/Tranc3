@@ -24,6 +24,7 @@ from src.adaptive.predictive_scaler import (
 # Enum tests
 # ---------------------------------------------------------------------------
 
+
 class TestScalingDirection:
     """Tests for ScalingDirection enum."""
 
@@ -43,8 +44,13 @@ class TestScalingReason:
 
     def test_all_reasons_exist(self):
         expected = [
-            "PREDICTED_DEMAND", "CURRENT_LOAD", "ZERO_COST_LIMIT",
-            "COOLDOWN", "MIN_REACHED", "MAX_REACHED", "INSUFFICIENT_DATA",
+            "PREDICTED_DEMAND",
+            "CURRENT_LOAD",
+            "ZERO_COST_LIMIT",
+            "COOLDOWN",
+            "MIN_REACHED",
+            "MAX_REACHED",
+            "INSUFFICIENT_DATA",
         ]
         for name in expected:
             assert hasattr(ScalingReason, name), f"Missing ScalingReason.{name}"
@@ -57,6 +63,7 @@ class TestScalingReason:
 # ---------------------------------------------------------------------------
 # Dataclass tests
 # ---------------------------------------------------------------------------
+
 
 class TestLoadSample:
     """Tests for LoadSample dataclass."""
@@ -185,6 +192,7 @@ class TestScalingDecision:
 # LoadForecaster tests
 # ---------------------------------------------------------------------------
 
+
 class TestLoadForecaster:
     """Tests for the LoadForecaster."""
 
@@ -236,6 +244,7 @@ class TestLoadForecaster:
 # PredictiveAutoscaler tests
 # ---------------------------------------------------------------------------
 
+
 class TestPredictiveAutoscaler:
     """Tests for the PredictiveAutoscaler."""
 
@@ -264,7 +273,9 @@ class TestPredictiveAutoscaler:
         assert config.free_tier_limit == 3
 
     def test_deregister_resource(self):
-        self.scaler.register_resource(name="temp-service", current_units=1, min_units=1, max_units=10)
+        self.scaler.register_resource(
+            name="temp-service", current_units=1, min_units=1, max_units=10
+        )
         self.scaler.deregister_resource("temp-service")
         # After deregister, should not appear in all_status
         status = self.scaler.get_all_status()
@@ -333,7 +344,9 @@ class TestPredictiveAutoscaler:
         # Should not raise
 
     def test_get_forecast(self):
-        self.scaler.register_resource(name="forecast-svc", current_units=1, min_units=1, max_units=10)
+        self.scaler.register_resource(
+            name="forecast-svc", current_units=1, min_units=1, max_units=10
+        )
         for i in range(10):
             self.scaler.record_load("forecast-svc", 0.5 + i * 0.01)
         forecast = self.scaler.get_forecast("forecast-svc")

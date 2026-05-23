@@ -37,6 +37,7 @@ logger = logging.getLogger(WORKER_NAME)
 # Database
 # ---------------------------------------------------------------------------
 
+
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -98,6 +99,7 @@ def _rebuild_fts(conn: sqlite3.Connection, index_name: str) -> None:
 # Models
 # ---------------------------------------------------------------------------
 
+
 class IndexCreate(BaseModel):
     name: str
     description: Optional[str] = None
@@ -126,6 +128,7 @@ class SearchIn(BaseModel):
 # Lifespan
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -139,7 +142,12 @@ async def lifespan(app: FastAPI):
 
 STARTED_AT = datetime.now(timezone.utc)
 
-app = FastAPI(title="search-service", description="SQLite FTS5 full-text search engine (self-hosted)", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="search-service",
+    description="SQLite FTS5 full-text search engine (self-hosted)",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -166,6 +174,7 @@ async def health():
 
 
 # --- Indices ---
+
 
 @app.get("/indices")
 async def list_indices():
@@ -203,6 +212,7 @@ async def delete_index(name: str):
 
 # --- Documents ---
 
+
 @app.put("/indices/{index}/documents/{doc_id}", status_code=200)
 async def index_document(index: str, doc_id: str, doc: DocumentIn):
     _ensure_index(index)
@@ -216,17 +226,13 @@ async def index_document(index: str, doc_id: str, doc: DocumentIn):
                 "UPDATE documents SET title=?, body=?, metadata=?, indexed_at=? WHERE index_name=? AND id=?",
                 (doc.title, doc.body, json.dumps(doc.metadata), now, index, doc_id),
             )
-            conn.execute(
-                "DELETE FROM fts_default WHERE rowid=?", (existing["rowid"],)
-            )
+            conn.execute("DELETE FROM fts_default WHERE rowid=?", (existing["rowid"],))
         else:
             conn.execute(
                 "INSERT INTO documents (id, index_name, title, body, metadata, indexed_at) VALUES (?,?,?,?,?,?)",
                 (doc_id, index, doc.title, doc.body, json.dumps(doc.metadata), now),
             )
-            conn.execute(
-                "UPDATE indices SET doc_count=doc_count+1 WHERE name=?", (index,)
-            )
+            conn.execute("UPDATE indices SET doc_count=doc_count+1 WHERE name=?", (index,))
         row = conn.execute(
             "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
         ).fetchone()
@@ -290,6 +296,7 @@ async def delete_document(index: str, doc_id: str):
 
 # --- Search ---
 
+
 @app.get("/search")
 async def search(
     q: str,
@@ -338,4 +345,5 @@ async def search_post(req: SearchIn):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

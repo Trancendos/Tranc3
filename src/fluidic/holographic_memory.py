@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MemoryNode:
     """A node in the holographic memory tree"""
+
     hash: str
     data: Optional[Dict[str, Any]] = None
     left: Optional["MemoryNode"] = None
@@ -56,10 +57,12 @@ class HolographicMemory:
         self._rebuild_tree()
 
         if len(self._leaves) > self._max_leaves:
-            self._leaves = self._leaves[-self._max_leaves:]
+            self._leaves = self._leaves[-self._max_leaves :]
             self._rebuild_tree()
 
-        logger.debug("Holographic memory append: %s...", sanitize_for_log(event_hash[:12]))  # codeql[py/cleartext-logging]
+        logger.debug(
+            "Holographic memory append: %s...", sanitize_for_log(event_hash[:12])
+        )  # codeql[py/cleartext-logging]
         return event_hash
 
     def _rebuild_tree(self) -> None:

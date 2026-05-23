@@ -61,6 +61,7 @@ def _get_neural_mesh():
             from src.neural.neural_mesh import (
                 NeuralMesh,  # noqa: F401  # intentional top-level import
             )
+
             _neural_mesh = NeuralMesh()
         except Exception as exc:
             logger.warning("NeuralMesh unavailable: %s", exc)
@@ -74,6 +75,7 @@ def _get_collective_memory():
             from src.neural.collective_memory import (
                 CollectiveMemory,  # noqa: F401  # intentional top-level import
             )
+
             _collective_memory = CollectiveMemory()
         except Exception as exc:
             logger.warning("CollectiveMemory unavailable: %s", exc)
@@ -87,6 +89,7 @@ def _get_meta_learner():
             from src.neural.meta_learner import (
                 MetaLearner,  # noqa: F401  # intentional top-level import
             )
+
             _meta_learner = MetaLearner()
         except Exception as exc:
             logger.warning("MetaLearner unavailable: %s", exc)
@@ -100,6 +103,7 @@ def _get_attention_router():
             from src.neural.attention_router import (
                 AttentionRouter,  # noqa: F401  # intentional top-level import
             )
+
             _attention_router = AttentionRouter()
         except Exception as exc:
             logger.warning("AttentionRouter unavailable: %s", exc)
@@ -113,6 +117,7 @@ def _get_causal_reasoner():
             from src.intelligence.causal_reasoner import (
                 CausalReasoner,  # noqa: F401  # intentional top-level import
             )
+
             _causal_reasoner = CausalReasoner()
         except Exception as exc:
             logger.warning("CausalReasoner unavailable: %s", exc)
@@ -126,6 +131,7 @@ def _get_knowledge_graph():
             from src.intelligence.semantic_knowledge import (
                 SemanticKnowledgeGraph,  # noqa: F401  # intentional top-level import
             )
+
             _knowledge_graph = SemanticKnowledgeGraph()
         except Exception as exc:
             logger.warning("SemanticKnowledgeGraph unavailable: %s", exc)
@@ -135,6 +141,7 @@ def _get_knowledge_graph():
 # ---------------------------------------------------------------------------
 # Helper: error response
 # ---------------------------------------------------------------------------
+
 
 def _err(msg: str) -> Dict[str, Any]:
     return {"error": msg, "ok": False}
@@ -147,6 +154,7 @@ def _ok(data: Dict[str, Any]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Neural Mesh handlers
 # ---------------------------------------------------------------------------
+
 
 async def _handle_neural_mesh_emit(params: Dict[str, Any]) -> Dict[str, Any]:
     """Emit a named signal from a source node through the neural mesh.
@@ -169,6 +177,7 @@ async def _handle_neural_mesh_emit(params: Dict[str, Any]) -> Dict[str, Any]:
             MeshNode,
             Signal,
         )
+
         # Auto-register source node if absent
         if source_id not in mesh._nodes:
             node = MeshNode(id=source_id, service_name="spark", host="internal", port=0)
@@ -197,12 +206,14 @@ async def _handle_neural_mesh_topology(params: Dict[str, Any]) -> Dict[str, Any]
     try:
         snapshot = mesh.topology_snapshot()
         partitions = mesh.find_partitions()
-        return _ok({
-            "nodes": snapshot.get("nodes", []),
-            "edges": snapshot.get("edges", []),
-            "partition_count": len(partitions),
-            "partitions": [list(p) for p in partitions],
-        })
+        return _ok(
+            {
+                "nodes": snapshot.get("nodes", []),
+                "edges": snapshot.get("edges", []),
+                "partition_count": len(partitions),
+                "partitions": [list(p) for p in partitions],
+            }
+        )
     except Exception as exc:
         logger.exception("neural_mesh_topology error")
         return _err(safe_error_detail(exc, 500))
@@ -211,6 +222,7 @@ async def _handle_neural_mesh_topology(params: Dict[str, Any]) -> Dict[str, Any]
 # ---------------------------------------------------------------------------
 # Collective Memory handlers
 # ---------------------------------------------------------------------------
+
 
 async def _handle_collective_memory_store(params: Dict[str, Any]) -> Dict[str, Any]:
     """Store a value in CollectiveMemory.
@@ -231,6 +243,7 @@ async def _handle_collective_memory_store(params: Dict[str, Any]) -> Dict[str, A
         from src.neural.collective_memory import (
             MemoryPriority,  # noqa: F401  # intentional top-level import
         )
+
         key = params.get("key")
         if not key:
             return _err("'key' is required")
@@ -239,7 +252,11 @@ async def _handle_collective_memory_store(params: Dict[str, Any]) -> Dict[str, A
         tags = set(params.get("tags", []))
         ttl = float(params.get("ttl", 3600))
         priority_str = params.get("priority", "NORMAL").upper()
-        priority = MemoryPriority[priority_str] if priority_str in MemoryPriority.__members__ else MemoryPriority.NORMAL
+        priority = (
+            MemoryPriority[priority_str]
+            if priority_str in MemoryPriority.__members__
+            else MemoryPriority.NORMAL
+        )
         source = params.get("source", "spark")
         entry_id = await cm.store(
             key=key,
@@ -277,24 +294,43 @@ async def _handle_collective_memory_query(params: Dict[str, Any]) -> Dict[str, A
         if key:
             entry = await cm.retrieve(key)
             if entry:
-                results = [{"key": entry.key, "value": entry.value,
-                            "topic": entry.topic, "tags": sorted(entry.tags),
-                            "priority": entry.priority.name}]
+                results = [
+                    {
+                        "key": entry.key,
+                        "value": entry.value,
+                        "topic": entry.topic,
+                        "tags": sorted(entry.tags),
+                        "priority": entry.priority.name,
+                    }
+                ]
         elif topic:
             entries = await cm.query_by_topic(topic, limit=limit)
-            results = [{"key": e.key, "value": e.value,
-                        "topic": e.topic, "tags": sorted(e.tags),
-                        "priority": e.priority.name} for e in entries]
+            results = [
+                {
+                    "key": e.key,
+                    "value": e.value,
+                    "topic": e.topic,
+                    "tags": sorted(e.tags),
+                    "priority": e.priority.name,
+                }
+                for e in entries
+            ]
         elif tag:
             entries = await cm.query_by_tag(tag, limit=limit)
-            results = [{"key": e.key, "value": e.value,
-                        "topic": e.topic, "tags": sorted(e.tags),
-                        "priority": e.priority.name} for e in entries]
+            results = [
+                {
+                    "key": e.key,
+                    "value": e.value,
+                    "topic": e.topic,
+                    "tags": sorted(e.tags),
+                    "priority": e.priority.name,
+                }
+                for e in entries
+            ]
         else:
             return _err("Provide at least one of: key, topic, tag")
         stats = cm.stats()
-        return _ok({"results": results, "count": len(results),
-                    "memory_stats": stats})
+        return _ok({"results": results, "count": len(results), "memory_stats": stats})
     except Exception as exc:
         logger.exception("collective_memory_query error")
         return _err(safe_error_detail(exc, 500))
@@ -303,6 +339,7 @@ async def _handle_collective_memory_query(params: Dict[str, Any]) -> Dict[str, A
 # ---------------------------------------------------------------------------
 # Meta Learner handlers
 # ---------------------------------------------------------------------------
+
 
 async def _handle_meta_learn_adapt(params: Dict[str, Any]) -> Dict[str, Any]:
     """Adapt task parameters for a new task using few-shot prototype matching.
@@ -334,18 +371,22 @@ async def _handle_meta_learn_adapt(params: Dict[str, Any]) -> Dict[str, Any]:
             current_parameters=base_params,
         )
         if result is None or result.confidence == 0.0:
-            return _ok({
-                "adapted": False,
-                "parameters": base_params,
-                "message": "No matching prototypes found; returned base parameters",
-            })
-        return _ok({
-            "adapted": True,
-            "prototype_id": result.prototype_id,
-            "parameters": result.adapted_parameters,
-            "confidence": result.confidence,
-            "match_score": result.matched_score,
-        })
+            return _ok(
+                {
+                    "adapted": False,
+                    "parameters": base_params,
+                    "message": "No matching prototypes found; returned base parameters",
+                }
+            )
+        return _ok(
+            {
+                "adapted": True,
+                "prototype_id": result.prototype_id,
+                "parameters": result.adapted_parameters,
+                "confidence": result.confidence,
+                "match_score": result.matched_score,
+            }
+        )
     except Exception as exc:
         logger.exception("meta_learn_adapt error")
         return _err(safe_error_detail(exc, 500))
@@ -354,6 +395,7 @@ async def _handle_meta_learn_adapt(params: Dict[str, Any]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Attention Router handlers
 # ---------------------------------------------------------------------------
+
 
 async def _handle_attention_route(params: Dict[str, Any]) -> Dict[str, Any]:
     """Route a request to the optimal registered service using transformer-style attention.
@@ -373,6 +415,7 @@ async def _handle_attention_route(params: Dict[str, Any]) -> Dict[str, Any]:
         from src.neural.attention_router import (
             RoutingRequest,  # noqa: F401  # intentional top-level import
         )
+
         request_id = params.get("request_id", uuid.uuid4().hex[:12])
         required_tags = set(params.get("required_tags", []))
         context_vector = list(params.get("context_vector", []))
@@ -386,12 +429,14 @@ async def _handle_attention_route(params: Dict[str, Any]) -> Dict[str, Any]:
         decision = await router.route(req)
         if not decision or not decision.selected_service:
             return _ok({"routed": False, "message": "No eligible services registered"})
-        return _ok({
-            "routed": True,
-            "selected_service": decision.selected_service,
-            "attention_weights": decision.attention_weights,
-            "confidence": decision.confidence,
-        })
+        return _ok(
+            {
+                "routed": True,
+                "selected_service": decision.selected_service,
+                "attention_weights": decision.attention_weights,
+                "confidence": decision.confidence,
+            }
+        )
     except Exception as exc:
         logger.exception("attention_route error")
         return _err(safe_error_detail(exc, 500))
@@ -400,6 +445,7 @@ async def _handle_attention_route(params: Dict[str, Any]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Causal Reasoner handlers
 # ---------------------------------------------------------------------------
+
 
 async def _handle_causal_predict(params: Dict[str, Any]) -> Dict[str, Any]:
     """Predict the likely effects of observed variables using the CausalReasoner.
@@ -420,11 +466,13 @@ async def _handle_causal_predict(params: Dict[str, Any]) -> Dict[str, Any]:
         for var, prob in observations.items():
             await cr.observe(var, float(prob))
         result = await cr.predict(causes=causes, max_results=max_results)
-        return _ok({
-            "effects": dict(result.effects),
-            "confidence": result.confidence,
-            "reasoning_chain": result.reasoning_chain,
-        })
+        return _ok(
+            {
+                "effects": dict(result.effects),
+                "confidence": result.confidence,
+                "reasoning_chain": result.reasoning_chain,
+            }
+        )
     except Exception as exc:
         logger.exception("causal_predict error")
         return _err(safe_error_detail(exc, 500))
@@ -448,11 +496,13 @@ async def _handle_causal_diagnose(params: Dict[str, Any]) -> Dict[str, Any]:
         for var, prob in observations.items():
             await cr.observe(var, float(prob))
         result = await cr.diagnose(effects=effects, max_results=max_results)
-        return _ok({
-            "causes": dict(result.causes),
-            "confidence": result.confidence,
-            "reasoning_chain": result.reasoning_chain,
-        })
+        return _ok(
+            {
+                "causes": dict(result.causes),
+                "confidence": result.confidence,
+                "reasoning_chain": result.reasoning_chain,
+            }
+        )
     except Exception as exc:
         logger.exception("causal_diagnose error")
         return _err(safe_error_detail(exc, 500))
@@ -482,13 +532,15 @@ async def _handle_causal_counterfactual(params: Dict[str, Any]) -> Dict[str, Any
             intervention=intervention,
             max_results=max_results,
         )
-        return _ok({
-            "counterfactual_effects": dict(result.effects),
-            "causes": dict(result.causes),
-            "confidence": result.confidence,
-            "reasoning_chain": result.reasoning_chain,
-            "intervention_applied": intervention,
-        })
+        return _ok(
+            {
+                "counterfactual_effects": dict(result.effects),
+                "causes": dict(result.causes),
+                "confidence": result.confidence,
+                "reasoning_chain": result.reasoning_chain,
+                "intervention_applied": intervention,
+            }
+        )
     except Exception as exc:
         logger.exception("causal_counterfactual error")
         return _err(safe_error_detail(exc, 500))
@@ -497,6 +549,7 @@ async def _handle_causal_counterfactual(params: Dict[str, Any]) -> Dict[str, Any
 # ---------------------------------------------------------------------------
 # Semantic Knowledge Graph handlers
 # ---------------------------------------------------------------------------
+
 
 async def _handle_knowledge_graph_add(params: Dict[str, Any]) -> Dict[str, Any]:
     """Add a node (and optional edge) to the SemanticKnowledgeGraph.
@@ -513,6 +566,7 @@ async def _handle_knowledge_graph_add(params: Dict[str, Any]) -> Dict[str, Any]:
             EdgeType,
             KnowledgeNode,
         )
+
         node_data = params.get("node", {})
         node = KnowledgeNode(
             label=node_data.get("label", ""),
@@ -527,7 +581,9 @@ async def _handle_knowledge_graph_add(params: Dict[str, Any]) -> Dict[str, Any]:
         if "edge" in params:
             ed = params["edge"]
             etype_str = ed.get("edge_type", "RELATED_TO").upper()
-            etype = EdgeType[etype_str] if etype_str in EdgeType.__members__ else EdgeType.RELATED_TO
+            etype = (
+                EdgeType[etype_str] if etype_str in EdgeType.__members__ else EdgeType.RELATED_TO
+            )
             edge_id = await kg.add_edge(
                 source_id=node_id,
                 target_id=ed["target_id"],
@@ -537,8 +593,14 @@ async def _handle_knowledge_graph_add(params: Dict[str, Any]) -> Dict[str, Any]:
                 provenance=ed.get("provenance", "spark"),
             )
         stats = await kg.stats()
-        return _ok({"node_id": node_id, "edge_id": edge_id,
-                    "fingerprint": node.fingerprint, "graph_stats": stats})
+        return _ok(
+            {
+                "node_id": node_id,
+                "edge_id": edge_id,
+                "fingerprint": node.fingerprint,
+                "graph_stats": stats,
+            }
+        )
     except Exception as exc:
         logger.exception("knowledge_graph_add error")
         return _err(safe_error_detail(exc, 500))
@@ -566,15 +628,23 @@ async def _handle_knowledge_graph_query(params: Dict[str, Any]) -> Dict[str, Any
         limit = int(params.get("limit", 20))
         nodes = await kg.query_nodes(**criteria)
         nodes = nodes[:limit]
-        return _ok({
-            "nodes": [
-                {"id": n.id, "label": n.label, "semantic_type": n.semantic_type,
-                 "tags": sorted(n.tags), "confidence": n.confidence,
-                 "provenance": n.provenance, "fingerprint": n.fingerprint}
-                for n in nodes
-            ],
-            "count": len(nodes),
-        })
+        return _ok(
+            {
+                "nodes": [
+                    {
+                        "id": n.id,
+                        "label": n.label,
+                        "semantic_type": n.semantic_type,
+                        "tags": sorted(n.tags),
+                        "confidence": n.confidence,
+                        "provenance": n.provenance,
+                        "fingerprint": n.fingerprint,
+                    }
+                    for n in nodes
+                ],
+                "count": len(nodes),
+            }
+        )
     except Exception as exc:
         logger.exception("knowledge_graph_query error")
         return _err(safe_error_detail(exc, 500))
@@ -597,6 +667,7 @@ async def _handle_knowledge_graph_path(params: Dict[str, Any]) -> Dict[str, Any]
         from src.intelligence.semantic_knowledge import (
             EdgeType,  # noqa: F401  # intentional top-level import
         )
+
         source_id = params.get("source_id")
         target_id = params.get("target_id")
         if not source_id or not target_id:
@@ -612,7 +683,9 @@ async def _handle_knowledge_graph_path(params: Dict[str, Any]) -> Dict[str, Any]
             return _ok({"paths": paths, "count": len(paths), "mode": "all"})
         else:
             path = await kg.shortest_path(source_id, target_id, edge_type=etype)
-            return _ok({"path": path, "length": len(path) - 1 if path else None, "mode": "shortest"})
+            return _ok(
+                {"path": path, "length": len(path) - 1 if path else None, "mode": "shortest"}
+            )
     except Exception as exc:
         logger.exception("knowledge_graph_path error")
         return _err(safe_error_detail(exc, 500))
@@ -634,6 +707,7 @@ async def _handle_knowledge_graph_expand(params: Dict[str, Any]) -> Dict[str, An
         from src.intelligence.semantic_knowledge import (
             EdgeType,  # noqa: F401  # intentional top-level import
         )
+
         node_id = params.get("node_id")
         if not node_id:
             return _err("'node_id' is required")
@@ -642,20 +716,28 @@ async def _handle_knowledge_graph_expand(params: Dict[str, Any]) -> Dict[str, An
         etype_strs = params.get("edge_types", [])
         etypes = None
         if etype_strs:
-            etypes = [EdgeType[et.upper()] for et in etype_strs
-                      if et.upper() in EdgeType.__members__]
+            etypes = [
+                EdgeType[et.upper()] for et in etype_strs if et.upper() in EdgeType.__members__
+            ]
         expanded = await kg.semantic_expand(
             node_id, depth=depth, edge_types=etypes, min_confidence=min_conf
         )
-        return _ok({
-            "expanded_nodes": [
-                {"id": nid, "label": node.label, "semantic_type": node.semantic_type,
-                 "accumulated_confidence": conf, "tags": sorted(node.tags)}
-                for nid, (node, conf) in expanded.items()
-            ],
-            "count": len(expanded),
-            "seed_node_id": node_id,
-        })
+        return _ok(
+            {
+                "expanded_nodes": [
+                    {
+                        "id": nid,
+                        "label": node.label,
+                        "semantic_type": node.semantic_type,
+                        "accumulated_confidence": conf,
+                        "tags": sorted(node.tags),
+                    }
+                    for nid, (node, conf) in expanded.items()
+                ],
+                "count": len(expanded),
+                "seed_node_id": node_id,
+            }
+        )
     except Exception as exc:
         logger.exception("knowledge_graph_expand error")
         return _err(safe_error_detail(exc, 500))
@@ -664,6 +746,7 @@ async def _handle_knowledge_graph_expand(params: Dict[str, Any]) -> Dict[str, An
 # ---------------------------------------------------------------------------
 # Adaptive Foresight handler
 # ---------------------------------------------------------------------------
+
 
 async def _handle_foresight_predict(params: Dict[str, Any]) -> Dict[str, Any]:
     """Predict the trajectory of a conversation using the ForesightEngine.
@@ -679,6 +762,7 @@ async def _handle_foresight_predict(params: Dict[str, Any]) -> Dict[str, Any]:
         from src.adaptive.foresight import (
             ConversationTrajectoryPredictor,  # noqa: F401  # intentional top-level import
         )
+
         predictor = ConversationTrajectoryPredictor()
         session_id = str(params.get("session_id", "default"))
         emotion = str(params.get("emotion", "neutral"))
@@ -698,11 +782,13 @@ async def _handle_foresight_predict(params: Dict[str, Any]) -> Dict[str, Any]:
         top = prediction.top(top_n) if prediction else []
         entropy = prediction.entropy() if prediction else 0.0
         confidence = prediction.confidence() if prediction else 0.0
-        return _ok({
-            "top_outcomes": [{"outcome": o, "probability": round(p, 4)} for o, p in top],
-            "entropy": round(entropy, 4),
-            "confidence": round(confidence, 4),
-        })
+        return _ok(
+            {
+                "top_outcomes": [{"outcome": o, "probability": round(p, 4)} for o, p in top],
+                "entropy": round(entropy, 4),
+                "confidence": round(confidence, 4),
+            }
+        )
     except Exception as exc:
         logger.exception("foresight_predict error")
         return _err(safe_error_detail(exc, 500))
@@ -711,6 +797,7 @@ async def _handle_foresight_predict(params: Dict[str, Any]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Analytics Intent handler
 # ---------------------------------------------------------------------------
+
 
 async def _handle_analytics_intent(params: Dict[str, Any]) -> Dict[str, Any]:
     """Classify user intent from a message fragment.
@@ -723,6 +810,7 @@ async def _handle_analytics_intent(params: Dict[str, Any]) -> Dict[str, Any]:
         from src.analytics.predictive import (
             IntentPredictor,  # noqa: F401  # intentional top-level import
         )
+
         predictor = IntentPredictor()
         message = str(params.get("message", ""))
         emotion = str(params.get("emotion", "neutral"))
@@ -730,12 +818,14 @@ async def _handle_analytics_intent(params: Dict[str, Any]) -> Dict[str, Any]:
         scores = predictor.predict(message, emotion=emotion)
         # Sort by score descending
         sorted_intents = sorted(scores.items(), key=lambda x: -x[1])
-        return _ok({
-            "primary_intent": sorted_intents[0][0] if sorted_intents else "unknown",
-            "intent_scores": [{"intent": i, "score": round(s, 4)} for i, s in sorted_intents],
-            "dominant_intent": predictor.dominant_intent(scores),
-            "message_length": len(message),
-        })
+        return _ok(
+            {
+                "primary_intent": sorted_intents[0][0] if sorted_intents else "unknown",
+                "intent_scores": [{"intent": i, "score": round(s, 4)} for i, s in sorted_intents],
+                "dominant_intent": predictor.dominant_intent(scores),
+                "message_length": len(message),
+            }
+        )
     except Exception as exc:
         logger.exception("analytics_intent error")
         return _err(safe_error_detail(exc, 500))
@@ -744,6 +834,7 @@ async def _handle_analytics_intent(params: Dict[str, Any]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # NanoBot Dispatch handler
 # ---------------------------------------------------------------------------
+
 
 async def _handle_nanobot_dispatch(params: Dict[str, Any]) -> Dict[str, Any]:
     """Dispatch a NanoCode repair bot to address a detected failure mode.
@@ -760,6 +851,7 @@ async def _handle_nanobot_dispatch(params: Dict[str, Any]) -> Dict[str, Any]:
             FailureMode,
             NanoCodeBotDispatcher,
         )
+
         dispatcher = NanoCodeBotDispatcher()
         failure_mode_str = params.get("failure_mode")
         metrics = dict(params.get("metrics", {}))
@@ -773,19 +865,23 @@ async def _handle_nanobot_dispatch(params: Dict[str, Any]) -> Dict[str, Any]:
                 failure_mode = FailureMode[fm_upper]
                 report = await dispatcher.dispatch(failure_mode, config=override_cfg)
             else:
-                return _err(f"Unknown failure_mode '{failure_mode_str}'. "
-                            f"Valid: {[f.name for f in FailureMode]}")
+                return _err(
+                    f"Unknown failure_mode '{failure_mode_str}'. "
+                    f"Valid: {[f.name for f in FailureMode]}"
+                )
         elif metrics:
             report = await dispatcher.dispatch_from_metrics(metrics, config=override_cfg)
         else:
             return _err("Provide 'failure_mode' or 'metrics'")
-        return _ok({
-            "dispatched": True,
-            "bot_type": report.get("bot_type"),
-            "success": report.get("success"),
-            "actions_taken": report.get("actions_taken", []),
-            "duration_ms": report.get("duration_ms"),
-        })
+        return _ok(
+            {
+                "dispatched": True,
+                "bot_type": report.get("bot_type"),
+                "success": report.get("success"),
+                "actions_taken": report.get("actions_taken", []),
+                "duration_ms": report.get("duration_ms"),
+            }
+        )
     except Exception as exc:
         logger.exception("nanobot_dispatch error")
         return _err(safe_error_detail(exc, 500))
@@ -806,7 +902,10 @@ PHASE4_TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "source_id": {"type": "string", "description": "Sending mesh node id (auto-created if absent)."},
+                "source_id": {
+                    "type": "string",
+                    "description": "Sending mesh node id (auto-created if absent).",
+                },
                 "signal_type": {"type": "string", "description": "Event/signal category name."},
                 "payload": {"type": "object", "description": "Arbitrary signal data."},
                 "ttl": {"type": "integer", "description": "Hop limit (default 5)."},
@@ -841,8 +940,11 @@ PHASE4_TOOLS = [
                 "topic": {"type": "string", "description": "Logical grouping topic."},
                 "tags": {"type": "array", "items": {"type": "string"}, "description": "Tag list."},
                 "ttl": {"type": "number", "description": "Time-to-live in seconds (default 3600)."},
-                "priority": {"type": "string", "enum": ["LOW", "NORMAL", "HIGH", "CRITICAL"],
-                             "description": "Eviction priority (default NORMAL)."},
+                "priority": {
+                    "type": "string",
+                    "enum": ["LOW", "NORMAL", "HIGH", "CRITICAL"],
+                    "description": "Eviction priority (default NORMAL).",
+                },
                 "source": {"type": "string", "description": "Origin identifier."},
             },
             "required": ["key", "value"],
@@ -879,12 +981,28 @@ PHASE4_TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "domain": {"type": "string", "description": "Task domain (e.g. nlp, code, analytics)."},
-                "task_type": {"type": "string", "description": "Specific task type (e.g. summarise)."},
+                "domain": {
+                    "type": "string",
+                    "description": "Task domain (e.g. nlp, code, analytics).",
+                },
+                "task_type": {
+                    "type": "string",
+                    "description": "Specific task type (e.g. summarise).",
+                },
                 "input_signature": {"type": "object", "description": "Input field names → types."},
-                "output_signature": {"type": "object", "description": "Output field names → types."},
-                "tags": {"type": "array", "items": {"type": "string"}, "description": "Descriptive tags."},
-                "current_parameters": {"type": "object", "description": "Base parameters to adapt."},
+                "output_signature": {
+                    "type": "object",
+                    "description": "Output field names → types.",
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Descriptive tags.",
+                },
+                "current_parameters": {
+                    "type": "object",
+                    "description": "Base parameters to adapt.",
+                },
             },
             "required": ["domain", "task_type"],
         },
@@ -902,12 +1020,21 @@ PHASE4_TOOLS = [
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Description of what is needed."},
-                "required_capabilities": {"type": "array", "items": {"type": "string"},
-                                          "description": "Must-have capability tags."},
-                "preferred_tags": {"type": "array", "items": {"type": "string"},
-                                   "description": "Nice-to-have tags."},
-                "exclude_tags": {"type": "array", "items": {"type": "string"},
-                                 "description": "Tags to avoid."},
+                "required_capabilities": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Must-have capability tags.",
+                },
+                "preferred_tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Nice-to-have tags.",
+                },
+                "exclude_tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Tags to avoid.",
+                },
                 "top_k": {"type": "integer", "description": "Return top-k candidates (default 3)."},
             },
             "required": ["query"],
@@ -924,10 +1051,19 @@ PHASE4_TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "observations": {"type": "object", "description": "Variable → value evidence dict."},
-                "target_variables": {"type": "array", "items": {"type": "string"},
-                                     "description": "Restrict output to these variables."},
-                "threshold": {"type": "number", "description": "Minimum probability to include (default 0.1)."},
+                "observations": {
+                    "type": "object",
+                    "description": "Variable → value evidence dict.",
+                },
+                "target_variables": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Restrict output to these variables.",
+                },
+                "threshold": {
+                    "type": "number",
+                    "description": "Minimum probability to include (default 0.1).",
+                },
             },
             "required": ["observations"],
         },
@@ -944,7 +1080,10 @@ PHASE4_TOOLS = [
             "type": "object",
             "properties": {
                 "symptoms": {"type": "object", "description": "Symptom variable → observed value."},
-                "max_causes": {"type": "integer", "description": "Max root causes to return (default 5)."},
+                "max_causes": {
+                    "type": "integer",
+                    "description": "Max root causes to return (default 5).",
+                },
             },
             "required": ["symptoms"],
         },
@@ -960,12 +1099,23 @@ PHASE4_TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "observed_effects": {"type": "array", "items": {"type": "string"},
-                                     "description": "Currently observed effect variables."},
-                "intervention": {"type": "string",
-                                 "description": "The single variable to do-intervene on."},
-                "observations": {"type": "object", "description": "Current observed evidence (var → probability)."},
-                "max_results": {"type": "integer", "description": "Max results to return (default 10)."},
+                "observed_effects": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Currently observed effect variables.",
+                },
+                "intervention": {
+                    "type": "string",
+                    "description": "The single variable to do-intervene on.",
+                },
+                "observations": {
+                    "type": "object",
+                    "description": "Current observed evidence (var → probability).",
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Max results to return (default 10).",
+                },
             },
             "required": ["observed_effects", "intervention"],
         },
@@ -1044,9 +1194,18 @@ PHASE4_TOOLS = [
             "properties": {
                 "source_id": {"type": "string"},
                 "target_id": {"type": "string"},
-                "edge_type": {"type": "string", "description": "IS_A | PART_OF | RELATED_TO | etc."},
-                "all_paths": {"type": "boolean", "description": "Return all paths instead of shortest."},
-                "max_depth": {"type": "integer", "description": "Max depth for all_paths (default 6)."},
+                "edge_type": {
+                    "type": "string",
+                    "description": "IS_A | PART_OF | RELATED_TO | etc.",
+                },
+                "all_paths": {
+                    "type": "boolean",
+                    "description": "Return all paths instead of shortest.",
+                },
+                "max_depth": {
+                    "type": "integer",
+                    "description": "Max depth for all_paths (default 6).",
+                },
             },
             "required": ["source_id", "target_id"],
         },
@@ -1065,9 +1224,15 @@ PHASE4_TOOLS = [
             "properties": {
                 "node_id": {"type": "string", "description": "Seed node to expand from."},
                 "depth": {"type": "integer", "description": "Traversal depth (default 2)."},
-                "edge_types": {"type": "array", "items": {"type": "string"},
-                               "description": "Restrict to these edge types."},
-                "min_confidence": {"type": "number", "description": "Min edge confidence (default 0.0)."},
+                "edge_types": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Restrict to these edge types.",
+                },
+                "min_confidence": {
+                    "type": "number",
+                    "description": "Min edge confidence (default 0.0).",
+                },
             },
             "required": ["node_id"],
         },
@@ -1084,9 +1249,18 @@ PHASE4_TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "session_id": {"type": "string", "description": "Session identifier (default 'default')."},
-                "emotion": {"type": "string", "description": "Current emotion label (default 'neutral')."},
-                "intent": {"type": "string", "description": "Current intent label (default 'question')."},
+                "session_id": {
+                    "type": "string",
+                    "description": "Session identifier (default 'default').",
+                },
+                "emotion": {
+                    "type": "string",
+                    "description": "Current emotion label (default 'neutral').",
+                },
+                "intent": {
+                    "type": "string",
+                    "description": "Current intent label (default 'question').",
+                },
                 "history": {
                     "type": "array",
                     "items": {
@@ -1099,7 +1273,10 @@ PHASE4_TOOLS = [
                     },
                     "description": "Prior conversation turns as [{emotion, intent}, ...].",
                 },
-                "top_n": {"type": "integer", "description": "Top N outcomes to return (default 3)."},
+                "top_n": {
+                    "type": "integer",
+                    "description": "Top N outcomes to return (default 3).",
+                },
             },
             "required": [],
         },
@@ -1117,7 +1294,10 @@ PHASE4_TOOLS = [
             "type": "object",
             "properties": {
                 "message": {"type": "string", "description": "Message to classify."},
-                "partial": {"type": "boolean", "description": "Treat as incomplete input (default false)."},
+                "partial": {
+                    "type": "boolean",
+                    "description": "Treat as incomplete input (default false).",
+                },
             },
             "required": ["message"],
         },
@@ -1139,11 +1319,24 @@ PHASE4_TOOLS = [
                 "failure_mode": {
                     "type": "string",
                     "description": "Explicit failure mode name.",
-                    "enum": ["HIGH_LATENCY", "MEMORY_LEAK", "CONNECTION_POOL_EXHAUSTED",
-                             "VECTOR_DB_CORRUPT", "SERVICE_UNREACHABLE", "CACHE_STALE", "LOOP_DETECTED"],
+                    "enum": [
+                        "HIGH_LATENCY",
+                        "MEMORY_LEAK",
+                        "CONNECTION_POOL_EXHAUSTED",
+                        "VECTOR_DB_CORRUPT",
+                        "SERVICE_UNREACHABLE",
+                        "CACHE_STALE",
+                        "LOOP_DETECTED",
+                    ],
                 },
-                "metrics": {"type": "object", "description": "Raw metrics for automatic mode inference."},
-                "target_service_url": {"type": "string", "description": "Override service URL for the bot."},
+                "metrics": {
+                    "type": "object",
+                    "description": "Raw metrics for automatic mode inference.",
+                },
+                "target_service_url": {
+                    "type": "string",
+                    "description": "Override service URL for the bot.",
+                },
             },
         },
         "handler": _handle_nanobot_dispatch,
@@ -1156,12 +1349,14 @@ PHASE4_TOOLS = [
 # Registration entry-point
 # ---------------------------------------------------------------------------
 
+
 def register_phase4_tools(registry: Any) -> int:
     """Register all Phase 4 tools into the given SparkToolRegistry.
 
     Returns the number of tools registered.
     """
     from src.mcp.tools import SparkTool  # codeql[py/cyclic-import]
+
     registered = 0
     for t in PHASE4_TOOLS:
         try:

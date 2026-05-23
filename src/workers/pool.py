@@ -16,35 +16,35 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-_REDIS_URL    = os.getenv("REDIS_URL", "redis://localhost:6379")
-_QUEUE_KEY    = "tranc3:tasks"          # LPUSH to submit, BRPOP to consume
-_RESULT_PREFIX = "tranc3:result:"       # key = tranc3:result:<job_id>
-_RESULT_TTL   = 300                     # seconds to keep results
+_REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+_QUEUE_KEY = "tranc3:tasks"  # LPUSH to submit, BRPOP to consume
+_RESULT_PREFIX = "tranc3:result:"  # key = tranc3:result:<job_id>
+_RESULT_TTL = 300  # seconds to keep results
 
 
 class JobStatus(str, Enum):
-    PENDING   = "pending"
-    RUNNING   = "running"
-    DONE      = "done"
-    FAILED    = "failed"
+    PENDING = "pending"
+    RUNNING = "running"
+    DONE = "done"
+    FAILED = "failed"
 
 
 class JobType(str, Enum):
-    GENERATE    = "generate"
-    EMBED       = "embed"
-    EMOTION     = "emotion"
-    TOKENIZE    = "tokenize"
+    GENERATE = "generate"
+    EMBED = "embed"
+    EMOTION = "emotion"
+    TOKENIZE = "tokenize"
     CONSCIOUSNESS = "consciousness"
     PERSONALITY = "personality"
-    PREDICT     = "predict"
+    PREDICT = "predict"
 
 
 @dataclass
 class JobSpec:
-    job_type: str                        # JobType value
-    payload: Dict[str, Any]             # task-specific args
-    job_id: str  = field(default_factory=lambda: str(uuid.uuid4()))
-    priority: int = 5                   # 1 (high) … 10 (low) — reserved for future use
+    job_type: str  # JobType value
+    payload: Dict[str, Any]  # task-specific args
+    job_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    priority: int = 5  # 1 (high) … 10 (low) — reserved for future use
     created_at: float = field(default_factory=time.time)
 
     def to_json(self) -> str:
@@ -59,11 +59,11 @@ class JobSpec:
 @dataclass
 class JobResult:
     job_id: str
-    status: str                         # JobStatus value
+    status: str  # JobStatus value
     result: Optional[Dict[str, Any]] = None
-    error:  Optional[str]            = None
-    duration_ms: float               = 0.0
-    worker_id: str                   = ""
+    error: Optional[str] = None
+    duration_ms: float = 0.0
+    worker_id: str = ""
 
     def to_json(self) -> str:
         return json.dumps(asdict(self))
@@ -91,13 +91,13 @@ class WorkerPool:
     def __init__(
         self,
         num_workers: int = int(os.getenv("TRANC3_WORKERS", "2")),
-        worker_fn=None,         # async callable(JobSpec) → dict — inject for testing
+        worker_fn=None,  # async callable(JobSpec) → dict — inject for testing
     ):
         self._num_workers = num_workers
-        self._worker_fn   = worker_fn
-        self._redis       = None
+        self._worker_fn = worker_fn
+        self._redis = None
         self._tasks: List[asyncio.Task] = []
-        self._running     = False
+        self._running = False
 
     # ─── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -105,7 +105,7 @@ class WorkerPool:
         """Start workers. Call once at application startup."""
         if self._running:
             return
-        self._redis   = await self._connect_redis()
+        self._redis = await self._connect_redis()
         self._running = True
 
         if self._worker_fn:
@@ -199,17 +199,17 @@ class WorkerPool:
                 result_data = ret
             status = JobStatus.DONE
         except Exception as exc:
-            error  = str(exc)
+            error = str(exc)
             status = JobStatus.FAILED
             logger.exception("Job %s failed: %s", job.job_id, exc)
 
         result = JobResult(
-            job_id      = job.job_id,
-            status      = status,
-            result      = result_data,
-            error       = error,
-            duration_ms = (time.monotonic() - t0) * 1000,
-            worker_id   = worker_id,
+            job_id=job.job_id,
+            status=status,
+            result=result_data,
+            error=error,
+            duration_ms=(time.monotonic() - t0) * 1000,
+            worker_id=worker_id,
         )
         key = f"{_RESULT_PREFIX}{job.job_id}"
         await self._redis.set(key, result.to_json(), ex=_RESULT_TTL)
@@ -221,6 +221,7 @@ class WorkerPool:
     async def _connect_redis():
         try:
             import redis.asyncio as aioredis
+
             client = aioredis.from_url(_REDIS_URL, decode_responses=True)
             await client.ping()
             logger.info("Redis connected: %s", _REDIS_URL)
@@ -239,15 +240,16 @@ class WorkerPool:
     async def health(self) -> Dict[str, Any]:
         q = await self.queue_length()
         return {
-            "workers":      self._num_workers,
-            "running":      self._running,
+            "workers": self._num_workers,
+            "running": self._running,
             "queue_length": q,
-            "redis_url":    _REDIS_URL,
+            "redis_url": _REDIS_URL,
         }
 
 
 # ─── In-memory fallback queue ────────────────────────────────────────────────
 # Used when Redis is not available (tests, local dev without Docker).
+
 
 class _MemoryQueue:
     """Minimal asyncio-compatible in-memory Redis substitute."""

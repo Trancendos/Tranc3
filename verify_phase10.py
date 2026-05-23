@@ -60,13 +60,16 @@ def main() -> int:
             ZeroCostModulator,
             proactive_orchestrator,
         )
+
         PASSED += 1
         print("  ✓ All proactive_orchestrator imports successful")
 
         # Enums — use actual member names
         verify(hasattr(ProactiveAction, "HEAL"), "ProactiveAction.HEAL exists")
         verify(hasattr(ProactiveAction, "SCALE_UP"), "ProactiveAction.SCALE_UP exists")
-        verify(hasattr(ProactiveAction, "MIGRATE_STORAGE"), "ProactiveAction.MIGRATE_STORAGE exists")
+        verify(
+            hasattr(ProactiveAction, "MIGRATE_STORAGE"), "ProactiveAction.MIGRATE_STORAGE exists"
+        )
         verify(hasattr(ProactiveAction, "REBALANCE"), "ProactiveAction.REBALANCE exists")
         verify(hasattr(ProactiveAction, "HARDEN"), "ProactiveAction.HARDEN exists")
         verify(hasattr(ProactiveAction, "ALERT"), "ProactiveAction.ALERT exists")
@@ -93,9 +96,13 @@ def main() -> int:
 
         try:
             HealthPrediction(
-                subsystem="test", current_score=1.0, predicted_score=0.9,
-                trend="stable", confidence=0.8, time_to_degradation=None,
-                horizon_seconds=300
+                subsystem="test",
+                current_score=1.0,
+                predicted_score=0.9,
+                trend="stable",
+                confidence=0.8,
+                time_to_degradation=None,
+                horizon_seconds=300,
             )
             verify(True, "HealthPrediction can be instantiated")
         except Exception as e:
@@ -103,10 +110,13 @@ def main() -> int:
 
         try:
             import uuid
+
             ActionPlan(
                 id=str(uuid.uuid4()),
-                action=ProactiveAction.ALERT, target="test",
-                description="test action", priority=ActionPriority.LOW
+                action=ProactiveAction.ALERT,
+                target="test",
+                description="test action",
+                priority=ActionPriority.LOW,
             )
             verify(True, "ActionPlan can be instantiated")
         except Exception as e:
@@ -162,6 +172,7 @@ def main() -> int:
             PulseMode,
             adaptive_pulse,
         )
+
         PASSED += 1
         print("  ✓ All adaptive_pulse imports successful")
 
@@ -205,6 +216,7 @@ def main() -> int:
             ScalingReason,
             predictive_scaler,
         )
+
         PASSED += 1
         print("  ✓ All predictive_scaler imports successful")
 
@@ -260,6 +272,7 @@ def main() -> int:
             EnvironmentType,
             auto_config,
         )
+
         PASSED += 1
         print("  ✓ All auto_config imports successful")
 
@@ -306,6 +319,7 @@ def main() -> int:
             WiringStatus,
             proactive_bootstrap,
         )
+
         PASSED += 1
         print("  ✓ All proactive_wiring imports successful")
 
@@ -352,6 +366,7 @@ def main() -> int:
             ProactiveMetricsCollector,
             proactive_metrics,
         )
+
         PASSED += 1
         print("  ✓ All proactive_metrics imports successful")
 
@@ -372,15 +387,15 @@ def main() -> int:
 
         verify(
             hasattr(ProactiveMetricsCollector, "export_prometheus"),
-            "ProactiveMetricsCollector.export_prometheus method exists"
+            "ProactiveMetricsCollector.export_prometheus method exists",
         )
         verify(
             hasattr(ProactiveMetricsCollector, "get_vitals"),
-            "ProactiveMetricsCollector.get_vitals method exists"
+            "ProactiveMetricsCollector.get_vitals method exists",
         )
         verify(
             hasattr(ProactiveMetricsCollector, "collect"),
-            "ProactiveMetricsCollector.collect method exists"
+            "ProactiveMetricsCollector.collect method exists",
         )
 
         verify(proactive_metrics is not None, "proactive_metrics singleton exists")
@@ -425,6 +440,7 @@ def main() -> int:
             proactive_metrics,
             proactive_orchestrator,
         )
+
         PASSED += 1
         print("  ✓ All 36 architecture __init__.py exports importable")
     except Exception as e:
@@ -447,6 +463,7 @@ def main() -> int:
             ScalingReason,
             predictive_scaler,
         )
+
         PASSED += 1
         print("  ✓ All 9 adaptive __init__.py exports importable")
     except Exception as e:
@@ -462,18 +479,13 @@ def main() -> int:
     # Verify ProactiveOrchestrator health scoring
     try:
         from shared_core.architecture.proactive_orchestrator import ProactiveOrchestrator
+
         po = ProactiveOrchestrator()
         health = po.get_health_profile()
         verify(health is not None, "ProactiveOrchestrator.get_health_profile() returns data")
         # SystemHealthProfile uses overall_score, not composite_score
-        verify(
-            hasattr(health, "overall_score"),
-            "Health profile has overall_score"
-        )
-        verify(
-            hasattr(health, "storage_health"),
-            "Health profile has storage_health"
-        )
+        verify(hasattr(health, "overall_score"), "Health profile has overall_score")
+        verify(hasattr(health, "storage_health"), "Health profile has storage_health")
     except Exception as e:
         verify(False, f"ProactiveOrchestrator health profile: {e}")
 
@@ -484,6 +496,7 @@ def main() -> int:
             PulseConfig,
             PulseMode,
         )
+
         apc = AdaptivePulseController()
         # register() takes keyword args: name, baseline_interval, etc.
         apc.register(name="test_daemon", baseline_interval=30.0)
@@ -492,7 +505,7 @@ def main() -> int:
         # Verify mode property
         verify(
             apc.current_mode == PulseMode.STEADY,
-            f"PulseController starts in STEADY mode: {apc.current_mode}"
+            f"PulseController starts in STEADY mode: {apc.current_mode}",
         )
     except Exception as e:
         verify(False, f"AdaptivePulseController interval management: {e}")
@@ -500,6 +513,7 @@ def main() -> int:
     # Verify LoadForecaster
     try:
         from src.adaptive.predictive_scaler import LoadForecaster
+
         lf = LoadForecaster()
         # record() takes: value, source='', tags=None
         for i in range(10):
@@ -515,6 +529,7 @@ def main() -> int:
     # Verify AutoConfigManager profiles
     try:
         from shared_core.architecture.auto_config import AutoConfigManager
+
         acm = AutoConfigManager()
         profiles = acm.list_profiles()
         verify(len(profiles) >= 3, f"AutoConfigManager has {len(profiles)} profiles (expected >=3)")
@@ -524,6 +539,7 @@ def main() -> int:
     # Verify ProactiveMetricsCollector Prometheus export
     try:
         from shared_core.architecture.proactive_metrics import ProactiveMetricsCollector
+
         pmc = ProactiveMetricsCollector()
         prom_output = pmc.export_prometheus()
         verify(isinstance(prom_output, str), "export_prometheus returns string")
@@ -534,6 +550,7 @@ def main() -> int:
     # Verify ProactiveSystemBootstrap status
     try:
         from shared_core.architecture.proactive_wiring import ProactiveSystemBootstrap
+
         psb = ProactiveSystemBootstrap()
         status = psb.get_status()
         verify(isinstance(status, dict), "ProactiveSystemBootstrap.get_status() returns dict")

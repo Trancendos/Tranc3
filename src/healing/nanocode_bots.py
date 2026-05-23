@@ -165,9 +165,7 @@ class ComplianceMetadataBot(NanoBot):
                 action = "Injected compliance metadata; validation endpoint unavailable"
 
         except httpx.HTTPStatusError as exc:
-            action = (
-                f"HTTP error during compliance injection: {exc.response.status_code}"
-            )
+            action = f"HTTP error during compliance injection: {exc.response.status_code}"
             logger.error("[ComplianceMetadataBot] %s — %s", service_id, action)
         except Exception as exc:
             action = f"Repair failed: {exc}"
@@ -315,9 +313,7 @@ class FreeTierBot(NanoBot):
                 },
             )
             if rate_resp.status_code < 300:
-                actions_taken.append(
-                    f"Rate limited to {self._CONSERVATION_RATE_LIMIT_RPS} RPS"
-                )
+                actions_taken.append(f"Rate limited to {self._CONSERVATION_RATE_LIMIT_RPS} RPS")
 
             # 2. Enable caching
             cache_resp = await client.post(

@@ -54,7 +54,10 @@ class _InMemoryFallback:
 
     async def keys(self, pattern: str) -> List[str]:
         import fnmatch
-        return [k for k in list(self._data.keys()) if fnmatch.fnmatch(k, pattern) and not self._evict(k)]
+
+        return [
+            k for k in list(self._data.keys()) if fnmatch.fnmatch(k, pattern) and not self._evict(k)
+        ]
 
     async def hset(self, name: str, mapping: Dict[str, Any]) -> None:
         existing = self._data.get(name, {})
@@ -118,8 +121,7 @@ class _RedisStore:
 
     async def hgetall(self, name: str) -> Dict[str, Any]:
         raw = await self._r.hgetall(name)
-        return {(k.decode() if isinstance(k, bytes) else k): json.loads(v)
-                for k, v in raw.items()}
+        return {(k.decode() if isinstance(k, bytes) else k): json.loads(v) for k, v in raw.items()}
 
     async def hdel(self, name: str, *fields: str) -> None:
         await self._r.hdel(name, *fields)
@@ -145,6 +147,7 @@ async def get_store() -> Any:
     if _REDIS_URL:
         try:
             import redis.asyncio as aioredis
+
             client = aioredis.from_url(
                 _REDIS_URL,
                 encoding="utf-8",

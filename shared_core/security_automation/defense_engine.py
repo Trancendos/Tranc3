@@ -50,6 +50,7 @@ class FirewallAction(str, Enum):
 @dataclass
 class FirewallRule:
     """A single firewall rule with priority-based matching."""
+
     id: str
     name: str
     description: str
@@ -82,6 +83,7 @@ class FirewallRule:
 @dataclass
 class IncidentEvent:
     """An event in a security incident's timeline."""
+
     id: str
     timestamp: float
     actor: str
@@ -101,6 +103,7 @@ class IncidentEvent:
 @dataclass
 class SecurityIncident:
     """A tracked security incident with timeline."""
+
     id: str
     title: str
     description: str
@@ -134,6 +137,7 @@ class SecurityIncident:
 @dataclass
 class DefenseStats:
     """Aggregate defense statistics."""
+
     current_threat_level: ThreatLevel = ThreatLevel.NONE
     total_incidents: int = 0
     open_incidents: int = 0
@@ -207,8 +211,12 @@ class DefenseEngine:
             enabled=enabled,
         )
         self._firewall_rules[rule.id] = rule
-        logger.info("Firewall rule added: %s (priority=%d, action=%s)",
-                     sanitize_for_log(name), priority, action.value)
+        logger.info(
+            "Firewall rule added: %s (priority=%d, action=%s)",
+            sanitize_for_log(name),
+            priority,
+            action.value,
+        )
         return rule
 
     def evaluate_request(
@@ -232,11 +240,7 @@ class DefenseEngine:
         )
 
         for rule in rules:
-            source_match = (
-                rule.source == "*"
-                or source == rule.source
-                or source in rule.source
-            )
+            source_match = rule.source == "*" or source == rule.source or source in rule.source
             dest_match = (
                 rule.destination == "*"
                 or destination == rule.destination
@@ -309,7 +313,8 @@ class DefenseEngine:
         self._incidents[incident.id] = incident
         logger.warning(
             "Security incident created: %s (severity=%s)",
-            sanitize_for_log(title), severity.value,
+            sanitize_for_log(title),
+            severity.value,
         )
         return incident
 
@@ -335,13 +340,15 @@ class DefenseEngine:
             incident.assigned_to = assigned_to
 
         if note:
-            incident.timeline.append(IncidentEvent(
-                id=str(uuid.uuid4()),
-                timestamp=time.time(),
-                actor=actor,
-                action="updated",
-                details=note,
-            ))
+            incident.timeline.append(
+                IncidentEvent(
+                    id=str(uuid.uuid4()),
+                    timestamp=time.time(),
+                    actor=actor,
+                    action="updated",
+                    details=note,
+                )
+            )
 
         incident.updated_at = time.time()
         return incident
@@ -367,7 +374,8 @@ class DefenseEngine:
     def get_current_threat_level(self) -> ThreatLevel:
         """Assess current threat level based on open incidents."""
         open_incidents = [
-            i for i in self._incidents.values()
+            i
+            for i in self._incidents.values()
             if i.status in (IncidentStatus.OPEN, IncidentStatus.INVESTIGATING)
         ]
         if any(i.severity == ThreatLevel.CRITICAL for i in open_incidents):
@@ -389,12 +397,12 @@ class DefenseEngine:
             current_threat_level=self.get_current_threat_level(),
             total_incidents=len(incidents),
             open_incidents=sum(
-                1 for i in incidents
+                1
+                for i in incidents
                 if i.status in (IncidentStatus.OPEN, IncidentStatus.INVESTIGATING)
             ),
             resolved_incidents=sum(
-                1 for i in incidents
-                if i.status in (IncidentStatus.RESOLVED, IncidentStatus.CLOSED)
+                1 for i in incidents if i.status in (IncidentStatus.RESOLVED, IncidentStatus.CLOSED)
             ),
             firewall_rules=len(self._firewall_rules),
             blocked_requests=self._blocked_count,

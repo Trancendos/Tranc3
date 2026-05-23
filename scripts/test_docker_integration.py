@@ -188,7 +188,9 @@ def test_worker_services(compose: Dict) -> bool:
             print(f"  ... and {len(errors) - 10} more errors")
         return False
 
-    print(f"  ✅ All {len(EXPECTED_WORKERS)} P0-P2 workers + {len(P3_STUB_WORKERS)} P3 stubs defined correctly")
+    print(
+        f"  ✅ All {len(EXPECTED_WORKERS)} P0-P2 workers + {len(P3_STUB_WORKERS)} P3 stubs defined correctly"
+    )
     return True
 
 

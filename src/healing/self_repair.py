@@ -87,18 +87,14 @@ class SelfRepairEngine:
             try:
                 triggered = strategy.condition(context)
             except Exception as exc:
-                logger.warning(
-                    "Condition error in strategy '%s': %s", strategy.name, exc
-                )
+                logger.warning("Condition error in strategy '%s': %s", strategy.name, exc)
                 triggered = False
 
             if not triggered:
                 continue
 
             if not strategy.is_ready():
-                remaining = strategy.cooldown_sec - (
-                    time.time() - strategy.last_applied
-                )
+                remaining = strategy.cooldown_sec - (time.time() - strategy.last_applied)
                 logger.debug(
                     "Strategy '%s' triggered but on cooldown (%.0f s remaining).",
                     strategy.name,
@@ -271,8 +267,7 @@ class SelfRepairEngine:
             RepairStrategy(
                 name="model_drift",
                 priority=4,
-                condition=lambda ctx: float(ctx.get("prediction_confidence", 1.0))
-                < 0.5,
+                condition=lambda ctx: float(ctx.get("prediction_confidence", 1.0)) < 0.5,
                 action=_model_drift_action,
                 cooldown_sec=900.0,
             )
@@ -353,9 +348,7 @@ class AdaptiveConfigTuner:
         """Store a metric observation with the current timestamp."""
         if name not in self._metric_series:
             self._metric_series[name] = []
-        self._metric_series[name].append(
-            _MetricPoint(value=value, timestamp=time.time())
-        )
+        self._metric_series[name].append(_MetricPoint(value=value, timestamp=time.time()))
         # Keep a bounded window (last 500 observations)
         if len(self._metric_series[name]) > 500:
             self._metric_series[name] = self._metric_series[name][-250:]

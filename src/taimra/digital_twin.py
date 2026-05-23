@@ -39,12 +39,8 @@ class TwinProfile:
     interaction_count: int = 0
     preferences: Dict[str, Any] = field(default_factory=dict)
     goals: List[str] = field(default_factory=list)
-    personality_affinity: Dict[str, float] = field(
-        default_factory=dict
-    )  # personality_id → score
-    topics_of_interest: Dict[str, int] = field(
-        default_factory=dict
-    )  # topic → frequency
+    personality_affinity: Dict[str, float] = field(default_factory=dict)  # personality_id → score
+    topics_of_interest: Dict[str, int] = field(default_factory=dict)  # topic → frequency
     last_active: Optional[float] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -53,9 +49,7 @@ class TwinProfile:
             "status": self.status.value,
             "interaction_count": self.interaction_count,
             "goals": self.goals,
-            "topics": dict(
-                sorted(self.topics_of_interest.items(), key=lambda x: -x[1])[:10]
-            ),
+            "topics": dict(sorted(self.topics_of_interest.items(), key=lambda x: -x[1])[:10]),
             "personality_affinity": self.personality_affinity,
             "last_active": self.last_active,
         }
@@ -82,7 +76,9 @@ class TAimra:
         twin.status = TwinStatus.LEARNING
         twin.last_active = time.time()
         self._emit(user_id, "taimra.activated")
-        logger.info("taimra: activated for user=%s", sanitize_for_log(user_id))  # codeql[py/cleartext-logging]
+        logger.info(
+            "taimra: activated for user=%s", sanitize_for_log(user_id)
+        )  # codeql[py/cleartext-logging]
         return twin
 
     def deactivate(self, user_id: str) -> None:
@@ -119,11 +115,7 @@ class TAimra:
     def suggest_personality(self, user_id: str) -> Optional[str]:
         """Return the personality with highest affinity score, or None."""
         twin = self._twins.get(user_id)
-        if (
-            not twin
-            or twin.status == TwinStatus.OFFLINE
-            or not twin.personality_affinity
-        ):
+        if not twin or twin.status == TwinStatus.OFFLINE or not twin.personality_affinity:
             return None
         return max(twin.personality_affinity, key=twin.personality_affinity.get)
 
@@ -161,7 +153,6 @@ class TAimra:
             )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
 
 _taimra: Optional[TAimra] = None

@@ -135,9 +135,7 @@ async def _run(bot_name: str, **kwargs) -> dict:
                 if r.status_code < 500:
                     return r.json()
         except Exception as exc:
-            logger.warning(
-                "Bots proxy to %s failed (%s) — falling back to local", bot_name, exc
-            )
+            logger.warning("Bots proxy to %s failed (%s) — falling back to local", bot_name, exc)
 
     if _registry is None:
         raise HTTPException(503, detail="Worker registry not initialised")
@@ -374,6 +372,7 @@ async def quantum(request: Request):
             qubits = body.get("qubits", 4)
             # Use quantum_attention_scores with dummy tensors for nano endpoint
             import torch
+
             dummy = torch.randn(1, 1, qubits, 8)
             result = qo.quantum_attention_scores(dummy, dummy)
             return {"attention": result.shape}
@@ -427,9 +426,7 @@ async def evolution_health():
 @nano_app.exception_handler(Exception)
 async def _generic_error(request: Request, exc: Exception):
     logger.exception("Nanoservice error at %s: %s", request.url.path, exc)
-    return JSONResponse(
-        status_code=500, content={"error": str(exc), "path": str(request.url.path)}
-    )
+    return JSONResponse(status_code=500, content={"error": str(exc), "path": str(request.url.path)})
 
 
 # ─── Standalone entry point ───────────────────────────────────────────────────

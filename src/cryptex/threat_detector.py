@@ -26,37 +26,38 @@ logger = logging.getLogger(__name__)
 
 
 class ThreatCategory(str, Enum):
-    INJECTION          = "injection"           # SQL, NoSQL, LDAP, OS command
-    XSS                = "xss"                 # Cross-site scripting
-    BROKEN_AUTH        = "broken_auth"         # Auth bypass, credential stuffing
-    SENSITIVE_DATA     = "sensitive_data"      # PII exposure, unencrypted secrets
-    BROKEN_ACCESS      = "broken_access"       # IDOR, privilege escalation
-    SSRF               = "ssrf"                # Server-side request forgery
-    MISCONFIG          = "misconfig"           # Security misconfiguration
+    INJECTION = "injection"  # SQL, NoSQL, LDAP, OS command
+    XSS = "xss"  # Cross-site scripting
+    BROKEN_AUTH = "broken_auth"  # Auth bypass, credential stuffing
+    SENSITIVE_DATA = "sensitive_data"  # PII exposure, unencrypted secrets
+    BROKEN_ACCESS = "broken_access"  # IDOR, privilege escalation
+    SSRF = "ssrf"  # Server-side request forgery
+    MISCONFIG = "misconfig"  # Security misconfiguration
     OUTDATED_COMPONENT = "outdated_component"  # Known-vulnerable dependency
-    LOGGING_FAILURE    = "logging_failure"     # Insufficient logging/monitoring
-    UNKNOWN            = "unknown"
+    LOGGING_FAILURE = "logging_failure"  # Insufficient logging/monitoring
+    UNKNOWN = "unknown"
 
 
 class ThreatSeverity(str, Enum):
-    INFO     = "info"
-    LOW      = "low"
-    MEDIUM   = "medium"
-    HIGH     = "high"
+    INFO = "info"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
     CRITICAL = "critical"
 
 
 class MitigationAction(str, Enum):
-    LOG      = "log"        # Record only
-    ALERT    = "alert"      # Notify via Nexus
+    LOG = "log"  # Record only
+    ALERT = "alert"  # Notify via Nexus
     RATE_LIMIT = "rate_limit"
-    BLOCK    = "block"      # Block actor/IP
-    ISOLATE  = "isolate"    # Send to The Ice Box
+    BLOCK = "block"  # Block actor/IP
+    ISOLATE = "isolate"  # Send to The Ice Box
 
 
 @dataclass
 class ThreatSignal:
     """A detected threat event."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: float = field(default_factory=time.time)
     category: ThreatCategory = ThreatCategory.UNKNOWN
@@ -158,13 +159,20 @@ class Cryptex:
 
         return signals
 
-    def analyse_request(self, path: str, body: str = "", headers: Dict[str, str] = None,
-                        actor: Optional[str] = None, ip: Optional[str] = None) -> List[ThreatSignal]:
+    def analyse_request(
+        self,
+        path: str,
+        body: str = "",
+        headers: Dict[str, str] = None,
+        actor: Optional[str] = None,
+        ip: Optional[str] = None,
+    ) -> List[ThreatSignal]:
         if headers is None:
             headers = {}
         return self.analyse(
             {"input": f"{path} {body}", "payload": body, "headers": str(headers), "target": path},
-            actor=actor, source_ip=ip,
+            actor=actor,
+            source_ip=ip,
         )
 
     # ── Blocking ──────────────────────────────────────────────────────────────
@@ -178,16 +186,25 @@ class Cryptex:
 
     def block_ip(self, ip: str) -> None:
         self._blocked_ips.add(ip)
-        logger.warning("cryptex: blocked IP %s", sanitize_for_log(ip))  # codeql[py/cleartext-logging]
+        logger.warning(
+            "cryptex: blocked IP %s", sanitize_for_log(ip)
+        )  # codeql[py/cleartext-logging]
 
     def unblock_ip(self, ip: str) -> None:
         self._blocked_ips.discard(ip)
 
     # ── Signals ───────────────────────────────────────────────────────────────
 
-    def recent_signals(self, limit: int = 50, min_severity: Optional[ThreatSeverity] = None) -> List[ThreatSignal]:
-        _order = [ThreatSeverity.INFO, ThreatSeverity.LOW, ThreatSeverity.MEDIUM,
-                  ThreatSeverity.HIGH, ThreatSeverity.CRITICAL]
+    def recent_signals(
+        self, limit: int = 50, min_severity: Optional[ThreatSeverity] = None
+    ) -> List[ThreatSignal]:
+        _order = [
+            ThreatSeverity.INFO,
+            ThreatSeverity.LOW,
+            ThreatSeverity.MEDIUM,
+            ThreatSeverity.HIGH,
+            ThreatSeverity.CRITICAL,
+        ]
         signals = list(reversed(self._signals))
         if min_severity:
             threshold = _order.index(min_severity)
@@ -222,13 +239,16 @@ class Cryptex:
     def _emit(self, signal: ThreatSignal) -> None:
         try:
             from src.observability.observatory import EventCategory, EventSeverity, observe
+
             observe(
                 f"cryptex.threat.{signal.category.value}",
                 actor=signal.actor,
                 actor_ip=signal.source_ip,
                 target=signal.target,
                 category=EventCategory.SECURITY,
-                severity=EventSeverity.SECURITY if signal.severity == ThreatSeverity.CRITICAL else EventSeverity.WARNING,
+                severity=EventSeverity.SECURITY
+                if signal.severity == ThreatSeverity.CRITICAL
+                else EventSeverity.WARNING,
                 service="cryptex",
                 outcome="detected",
                 metadata=signal.to_dict(),
@@ -236,10 +256,10 @@ class Cryptex:
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
-
         if signal.severity in (ThreatSeverity.HIGH, ThreatSeverity.CRITICAL):
             try:
                 from src.nexus.hub import get_nexus
+
                 get_nexus().publish(
                     "cryptex.threat.alert",
                     {"signal": signal.to_dict()},
@@ -247,7 +267,6 @@ class Cryptex:
                 )
             except Exception:
                 pass  # nosec B110 — graceful degradation; error logged upstream
-
 
     def _register_default_rules(self) -> None:
         rules = [

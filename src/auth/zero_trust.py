@@ -27,6 +27,7 @@ logger = logging.getLogger("tranc3.auth.zero_trust")
 
 class DevicePostureStatus(str, enum.Enum):
     """Device health status."""
+
     HEALTHY = "healthy"
     UNHEALTHY = "unhealthy"
     UNKNOWN = "unknown"
@@ -34,6 +35,7 @@ class DevicePostureStatus(str, enum.Enum):
 
 class AccessPolicy(str, enum.Enum):
     """Access decision."""
+
     ALLOW = "allow"
     DENY = "deny"
     MFA_REQUIRED = "mfa_required"
@@ -41,6 +43,7 @@ class AccessPolicy(str, enum.Enum):
 
 class ZeroTrustContext(BaseModel):
     """Zero Trust context extracted from request headers."""
+
     device_id: Optional[str] = None
     device_posture: DevicePostureStatus = DevicePostureStatus.UNKNOWN
     country: Optional[str] = None
@@ -53,10 +56,17 @@ class ZeroTrustContext(BaseModel):
 
 class ZeroTrustOptions(BaseModel):
     """Configuration for Zero Trust enforcement."""
+
     mfa_routes: list[str] = Field(default_factory=list, description="Routes requiring MFA")
-    healthy_device_routes: list[str] = Field(default_factory=list, description="Routes requiring healthy device")
-    allowed_countries: list[str] = Field(default_factory=list, description="ISO 3166-1 alpha-2 allowed countries")
-    blocked_countries: list[str] = Field(default_factory=list, description="ISO 3166-1 alpha-2 blocked countries")
+    healthy_device_routes: list[str] = Field(
+        default_factory=list, description="Routes requiring healthy device"
+    )
+    allowed_countries: list[str] = Field(
+        default_factory=list, description="ISO 3166-1 alpha-2 allowed countries"
+    )
+    blocked_countries: list[str] = Field(
+        default_factory=list, description="ISO 3166-1 alpha-2 blocked countries"
+    )
     min_risk_score: int = Field(default=0, ge=0, le=100, description="Minimum risk score to allow")
     enforce_on_all_routes: bool = False
     mfa_bypass_for_healthy: bool = True
@@ -99,9 +109,7 @@ class ZeroTrustMiddleware:
         """
         # Device posture
         posture_header = (
-            headers.get("x-device-posture", "")
-            or headers.get("X-Device-Posture", "")
-            or "unknown"
+            headers.get("x-device-posture", "") or headers.get("X-Device-Posture", "") or "unknown"
         ).lower()
         device_posture = DevicePostureStatus.UNKNOWN
         if posture_header == "healthy":
@@ -111,24 +119,15 @@ class ZeroTrustMiddleware:
 
         # MFA verification
         mfa_header = (
-            headers.get("x-mfa-verified", "")
-            or headers.get("X-MFA-Verified", "")
+            headers.get("x-mfa-verified", "") or headers.get("X-MFA-Verified", "")
         ).lower()
         mfa_verified = mfa_header in ("true", "1", "yes")
 
         # Country
-        country = (
-            headers.get("x-client-country", "")
-            or headers.get("X-Client-Country", "")
-            or None
-        )
+        country = headers.get("x-client-country", "") or headers.get("X-Client-Country", "") or None
 
         # Device ID
-        device_id = (
-            headers.get("x-device-id", "")
-            or headers.get("X-Device-ID", "")
-            or None
-        )
+        device_id = headers.get("x-device-id", "") or headers.get("X-Device-ID", "") or None
 
         # IP Address
         ip_address = (
@@ -188,14 +187,21 @@ class ZeroTrustMiddleware:
             return context
 
         # Check MFA routes
-        if path in self.options.mfa_routes or self._path_matches_patterns(path, self.options.mfa_routes):
+        if path in self.options.mfa_routes or self._path_matches_patterns(
+            path, self.options.mfa_routes
+        ):
             if not context.mfa_verified:
-                if not (self.options.mfa_bypass_for_healthy and context.device_posture == DevicePostureStatus.HEALTHY):
+                if not (
+                    self.options.mfa_bypass_for_healthy
+                    and context.device_posture == DevicePostureStatus.HEALTHY
+                ):
                     context.access_policy = AccessPolicy.MFA_REQUIRED
                     return context
 
         # Check healthy device routes
-        if path in self.options.healthy_device_routes or self._path_matches_patterns(path, self.options.healthy_device_routes):
+        if path in self.options.healthy_device_routes or self._path_matches_patterns(
+            path, self.options.healthy_device_routes
+        ):
             if context.device_posture != DevicePostureStatus.HEALTHY:
                 context.access_policy = AccessPolicy.DENY
                 return context
@@ -209,7 +215,10 @@ class ZeroTrustMiddleware:
             context.access_policy = AccessPolicy.MFA_REQUIRED
 
         # Unhealthy devices are denied on enforced routes
-        if self.options.enforce_on_all_routes and context.device_posture == DevicePostureStatus.UNHEALTHY:
+        if (
+            self.options.enforce_on_all_routes
+            and context.device_posture == DevicePostureStatus.UNHEALTHY
+        ):
             context.access_policy = AccessPolicy.DENY
 
         return context
@@ -253,4 +262,5 @@ class ZeroTrustMiddleware:
     def _path_matches_patterns(path: str, patterns: list[str]) -> bool:
         """Check if a path matches any of the given patterns (simple glob)."""
         import fnmatch
+
         return any(fnmatch.fnmatch(path, p) for p in patterns)

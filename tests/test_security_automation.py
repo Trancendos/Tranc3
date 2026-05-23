@@ -30,6 +30,7 @@ from shared_core.security_automation.telemetry import (
 # Helper — write sample code to a temp file for scanning
 # ---------------------------------------------------------------------------
 
+
 def _write_tmp(content: str, suffix: str = ".py") -> Path:
     """Write content to a temp file and return the path."""
     tmp = tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False)
@@ -43,50 +44,55 @@ def _write_tmp(content: str, suffix: str = ".py") -> Path:
 # Scanner Tests — Pattern Detection
 # ===========================================================================
 
+
 class TestScannerLogInjection:
     """CWE-117: f-string in logger calls should be flagged."""
 
     def test_fstring_logger_detected(self):
-        code = '''\
+        code = """\
         import logging
         logger = logging.getLogger(__name__)
         name = "user"
         logger.info(f"Hello {name}")
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
             violations = scanner.scan_file(str(path))
             log_violations = [v for v in violations if v.category == Category.LOG_INJECTION]
-            assert len(log_violations) >= 1, f"Expected LOG_INJECTION, got {[v.category for v in violations]}"
+            assert len(log_violations) >= 1, (
+                f"Expected LOG_INJECTION, got {[v.category for v in violations]}"
+            )
             assert log_violations[0].severity in (Severity.HIGH, Severity.MEDIUM)
         finally:
             path.unlink()
 
     def test_percent_style_logger_not_flagged(self):
-        code = '''\
+        code = """\
         import logging
         logger = logging.getLogger(__name__)
         name = "user"
         logger.info("Hello %s", name)
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
             violations = scanner.scan_file(str(path))
             log_violations = [v for v in violations if v.category == Category.LOG_INJECTION]
-            assert len(log_violations) == 0, f"Should not flag %-style logging, got {log_violations}"
+            assert len(log_violations) == 0, (
+                f"Should not flag %-style logging, got {log_violations}"
+            )
         finally:
             path.unlink()
 
     def test_sanitize_for_log_not_flagged(self):
-        code = '''\
+        code = """\
         import logging
         from shared_core.sanitize import sanitize_for_log
         logger = logging.getLogger(__name__)
         name = "user"
         logger.info("Hello %s", sanitize_for_log(name))  # codeql[py/cleartext-logging]
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -101,29 +107,31 @@ class TestScannerInfoExposure:
     """CWE-209: str(exc) in HTTP error responses should be flagged."""
 
     def test_str_exc_in_detail_detected(self):
-        code = '''\
+        code = """\
         try:
             do_something()
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc))
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
             violations = scanner.scan_file(str(path))
             info_violations = [v for v in violations if v.category == Category.INFO_EXPOSURE]
-            assert len(info_violations) >= 1, f"Expected INFO_EXPOSURE, got {[v.category for v in violations]}"
+            assert len(info_violations) >= 1, (
+                f"Expected INFO_EXPOSURE, got {[v.category for v in violations]}"
+            )
         finally:
             path.unlink()
 
     def test_safe_error_detail_not_flagged(self):
-        code = '''\
+        code = """\
         from shared_core.error_handlers import safe_error_detail
         try:
             do_something()
         except Exception as exc:
             raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500))
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -138,12 +146,12 @@ class TestScannerBareExcept:
     """PY-001: bare except: blocks should be flagged."""
 
     def test_bare_except_detected(self):
-        code = '''\
+        code = """\
         try:
             risky_operation()
         except:
             pass
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -154,12 +162,12 @@ class TestScannerBareExcept:
             path.unlink()
 
     def test_except_exception_not_flagged(self):
-        code = '''\
+        code = """\
         try:
             risky_operation()
         except Exception:
             pass
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -174,12 +182,12 @@ class TestScannerTypeExc:
     """PY-003: type(__exc).__name__ patterns should be flagged."""
 
     def test_type_exc_detected(self):
-        code = '''\
+        code = """\
         try:
             pass
         except Exception as __exc:
             logger.error(f"Error: {type(__exc).__name__}")
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -194,9 +202,9 @@ class TestScannerUnclosedFile:
     """PY-004: open().read() without context manager should be flagged."""
 
     def test_unclosed_file_detected(self):
-        code = '''\
+        code = """\
         data = open("config.json").read()
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -207,10 +215,10 @@ class TestScannerUnclosedFile:
             path.unlink()
 
     def test_context_manager_not_flagged(self):
-        code = '''\
+        code = """\
         with open("config.json") as f:
             data = f.read()
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -225,10 +233,10 @@ class TestScannerWeakHash:
     """CWE-327: md5/sha1 for security purposes should be flagged."""
 
     def test_hashlib_md5_detected(self):
-        code = '''\
+        code = """\
         import hashlib
         digest = hashlib.md5(data).hexdigest()
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -239,10 +247,10 @@ class TestScannerWeakHash:
             path.unlink()
 
     def test_hashlib_sha256_not_flagged(self):
-        code = '''\
+        code = """\
         import hashlib
         digest = hashlib.sha256(data).hexdigest()
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -257,13 +265,13 @@ class TestScannerPathTraversal:
     """CWE-022: user input in path operations should be flagged."""
 
     def test_user_input_in_open_detected(self):
-        code = '''\
+        code = """\
         from fastapi import Request
         def read_file(request: Request):
             filename = request.query_params.get("file")
             with open(filename) as f:
                 return f.read()
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -274,7 +282,7 @@ class TestScannerPathTraversal:
             path.unlink()
 
     def test_validated_path_not_flagged(self):
-        code = '''\
+        code = """\
         from shared_core.path_validation import validate_path
         from fastapi import Request
         def read_file(request: Request, base: str):
@@ -282,7 +290,7 @@ class TestScannerPathTraversal:
             safe_path = validate_path(filename, base)
             with open(safe_path) as f:
                 return f.read()
-        '''
+        """
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -297,6 +305,7 @@ class TestScannerPathTraversal:
 # ===========================================================================
 # Remediator Tests — Auto-Fix
 # ===========================================================================
+
 
 class TestRemediatorLogInjection:
     """Test auto-fix for CWE-117 log injection."""
@@ -318,12 +327,12 @@ class TestRemediatorLogInjection:
             path.unlink()
 
     def test_bare_except_fix(self):
-        code = dedent('''\
+        code = dedent("""\
         try:
             pass
         except:
             pass
-        ''')
+        """)
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -352,12 +361,12 @@ class TestRemediatorInfoExposure:
     """Test auto-fix for CWE-209 info exposure."""
 
     def test_fixes_str_exc_in_detail(self):
-        code = dedent('''\
+        code = dedent("""\
         try:
             pass
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc))
-        ''')
+        """)
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -379,6 +388,7 @@ class TestRemediatorInfoExposure:
 # ===========================================================================
 # Telemetry Tests
 # ===========================================================================
+
 
 class TestTelemetry:
     """Tests for the SecurityTelemetry module."""
@@ -503,20 +513,44 @@ class TestTelemetry:
 
             # First scan: 2 violations
             v1 = [
-                Violation(rule_id="R1", category=Category.LOG_INJECTION,
-                          severity=Severity.HIGH, file="a.py", line=10, message="v1"),
-                Violation(rule_id="R2", category=Category.BARE_EXCEPT,
-                          severity=Severity.MEDIUM, file="b.py", line=20, message="v2"),
+                Violation(
+                    rule_id="R1",
+                    category=Category.LOG_INJECTION,
+                    severity=Severity.HIGH,
+                    file="a.py",
+                    line=10,
+                    message="v1",
+                ),
+                Violation(
+                    rule_id="R2",
+                    category=Category.BARE_EXCEPT,
+                    severity=Severity.MEDIUM,
+                    file="b.py",
+                    line=20,
+                    message="v2",
+                ),
             ]
             result1 = ScanResult.from_violations(v1, commit="aaa", branch="main")
             telemetry.save(result1)
 
             # Second scan: 1 fixed (bare except gone), 1 new (path traversal)
             v2 = [
-                Violation(rule_id="R1", category=Category.LOG_INJECTION,
-                          severity=Severity.HIGH, file="a.py", line=10, message="v1"),
-                Violation(rule_id="R3", category=Category.PATH_TRAVERSAL,
-                          severity=Severity.CRITICAL, file="c.py", line=5, message="v3"),
+                Violation(
+                    rule_id="R1",
+                    category=Category.LOG_INJECTION,
+                    severity=Severity.HIGH,
+                    file="a.py",
+                    line=10,
+                    message="v1",
+                ),
+                Violation(
+                    rule_id="R3",
+                    category=Category.PATH_TRAVERSAL,
+                    severity=Severity.CRITICAL,
+                    file="c.py",
+                    line=5,
+                    message="v3",
+                ),
             ]
             result2 = ScanResult.from_violations(v2, commit="bbb", branch="main")
 
@@ -576,9 +610,7 @@ class TestTelemetry:
 
             # Create 10 scan results
             for i in range(10):
-                result = ScanResult.from_violations(
-                    [], commit=f"commit{i:04d}", branch="main"
-                )
+                result = ScanResult.from_violations([], commit=f"commit{i:04d}", branch="main")
                 telemetry.save(result)
 
             # Cleanup, keeping only 5
@@ -593,16 +625,17 @@ class TestTelemetry:
 # Integration Tests — Full Scan → Fix → Re-scan Cycle
 # ===========================================================================
 
+
 class TestIntegrationScanFixRescan:
     """End-to-end: scan a file with violations, auto-fix, verify clean on re-scan."""
 
     def test_bare_except_full_cycle(self):
-        code = dedent('''\
+        code = dedent("""\
         try:
             risky()
         except:
             handle_error()
-        ''')
+        """)
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -629,12 +662,12 @@ class TestIntegrationScanFixRescan:
             path.unlink(missing_ok=True)
 
     def test_info_exposure_full_cycle(self):
-        code = dedent('''\
+        code = dedent("""\
         try:
             connect_db()
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc))
-        ''')
+        """)
         path = _write_tmp(code)
         try:
             scanner = SecurityScanner()
@@ -683,7 +716,9 @@ class TestIntegrationScanFixRescan:
             violations = scanner.scan_file(str(path))
             # Should have zero high/critical violations
             serious = [v for v in violations if v.severity in (Severity.CRITICAL, Severity.HIGH)]
-            assert len(serious) == 0, f"Clean code should not have serious violations, got {serious}"
+            assert len(serious) == 0, (
+                f"Clean code should not have serious violations, got {serious}"
+            )
         finally:
             path.unlink()
 

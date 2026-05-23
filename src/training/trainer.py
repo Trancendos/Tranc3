@@ -121,12 +121,12 @@ class Trainer:
             _, loss = self.model(input_ids, targets)
             total_loss += loss.item()
             n_batches += 1
-            if n_batches >= 50:   # cap validation at 50 batches for speed
+            if n_batches >= 50:  # cap validation at 50 batches for speed
                 break
 
         self.model.train()
         avg_loss = total_loss / max(n_batches, 1)
-        perplexity = math.exp(min(avg_loss, 20))   # cap to avoid overflow display
+        perplexity = math.exp(min(avg_loss, 20))  # cap to avoid overflow display
         return avg_loss, perplexity
 
     # ------------------------------------------------------------------
@@ -135,12 +135,15 @@ class Trainer:
 
     def save_checkpoint(self, tag: str = "latest"):
         path = Path(self.cfg.checkpoint_dir) / f"{self.cfg.run_name}_{tag}.pt"
-        torch.save({
-            "step": self.step,
-            "model_state": self.model.state_dict(),
-            "optimiser_state": self.optimiser.state_dict(),
-            "best_val_loss": self.best_val_loss,
-        }, path)
+        torch.save(
+            {
+                "step": self.step,
+                "model_state": self.model.state_dict(),
+                "optimiser_state": self.optimiser.state_dict(),
+                "best_val_loss": self.best_val_loss,
+            },
+            path,
+        )
         print(f"[Checkpoint] Saved → {path}")
 
     def load_checkpoint(self, path: str):
@@ -165,11 +168,11 @@ class Trainer:
         t0 = time.time()
 
         print(f"\n[Trainer] Starting training — {self.cfg.max_steps:,} steps")
-        print(f"[Trainer] Effective batch size: "
-              f"{self.cfg.batch_size * self.cfg.grad_accum_steps}\n")
+        print(
+            f"[Trainer] Effective batch size: {self.cfg.batch_size * self.cfg.grad_accum_steps}\n"
+        )
 
         while self.step < self.cfg.max_steps:
-
             # Gradient accumulation loop
             self.optimiser.zero_grad()
             for _ in range(self.cfg.grad_accum_steps):

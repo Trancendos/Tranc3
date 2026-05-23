@@ -52,6 +52,7 @@ MAX_RETRIES = 3
 # Database
 # ---------------------------------------------------------------------------
 
+
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -90,7 +91,14 @@ def init_db() -> None:
         conn.commit()
 
 
-def _send_smtp(to: str, cc: Optional[str], subject: str, body_text: Optional[str], body_html: Optional[str], extra_headers: dict) -> None:
+def _send_smtp(
+    to: str,
+    cc: Optional[str],
+    subject: str,
+    body_text: Optional[str],
+    body_html: Optional[str],
+    extra_headers: dict,
+) -> None:
     msg = email.mime.multipart.MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = formataddr((SMTP_FROM_NAME, SMTP_FROM))
@@ -126,7 +134,9 @@ async def _drain_outbox() -> None:
                 # logging provider — mark sent without actually sending
                 logger.info(
                     "EMAIL [log] to=%s subject=%s body_preview=%s",
-                    row["to_addr"], row["subject"], (row["body_text"] or "")[:80],
+                    row["to_addr"],
+                    row["subject"],
+                    (row["body_text"] or "")[:80],
                 )
                 with get_conn() as conn:
                     conn.execute(
@@ -137,8 +147,14 @@ async def _drain_outbox() -> None:
                 continue
             try:
                 extra = json.loads(row["headers"] or "{}")
-                _send_smtp(row["to_addr"], row["cc_addr"], row["subject"],
-                           row["body_text"], row["body_html"], extra)
+                _send_smtp(
+                    row["to_addr"],
+                    row["cc_addr"],
+                    row["subject"],
+                    row["body_text"],
+                    row["body_html"],
+                    extra,
+                )
                 with get_conn() as conn:
                     conn.execute(
                         "UPDATE outbox SET status='sent', sent_at=? WHERE id=?",
@@ -160,6 +176,7 @@ async def _drain_outbox() -> None:
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
+
 
 class SendIn(BaseModel):
     to: str
@@ -192,6 +209,7 @@ class TemplateRender(BaseModel):
 # Lifespan
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -207,7 +225,12 @@ async def lifespan(app: FastAPI):
 
 STARTED_AT = datetime.now(timezone.utc)
 
-app = FastAPI(title="email-service", description="SMTP outbox queue (self-hosted)", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="email-service",
+    description="SMTP outbox queue (self-hosted)",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -243,7 +266,15 @@ async def send_email(req: SendIn):
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO outbox (to_addr, cc_addr, subject, body_text, body_html, headers, queued_at) VALUES (?,?,?,?,?,?,?)",
-            (req.to, req.cc, req.subject, req.body_text, req.body_html, json.dumps(req.headers), now),
+            (
+                req.to,
+                req.cc,
+                req.subject,
+                req.body_text,
+                req.body_html,
+                json.dumps(req.headers),
+                now,
+            ),
         )
         conn.commit()
     return {"id": cur.lastrowid, "status": "queued", "to": req.to}
@@ -291,12 +322,15 @@ async def retry_email(email_id: int):
         row = conn.execute("SELECT id, status FROM outbox WHERE id = ?", (email_id,)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Email not found")
-        conn.execute("UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (email_id,))
+        conn.execute(
+            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (email_id,)
+        )
         conn.commit()
     return {"retrying": email_id}
 
 
 # --- Templates ---
+
 
 @app.post("/templates", status_code=201)
 async def create_template(req: TemplateCreate):
@@ -314,7 +348,9 @@ async def create_template(req: TemplateCreate):
 @app.get("/templates")
 async def list_templates():
     with get_conn() as conn:
-        rows = conn.execute("SELECT id, name, subject, created_at FROM templates ORDER BY name").fetchall()
+        rows = conn.execute(
+            "SELECT id, name, subject, created_at FROM templates ORDER BY name"
+        ).fetchall()
     return {"templates": [dict(r) for r in rows]}
 
 
@@ -347,4 +383,5 @@ async def send_template(template_id: str, req: TemplateRender):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

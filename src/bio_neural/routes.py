@@ -47,9 +47,7 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
         state = body.get("state")
         if not state:
-            return JSONResponse(
-                {"error": "state (list of floats) is required"}, status_code=400
-            )
+            return JSONResponse({"error": "state (list of floats) is required"}, status_code=400)
 
         calc = IITCalculator()
         state_arr = np.array(state, dtype=float)
@@ -79,9 +77,7 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
         input_data = body.get("input", [])
         timesteps = int(body.get("timesteps", 10))
         if not input_data:
-            return JSONResponse(
-                {"error": "input (list of floats) is required"}, status_code=400
-            )
+            return JSONResponse({"error": "input (list of floats) is required"}, status_code=400)
 
         processor = NeuromorphicProcessor({})
         tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)

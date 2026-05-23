@@ -44,9 +44,7 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 # If set, only these domains may receive webhook notifications.
 # If empty/unset, all domains passing SSRF validation are permitted.
 _WEBHOOK_ALLOWED_DOMAINS: Set[str] = {
-    d.strip().lower()
-    for d in os.environ.get("WEBHOOK_ALLOWED_DOMAINS", "").split(",")
-    if d.strip()
+    d.strip().lower() for d in os.environ.get("WEBHOOK_ALLOWED_DOMAINS", "").split(",") if d.strip()
 }
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
@@ -55,6 +53,7 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
+
 
 class NotificationChannel(str, Enum):
     email = "email"
@@ -115,6 +114,7 @@ class UserPreferences(BaseModel):
 # Rate Limiter (in-memory, zero-cost)
 # ---------------------------------------------------------------------------
 
+
 class RateLimiter:
     """Token-bucket rate limiter per user+channel."""
 
@@ -142,6 +142,7 @@ import time  # noqa: E402 (needed for RateLimiter)
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+
 
 class NotificationsDatabase:
     """SQLite-backed storage for notifications, templates, and preferences."""
@@ -215,41 +216,68 @@ class NotificationsDatabase:
 
     # -- Notifications --
 
-    def create_notification(self, notif: NotificationRequest, status: NotificationStatus = NotificationStatus.pending) -> Dict[str, Any]:
+    def create_notification(
+        self, notif: NotificationRequest, status: NotificationStatus = NotificationStatus.pending
+    ) -> Dict[str, Any]:
         now = datetime.now(timezone.utc).isoformat()
         with self._cursor() as cur:
             cur.execute(
                 "INSERT INTO notifications (notification_id, user_id, channel, priority, subject, body, status, metadata, template_id, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (notif.notification_id, notif.user_id, notif.channel.value,
-                 notif.priority.value, notif.subject, notif.body,
-                 status.value, json.dumps(notif.metadata),
-                 notif.template_id, now),
+                (
+                    notif.notification_id,
+                    notif.user_id,
+                    notif.channel.value,
+                    notif.priority.value,
+                    notif.subject,
+                    notif.body,
+                    status.value,
+                    json.dumps(notif.metadata),
+                    notif.template_id,
+                    now,
+                ),
             )
         return {"notification_id": notif.notification_id, "status": status.value}
 
-    def update_status(self, notification_id: str, status: NotificationStatus, error: Optional[str] = None):
+    def update_status(
+        self, notification_id: str, status: NotificationStatus, error: Optional[str] = None
+    ):
         now = datetime.now(timezone.utc).isoformat()
         with self._cursor() as cur:
             if status == NotificationStatus.sent:
-                cur.execute("UPDATE notifications SET status=?, sent_at=? WHERE notification_id=?",
-                            (status.value, now, notification_id))
+                cur.execute(
+                    "UPDATE notifications SET status=?, sent_at=? WHERE notification_id=?",
+                    (status.value, now, notification_id),
+                )
             elif status == NotificationStatus.delivered:
-                cur.execute("UPDATE notifications SET status=?, delivered_at=? WHERE notification_id=?",
-                            (status.value, now, notification_id))
+                cur.execute(
+                    "UPDATE notifications SET status=?, delivered_at=? WHERE notification_id=?",
+                    (status.value, now, notification_id),
+                )
             elif status == NotificationStatus.failed:
-                cur.execute("UPDATE notifications SET status=?, error_message=? WHERE notification_id=?",
-                            (status.value, error or "", notification_id))
+                cur.execute(
+                    "UPDATE notifications SET status=?, error_message=? WHERE notification_id=?",
+                    (status.value, error or "", notification_id),
+                )
             else:
-                cur.execute("UPDATE notifications SET status=? WHERE notification_id=?",
-                            (status.value, notification_id))
+                cur.execute(
+                    "UPDATE notifications SET status=? WHERE notification_id=?",
+                    (status.value, notification_id),
+                )
 
     def get_notification(self, notification_id: str) -> Optional[Dict[str, Any]]:
         conn = self._get_conn()
-        row = conn.execute("SELECT * FROM notifications WHERE notification_id=?", (notification_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM notifications WHERE notification_id=?", (notification_id,)
+        ).fetchone()
         return dict(row) if row else None
 
-    def list_notifications(self, user_id: Optional[str] = None, status: Optional[str] = None,
-                           limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+    def list_notifications(
+        self,
+        user_id: Optional[str] = None,
+        status: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         query = "SELECT * FROM notifications WHERE 1=1"
         params: list = []
@@ -270,8 +298,14 @@ class NotificationsDatabase:
         with self._cursor() as cur:
             cur.execute(
                 "INSERT INTO templates (template_id, name, channel, subject_template, body_template, metadata) VALUES (?,?,?,?,?,?)",
-                (template.template_id, template.name, template.channel.value,
-                 template.subject_template, template.body_template, json.dumps(template.metadata)),
+                (
+                    template.template_id,
+                    template.name,
+                    template.channel.value,
+                    template.subject_template,
+                    template.body_template,
+                    json.dumps(template.metadata),
+                ),
             )
         return template
 
@@ -283,7 +317,9 @@ class NotificationsDatabase:
     def list_templates(self, channel: Optional[str] = None) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         if channel:
-            rows = conn.execute("SELECT * FROM templates WHERE channel=? ORDER BY name", (channel,)).fetchall()
+            rows = conn.execute(
+                "SELECT * FROM templates WHERE channel=? ORDER BY name", (channel,)
+            ).fetchall()
         else:
             rows = conn.execute("SELECT * FROM templates ORDER BY name").fetchall()
         return [dict(r) for r in rows]
@@ -299,9 +335,14 @@ class NotificationsDatabase:
         with self._cursor() as cur:
             cur.execute(
                 "INSERT OR REPLACE INTO user_preferences (user_id, channels_enabled, quiet_hours_start, quiet_hours_end, max_per_hour, max_per_day) VALUES (?,?,?,?,?,?)",
-                (prefs.user_id, json.dumps([c.value for c in prefs.channels_enabled]),
-                 prefs.quiet_hours_start, prefs.quiet_hours_end,
-                 prefs.max_per_hour, prefs.max_per_day),
+                (
+                    prefs.user_id,
+                    json.dumps([c.value for c in prefs.channels_enabled]),
+                    prefs.quiet_hours_start,
+                    prefs.quiet_hours_end,
+                    prefs.max_per_hour,
+                    prefs.max_per_day,
+                ),
             )
         return prefs
 
@@ -315,13 +356,18 @@ class NotificationsDatabase:
 # Notification Dispatchers (zero-cost — in-process)
 # ---------------------------------------------------------------------------
 
+
 class NotificationDispatcher:
     """Dispatches notifications through various channels. In production, plug in real providers."""
 
     @staticmethod
-    async def dispatch_email(user_id: str, subject: str, body: str, metadata: Dict[str, Any]) -> bool:
+    async def dispatch_email(
+        user_id: str, subject: str, body: str, metadata: Dict[str, Any]
+    ) -> bool:
         """Email dispatch — in zero-cost mode, logs and marks as sent. Plug in SMTP or SES later."""
-        logger.info("📧 EMAIL → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject))  # codeql[py/cleartext-logging]
+        logger.info(
+            "📧 EMAIL → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject)
+        )  # codeql[py/cleartext-logging]
         # In production: integrate with self-hosted mail or free-tier SMTP
         return True
 
@@ -332,9 +378,13 @@ class NotificationDispatcher:
         return True
 
     @staticmethod
-    async def dispatch_push(user_id: str, subject: str, body: str, metadata: Dict[str, Any]) -> bool:
+    async def dispatch_push(
+        user_id: str, subject: str, body: str, metadata: Dict[str, Any]
+    ) -> bool:
         """Push notification — zero-cost mode logs only. Plug in Web Push later."""
-        logger.info("🔔 PUSH → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject))  # codeql[py/cleartext-logging]
+        logger.info(
+            "🔔 PUSH → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject)
+        )  # codeql[py/cleartext-logging]
         return True
 
     @staticmethod
@@ -362,13 +412,16 @@ class NotificationDispatcher:
             if hostname not in _WEBHOOK_ALLOWED_DOMAINS:
                 logger.warning(
                     "Webhook domain '%s' not in allowlist: %s",
-                    sanitize_for_log(hostname), _WEBHOOK_ALLOWED_DOMAINS,  # codeql[py/cleartext-logging]
+                    sanitize_for_log(hostname),
+                    _WEBHOOK_ALLOWED_DOMAINS,  # codeql[py/cleartext-logging]
                 )
                 return False
 
         try:
             data = json.dumps(payload).encode()
-            req = urllib.request.Request(url, data=data, method="POST")  # codeql[py/ssrf] – URL validated against allowlist above
+            req = urllib.request.Request(
+                url, data=data, method="POST"
+            )  # codeql[py/ssrf] – URL validated against allowlist above
             req.add_header("Content-Type", "application/json")
             with urllib.request.urlopen(req, timeout=10) as resp:
                 return resp.status < 400
@@ -377,9 +430,13 @@ class NotificationDispatcher:
             return False
 
     @staticmethod
-    async def dispatch_in_app(user_id: str, subject: str, body: str, metadata: Dict[str, Any]) -> bool:
+    async def dispatch_in_app(
+        user_id: str, subject: str, body: str, metadata: Dict[str, Any]
+    ) -> bool:
         """In-app notification — stored in DB, client polls or uses WebSocket."""
-        logger.info("💬 IN-APP → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject))  # codeql[py/cleartext-logging]
+        logger.info(
+            "💬 IN-APP → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject)
+        )  # codeql[py/cleartext-logging]
         return True
 
 
@@ -411,6 +468,7 @@ STARTED_AT = datetime.now(timezone.utc)
 # Health
 # ---------------------------------------------------------------------------
 
+
 @app.get("/health")
 async def health():
     return {
@@ -433,6 +491,7 @@ async def health():
 # Send Notification
 # ---------------------------------------------------------------------------
 
+
 @app.post("/notifications/send")
 async def send_notification(req: NotificationRequest):
     """Send a notification through the specified channel."""
@@ -451,7 +510,11 @@ async def send_notification(req: NotificationRequest):
     rate_key = f"{req.user_id}:{req.channel.value}"
     if not rate_limiter.check(rate_key, max_per_hour=max_hour, max_per_day=max_day):
         db.create_notification(req, status=NotificationStatus.rate_limited)
-        return {"ok": False, "reason": "Rate limit exceeded", "notification_id": req.notification_id}
+        return {
+            "ok": False,
+            "reason": "Rate limit exceeded",
+            "notification_id": req.notification_id,
+        }
 
     # Apply template if specified
     if req.template_id:
@@ -472,11 +535,15 @@ async def send_notification(req: NotificationRequest):
     success = False
     try:
         if req.channel == NotificationChannel.email:
-            success = await dispatcher.dispatch_email(req.user_id, req.subject, req.body, req.metadata)
+            success = await dispatcher.dispatch_email(
+                req.user_id, req.subject, req.body, req.metadata
+            )
         elif req.channel == NotificationChannel.sms:
             success = await dispatcher.dispatch_sms(req.user_id, req.body, req.metadata)
         elif req.channel == NotificationChannel.push:
-            success = await dispatcher.dispatch_push(req.user_id, req.subject, req.body, req.metadata)
+            success = await dispatcher.dispatch_push(
+                req.user_id, req.subject, req.body, req.metadata
+            )
         elif req.channel == NotificationChannel.webhook:
             webhook_url = req.metadata.get("webhook_url", "")
             if not webhook_url:
@@ -488,29 +555,46 @@ async def send_notification(req: NotificationRequest):
                 raise HTTPException(
                     status_code=400,
                     detail=f"Webhook URL rejected: {e}",
-                )
-            success = await dispatcher.dispatch_webhook(webhook_url, {
-                "subject": req.subject, "body": req.body, "metadata": req.metadata,
-            })
+                ) from None
+            success = await dispatcher.dispatch_webhook(
+                webhook_url,
+                {
+                    "subject": req.subject,
+                    "body": req.body,
+                    "metadata": req.metadata,
+                },
+            )
         elif req.channel == NotificationChannel.in_app:
-            success = await dispatcher.dispatch_in_app(req.user_id, req.subject, req.body, req.metadata)
+            success = await dispatcher.dispatch_in_app(
+                req.user_id, req.subject, req.body, req.metadata
+            )
 
         if success:
             db.update_status(req.notification_id, NotificationStatus.sent)
             return {"ok": True, "notification_id": req.notification_id, "status": "sent"}
         else:
-            db.update_status(req.notification_id, NotificationStatus.failed, error="Dispatch failed")
+            db.update_status(
+                req.notification_id, NotificationStatus.failed, error="Dispatch failed"
+            )
             return {"ok": False, "notification_id": req.notification_id, "status": "failed"}
 
     except Exception as e:
-        db.update_status(req.notification_id, NotificationStatus.failed, error=safe_error_detail(e, 500))
+        db.update_status(
+            req.notification_id, NotificationStatus.failed, error=safe_error_detail(e, 500)
+        )
         logger.error("Notification dispatch error: %s", e)
-        return {"ok": False, "notification_id": req.notification_id, "status": "failed", "error": safe_error_detail(e, 500)}
+        return {
+            "ok": False,
+            "notification_id": req.notification_id,
+            "status": "failed",
+            "error": safe_error_detail(e, 500),
+        }
 
 
 # ---------------------------------------------------------------------------
 # List / Get Notifications
 # ---------------------------------------------------------------------------
+
 
 @app.get("/notifications")
 async def list_notifications(
@@ -520,7 +604,11 @@ async def list_notifications(
     offset: int = Query(0, ge=0),
 ):
     """List notifications with optional filtering."""
-    return {"notifications": db.list_notifications(user_id=user_id, status=status, limit=limit, offset=offset)}
+    return {
+        "notifications": db.list_notifications(
+            user_id=user_id, status=status, limit=limit, offset=offset
+        )
+    }
 
 
 @app.get("/notifications/{notification_id}")
@@ -535,6 +623,7 @@ async def get_notification(notification_id: str):
 # ---------------------------------------------------------------------------
 # Templates
 # ---------------------------------------------------------------------------
+
 
 @app.post("/templates")
 async def create_template(template: NotificationTemplate):
@@ -570,6 +659,7 @@ async def delete_template(template_id: str):
 # User Preferences
 # ---------------------------------------------------------------------------
 
+
 @app.get("/preferences/{user_id}")
 async def get_preferences(user_id: str):
     """Get notification preferences for a user."""
@@ -594,4 +684,5 @@ async def set_preferences(user_id: str, prefs: UserPreferences):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

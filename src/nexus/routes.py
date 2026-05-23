@@ -66,9 +66,7 @@ async def send_direct(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     except Exception as exc:
         return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
     if msg is None:
-        return JSONResponse(
-            {"error": "Recipient service not registered"}, status_code=404
-        )
+        return JSONResponse({"error": "Recipient service not registered"}, status_code=404)
     return {"sent": msg.id, "recipient": recipient}
 
 

@@ -94,12 +94,8 @@ class ChurnPredictor:
 
         # Signals that increase churn risk
         avg_rating = sum(s.response_rating or 3.0 for s in recent) / len(recent)
-        complaint_ratio = sum(1 for s in recent if s.emotion in ("angry", "sad")) / len(
-            recent
-        )
-        recency_score = 1.0 - min(
-            1.0, (now - recent[-1].timestamp) / self.window_seconds
-        )
+        complaint_ratio = sum(1 for s in recent if s.emotion in ("angry", "sad")) / len(recent)
+        recency_score = 1.0 - min(1.0, (now - recent[-1].timestamp) / self.window_seconds)
         session_trend = self._session_trend(recent)
 
         # Weighted score (lower = less churn risk)
@@ -175,9 +171,7 @@ class QualityPredictor:
         )
         return scores
 
-    def should_regenerate(
-        self, scores: Dict[str, float], threshold: float = 0.4
-    ) -> bool:
+    def should_regenerate(self, scores: Dict[str, float], threshold: float = 0.4) -> bool:
         return scores.get("overall", 1.0) < threshold
 
 
@@ -269,11 +263,7 @@ class PredictiveAnalyticsEngine:
             "intent": intent_scores,
             "dominant_intent": self.intent.dominant_intent(intent_scores),
             "churn_probability": churn_prob,
-            "churn_risk": "high"
-            if churn_prob > 0.7
-            else "medium"
-            if churn_prob > 0.4
-            else "low",
+            "churn_risk": "high" if churn_prob > 0.7 else "medium" if churn_prob > 0.4 else "low",
             "load_forecast": self.load.forecast_next_hour(),
         }
 

@@ -20,16 +20,16 @@ logger = logging.getLogger(__name__)
 
 
 class PolicyStatus(str, Enum):
-    ACTIVE   = "active"
-    DRAFT    = "draft"
-    RETIRED  = "retired"
+    ACTIVE = "active"
+    DRAFT = "draft"
+    RETIRED = "retired"
 
 
 class ComplianceResult(str, Enum):
-    PASS    = "pass"  # nosec B105 — false positive: not a password
+    PASS = "pass"  # nosec B105 — false positive: not a password
 
-    WARN    = "warn"
-    FAIL    = "fail"
+    WARN = "warn"
+    FAIL = "fail"
     UNKNOWN = "unknown"
 
 
@@ -37,11 +37,11 @@ class ComplianceResult(str, Enum):
 class Policy:
     id: str
     name: str
-    framework: str                        # "GDPR", "UK-GDPR", "Zero-Cost", etc.
+    framework: str  # "GDPR", "UK-GDPR", "Zero-Cost", etc.
     description: str = ""
     status: PolicyStatus = PolicyStatus.ACTIVE
-    score: float = 1.0                    # 0.0–1.0 current compliance score
-    articles: str = ""                    # human-readable article list
+    score: float = 1.0  # 0.0–1.0 current compliance score
+    articles: str = ""  # human-readable article list
     check: Optional[Callable[[Dict[str, Any]], ComplianceResult]] = field(default=None, repr=False)
 
     def evaluate(self, context: Dict[str, Any]) -> ComplianceResult:
@@ -123,19 +123,21 @@ class TownHall:
             if result in (ComplianceResult.WARN, ComplianceResult.FAIL):
                 try:
                     from src.observability.observatory import EventCategory, EventSeverity, observe
+
                     observe(
                         f"governance.policy.{result.value}",
                         actor=actor,
                         target=f"policy:{policy.id}",
                         category=EventCategory.GOVERNANCE,
-                        severity=EventSeverity.WARNING if result == ComplianceResult.WARN else EventSeverity.CRITICAL,
+                        severity=EventSeverity.WARNING
+                        if result == ComplianceResult.WARN
+                        else EventSeverity.CRITICAL,
                         service="townhall",
                         outcome=result.value,
                         metadata={"framework": policy.framework, "context": str(context)[:200]},
                     )
                 except Exception:
                     pass  # nosec B110 — graceful degradation; error logged upstream
-
 
         return results
 
@@ -159,59 +161,72 @@ class TownHall:
     # ── Default policies ──────────────────────────────────────────────────────
 
     def _register_default_policies(self) -> None:
-        self.register(Policy(
-            id="gdpr",
-            name="GDPR Compliance",
-            framework="GDPR",
-            description="EU General Data Protection Regulation",
-            score=1.0,
-            articles="Art.5,6,13,17,25,32,33,35",
-            check=_check_gdpr,
-        ))
-        self.register(Policy(
-            id="uk-gdpr",
-            name="UK-GDPR",
-            framework="UK-GDPR",
-            description="UK GDPR / Data Protection Act 2018",
-            score=0.97,
-            articles="DPDPD Act 2024 deviations",
-        ))
-        self.register(Policy(
-            id="zero-cost",
-            name="Zero-Cost Mandate",
-            framework="Zero-Cost",
-            description="All services must stay within free tiers",
-            score=1.0,
-            articles="All services within free tiers",
-            check=_check_zero_cost,
-        ))
-        self.register(Policy(
-            id="magna-carta",
-            name="Trancendos Magna Carta",
-            framework="Magna Carta",
-            description="User data ownership and zero lock-in guarantee",
-            score=0.95,
-            articles="User ownership · Zero lock-in · Right to export",
-        ))
-        self.register(Policy(
-            id="prince2",
-            name="PRINCE2 7th Edition",
-            framework="PRINCE2 7",
-            description="Project management principles",
-            score=0.92,
-            articles="7 principles · 7 themes · 7 processes",
-        ))
-        self.register(Policy(
-            id="itil4",
-            name="ITIL 4",
-            framework="ITIL 4",
-            description="IT service management best practices",
-            score=0.88,
-            articles="34 practices · Service Value System",
-        ))
+        self.register(
+            Policy(
+                id="gdpr",
+                name="GDPR Compliance",
+                framework="GDPR",
+                description="EU General Data Protection Regulation",
+                score=1.0,
+                articles="Art.5,6,13,17,25,32,33,35",
+                check=_check_gdpr,
+            )
+        )
+        self.register(
+            Policy(
+                id="uk-gdpr",
+                name="UK-GDPR",
+                framework="UK-GDPR",
+                description="UK GDPR / Data Protection Act 2018",
+                score=0.97,
+                articles="DPDPD Act 2024 deviations",
+            )
+        )
+        self.register(
+            Policy(
+                id="zero-cost",
+                name="Zero-Cost Mandate",
+                framework="Zero-Cost",
+                description="All services must stay within free tiers",
+                score=1.0,
+                articles="All services within free tiers",
+                check=_check_zero_cost,
+            )
+        )
+        self.register(
+            Policy(
+                id="magna-carta",
+                name="Trancendos Magna Carta",
+                framework="Magna Carta",
+                description="User data ownership and zero lock-in guarantee",
+                score=0.95,
+                articles="User ownership · Zero lock-in · Right to export",
+            )
+        )
+        self.register(
+            Policy(
+                id="prince2",
+                name="PRINCE2 7th Edition",
+                framework="PRINCE2 7",
+                description="Project management principles",
+                score=0.92,
+                articles="7 principles · 7 themes · 7 processes",
+            )
+        )
+        self.register(
+            Policy(
+                id="itil4",
+                name="ITIL 4",
+                framework="ITIL 4",
+                description="IT service management best practices",
+                score=0.88,
+                articles="34 practices · Service Value System",
+            )
+        )
 
 
 # ── Built-in policy checks ────────────────────────────────────────────────────
+
 
 def _check_gdpr(context: Dict[str, Any]) -> ComplianceResult:
     """Minimal GDPR check: personal data must have a lawful basis."""

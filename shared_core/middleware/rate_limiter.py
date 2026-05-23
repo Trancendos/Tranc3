@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RateLimitEntry:
     """Tracks request count within a sliding window for a single client."""
+
     count: int = 0
     window_start: float = 0.0
 
@@ -33,16 +34,19 @@ class RateLimitEntry:
 @dataclass
 class RateLimitConfig:
     """Configuration for the adaptive rate limiter."""
+
     window_seconds: int = 60
     max_requests: int = 100
     # IAM tier multipliers — higher tier = more requests allowed
-    tier_multipliers: Dict[str, float] = field(default_factory=lambda: {
-        "free": 1.0,
-        "pro": 2.5,
-        "prime": 5.0,
-        "admin": 10.0,
-        "service": 20.0,  # internal service accounts
-    })
+    tier_multipliers: Dict[str, float] = field(
+        default_factory=lambda: {
+            "free": 1.0,
+            "pro": 2.5,
+            "prime": 5.0,
+            "admin": 10.0,
+            "service": 20.0,  # internal service accounts
+        }
+    )
     # Key extraction: "ip", "jwt_sub", or "jwt_sub_with_ip_fallback"
     key_strategy: str = "jwt_sub_with_ip_fallback"
     cleanup_interval: int = 300  # seconds between stale entry cleanup
@@ -140,9 +144,8 @@ class AdaptiveRateLimiter:
             # Enforce max entries to prevent memory exhaustion
             if len(self._store) > self._config.max_entries:
                 # Remove oldest 10%
-                sorted_keys = sorted(self._store.keys(),
-                                     key=lambda k: self._store[k].window_start)
-                for k in sorted_keys[:len(sorted_keys) // 10]:
+                sorted_keys = sorted(self._store.keys(), key=lambda k: self._store[k].window_start)
+                for k in sorted_keys[: len(sorted_keys) // 10]:
                     del self._store[k]
 
             remaining = max(0, effective_limit - entry.count)

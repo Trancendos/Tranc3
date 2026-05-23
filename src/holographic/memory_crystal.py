@@ -10,6 +10,7 @@ try:
 except ImportError:
     from numpy.fft import fftn, ifftn  # type: ignore[assignment]
 
+
 class HolographicMemoryCrystal:
     """
     6D holographic data storage using quantum-optical crystals
@@ -35,10 +36,10 @@ class HolographicMemoryCrystal:
         ref = np.ones(dims, dtype=np.complex128)
         # Add phase gradients for each dimension
         for i, dim_size in enumerate(dims):
-            axis_phases = np.linspace(0, 2*np.pi, dim_size)
-            ref *= np.exp(1j * axis_phases.reshape(
-                [1]*i + [dim_size] + [1]*(len(dims)-i-1)
-            ))
+            axis_phases = np.linspace(0, 2 * np.pi, dim_size)
+            ref *= np.exp(
+                1j * axis_phases.reshape([1] * i + [dim_size] + [1] * (len(dims) - i - 1))
+            )
         return ref
 
     def store_experience(self, experience: Dict[str, torch.Tensor]) -> np.ndarray:
@@ -47,14 +48,13 @@ class HolographicMemoryCrystal:
         Includes all sensory, emotional, and conscious states
         """
         # Encode different aspects in different dimensions
-        spatial_data = experience.get('spatial', torch.randn(3, 100))
-        temporal_data = experience.get('temporal', torch.randn(50))
-        frequency_data = experience.get('frequency', torch.randn(50))
-        consciousness_data = experience.get('consciousness', torch.randn(50))
+        spatial_data = experience.get("spatial", torch.randn(3, 100))
+        temporal_data = experience.get("temporal", torch.randn(50))
+        frequency_data = experience.get("frequency", torch.randn(50))
+        consciousness_data = experience.get("consciousness", torch.randn(50))
 
         # Create interference pattern
-        data = self._encode_6d(spatial_data, temporal_data,
-                                frequency_data, consciousness_data)
+        data = self._encode_6d(spatial_data, temporal_data, frequency_data, consciousness_data)
 
         # Generate hologram
         hologram = data * self.reference_beam
@@ -64,8 +64,7 @@ class HolographicMemoryCrystal:
 
         return hologram
 
-    def recall_by_association(self, partial_cue: torch.Tensor,
-                            dimensions_known: List[str]) -> Dict:
+    def recall_by_association(self, partial_cue: torch.Tensor, dimensions_known: List[str]) -> Dict:
         """
         Holographic associative recall
         Reconstructs complete memory from partial cues
@@ -103,7 +102,7 @@ class HolographicMemoryCrystal:
         consciousness: torch.Tensor,
     ) -> np.ndarray:
         """Encode multi-modal data into a 6D holographic array."""
-        dims    = self.dimensions
+        dims = self.dimensions
         encoded = np.zeros(dims, dtype=np.complex128)
 
         # Spatial → axes 0,1,2
@@ -132,14 +131,18 @@ class HolographicMemoryCrystal:
         """Decode a 6D holographic array back into experience components."""
         real = reconstruction.real
         return {
-            "spatial":       torch.tensor(real[:3, 0, 0, 0, 0, 0].flatten(), dtype=torch.float32),
-            "temporal":      torch.tensor(real[0, 0, 0, :, 0, 0].flatten(), dtype=torch.float32),
-            "frequency":     torch.tensor(real[0, 0, 0, 0, :, 0].flatten(), dtype=torch.float32),
-            "consciousness": torch.tensor(np.abs(reconstruction[0, 0, 0, 0, 0, :]).flatten(), dtype=torch.float32),
-            "raw":           torch.tensor(real.flatten()[:768], dtype=torch.float32),
+            "spatial": torch.tensor(real[:3, 0, 0, 0, 0, 0].flatten(), dtype=torch.float32),
+            "temporal": torch.tensor(real[0, 0, 0, :, 0, 0].flatten(), dtype=torch.float32),
+            "frequency": torch.tensor(real[0, 0, 0, 0, :, 0].flatten(), dtype=torch.float32),
+            "consciousness": torch.tensor(
+                np.abs(reconstruction[0, 0, 0, 0, 0, :]).flatten(), dtype=torch.float32
+            ),
+            "raw": torch.tensor(real.flatten()[:768], dtype=torch.float32),
         }
 
-    def _create_probe_beam(self, partial_cue: torch.Tensor, dimensions_known: List[str]) -> np.ndarray:
+    def _create_probe_beam(
+        self, partial_cue: torch.Tensor, dimensions_known: List[str]
+    ) -> np.ndarray:
         """Create a probe beam from partial cue for associative recall."""
         probe = np.ones(self.dimensions, dtype=np.complex128)
         cue_np = partial_cue.detach().cpu().numpy().flatten()
@@ -180,7 +183,9 @@ class HolographicMemoryCrystal:
             hologram[i % self.dimensions[0], :, :, :, :, :] = q[i] * np.exp(1j * q[i])
         return hologram * self.reference_beam
 
-    def _find_correlation_peaks(self, correlations: np.ndarray, threshold: float = 0.1, max_peaks: int = 5) -> List[tuple]:
+    def _find_correlation_peaks(
+        self, correlations: np.ndarray, threshold: float = 0.1, max_peaks: int = 5
+    ) -> List[tuple]:
         """Find peak correlation indices in the holographic correlation map."""
         magnitude = np.abs(correlations)
         flat = magnitude.flatten()

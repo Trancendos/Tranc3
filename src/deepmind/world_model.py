@@ -230,9 +230,7 @@ class MuZeroWorldModel(nn.Module):
                 policy_logits, value = self.prediction(state)
                 action_idx = int(policy_logits.argmax(dim=-1)[0].item())
 
-                next_state, reward, next_policy_logits, next_value = self.step(
-                    state, action_idx
-                )
+                next_state, reward, next_policy_logits, next_value = self.step(state, action_idx)
 
                 step_info = {
                     "step": t,
@@ -322,10 +320,7 @@ class MuZeroWorldModel(nn.Module):
         )
 
         total_loss = (
-            reward_loss_total
-            + value_loss_total
-            + policy_loss_total
-            + 0.5 * consistency_loss_total
+            reward_loss_total + value_loss_total + policy_loss_total + 0.5 * consistency_loss_total
         )
 
         return {

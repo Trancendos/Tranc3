@@ -83,11 +83,13 @@ async def register_workflow(body: Dict[str, Any] = Body(...)):
 
         wf = WorkflowDefinition.from_dict(body)
     except Exception:
-        return JSONResponse(
-            {"error": "Invalid workflow definition"}, status_code=400
-        )
+        return JSONResponse({"error": "Invalid workflow definition"}, status_code=400)
     _workflow_registry[wf.id] = wf
-    logger.info("grid: registered workflow id=%s name=%s", sanitize_for_log(wf.id), sanitize_for_log(wf.name))  # codeql[py/cleartext-logging]
+    logger.info(
+        "grid: registered workflow id=%s name=%s",
+        sanitize_for_log(wf.id),
+        sanitize_for_log(wf.name),
+    )  # codeql[py/cleartext-logging]
     try:
         from src.observability.observatory import EventCategory, observe
 
@@ -120,7 +122,11 @@ async def run_workflow(
     except asyncio.TimeoutError:
         return JSONResponse({"error": "Workflow execution timed out"}, status_code=504)
     except Exception as exc:
-        logger.error("grid: execution error workflow=%s: %s", sanitize_for_log(workflow_id), sanitize_for_log(exc))  # codeql[py/cleartext-logging]
+        logger.error(
+            "grid: execution error workflow=%s: %s",
+            sanitize_for_log(workflow_id),
+            sanitize_for_log(exc),
+        )  # codeql[py/cleartext-logging]
         return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
     return {
         "execution_id": state.execution_id,
@@ -153,7 +159,5 @@ async def cancel_execution(execution_id: str = Path(...)):
     executor = _get_executor()
     cancelled = await executor.cancel(execution_id)
     if not cancelled:
-        return JSONResponse(
-            {"error": "Execution not found or already complete"}, status_code=404
-        )
+        return JSONResponse({"error": "Execution not found or already complete"}, status_code=404)
     return {"cancelled": execution_id}

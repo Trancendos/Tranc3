@@ -36,6 +36,7 @@ logger = logging.getLogger(WORKER_NAME)
 # Database
 # ---------------------------------------------------------------------------
 
+
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -78,6 +79,7 @@ def init_db() -> None:
 # Models
 # ---------------------------------------------------------------------------
 
+
 class EventIn(BaseModel):
     event_type: str
     user_id: Optional[str] = None
@@ -111,6 +113,7 @@ class FunnelIn(BaseModel):
 # Lifespan
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -124,7 +127,12 @@ async def lifespan(app: FastAPI):
 
 STARTED_AT = datetime.now(timezone.utc)
 
-app = FastAPI(title="analytics-service", description="Event analytics and metrics (self-hosted)", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="analytics-service",
+    description="Event analytics and metrics (self-hosted)",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -170,7 +178,9 @@ async def ingest_batch(batch: BatchEventsIn):
     for ev in batch.events:
         ts = ev.timestamp or time.time()
         date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
-        rows.append((ev.event_type, ev.user_id, ev.session_id, json.dumps(ev.properties), ts, date_str))
+        rows.append(
+            (ev.event_type, ev.user_id, ev.session_id, json.dumps(ev.properties), ts, date_str)
+        )
     with get_conn() as conn:
         conn.executemany(
             "INSERT INTO events (event_type, user_id, session_id, properties, timestamp, date_str) VALUES (?,?,?,?,?,?)",
@@ -329,4 +339,5 @@ async def summary():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

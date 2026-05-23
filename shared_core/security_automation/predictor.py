@@ -131,7 +131,8 @@ class ViolationPredictor:
 
         # Check complexity (high cyclomatic complexity = higher risk)
         function_count = sum(
-            1 for node in ast.walk(tree)
+            1
+            for node in ast.walk(tree)
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         )
         if function_count > 10:
@@ -155,12 +156,14 @@ class ViolationPredictor:
         risk_score = min(1.0, max(0.0, risk_score))
 
         if signals:
-            self._predictions.append(RiskPrediction(
-                file=str(filepath),
-                risk_score=risk_score,
-                signals=signals,
-                category="prediction",
-            ))
+            self._predictions.append(
+                RiskPrediction(
+                    file=str(filepath),
+                    risk_score=risk_score,
+                    signals=signals,
+                    category="prediction",
+                )
+            )
 
     def get_hotspots(self, limit: int = 10) -> List[RiskPrediction]:
         """Return the top N high-risk predictions.

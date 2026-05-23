@@ -76,6 +76,7 @@ _DEFAULT_SECRET_CHECK_INTERVAL = 3600  # 1 hour
 
 class SentinelState(Enum):
     """State of the Sentinel daemon."""
+
     STOPPED = "stopped"
     STARTING = "starting"
     RUNNING = "running"
@@ -87,8 +88,10 @@ class SentinelState(Enum):
 # Data models
 # ---------------------------------------------------------------------------
 
+
 class SentinelSeverity(str, Enum):
     """Severity levels for sentinel checks."""
+
     INFO = "info"
     LOW = "low"
     MEDIUM = "medium"
@@ -99,6 +102,7 @@ class SentinelSeverity(str, Enum):
 @dataclass
 class SentinelCheck:
     """Result of a single sentinel check."""
+
     check_type: str
     passed: bool
     timestamp: str = ""
@@ -117,6 +121,7 @@ class SentinelCheck:
 @dataclass
 class SentinelReport:
     """Full report from a sentinel check cycle."""
+
     timestamp: str
     state: SentinelState
     checks: List[SentinelCheck]
@@ -148,6 +153,7 @@ class SentinelReport:
 # ---------------------------------------------------------------------------
 # Sentinel
 # ---------------------------------------------------------------------------
+
 
 class Sentinel:
     """Continuous verification daemon for the Tranc3 platform.
@@ -452,7 +458,9 @@ class Sentinel:
                 check_type="config_drift",
                 passed=passed,
                 severity="medium" if not passed else "info",
-                message=f"Configuration drift detected in {len(drifted_keys)} keys" if not passed else "No configuration drift",
+                message=f"Configuration drift detected in {len(drifted_keys)} keys"
+                if not passed
+                else "No configuration drift",
                 details={"drifted_keys": drifted_keys[:10]},
             )
         except Exception as e:
@@ -507,6 +515,7 @@ class Sentinel:
         try:
             # Check if the API server is responsive (if running)
             import socket
+
             api_host = os.getenv("API_HOST", "localhost")
             api_port = int(os.getenv("API_PORT", "8000"))
 
@@ -525,6 +534,7 @@ class Sentinel:
             if redis_url:
                 try:
                     import redis
+
                     r = redis.from_url(redis_url)
                     r.ping()
                 except Exception:
@@ -557,7 +567,9 @@ class Sentinel:
                 check_type="ledger_integrity",
                 passed=is_valid,
                 severity="critical" if not is_valid else "info",
-                message="Audit ledger chain is intact" if is_valid else "AUDIT LEDGER TAMPERING DETECTED",
+                message="Audit ledger chain is intact"
+                if is_valid
+                else "AUDIT LEDGER TAMPERING DETECTED",
                 details={"chain_valid": is_valid},
             )
         except Exception as e:
@@ -601,5 +613,3 @@ class Sentinel:
                     pass
 
         return state
-
-

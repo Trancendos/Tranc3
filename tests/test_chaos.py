@@ -9,6 +9,7 @@ Deliberately introduce failures to verify the system degrades gracefully:
   - Event bus survives subscriber errors
   - SparkToolNode handles hanging tools via timeout
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -24,9 +25,11 @@ _log = logging.getLogger("tranc3.tests.chaos")
 # Circuit Breaker chaos
 # ---------------------------------------------------------------------------
 
+
 class TestCircuitBreakerChaos:
     def test_opens_after_failure_threshold(self, caplog):
         from src.validation.loop_validator import CircuitBreaker, CircuitState
+
         cb = CircuitBreaker("chaos-test", failure_threshold=3, recovery_timeout=9999)
 
         def _fail():
@@ -44,6 +47,7 @@ class TestCircuitBreakerChaos:
 
     def test_fallback_invoked_when_open(self, caplog):
         from src.validation.loop_validator import CircuitBreaker, CircuitState
+
         cb = CircuitBreaker("chaos-fallback", failure_threshold=1, recovery_timeout=9999)
 
         try:
@@ -58,6 +62,7 @@ class TestCircuitBreakerChaos:
 
     def test_recovers_after_timeout(self, caplog):
         from src.validation.loop_validator import CircuitBreaker, CircuitState
+
         cb = CircuitBreaker("chaos-recover", failure_threshold=1, recovery_timeout=0.01)
         try:
             cb.call(lambda: (_ for _ in ()).throw(RuntimeError("x")), fallback=None)
@@ -71,6 +76,7 @@ class TestCircuitBreakerChaos:
 
     def test_loop_validator_breaks_at_limit(self, caplog):
         from src.validation.loop_validator import LoopValidator
+
         lv = LoopValidator()
         # retry_loop context has a limit of 3; exhaust it
         broken = False
@@ -86,6 +92,7 @@ class TestCircuitBreakerChaos:
 # Workflow fail-fast chaos
 # ---------------------------------------------------------------------------
 
+
 class TestWorkflowChaos:
     @pytest.mark.asyncio
     async def test_failing_node_aborts_workflow(self, caplog):
@@ -100,6 +107,7 @@ class TestWorkflowChaos:
 
         # Monkey-patch NODE_REGISTRY temporarily
         from src.workflow import nodes as _nodes
+
         _nodes.NODE_REGISTRY[NodeType.TRIGGER] = BoomNode
 
         try:
@@ -113,6 +121,7 @@ class TestWorkflowChaos:
             assert state.error is not None
         finally:
             from src.workflow.nodes import TriggerNode
+
             _nodes.NODE_REGISTRY[NodeType.TRIGGER] = TriggerNode
 
     @pytest.mark.asyncio
@@ -156,7 +165,8 @@ class TestWorkflowChaos:
         )
         _log.info(
             "chaos.concurrent exec1=%s exec2=%s ids_differ=%s",
-            s1.status, s2.status,
+            s1.status,
+            s2.status,
             s1.execution_id != s2.execution_id,
         )
         assert s1.execution_id != s2.execution_id
@@ -183,6 +193,7 @@ class TestWorkflowChaos:
 # ---------------------------------------------------------------------------
 # Event bus chaos
 # ---------------------------------------------------------------------------
+
 
 class TestEventBusChaos:
     @pytest.mark.asyncio
@@ -224,6 +235,7 @@ class TestEventBusChaos:
 # SparkToolNode timeout chaos
 # ---------------------------------------------------------------------------
 
+
 class TestSparkToolNodeChaos:
     @pytest.mark.asyncio
     async def test_hanging_tool_times_out(self, caplog):
@@ -249,7 +261,9 @@ class TestSparkToolNodeChaos:
 
         try:
             nc = NodeConfig(
-                id="hang1", type=NodeType.SPARK_TOOL, name="hang",
+                id="hang1",
+                type=NodeType.SPARK_TOOL,
+                name="hang",
                 config={"tool_name": "hanging_tool"},
                 timeout_sec=0.05,
             )
@@ -257,7 +271,12 @@ class TestSparkToolNodeChaos:
             t0 = time.monotonic()
             result = await node.execute({}, {})
             elapsed = time.monotonic() - t0
-            _log.info("chaos.timeout success=%s elapsed=%.3fs error=%s", result.success, elapsed, result.error)
+            _log.info(
+                "chaos.timeout success=%s elapsed=%.3fs error=%s",
+                result.success,
+                elapsed,
+                result.error,
+            )
             assert not result.success
             assert elapsed < 5.0, "Timeout must fire well under 5 s"
         finally:

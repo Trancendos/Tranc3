@@ -147,9 +147,7 @@ class ChronosSphere:
     def get_task(self, task_id: str) -> Optional[ScheduledTask]:
         return self._tasks.get(task_id)
 
-    def list_tasks(
-        self, status: Optional[ScheduleStatus] = None
-    ) -> List[ScheduledTask]:
+    def list_tasks(self, status: Optional[ScheduleStatus] = None) -> List[ScheduledTask]:
         tasks = list(self._tasks.values())
         if status:
             tasks = [t for t in tasks if t.status == status]
@@ -215,9 +213,7 @@ class ChronosSphere:
         return False
 
     def stats(self) -> Dict[str, Any]:
-        active_tasks = sum(
-            1 for t in self._tasks.values() if t.status == ScheduleStatus.ACTIVE
-        )
+        active_tasks = sum(1 for t in self._tasks.values() if t.status == ScheduleStatus.ACTIVE)
         return {
             "service": "chronossphere",
             "total_tasks": len(self._tasks),
@@ -237,7 +233,6 @@ class ChronosSphere:
             )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
 
 _chronos: Optional[ChronosSphere] = None

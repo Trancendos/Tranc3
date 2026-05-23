@@ -19,14 +19,23 @@ from shared_core.architecture.proactive_wiring import (
 # Enum tests
 # ---------------------------------------------------------------------------
 
+
 class TestBridgeType:
     """Tests for BridgeType enum."""
 
     def test_all_bridge_types_exist(self):
         expected = [
-            "EVENT_BUS", "STORAGE", "SENTINEL", "DEFENSE",
-            "FORESIGHT", "ROUTING", "REGISTRY", "RESILIENCE",
-            "PULSE", "CONFIG", "SCALER",
+            "EVENT_BUS",
+            "STORAGE",
+            "SENTINEL",
+            "DEFENSE",
+            "FORESIGHT",
+            "ROUTING",
+            "REGISTRY",
+            "RESILIENCE",
+            "PULSE",
+            "CONFIG",
+            "SCALER",
         ]
         for name in expected:
             assert hasattr(BridgeType, name), f"Missing BridgeType.{name}"
@@ -44,8 +53,12 @@ class TestWiringStatus:
 
     def test_all_statuses_exist(self):
         expected = [
-            "DISCONNECTED", "CONNECTING", "CONNECTED",
-            "ACTIVE", "ERROR", "DISABLED",
+            "DISCONNECTED",
+            "CONNECTING",
+            "CONNECTED",
+            "ACTIVE",
+            "ERROR",
+            "DISABLED",
         ]
         for name in expected:
             assert hasattr(WiringStatus, name), f"Missing WiringStatus.{name}"
@@ -60,6 +73,7 @@ class TestWiringStatus:
 # ---------------------------------------------------------------------------
 # BridgeConnection tests
 # ---------------------------------------------------------------------------
+
 
 class TestBridgeConnection:
     """Tests for BridgeConnection dataclass."""
@@ -150,6 +164,7 @@ class TestBridgeConnection:
 # ---------------------------------------------------------------------------
 # ProactiveSystemBootstrap tests
 # ---------------------------------------------------------------------------
+
 
 class TestProactiveSystemBootstrap:
     """Tests for the ProactiveSystemBootstrap."""

@@ -329,12 +329,14 @@ class TestServiceMeshRegistration:
     def test_register_with_custom_circuit_breaker_config(self):
         custom_config = CircuitBreakerConfig(failure_threshold=10, reset_timeout_ms=60000)
         mesh = ServiceMesh()
-        mesh.register(ServiceDescriptor(
-            name="auth-api",
-            url="http://localhost",
-            port=8005,
-            circuit_breaker_config=custom_config,
-        ))
+        mesh.register(
+            ServiceDescriptor(
+                name="auth-api",
+                url="http://localhost",
+                port=8005,
+                circuit_breaker_config=custom_config,
+            )
+        )
         cb = mesh.get_circuit_breaker("auth-api")
         assert cb.config.failure_threshold == 10
         assert cb.config.reset_timeout_ms == 60000
@@ -418,14 +420,22 @@ class TestServiceMeshDependencyGraph:
 
     def test_dependency_graph(self):
         mesh = ServiceMesh()
-        mesh.register(ServiceDescriptor(
-            name="auth-api", url="http://localhost", port=8005,
-            dependencies=["users-api"],
-        ))
-        mesh.register(ServiceDescriptor(
-            name="users-api", url="http://localhost", port=8006,
-            dependencies=[],
-        ))
+        mesh.register(
+            ServiceDescriptor(
+                name="auth-api",
+                url="http://localhost",
+                port=8005,
+                dependencies=["users-api"],
+            )
+        )
+        mesh.register(
+            ServiceDescriptor(
+                name="users-api",
+                url="http://localhost",
+                port=8006,
+                dependencies=[],
+            )
+        )
         graph = mesh.get_dependency_graph()
         assert graph["auth-api"] == ["users-api"]
         assert graph["users-api"] == []

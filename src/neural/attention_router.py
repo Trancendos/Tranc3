@@ -48,6 +48,7 @@ except ImportError:
 
 # ── Data structures ────────────────────────────────────────────────
 
+
 @dataclass
 class ServiceAttention:
     """Attention profile for a nanoservice.
@@ -73,6 +74,7 @@ class ServiceAttention:
     metadata : Dict[str, Any]
         Additional metadata.
     """
+
     service_id: str
     capability_tags: Set[str] = field(default_factory=set)
     feature_vector: List[float] = field(default_factory=list)
@@ -126,6 +128,7 @@ class RoutingRequest:
     metadata : Dict[str, Any]
         Additional request metadata.
     """
+
     request_id: str
     required_tags: Set[str] = field(default_factory=set)
     context_vector: List[float] = field(default_factory=list)
@@ -137,6 +140,7 @@ class RoutingRequest:
 @dataclass
 class RoutingDecision:
     """Result of an attention-based routing decision."""
+
     request_id: str
     selected_service: str
     attention_weights: Dict[str, float]
@@ -145,6 +149,7 @@ class RoutingDecision:
 
 
 # ── Vector operations (numpy-free fallback) ────────────────────────
+
 
 def _dot_product(a: List[float], b: List[float]) -> float:
     """Compute dot product of two vectors."""
@@ -190,6 +195,7 @@ def _tag_to_vector(tags: Set[str], vocab: Dict[str, int], dim: int) -> List[floa
 
 
 # ── Attention Router ───────────────────────────────────────────────
+
 
 class AttentionRouter:
     """Attention-based service router for nanoservice coordination.
@@ -255,7 +261,7 @@ class AttentionRouter:
         service = ServiceAttention(
             service_id=service_id,
             capability_tags=tags,
-            feature_vector=feature_vector[:self._embedding_dim],
+            feature_vector=feature_vector[: self._embedding_dim],
             max_capacity=max_capacity,
             priority=priority,
             metadata=metadata or {},
@@ -270,7 +276,9 @@ class AttentionRouter:
 
         logger.info(
             "attention_router: registered service=%s tags=%s capacity=%d",
-            service_id, tags, max_capacity,
+            service_id,
+            tags,
+            max_capacity,
         )
         return service
 
@@ -329,11 +337,13 @@ class AttentionRouter:
 
             # Build query vector from request
             query_vector = request.context_vector or _tag_to_vector(
-                request.required_tags, self._tag_vocab, self._embedding_dim,
+                request.required_tags,
+                self._tag_vocab,
+                self._embedding_dim,
             )
             if len(query_vector) < self._embedding_dim:
                 query_vector = query_vector + [0.0] * (self._embedding_dim - len(query_vector))
-            query_vector = query_vector[:self._embedding_dim]
+            query_vector = query_vector[: self._embedding_dim]
 
             # Compute raw attention scores
             service_ids = list(self._services.keys())

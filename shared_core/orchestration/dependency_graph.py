@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, List, Optional, Set
 @dataclass
 class GraphNode:
     """A node in the dependency graph."""
+
     name: str
     node_type: str = "service"
     health: str = "unknown"
@@ -34,6 +35,7 @@ class GraphNode:
 @dataclass
 class GraphEdge:
     """A directed edge in the dependency graph (source depends on target)."""
+
     source: str
     target: str
     dep_type: str = "runtime"
@@ -49,6 +51,7 @@ class GraphEdge:
 @dataclass
 class ImpactAnalysis:
     """Result of impact analysis for a node failure."""
+
     root_node: str
     impacted_nodes: List[str] = field(default_factory=list)
     mitigation_suggestions: List[str] = field(default_factory=list)
@@ -302,7 +305,8 @@ class SmartDependencyGraph:
             if len(dependents) >= 2:
                 # Check if there are alternatives (same node_type)
                 alternatives = [
-                    n for n, nd in self._nodes.items()
+                    n
+                    for n, nd in self._nodes.items()
                     if nd.node_type == node.node_type and n != name
                 ]
                 if not alternatives:
@@ -312,10 +316,7 @@ class SmartDependencyGraph:
     def remove_node(self, name: str) -> None:
         """Remove a node and all its edges."""
         self._nodes.pop(name, None)
-        self._edges = [
-            e for e in self._edges
-            if e.source != name and e.target != name
-        ]
+        self._edges = [e for e in self._edges if e.source != name and e.target != name]
 
     def get_subgraph(self, root: str, max_depth: int = 3) -> Dict[str, Any]:
         """Get a subgraph starting from a root node.

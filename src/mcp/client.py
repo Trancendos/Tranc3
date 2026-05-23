@@ -216,9 +216,7 @@ class MCPClient:
 
     def _ensure_connected(self) -> None:
         if not self._initialized or self._client is None:
-            raise MCPClientError(
-                "MCPClient is not connected. Call await client.connect() first."
-            )
+            raise MCPClientError("MCPClient is not connected. Call await client.connect() first.")
 
     def _next_id(self) -> int:
         self._request_counter += 1
@@ -232,8 +230,9 @@ class MCPClient:
             _MCPRemoteError: on JSON-RPC error responses.
             httpx.HTTPError: on transport/HTTP failures.
         """
-        assert self._client is not None  # guarded by callers  # nosec B101 — assertion for type/class contract checking
-
+        assert (
+            self._client is not None
+        )  # guarded by callers  # nosec B101 — assertion for type/class contract checking
 
         payload = {
             "jsonrpc": JSONRPC_VERSION,
@@ -285,15 +284,11 @@ class MCPClient:
                             else:
                                 callback(event_type, data)
                         except Exception as exc:
-                            logger.warning(
-                                "mcp.client SSE parse error: %s raw=%r", exc, raw
-                            )
+                            logger.warning("mcp.client SSE parse error: %s raw=%r", exc, raw)
         except asyncio.CancelledError:
             logger.debug("mcp.client SSE loop cancelled server=%s", self.server_url)
         except Exception as exc:
-            logger.error(
-                "mcp.client SSE loop error server=%s error=%s", self.server_url, exc
-            )
+            logger.error("mcp.client SSE loop error server=%s error=%s", self.server_url, exc)
 
 
 # ---------------------------------------------------------------------------
@@ -357,8 +352,7 @@ class MCPClientPool:
         Returns a dict of {server_name: error_or_None}.
         """
         tasks = {
-            name: asyncio.create_task(self._connect_one(name))
-            for name in self._server_configs
+            name: asyncio.create_task(self._connect_one(name)) for name in self._server_configs
         }
         results: Dict[str, Optional[Exception]] = {}
         for name, task in tasks.items():
@@ -442,9 +436,7 @@ class MCPClientPool:
                 return server_name, {"status": "error", "error": safe_error_detail(exc, 500)}
 
         # Use raw RPC for ping (bypasses call_tool routing)
-        async def _ping_rpc(
-            server_name: str, client: MCPClient
-        ) -> tuple[str, Dict[str, Any]]:
+        async def _ping_rpc(server_name: str, client: MCPClient) -> tuple[str, Dict[str, Any]]:
             try:
                 start = time.monotonic()
                 result = await client._rpc_raw("ping", {})

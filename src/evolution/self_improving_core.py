@@ -41,9 +41,7 @@ class GeneticOperators:
     @staticmethod
     def crossover(parent_a: Individual, parent_b: Individual) -> Individual:
         point = np.random.randint(1, len(parent_a.genome))
-        child_genome = np.concatenate(
-            [parent_a.genome[:point], parent_b.genome[point:]]
-        )
+        child_genome = np.concatenate([parent_a.genome[:point], parent_b.genome[point:]])
         return Individual(
             genome=child_genome,
             generation=max(parent_a.generation, parent_b.generation) + 1,
@@ -59,9 +57,7 @@ class GeneticOperators:
 
     @staticmethod
     def tournament_select(population: List[Individual], k: int = 3) -> Individual:
-        contestants = np.random.choice(
-            population, size=min(k, len(population)), replace=False
-        )
+        contestants = np.random.choice(population, size=min(k, len(population)), replace=False)
         return max(contestants, key=lambda ind: ind.fitness)
 
 
@@ -125,9 +121,7 @@ class SelfEvolvingArchitecture:
             sanitize_for_log(self.genome_dim),
         )
 
-    def evolve(
-        self, num_generations: int = 1, feedback: Optional[List[Dict]] = None
-    ) -> Individual:
+    def evolve(self, num_generations: int = 1, feedback: Optional[List[Dict]] = None) -> Individual:
         """Run evolutionary loop and return best individual."""
         for _ in range(num_generations):
             for ind in self.population:
@@ -183,7 +177,9 @@ class SelfEvolvingArchitecture:
                 ex=86400 * 7,
             )  # 7-day TTL
         except Exception as e:
-            logger.debug("Genome persist skipped: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.debug(
+                "Genome persist skipped: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
 
     def load_genome_from_redis(self) -> bool:
         """Restore best genome from Redis on startup."""
@@ -207,7 +203,9 @@ class SelfEvolvingArchitecture:
                 )
                 return True
         except Exception as e:
-            logger.debug("Genome restore skipped: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.debug(
+                "Genome restore skipped: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
         return False
 
     def get_best_genome(self) -> torch.Tensor:

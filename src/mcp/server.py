@@ -61,7 +61,7 @@ class MCPError(BaseModel):
 
 class MCPRequest(BaseModel):
     jsonrpc: str = Field(default=JSONRPC_VERSION)
-    id: Optional[Any] = None          # str | int | None
+    id: Optional[Any] = None  # str | int | None
     method: str
     params: Optional[Dict[str, Any]] = None
 
@@ -78,6 +78,7 @@ class MCPResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # SSE event bus (in-process pub/sub)
 # ---------------------------------------------------------------------------
+
 
 class _SSEBus:
     """Minimal in-process pub/sub for SSE subscribers."""
@@ -101,7 +102,9 @@ class _SSEBus:
             try:
                 q.put_nowait(payload)
             except asyncio.QueueFull:
-                logger.warning("mcp.sse queue full for subscriber=%s, dropping event", sanitize_for_log(sub_id))  # codeql[py/cleartext-logging]
+                logger.warning(
+                    "mcp.sse queue full for subscriber=%s, dropping event", sanitize_for_log(sub_id)
+                )  # codeql[py/cleartext-logging]
             except Exception:
                 dead.append(sub_id)
         for sub_id in dead:
@@ -209,7 +212,9 @@ async def _method_tools_call(params: Optional[Dict[str, Any]], request_id: Any) 
         )
     except asyncio.TimeoutError:
         msg = f"Tool '{tool_name}' timed out after 60 s"
-        logger.error("mcp.tools_call timeout tool=%s", sanitize_for_log(tool_name))  # codeql[py/cleartext-logging]
+        logger.error(
+            "mcp.tools_call timeout tool=%s", sanitize_for_log(tool_name)
+        )  # codeql[py/cleartext-logging]
         await _bus.publish("error", {"tool": tool_name, "error": msg, "request_id": request_id})
         return _err(request_id, ERR_TOOL_EXECUTION, msg)
     except Exception as exc:
@@ -297,7 +302,9 @@ router = APIRouter(prefix="/mcp", tags=["mcp"])
 
 
 @router.post("/rpc")
-async def rpc_endpoint(request: Request, current_user: dict = Depends(get_current_user)) -> JSONResponse:
+async def rpc_endpoint(
+    request: Request, current_user: dict = Depends(get_current_user)
+) -> JSONResponse:
     """
     JSON-RPC 2.0 entry-point.  Accepts a single request object or a batch array.
     """
@@ -351,7 +358,9 @@ async def rpc_endpoint(request: Request, current_user: dict = Depends(get_curren
         result = await handler(params, req_id)
         return JSONResponse(content=result, status_code=200)
     except Exception as exc:
-        logger.exception("mcp.rpc unhandled error method=%s", sanitize_for_log(method))  # codeql[py/cleartext-logging]
+        logger.exception(
+            "mcp.rpc unhandled error method=%s", sanitize_for_log(method)
+        )  # codeql[py/cleartext-logging]
         return JSONResponse(
             content=_err(req_id, ERR_INTERNAL_ERROR, f"Internal error: {type(exc).__name__}"),
             status_code=200,
@@ -360,7 +369,9 @@ async def rpc_endpoint(request: Request, current_user: dict = Depends(get_curren
 
 
 @router.get("/sse")
-async def sse_endpoint(request: Request, current_user: dict = Depends(get_current_user)) -> StreamingResponse:
+async def sse_endpoint(
+    request: Request, current_user: dict = Depends(get_current_user)
+) -> StreamingResponse:
     """
     Server-Sent Events stream.  Clients connect here to receive async events
     (tool_result, progress, error) from The Spark, and lifecycle events
@@ -387,7 +398,9 @@ async def sse_endpoint(request: Request, current_user: dict = Depends(get_curren
             logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
         finally:
             _bus.unsubscribe(sub_id)
-            logger.info("mcp.sse client disconnected sub_id=%s", sanitize_for_log(sub_id))  # codeql[py/cleartext-logging]
+            logger.info(
+                "mcp.sse client disconnected sub_id=%s", sanitize_for_log(sub_id)
+            )  # codeql[py/cleartext-logging]
 
     return StreamingResponse(
         _event_generator(),
@@ -419,6 +432,7 @@ async def list_tools_endpoint() -> JSONResponse:
 async def health_endpoint() -> JSONResponse:
     """The Spark health check."""
     from src.mcp.tools import _grid_registry  # noqa: PLC0415
+
     tool_count = len(registry.list_tools())
     subscriber_count = len(_bus._queues)
     return JSONResponse(
@@ -521,6 +535,7 @@ async def _start_grid_bridge() -> None:
 # Standalone handle_rpc — callable from api_enhanced.py
 # ---------------------------------------------------------------------------
 
+
 async def handle_rpc(body: Dict[str, Any], enhanced: Any = None) -> Dict[str, Any]:
     """
     Process a raw JSON-RPC 2.0 request dict and return a response dict.
@@ -542,5 +557,7 @@ async def handle_rpc(body: Dict[str, Any], enhanced: Any = None) -> Dict[str, An
     try:
         return await handler(params, rpc_id)
     except Exception as exc:
-        logger.exception("handle_rpc unhandled error method=%s", sanitize_for_log(method))  # codeql[py/cleartext-logging]
+        logger.exception(
+            "handle_rpc unhandled error method=%s", sanitize_for_log(method)
+        )  # codeql[py/cleartext-logging]
         return _err(rpc_id, ERR_INTERNAL_ERROR, f"Internal error: {type(exc).__name__}: {exc}")

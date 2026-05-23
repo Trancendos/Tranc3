@@ -22,6 +22,7 @@ from shared_core.architecture.proactive_metrics import (
 # Enum tests
 # ---------------------------------------------------------------------------
 
+
 class TestMetricType:
     """Tests for MetricType enum."""
 
@@ -53,6 +54,7 @@ class TestHealthTrend:
 # ---------------------------------------------------------------------------
 # Dataclass tests
 # ---------------------------------------------------------------------------
+
 
 class TestSubsystemMetrics:
     """Tests for SubsystemMetrics dataclass."""
@@ -190,6 +192,7 @@ class TestMetricsSnapshot:
 # ProactiveMetricsCollector tests
 # ---------------------------------------------------------------------------
 
+
 class TestProactiveMetricsCollector:
     """Tests for the ProactiveMetricsCollector."""
 
@@ -224,6 +227,7 @@ class TestProactiveMetricsCollector:
     def test_register_custom_collector(self):
         def my_collector():
             return {"custom_metric": 42.0}
+
         self.collector.register_custom_collector("custom", my_collector)
 
     def test_collect_with_subsystems(self):

@@ -19,9 +19,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="module")
 def tiny_tokenizer():
     from src.core.tranc3_tokenizer import Tranc3Tokenizer
+
     texts = [
         "Hello, how are you today? I am TRANC3.",
         "You are a financial specialist. Explain compound interest.",
@@ -51,6 +53,7 @@ def tiny_model():
 @pytest.fixture(scope="module")
 def bootstrap_engine():
     from src.core.tranc3_inference import Tranc3Engine
+
     engine = Tranc3Engine(
         model_path="/nonexistent/tranc3-final.pt",
         tokenizer_path="/nonexistent/tokenizer",
@@ -63,18 +66,26 @@ def bootstrap_engine():
 # Tokenizer tests
 # ---------------------------------------------------------------------------
 
+
 class TestTranc3Tokenizer:
     def test_special_tokens_present(self, tiny_tokenizer):
         from src.core.tranc3_tokenizer import SPECIAL_TOKENS
+
         for name, expected_id in SPECIAL_TOKENS.items():
             assert name in tiny_tokenizer._vocab, f"Special token {name} missing from vocab"
 
     def test_all_ten_personalities_have_tokens(self, tiny_tokenizer):
         personalities = [
-            "tranc3-base", "tranc3-creative", "tranc3-analytical",
-            "tranc3-empathetic", "tranc3-multilingual",
-            "dorris-fontaine", "cornelius-macintyre", "the-guardian",
-            "vesper-nightingale", "atlas-meridian",
+            "tranc3-base",
+            "tranc3-creative",
+            "tranc3-analytical",
+            "tranc3-empathetic",
+            "tranc3-multilingual",
+            "dorris-fontaine",
+            "cornelius-macintyre",
+            "the-guardian",
+            "vesper-nightingale",
+            "atlas-meridian",
         ]
         for p in personalities:
             tok_id = tiny_tokenizer.personality_token_id(p)
@@ -127,6 +138,7 @@ class TestTranc3Tokenizer:
         assert (tmp_path / "tokenizer_meta.json").exists()
 
         from src.core.tranc3_tokenizer import Tranc3Tokenizer
+
         loaded = Tranc3Tokenizer.load(tmp_path)
         assert len(loaded) == len(tiny_tokenizer)
 
@@ -148,6 +160,7 @@ class TestTranc3Tokenizer:
 # ---------------------------------------------------------------------------
 # Advanced model tests
 # ---------------------------------------------------------------------------
+
 
 class TestAdvancedTransformerModel:
     def test_forward_returns_logits(self, tiny_model):
@@ -173,9 +186,9 @@ class TestAdvancedTransformerModel:
         out_without = tiny_model(x)
         out_with = tiny_model(x, personality_vector=pv)
         # Logits should differ when personality vector is injected
-        assert not torch.allclose(
-            out_without["logits"], out_with["logits"]
-        ), "Personality vector had no effect on output"
+        assert not torch.allclose(out_without["logits"], out_with["logits"]), (
+            "Personality vector had no effect on output"
+        )
 
     def test_attention_mask_accepted(self, tiny_model):
         x = torch.randint(0, 512, (1, 8))
@@ -215,6 +228,7 @@ class TestAdvancedTransformerModel:
 # ---------------------------------------------------------------------------
 # Inference engine tests (bootstrap mode — no weights needed)
 # ---------------------------------------------------------------------------
+
 
 class TestTranc3Engine:
     def test_bootstrap_mode_on_missing_weights(self, bootstrap_engine):
@@ -264,19 +278,28 @@ class TestTranc3Engine:
 # Dataset tests
 # ---------------------------------------------------------------------------
 
+
 class TestMultilingualDataset:
     def test_all_personalities_in_prompts(self):
         from src.core.dataset import PERSONALITY_SYSTEM_PROMPTS
+
         expected = {
-            "tranc3-base", "tranc3-creative", "tranc3-analytical",
-            "tranc3-empathetic", "tranc3-multilingual",
-            "dorris-fontaine", "cornelius-macintyre", "the-guardian",
-            "vesper-nightingale", "atlas-meridian",
+            "tranc3-base",
+            "tranc3-creative",
+            "tranc3-analytical",
+            "tranc3-empathetic",
+            "tranc3-multilingual",
+            "dorris-fontaine",
+            "cornelius-macintyre",
+            "the-guardian",
+            "vesper-nightingale",
+            "atlas-meridian",
         }
         assert expected == set(PERSONALITY_SYSTEM_PROMPTS.keys())
 
     def test_synthetic_fallback_generates_samples(self):
         from src.core.dataset import MultilingualDataset
+
         ds = MultilingualDataset(
             tokenizer=None,
             data_dir="/this/does/not/exist",
@@ -286,6 +309,7 @@ class TestMultilingualDataset:
 
     def test_synthetic_samples_have_required_fields(self):
         from src.core.dataset import MultilingualDataset
+
         ds = MultilingualDataset(
             tokenizer=None,
             data_dir="/nonexistent",
@@ -299,6 +323,7 @@ class TestMultilingualDataset:
 
     def test_synthetic_covers_all_personalities(self):
         from src.core.dataset import PERSONALITY_SYSTEM_PROMPTS, MultilingualDataset
+
         ds = MultilingualDataset(
             tokenizer=None,
             data_dir="/nonexistent",
@@ -312,6 +337,7 @@ class TestMultilingualDataset:
 # ---------------------------------------------------------------------------
 # Integration: tokenizer + model forward pass
 # ---------------------------------------------------------------------------
+
 
 class TestTokenizerModelIntegration:
     def test_tokenizer_output_fits_model_vocab(self, tiny_tokenizer, tiny_model):
@@ -339,9 +365,11 @@ class TestTokenizerModelIntegration:
 # No external API dependency check
 # ---------------------------------------------------------------------------
 
+
 class TestNoExternalAPI:
     def test_advanced_model_no_transformers(self):
         import src.core.advanced_model as mod
+
         src_path = mod.__file__
         with open(src_path) as f:
             content = f.read()
@@ -350,6 +378,7 @@ class TestNoExternalAPI:
 
     def test_code_generator_no_anthropic(self):
         import src.skills.code_generator as mod
+
         src_path = mod.__file__
         with open(src_path) as f:
             content = f.read()
@@ -358,6 +387,7 @@ class TestNoExternalAPI:
 
     def test_workflow_nodes_no_anthropic(self):
         import src.workflow.nodes as mod
+
         src_path = mod.__file__
         with open(src_path) as f:
             content = f.read()

@@ -38,6 +38,7 @@ logger = logging.getLogger("tranc3.workers.infinity-ws")
 
 class WSMessage(BaseModel):
     """WebSocket message envelope."""
+
     type: str  # "subscribe", "unsubscribe", "message", "ping", "pong", "error"
     channel: Optional[str] = None
     data: Any = None
@@ -48,6 +49,7 @@ class WSMessage(BaseModel):
 
 class ChannelInfo(BaseModel):
     """Channel information."""
+
     name: str
     subscribers: int = 0
     created_at: str = ""
@@ -55,6 +57,7 @@ class ChannelInfo(BaseModel):
 
 class ConnectionStats(BaseModel):
     """Connection statistics."""
+
     total_connections: int = 0
     total_channels: int = 0
     messages_sent: int = 0
@@ -102,7 +105,9 @@ class ConnectionManager:
             uptime_seconds=time.monotonic() - self._started_at,
         )
 
-    async def connect(self, ws: WebSocket, user_id: str, metadata: dict[str, Any] | None = None) -> bool:
+    async def connect(
+        self, ws: WebSocket, user_id: str, metadata: dict[str, Any] | None = None
+    ) -> bool:
         """Accept a new WebSocket connection."""
         if self.total_connections >= self.max_connections:
             await ws.close(code=1013, reason="Maximum connections reached")
@@ -114,7 +119,9 @@ class ConnectionManager:
             "connected_at": datetime.now(timezone.utc).isoformat(),
             "metadata": metadata or {},
         }
-        logger.info("ws_connected: user=%s, total=%s", sanitize_for_log(user_id), self.total_connections)  # codeql[py/cleartext-logging]
+        logger.info(
+            "ws_connected: user=%s, total=%s", sanitize_for_log(user_id), self.total_connections
+        )  # codeql[py/cleartext-logging]
         return True
 
     def disconnect(self, ws: WebSocket) -> None:
@@ -128,7 +135,9 @@ class ConnectionManager:
         self._subscriptions.pop(ws, None)
         conn_info = self._connections.pop(ws, None)
         if conn_info:
-            logger.info("ws_disconnected: user=%s", sanitize_for_log(conn_info.get('user_id', 'unknown')))  # codeql[py/cleartext-logging]
+            logger.info(
+                "ws_disconnected: user=%s", sanitize_for_log(conn_info.get("user_id", "unknown"))
+            )  # codeql[py/cleartext-logging]
 
     async def subscribe(self, ws: WebSocket, channel: str) -> bool:
         """Subscribe a connection to a channel."""
@@ -238,7 +247,9 @@ def verify_token(token: str, secret: str = "change-me-in-production") -> dict[st
 
         return payload
     except Exception as e:
-        logger.warning("token_verification_failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+        logger.warning(
+            "token_verification_failed: %s", sanitize_for_log(e)
+        )  # codeql[py/cleartext-logging]
         return None
 
 
@@ -326,67 +337,81 @@ async def websocket_endpoint(
                 msg_data = json.loads(raw)
                 message = WSMessage(**msg_data)
             except (json.JSONDecodeError, Exception) as e:
-                await ws.send_json(WSMessage(
-                    type="error",
-                    data={"error": f"Invalid message format: {e}"},
-                    sender="system",
-                    message_id=str(uuid.uuid4()),
-                    timestamp=datetime.now(timezone.utc).isoformat(),
-                ).model_dump())
+                await ws.send_json(
+                    WSMessage(
+                        type="error",
+                        data={"error": f"Invalid message format: {e}"},
+                        sender="system",
+                        message_id=str(uuid.uuid4()),
+                        timestamp=datetime.now(timezone.utc).isoformat(),
+                    ).model_dump()
+                )
                 continue
 
             # Handle message types
             if message.type == "ping":
-                await ws.send_json(WSMessage(
-                    type="pong",
-                    sender="system",
-                    message_id=str(uuid.uuid4()),
-                    timestamp=datetime.now(timezone.utc).isoformat(),
-                ).model_dump())
+                await ws.send_json(
+                    WSMessage(
+                        type="pong",
+                        sender="system",
+                        message_id=str(uuid.uuid4()),
+                        timestamp=datetime.now(timezone.utc).isoformat(),
+                    ).model_dump()
+                )
 
             elif message.type == "subscribe" and message.channel:
                 success = await manager.subscribe(ws, message.channel)
-                await ws.send_json(WSMessage(
-                    type="subscribed" if success else "error",
-                    channel=message.channel,
-                    data={"channels": manager.get_user_channels(ws)} if success else {"error": "Cannot subscribe"},
-                    sender="system",
-                    message_id=str(uuid.uuid4()),
-                    timestamp=datetime.now(timezone.utc).isoformat(),
-                ).model_dump())
+                await ws.send_json(
+                    WSMessage(
+                        type="subscribed" if success else "error",
+                        channel=message.channel,
+                        data={"channels": manager.get_user_channels(ws)}
+                        if success
+                        else {"error": "Cannot subscribe"},
+                        sender="system",
+                        message_id=str(uuid.uuid4()),
+                        timestamp=datetime.now(timezone.utc).isoformat(),
+                    ).model_dump()
+                )
 
             elif message.type == "unsubscribe" and message.channel:
                 await manager.unsubscribe(ws, message.channel)
-                await ws.send_json(WSMessage(
-                    type="unsubscribed",
-                    channel=message.channel,
-                    data={"channels": manager.get_user_channels(ws)},
-                    sender="system",
-                    message_id=str(uuid.uuid4()),
-                    timestamp=datetime.now(timezone.utc).isoformat(),
-                ).model_dump())
+                await ws.send_json(
+                    WSMessage(
+                        type="unsubscribed",
+                        channel=message.channel,
+                        data={"channels": manager.get_user_channels(ws)},
+                        sender="system",
+                        message_id=str(uuid.uuid4()),
+                        timestamp=datetime.now(timezone.utc).isoformat(),
+                    ).model_dump()
+                )
 
             elif message.type == "message" and message.channel:
                 recipients = await manager.broadcast(ws, message)
                 # Send delivery confirmation
-                await ws.send_json(WSMessage(
-                    type="delivered",
-                    channel=message.channel,
-                    data={"recipients": recipients},
-                    sender="system",
-                    message_id=message.message_id,
-                    timestamp=datetime.now(timezone.utc).isoformat(),
-                ).model_dump())
+                await ws.send_json(
+                    WSMessage(
+                        type="delivered",
+                        channel=message.channel,
+                        data={"recipients": recipients},
+                        sender="system",
+                        message_id=message.message_id,
+                        timestamp=datetime.now(timezone.utc).isoformat(),
+                    ).model_dump()
+                )
 
             elif message.type == "channels":
                 channels = manager.get_user_channels(ws)
-                await ws.send_json(WSMessage(
-                    type="channels",
-                    data={"channels": channels},
-                    sender="system",
-                    message_id=str(uuid.uuid4()),
-                    timestamp=datetime.now(timezone.utc).isoformat(),
-                ).model_dump())
+                await ws.send_json(
+                    WSMessage(
+                        type="channels",
+                        data={"channels": channels},
+                        sender="system",
+                        message_id=str(uuid.uuid4()),
+                        timestamp=datetime.now(timezone.utc).isoformat(),
+                    ).model_dump()
+                )
 
     except WebSocketDisconnect:
         manager.disconnect(ws)
@@ -397,4 +422,5 @@ async def websocket_endpoint(
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8004)

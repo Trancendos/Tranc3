@@ -40,6 +40,7 @@ GENESIS_HASH = "0" * 64
 # Database
 # ---------------------------------------------------------------------------
 
+
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -85,6 +86,7 @@ def _last_hash() -> str:
 # Models
 # ---------------------------------------------------------------------------
 
+
 class AuditIn(BaseModel):
     actor: str
     action: str
@@ -103,6 +105,7 @@ class AuditBatchIn(BaseModel):
 # Lifespan
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -116,7 +119,12 @@ async def lifespan(app: FastAPI):
 
 STARTED_AT = datetime.now(timezone.utc)
 
-app = FastAPI(title="audit-service", description="Append-only hash-chained audit log (self-hosted)", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="audit-service",
+    description="Append-only hash-chained audit log (self-hosted)",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -124,7 +132,9 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 async def health():
     with get_conn() as conn:
         count = conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0]
-        last = conn.execute("SELECT chain_hash, timestamp FROM audit_log ORDER BY id DESC LIMIT 1").fetchone()
+        last = conn.execute(
+            "SELECT chain_hash, timestamp FROM audit_log ORDER BY id DESC LIMIT 1"
+        ).fetchone()
     return {
         "status": "healthy",
         "service": WORKER_NAME,
@@ -151,8 +161,17 @@ async def append_entry(entry: AuditIn):
         cur = conn.execute(
             "INSERT INTO audit_log (actor, action, resource, details, outcome, ip_address, chain_hash, prev_hash, timestamp) "
             "VALUES (?,?,?,?,?,?,?,?,?)",
-            (entry.actor, entry.action, entry.resource, json.dumps(entry.details),
-             entry.outcome, entry.ip_address, "pending", prev_hash, ts),
+            (
+                entry.actor,
+                entry.action,
+                entry.resource,
+                json.dumps(entry.details),
+                entry.outcome,
+                entry.ip_address,
+                "pending",
+                prev_hash,
+                ts,
+            ),
         )
         row_id = cur.lastrowid
         chain_hash = _compute_hash(row_id, entry.actor, entry.action, ts, prev_hash)
@@ -174,13 +193,24 @@ async def append_batch(batch: AuditBatchIn):
     with get_conn() as conn:
         for entry in batch.entries:
             ts = entry.timestamp or time.time()
-            row = conn.execute("SELECT chain_hash FROM audit_log ORDER BY id DESC LIMIT 1").fetchone()
+            row = conn.execute(
+                "SELECT chain_hash FROM audit_log ORDER BY id DESC LIMIT 1"
+            ).fetchone()
             prev_hash = row["chain_hash"] if row else GENESIS_HASH
             cur = conn.execute(
                 "INSERT INTO audit_log (actor, action, resource, details, outcome, ip_address, chain_hash, prev_hash, timestamp) "
                 "VALUES (?,?,?,?,?,?,?,?,?)",
-                (entry.actor, entry.action, entry.resource, json.dumps(entry.details),
-                 entry.outcome, entry.ip_address, "pending", prev_hash, ts),
+                (
+                    entry.actor,
+                    entry.action,
+                    entry.resource,
+                    json.dumps(entry.details),
+                    entry.outcome,
+                    entry.ip_address,
+                    "pending",
+                    prev_hash,
+                    ts,
+                ),
             )
             row_id = cur.lastrowid
             chain_hash = _compute_hash(row_id, entry.actor, entry.action, ts, prev_hash)
@@ -245,7 +275,9 @@ async def verify_chain():
     prev_hash = GENESIS_HASH
     broken_at = None
     for row in rows:
-        expected = _compute_hash(row["id"], row["actor"], row["action"], row["timestamp"], row["prev_hash"])
+        expected = _compute_hash(
+            row["id"], row["actor"], row["action"], row["timestamp"], row["prev_hash"]
+        )
         if row["chain_hash"] != expected or row["prev_hash"] != prev_hash:
             broken_at = row["id"]
             break
@@ -282,4 +314,5 @@ async def stats():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

@@ -23,6 +23,7 @@ from shared_core.security_automation.scanner import Violation
 @dataclass
 class FixResult:
     """Result of a single fix operation."""
+
     file: str
     rule_id: str
     applied: bool
@@ -44,6 +45,7 @@ class FixResult:
 @dataclass
 class RemediationSession:
     """A session grouping multiple fix results."""
+
     session_id: str
     results: List[FixResult] = field(default_factory=list)
     created_at: str = ""
@@ -86,13 +88,15 @@ class AutoRemediatorV2:
         results: List[FixResult] = []
         for v in violations:
             if v.fixable:
-                results.append(FixResult(
-                    file=v.file,
-                    rule_id=v.rule_id,
-                    applied=False,
-                    dry_run=True,
-                    details=f"Would fix {v.rule_id} in {v.file}",
-                ))
+                results.append(
+                    FixResult(
+                        file=v.file,
+                        rule_id=v.rule_id,
+                        applied=False,
+                        dry_run=True,
+                        details=f"Would fix {v.rule_id} in {v.file}",
+                    )
+                )
         return results
 
     def remediate(self, violations: List[Violation]) -> RemediationSession:

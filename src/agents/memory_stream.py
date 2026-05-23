@@ -220,7 +220,9 @@ class MemoryStream:
 
             logger.debug(
                 "Memory added: %s (importance=%.2f, tags=%s)",
-                content[:60], importance, tags,
+                content[:60],
+                importance,
+                tags,
             )
             return memory.memory_id
         return None
@@ -287,10 +289,7 @@ class MemoryStream:
     async def get_by_tags(self, tags: Set[str], top_k: int = 20) -> List[EpisodicMemory]:
         """Retrieve memories that match any of the given tags, sorted by recency."""
         async with self._lock:
-            matching = [
-                m for m in self._memories.values()
-                if m.tags & tags
-            ]
+            matching = [m for m in self._memories.values() if m.tags & tags]
             matching.sort(key=lambda m: -m.timestamp)
             return matching[:top_k]
         return None
@@ -304,10 +303,7 @@ class MemoryStream:
         """Retrieve memories within a time range [start, end], sorted by timestamp."""
         async with self._lock:
             end = end or time.time()
-            matching = [
-                m for m in self._memories.values()
-                if start <= m.timestamp <= end
-            ]
+            matching = [m for m in self._memories.values() if start <= m.timestamp <= end]
             matching.sort(key=lambda m: -m.timestamp)
             return matching[:top_k]
         return None
@@ -315,9 +311,7 @@ class MemoryStream:
     async def get_recent(self, count: int = 10) -> List[EpisodicMemory]:
         """Return the N most recent memories."""
         async with self._lock:
-            sorted_memories = sorted(
-                self._memories.values(), key=lambda m: -m.timestamp
-            )
+            sorted_memories = sorted(self._memories.values(), key=lambda m: -m.timestamp)
             return sorted_memories[:count]
         return None
 
@@ -338,9 +332,9 @@ class MemoryStream:
         memories = await self.retrieve(
             query="",
             top_k=top_k,
-            w_recency=1.5,   # weight recency more for reflection
+            w_recency=1.5,  # weight recency more for reflection
             w_relevance=0.5,
-            w_importance=2.0, # weight importance more for reflection
+            w_importance=2.0,  # weight importance more for reflection
         )
         return [m.to_dict() for m in memories]
 
@@ -380,9 +374,7 @@ class MemoryStream:
     async def get_all(self) -> List[Dict[str, Any]]:
         """Return serialized representations of all memories, sorted by timestamp."""
         async with self._lock:
-            sorted_memories = sorted(
-                self._memories.values(), key=lambda m: m.timestamp
-            )
+            sorted_memories = sorted(self._memories.values(), key=lambda m: m.timestamp)
             return [m.to_dict() for m in sorted_memories]
         return None
 

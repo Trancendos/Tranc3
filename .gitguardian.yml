@@ -1,0 +1,31 @@
+# GitGuardian configuration — ignore known false positives
+# Test fixtures use dummy API keys that are not real secrets
+
+matches:
+  - name: OpenAI test key in test_adaptive_automation.py
+    match:
+      policy: Secret detection
+      type: OpenAI API Key
+    paths:
+      - tests/test_adaptive_automation.py
+
+  - name: API key fixture in test_security_remediation.py
+    match:
+      policy: Secret detection
+      type: API Key
+    paths:
+      - tests/test_security_remediation.py
+
+  - name: Secret detection regex patterns in vault.py
+    match:
+      policy: Secret detection
+      type: API Key
+    paths:
+      - shared_core/architecture/vault.py
+
+  - name: API key example in auth middleware
+    match:
+      policy: Secret detection
+      type: API Key
+    paths:
+      - shared_core/middleware/auth.py

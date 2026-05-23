@@ -30,7 +30,11 @@ class BCISignalProcessor:
     def __init__(self, sample_rate: int = 256, channels: int = 8):
         self.sample_rate = sample_rate
         self.channels = channels
-        logger.info("BCISignalProcessor: %sch @ %sHz", sanitize_for_log(channels), sanitize_for_log(sample_rate))  # codeql[py/cleartext-logging]
+        logger.info(
+            "BCISignalProcessor: %sch @ %sHz",
+            sanitize_for_log(channels),
+            sanitize_for_log(sample_rate),
+        )  # codeql[py/cleartext-logging]
 
     def process_neural_signal(self, raw_signal: np.ndarray) -> Dict:
         """
@@ -55,9 +59,9 @@ class BCISignalProcessor:
         dominant_band = max(features, key=features.get).replace("_power", "")
         features["dominant_band"] = dominant_band
         features["intent_signal"] = self._band_to_intent(dominant_band)
-        features["consciousness_estimate"] = features.get(
-            "gamma_power", 0
-        ) + features.get("high_gamma_power", 0)
+        features["consciousness_estimate"] = features.get("gamma_power", 0) + features.get(
+            "high_gamma_power", 0
+        )
 
         return features
 
@@ -112,9 +116,7 @@ class BCIInputAdapter:
             "intent_hint": features.get("intent_signal", "neutral"),
             "consciousness": features.get("consciousness_estimate", 0.0),
             "dominant_band": features.get("dominant_band", "alpha"),
-            "user_emotion": self._band_to_emotion(
-                features.get("dominant_band", "alpha")
-            ),
+            "user_emotion": self._band_to_emotion(features.get("dominant_band", "alpha")),
         }
 
     def _band_to_emotion(self, band: str) -> str:

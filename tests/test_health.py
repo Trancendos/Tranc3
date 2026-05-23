@@ -20,6 +20,7 @@ from src.observability.health import (
 # SystemHealth Enum Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestSystemHealth:
     """System health status enum."""
 
@@ -33,6 +34,7 @@ class TestSystemHealth:
 # ─────────────────────────────────────────────────────────────────────────────
 # SERVICE_REGISTRY Tests
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestServiceRegistry:
     """Default service registry contents."""
@@ -80,6 +82,7 @@ class TestServiceRegistry:
 # HealthChecker Tests
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestHealthChecker:
     """HealthChecker with custom registry."""
 
@@ -106,7 +109,11 @@ class TestHealthChecker:
     async def test_check_service_connection_refused(self):
         """Service that's not running should be unhealthy."""
         custom = {
-            "offline-svc": {"url": "http://localhost:1/health", "priority": "P0", "named": "Offline"},
+            "offline-svc": {
+                "url": "http://localhost:1/health",
+                "priority": "P0",
+                "named": "Offline",
+            },
         }
         checker = HealthChecker(registry=custom)
         result = await checker.check_service("offline-svc")
@@ -117,7 +124,11 @@ class TestHealthChecker:
     async def test_check_service_caches_result(self):
         """Health check results are cached."""
         custom = {
-            "offline-svc": {"url": "http://localhost:1/health", "priority": "P0", "named": "Offline"},
+            "offline-svc": {
+                "url": "http://localhost:1/health",
+                "priority": "P0",
+                "named": "Offline",
+            },
         }
         checker = HealthChecker(registry=custom)
         await checker.check_service("offline-svc")
@@ -127,7 +138,11 @@ class TestHealthChecker:
     async def test_get_cached(self):
         """get_cached returns last cached results."""
         custom = {
-            "offline-svc": {"url": "http://localhost:1/health", "priority": "P0", "named": "Offline"},
+            "offline-svc": {
+                "url": "http://localhost:1/health",
+                "priority": "P0",
+                "named": "Offline",
+            },
         }
         checker = HealthChecker(registry=custom)
         await checker.check_service("offline-svc")
@@ -157,12 +172,14 @@ class TestHealthChecker:
 # HealthChecker with Mock HTTP Server
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestHealthCheckerWithServer:
     """HealthChecker against a real HTTP server."""
 
     @pytest.fixture
     def healthy_server(self):
         """Start a mock HTTP server that returns healthy responses."""
+
         class HealthyHandler(BaseHTTPRequestHandler):
             def do_GET(self):
                 if self.path == "/health":
@@ -189,6 +206,7 @@ class TestHealthCheckerWithServer:
     @pytest.fixture
     def degraded_server(self):
         """Server that returns 403 (degraded)."""
+
         class DegradedHandler(BaseHTTPRequestHandler):
             def do_GET(self):
                 self.send_response(403)
@@ -207,6 +225,7 @@ class TestHealthCheckerWithServer:
     @pytest.fixture
     def error_server(self):
         """Server that returns 500 (unhealthy)."""
+
         class ErrorHandler(BaseHTTPRequestHandler):
             def do_GET(self):
                 self.send_response(500)

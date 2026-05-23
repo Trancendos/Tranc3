@@ -35,7 +35,7 @@ class PersonalityProfile:
     max_new_tokens: int = 512
 
     # Style metadata (used by avatar and UI layers later)
-    tone: str = "warm"          # warm | professional | direct | creative
+    tone: str = "warm"  # warm | professional | direct | creative
     domain_focus: str = "general"
     avatar_id: Optional[str] = None
 
@@ -66,9 +66,7 @@ class PersonalityProfile:
             prompt = self.context_preamble.strip() + "\n\n" + prompt
 
         if user_context:
-            context_lines = "\n".join(
-                f"- {k}: {v}" for k, v in user_context.items() if v
-            )
+            context_lines = "\n".join(f"- {k}: {v}" for k, v in user_context.items() if v)
             if context_lines:
                 prompt += f"\n\nUser context:\n{context_lines}"
 
@@ -97,15 +95,15 @@ class PersonalityMatrix:
             except Exception as e:
                 print(f"[PersonalityMatrix] Could not load {path.name}: {e}")
 
-        print(f"[PersonalityMatrix] Loaded {len(self._registry)} profile(s): "
-              f"{', '.join(self._registry.keys())}")
+        print(
+            f"[PersonalityMatrix] Loaded {len(self._registry)} profile(s): "
+            f"{', '.join(self._registry.keys())}"
+        )
 
     def get(self, name: str) -> PersonalityProfile:
         if name not in self._registry:
             available = list(self._registry.keys())
-            raise KeyError(
-                f"Profile '{name}' not found. Available: {available}"
-            )
+            raise KeyError(f"Profile '{name}' not found. Available: {available}")
         return self._registry[name]
 
     def list_profiles(self):

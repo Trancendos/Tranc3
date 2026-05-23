@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 class ServiceHealth(str, Enum):
     """Service health status"""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -18,6 +19,7 @@ class ServiceHealth(str, Enum):
 @dataclass
 class ServiceCapability:
     """A capability offered by a service"""
+
     name: str
     version: str
     description: Optional[str] = None
@@ -27,6 +29,7 @@ class ServiceCapability:
 @dataclass
 class ServiceInfo:
     """Service registration information"""
+
     name: str
     version: str
     endpoint: str
@@ -52,6 +55,7 @@ class ServiceInfo:
 @dataclass
 class EventMessage:
     """Event bus message"""
+
     event_type: str
     source: str
     data: Dict[str, Any]
@@ -73,6 +77,7 @@ class EventMessage:
 @dataclass
 class VectorClock:
     """Vector clock for causal ordering"""
+
     clock: Dict[str, int] = field(default_factory=dict)
 
     def increment(self, node_id: str):
@@ -86,12 +91,8 @@ class VectorClock:
         """Compare two vector clocks: 'before', 'after', 'concurrent', or 'equal'"""
         all_keys = set(self.clock.keys()) | set(other.clock.keys())
 
-        self_before = any(
-            self.clock.get(k, 0) < other.clock.get(k, 0) for k in all_keys
-        )
-        self_after = any(
-            self.clock.get(k, 0) > other.clock.get(k, 0) for k in all_keys
-        )
+        self_before = any(self.clock.get(k, 0) < other.clock.get(k, 0) for k in all_keys)
+        self_after = any(self.clock.get(k, 0) > other.clock.get(k, 0) for k in all_keys)
 
         if self_before and self_after:
             return "concurrent"

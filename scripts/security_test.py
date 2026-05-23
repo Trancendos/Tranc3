@@ -19,10 +19,10 @@ from pathlib import Path
 
 def run_command(cmd: list, description: str) -> bool:
     """Run a command and return success status."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Running: {description}")
     print(f"Command: {' '.join(cmd)}")
-    print('='*60)
+    print("=" * 60)
 
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
@@ -40,29 +40,26 @@ def run_command(cmd: list, description: str) -> bool:
 
 def check_dependencies() -> bool:
     """Check Python dependencies for vulnerabilities."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("DEPENDENCY VULNERABILITY SCANNING")
-    print("="*60)
+    print("=" * 60)
 
     all_passed = True
 
     # pip-audit
     all_passed &= run_command(
-        ["pip", "audit", "-r", "requirements.txt"],
-        "pip-audit (requirements.txt)"
+        ["pip", "audit", "-r", "requirements.txt"], "pip-audit (requirements.txt)"
     )
 
     # Check AI dependencies if they exist
     if Path("requirements-ai.txt").exists():
         all_passed &= run_command(
-            ["pip", "audit", "-r", "requirements-ai.txt"],
-            "pip-audit (requirements-ai.txt)"
+            ["pip", "audit", "-r", "requirements-ai.txt"], "pip-audit (requirements-ai.txt)"
         )
 
     # Safety check
     all_passed &= run_command(
-        ["safety", "check", "-r", "requirements.txt"],
-        "Safety check (requirements.txt)"
+        ["safety", "check", "-r", "requirements.txt"], "Safety check (requirements.txt)"
     )
 
     return all_passed
@@ -70,17 +67,14 @@ def check_dependencies() -> bool:
 
 def check_code() -> bool:
     """Check Python code for security issues."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("CODE SECURITY ANALYSIS")
-    print("="*60)
+    print("=" * 60)
 
     all_passed = True
 
     # Bandit security linting
-    all_passed &= run_command(
-        ["bandit", "-r", "src/", "-f", "txt"],
-        "Bandit security linting"
-    )
+    all_passed &= run_command(["bandit", "-r", "src/", "-f", "txt"], "Bandit security linting")
 
     # Check for exact version pinning
     print("\nChecking for exact version pinning in requirements.txt...")
@@ -100,9 +94,9 @@ def check_code() -> bool:
 
 def check_docker() -> bool:
     """Check Docker configuration for security issues."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("DOCKER SECURITY CHECKS")
-    print("="*60)
+    print("=" * 60)
 
     all_passed = True
 
@@ -132,9 +126,9 @@ def check_secrets() -> bool:
     Reports only the count and file locations of matches — never the
     matching lines themselves — to avoid logging sensitive data.
     """
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("SECRET DETECTION")
-    print("="*60)
+    print("=" * 60)
 
     all_passed = True
 
@@ -152,7 +146,7 @@ def check_secrets() -> bool:
         result = subprocess.run(
             ["grep", "-r", "-i", "-l", pattern, "src/", "--include=*.py"],
             capture_output=True,
-            text=True
+            text=True,
         )
         if result.returncode == 0:
             matching_files = [f for f in result.stdout.strip().splitlines() if f]
@@ -174,13 +168,22 @@ def check_secrets() -> bool:
 
 def generate_sbom() -> bool:
     """Generate Software Bill of Materials."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("SBOM GENERATION")
-    print("="*60)
+    print("=" * 60)
 
     return run_command(
-        ["cyclonedx-py", "requirements", "-i", "requirements.txt", "-o", "sbom.json", "--format", "json"],
-        "CycloneDX SBOM generation"
+        [
+            "cyclonedx-py",
+            "requirements",
+            "-i",
+            "requirements.txt",
+            "-o",
+            "sbom.json",
+            "--format",
+            "json",
+        ],
+        "CycloneDX SBOM generation",
     )
 
 
@@ -216,14 +219,14 @@ def main():
     if args.all or args.generate_sbom:
         all_passed &= generate_sbom()
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     if all_passed:
         print("✅ ALL SECURITY CHECKS PASSED")
-        print("="*60)
+        print("=" * 60)
         sys.exit(0)
     else:
         print("❌ SOME SECURITY CHECKS FAILED")
-        print("="*60)
+        print("=" * 60)
         sys.exit(1)
 
 

@@ -27,25 +27,25 @@ logger = logging.getLogger(__name__)
 
 
 class ArtifactType(str, Enum):
-    DOCKER      = "docker"       # OCI/Docker image
-    PYTHON      = "python"       # Python wheel / sdist
-    NPM         = "npm"          # Node.js package
-    MODEL       = "model"        # ML model weights / ONNX
-    GENERIC     = "generic"      # Raw file
-    CLOUDFLARE  = "cloudflare"   # CF Worker bundle
+    DOCKER = "docker"  # OCI/Docker image
+    PYTHON = "python"  # Python wheel / sdist
+    NPM = "npm"  # Node.js package
+    MODEL = "model"  # ML model weights / ONNX
+    GENERIC = "generic"  # Raw file
+    CLOUDFLARE = "cloudflare"  # CF Worker bundle
 
 
 class ArtifactStatus(str, Enum):
     AVAILABLE = "available"
     UPLOADING = "uploading"
-    DELETED   = "deleted"
-    EXPIRED   = "expired"
+    DELETED = "deleted"
+    EXPIRED = "expired"
 
 
 @dataclass
 class ArtifactVersion:
     version: str
-    digest: str = ""          # SHA-256 or OCI digest
+    digest: str = ""  # SHA-256 or OCI digest
     size_bytes: int = 0
     created_at: float = field(default_factory=time.time)
     tags: List[str] = field(default_factory=list)
@@ -72,7 +72,7 @@ class Artifact:
     updated_at: float = field(default_factory=time.time)
     versions: List[ArtifactVersion] = field(default_factory=list)
     description: str = ""
-    ttl_days: Optional[int] = None   # None = retain forever
+    ttl_days: Optional[int] = None  # None = retain forever
 
     def latest_version(self) -> Optional[ArtifactVersion]:
         if not self.versions:
@@ -113,7 +113,11 @@ class TheArtifactory:
         defaults = [
             ("tranc3-backend", ArtifactType.DOCKER, "tranc3-backend FastAPI Docker image"),
             ("tranc3-bots", ArtifactType.DOCKER, "tranc3-bots 12-bot service Docker image"),
-            ("tranc3-engine", ArtifactType.MODEL, "Tranc3Engine transformer weights (ONNX + PyTorch)"),
+            (
+                "tranc3-engine",
+                ArtifactType.MODEL,
+                "Tranc3Engine transformer weights (ONNX + PyTorch)",
+            ),
             ("tranc3-ai-worker", ArtifactType.CLOUDFLARE, "tranc3-ai CF Worker bundle"),
             ("infinity-void-worker", ArtifactType.CLOUDFLARE, "infinity-void CF Worker bundle"),
             ("trancendos-api-gateway", ArtifactType.CLOUDFLARE, "API Gateway CF Worker bundle"),
@@ -162,10 +166,16 @@ class TheArtifactory:
         )
         artifact.versions.append(ver)
         artifact.updated_at = time.time()
-        self._emit("artifactory.version.pushed", {
-            "artifact_id": artifact_id, "version": version, "digest": digest
-        })
-        logger.info("artifactory: pushed %s v%s digest=%s", sanitize_for_log(artifact.name), sanitize_for_log(version), sanitize_for_log(digest[:12]) if digest else "")  # codeql[py/cleartext-logging]
+        self._emit(
+            "artifactory.version.pushed",
+            {"artifact_id": artifact_id, "version": version, "digest": digest},
+        )
+        logger.info(
+            "artifactory: pushed %s v%s digest=%s",
+            sanitize_for_log(artifact.name),
+            sanitize_for_log(version),
+            sanitize_for_log(digest[:12]) if digest else "",
+        )  # codeql[py/cleartext-logging]
         return ver
 
     def get_artifact(self, artifact_id: str) -> Optional[Artifact]:
@@ -225,11 +235,15 @@ class TheArtifactory:
     def _emit(self, event_type: str, metadata: Optional[Dict] = None) -> None:
         try:
             from src.observability.observatory import EventCategory, observe
-            observe(event_type, category=EventCategory.SYSTEM, service="the-artifactory",
-                    metadata=metadata or {})
+
+            observe(
+                event_type,
+                category=EventCategory.SYSTEM,
+                service="the-artifactory",
+                metadata=metadata or {},
+            )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
 
 
 _artifactory: Optional[TheArtifactory] = None

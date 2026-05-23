@@ -141,8 +141,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_dir", default="data/processed")
     parser.add_argument("--raw_dir", default="data/raw")
-    parser.add_argument("--skip_download", action="store_true",
-                        help="Skip downloading public datasets (use custom data only)")
+    parser.add_argument(
+        "--skip_download",
+        action="store_true",
+        help="Skip downloading public datasets (use custom data only)",
+    )
     args = parser.parse_args()
 
     print("\n=== TRANC3 Data Preparation ===\n")

@@ -24,16 +24,16 @@ class TRANC3_2060:
     Complete integration of all advanced subsystems.
     """
 
-    def __init__(self, config_path: str = 'tranc3_2060_config.yaml'):
+    def __init__(self, config_path: str = "tranc3_2060_config.yaml"):
         self.config = self._load_config(config_path)
 
         print("Initializing TRANC3 2060 - The Conscious AI System")
 
-        self.quantum_core  = QuantumNeuralCore(self.config['quantum'])
-        self.consciousness = ConsciousnessModel(self.config['consciousness'])
-        self.evolution     = SelfEvolvingArchitecture(self.config['ai_capabilities'])
-        self.swarm         = DistributedIntelligenceSwarm(self.config['distributed'])
-        self.memory        = HolographicMemoryCrystal(self.config['memory']['dimensions'])
+        self.quantum_core = QuantumNeuralCore(self.config["quantum"])
+        self.consciousness = ConsciousnessModel(self.config["consciousness"])
+        self.evolution = SelfEvolvingArchitecture(self.config["ai_capabilities"])
+        self.swarm = DistributedIntelligenceSwarm(self.config["distributed"])
+        self.memory = HolographicMemoryCrystal(self.config["memory"]["dimensions"])
 
         self._start_background_services()
 
@@ -41,16 +41,19 @@ class TRANC3_2060:
         """Load YAML config, fall back to defaults if not found"""
         try:
             import yaml
-            with open(config_path, 'r') as f:
+
+            with open(config_path, "r") as f:
                 return yaml.safe_load(f)
         except FileNotFoundError:
-            logger.warning("Config not found at %s, using defaults", sanitize_for_log(config_path))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Config not found at %s, using defaults", sanitize_for_log(config_path)
+            )  # codeql[py/cleartext-logging]
             return {
-                'quantum':         {'num_qubits': 16},
-                'consciousness':   {'consciousness_threshold': 3.0, 'state_dimensions': 768},
-                'ai_capabilities': {},
-                'distributed':     {},
-                'memory':          {'dimensions': 768},
+                "quantum": {"num_qubits": 16},
+                "consciousness": {"consciousness_threshold": 3.0, "state_dimensions": 768},
+                "ai_capabilities": {},
+                "distributed": {},
+                "memory": {"dimensions": 768},
             }
 
     def _start_background_services(self):
@@ -62,7 +65,7 @@ class TRANC3_2060:
         tokens = [ord(c) % 768 for c in text[:768]]
         tensor = torch.tensor(tokens, dtype=torch.float32)
         # Pad or truncate to state_dimensions
-        dim = self.config['consciousness'].get('state_dimensions', 768)
+        dim = self.config["consciousness"].get("state_dimensions", 768)
         if len(tensor) < dim:
             tensor = torch.nn.functional.pad(tensor, (0, dim - len(tensor)))
         return tensor[:dim].unsqueeze(0)
@@ -75,20 +78,22 @@ class TRANC3_2060:
             encoded_input, time_steps=1000
         )
 
-        phi = consciousness_state['average_phi']
-        if phi > self.config['consciousness']['consciousness_threshold']:
+        phi = consciousness_state["average_phi"]
+        if phi > self.config["consciousness"]["consciousness_threshold"]:
             thought = await self._conscious_processing(encoded_input)
         else:
             thought = await self._reactive_processing(encoded_input)
 
         self.evolution.evolve(num_generations=1)
 
-        self.memory.store_experience({
-            'input':         encoded_input,
-            'thought':       thought,
-            'consciousness': consciousness_state,
-            'timestamp':     asyncio.get_event_loop().time(),
-        })
+        self.memory.store_experience(
+            {
+                "input": encoded_input,
+                "thought": thought,
+                "consciousness": consciousness_state,
+                "timestamp": asyncio.get_event_loop().time(),
+            }
+        )
 
         return thought
 
@@ -97,14 +102,16 @@ class TRANC3_2060:
         global_state = self.consciousness.global_workspace.broadcast(input_data.squeeze(0))
         attention_state = self.quantum_core.quantum_attention(global_state)
 
-        swarm_result = await self.swarm.collective_problem_solving({
-            'input':     input_data,
-            'attention': attention_state,
-            'context':   global_state,
-        })
+        swarm_result = await self.swarm.collective_problem_solving(
+            {
+                "input": input_data,
+                "attention": attention_state,
+                "context": global_state,
+            }
+        )
 
         meta_results = self.consciousness.metacognition.self_monitor(
-            swarm_result['result'], global_state
+            swarm_result["result"], global_state
         )
 
         relevant_memories = self.memory.parallel_search(input_data)
@@ -116,9 +123,9 @@ class TRANC3_2060:
     async def _reactive_processing(self, input_data: torch.Tensor) -> Dict:
         """Fast reactive processing (below consciousness threshold)"""
         return {
-            'result':          input_data,
-            'mode':            'reactive',
-            'consciousness':   False,
+            "result": input_data,
+            "mode": "reactive",
+            "consciousness": False,
         }
 
     def _synthesize_response(
@@ -130,11 +137,11 @@ class TRANC3_2060:
     ) -> Dict:
         """Synthesize final response from all subsystem outputs"""
         return {
-            'result':           swarm_result.get('result'),
-            'meta':             meta_results,
-            'memories_used':    relevant_memories is not None,
-            'global_state':     global_state,
-            'mode':             'conscious',
+            "result": swarm_result.get("result"),
+            "meta": meta_results,
+            "memories_used": relevant_memories is not None,
+            "global_state": global_state,
+            "mode": "conscious",
         }
 
     async def think_abstract(self, seed: torch.Tensor) -> Dict:
@@ -142,9 +149,9 @@ class TRANC3_2060:
         global_state = self.consciousness.global_workspace.broadcast(seed.squeeze(0))
         meta = self.consciousness.metacognition.self_monitor(seed.squeeze(0), global_state)
         return {
-            'internal_state':  seed.squeeze(0),
-            'global_workspace':global_state,
-            'meta':            meta,
+            "internal_state": seed.squeeze(0),
+            "global_workspace": global_state,
+            "meta": meta,
         }
 
     async def autonomous_operation(self):
@@ -155,10 +162,10 @@ class TRANC3_2060:
             thought = await self.think_abstract(random_thought_seed)
 
             self_eval = self.consciousness.metacognition.self_monitor(
-                thought['internal_state'], thought['global_workspace']
+                thought["internal_state"], thought["global_workspace"]
             )
 
-            if self_eval['self_assessment']['uncertainty'] > 0.5:
+            if self_eval["self_assessment"]["uncertainty"] > 0.5:
                 self.evolution.evolve(num_generations=10)
 
             await self.swarm.share_insight(thought)
