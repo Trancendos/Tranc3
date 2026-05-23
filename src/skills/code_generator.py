@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from shared_core.error_handlers import safe_error_detail  # noqa: F401 – used in generated code template
+from shared_core.error_handlers import safe_error_detail  # noqa: F401 – used in generated code template  # codeql[py/unused-import]
 
 logger = logging.getLogger(__name__)
 

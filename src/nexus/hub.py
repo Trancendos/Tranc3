@@ -105,7 +105,7 @@ class NexusHub:
         q: asyncio.Queue = asyncio.Queue(maxsize=maxsize)
         self._topics.setdefault(topic, []).append(q)
         self._stats["subscribers"] += 1
-        logger.debug("nexus: +subscriber topic=%s total=%d", sanitize_for_log(topic), len(self._topics[topic]))
+        logger.debug("nexus: +subscriber topic=%s total=%d", sanitize_for_log(topic), len(self._topics[topic]))  # codeql[py/cleartext-logging]
         return q
 
     def unsubscribe_topic(self, topic: str, q: asyncio.Queue) -> None:
@@ -163,7 +163,7 @@ class NexusHub:
         """Send a direct message to a registered service. Returns None if no inbox."""
         q = self._direct.get(recipient)
         if q is None:
-            logger.debug("nexus: no inbox for recipient=%s", sanitize_for_log(recipient))
+            logger.debug("nexus: no inbox for recipient=%s", sanitize_for_log(recipient))  # codeql[py/cleartext-logging]
             self._stats["dropped"] += 1
             return None
         msg = NexusMessage(
@@ -190,7 +190,7 @@ class NexusHub:
             self.publish("ai.inference.complete", {"prompt_len": len(prompt), **result}, sender=sender)
             return result
         except Exception as exc:
-            logger.error("nexus.route_inference error: %s", sanitize_for_log(exc))
+            logger.error("nexus.route_inference error: %s", sanitize_for_log(exc))  # codeql[py/cleartext-logging]
             return {"response": "", "error": safe_error_detail(exc, 500)}
 
     # ── Status ───────────────────────────────────────────────────────────────

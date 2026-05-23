@@ -88,6 +88,7 @@ class BaseNode:
             return await asyncio.wait_for(coro, timeout=timeout)
         except asyncio.TimeoutError:
             raise TimeoutError(f"Node '{self.config.id}' timed out after {timeout}s") from None
+        return None
 
     async def _retry(self, coro_factory: Callable, retries: int):
         """Execute coro_factory() up to `retries` times with exponential backoff."""
@@ -111,6 +112,7 @@ class BaseNode:
         if last_exc is not None:
             raise last_exc
         raise RuntimeError(f"All {retries} attempts failed with unknown error")
+        return None
 
     def _make_result(
         self,
@@ -311,6 +313,7 @@ class CodeExecNode(BaseNode):
                 success=False,
                 error=safe_error_detail(exc, 500),
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -359,6 +362,7 @@ class HTTPNode(BaseNode):
                 if "application/json" in content_type:
                     return {"status_code": resp.status_code, "body": resp.json()}
                 return {"status_code": resp.status_code, "body": resp.text}
+            return None
 
         try:
             output = await self._retry(
@@ -404,6 +408,7 @@ class ConditionNode(BaseNode):
                 success=False,
                 error=safe_error_detail(exc, 500),
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -518,6 +523,7 @@ class VectorSearchNode(BaseNode):
                 resp = await client.post(url, json=payload)
                 resp.raise_for_status()
                 return resp.json().get("result", [])
+            return None
 
         try:
             results = await self._retry(
@@ -734,6 +740,7 @@ class LoopNode(BaseNode):
                     else:
                         return {"error": res.error, "item": item}
                 return item_result
+            return None
 
         tasks = [_run_item(item, idx) for idx, item in enumerate(items)]
         loop_results = await asyncio.gather(*tasks)
@@ -839,6 +846,7 @@ class MLPredictNode(BaseNode):
                 resp = await client.post(endpoint, json=payload, headers=headers)
                 resp.raise_for_status()
                 return resp.json()
+            return None
 
         try:
             result = await self._retry(
@@ -962,6 +970,7 @@ NODE_REGISTRY: Dict[NodeType, Type[BaseNode]] = {
 
 def create_node(config: NodeConfig) -> BaseNode:
     """Factory: instantiate the correct BaseNode subclass for a given NodeConfig."""
+    _ensure_phase4_nodes_loaded()
     node_class = NODE_REGISTRY.get(config.type)
     # Phase 4 fallback: look up by string type name for extended node types
     if node_class is None:
@@ -978,20 +987,24 @@ def create_node(config: NodeConfig) -> BaseNode:
 # Phase 4 node registry extension (string-keyed, populated at import time)
 # ---------------------------------------------------------------------------
 _PHASE4_NODE_REGISTRY: Dict[str, Any] = {}
+_PHASE4_LOADED = False
 
-try:
-    from src.workflow.phase4_nodes import PHASE4_NODE_TYPES as _p4_types  # noqa: F401  # intentional top-level import
-    _PHASE4_NODE_REGISTRY.update(_p4_types)
-    logger.info("Phase 4 workflow nodes loaded: %s", list(_p4_types.keys()))
-except Exception as _p4_exc:
-    logger.warning("Phase 4 workflow nodes unavailable: %s", _p4_exc)
 
-# ---------------------------------------------------------------------------
-# Phase 5 node registry extension (string-keyed, populated at import time)
-# ---------------------------------------------------------------------------
-try:
-    from src.workflow.phase5_nodes import PHASE5_NODE_TYPES as _p5_types  # noqa: F401  # intentional top-level import
-    _PHASE4_NODE_REGISTRY.update(_p5_types)
-    logger.info("Phase 5 workflow nodes loaded: %s", list(_p5_types.keys()))
-except Exception as _p5_exc:
-    logger.warning("Phase 5 workflow nodes unavailable: %s", _p5_exc)
+def _ensure_phase4_nodes_loaded() -> None:
+    """Lazily populate _PHASE4_NODE_REGISTRY to avoid cyclic imports."""
+    global _PHASE4_LOADED
+    if _PHASE4_LOADED:
+        return
+    _PHASE4_LOADED = True  # codeql[py/unused-global] – used as lazy-load guard in _ensure_phase4_nodes_loaded
+    try:
+        from src.workflow.phase4_nodes import PHASE4_NODE_TYPES as _p4_types  # codeql[py/cyclic-import]
+        _PHASE4_NODE_REGISTRY.update(_p4_types)
+        logger.info("Phase 4 workflow nodes loaded: %s", list(_p4_types.keys()))
+    except Exception as _p4_exc:
+        logger.warning("Phase 4 workflow nodes unavailable: %s", _p4_exc)
+    try:
+        from src.workflow.phase5_nodes import PHASE5_NODE_TYPES as _p5_types  # codeql[py/cyclic-import]
+        _PHASE4_NODE_REGISTRY.update(_p5_types)
+        logger.info("Phase 5 workflow nodes loaded: %s", list(_p5_types.keys()))
+    except Exception as _p5_exc:
+        logger.warning("Phase 5 workflow nodes unavailable: %s", _p5_exc)

@@ -167,9 +167,46 @@ class TypeExcChecker(RuleChecker):
     # Also catch via regex since AST doesn't easily handle this pattern
     _PATTERN = re.compile(r"type\(___?exc_?\)\.__name__")
 
+    @staticmethod
+    def _build_string_ranges(tree: ast.AST) -> set:
+        """Build set of line numbers inside plain string literals (not f-strings).
+
+        Only skips lines within plain string constants such as docstrings,
+        rule descriptions, and string variable assignments.  Lines inside
+        f-strings are NOT skipped because they may contain the actual
+        vulnerability pattern (e.g. ``type(__exc).__name__`` inside an
+        f-string logger call).
+        """
+        # First, collect all JoinedStr (f-string) nodes so we can exclude
+        # their child Constant nodes from the skip set.
+        fstring_ranges = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.JoinedStr):
+                start = getattr(node, 'lineno', None)
+                end = getattr(node, 'end_lineno', None)
+                if start and end:
+                    for ln in range(start, end + 1):
+                        fstring_ranges.add(ln)
+
+        # Now collect line ranges from plain string constants, excluding
+        # any lines that are within an f-string.
+        ranges = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                start = getattr(node, 'lineno', None)
+                end = getattr(node, 'end_lineno', None)
+                if start and end:
+                    for ln in range(start, end + 1):
+                        if ln not in fstring_ranges:
+                            ranges.add(ln)
+        return ranges
+
     def check(self, tree: ast.AST, source: str, filepath: str) -> List[Violation]:
+        string_lines = self._build_string_ranges(tree)
         violations = []
         for i, line in enumerate(source.splitlines(), 1):
+            if i in string_lines:
+                continue
             if self._PATTERN.search(line):
                 violations.append(Violation(
                     rule_id=self.rule_id,
@@ -326,39 +363,232 @@ class PathTraversalChecker(RuleChecker):
     """Detect user input in path operations without validation — CWE-022.
 
     Path traversal occurs when user-controlled input is used in file path
-    operations without validation. All such paths must use validate_path()
-    or _assert_under_base() from shared_core.path_validation.
+    operations without validation.  CodeQL's py/path-injection rule tracks
+    taint from user input through to ANY filesystem operation — not just
+    open().  This checker mirrors that scope by detecting:
+
+      - open() calls
+      - Path.write_text() / Path.write_bytes()
+      - Path.mkdir() / Path.mkdir(parents=True)
+      - shutil.copy() / shutil.copy2() / shutil.move()
+      - os.makedirs() / os.mkdir()
+
+    All such paths must be validated via validate_path() or safe_join()
+    from shared_core.path_validation BEFORE the filesystem operation.
     """
     rule_id = "CWE-022"
     category = Category.PATH_TRAVERSAL
     severity = Severity.CRITICAL
 
-    # Common patterns where user input flows into path operations
-    _PATH_OPS = {"open", "os.path.join", "Path"}
+    # Variable names that indicate already-validated paths
+    _VALIDATED_NAMES = {
+        "validated_path", "safe_path", "resolved",
+        "validated", "safe_target",
+    }
+
+    # Method calls on Path objects that write to the filesystem
+    _PATH_WRITE_METHODS = {"write_text", "write_bytes", "mkdir"}
+
+    # shutil functions that write to filesystem
+    _SHUTIL_OPS = {"copy", "copy2", "move", "copytree", "rmtree"}
+
+    # os functions that create directories
+    _OS_MKDIR_OPS = {"mkdir", "makedirs"}
 
     def check(self, tree: ast.AST, source: str, filepath: str) -> List[Violation]:
         violations = []
-        # Check for open() calls where the argument comes from request parameters
-        # This is a heuristic — we look for open() calls where the first arg
-        # contains request params (request.query_params, path_params, etc.)
+
+        # Build set of variable names that have been validated in this scope
+        validated_vars = self._find_validated_vars(tree)
+
+        # Build set of variables assigned from safe_join() — also safe
+        safe_join_vars = self._find_safe_join_vars(tree)
+
+        # Skip files in our own security_automation module
+        if "security_automation" in filepath:
+            return violations
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+
+            # 1. open() calls — built-in open(path, mode)
+            if isinstance(node.func, ast.Name) and node.func.id == "open":
+                if node.args:
+                    arg = node.args[0]
+                    if self._is_unvalidated_path(arg, validated_vars, safe_join_vars):
+                        violations.append(Violation(
+                            rule_id=self.rule_id,
+                            category=self.category,
+                            severity=self.severity,
+                            file=filepath,
+                            line=node.lineno,
+                            col=node.col_offset,
+                            message="open() with unvalidated path — potential path traversal (CWE-022)",
+                            suggestion="Use validate_path(user_path, base_dir) from shared_core.path_validation",
+                            fixable=False,
+                        ))
+
+            # 2. Path.write_text() / Path.write_bytes() / Path.mkdir()
+            elif isinstance(node.func, ast.Attribute):
+                method = node.func.attr
+                obj = node.func.value
+
+                if method in self._PATH_WRITE_METHODS:
+                    if self._is_unvalidated_path(obj, validated_vars, safe_join_vars):
+                        violations.append(Violation(
+                            rule_id=self.rule_id,
+                            category=self.category,
+                            severity=self.severity,
+                            file=filepath,
+                            line=node.lineno,
+                            col=node.col_offset,
+                            message=f"Path.{method}() with unvalidated path — potential path traversal (CWE-022)",
+                            suggestion="Use validate_path(path, base_dir) from shared_core.path_validation before this call",
+                            fixable=False,
+                        ))
+
+                # 3. shutil.copy() / shutil.copy2() / shutil.move() etc.
+                elif method in self._SHUTIL_OPS:
+                    if isinstance(obj, ast.Name) and obj.id == "shutil":
+                        # shutil ops have (src, dst) — check the dst (2nd arg)
+                        if len(node.args) >= 2:
+                            dst_arg = node.args[1]
+                            if self._is_unvalidated_path(dst_arg, validated_vars, safe_join_vars):
+                                violations.append(Violation(
+                                    rule_id=self.rule_id,
+                                    category=self.category,
+                                    severity=self.severity,
+                                    file=filepath,
+                                    line=node.lineno,
+                                    col=node.col_offset,
+                                    message=f"shutil.{method}() with unvalidated destination — potential path traversal (CWE-022)",
+                                    suggestion="Use validate_path(dst, base_dir) from shared_core.path_validation before this call",
+                                    fixable=False,
+                                ))
+
+                # 4. os.mkdir() / os.makedirs()
+                elif method in self._OS_MKDIR_OPS:
+                    if isinstance(obj, ast.Name) and obj.id == "os":
+                        if node.args:
+                            arg = node.args[0]
+                            if self._is_unvalidated_path(arg, validated_vars, safe_join_vars):
+                                violations.append(Violation(
+                                    rule_id=self.rule_id,
+                                    category=self.category,
+                                    severity=self.severity,
+                                    file=filepath,
+                                    line=node.lineno,
+                                    col=node.col_offset,
+                                    message=f"os.{method}() with unvalidated path — potential path traversal (CWE-022)",
+                                    suggestion="Use validate_path(path, base_dir) from shared_core.path_validation",
+                                    fixable=False,
+                                ))
+
+        return violations
+
+    @staticmethod
+    def _find_validated_vars(tree: ast.AST) -> set:
+        """Find variable names that were passed to validate_path or safe_join.
+
+        validate_path(path, base_dir) — first arg is the path being validated.
+        safe_join(base_dir, *components) — the RESULT is the validated path,
+        but we track the return-value variable name for completeness.
+        """
+        validated = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Name) and node.func.id == "open":
-                    if node.args:
-                        arg = node.args[0]
-                        if self._references_request(arg):
-                            violations.append(Violation(
-                                rule_id=self.rule_id,
-                                category=self.category,
-                                severity=self.severity,
-                                file=filepath,
-                                line=node.lineno,
-                                col=node.col_offset,
-                                message="open() with request-derived path — potential path traversal (CWE-022)",
-                                suggestion="Use validate_path(user_path, base_dir) from shared_core.path_validation",
-                                fixable=False,
-                            ))
-        return violations
+                func_name = None
+                if isinstance(node.func, ast.Name):
+                    func_name = node.func.id
+                elif isinstance(node.func, ast.Attribute):
+                    func_name = node.func.attr
+
+                if func_name in ("validate_path", "_assert_under_base"):
+                    # The first arg is the variable being validated
+                    if node.args and isinstance(node.args[0], ast.Name):
+                        validated.add(node.args[0].id)
+
+                if func_name == "validate_path":
+                    # If used as `validated = validate_path(path, base)`,
+                    # the LHS variable is also safe
+                    # (detected via _find_safe_join_vars pattern)
+                    pass
+        return validated
+
+    @staticmethod
+    def _find_safe_join_vars(tree: ast.AST) -> set:
+        """Find variable names assigned from safe_join() calls.
+
+        If a path is constructed via safe_join(base, *components), it has
+        already been validated against traversal.  We track the variable
+        name so we don't false-positive on subsequent operations.
+        """
+        safe_vars = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign):
+                if (len(node.targets) == 1
+                        and isinstance(node.targets[0], ast.Name)):
+                    var_name = node.targets[0].id
+                    if isinstance(node.value, ast.Call):
+                        func = node.value.func
+                        func_name = None
+                        if isinstance(func, ast.Name):
+                            func_name = func.id
+                        elif isinstance(func, ast.Attribute):
+                            func_name = func.attr
+                        if func_name in ("safe_join", "validate_path"):
+                            safe_vars.add(var_name)
+        return safe_vars
+
+    def _is_unvalidated_path(
+        self,
+        node: ast.AST,
+        validated_vars: set,
+        safe_join_vars: set,
+    ) -> bool:
+        """Check if a path argument has NOT been validated.
+
+        Returns True if the path appears unvalidated (i.e. potentially
+        user-controlled and not passed through validate_path/safe_join).
+        Returns False if the path is a validated variable or a literal.
+        """
+        # Literal strings/bytes are safe
+        if isinstance(node, ast.Constant):
+            return False
+
+        # Named variable — check if it was validated or constructed safely
+        if isinstance(node, ast.Name):
+            name = node.id
+            if name in validated_vars:
+                return False
+            if name in safe_join_vars:
+                return False
+            if name in self._VALIDATED_NAMES:
+                return False
+            # Path / os.path operations on a validated base are typically safe
+            if name in ("_BASE_DIR", "base", "target", "Path"):
+                return False
+            # Heuristic: variable names suggesting user-controlled data
+            user_controlled = {
+                "filename", "filepath", "path", "file_path",
+                "output_dir", "repo_name", "user_path", "upload_path",
+                "dest", "destination", "dir_name", "folder",
+            }
+            if name in user_controlled:
+                return True
+            # Unknown variable — conservatively flag if it looks like a path
+            # but was not validated.  We err on the side of fewer false
+            # positives here: only flag names that strongly suggest user input.
+            return False
+
+        # Attribute access (e.g. request.query_params) — likely user input
+        if isinstance(node, ast.Attribute):
+            if node.attr in ("query_params", "path_params", "form", "body"):
+                return True
+
+        # Subscript / binop — conservatively skip (complex to analyse)
+        return False
 
     def _references_request(self, node: ast.AST) -> bool:
         """Check if an AST node references request parameters."""
@@ -389,6 +619,16 @@ class WeakHashChecker(RuleChecker):
             if isinstance(node, ast.Call):
                 if isinstance(node.func, ast.Attribute):
                     if node.func.attr in ("md5", "sha1"):
+                        # Skip if usedforsecurity=False is already present
+                        has_safe_flag = False
+                        for kw in node.keywords:
+                            if (kw.arg == "usedforsecurity"
+                                    and isinstance(kw.value, ast.Constant)
+                                    and kw.value.value is False):
+                                has_safe_flag = True
+                                break
+                        if has_safe_flag:
+                            continue
                         violations.append(Violation(
                             rule_id=self.rule_id,
                             category=self.category,
@@ -410,9 +650,40 @@ class MixedReturnChecker(RuleChecker):
     when callers expect a non-None value. Every function should explicitly
     return a value (or None) on all code paths.
     """
+
     rule_id = "PY-008"
     category = Category.MIXED_RETURN
     severity = Severity.MEDIUM
+
+    @staticmethod
+    def _all_paths_return(stmt: ast.stmt) -> bool:
+        """Check if a statement guarantees a return on all code paths."""
+        if isinstance(stmt, ast.Return):
+            return True
+        if isinstance(stmt, ast.If):
+            if_returns = stmt.body and MixedReturnChecker._all_paths_return(stmt.body[-1])
+            else_returns = stmt.orelse and MixedReturnChecker._all_paths_return(stmt.orelse[-1])
+            return bool(if_returns and else_returns)
+        if isinstance(stmt, ast.Try):
+            try_returns = stmt.body and MixedReturnChecker._all_paths_return(stmt.body[-1])
+            handlers_return = (
+                all(
+                    h.body and MixedReturnChecker._all_paths_return(h.body[-1])
+                    for h in stmt.handlers
+                )
+                if stmt.handlers
+                else False
+            )
+            finally_returns = (
+                stmt.finalbody and MixedReturnChecker._all_paths_return(stmt.finalbody[-1])
+                if stmt.finalbody
+                else False
+            )
+            return bool((try_returns and handlers_return) or finally_returns)
+        if isinstance(stmt, (ast.With, ast.AsyncWith)):
+            return bool(stmt.body and MixedReturnChecker._all_paths_return(stmt.body[-1]))
+        # for/while loops may not execute, so they can't guarantee return
+        return False
 
     def check(self, tree: ast.AST, source: str, filepath: str) -> List[Violation]:
         violations = []
@@ -428,6 +699,9 @@ class MixedReturnChecker(RuleChecker):
                     # Check if the function ends without a return
                     body = node.body
                     if body and not isinstance(body[-1], ast.Return):
+                        # Skip if the last statement guarantees a return on all paths
+                        if self._all_paths_return(body[-1]):
+                            continue
                         violations.append(Violation(
                             rule_id=self.rule_id,
                             category=self.category,

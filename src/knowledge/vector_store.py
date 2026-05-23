@@ -19,6 +19,8 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
+from shared_core.path_validation import validate_path
+
 logger = logging.getLogger(__name__)
 
 _EMBED_MODEL = os.getenv("EMBED_MODEL", "all-MiniLM-L6-v2")  # 80MB, fast, solid quality
@@ -128,7 +130,7 @@ class VectorCollection:
             q = query_vec.astype("float32")
             norm = np.linalg.norm(q)
             if norm > 0:
-                q = q / norm
+                q = q / norm  # normalize in-place
             # Use zero embeddings when no encoder either
             candidates = [(0.5, doc) for doc in self._docs]
 
@@ -236,19 +238,21 @@ class VectorStore:
             raise KeyError(f"Collection '{collection}' not found")
 
         dest = path or (_COLLECTIONS_DIR / collection)
-        dest.mkdir(parents=True, exist_ok=True)
+        # Validate path before mkdir to prevent path traversal (CWE-022)
+        validated = validate_path(dest, Path.cwd())
+        validated.mkdir(parents=True, exist_ok=True)
 
         if coll._index is not None:
             import faiss
-            faiss.write_index(coll._index, str(dest / "index.faiss"))
+            faiss.write_index(coll._index, str(validated / "index.faiss"))
 
         docs_json = [
             {"id": d.id, "text": d.text, "metadata": d.metadata, "inserted_at": d.inserted_at}
             for d in coll._docs
         ]
-        (dest / "docs.json").write_text(json.dumps(docs_json, indent=2))
-        logger.info("vector_store[%s]: saved %d docs to %s", collection, coll.count(), dest)
-        return dest
+        (validated / "docs.json").write_text(json.dumps(docs_json, indent=2))
+        logger.info("vector_store[%s]: saved %d docs to %s", collection, coll.count(), validated)
+        return validated
 
     def load_collection(self, collection: str, path: Optional[Path] = None) -> int:
         """Load a previously saved collection from disk. Returns number of vectors loaded."""

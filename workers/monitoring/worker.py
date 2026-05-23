@@ -27,6 +27,8 @@ from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnec
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from shared_core.error_handlers import safe_error_detail
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -486,6 +488,13 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": uptime,
         "version": "1.0.0",
+        "entity": {
+            "location": "The Observatory",
+            "pillar": "Knowledge",
+            "lead_ai": "Norman Hawkins",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Audit Log & Monitoring Platform",
+        },
     }
 
 
@@ -687,10 +696,10 @@ async def collect_health():
             report = HealthReport(
                 service_name=svc["name"],
                 status=HealthStatus.unhealthy,
-                metadata={"error": str(e)},
+                metadata={"error": safe_error_detail(e, 500)},
             )
             db.store_health(report)
-            results.append({"service": svc["name"], "status": "unhealthy", "error": str(e)})
+            results.append({"service": svc["name"], "status": "unhealthy", "error": safe_error_detail(e, 500)})
 
     await ws_manager.broadcast("health_collection", {"results": results})
     return {"collected": len(results), "results": results}

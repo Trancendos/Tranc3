@@ -161,6 +161,7 @@ def train(args):
         dropout              = args.dropout
 
     from src.core.advanced_model import AdvancedTransformerModel
+from shared_core.path_validation import validate_path
 
     if args.resume:
         logger.info("Resuming from checkpoint: %s", args.resume)
@@ -214,7 +215,7 @@ def train(args):
     loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
 
     # ── Output dir ────────────────────────────────────────────────────────────
-    output_dir = Path(args.output_dir)
+    validate_path(output_dir)  # CWE-022 guard
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # ── Training ──────────────────────────────────────────────────────────────
@@ -277,6 +278,7 @@ def train(args):
     _save_checkpoint(model, optimizer, scheduler, global_step, output_dir, final=True)
     logger.info("Training complete. Model saved to %s", output_dir)
     logger.info("To use: set MODEL_PATH=%s in .env", output_dir / "tranc3-final.pt")
+    return None
 
 
 def _save_checkpoint(model, optimizer, scheduler, step, out_dir: Path,

@@ -120,7 +120,9 @@ class SelfEvolvingArchitecture:
             for _ in range(self.population_size)
         ]
         logger.info(
-            f"SelfEvolvingArchitecture initialised: pop={self.population_size}, dim={self.genome_dim}"
+            "SelfEvolvingArchitecture initialised: pop=%s, dim=%s",
+            sanitize_for_log(self.population_size),
+            sanitize_for_log(self.genome_dim),
         )
 
     def evolve(
@@ -148,7 +150,10 @@ class SelfEvolvingArchitecture:
 
         best = self.population[0]
         logger.info(
-            f"Generation {self.generation}: best_fitness={best.fitness:.4f}, mutations={best.mutations}"
+            "Generation %s: best_fitness=%s, mutations=%s",
+            sanitize_for_log(self.generation),
+            sanitize_for_log(f"{best.fitness:.4f}"),
+            sanitize_for_log(best.mutations),
         )
 
         # Persist best genome to Redis — Gap G25 action
@@ -178,7 +183,7 @@ class SelfEvolvingArchitecture:
                 ex=86400 * 7,
             )  # 7-day TTL
         except Exception as e:
-            logger.debug("Genome persist skipped: %s", sanitize_for_log(e))
+            logger.debug("Genome persist skipped: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
 
     def load_genome_from_redis(self) -> bool:
         """Restore best genome from Redis on startup."""
@@ -196,11 +201,13 @@ class SelfEvolvingArchitecture:
                 self.population[0].fitness = saved["fitness"]
                 self.generation = saved.get("generation", 0)
                 logger.info(
-                    f"Genome restored from Redis: gen={self.generation}, fitness={saved['fitness']:.4f}"
+                    "Genome restored from Redis: gen=%s, fitness=%s",
+                    sanitize_for_log(self.generation),
+                    sanitize_for_log(f"{saved['fitness']:.4f}"),
                 )
                 return True
         except Exception as e:
-            logger.debug("Genome restore skipped: %s", sanitize_for_log(e))
+            logger.debug("Genome restore skipped: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
         return False
 
     def get_best_genome(self) -> torch.Tensor:

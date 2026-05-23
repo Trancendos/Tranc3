@@ -260,6 +260,7 @@ class SemanticKnowledgeGraph:
         finally:
             if self._lock:
                 self._lock.release()
+        return None
 
     async def get_node(self, node_id: str) -> Optional[KnowledgeNode]:
         """Retrieve a node by id, updating LRU access time."""
@@ -291,6 +292,7 @@ class SemanticKnowledgeGraph:
         finally:
             if self._lock:
                 self._lock.release()
+        return None
 
     async def remove_node(self, node_id: str) -> bool:
         """Remove a node and all its incident edges. Returns True if existed."""
@@ -319,6 +321,7 @@ class SemanticKnowledgeGraph:
         finally:
             if self._lock:
                 self._lock.release()
+        return None
 
     # ======================================================================
     # Edge CRUD
@@ -362,6 +365,7 @@ class SemanticKnowledgeGraph:
         finally:
             if self._lock:
                 self._lock.release()
+        return None
 
     async def remove_edge(self, source_id: str, target_id: str, edge_type: EdgeType) -> bool:
         """Remove a specific edge. Returns True if it existed."""
@@ -373,6 +377,7 @@ class SemanticKnowledgeGraph:
         finally:
             if self._lock:
                 self._lock.release()
+        return None
 
     def _remove_edge_raw(self, eid: str) -> bool:
         """Internal: remove edge by id without locking."""

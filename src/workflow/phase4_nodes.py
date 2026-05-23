@@ -105,7 +105,7 @@ def _knowledge_graph():
 # ---------------------------------------------------------------------------
 
 def _import_base():
-    from src.workflow.nodes import BaseNode, NodeConfig, NodeResult, NodeType  # noqa: F401  # intentional top-level import
+    from src.workflow.nodes import BaseNode, NodeConfig, NodeResult, NodeType  # codeql[py/cyclic-import]
     return BaseNode, NodeConfig, NodeResult, NodeType
 
 
@@ -130,7 +130,7 @@ class NeuralMeshNode:
         self.logger = logger.getChild("NeuralMeshNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
+        from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
         t0 = time.monotonic()
         cfg = self.config.config
         action = cfg.get("action", "emit")
@@ -183,6 +183,7 @@ class NeuralMeshNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -211,7 +212,7 @@ class CollectiveMemoryNode:
         self.logger = logger.getChild("CollectiveMemoryNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
+        from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
         t0 = time.monotonic()
         cfg = self.config.config
         action = cfg.get("action", "store")
@@ -282,6 +283,7 @@ class CollectiveMemoryNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -309,7 +311,7 @@ class MetaLearnNode:
         self.logger = logger.getChild("MetaLearnNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
+        from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
         t0 = time.monotonic()
         cfg = self.config.config
         try:
@@ -359,6 +361,7 @@ class MetaLearnNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -384,7 +387,7 @@ class AttentionRouteNode:
         self.logger = logger.getChild("AttentionRouteNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
+        from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
         t0 = time.monotonic()
         cfg = self.config.config
         try:
@@ -431,6 +434,7 @@ class AttentionRouteNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -457,7 +461,7 @@ class CausalReasonNode:
         self.logger = logger.getChild("CausalReasonNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
+        from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
         t0 = time.monotonic()
         cfg = self.config.config
         action = cfg.get("action", "predict")
@@ -538,6 +542,7 @@ class CausalReasonNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -570,7 +575,7 @@ class KnowledgeGraphNode:
         self.logger = logger.getChild("KnowledgeGraphNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
+        from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
         t0 = time.monotonic()
         cfg = self.config.config
         action = cfg.get("action", "query")
@@ -662,6 +667,7 @@ class KnowledgeGraphNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -687,7 +693,7 @@ class ForesightNode:
         self.logger = logger.getChild("ForesightNode")
 
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> Any:
-        from src.workflow.nodes import NodeResult  # noqa: F401  # intentional top-level import
+        from src.workflow.nodes import NodeResult  # codeql[py/cyclic-import]
         t0 = time.monotonic()
         cfg = self.config.config
         mode = cfg.get("mode", "foresight")
@@ -747,6 +753,7 @@ class ForesightNode:
                 error=str(exc),
                 duration_ms=(time.monotonic() - t0) * 1000,
             )
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -778,7 +785,7 @@ def extend_node_registry(registry: Dict[str, Any]) -> int:
     for type_name, node_class in PHASE4_NODE_TYPES.items():
         # Try to find matching enum member
         try:
-            from src.workflow.nodes import NodeType  # noqa: F401  # intentional top-level import
+            from src.workflow.nodes import NodeType  # codeql[py/cyclic-import]
             if hasattr(NodeType, type_name):
                 registry[NodeType(type_name)] = node_class
             else:

@@ -148,6 +148,7 @@ def configure_services(config=None) -> None:
 
     container._initialized = True
     logger.info("Service container configured with %s services", sanitize_for_log(len(container.list_services())))
+    return None
 
 
 # ── FastAPI dependency helpers ────────────────────────────────────────────

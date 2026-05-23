@@ -186,6 +186,7 @@ class MCPClient:
         raise MCPClientError(
             f"Tool '{name}' failed after {self.max_retries} attempts"
         ) from last_exc
+        return None
 
     async def subscribe_sse(self, callback: Callable[[str, Any], Any]) -> None:
         """
@@ -425,7 +426,7 @@ class MCPClientPool:
         Ping all servers and return a combined health report.
         """
 
-        async def _ping(
+        async def _ping(  # noqa: F841 – used in asyncio.gather below
             server_name: str, client: MCPClient
         ) -> tuple[str, Dict[str, Any]]:
             try:
@@ -526,6 +527,7 @@ class MCPClientPool:
             len(self._tool_index),
             len(self._servers),
         )
+        return None
 
 
 # ---------------------------------------------------------------------------

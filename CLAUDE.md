@@ -42,49 +42,61 @@ The `tranc3-bots` sub-project has its own pyproject.toml with matching pytest co
 
 Every service, location, and subsystem has a canonical code name. Use ONLY these names in code, comments, routes, log messages, and documentation.
 
-| Code Name | Role / Description | Status | Foundation |
-|---|---|---|---|
-| **The Spark** | MCP server — AI tool registry, JSON-RPC 2.0 over HTTP/SSE | ✅ In repo | `src/mcp/` |
-| **The Digital Grid** | Workflow DAG builder + executor (n8n-style) | ✅ In repo | `src/workflow/` |
-| **The Void** | Secrets + password vault (AES-GCM) | 🔧 Migrating | `cloudflare/infinity-void/` → self-hosted |
-| **The Workshop** | CI/CD hub — Forgejo self-hosted git + pipelines | ✅ In repo | `deploy/forgejo/` |
-| **Infinity** | OAuth, SSO, central user management (1 account, all services) | ✅ Self-hosted | `workers/infinity-auth/` (Port 8005) |
-| **The Lighthouse** | Cryptographic token assignment, authenticator, token scanner | ✅ Deployed | CF: `infinity-lighthouse` |
-| **The HIVE** | Data transfer hub, agent coordination | ✅ Deployed | CF: `infinity-hive` |
-| **Royal Bank of Arcadia** | Financial hub — billing, payments | ✅ Deployed | CF: `arcadia-royal-bank` |
-| **Arcadian Exchange** | Financial exchange, trading, crypto/stocks | ✅ Deployed | CF: `arcadia-exchange` |
-| **The Observatory** | Audit log — every action, change, activity on Trancendos | ✅ Self-hosted | `src/observability/`, `workers/monitoring/` |
-| **Luminous** | Brain of Trancendos — AI intelligence core | 🔧 Partial | `src/bio_neural/`, `src/core/` |
-| **Turing's Hub** | AI creation centre — personality template creator | 🔧 Partial | `src/personality/` |
-| **Arcadia** | Front-end post-login + forum | 🔧 Partial | `web/` |
-| **The Nexus** | AI communications and transfer hub | 🔧 Self-hosted | `workers/infinity-ws/` (Port 8004) |
-| **The Town Hall** | Governance hub — PRINCE2, ITIL, legal, compliance, policies | 🔧 Planned | `src/townhall/` (to create) |
-| **The Library** | KB (user-facing), Wiki (admin), Basement (archived) articles | 🔧 Planned | Outline (self-hosted) |
-| **The Academy** | Learning management — courses from Library articles | 🔧 Planned | Custom LMS |
-| **DocUtari** | Document repository | 🔧 Planned | Paperless-ngx |
-| **The Basement** | Archived information from The Observatory | 🔧 Planned | `src/basement/` (to create) |
-| **The Studio** | Creativity hub | 🔧 Planned | `src/studio/` (to create) |
-| **Sashas Photo Studio** | Image creation and editing | 🔧 Planned | Stable Diffusion + ComfyUI |
-| **TranceFlow** | 3D game development studio | 🔧 Planned | Godot Engine integration |
-| **TateKing** | Video creation and editing | 🔧 Planned | FFmpeg + custom UI |
-| **Fabulousa** | UX/UI + Aria styling and design platform | 🔧 Planned | Penpot (self-hosted) |
-| **Imaginarium** | Creative megahub (Fabulousa + TateKing + TranceFlow + Studio + Photo) | 🔧 Planned | Orchestrates above |
-| **The Lab** | Code creation platform (Claude Code-style) | 🔧 Planned | `src/lab/` (to create) |
-| **The Chaos Party** | Testing + validation compliance (Ansible-style, Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py` |
-| **The Artifactory** | Artefact repository (JFrog-style) | 🔧 Planned | Gitea packages / Zot |
-| **API Marketplace** | API connector hub — REST, webhooks, OAuth | 🔧 Planned | Gravitee.io |
-| **Cryptex** | Threat analysis, cyber security defence, bug bounty | 🔧 Planned | Wazuh + MISP |
-| **The Ice Box** | Threat holding + assessment (malware, virus, trojans) | 🔧 Planned | Cuckoo sandbox |
-| **Section 7** | Research + analysis hub, information analytics | 🔧 Planned | `src/research/` |
-| **The Citadel** | DevOps hub | ✅ Self-hosted | Docker Compose + Traefik + Forgejo |
-| **Think Tank** | Solutions + forefront technologies innovation centre | 🔧 Planned | `src/quantum/`, `src/deepmind/` |
-| **ChronosSphere / ArcStream** | Time and schedule management | 🔧 Planned | Cal.com (self-hosted) |
-| **DevOcity** | Developer centre — user developer hub | 🔧 Planned | Custom dev portal |
-| **Tranquility** | Wellbeing hub | 🔧 Planned | `src/tranquility/` (to create) |
-| **I-Mind** | Critical and sensitivity protocol | 🔧 Planned | `src/imind/` (to create) |
-| **tAimra** | Digital twin — offline by default | 🔧 Planned | `src/taimra/` (to create) |
-| **VRAR3D** | AR/VR wellbeing centre | 🔧 Planned | Three.js / A-Frame |
-| **Resonate** | Empathy and understanding services | 🔧 Planned | `src/resonate/` (to create) |
+Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `src/entities/platform.py`.
+
+**Naming rules:**
+- "The Digital Grid" — always with a space (entity table has a known typo "The DigitalGrid"; ignore it)
+- "Sashas Photo Studio" — no apostrophe (canonical; not "Sasha's Photo Studio")
+- "tAimra" = location name; "tAImra" = its Lead AI name (different capitalisation — both correct)
+- "The Guardian (Anchor: Orb of Orisis)" — full title required in entity contexts
+- `vesper-nightingale`, `atlas-meridian` — internal legacy profiles in `src/personality/profiles/`; NOT platform entities; unmapped pending future assignment
+- "Section 7" — internal placeholder name, NOT in the canonical entity hierarchy; closest entity is **The Dutchy** (Intelligence & Market Analysis, Lead AI: Predictive lore)
+
+| Code Name | Lead AI (Tier 3) | Role / Description | Status | Foundation |
+|---|---|---|---|---|
+| **The Spark** | Norman Hawkins | MCP server — AI tool registry, JSON-RPC 2.0 over HTTP/SSE | ✅ In repo | `src/mcp/` |
+| **The Digital Grid** | Tyler Towncroft | Workflow DAG builder + executor (n8n-style) | ✅ In repo | `src/workflow/` |
+| **The Void** | Prometheus | Secrets + password vault (AES-GCM) | 🔧 Migrating | `cloudflare/infinity-void/` → self-hosted |
+| **The Workshop** | Larry Lowhammer | CI/CD hub — Forgejo self-hosted git + pipelines | ✅ In repo | `deploy/forgejo/` |
+| **Infinity** | The Guardian (Anchor: Orb of Orisis) | OAuth, SSO, central user management (1 account, all services) | ✅ Self-hosted | `workers/infinity-auth/` (Port 8005) |
+| **The Lighthouse** | Rocking Ricki | Cryptographic token assignment, authenticator, token scanner | ✅ Deployed | CF: `infinity-lighthouse` |
+| **The HIVE** | The Queen | Data transport hub, agent + queue coordination | ✅ Deployed | CF: `infinity-hive` |
+| **Royal Bank of Arcadia** | Dorris Fontaine | Financial hub — billing, payments | ✅ Deployed | CF: `arcadia-royal-bank` |
+| **Arcadian Exchange** | The Porter Family | Financial exchange — procurement & resource trading | ✅ Deployed | CF: `arcadia-exchange` |
+| **The Observatory** | Norman Hawkins | Audit log — every action, change, activity on Trancendos | ✅ Self-hosted | `src/observability/`, `workers/monitoring/` |
+| **Luminous** | Cornelius MacIntyre | Core platform brain — AI intelligence & orchestration engine | 🔧 Partial | `src/bio_neural/`, `src/core/` |
+| **Turing's Hub** | Samantha Turing | AI creation centre — personality template creator | 🔧 Partial | `src/personality/` |
+| **Arcadia** | Lilli SC | Front-end post-login, forum & email hub | 🔧 Partial | `web/` |
+| **The Nexus** | The Nexus | AI communications and transfer hub | 🔧 Self-hosted | `workers/infinity-ws/` (Port 8004) |
+| **The Town Hall** | Tristuran | Governance hub — PRINCE2, ITIL, legal, compliance, policies | 🔧 Planned | `src/townhall/` (to create) |
+| **The Library** | Zimik | Knowledge base & wiki | 🔧 Planned | Outline (self-hosted) |
+| **The Academy** | Shimshi | Learning management — education & skill training | 🔧 Planned | Custom LMS |
+| **DocUtari** | To be Defined | Document management hub | 🔧 Planned | Paperless-ngx |
+| **The Basement** | Gary Glowman (Glow-Worm) | Archived information store from The Observatory | 🔧 Planned | `src/basement/` (to create) |
+| **The Studio** | Voxx | Central hub of the Creativity Center | 🔧 Planned | `src/studio/` (to create) |
+| **Sashas Photo Studio** | Madam Krystal | Photo & image generation center | 🔧 Planned | Stable Diffusion + ComfyUI |
+| **TranceFlow** | Junior Cesar | 3D modeling & games creation studio | 🔧 Planned | Godot Engine integration |
+| **TateKing** | Benji Tate & Sam King | Video creation & editing platform | 🔧 Planned | FFmpeg + custom UI |
+| **Fabulousa** | Baron Von Hilton | Styling, UX, UI & design center | 🔧 Planned | Penpot (self-hosted) |
+| **Imaginarium** | Voxx | Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo) | 🔧 Planned | Orchestrates above |
+| **The Lab** | The Dr. & Slime | Code creation platform (Claude Code-style) | 🔧 Planned | `src/lab/` (to create) |
+| **The Chaos Party** | The Mad Hatter | Central testing platform — validation & compliance (Alice in Wonderland themed) | 🔧 Partial | `tests/test_chaos.py` |
+| **The Artifactory** | Lunascene | Central artifact repository library | 🔧 Planned | Gitea packages / Zot |
+| **API Marketplace** | Solarscene | Central integration hub — REST, webhooks, OAuth | 🔧 Planned | Gravitee.io |
+| **Cryptex** | Renik | Cyber defense — threat intel, DDoS, CVE | 🔧 Planned | Wazuh + MISP |
+| **The Ice Box** | Neonach | Sandbox threat isolation & quarantine | 🔧 Planned | Cuckoo sandbox |
+| **The Warp Tunnel** | Rocking Ricki | Cryptographic scanner & quarantine transport | 🔧 Planned | `src/security/warp_tunnel/` (to create) |
+| **Warp Radio** | Rocking Ricki | Music & audio streaming integration | 🔧 Planned | `src/warp_radio/` (to create) |
+| **The Dutchy** | Predictive lore | Intelligence & market analysis | 🔧 Planned | `src/research/` |
+| **The Citadel** | Trancendos | Strategic ops & DevOps fortress | ✅ Self-hosted | Docker Compose + Traefik + Forgejo |
+| **Think Tank** | Trancendos | R&D centre — solutions & forefront technologies | 🔧 Planned | `src/quantum/`, `src/deepmind/` |
+| **ChronosSphere / ArcStream** | Chronos | Task, time & scheduling management | 🔧 Planned | Cal.com (self-hosted) |
+| **DevOcity** | Kitty | Development operations hub | 🔧 Planned | Custom dev portal |
+| **Tranquility** | Savania | Wellbeing central hub | 🔧 Planned | `src/tranquility/` (to create) |
+| **I-Mind** | Elouise | Sensitivity to emotion engine | 🔧 Planned | `src/imind/` (to create) |
+| **tAimra** | tAImra | Opt-in digital twin & life assistant | 🔧 Planned | `src/taimra/` (to create) |
+| **VRAR3D** | Entari | Standalone 3D / VR immersion | 🔧 Planned | Three.js / A-Frame |
+| **Resonate** | Magdalena | Empathy engine | 🔧 Planned | `src/resonate/` (to create) |
 
 ### Already-deployed Cloudflare Workers (not yet in this repo)
 

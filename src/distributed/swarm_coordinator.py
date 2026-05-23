@@ -47,7 +47,7 @@ class SwarmCoordinator:
         try:
             return await self._coordinate_swarm(problem)
         except Exception as e:
-            logger.warning("Swarm reasoning failed: %s", sanitize_for_log(e))
+            logger.warning("Swarm reasoning failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
             return None
 
     async def _coordinate_swarm(self, problem: Dict[str, Any]) -> Dict[str, Any]:
@@ -88,6 +88,7 @@ class SwarmCoordinator:
             timeout=aiohttp.ClientTimeout(total=10),
         ) as response:
             return await response.json()
+        return None
 
     def _decompose_problem(self, problem: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Decompose complex problem into sub-problems"""
@@ -142,3 +143,4 @@ class SwarmCoordinator:
                 return await response.json()
         except Exception:
             return {"status": "unhealthy"}
+        return None

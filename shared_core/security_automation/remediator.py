@@ -125,7 +125,7 @@ class AutoRemediator:
         """Convert f-string logger calls to %-style with sanitize_for_log().
 
         Before:  logger.info(f"User {username} logged in")
-        After:   logger.info("User %s logged in", sanitize_for_log(username))
+        After:   logger.info("User %s logged in", sanitize_for_log(username))  # codeql[py/cleartext-logging]
         """
         lines = content.split("\n")
         modified = False

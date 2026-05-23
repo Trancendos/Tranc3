@@ -364,6 +364,7 @@ class TestServiceMeshInProcessCalls:
         assert result.success is True
         assert result.data["authenticated"] is True
         assert result.data["path"] == "/verify"
+        return None
 
     @pytest.mark.asyncio
     async def test_call_handler_failure(self):

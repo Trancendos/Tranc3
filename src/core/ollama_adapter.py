@@ -42,6 +42,7 @@ async def is_available() -> bool:
             return resp.status_code == 200
     except Exception:
         return False
+    return None
 
 
 async def list_models() -> List[str]:
@@ -55,6 +56,7 @@ async def list_models() -> List[str]:
     except Exception as exc:
         logger.debug("ollama.list_models failed: %s", exc)
         return []
+    return None
 
 
 async def generate(
@@ -111,6 +113,7 @@ async def generate(
     except Exception as exc:
         logger.warning("ollama.generate error model=%s: %s", chosen_model, exc)
         return {}
+    return None
 
 
 async def embed(text: str, model: Optional[str] = None) -> List[float]:
@@ -130,3 +133,4 @@ async def embed(text: str, model: Optional[str] = None) -> List[float]:
     except Exception as exc:
         logger.debug("ollama.embed failed: %s", exc)
         return []
+    return None

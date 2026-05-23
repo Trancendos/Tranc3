@@ -6,6 +6,8 @@ import asyncio
 import logging
 from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar
 
+from shared_core.sanitize import sanitize_for_log
+
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
@@ -71,7 +73,9 @@ class ReactiveState(Generic[T]):
                     callback(new_value, old_value)
             except Exception as e:
                 logger.error(
-                    f"Reactive state subscriber error ({self._name}): {e}",
+                    "Reactive state subscriber error (%s): %s",
+                    sanitize_for_log(self._name),
+                    sanitize_for_log(e),
                     extra={"callback": callback.__name__},
                 )
 

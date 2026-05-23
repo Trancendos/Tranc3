@@ -15,6 +15,9 @@ paths-ignore:
   - "**/dist"
   - "**/__pycache__"
 
-# Use security-extended queries plus custom queries
+# Use security-and-quality queries for comprehensive analysis.
+# AlertSuppression packs are specified via the `packs:` parameter in the
+# codeql-action/init step (not here) — the `queries: uses:` format only
+# supports pre-defined query suite names, not external pack references.
 queries:
   - uses: security-and-quality

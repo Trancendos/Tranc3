@@ -142,7 +142,7 @@ class SparkToolRegistry:
         )
         # Rebuild semantic index lazily after each registration so RAG stays current
         try:
-            from src.mcp.tool_rag import rebuild_rag_index  # noqa: F401  # intentional top-level import
+            from src.mcp.tool_rag import rebuild_rag_index  # codeql[py/cyclic-import]
 
             rebuild_rag_index(list(self._tools.values()))
         except Exception:
@@ -180,7 +180,7 @@ class SparkToolRegistry:
 
         # Semantic search via ToolRAG
         try:
-            from src.mcp.tool_rag import get_rag  # noqa: F401  # intentional top-level import
+            from src.mcp.tool_rag import get_rag  # codeql[py/cyclic-import]
 
             rag = get_rag()
             if rag.is_ready():
@@ -733,7 +733,7 @@ class SparkToolRegistry:
 
         # Build initial RAG index after all builtins are loaded
         try:
-            from src.mcp.tool_rag import rebuild_rag_index  # noqa: F401  # intentional top-level import
+            from src.mcp.tool_rag import rebuild_rag_index  # codeql[py/cyclic-import]
 
             rebuild_rag_index(list(self._tools.values()))
         except Exception:
@@ -847,6 +847,7 @@ class SparkToolRegistry:
                 "status": "timeout",
                 "error": f"Workflow did not complete within {timeout_seconds}s.",
             }
+        return None
 
     async def _handle_register_workflow(self, params: Dict[str, Any]) -> Dict[str, Any]:
         workflow_dict = params.get("workflow")
@@ -1081,6 +1082,7 @@ class SparkToolRegistry:
                 "total_searched": 0,
                 "error": safe_error_detail(exc, 500),
             }
+        return None
 
     async def _handle_ingest_document(self, params: Dict[str, Any]) -> Dict[str, Any]:
         texts = params.get("texts") or []
@@ -1266,6 +1268,7 @@ class SparkToolRegistry:
                 "plan": None,
                 "error": safe_error_detail(exc, 500)[:120],
             }
+        return None
 
     # ── The Citadel handler ───────────────────────────────────────────────
 
@@ -1334,7 +1337,7 @@ registry = SparkToolRegistry()
 # Registers 16 additional Spark tools from Phase 4 modules
 # ---------------------------------------------------------------------------
 try:
-    from src.mcp.spark_phase4_tools import register_phase4_tools as _reg_p4  # noqa: F401  # intentional top-level import
+    from src.mcp.spark_phase4_tools import register_phase4_tools as _reg_p4  # codeql[py/cyclic-import]
     _p4_count = _reg_p4(registry)
     logger.info("Phase 4 Spark tools loaded: %d tools added (total=%d)", _p4_count, len(registry._tools))
 except Exception as _p4_exc:
@@ -1345,7 +1348,7 @@ except Exception as _p4_exc:
 # Registers 12 additional Spark tools from Phase 5 agent modules
 # ---------------------------------------------------------------------------
 try:
-    from src.mcp.spark_phase5_tools import register_phase5_tools as _reg_p5  # noqa: F401  # intentional top-level import
+    from src.mcp.spark_phase5_tools import register_phase5_tools as _reg_p5  # codeql[py/cyclic-import]
     _p5_count = _reg_p5(registry)
     logger.info("Phase 5 Spark tools loaded: %d tools added (total=%d)", _p5_count, len(registry._tools))
 except Exception as _p5_exc:

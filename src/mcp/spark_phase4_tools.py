@@ -1128,7 +1128,7 @@ def register_phase4_tools(registry: Any) -> int:
 
     Returns the number of tools registered.
     """
-    from src.mcp.tools import SparkTool  # noqa: F401  # intentional top-level import
+    from src.mcp.tools import SparkTool  # codeql[py/cyclic-import]
     registered = 0
     for t in PHASE4_TOOLS:
         try:

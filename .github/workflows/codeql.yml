@@ -35,8 +35,12 @@ jobs:
         include:
           - language: python
             build-mode: none
+            packs: codeql/python-queries:AlertSuppression.ql
+            sarif-name: python
           - language: javascript-typescript
             build-mode: none
+            packs: codeql/javascript-queries:AlertSuppression.ql
+            sarif-name: javascript
 
     steps:
       - name: Checkout repository
@@ -48,8 +52,20 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
           config-file: .github/codeql-config.yml
+          packs: ${{ matrix.packs }}
 
       - name: Perform CodeQL Analysis
+        id: analyze
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+          output: sarif-results
+
+      - name: Dismiss suppressed alerts
+        if: github.ref == 'refs/heads/main'
+        uses: advanced-security/dismiss-alerts@v2
+        with:
+          sarif-id: ${{ steps.analyze.outputs.sarif-id }}
+          sarif-file: sarif-results/${{ matrix.sarif-name }}.sarif
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

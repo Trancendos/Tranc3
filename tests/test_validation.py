@@ -161,6 +161,7 @@ class TestSparkToolValidation:
                 handler=_handler,
             )
         _log.info("val.spark_tool missing_name raised as expected")
+        return None
 
     def test_spark_tool_requires_handler(self, caplog):
         import pydantic
@@ -222,6 +223,7 @@ class TestGridWorkflowRegistryValidation:
         retrieved = reg.get("fixed-id")
         _log.info("val.grid_registry overwrite retrieved=%s", retrieved.id if retrieved else None)
         assert retrieved is not None
+        return None
 
     def test_get_nonexistent_returns_none(self, caplog):
         from src.mcp.tools import GridWorkflowRegistry

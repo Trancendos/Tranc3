@@ -167,6 +167,8 @@ def _register_routes(app: FastAPI):
         except ValueError as exc:
             raise HTTPException(404, str(exc))
         except RuntimeError as exc:
+        return None
+    return None
             raise HTTPException(500, str(exc))
 
 

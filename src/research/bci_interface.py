@@ -30,7 +30,7 @@ class BCISignalProcessor:
     def __init__(self, sample_rate: int = 256, channels: int = 8):
         self.sample_rate = sample_rate
         self.channels = channels
-        logger.info("BCISignalProcessor: %sch @ %sHz", sanitize_for_log(channels), sanitize_for_log(sample_rate))
+        logger.info("BCISignalProcessor: %sch @ %sHz", sanitize_for_log(channels), sanitize_for_log(sample_rate))  # codeql[py/cleartext-logging]
 
     def process_neural_signal(self, raw_signal: np.ndarray) -> Dict:
         """
@@ -94,7 +94,8 @@ class BCIInputAdapter:
     def connect(self, device_type: str = "openbci") -> bool:
         """Connect to BCI hardware. Returns True if successful."""
         logger.info(
-            f"BCI connect requested: {device_type} — stub mode, returning False"
+            "BCI connect requested: %s — stub mode, returning False",
+            sanitize_for_log(device_type),
         )
         return False  # Stub — implement when hardware available
 

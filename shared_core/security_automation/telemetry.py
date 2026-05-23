@@ -556,7 +556,7 @@ class SecurityTelemetry:
             if result.returncode == 0:
                 return result.stdout.strip()
         except (OSError, subprocess.TimeoutExpired):
-            pass
+            pass  # nosec B110 – graceful fallback when git unavailable
         return "unknown"
 
     @staticmethod
@@ -573,5 +573,5 @@ class SecurityTelemetry:
             if result.returncode == 0:
                 return result.stdout.strip()
         except (OSError, subprocess.TimeoutExpired):
-            pass
+            pass  # nosec B110 – graceful fallback when git unavailable
         return "unknown"
