@@ -1,0 +1,55 @@
+apiVersion: v2
+name: tranc3-operator
+description: >
+  Tranc3 Ecosystem Operator for K3s edge deployments.
+  Manages PID/AID/SID/NID custom resources with adaptive storage routing,
+  CRUSH-aware data placement, idle-defense against OCI reclamation,
+  and zero-cost free-tier infrastructure orchestration.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.27.0-0"
+home: https://github.com/tranc3/ecosystem
+sources:
+  - https://github.com/tranc3/ecosystem
+maintainers:
+  - name: Drew Porter
+    email: drew@trancendos.com
+icon: https://tranc3.io/favicon.ico
+keywords:
+  - tranc3
+  - nanoservice
+  - edge
+  - k3s
+  - ceph
+  - crush
+  - oci
+  - free-tier
+  - adaptive
+annotations:
+  category: Infrastructure
+  licenses: MIT
+  tranc3.io/part-of: tranc3-ecosystem
+  tranc3.io/pid: pid-tranc3-operator
+  tranc3.io/system-mode: hybrid
+dependencies:
+  - name: common
+    version: "2.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: common.enabled
+    tags:
+      - bitnami-common
+  - name: ceph-csi
+    version: "3.x.x"
+    repository: https://ceph.github.io/csi-charts
+    condition: ceph-csi.enabled
+    tags:
+      - storage
+      - ceph
+  - name: local-path-provisioner
+    version: "0.0.x"
+    repository: https://rust84.github.io/charts
+    condition: local-path-provisioner.enabled
+    tags:
+      - storage
+      - local

@@ -1,0 +1,1071 @@
+# ──────────────────────────────────────────────────────────────
+# Tranc3 Ecosystem Custom Resource Definitions
+# PID / AID / SID / NID — Entity Taxonomy for Adaptive Infrastructure
+# ──────────────────────────────────────────────────────────────
+# PID = Persistent Infrastructure Definition
+# AID = Adaptive Instance Definition
+# SID = Storage Identity Definition
+# NID = Network Identity Definition
+#
+# These CRDs form the declarative foundation of the Tranc3 ecosystem,
+# enabling the operator to reconcile desired state against actual
+# Oracle Cloud Always Free resources with zero-cost constraint enforcement.
+# ──────────────────────────────────────────────────────────────
+
+---
+# ──────────────────────────────────────────────────────────────
+# PID — Persistent Infrastructure Definition
+# ──────────────────────────────────────────────────────────────
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: persistentinfrastructures.tranc3.io
+  labels:
+    tranc3.io/part-of: tranc3-ecosystem
+    tranc3.io/entity: pid
+    app.kubernetes.io/managed-by: tranc3-operator
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.13.0
+    tranc3.io/description: >
+      Persistent Infrastructure Definitions represent long-lived,
+      stateful infrastructure resources that persist across instance
+      lifecycles — VCNs, subnets, security lists, object storage
+      namespaces, and DNS zones. PIDs are the stable backbone of
+      the Tranc3 ecosystem.
+spec:
+  group: tranc3.io
+  scope: Namespaced
+  names:
+    kind: PersistentInfrastructure
+    listKind: PersistentInfrastructureList
+    plural: persistentinfrastructures
+    singular: persistentinfrastructure
+    shortNames:
+      - pid
+      - pids
+    categories:
+      - tranc3
+      - all
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+        scale:
+          specReplicasPath: .spec.replicas
+          statusReplicasPath: .status.readyReplicas
+      additionalPrinterColumns:
+        - name: Mode
+          type: string
+          jsonPath: .spec.systemMode
+          description: System mode (true_nas/hybrid/cloud_only)
+        - name: Region
+          type: string
+          jsonPath: .spec.region
+          description: OCI region
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+        - name: Status
+          type: string
+          jsonPath: .status.phase
+          description: Current phase
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            apiVersion:
+              description: "APIVersion defines the versioned schema of this representation"
+              type: string
+            kind:
+              description: "Kind is a string value representing the REST resource"
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - systemMode
+                - region
+              properties:
+                systemMode:
+                  description: "System mode: true_nas, hybrid, or cloud_only"
+                  type: string
+                  enum:
+                    - true_nas
+                    - hybrid
+                    - cloud_only
+                  default: hybrid
+                region:
+                  description: "OCI home region for this infrastructure"
+                  type: string
+                  default: us-phoenix-1
+                availabilityDomain:
+                  description: "OCI availability domain"
+                  type: string
+                compartmentId:
+                  description: "OCI compartment OCID"
+                  type: string
+                replicas:
+                  description: "Desired number of infrastructure replicas"
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  default: 1
+                network:
+                  description: "Network configuration for this infrastructure"
+                  type: object
+                  properties:
+                    vcnCidr:
+                      type: string
+                      default: "10.0.0.0/16"
+                    publicSubnetCidr:
+                      type: string
+                      default: "10.0.1.0/24"
+                    privateSubnetCidr:
+                      type: string
+                      default: "10.0.2.0/24"
+                    cephSubnetCidr:
+                      type: string
+                      default: "10.0.3.0/24"
+                    enableNatGateway:
+                      type: boolean
+                      default: true
+                    enableServiceGateway:
+                      type: boolean
+                      default: true
+                    enableInternetGateway:
+                      type: boolean
+                      default: true
+                    dnsLabel:
+                      type: string
+                      default: "tranc3"
+                storage:
+                  description: "Storage configuration"
+                  type: object
+                  properties:
+                    objectStorageNamespace:
+                      type: string
+                    enableLifecycle:
+                      type: boolean
+                      default: true
+                    fallbackChain:
+                      description: "Ordered list of storage providers for fallback"
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - provider
+                          - priority
+                        properties:
+                          provider:
+                            type: string
+                            enum:
+                              - oci
+                              - cloudflare_r2
+                              - minio
+                              - gcp
+                              - azure
+                              - aws
+                          priority:
+                            type: integer
+                            minimum: 1
+                            maximum: 10
+                          capacityLimitGb:
+                            type: number
+                          crushAware:
+                            type: boolean
+                            default: false
+                    crushConfig:
+                      type: object
+                      properties:
+                        failureDomain:
+                          type: string
+                          default: "host"
+                        defaultRule:
+                          type: string
+                          default: "hybrid"
+                        osdWeights:
+                          type: object
+                          additionalProperties:
+                            type: number
+                freeTierGuards:
+                  description: "Zero-cost enforcement guards"
+                  type: object
+                  properties:
+                    maxOcpu:
+                      type: number
+                      default: 4.0
+                    maxMemoryGb:
+                      type: number
+                      default: 24.0
+                    maxBlockVolumeGb:
+                      type: number
+                      default: 200.0
+                    maxObjectStorageGb:
+                      type: number
+                      default: 20.0
+                    maxApiRequestsMonthly:
+                      type: integer
+                      default: 50000
+                    enableReclamationDefense:
+                      type: boolean
+                      default: true
+                idleDefense:
+                  description: "OCI idle compute reclamation defense"
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: true
+                    cpuBurstPercent:
+                      type: integer
+                      default: 25
+                      minimum: 10
+                      maximum: 50
+                    burstIntervalSeconds:
+                      type: integer
+                      default: 300
+                    burstDurationSeconds:
+                      type: integer
+                      default: 30
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Provisioning
+                    - Active
+                    - Degraded
+                    - Migrating
+                    - Terminating
+                    - Failed
+                observedGeneration:
+                  type: integer
+                  format: int64
+                readyReplicas:
+                  type: integer
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                ociResources:
+                  type: object
+                  properties:
+                    vcnId:
+                      type: string
+                    publicSubnetId:
+                      type: string
+                    privateSubnetId:
+                      type: string
+                    cephSubnetId:
+                      type: string
+                    natGatewayId:
+                      type: string
+                    serviceGatewayId:
+                      type: string
+                    internetGatewayId:
+                      type: string
+                    objectStorageNamespace:
+                      type: string
+                    compartmentId:
+                      type: string
+                capacityStatus:
+                  type: object
+                  properties:
+                    objectStorageUsedGb:
+                      type: number
+                    blockVolumeUsedGb:
+                      type: number
+                    computeOcpuUsed:
+                      type: number
+                    apiRequestsMonthToDate:
+                      type: integer
+                    nearQuotaWarning:
+                      type: boolean
+                lastReconciliation:
+                  type: string
+                  format: date-time
+
+---
+# ──────────────────────────────────────────────────────────────
+# AID — Adaptive Instance Definition
+# ──────────────────────────────────────────────────────────────
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: adaptiveinstances.tranc3.io
+  labels:
+    tranc3.io/part-of: tranc3-ecosystem
+    tranc3.io/entity: aid
+    app.kubernetes.io/managed-by: tranc3-operator
+  annotations:
+    tranc3.io/description: >
+      Adaptive Instance Definitions represent compute instances that
+      dynamically adjust their behavior based on system mode, capacity
+      constraints, and idle-defense requirements. AIDs can be
+      nanoservice hosts, Ceph nodes, or K3s edge nodes.
+spec:
+  group: tranc3.io
+  scope: Namespaced
+  names:
+    kind: AdaptiveInstance
+    listKind: AdaptiveInstanceList
+    plural: adaptiveinstances
+    singular: adaptiveinstance
+    shortNames:
+      - aid
+      - aids
+    categories:
+      - tranc3
+      - all
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Type
+          type: string
+          jsonPath: .spec.instanceType
+          description: Instance type
+        - name: Shape
+          type: string
+          jsonPath: .spec.shape
+          description: OCI shape
+        - name: Mode
+          type: string
+          jsonPath: .spec.systemMode
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+        - name: Status
+          type: string
+          jsonPath: .status.phase
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - instanceType
+                - shape
+                - systemMode
+              properties:
+                instanceType:
+                  description: "Type of adaptive instance"
+                  type: string
+                  enum:
+                    - nanoservice
+                    - ceph_node
+                    - k3s_edge
+                    - diode
+                shape:
+                  description: "OCI compute shape"
+                  type: string
+                  default: "VM.Standard.A1.Flex"
+                systemMode:
+                  type: string
+                  enum:
+                    - true_nas
+                    - hybrid
+                    - cloud_only
+                  default: hybrid
+                ocpus:
+                  type: number
+                  minimum: 1
+                  maximum: 4
+                  default: 1
+                memoryGbs:
+                  type: integer
+                  minimum: 1
+                  maximum: 24
+                  default: 6
+                bootVolumeSizeGbs:
+                  type: integer
+                  default: 47
+                  minimum: 47
+                  maximum: 200
+                subnetRef:
+                  description: "Reference to the subnet (by name or label)"
+                  type: string
+                pidRef:
+                  description: "Reference to the parent PersistentInfrastructure"
+                  type: string
+                cloudInit:
+                  description: "Cloud-init overrides"
+                  type: object
+                  properties:
+                    packages:
+                      type: array
+                      items:
+                        type: string
+                    writeFiles:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          path:
+                            type: string
+                          content:
+                            type: string
+                          permissions:
+                            type: string
+                          owner:
+                            type: string
+                    runcmd:
+                      type: array
+                      items:
+                        type: string
+                idleDefense:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: true
+                    burstCron:
+                      type: string
+                      default: "*/5 * * * *"
+                    burstDurationSeconds:
+                      type: integer
+                      default: 30
+                    cpuTargetPercent:
+                      type: integer
+                      default: 25
+                hsm:
+                  type: object
+                  properties:
+                    provider:
+                      type: string
+                      enum:
+                        - softhsm2
+                        - yubihsm2
+                        - disabled
+                      default: softhsm2
+                    tokenLabel:
+                      type: string
+                      default: "tranc3-hsm"
+                nanoservice:
+                  description: "Nanoservice-specific configuration"
+                  type: object
+                  properties:
+                    httpPort:
+                      type: integer
+                      default: 8080
+                    metricsPort:
+                      type: integer
+                      default: 9090
+                    crushRule:
+                      type: string
+                      default: "hybrid"
+                    logLevel:
+                      type: string
+                      default: "info"
+                    fallbackChain:
+                      type: string
+                      default: "oci,cloudflare_r2,minio"
+                cephNode:
+                  description: "Ceph/MicroCeph-specific configuration"
+                  type: object
+                  properties:
+                    role:
+                      type: string
+                      enum:
+                        - mon
+                        - osd
+                        - mgr
+                        - rgw
+                        - mds
+                        - all-in-one
+                      default: "all-in-one"
+                    osdDevices:
+                      type: array
+                      items:
+                        type: string
+                    rgwPort:
+                      type: integer
+                      default: 7480
+                    clusterNetwork:
+                      type: string
+                      default: "10.0.3.0/24"
+                k3sEdge:
+                  description: "K3s edge node specific configuration"
+                  type: object
+                  properties:
+                    serverUrl:
+                      type: string
+                    token:
+                      type: string
+                    nodeLabels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    nodeTaints:
+                      type: array
+                      items:
+                        type: string
+                    disableTraefik:
+                      type: boolean
+                      default: false
+                    disableServiceLb:
+                      type: boolean
+                      default: false
+                    kubeletArgs:
+                      type: array
+                      items:
+                        type: string
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Booting
+                    - Configuring
+                    - Running
+                    - Idle
+                    - Bursted
+                    - Degraded
+                    - Terminating
+                    - Failed
+                observedGeneration:
+                  type: integer
+                  format: int64
+                instanceOcid:
+                  type: string
+                privateIp:
+                  type: string
+                publicIp:
+                  type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                idleDefenseStatus:
+                  type: object
+                  properties:
+                    lastBurst:
+                      type: string
+                      format: date-time
+                    nextBurst:
+                      type: string
+                      format: date-time
+                    burstCount:
+                      type: integer
+                    currentCpuPercent:
+                      type: number
+
+---
+# ──────────────────────────────────────────────────────────────
+# SID — Storage Identity Definition
+# ──────────────────────────────────────────────────────────────
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: storageidentities.tranc3.io
+  labels:
+    tranc3.io/part-of: tranc3-ecosystem
+    tranc3.io/entity: sid
+    app.kubernetes.io/managed-by: tranc3-operator
+  annotations:
+    tranc3.io/description: >
+      Storage Identity Definitions represent storage backends with
+      their capacity, credentials, CRUSH weights, and temperature
+      tiering rules. SIDs are referenced by the StorageRouter to
+      determine where data should be placed and when to migrate
+      between tiers.
+spec:
+  group: tranc3.io
+  scope: Namespaced
+  names:
+    kind: StorageIdentity
+    listKind: StorageIdentityList
+    plural: storageidentities
+    singular: storageidentity
+    shortNames:
+      - sid
+      - sids
+    categories:
+      - tranc3
+      - all
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Provider
+          type: string
+          jsonPath: .spec.provider
+          description: Storage provider type
+        - name: Tier
+          type: string
+          jsonPath: .spec.temperatureTier
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+        - name: Status
+          type: string
+          jsonPath: .status.phase
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - provider
+                - temperatureTier
+              properties:
+                provider:
+                  description: "Storage provider backend"
+                  type: string
+                  enum:
+                    - oci_object
+                    - oci_block
+                    - cloudflare_r2
+                    - minio
+                    - ceph_rgw
+                    - ceph_rbd
+                    - local_path
+                    - gcp
+                    - azure
+                    - aws
+                temperatureTier:
+                  description: "Storage temperature tier"
+                  type: string
+                  enum:
+                    - hot
+                    - warm
+                    - cold
+                    - archive
+                  default: hot
+                endpoint:
+                  description: "S3-compatible endpoint URL"
+                  type: string
+                region:
+                  type: string
+                bucket:
+                  description: "Bucket or namespace name"
+                  type: string
+                pathPrefix:
+                  description: "Key prefix for multi-tenant isolation"
+                  type: string
+                crushWeight:
+                  description: "CRUSH weight for data placement (0.0-1.0)"
+                  type: number
+                  minimum: 0
+                  maximum: 1.0
+                  default: 1.0
+                crushAware:
+                  description: "Whether this backend participates in CRUSH placement"
+                  type: boolean
+                  default: false
+                capacityLimitBytes:
+                  description: "Maximum capacity in bytes (enforced by operator)"
+                  type: integer
+                  format: int64
+                redundancy:
+                  description: "Redundancy configuration"
+                  type: object
+                  properties:
+                    replicationFactor:
+                      type: integer
+                      minimum: 1
+                      maximum: 5
+                      default: 1
+                    erasureCoding:
+                      type: object
+                      properties:
+                        dataChunks:
+                          type: integer
+                        parityChunks:
+                          type: integer
+                credentials:
+                  description: "Reference to K8s secret containing credentials"
+                  type: object
+                  properties:
+                    secretName:
+                      type: string
+                    accessKeyKey:
+                      type: string
+                      default: "access_key"
+                    secretKeyKey:
+                      type: string
+                      default: "secret_key"
+                lifecycleRules:
+                  description: "Temperature migration lifecycle rules"
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - targetTier
+                      - afterDays
+                    properties:
+                      targetTier:
+                        type: string
+                        enum:
+                          - hot
+                          - warm
+                          - cold
+                          - archive
+                      afterDays:
+                        type: integer
+                        minimum: 1
+                      onAccess:
+                        description: "Tier to promote to on access"
+                        type: string
+                        enum:
+                          - hot
+                          - warm
+                          - cold
+                healthCheck:
+                  type: object
+                  properties:
+                    intervalSeconds:
+                      type: integer
+                      default: 30
+                    timeoutSeconds:
+                      type: integer
+                      default: 5
+                    unhealthyThreshold:
+                      type: integer
+                      default: 3
+                pidRef:
+                  description: "Reference to parent PersistentInfrastructure"
+                  type: string
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Connected
+                    - Healthy
+                    - Degraded
+                    - QuotaWarning
+                    - QuotaExceeded
+                    - Unreachable
+                    - Failed
+                observedGeneration:
+                  type: integer
+                  format: int64
+                capacityUsedBytes:
+                  type: integer
+                  format: int64
+                capacityAvailableBytes:
+                  type: integer
+                  format: int64
+                lastHealthCheck:
+                  type: string
+                  format: date-time
+                healthStatus:
+                  type: string
+                  enum:
+                    - healthy
+                    - degraded
+                    - unreachable
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                objectCount:
+                  type: integer
+                  format: int64
+                lastLifecycleTransition:
+                  type: string
+                  format: date-time
+
+---
+# ──────────────────────────────────────────────────────────────
+# NID — Network Identity Definition
+# ──────────────────────────────────────────────────────────────
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: networkidentities.tranc3.io
+  labels:
+    tranc3.io/part-of: tranc3-ecosystem
+    tranc3.io/entity: nid
+    app.kubernetes.io/managed-by: tranc3-operator
+  annotations:
+    tranc3.io/description: >
+      Network Identity Definitions represent network resources —
+      VCNs, subnets, security lists, NSGs, DNS records, and
+      load balancers. NIDs enable the operator to manage network
+      topology declaratively with free-tier constraint enforcement.
+spec:
+  group: tranc3.io
+  scope: Namespaced
+  names:
+    kind: NetworkIdentity
+    listKind: NetworkIdentityList
+    plural: networkidentities
+    singular: networkidentity
+    shortNames:
+      - nid
+      - nids
+    categories:
+      - tranc3
+      - all
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Type
+          type: string
+          jsonPath: .spec.networkType
+        - name: Cidr
+          type: string
+          jsonPath: .spec.cidr
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+        - name: Status
+          type: string
+          jsonPath: .status.phase
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - networkType
+              properties:
+                networkType:
+                  description: "Type of network resource"
+                  type: string
+                  enum:
+                    - vcn
+                    - public_subnet
+                    - private_subnet
+                    - ceph_subnet
+                    - security_list
+                    - nsg
+                    - dns_zone
+                    - dns_record
+                    - load_balancer
+                cidr:
+                  description: "CIDR block for this network"
+                  type: string
+                dnsLabel:
+                  description: "DNS label for the VCN/subnet"
+                  type: string
+                  maxLength: 15
+                vcnRef:
+                  description: "Reference to parent VCN (for subnets, NSGs)"
+                  type: string
+                pidRef:
+                  description: "Reference to parent PersistentInfrastructure"
+                  type: string
+                securityRules:
+                  description: "Security rules for NSGs or security lists"
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - direction
+                      - protocol
+                    properties:
+                      direction:
+                        type: string
+                        enum:
+                          - ingress
+                          - egress
+                      protocol:
+                        type: string
+                        default: "6"
+                      source:
+                        type: string
+                      destination:
+                        type: string
+                      sourcePortRange:
+                        type: object
+                        properties:
+                          min:
+                            type: integer
+                          max:
+                            type: integer
+                      destinationPortRange:
+                        type: object
+                        properties:
+                          min:
+                            type: integer
+                          max:
+                            type: integer
+                      description:
+                        type: string
+                isDefault:
+                  description: "Whether this is the default resource for its type"
+                  type: boolean
+                  default: false
+                blockTraffic:
+                  description: "Comma-separated list of CIDRs to block"
+                  type: string
+                dnsConfig:
+                  description: "DNS configuration"
+                  type: object
+                  properties:
+                    zoneName:
+                      type: string
+                    zoneType:
+                      type: string
+                      enum:
+                        - primary
+                        - secondary
+                    records:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          rtype:
+                            type: string
+                          ttl:
+                            type: integer
+                          values:
+                            type: array
+                            items:
+                              type: string
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Active
+                    - Updating
+                    - Degraded
+                    - Terminating
+                    - Failed
+                observedGeneration:
+                  type: integer
+                  format: int64
+                ociId:
+                  description: "OCID of the OCI resource"
+                  type: string
+                associatedResources:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      id:
+                        type: string
+                      name:
+                        type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
