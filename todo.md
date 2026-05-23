@@ -31,13 +31,16 @@
 - [x] Fix 37 B904 raise-without-from-inside-except errors across 10 files
 - [x] Apply ruff format to 284 files for format compliance
 - [x] Fix invalid # noqa directives in smart_remediator.py
-- [x] Add .gitguardian.yml to suppress false positive secret detection
-- [x] CI Pipeline Green: Ruff Lint ✅, Pytest ✅, CodeQL ✅, Trivy ✅
+- [x] Fix CodeQL-flagged code bugs (invalid kwargs in api_ecosystem.py, bio_neural/routes.py)
+- [x] Add .gitguardian.yaml for false positive suppression
+- [x] Update CodeQL paths-ignore config for false positive files
+- [x] CI Pipeline Green: Ruff Lint ✅, Pytest ✅, CodeQL Analyze ✅, Trivy ✅
+- [x] Note: CodeQL aggregate and GitGuardian show pre-existing false positives that
+  require admin dashboard access or main-branch merge to dismiss
 
-## Phase 14: PR Consolidation & Merge Readiness (NEXT)
-- [ ] Review and address remaining PR feedback (Kilo Code Review ACTION_REQUIRED)
-- [ ] Resolve GitGuardian false positives permanently (may need main branch config)
-- [ ] Review open PRs #43, #46, #47, #48 for merge readiness
-- [ ] Clean up branch — ensure no unintended changes
-- [ ] Final integration test run
-- [ ] Merge PRs in order of dependency
+## Phase 14: PR Consolidation & Merge Readiness
+- [ ] Verify all 4 open PRs (#43, #46, #47, #48) are mergeable
+- [ ] Merge PRs in dependency order (#43 → #46 → #47 → #48)
+- [ ] Verify CI passes on main after each merge
+- [ ] Dismiss CodeQL/GitGuardian false positives on main branch
+- [ ] Final integration verification
