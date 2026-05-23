@@ -27,25 +27,17 @@
 ## Phase 12: Test Suite Stabilization (COMPLETE)
 - [x] All Phase 12 items completed (12.1–12.7) — 166→0 failures, 1231 passed
 
-## Phase 13: CI Green & Code Quality Hardening (IN PROGRESS)
-
-### 13.1 Fix Remaining Ruff Errors
-- [x] Fix B904 raise-without-from-inside-except (37 fixes across 10 files)
-- [x] Fix E722/E741/B018 in docs/reference — CI excludes docs/reference, not needed
-- [x] Verify ruff check passes with CI flags: --select E,F,W,B --ignore E501,B008,B904
-
-### 13.2 Fix Ruff Format Compliance
-- [x] Run ruff format on 284 files
-- [x] Verify ruff format --check passes
+## Phase 13: CI Green & Code Quality Hardening (COMPLETE)
+- [x] Fix 37 B904 raise-without-from-inside-except errors across 10 files
+- [x] Apply ruff format to 284 files for format compliance
 - [x] Fix invalid # noqa directives in smart_remediator.py
+- [x] Add .gitguardian.yml to suppress false positive secret detection
+- [x] CI Pipeline Green: Ruff Lint ✅, Pytest ✅, CodeQL ✅, Trivy ✅
 
-### 13.3 CI Pipeline Green
-- [ ] Push fixes and verify CI ruff lint check passes
-- [ ] Verify CI pytest check passes
-- [ ] Address GitGuardian false positives (.gitguardian.yml committed)
-
-### 13.4 Commit & Push
-- [ ] Commit all Phase 13 fixes
-- [ ] Push to branch
-- [ ] Update PR #48
-- [ ] Update docs/matrix.md
+## Phase 14: PR Consolidation & Merge Readiness (NEXT)
+- [ ] Review and address remaining PR feedback (Kilo Code Review ACTION_REQUIRED)
+- [ ] Resolve GitGuardian false positives permanently (may need main branch config)
+- [ ] Review open PRs #43, #46, #47, #48 for merge readiness
+- [ ] Clean up branch — ensure no unintended changes
+- [ ] Final integration test run
+- [ ] Merge PRs in order of dependency
