@@ -73,5 +73,5 @@
 ### 17.4 CI Validation & Release
 - [x] Run ruff lint + format check — ensure zero errors
 - [x] Run full pytest suite — ensure all tests pass
-- [ ] Create release tag v0.3.0 and publish GitHub Release
-- [ ] Push to main via PR
+- [x] Create release tag v0.3.0 and publish GitHub Release
+- [x] Push to main via PR (#53)
