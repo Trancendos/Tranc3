@@ -4,87 +4,88 @@
 
 from typing import List, Optional
 
+from pydantic import ConfigDict, Field, field_validator
+
 try:
     from pydantic_settings import BaseSettings
 except ImportError:
     from pydantic import BaseSettings  # type: ignore[no-redef]
-
-from pydantic import Field, validator
 
 
 class Tranc3Config(BaseSettings):
     """
     Centralized configuration for Tranc3 platform.
     All settings are loaded from environment variables with sensible defaults.
+    In pydantic-settings V2, env vars are mapped automatically by field name.
     """
 
     # ── Core ──────────────────────────────────────────────────────────────
     APP_NAME: str = "Tranc3 AI"
     APP_VERSION: str = "0.1.0"
-    DEBUG: bool = Field(default=False, env="DEBUG")
-    LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
-    ENVIRONMENT: str = Field(default="development", env="ENVIRONMENT")
+    DEBUG: bool = Field(default=False)
+    LOG_LEVEL: str = Field(default="INFO")
+    ENVIRONMENT: str = Field(default="development")
 
-    # ── Security (required) ───────────────────────────────────────────────
-    SECRET_KEY: str = Field(..., env="SECRET_KEY")  # No default — must be set
-    JWT_SECRET: str = Field(..., env="JWT_SECRET")  # No default — must be set
+    # ── Security (required) ──────────────────────────────────────────────
+    SECRET_KEY: str = Field(...)  # No default — must be set
+    JWT_SECRET: str = Field(...)  # No default — must be set
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
-    # ── Model & Inference ─────────────────────────────────────────────────
-    MODEL_PATH: str = Field(default="./models/tranc3-base.pt", env="MODEL_PATH")
-    CACHE_DIR: str = Field(default="./cache", env="CACHE_DIR")
+    # ── Model & Inference ────────────────────────────────────────────────
+    MODEL_PATH: str = Field(default="./models/tranc3-base.pt")
+    CACHE_DIR: str = Field(default="./cache")
     VOCAB_SIZE: int = 119547
     HIDDEN_SIZE: int = 768
-    INFERENCE_TIMEOUT: float = Field(default=30.0, env="INFERENCE_TIMEOUT")
-    MAX_CONTEXT_LENGTH: int = Field(default=4096, env="MAX_CONTEXT_LENGTH")
+    INFERENCE_TIMEOUT: float = Field(default=30.0)
+    MAX_CONTEXT_LENGTH: int = Field(default=4096)
 
     # ── LLM Router (zero-cost tier fallback) ─────────────────────────────
-    LLM_PRIMARY_PROVIDER: str = Field(default="tranc3", env="LLM_PRIMARY_PROVIDER")
+    LLM_PRIMARY_PROVIDER: str = Field(default="tranc3")
     LLM_FALLBACK_PROVIDERS: str = Field(
         default="ollama,openrouter,huggingface,stub",
-        env="LLM_FALLBACK_PROVIDERS",
     )
-    OLLAMA_BASE_URL: str = Field(default="http://localhost:11434", env="OLLAMA_BASE_URL")
-    OPENROUTER_API_KEY: Optional[str] = Field(default=None, env="OPENROUTER_API_KEY")
-    HUGGINGFACE_API_KEY: Optional[str] = Field(default=None, env="HUGGINGFACE_API_KEY")
+    OLLAMA_BASE_URL: str = Field(default="http://localhost:11434")
+    OPENROUTER_API_KEY: Optional[str] = Field(default=None)
+    HUGGINGFACE_API_KEY: Optional[str] = Field(default=None)
 
-    # ── Database & Cache ──────────────────────────────────────────────────
-    DATABASE_URL: str = Field(default="sqlite:///./tranc3.db", env="DATABASE_URL")
-    REDIS_URL: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
+    # ── Database & Cache ─────────────────────────────────────────────────
+    DATABASE_URL: str = Field(default="sqlite:///./tranc3.db")
+    REDIS_URL: str = Field(default="redis://localhost:6379/0")
 
-    # ── Server ────────────────────────────────────────────────────────────
-    HOST: str = Field(default="127.0.0.1", env="HOST")
-    PORT: int = Field(default=8000, env="PORT")
-    WORKERS: int = Field(default=1, env="WORKERS")
-    CORS_ORIGINS: str = Field(default="*", env="CORS_ORIGINS")
-    MAX_BODY_SIZE: int = Field(default=10 * 1024 * 1024, env="MAX_BODY_SIZE")  # 10MB
+    # ── Server ───────────────────────────────────────────────────────────
+    HOST: str = Field(default="127.0.0.1")
+    PORT: int = Field(default=8000)
+    WORKERS: int = Field(default=1)
+    CORS_ORIGINS: str = Field(default="*")
+    MAX_BODY_SIZE: int = Field(default=10 * 1024 * 1024)  # 10MB
 
-    # ── Feature Flags ─────────────────────────────────────────────────────
-    ENABLE_EMOTION: bool = Field(default=True, env="ENABLE_EMOTION")
-    ENABLE_QUANTUM: bool = Field(default=False, env="ENABLE_QUANTUM")
-    ENABLE_EVOLUTION: bool = Field(default=True, env="ENABLE_EVOLUTION")
-    ENABLE_CONSCIOUSNESS: bool = Field(default=True, env="ENABLE_CONSCIOUSNESS")
-    ENABLE_BILLING: bool = Field(default=True, env="ENABLE_BILLING")
+    # ── Feature Flags ────────────────────────────────────────────────────
+    ENABLE_EMOTION: bool = Field(default=True)
+    ENABLE_QUANTUM: bool = Field(default=False)
+    ENABLE_EVOLUTION: bool = Field(default=True)
+    ENABLE_CONSCIOUSNESS: bool = Field(default=True)
+    ENABLE_BILLING: bool = Field(default=True)
 
-    # ── Languages ─────────────────────────────────────────────────────────
-    PRIMARY_LANGUAGE: str = Field(default="en", env="PRIMARY_LANGUAGE")
-    SUPPORTED_LANGUAGES: str = Field(default="en,es,fr,de,zh,ja", env="SUPPORTED_LANGUAGES")
+    # ── Languages ────────────────────────────────────────────────────────
+    PRIMARY_LANGUAGE: str = Field(default="en")
+    SUPPORTED_LANGUAGES: str = Field(default="en,es,fr,de,zh,ja")
 
-    # ── Personality ───────────────────────────────────────────────────────
-    PERSONALITY_DIR: str = Field(default="./src/personality/profiles", env="PERSONALITY_DIR")
+    # ── Personality ──────────────────────────────────────────────────────
+    PERSONALITY_DIR: str = Field(default="./src/personality/profiles")
 
-    # ── Observability ─────────────────────────────────────────────────────
-    LANGFUSE_PUBLIC_KEY: Optional[str] = Field(default=None, env="LANGFUSE_PUBLIC_KEY")
-    LANGFUSE_SECRET_KEY: Optional[str] = Field(default=None, env="LANGFUSE_SECRET_KEY")
-    LANGFUSE_HOST: str = Field(default="http://localhost:3000", env="LANGFUSE_HOST")
+    # ── Observability ────────────────────────────────────────────────────
+    LANGFUSE_PUBLIC_KEY: Optional[str] = Field(default=None)
+    LANGFUSE_SECRET_KEY: Optional[str] = Field(default=None)
+    LANGFUSE_HOST: str = Field(default="http://localhost:3000")
 
-    # ── Nanoservice Mesh ──────────────────────────────────────────────────
-    NANO_PORT: int = Field(default=8001, env="NANO_PORT")
-    NANO_HEALTH_INTERVAL: float = Field(default=30.0, env="NANO_HEALTH_INTERVAL")
+    # ── Nanoservice Mesh ─────────────────────────────────────────────────
+    NANO_PORT: int = Field(default=8001)
+    NANO_HEALTH_INTERVAL: float = Field(default=30.0)
 
-    @validator("LOG_LEVEL")
+    @field_validator("LOG_LEVEL", mode="before")
+    @classmethod
     def validate_log_level(cls, v: str) -> str:
         """Ensure LOG_LEVEL is one of the accepted severity names."""
         valid = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
@@ -93,7 +94,8 @@ class Tranc3Config(BaseSettings):
             raise ValueError(f"LOG_LEVEL must be one of {valid}")
         return upper
 
-    @validator("ENVIRONMENT")
+    @field_validator("ENVIRONMENT", mode="before")
+    @classmethod
     def validate_environment(cls, v: str) -> str:
         """Ensure ENVIRONMENT is one of the accepted deployment stages."""
         valid = {"development", "staging", "production"}
@@ -117,10 +119,11 @@ class Tranc3Config(BaseSettings):
         """Parse LLM_FALLBACK_PROVIDERS comma-separated string into a list."""
         return [p.strip() for p in self.LLM_FALLBACK_PROVIDERS.split(",")]
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+    )
 
 
 # Singleton — loaded once, importable everywhere
