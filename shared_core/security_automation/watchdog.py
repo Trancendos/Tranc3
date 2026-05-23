@@ -257,8 +257,8 @@ class SecurityWatchdog:
 
     def _start_watchdog_observer(self) -> None:
         """Start the watchdog library file observer."""
-        from watchdog.observers import Observer
         from watchdog.events import FileSystemEventHandler
+        from watchdog.observers import Observer
 
         parent = self
 

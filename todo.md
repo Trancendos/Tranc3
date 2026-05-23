@@ -1,26 +1,28 @@
-# Tranc3 — Phase 18: Deep Test Coverage, Pydantic V2 Migration & Production Hardening
+# Tranc3 — Phase 19: P3 Worker Build-Out, Enhanced Users-Service & docker-compose Integration
 
-## Phase 18.1: Second Wave Test Coverage
+## Phase 19.1: Enhanced Users-Service (Port 8006)
+- [x] Baseline confirmed: 229 lines, basic CRUD only
+- [x] Expand users-service with: avatar URL, bio, timezone, last_login, user search, roles endpoint, bulk deactivate, account lock/unlock, password-reset token stub
+- [x] Add json import for preferences serialisation (uses `str()` currently — bug)
+- [x] Verify all existing test_workers_p1.py tests still pass after enhancement
 
-- [x] Create tests/test_resilience.py — tests for src/resilience/circuit_breaker.py
-- [x] Create tests/test_errors.py — tests for src/errors/error_catalog.py
-- [x] Create tests/test_analytics.py — tests for src/analytics/predictive.py
-- [x] Create tests/test_basement.py — tests for src/basement/archive.py
-- [x] Create tests/test_entities.py — tests for src/entities/platform.py
-- [x] Create tests/test_coding.py — tests for src/coding/self_adaptive.py
-- [x] Create tests/test_healing.py — tests for src/healing/{anomaly_detector,health_monitor}.py
-- [x] Create tests/test_personality.py — tests for src/personality/{matrix,spawner}.py
+## Phase 19.2: P3 Worker Test Suite (test_workers_p3.py)
+- [x] Write tests/test_workers_p3.py covering all 16 extended workers:
+  - analytics-service (8016), search-service (8017), email-service (8018),
+    sms-service (8019), storage-service (8020), cron-service (8021),
+    queue-service (8022), cache-service (8023), config-service (8024),
+    audit-service (8025), rate-limit-service (8026), geo-service (8027),
+    cdn-service (8028), health-aggregator (8029), identity-service (8015),
+    the-grid (8010)
+- [x] Target ≥5 tests per worker (health + 2-3 functional + error path)
+- [x] All 143 tests pass (2170 total, 12 skipped, 0 failures)
 
-## Phase 18.2: Pydantic V2 Migration
+## Phase 19.3: docker-compose Integration
+- [x] Add all workers to docker-compose.yml with correct ports, volumes, env (30 services, 27 volumes)
+- [x] Verify compose file is valid (Python yaml.safe_load validation)
 
-- [x] Migrate src/core/config.py from @validator to @field_validator
-- [x] Migrate src/core/config.py from class Config to model_config = ConfigDict(...)
-- [x] Remove Pydantic V1 deprecation warnings from test output (removed all env= kwargs from Field())
-- [x] Verify full test suite still passes after migration (1884 passed, 0 failed, 0 deprecation warnings)
-
-## Phase 18.3: CI Validation & Release
-
-- [ ] Run ruff lint + format check — ensure zero errors
-- [ ] Run full pytest suite — ensure all tests pass
-- [ ] Create release tag v0.3.1 and publish GitHub Release
-- [ ] Push to main via PR
+## Phase 19.4: CI & Release
+- [x] ruff check + ruff format --check → 0 errors (403 files formatted)
+- [x] Full pytest suite → 2170 passed, 12 skipped, 0 failures
+- [ ] Create PR feat/phase19-p3-workers-users-enhancement
+- [ ] Merge PR + create release tag v0.4.0

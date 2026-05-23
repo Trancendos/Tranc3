@@ -1,10 +1,22 @@
 # shared_core/orchestration/__init__.py
 # Intelligent Service Orchestration — proactive, adaptive, self-healing
 
+from .config_drift import (
+    ConfigDriftDetector,
+    DriftItem,
+    DriftReport,
+    DriftSeverity,
+)
+from .dependency_graph import (
+    DependencyEdge,
+    DependencyNode,
+    ImpactAnalysis,
+    SmartDependencyGraph,
+)
 from .enhanced_registry import (
     EnhancedServiceRegistry,
-    ServiceDiscoveryEvent,
     RoutingStrategy,
+    ServiceDiscoveryEvent,
 )
 from .health_monitor import (
     AdaptiveHealthMonitor,
@@ -12,18 +24,6 @@ from .health_monitor import (
     CircuitState,
     HealthCheckResult,
     HealthStatus,
-)
-from .config_drift import (
-    ConfigDriftDetector,
-    DriftReport,
-    DriftItem,
-    DriftSeverity,
-)
-from .dependency_graph import (
-    SmartDependencyGraph,
-    DependencyNode,
-    ImpactAnalysis,
-    DependencyEdge,
 )
 
 __all__ = [

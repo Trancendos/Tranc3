@@ -16,7 +16,6 @@ from src.resilience.circuit_breaker import (
     ResilienceManager,
 )
 
-
 # ── CircuitState enum ────────────────────────────────────────────────
 
 

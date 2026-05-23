@@ -14,7 +14,6 @@ from src.errors.error_catalog import (
     get_error,
 )
 
-
 # ── ErrorCode enum ───────────────────────────────────────────────────
 
 

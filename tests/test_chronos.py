@@ -8,11 +8,10 @@ import time
 from src.chronos.scheduler import (
     CalendarEvent,
     ChronosSphere,
+    ScheduledTask,
     ScheduleStatus,
     ScheduleType,
-    ScheduledTask,
 )
-
 
 # ── Enum tests ──────────────────────────────────────────────────────────────
 
