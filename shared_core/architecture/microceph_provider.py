@@ -66,19 +66,17 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import hmac as _hmac_module
 import json
 import logging
 import os
-import re
 import shlex
-import struct
-import tempfile
-import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import quote as _quote
+from urllib.parse import urlencode as _urlencode
 
 import aiohttp
 
@@ -305,12 +303,11 @@ def straw2_choose(
     Each OSD gets a score = draw / (-ln(rand)) where draw is derived from
     the CRUSH hash.  The OSD with the highest score wins.
     """
-    import math
 
     best_score = -1.0
     best_osd   = osd_ids[0] if osd_ids else -1
 
-    for i, (osd_id, weight) in enumerate(zip(osd_ids, weights)):
+    for _i, (osd_id, weight) in enumerate(zip(osd_ids, weights, strict=False)):
         if weight <= 0:
             continue
         h     = crush_hash(pg_id, osd_id, retry)
@@ -395,7 +392,7 @@ async def _run(
             )
         return rc, stdout.decode(errors="replace"), stderr.decode(errors="replace")
     except asyncio.TimeoutError:
-        raise RuntimeError(f"Command timed out after {timeout}s: {cmd_str}")
+        raise RuntimeError(f"Command timed out after {timeout}s: {cmd_str}") from None
 
 
 async def _ceph(*args: str, **kw) -> Tuple[int, str, str]:
@@ -1033,10 +1030,6 @@ class CephHealthMonitor:
 # Re-use S3-compat tier from oci_adaptive_provider logic
 # (inline simplified version to avoid import circularity)
 
-import hmac as _hmac_module
-from urllib.parse import quote as _quote, urlencode as _urlencode
-
-
 class _RgwS3Client:
     """
     Lightweight async S3 client talking to the local RGW endpoint.
@@ -1342,7 +1335,7 @@ class MicroCephProvider:
         try:
             data = await self._require_s3().get(pool, key)
             return data
-        except Exception as exc:
+        except Exception:
             self._metrics["errors"] += 1
             raise
 
