@@ -135,7 +135,7 @@ hsm.close()  # Zeroizes PIN from memory
 
 #### YubiHSM 2 (Production)
 
-Hardware Security Module with FIPS 140-2 Level 3 tamper resistance. One-time cost (~$150 USD), no recurring fees.
+Hardware Security Module with FIPS 140-2 Level 3 tamper resistance. One-time cost (~$650 USD), no recurring fees.
 
 **Setup:**
 ```bash
@@ -248,7 +248,7 @@ All cryptographic operations with HSM keys:
 | SecureBytes | Free | Software-only memory protection |
 | VaultSecretLoader | Free | Uses self-hosted sources only |
 | SoftHSM2 | Free | Open-source software HSM |
-| YubiHSM 2 | ~$150 one-time | No recurring fees |
+| YubiHSM 2 | ~$650 one-time | No recurring fees |
 | VaultAuditLogger | Free | Local file storage (JSONL) |
 | Infinity Void | Free | Self-hosted encrypted vault |
 

@@ -251,7 +251,13 @@ capacity_check() {
     local disk_info
     disk_info="$(mc admin info "$ALIAS" 2>/dev/null | grep -A5 'Usage' || echo '')"
 
-    if [ -z "$disk_info" ]; then
+    local usage_pct=0
+    if [ -n "$disk_info" ]; then
+        echo "  MinIO Disk Usage:"
+        echo "$disk_info" | sed 's/^/    /'
+        # Try to extract usage percentage from mc admin info
+        usage_pct="$(echo "$disk_info" | grep -oP '\d+(?=\s*%)' | head -1 || echo 0)"
+    else
         # Alternative: check via du
         local total_size
         total_size="$(mc du "$ALIAS/$BUCKET" --summarize 2>/dev/null | awk '{print $1}' || echo '0')"
@@ -262,12 +268,20 @@ capacity_check() {
         if echo "$server_info" | grep -qi "usage"; then
             echo "  MinIO Server Info:"
             echo "$server_info" | grep -i "usage\|capacity\|available" | sed 's/^/    /'
+            usage_pct="$(echo "$server_info" | grep -oP '\d+(?=\s*%)' | head -1 || echo 0)"
         fi
 
         echo "  Bucket '$BUCKET' total size: $total_size"
+    fi
+
+    # Apply capacity thresholds
+    if [ "${usage_pct:-0}" -ge "$CAPACITY_CRITICAL" ]; then
+        err "CRITICAL: MinIO capacity at ${usage_pct}% — exceeds critical threshold (${CAPACITY_CRITICAL}%)"
+        err "SmartStorageOrchestrator auto-migration should be triggered."
+    elif [ "${usage_pct:-0}" -ge "$CAPACITY_WARN" ]; then
+        warn "WARNING: MinIO capacity at ${usage_pct}% — exceeds warning threshold (${CAPACITY_WARN}%)"
     else
-        echo "  MinIO Disk Usage:"
-        echo "$disk_info" | sed 's/^/    /'
+        log "MinIO capacity at ${usage_pct}% — within limits (warn=${CAPACITY_WARN}%, critical=${CAPACITY_CRITICAL}%)"
     fi
 
     # Check individual prefix sizes for zero-cost enforcement
@@ -390,6 +404,7 @@ JSONEOF
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 usage() {
+    local exit_code="${1:-0}"
     cat <<EOF
 Tranc3 MinIO Lifecycle Policy Manager
 
@@ -399,8 +414,8 @@ Options:
   --alias ALIAS         MinIO mc alias (default: myminio)
   --bucket BUCKET       Bucket name (default: tranc3)
   --endpoint URL        MinIO endpoint (default: http://localhost:9000)
-  --access-key KEY      Access key (default: minioadmin)
-  --secret-key KEY      Secret key (default: minioadmin)
+  --access-key KEY      Access key (env: MINIO_ACCESS_KEY)
+  --secret-key KEY      Secret key (env: MINIO_SECRET_KEY)
   --apply               Apply all lifecycle policies
   --apply-prefix PFX    Apply policy for a single prefix
   --list                List current lifecycle policies and usage
@@ -417,7 +432,7 @@ Examples:
   $SCRIPT_NAME --capacity-check
   $SCRIPT_NAME --generate-json > lifecycle.json
 EOF
-    exit 0
+    exit "$exit_code"
 }
 
 ACTION=""
