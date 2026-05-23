@@ -16,7 +16,8 @@ _jose = None
 _passlib = None
 
 
-def _get_jose():
+def _get_jose():  # type: ignore[return]
+    """Lazily import and cache python-jose's jwt module."""
     global _jose
     if _jose is None:
         from jose import jwt
@@ -25,7 +26,8 @@ def _get_jose():
     return _jose
 
 
-def _get_passlib():
+def _get_passlib():  # type: ignore[return]
+    """Lazily import and cache passlib's CryptContext."""
     global _passlib
     if _passlib is None:
         from passlib.context import CryptContext

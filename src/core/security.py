@@ -192,6 +192,7 @@ class RateLimitConfig:
 
     @property
     def requests_per_second(self) -> float:
+        """Compute the average allowed requests per second from the configured window."""
         return self.max_requests / self.window_seconds
 
 
@@ -250,6 +251,7 @@ class SecureDefaults:
 
     @classmethod
     def get_cors_config(cls) -> Dict[str, Any]:
+        """Return a CORS configuration dict suitable for FastAPI middleware."""
         return {
             "allow_origins": cls.CORS_ALLOW_ORIGINS,
             "allow_methods": cls.CORS_ALLOW_METHODS,
