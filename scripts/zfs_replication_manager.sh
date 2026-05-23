@@ -467,7 +467,10 @@ replicate_to_s3() {
 
     # Stream ZFS send through zstd compression to S3
     if command -v mc &>/dev/null; then
-        zfs send -Rv "$latest_snap" | zstd -3 | mc pipe "${s3_endpoint}/${s3_bucket}/${s3_key}" 2>/dev/null
+        # mc pipe requires an alias, not a raw S3 URL
+        local mc_alias="tranc3-repl"
+        mc alias set "$mc_alias" "$s3_endpoint" "${S3_ACCESS_KEY:-$ACCESS_KEY}" "${S3_SECRET_KEY:-$SECRET_KEY}" &>/dev/null || true
+        zfs send -Rv "$latest_snap" | zstd -3 | mc pipe "${mc_alias}/${s3_bucket}/${s3_key}" 2>/dev/null
     else
         zfs send -Rv "$latest_snap" | zstd -3 | aws s3 cp - "s3://${s3_bucket}/${s3_key}" \
             --endpoint-url="$s3_endpoint" 2>/dev/null
@@ -624,17 +627,20 @@ main() {
                 exit 1
             else
                 # ZFS → ZFS replication
-                # Ensure target dataset compression is set
-                set_dataset_compression "$TARGET" "$COMPRESSION"
-
                 case "$REPLICATION_MODE" in
                     incremental)
+                        # Target dataset exists from prior full replication
+                        set_dataset_compression "$TARGET" "$COMPRESSION"
                         replicate_incremental "$SOURCE" "$TARGET"
                         ;;
                     full)
                         replicate_full "$SOURCE" "$TARGET"
+                        # Set compression after recv creates the dataset
+                        set_dataset_compression "$TARGET" "$COMPRESSION"
                         ;;
                     differential)
+                        # Target dataset exists from prior replication
+                        set_dataset_compression "$TARGET" "$COMPRESSION"
                         replicate_differential "$SOURCE" "$TARGET" "${FROM_SNAP:-}"
                         ;;
                     *)

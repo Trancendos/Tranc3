@@ -1278,7 +1278,11 @@ def create_smart_storage(
     """
     mode = None
     if system_mode:
-        mode = SystemMode(system_mode.upper())
+        try:
+            mode = SystemMode(system_mode.upper())
+        except ValueError:
+            logger.warning("Invalid SYSTEM_MODE '%s'; defaulting to TRUE_NAS", system_mode)
+            mode = SystemMode.TRUE_NAS
 
     # Create providers based on environment
     zfs_provider = None

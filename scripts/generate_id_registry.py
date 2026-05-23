@@ -262,20 +262,20 @@ DUPLICATE_RENAMES = {
 
 # Lead AI repairs
 LEAD_AI_REPAIRS = {
-    "tAimra": "tAimra",       # Was "tAImra" — fix casing to match location
+    "tAimra": "tAImra",       # Lead AI uses uppercase I; location name stays lowercase i
     "The Nexus": "Nexus-Prime",  # Decouple AI name from location name
 }
 
-# Guardian naming harmonization
+# Guardian naming — preserve full canonical titles in entity contexts
 GUARDIAN_HARMONIZE = {
-    # Infinity's lead_ai: "The Guardian (Anchor: Orb of Orisis)" → "The Guardian"
-    "Infinity": "The Guardian",
-    # Primes: "The Guardian (Marcus Magnolia)" → "The Guardian"
-    "The Void": "The Guardian",
-    "The Lighthouse": "The Guardian",
-    "The Warp Tunnel": "The Guardian",
-    "Cryptex": "The Guardian",
-    "The Ice Box": "The Guardian",
+    # Infinity's lead_ai: "The Guardian (Anchor: Orb of Orisis)" — preserved
+    "Infinity": "The Guardian (Anchor: Orb of Orisis)",
+    # Primes: "The Guardian (Marcus Magnolia)" — preserved
+    "The Void": "The Guardian (Marcus Magnolia)",
+    "The Lighthouse": "The Guardian (Marcus Magnolia)",
+    "The Warp Tunnel": "The Guardian (Marcus Magnolia)",
+    "Cryptex": "The Guardian (Marcus Magnolia)",
+    "The Ice Box": "The Guardian (Marcus Magnolia)",
 }
 
 # Full title metadata (preserved for documentation)
@@ -325,7 +325,7 @@ def generate_id_registry():
                       "The Observatory", "Infinity", "The Citadel", "Think Tank", "Tranquility"]},
         {"name": "Dorris Fontaine", "aid": "AID-DOR-01", "tier": 2,
          "governs": ["Arcadia", "The Artifactory", "API Marketplace", "Arcadian Exchange", "Warp Radio"]},
-        {"name": "The Guardian", "aid": "AID-GRD-01", "tier": 2,
+        {"name": "The Guardian (Anchor: Orb of Orisis)", "aid": "AID-GRD-01", "tier": 2,
          "full_title": "The Guardian (Anchor: Orb of Orisis / Marcus Magnolia)",
          "governs": ["The Void", "The Lighthouse", "The Warp Tunnel", "Cryptex", "The Ice Box"]},
         {"name": "The Doctor (Nikolai O'denhim)", "aid": "AID-DRN-01", "tier": 2,
@@ -352,11 +352,11 @@ def generate_id_registry():
         if loc_name in LEAD_AI_REPAIRS:
             lead_ai_name = LEAD_AI_REPAIRS[loc_name]
         
-        # Primes (with Guardian harmonization)
+        # Primes (with Guardian harmonization — preserve full canonical titles)
         primes_repaired = []
         for p in entity.primes:
             if "Guardian" in p:
-                primes_repaired.append("The Guardian")
+                primes_repaired.append("The Guardian (Marcus Magnolia)")
             else:
                 primes_repaired.append(p)
         
@@ -520,7 +520,7 @@ if __name__ == "__main__":
     for loc in registry["locations"]:
         total_entities += 1 + len(loc["agents"]) + len(loc["bots"])  # lead_ai + agents + bots
     
-    print(f"\n📊 Registry Summary:")
+    print("\n📊 Registry Summary:")
     print(f"   Locations: {len(registry['locations'])}")
     print(f"   Primes: {len(registry['primes'])}")
     print(f"   Total Entities: {total_entities}")

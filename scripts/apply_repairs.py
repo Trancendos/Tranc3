@@ -16,21 +16,19 @@ PLATFORM_PY_PATH = os.path.join(os.path.dirname(__file__), '..', 'src', 'entitie
 # These are applied in order. Each old_string must be unique in the file.
 
 REPAIRS = [
-    # --- 1. tAImra casing fix ---
-    ('lead_ai="tAImra"', 'lead_ai="tAimra"'),
+    # --- 1. tAImra casing fix: Lead AI must use "tAImra" (uppercase I), location stays "tAimra" ---
+    ('lead_ai="tAimra"', 'lead_ai="tAImra"'),
     
     # --- 2. The Nexus Lead AI decoupling ---
     # The Nexus location has lead_ai="The Nexus" — decouple
     ('location="The Nexus",\n        pillar=Pillar.ARCHITECTURAL,\n        lead_ai="The Nexus",',
      'location="The Nexus",\n        pillar=Pillar.ARCHITECTURAL,\n        lead_ai="Nexus-Prime",'),
     
-    # --- 3. Guardian harmonization: Infinity lead_ai ---
-    ('lead_ai="The Guardian (Anchor: Orb of Orisis)",',
-     'lead_ai="The Guardian",'),
+    # --- 3. Guardian: Full canonical titles are preserved in entity contexts ---
+    # "The Guardian (Anchor: Orb of Orisis)" for Infinity lead_ai
+    # "The Guardian (Marcus Magnolia)" for primes — kept as-is
     
-    # --- 4. Guardian harmonization: Primes with Marcus Magnolia ---
-    ('primes=["The Guardian (Marcus Magnolia)"]',
-     'primes=["The Guardian"]'),
+    # --- 4. (merged into #3 above) ---
     
     # --- 5. The Studio: Wireframe → Layout-Bot (design grid plotting, not skeleton rigging) ---
     ('bot_04=Bot("Wireframe", "Plots design grids, focal alignments, and bounds.")',

@@ -296,9 +296,9 @@ DUPLICATE_RESOLUTIONS = {
 # ============================================================
 
 LEAD_AI_REPAIRS = {
-    # tAImra casing: Location is "tAimra", Lead AI should be "tAimra" (matching)
-    # The distinction is intentional (location vs AI entity) but casing should be consistent
-    "tAimra": "tAimra",  # Change lead_ai from "tAImra" to "tAimra"
+    # tAImra casing: Location is "tAimra", Lead AI is "tAImra" (uppercase I)
+    # These are intentionally different - the location name and Lead AI entity name
+    "tAimra": "tAImra",  # Lead AI uses uppercase I; location stays lowercase i
     
     # The Nexus: Lead AI is currently "The Nexus" (same as location) — decouple
     "The Nexus": "Nexus-Prime",  # New Lead AI name, distinct from location
@@ -320,8 +320,12 @@ LEAD_AI_REPAIRS = {
 # Add a `title` or `full_title` field if needed, but for now just harmonize the display name.
 
 GUARDIAN_REPAIR = {
-    "infinity_lead_ai": "The Guardian",  # Simplified from "The Guardian (Anchor: Orb of Orisis)"
-    "void_prime": "The Guardian",         # Simplified from "The Guardian (Marcus Magnolia)"
+    # Preserve full canonical titles in entity contexts
+    # As Lead AI of Infinity: "The Guardian (Anchor: Orb of Orisis)"
+    # As Prime: "The Guardian (Marcus Magnolia)"
+    # Short form "The Guardian" used only in display/summary contexts
+    "infinity_lead_ai": "The Guardian (Anchor: Orb of Orisis)",
+    "void_prime": "The Guardian (Marcus Magnolia)",
     # Full titles preserved in ID registry metadata
 }
 

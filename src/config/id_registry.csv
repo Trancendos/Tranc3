@@ -2,7 +2,7 @@ ID,Tier,Type,Name,Location,Pillar,Description
 AID-SOV-01,1,Sovereign,The Sovereign,,,Prime AI — ultimate orchestrator of the Tranc3 ecosystem
 AID-COR-01,2,Prime,Cornelius MacIntyre,,,"Governs: The Nexus, The HIVE, Luminous, The Town Hall, The Studio, The Digital Grid (indirect), The Lab, Royal Bank of Arcadia, The Observatory, Infinity, The Citadel, Think Tank, Tranquility"
 AID-DOR-01,2,Prime,Dorris Fontaine,,,"Governs: Arcadia, The Artifactory, API Marketplace, Arcadian Exchange, Warp Radio"
-AID-GRD-01,2,Prime,The Guardian,,,"Governs: The Void, The Lighthouse, The Warp Tunnel, Cryptex, The Ice Box"
+AID-GRD-01,2,Prime,The Guardian (Anchor: Orb of Orisis),,,"Governs: The Void, The Lighthouse, The Warp Tunnel, Cryptex, The Ice Box"
 AID-DRN-01,2,Prime,The Doctor (Nikolai O'denhim),,,"Governs: The Digital Grid, The Workshop, The Chaos Party"
 AID-VOX-01,2,Prime,Voxx,,,"Governs: Sashas Photo Studio, TranceFlow, TateKing, Fabulousa, Imaginarium"
 AID-NOR-01,2,Prime,Norman Hawkins,,,"Governs: The Library, The Academy, DocUtari, The Basement, The Spark"
@@ -183,7 +183,7 @@ NID-SPK-01,5,Bot 01,Spark-1-Bot,The Spark,Knowledge,Emits active status signals 
 NID-SPK-02,5,Bot 02,Spark-2-Bot,The Spark,Knowledge,Collects processing load updates to support routing decisions.
 NID-SPK-03,5,Bot 03,Linker-Bot,The Spark,Knowledge,Establishes secure channels between seeking and assisting nodes.
 NID-SPK-04,5,Bot 04,Pinger-Bot,The Spark,Knowledge,"Evaluates responsiveness of specific skills, flagging missing capabilities."
-AID-INF-01,3,Lead AI,The Guardian,Infinity,Security,"Centralized Auth, Edge Auth (OAuth 2.0) & User Transfer"
+AID-INF-01,3,Lead AI,The Guardian (Anchor: Orb of Orisis),Infinity,Security,"Centralized Auth, Edge Auth (OAuth 2.0) & User Transfer"
 SID-INF-01,4,Agent Alpha,The Gatekeeper,Infinity,Security,"Checks incoming user logins, issuing secure, temporary keys."
 SID-INF-02,4,Agent Beta,The Bouncer,Infinity,Security,"Monitors login origins and activities, blocking suspicious IPs."
 NID-INF-01,5,Bot 01,Token-Minter-Bot,Infinity,Security,"Generates secure, time-limited tokens for node-crossing users."

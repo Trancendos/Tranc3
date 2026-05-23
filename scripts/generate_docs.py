@@ -25,11 +25,11 @@ def generate_platform_entities_md():
     lines.append("Canonical reference for all 43 platform locations and their entity hierarchies.")
     lines.append("")
     lines.append("**Tier structure:**")
-    lines.append("- **Tier 1 — The Sovereign**: Ultimate orchestrator of the Tranc3 ecosystem")
-    lines.append("- **Tier 2 — Primes**: Executive AI authorities that govern one or more locations")
-    lines.append("- **Tier 3 — Lead AI**: The named AI that runs each location day-to-day")
-    lines.append("- **Tier 4 — Agents**: Agent Alpha and Agent Beta — mid-tier automation per location")
-    lines.append("- **Tier 5 — Bots**: Bot 01–04 — task-specific micro-workers per location")
+    lines.append("- **Tier 1 - The Sovereign**: Ultimate orchestrator of the Tranc3 ecosystem")
+    lines.append("- **Tier 2 - Primes**: Executive AI authorities that govern one or more locations")
+    lines.append("- **Tier 3 - Lead AI**: The named AI that runs each location day-to-day")
+    lines.append("- **Tier 4 - Agents**: Agent Alpha and Agent Beta - mid-tier automation per location")
+    lines.append("- **Tier 5 - Bots**: Bot 01-04 - task-specific micro-workers per location")
     lines.append("")
     lines.append("**Pillars:** Architectural · Commercial/Financial · Creativity · Development (Code) · Knowledge · Security · DevOps · Wellbeing")
     lines.append("")
@@ -42,7 +42,7 @@ def generate_platform_entities_md():
     lines.append("| ID Format | Tier | Description | Example |")
     lines.append("|---|---|---|---|")
     lines.append("| PID-XXX | Location | Product/Location ID (3-letter abbreviation) | PID-NXS |")
-    lines.append("| AID-XXX-NN | 2–3 | AI ID (location abbrev + 2-digit sequence) | AID-NXS-01 |")
+    lines.append("| AID-XXX-NN | 2-3 | AI ID (location abbrev + 2-digit sequence) | AID-NXS-01 |")
     lines.append("| SID-XXX-NN | 4 | Service/Agent ID | SID-NXS-01 |")
     lines.append("| NID-XXX-NN | 5 | Nano-ID/Bot ID | NID-NXS-01 |")
     lines.append("")
@@ -55,9 +55,9 @@ def generate_platform_entities_md():
     lines.append("| Rule | Resolved Form | Original Issue |")
     lines.append("|---|---|---|")
     lines.append('| Platform brain | The Digital Grid (with space) | The DigitalGrid (no space — typo) |')
-    lines.append('| Location vs AI | tAimra (location) / tAimra (Lead AI) | tAImra vs tAimra casing mismatch |')
+    lines.append('| Location vs AI | tAimra (location) / tAImra (Lead AI) | tAImra vs tAimra casing mismatch |')
     lines.append("| Photo studio | Sashas Photo Studio (no apostrophe) | Sasha's Photo Studio (apostrophe) |")
-    lines.append("| Guardian title | The Guardian (simplified) | The Guardian (Anchor: Orb of Orisis) vs The Guardian (Marcus Magnolia) |")
+    lines.append("| Guardian title | The Guardian (Anchor: Orb of Orisis) | The Guardian (Anchor: Orb of Orisis) vs The Guardian (Marcus Magnolia) |")
     lines.append("| Nexus AI | Nexus-Prime (Lead AI) | The Nexus (same name as location — tight coupling) |")
     lines.append("| Bot naming | All bots: Title-Case-Bot format | Inconsistent: some had -Bot suffix, some didn't |")
     lines.append("| Wireframe collision | Layout-Bot (Studio) / Wireframe-Bot (Turing's Hub) | Same name in two locations |")
@@ -79,8 +79,8 @@ def generate_platform_entities_md():
     
     worker_map = [
         (8004, "infinity-ws", "The Nexus", "Nexus-Prime", "PID-NXS", "Primary worker"),
-        (8005, "infinity-auth", "Infinity", "The Guardian", "PID-INF", "Primary worker"),
-        (8006, "users-service", "Infinity", "The Guardian", "PID-INF", "Supporting layer"),
+        (8005, "infinity-auth", "Infinity", "The Guardian (Anchor: Orb of Orisis)", "PID-INF", "Primary worker"),
+        (8006, "users-service", "Infinity", "The Guardian (Anchor: Orb of Orisis)", "PID-INF", "Supporting layer"),
         (8007, "monitoring", "The Observatory", "Norman Hawkins", "PID-OBS", "Primary worker"),
         (8008, "notifications", "Arcadia", "Lilli SC", "PID-ARC", "Supporting layer"),
         (8009, "infinity-ai", "Luminous", "Cornelius MacIntyre", "PID-LUM", "Primary worker"),
@@ -210,12 +210,12 @@ def generate_matrix_md():
     lines.append("")
     lines.append("## Summary")
     lines.append("")
-    lines.append(f"- **43 Locations** across 8 Pillars")
-    lines.append(f"- **8 Primes** (Tier 2) + **1 Sovereign** (Tier 1)")
-    lines.append(f"- **43 Lead AIs** (Tier 3)")
-    lines.append(f"- **86 Agents** (Tier 4: 43 Alpha + 43 Beta)")
-    lines.append(f"- **172 Bots** (Tier 5: 4 per location)")
-    lines.append(f"- **310 Total Entities**")
+    lines.append("- **43 Locations** across 8 Pillars")
+    lines.append("- **8 Primes** (Tier 2) + **1 Sovereign** (Tier 1)")
+    lines.append("- **43 Lead AIs** (Tier 3)")
+    lines.append("- **86 Agents** (Tier 4: 43 Alpha + 43 Beta)")
+    lines.append("- **172 Bots** (Tier 5: 4 per location)")
+    lines.append("- **310 Total Entities**")
     lines.append("")
     lines.append("---")
     lines.append("")
@@ -234,8 +234,8 @@ def generate_matrix_md():
         for loc_name, entity in locations_in_pillar:
             lines.append(f"### {loc_name} (`{entity.pid}`)")
             lines.append("")
-            lines.append(f"| Tier | Role | Name | ID | Description |")
-            lines.append(f"|------|------|------|----|-------------|")
+            lines.append("| Tier | Role | Name | ID | Description |")
+            lines.append("|------|------|------|----|-------------|")
             lines.append(f"| 3 | Lead AI | **{entity.lead_ai}** | `{entity.aid}` | {entity.primary_function} |")
             lines.append(f"| 4 | Agent α | {entity.agent_alpha.code_name} | `{entity.agent_alpha.sid}` | {entity.agent_alpha.description} |")
             lines.append(f"| 4 | Agent β | {entity.agent_beta.code_name} | `{entity.agent_beta.sid}` | {entity.agent_beta.description} |")

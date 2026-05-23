@@ -327,20 +327,27 @@ Based on the cross-repo analysis, the following integration points should be pri
 
 ## 7. Technology Landscape Summary
 
-| Technology | Status | Tranc3 Role | Zero-Cost? | Risk Level |
+### Zero-Cost Baseline (No cost - fully aligned with Tranc3 zero-cost mandate)
+
+| Technology | Status | Tranc3 Role | License | Risk Level |
 |---|---|---|---|---|
-| OpenZFS | Stable, actively developed | Primary NAS storage | Yes (FOSS) | Low |
-| Sanoid/syncoid | Mature, widely deployed | Snapshot orchestration reference | Yes (FOSS) | Low |
-| MinIO CE | Maintenance-only (Dec 2025) | Local S3-compatible storage | Yes (AGPL) | Medium (no new features) |
-| Ceph | Stable, actively developed | Distributed storage | Yes (LGPL) | Low |
-| YubiHSM 2 | Stable, production-grade | Hardware key management | ~$650 device | Low |
-| SoftHSM2 | Mature, dev/test grade | Development HSM | Yes (BSD) | Low (dev only) |
-| python-pkcs11 | Mature, some YubiHSM issues | PKCS#11 abstraction | Yes (MIT) | Medium |
-| yubihsm (native) | Stable, Yubico-maintained | Direct YubiHSM access | Yes (Apache-2.0) | Low |
-| Cloudflare R2 | Free tier available | Cloud S3 storage | Yes (10GB free) | Low |
-| Oracle Cloud Free Tier | Always-free available | Cloud object storage | Yes (20GB free) | Medium (account risk) |
-| HashiCorp Vault | BSL license (not FOSS) | Reference architecture | No (BSL) | N/A (not used) |
-| ZSTD compression | Stable, widely adopted | ZFS replication compression | Yes (FOSS) | Low |
+| OpenZFS | Stable, actively developed | Primary NAS storage | FOSS | Low |
+| Sanoid/syncoid | Mature, widely deployed | Snapshot orchestration reference | FOSS | Low |
+| MinIO CE | Maintenance-only (Dec 2025) | Local S3-compatible storage | AGPL | Medium (no new features) |
+| Ceph | Stable, actively developed | Distributed storage | LGPL | Low |
+| SoftHSM2 | Mature, dev/test grade | Development HSM | BSD | Low (dev only) |
+| python-pkcs11 | Mature, some YubiHSM issues | PKCS#11 abstraction | MIT | Medium |
+| yubihsm (native) | Stable, Yubico-maintained | Direct YubiHSM access | Apache-2.0 | Low |
+| Cloudflare R2 | Free tier available | Cloud S3 storage | 10GB free | Low |
+| Oracle Cloud Free Tier | Always-free available | Cloud object storage | 20GB free | Medium (account risk) |
+| ZSTD compression | Stable, widely adopted | ZFS replication compression | FOSS | Low |
+
+### Optional / Paid (Not required for zero-cost operation - listed for reference only)
+
+| Technology | Status | Tranc3 Role | Cost | Notes |
+|---|---|---|---|---|
+| YubiHSM 2 | Stable, production-grade | Hardware key management | ~$650 one-time | No recurring fees; optional for FIPS 140-2 L3 |
+| HashiCorp Vault | BSL license (not FOSS) | Reference architecture | BSL (not zero-cost) | Not used - included for comparison only |
 
 ---
 

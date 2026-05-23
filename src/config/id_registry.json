@@ -2,23 +2,23 @@
   "version": "2.0.0",
   "generated_by": "Tranc3 Naming Repair & ID Registry Generator",
   "taxonomy": {
-    "PID": "Product/Location ID \u2014 PID-XXX (3-letter location abbreviation)",
-    "AID": "AI ID \u2014 AID-XXX-NN (3-letter location + 2-digit sequence)",
-    "SID": "Service/Agent ID \u2014 SID-XXX-NN (3-letter location + 2-digit sequence)",
-    "NID": "Nano-ID/Bot ID \u2014 NID-XXX-NN (3-letter location + 2-digit sequence)"
+    "PID": "Product/Location ID — PID-XXX (3-letter location abbreviation)",
+    "AID": "AI ID — AID-XXX-NN (3-letter location + 2-digit sequence)",
+    "SID": "Service/Agent ID — SID-XXX-NN (3-letter location + 2-digit sequence)",
+    "NID": "Nano-ID/Bot ID — NID-XXX-NN (3-letter location + 2-digit sequence)"
   },
   "tiers": {
-    "1": "The Sovereign \u2014 Ultimate orchestrator",
-    "2": "Primes \u2014 Executive AI authorities",
-    "3": "Lead AIs \u2014 Day-to-day location managers",
-    "4": "Agents \u2014 Mid-tier automation (Alpha + Beta)",
-    "5": "Bots \u2014 Task-specific micro-workers (01-04)"
+    "1": "The Sovereign — Ultimate orchestrator",
+    "2": "Primes — Executive AI authorities",
+    "3": "Lead AIs — Day-to-day location managers",
+    "4": "Agents — Mid-tier automation (Alpha + Beta)",
+    "5": "Bots — Task-specific micro-workers (01-04)"
   },
   "sovereign": {
     "name": "The Sovereign",
     "aid": "AID-SOV-01",
     "tier": 1,
-    "description": "Prime AI \u2014 ultimate orchestrator of the Tranc3 ecosystem"
+    "description": "Prime AI — ultimate orchestrator of the Tranc3 ecosystem"
   },
   "primes": [
     {
@@ -54,7 +54,7 @@
       ]
     },
     {
-      "name": "The Guardian",
+      "name": "The Guardian (Anchor: Orb of Orisis)",
       "aid": "AID-GRD-01",
       "tier": 2,
       "full_title": "The Guardian (Anchor: Orb of Orisis / Marcus Magnolia)",
@@ -1805,7 +1805,7 @@
       "pillar": "Security",
       "pillar_abbrev": "SECU",
       "lead_ai": {
-        "name": "The Guardian",
+        "name": "The Guardian (Anchor: Orb of Orisis)",
         "aid": "AID-INF-01",
         "tier": 3
       },
@@ -1878,7 +1878,7 @@
       },
       "primary_function": "Secrets Vault, Password Store & Sensitive Data Store",
       "primes": [
-        "The Guardian"
+        "The Guardian (Marcus Magnolia)"
       ],
       "abilities": [
         "Zero-Knowledge Vaulting: Encrypts raw data from admins.",
@@ -1945,7 +1945,7 @@
       },
       "primary_function": "Cryptographic Token Applicator",
       "primes": [
-        "The Guardian"
+        "The Guardian (Marcus Magnolia)"
       ],
       "abilities": [
         "Universal Token Genesis: Mints tokens for new platform items.",
@@ -2012,7 +2012,7 @@
       },
       "primary_function": "Cryptographic Scanner & Automated Quarantine Transport",
       "primes": [
-        "The Guardian"
+        "The Guardian (Marcus Magnolia)"
       ],
       "abilities": [
         "Continuous Integrity Scanning: Monitors tokens for corruption.",
@@ -2079,7 +2079,7 @@
       },
       "primary_function": "Cyber Defense (Threat Intelligence, DDoS, CVE Scanning)",
       "primes": [
-        "The Guardian"
+        "The Guardian (Marcus Magnolia)"
       ],
       "abilities": [
         "Active Countermeasures: Traces and blocks origin IPs.",
@@ -2146,7 +2146,7 @@
       },
       "primary_function": "Inception-Layered Sandbox Threat Isolation & Quarantine Centre",
       "primes": [
-        "The Guardian"
+        "The Guardian (Marcus Magnolia)"
       ],
       "abilities": [
         "Inception-Layered Sandboxing: Traps code in simulated realms.",

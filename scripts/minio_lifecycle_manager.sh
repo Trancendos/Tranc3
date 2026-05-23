@@ -152,7 +152,7 @@ apply_all_policies() {
     apply_prefix_policy "warm" "$WARM_EXPIRE"
 
     # ── Cold Tier: Historical Data (archives, old backups) ────────────
-    apply_prefix_policy "cold" "$COLD_EXPIRE"
+    apply_prefix_policy "cold" "$COLD_EXPIRE" "14"
 
     # ── Archive Tier: Long-term Retention (compliance, audit) ────────
     apply_prefix_policy "archive" "$ARCHIVE_EXPIRE"
@@ -467,6 +467,13 @@ parse_args() {
 
 main() {
     parse_args "$@"
+
+    # Security: reject default credentials on non-local endpoints
+    if [ "$ENDPOINT" != "http://localhost:9000" ] && \
+       { [ "$ACCESS_KEY" = "minioadmin" ] || [ "$SECRET_KEY" = "minioadmin" ]; }; then
+        err "Refusing default credentials on non-local endpoint ($ENDPOINT). Set MINIO_ACCESS_KEY/MINIO_SECRET_KEY."
+        exit 1
+    fi
 
     case "$ACTION" in
         apply)

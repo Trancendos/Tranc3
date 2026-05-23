@@ -239,11 +239,11 @@ services:
       OCI_SECRET_KEY: ${OCI_SECRET_KEY:-}
       OCI_BUCKET: ${OCI_BUCKET:-tranc3}
       # Observability
-      PORT: "8010"
+      PORT: "8000"
       REDIS_URL: redis://redis:6379/0
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
-      - "8010:8010"
+      - "8000:8000"
     depends_on:
       minio:
         condition: service_healthy
@@ -252,7 +252,7 @@ services:
       - ${ZFS_MOUNT_ROOT:-/mnt/tank/tranc3}:/zfs-data:rw
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8010/health')"]
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
       interval: 15s
       timeout: 5s
       retries: 5

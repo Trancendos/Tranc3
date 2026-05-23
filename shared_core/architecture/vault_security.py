@@ -225,7 +225,6 @@ class SecureBytes:
             self.zeroize()
         except Exception:
             pass  # __del__ must never raise — safe to ignore zeroization failure
-        return self
 
     def __exit__(self, *args: Any) -> None:
         self.zeroize()

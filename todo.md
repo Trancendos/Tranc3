@@ -1,24 +1,34 @@
-# Tranc3 — Naming Convention Repair, ID Registry & Adaptive Architecture
+# Tranc3 - Phase 9: CodeRabbit Fixes + Zero-Cost Cloud Research
 
-## Phase 1-7: Original Implementation [COMPLETE]
-All original phases completed and pushed to PR #46.
+## Phase 9A: CodeRabbit + Additional Review Fixes (IN PROGRESS)
+- [x] Fix vault_security.py `__del__` returning `self`
+- [x] Fix platform.py: Guardian canonical naming + Unicode dashes + unused abbrev
+- [x] Fix apply_repairs.py: tAImra casing + Guardian title preservation
+- [x] Fix naming_repairs.py: LEAD_AI_REPAIRS + GUARDIAN_REPAIR
+- [x] Fix generate_id_registry.py: tAImra + Guardian + f-string
+- [x] Fix generate_docs.py: tAImra + Guardian + Unicode + f-strings
+- [x] Fix PLATFORM_ENTITIES.md: Guardian + tAImra naming
+- [x] Fix docs/matrix.md: Guardian canonical naming
+- [x] Fix prometheus.yml: Add tranc3-redis scrape job
+- [x] Fix docker-compose.storage.yml: Healthcheck port 8010->8000
+- [x] Fix smart_storage.py: Invalid SystemMode ValueError handling
+- [x] Fix zfs_snapshot_manager.sh: set -e short-circuit + capacity_aware_prune
+- [x] Fix zfs_replication_manager.sh: compression before target + mc pipe alias
+- [x] Fix minio_lifecycle_manager.sh: default credential rejection + cold retention drift
+- [x] Fix docs/vault_security.md: Language identifiers for fenced code blocks
+- [ ] Fix docs/vault_security.md: Split zero-cost baseline from optional paid hardening
+- [ ] Fix docs/RESEARCH_FINDINGS.md: Mark optional/paid items
+- [ ] Regenerate id_registry.json + id_registry.csv from fixed scripts
+- [ ] Commit and push Phase 9A fixes
 
-## Phase 8: Code Review Fixes (cubic + CodeQL)
-- [x] Fix P0: path traversal in smart_storage.py _resolve_path (line 209)
-- [x] Fix P0: path traversal in vault_security.py HSM file paths (line 1371)
-- [x] Fix P1: ZFS capacity alert condition inversion in prometheus-alerts.yml
-- [x] Fix P1: Duplicate AID-DOC-01 in matrix.md, PLATFORM_ENTITIES.md, id_registry.csv
-- [x] Fix P1: MinIO default credentials in docker-compose.storage.yml
-- [x] Fix P1: pkcs11 NameError in vault_security.py encryption/decryption
-- [x] Fix P1: HSM base64 encode/decode mismatch in vault_security.py
-- [x] Fix P1: zfs_snapshot_manager.sh — double recursion, /tmp lock file, exit codes
-- [x] Fix P1: zfs_replication_manager.sh — unsupported --compress flag, -i/-I mix
-- [x] Fix P1: smart_storage.py read() fallback skips providers
-- [x] Fix P1: CLOUD_ONLY mode has no usable providers in factory
-- [x] Fix P2: YubiHSM 2 price correction in vault_security.md (~$150 → $650)
-- [x] Fix P2: Various exit code 0 for errors in shell scripts
-- [x] Fix P2: minio_lifecycle_manager.sh — unused capacity thresholds, retention inconsistency
-- [x] Fix P2: docker-compose.storage.yml — init script doesn't apply lifecycle
-- [x] Fix P2: bandwidth throttling unused in zfs_replication_manager.sh
-- [x] Fix P2: tAImra vs tAimra naming in platform.py
-- [ ] Commit and push fixes
+## Phase 9B: Zero-Cost Cloud Provider Research & Integration
+- [x] Research Oracle Cloud free tier offerings (completed in prior session)
+- [ ] Research Google Cloud free tier offerings
+- [ ] Research Microsoft Azure free tier offerings
+- [ ] Research AWS free tier offerings
+- [ ] Research HashiCorp free/open-source offerings
+- [ ] Document findings in ZERO_COST_CLOUD_PROVIDERS.md
+- [ ] Implement new zero-cost providers in smart_storage.py
+- [ ] Update docker-compose.storage.yml with new provider configs
+- [ ] Update prometheus alerts for new providers
+- [ ] Commit and push Phase 9B

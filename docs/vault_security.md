@@ -6,7 +6,7 @@ The Tranc3 Vault Security layer provides defense-in-depth secret management with
 
 ## Architecture
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │                    Vault Security Layer                        │
 │                                                                │
@@ -20,7 +20,7 @@ The Tranc3 Vault Security layer provides defense-in-depth secret management with
 │  │  mlock() · explicit_bzero() · constant-time cmp   │        │
 │  └───────────────────────────────────────────────────┘        │
 └──────────────────────────────────────────────────────────────┘
-```
+```python
 
 ## Components
 
@@ -49,7 +49,7 @@ with SecureBytes(b"sensitive_data", lock_memory=True) as secret:
 secret = SecureBytes(b"sensitive_data")
 # Use secret...
 del secret  # Memory zeroized in __del__
-```
+```python
 
 ### 2. VaultSecretLoader — Secure Secret Retrieval
 
@@ -89,7 +89,7 @@ loader.store_secret("new_api_key", b"sk-xxxxx", source=SecretSource.HSM)
 
 # Rotate a secret
 loader.rotate_secret("api_key", b"sk-new-key-value")
-```
+```python
 
 ### 3. PKCS#11 HSM Integration
 
@@ -108,7 +108,7 @@ softhsm2-util --init-token --slot 0 --label "tranc3" \
 
 # Install Python bindings
 pip install python-pkcs11
-```
+```text
 
 **Usage:**
 ```python
@@ -131,7 +131,7 @@ is_valid = hsm.verify(sig_key, b"message to sign", signature)
 
 # Cleanup
 hsm.close()  # Zeroizes PIN from memory
-```
+```python
 
 #### YubiHSM 2 (Production)
 
@@ -147,7 +147,7 @@ yubihsm-connector --daemon
 
 # Initialize the HSM (first time only)
 yubihsm-setup
-```
+```text
 
 **Usage:**
 ```python
@@ -163,7 +163,7 @@ hsm.initialize()
 key_handle = hsm.generate_key(HSMKeyType.AES, 256, label="master-key")
 ciphertext = hsm.encrypt(key_handle, b"secret data")
 hsm.close()
-```
+```python
 
 ### 4. VaultAuditLogger — Append-Only Audit Trail
 
@@ -207,7 +207,7 @@ print(f"Chain integrity: {is_valid}")
 
 # Verify specific date
 is_valid = audit.verify_chain(date="2024-01-15")
-```
+```python
 
 ## Security Properties
 
@@ -243,20 +243,29 @@ All cryptographic operations with HSM keys:
 
 ## Zero-Cost Mandate
 
+### Zero-Cost Baseline (All components below are free - no cost whatsoever)
+
 | Component | Cost | Notes |
 |---|---|---|
 | SecureBytes | Free | Software-only memory protection |
 | VaultSecretLoader | Free | Uses self-hosted sources only |
 | SoftHSM2 | Free | Open-source software HSM |
-| YubiHSM 2 | ~$650 one-time | No recurring fees |
 | VaultAuditLogger | Free | Local file storage (JSONL) |
 | Infinity Void | Free | Self-hosted encrypted vault |
 
-**No paid cloud services:** AWS Secrets Manager, Azure Key Vault, HashiCorp Vault Enterprise, and GCP Secret Manager are NOT used.
+No paid cloud services are used in the baseline. AWS Secrets Manager, Azure Key Vault, HashiCorp Vault Enterprise, and GCP Secret Manager are NOT used.
+
+### Optional Hardening (One-time hardware cost - no recurring fees)
+
+| Component | Cost | Notes |
+|---|---|---|
+| YubiHSM 2 | ~$650 one-time | FIPS 140-2 Level 3 HSM, no recurring fees |
+
+YubiHSM 2 is an optional production hardening upgrade. The full vault security stack operates at zero cost using SoftHSM2 for development and testing. YubiHSM 2 is only recommended for deployments requiring FIPS 140-2 Level 3 compliance or hardware-bound key storage.
 
 ## File Structure
 
-```
+```text
 shared_core/architecture/
 ├── vault_security.py        # Main vault security module
 ├── audit_ledger.py          # Existing audit ledger (complementary)
@@ -273,7 +282,7 @@ logs/vault-audit/
 secrets/hsm/
 ├── database_password.enc    # HSM-encrypted secret files
 └── api_key.enc
-```
+```python
 
 ## Integration with Smart Storage
 
@@ -287,7 +296,10 @@ The Vault Security layer integrates with the Smart Storage architecture:
 
 ## Future Enhancements
 
+### Zero-Cost (Self-hosted / Open-source)
 - [ ] Shamir's Secret Sharing for multi-party key recovery
-- [ ] TPM 2.0 integration for platform-bound keys
-- [ ] Secret scanning integration with GitHub Advanced Security
-- [ ] Automated compliance reporting (SOC 2, ISO 27001)
+- [ ] TPM 2.0 integration for platform-bound keys (available on most modern hardware)
+
+### Optional / Paid
+- [ ] Secret scanning integration with GitHub Advanced Security (requires GitHub Enterprise)
+- [ ] Automated compliance reporting (SOC 2, ISO 27001) (requires commercial tooling)

@@ -415,7 +415,7 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 
 | Tier | Role | Name | ID | Description |
 |------|------|------|----|-------------|
-| 3 | Lead AI | **The Guardian** | `AID-INF-01` | Centralized Auth, Edge Auth (OAuth 2.0) & User Transfer |
+| 3 | Lead AI | **The Guardian (Anchor: Orb of Orisis)** | `AID-INF-01` | Centralized Auth, Edge Auth (OAuth 2.0) & User Transfer |
 | 4 | Agent α | The Gatekeeper | `SID-INF-01` | Checks incoming user logins, issuing secure, temporary keys. |
 | 4 | Agent β | The Bouncer | `SID-INF-02` | Monitors login origins and activities, blocking suspicious IPs. |
 | 5 | Bot 01 | Token-Minter-Bot | `NID-INF-01` | Generates secure, time-limited tokens for node-crossing users. |
@@ -436,7 +436,7 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | 5 | Bot 02 | Salt-Bot | `NID-VOI-02` | Adds randomized padding to password strings to prevent dictionary attacks. |
 | 5 | Bot 03 | Cipher-Bot | `NID-VOI-03` | Runs real-time encryption and decryption on active secure files. |
 | 5 | Bot 04 | Padlock-Bot | `NID-VOI-04` | Instantly locks sensitive structures if a local breach is suspected. |
-| — | Primes | The Guardian | — | — |
+| — | Primes | The Guardian (Marcus Magnolia) | — | — |
 | — | Port | 8024 | — | workers/config-service/ |
 
 ### The Lighthouse (`PID-LTH`)
@@ -450,7 +450,7 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | 5 | Bot 02 | Wax-Bot | `NID-LTH-02` | Generates temporary, single-use visual watermarks for digital assets. |
 | 5 | Bot 03 | Signet-Bot | `NID-LTH-03` | Validates credentials, signing certificates for structural operations. |
 | 5 | Bot 04 | Seal-Stamp-Bot | `NID-LTH-04` | Applies file-system metadata to register the exact creation details. |
-| — | Primes | The Guardian | — | — |
+| — | Primes | The Guardian (Marcus Magnolia) | — | — |
 | — | Port | 8015 | — | workers/identity-service/ |
 
 ### The Warp Tunnel (`PID-WTP`)
@@ -464,7 +464,7 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | 5 | Bot 02 | Sniffer-Bot | `NID-WTP-02` | Analyzes transport packets for corrupted signatures/manipulations. |
 | 5 | Bot 03 | Beam-Bot | `NID-WTP-03` | Isolates threatened memory spaces, cutting off surrounding connections. |
 | 5 | Bot 04 | Portal-Bot | `NID-WTP-04` | Safely moves compromised file layers directly into the secure Ice Box. |
-| — | Primes | The Guardian | — | — |
+| — | Primes | The Guardian (Marcus Magnolia) | — | — |
 | — | Port | N/A | — | src/security/warp_tunnel/ |
 
 ### Cryptex (`PID-CRX`)
@@ -478,7 +478,7 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | 5 | Bot 02 | Trace-Bot | `NID-CRX-02` | Traces malicious attacks back to origin networks for reporting. |
 | 5 | Bot 03 | Patcher-Bot | `NID-CRX-03` | Applies emergency system patches to vulnerable software layers. |
 | 5 | Bot 04 | Honeypot-Bot | `NID-CRX-04` | Spins up virtual servers with decoy data to distract/evaluate attackers. |
-| — | Primes | The Guardian | — | — |
+| — | Primes | The Guardian (Marcus Magnolia) | — | — |
 | — | Port | 8026 | — | workers/rate-limit-service/ |
 
 ### The Ice Box (`PID-ICB`)
@@ -492,7 +492,7 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | 5 | Bot 02 | Icicle-Bot | `NID-ICB-02` | Freezes dynamic processes to snapshot active RAM and memory spaces. |
 | 5 | Bot 03 | Glacier-Bot | `NID-ICB-03` | Packs dangerous binaries into heavily restricted, un-executable archives. |
 | 5 | Bot 04 | Permafrost-Bot | `NID-ICB-04` | Isolates local offline storage caches until secure networks reconnect. |
-| — | Primes | The Guardian | — | — |
+| — | Primes | The Guardian (Marcus Magnolia) | — | — |
 | — | Port | N/A | — | src/security/ice_box/ |
 
 ---
@@ -670,7 +670,7 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | AID-SOV-01 | 1 | The Sovereign | — |
 | AID-COR-01 | 2 | Cornelius MacIntyre | — |
 | AID-DOR-01 | 2 | Dorris Fontaine | — |
-| AID-GRD-01 | 2 | The Guardian | — |
+| AID-GRD-01 | 2 | The Guardian (Anchor: Orb of Orisis) | — |
 | AID-DRN-01 | 2 | The Doctor (Nikolai O'denhim) | — |
 | AID-VOX-01 | 2 | Voxx | — |
 | AID-NOR-01 | 2 | Norman Hawkins | — |
@@ -851,7 +851,7 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | NID-SPK-02 | 5 | Spark-2-Bot | The Spark |
 | NID-SPK-03 | 5 | Linker-Bot | The Spark |
 | NID-SPK-04 | 5 | Pinger-Bot | The Spark |
-| AID-INF-01 | 3 | The Guardian | Infinity |
+| AID-INF-01 | 3 | The Guardian (Anchor: Orb of Orisis) | Infinity |
 | SID-INF-01 | 4 | The Gatekeeper | Infinity |
 | SID-INF-02 | 4 | The Bouncer | Infinity |
 | NID-INF-01 | 5 | Token-Minter-Bot | Infinity |

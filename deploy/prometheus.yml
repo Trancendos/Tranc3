@@ -19,7 +19,7 @@ scrape_configs:
   # ── Smart Storage Orchestrator ─────────────────────────────────────────────
   - job_name: storage-orchestrator
     static_configs:
-      - targets: ['storage-orchestrator:8010']
+      - targets: ['storage-orchestrator:8000']
     metrics_path: /metrics
 
   # ── MinIO — Built-in Prometheus Metrics ────────────────────────────────────
@@ -34,6 +34,12 @@ scrape_configs:
   - job_name: node-exporter
     static_configs:
       - targets: ['node-exporter:9100']
+
+  # ── Redis ──────────────────────────────────────────────────────────────
+  # Required by RedisDown alert in prometheus-alerts.yml
+  - job_name: tranc3-redis
+    static_configs:
+      - targets: ['redis:6379']
 
   # ── Prometheus Self-Monitoring ─────────────────────────────────────────────
   - job_name: prometheus

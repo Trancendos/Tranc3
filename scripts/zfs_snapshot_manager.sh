@@ -158,13 +158,13 @@ create_snapshot() {
     # NOTE: When RECURSIVE=true, we only create the snapshot on the top-level
     # dataset with -r flag. This automatically covers all children.
     # We must NOT iterate over child datasets AND use -r (double recursion).
+    local rc=0
     if [ "$RECURSIVE" = true ]; then
-        zfs snapshot -r "$snap_name" 2>/dev/null || true
+        zfs snapshot -r "$snap_name" 2>/dev/null || rc=$?
     else
-        zfs snapshot "$snap_name" 2>/dev/null || true
+        zfs snapshot "$snap_name" 2>/dev/null || rc=$?
     fi
 
-    local rc=$?
     if [ $rc -eq 0 ]; then
         log "Created snapshot: $snap_name"
     else
@@ -245,8 +245,9 @@ get_retention_count() {
 prune_snapshots() {
     local dataset="$1"
     local schedule="$2"
+    local keep_override="${3:-}"
     local keep
-    keep="$(get_retention_count "$schedule")"
+    keep="${keep_override:-$(get_retention_count "$schedule")}"
 
     # Get all snapshots for this dataset+schedule, oldest first
     local snaps
@@ -304,15 +305,12 @@ capacity_aware_prune() {
         local keep_original
         keep_original="$(get_retention_count "$schedule")"
 
-        # Reduce retention by half during capacity pressure
-        export "ZFS_SNAP_KEEP_${schedule^^}=$(( keep_original / 2 ))"
+        # Reduce retention by half during capacity pressure (minimum 1)
+        local reduced_keep=$(( keep_original > 1 ? keep_original / 2 : 1 ))
 
         for dataset in $(get_all_datasets); do
-            prune_snapshots "$dataset" "$schedule"
+            prune_snapshots "$dataset" "$schedule" "$reduced_keep"
         done
-
-        # Restore original
-        export "ZFS_SNAP_KEEP_${schedule^^}=$keep_original"
 
         # Check if we've recovered enough
         capacity="$(get_pool_capacity)"

@@ -7,17 +7,17 @@ Agent Alpha + Beta (Tier 4), and Bots 01–04 (Tier 5).
 Canonical source of truth for entity names, roles, and worker mappings.
 
 Universal ID Taxonomy:
-  PID-XXX  — Product / Location ID   (3-letter abbreviation)
-  AID-XXX-NN — AI ID                 (location abbrev + 2-digit sequence)
-  SID-XXX-NN — Service / Agent ID    (location abbrev + 2-digit sequence)
-  NID-XXX-NN — Nano-ID / Bot ID      (location abbrev + 2-digit sequence)
+  PID-XXX  - Product / Location ID   (3-letter abbreviation)
+  AID-XXX-NN - AI ID                 (location abbrev + 2-digit sequence)
+  SID-XXX-NN - Service / Agent ID    (location abbrev + 2-digit sequence)
+  NID-XXX-NN - Nano-ID / Bot ID      (location abbrev + 2-digit sequence)
 
 Tier System:
   Tier 1 — The Sovereign (ultimate orchestrator)
-  Tier 2 — Primes (executive AI authorities)
-  Tier 3 — Lead AIs (day-to-day location managers)
-  Tier 4 — Agents (mid-tier automation: Alpha + Beta)
-  Tier 5 — Bots (task-specific micro-workers: 01–04)
+  Tier 2 - Primes (executive AI authorities)
+  Tier 3 - Lead AIs (day-to-day location managers)
+  Tier 4 - Agents (mid-tier automation: Alpha + Beta)
+  Tier 5 - Bots (task-specific micro-workers: 01-04)
 """
 
 from dataclasses import dataclass, field
@@ -646,7 +646,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "Infinity": LocationEntity(
         location="Infinity",
         pillar=Pillar.SECURITY,
-        lead_ai="The Guardian",
+        lead_ai="The Guardian (Anchor: Orb of Orisis)",
         abilities=[
             "Predictive Threat Modeling: Orb provides 'Future Sight.'",
             "Quantum Access Tokens: Expiring tokens for user transfer.",
