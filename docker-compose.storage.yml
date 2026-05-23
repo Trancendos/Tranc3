@@ -15,13 +15,13 @@
 #   docker compose -f docker-compose.storage.yml up -d
 #
 # Architecture:
-#   Storage Tier Priority: ZFS(0) → MinIO(1) → Ceph(2) → R2(3) → OCI(4)
+#   Storage Tier Priority: ZFS(0) → MinIO(1) → Ceph(2) → R2(3) → OCI(4) → GCP(5) → Azure(6) → AWS(7)
 #   SYSTEM_MODE: TRUE_NAS | HYBRID | CLOUD_ONLY (set in .env)
 #
 # Zero-Cost Mandate:
 #   - MinIO: Self-hosted, unlimited, free
 #   - Ceph: Self-hosted, scalable, free
-#   - No paid cloud services; free-tier cloud only (R2: 10GB, OCI: 10GB)
+#   - No paid cloud services; free-tier cloud only (R2: 10GB, OCI: 20GB, GCP: 5GB, Azure: 25GB, AWS: 25GB)
 #
 # Part of the Tranc3 Adaptive Smart Storage Architecture
 # ============================================================================
@@ -238,6 +238,20 @@ services:
       OCI_ACCESS_KEY: ${OCI_ACCESS_KEY:-}
       OCI_SECRET_KEY: ${OCI_SECRET_KEY:-}
       OCI_BUCKET: ${OCI_BUCKET:-tranc3}
+      # Zero-cost cloud fallback — GCP (HYBRID/CLOUD_ONLY modes)
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
+      GCP_BUCKET_NAME: ${GCP_BUCKET_NAME:-tranc3}
+      GCP_CREDENTIALS_PATH: ${GCP_CREDENTIALS_PATH:-}
+      # Zero-cost cloud fallback — Azure Cosmos DB (HYBRID/CLOUD_ONLY modes)
+      AZURE_COSMOS_ENDPOINT: ${AZURE_COSMOS_ENDPOINT:-}
+      AZURE_COSMOS_KEY: ${AZURE_COSMOS_KEY:-}
+      AZURE_COSMOS_DATABASE: ${AZURE_COSMOS_DATABASE:-tranc3}
+      AZURE_COSMOS_CONTAINER: ${AZURE_COSMOS_CONTAINER:-storage}
+      # Zero-cost cloud fallback — AWS DynamoDB (HYBRID/CLOUD_ONLY modes)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_DYNAMO_TABLE: ${AWS_DYNAMO_TABLE:-tranc3-storage}
       # Observability
       PORT: "8000"
       REDIS_URL: redis://redis:6379/0

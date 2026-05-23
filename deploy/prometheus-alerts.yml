@@ -57,7 +57,7 @@ groups:
 
   # ═══════════════════════════════════════════════════════════════════════════
   # STORAGE CAPACITY ALERTS — Zero-Cost Auto-Migration Triggers
-  # Storage Tier Priority: ZFS(0) → MinIO(1) → Ceph(2) → R2(3) → OCI(4)
+  # Storage Tier Priority: ZFS(0) → MinIO(1) → Ceph(2) → R2(3) → OCI(4) → GCP(5) → Azure(6) → AWS(7)
   # ═══════════════════════════════════════════════════════════════════════════
 
   - name: tranc3_storage_alerts
@@ -145,3 +145,66 @@ groups:
         annotations:
           summary: "Cloud free-tier CRITICAL — approaching 10GB hard limit"
           description: "Cloud storage usage is {{ $value | humanize }}B. Immediate migration required to avoid charges."
+
+      # ── GCP Cloud Storage Alerts (Tier 5) ──────────────────────────
+      - alert: GCPStorageApproachingLimit
+        expr: tranc3_gcp_storage_used_bytes > (5 * 1024 * 1024 * 1024 * 0.8)
+        for: 10m
+        labels:
+          severity: warning
+          storage_tier: gcp
+        annotations:
+          summary: "GCP Cloud Storage approaching 5GB free-tier limit"
+          description: "GCP storage usage is {{ $value | humanize }}B. Zero-cost auto-migration will redistribute data."
+
+      - alert: GCPStorageCritical
+        expr: tranc3_gcp_storage_used_bytes > (5 * 1024 * 1024 * 1024 * 0.95)
+        for: 5m
+        labels:
+          severity: critical
+          storage_tier: gcp
+        annotations:
+          summary: "GCP Cloud Storage CRITICAL — approaching 5GB hard limit"
+          description: "GCP storage usage is {{ $value | humanize }}B. Immediate migration required to avoid charges."
+
+      # ── Azure Cosmos DB Alerts (Tier 6) ────────────────────────────
+      - alert: AzureCosmosApproachingLimit
+        expr: tranc3_azure_cosmos_storage_used_bytes > (25 * 1024 * 1024 * 1024 * 0.8)
+        for: 10m
+        labels:
+          severity: warning
+          storage_tier: azure
+        annotations:
+          summary: "Azure Cosmos DB approaching 25GB free-tier limit"
+          description: "Azure Cosmos DB storage usage is {{ $value | humanize }}B. Zero-cost auto-migration will redistribute data."
+
+      - alert: AzureCosmosCritical
+        expr: tranc3_azure_cosmos_storage_used_bytes > (25 * 1024 * 1024 * 1024 * 0.95)
+        for: 5m
+        labels:
+          severity: critical
+          storage_tier: azure
+        annotations:
+          summary: "Azure Cosmos DB CRITICAL — approaching 25GB hard limit"
+          description: "Azure Cosmos DB storage usage is {{ $value | humanize }}B. Immediate migration required to avoid charges."
+
+      # ── AWS DynamoDB Alerts (Tier 7) ───────────────────────────────
+      - alert: AWSDynamoApproachingLimit
+        expr: tranc3_aws_dynamo_storage_used_bytes > (25 * 1024 * 1024 * 1024 * 0.8)
+        for: 10m
+        labels:
+          severity: warning
+          storage_tier: aws
+        annotations:
+          summary: "AWS DynamoDB approaching 25GB free-tier limit"
+          description: "AWS DynamoDB storage usage is {{ $value | humanize }}B. Zero-cost auto-migration will redistribute data."
+
+      - alert: AWSDynamoCritical
+        expr: tranc3_aws_dynamo_storage_used_bytes > (25 * 1024 * 1024 * 1024 * 0.95)
+        for: 5m
+        labels:
+          severity: critical
+          storage_tier: aws
+        annotations:
+          summary: "AWS DynamoDB CRITICAL — approaching 25GB hard limit"
+          description: "AWS DynamoDB storage usage is {{ $value | humanize }}B. Immediate migration required to avoid charges."

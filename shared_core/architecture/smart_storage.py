@@ -18,13 +18,16 @@ Storage Tier Priority (Zero-Cost Mandate):
     Tier 0: ZFS (local NAS — unlimited, fastest, free)
     Tier 1: MinIO (local S3-compatible — unlimited, fast, free)
     Tier 2: Ceph (distributed — scalable, self-hosted, free)
-    Tier 3: Cloudflare R2 (cloud — 10GB free, egress-free)
-    Tier 4: OCI Object Storage (cloud — 10GB free tier)
+    Tier 3: Cloudflare R2 (cloud — 10GB free, egress-free, S3-compatible)
+    Tier 4: OCI Object Storage (cloud — 20GB free tier, S3-compatible)
+    Tier 5: GCP Cloud Storage (cloud — 5GB free, GCS API)
+    Tier 6: Azure Cosmos DB (cloud — 25GB free, document API)
+    Tier 7: AWS DynamoDB (cloud — 25GB free, key-value API)
 
 SYSTEM_MODE:
     TRUE_NAS   — Primary: ZFS/MinIO (local), No cloud fallback
-    HYBRID     — Primary: ZFS/MinIO (local), Fallback: R2/OCI (cloud free tier)
-    CLOUD_ONLY — Primary: R2 (cloud free tier), Fallback: OCI (cloud free tier)
+    HYBRID     — Primary: ZFS/MinIO (local), Fallback: R2/OCI/GCP/Azure/AWS (cloud free tier)
+    CLOUD_ONLY — Primary: R2/OCI (cloud free tier), Fallback: GCP/Azure/AWS (cloud free tier)
 
 Zero-Cost Auto-Modulation:
     When a location approaches its free-tier limit, the system proactively
@@ -65,8 +68,11 @@ class StorageTier(Enum):
     ZFS = 0          # Local NAS — unlimited, fastest, free
     MINIO = 1        # Local S3-compatible — unlimited, fast, free
     CEPH = 2         # Distributed — scalable, self-hosted, free
-    R2 = 3           # Cloudflare R2 — 10GB free, egress-free
-    OCI = 4          # OCI Object Storage — 10GB free tier
+    R2 = 3           # Cloudflare R2 — 10GB free, egress-free, S3-compatible
+    OCI = 4          # OCI Object Storage — 20GB free tier, S3-compatible
+    GCP = 5          # GCP Cloud Storage — 5GB free, GCS API
+    AZURE = 6        # Azure Cosmos DB — 25GB free, document API
+    AWS = 7          # AWS DynamoDB — 25GB free, key-value API
 
 
 @dataclass
@@ -470,7 +476,7 @@ class MinIOStorageProvider(SmartStorageProvider):
             response.release_conn()
             return data
         except Exception as e:
-            raise FileNotFoundError(f"MinIO read failed: {path}: {e}")
+            raise FileNotFoundError(f"MinIO read failed: {path}: {e}") from None
 
     async def write(self, path: str, data: bytes) -> None:
         client = self._get_client()
@@ -568,7 +574,7 @@ class MinIOStorageProvider(SmartStorageProvider):
         # MinIO supports ILM (Information Lifecycle Management)
         # Using the minio-py API for lifecycle configuration
         try:
-            from minio.lifecycleconfig import LifecycleConfig, Rule, Expiration, Filter
+            from minio.lifecycleconfig import Expiration, Filter, LifecycleConfig, Rule
 
             config = LifecycleConfig(
                 [
@@ -672,7 +678,7 @@ class CephStorageProvider(SmartStorageProvider):
             )
             return await asyncio.to_thread(response["Body"].read)
         except Exception as e:
-            raise FileNotFoundError(f"Ceph read failed: {path}: {e}")
+            raise FileNotFoundError(f"Ceph read failed: {path}: {e}") from None
 
     async def write(self, path: str, data: bytes) -> None:
         client = self._get_client()
@@ -758,7 +764,7 @@ class OCISmartProvider(SmartStorageProvider):
 
     Wraps the existing OCIObjectStorageProvider from oci_storage.py
     and adds the SmartStorageProvider interface (capacity monitoring, tier).
-    OCI Always-Free tier: 10 GB Object Storage + 10 TB outbound/month.
+    OCI Always-Free tier: 20 GB Object Storage + 10 TB outbound/month.
     """
 
     def __init__(self):
@@ -789,7 +795,7 @@ class OCISmartProvider(SmartStorageProvider):
         return await self._oci.exists(path)
 
     async def get_capacity(self) -> TierCapacity:
-        """OCI free tier: 10 GB Object Storage."""
+        """OCI free tier: 20 GB Object Storage."""
         now = time.time()
         try:
             health = await self._oci.health()
@@ -801,7 +807,7 @@ class OCISmartProvider(SmartStorageProvider):
                 )
             # OCI doesn't expose simple capacity via the health endpoint;
             # return nominal free-tier capacity
-            free_tier_bytes = 10 * 1024 ** 3  # 10 GB
+            free_tier_bytes = 20 * 1024 ** 3  # 20 GB
             return TierCapacity(
                 tier=StorageTier.OCI,
                 is_available=True,
@@ -878,7 +884,7 @@ class CloudflareR2Provider(SmartStorageProvider):
             except ImportError:
                 raise RuntimeError(
                     "boto3 is required for R2 storage. Install: pip install boto3"
-                )
+                ) from None
         return self._client
 
     async def read(self, path: str) -> bytes:
@@ -888,7 +894,7 @@ class CloudflareR2Provider(SmartStorageProvider):
             return response["Body"].read()
         except Exception as e:
             if "NoSuchKey" in str(e) or "404" in str(e):
-                raise FileNotFoundError(f"R2 path not found: {path}")
+                raise FileNotFoundError(f"R2 path not found: {path}") from None
             raise
 
     async def write(self, path: str, data: bytes) -> None:
@@ -902,7 +908,7 @@ class CloudflareR2Provider(SmartStorageProvider):
             client.delete_object(Bucket=self._bucket, Key=path)
         except Exception as e:
             if "NoSuchKey" in str(e) or "404" in str(e):
-                raise FileNotFoundError(f"R2 path not found: {path}")
+                raise FileNotFoundError(f"R2 path not found: {path}") from None
             raise
 
     async def list(self, prefix: str = "") -> List[str]:
@@ -977,6 +983,604 @@ class CloudflareR2Provider(SmartStorageProvider):
             }
 
 
+# ---------------------------------------------------------------------------
+# GCP Cloud Storage Provider (5 GB free tier)
+# ---------------------------------------------------------------------------
+
+class GCPStorageProvider(SmartStorageProvider):
+    """Google Cloud Storage provider — 5 GB always-free tier (US regions).
+
+    GCP Always-Free tier: 5 GB Cloud Storage (US multi-region/us-west1/
+    us-central1/us-east1), 5K Class A + 50K Class B operations/month,
+    100 GB egress/month. Uses the google-cloud-storage Python SDK.
+
+    Zero-cost auto-modulation: The SmartStorageOrchestrator monitors usage
+    and proactively migrates data to the next provider (Azure/AWS) when
+    the 5 GB free-tier limit is approached.
+    """
+
+    def __init__(
+        self,
+        project_id: str = "",
+        bucket_name: str = "tranc3",
+        credentials_path: Optional[str] = None,
+    ):
+        self._project_id = project_id or os.getenv("GCP_PROJECT_ID", "")
+        self._bucket_name = bucket_name or os.getenv("GCP_BUCKET_NAME", "tranc3")
+        self._credentials_path = credentials_path or os.getenv(
+            "GCP_CREDENTIALS_PATH", ""
+        )
+        self._client = None
+        self._bucket = None
+
+    @property
+    def tier(self) -> StorageTier:
+        return StorageTier.GCP
+
+    @property
+    def name(self) -> str:
+        return "GCP Cloud Storage"
+
+    def _get_client(self):
+        """Lazy-initialize the GCS client."""
+        if self._client is None:
+            try:
+                from google.cloud import storage
+
+                if self._credentials_path:
+                    self._client = storage.Client.from_service_account_json(
+                        self._credentials_path,
+                        project=self._project_id,
+                    )
+                else:
+                    # Use Application Default Credentials
+                    self._client = storage.Client(project=self._project_id)
+            except ImportError:
+                raise RuntimeError(
+                    "google-cloud-storage is required for GCP storage. "
+                    "Install: pip install google-cloud-storage"
+                ) from None
+        return self._client
+
+    def _get_bucket(self):
+        """Lazy-initialize the GCS bucket reference."""
+        if self._bucket is None:
+            client = self._get_client()
+            self._bucket = client.bucket(self._bucket_name)
+        return self._bucket
+
+    async def read(self, path: str) -> bytes:
+        bucket = self._get_bucket()
+        blob = bucket.blob(path)
+        try:
+            return blob.download_as_bytes()
+        except Exception as e:
+            if "404" in str(e) or "No such object" in str(e):
+                raise FileNotFoundError(f"GCS path not found: {path}") from None
+            raise
+
+    async def write(self, path: str, data: bytes) -> None:
+        bucket = self._get_bucket()
+        blob = bucket.blob(path)
+        blob.upload_from_string(data, content_type="application/octet-stream")
+        logger.debug("Wrote %d bytes to GCS://%s/%s", len(data), self._bucket_name, path)
+
+    async def delete(self, path: str) -> None:
+        bucket = self._get_bucket()
+        blob = bucket.blob(path)
+        try:
+            blob.delete()
+        except Exception as e:
+            if "404" in str(e):
+                raise FileNotFoundError(f"GCS path not found: {path}") from None
+            raise
+
+    async def list(self, prefix: str = "") -> List[str]:
+        bucket = self._get_bucket()
+        return sorted(blob.name for blob in bucket.list_blobs(prefix=prefix))
+
+    async def exists(self, path: str) -> bool:
+        bucket = self._get_bucket()
+        blob = bucket.blob(path)
+        return blob.exists()
+
+    async def get_capacity(self) -> TierCapacity:
+        """GCP free tier: 5 GB Cloud Storage (US regions only)."""
+        now = time.time()
+        try:
+            bucket = self._get_bucket()
+            total_bytes = 0
+            for blob in bucket.list_blobs():
+                total_bytes += blob.size or 0
+
+            free_tier_gb = 5.0
+            used_gb = total_bytes / (1024 ** 3)
+            usage_pct = min(used_gb / free_tier_gb, 1.0)
+
+            return TierCapacity(
+                tier=StorageTier.GCP,
+                is_available=True,
+                total_bytes=int(free_tier_gb * 1024 ** 3),
+                used_bytes=total_bytes,
+                usage_pct=usage_pct,
+                is_critical=usage_pct > 0.95,
+                last_checked=now,
+            )
+        except Exception as e:
+            logger.warning("GCP capacity check failed: %s", e)
+            return TierCapacity(
+                tier=StorageTier.GCP,
+                is_available=False,
+                last_checked=now,
+            )
+
+    async def health(self) -> Dict[str, Any]:
+        try:
+            client = self._get_client()
+            # Verify connectivity by checking bucket existence
+            bucket = client.bucket(self._bucket_name)
+            if not bucket.exists():
+                return {
+                    "status": "unhealthy",
+                    "provider": self.name,
+                    "tier": self.tier.name,
+                    "error": f"Bucket '{self._bucket_name}' does not exist",
+                }
+            cap = await self.get_capacity()
+            return {
+                "status": "healthy",
+                "provider": self.name,
+                "tier": self.tier.name,
+                "bucket": self._bucket_name,
+                "project": self._project_id,
+                "capacity_used_pct": f"{cap.usage_pct * 100:.1f}%",
+            }
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "provider": self.name,
+                "tier": self.tier.name,
+                "error": str(e),
+            }
+
+
+# ---------------------------------------------------------------------------
+# Azure Cosmos DB Provider (25 GB free tier)
+# ---------------------------------------------------------------------------
+
+class AzureCosmosProvider(SmartStorageProvider):
+    """Azure Cosmos DB provider — 1K RU/sec + 25 GB always-free tier.
+
+    Azure Always-Free tier: 1,000 RU/sec provisioned throughput + 25 GB
+    storage per subscription. Uses the azure-cosmos Python SDK. Cosmos DB
+    is a document/NoSQL database, not an object store — it is best suited
+    for structured metadata, entity data, and configuration storage rather
+    than raw binary blobs.
+
+    Zero-cost auto-modulation: The SmartStorageOrchestrator tracks RU
+    consumption and storage usage. When approaching the 25 GB or 1K RU/sec
+    limit, data is proactively migrated to AWS DynamoDB (priority 7).
+    """
+
+    def __init__(
+        self,
+        endpoint: str = "",
+        key: str = "",
+        database_name: str = "tranc3",
+        container_name: str = "storage",
+    ):
+        self._endpoint = endpoint or os.getenv("AZURE_COSMOS_ENDPOINT", "")
+        self._key = key or os.getenv("AZURE_COSMOS_KEY", "")
+        self._database_name = database_name or os.getenv(
+            "AZURE_COSMOS_DATABASE", "tranc3"
+        )
+        self._container_name = container_name or os.getenv(
+            "AZURE_COSMOS_CONTAINER", "storage"
+        )
+        self._client = None
+        self._database = None
+        self._container = None
+
+    @property
+    def tier(self) -> StorageTier:
+        return StorageTier.AZURE
+
+    @property
+    def name(self) -> str:
+        return "Azure Cosmos DB"
+
+    def _get_client(self):
+        """Lazy-initialize the Cosmos DB client."""
+        if self._client is None:
+            try:
+                from azure.cosmos import CosmosClient
+
+                self._client = CosmosClient(self._endpoint, self._key)
+            except ImportError:
+                raise RuntimeError(
+                    "azure-cosmos is required for Azure Cosmos DB storage. "
+                    "Install: pip install azure-cosmos"
+                ) from None
+        return self._client
+
+    def _get_container(self):
+        """Lazy-initialize the Cosmos DB container reference."""
+        if self._container is None:
+            client = self._get_client()
+            self._database = client.get_database_client(self._database_name)
+            self._container = self._database.get_container_client(
+                self._container_name
+            )
+        return self._container
+
+    async def read(self, path: str) -> bytes:
+        import base64
+
+        container = self._get_container()
+        try:
+            doc = container.read_item(item=path, partition_key=path)
+            encoded_data = doc.get("data", "")
+            return base64.b64decode(encoded_data)
+        except Exception as e:
+            if "NotFound" in str(e) or "404" in str(e):
+                raise FileNotFoundError(
+                    f"Cosmos DB document not found: {path}"
+                ) from None
+            raise
+
+    async def write(self, path: str, data: bytes) -> None:
+        import base64
+
+        container = self._get_container()
+        doc = {
+            "id": path,
+            "data": base64.b64encode(data).decode("ascii"),
+            "size": len(data),
+            "created_at": datetime.now(tz=timezone.utc).isoformat(),
+        }
+        container.upsert_item(body=doc)
+        logger.debug(
+            "Wrote %d bytes to Cosmos DB://%s/%s",
+            len(data), self._database_name, path,
+        )
+
+    async def delete(self, path: str) -> None:
+        container = self._get_container()
+        try:
+            container.delete_item(item=path, partition_key=path)
+        except Exception as e:
+            if "NotFound" in str(e) or "404" in str(e):
+                raise FileNotFoundError(
+                    f"Cosmos DB document not found: {path}"
+                ) from None
+            raise
+
+    async def list(self, prefix: str = "") -> List[str]:
+        container = self._get_container()
+        query = "SELECT c.id FROM c"
+        if prefix:
+            query = f"SELECT c.id FROM c WHERE STARTSWITH(c.id, '{prefix}')"
+        results = list(container.query_items(
+            query=query,
+            enable_cross_partition_query=True,
+        ))
+        return sorted(r["id"] for r in results)
+
+    async def exists(self, path: str) -> bool:
+        container = self._get_container()
+        query = f"SELECT VALUE COUNT(1) FROM c WHERE c.id = '{path}'"
+        results = list(container.query_items(
+            query=query,
+            enable_cross_partition_query=True,
+        ))
+        return results[0] > 0 if results else False
+
+    async def get_capacity(self) -> TierCapacity:
+        """Azure Cosmos DB free tier: 25 GB storage + 1K RU/sec."""
+        now = time.time()
+        try:
+            container = self._get_container()
+            # Estimate storage from document sizes
+            query = "SELECT VALUE SUM(c.size) FROM c"
+            results = list(container.query_items(
+                query=query,
+                enable_cross_partition_query=True,
+            ))
+            total_bytes = results[0] if results and results[0] else 0
+
+            free_tier_gb = 25.0
+            used_gb = total_bytes / (1024 ** 3)
+            usage_pct = min(used_gb / free_tier_gb, 1.0)
+
+            return TierCapacity(
+                tier=StorageTier.AZURE,
+                is_available=True,
+                total_bytes=int(free_tier_gb * 1024 ** 3),
+                used_bytes=int(total_bytes),
+                usage_pct=usage_pct,
+                is_critical=usage_pct > 0.95,
+                last_checked=now,
+            )
+        except Exception as e:
+            logger.warning("Azure Cosmos DB capacity check failed: %s", e)
+            return TierCapacity(
+                tier=StorageTier.AZURE,
+                is_available=False,
+                last_checked=now,
+            )
+
+    async def health(self) -> Dict[str, Any]:
+        try:
+            client = self._get_client()
+            # Verify connectivity by listing databases
+            databases = list(client.list_databases())
+            db_names = [db["id"] for db in databases]
+            if self._database_name not in db_names:
+                return {
+                    "status": "unhealthy",
+                    "provider": self.name,
+                    "tier": self.tier.name,
+                    "error": f"Database '{self._database_name}' does not exist",
+                }
+            cap = await self.get_capacity()
+            return {
+                "status": "healthy",
+                "provider": self.name,
+                "tier": self.tier.name,
+                "database": self._database_name,
+                "container": self._container_name,
+                "capacity_used_pct": f"{cap.usage_pct * 100:.1f}%",
+            }
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "provider": self.name,
+                "tier": self.tier.name,
+                "error": str(e),
+            }
+
+
+# ---------------------------------------------------------------------------
+# AWS DynamoDB Provider (25 GB free tier)
+# ---------------------------------------------------------------------------
+
+class AWSDynamoProvider(SmartStorageProvider):
+    """AWS DynamoDB provider — 25 GB + 25 WCUs + 25 RCUs always-free tier.
+
+    AWS Always-Free tier: 25 GB storage, 25 write capacity units (WCUs),
+    25 read capacity units (RCUs) per month. Uses boto3 SDK. DynamoDB
+    is a key-value/document database, not an object store — best suited
+    for structured metadata, entity data, session tokens, and caching
+    rather than large binary blobs.
+
+    CRITICAL: AWS has NO always-free object storage (S3/Glacier are
+    12-month only). DynamoDB is the only always-free storage option.
+    For zero-cost cloud object storage, prefer R2 (10GB) or OCI (20GB).
+
+    Zero-cost auto-modulation: The SmartStorageOrchestrator tracks
+    storage and throughput consumption. When approaching limits, data
+    is proactively migrated or consolidated to stay within free tier.
+    """
+
+    def __init__(
+        self,
+        table_name: str = "tranc3-storage",
+        region: str = "us-east-1",
+        aws_access_key_id: str = "",
+        aws_secret_access_key: str = "",
+    ):
+        self._table_name = table_name or os.getenv(
+            "AWS_DYNAMO_TABLE", "tranc3-storage"
+        )
+        self._region = region or os.getenv("AWS_REGION", "us-east-1")
+        self._access_key = aws_access_key_id or os.getenv(
+            "AWS_ACCESS_KEY_ID", ""
+        )
+        self._secret_key = aws_secret_access_key or os.getenv(
+            "AWS_SECRET_ACCESS_KEY", ""
+        )
+        self._client = None
+
+    @property
+    def tier(self) -> StorageTier:
+        return StorageTier.AWS
+
+    @property
+    def name(self) -> str:
+        return "AWS DynamoDB"
+
+    def _get_client(self):
+        """Lazy-initialize the DynamoDB client."""
+        if self._client is None:
+            try:
+                import boto3
+
+                kwargs = {"region_name": self._region}
+                if self._access_key and self._secret_key:
+                    kwargs["aws_access_key_id"] = self._access_key
+                    kwargs["aws_secret_access_key"] = self._secret_key
+                self._client = boto3.client("dynamodb", **kwargs)
+            except ImportError:
+                raise RuntimeError(
+                    "boto3 is required for AWS DynamoDB storage. "
+                    "Install: pip install boto3"
+                ) from None
+        return self._client
+
+    async def read(self, path: str) -> bytes:
+        import base64
+
+        client = self._get_client()
+        try:
+            response = client.get_item(
+                TableName=self._table_name,
+                Key={"path": {"S": path}},
+            )
+            item = response.get("Item")
+            if not item:
+                raise FileNotFoundError(
+                    f"DynamoDB item not found: {path}"
+                )
+            encoded_data = item["data"]["S"]
+            return base64.b64decode(encoded_data)
+        except FileNotFoundError:
+            raise
+        except Exception as e:
+            if "ResourceNotFoundException" in str(e):
+                raise FileNotFoundError(
+                    f"DynamoDB item not found: {path}"
+                ) from None
+            raise
+
+    async def write(self, path: str, data: bytes) -> None:
+        import base64
+
+        client = self._get_client()
+        encoded_data = base64.b64encode(data).decode("ascii")
+        client.put_item(
+            TableName=self._table_name,
+            Item={
+                "path": {"S": path},
+                "data": {"S": encoded_data},
+                "size": {"N": str(len(data))},
+                "created_at": {"S": datetime.now(tz=timezone.utc).isoformat()},
+            },
+        )
+        logger.debug(
+            "Wrote %d bytes to DynamoDB://%s/%s",
+            len(data), self._table_name, path,
+        )
+
+    async def delete(self, path: str) -> None:
+        client = self._get_client()
+        try:
+            client.delete_item(
+                TableName=self._table_name,
+                Key={"path": {"S": path}},
+            )
+        except Exception as e:
+            if "ResourceNotFoundException" in str(e):
+                raise FileNotFoundError(
+                    f"DynamoDB item not found: {path}"
+                ) from None
+            raise
+
+    async def list(self, prefix: str = "") -> List[str]:
+        client = self._get_client()
+        results = []
+        if prefix:
+            response = client.query(
+                TableName=self._table_name,
+                KeyConditionExpression="begins_with(#p, :prefix)",
+                ExpressionAttributeNames={"#p": "path"},
+                ExpressionAttributeValues={":prefix": {"S": prefix}},
+            )
+        else:
+            response = client.scan(TableName=self._table_name)
+
+        for item in response.get("Items", []):
+            results.append(item["path"]["S"])
+
+        # Handle pagination
+        while "LastEvaluatedKey" in response:
+            if prefix:
+                response = client.query(
+                    TableName=self._table_name,
+                    KeyConditionExpression="begins_with(#p, :prefix)",
+                    ExpressionAttributeNames={"#p": "path"},
+                    ExpressionAttributeValues={":prefix": {"S": prefix}},
+                    ExclusiveStartKey=response["LastEvaluatedKey"],
+                )
+            else:
+                response = client.scan(
+                    TableName=self._table_name,
+                    ExclusiveStartKey=response["LastEvaluatedKey"],
+                )
+            for item in response.get("Items", []):
+                results.append(item["path"]["S"])
+
+        return sorted(results)
+
+    async def exists(self, path: str) -> bool:
+        client = self._get_client()
+        response = client.get_item(
+            TableName=self._table_name,
+            Key={"path": {"S": path}},
+            ProjectionExpression="#p",
+            ExpressionAttributeNames={"#p": "path"},
+        )
+        return "Item" in response
+
+    async def get_capacity(self) -> TierCapacity:
+        """AWS DynamoDB free tier: 25 GB storage."""
+        now = time.time()
+        try:
+            client = self._get_client()
+            # Estimate storage from scan + sum of sizes
+            total_bytes = 0
+            response = client.scan(
+                TableName=self._table_name,
+                ProjectionExpression="#s",
+                ExpressionAttributeNames={"#s": "size"},
+            )
+            for item in response.get("Items", []):
+                total_bytes += int(item.get("size", {}).get("N", "0"))
+
+            # Handle pagination
+            while "LastEvaluatedKey" in response:
+                response = client.scan(
+                    TableName=self._table_name,
+                    ProjectionExpression="#s",
+                    ExpressionAttributeNames={"#s": "size"},
+                    ExclusiveStartKey=response["LastEvaluatedKey"],
+                )
+                for item in response.get("Items", []):
+                    total_bytes += int(item.get("size", {}).get("N", "0"))
+
+            free_tier_gb = 25.0
+            used_gb = total_bytes / (1024 ** 3)
+            usage_pct = min(used_gb / free_tier_gb, 1.0)
+
+            return TierCapacity(
+                tier=StorageTier.AWS,
+                is_available=True,
+                total_bytes=int(free_tier_gb * 1024 ** 3),
+                used_bytes=total_bytes,
+                usage_pct=usage_pct,
+                is_critical=usage_pct > 0.95,
+                last_checked=now,
+            )
+        except Exception as e:
+            logger.warning("AWS DynamoDB capacity check failed: %s", e)
+            return TierCapacity(
+                tier=StorageTier.AWS,
+                is_available=False,
+                last_checked=now,
+            )
+
+    async def health(self) -> Dict[str, Any]:
+        try:
+            client = self._get_client()
+            # Verify table exists
+            client.describe_table(TableName=self._table_name)
+            cap = await self.get_capacity()
+            return {
+                "status": "healthy",
+                "provider": self.name,
+                "tier": self.tier.name,
+                "table": self._table_name,
+                "region": self._region,
+                "capacity_used_pct": f"{cap.usage_pct * 100:.1f}%",
+            }
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "provider": self.name,
+                "tier": self.tier.name,
+                "error": str(e),
+            }
+
+
 class SmartStorageOrchestrator:
     """Intelligent storage orchestrator that manages multiple providers.
 
@@ -1001,6 +1605,9 @@ class SmartStorageOrchestrator:
         ceph_provider: Optional[CephStorageProvider] = None,
         r2_provider: Optional[SmartStorageProvider] = None,
         oci_provider: Optional[SmartStorageProvider] = None,
+        gcp_provider: Optional[SmartStorageProvider] = None,
+        azure_provider: Optional[SmartStorageProvider] = None,
+        aws_provider: Optional[SmartStorageProvider] = None,
     ):
         self._mode = system_mode or self._detect_mode()
         self._providers: Dict[StorageTier, SmartStorageProvider] = {}
@@ -1019,6 +1626,12 @@ class SmartStorageOrchestrator:
             self._providers[StorageTier.R2] = r2_provider
         if oci_provider:
             self._providers[StorageTier.OCI] = oci_provider
+        if gcp_provider:
+            self._providers[StorageTier.GCP] = gcp_provider
+        if azure_provider:
+            self._providers[StorageTier.AZURE] = azure_provider
+        if aws_provider:
+            self._providers[StorageTier.AWS] = aws_provider
 
     @staticmethod
     def _detect_mode() -> SystemMode:
@@ -1034,9 +1647,16 @@ class SmartStorageOrchestrator:
         if self._mode == SystemMode.TRUE_NAS:
             return [StorageTier.ZFS, StorageTier.MINIO, StorageTier.CEPH]
         elif self._mode == SystemMode.HYBRID:
-            return [StorageTier.ZFS, StorageTier.MINIO, StorageTier.CEPH, StorageTier.R2, StorageTier.OCI]
+            return [
+                StorageTier.ZFS, StorageTier.MINIO, StorageTier.CEPH,
+                StorageTier.R2, StorageTier.OCI, StorageTier.GCP,
+                StorageTier.AZURE, StorageTier.AWS,
+            ]
         else:  # CLOUD_ONLY
-            return [StorageTier.R2, StorageTier.OCI]
+            return [
+                StorageTier.R2, StorageTier.OCI, StorageTier.GCP,
+                StorageTier.AZURE, StorageTier.AWS,
+            ]
 
     async def _select_provider(
         self,
@@ -1313,9 +1933,12 @@ def create_smart_storage(
             bucket=kwargs.get("ceph_bucket", os.getenv("CEPH_BUCKET", "tranc3")),
         )
 
-    # Cloud providers (R2/OCI) — available in HYBRID and CLOUD_ONLY modes
+    # Cloud providers — available in HYBRID and CLOUD_ONLY modes
     r2_provider = None
     oci_provider = None
+    gcp_provider = None
+    azure_provider = None
+    aws_provider = None
 
     r2_account_id = kwargs.get("r2_account_id", os.getenv("R2_ACCOUNT_ID", ""))
     r2_access_key = kwargs.get("r2_access_key", os.getenv("R2_ACCESS_KEY_ID", ""))
@@ -1336,10 +1959,53 @@ def create_smart_storage(
         except ImportError:
             logger.warning("OCI provider not available — install oci-sdk")
 
-    if mode == SystemMode.CLOUD_ONLY and not r2_provider and not oci_provider:
+    # GCP Cloud Storage (5 GB free tier)
+    gcp_project_id = kwargs.get("gcp_project_id", os.getenv("GCP_PROJECT_ID", ""))
+    gcp_credentials = kwargs.get("gcp_credentials_path", os.getenv("GCP_CREDENTIALS_PATH", ""))
+    if gcp_project_id:
+        try:
+            gcp_provider = GCPStorageProvider(
+                project_id=gcp_project_id,
+                bucket_name=kwargs.get("gcp_bucket", os.getenv("GCP_BUCKET_NAME", "tranc3")),
+                credentials_path=gcp_credentials or None,
+            )
+        except Exception as e:
+            logger.warning("GCP provider not available: %s", e)
+
+    # Azure Cosmos DB (25 GB free tier)
+    azure_endpoint = kwargs.get("azure_cosmos_endpoint", os.getenv("AZURE_COSMOS_ENDPOINT", ""))
+    azure_key = kwargs.get("azure_cosmos_key", os.getenv("AZURE_COSMOS_KEY", ""))
+    if azure_endpoint and azure_key:
+        try:
+            azure_provider = AzureCosmosProvider(
+                endpoint=azure_endpoint,
+                key=azure_key,
+                database_name=kwargs.get("azure_cosmos_database", os.getenv("AZURE_COSMOS_DATABASE", "tranc3")),
+                container_name=kwargs.get("azure_cosmos_container", os.getenv("AZURE_COSMOS_CONTAINER", "storage")),
+            )
+        except Exception as e:
+            logger.warning("Azure Cosmos DB provider not available: %s", e)
+
+    # AWS DynamoDB (25 GB free tier)
+    aws_access_key = kwargs.get("aws_access_key_id", os.getenv("AWS_ACCESS_KEY_ID", ""))
+    aws_secret_key_val = kwargs.get("aws_secret_access_key", os.getenv("AWS_SECRET_ACCESS_KEY", ""))
+    if aws_access_key and aws_secret_key_val:
+        try:
+            aws_provider = AWSDynamoProvider(
+                table_name=kwargs.get("aws_dynamo_table", os.getenv("AWS_DYNAMO_TABLE", "tranc3-storage")),
+                region=kwargs.get("aws_region", os.getenv("AWS_REGION", "us-east-1")),
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key_val,
+            )
+        except Exception as e:
+            logger.warning("AWS DynamoDB provider not available: %s", e)
+
+    cloud_providers = [r2_provider, oci_provider, gcp_provider, azure_provider, aws_provider]
+    if mode == SystemMode.CLOUD_ONLY and not any(cloud_providers):
         logger.warning(
             "CLOUD_ONLY mode but no cloud providers configured! "
-            "Set R2_ACCOUNT_ID or OCI_COMPARTMENT_ID environment variables."
+            "Set R2_ACCOUNT_ID, OCI_COMPARTMENT_ID, GCP_PROJECT_ID, "
+            "AZURE_COSMOS_ENDPOINT, or AWS_ACCESS_KEY_ID environment variables."
         )
 
     return SmartStorageOrchestrator(
@@ -1349,4 +2015,7 @@ def create_smart_storage(
         ceph_provider=ceph_provider,
         r2_provider=r2_provider,
         oci_provider=oci_provider,
+        gcp_provider=gcp_provider,
+        azure_provider=azure_provider,
+        aws_provider=aws_provider,
     )
