@@ -1011,3 +1011,17 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | 13.3 | Noqa Cleanup | ✅ Complete | Fixed invalid # noqa directives in smart_remediator.py |
 | 13.4 | GitGuardian | ✅ Complete | Added .gitguardian.yml to suppress false positive secret detection |
 | 13.5 | CI Pipeline Green | ✅ Complete | Ruff Lint ✅, Pytest ✅, CodeQL ✅, Trivy ✅ — all checks pass on commit 430a06e |
+
+## Phase 14 — PR Consolidation & Merge Readiness
+
+| Phase | Component | Status | Description |
+|-------|-----------|--------|-------------|
+| 14.1 | Ruff YAML Exclusion | ✅ Complete | Added .forgejo/ to ruff extend-exclude in pyproject.toml and CI workflow |
+| 14.2 | PR #43 Cherry-Pick | ✅ Complete | 4 unique files from PR #43 merged into PR #48 (adaptive-ci.yml, credential-rotation-advisory.md, watchdog.py, orchestration/__init__.py) |
+| 14.3 | Import Fix | ✅ Complete | Fixed __init__.py incorrect imports (HealthCheckResult→removed, DependencyNode→GraphNode, DependencyEdge→GraphEdge, DriftSeverity→removed) |
+| 14.4 | PR #48 Merged | ✅ Complete | Merged to main — all CI checks pass (Ruff Lint ✅, Pytest ✅, CodeQL ✅, Trivy ✅) |
+| 14.5 | Superseded PRs Closed | ✅ Complete | PR #43 CLOSED (superseded), PR #46 MERGED, PR #47 CLOSED (superseded) |
+| 14.6 | CodeQL Dismiss | ✅ Complete | Dismiss suppressed alerts step ran successfully on main for both python and javascript-typescript |
+| 14.7 | GitGuardian Config | ✅ Complete | .gitguardian.yaml now on default branch — future scans will respect ignored_paths and ignored_matches |
+| 14.8 | Main Branch CI | ✅ Complete | All 5 workflows pass on main: CI ✅, CodeQL ✅, Trivy ✅, Test Suite ✅, Dependency Graph ✅ |
+| 14.9 | Local Verification | ✅ Complete | Ruff Lint ✅, Ruff Format (379 files) ✅, Pytest 1231 passed / 0 failed ✅ |
