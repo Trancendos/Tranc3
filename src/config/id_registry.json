@@ -1,24 +1,24 @@
 {
-  "version": "2.0.0",
+  "version": "2.1.0",
   "generated_by": "Tranc3 Naming Repair & ID Registry Generator",
   "taxonomy": {
-    "PID": "Product/Location ID — PID-XXX (3-letter location abbreviation)",
-    "AID": "AI ID — AID-XXX-NN (3-letter location + 2-digit sequence)",
-    "SID": "Service/Agent ID — SID-XXX-NN (3-letter location + 2-digit sequence)",
-    "NID": "Nano-ID/Bot ID — NID-XXX-NN (3-letter location + 2-digit sequence)"
+    "PID": "Product/Location ID \u2014 PID-XXX (3-letter location abbreviation)",
+    "AID": "AI ID \u2014 AID-XXX-NN (3-letter location + 2-digit sequence)",
+    "SID": "Service/Agent ID \u2014 SID-XXX-NN (3-letter location + 2-digit sequence)",
+    "NID": "Nano-ID/Bot ID \u2014 NID-XXX-NN (3-letter location + 2-digit sequence)"
   },
   "tiers": {
-    "1": "The Sovereign — Ultimate orchestrator",
-    "2": "Primes — Executive AI authorities",
-    "3": "Lead AIs — Day-to-day location managers",
-    "4": "Agents — Mid-tier automation (Alpha + Beta)",
-    "5": "Bots — Task-specific micro-workers (01-04)"
+    "1": "The Sovereign \u2014 Ultimate orchestrator",
+    "2": "Primes \u2014 Executive AI authorities",
+    "3": "Lead AIs \u2014 Day-to-day location managers",
+    "4": "Agents \u2014 Mid-tier automation (Alpha + Beta)",
+    "5": "Bots \u2014 Task-specific micro-workers (01-04)"
   },
   "sovereign": {
     "name": "The Sovereign",
     "aid": "AID-SOV-01",
     "tier": 1,
-    "description": "Prime AI — ultimate orchestrator of the Tranc3 ecosystem"
+    "description": "Prime AI \u2014 ultimate orchestrator of the Tranc3 ecosystem"
   },
   "primes": [
     {
@@ -3003,6 +3003,185 @@
           "slot": "04",
           "description": "Smoothly blends external audio playlists with active calming sounds securely."
         }
+      ]
+    }
+  ],
+  "infrastructure": {
+    "_comment": "Phase 16 \u2014 Infrastructure entity taxonomy (PID/AID/SID/NID infra-layer)",
+    "storage_identities": [
+      {
+        "sid": "SID-OCI-01",
+        "name": "OCI Primary Bucket",
+        "backend": "oracle_cloud_object_storage",
+        "free_tier_gb": 20,
+        "purpose": "Primary object store \u2014 always-free OCI tier"
+      },
+      {
+        "sid": "SID-R2-01",
+        "name": "CF R2 Fallback",
+        "backend": "cloudflare_r2",
+        "free_tier_gb": 10,
+        "purpose": "First fallback \u2014 Cloudflare R2 free tier"
+      },
+      {
+        "sid": "SID-MIO-01",
+        "name": "MinIO Local",
+        "backend": "minio_self_hosted",
+        "free_tier_gb": 200,
+        "purpose": "Self-hosted MinIO on OCI 200 GB block volume"
+      },
+      {
+        "sid": "SID-CPH-01",
+        "name": "MicroCeph Meta Pool",
+        "backend": "microceph_rgw",
+        "pool": "tranc3-meta",
+        "pg_num": 8,
+        "purpose": "PID/AID/SID/NID metadata objects"
+      },
+      {
+        "sid": "SID-CPH-02",
+        "name": "MicroCeph Data Pool",
+        "backend": "microceph_rgw",
+        "pool": "tranc3-data",
+        "pg_num": 32,
+        "purpose": "Bulk application object data"
+      },
+      {
+        "sid": "SID-CPH-03",
+        "name": "MicroCeph Archive Pool",
+        "backend": "microceph_rgw",
+        "pool": "tranc3-archive",
+        "pg_num": 8,
+        "purpose": "Cold storage / audit ledger"
+      }
+    ],
+    "network_identities": [
+      {
+        "nid": "NID-RGW-01",
+        "name": "RGW S3 Gateway",
+        "port": 7480,
+        "protocol": "http",
+        "host": "127.0.0.1",
+        "purpose": "RADOS Gateway S3-compatible endpoint (local MicroCeph)"
+      },
+      {
+        "nid": "NID-NSV-01",
+        "name": "Rust Nanoservice",
+        "port": 3000,
+        "protocol": "http",
+        "host": "0.0.0.0",
+        "purpose": "Tokio/hyper async HTTP server on OCI ARM compute"
+      },
+      {
+        "nid": "NID-K3S-01",
+        "name": "K3s API Server",
+        "port": 6443,
+        "protocol": "https",
+        "host": "0.0.0.0",
+        "purpose": "K3s lightweight Kubernetes API server (edge node)"
+      },
+      {
+        "nid": "NID-OCI-01",
+        "name": "OCI Object Storage",
+        "port": 443,
+        "protocol": "https",
+        "host": "{ns}.compat.objectstorage.{region}.oraclecloud.com",
+        "purpose": "Oracle Cloud S3-compatible object storage endpoint"
+      },
+      {
+        "nid": "NID-HSM-01",
+        "name": "PKCS#11 HSM",
+        "port": null,
+        "protocol": "pkcs11",
+        "host": "slot-0",
+        "purpose": "SoftHSM2 (dev) / YubiHSM2 (prod) PKCS#11 slot"
+      }
+    ],
+    "persistent_infra_data_prefixes": [
+      {
+        "prefix": "PID/config/",
+        "description": "Immutable cluster configuration blobs"
+      },
+      {
+        "prefix": "PID/certs/",
+        "description": "Immutable TLS certificates and CA chains"
+      },
+      {
+        "prefix": "PID/snapshots/",
+        "description": "Point-in-time immutable state snapshots"
+      },
+      {
+        "prefix": "PID/audit/",
+        "description": "Immutable audit log events (append-only)"
+      }
+    ],
+    "adaptive_instance_data_prefixes": [
+      {
+        "prefix": "AID/thresholds/",
+        "description": "Mutable adaptive performance thresholds (versioned)"
+      },
+      {
+        "prefix": "AID/health/",
+        "description": "Live cluster health state (versioned)"
+      },
+      {
+        "prefix": "AID/sessions/",
+        "description": "Active session state blobs (versioned)"
+      },
+      {
+        "prefix": "AID/quotas/",
+        "description": "Current quota usage snapshots (versioned)"
+      }
+    ],
+    "crush_map": {
+      "tunables": "optimal",
+      "algorithm": "straw2",
+      "hash": "rjenkins1",
+      "root": "default",
+      "host_bucket": "tranc3-node-0",
+      "rules": [
+        {
+          "id": 0,
+          "name": "replicated_rule",
+          "type": "replicated",
+          "min_size": 1,
+          "max_size": 10,
+          "chooseleaf_type": "host"
+        },
+        {
+          "id": 1,
+          "name": "tranc3_replicated",
+          "type": "replicated",
+          "min_size": 1,
+          "max_size": 3,
+          "chooseleaf_type": "host"
+        }
+      ]
+    },
+    "oci_free_tier": {
+      "object_storage_gb": 20,
+      "api_requests_monthly": 50000,
+      "egress_tb_monthly": 10,
+      "vault_secrets": 150,
+      "hsm_key_versions": 20,
+      "arm_compute_ocpu": 4,
+      "arm_compute_ram_gb": 24,
+      "amd_micro_instances": 2,
+      "block_volume_gb": 200
+    }
+  },
+  "updated_at": "2025-06-01",
+  "changelog": [
+    {
+      "version": "2.1.0",
+      "date": "2025-06-01",
+      "changes": [
+        "Added Phase 16 infrastructure entity taxonomy",
+        "Added SID registry: OCI, R2, MinIO, MicroCeph pools",
+        "Added NID registry: RGW, Nanoservice, K3s, OCI endpoint, HSM",
+        "Added PID/AID object key prefix conventions",
+        "Added CRUSH map configuration block",
+        "Added OCI free-tier quota reference block"
       ]
     }
   ]
