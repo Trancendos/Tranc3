@@ -662,13 +662,6 @@ async def health():
         "ollama_available": ollama_ok,
         "providers": ["ollama", "openrouter", "huggingface", "offline"],
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "entity": {
-            "location": "Luminous",
-            "pillar": "Architectural",
-            "lead_ai": "Cornelius MacIntyre",
-            "primes": ["Cornelius MacIntyre"],
-            "primary_function": "Core Platform Brain & Orchestration Engine",
-        },
     }
 
 

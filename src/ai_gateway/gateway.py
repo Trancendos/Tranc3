@@ -25,9 +25,9 @@ from collections import OrderedDict
 from shared_core.sanitize import sanitize_for_log
 from src.ai_gateway.providers.base import AIProvider
 from src.ai_gateway.types import (
+    DEFAULT_TENANT_CONFIG,
     AIRequest,
     AIResponse,
-    DEFAULT_TENANT_CONFIG,
     GatewayMetrics,
     ProviderHealth,
     RouteRule,
@@ -312,7 +312,7 @@ class AIGateway:
         """Execute a provider call with optional latency limit."""
         import asyncio
 
-        _start = time.monotonic()
+        time.monotonic()
 
         if max_latency_ms:
             try:
@@ -321,7 +321,9 @@ class AIGateway:
                     timeout=max_latency_ms / 1000.0,
                 )
             except asyncio.TimeoutError:
-                raise RuntimeError(f"Provider {provider.name} exceeded {max_latency_ms}ms latency")
+                raise RuntimeError(
+                    f"Provider {provider.name} exceeded {max_latency_ms}ms latency"
+                ) from None
         else:
             return await provider.complete(request)
 

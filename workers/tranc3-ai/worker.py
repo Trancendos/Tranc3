@@ -58,7 +58,7 @@ TRANC3_MODELS: dict[str, dict[str, Any]] = {
         "capabilities": ["chat", "orchestration"],
     },
     "the-guardian": {
-        "name": "The Guardian (Anchor: Orb of Orisis)",
+        "name": "The Guardian",
         "backend": "tranc3-own",
         "capabilities": ["chat", "security"],
     },
@@ -131,7 +131,7 @@ async def call_nano(endpoint: str, payload: dict) -> dict | None:
                 if resp.status_code == 200:
                     return resp.json()
             except httpx.HTTPError:
-                pass  # nosec B110 — graceful degradation
+                pass
 
         # Try dedicated nanoservices server
         if NANO_URL:
@@ -144,7 +144,7 @@ async def call_nano(endpoint: str, payload: dict) -> dict | None:
                 if resp.status_code == 200:
                     return resp.json()
             except httpx.HTTPError:
-                pass  # nosec B110 — graceful degradation
+                pass
 
     return None
 
@@ -246,7 +246,7 @@ async def verify_auth(authorization: str | None) -> dict | None:
                     "email": user.get("email"),
                 }
         except httpx.HTTPError:
-            pass  # nosec B110 — graceful degradation
+            pass
     return None
 
 
@@ -285,13 +285,13 @@ async def health():
                 resp = await client.get(f"{BACKEND_URL}/health")
                 backend_ok = resp.status_code == 200
             except httpx.HTTPError:
-                pass  # nosec B110 — graceful degradation
+                pass
         if has_nano:
             try:
                 resp = await client.get(f"{NANO_URL}/health")
                 nano_ok = resp.status_code == 200
             except httpx.HTTPError:
-                pass  # nosec B110 — graceful degradation
+                pass
 
     mode = "tranc3-backend" if backend_ok else "tranc3-nano" if nano_ok else "stub"
 

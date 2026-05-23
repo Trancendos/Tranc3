@@ -157,13 +157,6 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "entity": {
-            "location": "Arcadian Exchange",
-            "pillar": "Commercial / Financial",
-            "lead_ai": "The Porter Family",
-            "primes": ["Dorris Fontaine"],
-            "primary_function": "Procurement & Resource Trading",
-        },
     }
 
 

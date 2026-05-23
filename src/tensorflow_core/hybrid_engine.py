@@ -147,7 +147,6 @@ class ModelEnsemble:
             # Default: identity / passthrough reduced to output_dim=1 per row
             data = np.array(arr, dtype=np.float32)
             return data.mean(axis=-1, keepdims=True)
-        return None
 
     def _tf_predict(self, inputs: Dict) -> np.ndarray:
         """Synchronous TensorFlow forward pass.
@@ -177,7 +176,6 @@ class ModelEnsemble:
             data = np.array(arr, dtype=np.float32)
             out = data.mean(axis=-1, keepdims=True)
             return out
-        return None
 
 
 class HybridInferenceEngine:
@@ -391,7 +389,6 @@ class HybridInferenceEngine:
             return np.array(out, dtype=np.float32)
 
         raise RuntimeError(f"No TF model registered for task '{task}'")
-        return None
 
     # ------------------------------------------------------------------
     # Batch inference

@@ -345,7 +345,6 @@ class CollectiveMemory:
                 await self._remove_entry(key)
                 return True
             return False
-        return None
 
     async def clear(self, topic: Optional[str] = None) -> int:
         """Clear entries, optionally filtered by topic.

@@ -25,11 +25,11 @@ from typing import Any, Callable
 
 import httpx
 
-from src.mesh.circuit_breaker import CircuitBreaker
 from shared_core.sanitize import sanitize_for_log
+from src.mesh.circuit_breaker import CircuitBreaker
 from src.mesh.types import (
-    CircuitState,
     DEFAULT_MESH_CONFIG,
+    CircuitState,
     HealthStatus,
     ServiceCallOptions,
     ServiceCallResult,

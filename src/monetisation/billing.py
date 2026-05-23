@@ -1,12 +1,13 @@
 # src/monetisation/billing.py
 # TRANC3 Billing, Tier Enforcement & Stripe Integration
 
-import os
 import logging
+import os
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Dict, Optional, Tuple
-from datetime import datetime, timedelta
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)

@@ -484,13 +484,6 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "entity": {
-            "location": "The Digital Grid",
-            "pillar": "Development (Code)",
-            "lead_ai": "Tyler Towncroft",
-            "primes": ["The Doctor (Nikolai O'denhim)"],
-            "primary_function": "Workflow Platform",
-        },
     }
 
 
@@ -550,7 +543,6 @@ async def execute_workflow(workflow_id: str, input_data: Dict[str, Any] = None):
         raise HTTPException(404, str(e)) from None
     except Exception as e:
         raise HTTPException(500, f"Execution failed: {e}") from None
-    return None
 
 
 @app.get("/executions")

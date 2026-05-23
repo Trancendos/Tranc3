@@ -260,7 +260,6 @@ class _EmbeddingOnlyWrapper:
                 return full_model.get_embeddings(input_ids)
 
         self._inner = _Inner()
-        return None
 
     def __call__(self, *a, **kw):
         return self._inner(*a, **kw)

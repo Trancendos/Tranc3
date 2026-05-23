@@ -5,6 +5,7 @@ import logging
 import statistics
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)

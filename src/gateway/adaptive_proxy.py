@@ -7,11 +7,11 @@ import logging
 import time
 from typing import Any, Dict, Optional
 
-from src.resilience.circuit_breaker import CircuitBreakerConfig, resilience
-from src.fluidic.fluid_router import FluidicRouter, fluid_router
 from shared_core.models import ServiceHealth, ServiceInfo
 from shared_core.registry import ServiceRegistry
 from shared_core.sanitize import sanitize_for_log
+from src.fluidic.fluid_router import FluidicRouter, fluid_router
+from src.resilience.circuit_breaker import CircuitBreakerConfig, resilience
 
 logger = logging.getLogger(__name__)
 

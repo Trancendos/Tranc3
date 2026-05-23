@@ -1,10 +1,11 @@
 # src/nanoservices/nano_registry.py
 # TRANC3 Nanoservice Registry — service discovery and routing
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 import logging
 import time
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)

@@ -106,7 +106,7 @@ class OllamaProvider(AIProvider):
                 tokens_completion=data.get("eval_count", 0),
                 tokens_total=data.get("prompt_eval_count", 0) + data.get("eval_count", 0),
                 latency_ms=latency_ms,
-                finish_reason="stop" if data.get("done", True) else "length",
+                done=data.get("done", True),
             )
         except httpx.ConnectError:
             raise RuntimeError(f"Ollama not available at {self.base_url}") from None
@@ -114,7 +114,6 @@ class OllamaProvider(AIProvider):
             raise RuntimeError(f"Ollama request timed out after {self.timeout}s") from None
         except httpx.HTTPStatusError as e:
             raise RuntimeError(f"Ollama HTTP error: {e.response.status_code}") from None
-        return None
 
     async def health_check(self) -> ProviderHealth:
         """Check if Ollama is running and responsive."""
@@ -145,7 +144,6 @@ class OllamaProvider(AIProvider):
                 healthy=False,
                 error=str(e),
             )
-        return None
 
     def get_models(self) -> list[str]:
         """List locally available models."""

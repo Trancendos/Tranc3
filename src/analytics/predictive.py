@@ -42,7 +42,7 @@ class IntentPredictor:
     def predict(self, partial_text: str, emotion: str = "neutral") -> Dict[str, float]:
         """Return intent probability scores"""
         text_lower = partial_text.lower()
-        scores: Dict[str, float] = dict.fromkeys(self.INTENT_PATTERNS, 0.0)
+        scores: Dict[str, float] = {intent: 0.0 for intent in self.INTENT_PATTERNS}
 
         for intent, patterns in self.INTENT_PATTERNS.items():
             for pattern in patterns:

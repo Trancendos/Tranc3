@@ -41,6 +41,7 @@ _attention_router_inst = None
 _meta_learner_inst = None
 _collective_memory_inst = None
 _causal_reasoner_inst = None
+_knowledge_graph_inst = None
 
 
 def _get_attention_router():
@@ -355,9 +356,7 @@ class MLPipeline:
                     if decision and decision.selected_service:
                         # Put the chosen provider first; keep others as fallback
                         chosen = decision.selected_service
-                        provider_order = [chosen] + [  # noqa: F841
-                            p for p in provider_order if p != chosen
-                        ]
+                        provider_order = [chosen] + [p for p in provider_order if p != chosen]
                         routed_from = chosen
                         logger.debug("Pipeline: attention-routed to %s", routed_from)
             except Exception as exc:

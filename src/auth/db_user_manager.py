@@ -2,14 +2,15 @@
 # DB-backed user manager — replaces in-memory UserManager
 # Root cause fix from 5 Whys #2
 
-import uuid
 import datetime
 import logging
+import uuid
 from typing import Optional
 
 from fastapi import HTTPException
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)

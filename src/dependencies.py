@@ -5,6 +5,7 @@ import logging
 from typing import Any, Callable, Dict, TypeVar
 
 from fastapi import Request
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)

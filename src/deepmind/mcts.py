@@ -118,7 +118,7 @@ class NeuralNetworkAdapter:
         # Default: derive actions from state if possible, else generic placeholders
         actions = self._default_actions(state)
         n = max(len(actions), 1)
-        priors = dict.fromkeys(actions, 1.0 / n)
+        priors = {a: 1.0 / n for a in actions}
         value = float(np.random.uniform(-0.1, 0.1))
         return priors, value
 

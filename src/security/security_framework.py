@@ -1,17 +1,19 @@
 # src/security/security_framework.py
 # TRANC3 Complete Security Framework
 
+import hashlib
+import logging
 import os
 import secrets
-import hashlib
 from datetime import datetime, timedelta
-from typing import Optional, Dict, List
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+from typing import Dict, List, Optional
+
+import redis
 from fastapi import HTTPException
 from fastapi.security import HTTPBearer
-import redis
-import logging
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -84,7 +86,7 @@ class JWTManager:
         try:
             return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         except JWTError as e:
-            raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
+            raise HTTPException(status_code=401, detail=f"Invalid token: {e}") from None
 
     @staticmethod
     def verify_token_type(payload: dict, expected_type: str):

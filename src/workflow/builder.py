@@ -229,7 +229,7 @@ class WorkflowBuilder:
                 adj[from_id].append(to_id)
 
         WHITE, GRAY, BLACK = 0, 1, 2
-        color: Dict[str, int] = dict.fromkeys(node_ids, WHITE)
+        color: Dict[str, int] = {nid: WHITE for nid in node_ids}
 
         def dfs(v: str) -> bool:
             color[v] = GRAY
