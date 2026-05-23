@@ -1,11 +1,10 @@
 # src/nanoservices/nano_registry.py
 # TRANC3 Nanoservice Registry — service discovery and routing
 
-import logging
-import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
-
+import logging
+import time
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -108,7 +107,7 @@ class NanoServiceRegistry:
             "Registered nanoservice: %s @ %s",
             sanitize_for_log(service.name),
             sanitize_for_log(service.endpoint),
-        )  # codeql[py/cleartext-logging]
+        )
 
     def get(self, name: str) -> Optional[NanoService]:
         return self._registry.get(name)
@@ -132,9 +131,7 @@ class NanoServiceRegistry:
     def mark_unhealthy(self, name: str):
         if name in self._registry:
             self._registry[name].is_healthy = False
-            logger.warning(
-                "Nanoservice marked unhealthy: %s", sanitize_for_log(name)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("Nanoservice marked unhealthy: %s", sanitize_for_log(name))
 
     def mark_healthy(self, name: str):
         if name in self._registry:

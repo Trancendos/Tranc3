@@ -2,15 +2,11 @@
 # MultilingualDataset — Gap G2 + Brainwriting R1 action
 
 import json
-import logging
 import os
-from pathlib import Path
+import logging
 from typing import Dict, List, Optional
-
-import torch
 from torch.utils.data import Dataset
-
-from shared_core.path_validation import validate_path
+import torch
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -61,15 +57,13 @@ class MultilingualDataset(Dataset):
             "MultilingualDataset: %s samples, split=%s",
             sanitize_for_log(len(self.samples)),
             sanitize_for_log(split),
-        )  # codeql[py/cleartext-logging]
+        )
 
     def _load_data(self, data_dir: str):
-        base = Path(data_dir).resolve()
         for lang in self.languages:
             path = os.path.join(data_dir, lang, f"{self.split}.jsonl")
             if os.path.exists(path):
-                validated = validate_path(path, base)
-                with open(validated, "r", encoding="utf-8") as f:
+                with open(path, "r", encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if line:
@@ -79,7 +73,7 @@ class MultilingualDataset(Dataset):
                                 continue
                 logger.info(
                     "Loaded %s data from %s", sanitize_for_log(lang), sanitize_for_log(path)
-                )  # codeql[py/cleartext-logging]
+                )
 
     def _generate_synthetic(self) -> List[Dict]:
         """Generate minimal synthetic training samples for each personality."""

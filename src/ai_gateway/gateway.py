@@ -25,9 +25,9 @@ from collections import OrderedDict
 from shared_core.sanitize import sanitize_for_log
 from src.ai_gateway.providers.base import AIProvider
 from src.ai_gateway.types import (
-    DEFAULT_TENANT_CONFIG,
     AIRequest,
     AIResponse,
+    DEFAULT_TENANT_CONFIG,
     GatewayMetrics,
     ProviderHealth,
     RouteRule,
@@ -120,9 +120,7 @@ class AIGateway:
     def register_provider(self, provider: AIProvider) -> None:
         """Register a new AI provider."""
         self._providers[provider.name] = provider
-        logger.info(
-            "ai_provider_registered: %s", sanitize_for_log(provider.name)
-        )  # codeql[py/cleartext-logging]
+        logger.info("ai_provider_registered: %s", sanitize_for_log(provider.name))
 
     def unregister_provider(self, name: str) -> bool:
         """Remove a provider by name."""
@@ -193,9 +191,7 @@ class AIGateway:
             health = self._health_status.get(route.provider)
             if health and not health.healthy:
                 if self._config.verbose:
-                    logger.info(
-                        "Skipping unhealthy provider: %s", sanitize_for_log(route.provider)
-                    )  # codeql[py/cleartext-logging]
+                    logger.info("Skipping unhealthy provider: %s", sanitize_for_log(route.provider))
                 continue
 
             try:
@@ -245,7 +241,6 @@ class AIGateway:
         self._metrics.errors += 1
         error_summary = "; ".join(f"{e['provider']}: {e['error']}" for e in errors)
         raise AIGatewayError("ALL_PROVIDERS_FAILED", f"All AI providers failed: {error_summary}")
-        return None
 
     # ── Health Checks ────────────────────────────────────────
 
@@ -317,7 +312,7 @@ class AIGateway:
         """Execute a provider call with optional latency limit."""
         import asyncio
 
-        start = time.monotonic()
+        _start = time.monotonic()
 
         if max_latency_ms:
             try:
@@ -326,13 +321,9 @@ class AIGateway:
                     timeout=max_latency_ms / 1000.0,
                 )
             except asyncio.TimeoutError:
-                elapsed_ms = (time.monotonic() - start) * 1000
-                raise RuntimeError(
-                    f"Provider {provider.name} exceeded {max_latency_ms}ms latency (took {elapsed_ms:.0f}ms)"
-                ) from None
+                raise RuntimeError(f"Provider {provider.name} exceeded {max_latency_ms}ms latency")
         else:
             return await provider.complete(request)
-        return None
 
     def _check_cache(self, request: AIRequest, config: TenantAIConfig) -> AIResponse | None:
         """Check the response cache."""

@@ -1,13 +1,12 @@
 # src/monetisation/billing.py
 # TRANC3 Billing, Tier Enforcement & Stripe Integration
 
-import logging
 import os
+import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 from enum import Enum
 from typing import Dict, Optional, Tuple
-
+from datetime import datetime, timedelta
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -237,9 +236,7 @@ class StripeManager:
             )
             return session.url
         except Exception as e:
-            logger.error(
-                "Stripe checkout error: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.error("Stripe checkout error: %s", sanitize_for_log(e))
             return None
 
     def get_subscription_tier(self, stripe_customer_id: str) -> str:
@@ -258,9 +255,7 @@ class StripeManager:
                     return tier
             return "free"
         except Exception as e:
-            logger.error(
-                "Stripe lookup error: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.error("Stripe lookup error: %s", sanitize_for_log(e))
             return "free"
 
     def cancel_subscription(self, stripe_subscription_id: str) -> bool:
@@ -270,9 +265,7 @@ class StripeManager:
             self._stripe.Subscription.cancel(stripe_subscription_id)
             return True
         except Exception as e:
-            logger.error(
-                "Stripe cancel error: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.error("Stripe cancel error: %s", sanitize_for_log(e))
             return False
 
 
@@ -293,7 +286,7 @@ class PassiveRevenueTracker:
     ]
 
     def __init__(self):
-        self._revenue: Dict[str, float] = dict.fromkeys(self.STREAMS, 0.0)
+        self._revenue: Dict[str, float] = {s: 0.0 for s in self.STREAMS}
 
     def record(self, stream: str, amount_gbp: float):
         if stream in self._revenue:
@@ -302,7 +295,7 @@ class PassiveRevenueTracker:
                 "Revenue recorded: %s +£%s",
                 sanitize_for_log(stream),
                 sanitize_for_log(f"{amount_gbp:.2f}"),
-            )  # codeql[py/cleartext-logging]
+            )
 
     def summary(self) -> Dict:
         total = sum(self._revenue.values())

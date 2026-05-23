@@ -31,15 +31,11 @@ class CausalEventBus:
 
     async def start(self) -> None:
         self._running = True
-        logger.info(
-            "CausalEventBus started (node=%s)", sanitize_for_log(self.node_id)
-        )  # codeql[py/cleartext-logging]
+        logger.info("CausalEventBus started (node=%s)", sanitize_for_log(self.node_id))
 
     async def stop(self) -> None:
         self._running = False
-        logger.info(
-            "CausalEventBus stopped (node=%s)", sanitize_for_log(self.node_id)
-        )  # codeql[py/cleartext-logging]
+        logger.info("CausalEventBus stopped (node=%s)", sanitize_for_log(self.node_id))
 
     def subscribe(self, event_type: str, handler: Callable) -> None:
         self._subscribers[event_type].append(handler)
@@ -72,7 +68,7 @@ class CausalEventBus:
                 "Buffered remote event: %s (pending=%s)",
                 sanitize_for_log(event.event_type),
                 sanitize_for_log(len(self._pending)),
-            )  # codeql[py/cleartext-logging]
+            )
 
         await self._try_deliver_pending()
 
@@ -114,7 +110,7 @@ class CausalEventBus:
                     "Causal delivery error for %s: %s",
                     sanitize_for_log(event.event_type),
                     sanitize_for_log(e),
-                )  # codeql[py/cleartext-logging]
+                )
 
     @property
     def clock_state(self) -> Dict[str, int]:

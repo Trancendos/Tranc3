@@ -1,15 +1,14 @@
 # src/quantum/quantum_core.py
 
-import logging
-from typing import Dict, List
-
 import numpy as np
 import torch
 import torch.nn as nn
+from typing import List, Dict
+import logging
+
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import QFT
 from qiskit_aer import AerSimulator
-
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -66,11 +65,11 @@ class QuantumNeuralCore:
             self.backend = AerSimulator(method="statevector")
             logger.info(
                 "QuantumNeuralCore initialised: %s qubits", sanitize_for_log(self.num_qubits)
-            )  # codeql[py/cleartext-logging]
+            )
         except Exception as e:
             logger.warning(
                 "AerSimulator init failed: %s — falling back to classical", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            )
             self.backend = None
 
         self.neuromorphic_bridge = NeuromorphicInterface(config)
@@ -117,7 +116,7 @@ class QuantumNeuralCore:
         except Exception as e:
             logger.warning(
                 "Quantum attention failed: %s — using classical fallback", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            )
             return self._classical_attention_fallback(input_state)
 
     def _classical_attention_fallback(self, x: torch.Tensor) -> torch.Tensor:

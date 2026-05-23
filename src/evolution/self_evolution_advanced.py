@@ -9,9 +9,9 @@ from typing import Any, Dict, Optional  # noqa: E402
 import torch  # noqa: E402
 import torch.nn as nn  # noqa: E402
 
-from shared_core.sanitize import sanitize_for_log  # noqa: E402
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
 from src.evolution.self_improving_core import SelfEvolvingArchitecture  # noqa: E402
+from shared_core.sanitize import sanitize_for_log  # noqa: E402
 
 
 class SelfEvolvingInference:
@@ -43,9 +43,7 @@ class SelfEvolvingInference:
         try:
             return self._evolve_model(input_data, feedback)
         except Exception as e:
-            logger.warning(
-                "Self-evolution failed: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("Self-evolution failed: %s", sanitize_for_log(e))
             return None
 
     def _evolve_model(self, input_data: torch.Tensor, feedback: Dict[str, Any]) -> nn.Module:

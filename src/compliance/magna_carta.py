@@ -2,10 +2,9 @@
 # TRANC3 Magna Carta Framework Compliance Layer
 # Placeholder — apply full framework when config file is provided
 
-import logging
 import os
+import logging
 from typing import Dict, Optional
-
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -39,17 +38,15 @@ class MagnaCartaCompliance:
                 config = json.load(f)
                 logger.info(
                     "Magna Carta config loaded from %s", sanitize_for_log(MAGNA_CARTA_CONFIG_PATH)
-                )  # codeql[py/cleartext-logging]
+                )
                 return config
         except FileNotFoundError:
             logger.warning(
                 "Magna Carta config not found at %s", sanitize_for_log(MAGNA_CARTA_CONFIG_PATH)
-            )  # codeql[py/cleartext-logging]
+            )
             return None
         except Exception as e:
-            logger.error(
-                "Magna Carta config load error: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.error("Magna Carta config load error: %s", sanitize_for_log(e))
             return None
 
     def check_request(self, request_data: Dict) -> Dict:
@@ -97,7 +94,7 @@ class MagnaCartaCompliance:
                 "MAGNA_CARTA_AUDIT | event=%s | data=%s",
                 sanitize_for_log(event),
                 sanitize_for_log(data),
-            )  # codeql[py/cleartext-logging]
+            )
 
 
 # Singleton

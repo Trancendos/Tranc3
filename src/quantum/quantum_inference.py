@@ -12,8 +12,8 @@ import torch.nn as nn  # noqa: E402
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister  # noqa: E402
 from qiskit_aer import AerSimulator  # noqa: E402
 
-from shared_core.sanitize import sanitize_for_log  # noqa: E402
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
+from shared_core.sanitize import sanitize_for_log  # noqa: E402
 
 
 class QuantumInferenceEngine:
@@ -47,7 +47,7 @@ class QuantumInferenceEngine:
         except Exception as e:
             logger.warning(
                 "Quantum attention failed, falling back to classical: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            )
             return self._classical_attention(input_tensor)
 
     def _quantum_attention_core(self, input_tensor: torch.Tensor) -> torch.Tensor:
@@ -128,7 +128,5 @@ class QuantumInferenceEngine:
             return torch.randn_like(query) * 0.1  # Placeholder for retrieved memory
 
         except Exception as e:
-            logger.warning(
-                "Quantum memory recall failed: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("Quantum memory recall failed: %s", sanitize_for_log(e))
             return None

@@ -252,9 +252,7 @@ class EventBus:
         """Flush the event buffer. Returns number of events flushed."""
         events = self._buffer.copy()
         self._buffer.clear()
-        logger.info(
-            "event_buffer_flushed: %s events", sanitize_for_log(len(events))
-        )  # codeql[py/cleartext-logging]
+        logger.info("event_buffer_flushed: %s events", sanitize_for_log(len(events)))
         return len(events)
 
     # ── Private ──────────────────────────────────────────────
@@ -405,6 +403,4 @@ class EventBus:
             )
             self._db.commit()
         except sqlite3.Error as e:
-            logger.error(
-                "sqlite_persist_error: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.error("sqlite_persist_error: %s", sanitize_for_log(e))

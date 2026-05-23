@@ -2,15 +2,14 @@
 # DB-backed user manager — replaces in-memory UserManager
 # Root cause fix from 5 Whys #2
 
+import uuid
 import datetime
 import logging
-import uuid
 from typing import Optional
 
 from fastapi import HTTPException
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -35,9 +34,7 @@ class DBUserManager:
             try:
                 return self._session_factory()
             except Exception as e:
-                logger.warning(
-                    "DB session failed: %s — using fallback", sanitize_for_log(e)
-                )  # codeql[py/cleartext-logging]
+                logger.warning("DB session failed: %s — using fallback", sanitize_for_log(e))
         return None
 
     def create_user(self, username: str, password: str, email: str = "") -> dict:
@@ -65,17 +62,13 @@ class DBUserManager:
                 session.add(user)
                 session.commit()
                 session.refresh(user)
-                logger.info(
-                    "User created in DB: %s", sanitize_for_log(username)
-                )  # codeql[py/cleartext-logging]
+                logger.info("User created in DB: %s", sanitize_for_log(username))
                 return {"user_id": str(user.id), "username": username, "tier": "free"}
             except HTTPException:
                 raise
             except Exception as e:
                 session.rollback()
-                logger.error(
-                    "DB create_user failed: %s — using fallback", sanitize_for_log(e)
-                )  # codeql[py/cleartext-logging]
+                logger.error("DB create_user failed: %s — using fallback", sanitize_for_log(e))
             finally:
                 session.close()
 
@@ -116,9 +109,7 @@ class DBUserManager:
                     "is_active": user.is_active,
                 }
             except Exception as e:
-                logger.error(
-                    "DB authenticate_user failed: %s", sanitize_for_log(e)
-                )  # codeql[py/cleartext-logging]
+                logger.error("DB authenticate_user failed: %s", sanitize_for_log(e))
             finally:
                 session.close()
 
@@ -145,9 +136,7 @@ class DBUserManager:
                         "is_active": user.is_active,
                     }
             except Exception as e:
-                logger.error(
-                    "DB get_user failed: %s", sanitize_for_log(e)
-                )  # codeql[py/cleartext-logging]
+                logger.error("DB get_user failed: %s", sanitize_for_log(e))
             finally:
                 session.close()
 
@@ -165,9 +154,7 @@ class DBUserManager:
                     session.commit()
                     return True
             except Exception as e:
-                logger.error(
-                    "DB update_tier failed: %s", sanitize_for_log(e)
-                )  # codeql[py/cleartext-logging]
+                logger.error("DB update_tier failed: %s", sanitize_for_log(e))
             finally:
                 session.close()
         return False

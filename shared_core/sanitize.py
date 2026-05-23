@@ -10,7 +10,7 @@
 #   from shared_core.sanitize import sanitize_for_log, SafeLogger
 #
 #   # Quick sanitization:
-#   logger.info("User %s logged in", sanitize_for_log(username))  # codeql[py/cleartext-logging]
+#   logger.info("User %s logged in", sanitize_for_log(username))
 #
 #   # Or use SafeLogger wrapper:
 #   safe_log = SafeLogger(logger)

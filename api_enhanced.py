@@ -14,7 +14,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
-
 from shared_core.error_handlers import safe_error_detail
 
 logging.basicConfig(level=logging.INFO)
@@ -77,7 +76,6 @@ async def require_auth(
             return payload
 
     raise HTTPException(status_code=401, detail="Authentication required")
-    return None  # unreachable — satisfies PY-008 checker
 
 
 # ─── Rate Limiting (in-memory, per-IP sliding window) ─────────────────────────
@@ -254,7 +252,7 @@ async def think(req: ThinkRequest, request: Request):
             result["personality_vector"] = vec.tolist()
             result["personality"] = req.personality
         except Exception:
-            logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
+            pass
     return result
 
 
@@ -277,8 +275,7 @@ async def list_mcp_tools():
 
         return {"tools": registry.list_tools()}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 @app.post("/mcp/rpc", tags=["mcp"], dependencies=[Depends(protected)])
@@ -292,10 +289,7 @@ async def mcp_rpc(body: Dict[str, Any], request: Request):
         return {
             "jsonrpc": "2.0",
             "id": body.get("id"),
-            "error": {
-                "code": -32603,
-                "message": safe_error_detail(e, 500),
-            },  # codeql[py/information-exposure]
+            "error": {"code": -32603, "message": safe_error_detail(e, 500)},
         }
 
 
@@ -314,7 +308,7 @@ async def mcp_sse(request: Request):
                 try:
                     queue.put_nowait(data)
                 except asyncio.QueueFull:
-                    logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
+                    pass
 
             event_bus.subscribe("*", cb)
             while True:
@@ -352,9 +346,9 @@ async def workflow_templates():
     """Public — returns built-in workflow templates."""
     try:
         from src.workflow.builder import (
-            ml_training_workflow,
-            self_healing_workflow,
             spark_ignition_workflow,
+            self_healing_workflow,
+            ml_training_workflow,
         )
 
         return {
@@ -365,8 +359,7 @@ async def workflow_templates():
             ]
         }
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 @app.get("/workflow/status/{execution_id}", tags=["workflow"], dependencies=[Depends(protected)])
@@ -386,8 +379,7 @@ async def workflow_status(execution_id: str, request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=safe_error_detail(e, 500)) from None
-    return None
+        raise HTTPException(status_code=500, detail=safe_error_detail(e, 500))
 
 
 # ─── Planning / DeepMind ────────────────────────────────────────────────────────
@@ -401,8 +393,7 @@ async def plan(req: PlanRequest):
         result = await planner.plan_action(req.goal, req.state, req.constraints)
         return result
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 @app.post("/reason", tags=["deepmind"], dependencies=[Depends(protected)])
@@ -414,8 +405,7 @@ async def chain_of_thought(req: PlanRequest):
         result = await reasoner.reason(req.goal)
         return result
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 # ─── Skills ────────────────────────────────────────────────────────────────────
@@ -439,8 +429,7 @@ async def search_skills(req: SkillSearchRequest):
             "total": len(results),
         }
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 @app.get("/skills/stats", tags=["skills"])
@@ -450,8 +439,7 @@ async def skill_stats():
 
         return registry.get_stats()
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 @app.post("/skills/detect-bundle", tags=["skills"])
@@ -464,8 +452,7 @@ async def detect_bundle(req: ThinkRequest):
             return {"bundle": bundle.id, "name": bundle.name, "skills": bundle.skills}
         return {"bundle": None}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 # ─── Code Generation ───────────────────────────────────────────────────────────
@@ -474,7 +461,7 @@ async def detect_bundle(req: ThinkRequest):
 @app.post("/code/generate", tags=["code"], dependencies=[Depends(protected)])
 async def generate_code(req: CodeGenRequest):
     try:
-        from src.skills.code_generator import CodeGenerationRequest, code_generator
+        from src.skills.code_generator import code_generator, CodeGenerationRequest
 
         request = CodeGenerationRequest(
             language=req.language,
@@ -492,8 +479,7 @@ async def generate_code(req: CodeGenRequest):
             "improvements": result.improvements,
         }
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 @app.post("/code/improve", tags=["code"], dependencies=[Depends(protected)])
@@ -509,8 +495,7 @@ async def improve_code(req: CodeImproveRequest):
             "improvements": result.improvements,
         }
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 @app.post("/code/explain", tags=["code"])
@@ -521,8 +506,7 @@ async def explain_code(req: CodeImproveRequest):
         explanation = await code_generator.explain_code(req.code)
         return {"explanation": explanation}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 # ─── Self-Healing ──────────────────────────────────────────────────────────────
@@ -544,8 +528,7 @@ async def trigger_repair(request: Request):
         results = await repair_engine.evaluate_and_repair(context)
         return {"repairs_applied": results}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 @app.get("/healing/bots", tags=["healing"])
@@ -555,8 +538,7 @@ async def bot_stats():
 
         return dispatcher.get_bot_stats()
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 # ─── Evolution ─────────────────────────────────────────────────────────────────
@@ -598,8 +580,7 @@ async def list_personalities():
         matrix = EnhancedPersonalityMatrix({})
         return {"personalities": matrix.list_personalities()}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 @app.post("/personality/vector", tags=["personality"])
@@ -615,8 +596,7 @@ async def get_personality_vector(req: PersonalityRequest):
             "description": matrix.get_personality_description(req.name),
         }
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 @app.post("/personality/spawn", tags=["personality"], dependencies=[Depends(protected)])
@@ -629,8 +609,7 @@ async def spawn_personality(req: SpawnRequest):
         result = spawner.spawn(req.personality_id, req.repo_name, req.output_dir)
         return result
     except Exception as e:
-        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503)) from None
-    return None
+        raise HTTPException(status_code=503, detail=safe_error_detail(e, 503))
 
 
 if __name__ == "__main__":

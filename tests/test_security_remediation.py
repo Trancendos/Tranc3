@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+
 # ─── Path Validation ─────────────────────────────────────────────────────────
 
 
@@ -22,28 +23,28 @@ class TestPathValidation:
             assert str(result).startswith(tmpdir)
 
     def test_validate_path_traversal_blocked(self):
-        from shared_core.path_validation import PathTraversalError, validate_path
+        from shared_core.path_validation import validate_path, PathTraversalError
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
                 validate_path("../../../etc/passwd", tmpdir)
 
     def test_validate_path_null_byte_blocked(self):
-        from shared_core.path_validation import PathTraversalError, validate_path
+        from shared_core.path_validation import validate_path, PathTraversalError
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
                 validate_path("file\x00.txt", tmpdir)
 
     def test_validate_path_double_dot_blocked(self):
-        from shared_core.path_validation import PathTraversalError, validate_path
+        from shared_core.path_validation import validate_path, PathTraversalError
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
                 validate_path("..", tmpdir)
 
     def test_validate_path_absolute_escaped(self):
-        from shared_core.path_validation import PathTraversalError, validate_path
+        from shared_core.path_validation import validate_path, PathTraversalError
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
@@ -58,21 +59,21 @@ class TestPathValidation:
             assert "repo/src/file.py" in str(result)
 
     def test_safe_join_traversal_blocked(self):
-        from shared_core.path_validation import PathTraversalError, safe_join
+        from shared_core.path_validation import safe_join, PathTraversalError
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
                 safe_join(tmpdir, "..", "etc", "passwd")
 
     def test_safe_join_null_byte_blocked(self):
-        from shared_core.path_validation import PathTraversalError, safe_join
+        from shared_core.path_validation import safe_join, PathTraversalError
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
                 safe_join(tmpdir, "file\x00name")
 
     def test_safe_join_absolute_component_blocked(self):
-        from shared_core.path_validation import PathTraversalError, safe_join
+        from shared_core.path_validation import safe_join, PathTraversalError
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
@@ -283,16 +284,15 @@ class TestSpawnerEndToEnd:
 
     def test_resolve_output_base_rejects_disallowed_dir(self):
         """_resolve_output_base should reject dirs outside _ALLOWED_OUTPUT_ROOTS."""
-        from src.personality.spawner import PathTraversalError, _resolve_output_base
+        from src.personality.spawner import _resolve_output_base, PathTraversalError
 
         with pytest.raises(PathTraversalError):
             _resolve_output_base("/etc")
 
     def test_resolve_output_base_accepts_cwd_subdir(self):
         """_resolve_output_base should accept a subdir of CWD."""
-        import tempfile
-
         from src.personality.spawner import _resolve_output_base
+        import tempfile
 
         with tempfile.TemporaryDirectory(dir=".") as tmpdir:
             result = _resolve_output_base(tmpdir)
@@ -300,16 +300,15 @@ class TestSpawnerEndToEnd:
 
     def test_resolve_output_base_rejects_strict_outside(self):
         """_resolve_output_base should reject /var/log (outside allowed roots)."""
-        from src.personality.spawner import PathTraversalError, _resolve_output_base
+        from src.personality.spawner import _resolve_output_base, PathTraversalError
 
         with pytest.raises(PathTraversalError):
             _resolve_output_base("/var/log")
 
     def test_spawn_end_to_end_with_safe_dir(self):
         """spawn() should succeed with a safe output directory."""
-        import tempfile
-
         from src.personality.spawner import PersonalitySpawner
+        import tempfile
 
         spawner = PersonalitySpawner()
         with tempfile.TemporaryDirectory(dir=".") as tmpdir:
@@ -319,7 +318,7 @@ class TestSpawnerEndToEnd:
 
     def test_spawn_end_to_end_rejects_outside_dir(self):
         """spawn() should raise when output_dir is outside allowed roots."""
-        from src.personality.spawner import PathTraversalError, PersonalitySpawner
+        from src.personality.spawner import PersonalitySpawner, PathTraversalError
 
         spawner = PersonalitySpawner()
         with pytest.raises(PathTraversalError):

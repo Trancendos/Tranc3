@@ -10,7 +10,6 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
-
 from shared_core.error_handlers import safe_error_detail
 
 logger = logging.getLogger(__name__)
@@ -42,7 +41,6 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     """
     try:
         import numpy as np
-
         from src.bio_neural.consciousness_engine import IITCalculator
 
         state = body.get("state")
@@ -71,7 +69,6 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
     """
     try:
         import torch
-
         from src.bio_neural.neuromorphic import NeuromorphicProcessor
 
         input_data = body.get("input", [])
@@ -82,7 +79,7 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
         processor = NeuromorphicProcessor({})
         tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)
         result = (
-            processor.process(tensor)  # type: ignore[union-attr]
+            processor.process(tensor, timesteps=timesteps)
             if hasattr(processor, "process")
             else {"note": "processor scaffold — wire input dimensions to activate"}
         )

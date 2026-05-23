@@ -1,13 +1,11 @@
 # src/core/multilingual_tokenizer.py
 # TRANC3 Full Multilingual Engine
 
-import logging
-from typing import Dict, List
-
-import langdetect
 import torch
 from transformers import AutoTokenizer
-
+from typing import Dict, List
+import langdetect
+import logging
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -87,13 +85,9 @@ class MultilingualTokenizer:
             self.tokenizer = AutoTokenizer.from_pretrained(  # nosec B615 — revision pinning via cache_dir; model pinned in config
                 model_name, cache_dir=self.cache_dir
             )
-            logger.info(
-                "Tokenizer loaded: %s", sanitize_for_log(model_name)
-            )  # codeql[py/cleartext-logging]
+            logger.info("Tokenizer loaded: %s", sanitize_for_log(model_name))
         except Exception as e:
-            logger.warning(
-                "Tokenizer load failed: %s, using mock", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("Tokenizer load failed: %s, using mock", sanitize_for_log(e))
             self.tokenizer = None
 
         # Language detection

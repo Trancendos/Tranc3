@@ -11,13 +11,13 @@ Architecture: Decoder-only transformer (GPT-style)
 """
 
 import math
-from typing import Optional, Tuple
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from typing import Optional, Tuple
 
 from .config import ModelConfig
+
 
 # ---------------------------------------------------------------------------
 # Rotary Positional Embeddings (RoPE)

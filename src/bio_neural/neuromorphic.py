@@ -1,13 +1,11 @@
 # src/bio_neural/neuromorphic.py
 # TRANC3 Complete Spiking Neural Network — merged from DOC-07
 
-import logging
-from typing import Dict, List, Optional, Tuple
-
-import numpy as np
 import torch
 import torch.nn as nn
-
+import numpy as np
+from typing import Dict, List, Optional, Tuple
+import logging
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -129,7 +127,7 @@ class SpikingNeuralNetwork(nn.Module):
         )
         self.stdp = STDPLearning()
         self.spike_rates: List[float] = []
-        logger.info("SNN initialised: %s", sanitize_for_log(sizes))  # codeql[py/cleartext-logging]
+        logger.info("SNN initialised: %s", sanitize_for_log(sizes))
 
     def forward(self, x: torch.Tensor, use_stdp: bool = False) -> Dict[str, torch.Tensor]:
         B, T, H = x.shape
@@ -202,9 +200,7 @@ class NeuromorphicProcessor:
         try:
             return self.snn(x, use_stdp=learn)
         except Exception as e:
-            logger.warning(
-                "Neuromorphic processing failed: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("Neuromorphic processing failed: %s", sanitize_for_log(e))
             return {"output": x, "spike_rate": 0.0, "energy_estimate": 0.0}
 
     def get_stats(self) -> Dict:

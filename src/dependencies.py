@@ -5,7 +5,6 @@ import logging
 from typing import Any, Callable, Dict, TypeVar
 
 from fastapi import Request
-
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -160,7 +159,6 @@ def configure_services(config=None) -> None:
         "Service container configured with %s services",
         sanitize_for_log(len(container.list_services())),
     )
-    return None
 
 
 # ── FastAPI dependency helpers ────────────────────────────────────────────

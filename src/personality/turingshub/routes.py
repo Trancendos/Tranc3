@@ -9,7 +9,6 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Body, Path
 from fastapi.responses import JSONResponse
-
 from shared_core.error_handlers import safe_error_detail
 
 router = APIRouter(prefix="/turingshub", tags=["turings-hub"])

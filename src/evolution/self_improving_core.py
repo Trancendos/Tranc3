@@ -2,13 +2,11 @@
 # TRANC3 Self-Evolution Engine
 
 import logging
+import numpy as np
+import torch
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional
-
-import numpy as np
-import torch
-
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
@@ -116,9 +114,7 @@ class SelfEvolvingArchitecture:
             for _ in range(self.population_size)
         ]
         logger.info(
-            "SelfEvolvingArchitecture initialised: pop=%s, dim=%s",
-            sanitize_for_log(self.population_size),
-            sanitize_for_log(self.genome_dim),
+            f"SelfEvolvingArchitecture initialised: pop={self.population_size}, dim={self.genome_dim}"
         )
 
     def evolve(self, num_generations: int = 1, feedback: Optional[List[Dict]] = None) -> Individual:
@@ -144,10 +140,7 @@ class SelfEvolvingArchitecture:
 
         best = self.population[0]
         logger.info(
-            "Generation %s: best_fitness=%s, mutations=%s",
-            sanitize_for_log(self.generation),
-            sanitize_for_log(f"{best.fitness:.4f}"),
-            sanitize_for_log(best.mutations),
+            f"Generation {self.generation}: best_fitness={best.fitness:.4f}, mutations={best.mutations}"
         )
 
         # Persist best genome to Redis — Gap G25 action
@@ -158,10 +151,9 @@ class SelfEvolvingArchitecture:
     def _persist_genome(self, individual: Individual):
         """Save best genome to Redis for cross-restart continuity."""
         try:
+            import redis as _redis
             import json
             import os
-
-            import redis as _redis
 
             r = _redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
             r.set(
@@ -177,17 +169,14 @@ class SelfEvolvingArchitecture:
                 ex=86400 * 7,
             )  # 7-day TTL
         except Exception as e:
-            logger.debug(
-                "Genome persist skipped: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.debug("Genome persist skipped: %s", sanitize_for_log(e))
 
     def load_genome_from_redis(self) -> bool:
         """Restore best genome from Redis on startup."""
         try:
+            import redis as _redis
             import json
             import os
-
-            import redis as _redis
 
             r = _redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
             data = r.get("tranc3:evolution:best_genome")
@@ -197,15 +186,11 @@ class SelfEvolvingArchitecture:
                 self.population[0].fitness = saved["fitness"]
                 self.generation = saved.get("generation", 0)
                 logger.info(
-                    "Genome restored from Redis: gen=%s, fitness=%s",
-                    sanitize_for_log(self.generation),
-                    sanitize_for_log(f"{saved['fitness']:.4f}"),
+                    f"Genome restored from Redis: gen={self.generation}, fitness={saved['fitness']:.4f}"
                 )
                 return True
         except Exception as e:
-            logger.debug(
-                "Genome restore skipped: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.debug("Genome restore skipped: %s", sanitize_for_log(e))
         return False
 
     def get_best_genome(self) -> torch.Tensor:
