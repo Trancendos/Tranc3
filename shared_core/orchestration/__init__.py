@@ -10,18 +10,20 @@ from .health_monitor import (
     AdaptiveHealthMonitor,
     CircuitBreaker,
     CircuitState,
+    HealthCheckResult,
     HealthStatus,
 )
 from .config_drift import (
     ConfigDriftDetector,
     DriftReport,
     DriftItem,
+    DriftSeverity,
 )
 from .dependency_graph import (
     SmartDependencyGraph,
-    GraphNode,
-    GraphEdge,
+    DependencyNode,
     ImpactAnalysis,
+    DependencyEdge,
 )
 
 __all__ = [
@@ -31,12 +33,14 @@ __all__ = [
     "AdaptiveHealthMonitor",
     "CircuitBreaker",
     "CircuitState",
+    "HealthCheckResult",
     "HealthStatus",
     "ConfigDriftDetector",
     "DriftReport",
     "DriftItem",
+    "DriftSeverity",
     "SmartDependencyGraph",
-    "GraphNode",
-    "GraphEdge",
+    "DependencyNode",
     "ImpactAnalysis",
+    "DependencyEdge",
 ]
