@@ -11,6 +11,7 @@ import pytest
 os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("REQUIRE_AUTH", "false")
 os.environ.setdefault("ALLOWED_ORIGINS", "*")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-unit-tests-0000001")
 os.environ.setdefault("JWT_SECRET", "test-secret-for-unit-tests-only-32chars")
 os.environ.setdefault("TRANC3_API_KEY", "test-key-12345")
 

@@ -146,31 +146,40 @@ class SafeLogger:
         return sanitize_for_log(msg, max_length=4096)
 
     def _sanitize_args(self, args: tuple) -> tuple:
+        """Sanitize all positional arguments for safe logging."""
         return tuple(sanitize_for_log(a) for a in args)
 
     def debug(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        """Log a debug-level message with automatic sanitization."""
         self._logger.debug(self._sanitize_msg(msg), *self._sanitize_args(args), **kwargs)
 
     def info(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        """Log an info-level message with automatic sanitization."""
         self._logger.info(self._sanitize_msg(msg), *self._sanitize_args(args), **kwargs)
 
     def warning(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        """Log a warning-level message with automatic sanitization."""
         self._logger.warning(self._sanitize_msg(msg), *self._sanitize_args(args), **kwargs)
 
     def error(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        """Log an error-level message with automatic sanitization."""
         self._logger.error(self._sanitize_msg(msg), *self._sanitize_args(args), **kwargs)
 
     def critical(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        """Log a critical-level message with automatic sanitization."""
         self._logger.critical(self._sanitize_msg(msg), *self._sanitize_args(args), **kwargs)
 
     def exception(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        """Log an exception-level message with automatic sanitization."""
         self._logger.exception(self._sanitize_msg(msg), *self._sanitize_args(args), **kwargs)
 
     # Pass-through for logger attributes
     @property
     def level(self) -> int:
+        """Return the underlying logger's effective level."""
         return self._logger.level
 
     @property
     def name(self) -> str:
+        """Return the underlying logger's name."""
         return self._logger.name

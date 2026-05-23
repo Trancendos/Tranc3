@@ -37,21 +37,41 @@
 - [x] CI Pipeline Green: Ruff Lint ✅, Pytest ✅, CodeQL Analyze ✅, Trivy ✅
 
 ## Phase 14: PR Consolidation & Merge Readiness (COMPLETE)
-- [x] 14.1 Fix ruff YAML exclusion for .forgejo/ directory
-- [x] 14.2 Cherry-pick 4 unique files from PR #43 into PR #48 branch
-- [x] 14.3 Fix __init__.py incorrect imports (HealthCheckResult, DependencyNode/Edge, DriftSeverity)
-- [x] 14.4 Fix unused imports in watchdog.py (field, Path, watchdog event classes)
-- [x] 14.5 Merge PR #48 to main — all CI checks pass ✅
-- [x] 14.6 Close superseded PRs (#43, #47 CLOSED; #46 was already merged)
-- [x] 14.7 CodeQL dismiss-alerts step ran successfully on main for python + javascript-typescript
-- [x] 14.8 GitGuardian .gitguardian.yaml now on default branch
-- [x] 14.9 Main branch CI: All 5 workflows pass (CI ✅, CodeQL ✅, Trivy ✅, Test Suite ✅, Dep Graph ✅)
-- [x] 14.10 Local verification: Ruff Lint ✅, Ruff Format (379 files) ✅, Pytest 1231/0 ✅
+- [x] 14.1–14.10 all completed
 
 ## Phase 15: Production Readiness & Documentation Finalization (COMPLETE)
-- [x] 15.1 Verify all platform entities match canonical naming (The Guardian (Anchor: Orb of Orisis), The Guardian (Marcus Magnolia), tAimra vs tAImra)
-- [x] 15.2 Audit all source files for naming convention consistency
-- [x] 15.3 Generate comprehensive API documentation from codebase
-- [x] 15.4 Create deployment guide for zero-cost infrastructure
-- [x] 15.5 Final security audit — ensure no secrets in source, all paths validated
-- [x] 15.6 Create release tag v0.1.0 on main branch — GitHub Release published at https://github.com/Trancendos/Tranc3/releases/tag/v0.1.0
+- [x] 15.1–15.6 all completed
+
+## Phase 16: Branch Consolidation (COMPLETE)
+- [x] All Phase 16 items completed
+
+## Phase 17: Local Branch Cleanup, Test Coverage Expansion & Code Quality
+
+### 17.1 Local Branch Cleanup
+- [x] Delete all stale local branches (only main remains)
+
+### 17.2 Test Coverage Expansion
+- [x] Create tests/test_auth.py — tests for src/auth/zero_trust.py
+- [x] Create tests/test_cryptex.py — tests for src/cryptex/threat_detector.py
+- [x] Create tests/test_chronos.py — tests for src/chronos/scheduler.py
+- [x] Create tests/test_agents.py — tests for src/agents/memory_stream.py
+- [x] Create tests/test_workflow.py — tests for src/workflow/builder.py
+- [x] Create tests/test_fluidic.py — tests for src/fluidic/reactive_state.py
+- [x] Create tests/test_observability.py — tests for src/observability/observatory.py (fixed asyncio event loop issue)
+- [x] Create tests/test_library.py — tests for src/library/knowledge_base.py
+- [x] Create tests/test_devocity.py — tests for src/devocity/portal.py
+- [x] Create tests/test_core.py — tests for src/core/config.py (92 tests)
+
+### 17.3 Type Annotation & Docstring Improvements
+- [x] Add return type annotations to shared_core/models.py (VectorClock.increment, VectorClock.merge)
+- [x] Add return type annotations to shared_core/security.py (_get_jose, _get_passlib)
+- [x] Add docstrings to all public functions in shared_core/ modules (bus, registry, security, sanitize, models)
+- [x] Add docstrings to src/core/config.py validators and computed properties
+- [x] Add docstrings to src/core/security.py (requests_per_second, get_cors_config)
+- [x] Add docstrings to src/observability/observatory.py public methods
+
+### 17.4 CI Validation & Release
+- [x] Run ruff lint + format check — ensure zero errors
+- [x] Run full pytest suite — ensure all tests pass
+- [ ] Create release tag v0.3.0 and publish GitHub Release
+- [ ] Push to main via PR

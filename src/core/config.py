@@ -86,6 +86,7 @@ class Tranc3Config(BaseSettings):
 
     @validator("LOG_LEVEL")
     def validate_log_level(cls, v: str) -> str:
+        """Ensure LOG_LEVEL is one of the accepted severity names."""
         valid = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         upper = v.upper()
         if upper not in valid:
@@ -94,6 +95,7 @@ class Tranc3Config(BaseSettings):
 
     @validator("ENVIRONMENT")
     def validate_environment(cls, v: str) -> str:
+        """Ensure ENVIRONMENT is one of the accepted deployment stages."""
         valid = {"development", "staging", "production"}
         lower = v.lower()
         if lower not in valid:
@@ -102,14 +104,17 @@ class Tranc3Config(BaseSettings):
 
     @property
     def cors_origins_list(self) -> List[str]:
+        """Parse CORS_ORIGINS comma-separated string into a list."""
         return [o.strip() for o in self.CORS_ORIGINS.split(",")]
 
     @property
     def supported_languages_list(self) -> List[str]:
+        """Parse SUPPORTED_LANGUAGES comma-separated string into a list."""
         return [lang.strip() for lang in self.SUPPORTED_LANGUAGES.split(",")]
 
     @property
     def fallback_providers_list(self) -> List[str]:
+        """Parse LLM_FALLBACK_PROVIDERS comma-separated string into a list."""
         return [p.strip() for p in self.LLM_FALLBACK_PROVIDERS.split(",")]
 
     class Config:

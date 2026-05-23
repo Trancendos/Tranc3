@@ -69,6 +69,7 @@ class AuditEvent:
     session_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """Serialize the audit event to a JSON-friendly dictionary."""
         d = asdict(self)
         d["category"] = self.category.value
         d["severity"] = self.severity.value
@@ -105,6 +106,7 @@ class Observatory:
         actor_ip: Optional[str] = None,
         session_id: Optional[str] = None,
     ) -> AuditEvent:
+        """Record an audit event, persist it to the ring buffer, and notify subscribers."""
         event = AuditEvent(
             event_type=event_type,
             category=category,
@@ -156,6 +158,7 @@ class Observatory:
         return q
 
     def unsubscribe(self, q: asyncio.Queue) -> None:
+        """Remove a subscriber queue from the live event stream."""
         try:
             self._subscribers.remove(q)
         except ValueError:
@@ -173,6 +176,7 @@ class Observatory:
     def search(
         self, actor: Optional[str] = None, event_type: Optional[str] = None, limit: int = 50
     ) -> List[AuditEvent]:
+        """Search the buffer for events matching the given actor or event_type prefix."""
         results = []
         for e in reversed(self._buffer):
             if actor and e.actor != actor:
@@ -185,6 +189,7 @@ class Observatory:
         return results
 
     def stats(self) -> Dict[str, Any]:
+        """Return summary statistics about the event buffer."""
         total = len(self._buffer)
         by_category: Dict[str, int] = {}
         by_severity: Dict[str, int] = {}
@@ -205,6 +210,7 @@ _observatory: Optional[Observatory] = None
 
 
 def get_observatory() -> Observatory:
+    """Return the module-level Observatory singleton, creating it if necessary."""
     global _observatory
     if _observatory is None:
         _observatory = Observatory()

@@ -40,6 +40,7 @@ class ServiceInfo:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
+        """Serialize service info to a JSON-friendly dictionary."""
         return {
             "name": self.name,
             "version": self.version,
@@ -64,6 +65,7 @@ class EventMessage:
     causation_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """Serialize event message to a JSON-friendly dictionary."""
         return {
             "event_type": self.event_type,
             "source": self.source,
@@ -80,15 +82,17 @@ class VectorClock:
 
     clock: Dict[str, int] = field(default_factory=dict)
 
-    def increment(self, node_id: str):
+    def increment(self, node_id: str) -> None:
+        """Increment the counter for the given node."""
         self.clock[node_id] = self.clock.get(node_id, 0) + 1
 
-    def merge(self, other: "VectorClock"):
+    def merge(self, other: "VectorClock") -> None:
+        """Merge another vector clock into this one, taking component-wise maximums."""
         for node, counter in other.clock.items():
             self.clock[node] = max(self.clock.get(node, 0), counter)
 
     def compare(self, other: "VectorClock") -> str:
-        """Compare two vector clocks: 'before', 'after', 'concurrent', or 'equal'"""
+        """Compare two vector clocks: 'before', 'after', 'concurrent', or 'equal'."""
         all_keys = set(self.clock.keys()) | set(other.clock.keys())
 
         self_before = any(self.clock.get(k, 0) < other.clock.get(k, 0) for k in all_keys)
@@ -104,4 +108,5 @@ class VectorClock:
             return "equal"
 
     def to_dict(self) -> Dict[str, int]:
+        """Return a shallow copy of the clock dictionary."""
         return self.clock.copy()
