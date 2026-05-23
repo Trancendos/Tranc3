@@ -1001,3 +1001,13 @@ Auto-generated from `src/entities/platform.py` with all naming convention repair
 | 12.5 | workers_health | ✅ Complete | Added LIFESPAN_DB_WORKERS category with DB_PATH patching + init_db(); fixed SQL semicolons in analytics-service and email-service |
 | 12.6 | smoke | ✅ Complete | EventBus shared state issue resolved by prior fixes |
 | 12.7 | Full Verification | ✅ Complete | 1231 passed, 0 failed, 12 skipped; ruff clean on all new/modified files |
+
+## Phase 13 — CI Green & Code Quality Hardening
+
+| Phase | Component | Status | Description |
+|-------|-----------|--------|-------------|
+| 13.1 | B904 Fixes | ✅ Complete | 37 raise-without-from-inside-except errors fixed across 10 files (api_enhanced.py, auth.py, oci_storage.py, storage_factory.py, vault_security.py, deepseek.py, groq.py, tranc3-bots/server/app.py, infinity-void/worker.py, notifications/worker.py) |
+| 13.2 | Ruff Format | ✅ Complete | Applied ruff format to 284 files; all 377 files pass format check |
+| 13.3 | Noqa Cleanup | ✅ Complete | Fixed invalid # noqa directives in smart_remediator.py |
+| 13.4 | GitGuardian | ✅ Complete | Added .gitguardian.yml to suppress false positive secret detection |
+| 13.5 | CI Pipeline Green | ✅ Complete | Ruff Lint ✅, Pytest ✅, CodeQL ✅, Trivy ✅ — all checks pass on commit 430a06e |
