@@ -160,7 +160,6 @@ def configure_services(config=None) -> None:
         "Service container configured with %s services",
         sanitize_for_log(len(container.list_services())),
     )
-    return None
 
 
 # ── FastAPI dependency helpers ────────────────────────────────────────────

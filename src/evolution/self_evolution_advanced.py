@@ -43,9 +43,7 @@ class SelfEvolvingInference:
         try:
             return self._evolve_model(input_data, feedback)
         except Exception as e:
-            logger.warning(
-                "Self-evolution failed: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("Self-evolution failed: %s", sanitize_for_log(e))
             return None
 
     def _evolve_model(self, input_data: torch.Tensor, feedback: Dict[str, Any]) -> nn.Module:

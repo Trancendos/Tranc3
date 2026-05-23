@@ -24,8 +24,6 @@ class ProviderName(str, enum.Enum):
     OFFLINE = "offline"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
-    GROQ = "groq"
-    DEEPSEEK = "deepseek"
 
 
 # ── Data Models ──────────────────────────────────────────────
@@ -114,9 +112,8 @@ DEFAULT_TENANT_CONFIG = TenantAIConfig(
     tenant_id="default",
     routes=[
         RouteRule(provider="ollama", priority=0),  # First: local, zero-cost
-        RouteRule(provider="groq", priority=1),  # Second: free cloud, ultra-low latency
-        RouteRule(provider="openrouter", priority=2),  # Third: free cloud models
-        RouteRule(provider="offline", priority=3),  # Last: deterministic fallback
+        RouteRule(provider="openrouter", priority=1),  # Second: free cloud
+        RouteRule(provider="offline", priority=2),  # Last: deterministic fallback
     ],
     daily_token_budget=100000,
     cache_enabled=True,
@@ -126,8 +123,7 @@ FREE_TIER_CONFIG = TenantAIConfig(
     tenant_id="free",
     routes=[
         RouteRule(provider="ollama", priority=0),
-        RouteRule(provider="groq", priority=1),  # Free tier: 30 req/min
-        RouteRule(provider="offline", priority=2),
+        RouteRule(provider="offline", priority=1),
     ],
     daily_token_budget=10000,
     cache_enabled=True,

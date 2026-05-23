@@ -43,9 +43,7 @@ class ConsciousnessAwareGenerator:
         try:
             return self._conscious_generate(input_text, personality_vector)
         except Exception as e:
-            logger.warning(
-                "Consciousness generation failed, falling back: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("Consciousness generation failed, falling back: %s", sanitize_for_log(e))
             return self._classical_generate(input_text, personality_vector)
 
     def _conscious_generate(

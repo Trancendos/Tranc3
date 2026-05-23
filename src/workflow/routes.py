@@ -19,7 +19,6 @@ from fastapi import APIRouter, Body, Path
 from fastapi.responses import JSONResponse
 
 from shared_core.error_handlers import safe_error_detail
-from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/grid", tags=["digital-grid"])
@@ -85,11 +84,7 @@ async def register_workflow(body: Dict[str, Any] = Body(...)):
     except Exception:
         return JSONResponse({"error": "Invalid workflow definition"}, status_code=400)
     _workflow_registry[wf.id] = wf
-    logger.info(
-        "grid: registered workflow id=%s name=%s",
-        sanitize_for_log(wf.id),
-        sanitize_for_log(wf.name),
-    )  # codeql[py/cleartext-logging]
+    logger.info("grid: registered workflow id=%s name=%s", wf.id, wf.name)
     try:
         from src.observability.observatory import EventCategory, observe
 
@@ -122,11 +117,7 @@ async def run_workflow(
     except asyncio.TimeoutError:
         return JSONResponse({"error": "Workflow execution timed out"}, status_code=504)
     except Exception as exc:
-        logger.error(
-            "grid: execution error workflow=%s: %s",
-            sanitize_for_log(workflow_id),
-            sanitize_for_log(exc),
-        )  # codeql[py/cleartext-logging]
+        logger.error("grid: execution error workflow=%s: %s", workflow_id, exc)
         return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
     return {
         "execution_id": state.execution_id,

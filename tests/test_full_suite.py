@@ -3,12 +3,11 @@
 # Full test suite with sample data, logic validation, and error code verification
 
 import json
-
 import pytest
 
 torch = pytest.importorskip("torch", reason="torch not installed — ML tests skipped")
 np = pytest.importorskip("numpy", reason="numpy not installed — ML tests skipped")
-from unittest.mock import MagicMock  # noqa: E402
+from unittest.mock import MagicMock, patch  # noqa: E402
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -60,13 +59,13 @@ def sample_emotions():
 
 class TestErrorCatalog:
     def test_all_error_codes_have_definitions(self):
-        from src.errors.error_catalog import CATALOG, ErrorCode
+        from src.errors.error_catalog import ErrorCode, CATALOG
 
-        for code in list(ErrorCode):
+        for code in ErrorCode:
             assert code in CATALOG, f"ErrorCode {code} has no definition in CATALOG"
 
     def test_error_format_response(self):
-        from src.errors.error_catalog import ErrorCode, format_error_response
+        from src.errors.error_catalog import format_error_response, ErrorCode
 
         resp = format_error_response(ErrorCode.AUTH_TOKEN_EXPIRED)
         assert "error" in resp
@@ -188,7 +187,7 @@ class TestLoopValidator:
             try:
                 cb.call(lambda: (_ for _ in ()).throw(ValueError("fail")))
             except ValueError:
-                pass  # nosec B110 — graceful degradation
+                pass
         assert cb.state == CircuitState.OPEN
 
     def test_circuit_breaker_fallback(self):
@@ -198,7 +197,7 @@ class TestLoopValidator:
         try:
             cb.call(lambda: (_ for _ in ()).throw(ValueError("fail")))
         except ValueError:
-            pass  # nosec B110 — graceful degradation
+            pass
         result = cb.call(lambda: "real", fallback=lambda: "fallback")
         assert result == "fallback"
 
@@ -305,7 +304,7 @@ class TestBilling:
         assert result["allowed"] is True
 
     def test_free_tier_blocks_at_limit(self):
-        from src.monetisation.billing import TIERS, TierEnforcer
+        from src.monetisation.billing import TierEnforcer, TIERS
 
         e = TierEnforcer()
         limit = TIERS["free"]["req_per_hour"]
@@ -526,9 +525,8 @@ class TestIntelligenceBlockchain:
         assert bc.is_valid() is True
 
     def test_homomorphic_crypto_aggregation(self):
-        import torch.nn as nn
-
         from src.distributed.intelligence_blockchain import HomomorphicCrypto
+        import torch.nn as nn
 
         crypto = HomomorphicCrypto(epsilon=1.0)
         model = nn.Linear(4, 4)
@@ -571,17 +569,10 @@ class TestVectorStore:
 
 def _api_available() -> bool:
     """True only when the full production stack (torch, transformers, etc.) is installed."""
-    try:
-        import fastapi  # noqa: F401
-        import passlib  # noqa: F401
-        import redis  # noqa: F401
-        import sqlalchemy  # noqa: F401
-        import torch  # noqa: F401
-        import transformers  # noqa: F401
+    import importlib.util
 
-        return True
-    except ImportError:
-        return False
+    required = ["fastapi", "redis", "passlib", "sqlalchemy", "transformers", "torch"]
+    return all(importlib.util.find_spec(mod) is not None for mod in required)
 
 
 @pytest.mark.skipif(
@@ -597,8 +588,6 @@ class TestAPIIntegration:
 
     @pytest.fixture
     def client(self):
-        from unittest.mock import patch
-
         with patch(
             "redis.from_url",
             return_value=MagicMock(
@@ -606,7 +595,6 @@ class TestAPIIntegration:
             ),
         ):
             from fastapi.testclient import TestClient
-
             from api import app
 
             return TestClient(app, raise_server_exceptions=False)

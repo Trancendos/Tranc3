@@ -87,7 +87,6 @@ class JWTManager:
             return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         except JWTError as e:
             raise HTTPException(status_code=401, detail=f"Invalid token: {e}") from None
-        return None
 
     @staticmethod
     def verify_token_type(payload: dict, expected_type: str):
@@ -217,7 +216,7 @@ class AuditLogger:
             sanitize_for_log(event_type),
             sanitize_for_log(user_id),
             sanitize_for_log(ip),
-        )  # codeql[py/cleartext-logging]
+        )
 
     def get_recent_events(self, limit: int = 100) -> List[Dict]:
         import json

@@ -98,7 +98,6 @@ class OpenRouterProvider(AIProvider):
             raise RuntimeError(f"OpenRouter HTTP error: {e.response.status_code}") from None
         except Exception as e:
             raise RuntimeError(f"OpenRouter error: {e}") from None
-        return None
 
     async def health_check(self) -> ProviderHealth:
         """Check OpenRouter availability."""
@@ -138,7 +137,6 @@ class OpenRouterProvider(AIProvider):
                 healthy=False,
                 error=str(e),
             )
-        return None
 
     def get_models(self) -> list[str]:
         """List free models available on OpenRouter."""

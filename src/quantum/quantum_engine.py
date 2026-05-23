@@ -222,9 +222,7 @@ class QuantumOptimizationEngine:
                 torch.tensor(weights, dtype=torch.float32).unsqueeze(0).unsqueeze(0).unsqueeze(-1)
             )
         except Exception as e:
-            logger.warning(
-                "Quantum attention failed: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("Quantum attention failed: %s", sanitize_for_log(e))
             return torch.ones(B, H, T, 1) / T
 
     def quantum_parameter_optimization(self, loss: float, params: np.ndarray) -> np.ndarray:
@@ -248,9 +246,7 @@ class QuantumOptimizationEngine:
 
             return params + updates
         except Exception as e:
-            logger.warning(
-                "Quantum optimization failed: %s", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("Quantum optimization failed: %s", sanitize_for_log(e))
             return params
 
     def get_quantum_state_info(self) -> Dict:

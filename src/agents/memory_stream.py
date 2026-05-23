@@ -225,7 +225,6 @@ class MemoryStream:
                 tags,
             )
             return memory.memory_id
-        return None
 
     async def remove(self, memory_id: str) -> bool:
         """Remove a specific memory by ID."""
@@ -235,7 +234,6 @@ class MemoryStream:
                 self._time_index = [m for m in self._time_index if m != memory_id]
                 return True
             return False
-        return None
 
     # -------------------------------------------------------------------
     # Retrieval
@@ -284,7 +282,6 @@ class MemoryStream:
                 results.append(memory)
 
             return results
-        return None
 
     async def get_by_tags(self, tags: Set[str], top_k: int = 20) -> List[EpisodicMemory]:
         """Retrieve memories that match any of the given tags, sorted by recency."""
@@ -292,7 +289,6 @@ class MemoryStream:
             matching = [m for m in self._memories.values() if m.tags & tags]
             matching.sort(key=lambda m: -m.timestamp)
             return matching[:top_k]
-        return None
 
     async def get_by_time_range(
         self,
@@ -306,14 +302,12 @@ class MemoryStream:
             matching = [m for m in self._memories.values() if start <= m.timestamp <= end]
             matching.sort(key=lambda m: -m.timestamp)
             return matching[:top_k]
-        return None
 
     async def get_recent(self, count: int = 10) -> List[EpisodicMemory]:
         """Return the N most recent memories."""
         async with self._lock:
             sorted_memories = sorted(self._memories.values(), key=lambda m: -m.timestamp)
             return sorted_memories[:count]
-        return None
 
     async def get(self, memory_id: str) -> Optional[EpisodicMemory]:
         """Get a specific memory by ID."""
@@ -369,14 +363,12 @@ class MemoryStream:
                 "oldest_timestamp": min(m.timestamp for m in self._memories.values()),
                 "newest_timestamp": max(m.timestamp for m in self._memories.values()),
             }
-        return None
 
     async def get_all(self) -> List[Dict[str, Any]]:
         """Return serialized representations of all memories, sorted by timestamp."""
         async with self._lock:
             sorted_memories = sorted(self._memories.values(), key=lambda m: m.timestamp)
             return [m.to_dict() for m in sorted_memories]
-        return None
 
     # -------------------------------------------------------------------
     # Internal

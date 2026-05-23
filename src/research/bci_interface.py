@@ -34,7 +34,7 @@ class BCISignalProcessor:
             "BCISignalProcessor: %sch @ %sHz",
             sanitize_for_log(channels),
             sanitize_for_log(sample_rate),
-        )  # codeql[py/cleartext-logging]
+        )
 
     def process_neural_signal(self, raw_signal: np.ndarray) -> Dict:
         """
@@ -97,10 +97,7 @@ class BCIInputAdapter:
 
     def connect(self, device_type: str = "openbci") -> bool:
         """Connect to BCI hardware. Returns True if successful."""
-        logger.info(
-            "BCI connect requested: %s — stub mode, returning False",
-            sanitize_for_log(device_type),
-        )
+        logger.info(f"BCI connect requested: {device_type} — stub mode, returning False")
         return False  # Stub — implement when hardware available
 
     def read_signal(self) -> Optional[np.ndarray]:

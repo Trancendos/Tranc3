@@ -41,8 +41,11 @@ logger = logging.getLogger(__name__)
 
 # Optional numpy for vector operations
 try:
-    import numpy as np  # codeql[py/unused-import] – conditional import, used when available
+    import numpy as np
+
+    _HAS_NUMPY = True
 except ImportError:
+    _HAS_NUMPY = False
     np = None  # type: ignore[assignment]
 
 
@@ -398,7 +401,7 @@ class AttentionRouter:
             weights = _softmax(raw_scores, temperature=self._temperature)
 
             # Build attention weight map
-            weight_map = dict(zip(service_ids, weights, strict=False))
+            weight_map = {sid: w for sid, w in zip(service_ids, weights, strict=False)}
 
             # Select service (highest weight)
             best_idx = weights.index(max(weights))

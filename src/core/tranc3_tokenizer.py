@@ -11,8 +11,6 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
-from shared_core.path_validation import validate_path
-
 logger = logging.getLogger(__name__)
 
 # ─── Special tokens ────────────────────────────────────────────────────────────
@@ -44,6 +42,8 @@ UNK_ID = SPECIAL_TOKENS["<unk>"]
 BOS_ID = SPECIAL_TOKENS["<bos>"]
 EOS_ID = SPECIAL_TOKENS["<eos>"]
 SEP_ID = SPECIAL_TOKENS["<sep>"]
+
+_SPECIAL_COUNT = max(SPECIAL_TOKENS.values()) + 1  # 18
 
 
 class Tranc3Tokenizer:
@@ -310,12 +310,10 @@ class Tranc3Tokenizer:
     def save(self, directory: Union[str, Path]) -> None:
         """Save tokenizer to directory."""
         path = Path(directory)
-        # Validate path before mkdir to prevent path traversal (CWE-022)
-        validated = validate_path(path, Path.cwd())
-        validated.mkdir(parents=True, exist_ok=True)
+        path.mkdir(parents=True, exist_ok=True)
 
         if hasattr(self, "_hf_tokenizer"):
-            self._hf_tokenizer.save(str(validated / "tokenizer.json"))
+            self._hf_tokenizer.save(str(path / "tokenizer.json"))
 
         meta = {
             "vocab_size": self.vocab_size,
@@ -323,10 +321,8 @@ class Tranc3Tokenizer:
             "merges": self._merges,
             "special_tokens": SPECIAL_TOKENS,
         }
-        (validated / "tokenizer_meta.json").write_text(
-            json.dumps(meta, ensure_ascii=False, indent=2)
-        )
-        logger.info("Tokenizer saved to %s", validated)
+        (path / "tokenizer_meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2))
+        logger.info("Tokenizer saved to %s", path)
 
     @classmethod
     def load(cls, directory: Union[str, Path]) -> "Tranc3Tokenizer":

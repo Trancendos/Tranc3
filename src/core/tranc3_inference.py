@@ -226,7 +226,6 @@ class Tranc3Engine:
             return loop.run_until_complete(self.generate(prompt, **kwargs))
         finally:
             loop.close()
-        return None
 
     def _default_system(self, personality: str) -> str:
         systems = {

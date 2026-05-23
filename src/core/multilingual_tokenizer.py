@@ -87,13 +87,9 @@ class MultilingualTokenizer:
             self.tokenizer = AutoTokenizer.from_pretrained(  # nosec B615 — revision pinning via cache_dir; model pinned in config
                 model_name, cache_dir=self.cache_dir
             )
-            logger.info(
-                "Tokenizer loaded: %s", sanitize_for_log(model_name)
-            )  # codeql[py/cleartext-logging]
+            logger.info("Tokenizer loaded: %s", sanitize_for_log(model_name))
         except Exception as e:
-            logger.warning(
-                "Tokenizer load failed: %s, using mock", sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("Tokenizer load failed: %s, using mock", sanitize_for_log(e))
             self.tokenizer = None
 
         # Language detection

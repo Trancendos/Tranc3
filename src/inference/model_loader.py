@@ -26,9 +26,7 @@ class LazyModelLoader:
     def register(self, name: str, factory: Callable) -> None:
         """Register a model factory function"""
         self._factories[name] = factory
-        logger.debug(
-            "Registered model factory: %s", sanitize_for_log(name)
-        )  # codeql[py/cleartext-logging]
+        logger.debug("Registered model factory: %s", sanitize_for_log(name))
 
     def get(self, name: str) -> Any:
         """Get a model, loading it lazily on first access"""
@@ -43,23 +41,18 @@ class LazyModelLoader:
             if name in self._models:
                 return self._models[name]
 
-            logger.info(
-                "Loading model: %s...", sanitize_for_log(name)
-            )  # codeql[py/cleartext-logging]
+            logger.info("Loading model: %s...", sanitize_for_log(name))
             try:
                 model = self._factories[name]()
                 self._models[name] = model
                 self._loaded[name] = True
-                logger.info(
-                    "Model loaded: %s", sanitize_for_log(name)
-                )  # codeql[py/cleartext-logging]
+                logger.info("Model loaded: %s", sanitize_for_log(name))
                 return model
             except Exception as e:
                 logger.error(
                     "Failed to load model '%s': %s", sanitize_for_log(name), sanitize_for_log(e)
-                )  # codeql[py/cleartext-logging]
+                )
                 raise
-        return None
 
     def is_loaded(self, name: str) -> bool:
         """Check if a model is currently loaded"""
@@ -71,9 +64,7 @@ class LazyModelLoader:
             if name in self._models:
                 del self._models[name]
                 self._loaded[name] = False
-                logger.info(
-                    "Unloaded model: %s", sanitize_for_log(name)
-                )  # codeql[py/cleartext-logging]
+                logger.info("Unloaded model: %s", sanitize_for_log(name))
                 return True
             return False
 
@@ -85,7 +76,7 @@ class LazyModelLoader:
             except Exception as e:
                 logger.error(
                     "Pre-load failed for %s: %s", sanitize_for_log(name), sanitize_for_log(e)
-                )  # codeql[py/cleartext-logging]
+                )
 
     def status(self) -> Dict[str, Dict[str, Any]]:
         """Get loading status for all models"""
@@ -118,7 +109,8 @@ class InferenceRouter:
             [
                 (n, p, pr)
                 for n, p, pr in [(n, p, self._get_priority(n)) for n, p in self._providers.items()]
-            ],  # removed constant `if True` filter – was always-true
+                if True
+            ],
             key=lambda x: x[2],
         )
 
@@ -140,19 +132,16 @@ class InferenceRouter:
             provider = self._providers[name]
             try:
                 result = await provider.generate(prompt, **kwargs)
-                logger.debug(
-                    "Inference succeeded via %s", sanitize_for_log(name)
-                )  # codeql[py/cleartext-logging]
+                logger.debug("Inference succeeded via %s", sanitize_for_log(name))
                 return result
             except Exception as e:
                 logger.warning(
                     "Provider %s failed: %s", sanitize_for_log(name), sanitize_for_log(e)
-                )  # codeql[py/cleartext-logging]
+                )
                 last_error = e
                 continue
 
         raise RuntimeError(f"All inference providers failed. Last error: {last_error}")
-        return None
 
 
 # Singleton instances

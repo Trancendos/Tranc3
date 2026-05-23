@@ -61,7 +61,7 @@ class Bot(ABC):
     @abstractmethod
     def _build_payload(self, **kwargs) -> Dict[str, Any]:
         """Convert keyword arguments into the job payload dict."""
-        # ...  # removed: statement had no effect
+        ...
 
     def _unwrap(self, result: JobResult) -> Dict[str, Any]:
         if result.result:

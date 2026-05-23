@@ -153,8 +153,7 @@ def check_secrets() -> bool:
             if matching_files:
                 print(f"⚠️  Found '{pattern}' references in {len(matching_files)} file(s):")
                 for filepath in matching_files:
-                    # Report file name only — never log matching content
-                    print(f"    - {filepath} (check manually)")
+                    print(f"    - {filepath}")
                 all_passed = False
 
     if all_passed:

@@ -5,10 +5,6 @@
 #
 # Security: All user-supplied path components (output_dir, repo_name) are
 # validated through shared_core.path_validation to prevent path traversal.
-# Every filesystem operation (open, write_text, mkdir, copy) is preceded by
-# validate_path() which raises PathTraversalError if the path escapes the
-# allowed base directory.  This replaces the previous _assert_under_base()
-# which used `assert` — stripped under `python -O`, making it a no-op.
 
 from __future__ import annotations
 
@@ -20,13 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from shared_core.path_validation import (
-    PathTraversalError,
-    safe_join,
-    sanitize_filename,
-    validate_path,
-)
-from shared_core.sanitize import sanitize_for_log
+from shared_core.path_validation import PathTraversalError, safe_join, sanitize_filename
 
 logger = logging.getLogger(__name__)
 
@@ -58,33 +48,32 @@ def _resolve_output_base(output_dir: str) -> Path:
         PathTraversalError: If the path escapes all allowed roots.
         FileNotFoundError: If the parent of the path does not exist.
     """
-    # Validate output_dir against each allowed root using validate_path(),
-    # which properly sanitizes the path and is recognized by CodeQL taint tracking.
+    candidate = Path(output_dir).resolve()
+
+    # Allow the path if it already exists and is under an allowed root
     for allowed_root in _ALLOWED_OUTPUT_ROOTS:
         try:
-            validated = validate_path(output_dir, allowed_root, allow_create=True)
-            return validated
-        except (PathTraversalError, FileNotFoundError, ValueError):
+            candidate.relative_to(allowed_root)
+            return candidate
+        except ValueError:
             continue
 
-    # Also try the parent — handles case where output_dir is "./spawned"
-    # which may not yet exist but its parent does
-    candidate = Path(
-        output_dir
-    ).resolve()  # codeql[py/path-injection] – validated by validate_path below
+    # Also allow if the resolved parent exists and is under an allowed root
+    # (this handles the common case where output_dir is "./spawned" which
+    # may not yet exist)
     parent = candidate.parent
-    for allowed_root in _ALLOWED_OUTPUT_ROOTS:
-        try:
-            validate_path(str(parent), allowed_root, must_exist=True, allow_create=False)
-            return candidate  # codeql[py/path-injection] – validated by validate_path below
-        except (PathTraversalError, FileNotFoundError, ValueError):
-            continue
+    if parent.exists():
+        for allowed_root in _ALLOWED_OUTPUT_ROOTS:
+            try:
+                parent.relative_to(allowed_root)
+                return candidate
+            except ValueError:
+                continue
 
     raise PathTraversalError(
         f"Output directory {candidate} is not under any allowed root. "
         f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}"
     )
-    return None  # unreachable — satisfies PY-008 mixed-return checker
 
 
 class PersonalitySpawner:
@@ -97,16 +86,13 @@ class PersonalitySpawner:
       - api_personality.py   a minimal FastAPI app wired to the personality
       - README.md            with identity, purpose, and quickstart
 
-    Security: All path construction uses safe_join() and every filesystem
-    operation is validated with validate_path() before execution.  This
-    prevents path traversal even if user-controlled input (output_dir,
-    repo_name) contains malicious components like '..' or symlinks.
+    Security: All path construction uses safe_join() to prevent traversal.
     """
 
     def __init__(self) -> None:
         self._profiles: Dict[str, Dict] = self._load_all_profiles()
 
-    # ── Public API ───────────────────────────────────────────────────────
+    # ─── Public API ──────────────────────────────────────────────────
 
     def spawn(
         self,
@@ -127,17 +113,11 @@ class PersonalitySpawner:
 
         # Safely construct the target path under the validated output base
         target = safe_join(output_base, safe_repo_name)
-        # validate_path() raises PathTraversalError (not stripped by -O)
-        validate_path(target, output_base)
         if target.exists():
             raise FileExistsError(f"Target directory already exists: {target}")
 
-        target.mkdir(parents=True, exist_ok=False)  # codeql[py/path-injection]
-        logger.info(
-            "Spawning personality '%s' into %s",
-            sanitize_for_log(personality_id),
-            sanitize_for_log(target),
-        )  # codeql[py/cleartext-logging]
+        target.mkdir(parents=True, exist_ok=False)
+        logger.info("Spawning personality '%s' into %s", personality_id, target)
 
         files_written = []
         files_written += self._write_config(target, profile)
@@ -174,7 +154,7 @@ class PersonalitySpawner:
             for pid, p in self._profiles.items()
         ]
 
-    # ── File writers ─────────────────────────────────────────────────────
+    # ─── File writers ────────────────────────────────────────────────
 
     def _write_config(self, target: Path, profile: Dict) -> list:
         code_name = profile.get("code_name", profile["id"])
@@ -203,23 +183,17 @@ class PersonalitySpawner:
         }
         # Safe path construction: target is already validated
         path = safe_join(target, "tranc3_config.yaml")
-        # validate_path raises PathTraversalError on escape (not assert!)
-        validate_path(path, target)
         import yaml  # type: ignore
 
-        with open(path, "w") as f:  # codeql[py/path-injection]
+        with open(path, "w") as f:
             yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
         return [str(path)]
 
     def _write_active_profile(self, target: Path, profile: Dict) -> list:
         # Safe path construction under validated target
         profile_dir = safe_join(target, "src", "personality")
-        # validate_path before mkdir — raises PathTraversalError on escape
-        validate_path(profile_dir, target)
         profile_dir.mkdir(parents=True, exist_ok=True)
         path = safe_join(target, "src", "personality", "active_profile.json")
-        # validate_path before open — raises PathTraversalError on escape
-        validate_path(path, target)
         with open(path, "w") as f:
             json.dump(profile, f, indent=2)
         return [str(path)]
@@ -260,8 +234,6 @@ class PersonalitySpawner:
             RATE_WINDOW_SECONDS=60
         """)
         path = safe_join(target, ".env.example")
-        # validate_path before write_text — raises PathTraversalError on escape
-        validate_path(path, target)
         path.write_text(content)
         return [str(path)]
 
@@ -378,8 +350,6 @@ class PersonalitySpawner:
                             reload=os.getenv("DEBUG", "false").lower() == "true")
         """)
         path = safe_join(target, "api_personality.py")
-        # validate_path before write_text — raises PathTraversalError on escape
-        validate_path(path, target)
         path.write_text(content)
         return [str(path)]
 
@@ -438,20 +408,16 @@ class PersonalitySpawner:
             `the-guardian`, `vesper-nightingale`, `atlas-meridian`.
         """)
         path = safe_join(target, "README.md")
-        # validate_path before write_text — raises PathTraversalError on escape
-        validate_path(path, target)
         path.write_text(content)
         return [str(path)]
 
     def _write_requirements(self, target: Path) -> list:
         base_reqs = _BASE_DIR / "requirements.txt"
         path = safe_join(target, "requirements.txt")
-        # validate_path before copy/write_text — raises PathTraversalError on escape
-        validate_path(path, target)
         if base_reqs.exists():
-            shutil.copy(base_reqs, path)  # codeql[py/path-injection]
+            shutil.copy(base_reqs, path)
         else:
-            path.write_text(  # codeql[py/path-injection]
+            path.write_text(
                 "fastapi==0.111.0\nuvicorn[standard]==0.29.0\npydantic==2.7.1\n"
                 "python-dotenv==1.0.1\npyyaml==6.0.1\n"
             )
@@ -471,12 +437,10 @@ class PersonalitySpawner:
             CMD ["uvicorn", "api_personality:app", "--host", "0.0.0.0", "--port", "8000"]
         """)
         path = safe_join(target, "Dockerfile")
-        # validate_path before write_text — raises PathTraversalError on escape
-        validate_path(path, target)
         path.write_text(content)
         return [str(path)]
 
-    # ── Internal ─────────────────────────────────────────────────────────
+    # ─── Internal ────────────────────────────────────────────────────
 
     def _load_all_profiles(self) -> Dict[str, Dict]:
         profiles: Dict[str, Dict] = {}
@@ -488,9 +452,5 @@ class PersonalitySpawner:
                 pid = data.get("id", f.stem)
                 profiles[pid] = data
             except Exception as e:
-                logger.warning(
-                    "Failed to load personality profile %s: %s",
-                    sanitize_for_log(f),
-                    sanitize_for_log(e),
-                )  # codeql[py/cleartext-logging]
+                logger.warning("Failed to load personality profile %s: %s", f, e)
         return profiles

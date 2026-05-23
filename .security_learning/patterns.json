@@ -1,0 +1,38 @@
+{
+  "PY-001:/tmp/pytest-of-root/pytest-1/test_scan_path_returns_adaptiv0": {
+    "rule_id": "PY-001",
+    "directory": "/tmp/pytest-of-root/pytest-1/test_scan_path_returns_adaptiv0",
+    "file_glob": "/tmp/pytest-of-root/pytest-1/test_scan_path_returns_adaptiv0/*.py",
+    "observation_count": 1,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-22T16:37:39.320827+00:00",
+    "notes": ""
+  },
+  "PY-001:/tmp/pytest-of-root/pytest-1/test_suppression_filtering0": {
+    "rule_id": "PY-001",
+    "directory": "/tmp/pytest-of-root/pytest-1/test_suppression_filtering0",
+    "file_glob": "/tmp/pytest-of-root/pytest-1/test_suppression_filtering0/*.py",
+    "observation_count": 1,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-22T16:37:39.323145+00:00",
+    "notes": ""
+  },
+  "PY-001:/tmp/pytest-of-root/pytest-1/test_mark_false_positive0": {
+    "rule_id": "PY-001",
+    "directory": "/tmp/pytest-of-root/pytest-1/test_mark_false_positive0",
+    "file_glob": "/tmp/pytest-of-root/pytest-1/test_mark_false_positive0/*.py",
+    "observation_count": 1,
+    "false_positive_count": 1,
+    "last_seen": "2026-05-22T16:37:39.325684+00:00",
+    "notes": ""
+  },
+  "PY-001:/tmp/pytest-of-root/pytest-1/test_context_aware_confidence0": {
+    "rule_id": "PY-001",
+    "directory": "/tmp/pytest-of-root/pytest-1/test_context_aware_confidence0",
+    "file_glob": "/tmp/pytest-of-root/pytest-1/test_context_aware_confidence0/*.py",
+    "observation_count": 1,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-22T16:37:39.327848+00:00",
+    "notes": ""
+  }
+}

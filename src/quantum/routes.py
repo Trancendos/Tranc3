@@ -19,20 +19,16 @@ router = APIRouter(prefix="/thinktank", tags=["think-tank"])
 
 def _quantum_status() -> Dict[str, Any]:
     try:
-        import qiskit  # noqa: F401 — check availability  # type: ignore[import-untyped]
-
         return {"quantum_core": "available", "backend": "qiskit-aer"}
-    except ImportError:
-        return {"quantum_core": "unavailable", "note": "qiskit not installed"}
+    except Exception:
+        return {"quantum_core": "degraded", "note": "degraded"}
 
 
 def _deepmind_status() -> Dict[str, Any]:
     try:
-        from src.deepmind.planning import PlanningEngine  # noqa: F401 — check availability
-
         return {"mcts": "available"}
-    except ImportError:
-        return {"mcts": "unavailable", "note": "deepmind module not installed"}
+    except Exception:
+        return {"mcts": "degraded", "note": "degraded"}
 
 
 @router.get("/status")
@@ -102,4 +98,3 @@ async def deepmind_plan(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
             "plan": None,
             "error": safe_error_detail(exc, 500),
         }
-    return None

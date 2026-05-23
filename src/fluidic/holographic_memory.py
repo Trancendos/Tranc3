@@ -60,9 +60,7 @@ class HolographicMemory:
             self._leaves = self._leaves[-self._max_leaves :]
             self._rebuild_tree()
 
-        logger.debug(
-            "Holographic memory append: %s...", sanitize_for_log(event_hash[:12])
-        )  # codeql[py/cleartext-logging]
+        logger.debug("Holographic memory append: %s...", sanitize_for_log(event_hash[:12]))
         return event_hash
 
     def _rebuild_tree(self) -> None:

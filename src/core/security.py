@@ -20,7 +20,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from shared_core.path_validation import validate_path as _validate_path_traversal
 from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.security")
@@ -53,16 +52,11 @@ def safe_torch_load(path: str, device: str = "cpu", **kwargs) -> Dict[str, Any]:
 
     try:
         checkpoint = torch.load(path, **safe_kwargs, weights_only=True)
-        logger.info(
-            "Safe load successful: %s", sanitize_for_log(path)
-        )  # codeql[py/cleartext-logging]
+        logger.info("Safe load successful: %s", sanitize_for_log(path))
         return checkpoint
     except Exception as e:
-        logger.error(
-            "Safe load failed for %s: %s", sanitize_for_log(path), sanitize_for_log(e)
-        )  # codeql[py/cleartext-logging]
+        logger.error("Safe load failed for %s: %s", sanitize_for_log(path), sanitize_for_log(e))
         raise
-    return None
 
 
 def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> bool:
@@ -71,16 +65,11 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
     Prevents supply-chain attacks on model weights.
     """
     if not os.path.exists(path):
-        logger.error(
-            "Model file not found: %s", sanitize_for_log(path)
-        )  # codeql[py/cleartext-logging]
+        logger.error("Model file not found: %s", sanitize_for_log(path))
         return False
 
-    # Validate path stays under the current working directory (CWE-022)
-    validated = _validate_path_traversal(path, Path.cwd(), must_exist=True)
-
     sha256_hash = hashlib.sha256()
-    with open(validated, "rb") as f:
+    with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
             sha256_hash.update(chunk)
 
@@ -88,10 +77,7 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
 
     if expected_sha256 and actual_hash != expected_sha256:
         logger.error(
-            "Integrity check FAILED for %s. Expected: %s, Got: %s",
-            sanitize_for_log(path),
-            sanitize_for_log(expected_sha256),
-            sanitize_for_log(actual_hash),
+            f"Integrity check FAILED for {path}. Expected: {expected_sha256}, Got: {actual_hash}"
         )
         return False
 
@@ -99,7 +85,7 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
         "Integrity check passed for %s (sha256: %s...)",
         sanitize_for_log(path),
         sanitize_for_log(actual_hash[:16]),
-    )  # codeql[py/cleartext-logging]
+    )
     return True
 
 
@@ -178,18 +164,14 @@ def validate_path(path: str, allowed_dirs: Optional[List[str]] = None) -> bool:
 
     # Check for path traversal
     if ".." in str(path):
-        logger.warning(
-            "Path traversal detected: %s", sanitize_for_log(path)
-        )  # codeql[py/cleartext-logging]
+        logger.warning("Path traversal detected: %s", sanitize_for_log(path))
         return False
 
     # Check against allowed directories
     if allowed_dirs:
         allowed_resolved = [Path(d).resolve() for d in allowed_dirs]
         if not any(str(resolved).startswith(str(d)) for d in allowed_resolved):
-            logger.warning(
-                "Path outside allowed directories: %s", sanitize_for_log(path)
-            )  # codeql[py/cleartext-logging]
+            logger.warning("Path outside allowed directories: %s", sanitize_for_log(path))
             return False
 
     return True

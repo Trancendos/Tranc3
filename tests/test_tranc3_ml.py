@@ -6,9 +6,8 @@
 # No external API, no Anthropic key, no transformers package required.
 
 import asyncio
-import os
 import sys
-
+import os
 import pytest
 
 torch = pytest.importorskip("torch", reason="torch not installed — ML tests skipped")
@@ -322,7 +321,7 @@ class TestMultilingualDataset:
             assert "language" in sample
 
     def test_synthetic_covers_all_personalities(self):
-        from src.core.dataset import PERSONALITY_SYSTEM_PROMPTS, MultilingualDataset
+        from src.core.dataset import MultilingualDataset, PERSONALITY_SYSTEM_PROMPTS
 
         ds = MultilingualDataset(
             tokenizer=None,

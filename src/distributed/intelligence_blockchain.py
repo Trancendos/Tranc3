@@ -89,7 +89,7 @@ class IntelligenceBlockchain:
             "Block mined: #%s, hash=%s...",
             sanitize_for_log(block.index),
             sanitize_for_log(block.hash[:16]),
-        )  # codeql[py/cleartext-logging]
+        )
 
     def _proof_of_work(self, last_proof: int, difficulty: int = 2) -> int:
         proof = 0
@@ -128,9 +128,7 @@ class HomomorphicCrypto:
 
     def __init__(self, epsilon: float = 1.0):
         self.epsilon = epsilon  # Privacy budget
-        logger.info(
-            "HomomorphicCrypto initialised (ε=%s)", sanitize_for_log(epsilon)
-        )  # codeql[py/cleartext-logging]
+        logger.info("HomomorphicCrypto initialised (ε=%s)", sanitize_for_log(epsilon))
 
     def encrypt_gradients(self, model) -> Dict:
         """Add Gaussian noise to gradients (differential privacy)."""

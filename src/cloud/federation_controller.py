@@ -48,7 +48,7 @@ class MultiCloudFederationController:
 
         logger.info(
             "Federation controller started. Primary: %s", sanitize_for_log(self.primary_cluster)
-        )  # codeql[py/cleartext-logging]
+        )
 
     async def stop(self):
         """Stop federation controller"""
@@ -62,9 +62,7 @@ class MultiCloudFederationController:
                 await self._check_all_clusters()
                 await asyncio.sleep(self.health_check_interval)
             except Exception as e:
-                logger.error(
-                    "Health monitor error: %s", sanitize_for_log(e)
-                )  # codeql[py/cleartext-logging]
+                logger.error("Health monitor error: %s", sanitize_for_log(e))
                 await asyncio.sleep(5)
 
     async def _check_all_clusters(self):
@@ -84,15 +82,13 @@ class MultiCloudFederationController:
                     await response.json()
                     self.cluster_health[cluster]["status"] = "healthy"
                     self.cluster_health[cluster]["consecutive_failures"] = 0
-                    logger.info(
-                        "✓ %s is healthy", sanitize_for_log(cluster)
-                    )  # codeql[py/cleartext-logging]
+                    logger.info("✓ %s is healthy", sanitize_for_log(cluster))
                 else:
                     self._mark_unhealthy(cluster)
         except Exception as e:
             logger.warning(
                 "Health check failed for %s: %s", sanitize_for_log(cluster), sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            )
             self._mark_unhealthy(cluster)
 
     def _mark_unhealthy(self, cluster: str):
@@ -101,9 +97,7 @@ class MultiCloudFederationController:
 
         if self.cluster_health[cluster]["consecutive_failures"] >= 3:
             self.cluster_health[cluster]["status"] = "unhealthy"
-            logger.error(
-                "✗ %s marked as UNHEALTHY", sanitize_for_log(cluster)
-            )  # codeql[py/cleartext-logging]
+            logger.error("✗ %s marked as UNHEALTHY", sanitize_for_log(cluster))
 
             # Trigger failover if primary
             if cluster == self.primary_cluster:
@@ -116,9 +110,7 @@ class MultiCloudFederationController:
         # Find healthy failover cluster
         for cluster in self.failover_clusters:
             if self.cluster_health[cluster]["status"] == "healthy":
-                logger.info(
-                    "Failing over to: %s", sanitize_for_log(cluster)
-                )  # codeql[py/cleartext-logging]
+                logger.info("Failing over to: %s", sanitize_for_log(cluster))
                 self.primary_cluster = cluster
 
                 # Update DNS/routing
@@ -127,9 +119,7 @@ class MultiCloudFederationController:
 
     async def _update_global_routing(self, new_primary: str):
         """Update global DNS/routing to new primary"""
-        logger.info(
-            "Updating routing to %s", sanitize_for_log(new_primary)
-        )  # codeql[py/cleartext-logging]
+        logger.info("Updating routing to %s", sanitize_for_log(new_primary))
         # Implementation depends on DNS provider (Route53, Cloud DNS, etc.)
 
     def _get_cluster_endpoint(self, cluster: str) -> str:
@@ -159,13 +149,10 @@ class MultiCloudFederationController:
         # Fallback to healthy failover clusters
         for cluster in self.failover_clusters:
             if self.cluster_health[cluster]["status"] == "healthy":
-                logger.warning(
-                    "Primary unavailable, routing to %s", sanitize_for_log(cluster)
-                )  # codeql[py/cleartext-logging]
+                logger.warning("Primary unavailable, routing to %s", sanitize_for_log(cluster))
                 return await self._send_to_cluster(cluster, request_data)
 
         raise Exception("No healthy clusters available")
-        return None
 
     async def _send_to_cluster(self, cluster: str, request_data: Dict) -> Dict:
         """Send request to specific cluster"""
@@ -179,11 +166,8 @@ class MultiCloudFederationController:
             ) as response:
                 return await response.json()
         except Exception as e:
-            logger.error(
-                "Request to %s failed: %s", sanitize_for_log(cluster), sanitize_for_log(e)
-            )  # codeql[py/cleartext-logging]
+            logger.error("Request to %s failed: %s", sanitize_for_log(cluster), sanitize_for_log(e))
             raise
-        return None
 
 
 # Global federation controller instance

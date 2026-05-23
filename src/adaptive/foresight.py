@@ -74,7 +74,7 @@ class ConversationTrajectoryPredictor:
         if len(history) < 2:
             return ProbabilityVector({"stable": 1.0}).normalise()
 
-        scores = dict.fromkeys(self.TRAJECTORIES, 0.0)
+        scores = {t: 0.0 for t in self.TRAJECTORIES}
 
         # Emotion trend
         emotions = [h["emotion"] for h in history]

@@ -36,7 +36,6 @@ def _get_tf() -> Any:
         raise ImportError(
             "TensorFlow is not installed.  Install it with: pip install tensorflow"
         ) from exc
-    return None
 
 
 @dataclass

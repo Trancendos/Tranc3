@@ -71,7 +71,7 @@ class AdaptiveProxy:
             if not breaker.can_execute():
                 logger.warning(
                     "Circuit open for %s, trying alternatives", sanitize_for_log(service.name)
-                )  # codeql[py/cleartext-logging]
+                )
                 # Try to find an alternative service
                 alternatives = self.registry.find_by_capability(capability)
                 service = next(
@@ -97,29 +97,22 @@ class AdaptiveProxy:
                     payload,
                     timeout,
                 )
-                elapsed = (
-                    time.time() - start_time
-                )  # codeql[py/redefined-variable] – separate scope for error metrics
+                elapsed = time.time() - start_time
                 self.router.record_success(service.name, elapsed * 1000)
                 return result
 
             except Exception as e:
                 elapsed = time.time() - start_time
-                last_error = e
                 self.router.record_error(service.name)
+                last_error = e
                 logger.warning(
-                    "Call to %s failed (attempt %s/%s): %s",
-                    sanitize_for_log(service.name),
-                    sanitize_for_log(attempt + 1),
-                    sanitize_for_log(retries + 1),
-                    sanitize_for_log(e),
+                    f"Call to {service.name} failed (attempt {attempt + 1}/{retries + 1}): {e}"
                 )
 
                 if attempt < retries:
                     await asyncio.sleep(0.5 * (attempt + 1))  # Exponential backoff
 
         raise RuntimeError(f"All attempts failed for capability '{capability}': {last_error}")
-        return None
 
     async def _make_request(
         self,
@@ -142,7 +135,6 @@ class AdaptiveProxy:
                 text = await resp.text()
                 raise RuntimeError(f"Service {service.name} returned {resp.status}: {text}")
             return await resp.json()
-        return None
 
     async def health_check(self) -> Dict[str, Any]:
         """Get overall proxy health"""

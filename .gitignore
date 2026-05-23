@@ -73,7 +73,3 @@ Thumbs.db
 *.db-wal
 spawned/
 node_modules/
-
-# Security telemetry (local scan results)
-.security_telemetry/
-.security_learning/
