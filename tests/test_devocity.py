@@ -15,7 +15,6 @@ from src.devocity.portal import (
     get_devocity,
 )
 
-
 # ── Enum tests ──────────────────────────────────────────────────────────────
 
 

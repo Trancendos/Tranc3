@@ -4,8 +4,8 @@
 
 import asyncio
 import logging
-import time
 import threading
+import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum

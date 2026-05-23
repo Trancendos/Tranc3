@@ -10,7 +10,6 @@ from src.library.knowledge_base import (
     get_library,
 )
 
-
 # ── Enum tests ──────────────────────────────────────────────────────────────
 
 

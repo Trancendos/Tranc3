@@ -14,7 +14,6 @@ from src.cryptex.threat_detector import (
     ThreatSignal,
 )
 
-
 # ── Enum tests ──────────────────────────────────────────────────────────────
 
 

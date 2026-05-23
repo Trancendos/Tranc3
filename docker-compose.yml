@@ -103,8 +103,474 @@ services:
       - loki
     restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # P1 Business-Logic Workers (ports 8006-8015)
+  # ---------------------------------------------------------------------------
+
+  users-service:
+    build:
+      context: workers/users-service
+      dockerfile: Dockerfile
+    container_name: tranc3-users-service
+    environment:
+      WORKER_PORT: "8006"
+    ports:
+      - "8006:8006"
+    volumes:
+      - users_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  monitoring-service:
+    build:
+      context: workers/monitoring
+      dockerfile: Dockerfile
+    container_name: tranc3-monitoring-service
+    environment:
+      WORKER_PORT: "8007"
+    ports:
+      - "8007:8007"
+    volumes:
+      - monitoring_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  notifications-service:
+    build:
+      context: workers/notifications
+      dockerfile: Dockerfile
+    container_name: tranc3-notifications-service
+    environment:
+      WORKER_PORT: "8008"
+    ports:
+      - "8008:8008"
+    volumes:
+      - notifications_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  the-grid:
+    build:
+      context: workers/the-grid
+      dockerfile: Dockerfile
+    container_name: tranc3-the-grid
+    environment:
+      WORKER_PORT: "8010"
+    ports:
+      - "8010:8010"
+    volumes:
+      - grid_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  products-service:
+    build:
+      context: workers/products-service
+      dockerfile: Dockerfile
+    container_name: tranc3-products-service
+    environment:
+      WORKER_PORT: "8011"
+    ports:
+      - "8011:8011"
+    volumes:
+      - products_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  orders-service:
+    build:
+      context: workers/orders-service
+      dockerfile: Dockerfile
+    container_name: tranc3-orders-service
+    environment:
+      WORKER_PORT: "8012"
+    ports:
+      - "8012:8012"
+    volumes:
+      - orders_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8012/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  payments-service:
+    build:
+      context: workers/payments-service
+      dockerfile: Dockerfile
+    container_name: tranc3-payments-service
+    environment:
+      WORKER_PORT: "8013"
+    ports:
+      - "8013:8013"
+    volumes:
+      - payments_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8013/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  files-service:
+    build:
+      context: workers/files-service
+      dockerfile: Dockerfile
+    container_name: tranc3-files-service
+    environment:
+      WORKER_PORT: "8014"
+    ports:
+      - "8014:8014"
+    volumes:
+      - files_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8014/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  identity-service:
+    build:
+      context: workers/identity-service
+      dockerfile: Dockerfile
+    container_name: tranc3-identity-service
+    environment:
+      WORKER_PORT: "8015"
+    ports:
+      - "8015:8015"
+    volumes:
+      - identity_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8015/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # P3 Supporting Workers (ports 8016-8029)
+  # ---------------------------------------------------------------------------
+
+  analytics-service:
+    build:
+      context: workers/analytics-service
+      dockerfile: Dockerfile
+    container_name: tranc3-analytics-service
+    environment:
+      WORKER_PORT: "8016"
+    ports:
+      - "8016:8016"
+    volumes:
+      - analytics_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8016/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  search-service:
+    build:
+      context: workers/search-service
+      dockerfile: Dockerfile
+    container_name: tranc3-search-service
+    environment:
+      WORKER_PORT: "8017"
+    ports:
+      - "8017:8017"
+    volumes:
+      - search_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8017/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  email-service:
+    build:
+      context: workers/email-service
+      dockerfile: Dockerfile
+    container_name: tranc3-email-service
+    environment:
+      WORKER_PORT: "8018"
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@tranc3.local}
+    ports:
+      - "8018:8018"
+    volumes:
+      - email_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8018/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  sms-service:
+    build:
+      context: workers/sms-service
+      dockerfile: Dockerfile
+    container_name: tranc3-sms-service
+    environment:
+      WORKER_PORT: "8019"
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
+    ports:
+      - "8019:8019"
+    volumes:
+      - sms_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8019/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  storage-service:
+    build:
+      context: workers/storage-service
+      dockerfile: Dockerfile
+    container_name: tranc3-storage-service
+    environment:
+      WORKER_PORT: "8020"
+    ports:
+      - "8020:8020"
+    volumes:
+      - storage_data:/app/data
+      - storage_objects:/app/objects
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8020/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  cron-service:
+    build:
+      context: workers/cron-service
+      dockerfile: Dockerfile
+    container_name: tranc3-cron-service
+    environment:
+      WORKER_PORT: "8021"
+    ports:
+      - "8021:8021"
+    volumes:
+      - cron_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  queue-service:
+    build:
+      context: workers/queue-service
+      dockerfile: Dockerfile
+    container_name: tranc3-queue-service
+    environment:
+      WORKER_PORT: "8022"
+    ports:
+      - "8022:8022"
+    volumes:
+      - queue_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8022/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  cache-service:
+    build:
+      context: workers/cache-service
+      dockerfile: Dockerfile
+    container_name: tranc3-cache-service
+    environment:
+      WORKER_PORT: "8023"
+    ports:
+      - "8023:8023"
+    volumes:
+      - cache_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8023/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  config-service:
+    build:
+      context: workers/config-service
+      dockerfile: Dockerfile
+    container_name: tranc3-config-service
+    environment:
+      WORKER_PORT: "8024"
+    ports:
+      - "8024:8024"
+    volumes:
+      - config_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8024/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  audit-service:
+    build:
+      context: workers/audit-service
+      dockerfile: Dockerfile
+    container_name: tranc3-audit-service
+    environment:
+      WORKER_PORT: "8025"
+    ports:
+      - "8025:8025"
+    volumes:
+      - audit_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8025/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  rate-limit-service:
+    build:
+      context: workers/rate-limit-service
+      dockerfile: Dockerfile
+    container_name: tranc3-rate-limit-service
+    environment:
+      WORKER_PORT: "8026"
+    ports:
+      - "8026:8026"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8026/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  geo-service:
+    build:
+      context: workers/geo-service
+      dockerfile: Dockerfile
+    container_name: tranc3-geo-service
+    environment:
+      WORKER_PORT: "8027"
+    ports:
+      - "8027:8027"
+    volumes:
+      - geo_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8027/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  cdn-service:
+    build:
+      context: workers/cdn-service
+      dockerfile: Dockerfile
+    container_name: tranc3-cdn-service
+    environment:
+      WORKER_PORT: "8028"
+    ports:
+      - "8028:8028"
+    volumes:
+      - cdn_assets:/app/assets
+      - cdn_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8028/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  health-aggregator:
+    build:
+      context: workers/health-aggregator
+      dockerfile: Dockerfile
+    container_name: tranc3-health-aggregator
+    environment:
+      WORKER_PORT: "8029"
+    ports:
+      - "8029:8029"
+    depends_on:
+      - users-service
+      - analytics-service
+      - search-service
+      - email-service
+      - sms-service
+      - storage-service
+      - cron-service
+      - queue-service
+      - cache-service
+      - config-service
+      - audit-service
+      - rate-limit-service
+      - geo-service
+      - cdn-service
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8029/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 volumes:
   redis_data:
   prometheus_data:
   grafana_data:
   loki_data:
+  users_data:
+  monitoring_data:
+  notifications_data:
+  grid_data:
+  products_data:
+  orders_data:
+  payments_data:
+  files_data:
+  identity_data:
+  analytics_data:
+  search_data:
+  email_data:
+  sms_data:
+  storage_data:
+  storage_objects:
+  cron_data:
+  queue_data:
+  cache_data:
+  config_data:
+  audit_data:
+  geo_data:
+  cdn_assets:
+  cdn_data:

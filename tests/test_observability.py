@@ -15,7 +15,6 @@ from src.observability.observatory import (
     observe,
 )
 
-
 # ── Enum tests ──────────────────────────────────────────────────────────────
 
 

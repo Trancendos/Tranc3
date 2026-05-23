@@ -12,7 +12,6 @@ from src.coding.self_adaptive import (
     RegressionDetector,
 )
 
-
 # ── CodeQualityMetric ────────────────────────────────────────────────
 
 
