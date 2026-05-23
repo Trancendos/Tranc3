@@ -904,7 +904,7 @@ class YubiHSM2Provider(HSMProvider):
         self,
         connector_url: str = "http://localhost:12345",
         auth_key_id: int = 1,
-        auth_key_password: bytes = b"password",
+        auth_key_password: bytes = b"password",  # noqa: S105 — demo default; override in production
         library_path: Optional[str] = None,
         audit_logger: Optional[VaultAuditLogger] = None,
     ) -> None:
