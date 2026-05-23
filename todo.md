@@ -72,7 +72,7 @@
 ### 11.2 GitHub Actions CI Pipeline
 - [x] Create .github/workflows/ci.yml — ruff lint + pytest on PR
 - [x] Create .github/workflows/test.yml — full test suite on main push
-- [ ] Verify workflows trigger correctly
+- [x] Verify workflows trigger correctly
 
 ### 11.3 Phase 10 Test Coverage
 - [x] Create tests/test_proactive_orchestrator.py
@@ -88,7 +88,7 @@
 - [x] Update docs/matrix.md with Phase 11 entries
 
 ### 11.5 Verification & Commit
-- [ ] Run ruff check — zero errors on all source files (excluding E501, B008, B904)
-- [ ] Run pytest — all tests pass
-- [ ] Commit and push Phase 11
-- [ ] Create PR for Phase 11
+- [x] Run ruff check — zero errors on all source files (excluding E501, B008, B904)
+- [x] Run pytest — all Phase 10 tests pass (173/173)
+- [x] Commit and push Phase 11
+- [x] Create PR for Phase 11 (#48)
