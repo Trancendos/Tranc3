@@ -73,3 +73,5 @@ Thumbs.db
 *.db-wal
 spawned/
 node_modules/
+deploy/terraform/.terraform/
+src/nanoservices/rust/tranc3-nanoservice/Cargo.lock

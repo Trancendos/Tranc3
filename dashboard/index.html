@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tranc3 Ecosystem Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body class="grid-bg">
+
+<!-- Header -->
+<header class="border-b border-slate-700/50 px-6 py-4 flex items-center justify-between sticky top-0 z-50 bg-slate-900/95 backdrop-blur-sm">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center font-bold text-white text-lg">T3</div>
+    <div>
+      <h1 class="text-xl font-bold text-slate-100">Tranc3 Ecosystem</h1>
+      <p class="text-xs text-slate-400">Phase 20 — Control Plane v0.5.0</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-4">
+    <span class="text-xs text-slate-500" id="last-refresh">—</span>
+    <button onclick="refreshAll()" class="px-3 py-1.5 text-xs bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded-lg hover:bg-sky-500/30 transition">↻ Refresh</button>
+    <div class="flex items-center gap-2">
+      <span class="status-dot healthy"></span>
+      <span class="text-xs text-slate-400">Live</span>
+    </div>
+  </div>
+</header>
+
+<main class="p-6 space-y-6 max-w-[1600px] mx-auto">
+
+  <!-- Overview Stats -->
+  <section class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+    <div class="card text-center">
+      <p class="text-xs text-slate-400 uppercase tracking-wide">Services</p>
+      <p class="stat-value" id="stat-services">38</p>
+      <p class="text-xs text-slate-500">Active</p>
+    </div>
+    <div class="card text-center">
+      <p class="text-xs text-slate-400 uppercase tracking-wide">P4 Workers</p>
+      <p class="stat-value" id="stat-p4">8</p>
+      <p class="text-xs text-slate-500">Ecosystem Matrix</p>
+    </div>
+    <div class="card text-center">
+      <p class="text-xs text-slate-400 uppercase tracking-wide">Topology</p>
+      <p class="stat-value" id="stat-topology">TRUE_NAS</p>
+      <p class="text-xs text-slate-500">Current Mode</p>
+    </div>
+    <div class="card text-center">
+      <p class="text-xs text-slate-400 uppercase tracking-wide">AI Models</p>
+      <p class="stat-value" id="stat-models">6</p>
+      <p class="text-xs text-slate-500">Zero-Cost</p>
+    </div>
+    <div class="card text-center">
+      <p class="text-xs text-slate-400 uppercase tracking-wide">Secrets</p>
+      <p class="stat-value" id="stat-secrets">0</p>
+      <p class="text-xs text-slate-500">Vault Active</p>
+    </div>
+    <div class="card text-center">
+      <p class="text-xs text-slate-400 uppercase tracking-wide">Agents</p>
+      <p class="stat-value" id="stat-agents">0</p>
+      <p class="text-xs text-slate-500">DeepAgents</p>
+    </div>
+  </section>
+
+  <!-- Service Health Grid -->
+  <section>
+    <h2 class="text-lg font-semibold text-slate-200 mb-3 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+      Service Health Grid
+    </h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3" id="health-grid">
+      <!-- Populated by JS -->
+    </div>
+  </section>
+
+  <!-- P4 Detail Panels -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Vault Service -->
+    <section class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-slate-200 flex items-center gap-2">
+          <span class="text-lg">🔐</span> Vault Service <span class="text-xs text-slate-500">:8030</span>
+        </h3>
+        <span class="text-xs px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full" id="vault-status">OK</span>
+      </div>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-slate-400">Total Secrets</span><span id="vault-total">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Active Secrets</span><span id="vault-active">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Revoked</span><span id="vault-revoked">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Audit Entries</span><span id="vault-audit">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Chain Valid</span><span id="vault-chain" class="text-green-400">✓</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Open Leaks</span><span id="vault-leaks">0</span></div>
+      </div>
+    </section>
+
+    <!-- Topology Service -->
+    <section class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-slate-200 flex items-center gap-2">
+          <span class="text-lg">🌐</span> Topology Service <span class="text-xs text-slate-500">:8031</span>
+        </h3>
+        <span class="text-xs px-2 py-0.5 bg-sky-500/20 text-sky-400 rounded-full" id="topo-mode-badge">TRUE_NAS</span>
+      </div>
+      <div class="space-y-3">
+        <!-- Topology Visualization -->
+        <div class="flex items-center justify-center gap-4 py-4">
+          <div class="topo-node active" id="topo-nas">NAS</div>
+          <svg width="60" height="2"><line x1="0" y1="1" x2="60" y2="1" class="topo-connector"/></svg>
+          <div class="topo-node" id="topo-hybrid">HYB</div>
+          <svg width="60" height="2"><line x1="0" y1="1" x2="60" y2="1" class="topo-connector"/></svg>
+          <div class="topo-node" id="topo-cloud">CLD</div>
+        </div>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-slate-400">Current Mode</span><span id="topo-mode">TRUE_NAS</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Registered Nodes</span><span id="topo-nodes">0</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Healthy Nodes</span><span id="topo-healthy">0</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Migrations</span><span id="topo-migrations">0</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Model Router -->
+    <section class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-slate-200 flex items-center gap-2">
+          <span class="text-lg">🧠</span> Model Router <span class="text-xs text-slate-500">:8033</span>
+        </h3>
+        <span class="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded-full">Zero-Cost</span>
+      </div>
+      <div class="space-y-2" id="model-list">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- Workflow Engine -->
+    <section class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-slate-200 flex items-center gap-2">
+          <span class="text-lg">⚙️</span> Workflow Engine <span class="text-xs text-slate-500">:8034</span>
+        </h3>
+        <span class="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full">DAG</span>
+      </div>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-slate-400">Total Workflows</span><span id="wf-total">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Total Runs</span><span id="wf-runs">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Completed</span><span id="wf-completed">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Failed</span><span id="wf-failed">0</span></div>
+      </div>
+      <div class="mt-3 flex items-center gap-2 flex-wrap" id="wf-demo-steps">
+        <span class="wf-step completed">Extract</span>
+        <span class="text-slate-500">→</span>
+        <span class="wf-step running">Transform</span>
+        <span class="text-slate-500">→</span>
+        <span class="wf-step pending">Load</span>
+      </div>
+    </section>
+
+    <!-- Ledger Service -->
+    <section class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-slate-200 flex items-center gap-2">
+          <span class="text-lg">📋</span> Audit Ledger <span class="text-xs text-slate-500">:8032</span>
+        </h3>
+        <span class="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full">Immutable</span>
+      </div>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-slate-400">Total Entries</span><span id="ledger-entries">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Chain Valid</span><span id="ledger-valid" class="text-green-400">✓</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Sentinel Checks</span><span id="ledger-sentinel">0</span></div>
+      </div>
+    </section>
+
+    <!-- Skills Benchmark -->
+    <section class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-slate-200 flex items-center gap-2">
+          <span class="text-lg">📊</span> Skills Benchmark <span class="text-xs text-slate-500">:8035</span>
+        </h3>
+        <span class="text-xs px-2 py-0.5 bg-teal-500/20 text-teal-400 rounded-full">AI Eval</span>
+      </div>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-slate-400">Benchmark Suites</span><span id="bench-suites">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Total Evaluations</span><span id="bench-evals">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Completed</span><span id="bench-completed">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Pending</span><span id="bench-pending">0</span></div>
+      </div>
+    </section>
+
+    <!-- LangChain Integration -->
+    <section class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-slate-200 flex items-center gap-2">
+          <span class="text-lg">🔗</span> LangChain <span class="text-xs text-slate-500">:8036</span>
+        </h3>
+        <span class="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full">Orchestration</span>
+      </div>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-slate-400">Prompt Templates</span><span id="lc-templates">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Chains</span><span id="lc-chains">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Documents</span><span id="lc-docs">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">State Graphs</span><span id="lc-graphs">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Executions</span><span id="lc-executions">0</span></div>
+      </div>
+    </section>
+
+    <!-- DeepAgents Orchestrator -->
+    <section class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-slate-200 flex items-center gap-2">
+          <span class="text-lg">🤖</span> DeepAgents <span class="text-xs text-slate-500">:8037</span>
+        </h3>
+        <span class="text-xs px-2 py-0.5 bg-violet-500/20 text-violet-400 rounded-full">Orchestrator</span>
+      </div>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-slate-400">Registered Agents</span><span id="da-agents">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Active Agents</span><span id="da-active">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Total Tasks</span><span id="da-tasks">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Delegations</span><span id="da-delegations">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Skills Available</span><span id="da-skills">0</span></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Audit Log Timeline -->
+  <section class="card">
+    <h3 class="font-semibold text-slate-200 mb-3 flex items-center gap-2">
+      <span class="text-lg">📜</span> Recent Audit Events
+    </h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-slate-400 text-left border-b border-slate-700">
+            <th class="pb-2 pr-4">Time</th>
+            <th class="pb-2 pr-4">Service</th>
+            <th class="pb-2 pr-4">Action</th>
+            <th class="pb-2 pr-4">Actor</th>
+            <th class="pb-2">Details</th>
+          </tr>
+        </thead>
+        <tbody id="audit-timeline" class="text-slate-300">
+          <tr class="text-slate-500"><td colspan="5" class="py-4 text-center">No events — connect services to see live data</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<!-- Footer -->
+<footer class="border-t border-slate-700/50 px-6 py-3 text-center text-xs text-slate-500">
+  Tranc3 Ecosystem Dashboard — Phase 20 — Zero-Cost Architecture — v0.5.0
+</footer>
+
+<script>
+// ── Service registry ──────────────────────────────────────────────────────
+const SERVICES = [
+  // P0 (core)
+  { name: 'api-gateway', port: 8000, group: 'P0' },
+  { name: 'auth', port: 8001, group: 'P0' },
+  { name: 'users-service', port: 8006, group: 'P0' },
+  { name: 'tranc3-ai', port: 8003, group: 'P0' },
+  { name: 'infinity-ai', port: 8011, group: 'P0' },
+  { name: 'infinity-auth', port: 8012, group: 'P0' },
+  { name: 'infinity-ws', port: 8014, group: 'P0' },
+  { name: 'infinity-void', port: 8013, group: 'P0' },
+  // P1
+  { name: 'monitoring', port: 8005, group: 'P1' },
+  { name: 'notifications', port: 8008, group: 'P1' },
+  { name: 'products-service', port: 8007, group: 'P1' },
+  { name: 'orders-service', port: 8009, group: 'P1' },
+  { name: 'payments-service', port: 8011, group: 'P1' },
+  { name: 'files-service', port: 8012, group: 'P1' },
+  // P2
+  { name: 'the-grid', port: 8010, group: 'P2' },
+  { name: 'identity-service', port: 8015, group: 'P2' },
+  // P3
+  { name: 'analytics-service', port: 8016, group: 'P3' },
+  { name: 'search-service', port: 8017, group: 'P3' },
+  { name: 'email-service', port: 8018, group: 'P3' },
+  { name: 'sms-service', port: 8019, group: 'P3' },
+  { name: 'storage-service', port: 8020, group: 'P3' },
+  { name: 'cron-service', port: 8021, group: 'P3' },
+  { name: 'queue-service', port: 8022, group: 'P3' },
+  { name: 'cache-service', port: 8023, group: 'P3' },
+  { name: 'config-service', port: 8024, group: 'P3' },
+  { name: 'audit-service', port: 8025, group: 'P3' },
+  { name: 'rate-limit-service', port: 8026, group: 'P3' },
+  { name: 'geo-service', port: 8027, group: 'P3' },
+  { name: 'cdn-service', port: 8028, group: 'P3' },
+  { name: 'health-aggregator', port: 8029, group: 'P3' },
+  // P4 (Ecosystem Matrix)
+  { name: 'vault-service', port: 8030, group: 'P4', emoji: '🔐' },
+  { name: 'topology-service', port: 8031, group: 'P4', emoji: '🌐' },
+  { name: 'ledger-service', port: 8032, group: 'P4', emoji: '📋' },
+  { name: 'model-router', port: 8033, group: 'P4', emoji: '🧠' },
+  { name: 'workflow-engine', port: 8034, group: 'P4', emoji: '⚙️' },
+  { name: 'skills-benchmark', port: 8035, group: 'P4', emoji: '📊' },
+  { name: 'langchain', port: 8036, group: 'P4', emoji: '🔗' },
+  { name: 'deepagents', port: 8037, group: 'P4', emoji: '🤖' },
+];
+
+const P4_SERVICES = SERVICES.filter(s => s.group === 'P4');
+
+// ── Config ────────────────────────────────────────────────────────────────
+const API_BASE = window.location.hostname === 'localhost'
+  ? 'http://localhost' : window.location.origin;
+const REFRESH_MS = 15000;
+
+// ── Health Grid ───────────────────────────────────────────────────────────
+function renderHealthGrid() {
+  const grid = document.getElementById('health-grid');
+  grid.innerHTML = SERVICES.map(s => {
+    const isP4 = s.group === 'P4';
+    const bgClass = isP4 ? 'border-sky-500/30 bg-sky-500/5' : 'border-slate-700 bg-slate-800/50';
+    const emoji = s.emoji || '';
+    return `
+      <div class="card ${bgClass} text-center cursor-pointer" onclick="checkService('${s.name}', ${s.port})" title="${s.name}:${s.port}">
+        <div class="text-lg mb-1">${emoji || '●'}</div>
+        <div class="text-xs font-medium text-slate-300 truncate">${s.name}</div>
+        <div class="text-[10px] text-slate-500">:${s.port}</div>
+        <div class="mt-1"><span class="status-dot healthy" id="dot-${s.port}"></span></div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function checkService(name, port) {
+  try {
+    const r = await fetch(`${API_BASE}:${port}/health`, { signal: AbortSignal.timeout(3000) });
+    const d = await r.json();
+    const dot = document.getElementById(`dot-${port}`);
+    if (dot) { dot.className = 'status-dot healthy'; }
+    return d;
+  } catch {
+    const dot = document.getElementById(`dot-${port}`);
+    if (dot) { dot.className = 'status-dot error'; }
+    return null;
+  }
+}
+
+// ── P4 Stats Fetch ───────────────────────────────────────────────────────
+async function fetchP4Stats() {
+  const endpoints = [
+    { port: 8030, path: '/stats', handler: updateVaultStats },
+    { port: 8031, path: '/stats', handler: updateTopologyStats },
+    { port: 8032, path: '/stats', handler: updateLedgerStats },
+    { port: 8033, path: '/stats', handler: updateModelRouterStats },
+    { port: 8034, path: '/stats', handler: updateWorkflowStats },
+    { port: 8035, path: '/stats', handler: updateBenchmarkStats },
+    { port: 8036, path: '/stats', handler: updateLangchainStats },
+    { port: 8037, path: '/stats', handler: updateDeepagentsStats },
+  ];
+
+  for (const ep of endpoints) {
+    try {
+      const r = await fetch(`${API_BASE}:${ep.port}${ep.path}`, { signal: AbortSignal.timeout(5000) });
+      if (r.ok) {
+        const data = await r.json();
+        ep.handler(data);
+        const dot = document.getElementById(`dot-${ep.port}`);
+        if (dot) dot.className = 'status-dot healthy';
+      }
+    } catch {
+      const dot = document.getElementById(`dot-${ep.port}`);
+      if (dot) dot.className = 'status-dot error';
+    }
+  }
+}
+
+function updateVaultStats(d) {
+  document.getElementById('vault-total').textContent = d.total_secrets ?? '—';
+  document.getElementById('vault-active').textContent = d.active_secrets ?? '—';
+  document.getElementById('vault-revoked').textContent = d.revoked_secrets ?? '—';
+  document.getElementById('vault-audit').textContent = d.audit_entries ?? '—';
+  document.getElementById('vault-leaks').textContent = d.open_leaks ?? '—';
+  document.getElementById('stat-secrets').textContent = d.active_secrets ?? '0';
+}
+
+function updateTopologyStats(d) {
+  document.getElementById('topo-mode').textContent = d.current_mode ?? '—';
+  document.getElementById('topo-nodes').textContent = d.total_nodes ?? '—';
+  document.getElementById('topo-healthy').textContent = d.healthy_nodes ?? '—';
+  document.getElementById('topo-migrations').textContent = d.total_migrations ?? '—';
+  document.getElementById('stat-topology').textContent = d.current_mode ?? 'TRUE_NAS';
+  document.getElementById('topo-mode-badge').textContent = d.current_mode ?? 'TRUE_NAS';
+  // Update topology visual
+  const mode = d.current_mode;
+  document.getElementById('topo-nas').className = 'topo-node' + (mode === 'TRUE_NAS' ? ' active' : '');
+  document.getElementById('topo-hybrid').className = 'topo-node' + (mode === 'HYBRID' ? ' active' : '');
+  document.getElementById('topo-cloud').className = 'topo-node' + (mode === 'CLOUD_ONLY' ? ' active' : '');
+}
+
+function updateLedgerStats(d) {
+  document.getElementById('ledger-entries').textContent = d.total_entries ?? '—';
+  document.getElementById('ledger-valid').textContent = d.chain_valid ? '✓' : '✗';
+  document.getElementById('ledger-valid').className = d.chain_valid ? 'text-green-400' : 'text-red-400';
+  document.getElementById('ledger-sentinel').textContent = d.sentinel_checks ?? '—';
+}
+
+function updateModelRouterStats(d) {
+  document.getElementById('stat-models').textContent = d.total_models ?? '0';
+  const list = document.getElementById('model-list');
+  // Fetch model list for details
+  fetch(`${API_BASE}:8033/models`).then(r => r.json()).then(models => {
+    list.innerHTML = models.slice(0, 6).map(m => `
+      <div class="flex items-center justify-between py-1">
+        <span class="text-slate-300">${m.name}</span>
+        <span class="text-xs ${m.is_active ? 'text-green-400' : 'text-red-400'}">${m.is_active ? '●' : '○'} ${m.provider}</span>
+      </div>
+    `).join('');
+  }).catch(() => {});
+}
+
+function updateWorkflowStats(d) {
+  document.getElementById('wf-total').textContent = d.total_workflows ?? '—';
+  document.getElementById('wf-runs').textContent = d.total_runs ?? '—';
+  document.getElementById('wf-completed').textContent = d.completed_runs ?? '—';
+  document.getElementById('wf-failed').textContent = d.failed_runs ?? '—';
+}
+
+function updateBenchmarkStats(d) {
+  document.getElementById('bench-suites').textContent = d.total_suites ?? '—';
+  document.getElementById('bench-evals').textContent = d.total_evaluations ?? '—';
+  document.getElementById('bench-completed').textContent = d.completed_evaluations ?? '—';
+  document.getElementById('bench-pending').textContent = d.pending_evaluations ?? '—';
+}
+
+function updateLangchainStats(d) {
+  document.getElementById('lc-templates').textContent = d.prompt_templates ?? '—';
+  document.getElementById('lc-chains').textContent = d.chains ?? '—';
+  document.getElementById('lc-docs').textContent = d.documents ?? '—';
+  document.getElementById('lc-graphs').textContent = d.state_graphs ?? '—';
+  document.getElementById('lc-executions').textContent = d.total_executions ?? '—';
+}
+
+function updateDeepagentsStats(d) {
+  document.getElementById('da-agents').textContent = d.agents?.total ?? '—';
+  document.getElementById('da-active').textContent = d.agents?.active ?? '—';
+  document.getElementById('da-tasks').textContent = d.tasks?.total ?? '—';
+  document.getElementById('da-delegations').textContent = d.delegations ?? '—';
+  document.getElementById('da-skills').textContent = d.skills ?? '—';
+  document.getElementById('stat-agents').textContent = d.agents?.active ?? '0';
+}
+
+// ── Refresh ───────────────────────────────────────────────────────────────
+async function refreshAll() {
+  document.getElementById('last-refresh').textContent = new Date().toLocaleTimeString();
+  await fetchP4Stats();
+  // Quick health check on all services
+  for (const s of SERVICES) {
+    checkService(s.name, s.port);
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+renderHealthGrid();
+refreshAll();
+setInterval(refreshAll, REFRESH_MS);
+</script>
+</body>
+</html>

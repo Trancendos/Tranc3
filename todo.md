@@ -1,28 +1,42 @@
-# Tranc3 — Phase 19: P3 Worker Build-Out, Enhanced Users-Service & docker-compose Integration
+# Tranc3 — Phase 20: Ecosystem Matrix, AI Workers & Dashboard
 
-## Phase 19.1: Enhanced Users-Service (Port 8006)
-- [x] Baseline confirmed: 229 lines, basic CRUD only
-- [x] Expand users-service with: avatar URL, bio, timezone, last_login, user search, roles endpoint, bulk deactivate, account lock/unlock, password-reset token stub
-- [x] Add json import for preferences serialisation (uses `str()` currently — bug)
-- [x] Verify all existing test_workers_p1.py tests still pass after enhancement
+## Phase 20.1: Research & Architecture Review
+- [x] Survey shared_core architecture files (vault, vault_security, audit_ledger, sentinel, storage_factory, smart_storage)
+- [x] Review LangChain/LangGraph patterns for workflow and integration services
+- [x] Design zero-cost service architecture (XOR encryption, SQLite, no external deps)
 
-## Phase 19.2: P3 Worker Test Suite (test_workers_p3.py)
-- [x] Write tests/test_workers_p3.py covering all 16 extended workers:
-  - analytics-service (8016), search-service (8017), email-service (8018),
-    sms-service (8019), storage-service (8020), cron-service (8021),
-    queue-service (8022), cache-service (8023), config-service (8024),
-    audit-service (8025), rate-limit-service (8026), geo-service (8027),
-    cdn-service (8028), health-aggregator (8029), identity-service (8015),
-    the-grid (8010)
-- [x] Target ≥5 tests per worker (health + 2-3 functional + error path)
-- [x] All 143 tests pass (2170 total, 12 skipped, 0 failures)
+## Phase 20.2: P4 Worker Build-Out (8 workers, ports 8030–8037)
+- [x] vault-service (8030) — XOR encryption, hash-chained audit, leak detection, zeroization
+- [x] topology-service (8031) — Adaptive topology switching (TRUE_NAS↔HYBRID↔CLOUD_ONLY), failover
+- [x] ledger-service (8032) — SHA-256 hash-chained immutable audit ledger with sentinel verification
+- [x] model-router-service (8033) — Smart multi-model routing (cost/latency/priority/round-robin), circuit breaker
+- [x] workflow-engine-service (8034) — DAG-based workflow execution, topological sort, DFS cycle detection, checkpoints
+- [x] skills-benchmark-service (8035) — AI capability benchmarking, leaderboard, skill gap detection
+- [x] langchain-integration-service (8036) — Zero-cost LangChain orchestration, prompt templates, chains, RAG, state graphs
+- [x] deepagents-orchestrator-service (8037) — Multi-agent orchestration, delegation depth limits, skill registry, execution logs
 
-## Phase 19.3: docker-compose Integration
-- [x] Add all workers to docker-compose.yml with correct ports, volumes, env (30 services, 27 volumes)
-- [x] Verify compose file is valid (Python yaml.safe_load validation)
+## Phase 20.3: P4 Test Suite
+- [x] Write tests/test_workers_p4.py covering all 8 P4 workers (61 tests, ≥5 per worker)
+- [x] All tests pass (406 total across P0–P4, 0 failures)
+- [x] Fix vault-service audit chain ordering bug (ORDER BY created_at instead of id)
 
-## Phase 19.4: CI & Release
-- [x] ruff check + ruff format --check → 0 errors (403 files formatted)
-- [x] Full pytest suite → 2170 passed, 12 skipped, 0 failures
-- [ ] Create PR feat/phase19-p3-workers-users-enhancement
-- [ ] Merge PR + create release tag v0.4.0
+## Phase 20.4: docker-compose Integration
+- [x] Add P4 workers to docker-compose.yml (ports 8030–8037, 8 new volumes)
+- [x] Verify compose file validity (38 services, 35 volumes)
+
+## Phase 20.5: UI Dashboard (Ecosystem Control Plane)
+- [x] Create React + Tailwind dashboard for monitoring all workers
+- [x] Service health grid, topology visualizer, model router status, workflow DAG viewer
+- [x] Deploy or serve as static site (http://localhost:8090)
+
+## Phase 20.6: SWOT Analysis & Forensic Assessment
+- [x] Pre-implementation production-readiness % assessment (48.6%)
+- [x] SWOT analysis document (PHASE20_SWOT_FORENSIC.md)
+- [x] Post-implementation production-readiness % assessment (81.1%, +32.5%)
+
+## Phase 20.7: CI & Release
+- [ ] ruff check + ruff format
+- [ ] Full pytest suite passes (existing + new P4 tests)
+- [ ] Update pyproject.toml version to 0.5.0
+- [ ] Initialize git repo, create branch, commit, tag v0.5.0
+- [ ] Provide before/after production-readiness percentage
