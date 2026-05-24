@@ -76,3 +76,7 @@ node_modules/
 .terraform/
 aeonmind/python/.venv/
 aeonmind/python/*.egg-info/
+
+# Nexus test artifacts
+bridge-*
+nexus-*

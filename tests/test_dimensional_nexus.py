@@ -930,5 +930,110 @@ class TestDashboardEndpoint:
             assert "/ws/events (WebSocket)" in data.get("endpoints", [])
 
 
+# ---------------------------------------------------------------------------
+# Test Sentinel Bridge
+# ---------------------------------------------------------------------------
+
+
+class TestNexusSentinelBridge:
+    """Tests for the Nexus ↔ Sentinel Station bidirectional bridge."""
+
+    def test_bridge_creation(self):
+        """Bridge can be created with or without a nexus."""
+        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        bridge = NexusSentinelBridge()
+        assert bridge._nexus is None
+        assert bridge._sentinel_station is None
+        assert bridge._forward_to_sentinel is True
+        assert bridge._forward_to_nexus is True
+
+    def test_bridge_stats(self):
+        """Bridge stats track forwarded events."""
+        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        bridge = NexusSentinelBridge()
+        stats = bridge.stats
+        assert stats["nexus_to_sentinel"] == 0
+        assert stats["sentinel_to_nexus"] == 0
+        assert stats["errors"] == 0
+
+    def test_bridge_pause_resume_sentinel(self):
+        """Bridge can pause/resume forwarding to Sentinel."""
+        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        bridge = NexusSentinelBridge()
+        bridge.pause_sentinel_forward()
+        assert bridge._forward_to_sentinel is False
+        bridge.resume_sentinel_forward()
+        assert bridge._forward_to_sentinel is True
+
+    def test_bridge_pause_resume_nexus(self):
+        """Bridge can pause/resume forwarding to Nexus."""
+        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        bridge = NexusSentinelBridge()
+        bridge.pause_nexus_forward()
+        assert bridge._forward_to_nexus is False
+        bridge.resume_nexus_forward()
+        assert bridge._forward_to_nexus is True
+
+    @pytest.mark.asyncio
+    async def test_bridge_status(self):
+        """Bridge status returns correct info."""
+        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        bridge = NexusSentinelBridge()
+        status = await bridge.get_status()
+        assert status["bridge"] == "NexusSentinelBridge"
+        assert status["sentinel_attached"] is False
+        assert status["forward_to_sentinel"] is True
+        assert status["forward_to_nexus"] is True
+        assert "channel_map" in status
+        assert "platform" in status["channel_map"]
+
+    @pytest.mark.asyncio
+    async def test_bridge_on_sentinel_event(self):
+        """Bridge forwards Sentinel events into the Nexus."""
+        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge, get_bridge
+        from Dimensional.nexus.nexus_core import DimensionalNexus
+
+        nexus = DimensionalNexus("bridge-test")
+        bridge = NexusSentinelBridge(nexus)
+
+        await bridge.on_sentinel_event(
+            channel="security",
+            payload={"alert": "test"},
+            event_type="security_alert",
+            source="sentinel:test-dim",
+        )
+        assert bridge.stats["sentinel_to_nexus"] == 1
+
+    @pytest.mark.asyncio
+    async def test_bridge_on_sentinel_event_paused(self):
+        """Bridge does not forward when Nexus forwarding is paused."""
+        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        from Dimensional.nexus.nexus_core import DimensionalNexus
+
+        nexus = DimensionalNexus("bridge-pause-test")
+        bridge = NexusSentinelBridge(nexus)
+        bridge.pause_nexus_forward()
+
+        await bridge.on_sentinel_event(
+            channel="platform",
+            payload={"test": True},
+            event_type="test",
+            source="sentinel",
+        )
+        assert bridge.stats["sentinel_to_nexus"] == 0
+
+    def test_bridge_singleton(self):
+        """get_bridge returns a singleton instance."""
+        from Dimensional.nexus.sentinel_bridge import get_bridge
+        # Reset singleton for test isolation
+        import Dimensional.nexus.sentinel_bridge as _sb
+        _sb._bridge_instance = None
+        b1 = get_bridge()
+        b2 = get_bridge()
+        assert b1 is b2
+        # Cleanup
+        _sb._bridge_instance = None
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

@@ -11,6 +11,7 @@ Architecture:
          → Tier Access Bridge (RBAC ↔ ABAC unification)
          → Sentinel Event Router → Cross-platform event distribution
          → Causal Ordering Engine → Timeline consistency for all events
+         → Sentinel Bridge → Bidirectional Nexus ↔ Sentinel Station flow
 
 Components:
     DimensionalNexus: Central coordinator and API surface
@@ -18,6 +19,7 @@ Components:
     HealthAggregator: Real-time health across all dimensional services
     EventRouter: Cross-dimensional sentinel event distribution
     CausalOrderingEngine: Vector-clock based event timeline consistency
+    NexusSentinelBridge: Bidirectional event bridge to Sentinel Station
 
 Port: 8050
 Zero-cost: FastAPI + SQLite + in-process bus. No external dependencies.
@@ -28,15 +30,20 @@ from .nexus_core import (
     DimensionalNexus,
     EventRouter,
     HealthAggregator,
+    NexusWSManager,
     TierAccessBridge,
     get_nexus,
 )
+from .sentinel_bridge import NexusSentinelBridge, get_bridge
 
 __all__ = [
     "CausalOrderingEngine",
     "DimensionalNexus",
     "EventRouter",
     "HealthAggregator",
+    "NexusWSManager",
+    "NexusSentinelBridge",
     "TierAccessBridge",
+    "get_bridge",
     "get_nexus",
 ]
