@@ -73,3 +73,5 @@ Thumbs.db
 *.db-wal
 spawned/
 node_modules/
+# Terraform provider binaries
+deploy/terraform/.terraform/providers/
