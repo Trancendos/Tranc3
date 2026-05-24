@@ -1,1149 +1,1110 @@
 /* ============================================================
    Tranc3 AI Platform — Application Logic
-   Phase 21: Full AI Platform SPA with real-time data flows
+   Phase 22.8: Infinity Ecosystem Dashboard
+   Smart Adaptive Intelligence · Proactive Defense · Fluidic Routing
    ============================================================ */
 
 (function () {
   'use strict';
 
-  // ── Configuration ──────────────────────────────────────────
+  // ── Configuration ──────────────────────────────────────────────────────────
   const CONFIG = {
-    gatewayUrl: window.GATEWAY_URL || `${window.location.protocol}//${window.location.hostname}:8040`,
-    refreshInterval: 5000,
-    sseReconnectDelay: 3000,
-    wsReconnectDelay: 3000,
-    maxRetries: 5,
+    gatewayUrl:      window.GATEWAY_URL      || `${location.protocol}//${location.hostname}:8040`,
+    portalUrl:       window.PORTAL_URL       || `${location.protocol}//${location.hostname}:8042`,
+    oneUrl:          window.ONE_URL          || `${location.protocol}//${location.hostname}:8043`,
+    adminUrl:        window.ADMIN_URL        || `${location.protocol}//${location.hostname}:8044`,
+    sentinelUrl:     window.SENTINEL_URL     || `${location.protocol}//${location.hostname}:8041`,
+    authUrl:         window.AUTH_URL         || `${location.protocol}//${location.hostname}:8005`,
+    refreshInterval: 6000,       // 6 s primary polling
+    sseReconnectMs:  4000,       // SSE back-off base
+    sentinelFeedMax: 120,        // max events in live feed
   };
 
-  // ── State Management ───────────────────────────────────────
-  const state = {
-    connected: false,
-    topologyMode: 'TRUE_NAS',
-    activeView: 'command',
-    sidebarCollapsed: false,
-    overview: null,
-    agents: [],
-    models: [],
-    workflows: [],
-    security: null,
-    audit: [],
-    services: [],
-    activityLog: [],
-    ws: null,
-    sse: null,
-    retryCount: 0,
-  };
-
-  // ── SVG Icon Library ───────────────────────────────────────
-  const ICONS = {
-    command: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',
-    agents: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-    models: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></svg>',
-    workflows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>',
-    security: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
-    audit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
-    services: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>',
-    refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
-    settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
-    send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
-    bolt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
-    brain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2z"/></svg>',
-    shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
-    key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',
-    chevronLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
-    chevronRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
-    terminal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',
-    play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
-    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-    server: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>',
-    globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-    activity: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
-    zap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
-  };
-
-  function icon(name, cls) {
-    return `<span class="icon ${cls || ''}">${ICONS[name] || ''}</span>`;
-  }
-
-  // ── Utility Functions ──────────────────────────────────────
-  function $(sel) { return document.querySelector(sel); }
-  function $$(sel) { return document.querySelectorAll(sel); }
-
-  function timeAgo(dateStr) {
-    if (!dateStr) return '—';
-    const diff = Date.now() - new Date(dateStr).getTime();
-    if (diff < 60000) return 'just now';
-    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
-    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
-    return Math.floor(diff / 86400000) + 'd ago';
-  }
-
-  function truncate(s, n) {
-    if (!s) return '—';
-    return s.length > n ? s.substring(0, n) + '…' : s;
-  }
-
-  function addActivity(type, text) {
-    state.activityLog.unshift({ type, text, time: new Date().toISOString() });
-    if (state.activityLog.length > 50) state.activityLog.pop();
-  }
-
-  // ── API Client ─────────────────────────────────────────────
-  const api = {
-    async fetch(path) {
-      try {
-        const res = await fetch(`${CONFIG.gatewayUrl}${path}`, { signal: AbortSignal.timeout(8000) });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
-      } catch (err) {
-        console.warn(`[API] ${path} failed:`, err.message);
-        return null;
-      }
-    },
-
-    async post(path, body) {
-      try {
-        const res = await fetch(`${CONFIG.gatewayUrl}${path}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(8000),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
-      } catch (err) {
-        console.warn(`[API POST] ${path} failed:`, err.message);
-        return null;
-      }
-    },
-
-    async put(path, body) {
-      try {
-        const res = await fetch(`${CONFIG.gatewayUrl}${path}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(8000),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
-      } catch (err) {
-        console.warn(`[API PUT] ${path} failed:`, err.message);
-        return null;
-      }
+  // ── State ──────────────────────────────────────────────────────────────────
+  const S = {
+    activeView:      'overview',
+    sidebarOpen:     true,
+    sse:             null,
+    sseRetries:      0,
+    pollTimer:       null,
+    clockTimer:      null,
+    sentinelFeed:    [],   // [{ts, channel, eventType, source}]
+    serviceData:     {},   // keyed by service name
+    healthScores: {
+      portal: null, one: null, admin: null,
+      gateway: null, sentinel: null, auth: null,
     },
   };
 
-  // ── Real-Time Connections ──────────────────────────────────
-  function connectSSE() {
-    if (state.sse) { state.sse.close(); }
-    try {
-      const url = `${CONFIG.gatewayUrl}/events`;
-      const es = new EventSource(url);
-      es.onopen = () => {
-        state.connected = true;
-        state.retryCount = 0;
-        updateConnectionStatus();
-        addActivity('system', 'SSE stream connected');
-      };
-      es.onmessage = (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          handleSSEEvent(data);
-        } catch { /* ignore non-JSON */ }
-      };
-      es.onerror = () => {
-        state.connected = false;
-        updateConnectionStatus();
-        es.close();
-        if (state.retryCount < CONFIG.maxRetries) {
-          state.retryCount++;
-          setTimeout(connectSSE, CONFIG.sseReconnectDelay);
-        }
-      };
-      state.sse = es;
-    } catch (err) {
-      console.warn('[SSE] Connection failed:', err);
-    }
-  }
+  // ── DOM helpers ────────────────────────────────────────────────────────────
+  const $         = id => document.getElementById(id);
+  const setText   = (id, v, fallback = '—') => {
+    const el = $(id);
+    if (el) el.textContent = (v === null || v === undefined) ? fallback : String(v);
+  };
+  const addClass    = (el, c) => el && el.classList.add(c);
+  const removeClass = (el, c) => el && el.classList.remove(c);
 
-  function handleSSEEvent(data) {
-    if (data.type === 'overview_update' || data.type === 'health_change') {
-      refreshAllData();
-    } else if (data.type === 'agent_event') {
-      refreshAgents();
-      addActivity('agent', data.message || 'Agent event');
-    } else if (data.type === 'workflow_event') {
-      refreshWorkflows();
-      addActivity('workflow', data.message || 'Workflow event');
-    } else if (data.type === 'security_event') {
-      refreshSecurity();
-      addActivity('security', data.message || 'Security event');
-    }
-    renderActivityFeed();
-  }
+  // ── View Switching ─────────────────────────────────────────────────────────
+  window.switchView = function (name, el) {
+    document.querySelectorAll('.view').forEach(v => removeClass(v, 'active'));
+    document.querySelectorAll('.nav-item').forEach(i => removeClass(i, 'active'));
 
-  function connectWebSocket() {
-    if (state.ws && state.ws.readyState === WebSocket.OPEN) return;
-    try {
-      const wsUrl = CONFIG.gatewayUrl.replace(/^http/, 'ws') + '/ws';
-      const ws = new WebSocket(wsUrl);
-      ws.onopen = () => {
-        state.connected = true;
-        updateConnectionStatus();
-        ws.send(JSON.stringify({ type: 'subscribe', channels: ['overview', 'agents', 'workflows', 'security'] }));
-      };
-      ws.onmessage = (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          handleSSEEvent(data);
-        } catch { /* ignore */ }
-      };
-      ws.onclose = () => {
-        state.connected = false;
-        updateConnectionStatus();
-        if (state.retryCount < CONFIG.maxRetries) {
-          setTimeout(connectWebSocket, CONFIG.wsReconnectDelay);
-        }
-      };
-      ws.onerror = () => { ws.close(); };
-      state.ws = ws;
-    } catch (err) {
-      console.warn('[WS] Connection failed:', err);
-    }
-  }
+    const viewEl = $('view-' + name);
+    if (viewEl) addClass(viewEl, 'active');
+    if (el)     addClass(el, 'active');
 
-  // ── Data Fetching ──────────────────────────────────────────
-  async function refreshAllData() {
-    const [overview, agents, models, workflows, security, audit] = await Promise.all([
-      api.fetch('/api/overview'),
-      api.fetch('/api/agents'),
-      api.fetch('/api/models'),
-      api.fetch('/api/workflows'),
-      api.fetch('/api/security'),
-      api.fetch('/api/audit'),
-    ]);
+    S.activeView = name;
 
-    if (overview) {
-      state.overview = overview;
-      state.topologyMode = overview.topology_mode || overview.topology || 'TRUE_NAS';
-      state.services = overview.services || [];
-    }
-    if (agents) state.agents = agents.agents || agents || [];
-    if (models) state.models = models.models || models || [];
-    if (workflows) state.workflows = workflows.workflows || workflows || [];
-    if (security) state.security = security;
-    if (audit) state.audit = audit.entries || audit.audit || audit || [];
-
-    renderCurrentView();
-    updateTopologyIndicator();
-  }
-
-  async function refreshAgents() {
-    const data = await api.fetch('/api/agents');
-    if (data) state.agents = data.agents || data || [];
-  }
-
-  async function refreshWorkflows() {
-    const data = await api.fetch('/api/workflows');
-    if (data) state.workflows = data.workflows || data || [];
-  }
-
-  async function refreshSecurity() {
-    const data = await api.fetch('/api/security');
-    if (data) state.security = data;
-  }
-
-  // ── View Switching ─────────────────────────────────────────
-  function switchView(viewId) {
-    state.activeView = viewId;
-    $$('.view').forEach(v => v.classList.remove('active'));
-    const target = $(`#view-${viewId}`);
-    if (target) target.classList.add('active');
-    $$('.nav-item').forEach(n => n.classList.remove('active'));
-    const navItem = $(`.nav-item[data-view="${viewId}"]`);
-    if (navItem) navItem.classList.add('active');
-    // Update top bar title
-    const titles = {
-      command: 'AI Command Center',
-      agents: 'Agent Fleet',
-      models: 'Model Hub',
-      workflows: 'Workflow Studio',
-      security: 'Security Vault',
-      audit: 'Audit Ledger',
-      services: 'Service Health',
+    const labels = {
+      overview:          'Dashboard',
+      security:          'Defense Layer',
+      pulse:             'Adaptive Pulse',
+      routing:           'Fluidic Routing',
+      foresight:         'Foresight',
+      tiers:             'Tier Structure',
+      dimensionals:      'Dimensionals',
+      agents:            'AI Agents',
+      models:            'Models',
+      workflows:         'Workflows',
+      'infinity-portal': 'Portal :8042',
+      'infinity-one':    'Infinity One :8043',
+      'infinity-admin':  'Admin :8044',
+      gateway:           'Gateway :8040',
+      sentinel:          'Sentinel Station :8041',
     };
-    const titleEl = $('#top-bar-title');
-    if (titleEl) titleEl.textContent = titles[viewId] || viewId;
-    renderCurrentView();
-  }
+    setText('breadcrumb-current', labels[name] || name);
 
-  function renderCurrentView() {
-    switch (state.activeView) {
-      case 'command': renderCommandCenter(); break;
-      case 'agents': renderAgentFleet(); break;
-      case 'models': renderModelHub(); break;
-      case 'workflows': renderWorkflowStudio(); break;
-      case 'security': renderSecurityVault(); break;
-      case 'audit': renderAuditLedger(); break;
-      case 'services': renderServiceHealth(); break;
+    switch (name) {
+      case 'security':         renderSecurityView();    break;
+      case 'pulse':            renderPulseView();       break;
+      case 'routing':          renderRoutingView();     break;
+      case 'foresight':        renderForesightView();   break;
+      case 'dimensionals':     renderDimensionalsView(); break;
+      case 'agents':           renderAgentsView();      break;
+      case 'models':           renderModelsView();      break;
+      case 'workflows':        renderWorkflowsView();   break;
+      case 'infinity-portal':  renderPortalDetail();    break;
+      case 'infinity-one':     renderOneDetail();       break;
+      case 'infinity-admin':   renderAdminDetail();     break;
+      case 'gateway':          renderGatewayDetail();   break;
+      case 'sentinel':         renderSentinelDetail();  break;
+      default: break;
     }
-  }
-
-  // ── Render: Command Center ─────────────────────────────────
-  function renderCommandCenter() {
-    const container = $('#view-command');
-    if (!container) return;
-
-    const o = state.overview || {};
-    const svcCount = state.services.length || 8;
-    const agentCount = state.agents.length || 0;
-    const modelCount = state.models.length || 0;
-    const wfCount = state.workflows.length || 0;
-    const secretCount = state.security?.total_secrets || state.security?.active_secrets || 0;
-    const auditCount = state.audit.length || 0;
-
-    container.innerHTML = `
-      <!-- Stat Cards -->
-      <div class="stat-grid">
-        <div class="stat-card blue">
-          <div class="stat-icon">${icon('services')}</div>
-          <div class="stat-label">Services Online</div>
-          <div class="stat-value">${svcCount}</div>
-          <div class="stat-sub">P4 Ecosystem</div>
-        </div>
-        <div class="stat-card purple">
-          <div class="stat-icon">${icon('agents')}</div>
-          <div class="stat-label">Active Agents</div>
-          <div class="stat-value">${agentCount}</div>
-          <div class="stat-sub">DeepAgents Fleet</div>
-        </div>
-        <div class="stat-card cyan">
-          <div class="stat-icon">${icon('models')}</div>
-          <div class="stat-label">AI Models</div>
-          <div class="stat-value">${modelCount}</div>
-          <div class="stat-sub">Zero-Cost Routes</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-icon">${icon('workflows')}</div>
-          <div class="stat-label">Workflows</div>
-          <div class="stat-value">${wfCount}</div>
-          <div class="stat-sub">DAG Engine</div>
-        </div>
-        <div class="stat-card warm">
-          <div class="stat-icon">${icon('security')}</div>
-          <div class="stat-label">Secrets</div>
-          <div class="stat-value">${secretCount}</div>
-          <div class="stat-sub">XOR Vault</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-icon">${icon('audit')}</div>
-          <div class="stat-label">Audit Entries</div>
-          <div class="stat-value">${auditCount}</div>
-          <div class="stat-sub">Hash Chain</div>
-        </div>
-      </div>
-
-      <!-- Command Bar + Activity -->
-      <div class="command-center mb-24">
-        <div class="command-input-area mb-20">
-          <div class="command-bar">
-            <span class="cmd-icon">${ICONS.terminal}</span>
-            <input type="text" id="cmd-input" placeholder="Ask the AI, run a workflow, manage agents…" autocomplete="off">
-            <button class="cmd-submit" id="cmd-submit">Execute</button>
-          </div>
-        </div>
-
-        <div class="glass-card">
-          <div class="glass-card-header">
-            <h3>${icon('activity')} Live Activity</h3>
-            <div class="card-actions">
-              <button class="card-action-btn" onclick="Tranc3App.clearActivity()">Clear</button>
-            </div>
-          </div>
-          <div class="activity-feed" id="activity-feed">
-            ${renderActivityItems()}
-          </div>
-        </div>
-
-        <div class="glass-card">
-          <div class="glass-card-header">
-            <h3>${icon('globe')} Topology Status</h3>
-          </div>
-          <div class="topo-visual" id="topo-visual">
-            <div class="topo-center">T3</div>
-            <div class="topo-orbit" style="width:120px;height:120px;"></div>
-            <div class="topo-orbit" style="width:220px;height:220px;"></div>
-            ${renderTopoNodes()}
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Service Overview -->
-      <div class="section-title">Service Health Snapshot</div>
-      <div class="service-grid" id="quick-services">
-        ${renderServiceTiles()}
-      </div>
-    `;
-
-    // Bind command bar
-    const cmdInput = $('#cmd-input');
-    const cmdSubmit = $('#cmd-submit');
-    if (cmdSubmit) {
-      cmdSubmit.addEventListener('click', handleCommand);
-    }
-    if (cmdInput) {
-      cmdInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') handleCommand();
-      });
-    }
-  }
-
-  function renderActivityItems() {
-    if (state.activityLog.length === 0) {
-      return '<div class="empty-state"><p>No recent activity</p></div>';
-    }
-    return state.activityLog.slice(0, 15).map(a => `
-      <div class="activity-item">
-        <div class="activity-icon ${a.type}">${getActivityIcon(a.type)}</div>
-        <div class="activity-text"><p>${a.text}</p></div>
-        <div class="activity-time">${timeAgo(a.time)}</div>
-      </div>
-    `).join('');
-  }
-
-  function getActivityIcon(type) {
-    const map = { agent: ICONS.agents, model: ICONS.models, workflow: ICONS.workflows,
-                  security: ICONS.shield, system: ICONS.globe };
-    return map[type] || ICONS.activity;
-  }
-
-  function renderTopoNodes() {
-    const nodes = [
-      { name: 'VLT', x: 80, y: 50 },
-      { name: 'TOP', x: 80, y: 150 },
-      { name: 'LDG', x: 180, y: 50 },
-      { name: 'MRT', x: 180, y: 150 },
-      { name: 'WF', x: 50, y: 100 },
-      { name: 'BMK', x: 210, y: 100 },
-      { name: 'LC', x: 130, y: 30 },
-      { name: 'DA', x: 130, y: 170 },
-    ];
-    return nodes.map(n => `
-      <div class="topo-node active" style="left:${n.x}px;top:${n.y}px;">${n.name}</div>
-    `).join('');
-  }
-
-  function renderServiceTiles() {
-    const defaultServices = [
-      { name: 'Vault', port: 8030, status: 'healthy' },
-      { name: 'Topology', port: 8031, status: 'healthy' },
-      { name: 'Ledger', port: 8032, status: 'healthy' },
-      { name: 'Model Router', port: 8033, status: 'healthy' },
-      { name: 'Workflow', port: 8034, status: 'healthy' },
-      { name: 'Benchmark', port: 8035, status: 'healthy' },
-      { name: 'LangChain', port: 8036, status: 'healthy' },
-      { name: 'DeepAgents', port: 8037, status: 'healthy' },
-    ];
-    const services = state.services.length > 0 ? state.services : defaultServices;
-    return services.map(s => `
-      <div class="service-tile">
-        <div class="service-dot ${s.status || 'healthy'}"></div>
-        <div class="service-name">${s.name || s.service || 'Unknown'}</div>
-        <div class="service-port">:${s.port || '—'}</div>
-      </div>
-    `).join('');
-  }
-
-  async function handleCommand() {
-    const input = $('#cmd-input');
-    if (!input || !input.value.trim()) return;
-    const cmd = input.value.trim();
-    input.value = '';
-
-    addActivity('system', `Command: <strong>${truncate(cmd, 60)}</strong>`);
-
-    // Parse commands
-    const lower = cmd.toLowerCase();
-    if (lower.startsWith('/topology ') || lower.startsWith('topology ')) {
-      const mode = cmd.split(/\s+/)[1]?.toUpperCase();
-      if (['TRUE_NAS', 'HYBRID', 'CLOUD_ONLY'].includes(mode)) {
-        const result = await api.put('/api/topology/mode', { mode });
-        addActivity('system', result ? `Topology switched to <strong>${mode}</strong>` : 'Topology switch failed');
-        refreshAllData();
-      } else {
-        addActivity('system', 'Invalid topology mode. Use: TRUE_NAS, HYBRID, CLOUD_ONLY');
-      }
-    } else if (lower.startsWith('/run ') || lower.startsWith('run ')) {
-      const wfId = cmd.split(/\s+/)[1];
-      if (wfId) {
-        const result = await api.post(`/api/workflows/${wfId}/run`, {});
-        addActivity('workflow', result ? `Workflow <strong>${wfId}</strong> triggered` : 'Workflow run failed');
-        refreshWorkflows();
-      }
-    } else if (lower.startsWith('/agent ') || lower.startsWith('agent ')) {
-      const result = await api.post('/api/agents', { prompt: cmd.substring(cmd.indexOf(' ') + 1) });
-      addActivity('agent', result ? 'Agent task submitted' : 'Agent submission failed');
-      refreshAgents();
-    } else {
-      addActivity('system', `Processing: <strong>${truncate(cmd, 50)}</strong>`);
-      // Try sending to the agent endpoint
-      const result = await api.post('/api/agents', { prompt: cmd });
-      if (result) {
-        addActivity('agent', `AI Response received`);
-      } else {
-        addActivity('system', 'Command processed (no live backend connected — showing cached data)');
-      }
-    }
-    renderActivityFeed();
-  }
-
-  function renderActivityFeed() {
-    const feed = $('#activity-feed');
-    if (feed) feed.innerHTML = renderActivityItems();
-  }
-
-  // ── Render: Agent Fleet ────────────────────────────────────
-  function renderAgentFleet() {
-    const container = $('#view-agents');
-    if (!container) return;
-
-    const agents = state.agents.length > 0 ? state.agents : generateMockAgents();
-
-    container.innerHTML = `
-      <div class="stat-grid mb-24">
-        <div class="stat-card purple">
-          <div class="stat-icon">${icon('agents')}</div>
-          <div class="stat-label">Total Agents</div>
-          <div class="stat-value">${agents.length}</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-icon">${icon('check')}</div>
-          <div class="stat-label">Active</div>
-          <div class="stat-value">${agents.filter(a => a.status === 'working' || a.status === 'active').length}</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-icon">${icon('clock')}</div>
-          <div class="stat-label">Idle</div>
-          <div class="stat-value">${agents.filter(a => a.status === 'idle').length}</div>
-        </div>
-        <div class="stat-card warm">
-          <div class="stat-icon">${icon('alert')}</div>
-          <div class="stat-label">Errors</div>
-          <div class="stat-value">${agents.filter(a => a.status === 'error').length}</div>
-        </div>
-      </div>
-
-      <div class="glass-card-header mb-12" style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="section-title mb-0">Agent Fleet</div>
-        <button class="card-action-btn primary" onclick="Tranc3App.createAgent()">+ Spawn Agent</button>
-      </div>
-
-      <div class="agent-grid">
-        ${agents.map(a => renderAgentCard(a)).join('')}
-      </div>
-    `;
-  }
-
-  function renderAgentCard(agent) {
-    const statusClass = agent.status === 'working' || agent.status === 'active' ? 'working' :
-                        agent.status === 'error' ? 'error' : 'idle';
-    const statusLabel = agent.status === 'working' || agent.status === 'active' ? 'Active' :
-                        agent.status === 'error' ? 'Error' : 'Idle';
-    const bgColors = ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B'];
-    const bgColor = bgColors[Math.abs(hashCode(agent.id || agent.name || 'agent')) % bgColors.length];
-    const initials = (agent.name || agent.id || 'A').substring(0, 2).toUpperCase();
-    const tasks = agent.tasks_completed ?? agent.tasksCompleted ?? Math.floor(Math.random() * 20);
-    const success = agent.success_rate ?? agent.successRate ?? (80 + Math.floor(Math.random() * 20));
-
-    return `
-      <div class="agent-card">
-        <div class="agent-header">
-          <div class="agent-avatar" style="background:${bgColor}">${initials}</div>
-          <div class="agent-info">
-            <h4>${agent.name || agent.id || 'Agent'}</h4>
-            <div class="agent-type">${agent.type || agent.role || 'General Purpose'}</div>
-          </div>
-          <div class="agent-status ${statusClass}">
-            <span class="status-dot"></span>
-            ${statusLabel}
-          </div>
-        </div>
-        <div class="agent-metrics">
-          <div class="metric"><div class="metric-val">${tasks}</div><div class="metric-label">Tasks</div></div>
-          <div class="metric"><div class="metric-val">${success}%</div><div class="metric-label">Success</div></div>
-          <div class="metric"><div class="metric-val">${agent.delegation_depth ?? agent.depth ?? 0}</div><div class="metric-label">Depth</div></div>
-        </div>
-        <div class="agent-actions">
-          <button class="agent-btn" onclick="Tranc3App.inspectAgent('${agent.id || agent.name}')">Inspect</button>
-          <button class="agent-btn primary" onclick="Tranc3App.delegateAgent('${agent.id || agent.name}')">Delegate</button>
-        </div>
-      </div>
-    `;
-  }
-
-  function generateMockAgents() {
-    const names = ['Sovereign', 'Guardian', 'Orchestrator', 'Analyst', 'Builder', 'Scout', 'Archivist', 'Sentinel'];
-    const types = ['Prime AI', 'Security Agent', 'Orchestration Agent', 'Data Agent', 'Dev Agent', 'Scout Agent', 'Knowledge Agent', 'Monitor Agent'];
-    const statuses = ['idle', 'working', 'idle', 'idle', 'working', 'idle', 'error', 'idle'];
-    return names.map((name, i) => ({
-      id: `agent-${name.toLowerCase()}`,
-      name,
-      type: types[i],
-      status: statuses[i],
-      tasks_completed: Math.floor(Math.random() * 50),
-      success_rate: 75 + Math.floor(Math.random() * 25),
-      delegation_depth: Math.floor(Math.random() * 5),
-    }));
-  }
-
-  // ── Render: Model Hub ──────────────────────────────────────
-  function renderModelHub() {
-    const container = $('#view-models');
-    if (!container) return;
-
-    const models = state.models.length > 0 ? state.models : generateMockModels();
-
-    // Group by provider
-    const providers = {};
-    models.forEach(m => {
-      const p = m.provider || 'unknown';
-      if (!providers[p]) providers[p] = [];
-      providers[p].push(m);
-    });
-
-    container.innerHTML = `
-      <div class="stat-grid mb-24">
-        <div class="stat-card cyan">
-          <div class="stat-icon">${icon('models')}</div>
-          <div class="stat-label">Total Models</div>
-          <div class="stat-value">${models.length}</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-icon">${icon('globe')}</div>
-          <div class="stat-label">Providers</div>
-          <div class="stat-value">${Object.keys(providers).length}</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-icon">${icon('zap')}</div>
-          <div class="stat-label">Routing Strategy</div>
-          <div class="stat-value" style="font-size:16px;">${state.overview?.routing_strategy || 'cost_aware'}</div>
-        </div>
-        <div class="stat-card purple">
-          <div class="stat-icon">${icon('shield')}</div>
-          <div class="stat-label">Circuit Breaker</div>
-          <div class="stat-value" style="font-size:16px;">${state.overview?.circuit_breaker_state || 'closed'}</div>
-        </div>
-      </div>
-
-      ${Object.entries(providers).map(([provider, pModels]) => `
-        <div class="section-title">${provider.toUpperCase()}</div>
-        <div class="model-grid mb-24">
-          ${pModels.map(m => renderModelCard(m)).join('')}
-        </div>
-      `).join('')}
-    `;
-  }
-
-  function renderModelCard(model) {
-    const provider = model.provider || 'unknown';
-    const usage = model.usage_count ?? model.usageCount ?? model.requests ?? Math.floor(Math.random() * 500);
-    const maxUsage = 1000;
-    const usagePct = Math.min(100, Math.round((usage / maxUsage) * 100));
-    const tags = model.tags || [model.tier || 'free', model.type || 'chat'];
-    const latency = model.avg_latency ?? model.latency ?? Math.floor(50 + Math.random() * 200);
-
-    return `
-      <div class="model-card">
-        <div class="model-provider ${provider}">${provider}</div>
-        <div class="model-name">${model.name || model.id || 'Unknown Model'}</div>
-        <div class="model-meta">
-          <span>${latency}ms avg</span>
-          <span>${usage} reqs</span>
-        </div>
-        <div class="model-bar"><div class="model-bar-fill" style="width:${usagePct}%"></div></div>
-        <div class="model-tags">
-          ${tags.map(t => `<span class="model-tag">${t}</span>`).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  function generateMockModels() {
-    return [
-      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'google', avg_latency: 120, usage_count: 342, tags: ['free', 'chat', 'fast'] },
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google', avg_latency: 350, usage_count: 156, tags: ['free', 'chat', 'reasoning'] },
-      { id: 'llama-4-maverick', name: 'Llama 4 Maverick', provider: 'meta', avg_latency: 200, usage_count: 89, tags: ['free', 'chat'] },
-      { id: 'mistral-large', name: 'Mistral Large', provider: 'mistral', avg_latency: 280, usage_count: 45, tags: ['free', 'chat', 'multilingual'] },
-      { id: 'codestral', name: 'Codestral', provider: 'mistral', avg_latency: 180, usage_count: 67, tags: ['free', 'code'] },
-      { id: 'local-phi3', name: 'Phi-3 Mini (Local)', provider: 'local', avg_latency: 50, usage_count: 210, tags: ['local', 'chat', 'fast'] },
-    ];
-  }
-
-  // ── Render: Workflow Studio ────────────────────────────────
-  function renderWorkflowStudio() {
-    const container = $('#view-workflows');
-    if (!container) return;
-
-    const workflows = state.workflows.length > 0 ? state.workflows : generateMockWorkflows();
-
-    container.innerHTML = `
-      <div class="stat-grid mb-24">
-        <div class="stat-card green">
-          <div class="stat-icon">${icon('workflows')}</div>
-          <div class="stat-label">Total Workflows</div>
-          <div class="stat-value">${workflows.length}</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-icon">${icon('play')}</div>
-          <div class="stat-label">Running</div>
-          <div class="stat-value">${workflows.filter(w => w.status === 'running').length}</div>
-        </div>
-        <div class="stat-card purple">
-          <div class="stat-icon">${icon('check')}</div>
-          <div class="stat-label">Completed</div>
-          <div class="stat-value">${workflows.filter(w => w.status === 'completed').length}</div>
-        </div>
-        <div class="stat-card warm">
-          <div class="stat-icon">${icon('alert')}</div>
-          <div class="stat-label">Failed</div>
-          <div class="stat-value">${workflows.filter(w => w.status === 'failed').length}</div>
-        </div>
-      </div>
-
-      <div class="glass-card-header mb-12" style="display:flex;justify-content:space-between;align-items:center;">
-        <div class="section-title mb-0">Workflow Definitions</div>
-        <button class="card-action-btn primary" onclick="Tranc3App.createWorkflow()">+ Create Workflow</button>
-      </div>
-
-      <div class="workflow-list">
-        ${workflows.map(w => renderWorkflowItem(w)).join('')}
-      </div>
-    `;
-  }
-
-  function renderWorkflowItem(wf) {
-    const steps = wf.steps || wf.nodes || [];
-    const stepCount = steps.length || Math.floor(Math.random() * 6) + 2;
-    const status = wf.status || 'pending';
-
-    let stepDots = '';
-    for (let i = 0; i < stepCount; i++) {
-      let cls = '';
-      if (status === 'completed') cls = 'completed';
-      else if (status === 'running' && i <= Math.floor(stepCount / 2)) cls = i < Math.floor(stepCount / 2) ? 'completed' : 'running';
-      else if (status === 'failed' && i === Math.floor(stepCount / 2)) cls = 'failed';
-      if (i > 0) stepDots += '<div class="wf-step-connector"></div>';
-      stepDots += `<div class="wf-step-dot ${cls}"></div>`;
-    }
-
-    return `
-      <div class="workflow-item">
-        <div class="wf-icon" style="background:rgba(6,182,212,0.12);color:#06B6D4;">
-          ${ICONS.workflows}
-        </div>
-        <div class="wf-info">
-          <h4>${wf.name || wf.id || 'Untitled Workflow'}</h4>
-          <p>${wf.description || `${stepCount} steps • DAG-based execution`}</p>
-        </div>
-        <div class="wf-steps-visual">
-          ${stepDots}
-        </div>
-        <div class="wf-status-badge ${status}">${status}</div>
-        <button class="card-action-btn primary" onclick="Tranc3App.runWorkflow('${wf.id || wf.name}')">Run</button>
-      </div>
-    `;
-  }
-
-  function generateMockWorkflows() {
-    return [
-      { id: 'wf-pipeline', name: 'Data Processing Pipeline', description: 'Ingest → Transform → Validate → Store', status: 'completed', steps: 4 },
-      { id: 'wf-analysis', name: 'AI Analysis Chain', description: 'Fetch → Enrich → Classify → Report', status: 'running', steps: 4 },
-      { id: 'wf-deploy', name: 'Deployment Workflow', description: 'Build → Test → Stage → Deploy → Verify', status: 'pending', steps: 5 },
-      { id: 'wf-security', name: 'Security Audit Flow', description: 'Scan → Assess → Remediate → Report', status: 'failed', steps: 4 },
-    ];
-  }
-
-  // ── Render: Security Vault ─────────────────────────────────
-  function renderSecurityVault() {
-    const container = $('#view-security');
-    if (!container) return;
-
-    const sec = state.security || {};
-    const secrets = sec.secrets || generateMockSecrets();
-    const chainValid = sec.chain_valid ?? sec.chainValid ?? true;
-    const openLeaks = sec.open_leaks ?? sec.openLeaks ?? 0;
-
-    container.innerHTML = `
-      <div class="stat-grid mb-24">
-        <div class="stat-card warm">
-          <div class="stat-icon">${icon('security')}</div>
-          <div class="stat-label">Total Secrets</div>
-          <div class="stat-value">${sec.total_secrets || secrets.length}</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-icon">${icon('check')}</div>
-          <div class="stat-label">Chain Valid</div>
-          <div class="stat-value" style="font-size:20px;">${chainValid ? '✓ Valid' : '✗ Broken'}</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-icon">${icon('key')}</div>
-          <div class="stat-label">Active Secrets</div>
-          <div class="stat-value">${sec.active_secrets || secrets.filter(s => s.status === 'active').length}</div>
-        </div>
-        <div class="stat-card purple">
-          <div class="stat-icon">${icon('shield')}</div>
-          <div class="stat-label">Open Leaks</div>
-          <div class="stat-value">${openLeaks}</div>
-        </div>
-      </div>
-
-      <div class="grid-2 mb-24">
-        <div class="glass-card">
-          <div class="glass-card-header">
-            <h3>${icon('key')} Vault Entries</h3>
-            <button class="card-action-btn primary" onclick="Tranc3App.createSecret()">+ Add Secret</button>
-          </div>
-          <div>
-            ${secrets.map(s => renderSecretEntry(s)).join('')}
-          </div>
-        </div>
-
-        <div class="glass-card">
-          <div class="glass-card-header">
-            <h3>${icon('shield')} Encryption Status</h3>
-          </div>
-          <div style="padding:20px 0;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
-              <span style="color:var(--text-secondary);font-size:13px;">Encryption Method</span>
-              <span style="color:var(--brand-primary);font-size:13px;font-weight:600;">XOR-256 (Zero-Cost)</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
-              <span style="color:var(--text-secondary);font-size:13px;">Key Rotation</span>
-              <span style="color:var(--status-online);font-size:13px;font-weight:600;">Automatic</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
-              <span style="color:var(--text-secondary);font-size:13px;">Audit Chain</span>
-              <span style="color:${chainValid ? 'var(--status-online)' : 'var(--status-offline)'};font-size:13px;font-weight:600;">${chainValid ? 'SHA-256 Verified' : 'Broken Chain'}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
-              <span style="color:var(--text-secondary);font-size:13px;">Sentinel Status</span>
-              <span style="color:var(--status-online);font-size:13px;font-weight:600;">Active</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--text-secondary);font-size:13px;">Leak Detection</span>
-              <span style="color:${openLeaks > 0 ? 'var(--status-offline)' : 'var(--status-online)'};font-size:13px;font-weight:600;">${openLeaks > 0 ? `${openLeaks} Leak(s)` : 'Clear'}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Topology Mode Control -->
-      <div class="glass-card">
-        <div class="glass-card-header">
-          <h3>${icon('globe')} Adaptive Topology Control</h3>
-        </div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-          <button class="card-action-btn ${state.topologyMode === 'TRUE_NAS' ? 'primary' : ''}" onclick="Tranc3App.setTopology('TRUE_NAS')">TRUE_NAS</button>
-          <button class="card-action-btn ${state.topologyMode === 'HYBRID' ? 'primary' : ''}" onclick="Tranc3App.setTopology('HYBRID')">HYBRID</button>
-          <button class="card-action-btn ${state.topologyMode === 'CLOUD_ONLY' ? 'primary' : ''}" onclick="Tranc3App.setTopology('CLOUD_ONLY')">CLOUD_ONLY</button>
-        </div>
-        <p style="font-size:12px;color:var(--text-muted);margin-top:12px;">
-          Current mode: <strong style="color:var(--text-primary);">${state.topologyMode}</strong> — 
-          ${state.topologyMode === 'TRUE_NAS' ? 'Local-first, maximum security and performance' : 
-            state.topologyMode === 'HYBRID' ? 'Adaptive switching between local and cloud' : 
-            'Cloud-only, free-tier services'}
-        </p>
-      </div>
-    `;
-  }
-
-  function renderSecretEntry(secret) {
-    const status = secret.status || 'active';
-    return `
-      <div class="secret-entry">
-        <div class="secret-icon">${ICONS.key}</div>
-        <div class="secret-info">
-          <div class="secret-key">${secret.name || secret.key || secret.id || 'secret'}</div>
-          <div class="secret-meta">${status} • ${timeAgo(secret.created_at || secret.updated_at)}</div>
-        </div>
-        <div class="secret-masked">••••••••</div>
-      </div>
-    `;
-  }
-
-  function generateMockSecrets() {
-    return [
-      { id: 'sec-1', name: 'DATABASE_URL', status: 'active', created_at: new Date(Date.now() - 86400000).toISOString() },
-      { id: 'sec-2', name: 'API_KEY_GEMINI', status: 'active', created_at: new Date(Date.now() - 172800000).toISOString() },
-      { id: 'sec-3', name: 'JWT_SECRET', status: 'active', created_at: new Date(Date.now() - 259200000).toISOString() },
-      { id: 'sec-4', name: 'ENCRYPTION_KEY', status: 'revoked', created_at: new Date(Date.now() - 345600000).toISOString() },
-    ];
-  }
-
-  // ── Render: Audit Ledger ───────────────────────────────────
-  function renderAuditLedger() {
-    const container = $('#view-audit');
-    if (!container) return;
-
-    const entries = state.audit.length > 0 ? state.audit : generateMockAudit();
-
-    container.innerHTML = `
-      <div class="stat-grid mb-24">
-        <div class="stat-card blue">
-          <div class="stat-icon">${icon('audit')}</div>
-          <div class="stat-label">Total Entries</div>
-          <div class="stat-value">${entries.length}</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-icon">${icon('shield')}</div>
-          <div class="stat-label">Chain Integrity</div>
-          <div class="stat-value" style="font-size:18px;">${state.security?.chain_valid !== false ? 'SHA-256 ✓' : 'BROKEN'}</div>
-        </div>
-        <div class="stat-card purple">
-          <div class="stat-icon">${icon('activity')}</div>
-          <div class="stat-label">Last 24h</div>
-          <div class="stat-value">${entries.filter(e => {
-            const t = new Date(e.timestamp || e.created_at || 0).getTime();
-            return t > Date.now() - 86400000;
-          }).length}</div>
-        </div>
-      </div>
-
-      <div class="glass-card">
-        <div class="glass-card-header">
-          <h3>${icon('audit')} Hash-Chained Audit Ledger</h3>
-          <button class="card-action-btn" onclick="Tranc3App.refreshAudit()">Refresh</button>
-        </div>
-        <div style="overflow-x:auto;">
-          <table class="audit-table">
-            <thead>
-              <tr>
-                <th>Timestamp</th>
-                <th>Action</th>
-                <th>Subject</th>
-                <th>Actor</th>
-                <th>Hash</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${entries.slice(0, 25).map(e => renderAuditRow(e)).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  }
-
-  function renderAuditRow(entry) {
-    const action = entry.action || entry.event || 'access';
-    const actionClass = action.includes('creat') || action.includes('CREAT') ? 'create' :
-                        action.includes('revoke') || action.includes('REVOK') ? 'revoke' :
-                        action.includes('rotat') || action.includes('ROTAT') ? 'rotate' : 'access';
-    const hash = entry.hash || entry.chain_hash || '0' + Math.random().toString(16).substring(2, 10);
-
-    return `
-      <tr>
-        <td style="white-space:nowrap;">${timeAgo(entry.timestamp || entry.created_at)}</td>
-        <td><span class="action-badge ${actionClass}">${action}</span></td>
-        <td>${entry.subject || entry.key || entry.target || '—'}</td>
-        <td>${entry.actor || entry.source || 'system'}</td>
-        <td class="hash-cell">${truncate(hash, 16)}</td>
-      </tr>
-    `;
-  }
-
-  function generateMockAudit() {
-    const actions = ['SECRET_CREATE', 'SECRET_ACCESS', 'AGENT_DELEGATE', 'WORKFLOW_RUN', 'SECRET_ROTATE', 'TOPOLOGY_SWITCH'];
-    const subjects = ['DATABASE_URL', 'API_KEY_GEMINI', 'agent-sovereign', 'wf-analysis', 'JWT_SECRET', 'system'];
-    const actors = ['vault-service', 'deepagents', 'model-router', 'workflow-engine', 'vault-service', 'topology'];
-    return actions.map((a, i) => ({
-      timestamp: new Date(Date.now() - i * 3600000).toISOString(),
-      action: a,
-      subject: subjects[i],
-      actor: actors[i],
-      hash: 'sha256:' + Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join(''),
-    }));
-  }
-
-  // ── Render: Service Health ─────────────────────────────────
-  function renderServiceHealth() {
-    const container = $('#view-services');
-    if (!container) return;
-
-    const defaultServices = [
-      { name: 'Vault Service', port: 8030, status: 'healthy', desc: 'XOR-encrypted secret vault' },
-      { name: 'Topology Manager', port: 8031, status: 'healthy', desc: 'Adaptive topology switching' },
-      { name: 'Audit Ledger', port: 8032, status: 'healthy', desc: 'SHA-256 hash-chained ledger' },
-      { name: 'Model Router', port: 8033, status: 'healthy', desc: 'Multi-model routing with circuit breaker' },
-      { name: 'Workflow Engine', port: 8034, status: 'healthy', desc: 'DAG-based workflow execution' },
-      { name: 'Benchmark Service', port: 8035, status: 'healthy', desc: 'Performance benchmarking' },
-      { name: 'LangChain Integration', port: 8036, status: 'healthy', desc: 'LangChain chain orchestration' },
-      { name: 'DeepAgents Orchestrator', port: 8037, status: 'healthy', desc: 'Agent delegation with depth limits' },
-      { name: 'Gateway Aggregator', port: 8040, status: 'healthy', desc: 'Unified API surface + real-time' },
-    ];
-    const services = state.services.length > 0 ? state.services : defaultServices;
-
-    container.innerHTML = `
-      <div class="stat-grid mb-24">
-        <div class="stat-card green">
-          <div class="stat-icon">${icon('server')}</div>
-          <div class="stat-label">Healthy</div>
-          <div class="stat-value">${services.filter(s => s.status === 'healthy').length}</div>
-        </div>
-        <div class="stat-card warm">
-          <div class="stat-icon">${icon('alert')}</div>
-          <div class="stat-label">Degraded</div>
-          <div class="stat-value">${services.filter(s => s.status === 'degraded').length}</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-icon">${icon('server')}</div>
-          <div class="stat-label">Total</div>
-          <div class="stat-value">${services.length}</div>
-        </div>
-      </div>
-
-      <div class="glass-card">
-        <div class="glass-card-header">
-          <h3>${icon('services')} P4 Ecosystem Services</h3>
-          <button class="card-action-btn" onclick="Tranc3App.refreshData()">Refresh All</button>
-        </div>
-        <div style="overflow-x:auto;">
-          <table class="audit-table">
-            <thead>
-              <tr>
-                <th>Status</th>
-                <th>Service</th>
-                <th>Port</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${services.map(s => `
-                <tr>
-                  <td><span class="service-dot ${s.status || 'healthy'}" style="display:inline-block;"></span></td>
-                  <td style="color:var(--text-primary);font-weight:600;">${s.name || s.service || 'Unknown'}</td>
-                  <td class="hash-cell">:${s.port || '—'}</td>
-                  <td>${s.desc || s.description || '—'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  }
-
-  // ── Connection Status ──────────────────────────────────────
-  function updateConnectionStatus() {
-    const el = $('#connection-status');
-    if (el) {
-      el.className = `connection-status ${state.connected ? '' : 'disconnected'}`;
-      el.innerHTML = `
-        <span class="conn-dot"></span>
-        ${state.connected ? 'Live' : 'Offline'}
-      `;
-    }
-  }
-
-  function updateTopologyIndicator() {
-    const el = $('#topology-indicator');
-    if (!el) return;
-    const mode = state.topologyMode;
-    const cls = mode === 'TRUE_NAS' ? 'nas' : mode === 'HYBRID' ? 'hybrid' : 'cloud';
-    const label = mode === 'TRUE_NAS' ? 'True NAS' : mode === 'HYBRID' ? 'Hybrid' : 'Cloud';
-    el.className = `topology-indicator ${cls}`;
-    el.innerHTML = `<span class="topo-dot"></span>${label}`;
-  }
-
-  // ── Sidebar Toggle ─────────────────────────────────────────
-  function toggleSidebar() {
-    state.sidebarCollapsed = !state.sidebarCollapsed;
-    const sidebar = $('#sidebar');
-    if (sidebar) {
-      sidebar.classList.toggle('collapsed', state.sidebarCollapsed);
-    }
-  }
-
-  // ── Hash Utility ───────────────────────────────────────────
-  function hashCode(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash) + str.charCodeAt(i);
-      hash |= 0;
-    }
-    return hash;
-  }
-
-  // ── Public API (exposed for onclick handlers) ──────────────
-  window.Tranc3App = {
-    switchView,
-    toggleSidebar,
-    refreshData: refreshAllData,
-    clearActivity: () => { state.activityLog = []; renderActivityFeed(); },
-    setTopology: async (mode) => {
-      const result = await api.put('/api/topology/mode', { mode });
-      addActivity('system', result ? `Topology → <strong>${mode}</strong>` : `Topology switch failed`);
-      refreshAllData();
-    },
-    runWorkflow: async (id) => {
-      const result = await api.post(`/api/workflows/${id}/run`, {});
-      addActivity('workflow', result ? `Workflow <strong>${id}</strong> triggered` : 'Workflow trigger failed');
-      renderActivityFeed();
-      refreshWorkflows();
-    },
-    createAgent: async () => {
-      addActivity('agent', 'Spawning new agent…');
-      const result = await api.post('/api/agents', { prompt: 'new agent', type: 'general' });
-      addActivity('agent', result ? 'Agent spawned successfully' : 'Agent spawn failed');
-      renderActivityFeed();
-      refreshAgents();
-    },
-    createWorkflow: () => { addActivity('workflow', 'Workflow creation requested'); renderActivityFeed(); },
-    createSecret: () => { addActivity('security', 'New secret creation requested'); renderActivityFeed(); },
-    inspectAgent: (id) => { addActivity('agent', `Inspecting agent <strong>${id}</strong>`); renderActivityFeed(); },
-    delegateAgent: (id) => { addActivity('agent', `Delegating to agent <strong>${id}</strong>`); renderActivityFeed(); },
-    refreshAudit: () => { refreshAllData(); },
   };
 
-  // ── Initialization ─────────────────────────────────────────
-  async function init() {
-    console.log('[Tranc3] AI Platform initializing…');
+  window.toggleSidebar = function () {
+    S.sidebarOpen = !S.sidebarOpen;
+    const sb = $('sidebar');
+    if (sb) sb.classList.toggle('collapsed', !S.sidebarOpen);
+  };
 
-    // Bind navigation
-    $$('.nav-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const view = item.dataset.view;
-        if (view) Tranc3App.switchView(view);
+  window.refreshAll = function () { pollAll(); };
+
+  // ── Clock ──────────────────────────────────────────────────────────────────
+  function startClock() {
+    const tick = () => {
+      const now = new Date();
+      setText('topbar-clock', now.toLocaleTimeString('en-GB', { hour12: false }));
+      setText('footer-time',  now.toLocaleString('en-GB', { hour12: false }));
+    };
+    tick();
+    S.clockTimer = setInterval(tick, 1000);
+  }
+
+  // ── Fetch helper ───────────────────────────────────────────────────────────
+  async function apiFetch(url, timeout = 5000) {
+    const ctrl = new AbortController();
+    const tid  = setTimeout(() => ctrl.abort(), timeout);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      clearTimeout(tid);
+      return null;
+    }
+  }
+
+  // ── Polling orchestrator ───────────────────────────────────────────────────
+  async function pollAll() {
+    await Promise.allSettled([
+      pollGateway(),
+      pollPortal(),
+      pollOne(),
+      pollAdmin(),
+      pollSentinel(),
+      pollAuth(),
+    ]);
+    setText('last-updated', new Date().toLocaleTimeString('en-GB', { hour12: false }));
+    refreshCurrentView();
+  }
+
+  function refreshCurrentView() {
+    switch (S.activeView) {
+      case 'overview':         renderOverview();        break;
+      case 'security':         renderSecurityView();    break;
+      case 'pulse':            renderPulseView();       break;
+      case 'routing':          renderRoutingView();     break;
+      case 'foresight':        renderForesightView();   break;
+      case 'dimensionals':     renderDimensionalsView(); break;
+      case 'agents':           renderAgentsView();      break;
+      case 'models':           renderModelsView();      break;
+      case 'workflows':        renderWorkflowsView();   break;
+      case 'infinity-portal':  renderPortalDetail();    break;
+      case 'infinity-one':     renderOneDetail();       break;
+      case 'infinity-admin':   renderAdminDetail();     break;
+      case 'gateway':          renderGatewayDetail();   break;
+      case 'sentinel':         renderSentinelDetail();  break;
+    }
+  }
+
+  // ── Per-service pollers ────────────────────────────────────────────────────
+  async function pollGateway() {
+    const [health, stats, overview] = await Promise.allSettled([
+      apiFetch(`${CONFIG.gatewayUrl}/health`),
+      apiFetch(`${CONFIG.gatewayUrl}/stats`),
+      apiFetch(`${CONFIG.gatewayUrl}/api/overview`),
+    ]);
+    const h = health.value   || {};
+    const s = stats.value    || {};
+    const o = overview.value || {};
+    S.serviceData.gateway = { health: h, stats: s, overview: o };
+    S.healthScores.gateway = (h.status === 'ok' || h.status === 'healthy') ? 1.0 : null;
+    updateServiceCard('gateway', h, s);
+  }
+
+  async function pollPortal() {
+    const [health, stats] = await Promise.allSettled([
+      apiFetch(`${CONFIG.portalUrl}/health`),
+      apiFetch(`${CONFIG.portalUrl}/stats`),
+    ]);
+    const h = health.value || {};
+    const s = stats.value  || {};
+    S.serviceData.portal = { health: h, stats: s };
+    S.healthScores.portal = extractHealthScore(h);
+    updateServiceCard('portal', h, s);
+  }
+
+  async function pollOne() {
+    const [health, stats] = await Promise.allSettled([
+      apiFetch(`${CONFIG.oneUrl}/health`),
+      apiFetch(`${CONFIG.oneUrl}/stats`),
+    ]);
+    const h = health.value || {};
+    const s = stats.value  || {};
+    S.serviceData.one = { health: h, stats: s };
+    S.healthScores.one = extractHealthScore(h);
+    updateServiceCard('one', h, s);
+  }
+
+  async function pollAdmin() {
+    const [health, stats] = await Promise.allSettled([
+      apiFetch(`${CONFIG.adminUrl}/health`),
+      apiFetch(`${CONFIG.adminUrl}/stats`),
+    ]);
+    const h = health.value || {};
+    const s = stats.value  || {};
+    S.serviceData.admin = { health: h, stats: s };
+    S.healthScores.admin = extractHealthScore(h);
+    updateServiceCard('admin', h, s);
+  }
+
+  async function pollSentinel() {
+    const [health, stats] = await Promise.allSettled([
+      apiFetch(`${CONFIG.sentinelUrl}/health`),
+      apiFetch(`${CONFIG.sentinelUrl}/stats`),
+    ]);
+    const h = health.value || {};
+    const s = stats.value  || {};
+    S.serviceData.sentinel = { health: h, stats: s };
+    S.healthScores.sentinel = (h.status === 'healthy' || h.status === 'ok') ? 1.0 : null;
+    updateServiceCard('sentinel', h, s);
+  }
+
+  async function pollAuth() {
+    const h = await apiFetch(`${CONFIG.authUrl}/health`) || {};
+    S.serviceData.auth = { health: h };
+    S.healthScores.auth = extractHealthScore(h) || ((h.status === 'ok' || h.status === 'healthy') ? 1.0 : null);
+    updateAuthCard(h);
+  }
+
+  function extractHealthScore(h) {
+    if (h.health_score !== undefined && h.health_score !== null) return parseFloat(h.health_score);
+    if (h.status === 'healthy' || h.status === 'ok') return 1.0;
+    return null;
+  }
+
+  // ── Service card updaters ──────────────────────────────────────────────────
+  function updateServiceCard(name, h, s) {
+    const alive = (h.status === 'healthy' || h.status === 'ok');
+    const dot   = $(`dot-${name}`);
+    if (dot) dot.className = 'service-health-dot ' + (alive ? 'dot-healthy' : 'dot-offline');
+
+    const score = S.healthScores[name];
+    setText(`${name}-health-score`,
+      score !== null ? `${(score * 100).toFixed(0)}%` : (alive ? '—' : 'Offline'));
+
+    switch (name) {
+      case 'portal': {
+        setText('portal-sessions', s?.sessions?.active ?? '—');
+        setText('portal-defense',  s?.smart_adaptive?.defense?.evaluations ?? '—');
+        break;
+      }
+      case 'one': {
+        setText('one-identities', s?.identities?.active ?? '—');
+        setText('one-apps',       s?.app_access?.active_grants ?? '—');
+        break;
+      }
+      case 'admin': {
+        setText('admin-configs',  s?.system_data?.config_keys ?? '—');
+        setText('admin-blocked',
+          h.defense_blocked_ips ?? s?.smart_adaptive?.defense?.blocked_ips_count ?? '—');
+        break;
+      }
+      case 'gateway': {
+        setText('gateway-cache',    s?.cache_entries ?? '—');
+        setText('gateway-circuits',
+          s?.circuit_breakers ? Object.keys(s.circuit_breakers).length : '—');
+        break;
+      }
+      case 'sentinel': {
+        setText('sentinel-events', s?.events?.total_published ?? '—');
+        setText('sentinel-subs',   s?.subscriptions?.total   ?? '—');
+        break;
+      }
+    }
+
+    updateForesightBar(name, score);
+  }
+
+  function updateAuthCard(h) {
+    const alive = (h.status === 'healthy' || h.status === 'ok');
+    const dot   = $('dot-auth');
+    if (dot) dot.className = 'service-health-dot ' + (alive ? 'dot-healthy' : 'dot-offline');
+    const score = S.healthScores.auth;
+    setText('auth-health-score',
+      score !== null ? `${(score * 100).toFixed(0)}%` : (alive ? '—' : 'Offline'));
+    setText('auth-blocked', h.defense_blocked_ips ?? '—');
+  }
+
+  // ── Foresight trajectory bars ──────────────────────────────────────────────
+  function updateForesightBar(name, score) {
+    const bar   = $(`traj-${name}`);
+    const label = $(`traj-${name}-lbl`);
+    if (!bar || !label) return;
+    if (score === null) {
+      bar.style.width   = '0%';
+      bar.className     = 'traj-bar traj-offline';
+      label.textContent = 'Offline';
+      return;
+    }
+    const pct  = (score * 100).toFixed(0);
+    const tier = healthTier(score);
+    bar.style.width   = `${pct}%`;
+    bar.className     = `traj-bar traj-${tier.toLowerCase()}`;
+    label.textContent = `${pct}% · ${tier}`;
+  }
+
+  function healthTier(score) {
+    if (score >= 0.95) return 'EXCELLENT';
+    if (score >= 0.80) return 'GOOD';
+    if (score >= 0.60) return 'FAIR';
+    if (score >= 0.40) return 'POOR';
+    return 'CRITICAL';
+  }
+
+  // ── Overview rendering ─────────────────────────────────────────────────────
+  function renderOverview() {
+    const gw  = S.serviceData.gateway || {};
+    const ov  = gw.overview || {};
+    const gs  = gw.stats    || {};
+
+    setText('kpi-agents-val',    ov.agents?.active    ?? gs.agents_active    ?? '—');
+    setText('kpi-models-val',    ov.models?.loaded    ?? gs.models_loaded    ?? '—');
+    setText('kpi-workflows-val', ov.workflows?.active ?? gs.workflows_active ?? '—');
+    setText('kpi-requests-val',  ov.requests_per_min  ?? '—');
+
+    const scores    = Object.values(S.healthScores).filter(v => v !== null);
+    const avgHealth = scores.length
+      ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+    setText('kpi-health-val',
+      avgHealth !== null ? `${(avgHealth * 100).toFixed(0)}%` : '—');
+
+    // Total blocked across all services
+    let totalBlocked = 0;
+    for (const data of Object.values(S.serviceData)) {
+      const k = data?.stats?.smart_adaptive?.defense;
+      if (k?.blocked_count) totalBlocked += k.blocked_count;
+      const ip = data?.health?.defense_blocked_ips;
+      if (ip)  totalBlocked += parseInt(ip, 10) || 0;
+    }
+    setText('kpi-threats-val', totalBlocked || '—');
+    setText('count-threats',   totalBlocked || '0');
+    setText('count-agents',    ov.agents?.active ?? gs.agents_active ?? '0');
+
+    // Global health badge
+    const healthBadge = $('health-badge');
+    const healthLabel = $('health-label');
+    if (healthBadge && avgHealth !== null) {
+      const tier = healthTier(avgHealth);
+      if (healthLabel)
+        healthLabel.textContent = `${(avgHealth * 100).toFixed(0)}% · ${tier}`;
+      healthBadge.className = `health-badge health-${tier.toLowerCase()}`;
+    }
+
+    // Status indicator
+    const allAlive   = Object.values(S.healthScores).some(v => v !== null);
+    const mainDot    = $('status-dot-main');
+    const mainStatus = $('status-main');
+    if (mainDot)    mainDot.className    = 'status-dot ' + (allAlive ? 'dot-healthy' : 'dot-offline');
+    if (mainStatus) mainStatus.textContent = allAlive ? 'Online' : 'Connecting…';
+
+    // Re-render sentinel feed when overview is visible
+    renderSentinelFeedPanel();
+  }
+
+  // ── Security / Defense View ────────────────────────────────────────────────
+  async function renderSecurityView() {
+    let totalEval = 0, totalBlocked = 0, totalIncidents = 0, totalBlockedIps = 0;
+    const rows = [];
+
+    const services = [
+      { name: 'portal',   label: 'Portal',        url: CONFIG.portalUrl,   port: '8042' },
+      { name: 'one',      label: 'Infinity One',  url: CONFIG.oneUrl,      port: '8043' },
+      { name: 'admin',    label: 'Admin',         url: CONFIG.adminUrl,    port: '8044' },
+      { name: 'gateway',  label: 'Gateway',       url: CONFIG.gatewayUrl,  port: '8040' },
+      { name: 'sentinel', label: 'Sentinel',      url: CONFIG.sentinelUrl, port: '8041' },
+      { name: 'auth',     label: 'Auth',          url: CONFIG.authUrl,     port: '8005' },
+    ];
+
+    for (const svc of services) {
+      const dStats = await apiFetch(`${svc.url}/defense/stats`, 2500)
+                     || S.serviceData[svc.name]?.stats?.smart_adaptive?.defense
+                     || {};
+      const bIps   = await apiFetch(`${svc.url}/defense/blocked-ips`, 2500);
+      const bIpCnt = Array.isArray(bIps?.blocked_ips)
+        ? bIps.blocked_ips.length
+        : (S.serviceData[svc.name]?.health?.defense_blocked_ips ?? 0);
+
+      const evaluations = parseInt(dStats.evaluations   || 0, 10);
+      const blocked     = parseInt(dStats.blocked_count || 0, 10);
+      const incidents   = parseInt(dStats.incidents     || 0, 10);
+
+      totalEval       += evaluations;
+      totalBlocked    += blocked;
+      totalIncidents  += incidents;
+      totalBlockedIps += parseInt(bIpCnt, 10) || 0;
+
+      rows.push({ ...svc, evaluations, blocked, incidents, bIpCnt });
+    }
+
+    setText('sec-evaluations', totalEval);
+    setText('sec-blocks',      totalBlocked);
+    setText('sec-incidents',   totalIncidents);
+    setText('sec-blocked-ips', totalBlockedIps);
+
+    const body = $('defense-stats-body');
+    if (!body) return;
+    body.innerHTML = `
+      <table class="data-table">
+        <thead><tr>
+          <th>Service</th><th>Port</th>
+          <th>Evaluations</th><th>Blocked Req</th>
+          <th>Incidents</th><th>Blocked IPs</th>
+          <th>Mode</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => `
+          <tr class="defense-service-row">
+            <td><strong>${r.label}</strong></td>
+            <td><span class="port-badge">${r.port}</span></td>
+            <td>${r.evaluations}</td>
+            <td class="${r.blocked   > 0 ? 'threat-value' : ''}">${r.blocked}</td>
+            <td class="${r.incidents > 0 ? 'threat-value' : ''}">${r.incidents}</td>
+            <td class="${r.bIpCnt   > 0 ? 'threat-value' : ''}">${r.bIpCnt}</td>
+            <td><span class="smart-badge">🛡 ProactiveDefense</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // ── Adaptive Pulse View ────────────────────────────────────────────────────
+  async function renderPulseView() {
+    const body = $('pulse-daemons-body');
+    if (!body) return;
+
+    const services = [
+      { label: 'Portal',   url: CONFIG.portalUrl  },
+      { label: 'One',      url: CONFIG.oneUrl     },
+      { label: 'Admin',    url: CONFIG.adminUrl   },
+      { label: 'Gateway',  url: CONFIG.gatewayUrl },
+      { label: 'Sentinel', url: CONFIG.sentinelUrl},
+    ];
+
+    const rows = [];
+    for (const svc of services) {
+      const smart   = await apiFetch(`${svc.url}/health/smart`, 2500) || {};
+      const kit     = S.serviceData[svc.label.toLowerCase()]?.stats?.smart_adaptive || {};
+      const pulse   = kit.health?.pulse_mode || smart.pulse_mode || 'STEADY';
+      const interval= kit.health?.interval_ms || smart.interval_ms;
+      const daemons = kit.health?.daemons  || smart.daemons || [];
+      rows.push({ label: svc.label, pulse, interval, daemons });
+    }
+
+    body.innerHTML = `
+      <div class="pulse-grid">
+        ${rows.map(r => `
+        <div class="pulse-card">
+          <div class="pulse-card-header">
+            <strong>${r.label}</strong>
+            <span class="pulse-mode pulse-mode-${(r.pulse || 'steady').toLowerCase()}">${r.pulse}</span>
+          </div>
+          <div class="pulse-interval">
+            Interval: <code>${r.interval !== undefined ? r.interval + 'ms' : '—'}</code>
+          </div>
+          <div class="pulse-daemons">
+            ${Array.isArray(r.daemons) && r.daemons.length
+              ? r.daemons.map(d =>
+                  `<span class="daemon-chip">${typeof d === 'string' ? d : (d.name || JSON.stringify(d))}</span>`
+                ).join('')
+              : '<span class="muted">No daemons reported</span>'}
+          </div>
+        </div>`).join('')}
+      </div>`;
+  }
+
+  // ── Fluidic Routing View ───────────────────────────────────────────────────
+  async function renderRoutingView() {
+    const body = $('routing-cells-body');
+    if (!body) return;
+
+    const targets = [
+      { label: 'Portal',  url: CONFIG.portalUrl  },
+      { label: 'One',     url: CONFIG.oneUrl     },
+      { label: 'Admin',   url: CONFIG.adminUrl   },
+      { label: 'Gateway', url: CONFIG.gatewayUrl },
+    ];
+
+    const topologies = [];
+    for (const t of targets) {
+      const topo = await apiFetch(`${t.url}/routing/topology`, 2500);
+      if (topo?.routes && Object.keys(topo.routes).length) {
+        topologies.push({ service: t.label, routes: topo.routes });
+      }
+    }
+
+    if (!topologies.length) {
+      body.innerHTML = `<div class="muted-state">
+        Routing topology not yet available — will populate once routing events occur.
+      </div>`;
+      return;
+    }
+
+    body.innerHTML = topologies.map(t => `
+      <div class="routing-service-block">
+        <h4 class="routing-service-name">${t.service}</h4>
+        <div class="routing-cells">
+          ${Object.entries(t.routes).map(([loc, cell]) => `
+          <div class="routing-cell">
+            <div class="routing-cell-location">${loc}</div>
+            <div class="routing-cell-weight">${(cell.weight ?? 1.0).toFixed(3)}</div>
+            <div class="routing-cell-meta">
+              <span>Calls: ${cell.call_count ?? 0}</span>
+              <span>Latency: ${cell.avg_latency_ms !== undefined
+                ? cell.avg_latency_ms.toFixed(0) + 'ms' : '—'}</span>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>`).join('');
+  }
+
+  // ── Foresight View ─────────────────────────────────────────────────────────
+  function renderForesightView() {
+    const body = $('foresight-detail-body');
+    if (!body) return;
+
+    const services = [
+      { name: 'portal',   label: 'Portal' },
+      { name: 'one',      label: 'Infinity One' },
+      { name: 'admin',    label: 'Admin' },
+      { name: 'gateway',  label: 'Gateway' },
+      { name: 'sentinel', label: 'Sentinel Station' },
+      { name: 'auth',     label: 'Auth' },
+    ];
+
+    body.innerHTML = `
+      <div class="foresight-detail">
+        ${services.map(svc => {
+          const score = S.healthScores[svc.name];
+          const tier  = score !== null ? healthTier(score) : 'UNKNOWN';
+          const pct   = score !== null ? (score * 100).toFixed(1) : null;
+          return `
+          <div class="foresight-row">
+            <div class="foresight-service">${svc.label}</div>
+            <div class="foresight-bar-wrap">
+              <div class="foresight-bar foresight-${tier.toLowerCase()}"
+                   style="width:${pct !== null ? pct : 0}%"></div>
+            </div>
+            <div class="foresight-stats">
+              <span class="tier-chip tier-chip-${tier.toLowerCase()}">${tier}</span>
+              <span class="foresight-score">${pct !== null ? pct + '%' : 'Offline'}</span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="foresight-legend">
+        <span class="legend-item foresight-excellent">EXCELLENT ≥95%</span>
+        <span class="legend-item foresight-good">GOOD ≥80%</span>
+        <span class="legend-item foresight-fair">FAIR ≥60%</span>
+        <span class="legend-item foresight-poor">POOR ≥40%</span>
+        <span class="legend-item foresight-critical">CRITICAL &lt;40%</span>
+      </div>`;
+  }
+
+  // ── Dimensionals View ──────────────────────────────────────────────────────
+  async function renderDimensionalsView() {
+    const body = $('dimensionals-body');
+    if (!body) return;
+
+    const data     = await apiFetch(`${CONFIG.gatewayUrl}/api/dimensionals`) || {};
+    const services = data.services || data.dimensional_services || [];
+    const regStats = S.serviceData.gateway?.stats?.dimensional_registry || {};
+
+    if (!services.length) {
+      body.innerHTML = `
+        <div class="dim-stats">
+          <div class="dim-stat"><span class="stat-label">Registered</span>
+            <span class="stat-value">${regStats.service_count ?? '—'}</span></div>
+          <div class="dim-stat"><span class="stat-label">Active</span>
+            <span class="stat-value">${regStats.active_count ?? '—'}</span></div>
+          <div class="dim-stat"><span class="stat-label">Pillars</span>
+            <span class="stat-value">${regStats.pillar_count ?? '—'}</span></div>
+        </div>
+        <div class="muted-state">Detailed dimensional registry available once the gateway is online.</div>`;
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="dimensional-grid">
+        ${services.map(svc => `
+        <div class="dimensional-card pillar-${(svc.pillar || 'creation').toLowerCase()}">
+          <div class="dim-card-header">
+            <span class="dim-icon">⬡</span>
+            <strong>${svc.name || svc.service_id}</strong>
+            <span class="port-badge">${svc.port || ''}</span>
+          </div>
+          <div class="dim-card-body">
+            <div class="dim-meta">Pillar: <em>${svc.pillar || '—'}</em></div>
+            <div class="dim-meta">Status:
+              <span class="${svc.is_active ? 'text-healthy' : 'text-offline'}">
+                ${svc.is_active ? '● Online' : '○ Offline'}
+              </span>
+            </div>
+            ${svc.description ? `<div class="dim-desc">${svc.description}</div>` : ''}
+          </div>
+        </div>`).join('')}
+      </div>`;
+  }
+
+  // ── AI Agents View ─────────────────────────────────────────────────────────
+  async function renderAgentsView() {
+    const body = $('agents-body');
+    if (!body) return;
+    const data   = await apiFetch(`${CONFIG.gatewayUrl}/api/agents`) || {};
+    const list   = data.agents || S.serviceData.gateway?.overview?.agents?.list || [];
+    if (!list.length) {
+      body.innerHTML = `<div class="muted-state">No active agents. Start an agent to see it here.</div>`;
+      return;
+    }
+    body.innerHTML = `
+      <div class="entity-grid">
+        ${list.map(a => `
+        <div class="entity-card">
+          <div class="entity-header">
+            <span class="entity-icon">⚡</span>
+            <strong>${a.name || a.agent_id || 'Agent'}</strong>
+            <span class="tier-badge tier-4">T4 · Agent</span>
+          </div>
+          <div class="entity-meta">Model: ${a.model || '—'}</div>
+          <div class="entity-meta">Status: ${a.status || '—'}</div>
+        </div>`).join('')}
+      </div>`;
+  }
+
+  // ── Models View ────────────────────────────────────────────────────────────
+  async function renderModelsView() {
+    const body = $('models-body');
+    if (!body) return;
+    const data = await apiFetch(`${CONFIG.gatewayUrl}/api/models`) || {};
+    const list = data.models || [];
+    if (!list.length) {
+      body.innerHTML = `<div class="muted-state">No models loaded. Deploy a model to see it here.</div>`;
+      return;
+    }
+    body.innerHTML = `
+      <div class="entity-grid">
+        ${list.map(m => `
+        <div class="entity-card">
+          <div class="entity-header">
+            <span class="entity-icon">🧠</span>
+            <strong>${m.name || m.model_id || 'Model'}</strong>
+            <span class="tier-badge tier-3">T3 · AI</span>
+          </div>
+          <div class="entity-meta">Type: ${m.type || '—'}</div>
+          <div class="entity-meta">Status: ${m.status || 'ready'}</div>
+        </div>`).join('')}
+      </div>`;
+  }
+
+  // ── Workflows View ─────────────────────────────────────────────────────────
+  async function renderWorkflowsView() {
+    const body = $('workflows-body');
+    if (!body) return;
+    const data = await apiFetch(`${CONFIG.gatewayUrl}/api/workflows`) || {};
+    const list = data.workflows || [];
+    if (!list.length) {
+      body.innerHTML = `<div class="muted-state">No workflows found. Create one to see it here.</div>`;
+      return;
+    }
+    body.innerHTML = `
+      <div class="entity-grid">
+        ${list.map(w => `
+        <div class="entity-card">
+          <div class="entity-header">
+            <span class="entity-icon">◈</span>
+            <strong>${w.name || w.workflow_id || 'Workflow'}</strong>
+            <span class="tier-badge tier-1">T1 · Orchestrator</span>
+          </div>
+          <div class="entity-meta">Status: ${w.status || '—'}</div>
+          <div class="entity-meta">Steps: ${w.steps?.length ?? '—'}</div>
+        </div>`).join('')}
+      </div>`;
+  }
+
+  // ── Infinity Service Detail Views ──────────────────────────────────────────
+  function renderPortalDetail() {
+    const body = $('portal-detail-body');
+    if (!body) return;
+    const d = S.serviceData.portal || {};
+    body.innerHTML = buildServiceDetail('Portal', 8042, d.health || {}, d.stats || {}, [
+      { label: 'Active Sessions', value: d.stats?.sessions?.active   ?? '—' },
+      { label: 'Total Sessions',  value: d.stats?.sessions?.total    ?? '—' },
+      { label: 'Total Events',    value: d.stats?.events?.total      ?? '—' },
+      { label: 'Gate Routings',   value: d.stats?.gate_routing?.total ?? '—' },
+    ]);
+  }
+
+  function renderOneDetail() {
+    const body = $('one-detail-body');
+    if (!body) return;
+    const d = S.serviceData.one || {};
+    body.innerHTML = buildServiceDetail('Infinity One', 8043, d.health || {}, d.stats || {}, [
+      { label: 'Active Identities', value: d.stats?.identities?.active         ?? '—' },
+      { label: 'Total Identities',  value: d.stats?.identities?.total          ?? '—' },
+      { label: 'App Grants',        value: d.stats?.app_access?.active_grants  ?? '—' },
+      { label: 'Devices',           value: d.stats?.devices?.total             ?? '—' },
+      { label: 'Identity Events',   value: d.stats?.events?.total              ?? '—' },
+    ]);
+  }
+
+  function renderAdminDetail() {
+    const body = $('admin-detail-body');
+    if (!body) return;
+    const d = S.serviceData.admin || {};
+    body.innerHTML = buildServiceDetail('Admin', 8044, d.health || {}, d.stats || {}, [
+      { label: 'Config Keys',   value: d.stats?.system_data?.config_keys       ?? '—' },
+      { label: 'Feature Flags', value: d.stats?.system_data?.feature_flags     ?? '—' },
+      { label: 'Audit Actions', value: d.stats?.system_data?.audit_actions     ?? '—' },
+      { label: 'Compliance',    value: d.stats?.system_data?.compliance_events ?? '—' },
+      { label: 'Blocked IPs',   value: d.health?.defense_blocked_ips           ?? '—' },
+    ]);
+  }
+
+  function renderGatewayDetail() {
+    const body = $('gateway-detail-body');
+    if (!body) return;
+    const d = S.serviceData.gateway || {};
+    body.innerHTML = buildServiceDetail('Gateway', 8040, d.health || {}, d.stats || {}, [
+      { label: 'Upstream Workers',  value: d.stats?.upstream_workers   ?? '—' },
+      { label: 'Reachable',         value: d.stats?.reachable          ?? '—' },
+      { label: 'WS Connections',    value: d.stats?.ws_connections     ?? '—' },
+      { label: 'Cache Entries',     value: d.stats?.cache_entries      ?? '—' },
+      { label: 'ABAC Threat Level', value: d.stats?.abac_threat_level  ?? '—' },
+      { label: 'Sentinel Backend',  value: d.health?.sentinel_station?.backend ?? '—' },
+    ]);
+  }
+
+  function renderSentinelDetail() {
+    const body = $('sentinel-detail-body');
+    if (!body) return;
+    const d = S.serviceData.sentinel || {};
+    body.innerHTML = buildServiceDetail('Sentinel Station', 8041, d.health || {}, d.stats || {}, [
+      { label: 'Total Published',     value: d.stats?.events?.total_published  ?? '—' },
+      { label: 'Total Subscriptions', value: d.stats?.subscriptions?.total     ?? '—' },
+      { label: 'Active Channels',     value: d.stats?.channels?.active_count   ?? '—' },
+      { label: 'Reactive Topology',   value: d.health?.reactive_topology ? '✓ Live' : '—' },
+      { label: 'Redis Backend',
+        value: d.health?.sentinel?.redis_connected !== undefined
+          ? (d.health.sentinel.redis_connected ? 'Connected' : 'Fallback') : '—' },
+    ]);
+  }
+
+  // ── Shared service detail builder ──────────────────────────────────────────
+  function buildServiceDetail(name, port, health, stats, metrics) {
+    const alive   = health.status === 'healthy' || health.status === 'ok';
+    const score   = health.health_score;
+    const tier    = health.health_tier
+      || (score !== undefined ? healthTier(parseFloat(score)) : '—');
+    const pct     = score !== undefined
+      ? (parseFloat(score) * 100).toFixed(1) + '%' : '—';
+
+    const kit     = stats.smart_adaptive  || {};
+    const defStat = kit.defense           || {};
+    const gwStat  = kit.gateway           || {};
+    const hStat   = kit.health            || {};
+
+    return `
+      <div class="service-detail">
+        <div class="service-detail-header">
+          <div class="service-detail-status ${alive ? 'status-healthy' : 'status-offline'}">
+            ${alive ? '● Online' : '○ Offline'}
+          </div>
+          <div class="service-detail-scores">
+            <span class="score-chip">Health: <strong>${pct}</strong></span>
+            <span class="tier-chip tier-chip-${tier.toLowerCase()}">${tier}</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>📊 Service Metrics</h4>
+          <div class="metrics-grid">
+            ${metrics.map(m => `
+            <div class="metric-item">
+              <span class="metric-label">${m.label}</span>
+              <span class="metric-value">${m.value}</span>
+            </div>`).join('')}
+          </div>
+        </div>
+
+        ${Object.keys(defStat).length ? `
+        <div class="detail-section">
+          <h4>🛡 Defense Layer</h4>
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <span class="metric-label">Evaluations</span>
+              <span class="metric-value">${defStat.evaluations ?? '—'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Blocked</span>
+              <span class="metric-value threat-value">${defStat.blocked_count ?? '—'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Incidents</span>
+              <span class="metric-value threat-value">${defStat.incidents ?? '—'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Blocked IPs</span>
+              <span class="metric-value threat-value">
+                ${defStat.blocked_ips_count ?? (Array.isArray(defStat.blocked_ips) ? defStat.blocked_ips.length : '—')}
+              </span>
+            </div>
+          </div>
+        </div>` : ''}
+
+        ${Object.keys(gwStat).length ? `
+        <div class="detail-section">
+          <h4>⟁ Fluidic Gateway</h4>
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <span class="metric-label">Route Count</span>
+              <span class="metric-value">${gwStat.route_count ?? '—'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Last Route</span>
+              <span class="metric-value">${gwStat.last_route ?? '—'}</span>
+            </div>
+          </div>
+        </div>` : ''}
+
+        ${Object.keys(hStat).length ? `
+        <div class="detail-section">
+          <h4>⬡ Adaptive Pulse</h4>
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <span class="metric-label">Mode</span>
+              <span class="metric-value">${hStat.pulse_mode ?? '—'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Interval</span>
+              <span class="metric-value">
+                ${hStat.interval_ms !== undefined ? hStat.interval_ms + 'ms' : '—'}
+              </span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Total Requests</span>
+              <span class="metric-value">${hStat.total_requests ?? '—'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Error Rate</span>
+              <span class="metric-value">
+                ${hStat.error_rate !== undefined
+                  ? (hStat.error_rate * 100).toFixed(1) + '%' : '—'}
+              </span>
+            </div>
+          </div>
+        </div>` : ''}
+
+        <div class="detail-meta">
+          <span class="meta-chip">Port: ${port}</span>
+          <span class="meta-chip">Smart Adaptive: ${health.smart_adaptive ? '✓' : '—'}</span>
+          <span class="meta-chip">Sentinel: ${
+            health.sentinel || stats.sentinel?.is_running ? '✓' : '—'
+          }</span>
+          <span class="meta-chip">Phase 22.6</span>
+        </div>
+      </div>`;
+  }
+
+  // ── Sentinel SSE Feed ──────────────────────────────────────────────────────
+  function connectSentinelSSE() {
+    if (S.sse && S.sse.readyState !== EventSource.CLOSED) return;
+
+    try {
+      S.sse = new EventSource(`${CONFIG.sentinelUrl}/events`);
+    } catch {
+      scheduleSSEReconnect();
+      return;
+    }
+
+    S.sse.onopen = () => {
+      S.sseRetries = 0;
+      const dot = $('sentinel-live-dot');
+      if (dot) { dot.className = 'live-dot live-connected'; dot.textContent = '●'; }
+    };
+
+    S.sse.onmessage = (e) => {
+      try { pushFeedItem(JSON.parse(e.data)); } catch {}
+    };
+
+    // Subscribe to Sentinel channel events
+    ['platform', 'security', 'bridge', 'agent', 'ai', 'dimensional', 'underverse'].forEach(ch => {
+      S.sse.addEventListener(ch, (e) => {
+        try {
+          const ev = JSON.parse(e.data);
+          ev._channel = ch;
+          pushFeedItem(ev);
+        } catch {}
       });
     });
 
-    // Bind sidebar toggle
-    const toggleBtn = $('#sidebar-toggle');
-    if (toggleBtn) toggleBtn.addEventListener('click', Tranc3App.toggleSidebar);
-
-    // Initial data load
-    await refreshAllData();
-
-    // Connect real-time
-    connectSSE();
-    connectWebSocket();
-
-    // Periodic refresh
-    setInterval(refreshAllData, CONFIG.refreshInterval);
-
-    // Set default view
-    switchView('command');
-
-    addActivity('system', 'Tranc3 AI Platform initialized');
-    renderActivityFeed();
-
-    console.log('[Tranc3] Ready — Gateway:', CONFIG.gatewayUrl);
+    S.sse.onerror = () => {
+      S.sse.close();
+      const dot = $('sentinel-live-dot');
+      if (dot) { dot.className = 'live-dot live-disconnected'; dot.textContent = '○'; }
+      scheduleSSEReconnect();
+    };
   }
 
-  // Start when DOM is ready
+  function scheduleSSEReconnect() {
+    const delay = Math.min(CONFIG.sseReconnectMs * Math.pow(1.5, S.sseRetries), 30000);
+    S.sseRetries++;
+    setTimeout(connectSentinelSSE, delay);
+  }
+
+  function pushFeedItem(event) {
+    const channel   = event._channel || event.channel   || 'platform';
+    const eventType = event.event_type || event.type    || 'event';
+    const source    = event.source                      || '—';
+    const ts        = new Date().toLocaleTimeString('en-GB', { hour12: false });
+
+    S.sentinelFeed.unshift({ ts, channel, eventType, source });
+    if (S.sentinelFeed.length > CONFIG.sentinelFeedMax)
+      S.sentinelFeed.length = CONFIG.sentinelFeedMax;
+
+    renderSentinelFeedPanel();
+  }
+
+  function renderSentinelFeedPanel() {
+    const feed = $('sentinel-feed');
+    if (!feed) return;
+    if (!S.sentinelFeed.length) {
+      feed.innerHTML = '<div class="feed-empty">Connecting to Sentinel Station…</div>';
+      return;
+    }
+    feed.innerHTML = S.sentinelFeed.slice(0, 40).map(item => `
+      <div class="feed-item feed-channel-${item.channel}">
+        <span class="feed-ts">${item.ts}</span>
+        <span class="feed-channel">${item.channel.toUpperCase()}</span>
+        <span class="feed-event">${item.eventType}</span>
+        <span class="feed-source">${item.source}</span>
+      </div>`).join('');
+  }
+
+  // ── Dynamic CSS injection ──────────────────────────────────────────────────
+  function injectDynamicStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+      .dot-healthy  { background: var(--health-excellent); box-shadow: 0 0 6px var(--health-excellent); }
+      .dot-offline  { background: var(--color-text-muted); box-shadow: none; }
+
+      .pulse-mode-steady      { background: var(--health-excellent); color: #0a0e1a; }
+      .pulse-mode-accelerated { background: var(--pillar-intelligence); color: #0a0e1a; }
+      .pulse-mode-emergency   { background: var(--health-critical); color: #fff; }
+      .pulse-mode-recovery    { background: var(--health-poor); color: #0a0e1a; }
+
+      .traj-offline   { background: var(--color-text-muted); }
+      .traj-excellent { background: var(--health-excellent); }
+      .traj-good      { background: var(--health-good); }
+      .traj-fair      { background: var(--health-fair); }
+      .traj-poor      { background: var(--health-poor); }
+      .traj-critical  { background: var(--health-critical); }
+
+      .foresight-detail    { display:flex; flex-direction:column; gap:.75rem; }
+      .foresight-row       { display:grid; grid-template-columns:130px 1fr 200px; align-items:center; gap:1rem; }
+      .foresight-service   { font-size:.88rem; color:var(--color-text-secondary); }
+      .foresight-bar-wrap  { height:14px; background:var(--color-surface-raised); border-radius:3px; overflow:hidden; }
+      .foresight-bar       { height:100%; border-radius:3px; transition:width .8s ease; }
+      .foresight-excellent { background:var(--health-excellent); }
+      .foresight-good      { background:var(--health-good); }
+      .foresight-fair      { background:var(--health-fair); }
+      .foresight-poor      { background:var(--health-poor); }
+      .foresight-critical  { background:var(--health-critical); }
+      .foresight-unknown   { background:var(--color-text-muted); }
+      .foresight-stats     { display:flex; align-items:center; gap:.5rem; }
+      .foresight-score     { font-size:.82rem; color:var(--color-text-muted); font-family:var(--font-mono); }
+      .foresight-legend    { display:flex; gap:.75rem; flex-wrap:wrap; margin-top:1rem; padding-top:.75rem; border-top:1px solid var(--color-border); }
+      .legend-item         { font-size:.72rem; padding:2px 8px; border-radius:10px; color:#0a0e1a; font-weight:700; }
+      .legend-item.foresight-excellent { background:var(--health-excellent); }
+      .legend-item.foresight-good      { background:var(--health-good); }
+      .legend-item.foresight-fair      { background:var(--health-fair); }
+      .legend-item.foresight-poor      { background:var(--health-poor); }
+      .legend-item.foresight-critical  { background:var(--health-critical); }
+
+      .tier-chip             { font-size:.72rem; padding:2px 8px; border-radius:10px; font-weight:700; color:#0a0e1a; }
+      .tier-chip-excellent   { background:var(--health-excellent); }
+      .tier-chip-good        { background:var(--health-good); }
+      .tier-chip-fair        { background:var(--health-fair); }
+      .tier-chip-poor        { background:var(--health-poor); }
+      .tier-chip-critical    { background:var(--health-critical); }
+      .tier-chip-unknown     { background:var(--color-text-muted); color:var(--color-text); }
+
+      .feed-item   { display:grid; grid-template-columns:65px 100px 1fr 85px; gap:.5rem; padding:4px 8px; border-radius:4px; font-size:.76rem; font-family:var(--font-mono); }
+      .feed-item:hover { background:var(--color-surface-raised); }
+      .feed-ts     { color:var(--color-text-muted); }
+      .feed-channel{ font-weight:700; font-size:.68rem; letter-spacing:.04em; }
+      .feed-event  { color:var(--color-text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .feed-source { color:var(--color-text-muted); font-size:.7rem; text-align:right; overflow:hidden; text-overflow:ellipsis; }
+      .feed-empty  { color:var(--color-text-muted); font-size:.85rem; padding:1.5rem; text-align:center; }
+      .feed-channel-security { border-left:2px solid var(--pillar-security); }
+      .feed-channel-platform { border-left:2px solid var(--pillar-intelligence); }
+      .feed-channel-bridge   { border-left:2px solid var(--pillar-governance); }
+      .feed-channel-agent    { border-left:2px solid var(--pillar-nexus); }
+      .feed-channel-ai       { border-left:2px solid var(--pillar-creation); }
+
+      .health-badge      { display:flex; align-items:center; gap:.4rem; font-size:.82rem; font-family:var(--font-mono); font-weight:600; }
+      .health-excellent  { color:var(--health-excellent); }
+      .health-good       { color:var(--health-good); }
+      .health-fair       { color:var(--health-fair); }
+      .health-poor       { color:var(--health-poor); }
+      .health-critical   { color:var(--health-critical); }
+
+      .data-table           { width:100%; border-collapse:collapse; font-size:.83rem; }
+      .data-table th        { text-align:left; padding:.5rem .75rem; color:var(--color-text-muted); font-weight:500; font-size:.72rem; border-bottom:1px solid var(--color-border); }
+      .data-table td        { padding:.6rem .75rem; border-bottom:1px solid rgba(255,255,255,.04); }
+      .data-table tr:hover td { background:var(--color-surface-raised); }
+      .threat-value         { color:var(--health-critical); font-weight:700; }
+      .text-healthy         { color:var(--health-excellent); }
+      .text-offline         { color:var(--color-text-muted); }
+
+      .pulse-grid           { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:1rem; }
+      .pulse-card           { background:var(--color-surface); border:1px solid var(--color-border); border-radius:8px; padding:1rem; }
+      .pulse-card-header    { display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem; }
+      .pulse-mode           { font-size:.7rem; padding:2px 8px; border-radius:10px; font-weight:700; }
+      .pulse-interval       { font-size:.8rem; color:var(--color-text-muted); margin-bottom:.5rem; }
+      .pulse-interval code  { color:var(--color-text); background:var(--color-surface-raised); padding:1px 5px; border-radius:3px; }
+      .pulse-daemons        { display:flex; flex-wrap:wrap; gap:.3rem; }
+      .daemon-chip          { font-size:.7rem; padding:2px 6px; background:var(--color-surface-raised); border:1px solid var(--color-border); border-radius:4px; color:var(--color-text-secondary); }
+
+      .routing-service-block { margin-bottom:1.5rem; }
+      .routing-service-name  { color:var(--pillar-intelligence); font-size:.88rem; margin-bottom:.75rem; font-weight:600; }
+      .routing-cells         { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:.75rem; }
+      .routing-cell          { background:var(--color-surface); border:1px solid var(--color-border); border-radius:8px; padding:.75rem; }
+      .routing-cell-location { font-weight:600; font-size:.83rem; color:var(--pillar-intelligence); margin-bottom:.2rem; }
+      .routing-cell-weight   { font-size:1.2rem; font-family:var(--font-mono); font-weight:700; margin-bottom:.25rem; }
+      .routing-cell-meta     { display:flex; justify-content:space-between; font-size:.72rem; color:var(--color-text-muted); }
+      .muted-state           { color:var(--color-text-muted); font-size:.85rem; padding:2rem; text-align:center; }
+
+      .dimensional-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:1rem; }
+      .dimensional-card { background:var(--color-surface); border-radius:8px; padding:1rem; border-left:3px solid var(--color-border); }
+      .dim-card-header  { display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; font-size:.88rem; font-weight:600; }
+      .dim-icon         { color:var(--color-text-muted); }
+      .dim-card-body    { font-size:.8rem; }
+      .dim-meta         { color:var(--color-text-muted); line-height:1.7; }
+      .dim-desc         { color:var(--color-text-secondary); margin-top:.3rem; font-size:.75rem; }
+      .dim-stats        { display:flex; gap:2rem; padding:1rem 0 1.5rem; }
+      .dim-stat         { display:flex; flex-direction:column; }
+      .dim-stat .stat-label { font-size:.7rem; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.04em; }
+      .dim-stat .stat-value { font-size:1.5rem; font-family:var(--font-mono); font-weight:700; color:var(--color-text); }
+
+      .entity-grid   { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:1rem; }
+      .entity-card   { background:var(--color-surface); border:1px solid var(--color-border); border-radius:8px; padding:1rem; }
+      .entity-header { display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
+      .entity-icon   { font-size:1.1rem; }
+      .entity-meta   { font-size:.8rem; color:var(--color-text-muted); line-height:1.6; }
+
+      .service-detail        { }
+      .service-detail-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; }
+      .service-detail-status { font-size:.9rem; font-weight:700; }
+      .status-healthy { color:var(--health-excellent); }
+      .status-offline { color:var(--color-text-muted); }
+      .service-detail-scores { display:flex; gap:.5rem; align-items:center; }
+      .score-chip            { font-size:.85rem; color:var(--color-text-secondary); }
+      .score-chip strong     { color:var(--color-text); }
+      .detail-section        { margin-bottom:1.25rem; }
+      .detail-section h4     { font-size:.82rem; color:var(--color-text-muted); margin-bottom:.75rem; font-weight:600; }
+      .metrics-grid          { display:grid; grid-template-columns:repeat(auto-fill,minmax(175px,1fr)); gap:.5rem; }
+      .metric-item           { background:var(--color-surface-raised); border-radius:6px; padding:.6rem .75rem; display:flex; flex-direction:column; }
+      .metric-label          { font-size:.7rem; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:.2rem; }
+      .metric-value          { font-size:.98rem; font-family:var(--font-mono); font-weight:600; color:var(--color-text); }
+      .detail-meta           { display:flex; gap:.5rem; flex-wrap:wrap; padding-top:.75rem; border-top:1px solid var(--color-border); margin-top:.5rem; }
+      .meta-chip             { font-size:.72rem; padding:2px 8px; background:var(--color-surface-raised); border:1px solid var(--color-border); border-radius:4px; color:var(--color-text-muted); }
+
+      .live-dot              { font-size:.8rem; margin-left:auto; }
+      .live-connected        { color:var(--health-excellent); animation:pulse-dot 2s infinite; }
+      .live-disconnected     { color:var(--color-text-muted); }
+      @keyframes pulse-dot   { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+      .alert-banner { position:sticky; top:0; z-index:100; padding:.6rem 1.5rem; font-size:.85rem; font-weight:600; }
+      .alert-info   { background:var(--pillar-intelligence); color:#0a0e1a; }
+      .alert-warning{ background:var(--health-fair);         color:#0a0e1a; }
+      .alert-error  { background:var(--health-critical);     color:#fff; }
+
+      .port-badge { font-size:.7rem; font-family:var(--font-mono); padding:1px 6px; background:var(--color-surface-raised); border:1px solid var(--color-border); border-radius:4px; color:var(--color-text-muted); }
+      .muted      { color:var(--color-text-muted); font-size:.8rem; }
+
+      .sidebar.collapsed .brand-text,
+      .sidebar.collapsed .nav-section-label,
+      .sidebar.collapsed .nav-item span:not(.nav-icon),
+      .sidebar.collapsed .nav-service-badge,
+      .sidebar.collapsed .nav-count,
+      .sidebar.collapsed .nav-badge,
+      .sidebar.collapsed .status-info { display:none; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // ── Bootstrap ──────────────────────────────────────────────────────────────
+  function init() {
+    injectDynamicStyles();
+    startClock();
+    connectSentinelSSE();
+    pollAll();
+    S.pollTimer = setInterval(pollAll, CONFIG.refreshInterval);
+    setInterval(renderSentinelFeedPanel, 2000);
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
