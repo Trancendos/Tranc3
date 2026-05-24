@@ -16,6 +16,7 @@ Zero-cost: FastAPI + SQLite, routes to free-tier LLMs only.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -25,12 +26,18 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from sse_starlette.sse import EventSourceResponse
 
 # ---------------------------------------------------------------------------
 # Configuration
+# ---------------------------------------------------------------------------
+
+SERVICE_NAME = "model-router-service"
+PORT = 8033
+
 # ---------------------------------------------------------------------------
 
 DB_PATH = os.environ.get("MODEL_ROUTER_DB_PATH", "data/model_router.db")
@@ -396,6 +403,92 @@ async def get_stats():
         "active_models": active,
         "total_requests": total_requests,
     }
+
+
+_connected_ws: list[WebSocket] = []
+
+
+@app.websocket("/ws")
+async def _ws_endpoint(ws: WebSocket) -> None:
+    await ws.accept()
+    _connected_ws.append(ws)
+    try:
+        # Push initial state
+        stats = await _get_stats_async()
+        await ws.send_text(json.dumps({"type": "initial_state", "data": stats}))
+        # Keep alive — listen for client messages
+        while True:
+            raw = await ws.receive_text()
+            try:
+                msg = json.loads(raw)
+            except Exception:
+                msg = {"type": "ping"}
+            if msg.get("type") == "ping":
+                await ws.send_text(json.dumps({"type": "pong"}))
+            elif msg.get("type") == "get_stats":
+                await ws.send_text(json.dumps({"type": "stats", "data": _get_stats()}))
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if ws in _connected_ws:
+            _connected_ws.remove(ws)
+
+
+async def _broadcast_event(event_type: str, data: dict) -> None:
+    msg = json.dumps({"type": event_type, "data": data})
+    stale = []
+    for ws in _connected_ws:
+        try:
+            await ws.send_text(msg)
+        except Exception:
+            stale.append(ws)
+    for ws in stale:
+        _connected_ws.remove(ws)
+
+
+@app.get("/events")
+async def _sse_events():
+    async def _generator():
+        while True:
+            stats = await _get_stats_async()
+            yield {"event": "stats", "data": json.dumps(stats)}
+            await asyncio.sleep(5)
+
+    return EventSourceResponse(_generator())
+
+
+@app.get("/dashboard/summary")
+async def _dashboard_summary():
+    """Aggregated summary optimized for dashboard consumption."""
+    stats = await _get_stats_async()
+    return {
+        "service": stats.get("service", SERVICE_NAME),
+        "port": stats.get("port", PORT),
+        "status": "healthy",
+        "summary": stats,
+        "real_time": {
+            "websocket": f"ws://localhost:{PORT}/ws",
+            "sse": f"http://localhost:{PORT}/events",
+        },
+    }
+
+
+async def _get_stats_async() -> dict:
+    """Async version for use in async contexts."""
+    try:
+        result = await get_stats()
+        if isinstance(result, dict):
+            result["service"] = SERVICE_NAME
+            result["port"] = PORT
+            return result
+    except Exception:
+        pass
+    return {"service": SERVICE_NAME, "port": PORT}
+
+
+def _get_stats() -> dict:
+    """Return basic service stats for real-time endpoints (sync fallback)."""
+    return {"service": SERVICE_NAME, "port": PORT}
 
 
 if __name__ == "__main__":

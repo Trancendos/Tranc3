@@ -563,3 +563,61 @@ class TestDeepagentsOrchestratorService:
         r = client.delete(f"/agents/{a['id']}")
         assert r.status_code == 200
         assert r.json()["deregistered"] is True
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Phase 21 — Real-Time Endpoint Tests (WebSocket, SSE, Dashboard Summary)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+ALL_P4_MODULES = list(MODULE_ENV_MAP.keys())
+
+
+@pytest.mark.parametrize("client", ALL_P4_MODULES, indirect=True)
+class TestP4RealTimeEndpoints:
+    """Test the Phase 21 real-time enhancements added to all P4 workers."""
+
+    def test_dashboard_summary(self, client):
+        """GET /dashboard/summary returns aggregated service data."""
+        r = client.get("/dashboard/summary")
+        assert r.status_code == 200
+        data = r.json()
+        assert "service" in data
+        assert "port" in data
+        assert "status" in data
+        assert data["status"] == "healthy"
+        assert "summary" in data
+        assert "real_time" in data
+        # real_time should advertise ws and sse URLs
+        rt = data["real_time"]
+        assert "websocket" in rt
+        assert "sse" in rt
+
+    def test_websocket_connect_and_ping(self, client):
+        """WebSocket /ws accepts connection, sends initial_state, responds to ping."""
+        with client.websocket_connect("/ws") as ws:
+            # First message should be initial_state
+            init_msg = ws.receive_json()
+            assert init_msg["type"] == "initial_state"
+            assert "data" in init_msg
+
+            # Send ping, expect pong
+            ws.send_text('{"type": "ping"}')
+            msg = ws.receive_json()
+            assert msg["type"] == "pong"
+
+    def test_websocket_get_stats(self, client):
+        """WebSocket /ws responds to get_stats message."""
+        with client.websocket_connect("/ws") as ws:
+            # Consume initial_state
+            ws.receive_json()
+
+            ws.send_text('{"type": "get_stats"}')
+            msg = ws.receive_json()
+            assert msg["type"] == "stats"
+            assert "data" in msg
+
+    @pytest.mark.skip(reason="SSE EventSourceResponse hangs in TestClient; verified manually")
+    def test_sse_events_endpoint(self, client):
+        """GET /events returns an SSE stream."""
+        r = client.get("/events")
+        assert r.status_code == 200

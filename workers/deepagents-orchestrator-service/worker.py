@@ -5,15 +5,18 @@ Smart, adaptive multi-agent orchestration with delegation depth limits,
 skill-based routing, and execution logging. Zero-cost self-hosted design.
 """
 
+import asyncio
 import json
 import sqlite3
 import time
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
+from sse_starlette.sse import EventSourceResponse
 
 # ── Config ───────────────────────────────────────────────────────────────────
 SERVICE_NAME = "deepagents-orchestrator"
@@ -21,7 +24,15 @@ PORT = 8037
 DB_PATH = Path(__file__).parent / "deepagents.db"
 MAX_DELEGATION_DEPTH = 5
 
-app = FastAPI(title=f"Tranc3 {SERVICE_NAME}", version="0.5.0")
+
+@asynccontextmanager
+async def _lifespan(app):
+    """Initialize database on startup."""
+    init_db()
+    yield
+
+
+app = FastAPI(title=f"Tranc3 {SERVICE_NAME}", version="0.6.0", lifespan=_lifespan)
 
 # ── Pydantic schemas ─────────────────────────────────────────────────────────
 
@@ -174,9 +185,6 @@ def init_db() -> None:
             )
     db.commit()
     db.close()
-
-
-init_db()
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -729,6 +737,94 @@ def get_stats():
         "delegations": delegations_total,
         "skills": skills_total,
         "execution_logs": logs_total,
+    }
+
+
+def _get_stats() -> dict:
+    """Return basic service stats for real-time endpoints."""
+    try:
+        # Try calling the /stats handler synchronously if possible
+        import inspect
+
+        stats_fn = get_stats
+        if not inspect.iscoroutinefunction(stats_fn):
+            result = stats_fn()
+            if isinstance(result, dict):
+                result["service"] = SERVICE_NAME
+                result["port"] = PORT
+                return result
+    except Exception:
+        pass
+    return {"service": SERVICE_NAME, "port": PORT}
+
+
+# ── Real-time endpoints (Phase 21) ────────────────────────────────
+
+_connected_ws: list[WebSocket] = []
+
+
+@app.websocket("/ws")
+async def _ws_endpoint(ws: WebSocket) -> None:
+    await ws.accept()
+    _connected_ws.append(ws)
+    try:
+        # Push initial state
+        stats = _get_stats()
+        await ws.send_text(json.dumps({"type": "initial_state", "data": stats}))
+        # Keep alive — listen for client messages
+        while True:
+            raw = await ws.receive_text()
+            try:
+                msg = json.loads(raw)
+            except Exception:
+                msg = {"type": "ping"}
+            if msg.get("type") == "ping":
+                await ws.send_text(json.dumps({"type": "pong"}))
+            elif msg.get("type") == "get_stats":
+                await ws.send_text(json.dumps({"type": "stats", "data": _get_stats()}))
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if ws in _connected_ws:
+            _connected_ws.remove(ws)
+
+
+async def _broadcast_event(event_type: str, data: dict) -> None:
+    msg = json.dumps({"type": event_type, "data": data})
+    stale = []
+    for ws in _connected_ws:
+        try:
+            await ws.send_text(msg)
+        except Exception:
+            stale.append(ws)
+    for ws in stale:
+        _connected_ws.remove(ws)
+
+
+@app.get("/events")
+async def _sse_events():
+    async def _generator():
+        while True:
+            stats = _get_stats()
+            yield {"event": "stats", "data": json.dumps(stats)}
+            await asyncio.sleep(5)
+
+    return EventSourceResponse(_generator())
+
+
+@app.get("/dashboard/summary")
+async def _dashboard_summary():
+    """Aggregated summary optimized for dashboard consumption."""
+    stats = _get_stats()
+    return {
+        "service": stats.get("service", SERVICE_NAME),
+        "port": stats.get("port", PORT),
+        "status": "healthy",
+        "summary": stats,
+        "real_time": {
+            "websocket": f"ws://localhost:{PORT}/ws",
+            "sse": f"http://localhost:{PORT}/events",
+        },
     }
 
 

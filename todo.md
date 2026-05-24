@@ -1,47 +1,38 @@
-# Tranc3 — Phase 20: Ecosystem Matrix, AI Workers & Dashboard
+# Tranc3 — Phase 21: AI Platform Redesign, Dashboard Upgrade & System Enhancement
 
-## Phase 20.1: Research & Architecture Review
-- [x] Survey shared_core architecture files (vault, vault_security, audit_ledger, sentinel, storage_factory, smart_storage)
-- [x] Review LangChain/LangGraph patterns for workflow and integration services
-- [x] Design zero-cost service architecture (XOR encryption, SQLite, no external deps)
+## Phase 21.1: Architecture & Dependencies
+- [x] Install/enhance Python dependencies (jinja2, websockets, sse-starlette for streaming)
+- [x] Create unified gateway API that aggregates all P4 worker data
+- [x] Add WebSocket + SSE endpoints to P4 workers (all 8 workers now have /ws, /events, /dashboard/summary)
 
-## Phase 20.2: P4 Worker Build-Out (8 workers, ports 8030–8037)
-- [x] vault-service (8030) — XOR encryption, hash-chained audit, leak detection, zeroization
-- [x] topology-service (8031) — Adaptive topology switching (TRUE_NAS↔HYBRID↔CLOUD_ONLY), failover
-- [x] ledger-service (8032) — SHA-256 hash-chained immutable audit ledger with sentinel verification
-- [x] model-router-service (8033) — Smart multi-model routing (cost/latency/priority/round-robin), circuit breaker
-- [x] workflow-engine-service (8034) — DAG-based workflow execution, topological sort, DFS cycle detection, checkpoints
-- [x] skills-benchmark-service (8035) — AI capability benchmarking, leaderboard, skill gap detection
-- [x] langchain-integration-service (8036) — Zero-cost LangChain orchestration, prompt templates, chains, RAG, state graphs
-- [x] deepagents-orchestrator-service (8037) — Multi-agent orchestration, delegation depth limits, skill registry, execution logs
+## Phase 21.2: AI Platform Dashboard Redesign
+- [x] Design new AI Platform UX: sidebar navigation, AI command center, agent management
+- [x] Create dashboard/styles.css — premium AI platform styling with glass morphism, animated gradients
+- [x] Create dashboard/app.js — application logic, state management, real-time data flows
+- [x] Create dashboard/index.html — full AI platform SPA with proper AI UX patterns
 
-## Phase 20.3: P4 Test Suite
-- [x] Write tests/test_workers_p4.py covering all 8 P4 workers (61 tests, ≥5 per worker)
-- [x] All tests pass (406 total across P0–P4, 0 failures)
-- [x] Fix vault-service audit chain ordering bug (ORDER BY created_at instead of id)
+## Phase 21.3: Worker Enhancements
+- [x] Add /ws WebSocket endpoints to all P4 workers for real-time streaming
+- [x] Add /events SSE streaming endpoints for dashboard consumption
+- [x] Add /dashboard/summary endpoint to each worker (aggregated data for the dashboard)
+- [x] Standardize deepagents-orchestrator init pattern to match other 7 workers (_lifespan)
 
-## Phase 20.4: docker-compose Integration
-- [x] Add P4 workers to docker-compose.yml (ports 8030–8037, 8 new volumes)
-- [x] Verify compose file validity (38 services, 35 volumes)
+## Phase 21.4: Gateway Aggregation Service
+- [x] Create workers/gateway-service/worker.py (port 8040) — unified aggregation of all P4 data
+- [x] Endpoints verified and tested
+- [x] WebSocket /ws for real-time push to dashboard
+- [x] Proxy/cache layer with 5s cache TTL
 
-## Phase 20.5: UI Dashboard (Ecosystem Control Plane)
-- [x] Create React + Tailwind dashboard for monitoring all workers
-- [x] Service health grid, topology visualizer, model router status, workflow DAG viewer
-- [x] Deploy or serve as static site (dashboard/index.html)
+## Phase 21.5: Test Suite Updates
+- [x] Update tests/test_workers_p4.py for new endpoints (WebSocket, SSE, dashboard summary)
+- [x] Add tests for gateway-service
+- [x] Fix duplicate real-time endpoint blocks in 7 P4 workers
+- [x] Fix missing SERVICE_NAME/PORT constants in 7 P4 workers
+- [x] Fix missing _connected_ws declaration in 7 P4 workers
+- [x] Verify all tests pass (P0–P4) — 457 passed, 9 skipped
 
-## Phase 20.6: SWOT Analysis & Forensic Assessment
-- [x] Pre-implementation production-readiness % assessment (48.6%)
-- [x] SWOT analysis document (PHASE20_SWOT_FORENSIC.md)
-- [x] Post-implementation production-readiness % assessment (81.1%, +32.5%)
-
-## Phase 20.7: CI & Release
-- [x] ruff check + ruff format (all 8 P4 workers clean, 23 violations fixed)
-- [x] Full pytest suite passes (406 passed, 0 failures across P0–P4)
-- [x] Update pyproject.toml version to 0.5.0
-- [x] Initialize git repo, create branch, commit, tag v0.5.0
-- [x] Provide before/after production-readiness percentage (48.6% → 81.1%)
-
-## Phase 20.8: GitHub Integration
-- [x] Push branch feat/phase20-ecosystem-matrix-ai-workers-dashboard to Trancendos/Tranc3
-- [x] Push tag v0.5.0 to remote
-- [x] Create PR #58: https://github.com/Trancendos/Tranc3/pull/58
+## Phase 21.6: SWOT Update & Release
+- [x] ruff check + ruff format on all new/modified files
+- [x] Update PHASE21_SWOT_FORENSIC.md with before/after assessment (72.9% → 88.8%)
+- [x] Update pyproject.toml version to 0.6.0
+- [ ] Git commit, tag v0.6.0, push branch, create PR
