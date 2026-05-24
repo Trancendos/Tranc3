@@ -1,88 +1,107 @@
-# Phase 27: Dimensional Nexus — Central Nervous System
+# Phase 27: Three-Bridge Architecture — Nexus, HIVE, and InfinityBridge
 
 **Branch:** `phase-24/aeonmind-polyglot-v0.9.0`  
-**Commits:** `8ef9c3b` → `79dc8e8` → `537b84f`  
 **Date:** 2025-05-24  
-**Status:** Complete — 67 tests passing, 2795 total suite green
+**Status:** Complete — 120 tests passing (67 Nexus + 53 HIVE), full suite green
 
 ---
 
 ## Overview
 
-The Dimensional Nexus is the Central Nervous System of the Tranc3 platform. It provides a unified coordination layer that binds together causal event ordering, tier-aware access control, real-time health monitoring, cross-dimensional event routing, live WebSocket dashboard streaming, and bidirectional Sentinel Station integration into a single cohesive subsystem.
+Sentinel Station routes three distinct types of traffic through the Tranc3 platform, each handled by a dedicated bridge system:
 
-The Nexus sits at the heart of the `Dimensional` package (formerly `shared_core`, renamed in Phase 27) and exposes its capabilities through both a Python API and a FastAPI HTTP surface on port 8050. A Docker-ready worker service is provided for standalone deployment.
+| Bridge | Traffic Type | Description |
+|--------|-------------|-------------|
+| **InfinityBridge** | User context / human traffic | Light bridges connecting users across Admin, Arcadia, and The Citadel |
+| **The Nexus** | AI, Agent, and Bot traffic | Routing and coordination for intelligence entities (Tier 3–5) |
+| **The HIVE** | Data movement and swarm systems | Data pipelines, chunk routing, swarm coordination, flow monitoring |
 
----
+These are **three separate systems**, each purpose-built for its traffic type. They share the Dimensional package for core services but are architecturally distinct.
 
-## Architecture
-
-```
-                    ┌─────────────────────────────────────┐
-                    │         DimensionalNexus             │
-                    │     (Central Coordinator)            │
-                    └──────┬──────┬──────┬──────┬──────────┘
-                           │      │      │      │
-              ┌────────────┘      │      │      └────────────┐
-              ▼                   ▼      ▼                   ▼
-   ┌──────────────────┐ ┌──────────────┐ ┌────────────┐ ┌───────────────┐
-   │CausalOrdering    │ │TierAccess    │ │Health      │ │EventRouter    │
-   │Engine            │ │Bridge        │ │Aggregator  │ │               │
-   │                  │ │              │ │            │ │               │
-   │• Vector clocks   │ │• Tier check  │ │• SQLite    │ │• Channel subs │
-   │• Causality hash  │ │• RBAC        │ │• Heartbeat │ │• Handlers     │
-   │• Event buffer    │ │• ABAC        │ │• Anomalies │ │• Routing tbl  │
-   └──────────────────┘ └──────────────┘ └────────────┘ └───────────────┘
-                           │
-              ┌────────────┴────────────┐
-              ▼                         ▼
-   ┌──────────────────┐    ┌───────────────────┐
-   │ NexusWSManager   │    │NexusSentinelBridge│
-   │ (WebSocket)      │    │(Bidirectional)    │
-   │                  │    │                   │
-   │• Live dashboard  │    │• Nexus → Sentinel │
-   │• Channel subs    │    │• Sentinel → Nexus │
-   │• Dead conn clean │    │• Pause/Resume     │
-   └──────────────────┘    └───────────────────┘
-```
+**Critical Distinction:**
+- **Nexus** = AI, Agent, and Bot movement and traffic ONLY
+- **Dimensional** = Core/shared services package
+- **"DimensionalNexus"** = Only valid when referring to BOTH Dimensional AND Nexus in conjunction — NOT a merged system
+- **The HIVE** = Data movement and swarm coordination ONLY
+- **InfinityBridge** = User/human traffic ONLY
 
 ---
 
-## Subsystems
+## Three-Bridge Architecture
 
-### 1. CausalOrderingEngine
+```
+                        ┌──────────────────────┐
+                        │   Sentinel Station    │
+                        │  (Interplexus Hub)    │
+                        │   Redis Pub/Sub +     │
+                        │   In-Process Fallback │
+                        └──────┬───────┬───────┘
+                               │       │
+              ┌────────────────┤       ├────────────────┐
+              │                │       │                │
+    ┌─────────▼─────────┐  ┌──▼───────▼──┐  ┌──────────▼──────────┐
+    │  InfinityBridge   │  │  The Nexus  │  │     The HIVE        │
+    │  (Light Bridges)  │  │             │  │                     │
+    │                   │  │ AI/Agent/Bot│  │ Data movement &     │
+    │  User traffic     │  │ traffic &   │  │ swarm coordination  │
+    │  Human context    │  │ coordination│  │                     │
+    │  Tier 0           │  │ Tier 3-5    │  │ Pipelines & Swarms  │
+    └───────────────────┘  └──────┬──────┘  └──────────┬──────────┘
+                                │                     │
+                    ┌───────────┼───────────┐    ┌────┼─────┐
+                    │           │           │    │    │     │
+              ┌─────▼──┐ ┌─────▼──┐ ┌─────▼──┐  ┌▼──┐ ┌▼──┐ ┌▼──┐
+              │Causal  │ │Tier    │ │Health  │  │Flow│ │Pipe│ │Swrm│
+              │Ordering│ │Access  │ │Aggreg  │  │Mon │ │Mgmt│ │Coor│
+              │Engine  │ │Bridge  │ │        │  │    │ │    │ │    │
+              └────────┘ └────────┘ └────────┘  └────┘ └────┘ └────┘
+```
 
-Distributed vector-clock implementation for cross-dimensional event ordering. Every event that flows through the Nexus is tagged with a vector clock timestamp, enabling precise causality tracking even when events originate from different dimensions with varying network latencies.
+---
+
+## Bridge 1: InfinityBridge — User/Human Traffic
+
+The InfinityBridge handles all user context and human movement across the platform. Users traversing between Admin, Arcadia, and The Citadel use the light bridges of the InfinityBridge.
+
+**Defined in:** `Dimensional/infinity/nomenclature.py`
+```python
+TransferSystem.BRIDGE  # "bridge" — The Infinity Bridge
+InfinityLocation.BRIDGE  # "infinity_bridge"
+SentinelChannel.BRIDGE  # "bridge" — Bridge User Events
+```
+
+**Transfers:** Users  
+**Description:** User transfer system within Infinity — connects Admin, Arcadia, and The Citadel
+
+The InfinityBridge infrastructure already exists within the `Dimensional/infinity/` package, including the Infinity Portal, Auth Gateway, and Sentinel Station for event distribution.
+
+---
+
+## Bridge 2: The Nexus — AI, Agent, and Bot Traffic
+
+The Nexus is the dedicated routing and coordination system for AI, Agent, and Bot traffic (Tier 3–5). It provides causal event ordering, tier-aware access control, real-time health aggregation, cross-Nexus event routing, and a live WebSocket dashboard.
+
+**Package:** `Dimensional/nexus/`  
+**Port:** 8050
+
+### Nexus Subsystems
+
+#### CausalOrderingEngine
+Distributed vector-clock implementation for cross-Nexus event ordering. Every AI/Agent/Bot event is tagged with a vector clock timestamp, enabling precise causality tracking.
 
 **Key capabilities:**
-- **`increment()`** — Advance the local vector clock
-- **`merge(incoming_clock)`** — Merge a foreign vector clock (happens-before relation)
-- **`happened_before(a, b)`** — Determine if clock `a` causally precedes `b`
-- **`concurrent(a, b)`** — Determine if two events are causally independent
-- **`compute_causality_hash()`** — Deterministic hash of the current clock state for integrity verification
-- **`record_event(event)`** — Store an event with its vector clock; buffer is size-bounded (configurable via `buffer_size` parameter or `NEXUS_EVENT_BUFFER_SIZE` env var, default 10,000)
-- **`get_ordered_events()`** — Retrieve all buffered events sorted by causal order
+- `increment()` — Advance the local vector clock
+- `merge(incoming_clock)` — Merge a foreign vector clock (happens-before relation)
+- `happened_before(a, b)` — Determine if clock `a` causally precedes `b`
+- `concurrent(a, b)` — Determine if two events are causally independent
+- `compute_causality_hash()` — Deterministic hash of the current clock state
+- `record_event(event)` — Store an event with its vector clock (buffer size configurable)
+- `get_ordered_events()` — Retrieve all buffered events sorted by causal order
 
-**Data model:**
-```python
-class NexusEvent(BaseModel):
-    event_id: str          # UUID
-    channel: SentinelChannel
-    source_dimension: str
-    source_tier: int       # 0-5
-    event_type: str
-    payload: dict = {}
-    vector_clock: Dict[str, int] = {}
-    timestamp: str         # ISO 8601
-    correlation_id: Optional[str] = None
-    causality_hash: Optional[str] = None
-```
+#### TierAccessBridge
+Unified access control enforcing the Tranc3 Tier hierarchy through a layered check pipeline: explicit deny → tier hierarchy → RBAC → ABAC → combined decision.
 
-### 2. TierAccessBridge
-
-Unified access control that enforces the Tranc3 Tier hierarchy through a layered check pipeline. Every access decision traverses: explicit deny → tier hierarchy → RBAC → ABAC → combined decision.
-
-**Tier Hierarchy (enforced top-down):**
+**Tier Hierarchy:**
 | Tier | Name | Description |
 |------|------|-------------|
 | 0 | HUMAN | Human operators — unrestricted |
@@ -92,252 +111,271 @@ Unified access control that enforces the Tranc3 Tier hierarchy through a layered
 | 4 | AGENT | Lower-level autonomous AI |
 | 5 | BOT | Stateless service worker/function |
 
-**Key capabilities:**
-- **`check_access(request)`** — Full access decision pipeline returning `NexusAccessDecision`
-- **`add_deny(subject, resource)`** / **`remove_deny()`** — Explicit deny list management
-- **`add_rbac_policy()`** / **`add_abac_policy()`** — Policy registration
+#### HealthAggregator
+Real-time health monitoring for AI/Agent/Bot services, backed by SQLite for zero-cost persistence. Tracks status, detects anomalies (stale heartbeats, error-rate spikes).
 
-**Decision flow:**
-```
-Request → Explicit Deny? → Tier Check → RBAC Policies → ABAC Policies → Combined Decision
-              │                  │             │               │               │
-           DENIED           TIER_OK      RBAC_RESULT     ABAC_RESULT     ALLOW/DENY
-```
+#### EventRouter
+Channel-based event distribution built on `SentinelChannel`. Services subscribe to channels, register handlers, and the router dispatches published events.
 
-**Data models:**
-```python
-class NexusAccessRequest(BaseModel):
-    subject: str
-    resource: str
-    action: str
-    subject_tier: int
-    resource_tier: int
-    context: dict = {}
+#### NexusSentinelBridge
+Bidirectional event bridge between The Nexus and Sentinel Station. AI/Agent/Bot events are forwarded to Sentinel for cross-worker distribution; Sentinel events are routed into the Nexus for dashboard visualization and causal tracking.
 
-class NexusAccessDecision(BaseModel):
-    allowed: bool
-    reason: str
-    tier_valid: bool
-    rbac_result: Optional[bool] = None
-    abac_result: Optional[bool] = None
-    evaluation_time_ms: float
-```
-
-### 3. HealthAggregator
-
-Real-time health monitoring across all dimensional services, backed by SQLite for zero-cost persistence. Services register, send heartbeats, and the aggregator tracks their status while detecting anomalies like stale heartbeats and error-rate spikes.
-
-**Key capabilities:**
-- **`register_service()`** — Register a new service in the health database
-- **`update_heartbeat()`** — Record a heartbeat with optional metrics
-- **`get_summary()`** — Get aggregate health summary across all services
-- **`detect_anomalies()`** — Identify stale heartbeats (>30s since last) and high error rates (>0.1)
-
-**Data models:**
-```python
-class NexusServiceHealth(BaseModel):
-    service_id: str
-    dimension: str
-    tier: int
-    status: str = "healthy"    # healthy | degraded | unhealthy | unknown
-    last_heartbeat: Optional[str] = None
-    error_rate: float = 0.0
-    latency_ms: float = 0.0
-    metadata: dict = {}
-
-class NexusHealthSummary(BaseModel):
-    total_services: int
-    healthy: int
-    degraded: int
-    unhealthy: int
-    unknown: int
-    services: List[NexusServiceHealth]
-    timestamp: str
-```
-
-### 4. EventRouter
-
-Channel-based event distribution system built on the `SentinelChannel` enum. Services subscribe to channels, register handlers, and the router dispatches published events to all matching handlers.
-
-**SentinelChannel values:**
-`PLATFORM` | `AGENTS` | `MODELS` | `WORKFLOWS` | `SECURITY` | `HIVE` | `NEXUS` | `BRIDGE` | `PILLARS` | `INFRASTRUCTURE` | `EVENTS`
-
-**Key capabilities:**
-- **`subscribe(channel, subscriber_id)`** / **`unsubscribe()`** — Channel subscription management
-- **`register_handler(channel, handler)`** — Register an async callback for a channel
-- **`publish(event)`** — Dispatch an event to all subscribers and handlers on the event's channel
-- **`get_routing_table()`** — Return the full subscription map
-
-### 5. DimensionalNexus (Central Coordinator)
-
-The top-level coordinator that integrates all four subsystems and provides a unified interface. It also manages the service topology graph (nodes + edges) and exposes a FastAPI application factory.
-
-**Key capabilities:**
-- **`register_service(service)`** — Register a service with both the HealthAggregator and EventRouter
-- **`add_topology_edge()`** — Add a connection between dimensional services
-- **`emit_event(event)`** — Record event in causal engine, route to subscribers, and broadcast to WebSocket dashboards
-- **`check_access(request)`** — Delegate to TierAccessBridge
-- **`get_topology()`** — Return the full topology graph
-- **`get_status()`** — Return comprehensive Nexus status
-
-**Data models:**
-```python
-class NexusTopologyNode(BaseModel):
-    node_id: str
-    dimension: str
-    tier: int
-    service_type: str
-    metadata: dict = {}
-
-class NexusTopologyEdge(BaseModel):
-    source: str
-    target: str
-    edge_type: str
-    metadata: dict = {}
-```
-
-### 6. NexusWSManager (NEW)
-
-WebSocket connection manager for live event streaming to dashboards. Manages connections, tracks channel subscriptions, and broadcasts events in real-time with automatic dead-connection cleanup.
-
-**Key capabilities:**
-- **`connect(ws, channels)`** — Accept a WebSocket connection with optional channel subscriptions
-- **`disconnect(ws)`** — Clean up a connection from all tracking lists
-- **`broadcast(event)`** — Send an event to all connected dashboards and channel subscribers
-
-**Integration:** Events emitted through `DimensionalNexus.emit_event()` are automatically broadcast to all connected WebSocket clients.
-
-### 7. NexusSentinelBridge (NEW)
-
-Bidirectional event bridge between the Dimensional Nexus and the Sentinel Station. Events published to the Nexus are forwarded to the Sentinel Station for cross-worker distribution, and Sentinel events are routed into the Nexus for dashboard visualization and causal tracking.
-
-**Channel Mapping:**
-| Sentinel (lowercase) | Nexus (SentinelChannel) |
-|---------------------|------------------------|
-| `platform` | `PLATFORM` |
-| `agents` | `AGENTS` |
-| `models` | `MODELS` |
-| `workflows` | `WORKFLOWS` |
-| `security` | `SECURITY` |
-| `hive` | `HIVE` |
-| `nexus` | `NEXUS` |
-| `bridge` | `BRIDGE` |
-| `pillars` | `PILLARS` |
-| `infrastructure` | `INFRASTRUCTURE` |
-| `events` | `EVENTS` |
-
-**Key capabilities:**
-- **`attach_sentinel(sentinel_station)`** — Attach to a Sentinel Station and register handlers
-- **`on_sentinel_event()`** — Forward Sentinel events into the Nexus
-- **`pause_sentinel_forward()`** / **`resume_sentinel_forward()`** — Control Nexus→Sentinel flow
-- **`pause_nexus_forward()`** / **`resume_nexus_forward()`** — Control Sentinel→Nexus flow
-- **`get_status()`** — Bridge status including stats and channel map
-
-**Stats tracking:** `nexus_to_sentinel`, `sentinel_to_nexus`, `errors`
-
----
-
-## Dimensional Dashboard
-
-A real-time web dashboard served from the `/dashboard` endpoint. Features:
-
-- **6 tabs:** Overview, Health, Events, Topology, Access Control, Tier Hierarchy
-- **Live event feed** via WebSocket with channel color-coding
-- **Service health cards** with status indicators and tier badges
-- **Canvas-based topology graph** visualization with tier-colored nodes and directional edges
-- **Interactive access control checker** with decision logging
-- **Channel distribution grid** showing event counts per Sentinel channel
-- **Auto-refresh** every 10 seconds for health and anomaly data
-
-**Technology:** Pure HTML + CSS + JavaScript, no build tools required. Connects to the Nexus via REST API and WebSocket.
-
----
-
-## Dimensional Nexus Worker Service
-
-A Docker-ready standalone service for deploying the Nexus:
-
-**Files:**
-```
-workers/dimensional-nexus-service/
-├── Dockerfile
-├── requirements-worker.txt
-└── worker.py
-```
-
-**Startup initialization:**
-- Registers 8 core dimensional services (nexus-self, infinity-portal, infinity-auth, sentinel-station, health-aggregator, the-grid, tranc3-ai, deepagents-orchestrator)
-- Builds 11 default topology edges connecting core services
-- Emits a `nexus_startup` event on the NEXUS channel
-- Health check on `/health` endpoint
-
-**Docker deployment:**
-```bash
-docker build -t dimensional-nexus .
-docker run -p 8050:8050 dimensional-nexus
-```
-
----
-
-## FastAPI Surface
-
-The `create_nexus_app()` factory produces a FastAPI application with the following endpoints:
+### Nexus FastAPI Surface
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/` | Nexus info and endpoint listing |
+| GET | `/` | Nexus info with three-bridge architecture |
 | GET | `/health` | Aggregate health summary |
 | GET | `/health/anomalies` | Anomaly detection results |
 | GET | `/health/service/{service_id}` | Individual service health |
 | POST | `/access/check` | Access control decision |
 | GET | `/access/tiers` | Tier hierarchy definition |
-| POST | `/events/emit` | Emit an event |
+| POST | `/events/emit` | Emit an AI/Agent/Bot event |
 | GET | `/events/recent` | Get recent events in causal order |
 | GET | `/events/routing` | Event routing table |
 | GET | `/topology` | Full topology graph |
-| GET | `/topology/nodes` | Topology nodes only |
-| GET | `/topology/edges` | Topology edges only |
-| POST | `/services/register` | Register a new service |
+| POST | `/services/register` | Register a new AI/Agent/Bot service |
 | POST | `/services/heartbeat` | Submit a service heartbeat |
-| GET | `/status` | Comprehensive Nexus status |
+| GET | `/status` | Comprehensive Nexus status with three_bridges |
 | GET | `/dashboard` | Real-time dashboard web UI |
 | WS | `/ws/events` | WebSocket live event streaming |
 
-**Default port:** 8050  
-**Startup:** `uvicorn Dimensional.nexus.nexus_core:app --host 0.0.0.0 --port 8050`
+### Nexus Status Response
+```json
+{
+  "nexus_id": "nexus-abc12345",
+  "bridge_type": "nexus",
+  "description": "AI, Agent, and Bot traffic coordination",
+  "three_bridges": {
+    "infinity_bridge": "User context / human traffic (Light bridges)",
+    "nexus": "AI, Agent, and Bot movement and traffic (THIS)",
+    "hive": "Data movement and swarm system coordination"
+  },
+  "tier_hierarchy": { "HUMAN": 0, "ORCHESTRATOR": 1, "PRIME": 2, "AI": 3, "AGENT": 4, "BOT": 5 }
+}
+```
+
+---
+
+## Bridge 3: The HIVE — Data Movement and Swarm Coordination
+
+The HIVE is the dedicated routing and coordination system for data movement and swarm systems. It handles data pipelines, chunk routing with priority and replication, distributed swarm coordination for data processing, and flow monitoring with throughput/latency tracking.
+
+**Package:** `Dimensional/hive/`  
+**Port:** 8060
+
+### HIVE Subsystems
+
+#### FlowMonitor
+Monitors data flow through the HIVE. Tracks throughput (Mbps), latency (ms), chunk delivery rates, and error rates for all data pipelines and swarm operations. Backed by SQLite for persistent metrics.
+
+**Key capabilities:**
+- `record_throughput(pipeline_id, mbps)` — Record a throughput sample
+- `record_latency(pipeline_id, latency_ms)` — Record a latency sample
+- `record_chunk_status(status)` — Track chunk delivery/pend/fail counts
+- `get_throughput(pipeline_id)` — Average throughput over last 60s
+- `get_latency(pipeline_id)` — Average latency over last 60s
+- `get_summary()` — Aggregate flow metrics across all pipelines
+
+#### SwarmCoordinator
+Manages data-processing swarms — groups of nodes processing shared data tasks (ETL, aggregation, replication, etc.). Handles the full lifecycle: formation, task distribution, scaling, completion, and dissolution.
+
+**Key capabilities:**
+- `create_swarm(name, purpose)` — Create a new data-processing swarm
+- `add_node(swarm_id, node)` — Add a processing node (auto-activates forming swarms)
+- `remove_node(swarm_id, node_id)` — Remove a node (drains swarm if empty)
+- `update_task_progress(swarm_id, node_id, completed, failed)` — Track task progress
+- `dissolve_swarm(swarm_id)` — Release all nodes and dissolve the swarm
+- `list_swarms(status)` — List swarms, optionally filtered by status
+
+**Swarm Lifecycle:**
+```
+FORMING → ACTIVE → SCALING → COMPLETED
+                  → DRAINING → (removed)
+                  → FAILED
+```
+
+#### PipelineManager
+Manages data pipelines — the routes through which data chunks flow from sources to sinks. Handles pipeline creation, chunk routing, replication, delivery tracking, and status management.
+
+**Key capabilities:**
+- `create_pipeline(name, source_id, sink_ids, priority, replication)` — Create a pipeline
+- `start_pipeline(pipeline_id)` — Start a pending pipeline
+- `pause_pipeline(pipeline_id)` — Pause a running pipeline
+- `route_chunk(chunk)` — Route a data chunk through its pipeline
+- `list_pipelines(status)` — List pipelines, optionally filtered by status
+
+**Replication:** Capped at `HIVE_MAX_REPLICATION` (default 5) to prevent runaway replication.
+
+### HIVE Data Models
+
+```python
+class DataPriority(str, Enum):
+    CRITICAL | HIGH | NORMAL | LOW | BACKGROUND
+
+class SwarmStatus(str, Enum):
+    FORMING | ACTIVE | SCALING | DRAINING | COMPLETED | FAILED
+
+class PipelineStatus(str, Enum):
+    PENDING | RUNNING | PAUSED | COMPLETED | FAILED
+
+class HiveDataSource(BaseModel):
+    source_id, name, data_type, pillar, throughput_mbps, status, metadata
+
+class HiveDataSink(BaseModel):
+    sink_id, name, data_type, pillar, consumption_rate_mbps, status, metadata
+
+class DataChunk(BaseModel):
+    chunk_id, pipeline_id, source_id, sink_id, priority, size_bytes,
+    checksum, status, hops, created_at, delivered_at, metadata
+
+class Swarm(BaseModel):
+    swarm_id, name, purpose, status, nodes, data_type,
+    total_tasks, completed_tasks, failed_tasks, metadata
+
+class DataPipeline(BaseModel):
+    pipeline_id, name, source_id, sink_ids, status, priority,
+    replication_factor, total_chunks, delivered_chunks, failed_chunks,
+    throughput_mbps, latency_ms, metadata
+```
+
+### HIVE FastAPI Surface
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | HIVE info with three-bridge architecture |
+| GET | `/status` | Comprehensive HIVE status |
+| GET | `/health` | HIVE health summary |
+| POST | `/sources` | Register a data source |
+| GET | `/sources` | List all data sources |
+| POST | `/sinks` | Register a data sink |
+| GET | `/sinks` | List all data sinks |
+| POST | `/pipelines` | Create a data pipeline |
+| POST | `/pipelines/{id}/start` | Start a pipeline |
+| POST | `/pipelines/{id}/pause` | Pause a pipeline |
+| GET | `/pipelines` | List all pipelines |
+| POST | `/swarms` | Create a data-processing swarm |
+| GET | `/swarms` | List all swarms |
+| POST | `/swarms/{id}/nodes` | Add a processing node |
+| DELETE | `/swarms/{id}/nodes/{nid}` | Remove a processing node |
+| DELETE | `/swarms/{id}` | Dissolve a swarm |
+| POST | `/route` | Route a data chunk |
+| GET | `/flow` | Flow monitoring summary |
+| WS | `/ws` | WebSocket live event streaming |
+
+### HIVE Status Response
+```json
+{
+  "hive_id": "hive-abc12345",
+  "bridge_type": "hive",
+  "description": "Data movement and swarm system coordination",
+  "three_bridges": {
+    "infinity_bridge": "User context / human traffic (Light bridges)",
+    "nexus": "AI, Agent, and Bot movement and traffic",
+    "hive": "Data movement and swarm system coordination (THIS)"
+  },
+  "flow": { "total_throughput_mbps": 0, "avg_latency_ms": 0, "chunks_delivered": 0 }
+}
+```
+
+---
+
+## Nomenclature Integration
+
+The three bridges are formally defined in `Dimensional/infinity/nomenclature.py`:
+
+```python
+class TransferSystem(str, Enum):
+    NEXUS = "nexus"      # The Nexus — AI, Agent, and Bot traffic
+    HIVE = "hive"        # The HIVE — Data movement and swarm systems
+    BRIDGE = "bridge"    # The Infinity Bridge — User traffic
+
+TRANSFER_SYSTEMS = {
+    TransferSystem.NEXUS: {
+        "name": "The Nexus",
+        "transfers": "AI's, Agents, and Bots",
+        "description": "Routing and distribution system for all intelligence entities (Tier 3-5)",
+    },
+    TransferSystem.HIVE: {
+        "name": "The HIVE",
+        "transfers": "Data",
+        "description": "Data transfer system that moves information across the entire ecosystem",
+    },
+    TransferSystem.BRIDGE: {
+        "name": "The Infinity Bridge",
+        "transfers": "Users",
+        "description": "User transfer system within Infinity — connects Admin, Arcadia, and The Citadel",
+    },
+}
+
+class SentinelChannel(str, Enum):
+    # ...
+    HIVE = "hive"       # HIVE Data Events
+    NEXUS = "nexus"     # Nexus Entity Events (AI/Agent/Bot movement)
+    BRIDGE = "bridge"   # Bridge User Events
+    # ...
+```
+
+---
+
+## Dimensional Package — Core/Shared Services
+
+The `Dimensional` package provides core/shared services that all three bridges use:
+
+- **Models** — EventMessage, ServiceInfo, ServiceHealth, VectorClock
+- **EventBus** — In-process event distribution
+- **Security** — JWT, password hashing, RBAC, ABAC
+- **Registry** — Service discovery and registration
+- **Path/URL Validation** — Security hardening
+- **Error Handlers** — Safe error responses
+- **Log Sanitization** — Structured logging with PII protection
+- **Optional Imports** — Lazy loading for heavy dependencies
+
+The Dimensional package is NOT a bridge itself. It is the shared foundation upon which the bridges are built.
 
 ---
 
 ## Test Coverage
 
-67 tests across 8 test classes:
-
+### Nexus Tests (67)
 | Class | Tests | Coverage |
 |-------|-------|----------|
 | TestCausalOrderingEngine | 11 | Vector clock increment, merge, happened_before, concurrent, hash, record, buffer limit |
 | TestTierAccessBridge | 12 | Tier checks, deny list, hierarchy enforcement, RBAC/ABAC integration |
 | TestHealthAggregator | 7 | Register, heartbeat, summary, anomaly detection |
 | TestEventRouter | 7 | Subscribe, publish, handlers, routing table |
-| TestDimensionalNexus | 8 | Integration: register, emit, access, topology, status |
+| TestNexusIntegration | 8 | Integration: register, emit, access, topology, status |
+| TestNexusSingleton | 2 | Singleton pattern, instance type |
 | TestDataModels | 6 | Model defaults and auto-field generation |
 | TestNexusWSManager | 4 | Connect/disconnect, channel subscribe, broadcast, dead cleanup |
 | TestDashboardEndpoint | 2 | Dashboard HTML, root endpoint listing |
 | TestNexusSentinelBridge | 8 | Bridge creation, stats, pause/resume, status, forwarding, singleton |
 
-All 67 tests pass. Full suite: **2795 passed, 21 skipped, 0 failed**.
+### HIVE Tests (53)
+| Class | Tests | Coverage |
+|-------|-------|----------|
+| TestFlowMonitor | 6 | Throughput, latency, chunk tracking, empty state |
+| TestSwarmCoordinator | 9 | Create, add/remove nodes, task progress, completion, dissolution, filtering |
+| TestPipelineManager | 9 | Create, start, pause, route chunks, replication cap, filtering |
+| TestHiveIntegration | 12 | Sources, sinks, pipelines, swarms, routing, events, status, health |
+| TestHiveSingleton | 2 | Singleton pattern, instance type |
+| TestHiveDataModels | 9 | Priority enum, SwarmStatus, PipelineStatus, all model defaults |
+| TestHiveApp | 3 | App creation, root endpoint, status endpoint |
+
+**Total: 120 tests passing.**
 
 ---
 
 ## Zero-Cost Infrastructure
 
-The Dimensional Nexus maintains the platform's zero-cost infrastructure commitment:
+All three bridges maintain the platform's zero-cost infrastructure commitment:
 
-- **SQLite** for health persistence (no external database required)
-- **In-process event routing** (no message broker dependency)
+- **SQLite** for persistence (Nexus health, HIVE flow metrics — no external database)
+- **In-process routing** (no message broker dependency for local operations)
 - **Vector clocks** for causal ordering (no external coordination service)
-- **FastAPI + Uvicorn** for HTTP surface (lightweight, no license cost)
-- **WebSocket** for live dashboard (no polling overhead)
-- **Sentinel Bridge** integrates with existing Sentinel Station (no new infrastructure)
+- **FastAPI + Uvicorn** for HTTP surfaces (lightweight, no license cost)
+- **WebSocket** for live dashboards (no polling overhead)
+- **Sentinel Station** provides cross-worker event distribution via Redis Pub/Sub with in-process fallback
 - All dependencies are open-source Python packages
 
 ---
@@ -347,38 +385,66 @@ The Dimensional Nexus maintains the platform's zero-cost infrastructure commitme
 ```
 Tranc3/
 ├── Dimensional/
-│   └── nexus/
-│       ├── __init__.py           (62 lines)  — Package init, public API exports
-│       ├── nexus_core.py         (~1100 lines) — Full implementation + FastAPI + WebSocket
-│       ├── sentinel_bridge.py    (~230 lines) — Bidirectional Sentinel Station bridge
-│       └── dashboard.html        (~620 lines) — Real-time web dashboard UI
+│   ├── nexus/
+│   │   ├── __init__.py           — Package init, exports Nexus as primary class
+│   │   ├── nexus_core.py         — Nexus coordinator + FastAPI + WebSocket
+│   │   ├── sentinel_bridge.py    — Bidirectional Sentinel Station bridge
+│   │   └── dashboard.html        — Real-time web dashboard UI
+│   ├── hive/
+│   │   ├── __init__.py           — Package init, exports Hive as primary class
+│   │   └── hive_core.py          — Hive coordinator + FastAPI + WebSocket
+│   └── infinity/
+│       ├── nomenclature.py       — TransferSystem enum (NEXUS, HIVE, BRIDGE)
+│       ├── sentinel_station.py   — Redis Pub/Sub hub (Interplexus)
+│       └── worker_bridges.py     — Worker integration bridges
 ├── workers/
 │   └── dimensional-nexus-service/
 │       ├── Dockerfile            — Docker deployment
 │       ├── requirements-worker.txt — Python dependencies
-│       └── worker.py             (~160 lines) — Standalone worker entry point
+│       └── worker.py             — Standalone Nexus worker entry point
 └── tests/
-    └── test_dimensional_nexus.py (~900 lines) — 67 test cases
+    ├── test_nexus.py             — 67 Nexus test cases
+    └── test_hive.py              — 53 HIVE test cases
 ```
+
+---
+
+## Backward Compatibility
+
+The `DimensionalNexus` name is preserved as a backward-compatible alias for `Nexus`:
+
+```python
+# In nexus_core.py:
+DimensionalNexus = Nexus  # Only valid when referring to both Dimensional AND Nexus
+
+# In __init__.py:
+from Dimensional.nexus.nexus_core import Nexus, DimensionalNexus
+```
+
+This alias should ONLY be used when referring to both the Dimensional package AND The Nexus in conjunction. For the Nexus specifically, always use the `Nexus` class name.
+
+The old test file `test_dimensional_nexus.py` is superseded by `test_nexus.py`.
 
 ---
 
 ## Relationship to Previous Phases
 
-| Phase | Contribution | Nexus Connection |
-|-------|-------------|-----------------|
-| Phase 22 | Infinity Portal, Auth Gateway, Sentinel Station | Nexus Sentinel Bridge provides bidirectional flow |
-| Phase 23 | Forensic audit, Sentinel system | EventRouter uses SentinelChannel from Phase 23 |
-| Phase 24 | AeonMind Polyglot v0.9.0 | Nexus can coordinate polyglot services |
-| Phase 25 | Repo review, architecture docs | Tier hierarchy formalized here |
+| Phase | Contribution | Connection |
+|-------|-------------|-----------|
+| Phase 22 | Infinity Portal, Auth Gateway, Sentinel Station | Bridges connect through Sentinel Station |
+| Phase 23 | Forensic audit, Sentinel system | All three bridges use SentinelChannel |
+| Phase 24 | AeonMind Polyglot v0.9.0 | Nexus coordinates polyglot AI/Agent/Bot services |
+| Phase 25 | Repo review, architecture docs | Tier hierarchy formalized |
 | Phase 26 | Directory restructuring | `shared_core` → `Dimensional` rename |
-| Phase 27 | **This phase** | Nexus is the central nervous system |
+| Phase 27 | **This phase** | Three-bridge architecture implemented |
 
 ---
 
 ## Next Steps
 
-- **Nexus Dashboard Enhancement**: Add time-series health charts and topology auto-layout
+- **HIVE Worker Service**: Create `workers/hive-service/` with Dockerfile and worker entry point
+- **HIVE Dashboard**: Real-time data flow visualization web UI
+- **InfinityBridge Coordinator**: Dedicated coordinator class for user traffic (currently modeled in nomenclature.py)
+- **Cross-Bridge Event Flow**: Events flowing between all three bridges through Sentinel Station
 - **Nexus Cluster Mode**: Multi-node Nexus with Raft consensus for HA
-- **Cross-Worker Heartbeat Protocol**: Standardized heartbeat format for all dimensional workers
-- **Topology Auto-Discovery**: Automatic topology building from service registration
+- **HIVE Swarm Auto-Scaling**: Dynamic swarm node allocation based on pipeline throughput

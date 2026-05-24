@@ -1,9 +1,21 @@
 """
-Dimensional Nexus Core — Central Nervous System Implementation
-================================================================
-The heart of the Dimensional infrastructure. Provides unified coordination
-across all dimensional services with tier-aware access control, real-time
-health aggregation, cross-dimensional event routing, and causal ordering.
+The Nexus — AI, Agent, and Bot Traffic Coordination
+=====================================================
+The Nexus is the dedicated routing and coordination system for AI, Agent,
+and Bot traffic (Tier 3–5) within the Tranc3 platform. It is ONE of the
+three bridges that route traffic through Sentinel Station:
+
+    Bridge 1 — InfinityBridge : User context / human traffic (Light bridges)
+    Bridge 2 — The Nexus      : AI, Agent, and Bot movement and traffic
+    Bridge 3 — The HIVE       : Data movement and swarm system coordination
+
+The Nexus provides:
+    - Causal event ordering for AI/Agent/Bot events (vector clocks)
+    - Tier-aware access control for AI/Agent/Bot resources
+    - Real-time health aggregation for AI/Agent/Bot services
+    - Cross-Nexus event routing via Sentinel channels
+    - Topology mapping of AI/Agent/Bot service connections
+    - WebSocket dashboard for live Nexus event streaming
 
 Tier Hierarchy (Mandatory Custom Definitions):
     Tier 0: HUMAN — Override authority, maximum access
@@ -12,6 +24,14 @@ Tier Hierarchy (Mandatory Custom Definitions):
     Tier 3: AI — The overarching ML/LLM Complex
     Tier 4: AGENT — Lower-level autonomous AI
     Tier 5: BOT — Stateless service worker/function
+
+IMPORTANT: The Nexus is NOT a general coordinator. It is specifically for
+AI, Agent, and Bot traffic. User traffic uses InfinityBridge. Data traffic
+uses The HIVE. The Dimensional package provides core/shared services that
+all three bridges can use, but Dimensional and Nexus are separate concepts.
+
+"DimensionalNexus" is only valid when referring to both the Dimensional
+package AND The Nexus in conjunction — NOT as a merged system.
 """
 
 from __future__ import annotations
@@ -40,7 +60,7 @@ from Dimensional.infinity.nomenclature import InfinityRole, SentinelChannel, Tie
 from Dimensional.infinity.rbac import RBACEngine, Permission
 from Dimensional.infinity.abac import ABACEngine, Policy, PolicyEffect
 
-logger = logging.getLogger("dimensional.nexus")
+logger = logging.getLogger("nexus")
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -57,7 +77,7 @@ NEXUS_EVENT_BUFFER_SIZE = int(os.environ.get("NEXUS_EVENT_BUFFER_SIZE", "10000")
 
 
 class NexusServiceHealth(BaseModel):
-    """Health status of a single dimensional service."""
+    """Health status of a single AI/Agent/Bot service in the Nexus."""
     service_id: str
     service_name: str
     pillar: str
@@ -71,7 +91,7 @@ class NexusServiceHealth(BaseModel):
 
 
 class NexusHealthSummary(BaseModel):
-    """Aggregated health across all dimensional services."""
+    """Aggregated health across all AI/Agent/Bot services in the Nexus."""
     total_services: int = 0
     healthy: int = 0
     degraded: int = 0
@@ -84,7 +104,7 @@ class NexusHealthSummary(BaseModel):
 
 
 class NexusAccessDecision(BaseModel):
-    """Result of a tier-aware access control decision."""
+    """Result of a tier-aware access control decision for Nexus traffic."""
     allowed: bool
     reason: str = ""
     matched_policy: Optional[str] = None
@@ -97,11 +117,16 @@ class NexusAccessDecision(BaseModel):
 
 
 class NexusEvent(BaseModel):
-    """A cross-dimensional event with causal ordering."""
+    """An event in the Nexus — AI/Agent/Bot traffic with causal ordering.
+
+    Events flowing through the Nexus represent AI, Agent, and Bot
+    movement, coordination, and traffic. They are NOT general platform
+    events — those flow through the HIVE or Sentinel Station directly.
+    """
     event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     channel: str  # SentinelChannel name
-    source_dimension: str  # Which dimensional service emitted this
-    source_tier: int
+    source_dimension: str  # Which AI/Agent/Bot service emitted this
+    source_tier: int  # Must be Tier 3 (AI), 4 (Agent), or 5 (Bot)
     event_type: str
     payload: Dict[str, Any] = Field(default_factory=dict)
     vector_clock: Dict[str, int] = Field(default_factory=dict)
@@ -111,9 +136,9 @@ class NexusEvent(BaseModel):
 
 
 class NexusTopologyNode(BaseModel):
-    """A node in the dimensional topology graph."""
+    """A node in the Nexus topology graph — an AI/Agent/Bot service."""
     node_id: str
-    node_type: str  # dimension, worker, service, gateway
+    node_type: str  # ai_complex, agent, bot, gateway, coordinator
     tier: int
     pillar: str
     connections: List[str] = Field(default_factory=list)
@@ -122,10 +147,10 @@ class NexusTopologyNode(BaseModel):
 
 
 class NexusTopologyEdge(BaseModel):
-    """An edge in the dimensional topology graph."""
+    """An edge in the Nexus topology — traffic flow between AI/Agent/Bot services."""
     source: str
     target: str
-    edge_type: str  # dependency, event_flow, data_flow, auth_flow
+    edge_type: str  # task_dispatch, inference_route, data_flow, coordination
     sentinel_channel: Optional[str] = None
     bandwidth: Optional[float] = None
     latency_ms: Optional[float] = None
@@ -138,12 +163,12 @@ class NexusTopologyEdge(BaseModel):
 
 class CausalOrderingEngine:
     """
-    Vector-clock based causal ordering for cross-dimensional events.
+    Vector-clock based causal ordering for Nexus events.
 
     Implements a distributed vector clock that tracks causality across
-    all dimensional services. Events are ordered by their vector clocks,
-    ensuring timeline consistency even in the presence of network delays
-    and concurrent operations.
+    all AI/Agent/Bot services in the Nexus. Events are ordered by their
+    vector clocks, ensuring timeline consistency even in the presence of
+    network delays and concurrent AI/Agent/Bot operations.
     """
 
     def __init__(self, node_id: str, known_nodes: Optional[Set[str]] = None,
@@ -225,7 +250,7 @@ class CausalOrderingEngine:
 class TierAccessBridge:
     """
     Unified access control bridge that combines RBAC and ABAC with
-    the Tier hierarchy.
+    the Tier hierarchy for AI/Agent/Bot traffic in the Nexus.
 
     The bridge enforces the mandatory custom definition hierarchy:
         - AI (Tier 3): The overarching ML/LLM Complex
@@ -387,9 +412,9 @@ class TierAccessBridge:
 
 class HealthAggregator:
     """
-    Real-time health aggregation across all dimensional services.
+    Real-time health aggregation for AI/Agent/Bot services in the Nexus.
 
-    Collects heartbeat signals from dimensional services and maintains
+    Collects heartbeat signals from AI/Agent/Bot services and maintains
     a comprehensive health view organized by pillar, tier, and status.
     Supports configurable health thresholds and anomaly detection.
     """
@@ -439,7 +464,7 @@ class HealthAggregator:
         conn.close()
 
     async def register_service(self, health: NexusServiceHealth) -> None:
-        """Register a new dimensional service for health tracking."""
+        """Register an AI/Agent/Bot service for health tracking in the Nexus."""
         async with self._lock:
             self._services[health.service_id] = health
         conn = sqlite3.connect(self.db_path)
@@ -471,7 +496,7 @@ class HealthAggregator:
         response_time_ms: Optional[float] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Update the heartbeat for a dimensional service."""
+        """Update the heartbeat for an AI/Agent/Bot service in the Nexus."""
         async with self._lock:
             if service_id not in self._services:
                 return
@@ -506,7 +531,7 @@ class HealthAggregator:
         conn.close()
 
     async def get_summary(self) -> NexusHealthSummary:
-        """Get the aggregated health summary."""
+        """Get the aggregated health summary for Nexus services."""
         async with self._lock:
             services = list(self._services.values())
 
@@ -549,7 +574,7 @@ class HealthAggregator:
         return summary
 
     async def detect_anomalies(self) -> List[Dict[str, Any]]:
-        """Detect health anomalies across dimensional services."""
+        """Detect health anomalies across AI/Agent/Bot services in the Nexus."""
         anomalies = []
         now = time.time()
 
@@ -599,15 +624,15 @@ class HealthAggregator:
 
 
 # ---------------------------------------------------------------------------
-# Event Router — Cross-Dimensional Sentinel Event Distribution
+# Event Router — Cross-Nexus Sentinel Event Distribution
 # ---------------------------------------------------------------------------
 
 
 class EventRouter:
     """
-    Cross-dimensional event routing with Sentinel channel distribution.
+    Cross-Nexus event routing with Sentinel channel distribution.
 
-    Routes events between dimensional services based on Sentinel channel
+    Routes events between AI/Agent/Bot services based on Sentinel channel
     subscriptions. Supports fan-out, point-to-point, and channel-based
     routing with causal ordering guarantees.
     """
@@ -619,12 +644,12 @@ class EventRouter:
         self._lock = asyncio.Lock()
 
     async def subscribe(self, channel: str, service_id: str) -> None:
-        """Subscribe a dimensional service to a Sentinel channel."""
+        """Subscribe an AI/Agent/Bot service to a Sentinel channel."""
         async with self._lock:
             self._subscriptions[channel].add(service_id)
 
     async def unsubscribe(self, channel: str, service_id: str) -> None:
-        """Unsubscribe a dimensional service from a Sentinel channel."""
+        """Unsubscribe an AI/Agent/Bot service from a Sentinel channel."""
         async with self._lock:
             self._subscriptions[channel].discard(service_id)
 
@@ -683,20 +708,28 @@ class EventRouter:
 
 
 # ---------------------------------------------------------------------------
-# Dimensional Nexus — The Central Coordinator
+# The Nexus — AI/Agent/Bot Traffic Coordinator
 # ---------------------------------------------------------------------------
 
 
-class DimensionalNexus:
+class Nexus:
     """
-    The central coordinator for the Dimensional infrastructure.
+    The Nexus — dedicated coordinator for AI, Agent, and Bot traffic.
 
-    Provides a unified API surface that integrates:
-    - Health aggregation and monitoring
-    - Tier-aware access control (RBAC + ABAC bridge)
-    - Cross-dimensional event routing with causal ordering
-    - Topology mapping and visualization
-    - Service registration and discovery
+    The Nexus is ONE of the three bridges through Sentinel Station:
+        - InfinityBridge: User context / human traffic
+        - The Nexus (THIS): AI, Agent, and Bot movement and traffic
+        - The HIVE: Data movement and swarm system coordination
+
+    The Nexus provides a unified API surface for AI/Agent/Bot services:
+    - Health aggregation and monitoring for AI/Agent/Bot services
+    - Tier-aware access control (RBAC + ABAC bridge) for AI/Agent/Bot resources
+    - Cross-Nexus event routing with causal ordering for AI/Agent/Bot events
+    - Topology mapping of AI/Agent/Bot service connections
+    - Service registration and discovery for AI/Agent/Bot entities
+
+    IMPORTANT: The Nexus is NOT a general coordinator. It is specifically
+    and exclusively for AI (Tier 3), Agent (Tier 4), and Bot (Tier 5) traffic.
     """
 
     def __init__(self, db_path: str = NEXUS_DB_PATH):
@@ -710,7 +743,7 @@ class DimensionalNexus:
         self._topology_edges: List[NexusTopologyEdge] = []
         self._started_at = time.time()
         self._lock = asyncio.Lock()
-        logger.info(f"DimensionalNexus initialized: {self.node_id}")
+        logger.info(f"Nexus initialized: {self.node_id}")
 
     async def register_service(
         self,
@@ -720,7 +753,7 @@ class DimensionalNexus:
         tier_requirement: int,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> NexusServiceHealth:
-        """Register a new dimensional service with the Nexus."""
+        """Register an AI/Agent/Bot service with the Nexus."""
         health = NexusServiceHealth(
             service_id=service_id,
             service_name=service_name,
@@ -747,7 +780,7 @@ class DimensionalNexus:
         for channel in SentinelChannel:
             await self.event_router.subscribe(channel.value, service_id)
 
-        logger.info(f"Registered dimensional service: {service_name} ({service_id})")
+        logger.info(f"Registered Nexus service: {service_name} ({service_id})")
         return health
 
     async def add_topology_edge(
@@ -757,7 +790,7 @@ class DimensionalNexus:
         edge_type: str,
         sentinel_channel: Optional[str] = None,
     ) -> None:
-        """Add a connection edge to the dimensional topology."""
+        """Add a traffic flow edge to the Nexus topology."""
         edge = NexusTopologyEdge(
             source=source,
             target=target,
@@ -779,7 +812,7 @@ class DimensionalNexus:
         payload: Optional[Dict[str, Any]] = None,
         correlation_id: Optional[str] = None,
     ) -> NexusEvent:
-        """Emit a cross-dimensional event through the Nexus."""
+        """Emit an AI/Agent/Bot traffic event through the Nexus."""
         event = NexusEvent(
             channel=channel,
             source_dimension=source_dimension,
@@ -792,7 +825,7 @@ class DimensionalNexus:
         # Broadcast to WebSocket dashboards
         await _ws_manager.broadcast(event)
         logger.info(
-            f"Event emitted: {event_type} on {channel} "
+            f"Nexus event: {event_type} on {channel} "
             f"from {source_dimension} → {len(subscribers)} subscribers"
         )
         return event
@@ -805,7 +838,7 @@ class DimensionalNexus:
         subject_tier: int,
         **kwargs,
     ) -> NexusAccessDecision:
-        """Perform a tier-aware access control check."""
+        """Perform a tier-aware access control check for Nexus traffic."""
         return self.access_bridge.check_access(
             subject=subject,
             resource=resource,
@@ -815,7 +848,7 @@ class DimensionalNexus:
         )
 
     async def get_topology(self) -> Dict[str, Any]:
-        """Get the complete dimensional topology graph."""
+        """Get the complete Nexus topology graph."""
         async with self._lock:
             return {
                 "nodes": [n.model_dump() for n in self._topology_nodes.values()],
@@ -830,6 +863,8 @@ class DimensionalNexus:
         routing_table = await self.event_router.get_routing_table()
         return {
             "nexus_id": self.node_id,
+            "bridge_type": "nexus",
+            "description": "AI, Agent, and Bot traffic coordination",
             "uptime_seconds": round(time.time() - self._started_at, 1),
             "health": health_summary.model_dump(),
             "event_routing": routing_table,
@@ -844,22 +879,32 @@ class DimensionalNexus:
                 "AGENT": 4,
                 "BOT": 5,
             },
+            "three_bridges": {
+                "infinity_bridge": "User context / human traffic (Light bridges)",
+                "nexus": "AI, Agent, and Bot movement and traffic (THIS)",
+                "hive": "Data movement and swarm system coordination",
+            },
             "sentinel_channels": [ch.value for ch in SentinelChannel],
         }
+
+
+# Backward-compatible alias — only valid when referring to both Dimensional
+# AND Nexus in conjunction. For the Nexus specifically, use the Nexus class.
+DimensionalNexus = Nexus
 
 
 # ---------------------------------------------------------------------------
 # Singleton Nexus Instance
 # ---------------------------------------------------------------------------
 
-_nexus_instance: Optional[DimensionalNexus] = None
+_nexus_instance: Optional[Nexus] = None
 
 
-def get_nexus() -> DimensionalNexus:
-    """Get or create the singleton DimensionalNexus instance."""
+def get_nexus() -> Nexus:
+    """Get or create the singleton Nexus instance."""
     global _nexus_instance
     if _nexus_instance is None:
-        _nexus_instance = DimensionalNexus()
+        _nexus_instance = Nexus()
     return _nexus_instance
 
 
@@ -869,7 +914,7 @@ def get_nexus() -> DimensionalNexus:
 
 
 class NexusWSManager:
-    """Manages WebSocket connections for live event streaming to dashboards."""
+    """Manages WebSocket connections for live Nexus event streaming to dashboards."""
 
     def __init__(self):
         self._connections: List[WebSocket] = []
@@ -881,7 +926,7 @@ class NexusWSManager:
         if channels:
             for ch in channels:
                 self._channel_subs[ch].append(ws)
-        logger.info(f"Dashboard WebSocket connected (total: {len(self._connections)})")
+        logger.info(f"Nexus Dashboard WebSocket connected (total: {len(self._connections)})")
 
     def disconnect(self, ws: WebSocket):
         if ws in self._connections:
@@ -889,7 +934,7 @@ class NexusWSManager:
         for ch_conns in self._channel_subs.values():
             if ws in ch_conns:
                 ch_conns.remove(ws)
-        logger.info(f"Dashboard WebSocket disconnected (total: {len(self._connections)})")
+        logger.info(f"Nexus Dashboard WebSocket disconnected (total: {len(self._connections)})")
 
     async def broadcast(self, event: NexusEvent):
         msg = event.model_dump_json()
@@ -923,19 +968,19 @@ _ws_manager = NexusWSManager()
 
 
 def create_nexus_app() -> FastAPI:
-    """Create the Dimensional Nexus FastAPI application."""
+    """Create the Nexus FastAPI application — AI/Agent/Bot traffic coordination."""
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         nexus = get_nexus()
-        logger.info(f"Dimensional Nexus starting: {nexus.node_id}")
+        logger.info(f"Nexus starting: {nexus.node_id}")
         yield
-        logger.info("Dimensional Nexus shutting down")
+        logger.info("Nexus shutting down")
 
     app = FastAPI(
-        title="Tranc3 Dimensional Nexus",
-        description="Central Nervous System for the Dimensional Infrastructure",
-        version="0.1.0",
+        title="Tranc3 Nexus",
+        description="The Nexus — AI, Agent, and Bot Traffic Coordination (Bridge 2 of 3)",
+        version="0.2.0",
         lifespan=lifespan,
     )
 
@@ -951,19 +996,19 @@ def create_nexus_app() -> FastAPI:
 
     @app.get("/health", response_model=NexusHealthSummary)
     async def health_summary():
-        """Get aggregated health across all dimensional services."""
+        """Get aggregated health across all AI/Agent/Bot services in the Nexus."""
         nexus = get_nexus()
         return await nexus.health_aggregator.get_summary()
 
     @app.get("/health/anomalies")
     async def health_anomalies():
-        """Detect health anomalies across dimensional services."""
+        """Detect health anomalies across AI/Agent/Bot services in the Nexus."""
         nexus = get_nexus()
         return await nexus.health_aggregator.detect_anomalies()
 
     @app.get("/health/service/{service_id}", response_model=NexusServiceHealth)
     async def service_health(service_id: str):
-        """Get health for a specific dimensional service."""
+        """Get health for a specific AI/Agent/Bot service in the Nexus."""
         nexus = get_nexus()
         if service_id in nexus.health_aggregator._services:
             return nexus.health_aggregator._services[service_id]
@@ -973,14 +1018,14 @@ def create_nexus_app() -> FastAPI:
 
     @app.post("/access/check", response_model=NexusAccessDecision)
     async def check_access(request: Request):
-        """Perform a tier-aware access control check."""
+        """Perform a tier-aware access control check for Nexus traffic."""
         body = await request.json()
         nexus = get_nexus()
         return await nexus.check_access(**body)
 
     @app.get("/access/tiers")
     async def get_tier_hierarchy():
-        """Get the tier hierarchy definition."""
+        """Get the tier hierarchy definition for AI/Agent/Bot access control."""
         return {
             "0": "HUMAN — Override authority, maximum access",
             "1": "ORCHESTRATOR — System-level coordination",
@@ -994,14 +1039,14 @@ def create_nexus_app() -> FastAPI:
 
     @app.post("/events/emit", response_model=NexusEvent)
     async def emit_event(request: Request):
-        """Emit a cross-dimensional event."""
+        """Emit an AI/Agent/Bot traffic event through the Nexus."""
         body = await request.json()
         nexus = get_nexus()
         return await nexus.emit_event(**body)
 
     @app.get("/events/recent")
     async def recent_events(channel: Optional[str] = None, limit: int = 100):
-        """Get recent events in causal order."""
+        """Get recent Nexus events in causal order."""
         nexus = get_nexus()
         return [
             e.model_dump()
@@ -1010,7 +1055,7 @@ def create_nexus_app() -> FastAPI:
 
     @app.get("/events/routing")
     async def event_routing():
-        """Get the current event routing table."""
+        """Get the current Nexus event routing table."""
         nexus = get_nexus()
         return await nexus.event_router.get_routing_table()
 
@@ -1018,20 +1063,20 @@ def create_nexus_app() -> FastAPI:
 
     @app.get("/topology")
     async def get_topology():
-        """Get the dimensional topology graph."""
+        """Get the Nexus topology graph of AI/Agent/Bot services."""
         nexus = get_nexus()
         return await nexus.get_topology()
 
     @app.get("/topology/nodes")
     async def get_topology_nodes():
-        """Get all topology nodes."""
+        """Get all AI/Agent/Bot service nodes in the Nexus topology."""
         nexus = get_nexus()
         async with nexus._lock:
             return [n.model_dump() for n in nexus._topology_nodes.values()]
 
     @app.get("/topology/edges")
     async def get_topology_edges():
-        """Get all topology edges."""
+        """Get all traffic flow edges in the Nexus topology."""
         nexus = get_nexus()
         async with nexus._lock:
             return [e.model_dump() for e in nexus._topology_edges]
@@ -1040,14 +1085,14 @@ def create_nexus_app() -> FastAPI:
 
     @app.post("/services/register", response_model=NexusServiceHealth)
     async def register_service(request: Request):
-        """Register a new dimensional service with the Nexus."""
+        """Register an AI/Agent/Bot service with the Nexus."""
         body = await request.json()
         nexus = get_nexus()
         return await nexus.register_service(**body)
 
     @app.post("/services/heartbeat")
     async def service_heartbeat(request: Request):
-        """Submit a heartbeat for a dimensional service."""
+        """Submit a heartbeat for an AI/Agent/Bot service in the Nexus."""
         body = await request.json()
         nexus = get_nexus()
         await nexus.health_aggregator.update_heartbeat(**body)
@@ -1065,9 +1110,15 @@ def create_nexus_app() -> FastAPI:
     async def root():
         """Nexus root endpoint."""
         return {
-            "service": "Tranc3 Dimensional Nexus",
-            "version": "0.1.0",
-            "description": "Central Nervous System for the Dimensional Infrastructure",
+            "service": "Tranc3 Nexus",
+            "version": "0.2.0",
+            "bridge_type": "nexus",
+            "description": "The Nexus — AI, Agent, and Bot Traffic Coordination",
+            "three_bridges": {
+                "infinity_bridge": "User context / human traffic (Light bridges)",
+                "nexus": "AI, Agent, and Bot movement and traffic (THIS SERVICE)",
+                "hive": "Data movement and swarm system coordination",
+            },
             "tier_hierarchy": "HUMAN(0) → ORCHESTRATOR(1) → PRIME(2) → AI(3) → AGENT(4) → BOT(5)",
             "channels": [ch.value for ch in SentinelChannel],
             "endpoints": [
@@ -1086,7 +1137,7 @@ def create_nexus_app() -> FastAPI:
 
     @app.websocket("/ws/events")
     async def ws_events(ws: WebSocket):
-        """WebSocket endpoint for live event streaming to dashboards."""
+        """WebSocket endpoint for live Nexus event streaming to dashboards."""
         await _ws_manager.connect(ws)
         try:
             while True:
@@ -1106,7 +1157,7 @@ def create_nexus_app() -> FastAPI:
 
     @app.get("/dashboard", response_class=HTMLResponse)
     async def dashboard():
-        """Serve the Dimensional Dashboard web UI."""
+        """Serve the Nexus Dashboard web UI."""
         dashboard_path = Path(__file__).parent / "dashboard.html"
         if dashboard_path.exists():
             return dashboard_path.read_text(encoding="utf-8")

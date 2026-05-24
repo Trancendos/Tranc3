@@ -1,31 +1,39 @@
 """
-Trancendos Dimensional Nexus Service — Worker Entry Point
-===========================================================
-Self-hosted worker that launches the Dimensional Nexus as a standalone
-service. The Nexus is the Central Nervous System of the Tranc3 platform,
-providing causal event ordering, tier-aware access control, real-time
-health aggregation, and cross-dimensional event routing.
+Tranc3 Nexus Service — Worker Entry Point
+==========================================
+Self-hosted worker that launches The Nexus as a standalone service.
+
+The Nexus is ONE of the three bridges that route traffic through Sentinel Station:
+
+    Bridge 1 — InfinityBridge : User context / human traffic (Light bridges)
+    Bridge 2 — The Nexus (THIS): AI, Agent, and Bot movement and traffic
+    Bridge 3 — The HIVE       : Data movement and swarm system coordination
+
+The Nexus provides causal event ordering, tier-aware access control,
+real-time health aggregation, and cross-Nexus event routing for AI,
+Agent, and Bot services (Tier 3–5).
 
 Architecture:
-    The Nexus sits at the center of the dimensional mesh:
-    
-    Workers ──heartbeat──▸ Nexus ◂──events── Dimensional Services
-                              │
-                    ┌─────────┼─────────┐
-                    ▼         ▼         ▼
-              HealthAgg   EventRouter  TierAccess
-              (SQLite)    (Channels)   (RBAC+ABAC)
-                    │         │         │
-                    └─────────┼─────────┘
-                              ▼
-                    CausalOrderingEngine
-                    (Vector Clocks)
-                              │
-                              ▼
-                    WebSocket Dashboard
+    AI/Agent/Bot Services ──heartbeat──▸ Nexus ◂──events── Dimensional Services
+                                          │
+                            ┌─────────────┼─────────────┐
+                            ▼             ▼             ▼
+                      HealthAgg    EventRouter    TierAccess
+                      (SQLite)     (Channels)     (RBAC+ABAC)
+                            │             │             │
+                            └─────────────┼─────────────┘
+                                          ▼
+                              CausalOrderingEngine
+                              (Vector Clocks)
+                                          │
+                                          ▼
+                              WebSocket Dashboard
 
 Port: 8050
 Zero-cost: FastAPI + SQLite + in-process routing. No external deps.
+
+IMPORTANT: This is The Nexus — for AI/Agent/Bot traffic ONLY.
+User traffic uses InfinityBridge. Data traffic uses The HIVE.
 """
 
 from __future__ import annotations
@@ -41,13 +49,16 @@ if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
 from Dimensional.nexus.nexus_core import (
-    DimensionalNexus,
+    Nexus,
     create_nexus_app,
     get_nexus,
 )
 
+# Backward-compatible alias — only valid when referring to both Dimensional AND Nexus
+DimensionalNexus = Nexus
+
 WORKER_PORT = int(os.environ.get("NEXUS_PORT", "8050"))
-WORKER_NAME = "dimensional-nexus"
+WORKER_NAME = "nexus"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -61,79 +72,72 @@ app = create_nexus_app()
 
 @app.on_event("startup")
 async def _worker_startup():
-    """Initialize the Nexus with default services and topology on startup."""
+    """Initialize the Nexus with default AI/Agent/Bot services and topology on startup."""
     nexus = get_nexus()
-    logger.info(f"Dimensional Nexus worker starting on port {WORKER_PORT}")
+    logger.info(f"Nexus worker starting on port {WORKER_PORT}")
     logger.info(f"Node ID: {nexus.node_id}")
+    logger.info("Bridge type: nexus — AI, Agent, and Bot traffic coordination")
 
-    # Register core dimensional services
+    # Register core AI/Agent/Bot services that route through The Nexus
     core_services = [
         {
             "service_id": "nexus-self",
-            "dimension": "nexus",
-            "tier": 1,
-            "service_type": "coordinator",
-            "status": "healthy",
+            "service_name": "The Nexus",
+            "pillar": "nexus",
+            "tier_requirement": 1,
         },
         {
             "service_id": "infinity-portal",
-            "dimension": "infinity",
-            "tier": 3,
-            "service_type": "gateway",
-            "status": "healthy",
+            "service_name": "Infinity Portal",
+            "pillar": "infinity",
+            "tier_requirement": 3,
         },
         {
             "service_id": "infinity-auth",
-            "dimension": "infinity",
-            "tier": 3,
-            "service_type": "auth",
-            "status": "healthy",
+            "service_name": "Infinity Auth",
+            "pillar": "infinity",
+            "tier_requirement": 3,
         },
         {
             "service_id": "sentinel-station",
-            "dimension": "infinity",
-            "tier": 3,
-            "service_type": "event-bus",
-            "status": "healthy",
+            "service_name": "Sentinel Station",
+            "pillar": "infinity",
+            "tier_requirement": 3,
         },
         {
             "service_id": "health-aggregator",
-            "dimension": "monitoring",
-            "tier": 5,
-            "service_type": "worker",
-            "status": "healthy",
+            "service_name": "Health Aggregator",
+            "pillar": "monitoring",
+            "tier_requirement": 5,
         },
         {
             "service_id": "the-grid",
-            "dimension": "infrastructure",
-            "tier": 5,
-            "service_type": "worker",
-            "status": "healthy",
+            "service_name": "The Grid",
+            "pillar": "infrastructure",
+            "tier_requirement": 5,
         },
         {
             "service_id": "tranc3-ai",
-            "dimension": "ai",
-            "tier": 3,
-            "service_type": "ai-complex",
-            "status": "healthy",
+            "service_name": "Tranc3 AI",
+            "pillar": "ai",
+            "tier_requirement": 3,
         },
         {
             "service_id": "deepagents-orchestrator",
-            "dimension": "agents",
-            "tier": 4,
-            "service_type": "orchestrator",
-            "status": "healthy",
+            "service_name": "DeepAgents Orchestrator",
+            "pillar": "agents",
+            "tier_requirement": 4,
         },
     ]
 
     for svc in core_services:
         try:
             await nexus.register_service(**svc)
-            logger.info(f"Registered core service: {svc['service_id']}")
+            logger.info(f"Registered Nexus service: {svc['service_id']}")
         except Exception as e:
             logger.warning(f"Failed to register {svc['service_id']}: {e}")
 
-    # Build default topology edges
+    # Build default Nexus topology edges for AI/Agent/Bot traffic
     edges = [
         ("nexus-self", "infinity-portal", "control"),
         ("nexus-self", "infinity-auth", "control"),
@@ -155,7 +159,7 @@ async def _worker_startup():
         except Exception as e:
             logger.warning(f"Failed to add edge {src}→{tgt}: {e}")
 
-    # Emit startup event
+    # Emit startup event through The Nexus
     try:
         await nexus.emit_event(
             channel="NEXUS",
@@ -169,8 +173,8 @@ async def _worker_startup():
         logger.warning(f"Failed to emit startup event: {e}")
 
     logger.info(
-        f"Dimensional Nexus ready: {len(core_services)} services, "
-        f"{len(edges)} edges, port {WORKER_PORT}"
+        f"Nexus ready: {len(core_services)} AI/Agent/Bot services, "
+        f"{len(edges)} topology edges, port {WORKER_PORT}"
     )
 
 

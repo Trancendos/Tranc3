@@ -1,14 +1,19 @@
 """
-Dimensional Nexus ↔ Sentinel Station Bridge
-=============================================
-Bidirectional event bridge between the Dimensional Nexus and the
-Sentinel Station. Events published to the Nexus are forwarded to
-the Sentinel Station and vice versa, ensuring unified event flow
-across the entire platform.
+The Nexus ↔ Sentinel Station Bridge
+====================================
+Bidirectional event bridge between The Nexus (AI/Agent/Bot traffic
+coordinator) and the Sentinel Station. Events published to the Nexus
+are forwarded to the Sentinel Station and vice versa, ensuring unified
+event flow across the entire platform.
 
 Architecture:
-    Sentinel Event ──▸ Bridge ──▸ Nexus EventRouter ──▸ Dashboard
     Nexus Event     ──▸ Bridge ──▸ Sentinel Station  ──▸ Workers
+    Sentinel Event  ──▸ Bridge ──▸ Nexus EventRouter  ──▸ Dashboard
+
+Three Bridges through Sentinel Station:
+    Bridge 1 — InfinityBridge : User context / human traffic
+    Bridge 2 — The Nexus      : AI, Agent, and Bot traffic (THIS BRIDGE)
+    Bridge 3 — The HIVE       : Data movement and swarm coordination
 
 Channel Mapping:
     Sentinel channels (lowercase) map directly to SentinelChannel enum
@@ -22,7 +27,7 @@ import logging
 from typing import Any, Callable, Dict, List, Optional
 
 from Dimensional.infinity.nomenclature import SentinelChannel
-from Dimensional.nexus.nexus_core import DimensionalNexus, NexusEvent, get_nexus
+from Dimensional.nexus.nexus_core import Nexus, NexusEvent, get_nexus
 
 logger = logging.getLogger(__name__)
 
@@ -43,15 +48,18 @@ SENTINEL_TO_NEXUS_MAP = {
 
 
 class NexusSentinelBridge:
-    """Bidirectional bridge between Dimensional Nexus and Sentinel Station.
+    """Bidirectional bridge between The Nexus and Sentinel Station.
 
     When a NexusEvent is emitted through the Nexus, the bridge forwards it
     to the Sentinel Station for cross-worker distribution. When a Sentinel
     event is published on the Sentinel Station, the bridge routes it into
     the Nexus for dashboard visualization and causal tracking.
+
+    This bridge specifically handles AI/Agent/Bot traffic (Nexus domain).
+    User traffic uses the InfinityBridge. Data traffic uses The HIVE.
     """
 
-    def __init__(self, nexus: Optional[DimensionalNexus] = None):
+    def __init__(self, nexus: Optional[Nexus] = None):
         self._nexus = nexus
         self._sentinel_station = None
         self._sentinel_handler_id: Optional[str] = None
@@ -65,7 +73,7 @@ class NexusSentinelBridge:
         }
 
     @property
-    def nexus(self) -> DimensionalNexus:
+    def nexus(self) -> Nexus:
         if self._nexus is None:
             self._nexus = get_nexus()
         return self._nexus
@@ -195,6 +203,7 @@ class NexusSentinelBridge:
         """Get the current bridge status."""
         return {
             "bridge": "NexusSentinelBridge",
+            "description": "Bidirectional bridge for AI/Agent/Bot traffic between Nexus and Sentinel",
             "sentinel_attached": self._sentinel_station is not None,
             "nexus_handler_registered": self._nexus_handler_registered,
             "forward_to_sentinel": self._forward_to_sentinel,
@@ -208,7 +217,7 @@ class NexusSentinelBridge:
 _bridge_instance: Optional[NexusSentinelBridge] = None
 
 
-def get_bridge(nexus: Optional[DimensionalNexus] = None) -> NexusSentinelBridge:
+def get_bridge(nexus: Optional[Nexus] = None) -> NexusSentinelBridge:
     """Get or create the Nexus-Sentinel Bridge singleton."""
     global _bridge_instance
     if _bridge_instance is None:
