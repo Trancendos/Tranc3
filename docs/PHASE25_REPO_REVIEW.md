@@ -15,7 +15,7 @@ The Trancendos GitHub organization hosts **51 repositories** spanning the full I
 | **Tranc3** | Python | Main monorepo — AI platform with workers, nanoservices, Dimensional | ★1 | Active (Phase 24) |
 | **trancendos-ecosystem** | TypeScript | Financial autonomy platform with AI-powered scalability | ★1 | Active |
 | **infinity-adminOS** | TypeScript | Central authentication administration portal | — | Active |
-| **Dimensional** | JavaScript | Shared core libraries and types | — | Foundational |
+| **Dimensional** | JavaScript | Dimensional libraries and types | — | Foundational |
 
 ### 1.2 AI Agent Repositories (Named AI Entities)
 

@@ -115,7 +115,7 @@ from Dimensional.middleware.auth import AuthMiddleware
 
 app.add_middleware(AuthMiddleware)
 
-# ─── Shared Core Imports ─────────────────────────────────────────────────────
+# ─── Dimensional Imports ─────────────────────────────────────────────────────
 
 from Dimensional.architecture.audit_ledger import AuditLedger
 from Dimensional.architecture.storage_factory import StorageFactory

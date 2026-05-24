@@ -1,5 +1,5 @@
 # Dimensional/__init__.py
-# Trancendos Shared Core — Common utilities, models, and interfaces
+# Trancendos Dimensional — Common utilities, models, and interfaces
 
 from .bus import EventBus
 from .error_handlers import (
