@@ -31,8 +31,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from Dimensional.infinity.nomenclature import InfinityRole, SentinelChannel, Tier
@@ -788,6 +789,8 @@ class DimensionalNexus:
             correlation_id=correlation_id,
         )
         subscribers = await self.event_router.publish(event)
+        # Broadcast to WebSocket dashboards
+        await _ws_manager.broadcast(event)
         logger.info(
             f"Event emitted: {event_type} on {channel} "
             f"from {source_dimension} → {len(subscribers)} subscribers"
@@ -858,6 +861,60 @@ def get_nexus() -> DimensionalNexus:
     if _nexus_instance is None:
         _nexus_instance = DimensionalNexus()
     return _nexus_instance
+
+
+# ---------------------------------------------------------------------------
+# WebSocket Connection Manager
+# ---------------------------------------------------------------------------
+
+
+class NexusWSManager:
+    """Manages WebSocket connections for live event streaming to dashboards."""
+
+    def __init__(self):
+        self._connections: List[WebSocket] = []
+        self._channel_subs: Dict[str, List[WebSocket]] = defaultdict(list)
+
+    async def connect(self, ws: WebSocket, channels: Optional[List[str]] = None):
+        await ws.accept()
+        self._connections.append(ws)
+        if channels:
+            for ch in channels:
+                self._channel_subs[ch].append(ws)
+        logger.info(f"Dashboard WebSocket connected (total: {len(self._connections)})")
+
+    def disconnect(self, ws: WebSocket):
+        if ws in self._connections:
+            self._connections.remove(ws)
+        for ch_conns in self._channel_subs.values():
+            if ws in ch_conns:
+                ch_conns.remove(ws)
+        logger.info(f"Dashboard WebSocket disconnected (total: {len(self._connections)})")
+
+    async def broadcast(self, event: NexusEvent):
+        msg = event.model_dump_json()
+        # Broadcast to all connections
+        dead = []
+        for ws in self._connections:
+            try:
+                await ws.send_text(msg)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect(ws)
+        # Broadcast to channel subscribers
+        ch = event.channel.value if isinstance(event.channel, SentinelChannel) else str(event.channel)
+        dead = []
+        for ws in self._channel_subs.get(ch, []):
+            try:
+                await ws.send_text(msg)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect(ws)
+
+
+_ws_manager = NexusWSManager()
 
 
 # ---------------------------------------------------------------------------
@@ -1020,8 +1077,43 @@ def create_nexus_app() -> FastAPI:
                 "/topology", "/topology/nodes", "/topology/edges",
                 "/services/register", "/services/heartbeat",
                 "/status",
+                "/ws/events (WebSocket)",
+                "/dashboard",
             ],
         }
+
+    # --- WebSocket Endpoint ---
+
+    @app.websocket("/ws/events")
+    async def ws_events(ws: WebSocket):
+        """WebSocket endpoint for live event streaming to dashboards."""
+        await _ws_manager.connect(ws)
+        try:
+            while True:
+                data = await ws.receive_text()
+                # Client can send channel subscription messages
+                try:
+                    msg = json.loads(data)
+                    if msg.get("type") == "subscribe" and "channel" in msg:
+                        _ws_manager._channel_subs[msg["channel"]].append(ws)
+                        await ws.send_text(json.dumps({"type": "subscribed", "channel": msg["channel"]}))
+                except (json.JSONDecodeError, KeyError):
+                    pass
+        except WebSocketDisconnect:
+            _ws_manager.disconnect(ws)
+
+    # --- Dashboard UI ---
+
+    @app.get("/dashboard", response_class=HTMLResponse)
+    async def dashboard():
+        """Serve the Dimensional Dashboard web UI."""
+        dashboard_path = Path(__file__).parent / "dashboard.html"
+        if dashboard_path.exists():
+            return dashboard_path.read_text(encoding="utf-8")
+        return HTMLResponse(
+            "<h1>Dashboard not found</h1><p>Place dashboard.html in the nexus package directory.</p>",
+            status_code=404,
+        )
 
     return app
 

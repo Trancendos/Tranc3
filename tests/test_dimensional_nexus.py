@@ -791,5 +791,144 @@ class TestDataModels:
         assert edge.bandwidth is None
 
 
+# ---------------------------------------------------------------------------
+# Test WebSocket Manager
+# ---------------------------------------------------------------------------
+
+
+class TestNexusWSManager:
+    """Tests for the WebSocket connection manager."""
+
+    @pytest.mark.asyncio
+    async def test_ws_manager_connect_disconnect(self):
+        """WSManager tracks connections correctly."""
+        from Dimensional.nexus.nexus_core import NexusWSManager
+        manager = NexusWSManager()
+        assert len(manager._connections) == 0
+
+        class FakeWS:
+            def __init__(self):
+                self.accepted = False
+            async def accept(self):
+                self.accepted = True
+
+        ws = FakeWS()
+        await manager.connect(ws)
+        assert len(manager._connections) == 1
+        assert ws.accepted is True
+
+        manager.disconnect(ws)
+        assert len(manager._connections) == 0
+
+    @pytest.mark.asyncio
+    async def test_ws_manager_channel_subscribe(self):
+        """WSManager tracks channel subscriptions."""
+        from Dimensional.nexus.nexus_core import NexusWSManager
+        manager = NexusWSManager()
+
+        class FakeWS:
+            async def accept(self):
+                pass
+
+        ws = FakeWS()
+        await manager.connect(ws, channels=["PLATFORM", "SECURITY"])
+        assert ws in manager._channel_subs.get("PLATFORM", [])
+        assert ws in manager._channel_subs.get("SECURITY", [])
+        assert ws not in manager._channel_subs.get("HIVE", [])
+
+        manager.disconnect(ws)
+        assert ws not in manager._channel_subs.get("PLATFORM", [])
+        assert ws not in manager._channel_subs.get("SECURITY", [])
+
+    @pytest.mark.asyncio
+    async def test_ws_manager_broadcast(self):
+        """WSManager broadcasts events to all connections."""
+        from Dimensional.nexus.nexus_core import NexusWSManager, NexusEvent
+        manager = NexusWSManager()
+
+        messages = []
+
+        class FakeWS:
+            async def accept(self):
+                pass
+            async def send_text(self, msg):
+                messages.append(msg)
+
+        ws1 = FakeWS()
+        ws2 = FakeWS()
+        await manager.connect(ws1)
+        await manager.connect(ws2)
+
+        event = NexusEvent(
+            channel="PLATFORM",
+            source_dimension="test",
+            source_tier=3,
+            event_type="test_event",
+        )
+        await manager.broadcast(event)
+        assert len(messages) == 2
+
+    @pytest.mark.asyncio
+    async def test_ws_manager_broadcast_removes_dead(self):
+        """WSManager removes connections that fail on broadcast."""
+        from Dimensional.nexus.nexus_core import NexusWSManager, NexusEvent
+        manager = NexusWSManager()
+
+        class DeadWS:
+            async def accept(self):
+                pass
+            async def send_text(self, msg):
+                raise ConnectionError("dead")
+
+        ws = DeadWS()
+        await manager.connect(ws)
+        assert len(manager._connections) == 1
+
+        event = NexusEvent(
+            channel="PLATFORM",
+            source_dimension="test",
+            source_tier=3,
+            event_type="test_event",
+        )
+        await manager.broadcast(event)
+        assert len(manager._connections) == 0
+
+
+# ---------------------------------------------------------------------------
+# Test Dashboard Endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestDashboardEndpoint:
+    """Tests for the /dashboard and /ws/events endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_dashboard_endpoint_exists(self):
+        """Dashboard endpoint returns HTML when file exists."""
+        from httpx import AsyncClient, ASGITransport
+        from Dimensional.nexus.nexus_core import create_nexus_app
+
+        app = create_nexus_app()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/dashboard")
+            assert resp.status_code == 200
+            assert "Dimensional Nexus" in resp.text or "Dashboard" in resp.text or "html" in resp.text.lower()
+
+    @pytest.mark.asyncio
+    async def test_root_includes_dashboard_endpoint(self):
+        """Root endpoint lists the dashboard in available endpoints."""
+        from httpx import AsyncClient, ASGITransport
+        from Dimensional.nexus.nexus_core import create_nexus_app
+
+        app = create_nexus_app()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/")
+            data = resp.json()
+            assert "/dashboard" in data.get("endpoints", [])
+            assert "/ws/events (WebSocket)" in data.get("endpoints", [])
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
