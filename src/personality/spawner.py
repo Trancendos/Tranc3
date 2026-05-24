@@ -4,7 +4,7 @@
 # one dominant personality, its domain skills, and its system-prompt identity.
 #
 # Security: All user-supplied path components (output_dir, repo_name) are
-# validated through shared_core.path_validation to prevent path traversal.
+# validated through Dimensional.path_validation to prevent path traversal.
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from shared_core.path_validation import PathTraversalError, safe_join, sanitize_filename
+from Dimensional.path_validation import PathTraversalError, safe_join, sanitize_filename
 
 logger = logging.getLogger(__name__)
 

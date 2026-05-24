@@ -58,8 +58,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
 # Phase 22: Infinity Ecosystem security
-from shared_core.infinity.auth_gateway import AuthGatewayMiddleware
-from shared_core.infinity.nomenclature import (
+from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensional.infinity.nomenclature import (
     GATE_ROUTING,
     INFINITY_LOCATIONS,
     InfinityLocation,
@@ -69,18 +69,18 @@ from shared_core.infinity.nomenclature import (
     Tier,
     TransferSystem,
 )
-from shared_core.infinity.owasp_hardening import OWASPHardeningMiddleware
-from shared_core.infinity.rbac import Permission, RBACEngine
+from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensional.infinity.rbac import Permission, RBACEngine
 
 # Phase 22.3: Sentinel Station event bus
-from shared_core.infinity.sentinel_station import (
+from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     SentinelStation,
     get_sentinel_station,
 )
 
 # Phase 22.4: Dimensional Services
-from shared_core.dimensionals import (
+from Dimensional.dimensionals import (
     DimensionalServiceBus,
     get_dimensional_bus,
     get_dimensional_registry,
@@ -88,7 +88,7 @@ from shared_core.dimensionals import (
 )
 
 # Phase 22.6: Smart Adaptive Intelligence
-from shared_core.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -1066,7 +1066,7 @@ async def gate_info():
 @app.get("/portal/transfer-systems")
 async def transfer_systems():
     """Get information about the three transfer systems."""
-    from shared_core.infinity.nomenclature import TRANSFER_SYSTEMS
+    from Dimensional.infinity.nomenclature import TRANSFER_SYSTEMS
 
     systems = []
     for ts, info in TRANSFER_SYSTEMS.items():

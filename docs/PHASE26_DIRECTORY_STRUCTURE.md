@@ -155,7 +155,7 @@ Tranc3/
 │
 ├── scripts/                          # Utility scripts
 │
-├── shared_core/                      # ═══ Shared Core Libraries ═══
+├── Dimensional/                      # ═══ Shared Core Libraries ═══
 │   ├── __init__.py
 │   ├── architecture/                # Architecture patterns
 │   ├── dimensionals/                # Dimensional service abstractions
@@ -504,7 +504,7 @@ Tranc3/
 | `dashboard/` | HTML/CSS/JS | — | Standalone dashboard |
 | `deploy/terraform/` | HCL | Shell | Infrastructure-as-Code |
 | `cloudflare/` | JavaScript | — | Edge workers |
-| `shared_core/` | Python | — | Shared libraries |
+| `Dimensional/` | Python | — | Shared libraries |
 | `tests/` | Python (67 files) | — | Platform test suite |
 | `tranc3-bots/` | Python | — | Bot framework |
 

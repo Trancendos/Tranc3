@@ -12,10 +12,10 @@ The Trancendos GitHub organization hosts **51 repositories** spanning the full I
 
 | Repository | Language | Description | Stars | Status |
 |---|---|---|---|---|
-| **Tranc3** | Python | Main monorepo — AI platform with workers, nanoservices, shared_core | ★1 | Active (Phase 24) |
+| **Tranc3** | Python | Main monorepo — AI platform with workers, nanoservices, Dimensional | ★1 | Active (Phase 24) |
 | **trancendos-ecosystem** | TypeScript | Financial autonomy platform with AI-powered scalability | ★1 | Active |
 | **infinity-adminOS** | TypeScript | Central authentication administration portal | — | Active |
-| **shared-core** | JavaScript | Shared core libraries and types | — | Foundational |
+| **Dimensional** | JavaScript | Shared core libraries and types | — | Foundational |
 
 ### 1.2 AI Agent Repositories (Named AI Entities)
 
@@ -159,7 +159,7 @@ Using the canonical AI/Agent/Bot hierarchy from the AI Definitions Dictionary:
 
 ### 3.1 Monorepo ↔ Microservice Tension
 
-The Tranc3 monorepo contains workers, shared_core, src/nanoservices, and now the AeonMind polyglot framework. Many of the standalone TypeScript repos (the-* facilities, *-ai agents) appear to be microservice stubs that could potentially be consolidated into the monorepo or integrated via the AeonMind gRPC orchestrator.
+The Tranc3 monorepo contains workers, Dimensional, src/nanoservices, and now the AeonMind polyglot framework. Many of the standalone TypeScript repos (the-* facilities, *-ai agents) appear to be microservice stubs that could potentially be consolidated into the monorepo or integrated via the AeonMind gRPC orchestrator.
 
 **Recommendation**: Use the AeonMind Go gRPC orchestrator as the unified service mesh. Each standalone TypeScript repo becomes a gRPC client that registers with the central AeonMind orchestrator. This eliminates service discovery complexity while preserving repo autonomy.
 
@@ -174,7 +174,7 @@ The Tranc3 monorepo contains workers, shared_core, src/nanoservices, and now the
 
 | Priority | Repos | Rationale |
 |---|---|---|
-| High | shared-core ↔ Tranc3/shared_core | Duplicate purpose — merge types and interfaces |
+| High | Dimensional ↔ Tranc3/Dimensional | Duplicate purpose — merge types and interfaces |
 | High | central-plexus ↔ AeonMind Go orchestrator | Same function — consolidate to gRPC |
 | Medium | All *-ai repos → AeonMind agents | Standardize agent lifecycle |
 | Medium | the-forge ↔ Tranc3 train.py | Training infrastructure consolidation |
@@ -203,7 +203,7 @@ The Tranc3 monorepo contains workers, shared_core, src/nanoservices, and now the
 1. **Generate TypeScript gRPC client** from aeonmind.proto for all TypeScript repos
 2. **Create a shared AeonMind SDK** package (npm) for standardized agent registration
 3. **Implement Tier-aware routing** in central-plexus using the AeonMind Tier enum
-4. **Consolidate shared-core** into Tranc3/shared_core with TypeScript type exports
+4. **Consolidate Dimensional** into Tranc3/Dimensional with TypeScript type exports
 5. **Add CI/CD to all repos** using standardized GitHub Actions templates
 6. **Create a repo health dashboard** using the AeonMind IntelligenceScore framework
 7. **Establish AeonMind WASM deployment** for edge-capable agents (sentinel-ai, iris-ai)

@@ -19,7 +19,7 @@ import time
 
 import pytest
 
-from shared_core.infinity.zkp import (
+from Dimensional.infinity.zkp import (
     _G,
     _P,
     _Q,

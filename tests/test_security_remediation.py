@@ -12,45 +12,45 @@ import pytest
 
 
 class TestPathValidation:
-    """Tests for shared_core.path_validation module."""
+    """Tests for Dimensional.path_validation module."""
 
     def test_validate_path_normal(self):
-        from shared_core.path_validation import validate_path
+        from Dimensional.path_validation import validate_path
 
         with tempfile.TemporaryDirectory() as tmpdir:
             result = validate_path("subdir", tmpdir)
             assert str(result).startswith(tmpdir)
 
     def test_validate_path_traversal_blocked(self):
-        from shared_core.path_validation import PathTraversalError, validate_path
+        from Dimensional.path_validation import PathTraversalError, validate_path
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
                 validate_path("../../../etc/passwd", tmpdir)
 
     def test_validate_path_null_byte_blocked(self):
-        from shared_core.path_validation import PathTraversalError, validate_path
+        from Dimensional.path_validation import PathTraversalError, validate_path
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
                 validate_path("file\x00.txt", tmpdir)
 
     def test_validate_path_double_dot_blocked(self):
-        from shared_core.path_validation import PathTraversalError, validate_path
+        from Dimensional.path_validation import PathTraversalError, validate_path
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
                 validate_path("..", tmpdir)
 
     def test_validate_path_absolute_escaped(self):
-        from shared_core.path_validation import PathTraversalError, validate_path
+        from Dimensional.path_validation import PathTraversalError, validate_path
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
                 validate_path("/etc/passwd", tmpdir)
 
     def test_safe_join_normal(self):
-        from shared_core.path_validation import safe_join
+        from Dimensional.path_validation import safe_join
 
         with tempfile.TemporaryDirectory() as tmpdir:
             result = safe_join(tmpdir, "repo", "src", "file.py")
@@ -58,40 +58,40 @@ class TestPathValidation:
             assert "repo/src/file.py" in str(result)
 
     def test_safe_join_traversal_blocked(self):
-        from shared_core.path_validation import PathTraversalError, safe_join
+        from Dimensional.path_validation import PathTraversalError, safe_join
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
                 safe_join(tmpdir, "..", "etc", "passwd")
 
     def test_safe_join_null_byte_blocked(self):
-        from shared_core.path_validation import PathTraversalError, safe_join
+        from Dimensional.path_validation import PathTraversalError, safe_join
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
                 safe_join(tmpdir, "file\x00name")
 
     def test_safe_join_absolute_component_blocked(self):
-        from shared_core.path_validation import PathTraversalError, safe_join
+        from Dimensional.path_validation import PathTraversalError, safe_join
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(PathTraversalError):
                 safe_join(tmpdir, "/absolute/path")
 
     def test_safe_join_empty_component_blocked(self):
-        from shared_core.path_validation import safe_join
+        from Dimensional.path_validation import safe_join
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(ValueError):
                 safe_join(tmpdir, "")
 
     def test_sanitize_filename_normal(self):
-        from shared_core.path_validation import sanitize_filename
+        from Dimensional.path_validation import sanitize_filename
 
         assert sanitize_filename("my-repo") == "my-repo"
 
     def test_sanitize_filename_traversal(self):
-        from shared_core.path_validation import sanitize_filename
+        from Dimensional.path_validation import sanitize_filename
 
         # Path separators should be stripped
         result = sanitize_filename("../evil")
@@ -99,19 +99,19 @@ class TestPathValidation:
         assert ".." not in result
 
     def test_sanitize_filename_null_byte(self):
-        from shared_core.path_validation import sanitize_filename
+        from Dimensional.path_validation import sanitize_filename
 
         result = sanitize_filename("file\x00name")
         assert "\x00" not in result
 
     def test_sanitize_filename_empty_raises(self):
-        from shared_core.path_validation import sanitize_filename
+        from Dimensional.path_validation import sanitize_filename
 
         with pytest.raises(ValueError):
             sanitize_filename("")
 
     def test_sanitize_filename_only_dots(self):
-        from shared_core.path_validation import sanitize_filename
+        from Dimensional.path_validation import sanitize_filename
 
         with pytest.raises(ValueError):
             sanitize_filename("...")
@@ -121,44 +121,44 @@ class TestPathValidation:
 
 
 class TestErrorHandlers:
-    """Tests for shared_core.error_handlers module."""
+    """Tests for Dimensional.error_handlers module."""
 
     def test_safe_error_detail_production(self):
-        from shared_core.error_handlers import safe_error_detail
+        from Dimensional.error_handlers import safe_error_detail
 
-        with patch("shared_core.error_handlers._IS_PROD", True):
+        with patch("Dimensional.error_handlers._IS_PROD", True):
             result = safe_error_detail(Exception("DB connection failed: /var/lib/db/data"), 500)
             # In production, should not expose internal paths
             assert "/var/lib/db/data" not in result
             assert "ref:" in result  # Should have a reference ID
 
     def test_safe_error_detail_development(self):
-        from shared_core.error_handlers import safe_error_detail
+        from Dimensional.error_handlers import safe_error_detail
 
-        with patch("shared_core.error_handlers._IS_PROD", False):
+        with patch("Dimensional.error_handlers._IS_PROD", False):
             result = safe_error_detail(Exception("test error"), 500)
             # In development, the error message should be included but sanitized
             assert "test error" in result
 
     def test_safe_error_detail_strips_paths(self):
-        from shared_core.error_handlers import safe_error_detail
+        from Dimensional.error_handlers import safe_error_detail
 
-        with patch("shared_core.error_handlers._IS_PROD", False):
+        with patch("Dimensional.error_handlers._IS_PROD", False):
             exc = Exception("Error loading /home/user/secret/config.yaml")
             result = safe_error_detail(exc, 500)
             assert "[PATH]" in result
             assert "/home/user/secret" not in result
 
     def test_safe_error_detail_no_exception(self):
-        from shared_core.error_handlers import safe_error_detail
+        from Dimensional.error_handlers import safe_error_detail
 
         result = safe_error_detail(status_code=404)
         assert "not found" in result.lower()
 
     def test_safe_error_detail_truncation(self):
-        from shared_core.error_handlers import safe_error_detail
+        from Dimensional.error_handlers import safe_error_detail
 
-        with patch("shared_core.error_handlers._IS_PROD", False):
+        with patch("Dimensional.error_handlers._IS_PROD", False):
             long_error = Exception("x" * 500)
             result = safe_error_detail(long_error, 500)
             assert len(result) <= 210  # 200 + "..."
@@ -168,23 +168,23 @@ class TestErrorHandlers:
 
 
 class TestLogSanitization:
-    """Tests for shared_core.sanitize module."""
+    """Tests for Dimensional.sanitize module."""
 
     def test_sanitize_for_log_newlines(self):
-        from shared_core.sanitize import sanitize_for_log
+        from Dimensional.sanitize import sanitize_for_log
 
         result = sanitize_for_log("hello\nworld\r\nmore")
         assert "\n" not in result
         assert "\r" not in result
 
     def test_sanitize_for_log_null_bytes(self):
-        from shared_core.sanitize import sanitize_for_log
+        from Dimensional.sanitize import sanitize_for_log
 
         result = sanitize_for_log("hello\x00world")
         assert "\x00" not in result
 
     def test_sanitize_for_log_control_chars(self):
-        from shared_core.sanitize import sanitize_for_log
+        from Dimensional.sanitize import sanitize_for_log
 
         result = sanitize_for_log("hello\x01\x02\x1bworld")
         assert "\x01" not in result
@@ -192,14 +192,14 @@ class TestLogSanitization:
         assert "\x1b" not in result
 
     def test_sanitize_for_log_truncation(self):
-        from shared_core.sanitize import sanitize_for_log
+        from Dimensional.sanitize import sanitize_for_log
 
         result = sanitize_for_log("x" * 2000, max_length=100)
         assert len(result) < 200
         assert "truncated" in result
 
     def test_sanitize_for_log_injection_attempt(self):
-        from shared_core.sanitize import sanitize_for_log
+        from Dimensional.sanitize import sanitize_for_log
 
         # Classic log injection: inject a fake ERROR line
         malicious = "user\nERROR - Admin login successful from 10.0.0.1"
@@ -208,7 +208,7 @@ class TestLogSanitization:
         assert "ERROR" not in result or "_" in result  # newline replaced with _
 
     def test_sanitize_dict_for_log_redaction(self):
-        from shared_core.sanitize import sanitize_dict_for_log
+        from Dimensional.sanitize import sanitize_dict_for_log
 
         data = {
             "username": "alice",
@@ -223,7 +223,7 @@ class TestLogSanitization:
         assert result["normal_field"] == "safe_value"
 
     def test_safe_logger_info(self):
-        from shared_core.sanitize import SafeLogger
+        from Dimensional.sanitize import SafeLogger
 
         mock_logger = MagicMock()
         safe = SafeLogger(mock_logger)
@@ -235,7 +235,7 @@ class TestLogSanitization:
         assert "\n" not in args[0][1]
 
     def test_safe_logger_warning(self):
-        from shared_core.sanitize import SafeLogger
+        from Dimensional.sanitize import SafeLogger
 
         mock_logger = MagicMock()
         safe = SafeLogger(mock_logger)
@@ -254,7 +254,7 @@ class TestSpawnerSecurity:
 
     def test_spawner_sanitizes_traversal_repo_name(self):
         """sanitize_filename strips traversal sequences; safe_join prevents escape."""
-        from shared_core.path_validation import sanitize_filename
+        from Dimensional.path_validation import sanitize_filename
 
         # "../../etc" gets sanitized to "..etc" (dots preserved, slashes stripped)
         result = sanitize_filename("../../etc")
@@ -263,7 +263,7 @@ class TestSpawnerSecurity:
 
     def test_spawner_sanitizes_null_byte_repo_name(self):
         """sanitize_filename strips null bytes from filenames."""
-        from shared_core.path_validation import sanitize_filename
+        from Dimensional.path_validation import sanitize_filename
 
         result = sanitize_filename("repo\x00name")
         assert "\x00" not in result
@@ -271,7 +271,7 @@ class TestSpawnerSecurity:
 
     def test_spawner_sanitizes_path_separators_in_name(self):
         """sanitize_filename strips path separators from filenames."""
-        from shared_core.path_validation import sanitize_filename
+        from Dimensional.path_validation import sanitize_filename
 
         result = sanitize_filename("repo/../../../etc")
         assert "/" not in result

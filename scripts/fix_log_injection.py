@@ -7,11 +7,11 @@ wrapping on user-controlled data.
 
 import os
 
-from shared_core.path_validation import validate_path
+from Dimensional.path_validation import validate_path
 
 # Files and their fixes
 FIXES = {
-    "shared_core/bus.py": [
+    "Dimensional/bus.py": [
         # line 32: logger.info(f"EventBus started (node={self.node_id})")
         (
             'logger.info(f"EventBus started (node={self.node_id})")',
@@ -33,14 +33,14 @@ FIXES = {
             'logger.error("Replay handler error: %s", sanitize_for_log(e))',
         ),
     ],
-    "shared_core/security.py": [
+    "Dimensional/security.py": [
         # line 71: logger.warning(f"JWT verification failed: {e}")
         (
             'logger.warning(f"JWT verification failed: {e}")',
             'logger.warning("JWT verification failed: %s", sanitize_for_log(e))',
         ),
     ],
-    "shared_core/registry.py": [
+    "Dimensional/registry.py": [
         # line 33: logger.info(f"Registered service: {service.name} @ {service.endpoint}")
         (
             'logger.info(f"Registered service: {service.name} @ {service.endpoint}")',
@@ -67,7 +67,7 @@ FIXES = {
             'logger.error("Health check loop error: %s", sanitize_for_log(e))',
         ),
     ],
-    "shared_core/optional_import.py": [
+    "Dimensional/optional_import.py": [
         # line 58: logger.debug(f"Lazy-loaded: {module_name}")
         (
             'logger.debug(f"Lazy-loaded: {module_name}")',
@@ -144,12 +144,12 @@ def fix_file(filepath, replacements):
 
     if changed:
         # Add sanitize_for_log import if not already present
-        if "from shared_core.sanitize import sanitize_for_log" not in content:
+        if "from Dimensional.sanitize import sanitize_for_log" not in content:
             # Find the right place to add the import
             if "import logging" in content:
                 content = content.replace(
                     "import logging",
-                    "import logging\n\nfrom shared_core.sanitize import sanitize_for_log",
+                    "import logging\n\nfrom Dimensional.sanitize import sanitize_for_log",
                 )
                 print("  Added sanitize_for_log import")
             else:
@@ -165,7 +165,7 @@ def fix_file(filepath, replacements):
                         and not line.startswith("from ")
                     ):
                         break
-                lines.insert(insert_idx, "from shared_core.sanitize import sanitize_for_log")
+                lines.insert(insert_idx, "from Dimensional.sanitize import sanitize_for_log")
                 content = "\n".join(lines)
                 print(f"  Added sanitize_for_log import at line {insert_idx}")
 

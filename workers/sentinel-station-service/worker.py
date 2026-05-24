@@ -46,14 +46,14 @@ from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 # Phase 22: Infinity Ecosystem security integration
-from shared_core.infinity.auth_gateway import AuthGatewayMiddleware
-from shared_core.infinity.nomenclature import InfinityRole, SentinelChannel, Tier
-from shared_core.infinity.owasp_hardening import OWASPHardeningMiddleware
-from shared_core.infinity.rbac import Permission, RBACEngine
+from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensional.infinity.nomenclature import InfinityRole, SentinelChannel, Tier
+from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensional.infinity.rbac import Permission, RBACEngine
 
 # Sentinel Station core
-from shared_core.infinity.sentinel_config import sentinel_config
-from shared_core.infinity.sentinel_station import (
+from Dimensional.infinity.sentinel_config import sentinel_config
+from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     SentinelStation,
     SharedSSEGenerator,
@@ -61,7 +61,7 @@ from shared_core.infinity.sentinel_station import (
 )
 
 # Phase 22.4: Dimensional Services integration
-from shared_core.dimensionals import (
+from Dimensional.dimensionals import (
     DimensionalServiceBus,
     get_dimensional_bus,
     get_dimensional_registry,
@@ -69,7 +69,7 @@ from shared_core.dimensionals import (
 )
 
 # Phase 22.6: Smart Adaptive Intelligence + ReactiveState
-from shared_core.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 # Optional: ReactiveState for live Sentinel topology
 try:

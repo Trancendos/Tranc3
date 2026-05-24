@@ -5,7 +5,7 @@ import logging
 import threading
 from typing import Any, Callable, Dict
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

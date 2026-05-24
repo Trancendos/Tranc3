@@ -14,7 +14,7 @@ os.environ.setdefault("JWT_SECRET", "test-jwt-secret-portal-00001")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from shared_core.infinity.nomenclature import (
+from Dimensional.infinity.nomenclature import (
     ROLE_INFINITY_ROLE_MAP,
     ROLE_TIER_MAP,
     InfinityLocation,

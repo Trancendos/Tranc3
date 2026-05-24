@@ -6,7 +6,7 @@ import asyncio
 import logging
 from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

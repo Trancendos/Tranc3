@@ -2,7 +2,7 @@
 Trancendos vault-service — Self-Hosted Worker
 ==============================================
 Secure secret management with memory-mapped injection, zeroization,
-and audit integration. Wraps shared_core.architecture.vault and
+and audit integration. Wraps Dimensional.architecture.vault and
 vault_security into a FastAPI microservice.
 
 Features:
@@ -111,7 +111,7 @@ def _init_db() -> None:
 
 
 # ---------------------------------------------------------------------------
-# XOR Encryption (zero-cost, no external deps; swap with shared_core AES in prod)
+# XOR Encryption (zero-cost, no external deps; swap with Dimensional AES in prod)
 # ---------------------------------------------------------------------------
 
 

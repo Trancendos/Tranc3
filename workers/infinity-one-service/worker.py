@@ -43,8 +43,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
 # Phase 22: Infinity Ecosystem security
-from shared_core.infinity.auth_gateway import AuthGatewayMiddleware
-from shared_core.infinity.nomenclature import (
+from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensional.infinity.nomenclature import (
     InfinityLocation,
     InfinityRole,
     Pillar,
@@ -53,18 +53,18 @@ from shared_core.infinity.nomenclature import (
     SentinelChannel,
     Tier,
 )
-from shared_core.infinity.owasp_hardening import OWASPHardeningMiddleware
-from shared_core.infinity.rbac import Permission, RBACEngine
+from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensional.infinity.rbac import Permission, RBACEngine
 
 # Phase 22.3: Sentinel Station
-from shared_core.infinity.sentinel_station import (
+from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     SentinelStation,
     get_sentinel_station,
 )
 
 # Phase 22.4: Dimensional Services
-from shared_core.dimensionals import (
+from Dimensional.dimensionals import (
     DimensionalServiceBus,
     get_dimensional_bus,
     get_dimensional_registry,
@@ -72,7 +72,7 @@ from shared_core.dimensionals import (
 )
 
 # Phase 22.6: Smart Adaptive Intelligence
-from shared_core.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -497,7 +497,7 @@ async def create_identity(request: Request, identity: IdentityCreate):
         raise HTTPException(status_code=409, detail="Identity already exists")
 
     # Determine tier and infinity_role from role
-    from shared_core.infinity.nomenclature import get_tier_for_role as _gtr, get_infinity_role_for_role as _girr
+    from Dimensional.infinity.nomenclature import get_tier_for_role as _gtr, get_infinity_role_for_role as _girr
     tier = _gtr(identity.role)
     infinity_role = _girr(identity.role)
 
@@ -656,7 +656,7 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
         updates.append("role = ?")
         params.append(update.role)
         # Update tier and infinity_role based on new role
-        from shared_core.infinity.nomenclature import get_tier_for_role as _gtr, get_infinity_role_for_role as _girr
+        from Dimensional.infinity.nomenclature import get_tier_for_role as _gtr, get_infinity_role_for_role as _girr
         tier = _gtr(update.role)
         infinity_role = _girr(update.role)
         updates.append("tier = ?")

@@ -45,8 +45,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 # Phase 22: Infinity Ecosystem security
-from shared_core.infinity.auth_gateway import AuthGatewayMiddleware
-from shared_core.infinity.nomenclature import (
+from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensional.infinity.nomenclature import (
     ECOSYSTEM_NAME,
     INFINITY_LOCATIONS,
     PILLAR_ACCENT_COLORS,
@@ -62,17 +62,17 @@ from shared_core.infinity.nomenclature import (
     Tier,
     TransferSystem,
 )
-from shared_core.infinity.owasp_hardening import OWASPHardeningMiddleware
-from shared_core.infinity.rbac import Permission, RBACEngine
+from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensional.infinity.rbac import Permission, RBACEngine
 
 # Phase 22.3: Sentinel Station
-from shared_core.infinity.sentinel_station import (
+from Dimensional.infinity.sentinel_station import (
     SentinelStation,
     get_sentinel_station,
 )
 
 # Phase 22.4: Dimensional Services
-from shared_core.dimensionals import (
+from Dimensional.dimensionals import (
     DimensionalServiceBus,
     get_dimensional_bus,
     get_dimensional_registry,
@@ -80,7 +80,7 @@ from shared_core.dimensionals import (
 )
 
 # Phase 22.6: Smart Adaptive Intelligence
-from shared_core.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -608,7 +608,7 @@ async def list_pillars():
 @app.get("/admin/tiers")
 async def list_tiers():
     """List the complete tier system with descriptions."""
-    from shared_core.infinity.nomenclature import TIER_NAMES, TIER_DESCRIPTIONS
+    from Dimensional.infinity.nomenclature import TIER_NAMES, TIER_DESCRIPTIONS
 
     tiers_data = []
     for tier in Tier:
@@ -804,8 +804,8 @@ async def compliance_events(
 @app.get("/admin/sentinel")
 async def sentinel_status():
     """Get Sentinel Station status and channel information."""
-    from shared_core.infinity.sentinel_config import sentinel_config
-    from shared_core.infinity.nomenclature import SENTINEL_CHANNELS
+    from Dimensional.infinity.sentinel_config import sentinel_config
+    from Dimensional.infinity.nomenclature import SENTINEL_CHANNELS
 
     return {
         "running": sentinel.is_running,

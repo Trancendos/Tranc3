@@ -6,7 +6,7 @@ from typing import Dict
 
 import torch
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 from src.bio_neural.consciousness_engine import ConsciousnessModel
 from src.distributed.swarm_intelligence import DistributedIntelligenceSwarm
 from src.evolution.self_improving_core import SelfEvolvingArchitecture

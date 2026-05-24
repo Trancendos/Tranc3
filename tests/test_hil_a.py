@@ -14,7 +14,7 @@ os.environ.setdefault("JWT_SECRET", "test-jwt-secret-hil-a-00001")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from shared_core.infinity.hil_a import (
+from Dimensional.infinity.hil_a import (
     BypassReason,
     ChainProtocol,
     EnhancementRequest,
@@ -27,7 +27,7 @@ from shared_core.infinity.hil_a import (
     create_default_chain,
     get_default_chain,
 )
-from shared_core.infinity.nomenclature import Tier
+from Dimensional.infinity.nomenclature import Tier
 
 
 # ---------------------------------------------------------------------------
