@@ -1,0 +1,300 @@
+// AeonMind gRPC Protocol Buffer Definitions
+// Tranc3 Infinity Ecosystem v0.9.0
+//
+// Custom Hierarchy:
+//   AI    = The overarching ML/LLM Complex (Tier 3)
+//   Agent = Lower-level autonomous AI (Tier 4)
+//   Bot   = Stateless service worker/function (Tier 5)
+
+syntax = "proto3";
+
+package aeonmind;
+
+option go_package = "github.com/Trancendos/Tranc3/aeonmind/go/proto;aeonmind";
+
+// ── Enums ────────────────────────────────────────────────────────────────────
+
+enum Tier {
+  TIER_UNSPECIFIED = 0;
+  TIER_HUMAN = 1;
+  TIER_ORCHESTRATOR = 2;
+  TIER_PRIME = 3;
+  TIER_AI = 4;
+  TIER_AGENT = 5;
+  TIER_BOT = 6;
+}
+
+enum SentinelChannel {
+  CHANNEL_UNSPECIFIED = 0;
+  CHANNEL_PLATFORM = 1;
+  CHANNEL_AGENTS = 2;
+  CHANNEL_MODELS = 3;
+  CHANNEL_WORKFLOWS = 4;
+  CHANNEL_SECURITY = 5;
+  CHANNEL_HIVE = 6;
+  CHANNEL_NEXUS = 7;
+  CHANNEL_BRIDGE = 8;
+  CHANNEL_PILLARS = 9;
+  CHANNEL_INFRASTRUCTURE = 10;
+  CHANNEL_EVENTS = 11;
+}
+
+enum EntityType {
+  ENTITY_UNSPECIFIED = 0;
+  ENTITY_AI_COMPLEX = 1;
+  ENTITY_AGENT = 2;
+  ENTITY_BOT = 3;
+}
+
+enum AgentStatus {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_IDLE = 1;
+  STATUS_RUNNING = 2;
+  STATUS_WAITING = 3;
+  STATUS_ERROR = 4;
+  STATUS_TERMINATED = 5;
+}
+
+// ── Messages ─────────────────────────────────────────────────────────────────
+
+message FluidicState {
+  repeated double velocity = 1;
+  repeated double acceleration = 2;
+  double energy = 3;
+  double coherence = 4;
+  double entropy = 5;
+  double compression = 6;
+  double timestamp = 7;
+}
+
+message IntelligenceScore {
+  double decision_quality = 1;
+  double adaptation_speed = 2;
+  double state_coherence = 3;
+  double resource_efficiency = 4;
+  double communication = 5;
+  double overall = 6;
+}
+
+message ScoringWeights {
+  double decision_quality = 1;
+  double adaptation_speed = 2;
+  double state_coherence = 3;
+  double resource_efficiency = 4;
+  double communication = 5;
+}
+
+message DnaVector {
+  repeated double genes = 1;
+  double fitness = 2;
+  int32 age = 3;
+}
+
+message QuantumCircuitConfig {
+  int32 n_qubits = 1;
+  int32 n_layers = 2;
+  int32 rotations_per_layer = 3;
+  bool adaptive_depth = 4;
+  int32 max_depth = 5;
+  string entangling_gate = 6;
+  string entangling_strategy = 7;
+  repeated double parameter_range = 8;
+}
+
+message ReservoirConfig {
+  int32 input_size = 1;
+  int32 reservoir_size = 2;
+  double spectral_radius = 3;
+  double leaking_rate = 4;
+  double input_scaling = 5;
+  double connectivity = 6;
+  int32 washout = 7;
+}
+
+message GeneticConfig {
+  int32 population_size = 1;
+  int32 dna_length = 2;
+  double mutation_rate = 3;
+  double mutation_strength = 4;
+  double crossover_rate = 5;
+  int32 tournament_size = 6;
+  int32 elitism_count = 7;
+  int32 max_generations = 8;
+  double diversity_threshold = 9;
+  bool adaptive_mutation = 10;
+}
+
+message AdaptiveConfig {
+  double learning_rate = 1;
+  int32 memory_size = 2;
+  int32 max_iterations = 3;
+  double tolerance = 4;
+  double gradient_clip = 5;
+  double momentum = 6;
+  double beta1 = 7;
+  double beta2 = 8;
+  double epsilon = 9;
+  double decay_rate = 10;
+  int32 warmup_steps = 11;
+  bool use_lbfgs = 12;
+}
+
+// ── Entity Messages ──────────────────────────────────────────────────────────
+
+message AiComplexMsg {
+  string id = 1;
+  string name = 2;
+  Tier tier = 3;
+  repeated AgentEntityMsg agents = 4;
+  repeated BotServiceMsg bots = 5;
+  repeated string models = 6;
+  AgentStatus status = 7;
+  map<string, string> metadata = 8;
+}
+
+message AgentEntityMsg {
+  string id = 1;
+  string name = 2;
+  Tier tier = 3;
+  repeated string capabilities = 4;
+  FluidicState fluidic_state = 5;
+  DnaVector dna = 6;
+  double confidence = 7;
+  IntelligenceScore intelligence = 8;
+  AgentStatus status = 9;
+  repeated SentinelChannel subscriptions = 10;
+  map<string, string> metadata = 11;
+}
+
+message BotServiceMsg {
+  string id = 1;
+  string name = 2;
+  string capability = 3;
+  bool stateless = 4;
+  AgentStatus status = 5;
+  map<string, string> metadata = 6;
+}
+
+// ── Request/Response Messages ────────────────────────────────────────────────
+
+message CreateEntityRequest {
+  EntityType entity_type = 1;
+  string name = 2;
+  Tier tier = 3;
+  map<string, string> config = 4;
+}
+
+message CreateEntityResponse {
+  string entity_id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+message DispatchTaskRequest {
+  string entity_id = 1;
+  string task_type = 2;
+  bytes payload = 3;
+  int32 priority = 4;
+  map<string, string> metadata = 5;
+}
+
+message DispatchTaskResponse {
+  string task_id = 1;
+  bool success = 2;
+  bytes result = 3;
+  string message = 4;
+}
+
+message GetEntityRequest {
+  string entity_id = 1;
+}
+
+message GetEntityResponse {
+  EntityType entity_type = 1;
+  bytes entity_data = 2;
+  bool found = 3;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  int32 active_entities = 2;
+  int32 total_agents = 3;
+  int32 total_bots = 4;
+  double uptime_seconds = 5;
+  string version = 6;
+}
+
+message ListEntitiesRequest {
+  EntityType entity_type = 1;
+  Tier tier = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListEntitiesResponse {
+  repeated string entity_ids = 1;
+  int32 total_count = 2;
+  string next_page_token = 3;
+}
+
+message BroadcastRequest {
+  SentinelChannel channel = 1;
+  string source_id = 2;
+  bytes message = 3;
+}
+
+message BroadcastResponse {
+  int32 recipients = 1;
+  bool success = 2;
+}
+
+message EvolveRequest {
+  string agent_id = 1;
+  int32 generations = 2;
+  GeneticConfig config = 3;
+}
+
+message EvolveResponse {
+  DnaVector best_dna = 1;
+  double best_fitness = 2;
+  int32 generations_completed = 3;
+  bool converged = 4;
+}
+
+message OptimizeRequest {
+  string agent_id = 1;
+  AdaptiveConfig config = 2;
+  int32 max_steps = 3;
+}
+
+message OptimizeResponse {
+  repeated double final_parameters = 1;
+  double final_loss = 2;
+  int32 steps_completed = 3;
+  bool converged = 4;
+}
+
+// ── Service Definitions ──────────────────────────────────────────────────────
+
+service AeonMindOrchestrator {
+  // Entity Management
+  rpc CreateEntity(CreateEntityRequest) returns (CreateEntityResponse);
+  rpc GetEntity(GetEntityRequest) returns (GetEntityResponse);
+  rpc ListEntities(ListEntitiesRequest) returns (ListEntitiesResponse);
+
+  // Task Dispatch
+  rpc DispatchTask(DispatchTaskRequest) returns (DispatchTaskResponse);
+  rpc DispatchBatch(stream DispatchTaskRequest) returns (stream DispatchTaskResponse);
+
+  // Evolution & Optimization
+  rpc EvolveAgent(EvolveRequest) returns (EvolveResponse);
+  rpc OptimizeAgent(OptimizeRequest) returns (OptimizeResponse);
+
+  // Sentinel Broadcasting
+  rpc Broadcast(BroadcastRequest) returns (BroadcastResponse);
+
+  // Health & Monitoring
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
