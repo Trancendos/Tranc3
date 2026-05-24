@@ -37,6 +37,10 @@ from Dimensional.hive.hive_core import (
     create_hive_app,
     get_hive,
 )
+from Dimensional.hive.sentinel_bridge import (
+    HiveSentinelBridge,
+    get_bridge,
+)
 
 __all__ = [
     "Hive",
@@ -55,6 +59,8 @@ __all__ = [
     "SwarmNode",
     "SwarmStatus",
     "FlowMonitor",
+    "HiveSentinelBridge",
     "create_hive_app",
     "get_hive",
+    "get_bridge",
 ]

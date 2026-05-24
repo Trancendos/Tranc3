@@ -784,9 +784,27 @@ class Hive:
             "registered_sources": len(self._sources),
             "registered_sinks": len(self._sinks),
             "three_bridges": {
-                "infinity_bridge": "User context / human traffic (Light bridges)",
-                "nexus": "AI, Agent, and Bot movement and traffic",
-                "hive": "Data movement and swarm system coordination (THIS)",
+                "infinity_bridge": {
+                    "name": "InfinityBridge",
+                    "role": "User Context & Human Traffic",
+                    "description": "User Context & Human Traffic (Light Bridge)",
+                    "status": "see_infinity_bridge_status",
+                    "bridge_type": "infinity",
+                },
+                "nexus": {
+                    "name": "The Nexus",
+                    "role": "AI, Agent, and Bot Traffic",
+                    "description": "AI, Agent, and Bot Traffic Coordination",
+                    "status": "see_nexus_status",
+                    "bridge_type": "nexus",
+                },
+                "hive": {
+                    "name": "The HIVE",
+                    "role": "Data Movement & Swarm Coordination",
+                    "description": "Data Movement & Swarm System Coordination",
+                    "status": "active",
+                    "bridge_type": "hive",
+                },
             },
             "data_types": list(set(s.data_type for s in self._sources.values())),
             "pillar_distribution": dict(

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tranc3 Dimensional Nexus — Dashboard</title>
+<title>Tranc3 The Nexus — AI, Agent & Bot Traffic Dashboard</title>
 <style>
   :root {
     --bg-deep: #0a0e17;
@@ -58,6 +58,14 @@
   .header-title { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
   .header-subtitle { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
   .header-right { display: flex; align-items: center; gap: 12px; }
+  .bridge-badges { display: flex; gap: 8px; }
+  .bridge-badge {
+    font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .bridge-badge.nexus { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+  .bridge-badge.hive { background: rgba(245,158,11,0.2); color: var(--accent-amber); }
+  .bridge-badge.infinity { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
   .status-dot {
     width: 8px; height: 8px; border-radius: 50%;
     background: var(--accent-green);
@@ -272,13 +280,18 @@
 <!-- Header -->
 <div class="header">
   <div class="header-left">
-    <div class="logo">D</div>
+    <div class="logo">N</div>
     <div>
-      <div class="header-title">Dimensional Nexus</div>
-      <div class="header-subtitle">Central Nervous System</div>
+      <div class="header-title">The Nexus</div>
+      <div class="header-subtitle">AI, Agent &amp; Bot Traffic Coordination</div>
     </div>
   </div>
   <div class="header-right">
+    <div class="bridge-badges">
+      <span class="bridge-badge nexus">Nexus</span>
+      <span class="bridge-badge hive">HIVE</span>
+      <span class="bridge-badge infinity">Infinity</span>
+    </div>
     <div class="status-dot" id="wsStatus"></div>
     <span class="status-text" id="wsStatusText">Connecting...</span>
   </div>

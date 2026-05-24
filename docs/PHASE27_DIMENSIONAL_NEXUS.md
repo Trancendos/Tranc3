@@ -2,7 +2,7 @@
 
 **Branch:** `phase-24/aeonmind-polyglot-v0.9.0`  
 **Date:** 2025-05-24  
-**Status:** Complete — 120 tests passing (67 Nexus + 53 HIVE), full suite green
+**Status:** Complete — 3012 tests passing (67 Nexus + 53 HIVE + 60 Three-Bridge Integration + 37 Coordinator + 2795 platform), full suite green
 
 ---
 
@@ -35,26 +35,32 @@ These are **three separate systems**, each purpose-built for its traffic type. T
                         │  (Interplexus Hub)    │
                         │   Redis Pub/Sub +     │
                         │   In-Process Fallback │
-                        └──────┬───────┬───────┘
+                        └───────┬───────┬───────┘
                                │       │
               ┌────────────────┤       ├────────────────┐
               │                │       │                │
-    ┌─────────▼─────────┐  ┌──▼───────▼──┐  ┌──────────▼──────────┐
+    ┌─────────▼──────────┐  ┌─▼───────▼──┐  ┌──────────▼─────────┐
     │  InfinityBridge   │  │  The Nexus  │  │     The HIVE        │
     │  (Light Bridges)  │  │             │  │                     │
     │                   │  │ AI/Agent/Bot│  │ Data movement &     │
     │  User traffic     │  │ traffic &   │  │ swarm coordination  │
     │  Human context    │  │ coordination│  │                     │
     │  Tier 0           │  │ Tier 3-5    │  │ Pipelines & Swarms  │
-    └───────────────────┘  └──────┬──────┘  └──────────┬──────────┘
+    └──────────────────┘  └──────┬──────┘  └──────────┬──────────┘
                                 │                     │
                     ┌───────────┼───────────┐    ┌────┼─────┐
                     │           │           │    │    │     │
-              ┌─────▼──┐ ┌─────▼──┐ ┌─────▼──┐  ┌▼──┐ ┌▼──┐ ┌▼──┐
-              │Causal  │ │Tier    │ │Health  │  │Flow│ │Pipe│ │Swrm│
-              │Ordering│ │Access  │ │Aggreg  │  │Mon │ │Mgmt│ │Coor│
-              │Engine  │ │Bridge  │ │        │  │    │ │    │ │    │
-              └────────┘ └────────┘ └────────┘  └────┘ └────┘ └────┘
+              ┌─────▼───┐ ┌────▼────┐ ┌────▼──┐ ┌▼───┐ ▼───┐ ▼───┐
+              │Causal  │ │Tier    │ │Health │ │Flow│Pipe│Swrm│
+              │Ordering│ │Access  │ │Aggreg │ │Mon │Mgmt│Coor│
+              │Engine  │ │Bridge  │ │       │ │    │    │    │
+              └─────────┘ └─────────┘ └───────┘ └────┘ └───┘ └───┘
+
+    ┌──────────────────────────────────────────────────────────────┐
+    │              ThreeBridgeCoordinator                          │
+    │  Wires all three bridges together through Sentinel Station   │
+    │  Cross-bridge event forwarding · Unified status · Health    │
+    └──────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -62,6 +68,10 @@ These are **three separate systems**, each purpose-built for its traffic type. T
 ## Bridge 1: InfinityBridge — User/Human Traffic
 
 The InfinityBridge handles all user context and human movement across the platform. Users traversing between Admin, Arcadia, and The Citadel use the light bridges of the InfinityBridge.
+
+**Package:** `Dimensional/infinity/bridge/`  
+**Port:** 8070  
+**Worker Service:** `workers/infinity-bridge-service/`
 
 **Defined in:** `Dimensional/infinity/nomenclature.py`
 ```python
@@ -73,7 +83,69 @@ SentinelChannel.BRIDGE  # "bridge" — Bridge User Events
 **Transfers:** Users  
 **Description:** User transfer system within Infinity — connects Admin, Arcadia, and The Citadel
 
-The InfinityBridge infrastructure already exists within the `Dimensional/infinity/` package, including the Infinity Portal, Auth Gateway, and Sentinel Station for event distribution.
+### InfinityBridge Subsystems
+
+#### UserContext
+Tracks a user's session across the platform including their current location, context type, active session status, and metadata. Each user has a unique ID, a location within the Infinity system, context type (navigation, command, observation), and a session status (active, idle, away, disconnected).
+
+#### ContextWindow
+Manages the set of all active user contexts. Provides efficient lookups by user ID, by location, and by session status. Supports total user counts, active user counts, and location-based breakdowns.
+
+#### PresenceTracker
+Tracks user presence states (online, idle, away, offline) with automatic idle detection and configurable timeout thresholds. Emits presence change events through the bridge.
+
+#### BridgePathManager
+Manages the light bridge paths that connect locations across the platform (Admin, Arcadia, The Citadel). Each path has a source location, destination location, status (open, closed, maintenance), and optional directionality.
+
+#### InfinityBridge
+The main coordinator class that ties together user context, presence tracking, and bridge path management. Provides the primary API surface for user traffic operations.
+
+**Key capabilities:**
+- `connect_user(user_id, location)` — Register a user connection at a location
+- `disconnect_user(user_id)` — Remove a user from the bridge
+- `transition_user(user_id, new_location)` — Move a user between locations
+- `get_status()` — Get comprehensive bridge status with three_bridges dict
+- `get_health()` — Get bridge health summary
+- `start()` / `stop()` — Lifecycle management
+
+#### InfinitySentinelBridge
+Bidirectional event bridge between InfinityBridge and Sentinel Station. User traffic events (connections, disconnections, transitions) are forwarded to Sentinel for cross-bridge awareness; Sentinel events are routed into the InfinityBridge for dashboard visualization.
+
+### InfinityBridge Status Response
+```json
+{
+  "bridge": "InfinityBridge",
+  "bridge_type": "infinity",
+  "description": "User Context & Human Traffic Coordinator (Light Bridge)",
+  "status": "active",
+  "users": { "total": 5, "active": 3 },
+  "presence": { "online": 3, "idle": 1, "away": 1 },
+  "paths": { "total": 3, "open": 3 },
+  "three_bridges": {
+    "infinity_bridge": {
+      "name": "InfinityBridge",
+      "role": "User Context & Human Traffic",
+      "description": "User Context & Human Traffic (Light Bridge)",
+      "status": "active",
+      "bridge_type": "infinity"
+    },
+    "nexus": {
+      "name": "The Nexus",
+      "role": "AI, Agent, and Bot Traffic",
+      "description": "AI, Agent, and Bot Traffic Coordination",
+      "status": "see_nexus_status",
+      "bridge_type": "nexus"
+    },
+    "hive": {
+      "name": "The HIVE",
+      "role": "Data Movement & Swarm Coordination",
+      "description": "Data Movement & Swarm System Coordination",
+      "status": "see_hive_status",
+      "bridge_type": "hive"
+    }
+  }
+}
+```
 
 ---
 
@@ -147,9 +219,27 @@ Bidirectional event bridge between The Nexus and Sentinel Station. AI/Agent/Bot 
   "bridge_type": "nexus",
   "description": "AI, Agent, and Bot traffic coordination",
   "three_bridges": {
-    "infinity_bridge": "User context / human traffic (Light bridges)",
-    "nexus": "AI, Agent, and Bot movement and traffic (THIS)",
-    "hive": "Data movement and swarm system coordination"
+    "infinity_bridge": {
+      "name": "InfinityBridge",
+      "role": "User Context & Human Traffic",
+      "description": "User Context & Human Traffic (Light Bridge)",
+      "status": "see_infinity_bridge_status",
+      "bridge_type": "infinity"
+    },
+    "nexus": {
+      "name": "The Nexus",
+      "role": "AI, Agent, and Bot Traffic",
+      "description": "AI, Agent, and Bot Traffic Coordination",
+      "status": "active",
+      "bridge_type": "nexus"
+    },
+    "hive": {
+      "name": "The HIVE",
+      "role": "Data Movement & Swarm Coordination",
+      "description": "Data Movement & Swarm System Coordination",
+      "status": "see_hive_status",
+      "bridge_type": "hive"
+    }
   },
   "tier_hierarchy": { "HUMAN": 0, "ORCHESTRATOR": 1, "PRIME": 2, "AI": 3, "AGENT": 4, "BOT": 5 }
 }
@@ -206,6 +296,9 @@ Manages data pipelines — the routes through which data chunks flow from source
 - `list_pipelines(status)` — List pipelines, optionally filtered by status
 
 **Replication:** Capped at `HIVE_MAX_REPLICATION` (default 5) to prevent runaway replication.
+
+#### HiveSentinelBridge
+Bidirectional event bridge between The HIVE and Sentinel Station. Data flow events (pipeline creation, chunk delivery, swarm formation) are forwarded to Sentinel for cross-bridge awareness; Sentinel events are routed into the HIVE for dashboard visualization and flow monitoring.
 
 ### HIVE Data Models
 
@@ -270,13 +363,169 @@ class DataPipeline(BaseModel):
   "bridge_type": "hive",
   "description": "Data movement and swarm system coordination",
   "three_bridges": {
-    "infinity_bridge": "User context / human traffic (Light bridges)",
-    "nexus": "AI, Agent, and Bot movement and traffic",
-    "hive": "Data movement and swarm system coordination (THIS)"
+    "infinity_bridge": {
+      "name": "InfinityBridge",
+      "role": "User Context & Human Traffic",
+      "description": "User Context & Human Traffic (Light Bridge)",
+      "status": "see_infinity_bridge_status",
+      "bridge_type": "infinity"
+    },
+    "nexus": {
+      "name": "The Nexus",
+      "role": "AI, Agent, and Bot Traffic",
+      "description": "AI, Agent, and Bot Traffic Coordination",
+      "status": "see_nexus_status",
+      "bridge_type": "nexus"
+    },
+    "hive": {
+      "name": "The HIVE",
+      "role": "Data Movement & Swarm Coordination",
+      "description": "Data Movement & Swarm System Coordination",
+      "status": "active",
+      "bridge_type": "hive"
+    }
   },
   "flow": { "total_throughput_mbps": 0, "avg_latency_ms": 0, "chunks_delivered": 0 }
 }
 ```
+
+---
+
+## ThreeBridgeCoordinator
+
+The `ThreeBridgeCoordinator` is the central wiring module that connects all three bridges through Sentinel Station. It manages cross-bridge event forwarding, provides a unified status endpoint, and enforces traffic separation at the coordinator level.
+
+**Package:** `Dimensional/three_bridge_coordinator.py`
+
+### Coordinator Enums
+
+```python
+class CoordinatorState(str, Enum):
+    STOPPED = "stopped"
+    STARTING = "starting"
+    RUNNING = "running"
+    DEGRADED = "degraded"
+    STOPPING = "stopping"
+
+class BridgeIdentity(str, Enum):
+    INFINITY_BRIDGE = "infinity"
+    NEXUS = "nexus"
+    HIVE = "hive"
+```
+
+### Coordinator Data Models
+
+```python
+@dataclass
+class BridgeHealth:
+    bridge_type: str
+    healthy: bool
+    sentinel_attached: bool
+    stats: Dict[str, Any]
+    error: Optional[str] = None
+
+@dataclass
+class CrossBridgeEvent:
+    event_id: str           # Auto-generated UUID
+    source_bridge: str      # "infinity", "nexus", or "hive"
+    target_bridges: List[str]  # Bridges to receive this event
+    sentinel_channel: str   # SentinelChannel value
+    event_type: str         # Event type identifier
+    payload: Dict[str, Any] # Event data
+    timestamp: str          # ISO 8601 timestamp
+```
+
+### Coordinator Lifecycle
+
+```python
+coordinator = ThreeBridgeCoordinator()
+
+# Start — wires all three bridges through Sentinel Station
+await coordinator.start()
+
+# Stop — gracefully detaches all bridges and stops Sentinel Station
+await coordinator.stop()
+```
+
+The `start()` method:
+1. Starts Sentinel Station
+2. Creates and attaches InfinitySentinelBridge to Sentinel Station
+3. Creates and attaches NexusSentinelBridge to Sentinel Station
+4. Creates and attaches HiveSentinelBridge to Sentinel Station
+5. Registers cross-bridge event handlers on Sentinel Station channels (BRIDGE, NEXUS, HIVE)
+6. Starts the InfinityBridge
+7. Transitions to RUNNING state (or DEGRADED if partial failure)
+
+The `stop()` method:
+1. Stops the InfinityBridge
+2. Stops Sentinel Station
+3. Detaches all sentinel bridges
+4. Transitions to STOPPED state
+
+### Cross-Bridge Event Forwarding
+
+The coordinator registers event handlers on three Sentinel Station channels:
+
+| Channel | Handler | Forwards To |
+|---------|---------|------------|
+| `BRIDGE` | `_on_bridge_channel_event()` | Nexus, HIVE (for awareness) |
+| `NEXUS` | `_on_nexus_channel_event()` | InfinityBridge, HIVE (for awareness) |
+| `HIVE` | `_on_hive_channel_event()` | InfinityBridge, Nexus (for awareness) |
+
+**Important:** Cross-bridge events are awareness notifications only. Bridges do NOT call methods on each other — they maintain strict traffic separation. A Nexus AI event being forwarded to InfinityBridge does NOT mean InfinityBridge processes AI traffic; it means InfinityBridge is aware that an AI event occurred (e.g., for dashboard display).
+
+### Unified Status
+
+```python
+status = await coordinator.get_unified_status()
+```
+
+Returns a comprehensive status dict containing:
+- `coordinator` — State, uptime, started_at
+- `three_bridges` — Each bridge's status, sentinel bridge status, name, role, description, bridge_type
+- `sentinel_station` — Sentinel Station stats
+- `traffic_separation` — Description of each bridge's traffic domain
+- `cross_bridge_events` — Total count and recent events
+- `stats` — Cross-bridge forwarding counters
+- `tier_system` — Full tier hierarchy
+- `port_assignments` — Nexus=8050, HIVE=8060, InfinityBridge=8070
+- `transfer_systems` — TransferSystem enum values
+
+### Health Check
+
+```python
+health = await coordinator.health_check()
+```
+
+Returns:
+- `status` — "healthy" or "degraded"
+- `all_bridges_healthy` — Boolean
+- `all_sentinels_attached` — Boolean
+- `bridges` — Per-bridge health details
+- `coordinator_state` — Current CoordinatorState value
+
+### Singleton
+
+```python
+from Dimensional.three_bridge_coordinator import get_coordinator
+
+coordinator = get_coordinator()  # Returns the same instance
+```
+
+---
+
+## Consistent `three_bridges` Status Format
+
+All three bridges report a consistent `three_bridges` structure in their `get_status()` response. Each bridge marks itself with `"status": "active"` and references the other bridges with `"status": "see_X_status"`.
+
+**Shared keys per bridge entry:**
+- `name` — Human-readable bridge name
+- `role` — Short role description
+- `description` — Longer description
+- `status` — `"active"` (this bridge) or `"see_X_status"` (other bridges)
+- `bridge_type` — Machine-readable bridge identifier
+
+The ThreeBridgeCoordinator extends this format with additional keys (`sentinel_bridge`, actual status data) since it has access to all three bridges' full status.
 
 ---
 
@@ -337,6 +586,10 @@ The Dimensional package is NOT a bridge itself. It is the shared foundation upon
 
 ## Test Coverage
 
+### InfinityBridge Tests (included in Three-Bridge Integration)
+
+InfinityBridge is tested through the cross-bridge integration test suite covering user context management, presence tracking, bridge paths, and InfinitySentinelBridge behavior.
+
 ### Nexus Tests (67)
 | Class | Tests | Coverage |
 |-------|-------|----------|
@@ -362,7 +615,35 @@ The Dimensional package is NOT a bridge itself. It is the shared foundation upon
 | TestHiveDataModels | 9 | Priority enum, SwarmStatus, PipelineStatus, all model defaults |
 | TestHiveApp | 3 | App creation, root endpoint, status endpoint |
 
-**Total: 120 tests passing.**
+### Three-Bridge Integration Tests (60)
+| Class | Tests | Coverage |
+|-------|-------|----------|
+| TestInfinityBridgeCore | 6 | Connect, disconnect, transition, status, health, presence |
+| TestContextWindow | 7 | Add, remove, lookup, total, active, location, update |
+| TestPresenceTracker | 5 | Track, untrack, update, get, idle detection |
+| TestBridgePathManager | 5 | Create, open, close, get, directionality |
+| TestBridgeEnums | 4 | UserTier, SessionStatus, ContextType, BridgeEvent |
+| TestThreeBridgeTraffic | 8 | User on bridge, AI on nexus, data on HIVE, status format, bridge_type checks |
+| TestThreeBridgesStatus | 5 | All bridges report three_bridges, consistent structure, bridge types |
+| TestTransferSystemEnum | 3 | NEXUS, HIVE, BRIDGE values and descriptions |
+| TestThreeBridgesCanCoexist | 5 | Independent operation, no cross-method calls, status dict |
+| TestInfinitySentinelBridgeClass | 5 | Creation, stats, status, pause/resume, forwarding |
+| TestInfinityBridgeWorker | 7 | App creation, root, status, connect, disconnect, transition, health |
+
+### Three-Bridge Coordinator Tests (37)
+| Class | Tests | Coverage |
+|-------|-------|----------|
+| TestCoordinatorLifecycle | 7 | Initial state, start, stop, double start/stop, start/stop counts |
+| TestBridgeHealth | 5 | Per-bridge health, unknown bridge, health after connect |
+| TestUnifiedStatus | 7 | Structure, bridge presence, bridge types, traffic separation, tiers, ports, transfer systems |
+| TestCrossBridgeEvents | 5 | Creation, tracking, limit, publish, explicit targets |
+| TestCoordinatorTrafficSeparation | 5 | Method presence, BridgeIdentity enum, CoordinatorState enum |
+| TestHealthCheck | 3 | Structure, before start, bridge details |
+| TestCoordinatorSingleton | 1 | Singleton pattern |
+| TestAllThreeBridgesThroughCoordinator | 4 | User traffic, unified status, custom instances, stats |
+
+**Total new tests: 217 (67 + 53 + 60 + 37)**  
+**Full suite: 3012 passed, 21 skipped**
 
 ---
 
@@ -370,7 +651,7 @@ The Dimensional package is NOT a bridge itself. It is the shared foundation upon
 
 All three bridges maintain the platform's zero-cost infrastructure commitment:
 
-- **SQLite** for persistence (Nexus health, HIVE flow metrics — no external database)
+- **SQLite** for persistence (Nexus health, HIVE flow metrics, InfinityBridge sessions — no external database)
 - **In-process routing** (no message broker dependency for local operations)
 - **Vector clocks** for causal ordering (no external coordination service)
 - **FastAPI + Uvicorn** for HTTP surfaces (lightweight, no license cost)
@@ -380,31 +661,58 @@ All three bridges maintain the platform's zero-cost infrastructure commitment:
 
 ---
 
+## Port Assignments
+
+| Service | Port | Description |
+|---------|------|-------------|
+| The Nexus | 8050 | AI, Agent, and Bot traffic coordination |
+| The HIVE | 8060 | Data movement and swarm coordination |
+| InfinityBridge | 8070 | User context and human traffic |
+
+---
+
 ## File Map
 
 ```
 Tranc3/
 ├── Dimensional/
+│   ├── three_bridge_coordinator.py  — Central coordinator wiring all three bridges
 │   ├── nexus/
 │   │   ├── __init__.py           — Package init, exports Nexus as primary class
 │   │   ├── nexus_core.py         — Nexus coordinator + FastAPI + WebSocket
 │   │   ├── sentinel_bridge.py    — Bidirectional Sentinel Station bridge
-│   │   └── dashboard.html        — Real-time web dashboard UI
+│   │   └── dashboard.html        — Real-time web dashboard UI (cyan theme)
 │   ├── hive/
 │   │   ├── __init__.py           — Package init, exports Hive as primary class
-│   │   └── hive_core.py          — Hive coordinator + FastAPI + WebSocket
+│   │   ├── hive_core.py          — Hive coordinator + FastAPI + WebSocket
+│   │   ├── sentinel_bridge.py    — Bidirectional Sentinel Station bridge
+│   │   └── dashboard.html        — Real-time data flow dashboard (amber theme)
 │   └── infinity/
 │       ├── nomenclature.py       — TransferSystem enum (NEXUS, HIVE, BRIDGE)
 │       ├── sentinel_station.py   — Redis Pub/Sub hub (Interplexus)
+│       ├── bridge/
+│       │   ├── __init__.py       — Package init, exports InfinityBridge
+│       │   ├── bridge_core.py    — InfinityBridge coordinator + all subsystems
+│       │   └── dashboard.html    — Real-time bridge dashboard (purple theme)
 │       └── worker_bridges.py     — Worker integration bridges
 ├── workers/
-│   └── dimensional-nexus-service/
+│   ├── dimensional-nexus-service/
+│   │   ├── Dockerfile            — Docker deployment
+│   │   ├── requirements-worker.txt — Python dependencies
+│   │   └── worker.py             — Standalone Nexus worker entry point
+│   ├── hive-service/
+│   │   ├── Dockerfile            — Docker deployment
+│   │   ├── requirements-worker.txt — Python dependencies
+│   │   └── worker.py             — Standalone HIVE worker entry point
+│   └── infinity-bridge-service/
 │       ├── Dockerfile            — Docker deployment
 │       ├── requirements-worker.txt — Python dependencies
-│       └── worker.py             — Standalone Nexus worker entry point
+│       └── worker.py             — Standalone InfinityBridge worker entry point
 └── tests/
     ├── test_nexus.py             — 67 Nexus test cases
-    └── test_hive.py              — 53 HIVE test cases
+    ├── test_hive.py              — 53 HIVE test cases
+    ├── test_three_bridges.py     — 60 Three-Bridge integration test cases
+    └── test_three_bridge_coordinator.py — 37 Coordinator test cases
 ```
 
 ---
@@ -436,15 +744,14 @@ The old test file `test_dimensional_nexus.py` is superseded by `test_nexus.py`.
 | Phase 24 | AeonMind Polyglot v0.9.0 | Nexus coordinates polyglot AI/Agent/Bot services |
 | Phase 25 | Repo review, architecture docs | Tier hierarchy formalized |
 | Phase 26 | Directory restructuring | `shared_core` → `Dimensional` rename |
-| Phase 27 | **This phase** | Three-bridge architecture implemented |
+| Phase 27 | **This phase** | Three-bridge architecture implemented and coordinated |
 
 ---
 
 ## Next Steps
 
-- **HIVE Worker Service**: Create `workers/hive-service/` with Dockerfile and worker entry point
-- **HIVE Dashboard**: Real-time data flow visualization web UI
-- **InfinityBridge Coordinator**: Dedicated coordinator class for user traffic (currently modeled in nomenclature.py)
-- **Cross-Bridge Event Flow**: Events flowing between all three bridges through Sentinel Station
 - **Nexus Cluster Mode**: Multi-node Nexus with Raft consensus for HA
 - **HIVE Swarm Auto-Scaling**: Dynamic swarm node allocation based on pipeline throughput
+- **InfinityBridge Path Optimization**: Intelligent routing of users across light bridges
+- **Cross-Bridge Orchestrations**: Coordinated workflows spanning all three bridges (e.g., user action triggers AI analysis that produces data pipeline output)
+- **Sentinel Station Clustering**: Redis Cluster support for high-availability Sentinel Station

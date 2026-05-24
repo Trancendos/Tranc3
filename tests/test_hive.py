@@ -451,9 +451,10 @@ class TestHiveIntegration:
         assert status["bridge_type"] == "hive"
         assert status["description"] == "Data movement and swarm system coordination"
         assert "three_bridges" in status
-        assert status["three_bridges"]["hive"] == "Data movement and swarm system coordination (THIS)"
-        assert status["three_bridges"]["nexus"] == "AI, Agent, and Bot movement and traffic"
-        assert status["three_bridges"]["infinity_bridge"] == "User context / human traffic (Light bridges)"
+        assert status["three_bridges"]["hive"]["bridge_type"] == "hive"
+        assert status["three_bridges"]["hive"]["status"] == "active"
+        assert status["three_bridges"]["nexus"]["bridge_type"] == "nexus"
+        assert status["three_bridges"]["infinity_bridge"]["bridge_type"] == "infinity"
 
     @pytest.mark.asyncio
     async def test_get_health(self):
