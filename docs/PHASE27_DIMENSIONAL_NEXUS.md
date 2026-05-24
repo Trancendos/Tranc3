@@ -1,17 +1,17 @@
 # Phase 27: Dimensional Nexus — Central Nervous System
 
 **Branch:** `phase-24/aeonmind-polyglot-v0.9.0`  
-**Commit:** `8ef9c3b`  
+**Commits:** `8ef9c3b` → `79dc8e8` → `537b84f`  
 **Date:** 2025-05-24  
-**Status:** Complete — 53 tests passing, 2781 total suite green
+**Status:** Complete — 67 tests passing, 2795 total suite green
 
 ---
 
 ## Overview
 
-The Dimensional Nexus is the Central Nervous System of the Tranc3 platform. It provides a unified coordination layer that binds together causal event ordering, tier-aware access control, real-time health monitoring, and cross-dimensional event routing into a single cohesive subsystem.
+The Dimensional Nexus is the Central Nervous System of the Tranc3 platform. It provides a unified coordination layer that binds together causal event ordering, tier-aware access control, real-time health monitoring, cross-dimensional event routing, live WebSocket dashboard streaming, and bidirectional Sentinel Station integration into a single cohesive subsystem.
 
-The Nexus sits at the heart of the `Dimensional` package (formerly `shared_core`, renamed in Phase 27) and exposes its capabilities through both a Python API and a FastAPI HTTP surface on port 8050.
+The Nexus sits at the heart of the `Dimensional` package (formerly `shared_core`, renamed in Phase 27) and exposes its capabilities through both a Python API and a FastAPI HTTP surface on port 8050. A Docker-ready worker service is provided for standalone deployment.
 
 ---
 
@@ -33,6 +33,17 @@ The Nexus sits at the heart of the `Dimensional` package (formerly `shared_core`
    │• Causality hash  │ │• RBAC        │ │• Heartbeat │ │• Handlers     │
    │• Event buffer    │ │• ABAC        │ │• Anomalies │ │• Routing tbl  │
    └──────────────────┘ └──────────────┘ └────────────┘ └───────────────┘
+                           │
+              ┌────────────┴────────────┐
+              ▼                         ▼
+   ┌──────────────────┐    ┌───────────────────┐
+   │ NexusWSManager   │    │NexusSentinelBridge│
+   │ (WebSocket)      │    │(Bidirectional)    │
+   │                  │    │                   │
+   │• Live dashboard  │    │• Nexus → Sentinel │
+   │• Channel subs    │    │• Sentinel → Nexus │
+   │• Dead conn clean │    │• Pause/Resume     │
+   └──────────────────┘    └───────────────────┘
 ```
 
 ---
@@ -49,7 +60,7 @@ Distributed vector-clock implementation for cross-dimensional event ordering. Ev
 - **`happened_before(a, b)`** — Determine if clock `a` causally precedes `b`
 - **`concurrent(a, b)`** — Determine if two events are causally independent
 - **`compute_causality_hash()`** — Deterministic hash of the current clock state for integrity verification
-- **`record_event(event)`** — Store an event with its vector clock; buffer is size-bounded (configurable via `NEXUS_EVENT_BUFFER_SIZE` env var, default 10,000)
+- **`record_event(event)`** — Store an event with its vector clock; buffer is size-bounded (configurable via `buffer_size` parameter or `NEXUS_EVENT_BUFFER_SIZE` env var, default 10,000)
 - **`get_ordered_events()`** — Retrieve all buffered events sorted by causal order
 
 **Data model:**
@@ -164,7 +175,7 @@ The top-level coordinator that integrates all four subsystems and provides a uni
 **Key capabilities:**
 - **`register_service(service)`** — Register a service with both the HealthAggregator and EventRouter
 - **`add_topology_edge()`** — Add a connection between dimensional services
-- **`emit_event(event)`** — Record event in causal engine and route to subscribers
+- **`emit_event(event)`** — Record event in causal engine, route to subscribers, and broadcast to WebSocket dashboards
 - **`check_access(request)`** — Delegate to TierAccessBridge
 - **`get_topology()`** — Return the full topology graph
 - **`get_status()`** — Return comprehensive Nexus status
@@ -185,6 +196,87 @@ class NexusTopologyEdge(BaseModel):
     metadata: dict = {}
 ```
 
+### 6. NexusWSManager (NEW)
+
+WebSocket connection manager for live event streaming to dashboards. Manages connections, tracks channel subscriptions, and broadcasts events in real-time with automatic dead-connection cleanup.
+
+**Key capabilities:**
+- **`connect(ws, channels)`** — Accept a WebSocket connection with optional channel subscriptions
+- **`disconnect(ws)`** — Clean up a connection from all tracking lists
+- **`broadcast(event)`** — Send an event to all connected dashboards and channel subscribers
+
+**Integration:** Events emitted through `DimensionalNexus.emit_event()` are automatically broadcast to all connected WebSocket clients.
+
+### 7. NexusSentinelBridge (NEW)
+
+Bidirectional event bridge between the Dimensional Nexus and the Sentinel Station. Events published to the Nexus are forwarded to the Sentinel Station for cross-worker distribution, and Sentinel events are routed into the Nexus for dashboard visualization and causal tracking.
+
+**Channel Mapping:**
+| Sentinel (lowercase) | Nexus (SentinelChannel) |
+|---------------------|------------------------|
+| `platform` | `PLATFORM` |
+| `agents` | `AGENTS` |
+| `models` | `MODELS` |
+| `workflows` | `WORKFLOWS` |
+| `security` | `SECURITY` |
+| `hive` | `HIVE` |
+| `nexus` | `NEXUS` |
+| `bridge` | `BRIDGE` |
+| `pillars` | `PILLARS` |
+| `infrastructure` | `INFRASTRUCTURE` |
+| `events` | `EVENTS` |
+
+**Key capabilities:**
+- **`attach_sentinel(sentinel_station)`** — Attach to a Sentinel Station and register handlers
+- **`on_sentinel_event()`** — Forward Sentinel events into the Nexus
+- **`pause_sentinel_forward()`** / **`resume_sentinel_forward()`** — Control Nexus→Sentinel flow
+- **`pause_nexus_forward()`** / **`resume_nexus_forward()`** — Control Sentinel→Nexus flow
+- **`get_status()`** — Bridge status including stats and channel map
+
+**Stats tracking:** `nexus_to_sentinel`, `sentinel_to_nexus`, `errors`
+
+---
+
+## Dimensional Dashboard
+
+A real-time web dashboard served from the `/dashboard` endpoint. Features:
+
+- **6 tabs:** Overview, Health, Events, Topology, Access Control, Tier Hierarchy
+- **Live event feed** via WebSocket with channel color-coding
+- **Service health cards** with status indicators and tier badges
+- **Canvas-based topology graph** visualization with tier-colored nodes and directional edges
+- **Interactive access control checker** with decision logging
+- **Channel distribution grid** showing event counts per Sentinel channel
+- **Auto-refresh** every 10 seconds for health and anomaly data
+
+**Technology:** Pure HTML + CSS + JavaScript, no build tools required. Connects to the Nexus via REST API and WebSocket.
+
+---
+
+## Dimensional Nexus Worker Service
+
+A Docker-ready standalone service for deploying the Nexus:
+
+**Files:**
+```
+workers/dimensional-nexus-service/
+├── Dockerfile
+├── requirements-worker.txt
+└── worker.py
+```
+
+**Startup initialization:**
+- Registers 8 core dimensional services (nexus-self, infinity-portal, infinity-auth, sentinel-station, health-aggregator, the-grid, tranc3-ai, deepagents-orchestrator)
+- Builds 11 default topology edges connecting core services
+- Emits a `nexus_startup` event on the NEXUS channel
+- Health check on `/health` endpoint
+
+**Docker deployment:**
+```bash
+docker build -t dimensional-nexus .
+docker run -p 8050:8050 dimensional-nexus
+```
+
 ---
 
 ## FastAPI Surface
@@ -193,23 +285,32 @@ The `create_nexus_app()` factory produces a FastAPI application with the followi
 
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/` | Nexus info and endpoint listing |
 | GET | `/health` | Aggregate health summary |
-| GET | `/health/{service_id}` | Individual service health |
-| POST | `/access` | Access control decision |
-| POST | `/events` | Emit an event |
-| GET | `/events` | Get ordered events |
-| GET | `/topology` | Service topology graph |
-| POST | `/services` | Register a new service |
+| GET | `/health/anomalies` | Anomaly detection results |
+| GET | `/health/service/{service_id}` | Individual service health |
+| POST | `/access/check` | Access control decision |
+| GET | `/access/tiers` | Tier hierarchy definition |
+| POST | `/events/emit` | Emit an event |
+| GET | `/events/recent` | Get recent events in causal order |
+| GET | `/events/routing` | Event routing table |
+| GET | `/topology` | Full topology graph |
+| GET | `/topology/nodes` | Topology nodes only |
+| GET | `/topology/edges` | Topology edges only |
+| POST | `/services/register` | Register a new service |
+| POST | `/services/heartbeat` | Submit a service heartbeat |
 | GET | `/status` | Comprehensive Nexus status |
+| GET | `/dashboard` | Real-time dashboard web UI |
+| WS | `/ws/events` | WebSocket live event streaming |
 
 **Default port:** 8050  
-**Startup:** `uvicorn Dimensional.nexus.nexus_core:create_nexus_app() --port 8050`
+**Startup:** `uvicorn Dimensional.nexus.nexus_core:app --host 0.0.0.0 --port 8050`
 
 ---
 
 ## Test Coverage
 
-53 tests across 6 test classes:
+67 tests across 8 test classes:
 
 | Class | Tests | Coverage |
 |-------|-------|----------|
@@ -219,8 +320,11 @@ The `create_nexus_app()` factory produces a FastAPI application with the followi
 | TestEventRouter | 7 | Subscribe, publish, handlers, routing table |
 | TestDimensionalNexus | 8 | Integration: register, emit, access, topology, status |
 | TestDataModels | 6 | Model defaults and auto-field generation |
+| TestNexusWSManager | 4 | Connect/disconnect, channel subscribe, broadcast, dead cleanup |
+| TestDashboardEndpoint | 2 | Dashboard HTML, root endpoint listing |
+| TestNexusSentinelBridge | 8 | Bridge creation, stats, pause/resume, status, forwarding, singleton |
 
-All 53 tests pass. Full suite: **2781 passed, 21 skipped, 0 failed**.
+All 67 tests pass. Full suite: **2795 passed, 21 skipped, 0 failed**.
 
 ---
 
@@ -232,6 +336,8 @@ The Dimensional Nexus maintains the platform's zero-cost infrastructure commitme
 - **In-process event routing** (no message broker dependency)
 - **Vector clocks** for causal ordering (no external coordination service)
 - **FastAPI + Uvicorn** for HTTP surface (lightweight, no license cost)
+- **WebSocket** for live dashboard (no polling overhead)
+- **Sentinel Bridge** integrates with existing Sentinel Station (no new infrastructure)
 - All dependencies are open-source Python packages
 
 ---
@@ -242,10 +348,17 @@ The Dimensional Nexus maintains the platform's zero-cost infrastructure commitme
 Tranc3/
 ├── Dimensional/
 │   └── nexus/
-│       ├── __init__.py          (42 lines)  — Package init, public API exports
-│       └── nexus_core.py        (1037 lines) — Full implementation
+│       ├── __init__.py           (62 lines)  — Package init, public API exports
+│       ├── nexus_core.py         (~1100 lines) — Full implementation + FastAPI + WebSocket
+│       ├── sentinel_bridge.py    (~230 lines) — Bidirectional Sentinel Station bridge
+│       └── dashboard.html        (~620 lines) — Real-time web dashboard UI
+├── workers/
+│   └── dimensional-nexus-service/
+│       ├── Dockerfile            — Docker deployment
+│       ├── requirements-worker.txt — Python dependencies
+│       └── worker.py             (~160 lines) — Standalone worker entry point
 └── tests/
-    └── test_dimensional_nexus.py (795 lines) — 53 test cases
+    └── test_dimensional_nexus.py (~900 lines) — 67 test cases
 ```
 
 ---
@@ -254,7 +367,8 @@ Tranc3/
 
 | Phase | Contribution | Nexus Connection |
 |-------|-------------|-----------------|
-| Phase 23 | Forensic audit, Sentinel system | EventRouter uses SentinelChannel |
+| Phase 22 | Infinity Portal, Auth Gateway, Sentinel Station | Nexus Sentinel Bridge provides bidirectional flow |
+| Phase 23 | Forensic audit, Sentinel system | EventRouter uses SentinelChannel from Phase 23 |
 | Phase 24 | AeonMind Polyglot v0.9.0 | Nexus can coordinate polyglot services |
 | Phase 25 | Repo review, architecture docs | Tier hierarchy formalized here |
 | Phase 26 | Directory restructuring | `shared_core` → `Dimensional` rename |
@@ -264,7 +378,7 @@ Tranc3/
 
 ## Next Steps
 
-- **Infinity Portal Authentication**: JWT-based login/register flow with tier-aware session management
-- **Nexus Dashboard**: Real-time web UI for health monitoring and event visualization
+- **Nexus Dashboard Enhancement**: Add time-series health charts and topology auto-layout
+- **Nexus Cluster Mode**: Multi-node Nexus with Raft consensus for HA
 - **Cross-Worker Heartbeat Protocol**: Standardized heartbeat format for all dimensional workers
-- **Topology Visualization**: Graph-based visualization of the dimensional service mesh
+- **Topology Auto-Discovery**: Automatic topology building from service registration
