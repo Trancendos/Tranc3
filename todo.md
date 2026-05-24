@@ -27,7 +27,7 @@
 ## Phase 20.5: UI Dashboard (Ecosystem Control Plane)
 - [x] Create React + Tailwind dashboard for monitoring all workers
 - [x] Service health grid, topology visualizer, model router status, workflow DAG viewer
-- [x] Deploy or serve as static site (http://localhost:8090)
+- [x] Deploy or serve as static site (dashboard/index.html)
 
 ## Phase 20.6: SWOT Analysis & Forensic Assessment
 - [x] Pre-implementation production-readiness % assessment (48.6%)
@@ -35,8 +35,13 @@
 - [x] Post-implementation production-readiness % assessment (81.1%, +32.5%)
 
 ## Phase 20.7: CI & Release
-- [ ] ruff check + ruff format
-- [ ] Full pytest suite passes (existing + new P4 tests)
-- [ ] Update pyproject.toml version to 0.5.0
-- [ ] Initialize git repo, create branch, commit, tag v0.5.0
-- [ ] Provide before/after production-readiness percentage
+- [x] ruff check + ruff format (all 8 P4 workers clean, 23 violations fixed)
+- [x] Full pytest suite passes (406 passed, 0 failures across P0–P4)
+- [x] Update pyproject.toml version to 0.5.0
+- [x] Initialize git repo, create branch, commit, tag v0.5.0
+- [x] Provide before/after production-readiness percentage (48.6% → 81.1%)
+
+## Phase 20.8: GitHub Integration
+- [x] Push branch feat/phase20-ecosystem-matrix-ai-workers-dashboard to Trancendos/Tranc3
+- [x] Push tag v0.5.0 to remote
+- [x] Create PR #58: https://github.com/Trancendos/Tranc3/pull/58
