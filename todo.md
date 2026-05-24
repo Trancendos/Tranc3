@@ -35,4 +35,4 @@
 - [x] ruff check + ruff format on all new/modified files
 - [x] Update PHASE21_SWOT_FORENSIC.md with before/after assessment (72.9% → 88.8%)
 - [x] Update pyproject.toml version to 0.6.0
-- [ ] Git commit, tag v0.6.0, push branch, create PR
+- [x] Git commit, tag v0.6.0, push branch, create PR
