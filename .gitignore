@@ -73,3 +73,6 @@ Thumbs.db
 *.db-wal
 spawned/
 node_modules/
+.terraform/
+aeonmind/python/.venv/
+aeonmind/python/*.egg-info/
