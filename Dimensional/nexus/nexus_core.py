@@ -1,0 +1,1035 @@
+"""
+Dimensional Nexus Core — Central Nervous System Implementation
+================================================================
+The heart of the Dimensional infrastructure. Provides unified coordination
+across all dimensional services with tier-aware access control, real-time
+health aggregation, cross-dimensional event routing, and causal ordering.
+
+Tier Hierarchy (Mandatory Custom Definitions):
+    Tier 0: HUMAN — Override authority, maximum access
+    Tier 1: ORCHESTRATOR — System-level coordination
+    Tier 2: PRIME — Strategic decision-making
+    Tier 3: AI — The overarching ML/LLM Complex
+    Tier 4: AGENT — Lower-level autonomous AI
+    Tier 5: BOT — Stateless service worker/function
+"""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import json
+import logging
+import os
+import sqlite3
+import time
+import uuid
+from collections import defaultdict
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+
+from Dimensional.infinity.nomenclature import InfinityRole, SentinelChannel, Tier
+from Dimensional.infinity.rbac import RBACEngine, Permission
+from Dimensional.infinity.abac import ABACEngine, Policy, PolicyEffect
+
+logger = logging.getLogger("dimensional.nexus")
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+
+NEXUS_DB_PATH = os.environ.get("NEXUS_DB_PATH", "data/nexus.db")
+NEXUS_PORT = int(os.environ.get("NEXUS_PORT", "8050"))
+NEXUS_HEALTH_INTERVAL = int(os.environ.get("NEXUS_HEALTH_INTERVAL", "30"))  # seconds
+NEXUS_EVENT_BUFFER_SIZE = int(os.environ.get("NEXUS_EVENT_BUFFER_SIZE", "10000"))
+
+# ---------------------------------------------------------------------------
+# Data Models
+# ---------------------------------------------------------------------------
+
+
+class NexusServiceHealth(BaseModel):
+    """Health status of a single dimensional service."""
+    service_id: str
+    service_name: str
+    pillar: str
+    tier_requirement: int
+    status: str = "unknown"  # healthy, degraded, unhealthy, unknown
+    uptime_seconds: float = 0.0
+    last_heartbeat: Optional[str] = None
+    response_time_ms: Optional[float] = None
+    error_count: int = 0
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class NexusHealthSummary(BaseModel):
+    """Aggregated health across all dimensional services."""
+    total_services: int = 0
+    healthy: int = 0
+    degraded: int = 0
+    unhealthy: int = 0
+    unknown: int = 0
+    overall_status: str = "unknown"
+    pillar_health: Dict[str, Dict[str, int]] = Field(default_factory=dict)
+    tier_coverage: Dict[int, List[str]] = Field(default_factory=dict)
+    last_updated: str = ""
+
+
+class NexusAccessDecision(BaseModel):
+    """Result of a tier-aware access control decision."""
+    allowed: bool
+    reason: str = ""
+    matched_policy: Optional[str] = None
+    tier_valid: bool = True
+    rbac_result: Optional[bool] = None
+    abac_result: Optional[bool] = None
+    effective_tier: int = 5
+    required_tier: int = 5
+    constraints: List[str] = Field(default_factory=list)
+
+
+class NexusEvent(BaseModel):
+    """A cross-dimensional event with causal ordering."""
+    event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    channel: str  # SentinelChannel name
+    source_dimension: str  # Which dimensional service emitted this
+    source_tier: int
+    event_type: str
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    vector_clock: Dict[str, int] = Field(default_factory=dict)
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    correlation_id: Optional[str] = None
+    causality_hash: Optional[str] = None
+
+
+class NexusTopologyNode(BaseModel):
+    """A node in the dimensional topology graph."""
+    node_id: str
+    node_type: str  # dimension, worker, service, gateway
+    tier: int
+    pillar: str
+    connections: List[str] = Field(default_factory=list)
+    health_status: str = "unknown"
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class NexusTopologyEdge(BaseModel):
+    """An edge in the dimensional topology graph."""
+    source: str
+    target: str
+    edge_type: str  # dependency, event_flow, data_flow, auth_flow
+    sentinel_channel: Optional[str] = None
+    bandwidth: Optional[float] = None
+    latency_ms: Optional[float] = None
+
+
+# ---------------------------------------------------------------------------
+# Causal Ordering Engine
+# ---------------------------------------------------------------------------
+
+
+class CausalOrderingEngine:
+    """
+    Vector-clock based causal ordering for cross-dimensional events.
+
+    Implements a distributed vector clock that tracks causality across
+    all dimensional services. Events are ordered by their vector clocks,
+    ensuring timeline consistency even in the presence of network delays
+    and concurrent operations.
+    """
+
+    def __init__(self, node_id: str, known_nodes: Optional[Set[str]] = None,
+                 buffer_size: Optional[int] = None):
+        self.node_id = node_id
+        self.clock: Dict[str, int] = {node_id: 0}
+        self.known_nodes: Set[str] = known_nodes or {node_id}
+        self._buffer_size = buffer_size or int(os.environ.get("NEXUS_EVENT_BUFFER_SIZE", "10000"))
+        self._event_buffer: List[NexusEvent] = []
+        self._lock = asyncio.Lock()
+
+    def increment(self) -> Dict[str, int]:
+        """Increment the local clock and return the new vector clock."""
+        self.clock[self.node_id] = self.clock.get(self.node_id, 0) + 1
+        return dict(self.clock)
+
+    def merge(self, incoming_clock: Dict[str, int]) -> Dict[str, int]:
+        """Merge an incoming vector clock (happens-before relation)."""
+        for node, ts in incoming_clock.items():
+            self.known_nodes.add(node)
+            current = self.clock.get(node, 0)
+            self.clock[node] = max(current, ts)
+        self.clock[self.node_id] = self.clock.get(self.node_id, 0) + 1
+        return dict(self.clock)
+
+    def happened_before(self, clock_a: Dict[str, int], clock_b: Dict[str, int]) -> bool:
+        """Check if clock_a happened before clock_b (strict partial order)."""
+        all_nodes = set(clock_a.keys()) | set(clock_b.keys())
+        at_least_one_less = False
+        for node in all_nodes:
+            a_val = clock_a.get(node, 0)
+            b_val = clock_b.get(node, 0)
+            if a_val > b_val:
+                return False
+            if a_val < b_val:
+                at_least_one_less = True
+        return at_least_one_less
+
+    def concurrent(self, clock_a: Dict[str, int], clock_b: Dict[str, int]) -> bool:
+        """Check if two events are concurrent (no causal relationship)."""
+        return not self.happened_before(clock_a, clock_b) and not self.happened_before(clock_b, clock_a)
+
+    def compute_causality_hash(self, event: NexusEvent) -> str:
+        """Compute a deterministic hash for causal chain verification."""
+        vc_str = json.dumps(event.vector_clock, sort_keys=True)
+        content = f"{event.source_dimension}:{event.event_type}:{vc_str}:{event.timestamp}"
+        return hashlib.sha256(content.encode()).hexdigest()[:16]
+
+    async def record_event(self, event: NexusEvent) -> NexusEvent:
+        """Record an event and update causal ordering."""
+        async with self._lock:
+            if event.source_dimension == self.node_id:
+                event.vector_clock = self.increment()
+            else:
+                event.vector_clock = self.merge(event.vector_clock)
+            event.causality_hash = self.compute_causality_hash(event)
+            self._event_buffer.append(event)
+            if len(self._event_buffer) > self._buffer_size:
+                self._event_buffer = self._event_buffer[-self._buffer_size:]
+        return event
+
+    async def get_ordered_events(
+        self, channel: Optional[str] = None, limit: int = 100
+    ) -> List[NexusEvent]:
+        """Get events in causal order, optionally filtered by channel."""
+        async with self._lock:
+            events = list(self._event_buffer)
+        if channel:
+            events = [e for e in events if e.channel == channel]
+        events.sort(key=lambda e: json.dumps(e.vector_clock, sort_keys=True))
+        return events[-limit:]
+
+
+# ---------------------------------------------------------------------------
+# Tier Access Bridge — Unified RBAC + ABAC with Tier Hierarchy
+# ---------------------------------------------------------------------------
+
+
+class TierAccessBridge:
+    """
+    Unified access control bridge that combines RBAC and ABAC with
+    the Tier hierarchy.
+
+    The bridge enforces the mandatory custom definition hierarchy:
+        - AI (Tier 3): The overarching ML/LLM Complex
+        - Agent (Tier 4): Lower-level autonomous AI
+        - Bot (Tier 5): Stateless service worker/function
+
+    Access decisions are made by:
+    1. Checking tier requirements (minimum tier for the resource)
+    2. Applying RBAC permissions (role-based)
+    3. Applying ABAC policies (attribute-based)
+    4. Combining results with AND logic (both must allow)
+
+    If either RBAC or ABAC is not configured, the other acts as
+    the sole decision maker. If neither is configured, tier check
+    alone determines access.
+    """
+
+    def __init__(
+        self,
+        rbac_engine: Optional[RBACEngine] = None,
+        abac_engine: Optional[ABACEngine] = None,
+    ):
+        self.rbac = rbac_engine
+        self.abac = abac_engine
+        self._tier_overrides: Dict[str, int] = {}  # resource → min_tier
+        self._deny_list: Set[str] = set()  # explicitly denied resources
+
+    def set_tier_requirement(self, resource: str, min_tier: int) -> None:
+        """Set the minimum tier required to access a resource."""
+        self._tier_overrides[resource] = min_tier
+
+    def add_deny(self, resource: str) -> None:
+        """Explicitly deny access to a resource regardless of other checks."""
+        self._deny_list.add(resource)
+
+    def remove_deny(self, resource: str) -> None:
+        """Remove an explicit deny."""
+        self._deny_list.discard(resource)
+
+    def check_access(
+        self,
+        subject: str,
+        resource: str,
+        action: str,
+        subject_tier: int,
+        subject_role: Optional[str] = None,
+        subject_attributes: Optional[Dict[str, Any]] = None,
+        resource_attributes: Optional[Dict[str, Any]] = None,
+        environment: Optional[Dict[str, Any]] = None,
+    ) -> NexusAccessDecision:
+        """
+        Perform a complete tier-aware access control check.
+
+        The decision process:
+        1. Check explicit deny list → immediate deny
+        2. Check tier requirement → deny if tier insufficient
+        3. Check RBAC if configured → deny if role lacks permission
+        4. Check ABAC if configured → deny if no policy allows
+        5. If both RBAC and ABAC configured → both must allow
+        6. If neither configured → tier check alone suffices
+        """
+        # Step 1: Explicit deny
+        if resource in self._deny_list:
+            return NexusAccessDecision(
+                allowed=False,
+                reason=f"Resource '{resource}' is explicitly denied",
+                tier_valid=True,
+                effective_tier=subject_tier,
+                required_tier=self._tier_overrides.get(resource, 5),
+                constraints=["explicit_deny"],
+            )
+
+        # Step 2: Tier check
+        required_tier = self._tier_overrides.get(resource, 5)
+        tier_valid = subject_tier <= required_tier  # Lower tier number = higher access
+
+        if not tier_valid:
+            return NexusAccessDecision(
+                allowed=False,
+                reason=f"Tier {subject_tier} insufficient for resource requiring tier {required_tier}",
+                tier_valid=False,
+                effective_tier=subject_tier,
+                required_tier=required_tier,
+                constraints=["insufficient_tier"],
+            )
+
+        # Step 3: RBAC check
+        rbac_result = None
+        if self.rbac and subject_role:
+            try:
+                rbac_result = self.rbac.check_permission(subject_role, resource, action)
+            except Exception:
+                rbac_result = None  # RBAC not authoritative if misconfigured
+
+        # Step 4: ABAC check
+        abac_result = None
+        if self.abac:
+            try:
+                abac_result = self.abac.evaluate(
+                    subject_attributes or {},
+                    resource_attributes or {},
+                    action,
+                    environment or {},
+                )
+            except Exception:
+                abac_result = None  # ABAC not authoritative if misconfigured
+
+        # Step 5: Combine results
+        matched_policy = None
+        constraints = []
+
+        if rbac_result is not None and abac_result is not None:
+            # Both configured → both must allow
+            allowed = rbac_result and abac_result
+            if not allowed:
+                if not rbac_result:
+                    constraints.append("rbac_denied")
+                if not abac_result:
+                    constraints.append("abac_denied")
+            matched_policy = "rbac+abac"
+        elif rbac_result is not None:
+            allowed = rbac_result
+            matched_policy = "rbac"
+            if not allowed:
+                constraints.append("rbac_denied")
+        elif abac_result is not None:
+            allowed = abac_result
+            matched_policy = "abac"
+            if not allowed:
+                constraints.append("abac_denied")
+        else:
+            # Neither configured → tier check alone
+            allowed = tier_valid
+            matched_policy = "tier_only"
+
+        reason = ""
+        if not allowed:
+            reason = f"Access denied by {matched_policy}"
+            if constraints:
+                reason += f" ({', '.join(constraints)})"
+
+        return NexusAccessDecision(
+            allowed=allowed,
+            reason=reason,
+            matched_policy=matched_policy,
+            tier_valid=tier_valid,
+            rbac_result=rbac_result,
+            abac_result=abac_result,
+            effective_tier=subject_tier,
+            required_tier=required_tier,
+            constraints=constraints,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Health Aggregator
+# ---------------------------------------------------------------------------
+
+
+class HealthAggregator:
+    """
+    Real-time health aggregation across all dimensional services.
+
+    Collects heartbeat signals from dimensional services and maintains
+    a comprehensive health view organized by pillar, tier, and status.
+    Supports configurable health thresholds and anomaly detection.
+    """
+
+    def __init__(self, db_path: str = NEXUS_DB_PATH):
+        self.db_path = db_path
+        self._services: Dict[str, NexusServiceHealth] = {}
+        self._health_history: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        self._thresholds = {
+            "response_time_ms": 1000.0,
+            "error_rate": 0.1,
+            "heartbeat_timeout_seconds": 90,
+        }
+        self._lock = asyncio.Lock()
+        self._init_db()
+
+    def _init_db(self) -> None:
+        """Initialize the health database."""
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(self.db_path)
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS service_health (
+                service_id TEXT PRIMARY KEY,
+                service_name TEXT NOT NULL,
+                pillar TEXT NOT NULL,
+                tier_requirement INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'unknown',
+                uptime_seconds REAL DEFAULT 0.0,
+                last_heartbeat TEXT,
+                response_time_ms REAL,
+                error_count INTEGER DEFAULT 0,
+                metadata TEXT DEFAULT '{}',
+                updated_at TEXT DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS health_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                service_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                response_time_ms REAL,
+                timestamp TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY (service_id) REFERENCES service_health(service_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_health_history_service
+                ON health_history(service_id, timestamp);
+        """)
+        conn.commit()
+        conn.close()
+
+    async def register_service(self, health: NexusServiceHealth) -> None:
+        """Register a new dimensional service for health tracking."""
+        async with self._lock:
+            self._services[health.service_id] = health
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            """INSERT OR REPLACE INTO service_health
+               (service_id, service_name, pillar, tier_requirement, status,
+                uptime_seconds, last_heartbeat, response_time_ms, error_count, metadata)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                health.service_id,
+                health.service_name,
+                health.pillar,
+                health.tier_requirement,
+                health.status,
+                health.uptime_seconds,
+                health.last_heartbeat,
+                health.response_time_ms,
+                health.error_count,
+                json.dumps(health.metadata),
+            ),
+        )
+        conn.commit()
+        conn.close()
+
+    async def update_heartbeat(
+        self,
+        service_id: str,
+        status: str = "healthy",
+        response_time_ms: Optional[float] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Update the heartbeat for a dimensional service."""
+        async with self._lock:
+            if service_id not in self._services:
+                return
+            svc = self._services[service_id]
+            svc.status = status
+            svc.last_heartbeat = datetime.now(timezone.utc).isoformat()
+            if response_time_ms is not None:
+                svc.response_time_ms = response_time_ms
+            if status == "unhealthy":
+                svc.error_count += 1
+            if metadata:
+                svc.metadata.update(metadata)
+
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            """UPDATE service_health
+               SET status=?, last_heartbeat=?, response_time_ms=?, error_count=?, metadata=?
+               WHERE service_id=?""",
+            (status, datetime.now(timezone.utc).isoformat(),
+             response_time_ms, self._services.get(service_id, NexusServiceHealth(
+                 service_id=service_id, service_name="", pillar="",
+                 tier_requirement=5)).error_count,
+             json.dumps(metadata or {}),
+             service_id),
+        )
+        conn.execute(
+            """INSERT INTO health_history (service_id, status, response_time_ms)
+               VALUES (?, ?, ?)""",
+            (service_id, status, response_time_ms),
+        )
+        conn.commit()
+        conn.close()
+
+    async def get_summary(self) -> NexusHealthSummary:
+        """Get the aggregated health summary."""
+        async with self._lock:
+            services = list(self._services.values())
+
+        summary = NexusHealthSummary(
+            total_services=len(services),
+            last_updated=datetime.now(timezone.utc).isoformat(),
+        )
+
+        pillar_health: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        tier_coverage: Dict[int, List[str]] = defaultdict(list)
+
+        for svc in services:
+            if svc.status == "healthy":
+                summary.healthy += 1
+            elif svc.status == "degraded":
+                summary.degraded += 1
+            elif svc.status == "unhealthy":
+                summary.unhealthy += 1
+            else:
+                summary.unknown += 1
+
+            pillar_health[svc.pillar][svc.status] += 1
+            tier_coverage[svc.tier_requirement].append(svc.service_name)
+
+        summary.pillar_health = dict(pillar_health)
+        summary.tier_coverage = dict(tier_coverage)
+
+        # Overall status determination
+        if summary.total_services == 0:
+            summary.overall_status = "unknown"
+        elif summary.unhealthy > 0:
+            summary.overall_status = "critical"
+        elif summary.degraded > summary.healthy:
+            summary.overall_status = "degraded"
+        elif summary.degraded > 0:
+            summary.overall_status = "warning"
+        else:
+            summary.overall_status = "healthy"
+
+        return summary
+
+    async def detect_anomalies(self) -> List[Dict[str, Any]]:
+        """Detect health anomalies across dimensional services."""
+        anomalies = []
+        now = time.time()
+
+        async with self._lock:
+            services = list(self._services.values())
+
+        for svc in services:
+            # Check heartbeat timeout
+            if svc.last_heartbeat:
+                try:
+                    hb_time = datetime.fromisoformat(svc.last_heartbeat).timestamp()
+                    elapsed = now - hb_time
+                    if elapsed > self._thresholds["heartbeat_timeout_seconds"]:
+                        anomalies.append({
+                            "type": "heartbeat_timeout",
+                            "service_id": svc.service_id,
+                            "service_name": svc.service_name,
+                            "elapsed_seconds": round(elapsed, 1),
+                            "threshold": self._thresholds["heartbeat_timeout_seconds"],
+                            "severity": "high",
+                        })
+                except (ValueError, TypeError):
+                    pass
+
+            # Check response time
+            if svc.response_time_ms and svc.response_time_ms > self._thresholds["response_time_ms"]:
+                anomalies.append({
+                    "type": "high_response_time",
+                    "service_id": svc.service_id,
+                    "service_name": svc.service_name,
+                    "response_time_ms": svc.response_time_ms,
+                    "threshold_ms": self._thresholds["response_time_ms"],
+                    "severity": "medium",
+                })
+
+            # Check error rate
+            if svc.error_count > 10:
+                anomalies.append({
+                    "type": "high_error_count",
+                    "service_id": svc.service_id,
+                    "service_name": svc.service_name,
+                    "error_count": svc.error_count,
+                    "severity": "high",
+                })
+
+        return anomalies
+
+
+# ---------------------------------------------------------------------------
+# Event Router — Cross-Dimensional Sentinel Event Distribution
+# ---------------------------------------------------------------------------
+
+
+class EventRouter:
+    """
+    Cross-dimensional event routing with Sentinel channel distribution.
+
+    Routes events between dimensional services based on Sentinel channel
+    subscriptions. Supports fan-out, point-to-point, and channel-based
+    routing with causal ordering guarantees.
+    """
+
+    def __init__(self, causal_engine: CausalOrderingEngine):
+        self.causal_engine = causal_engine
+        self._subscriptions: Dict[str, Set[str]] = defaultdict(set)  # channel → set of service_ids
+        self._event_handlers: Dict[str, List[callable]] = defaultdict(list)
+        self._lock = asyncio.Lock()
+
+    async def subscribe(self, channel: str, service_id: str) -> None:
+        """Subscribe a dimensional service to a Sentinel channel."""
+        async with self._lock:
+            self._subscriptions[channel].add(service_id)
+
+    async def unsubscribe(self, channel: str, service_id: str) -> None:
+        """Unsubscribe a dimensional service from a Sentinel channel."""
+        async with self._lock:
+            self._subscriptions[channel].discard(service_id)
+
+    async def register_handler(self, channel: str, handler: callable) -> None:
+        """Register an async handler for events on a channel."""
+        async with self._lock:
+            self._event_handlers[channel].append(handler)
+
+    async def publish(self, event: NexusEvent) -> List[str]:
+        """
+        Publish an event to all subscribers on its channel.
+        Returns list of service IDs that were notified.
+        """
+        # Record event with causal ordering
+        event = await self.causal_engine.record_event(event)
+
+        async with self._lock:
+            subscribers = list(self._subscriptions.get(event.channel, set()))
+            handlers = list(self._event_handlers.get(event.channel, []))
+
+        # Invoke handlers
+        for handler in handlers:
+            try:
+                if asyncio.iscoroutinefunction(handler):
+                    await handler(event)
+                else:
+                    handler(event)
+            except Exception as e:
+                logger.error(f"Event handler error on channel {event.channel}: {e}")
+
+        return subscribers
+
+    async def get_subscriptions(self, service_id: Optional[str] = None) -> Dict[str, List[str]]:
+        """Get current subscriptions, optionally filtered by service."""
+        async with self._lock:
+            if service_id:
+                return {
+                    ch: [s for s in subs if s == service_id]
+                    for ch, subs in self._subscriptions.items()
+                    if service_id in subs
+                }
+            return {ch: list(subs) for ch, subs in self._subscriptions.items()}
+
+    async def get_routing_table(self) -> Dict[str, Any]:
+        """Get the complete routing table for topology visualization."""
+        async with self._lock:
+            return {
+                "channels": {
+                    ch: list(subs) for ch, subs in self._subscriptions.items()
+                },
+                "total_channels": len(self._subscriptions),
+                "total_subscriptions": sum(
+                    len(subs) for subs in self._subscriptions.values()
+                ),
+            }
+
+
+# ---------------------------------------------------------------------------
+# Dimensional Nexus — The Central Coordinator
+# ---------------------------------------------------------------------------
+
+
+class DimensionalNexus:
+    """
+    The central coordinator for the Dimensional infrastructure.
+
+    Provides a unified API surface that integrates:
+    - Health aggregation and monitoring
+    - Tier-aware access control (RBAC + ABAC bridge)
+    - Cross-dimensional event routing with causal ordering
+    - Topology mapping and visualization
+    - Service registration and discovery
+    """
+
+    def __init__(self, db_path: str = NEXUS_DB_PATH):
+        self.node_id = f"nexus-{uuid.uuid4().hex[:8]}"
+        self.db_path = db_path
+        self.causal_engine = CausalOrderingEngine(self.node_id)
+        self.health_aggregator = HealthAggregator(db_path)
+        self.access_bridge = TierAccessBridge()
+        self.event_router = EventRouter(self.causal_engine)
+        self._topology_nodes: Dict[str, NexusTopologyNode] = {}
+        self._topology_edges: List[NexusTopologyEdge] = []
+        self._started_at = time.time()
+        self._lock = asyncio.Lock()
+        logger.info(f"DimensionalNexus initialized: {self.node_id}")
+
+    async def register_service(
+        self,
+        service_id: str,
+        service_name: str,
+        pillar: str,
+        tier_requirement: int,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> NexusServiceHealth:
+        """Register a new dimensional service with the Nexus."""
+        health = NexusServiceHealth(
+            service_id=service_id,
+            service_name=service_name,
+            pillar=pillar,
+            tier_requirement=tier_requirement,
+            status="unknown",
+            metadata=metadata or {},
+        )
+        await self.health_aggregator.register_service(health)
+
+        # Add to topology
+        node = NexusTopologyNode(
+            node_id=service_id,
+            node_type="dimension",
+            tier=tier_requirement,
+            pillar=pillar,
+            health_status="unknown",
+            metadata=metadata or {},
+        )
+        async with self._lock:
+            self._topology_nodes[service_id] = node
+
+        # Subscribe to all Sentinel channels by default
+        for channel in SentinelChannel:
+            await self.event_router.subscribe(channel.value, service_id)
+
+        logger.info(f"Registered dimensional service: {service_name} ({service_id})")
+        return health
+
+    async def add_topology_edge(
+        self,
+        source: str,
+        target: str,
+        edge_type: str,
+        sentinel_channel: Optional[str] = None,
+    ) -> None:
+        """Add a connection edge to the dimensional topology."""
+        edge = NexusTopologyEdge(
+            source=source,
+            target=target,
+            edge_type=edge_type,
+            sentinel_channel=sentinel_channel,
+        )
+        async with self._lock:
+            self._topology_edges.append(edge)
+            if source in self._topology_nodes:
+                if target not in self._topology_nodes[source].connections:
+                    self._topology_nodes[source].connections.append(target)
+
+    async def emit_event(
+        self,
+        channel: str,
+        source_dimension: str,
+        source_tier: int,
+        event_type: str,
+        payload: Optional[Dict[str, Any]] = None,
+        correlation_id: Optional[str] = None,
+    ) -> NexusEvent:
+        """Emit a cross-dimensional event through the Nexus."""
+        event = NexusEvent(
+            channel=channel,
+            source_dimension=source_dimension,
+            source_tier=source_tier,
+            event_type=event_type,
+            payload=payload or {},
+            correlation_id=correlation_id,
+        )
+        subscribers = await self.event_router.publish(event)
+        logger.info(
+            f"Event emitted: {event_type} on {channel} "
+            f"from {source_dimension} → {len(subscribers)} subscribers"
+        )
+        return event
+
+    async def check_access(
+        self,
+        subject: str,
+        resource: str,
+        action: str,
+        subject_tier: int,
+        **kwargs,
+    ) -> NexusAccessDecision:
+        """Perform a tier-aware access control check."""
+        return self.access_bridge.check_access(
+            subject=subject,
+            resource=resource,
+            action=action,
+            subject_tier=subject_tier,
+            **kwargs,
+        )
+
+    async def get_topology(self) -> Dict[str, Any]:
+        """Get the complete dimensional topology graph."""
+        async with self._lock:
+            return {
+                "nodes": [n.model_dump() for n in self._topology_nodes.values()],
+                "edges": [e.model_dump() for e in self._topology_edges],
+                "node_count": len(self._topology_nodes),
+                "edge_count": len(self._topology_edges),
+            }
+
+    async def get_status(self) -> Dict[str, Any]:
+        """Get the comprehensive Nexus status."""
+        health_summary = await self.health_aggregator.get_summary()
+        routing_table = await self.event_router.get_routing_table()
+        return {
+            "nexus_id": self.node_id,
+            "uptime_seconds": round(time.time() - self._started_at, 1),
+            "health": health_summary.model_dump(),
+            "event_routing": routing_table,
+            "topology_nodes": len(self._topology_nodes),
+            "topology_edges": len(self._topology_edges),
+            "causal_clock": dict(self.causal_engine.clock),
+            "tier_hierarchy": {
+                "HUMAN": 0,
+                "ORCHESTRATOR": 1,
+                "PRIME": 2,
+                "AI": 3,
+                "AGENT": 4,
+                "BOT": 5,
+            },
+            "sentinel_channels": [ch.value for ch in SentinelChannel],
+        }
+
+
+# ---------------------------------------------------------------------------
+# Singleton Nexus Instance
+# ---------------------------------------------------------------------------
+
+_nexus_instance: Optional[DimensionalNexus] = None
+
+
+def get_nexus() -> DimensionalNexus:
+    """Get or create the singleton DimensionalNexus instance."""
+    global _nexus_instance
+    if _nexus_instance is None:
+        _nexus_instance = DimensionalNexus()
+    return _nexus_instance
+
+
+# ---------------------------------------------------------------------------
+# FastAPI Application
+# ---------------------------------------------------------------------------
+
+
+def create_nexus_app() -> FastAPI:
+    """Create the Dimensional Nexus FastAPI application."""
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        nexus = get_nexus()
+        logger.info(f"Dimensional Nexus starting: {nexus.node_id}")
+        yield
+        logger.info("Dimensional Nexus shutting down")
+
+    app = FastAPI(
+        title="Tranc3 Dimensional Nexus",
+        description="Central Nervous System for the Dimensional Infrastructure",
+        version="0.1.0",
+        lifespan=lifespan,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # --- Health Endpoints ---
+
+    @app.get("/health", response_model=NexusHealthSummary)
+    async def health_summary():
+        """Get aggregated health across all dimensional services."""
+        nexus = get_nexus()
+        return await nexus.health_aggregator.get_summary()
+
+    @app.get("/health/anomalies")
+    async def health_anomalies():
+        """Detect health anomalies across dimensional services."""
+        nexus = get_nexus()
+        return await nexus.health_aggregator.detect_anomalies()
+
+    @app.get("/health/service/{service_id}", response_model=NexusServiceHealth)
+    async def service_health(service_id: str):
+        """Get health for a specific dimensional service."""
+        nexus = get_nexus()
+        if service_id in nexus.health_aggregator._services:
+            return nexus.health_aggregator._services[service_id]
+        raise HTTPException(status_code=404, detail=f"Service {service_id} not found")
+
+    # --- Access Control Endpoints ---
+
+    @app.post("/access/check", response_model=NexusAccessDecision)
+    async def check_access(request: Request):
+        """Perform a tier-aware access control check."""
+        body = await request.json()
+        nexus = get_nexus()
+        return await nexus.check_access(**body)
+
+    @app.get("/access/tiers")
+    async def get_tier_hierarchy():
+        """Get the tier hierarchy definition."""
+        return {
+            "0": "HUMAN — Override authority, maximum access",
+            "1": "ORCHESTRATOR — System-level coordination",
+            "2": "PRIME — Strategic decision-making",
+            "3": "AI — The overarching ML/LLM Complex",
+            "4": "AGENT — Lower-level autonomous AI",
+            "5": "BOT — Stateless service worker/function",
+        }
+
+    # --- Event Endpoints ---
+
+    @app.post("/events/emit", response_model=NexusEvent)
+    async def emit_event(request: Request):
+        """Emit a cross-dimensional event."""
+        body = await request.json()
+        nexus = get_nexus()
+        return await nexus.emit_event(**body)
+
+    @app.get("/events/recent")
+    async def recent_events(channel: Optional[str] = None, limit: int = 100):
+        """Get recent events in causal order."""
+        nexus = get_nexus()
+        return [
+            e.model_dump()
+            for e in await nexus.causal_engine.get_ordered_events(channel, limit)
+        ]
+
+    @app.get("/events/routing")
+    async def event_routing():
+        """Get the current event routing table."""
+        nexus = get_nexus()
+        return await nexus.event_router.get_routing_table()
+
+    # --- Topology Endpoints ---
+
+    @app.get("/topology")
+    async def get_topology():
+        """Get the dimensional topology graph."""
+        nexus = get_nexus()
+        return await nexus.get_topology()
+
+    @app.get("/topology/nodes")
+    async def get_topology_nodes():
+        """Get all topology nodes."""
+        nexus = get_nexus()
+        async with nexus._lock:
+            return [n.model_dump() for n in nexus._topology_nodes.values()]
+
+    @app.get("/topology/edges")
+    async def get_topology_edges():
+        """Get all topology edges."""
+        nexus = get_nexus()
+        async with nexus._lock:
+            return [e.model_dump() for e in nexus._topology_edges]
+
+    # --- Service Registration ---
+
+    @app.post("/services/register", response_model=NexusServiceHealth)
+    async def register_service(request: Request):
+        """Register a new dimensional service with the Nexus."""
+        body = await request.json()
+        nexus = get_nexus()
+        return await nexus.register_service(**body)
+
+    @app.post("/services/heartbeat")
+    async def service_heartbeat(request: Request):
+        """Submit a heartbeat for a dimensional service."""
+        body = await request.json()
+        nexus = get_nexus()
+        await nexus.health_aggregator.update_heartbeat(**body)
+        return {"status": "acknowledged"}
+
+    # --- Nexus Status ---
+
+    @app.get("/status")
+    async def nexus_status():
+        """Get the comprehensive Nexus status."""
+        nexus = get_nexus()
+        return await nexus.get_status()
+
+    @app.get("/")
+    async def root():
+        """Nexus root endpoint."""
+        return {
+            "service": "Tranc3 Dimensional Nexus",
+            "version": "0.1.0",
+            "description": "Central Nervous System for the Dimensional Infrastructure",
+            "tier_hierarchy": "HUMAN(0) → ORCHESTRATOR(1) → PRIME(2) → AI(3) → AGENT(4) → BOT(5)",
+            "channels": [ch.value for ch in SentinelChannel],
+            "endpoints": [
+                "/health", "/health/anomalies", "/health/service/{id}",
+                "/access/check", "/access/tiers",
+                "/events/emit", "/events/recent", "/events/routing",
+                "/topology", "/topology/nodes", "/topology/edges",
+                "/services/register", "/services/heartbeat",
+                "/status",
+            ],
+        }
+
+    return app
+
+
+# Create the default app instance
+app = create_nexus_app()
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=NEXUS_PORT)
