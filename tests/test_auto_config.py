@@ -1,5 +1,5 @@
 """
-Tests for shared_core.architecture.auto_config.
+Tests for Dimensional.architecture.auto_config.
 
 Covers: ConfigStatus, EnvironmentType, ConfigItem, ConfigProfile,
 DetectionResult, EnvironmentDetector, AutoConfigManager.
@@ -7,7 +7,7 @@ DetectionResult, EnvironmentDetector, AutoConfigManager.
 
 from __future__ import annotations
 
-from shared_core.architecture.auto_config import (
+from Dimensional.architecture.auto_config import (
     AutoConfigManager,
     ConfigItem,
     ConfigProfile,

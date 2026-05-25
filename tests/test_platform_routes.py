@@ -13,7 +13,7 @@ import os
 
 import pytest
 
-from shared_core.path_validation import validate_path
+from Dimensional.path_validation import validate_path
 
 os.environ.setdefault("SECRET_KEY", "test-secret-not-for-prod")
 os.environ.setdefault("ENVIRONMENT", "test")
