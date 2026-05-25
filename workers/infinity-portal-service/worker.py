@@ -476,8 +476,7 @@ async def _lifespan(app: FastAPI):
                 # Health reporter daemon
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    summary_dict = summary.to_dict()
-                    score = summary_dict.get("health_score", 1.0)
+                    score = summary.get("health_score", 1.0)
                     worker_kit.health.update_health(score)
                     worker_kit.health.record_fire("health_reporter")
 
@@ -486,7 +485,7 @@ async def _lifespan(app: FastAPI):
                         channel=SentinelChannel.PLATFORM,
                         event_type="health_report",
                         source="infinity_portal",
-                        payload=summary_dict,
+                        payload=summary,
                     ))
 
             except asyncio.CancelledError:
@@ -686,8 +685,8 @@ async def health():
         "dimensional_bus": dimensional_bus.is_running,
         "sentinel": sentinel.is_running,
         # Phase 22.6: Smart health info
-        "health_score": health_summary.to_dict().get("health_score", 1.0),
-        "health_tier": health_summary.to_dict().get("health_tier", "EXCELLENT"),
+        "health_score": health_summary.get("health_score", 1.0),
+        "health_tier": health_summary.get("tier", "EXCELLENT"),
         "smart_adaptive": True,
     }
 

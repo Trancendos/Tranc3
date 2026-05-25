@@ -318,13 +318,13 @@ async def _lifespan(app: FastAPI):
                 await asyncio.sleep(15)
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    summary_dict = summary.to_dict(); worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
+                    worker_kit.health.update_health(summary.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
                     await sentinel.publish(SentinelEvent(
                         channel=SentinelChannel.PLATFORM,
                         event_type="health_report",
                         source="infinity_one",
-                        payload=summary_dict,
+                        payload=summary,
                     ))
             except asyncio.CancelledError:
                 break
@@ -474,8 +474,8 @@ async def health():
         "purpose": "Single Identity Management — one login, multi-app access",
         "dimensional_bus": dimensional_bus.is_running,
         "sentinel": sentinel.is_running,
-        "health_score": health_summary.to_dict().get("health_score", 1.0),
-        "health_tier": health_summary.to_dict().get("health_tier", "EXCELLENT"),
+        "health_score": health_summary.get("health_score", 1.0),
+        "health_tier": health_summary.get("tier", "EXCELLENT"),
         "smart_adaptive": True,
     }
 

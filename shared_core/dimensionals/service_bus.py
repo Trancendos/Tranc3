@@ -426,7 +426,7 @@ class DimensionalServiceBus:
             asyncio.TimeoutError: If no reply is received within timeout
         """
         correlation_id = uuid.uuid4().hex[:16]
-        future: asyncio.Future[BusMessage] = asyncio.get_running_loop().create_future()
+        future: asyncio.Future[BusMessage] = asyncio.get_event_loop().create_future()
         self._pending_requests[correlation_id] = future
 
         message = BusMessage(

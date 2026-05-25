@@ -71,20 +71,6 @@ from typing import Any, Callable, Dict, List, Optional
 
 from shared_core.sanitize import sanitize_for_log
 
-
-def _try_async_schedule(coro):
-    """Safely schedule a coroutine on the event loop if one is running.
-
-    Prevents RuntimeError when no event loop exists (e.g., after test teardown
-    or in purely synchronous contexts). Returns True if scheduled, False otherwise.
-    """
-    try:
-        loop = asyncio.get_running_loop()
-        loop.call_soon_threadsafe(asyncio.ensure_future, coro)
-        return True
-    except RuntimeError:
-        return False
-
 logger = logging.getLogger(__name__)
 
 # ── Optional imports (graceful degradation) ──────────────────────────────────
@@ -494,7 +480,8 @@ class InfinityHealthOrchestrator:
         # Update reactive state
         tier_label, tier_icon = HealthTier.classify(score)
         if self.health_state and _REACTIVE_AVAILABLE:
-            _try_async_schedule(
+            asyncio.get_event_loop().call_soon_threadsafe(
+                asyncio.ensure_future,
                 self.health_state.set(
                     {
                         "score": round(score, 4),
@@ -509,7 +496,10 @@ class InfinityHealthOrchestrator:
         # Publish to Sentinel Station
         if self.config.sentinel_publish_fn and score < 0.7:
             try:
-                _try_async_schedule(self._publish_health_event(score, tier_label, reason))
+                asyncio.get_event_loop().call_soon_threadsafe(
+                    asyncio.ensure_future,
+                    self._publish_health_event(score, tier_label, reason),
+                )
             except Exception as e:
                 logger.debug("Sentinel health publish error: %s", sanitize_for_log(str(e)))
 
@@ -553,7 +543,8 @@ class InfinityHealthOrchestrator:
 
         # Publish to Sentinel security channel for critical anomalies
         if severity in ("high", "critical") and self.config.sentinel_publish_fn:
-            _try_async_schedule(
+            asyncio.get_event_loop().call_soon_threadsafe(
+                asyncio.ensure_future,
                 self.config.sentinel_publish_fn(
                     "anomaly_detected",
                     {

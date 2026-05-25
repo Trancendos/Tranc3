@@ -425,21 +425,17 @@ class InfinityFluidicGateway:
                 cell.weight = max(0.1, cell.weight * 0.5)
         # Update reactive topology
         if self.topology_state and _REACTIVE_AVAILABLE:
-            try:
-                loop = asyncio.get_running_loop()
-                loop.call_soon_threadsafe(
-                    asyncio.ensure_future,
-                    self.topology_state.update(
-                        **{
-                            location_key: {
-                                "healthy": is_healthy,
-                                "weight": round(cell.effective_weight if cell else 0.0, 4),
-                            }
+            asyncio.get_event_loop().call_soon_threadsafe(
+                asyncio.ensure_future,
+                self.topology_state.update(
+                    **{
+                        location_key: {
+                            "healthy": is_healthy,
+                            "weight": round(cell.effective_weight if cell else 0.0, 4),
                         }
-                    ),
-                )
-            except RuntimeError:
-                pass
+                    }
+                ),
+            )
 
     # ── Query Interface ───────────────────────────────────────────────────────
 

@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Tranc3 AI Platform — Infinity Ecosystem Dashboard">
   <title>Tranc3 AI Platform — Infinity Ecosystem</title>
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -14,10 +13,7 @@
 </head>
 <body>
 
-<!-- Skip to content link for accessibility -->
-<a href="#main-content" class="skip-link" role="link" style="position:absolute;top:-100px;left:0;background:var(--accent-blue);color:#fff;padding:8px 16px;z-index:9999;border-radius:0 0 8px 0;font-size:14px;">Skip to main content</a>
-
-<div class="platform-bg" aria-hidden="true">
+<div class="platform-bg">
   <div class="bg-stars"></div>
   <div class="bg-nebula"></div>
   <div class="bg-grid"></div>
@@ -26,94 +22,88 @@
 <div class="platform-shell">
 
   <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="brand-icon"><span class="brand-infinity" aria-hidden="true">∞</span></div>
+      <div class="brand-icon"><span class="brand-infinity">∞</span></div>
       <div class="brand-text">
         <h1>Tranc3</h1>
-        <span>Infinity Ecosystem v0.8.0</span>
+        <span>Infinity Ecosystem v0.7.0</span>
       </div>
     </div>
 
     <nav class="sidebar-nav">
       <div class="nav-section">
-        <span class="nav-section-label" aria-hidden="true">Overview</span>
-        <a href="#" class="nav-item active" data-view="overview" onclick="switchView('overview',this)" role="menuitem" aria-current="page">
-          <span class="nav-icon" aria-hidden="true">◇</span><span>Dashboard</span>
-          <span class="nav-badge" id="badge-health" aria-label="System healthy">●</span>
+        <span class="nav-section-label">Overview</span>
+        <a href="#" class="nav-item active" data-view="overview" onclick="switchView('overview',this)">
+          <span class="nav-icon">⬡</span><span>Dashboard</span>
+          <span class="nav-badge" id="badge-health">●</span>
         </a>
-        <a href="#" class="nav-item" data-view="agents" onclick="switchView('agents',this)" role="menuitem">
-          <span class="nav-icon" aria-hidden="true">⚡</span><span>AI Agents</span>
-          <span class="nav-count" id="count-agents" aria-label="Active agents">0</span>
+        <a href="#" class="nav-item" data-view="agents" onclick="switchView('agents',this)">
+          <span class="nav-icon">⚡</span><span>AI Agents</span>
+          <span class="nav-count" id="count-agents">0</span>
         </a>
-        <a href="#" class="nav-item" data-view="models" onclick="switchView('models',this)" role="menuitem">
-          <span class="nav-icon" aria-hidden="true">🧠</span><span>Models</span>
+        <a href="#" class="nav-item" data-view="models" onclick="switchView('models',this)">
+          <span class="nav-icon">🧠</span><span>Models</span>
         </a>
-        <a href="#" class="nav-item" data-view="workflows" onclick="switchView('workflows',this)" role="menuitem">
-          <span class="nav-icon" aria-hidden="true">◈</span><span>Workflows</span>
-        </a>
-      </div>
-
-      <div class="nav-section">
-        <span class="nav-section-label" aria-hidden="true">Infinity Ecosystem</span>
-        <a href="#" class="nav-item" data-view="infinity-portal" onclick="switchView('infinity-portal',this)" role="menuitem">
-          <span class="nav-icon" style="color:var(--pillar-creation)" aria-hidden="true">⬟</span><span>Portal</span>
-          <span class="nav-service-badge" aria-label="Port 8042">8042</span>
-        </a>
-        <a href="#" class="nav-item" data-view="infinity-one" onclick="switchView('infinity-one',this)" role="menuitem">
-          <span class="nav-icon" style="color:var(--pillar-governance)" aria-hidden="true">◉</span><span>Infinity One</span>
-          <span class="nav-service-badge" aria-label="Port 8043">8043</span>
-        </a>
-        <a href="#" class="nav-item" data-view="infinity-admin" onclick="switchView('infinity-admin',this)" role="menuitem">
-          <span class="nav-icon" style="color:var(--pillar-security)" aria-hidden="true">◇</span><span>Admin</span>
-          <span class="nav-service-badge" aria-label="Port 8044">8044</span>
-        </a>
-        <a href="#" class="nav-item" data-view="gateway" onclick="switchView('gateway',this)" role="menuitem">
-          <span class="nav-icon" style="color:var(--pillar-intelligence)" aria-hidden="true">⟁</span><span>Gateway</span>
-          <span class="nav-service-badge" aria-label="Port 8040">8040</span>
-        </a>
-        <a href="#" class="nav-item" data-view="sentinel" onclick="switchView('sentinel',this)" role="menuitem">
-          <span class="nav-icon" style="color:var(--pillar-nexus)" aria-hidden="true">⬢</span><span>Sentinel Station</span>
-          <span class="nav-service-badge" aria-label="Port 8041">8041</span>
+        <a href="#" class="nav-item" data-view="workflows" onclick="switchView('workflows',this)">
+          <span class="nav-icon">◈</span><span>Workflows</span>
         </a>
       </div>
 
       <div class="nav-section">
-        <span class="nav-section-label" aria-hidden="true">Intelligence</span>
-        <a href="#" class="nav-item" data-view="security" onclick="switchView('security',this)" role="menuitem">
-          <span class="nav-icon" aria-hidden="true">🛡</span><span>Defense Layer</span>
-          <span class="nav-count" id="count-threats" aria-label="Threats blocked">0</span>
+        <span class="nav-section-label">Infinity Ecosystem</span>
+        <a href="#" class="nav-item" data-view="infinity-portal" onclick="switchView('infinity-portal',this)">
+          <span class="nav-icon" style="color:var(--pillar-creation)">⬟</span><span>Portal</span>
+          <span class="nav-service-badge">8042</span>
         </a>
-        <a href="#" class="nav-item" data-view="pulse" onclick="switchView('pulse',this)" role="menuitem">
-          <span class="nav-icon" aria-hidden="true">◈</span><span>Adaptive Pulse</span>
+        <a href="#" class="nav-item" data-view="infinity-one" onclick="switchView('infinity-one',this)">
+          <span class="nav-icon" style="color:var(--pillar-governance)">◉</span><span>Infinity One</span>
+          <span class="nav-service-badge">8043</span>
         </a>
-        <a href="#" class="nav-item" data-view="routing" onclick="switchView('routing',this)" role="menuitem">
-          <span class="nav-icon" aria-hidden="true">⟁</span><span>Fluidic Routing</span>
+        <a href="#" class="nav-item" data-view="infinity-admin" onclick="switchView('infinity-admin',this)">
+          <span class="nav-icon" style="color:var(--pillar-security)">⬡</span><span>Admin</span>
+          <span class="nav-service-badge">8044</span>
         </a>
-        <a href="#" class="nav-item" data-view="foresight" onclick="switchView('foresight',this)" role="menuitem">
-          <span class="nav-icon" aria-hidden="true">◎</span><span>Foresight</span>
+        <a href="#" class="nav-item" data-view="gateway" onclick="switchView('gateway',this)">
+          <span class="nav-icon" style="color:var(--pillar-intelligence)">⟁</span><span>Gateway</span>
+          <span class="nav-service-badge">8040</span>
+        </a>
+        <a href="#" class="nav-item" data-view="sentinel" onclick="switchView('sentinel',this)">
+          <span class="nav-icon" style="color:var(--pillar-nexus)">⬢</span><span>Sentinel Station</span>
+          <span class="nav-service-badge">8041</span>
         </a>
       </div>
 
       <div class="nav-section">
-        <span class="nav-section-label" aria-hidden="true">Platform</span>
-        <a href="#" class="nav-item" data-view="dimensionals" onclick="switchView('dimensionals',this)" role="menuitem">
-          <span class="nav-icon" aria-hidden="true">◇</span><span>Dimensionals</span>
+        <span class="nav-section-label">Intelligence</span>
+        <a href="#" class="nav-item" data-view="security" onclick="switchView('security',this)">
+          <span class="nav-icon">🛡</span><span>Defense Layer</span>
+          <span class="nav-count" id="count-threats">0</span>
         </a>
-        <a href="#" class="nav-item" data-view="tiers" onclick="switchView('tiers',this)" role="menuitem">
-          <span class="nav-icon" aria-hidden="true">◈</span><span>Tier Structure</span>
+        <a href="#" class="nav-item" data-view="pulse" onclick="switchView('pulse',this)">
+          <span class="nav-icon">◈</span><span>Adaptive Pulse</span>
         </a>
-        <a href="#" class="nav-item" data-view="builder" onclick="switchView('builder',this)" role="menuitem">
-          <span class="nav-icon" aria-hidden="true">🧱</span><span>Builder</span>
+        <a href="#" class="nav-item" data-view="routing" onclick="switchView('routing',this)">
+          <span class="nav-icon">⟁</span><span>Fluidic Routing</span>
         </a>
-        <a href="#" class="nav-item" data-view="tokens" onclick="switchView('tokens',this)" role="menuitem">
-          <span class="nav-icon" aria-hidden="true">🎨</span><span>Design Tokens</span>
+        <a href="#" class="nav-item" data-view="foresight" onclick="switchView('foresight',this)">
+          <span class="nav-icon">◎</span><span>Foresight</span>
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <span class="nav-section-label">Platform</span>
+        <a href="#" class="nav-item" data-view="dimensionals" onclick="switchView('dimensionals',this)">
+          <span class="nav-icon">⬡</span><span>Dimensionals</span>
+        </a>
+        <a href="#" class="nav-item" data-view="tiers" onclick="switchView('tiers',this)">
+          <span class="nav-icon">◈</span><span>Tier Structure</span>
         </a>
       </div>
     </nav>
 
-    <div class="sidebar-status" aria-live="polite">
-      <div class="status-dot" id="status-dot-main" role="status" aria-label="Platform status"></div>
+    <div class="sidebar-status">
+      <div class="status-dot" id="status-dot-main"></div>
       <div class="status-info">
         <span class="status-label">Platform</span>
         <span class="status-value" id="status-main">Connecting...</span>
@@ -122,56 +112,44 @@
   </aside>
 
   <!-- Main Content -->
-  <main class="main-content" id="main-content" role="main">
+  <main class="main-content">
 
-    <header class="topbar" role="banner">
+    <header class="topbar">
       <div class="topbar-left">
-        <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar" title="Toggle sidebar">☰</button>
-        <div class="breadcrumb" aria-label="Breadcrumb">
-          <span aria-hidden="true">∞ Infinity</span>
-          <span class="breadcrumb-sep" aria-hidden="true">›</span>
-          <span id="breadcrumb-current" aria-current="page">Dashboard</span>
+        <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+        <div class="breadcrumb">
+          <span>∞ Infinity</span>
+          <span class="breadcrumb-sep">›</span>
+          <span id="breadcrumb-current">Dashboard</span>
         </div>
       </div>
       <div class="topbar-center">
         <div class="ecosystem-pill">
-          <span class="pill-icon" aria-hidden="true">∞</span>
+          <span class="pill-icon">∞</span>
           <span>Trancendos Universe</span>
-          <span class="pill-version">Phase 23</span>
+          <span class="pill-version">Phase 22.6</span>
         </div>
       </div>
       <div class="topbar-right">
-        <div class="health-badge" id="health-badge" aria-label="System health">
-          <span class="health-icon" id="health-icon" aria-hidden="true">◎</span>
+        <div class="health-badge" id="health-badge">
+          <span class="health-icon" id="health-icon">◎</span>
           <span class="health-label" id="health-label">—</span>
         </div>
-        <div class="topbar-clock" id="topbar-clock" aria-label="Current time" role="timer">—</div>
-        <div class="layout-controls" role="toolbar" aria-label="Layout controls">
-          <button class="layout-btn active" data-layout="grid" onclick="setLayout('grid')" aria-label="Grid layout" title="Grid layout">⊞</button>
-          <button class="layout-btn" data-layout="2-col" onclick="setLayout('2col')" aria-label="2 column layout" title="2 column">▤</button>
-          <button class="layout-btn" data-layout="1-col" onclick="setLayout('1col')" aria-label="Single column layout" title="Single column">☰</button>
-        </div>
-        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark/light theme" title="Toggle theme" role="switch" aria-checked="false">
-          <div class="theme-toggle-knob">
-            <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
-          </div>
-        </button>
-        <button class="btn btn-icon" onclick="refreshAll()" title="Refresh" aria-label="Refresh all services">↻</button>
+        <div class="topbar-clock" id="topbar-clock">—</div>
+        <button class="btn btn-icon" onclick="refreshAll()" title="Refresh">↻</button>
       </div>
     </header>
 
-    <div class="alert-banner" id="alert-banner" style="display:none" role="alert" aria-live="assertive"></div>
+    <div class="alert-banner" id="alert-banner" style="display:none"></div>
 
-    <!-- ═══════════════════════════════════════════════════════════
-         OVERVIEW — Building Block Layout
-         ═══════════════════════════════════════════════════════════ -->
-    <div class="view active" id="view-overview" role="region" aria-label="Dashboard overview">
+    <!-- OVERVIEW -->
+    <div class="view active" id="view-overview">
       <div class="view-hero">
         <div class="hero-title">
           <h2>Infinity Ecosystem</h2>
           <p>Smart Adaptive Intelligence · Proactive Defense · Fluidic Routing</p>
         </div>
-        <div class="hero-badges" aria-label="Tier badges">
+        <div class="hero-badges">
           <span class="tier-badge tier-0">0 · Human</span>
           <span class="tier-badge tier-1">1 · Orchestrator</span>
           <span class="tier-badge tier-2">2 · Prime</span>
@@ -181,274 +159,132 @@
         </div>
       </div>
 
-      <!-- KPI Building Block Row -->
-      <div class="block-grid" style="grid-template-columns: repeat(6, 1fr); margin-bottom: 20px;" role="group" aria-label="Key performance indicators">
-        <div class="stat-card" role="figure" aria-label="Active Agents">
-          <span class="stat-card-label">Active Agents</span>
-          <span class="stat-card-value" id="kpi-agents-val">—</span>
-          <span class="stat-card-change neutral" id="kpi-agents-change">—</span>
-        </div>
-        <div class="stat-card" role="figure" aria-label="Models">
-          <span class="stat-card-label">Models</span>
-          <span class="stat-card-value" id="kpi-models-val">—</span>
-          <span class="stat-card-change neutral" id="kpi-models-change">—</span>
-        </div>
-        <div class="stat-card" role="figure" aria-label="Workflows">
-          <span class="stat-card-label">Workflows</span>
-          <span class="stat-card-value" id="kpi-workflows-val">—</span>
-          <span class="stat-card-change neutral" id="kpi-workflows-change">—</span>
-        </div>
-        <div class="stat-card" role="figure" aria-label="Requests per minute">
-          <span class="stat-card-label">Req/min</span>
-          <span class="stat-card-value" id="kpi-requests-val">—</span>
-          <span class="stat-card-change neutral" id="kpi-requests-change">—</span>
-        </div>
-        <div class="stat-card" role="figure" aria-label="Health Score">
-          <span class="stat-card-label">Health Score</span>
-          <span class="stat-card-value" id="kpi-health-val">—</span>
-          <span class="stat-card-change neutral" id="kpi-health-change">—</span>
-        </div>
-        <div class="stat-card" role="figure" aria-label="Threats Blocked">
-          <span class="stat-card-label">Blocked</span>
-          <span class="stat-card-value" id="kpi-threats-val" style="color:var(--accent-red)">—</span>
-          <span class="stat-card-change neutral" id="kpi-threats-change">—</span>
-        </div>
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-icon">⚡</div><div class="kpi-body"><div class="kpi-value" id="kpi-agents-val">—</div><div class="kpi-label">Active Agents</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon">🧠</div><div class="kpi-body"><div class="kpi-value" id="kpi-models-val">—</div><div class="kpi-label">Models</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon">◈</div><div class="kpi-body"><div class="kpi-value" id="kpi-workflows-val">—</div><div class="kpi-label">Workflows</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon">⟁</div><div class="kpi-body"><div class="kpi-value" id="kpi-requests-val">—</div><div class="kpi-label">Req/min</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon">◎</div><div class="kpi-body"><div class="kpi-value" id="kpi-health-val">—</div><div class="kpi-label">Health Score</div></div></div>
+        <div class="kpi-card kpi-threat"><div class="kpi-icon">🛡</div><div class="kpi-body"><div class="kpi-value" id="kpi-threats-val">—</div><div class="kpi-label">Blocked</div></div></div>
       </div>
 
-      <!-- Infinity Services Block Grid -->
       <div class="section-header">
         <h3>Infinity Services</h3>
         <span class="section-meta">Live Health · <span id="last-updated">—</span></span>
       </div>
 
-      <div class="block-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;" role="group" aria-label="Infinity services">
-        <!-- Portal Block -->
-        <div class="block" id="card-portal" role="article" aria-label="Portal service">
-          <div class="block-header">
-            <span class="block-drag-handle" aria-hidden="true" title="Drag to reorder">⠿</span>
-            <span class="block-header-icon" aria-hidden="true" style="color:var(--pillar-creation)">⬟</span>
-            <span class="block-header-title">Portal</span>
-            <span class="block-header-badge" aria-label="Port 8042">:8042</span>
-            <div class="block-header-actions">
-              <button class="block-action-btn" aria-label="Portal details" title="View details" onclick="switchView('infinity-portal',document.querySelector('[data-view=infinity-portal]'))">↗</button>
-            </div>
+      <div class="infinity-grid">
+        <div class="infinity-card pillar-creation" id="card-portal">
+          <div class="infinity-card-header">
+            <div class="infinity-card-icon">⬟</div>
+            <div class="infinity-card-title"><h4>Portal</h4><span class="infinity-port">:8042</span></div>
+            <div class="service-health-dot" id="dot-portal"></div>
           </div>
-          <div class="block-body">
+          <div class="infinity-card-body">
             <div class="service-stat"><span class="stat-label">Health</span><span class="stat-value" id="portal-health-score">—</span></div>
             <div class="service-stat"><span class="stat-label">Sessions</span><span class="stat-value" id="portal-sessions">—</span></div>
             <div class="service-stat"><span class="stat-label">Defense</span><span class="smart-badge" id="portal-defense">—</span></div>
           </div>
-          <div class="block-footer">
-            <span>Front Door</span>
-            <span class="smart-badge">🧠 Smart</span>
-          </div>
+          <div class="infinity-card-footer"><span class="location-tag">Front Door</span><span class="smart-badge">🧠 Smart</span></div>
         </div>
 
-        <!-- Infinity One Block -->
-        <div class="block" id="card-one" role="article" aria-label="Infinity One service">
-          <div class="block-header">
-            <span class="block-drag-handle" aria-hidden="true" title="Drag to reorder">⠿</span>
-            <span class="block-header-icon" aria-hidden="true" style="color:var(--pillar-governance)">◉</span>
-            <span class="block-header-title">Infinity One</span>
-            <span class="block-header-badge" aria-label="Port 8043">:8043</span>
-            <div class="block-header-actions">
-              <button class="block-action-btn" aria-label="One details" title="View details" onclick="switchView('infinity-one',document.querySelector('[data-view=infinity-one]'))">↗</button>
-            </div>
+        <div class="infinity-card pillar-governance" id="card-one">
+          <div class="infinity-card-header">
+            <div class="infinity-card-icon">◉</div>
+            <div class="infinity-card-title"><h4>Infinity One</h4><span class="infinity-port">:8043</span></div>
+            <div class="service-health-dot" id="dot-one"></div>
           </div>
-          <div class="block-body">
+          <div class="infinity-card-body">
             <div class="service-stat"><span class="stat-label">Health</span><span class="stat-value" id="one-health-score">—</span></div>
             <div class="service-stat"><span class="stat-label">Identities</span><span class="stat-value" id="one-identities">—</span></div>
             <div class="service-stat"><span class="stat-label">Apps</span><span class="stat-value" id="one-apps">—</span></div>
           </div>
-          <div class="block-footer">
-            <span>Single Identity</span>
-            <span class="smart-badge">🧠 Smart</span>
-          </div>
+          <div class="infinity-card-footer"><span class="location-tag">Single Identity</span><span class="smart-badge">🧠 Smart</span></div>
         </div>
 
-        <!-- Admin Block -->
-        <div class="block" id="card-admin" role="article" aria-label="Admin service">
-          <div class="block-header">
-            <span class="block-drag-handle" aria-hidden="true" title="Drag to reorder">⠿</span>
-            <span class="block-header-icon" aria-hidden="true" style="color:var(--pillar-security)">◇</span>
-            <span class="block-header-title">Admin</span>
-            <span class="block-header-badge" aria-label="Port 8044">:8044</span>
-            <div class="block-header-actions">
-              <button class="block-action-btn" aria-label="Admin details" title="View details" onclick="switchView('infinity-admin',document.querySelector('[data-view=infinity-admin]'))">↗</button>
-            </div>
+        <div class="infinity-card pillar-security" id="card-admin">
+          <div class="infinity-card-header">
+            <div class="infinity-card-icon">⬡</div>
+            <div class="infinity-card-title"><h4>Admin</h4><span class="infinity-port">:8044</span></div>
+            <div class="service-health-dot" id="dot-admin"></div>
           </div>
-          <div class="block-body">
+          <div class="infinity-card-body">
             <div class="service-stat"><span class="stat-label">Health</span><span class="stat-value" id="admin-health-score">—</span></div>
             <div class="service-stat"><span class="stat-label">Configs</span><span class="stat-value" id="admin-configs">—</span></div>
             <div class="service-stat"><span class="stat-label">Blocked IPs</span><span class="stat-value threat-value" id="admin-blocked">—</span></div>
           </div>
-          <div class="block-footer">
-            <span>Management OS</span>
-            <span class="smart-badge">🛡 Defense+</span>
-          </div>
+          <div class="infinity-card-footer"><span class="location-tag">Management OS</span><span class="smart-badge">🛡 Defense+</span></div>
         </div>
 
-        <!-- Gateway Block -->
-        <div class="block" id="card-gateway" role="article" aria-label="Gateway service">
-          <div class="block-header">
-            <span class="block-drag-handle" aria-hidden="true" title="Drag to reorder">⠿</span>
-            <span class="block-header-icon" aria-hidden="true" style="color:var(--pillar-intelligence)">⟁</span>
-            <span class="block-header-title">Gateway</span>
-            <span class="block-header-badge" aria-label="Port 8040">:8040</span>
-            <div class="block-header-actions">
-              <button class="block-action-btn" aria-label="Gateway details" title="View details" onclick="switchView('gateway',document.querySelector('[data-view=gateway]'))">↗</button>
-            </div>
+        <div class="infinity-card pillar-intelligence" id="card-gateway">
+          <div class="infinity-card-header">
+            <div class="infinity-card-icon">⟁</div>
+            <div class="infinity-card-title"><h4>Gateway</h4><span class="infinity-port">:8040</span></div>
+            <div class="service-health-dot" id="dot-gateway"></div>
           </div>
-          <div class="block-body">
+          <div class="infinity-card-body">
             <div class="service-stat"><span class="stat-label">Health</span><span class="stat-value" id="gateway-health-score">—</span></div>
             <div class="service-stat"><span class="stat-label">Cache</span><span class="stat-value" id="gateway-cache">—</span></div>
             <div class="service-stat"><span class="stat-label">Circuits</span><span class="stat-value" id="gateway-circuits">—</span></div>
           </div>
-          <div class="block-footer">
-            <span>Fluidic Gateway</span>
-            <span class="smart-badge">⟁ Fluidic</span>
-          </div>
+          <div class="infinity-card-footer"><span class="location-tag">Fluidic Gateway</span><span class="smart-badge">⟁ Fluidic</span></div>
         </div>
 
-        <!-- Sentinel Block -->
-        <div class="block" id="card-sentinel" role="article" aria-label="Sentinel Station service">
-          <div class="block-header">
-            <span class="block-drag-handle" aria-hidden="true" title="Drag to reorder">⠿</span>
-            <span class="block-header-icon" aria-hidden="true" style="color:var(--pillar-nexus)">⬢</span>
-            <span class="block-header-title">Sentinel Station</span>
-            <span class="block-header-badge" aria-label="Port 8041">:8041</span>
-            <div class="block-header-actions">
-              <button class="block-action-btn" aria-label="Sentinel details" title="View details" onclick="switchView('sentinel',document.querySelector('[data-view=sentinel]'))">↗</button>
-            </div>
+        <div class="infinity-card pillar-nexus" id="card-sentinel">
+          <div class="infinity-card-header">
+            <div class="infinity-card-icon">⬢</div>
+            <div class="infinity-card-title"><h4>Sentinel Station</h4><span class="infinity-port">:8041</span></div>
+            <div class="service-health-dot" id="dot-sentinel"></div>
           </div>
-          <div class="block-body">
+          <div class="infinity-card-body">
             <div class="service-stat"><span class="stat-label">Health</span><span class="stat-value" id="sentinel-health-score">—</span></div>
             <div class="service-stat"><span class="stat-label">Events</span><span class="stat-value" id="sentinel-events">—</span></div>
             <div class="service-stat"><span class="stat-label">Subscribers</span><span class="stat-value" id="sentinel-subs">—</span></div>
           </div>
-          <div class="block-footer">
-            <span>Event Bus</span>
-            <span class="smart-badge">⬢ Reactive</span>
-          </div>
+          <div class="infinity-card-footer"><span class="location-tag">Event Bus</span><span class="smart-badge">⬢ Reactive</span></div>
         </div>
 
-        <!-- Auth Block -->
-        <div class="block" id="card-auth" role="article" aria-label="Auth service">
-          <div class="block-header">
-            <span class="block-drag-handle" aria-hidden="true" title="Drag to reorder">⠿</span>
-            <span class="block-header-icon" aria-hidden="true">🔐</span>
-            <span class="block-header-title">Auth</span>
-            <span class="block-header-badge" aria-label="Port 8005">:8005</span>
+        <div class="infinity-card pillar-creation" id="card-auth">
+          <div class="infinity-card-header">
+            <div class="infinity-card-icon">🔐</div>
+            <div class="infinity-card-title"><h4>Auth</h4><span class="infinity-port">:8005</span></div>
+            <div class="service-health-dot" id="dot-auth"></div>
           </div>
-          <div class="block-body">
+          <div class="infinity-card-body">
             <div class="service-stat"><span class="stat-label">Health</span><span class="stat-value" id="auth-health-score">—</span></div>
             <div class="service-stat"><span class="stat-label">JWT</span><span class="stat-value">HS256</span></div>
             <div class="service-stat"><span class="stat-label">Blocked IPs</span><span class="stat-value threat-value" id="auth-blocked">—</span></div>
           </div>
-          <div class="block-footer">
-            <span>OAuth2 · SSO</span>
-            <span class="smart-badge">🔐 Hardened</span>
-          </div>
+          <div class="infinity-card-footer"><span class="location-tag">OAuth2 · SSO</span><span class="smart-badge">🔐 Hardened</span></div>
         </div>
       </div>
 
-      <!-- Widget Row: Sentinel Feed + System Health + Activity -->
-      <div class="block-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 24px;" role="group" aria-label="Live monitoring widgets">
-        <!-- Sentinel Live Feed Widget -->
-        <div class="widget" role="complementary" aria-label="Sentinel live event feed">
-          <div class="widget-header">
-            <span class="widget-header-icon" aria-hidden="true">⬢</span>
-            <span class="widget-header-title">Sentinel Live Feed</span>
-            <span class="widget-header-badge live" id="sentinel-live-dot" aria-label="Live connection status">● LIVE</span>
+      <div class="two-col-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-icon">⬢</span>
+            <h3>Sentinel Live Feed</h3>
+            <span class="live-dot" id="sentinel-live-dot">●</span>
           </div>
-          <div class="widget-body">
-            <div class="sentinel-feed" id="sentinel-feed" role="log" aria-label="Event feed" aria-live="polite">
+          <div class="panel-body">
+            <div class="sentinel-feed" id="sentinel-feed">
               <div class="feed-empty">Connecting to Sentinel Station…</div>
             </div>
           </div>
         </div>
 
-        <!-- System Health Widget -->
-        <div class="widget" role="complementary" aria-label="System health overview">
-          <div class="widget-header">
-            <span class="widget-header-icon" aria-hidden="true">◎</span>
-            <span class="widget-header-title">System Health</span>
-            <span class="widget-header-badge info" id="health-widget-badge">6 services</span>
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-icon">◎</span>
+            <h3>Foresight — Predictive Trajectory</h3>
           </div>
-          <div class="widget-body">
-            <div class="health-widget-grid" id="health-widget-grid" role="list" aria-label="Service health indicators">
-              <!-- Populated by JS -->
-            </div>
-          </div>
-        </div>
-
-        <!-- Foresight Trajectory Widget -->
-        <div class="widget" role="complementary" aria-label="Predictive health trajectory">
-          <div class="widget-header">
-            <span class="widget-header-icon" aria-hidden="true">◎</span>
-            <span class="widget-header-title">Foresight Trajectory</span>
-            <span class="widget-header-badge info">Predictive</span>
-          </div>
-          <div class="widget-body">
-            <div class="foresight-panel" id="foresight-panel" role="list" aria-label="Health trajectories">
-              <div class="trajectory-row" role="listitem"><span class="traj-service">Portal</span><div class="traj-bar-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="traj-bar" id="traj-portal" style="width:0%"></div></div><span class="traj-label" id="traj-portal-lbl">—</span></div>
-              <div class="trajectory-row" role="listitem"><span class="traj-service">One</span><div class="traj-bar-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="traj-bar" id="traj-one" style="width:0%"></div></div><span class="traj-label" id="traj-one-lbl">—</span></div>
-              <div class="trajectory-row" role="listitem"><span class="traj-service">Admin</span><div class="traj-bar-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="traj-bar" id="traj-admin" style="width:0%"></div></div><span class="traj-label" id="traj-admin-lbl">—</span></div>
-              <div class="trajectory-row" role="listitem"><span class="traj-service">Gateway</span><div class="traj-bar-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="traj-bar" id="traj-gateway" style="width:0%"></div></div><span class="traj-label" id="traj-gateway-lbl">—</span></div>
-              <div class="trajectory-row" role="listitem"><span class="traj-service">Sentinel</span><div class="traj-bar-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><div class="traj-bar" id="traj-sentinel" style="width:0%"></div></div><span class="traj-label" id="traj-sentinel-lbl">—</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Actions Widget Row -->
-      <div class="block-grid" style="grid-template-columns: 2fr 1fr; margin-bottom: 24px;" role="group" aria-label="Quick actions and recent activity">
-        <!-- Recent Activity Widget -->
-        <div class="widget" role="complementary" aria-label="Recent platform activity">
-          <div class="widget-header">
-            <span class="widget-header-icon" aria-hidden="true">◈</span>
-            <span class="widget-header-title">Recent Activity</span>
-            <span class="widget-header-badge info">Last 24h</span>
-          </div>
-          <div class="widget-body">
-            <div class="activity-feed" id="activity-feed" role="log" aria-label="Recent activities">
-              <!-- Populated by JS -->
-            </div>
-          </div>
-        </div>
-
-        <!-- Quick Actions Widget -->
-        <div class="widget" role="complementary" aria-label="Quick actions">
-          <div class="widget-header">
-            <span class="widget-header-icon" aria-hidden="true">⚡</span>
-            <span class="widget-header-title">Quick Actions</span>
-          </div>
-          <div class="widget-body">
-            <div class="quick-actions-grid" role="group" aria-label="Quick action buttons">
-              <button class="quick-action-btn" onclick="switchView('security',document.querySelector('[data-view=security]'))" aria-label="View defense layer">
-                <span class="quick-action-icon" aria-hidden="true">🛡</span>
-                <span>Defense</span>
-              </button>
-              <button class="quick-action-btn" onclick="switchView('pulse',document.querySelector('[data-view=pulse]'))" aria-label="View adaptive pulse">
-                <span class="quick-action-icon" aria-hidden="true">◈</span>
-                <span>Pulse</span>
-              </button>
-              <button class="quick-action-btn" onclick="switchView('foresight',document.querySelector('[data-view=foresight]'))" aria-label="View foresight engine">
-                <span class="quick-action-icon" aria-hidden="true">◎</span>
-                <span>Foresight</span>
-              </button>
-              <button class="quick-action-btn" onclick="switchView('routing',document.querySelector('[data-view=routing]'))" aria-label="View fluidic routing">
-                <span class="quick-action-icon" aria-hidden="true">⟁</span>
-                <span>Routing</span>
-              </button>
-              <button class="quick-action-btn" onclick="switchView('builder',document.querySelector('[data-view=builder]'))" aria-label="Open dashboard builder">
-                <span class="quick-action-icon" aria-hidden="true">🧱</span>
-                <span>Builder</span>
-              </button>
-              <button class="quick-action-btn" onclick="switchView('tokens',document.querySelector('[data-view=tokens]'))" aria-label="View design tokens">
-                <span class="quick-action-icon" aria-hidden="true">🎨</span>
-                <span>Tokens</span>
-              </button>
+          <div class="panel-body">
+            <div class="foresight-panel" id="foresight-panel">
+              <div class="trajectory-row"><span class="traj-service">Portal</span><div class="traj-bar-wrap"><div class="traj-bar" id="traj-portal" style="width:0%"></div></div><span class="traj-label" id="traj-portal-lbl">—</span></div>
+              <div class="trajectory-row"><span class="traj-service">One</span><div class="traj-bar-wrap"><div class="traj-bar" id="traj-one" style="width:0%"></div></div><span class="traj-label" id="traj-one-lbl">—</span></div>
+              <div class="trajectory-row"><span class="traj-service">Admin</span><div class="traj-bar-wrap"><div class="traj-bar" id="traj-admin" style="width:0%"></div></div><span class="traj-label" id="traj-admin-lbl">—</span></div>
+              <div class="trajectory-row"><span class="traj-service">Gateway</span><div class="traj-bar-wrap"><div class="traj-bar" id="traj-gateway" style="width:0%"></div></div><span class="traj-label" id="traj-gateway-lbl">—</span></div>
+              <div class="trajectory-row"><span class="traj-service">Sentinel</span><div class="traj-bar-wrap"><div class="traj-bar" id="traj-sentinel" style="width:0%"></div></div><span class="traj-label" id="traj-sentinel-lbl">—</span></div>
             </div>
           </div>
         </div>
@@ -456,174 +292,91 @@
     </div>
 
     <!-- SECURITY VIEW -->
-    <div class="view" id="view-security" role="region" aria-label="Proactive Defense Layer">
-      <div class="view-header"><h2>🛡 Proactive Defense Layer</h2><p>Phase 23 — AI-driven threat detection, IP blocking, incident management</p></div>
-      <div class="kpi-grid" role="group" aria-label="Defense metrics">
-        <div class="kpi-card kpi-threat" role="figure" aria-label="Evaluations"><div class="kpi-icon" aria-hidden="true">⚠</div><div class="kpi-body"><div class="kpi-value" id="sec-evaluations">—</div><div class="kpi-label">Evaluations</div></div></div>
-        <div class="kpi-card kpi-threat" role="figure" aria-label="Blocked requests"><div class="kpi-icon" aria-hidden="true">🚫</div><div class="kpi-body"><div class="kpi-value" id="sec-blocks">—</div><div class="kpi-label">Blocked Requests</div></div></div>
-        <div class="kpi-card kpi-threat" role="figure" aria-label="Incidents"><div class="kpi-icon" aria-hidden="true">🔴</div><div class="kpi-body"><div class="kpi-value" id="sec-incidents">—</div><div class="kpi-label">Incidents</div></div></div>
-        <div class="kpi-card" role="figure" aria-label="Blocked IPs"><div class="kpi-icon" aria-hidden="true">🛡</div><div class="kpi-body"><div class="kpi-value" id="sec-blocked-ips">—</div><div class="kpi-label">Blocked IPs</div></div></div>
+    <div class="view" id="view-security">
+      <div class="view-header"><h2>🛡 Proactive Defense Layer</h2><p>Phase 22.6 — AI-driven threat detection, IP blocking, incident management</p></div>
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-threat"><div class="kpi-icon">⚠</div><div class="kpi-body"><div class="kpi-value" id="sec-evaluations">—</div><div class="kpi-label">Evaluations</div></div></div>
+        <div class="kpi-card kpi-threat"><div class="kpi-icon">🚫</div><div class="kpi-body"><div class="kpi-value" id="sec-blocks">—</div><div class="kpi-label">Blocked Requests</div></div></div>
+        <div class="kpi-card kpi-threat"><div class="kpi-icon">🔴</div><div class="kpi-body"><div class="kpi-value" id="sec-incidents">—</div><div class="kpi-label">Incidents</div></div></div>
+        <div class="kpi-card"><div class="kpi-icon">🛡</div><div class="kpi-body"><div class="kpi-value" id="sec-blocked-ips">—</div><div class="kpi-label">Blocked IPs</div></div></div>
       </div>
-      <div class="panel" role="region" aria-label="Defense statistics by service">
-        <div class="panel-header"><span class="panel-icon" aria-hidden="true">🛡</span><h3>Defense Stats by Service</h3></div>
-        <div class="panel-body" id="defense-stats-body"><div class="loading-state" role="status">Loading…</div></div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-icon">🛡</span><h3>Defense Stats by Service</h3></div>
+        <div class="panel-body" id="defense-stats-body"><div class="loading-state">Loading…</div></div>
       </div>
     </div>
 
     <!-- PULSE VIEW -->
-    <div class="view" id="view-pulse" role="region" aria-label="Adaptive Pulse Controller">
+    <div class="view" id="view-pulse">
       <div class="view-header"><h2>◈ Adaptive Pulse Controller</h2><p>STEADY / ACCELERATED / EMERGENCY / RECOVERY interval compression</p></div>
-      <div class="panel" role="region" aria-label="Pulse daemons">
-        <div class="panel-header"><span class="panel-icon" aria-hidden="true">◈</span><h3>Pulse Daemons</h3></div>
-        <div class="panel-body" id="pulse-daemons-body"><div class="loading-state" role="status">Loading…</div></div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-icon">◈</span><h3>Pulse Daemons</h3></div>
+        <div class="panel-body" id="pulse-daemons-body"><div class="loading-state">Loading…</div></div>
       </div>
     </div>
 
     <!-- ROUTING VIEW -->
-    <div class="view" id="view-routing" role="region" aria-label="Fluidic Routing Topology">
+    <div class="view" id="view-routing">
       <div class="view-header"><h2>⟁ Fluidic Routing Topology</h2><p>Liquid-neural weighted routing with time-decay cells</p></div>
-      <div class="panel" role="region" aria-label="Routing cells">
-        <div class="panel-header"><span class="panel-icon" aria-hidden="true">⟁</span><h3>Location Routing Cells</h3></div>
-        <div class="panel-body" id="routing-cells-body"><div class="loading-state" role="status">Loading…</div></div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-icon">⟁</span><h3>Location Routing Cells</h3></div>
+        <div class="panel-body" id="routing-cells-body"><div class="loading-state">Loading…</div></div>
       </div>
     </div>
 
     <!-- FORESIGHT VIEW -->
-    <div class="view" id="view-foresight" role="region" aria-label="Foresight Engine">
+    <div class="view" id="view-foresight">
       <div class="view-header"><h2>◎ Foresight Engine</h2><p>Predictive health trajectory with ProbabilityVector</p></div>
-      <div class="panel" role="region" aria-label="Health trajectories">
-        <div class="panel-header"><span class="panel-icon" aria-hidden="true">◎</span><h3>Health Trajectories</h3></div>
-        <div class="panel-body" id="foresight-detail-body"><div class="loading-state" role="status">Calculating…</div></div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-icon">◎</span><h3>Health Trajectories</h3></div>
+        <div class="panel-body" id="foresight-detail-body"><div class="loading-state">Calculating…</div></div>
       </div>
     </div>
 
     <!-- TIERS VIEW -->
-    <div class="view" id="view-tiers" role="region" aria-label="Tier Structure">
+    <div class="view" id="view-tiers">
       <div class="view-header"><h2>◈ Tier Structure</h2><p>Universal Tier Classification System</p></div>
-      <div class="tier-grid" role="list" aria-label="Tier definitions">
-        <div class="tier-card tier-0-card" role="listitem"><div class="tier-number" aria-label="Tier 0">0</div><div class="tier-name">Human</div><div class="tier-desc">admin · user · developer · devops</div><div class="tier-roles"><span>admin</span><span>user</span><span>developer</span><span>devops</span></div></div>
-        <div class="tier-card tier-1-card" role="listitem"><div class="tier-number" aria-label="Tier 1">1</div><div class="tier-name">Orchestrator</div><div class="tier-desc">System orchestration</div></div>
-        <div class="tier-card tier-2-card" role="listitem"><div class="tier-number" aria-label="Tier 2">2</div><div class="tier-name">Prime</div><div class="tier-desc">Domain management — Admin</div><div class="tier-roles"><span>prime</span></div></div>
-        <div class="tier-card tier-3-card" role="listitem"><div class="tier-number" aria-label="Tier 3">3</div><div class="tier-name">AI</div><div class="tier-desc">ML · LLM · Complex reasoning</div><div class="tier-roles"><span>ai</span></div></div>
-        <div class="tier-card tier-4-card" role="listitem"><div class="tier-number" aria-label="Tier 4">4</div><div class="tier-name">Agent</div><div class="tier-desc">Low-level autonomous agents</div><div class="tier-roles"><span>agent</span></div></div>
-        <div class="tier-card tier-5-card" role="listitem"><div class="tier-number" aria-label="Tier 5">5</div><div class="tier-name">Bot</div><div class="tier-desc">Automated bots · Services</div><div class="tier-roles"><span>bot</span><span>service</span></div></div>
+      <div class="tier-grid">
+        <div class="tier-card tier-0-card"><div class="tier-number">0</div><div class="tier-name">Human</div><div class="tier-desc">admin · user · developer · devops</div><div class="tier-roles"><span>admin</span><span>user</span><span>developer</span><span>devops</span></div></div>
+        <div class="tier-card tier-1-card"><div class="tier-number">1</div><div class="tier-name">Orchestrator</div><div class="tier-desc">System orchestration</div></div>
+        <div class="tier-card tier-2-card"><div class="tier-number">2</div><div class="tier-name">Prime</div><div class="tier-desc">Domain management — Admin</div><div class="tier-roles"><span>prime</span></div></div>
+        <div class="tier-card tier-3-card"><div class="tier-number">3</div><div class="tier-name">AI</div><div class="tier-desc">ML · LLM · Complex reasoning</div><div class="tier-roles"><span>ai</span></div></div>
+        <div class="tier-card tier-4-card"><div class="tier-number">4</div><div class="tier-name">Agent</div><div class="tier-desc">Low-level autonomous agents</div><div class="tier-roles"><span>agent</span></div></div>
+        <div class="tier-card tier-5-card"><div class="tier-number">5</div><div class="tier-name">Bot</div><div class="tier-desc">Automated bots · Services</div><div class="tier-roles"><span>bot</span><span>service</span></div></div>
       </div>
     </div>
 
     <!-- DIMENSIONALS VIEW -->
-    <div class="view" id="view-dimensionals" role="region" aria-label="Dimensional Services">
-      <div class="view-header"><h2>◇ Dimensional Services</h2><p>12 core dimensional services powering the Infinity Ecosystem</p></div>
-      <div class="panel" role="region" aria-label="Dimensional registry">
-        <div class="panel-header"><span class="panel-icon" aria-hidden="true">◇</span><h3>Dimensional Registry</h3></div>
-        <div class="panel-body" id="dimensionals-body"><div class="loading-state" role="status">Loading…</div></div>
+    <div class="view" id="view-dimensionals">
+      <div class="view-header"><h2>⬡ Dimensional Services</h2><p>12 core dimensional services powering the Infinity Ecosystem</p></div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-icon">⬡</span><h3>Dimensional Registry</h3></div>
+        <div class="panel-body" id="dimensionals-body"><div class="loading-state">Loading…</div></div>
       </div>
     </div>
 
     <!-- AGENTS / MODELS / WORKFLOWS -->
-    <div class="view" id="view-agents" role="region" aria-label="AI Agents"><div class="view-header"><h2>⚡ AI Agents</h2></div><div class="panel" role="region"><div class="panel-header"><span class="panel-icon" aria-hidden="true">⚡</span><h3>Active Agents</h3></div><div class="panel-body" id="agents-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
-    <div class="view" id="view-models" role="region" aria-label="AI Models"><div class="view-header"><h2>🧠 AI Models</h2></div><div class="panel" role="region"><div class="panel-header"><span class="panel-icon" aria-hidden="true">🧠</span><h3>Loaded Models</h3></div><div class="panel-body" id="models-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
-    <div class="view" id="view-workflows" role="region" aria-label="Workflows"><div class="view-header"><h2>◈ Workflows</h2></div><div class="panel" role="region"><div class="panel-header"><span class="panel-icon" aria-hidden="true">◈</span><h3>Active Workflows</h3></div><div class="panel-body" id="workflows-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
+    <div class="view" id="view-agents"><div class="view-header"><h2>⚡ AI Agents</h2></div><div class="panel"><div class="panel-header"><span class="panel-icon">⚡</span><h3>Active Agents</h3></div><div class="panel-body" id="agents-body"><div class="loading-state">Loading…</div></div></div></div>
+    <div class="view" id="view-models"><div class="view-header"><h2>🧠 AI Models</h2></div><div class="panel"><div class="panel-header"><span class="panel-icon">🧠</span><h3>Loaded Models</h3></div><div class="panel-body" id="models-body"><div class="loading-state">Loading…</div></div></div></div>
+    <div class="view" id="view-workflows"><div class="view-header"><h2>◈ Workflows</h2></div><div class="panel"><div class="panel-header"><span class="panel-icon">◈</span><h3>Active Workflows</h3></div><div class="panel-body" id="workflows-body"><div class="loading-state">Loading…</div></div></div></div>
 
     <!-- INFINITY SERVICE DETAIL VIEWS -->
-    <div class="view" id="view-infinity-portal" role="region" aria-label="Portal details"><div class="view-header"><h2>⬟ Portal <span class="port-badge">:8042</span></h2><p>Central login · Infinity Gate routing</p></div><div class="panel"><div class="panel-header"><span class="panel-icon" aria-hidden="true">⬟</span><h3>Portal Stats</h3></div><div class="panel-body" id="portal-detail-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
-    <div class="view" id="view-infinity-one" role="region" aria-label="Infinity One details"><div class="view-header"><h2>◉ Infinity One <span class="port-badge">:8043</span></h2><p>Single identity — multi-app access</p></div><div class="panel"><div class="panel-header"><span class="panel-icon" aria-hidden="true">◉</span><h3>Identity Stats</h3></div><div class="panel-body" id="one-detail-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
-    <div class="view" id="view-infinity-admin" role="region" aria-label="Admin details"><div class="view-header"><h2>◇ Admin <span class="port-badge">:8044</span></h2><p>Administrative management service</p></div><div class="panel"><div class="panel-header"><span class="panel-icon" aria-hidden="true">◇</span><h3>Admin Stats</h3></div><div class="panel-body" id="admin-detail-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
-    <div class="view" id="view-gateway" role="region" aria-label="Gateway details"><div class="view-header"><h2>⟁ Gateway <span class="port-badge">:8040</span></h2><p>Unified aggregation + smart adaptive</p></div><div class="panel"><div class="panel-header"><span class="panel-icon" aria-hidden="true">⟁</span><h3>Gateway Stats</h3></div><div class="panel-body" id="gateway-detail-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
-    <div class="view" id="view-sentinel" role="region" aria-label="Sentinel Station details"><div class="view-header"><h2>⬢ Sentinel Station <span class="port-badge">:8041</span></h2><p>Redis Pub/Sub · reactive topology</p></div><div class="panel"><div class="panel-header"><span class="panel-icon" aria-hidden="true">⬢</span><h3>Sentinel Stats</h3></div><div class="panel-body" id="sentinel-detail-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
-
-    <!-- ═══════════════════════════════════════════════════════════
-         BUILDER VIEW — No-Code/Low-Code Dashboard Builder
-         ═══════════════════════════════════════════════════════════ -->
-    <div class="view" id="view-builder" role="region" aria-label="Dashboard Builder">
-      <div class="view-header">
-        <h2>🧱 Dashboard Builder</h2>
-        <p>Drag and drop building blocks to customize your dashboard layout. Click any block to configure it.</p>
-      </div>
-      <div class="block-grid" id="builder-grid" style="grid-template-columns: repeat(12, 1fr); margin-bottom: 24px;" role="group" aria-label="Dashboard builder canvas">
-        <!-- Populated by JS with draggable blocks -->
-      </div>
-      <div class="section-header">
-        <h3>Available Widgets</h3>
-        <span class="section-meta">Click to add to dashboard</span>
-      </div>
-      <div class="block-grid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));" role="group" aria-label="Available widgets to add">
-        <div class="widget-template-card" onclick="addBuilderWidget('health')" role="button" tabindex="0" aria-label="Add health overview widget">
-          <h4>💚 Health Overview</h4>
-          <p>System health rings for all services</p>
-        </div>
-        <div class="widget-template-card" onclick="addBuilderWidget('activity')" role="button" tabindex="0" aria-label="Add activity feed widget">
-          <h4>📋 Activity Feed</h4>
-          <p>Recent platform events and actions</p>
-        </div>
-        <div class="widget-template-card" onclick="addBuilderWidget('metrics')" role="button" tabindex="0" aria-label="Add metrics chart widget">
-          <h4>📊 Metrics Chart</h4>
-          <p>Request rate and performance sparkline</p>
-        </div>
-        <div class="widget-template-card" onclick="addBuilderWidget('defense')" role="button" tabindex="0" aria-label="Add defense status widget">
-          <h4>🛡 Defense Status</h4>
-          <p>Proactive defense layer overview</p>
-        </div>
-        <div class="widget-template-card" onclick="addBuilderWidget('services')" role="button" tabindex="0" aria-label="Add services list widget">
-          <h4>⚡ Services List</h4>
-          <p>All Infinity services with status</p>
-        </div>
-        <div class="widget-template-card" onclick="addBuilderWidget('sparkline')" role="button" tabindex="0" aria-label="Add traffic sparkline widget">
-          <h4>📈 Traffic Sparkline</h4>
-          <p>Real-time request traffic visualization</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══════════════════════════════════════════════════════════
-         DESIGN TOKENS VIEW
-         ═══════════════════════════════════════════════════════════ -->
-    <div class="view" id="view-tokens" role="region" aria-label="Design Tokens">
-      <div class="view-header">
-        <h2>🎨 Design Tokens</h2>
-        <p>Colour swatches, typography scale, spacing system, and design tokens powering the Infinity Ecosystem UI</p>
-      </div>
-      <div class="section-header"><h3>Pillar Colours</h3></div>
-      <div class="swatch-grid" id="swatch-pillars" role="list" aria-label="Pillar colour swatches">
-        <!-- Populated by JS -->
-      </div>
-      <div class="section-header" style="margin-top:20px"><h3>Accent Colours</h3></div>
-      <div class="swatch-grid" id="swatch-accents" role="list" aria-label="Accent colour swatches">
-        <!-- Populated by JS -->
-      </div>
-      <div class="section-header" style="margin-top:20px"><h3>Health Colours</h3></div>
-      <div class="swatch-grid" id="swatch-health" role="list" aria-label="Health colour swatches">
-        <!-- Populated by JS -->
-      </div>
-      <div class="section-header" style="margin-top:20px"><h3>Typography Scale</h3></div>
-      <div class="panel" role="region" aria-label="Typography examples">
-        <div class="panel-body" id="typography-showcase">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-      <div class="section-header" style="margin-top:20px"><h3>Spacing Scale</h3></div>
-      <div class="panel" role="region" aria-label="Spacing examples">
-        <div class="panel-body" id="spacing-showcase">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-    </div>
+    <div class="view" id="view-infinity-portal"><div class="view-header"><h2>⬟ Portal <span class="port-badge">:8042</span></h2><p>Central login · Infinity Gate routing</p></div><div class="panel"><div class="panel-header"><span class="panel-icon">⬟</span><h3>Portal Stats</h3></div><div class="panel-body" id="portal-detail-body"><div class="loading-state">Loading…</div></div></div></div>
+    <div class="view" id="view-infinity-one"><div class="view-header"><h2>◉ Infinity One <span class="port-badge">:8043</span></h2><p>Single identity — multi-app access</p></div><div class="panel"><div class="panel-header"><span class="panel-icon">◉</span><h3>Identity Stats</h3></div><div class="panel-body" id="one-detail-body"><div class="loading-state">Loading…</div></div></div></div>
+    <div class="view" id="view-infinity-admin"><div class="view-header"><h2>⬡ Admin <span class="port-badge">:8044</span></h2><p>Administrative management OS</p></div><div class="panel"><div class="panel-header"><span class="panel-icon">⬡</span><h3>Admin Stats</h3></div><div class="panel-body" id="admin-detail-body"><div class="loading-state">Loading…</div></div></div></div>
+    <div class="view" id="view-gateway"><div class="view-header"><h2>⟁ Gateway <span class="port-badge">:8040</span></h2><p>Unified aggregation + smart adaptive</p></div><div class="panel"><div class="panel-header"><span class="panel-icon">⟁</span><h3>Gateway Stats</h3></div><div class="panel-body" id="gateway-detail-body"><div class="loading-state">Loading…</div></div></div></div>
+    <div class="view" id="view-sentinel"><div class="view-header"><h2>⬢ Sentinel Station <span class="port-badge">:8041</span></h2><p>Redis Pub/Sub · reactive topology</p></div><div class="panel"><div class="panel-header"><span class="panel-icon">⬢</span><h3>Sentinel Stats</h3></div><div class="panel-body" id="sentinel-detail-body"><div class="loading-state">Loading…</div></div></div></div>
 
   </main>
 </div>
 
-<footer class="platform-footer" role="contentinfo">
+<footer class="platform-footer">
   <span>Tranc3 Infinity Ecosystem</span>
   <span>·</span>
-  <span>Phase 23 Smart Adaptive</span>
+  <span>Phase 22.6 Smart Adaptive</span>
   <span>·</span>
   <span id="footer-time">—</span>
 </footer>
-
-<!-- Toast Container -->
-<div class="toast-container" id="toast-container" role="status" aria-live="polite" aria-label="Notifications"></div>
-
-<!-- Widget Drawer Overlay -->
-<div class="widget-drawer-overlay" id="widget-drawer-overlay"></div>
 
 <script src="app.js"></script>
 </body>

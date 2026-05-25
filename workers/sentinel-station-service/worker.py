@@ -258,14 +258,14 @@ async def _lifespan(app: FastAPI):
 
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    summary_dict = summary.to_dict(); worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
+                    worker_kit.health.update_health(summary.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
                     # Broadcast sentinel health to the platform channel
                     await sentinel.publish(SentinelEvent(
                         channel=SentinelChannel.PLATFORM,
                         event_type="sentinel_health_report",
                         source="sentinel_station",
-                        payload=summary_dict,
+                        payload=summary,
                     ))
             except asyncio.CancelledError:
                 break
@@ -298,7 +298,7 @@ async def _lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Tranc3 Sentinel Station Service",
-    version="0.8.0",
+    version="0.7.0",
     lifespan=_lifespan,
 )
 
@@ -358,7 +358,7 @@ async def health():
     return {
         "status": "ok",
         "service": "sentinel-station-service",
-        "version": "0.8.0",
+        "version": "0.7.0",
         "sentinel": sentinel_health,
         "dimensional_bus": {
             "running": dimensional_bus.is_running,
@@ -376,7 +376,7 @@ async def stats():
     """Service statistics endpoint."""
     return {
         "service": "sentinel-station-service",
-        "version": "0.8.0",
+        "version": "0.7.0",
         "sentinel": sentinel.get_stats(),
         "dimensional_bus": dimensional_bus.get_stats(),
         "dimensional_registry": dimensional_registry.get_stats(),

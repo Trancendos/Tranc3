@@ -133,7 +133,7 @@ class TestGatewayOverview:
         data = res.json()
         platform = data["platform"]
         assert platform["name"] == "Tranc3"
-        assert platform["version"] == "0.8.0"
+        assert platform["version"] == "0.7.0"
         assert platform["status"] in ("operational", "degraded", "critical")
 
     def test_overview_services_structure(self, client, admin_headers):

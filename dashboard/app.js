@@ -1,13 +1,13 @@
 /* ============================================================
    Tranc3 AI Platform — Application Logic
-   Phase 23.6: Infinity Ecosystem Dashboard
-   Smart Adaptive · Building Blocks · Widgets · Theme Engine
+   Phase 22.8: Infinity Ecosystem Dashboard
+   Smart Adaptive Intelligence · Proactive Defense · Fluidic Routing
    ============================================================ */
 
 (function () {
   'use strict';
 
-  // ── Configuration ──────────────────────────────────────────
+  // ── Configuration ──────────────────────────────────────────────────────────
   const CONFIG = {
     gatewayUrl:      window.GATEWAY_URL      || `${location.protocol}//${location.hostname}:8040`,
     portalUrl:       window.PORTAL_URL       || `${location.protocol}//${location.hostname}:8042`,
@@ -15,14 +15,12 @@
     adminUrl:        window.ADMIN_URL        || `${location.protocol}//${location.hostname}:8044`,
     sentinelUrl:     window.SENTINEL_URL     || `${location.protocol}//${location.hostname}:8041`,
     authUrl:         window.AUTH_URL         || `${location.protocol}//${location.hostname}:8005`,
-    refreshInterval: 6000,
-    sseReconnectMs:  4000,
-    sentinelFeedMax: 120,
-    themeKey:        'tranc3-dashboard-theme',
-    layoutKey:       'tranc3-dashboard-layout',
+    refreshInterval: 6000,       // 6 s primary polling
+    sseReconnectMs:  4000,       // SSE back-off base
+    sentinelFeedMax: 120,        // max events in live feed
   };
 
-  // ── State ──────────────────────────────────────────────────
+  // ── State ──────────────────────────────────────────────────────────────────
   const S = {
     activeView:      'overview',
     sidebarOpen:     true,
@@ -30,19 +28,15 @@
     sseRetries:      0,
     pollTimer:       null,
     clockTimer:      null,
-    sentinelFeed:    [],
-    serviceData:     {},
+    sentinelFeed:    [],   // [{ts, channel, eventType, source}]
+    serviceData:     {},   // keyed by service name
     healthScores: {
       portal: null, one: null, admin: null,
       gateway: null, sentinel: null, auth: null,
     },
-    theme:           'dark',
-    layout:          'grid',
-    builderWidgets:  [],
-    dragState:       null,
   };
 
-  // ── DOM helpers ────────────────────────────────────────────
+  // ── DOM helpers ────────────────────────────────────────────────────────────
   const $         = id => document.getElementById(id);
   const setText   = (id, v, fallback = '—') => {
     const el = $(id);
@@ -51,104 +45,14 @@
   const addClass    = (el, c) => el && el.classList.add(c);
   const removeClass = (el, c) => el && el.classList.remove(c);
 
-  // ════════════════════════════════════════════════════════════
-  //  THEME ENGINE
-  // ════════════════════════════════════════════════════════════
-  function initTheme() {
-    const stored = localStorage.getItem(CONFIG.themeKey);
-    S.theme = stored || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-    applyTheme(S.theme, false);
-  }
-
-  function applyTheme(theme, animate = true) {
-    S.theme = theme;
-    document.documentElement.setAttribute('data-theme', theme);
-
-    const toggle = $('theme-toggle');
-    if (toggle) {
-      toggle.setAttribute('aria-checked', String(theme === 'light'));
-      const icon = toggle.querySelector('.theme-toggle-icon');
-      if (icon) icon.textContent = theme === 'dark' ? '🌙' : '☀️';
-    }
-
-    if (animate) {
-      addClass(document.body, 'theme-transitioning');
-      setTimeout(() => removeClass(document.body, 'theme-transitioning'), 500);
-    }
-
-    try { localStorage.setItem(CONFIG.themeKey, theme); } catch {}
-  }
-
-  window.toggleTheme = function () {
-    const next = S.theme === 'dark' ? 'light' : 'dark';
-    applyTheme(next, true);
-    showToast(next === 'light' ? '☀️ Light theme activated' : '🌙 Dark theme activated', 'info');
-  };
-
-  // ════════════════════════════════════════════════════════════
-  //  LAYOUT ENGINE
-  // ════════════════════════════════════════════════════════════
-  function initLayout() {
-    const stored = localStorage.getItem(CONFIG.layoutKey);
-    if (stored) { S.layout = stored; applyLayout(S.layout); }
-  }
-
-  function applyLayout(layout) {
-    S.layout = layout;
-    document.querySelectorAll('.layout-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.layout === layout);
-    });
-    try { localStorage.setItem(CONFIG.layoutKey, layout); } catch {}
-  }
-
-  window.setLayout = function (layout) {
-    applyLayout(layout);
-    showToast(`Layout: ${layout === 'grid' ? 'Grid' : layout === '2col' ? '2 Column' : 'Single Column'}`, 'info');
-  };
-
-  // ════════════════════════════════════════════════════════════
-  //  TOAST NOTIFICATION SYSTEM
-  // ════════════════════════════════════════════════════════════
-  const TOAST_ICONS = {
-    success: '✅', warning: '⚠️', error: '❌', info: 'ℹ️',
-  };
-
-  function showToast(message, type = 'info', duration = 4000) {
-    const container = $('toast-container');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.setAttribute('role', 'alert');
-    toast.innerHTML = `
-      <span class="toast-icon" aria-hidden="true">${TOAST_ICONS[type] || TOAST_ICONS.info}</span>
-      <span class="toast-message">${message}</span>
-      <button class="toast-close" aria-label="Close notification" onclick="this.closest('.toast').remove()">×</button>
-    `;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-      toast.style.animation = 'toast-out 0.3s ease forwards';
-      setTimeout(() => toast.remove(), 300);
-    }, duration);
-  }
-
-  // ════════════════════════════════════════════════════════════
-  //  VIEW SWITCHING
-  // ════════════════════════════════════════════════════════════
+  // ── View Switching ─────────────────────────────────────────────────────────
   window.switchView = function (name, el) {
     document.querySelectorAll('.view').forEach(v => removeClass(v, 'active'));
-    document.querySelectorAll('.nav-item').forEach(i => {
-      removeClass(i, 'active');
-      i.removeAttribute('aria-current');
-    });
+    document.querySelectorAll('.nav-item').forEach(i => removeClass(i, 'active'));
 
     const viewEl = $('view-' + name);
     if (viewEl) addClass(viewEl, 'active');
-    if (el) {
-      addClass(el, 'active');
-      el.setAttribute('aria-current', 'page');
-    }
+    if (el)     addClass(el, 'active');
 
     S.activeView = name;
 
@@ -168,8 +72,6 @@
       'infinity-admin':  'Admin :8044',
       gateway:           'Gateway :8040',
       sentinel:          'Sentinel Station :8041',
-      builder:           'Dashboard Builder',
-      tokens:            'Design Tokens',
     };
     setText('breadcrumb-current', labels[name] || name);
 
@@ -187,8 +89,6 @@
       case 'infinity-admin':   renderAdminDetail();     break;
       case 'gateway':          renderGatewayDetail();   break;
       case 'sentinel':         renderSentinelDetail();  break;
-      case 'builder':          renderBuilderView();     break;
-      case 'tokens':           renderTokensView();      break;
       default: break;
     }
   };
@@ -199,11 +99,9 @@
     if (sb) sb.classList.toggle('collapsed', !S.sidebarOpen);
   };
 
-  window.refreshAll = function () { pollAll(); showToast('↻ Refreshing all services...', 'info'); };
+  window.refreshAll = function () { pollAll(); };
 
-  // ════════════════════════════════════════════════════════════
-  //  CLOCK
-  // ════════════════════════════════════════════════════════════
+  // ── Clock ──────────────────────────────────────────────────────────────────
   function startClock() {
     const tick = () => {
       const now = new Date();
@@ -214,9 +112,7 @@
     S.clockTimer = setInterval(tick, 1000);
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  API FETCH
-  // ════════════════════════════════════════════════════════════
+  // ── Fetch helper ───────────────────────────────────────────────────────────
   async function apiFetch(url, timeout = 5000) {
     const ctrl = new AbortController();
     const tid  = setTimeout(() => ctrl.abort(), timeout);
@@ -231,9 +127,7 @@
     }
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  POLLING ORCHESTRATOR
-  // ════════════════════════════════════════════════════════════
+  // ── Polling orchestrator ───────────────────────────────────────────────────
   async function pollAll() {
     await Promise.allSettled([
       pollGateway(),
@@ -263,12 +157,10 @@
       case 'infinity-admin':   renderAdminDetail();     break;
       case 'gateway':          renderGatewayDetail();   break;
       case 'sentinel':         renderSentinelDetail();  break;
-      case 'builder':          renderBuilderView();     break;
-      case 'tokens':           renderTokensView();      break;
     }
   }
 
-  // ── Per-service pollers ────────────────────────────────────
+  // ── Per-service pollers ────────────────────────────────────────────────────
   async function pollGateway() {
     const [health, stats, overview] = await Promise.allSettled([
       apiFetch(`${CONFIG.gatewayUrl}/health`),
@@ -344,7 +236,7 @@
     return null;
   }
 
-  // ── Service card updaters ──────────────────────────────────
+  // ── Service card updaters ──────────────────────────────────────────────────
   function updateServiceCard(name, h, s) {
     const alive = (h.status === 'healthy' || h.status === 'ok');
     const dot   = $(`dot-${name}`);
@@ -397,7 +289,7 @@
     setText('auth-blocked', h.defense_blocked_ips ?? '—');
   }
 
-  // ── Foresight trajectory bars ──────────────────────────────
+  // ── Foresight trajectory bars ──────────────────────────────────────────────
   function updateForesightBar(name, score) {
     const bar   = $(`traj-${name}`);
     const label = $(`traj-${name}-lbl`);
@@ -423,9 +315,7 @@
     return 'CRITICAL';
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  OVERVIEW RENDERING
-  // ════════════════════════════════════════════════════════════
+  // ── Overview rendering ─────────────────────────────────────────────────────
   function renderOverview() {
     const gw  = S.serviceData.gateway || {};
     const ov  = gw.overview || {};
@@ -442,6 +332,7 @@
     setText('kpi-health-val',
       avgHealth !== null ? `${(avgHealth * 100).toFixed(0)}%` : '—');
 
+    // Total blocked across all services
     let totalBlocked = 0;
     for (const data of Object.values(S.serviceData)) {
       const k = data?.stats?.smart_adaptive?.defense;
@@ -453,6 +344,7 @@
     setText('count-threats',   totalBlocked || '0');
     setText('count-agents',    ov.agents?.active ?? gs.agents_active ?? '0');
 
+    // Global health badge
     const healthBadge = $('health-badge');
     const healthLabel = $('health-label');
     if (healthBadge && avgHealth !== null) {
@@ -462,399 +354,18 @@
       healthBadge.className = `health-badge health-${tier.toLowerCase()}`;
     }
 
+    // Status indicator
     const allAlive   = Object.values(S.healthScores).some(v => v !== null);
     const mainDot    = $('status-dot-main');
     const mainStatus = $('status-main');
     if (mainDot)    mainDot.className    = 'status-dot ' + (allAlive ? 'dot-healthy' : 'dot-offline');
     if (mainStatus) mainStatus.textContent = allAlive ? 'Online' : 'Connecting…';
 
-    renderHealthWidget();
-    renderActivityFeed();
+    // Re-render sentinel feed when overview is visible
     renderSentinelFeedPanel();
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  HEALTH WIDGET
-  // ════════════════════════════════════════════════════════════
-  function renderHealthWidget() {
-    const grid = $('health-widget-grid');
-    if (!grid) return;
-
-    const services = [
-      { key: 'portal',   name: 'Portal' },
-      { key: 'one',      name: 'One' },
-      { key: 'admin',    name: 'Admin' },
-      { key: 'gateway',  name: 'Gateway' },
-      { key: 'sentinel', name: 'Sentinel' },
-      { key: 'auth',     name: 'Auth' },
-    ];
-
-    grid.innerHTML = services.map(svc => {
-      const score = S.healthScores[svc.key];
-      const tier = score !== null ? healthTier(score) : 'UNKNOWN';
-      const pct = score !== null ? (score * 100).toFixed(0) : '—';
-      const ringClass = tier.toLowerCase();
-      return `
-        <div class="health-widget-item" role="listitem" aria-label="${svc.name}: ${pct}% ${tier}">
-          <div class="health-widget-ring ring-${ringClass}">${pct}%</div>
-          <span class="health-widget-name">${svc.name}</span>
-        </div>`;
-    }).join('');
-  }
-
-  // ════════════════════════════════════════════════════════════
-  //  ACTIVITY FEED WIDGET
-  // ════════════════════════════════════════════════════════════
-  function renderActivityFeed() {
-    const feed = $('activity-feed');
-    if (!feed) return;
-
-    const activities = [];
-    const now = new Date();
-
-    // Convert sentinel feed into activities
-    for (const item of S.sentinelFeed.slice(0, 15)) {
-      const dotClass = {
-        security: 'dot-red', platform: 'dot-blue', bridge: 'dot-purple',
-        agent: 'dot-green', ai: 'dot-purple', dimensional: 'dot-yellow',
-      }[item.channel] || 'dot-blue';
-
-      activities.push({
-        dot: dotClass,
-        text: `${item.eventType} — ${item.source}`,
-        time: item.ts,
-      });
-    }
-
-    // Add service health events
-    for (const [key, score] of Object.entries(S.healthScores)) {
-      if (score !== null) {
-        const tier = healthTier(score);
-        activities.push({
-          dot: score >= 0.8 ? 'dot-green' : score >= 0.6 ? 'dot-yellow' : 'dot-red',
-          text: `${key.charAt(0).toUpperCase() + key.slice(1)} health: ${(score * 100).toFixed(0)}% (${tier})`,
-          time: now.toLocaleTimeString('en-GB', { hour12: false }),
-        });
-      }
-    }
-
-    if (!activities.length) {
-      feed.innerHTML = '<div class="feed-empty">No recent activity</div>';
-      return;
-    }
-
-    feed.innerHTML = activities.slice(0, 20).map(a => `
-      <div class="activity-item">
-        <div class="activity-dot ${a.dot}" aria-hidden="true"></div>
-        <span class="activity-text">${a.text}</span>
-        <span class="activity-time">${a.time}</span>
-      </div>`).join('');
-  }
-
-  // ════════════════════════════════════════════════════════════
-  //  BUILDER VIEW (No-Code/Low-Code Dashboard Builder)
-  // ════════════════════════════════════════════════════════════
-  function renderBuilderView() {
-    const grid = $('builder-grid');
-    if (!grid) return;
-
-    if (!S.builderWidgets.length) {
-      // Default builder layout
-      S.builderWidgets = [
-        { type: 'health',   span: 4 },
-        { type: 'activity', span: 4 },
-        { type: 'metrics',  span: 4 },
-        { type: 'defense',  span: 6 },
-        { type: 'services', span: 6 },
-      ];
-    }
-
-    grid.innerHTML = S.builderWidgets.map((w, i) => {
-      const spanClass = `block-span-${w.span}`;
-      const content = getBuilderWidgetContent(w.type);
-      return `
-        <div class="block ${spanClass}" data-builder-idx="${i}" draggable="true"
-             role="article" aria-label="${w.type} widget">
-          <div class="block-header">
-            <span class="block-drag-handle" aria-hidden="true" title="Drag to reorder">⠿</span>
-            ${content.header}
-            <div class="block-header-actions">
-              <button class="block-action-btn" aria-label="Configure widget" title="Configure">⚙</button>
-              <button class="block-action-btn" aria-label="Remove widget" title="Remove" onclick="removeBuilderWidget(${i})">×</button>
-            </div>
-          </div>
-          <div class="block-body">${content.body}</div>
-        </div>`;
-    }).join('');
-
-    // Attach drag events
-    initDragAndDrop(grid);
-  }
-
-  function getBuilderWidgetContent(type) {
-    switch (type) {
-      case 'health': {
-        const services = ['Portal','One','Admin','Gateway','Sentinel','Auth'];
-        const keys = ['portal','one','admin','gateway','sentinel','auth'];
-        return {
-          header: '<span class="block-header-icon" aria-hidden="true">💚</span><span class="block-header-title">Health Overview</span>',
-          body: `<div class="health-widget-grid">${services.map((s, i) => {
-            const score = S.healthScores[keys[i]];
-            const tier = score !== null ? healthTier(score) : 'UNKNOWN';
-            const pct = score !== null ? (score * 100).toFixed(0) : '—';
-            return `<div class="health-widget-item" role="listitem">
-              <div class="health-widget-ring ring-${tier.toLowerCase()}">${pct}%</div>
-              <span class="health-widget-name">${s}</span>
-            </div>`;
-          }).join('')}</div>`,
-        };
-      }
-      case 'activity': {
-        const items = S.sentinelFeed.slice(0, 8);
-        return {
-          header: '<span class="block-header-icon" aria-hidden="true">📋</span><span class="block-header-title">Activity Feed</span>',
-          body: items.length ? `<div class="activity-feed">${items.map(a => `
-            <div class="activity-item">
-              <div class="activity-dot dot-blue" aria-hidden="true"></div>
-              <span class="activity-text">${a.eventType} — ${a.source}</span>
-              <span class="activity-time">${a.ts}</span>
-            </div>`).join('')}</div>` : '<div class="feed-empty">No recent activity</div>',
-        };
-      }
-      case 'metrics': {
-        const bars = Array.from({length: 12}, () => Math.floor(Math.random() * 80 + 20));
-        return {
-          header: '<span class="block-header-icon" aria-hidden="true">📊</span><span class="block-header-title">Request Rate</span><span class="block-header-badge">live</span>',
-          body: `<div class="mini-chart-card" style="border:none;padding:0">
-            <div class="chart-bars">${bars.map(h => `<div class="chart-bar" style="height:${h}%"></div>`).join('')}</div>
-          </div>`,
-        };
-      }
-      case 'defense': {
-        const services = ['Portal','One','Admin','Gateway','Sentinel','Auth'];
-        const keys = ['portal','one','admin','gateway','sentinel','auth'];
-        return {
-          header: '<span class="block-header-icon" aria-hidden="true">🛡</span><span class="block-header-title">Defense Status</span>',
-          body: `<div style="display:flex;flex-direction:column;gap:8px">${services.map((s, i) => {
-            const data = S.serviceData[keys[i]] || {};
-            const defEvals = data?.stats?.smart_adaptive?.defense?.evaluations ?? 0;
-            const defBlocked = data?.stats?.smart_adaptive?.defense?.blocked_count ?? 0;
-            const pct = Math.min(defBlocked / Math.max(defEvals, 1) * 100, 100);
-            return `<div class="status-row">
-              <div class="status-indicator ${defBlocked > 0 ? 'warning' : 'online'}" aria-hidden="true"></div>
-              <span class="status-name">${s}</span>
-              <span class="status-value">${defEvals} eval · ${defBlocked} blocked</span>
-            </div>`;
-          }).join('')}</div>`,
-        };
-      }
-      case 'services': {
-        const services = [
-          {name: 'Portal', port: 8042, key: 'portal'},
-          {name: 'One', port: 8043, key: 'one'},
-          {name: 'Admin', port: 8044, key: 'admin'},
-          {name: 'Gateway', port: 8040, key: 'gateway'},
-          {name: 'Sentinel', port: 8041, key: 'sentinel'},
-          {name: 'Auth', port: 8005, key: 'auth'},
-        ];
-        return {
-          header: '<span class="block-header-icon" aria-hidden="true">⚡</span><span class="block-header-title">Services</span>',
-          body: `<ul class="block-list">${services.map(s => {
-            const score = S.healthScores[s.key];
-            const alive = score !== null;
-            return `<li class="block-list-item">
-              <span class="block-list-item-icon" aria-hidden="true">${alive ? '🟢' : '⚫'}</span>
-              <div class="block-list-item-content">
-                <span class="block-list-item-title">${s.name}</span>
-                <span class="block-list-item-subtitle">:${s.port}</span>
-              </div>
-              <span class="block-list-item-meta">${score !== null ? (score * 100).toFixed(0) + '%' : 'Offline'}</span>
-            </li>`;
-          }).join('')}</ul>`,
-        };
-      }
-      case 'sparkline': {
-        const bars = Array.from({length: 20}, () => Math.floor(Math.random() * 100));
-        return {
-          header: '<span class="block-header-icon" aria-hidden="true">📈</span><span class="block-header-title">Traffic</span><span class="block-header-badge">live</span>',
-          body: `<div class="sparkline-container">${bars.map(h =>
-            `<div class="sparkline-bar" style="height:${h}%;background:var(--accent-cyan)"></div>`
-          ).join('')}</div>`,
-        };
-      }
-      default:
-        return { header: '<span class="block-header-title">Widget</span>', body: '<div class="feed-empty">Configure this widget</div>' };
-    }
-  }
-
-  window.addBuilderWidget = function (type) {
-    const spans = { health: 4, activity: 4, metrics: 4, defense: 6, services: 6, sparkline: 4 };
-    S.builderWidgets.push({ type, span: spans[type] || 6 });
-    renderBuilderView();
-    showToast(`Added ${type} widget`, 'success');
-  };
-
-  window.removeBuilderWidget = function (idx) {
-    S.builderWidgets.splice(idx, 1);
-    renderBuilderView();
-    showToast('Widget removed', 'info');
-  };
-
-  // ════════════════════════════════════════════════════════════
-  //  DRAG & DROP
-  // ════════════════════════════════════════════════════════════
-  function initDragAndDrop(container) {
-    const blocks = container.querySelectorAll('[draggable="true"]');
-
-    blocks.forEach(block => {
-      block.addEventListener('dragstart', handleDragStart);
-      block.addEventListener('dragend', handleDragEnd);
-      block.addEventListener('dragover', handleDragOver);
-      block.addEventListener('dragenter', handleDragEnter);
-      block.addEventListener('dragleave', handleDragLeave);
-      block.addEventListener('drop', handleDrop);
-    });
-  }
-
-  function handleDragStart(e) {
-    S.dragState = { sourceIdx: parseInt(e.currentTarget.dataset.builderIdx) };
-    e.currentTarget.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', e.currentTarget.dataset.builderIdx);
-  }
-
-  function handleDragEnd(e) {
-    e.currentTarget.classList.remove('dragging');
-    document.querySelectorAll('.block.drag-over').forEach(el => el.classList.remove('drag-over'));
-    S.dragState = null;
-  }
-
-  function handleDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  }
-
-  function handleDragEnter(e) {
-    e.preventDefault();
-    const block = e.currentTarget;
-    if (block.classList.contains('block')) block.classList.add('drag-over');
-  }
-
-  function handleDragLeave(e) {
-    e.currentTarget.classList.remove('drag-over');
-  }
-
-  function handleDrop(e) {
-    e.preventDefault();
-    const targetIdx = parseInt(e.currentTarget.dataset.builderIdx);
-    const sourceIdx = S.dragState?.sourceIdx;
-
-    if (sourceIdx !== undefined && sourceIdx !== targetIdx) {
-      const widget = S.builderWidgets.splice(sourceIdx, 1)[0];
-      S.builderWidgets.splice(targetIdx, 0, widget);
-      renderBuilderView();
-      showToast('Widget reordered', 'success');
-    }
-
-    e.currentTarget.classList.remove('drag-over');
-  }
-
-  // ════════════════════════════════════════════════════════════
-  //  DESIGN TOKENS VIEW
-  // ════════════════════════════════════════════════════════════
-  function renderTokensView() {
-    renderSwatchGrid('swatch-pillars', [
-      { name: 'Creation',     var: '--pillar-creation',     color: 'var(--pillar-creation)' },
-      { name: 'Governance',   var: '--pillar-governance',   color: 'var(--pillar-governance)' },
-      { name: 'Security',     var: '--pillar-security',     color: 'var(--pillar-security)' },
-      { name: 'Intelligence', var: '--pillar-intelligence', color: 'var(--pillar-intelligence)' },
-      { name: 'Nexus',        var: '--pillar-nexus',        color: 'var(--pillar-nexus)' },
-      { name: 'Sovereignty',  var: '--pillar-sovereignty',  color: 'var(--pillar-sovereignty)' },
-    ]);
-    renderSwatchGrid('swatch-accents', [
-      { name: 'Blue',   var: '--accent-blue',   color: 'var(--accent-blue)' },
-      { name: 'Cyan',   var: '--accent-cyan',   color: 'var(--accent-cyan)' },
-      { name: 'Purple', var: '--accent-purple',  color: 'var(--accent-purple)' },
-      { name: 'Green',  var: '--accent-green',  color: 'var(--accent-green)' },
-      { name: 'Yellow', var: '--accent-yellow', color: 'var(--accent-yellow)' },
-      { name: 'Red',    var: '--accent-red',    color: 'var(--accent-red)' },
-      { name: 'Orange', var: '--accent-orange', color: 'var(--accent-orange)' },
-      { name: 'Pink',   var: '--accent-pink',   color: 'var(--accent-pink)' },
-    ]);
-    renderSwatchGrid('swatch-health', [
-      { name: 'Excellent', var: '--health-excellent', color: 'var(--health-excellent)' },
-      { name: 'Good',      var: '--health-good',      color: 'var(--health-good)' },
-      { name: 'Fair',      var: '--health-fair',      color: 'var(--health-fair)' },
-      { name: 'Poor',      var: '--health-poor',      color: 'var(--health-poor)' },
-      { name: 'Critical',  var: '--health-critical',  color: 'var(--health-critical)' },
-    ]);
-
-    renderTypographyShowcase();
-    renderSpacingShowcase();
-  }
-
-  function renderSwatchGrid(containerId, swatches) {
-    const container = $(containerId);
-    if (!container) return;
-    container.innerHTML = swatches.map(s => `
-      <div class="swatch-card" role="listitem" aria-label="${s.name} colour swatch">
-        <div class="swatch-preview" style="background:${s.color};color:#fff">${s.name}</div>
-        <div class="swatch-info">
-          <div class="swatch-name">${s.name}</div>
-          <div class="swatch-value">${s.var}</div>
-        </div>
-      </div>`).join('');
-  }
-
-  function renderTypographyShowcase() {
-    const container = $('typography-showcase');
-    if (!container) return;
-
-    const scale = [
-      { name: 'text-xs',   var: '--text-xs',   size: '0.6875rem' },
-      { name: 'text-sm',   var: '--text-sm',   size: '0.75rem' },
-      { name: 'text-base', var: '--text-base', size: '0.875rem' },
-      { name: 'text-md',   var: '--text-md',   size: '1rem' },
-      { name: 'text-lg',   var: '--text-lg',   size: '1.125rem' },
-      { name: 'text-xl',   var: '--text-xl',   size: '1.375rem' },
-      { name: 'text-2xl',  var: '--text-2xl',  size: '1.75rem' },
-      { name: 'text-3xl',  var: '--text-3xl',  size: '2.25rem' },
-    ];
-
-    container.innerHTML = scale.map(s => `
-      <div style="display:flex;align-items:baseline;gap:16px;padding:8px 0;border-bottom:1px solid var(--border)">
-        <span style="font-size:${s.size};font-weight:700;flex:1">The quick brown fox jumps over the lazy dog</span>
-        <code style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);white-space:nowrap">${s.name} (${s.size})</code>
-      </div>`).join('');
-  }
-
-  function renderSpacingShowcase() {
-    const container = $('spacing-showcase');
-    if (!container) return;
-
-    const spaces = [
-      { name: 'space-1', value: '4px' },
-      { name: 'space-2', value: '8px' },
-      { name: 'space-3', value: '12px' },
-      { name: 'space-4', value: '16px' },
-      { name: 'space-5', value: '20px' },
-      { name: 'space-6', value: '24px' },
-      { name: 'space-8', value: '32px' },
-      { name: 'space-10', value: '40px' },
-      { name: 'space-12', value: '48px' },
-    ];
-
-    container.innerHTML = spaces.map(s => `
-      <div style="display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid rgba(80,110,200,0.06)">
-        <div style="width:${s.value};height:24px;background:var(--accent-blue);border-radius:3px;opacity:0.6" aria-hidden="true"></div>
-        <code style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);white-space:nowrap">--${s.name}</code>
-        <span style="font-size:12px;color:var(--text-muted)">${s.value}</span>
-      </div>`).join('');
-  }
-
-  // ════════════════════════════════════════════════════════════
-  //  SECURITY / DEFENSE VIEW
-  // ════════════════════════════════════════════════════════════
+  // ── Security / Defense View ────────────────────────────────────────────────
   async function renderSecurityView() {
     let totalEval = 0, totalBlocked = 0, totalIncidents = 0, totalBlockedIps = 0;
     const rows = [];
@@ -897,12 +408,12 @@
     const body = $('defense-stats-body');
     if (!body) return;
     body.innerHTML = `
-      <table class="data-table" role="table" aria-label="Defense statistics by service">
+      <table class="data-table">
         <thead><tr>
-          <th scope="col">Service</th><th scope="col">Port</th>
-          <th scope="col">Evaluations</th><th scope="col">Blocked Req</th>
-          <th scope="col">Incidents</th><th scope="col">Blocked IPs</th>
-          <th scope="col">Mode</th>
+          <th>Service</th><th>Port</th>
+          <th>Evaluations</th><th>Blocked Req</th>
+          <th>Incidents</th><th>Blocked IPs</th>
+          <th>Mode</th>
         </tr></thead>
         <tbody>
           ${rows.map(r => `
@@ -919,9 +430,7 @@
       </table>`;
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  ADAPTIVE PULSE VIEW
-  // ════════════════════════════════════════════════════════════
+  // ── Adaptive Pulse View ────────────────────────────────────────────────────
   async function renderPulseView() {
     const body = $('pulse-daemons-body');
     if (!body) return;
@@ -966,9 +475,7 @@
       </div>`;
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  FLUIDIC ROUTING VIEW
-  // ════════════════════════════════════════════════════════════
+  // ── Fluidic Routing View ───────────────────────────────────────────────────
   async function renderRoutingView() {
     const body = $('routing-cells-body');
     if (!body) return;
@@ -1013,9 +520,7 @@
       </div>`).join('');
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  FORESIGHT VIEW
-  // ════════════════════════════════════════════════════════════
+  // ── Foresight View ─────────────────────────────────────────────────────────
   function renderForesightView() {
     const body = $('foresight-detail-body');
     if (!body) return;
@@ -1058,9 +563,7 @@
       </div>`;
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  DIMENSIONALS VIEW
-  // ════════════════════════════════════════════════════════════
+  // ── Dimensionals View ──────────────────────────────────────────────────────
   async function renderDimensionalsView() {
     const body = $('dimensionals-body');
     if (!body) return;
@@ -1088,7 +591,7 @@
         ${services.map(svc => `
         <div class="dimensional-card pillar-${(svc.pillar || 'creation').toLowerCase()}">
           <div class="dim-card-header">
-            <span class="dim-icon">◇</span>
+            <span class="dim-icon">⬡</span>
             <strong>${svc.name || svc.service_id}</strong>
             <span class="port-badge">${svc.port || ''}</span>
           </div>
@@ -1105,9 +608,7 @@
       </div>`;
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  AI AGENTS / MODELS / WORKFLOWS VIEWS
-  // ════════════════════════════════════════════════════════════
+  // ── AI Agents View ─────────────────────────────────────────────────────────
   async function renderAgentsView() {
     const body = $('agents-body');
     if (!body) return;
@@ -1132,6 +633,7 @@
       </div>`;
   }
 
+  // ── Models View ────────────────────────────────────────────────────────────
   async function renderModelsView() {
     const body = $('models-body');
     if (!body) return;
@@ -1156,6 +658,7 @@
       </div>`;
   }
 
+  // ── Workflows View ─────────────────────────────────────────────────────────
   async function renderWorkflowsView() {
     const body = $('workflows-body');
     if (!body) return;
@@ -1180,9 +683,7 @@
       </div>`;
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  INFINITY SERVICE DETAIL VIEWS
-  // ════════════════════════════════════════════════════════════
+  // ── Infinity Service Detail Views ──────────────────────────────────────────
   function renderPortalDetail() {
     const body = $('portal-detail-body');
     if (!body) return;
@@ -1250,7 +751,7 @@
     ]);
   }
 
-  // ── Shared service detail builder ──────────────────────────
+  // ── Shared service detail builder ──────────────────────────────────────────
   function buildServiceDetail(name, port, health, stats, metrics) {
     const alive   = health.status === 'healthy' || health.status === 'ok';
     const score   = health.health_score;
@@ -1329,7 +830,7 @@
 
         ${Object.keys(hStat).length ? `
         <div class="detail-section">
-          <h4>◇ Adaptive Pulse</h4>
+          <h4>⬡ Adaptive Pulse</h4>
           <div class="metrics-grid">
             <div class="metric-item">
               <span class="metric-label">Mode</span>
@@ -1361,14 +862,12 @@
           <span class="meta-chip">Sentinel: ${
             health.sentinel || stats.sentinel?.is_running ? '✓' : '—'
           }</span>
-          <span class="meta-chip">Phase 23</span>
+          <span class="meta-chip">Phase 22.6</span>
         </div>
       </div>`;
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  SENTINEL SSE FEED
-  // ════════════════════════════════════════════════════════════
+  // ── Sentinel SSE Feed ──────────────────────────────────────────────────────
   function connectSentinelSSE() {
     if (S.sse && S.sse.readyState !== EventSource.CLOSED) return;
 
@@ -1382,13 +881,14 @@
     S.sse.onopen = () => {
       S.sseRetries = 0;
       const dot = $('sentinel-live-dot');
-      if (dot) { dot.className = 'widget-header-badge live'; dot.textContent = '● LIVE'; }
+      if (dot) { dot.className = 'live-dot live-connected'; dot.textContent = '●'; }
     };
 
     S.sse.onmessage = (e) => {
       try { pushFeedItem(JSON.parse(e.data)); } catch {}
     };
 
+    // Subscribe to Sentinel channel events
     ['platform', 'security', 'bridge', 'agent', 'ai', 'dimensional', 'underverse'].forEach(ch => {
       S.sse.addEventListener(ch, (e) => {
         try {
@@ -1402,7 +902,7 @@
     S.sse.onerror = () => {
       S.sse.close();
       const dot = $('sentinel-live-dot');
-      if (dot) { dot.className = 'widget-header-badge alert'; dot.textContent = '○ OFFLINE'; }
+      if (dot) { dot.className = 'live-dot live-disconnected'; dot.textContent = '○'; }
       scheduleSSEReconnect();
     };
   }
@@ -1442,21 +942,19 @@
       </div>`).join('');
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  DYNAMIC CSS INJECTION (View-specific styles)
-  // ════════════════════════════════════════════════════════════
+  // ── Dynamic CSS injection ──────────────────────────────────────────────────
   function injectDynamicStyles() {
     const style = document.createElement('style');
     style.textContent = `
       .dot-healthy  { background: var(--health-excellent); box-shadow: 0 0 6px var(--health-excellent); }
-      .dot-offline  { background: var(--text-muted); box-shadow: none; }
+      .dot-offline  { background: var(--color-text-muted); box-shadow: none; }
 
       .pulse-mode-steady      { background: var(--health-excellent); color: #0a0e1a; }
       .pulse-mode-accelerated { background: var(--pillar-intelligence); color: #0a0e1a; }
       .pulse-mode-emergency   { background: var(--health-critical); color: #fff; }
       .pulse-mode-recovery    { background: var(--health-poor); color: #0a0e1a; }
 
-      .traj-offline   { background: var(--text-muted); }
+      .traj-offline   { background: var(--color-text-muted); }
       .traj-excellent { background: var(--health-excellent); }
       .traj-good      { background: var(--health-good); }
       .traj-fair      { background: var(--health-fair); }
@@ -1465,18 +963,18 @@
 
       .foresight-detail    { display:flex; flex-direction:column; gap:.75rem; }
       .foresight-row       { display:grid; grid-template-columns:130px 1fr 200px; align-items:center; gap:1rem; }
-      .foresight-service   { font-size:.88rem; color:var(--text-secondary); }
-      .foresight-bar-wrap  { height:14px; background:var(--bg-card-2); border-radius:3px; overflow:hidden; }
+      .foresight-service   { font-size:.88rem; color:var(--color-text-secondary); }
+      .foresight-bar-wrap  { height:14px; background:var(--color-surface-raised); border-radius:3px; overflow:hidden; }
       .foresight-bar       { height:100%; border-radius:3px; transition:width .8s ease; }
       .foresight-excellent { background:var(--health-excellent); }
       .foresight-good      { background:var(--health-good); }
       .foresight-fair      { background:var(--health-fair); }
       .foresight-poor      { background:var(--health-poor); }
       .foresight-critical  { background:var(--health-critical); }
-      .foresight-unknown   { background:var(--text-muted); }
+      .foresight-unknown   { background:var(--color-text-muted); }
       .foresight-stats     { display:flex; align-items:center; gap:.5rem; }
-      .foresight-score     { font-size:.82rem; color:var(--text-muted); font-family:var(--font-mono); }
-      .foresight-legend    { display:flex; gap:.75rem; flex-wrap:wrap; margin-top:1rem; padding-top:.75rem; border-top:1px solid var(--border); }
+      .foresight-score     { font-size:.82rem; color:var(--color-text-muted); font-family:var(--font-mono); }
+      .foresight-legend    { display:flex; gap:.75rem; flex-wrap:wrap; margin-top:1rem; padding-top:.75rem; border-top:1px solid var(--color-border); }
       .legend-item         { font-size:.72rem; padding:2px 8px; border-radius:10px; color:#0a0e1a; font-weight:700; }
       .legend-item.foresight-excellent { background:var(--health-excellent); }
       .legend-item.foresight-good      { background:var(--health-good); }
@@ -1490,15 +988,15 @@
       .tier-chip-fair        { background:var(--health-fair); }
       .tier-chip-poor        { background:var(--health-poor); }
       .tier-chip-critical    { background:var(--health-critical); }
-      .tier-chip-unknown     { background:var(--text-muted); color:var(--text-primary); }
+      .tier-chip-unknown     { background:var(--color-text-muted); color:var(--color-text); }
 
       .feed-item   { display:grid; grid-template-columns:65px 100px 1fr 85px; gap:.5rem; padding:4px 8px; border-radius:4px; font-size:.76rem; font-family:var(--font-mono); }
-      .feed-item:hover { background:var(--bg-card-2); }
-      .feed-ts     { color:var(--text-muted); }
+      .feed-item:hover { background:var(--color-surface-raised); }
+      .feed-ts     { color:var(--color-text-muted); }
       .feed-channel{ font-weight:700; font-size:.68rem; letter-spacing:.04em; }
-      .feed-event  { color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-      .feed-source { color:var(--text-muted); font-size:.7rem; text-align:right; overflow:hidden; text-overflow:ellipsis; }
-      .feed-empty  { color:var(--text-muted); font-size:.85rem; padding:1.5rem; text-align:center; }
+      .feed-event  { color:var(--color-text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .feed-source { color:var(--color-text-muted); font-size:.7rem; text-align:right; overflow:hidden; text-overflow:ellipsis; }
+      .feed-empty  { color:var(--color-text-muted); font-size:.85rem; padding:1.5rem; text-align:center; }
       .feed-channel-security { border-left:2px solid var(--pillar-security); }
       .feed-channel-platform { border-left:2px solid var(--pillar-intelligence); }
       .feed-channel-bridge   { border-left:2px solid var(--pillar-governance); }
@@ -1513,74 +1011,78 @@
       .health-critical   { color:var(--health-critical); }
 
       .data-table           { width:100%; border-collapse:collapse; font-size:.83rem; }
-      .data-table th        { text-align:left; padding:.5rem .75rem; color:var(--text-muted); font-weight:500; font-size:.72rem; border-bottom:1px solid var(--border); }
+      .data-table th        { text-align:left; padding:.5rem .75rem; color:var(--color-text-muted); font-weight:500; font-size:.72rem; border-bottom:1px solid var(--color-border); }
       .data-table td        { padding:.6rem .75rem; border-bottom:1px solid rgba(255,255,255,.04); }
-      [data-theme="light"] .data-table td { border-bottom-color: rgba(0,0,0,.06); }
-      .data-table tr:hover td { background:var(--bg-card-2); }
+      .data-table tr:hover td { background:var(--color-surface-raised); }
       .threat-value         { color:var(--health-critical); font-weight:700; }
       .text-healthy         { color:var(--health-excellent); }
-      .text-offline         { color:var(--text-muted); }
+      .text-offline         { color:var(--color-text-muted); }
 
       .pulse-grid           { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:1rem; }
-      .pulse-card           { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:1rem; }
+      .pulse-card           { background:var(--color-surface); border:1px solid var(--color-border); border-radius:8px; padding:1rem; }
       .pulse-card-header    { display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem; }
       .pulse-mode           { font-size:.7rem; padding:2px 8px; border-radius:10px; font-weight:700; }
-      .pulse-interval       { font-size:.8rem; color:var(--text-muted); margin-bottom:.5rem; }
-      .pulse-interval code  { color:var(--text-primary); background:var(--bg-card-2); padding:1px 5px; border-radius:3px; }
+      .pulse-interval       { font-size:.8rem; color:var(--color-text-muted); margin-bottom:.5rem; }
+      .pulse-interval code  { color:var(--color-text); background:var(--color-surface-raised); padding:1px 5px; border-radius:3px; }
       .pulse-daemons        { display:flex; flex-wrap:wrap; gap:.3rem; }
-      .daemon-chip          { font-size:.7rem; padding:2px 6px; background:var(--bg-card-2); border:1px solid var(--border); border-radius:4px; color:var(--text-secondary); }
+      .daemon-chip          { font-size:.7rem; padding:2px 6px; background:var(--color-surface-raised); border:1px solid var(--color-border); border-radius:4px; color:var(--color-text-secondary); }
 
       .routing-service-block { margin-bottom:1.5rem; }
       .routing-service-name  { color:var(--pillar-intelligence); font-size:.88rem; margin-bottom:.75rem; font-weight:600; }
       .routing-cells         { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:.75rem; }
-      .routing-cell          { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:.75rem; }
+      .routing-cell          { background:var(--color-surface); border:1px solid var(--color-border); border-radius:8px; padding:.75rem; }
       .routing-cell-location { font-weight:600; font-size:.83rem; color:var(--pillar-intelligence); margin-bottom:.2rem; }
       .routing-cell-weight   { font-size:1.2rem; font-family:var(--font-mono); font-weight:700; margin-bottom:.25rem; }
-      .routing-cell-meta     { display:flex; justify-content:space-between; font-size:.72rem; color:var(--text-muted); }
-      .muted-state           { color:var(--text-muted); font-size:.85rem; padding:2rem; text-align:center; }
+      .routing-cell-meta     { display:flex; justify-content:space-between; font-size:.72rem; color:var(--color-text-muted); }
+      .muted-state           { color:var(--color-text-muted); font-size:.85rem; padding:2rem; text-align:center; }
 
       .dimensional-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:1rem; }
-      .dimensional-card { background:var(--bg-card); border-radius:8px; padding:1rem; border-left:3px solid var(--border); }
+      .dimensional-card { background:var(--color-surface); border-radius:8px; padding:1rem; border-left:3px solid var(--color-border); }
       .dim-card-header  { display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; font-size:.88rem; font-weight:600; }
-      .dim-icon         { color:var(--text-muted); }
+      .dim-icon         { color:var(--color-text-muted); }
       .dim-card-body    { font-size:.8rem; }
-      .dim-meta         { color:var(--text-muted); line-height:1.7; }
-      .dim-desc         { color:var(--text-secondary); margin-top:.3rem; font-size:.75rem; }
+      .dim-meta         { color:var(--color-text-muted); line-height:1.7; }
+      .dim-desc         { color:var(--color-text-secondary); margin-top:.3rem; font-size:.75rem; }
       .dim-stats        { display:flex; gap:2rem; padding:1rem 0 1.5rem; }
       .dim-stat         { display:flex; flex-direction:column; }
-      .dim-stat .stat-label { font-size:.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
-      .dim-stat .stat-value { font-size:1.5rem; font-family:var(--font-mono); font-weight:700; color:var(--text-primary); }
+      .dim-stat .stat-label { font-size:.7rem; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.04em; }
+      .dim-stat .stat-value { font-size:1.5rem; font-family:var(--font-mono); font-weight:700; color:var(--color-text); }
 
       .entity-grid   { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:1rem; }
-      .entity-card   { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:1rem; }
+      .entity-card   { background:var(--color-surface); border:1px solid var(--color-border); border-radius:8px; padding:1rem; }
       .entity-header { display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
       .entity-icon   { font-size:1.1rem; }
-      .entity-meta   { font-size:.8rem; color:var(--text-muted); line-height:1.6; }
+      .entity-meta   { font-size:.8rem; color:var(--color-text-muted); line-height:1.6; }
 
       .service-detail        { }
       .service-detail-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; }
       .service-detail-status { font-size:.9rem; font-weight:700; }
       .status-healthy { color:var(--health-excellent); }
-      .status-offline { color:var(--text-muted); }
+      .status-offline { color:var(--color-text-muted); }
       .service-detail-scores { display:flex; gap:.5rem; align-items:center; }
-      .score-chip            { font-size:.85rem; color:var(--text-secondary); }
-      .score-chip strong     { color:var(--text-primary); }
+      .score-chip            { font-size:.85rem; color:var(--color-text-secondary); }
+      .score-chip strong     { color:var(--color-text); }
       .detail-section        { margin-bottom:1.25rem; }
-      .detail-section h4     { font-size:.82rem; color:var(--text-muted); margin-bottom:.75rem; font-weight:600; }
+      .detail-section h4     { font-size:.82rem; color:var(--color-text-muted); margin-bottom:.75rem; font-weight:600; }
       .metrics-grid          { display:grid; grid-template-columns:repeat(auto-fill,minmax(175px,1fr)); gap:.5rem; }
-      .metric-item           { background:var(--bg-card-2); border-radius:6px; padding:.6rem .75rem; display:flex; flex-direction:column; }
-      .metric-label          { font-size:.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:.2rem; }
-      .metric-value          { font-size:.98rem; font-family:var(--font-mono); font-weight:600; color:var(--text-primary); }
-      .detail-meta           { display:flex; gap:.5rem; flex-wrap:wrap; padding-top:.75rem; border-top:1px solid var(--border); margin-top:.5rem; }
-      .meta-chip             { font-size:.72rem; padding:2px 8px; background:var(--bg-card-2); border:1px solid var(--border); border-radius:4px; color:var(--text-muted); }
+      .metric-item           { background:var(--color-surface-raised); border-radius:6px; padding:.6rem .75rem; display:flex; flex-direction:column; }
+      .metric-label          { font-size:.7rem; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:.2rem; }
+      .metric-value          { font-size:.98rem; font-family:var(--font-mono); font-weight:600; color:var(--color-text); }
+      .detail-meta           { display:flex; gap:.5rem; flex-wrap:wrap; padding-top:.75rem; border-top:1px solid var(--color-border); margin-top:.5rem; }
+      .meta-chip             { font-size:.72rem; padding:2px 8px; background:var(--color-surface-raised); border:1px solid var(--color-border); border-radius:4px; color:var(--color-text-muted); }
+
+      .live-dot              { font-size:.8rem; margin-left:auto; }
+      .live-connected        { color:var(--health-excellent); animation:pulse-dot 2s infinite; }
+      .live-disconnected     { color:var(--color-text-muted); }
+      @keyframes pulse-dot   { 0%,100%{opacity:1} 50%{opacity:.25} }
 
       .alert-banner { position:sticky; top:0; z-index:100; padding:.6rem 1.5rem; font-size:.85rem; font-weight:600; }
       .alert-info   { background:var(--pillar-intelligence); color:#0a0e1a; }
       .alert-warning{ background:var(--health-fair);         color:#0a0e1a; }
       .alert-error  { background:var(--health-critical);     color:#fff; }
 
-      .port-badge { font-size:.7rem; font-family:var(--font-mono); padding:1px 6px; background:var(--bg-card-2); border:1px solid var(--border); border-radius:4px; color:var(--text-muted); }
-      .muted      { color:var(--text-muted); font-size:.8rem; }
+      .port-badge { font-size:.7rem; font-family:var(--font-mono); padding:1px 6px; background:var(--color-surface-raised); border:1px solid var(--color-border); border-radius:4px; color:var(--color-text-muted); }
+      .muted      { color:var(--color-text-muted); font-size:.8rem; }
 
       .sidebar.collapsed .brand-text,
       .sidebar.collapsed .nav-section-label,
@@ -1589,20 +1091,13 @@
       .sidebar.collapsed .nav-count,
       .sidebar.collapsed .nav-badge,
       .sidebar.collapsed .status-info { display:none; }
-
-      /* Skip link */
-      .skip-link:focus { top: 0 !important; }
     `;
     document.head.appendChild(style);
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  BOOTSTRAP
-  // ════════════════════════════════════════════════════════════
+  // ── Bootstrap ──────────────────────────────────────────────────────────────
   function init() {
     injectDynamicStyles();
-    initTheme();
-    initLayout();
     startClock();
     connectSentinelSSE();
     pollAll();

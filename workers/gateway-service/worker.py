@@ -256,7 +256,7 @@ async def _lifespan(app: FastAPI):
 
                 # Gateway reporter
                 if worker_kit.health.should_fire("gateway_reporter"):
-                    summary = worker_kit.health.get_health_summary().to_dict()
+                    summary = worker_kit.health.get_health_summary()
                     worker_kit.health.record_fire("gateway_reporter")
                     await sentinel.publish(SentinelEvent(
                         channel=SentinelChannel.PLATFORM,
@@ -291,7 +291,7 @@ async def _lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Tranc3 Gateway Service",
-    version="0.8.0",
+    version="0.7.0",
     lifespan=_lifespan,
 )
 
@@ -558,7 +558,7 @@ async def health():
     return {
         "status": "ok",
         "service": "gateway-service",
-        "version": "0.8.0",
+        "version": "0.7.0",
         "upstream_workers": len(UPSTREAM_WORKERS),
         "ws_connections": ws_auth_manager.connection_count,
         "sentinel_station": {
@@ -620,7 +620,7 @@ async def api_overview(request: Request):
     return {
         "platform": {
             "name": "Tranc3",
-            "version": "0.8.0",
+            "version": "0.7.0",
             "status": "operational"
             if reachable >= 6
             else "degraded"

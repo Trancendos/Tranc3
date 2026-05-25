@@ -1,0 +1,21 @@
+{
+  "name": "tranc3-ts",
+  "version": "1.0.0",
+  "description": "Trancendos/Tranc3 TypeScript AI/Agent/Bot Ecosystem — 22+ Hub Architecture",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "rebuild": "npm run clean && npm run build"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0"
+  }
+}

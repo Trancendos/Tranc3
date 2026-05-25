@@ -32,24 +32,6 @@ def _make_orchestrator(name: str = "test-service") -> InfinityHealthOrchestrator
     return InfinityHealthOrchestrator(AIConfig(service_name=name))
 
 
-def _run_coro(coro):
-    """Run a coroutine safely, creating a fresh event loop if needed.
-
-    This avoids RuntimeError from asyncio.get_event_loop() after other test
-    modules (e.g. test_adaptive_automation) close the default loop.
-    """
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
-    if loop and loop.is_running():
-        # We're inside an already-running loop (shouldn't happen in sync tests)
-        import concurrent.futures
-        with concurrent.futures.ThreadPoolExecutor() as pool:
-            return pool.submit(asyncio.run, coro).result()
-    return asyncio.run(coro)
-
-
 # ---------------------------------------------------------------------------
 # InfinityHealthOrchestrator
 # ---------------------------------------------------------------------------
@@ -150,7 +132,7 @@ class TestProactiveDefenseLayer:
         assert self.defense is not None
 
     def test_evaluate_safe_request_allowed(self):
-        result = _run_coro(
+        result = asyncio.get_event_loop().run_until_complete(
             self.defense.evaluate_request(
                 {
                     "ip": "192.168.1.100",
@@ -176,11 +158,11 @@ class TestProactiveDefenseLayer:
 
     def test_evaluate_many_requests_increments_evaluations(self):
         """IP should be blocked after exceeding violation threshold."""
+        loop = asyncio.get_event_loop()
         bad_ip = "10.0.0.99"
-
-        async def _run_many():
-            for i in range(20):
-                await self.defense.evaluate_request(
+        for i in range(20):
+            loop.run_until_complete(
+                self.defense.evaluate_request(
                     {
                         "ip": bad_ip,
                         "path": f"/portal/login?attempt={i}",
@@ -188,8 +170,7 @@ class TestProactiveDefenseLayer:
                         "user_agent": "python-requests/2.28",
                     }
                 )
-
-        _run_coro(_run_many())
+            )
         stats = self.defense.get_stats()
         assert stats.get("evaluations", 0) > 0
 
@@ -214,24 +195,28 @@ class TestInfinityFluidicGateway:
         assert self.gateway is not None
 
     def test_route_user_role(self):
-        result = _run_coro(self.gateway.route("user", "user-123"))
+        result = asyncio.get_event_loop().run_until_complete(self.gateway.route("user", "user-123"))
         assert result is not None
         assert hasattr(result, "target_location")
 
     def test_route_admin_role(self):
-        result = _run_coro(self.gateway.route("admin", "admin-456"))
+        result = asyncio.get_event_loop().run_until_complete(
+            self.gateway.route("admin", "admin-456")
+        )
         assert result is not None
 
     def test_route_ai_role(self):
-        result = _run_coro(self.gateway.route("ai", "ai-789"))
+        result = asyncio.get_event_loop().run_until_complete(self.gateway.route("ai", "ai-789"))
         assert result is not None
 
     def test_route_unknown_role_fallback(self):
-        result = _run_coro(self.gateway.route("unknown_role", "u-0"))
+        result = asyncio.get_event_loop().run_until_complete(
+            self.gateway.route("unknown_role", "u-0")
+        )
         assert result is not None
 
     def test_record_route_success(self):
-        result = _run_coro(self.gateway.route("user", "u-rec"))
+        result = asyncio.get_event_loop().run_until_complete(self.gateway.route("user", "u-rec"))
         self.gateway.record_route_success(result.target_location, 42.5)
 
     def test_get_stats_returns_dict(self):
@@ -285,19 +270,17 @@ class TestInfinityWorkerKit:
 
     def test_shutdown_without_startup(self):
         """Shutdown on a kit that was never started should not raise."""
-        _run_coro(self.kit.shutdown())
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.kit.shutdown())
 
     def test_startup_and_shutdown(self):
         """Full startup → shutdown lifecycle."""
         from fastapi import FastAPI
 
         app = FastAPI()
-
-        async def _lifecycle():
-            await self.kit.startup(app, sentinel=None)
-            await self.kit.shutdown()
-
-        _run_coro(_lifecycle())
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.kit.startup(app, sentinel=None))
+        loop.run_until_complete(self.kit.shutdown())
 
     def test_startup_mounts_health_smart_endpoint(self):
         """InfinityWorkerKit should mount /health/smart after startup."""
@@ -305,11 +288,8 @@ class TestInfinityWorkerKit:
         from fastapi.testclient import TestClient
 
         app = FastAPI()
-
-        async def _startup():
-            await self.kit.startup(app, sentinel=None)
-
-        _run_coro(_startup())
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.kit.startup(app, sentinel=None))
 
         client = TestClient(app, raise_server_exceptions=False)
         r = client.get("/health/smart")
@@ -321,11 +301,8 @@ class TestInfinityWorkerKit:
         from fastapi.testclient import TestClient
 
         app = FastAPI()
-
-        async def _startup():
-            await self.kit.startup(app, sentinel=None)
-
-        _run_coro(_startup())
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.kit.startup(app, sentinel=None))
 
         client = TestClient(app, raise_server_exceptions=False)
         r = client.get("/defense/stats")
@@ -336,11 +313,8 @@ class TestInfinityWorkerKit:
         from fastapi.testclient import TestClient
 
         app = FastAPI()
-
-        async def _startup():
-            await self.kit.startup(app, sentinel=None)
-
-        _run_coro(_startup())
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.kit.startup(app, sentinel=None))
 
         client = TestClient(app, raise_server_exceptions=False)
         r = client.get("/routing/topology")
