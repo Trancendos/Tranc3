@@ -14,15 +14,9 @@ The HIVE is ONE of the three bridges through Sentinel Station:
     Bridge 3 — The HIVE (THIS): Data movement and swarm system coordination
 """
 
-import asyncio
-import json
 import os
 import sys
 import tempfile
-import time
-from datetime import datetime, timezone
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -31,7 +25,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from Dimensional.hive.hive_core import (
     DataChunk,
-    DataPipeline,
     DataPriority,
     FlowMonitor,
     Hive,
@@ -184,7 +177,7 @@ class TestSwarmCoordinator:
     @pytest.mark.asyncio
     async def test_list_swarms_by_status(self):
         """List swarms can filter by status."""
-        swarm = await self.coordinator.create_swarm(name="forming", purpose="test")
+        _swarm = await self.coordinator.create_swarm(name="forming", purpose="test")
         # swarm is FORMING, not ACTIVE
         forming = await self.coordinator.list_swarms(status=SwarmStatus.FORMING)
         active = await self.coordinator.list_swarms(status=SwarmStatus.ACTIVE)

@@ -24,7 +24,7 @@ import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -376,7 +376,7 @@ class FallbackRouter:
         return OptimizedRoute(
             source=source, target=target,
             route_type=RouteType.FALLBACK,
-            path_ids=[f"→".join(best_route)],
+            path_ids=["→".join(best_route)],
             hops=best_route,
             strategy=OptimizationStrategy.BALANCED,
             is_fallback=True,

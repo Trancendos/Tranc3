@@ -39,10 +39,9 @@ import logging
 import time
 import uuid
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -182,7 +181,7 @@ class MetricsCollector:
             ys = [m.load_factor for m in recent]
             sum_x = sum(xs)
             sum_y = sum(ys)
-            sum_xy = sum(x * y for x, y in zip(xs, ys))
+            sum_xy = sum(x * y for x, y in zip(xs, ys, strict=True))
             sum_xx = sum(x * x for x in xs)
             denom = n * sum_xx - sum_x * sum_x
             if denom == 0:

@@ -10,15 +10,11 @@ Comprehensive test suite covering:
 - FastAPI endpoints
 """
 
-import asyncio
-import json
 import os
 import sys
 import tempfile
-import time
 from datetime import datetime, timezone
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -39,7 +35,7 @@ from Dimensional.nexus.nexus_core import (
     TierAccessBridge,
     get_nexus,
 )
-from Dimensional.infinity.nomenclature import SentinelChannel, Tier
+from Dimensional.infinity.nomenclature import SentinelChannel
 
 
 # ---------------------------------------------------------------------------
@@ -589,7 +585,7 @@ class TestEventRouter:
             source_tier=3,
             event_type="test_event",
         )
-        subscribers = await self.router.publish(event)
+        _subscribers = await self.router.publish(event)
         assert len(good_received) == 1
 
     @pytest.mark.asyncio
@@ -990,7 +986,7 @@ class TestNexusSentinelBridge:
     @pytest.mark.asyncio
     async def test_bridge_on_sentinel_event(self):
         """Bridge forwards Sentinel events into the Nexus."""
-        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge, get_bridge
+        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
         from Dimensional.nexus.nexus_core import DimensionalNexus
 
         nexus = DimensionalNexus("bridge-test")

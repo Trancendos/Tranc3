@@ -6,14 +6,12 @@ leader election, log replication, commitment, and cluster management.
 """
 
 import asyncio
-import pytest
 
 from Dimensional.nexus.raft.raft_core import (
     RaftConfig,
     RaftLog,
     RaftLogEntry,
     RaftNode,
-    RaftNodeStatus,
     RaftState,
     NexusCluster,
     NexusClusterNode,

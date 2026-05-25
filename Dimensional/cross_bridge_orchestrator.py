@@ -18,7 +18,7 @@ import uuid
 import logging
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 

@@ -6,7 +6,6 @@ failover, partition handling, and cluster lifecycle.
 """
 
 import asyncio
-import pytest
 
 from Dimensional.infinity.sentinel_cluster import (
     NodeRole,

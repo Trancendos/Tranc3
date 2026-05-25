@@ -33,12 +33,12 @@ import os
 import time
 from typing import Any, Dict, List, Optional, Set
 
-from fastapi import Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import Request, Response, WebSocket
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp
 
-from Dimensional.infinity.nomenclature import InfinityRole, Tier
+from Dimensional.infinity.nomenclature import Tier
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ def _validate_jwt_token(token: str, secret: str, algorithm: str = "HS256") -> Op
     The payload includes tier, role, and pillar claims for RBAC/ABAC.
     """
     try:
-        from jose import jwt, JWTError
+        from jose import jwt
 
         payload = jwt.decode(token, secret, algorithms=[algorithm])
 

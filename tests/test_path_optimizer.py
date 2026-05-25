@@ -7,7 +7,6 @@ across light bridges.
 """
 
 import asyncio
-import pytest
 
 from Dimensional.infinity.bridge.path_optimizer import (
     PathMetrics,
@@ -20,7 +19,6 @@ from Dimensional.infinity.bridge.path_optimizer import (
     FallbackRouter,
     PathOptimizationEngine,
     OptimizedRoute,
-    RouteType,
     get_path_optimizer,
 )
 
@@ -270,7 +268,7 @@ class TestFallbackRouter:
             router = FallbackRouter()
             loop.run_until_complete(router.register_path("A", "B"))
             # Need scored_paths and health_monitor for get_fallback_route
-            scorer = PathScorer()
+            _scorer = PathScorer()
             monitor = PathHealthMonitor()
             # Score a path with low total_score to trigger fallback
             scored_paths = {}

@@ -13,13 +13,11 @@ Architecture:
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 import logging
-import time
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -432,7 +430,7 @@ def create_sentinel_cluster_app():
         """Create a new sentinel cluster."""
         mgr = get_sentinel_cluster_manager()
         body = await request.json() if request.headers.get("content-type") else {}
-        cluster = mgr.create_cluster(cluster_name, config=body.get("config"))
+        mgr.create_cluster(cluster_name, config=body.get("config"))
         return {"action": "create_cluster", "cluster_name": cluster_name, "status": "created"}
 
     @app.delete("/clusters/{cluster_name}", tags=["clusters"])
@@ -468,7 +466,7 @@ def create_sentinel_cluster_app():
         if cluster is None:
             return {"error": "cluster not found", "cluster_name": cluster_name}
         body = await request.json() if request.headers.get("content-type") else {}
-        node = cluster.add_node(
+        cluster.add_node(
             node_id=node_id,
             address=body.get("address", f"sentinel-{node_id}:6379"),
             role=body.get("role", "replica"),

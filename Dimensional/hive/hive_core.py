@@ -48,21 +48,17 @@ import time
 import uuid
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from Dimensional.infinity.nomenclature import (
-    InfinityRole,
     SentinelChannel,
-    Tier,
-    TransferSystem,
 )
 
 logger = logging.getLogger("hive")
@@ -506,8 +502,8 @@ class PipelineManager:
         chunk.hops.append(f"hive-{uuid.uuid4().hex[:6]}")
 
         # Simulate delivery for each sink
-        delivered = True
-        for sink_id in chunk.sink_id.split(","):
+        _delivered = True
+        for _sink_id in chunk.sink_id.split(","):
             # In production, this would route through the actual data transport
             pass
 
@@ -1144,7 +1140,7 @@ def create_hive_app() -> FastAPI:
         await _ws_manager.connect(ws)
         try:
             while True:
-                data = await ws.receive_text()
+                _data = await ws.receive_text()
                 # Echo back for keepalive
                 await ws.send_text(json.dumps({"type": "pong", "hive_id": get_hive().node_id}))
         except WebSocketDisconnect:

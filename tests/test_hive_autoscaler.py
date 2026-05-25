@@ -6,7 +6,6 @@ scaling policies, cooldown management, and threshold triggers.
 """
 
 import asyncio
-import pytest
 
 from Dimensional.hive.autoscaler import (
     ScalingPolicyType,

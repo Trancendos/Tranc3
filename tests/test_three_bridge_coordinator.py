@@ -14,7 +14,6 @@ Tests verify:
 """
 
 import asyncio
-import pytest
 # Note: Direct _sentinel_station assignment used instead of patch.object
 # because sentinel_station is a property without a setter
 
@@ -27,11 +26,9 @@ from Dimensional.three_bridge_coordinator import (
 )
 from Dimensional.infinity.bridge.bridge_core import (
     InfinityBridge,
-    InfinitySentinelBridge,
 )
 from Dimensional.nexus.nexus_core import Nexus
 from Dimensional.hive.hive_core import Hive
-from Dimensional.infinity.nomenclature import SentinelChannel, TransferSystem
 
 
 def run_async(coro):
@@ -264,7 +261,7 @@ class TestCrossBridgeEvents:
             coordinator._track_cross_bridge_event(
                 CrossBridgeEvent(event_type=f"event-{i}")
             )
-        recent = coordinator.get_recent_cross_bridge_events()
+        _recent = coordinator.get_recent_cross_bridge_events()
         # Should only keep the last 5
         total = len(coordinator._cross_bridge_events)
         assert total <= 5

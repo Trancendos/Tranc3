@@ -48,16 +48,14 @@ Usage:
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from Dimensional.infinity.bridge.bridge_core import (
-    BridgeEvent,
     InfinityBridge,
     InfinitySentinelBridge,
     get_infinity_bridge,

@@ -39,7 +39,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set
 
 logger = logging.getLogger("nexus.raft")
 
@@ -286,7 +286,7 @@ class RaftNode:
             self._election_timer.cancel()
         try:
             loop = asyncio.get_event_loop()
-            timeout = self._config.election_timeout_ms / 1000.0
+            _timeout = self._config.election_timeout_ms / 1000.0
             self._election_timer = loop.create_task(self._election_timeout())
         except RuntimeError:
             pass
@@ -573,7 +573,7 @@ class NexusCluster:
 
     def get_cluster_status(self) -> Dict[str, Any]:
         """Get comprehensive cluster status."""
-        leader = self._get_leader()
+        _leader = self._get_leader()
         return {
             "running": self._running,
             "cluster_size": self._cluster_size,
