@@ -1,28 +1,38 @@
-# Tranc3 — Phase 19: P3 Worker Build-Out, Enhanced Users-Service & docker-compose Integration
+# Tranc3 — Phase 21: AI Platform Redesign, Dashboard Upgrade & System Enhancement
 
-## Phase 19.1: Enhanced Users-Service (Port 8006)
-- [x] Baseline confirmed: 229 lines, basic CRUD only
-- [x] Expand users-service with: avatar URL, bio, timezone, last_login, user search, roles endpoint, bulk deactivate, account lock/unlock, password-reset token stub
-- [x] Add json import for preferences serialisation (uses `str()` currently — bug)
-- [x] Verify all existing test_workers_p1.py tests still pass after enhancement
+## Phase 21.1: Architecture & Dependencies
+- [x] Install/enhance Python dependencies (jinja2, websockets, sse-starlette for streaming)
+- [x] Create unified gateway API that aggregates all P4 worker data
+- [x] Add WebSocket + SSE endpoints to P4 workers (all 8 workers now have /ws, /events, /dashboard/summary)
 
-## Phase 19.2: P3 Worker Test Suite (test_workers_p3.py)
-- [x] Write tests/test_workers_p3.py covering all 16 extended workers:
-  - analytics-service (8016), search-service (8017), email-service (8018),
-    sms-service (8019), storage-service (8020), cron-service (8021),
-    queue-service (8022), cache-service (8023), config-service (8024),
-    audit-service (8025), rate-limit-service (8026), geo-service (8027),
-    cdn-service (8028), health-aggregator (8029), identity-service (8015),
-    the-grid (8010)
-- [x] Target ≥5 tests per worker (health + 2-3 functional + error path)
-- [x] All 143 tests pass (2170 total, 12 skipped, 0 failures)
+## Phase 21.2: AI Platform Dashboard Redesign
+- [x] Design new AI Platform UX: sidebar navigation, AI command center, agent management
+- [x] Create dashboard/styles.css — premium AI platform styling with glass morphism, animated gradients
+- [x] Create dashboard/app.js — application logic, state management, real-time data flows
+- [x] Create dashboard/index.html — full AI platform SPA with proper AI UX patterns
 
-## Phase 19.3: docker-compose Integration
-- [x] Add all workers to docker-compose.yml with correct ports, volumes, env (30 services, 27 volumes)
-- [x] Verify compose file is valid (Python yaml.safe_load validation)
+## Phase 21.3: Worker Enhancements
+- [x] Add /ws WebSocket endpoints to all P4 workers for real-time streaming
+- [x] Add /events SSE streaming endpoints for dashboard consumption
+- [x] Add /dashboard/summary endpoint to each worker (aggregated data for the dashboard)
+- [x] Standardize deepagents-orchestrator init pattern to match other 7 workers (_lifespan)
 
-## Phase 19.4: CI & Release
-- [x] ruff check + ruff format --check → 0 errors (403 files formatted)
-- [x] Full pytest suite → 2170 passed, 12 skipped, 0 failures
-- [ ] Create PR feat/phase19-p3-workers-users-enhancement
-- [ ] Merge PR + create release tag v0.4.0
+## Phase 21.4: Gateway Aggregation Service
+- [x] Create workers/gateway-service/worker.py (port 8040) — unified aggregation of all P4 data
+- [x] Endpoints verified and tested
+- [x] WebSocket /ws for real-time push to dashboard
+- [x] Proxy/cache layer with 5s cache TTL
+
+## Phase 21.5: Test Suite Updates
+- [x] Update tests/test_workers_p4.py for new endpoints (WebSocket, SSE, dashboard summary)
+- [x] Add tests for gateway-service
+- [x] Fix duplicate real-time endpoint blocks in 7 P4 workers
+- [x] Fix missing SERVICE_NAME/PORT constants in 7 P4 workers
+- [x] Fix missing _connected_ws declaration in 7 P4 workers
+- [x] Verify all tests pass (P0–P4) — 457 passed, 9 skipped
+
+## Phase 21.6: SWOT Update & Release
+- [x] ruff check + ruff format on all new/modified files
+- [x] Update PHASE21_SWOT_FORENSIC.md with before/after assessment (72.9% → 88.8%)
+- [x] Update pyproject.toml version to 0.6.0
+- [x] Git commit, tag v0.6.0, push branch, create PR
