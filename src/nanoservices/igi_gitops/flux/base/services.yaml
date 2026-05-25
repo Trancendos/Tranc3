@@ -1,0 +1,66 @@
+# Tranc3 Services
+apiVersion: v1
+kind: Service
+metadata:
+  name: nsa-broker
+  namespace: tranc3
+spec:
+  selector:
+    app: nsa-broker
+  ports:
+    - port: 7780
+      targetPort: 7780
+      name: http
+  clusterIP: None  # Headless for direct pod access
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shi-gateway
+  namespace: tranc3
+spec:
+  selector:
+    app: shi-gateway
+  ports:
+    - port: 7781
+      targetPort: 7781
+      name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dnf-orchestrator
+  namespace: tranc3
+spec:
+  selector:
+    app: dnf-orchestrator
+  ports:
+    - port: 7782
+      targetPort: 7782
+      name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tranc3-api
+  namespace: tranc3
+spec:
+  selector:
+    app: tranc3-api
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tranc3-web
+  namespace: tranc3
+spec:
+  selector:
+    app: tranc3-web
+  ports:
+    - port: 3000
+      targetPort: 3000
+      name: http

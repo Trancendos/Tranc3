@@ -1,0 +1,12 @@
+# flux/base/kustomization.yaml
+# Base Kustomization — shared resources for all environments
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - configmaps.yaml
+  - deployments.yaml
+  - services.yaml
+commonLabels:
+  app.kubernetes.io/part-of: tranc3
+  app.kubernetes.io/managed-by: fluxcd
