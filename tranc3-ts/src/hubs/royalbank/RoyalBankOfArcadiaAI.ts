@@ -17,12 +17,14 @@
  *            AuditorAgent ensures compliance and fraud prevention
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { TellerAgent } from './agents/TellerAgent';
 import { AuditorAgent } from './agents/AuditorAgent';
 import { LedgerBot } from './bots/LedgerBot';
 import { VaultBot } from './bots/VaultBot';
 import { ExchangeBot } from './bots/ExchangeBot';
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Interfaces
@@ -97,7 +99,7 @@ export class RoyalBankOfArcadiaAI extends AI {
     );
 
     this.log = new Logger('RoyalBankOfArcadiaAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.accounts = new Map();
     this.transactions = new Map();
     this.exchangeRates = new Map();

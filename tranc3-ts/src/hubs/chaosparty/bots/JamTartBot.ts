@@ -15,7 +15,9 @@
  * "Taste this — no, not that one — the other one. Or was it this one?"
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -112,7 +114,7 @@ export class JamTartBot extends Bot {
     );
 
     this.log = new Logger('JamTartBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.tasteHistory = new Map();
   }
 

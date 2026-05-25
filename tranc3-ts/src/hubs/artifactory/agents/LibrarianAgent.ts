@@ -15,7 +15,9 @@
  * "A library is not a luxury but one of the necessities of life."
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -98,7 +100,7 @@ export class LibrarianAgent extends Agent {
   constructor() {
     super('SID-ARTIFACTORY-LIBRARIAN');
     this.log = new Logger('LibrarianAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.catalog = new Map();
     this.deprecations = new Map();
     this.tagIndex = new Map();
@@ -108,7 +110,7 @@ export class LibrarianAgent extends Agent {
   // Agent Lifecycle: Perceive → Decide → Act
   // ─────────────────────────────────────────────────────────────────────────
 
-  protected async perceive(input: LibrarianInput): Promise<LibrarianInput> {
+  public async perceive(input: LibrarianInput): Promise<LibrarianInput> {
     this.log.info('Perceiving catalog operation', { operation: input.operation });
 
     // Validate artifact references
@@ -124,7 +126,7 @@ export class LibrarianAgent extends Agent {
     return input;
   }
 
-  protected async decide(input: LibrarianInput): Promise<string> {
+  public async decide(input: LibrarianInput): Promise<string> {
     this.log.info('Deciding catalog action', { operation: input.operation });
 
     switch (input.operation) {
@@ -136,7 +138,7 @@ export class LibrarianAgent extends Agent {
     }
   }
 
-  protected async act(input: LibrarianInput, decision: string): Promise<LibrarianResult> {
+  public async act(input: LibrarianInput, decision: string): Promise<LibrarianResult> {
     this.log.info('Acting on catalog decision', { decision });
 
     switch (decision) {

@@ -13,7 +13,9 @@
  *   - Weave multiple mesh sources into unified scene geometry
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ───────────────────────────────────────────
 // Domain Types
@@ -113,7 +115,7 @@ export class MeshWeaverAgent extends Agent {
     );
 
     this.log = new Logger('MeshWeaverAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.meshRegistry = new Map();
     this.materials = new Map();
     this.agentState = {
@@ -142,7 +144,7 @@ export class MeshWeaverAgent extends Agent {
   // Abstract Method Implementations
   // ───────────────────────────────────────
 
-  protected async perceive(input: unknown): Promise<unknown> {
+  public async perceive(input: unknown): Promise<unknown> {
     const meshSource = input as MeshSource;
     this.log.debug('Perceiving mesh source', { type: meshSource.type });
 
@@ -160,7 +162,7 @@ export class MeshWeaverAgent extends Agent {
     return analysis;
   }
 
-  protected async decide(perception: unknown): Promise<MeshWeaverDecision> {
+  public async decide(perception: unknown): Promise<MeshWeaverDecision> {
     const analysis = perception as {
       sourceType: MeshSource['type'];
       estimatedComplexity: number;
@@ -194,7 +196,7 @@ export class MeshWeaverAgent extends Agent {
     return 'COMPOSE_PRIMITIVE';
   }
 
-  protected async act(decision: MeshWeaverDecision, perception: unknown): Promise<MeshWeaveResult> {
+  public async act(decision: MeshWeaverDecision, perception: unknown): Promise<MeshWeaveResult> {
     const analysis = perception as { sourceType: MeshSource['type']; params: Record<string, unknown> };
     const source: MeshSource = { type: analysis.sourceType, params: analysis.params };
 
@@ -244,7 +246,7 @@ export class MeshWeaverAgent extends Agent {
         vertices: result.topology.vertices,
         faces: result.topology.faces,
       },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.episodeCount++;

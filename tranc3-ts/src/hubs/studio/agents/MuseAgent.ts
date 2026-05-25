@@ -10,9 +10,8 @@
  * Act: Generate creative output with artistic coherence
  */
 
-import { Agent, Bot } from '../../../core/definitions';
+import { AuditLedger, Agent, Bot } from '../../../core/definitions'
 import { Logger } from '../../../core/logger';
-import { AuditLedger } from '../../../core/audit';
 
 const logger = new Logger('MuseAgent');
 

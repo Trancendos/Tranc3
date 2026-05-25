@@ -15,7 +15,9 @@
  * "The teller's window never closes — but the vault has rules."
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -89,7 +91,7 @@ export class TellerAgent extends Agent {
   constructor() {
     super('SID-ROYALBANK-TELLER');
     this.log = new Logger('TellerAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.accounts = new Map();
     this.transactionCounter = 0;
 
@@ -107,7 +109,7 @@ export class TellerAgent extends Agent {
   // Agent Lifecycle: Perceive → Decide → Act
   // ─────────────────────────────────────────────────────────────────────────
 
-  protected async perceive(input: TellerInput): Promise<TellerInput> {
+  public async perceive(input: TellerInput): Promise<TellerInput> {
     this.log.info('Perceiving teller operation', { operation: input.operation });
 
     // Validate account references
@@ -123,7 +125,7 @@ export class TellerAgent extends Agent {
     return input;
   }
 
-  protected async decide(input: TellerInput): Promise<string> {
+  public async decide(input: TellerInput): Promise<string> {
     this.log.info('Deciding teller action', { operation: input.operation });
 
     switch (input.operation) {
@@ -135,7 +137,7 @@ export class TellerAgent extends Agent {
     }
   }
 
-  protected async act(input: TellerInput, decision: string): Promise<TellerResult> {
+  public async act(input: TellerInput, decision: string): Promise<TellerResult> {
     this.log.info('Acting on teller decision', { decision });
 
     switch (decision) {

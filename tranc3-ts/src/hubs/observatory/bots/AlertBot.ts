@@ -15,7 +15,9 @@
  * "A signal unseen is no signal at all. The AlertBot ensures every warning finds its witness."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -119,7 +121,7 @@ export class AlertBot extends Bot {
     );
 
     this.log = new Logger('AlertBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async handle(input: AlertInput): Promise<SignalResult> {

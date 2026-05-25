@@ -13,7 +13,9 @@
  *   - Report push results with ref updates
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -86,7 +88,7 @@ export class PushBot extends Bot {
     );
 
     this.log = new Logger('PushBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.protectedBranches = new Set(['main', 'master', 'production', 'release']);
   }
 
@@ -173,7 +175,8 @@ export class PushBot extends Bot {
     };
 
     this.audit.append({
-      botId: 'NID-WORKSHOP-PUSH',
+      actor: 'NID-WORKSHOP-PUSH',
+      entity: 'PUSH_EXECUTED',
       action: 'PUSH_EXECUTED',
       details: {
         remote,
@@ -183,7 +186,7 @@ export class PushBot extends Bot {
         forceWithLease,
         objects: objectsPushed,
       },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Push completed', {

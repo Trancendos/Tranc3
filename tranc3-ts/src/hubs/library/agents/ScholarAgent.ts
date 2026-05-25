@@ -16,7 +16,9 @@
  *             ScholarAgent follows those doorways and illuminates the path.
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────
 // Input / Output Types
@@ -156,7 +158,7 @@ export class ScholarAgent extends Agent {
   constructor() {
     super('SID-LIBRARY-SCHOLAR');
     this.log = new Logger('ScholarAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.crossReferenceStore = new Map();
     this.summaryStore = new Map();
     this.researchCounter = 0;

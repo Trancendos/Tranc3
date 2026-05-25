@@ -14,7 +14,9 @@
  * "The stars do not dictate — they whisper. The Astrologer listens."
  */
 
-import { Agent, Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -167,7 +169,7 @@ export class AstrologerAgent extends Agent {
   constructor() {
     super('SID-OBSERVATORY-ASTROLOGER');
     this.log = new Logger('AstrologerAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.readings = new Map();
     this.interpretations = new Map();
     this.predictions = new Map();

@@ -15,7 +15,9 @@
  * "The toll must be paid — but fairness governs the gate."
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -142,7 +144,7 @@ export class TollAgent extends Agent {
   constructor() {
     super('SID-APIMARKETPLACE-TOLL');
     this.log = new Logger('TollAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.policies = new Map(Object.entries(DEFAULT_POLICIES));
     this.usageTracking = new Map();
     this.violationHistory = new Map();
@@ -152,7 +154,7 @@ export class TollAgent extends Agent {
   // Agent Lifecycle: Perceive → Decide → Act
   // ─────────────────────────────────────────────────────────────────────────
 
-  protected async perceive(input: TollInput): Promise<TollInput> {
+  public async perceive(input: TollInput): Promise<TollInput> {
     this.log.info('Perceiving toll operation', { operation: input.operation });
 
     // Validate consumer reference
@@ -171,7 +173,7 @@ export class TollAgent extends Agent {
     return input;
   }
 
-  protected async decide(input: TollInput): Promise<string> {
+  public async decide(input: TollInput): Promise<string> {
     this.log.info('Deciding toll action', { operation: input.operation });
 
     switch (input.operation) {
@@ -182,7 +184,7 @@ export class TollAgent extends Agent {
     }
   }
 
-  protected async act(input: TollInput, decision: string): Promise<TollResult> {
+  public async act(input: TollInput, decision: string): Promise<TollResult> {
     this.log.info('Acting on toll decision', { decision });
 
     switch (decision) {

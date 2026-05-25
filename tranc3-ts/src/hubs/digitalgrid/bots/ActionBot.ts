@@ -44,14 +44,11 @@ export class ActionBot extends Bot {
   private readonly log: Logger;
 
   constructor() {
-    const handler = async (input: ActionInput): Promise<unknown> => {
-      return this.process(input);
-    };
-
+    // Must call super first — handler will be bound via execute()
     super(
       'NID-DIGITALGRID-ACTION',
       'Action',
-      handler,
+      async (input: ActionInput): Promise<unknown> => ({ processed: true, input }),
       'Action execution (transform, notify, store, http, script, composite)'
     );
 
@@ -61,7 +58,7 @@ export class ActionBot extends Bot {
   private async process(input: ActionInput): Promise<ActionResult> {
     switch (input.operation) {
       case 'EXECUTE':
-        return this.execute(input);
+        return this.executeAction(input);
       default:
         throw new Error(`ActionBot: Unknown operation "${(input as any).operation}"`);
     }
@@ -71,7 +68,7 @@ export class ActionBot extends Bot {
   // EXECUTE
   // ─────────────────────────────────────────────────────────────
 
-  private async execute(input: ActionExecuteInput): Promise<ActionResult> {
+  private async executeAction(input: ActionExecuteInput): Promise<ActionResult> {
     const { actionType, config, input: actionInput } = input;
     const startTime = Date.now();
 
@@ -524,7 +521,7 @@ export class ActionBot extends Bot {
         input: currentInput,
       };
 
-      const result = await this.execute(subInput);
+      const result = await this.executeAction(subInput);
       subResults.push({
         actionType: result.actionType,
         success: result.success,

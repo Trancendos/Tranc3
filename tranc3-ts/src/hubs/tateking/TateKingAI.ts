@@ -11,13 +11,15 @@
  *            Splicer handles clip joining and transitions
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { DirectorAgent } from './agents/DirectorAgent';
 import { EditorAgent } from './agents/EditorAgent';
 import { CutterBot } from './bots/CutterBot';
 import { SplicerBot } from './bots/SplicerBot';
 import { RendererBot } from './bots/RendererBot';
 import { ScrubberBot } from './bots/ScrubberBot';
+
+const auditLedger = new AuditLedger();
 
 // ───────────────────────────────────────────
 // Domain Interfaces
@@ -130,7 +132,7 @@ export class TateKingAI extends AI {
     );
 
     this.log = new Logger('TateKingAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.projects = new Map();
 
     // Register Agents
@@ -186,7 +188,7 @@ export class TateKingAI extends AI {
       action: 'PROJECT_CREATED',
       entity: projectId,
       details: { name, resolution, frameRate },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Video project created', { projectId, name });
@@ -368,7 +370,7 @@ export class TateKingAI extends AI {
       action: 'PROJECT_RENDERED',
       entity: projectId,
       details: { format: config.format, codec: config.codec, quality: config.quality },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Project render initiated', { projectId, format: config.format });

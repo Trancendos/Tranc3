@@ -13,7 +13,9 @@
  *   - Amend previous commits when requested
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -96,7 +98,7 @@ export class CommitBot extends Bot {
     );
 
     this.log = new Logger('CommitBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async process(input: CommitInput): Promise<CommitResult> {
@@ -194,10 +196,11 @@ export class CommitBot extends Bot {
     };
 
     this.audit.append({
-      botId: 'NID-WORKSHOP-COMMIT',
+      actor: 'NID-WORKSHOP-COMMIT',
+      entity: 'COMMIT_CREATE',
       action: 'COMMIT_CREATE',
       details: { hash, message: message.substring(0, 80), files: files.length, author },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Commit created', {

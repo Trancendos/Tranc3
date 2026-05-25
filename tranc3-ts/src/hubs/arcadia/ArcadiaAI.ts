@@ -19,9 +19,8 @@
  *   NID-ARCADIA-CACHE-FETCH   — CacheFetchBot (cache read/write operations)
  */
 
-import { AI, Agent, Bot, AuditEntry } from '../../core/definitions';
+import { AuditLedger,  AI, Agent, Bot, AuditEntry  } from '../../core/definitions'
 import { Logger } from '../../core/logger';
-import { AuditLedger } from '../../core/audit';
 import { ForumModAgent } from './agents/ForumModAgent';
 import { CampaignMgrAgent } from './agents/CampaignMgrAgent';
 import { MailSorterBot } from './bots/MailSorterBot';

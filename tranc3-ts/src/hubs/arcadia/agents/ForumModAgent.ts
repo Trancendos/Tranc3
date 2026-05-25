@@ -10,9 +10,8 @@
  * Act: Execute moderation decision via registered bots
  */
 
-import { Agent, Bot, AuditEntry } from '../../../core/definitions';
+import { AuditLedger, Agent, Bot, AuditEntry } from '../../../core/definitions'
 import { Logger } from '../../../core/logger';
-import { AuditLedger } from '../../../core/audit';
 
 const logger = new Logger('ForumModAgent');
 

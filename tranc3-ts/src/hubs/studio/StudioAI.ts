@@ -19,9 +19,8 @@
  *   NID-STUDIO-WIREFRAME — WireframeBot (layout structure, wireframe generation)
  */
 
-import { AI, Agent, Bot } from '../../core/definitions';
+import { AuditLedger,  AI, Agent, Bot  } from '../../core/definitions'
 import { Logger } from '../../core/logger';
-import { AuditLedger } from '../../core/audit';
 import { ConductorAgent } from './agents/ConductorAgent';
 import { MuseAgent } from './agents/MuseAgent';
 import { PaletteBot } from './bots/PaletteBot';

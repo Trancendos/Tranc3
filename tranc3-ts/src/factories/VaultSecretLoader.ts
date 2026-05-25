@@ -34,6 +34,8 @@ import { StorageFactory } from './StorageFactory';
 import { AuditLedger } from '../core/audit';
 import { Logger } from '../core/logger';
 
+const auditLedger = new AuditLedger();
+
 const logger = new Logger('VaultSecretLoader');
 
 /** Encrypted secret envelope */

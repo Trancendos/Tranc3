@@ -17,12 +17,14 @@
  *            TollAgent manages rate limiting and billing
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { BrokerAgent } from './agents/BrokerAgent';
 import { TollAgent } from './agents/TollAgent';
 import { RegistrarBot } from './bots/RegistrarBot';
 import { ValidatorBot } from './bots/ValidatorBot';
 import { RouterBot } from './bots/RouterBot';
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Interfaces
@@ -105,7 +107,7 @@ export class TheAPIMarketplaceAI extends AI {
     );
 
     this.log = new Logger('TheAPIMarketplaceAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.endpoints = new Map();
     this.consumers = new Map();
     this.metrics = new Map();

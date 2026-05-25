@@ -14,7 +14,9 @@
  *   - Optimize style declarations for performance
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ───────────────────────────────────────────
 // Domain Types
@@ -60,7 +62,20 @@ export interface TailoredStyleSet {
   warnings: string[];
 }
 
-type TailorDecision =
+
+// Re-exported type aliases for barrel compatibility
+export interface PacingAnalysis {
+  rhythm: string;
+  tempo: number;
+  consistency: number;
+}
+export interface VariantGeneration {
+  variants: TailoredStyleSet[];
+  count: number;
+}
+
+
+export type TailorDecision =
   | 'GENERATE_VARIANTS'
   | 'CHECK_CONTRAST'
   | 'ADAPT_THEME'
@@ -84,7 +99,7 @@ export class TailorAgent extends Agent {
     );
 
     this.log = new Logger('TailorAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.tailoredStyles = new Map();
 
     this.registerTool('generateVariants', this.generateVariants.bind(this));
@@ -99,7 +114,7 @@ export class TailorAgent extends Agent {
   // Abstract Implementations
   // ───────────────────────────────────────
 
-  protected async perceive(input: unknown): Promise<unknown> {
+  public async perceive(input: unknown): Promise<unknown> {
     const { designSystem, requirements } = input as TailorInput;
 
     const perception = {
@@ -115,7 +130,7 @@ export class TailorAgent extends Agent {
     return perception;
   }
 
-  protected async decide(perception: unknown): Promise<TailorDecision> {
+  public async decide(perception: unknown): Promise<TailorDecision> {
     const p = perception as { requirementKeys: string[] };
 
     if (p.requirementKeys.includes('variant') || p.requirementKeys.includes('variants')) {
@@ -134,7 +149,7 @@ export class TailorAgent extends Agent {
     return 'APPLY_CONSTRAINTS';
   }
 
-  protected async act(decision: TailorDecision, perception: unknown): Promise<TailoredStyleSet> {
+  public async act(decision: TailorDecision, perception: unknown): Promise<TailoredStyleSet> {
     const p = perception as TailorInput;
     this.log.info('Tailor acting on decision', { decision, designSystemId: p.designSystem.id });
 
@@ -204,7 +219,7 @@ export class TailorAgent extends Agent {
       action: 'STYLES_TAILORED',
       entity: p.designSystem.id,
       details: { decision, component, contrastCheckCount: contrastChecks.length },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.episodeCount++;

@@ -16,7 +16,9 @@
  *  what is scribed endures. ChalkBot is the memory of the lecture hall."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ────────────────────────────────────────────────────────────────────────────
 // Input / Output Types
@@ -68,9 +70,9 @@ export interface ChalkRevision {
 
 export interface ChalkStats {
   totalDocuments: number;
-  byContentType: Record<ChalkInput['contentType'], number>;
-  byStatus: Record<ChalkDocument['status'], number>;
-  byFormat: Record<ChalkInput['format'], number>;
+  byContentType: Record<NonNullable<ChalkInput['contentType']>, number>;
+  byStatus: Record<NonNullable<ChalkDocument['status']>, number>;
+  byFormat: Record<NonNullable<ChalkInput['format']>, number>;
   totalRevisions: number;
   averageWordCount: number;
   averageReadingTime: number;
@@ -129,7 +131,7 @@ const CONTENT_TEMPLATES: Record<ChalkInput['contentType'], {
   },
 };
 
-const FORMAT_WRAPPERS: Record<ChalkInput['format'], {
+const FORMAT_WRAPPERS: Record<NonNullable<ChalkInput['format']>, {
   bold: (t: string) => string;
   italic: (t: string) => string;
   heading: (t: string, level: number) => string;
@@ -186,7 +188,7 @@ export class ChalkBot extends Bot {
     );
 
     this.log = new Logger('ChalkBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -337,7 +339,7 @@ export class ChalkBot extends Bot {
     format: ChalkInput['format'],
     template: typeof CONTENT_TEMPLATES['lecture']
   ): string {
-    const wrappers = FORMAT_WRAPPERS[format];
+    const wrappers = FORMAT_WRAPPERS[format!];
     const lines: string[] = [];
 
     // Header
@@ -429,20 +431,20 @@ export class ChalkBot extends Bot {
   private buildStats(): ChalkStats {
     const all = Array.from(documentStore.values());
 
-    const byContentType: Record<ChalkInput['contentType'], number> = {
+    const byContentType: Record<NonNullable<ChalkInput['contentType']>, number> = {
       lecture: 0, exam: 0, notes: 0, feedback: 0, syllabus: 0,
     };
-    const byStatus: Record<ChalkDocument['status'], number> = {
+    const byStatus: Record<NonNullable<ChalkDocument['status']>, number> = {
       draft: 0, reviewed: 0, published: 0, archived: 0, retracted: 0,
     };
-    const byFormat: Record<ChalkInput['format'], number> = {
+    const byFormat: Record<NonNullable<ChalkInput['format']>, number> = {
       plain: 0, markdown: 0, html: 0, latex: 0,
     };
 
     for (const doc of all) {
       byContentType[doc.contentType]++;
-      byStatus[doc.status]++;
-      byFormat[doc.format]++;
+      byStatus[doc.status!]++;
+      byFormat[doc.format!]++;
     }
 
     const totalWords = all.reduce((sum, doc) => sum + doc.wordCount, 0);

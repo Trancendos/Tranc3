@@ -13,7 +13,9 @@
  *   - Track merge history and conflict patterns
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -99,7 +101,7 @@ export class MergeMasterAgent extends Agent {
     );
 
     this.log = new Logger('MergeMasterAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.mergeHistory = [];
     this.conflictPatterns = new Map();
   }
@@ -108,7 +110,7 @@ export class MergeMasterAgent extends Agent {
   // Agent Lifecycle: Perceive → Decide → Act
   // ───────────────────────────────────────────────────────────────────────────
 
-  protected async perceive(input: MergeMasterInput): Promise<MergeMasterInput> {
+  public async perceive(input: MergeMasterInput): Promise<MergeMasterInput> {
     this.log.info('Perceiving merge operation', {
       operation: input.operation,
       source: input.sourceBranch,
@@ -138,7 +140,7 @@ export class MergeMasterAgent extends Agent {
     return input;
   }
 
-  protected async decide(input: MergeMasterInput): Promise<string> {
+  public async decide(input: MergeMasterInput): Promise<string> {
     this.log.info('Deciding merge action', { operation: input.operation });
 
     switch (input.operation) {
@@ -159,7 +161,7 @@ export class MergeMasterAgent extends Agent {
     }
   }
 
-  protected async act(input: MergeMasterInput, decision: string): Promise<MergeResult> {
+  public async act(input: MergeMasterInput, decision: string): Promise<MergeResult> {
     this.log.info('Acting on merge decision', { decision });
 
     switch (decision) {
@@ -294,11 +296,11 @@ export class MergeMasterAgent extends Agent {
 
     this.recordMergeHistory(sourceBranch, targetBranch, mergeStrategy, 'merged', 0);
 
-    this.audit.append({
-      agentId: this.id,
+    this.audit.append({ actor: this.id,
+      entity: 'MERGE_COMPLETE',
       action: 'MERGE_COMPLETE',
       details: { sourceBranch, targetBranch, strategy: mergeStrategy, filesChanged },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Merge completed successfully', {
@@ -311,11 +313,11 @@ export class MergeMasterAgent extends Agent {
   }
 
   private abortMerge(input: MergeMasterInput): MergeResult {
-    this.audit.append({
-      agentId: this.id,
+    this.audit.append({ actor: this.id,
+      entity: 'MERGE_ABORT',
       action: 'MERGE_ABORT',
       details: { sourceBranch: input.sourceBranch, targetBranch: input.targetBranch },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Merge aborted', {
@@ -409,8 +411,8 @@ export class MergeMasterAgent extends Agent {
       return analysis;
     });
 
-    this.audit.append({
-      agentId: this.id,
+    this.audit.append({ actor: this.id,
+      entity: 'CONFLICTS_RESOLVED',
       action: 'CONFLICTS_RESOLVED',
       details: {
         sourceBranch: input.sourceBranch,
@@ -420,7 +422,7 @@ export class MergeMasterAgent extends Agent {
           resolution: r.resolution,
         })),
       },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Conflicts resolved', {

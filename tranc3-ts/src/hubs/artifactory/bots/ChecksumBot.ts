@@ -15,7 +15,9 @@
  * "Trust, but verify. Then verify again."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -114,7 +116,7 @@ export class ChecksumBot extends Bot {
     );
 
     this.log = new Logger('ChecksumBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async process(input: ChecksumInput): Promise<VerifyResult> {

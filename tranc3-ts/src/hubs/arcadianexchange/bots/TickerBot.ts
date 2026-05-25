@@ -15,7 +15,9 @@
  * "The ticker tells the story of the market — one price at a time."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -118,7 +120,7 @@ export class TickerBot extends Bot {
     );
 
     this.log = new Logger('TickerBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async handle(input: TickerInput): Promise<QuoteResult> {

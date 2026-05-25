@@ -12,13 +12,15 @@
  *            Padding handles spacing and layout
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { TailorAgent } from './agents/TailorAgent';
 import { WeaverAgent } from './agents/WeaverAgent';
 import { PixelPusherBot } from './bots/PixelPusherBot';
 import { HexCodeBot } from './bots/HexCodeBot';
 import { FontFetcherBot } from './bots/FontFetcherBot';
 import { PaddingBot } from './bots/PaddingBot';
+
+const auditLedger = new AuditLedger();
 
 // ───────────────────────────────────────────
 // Domain Interfaces
@@ -125,7 +127,7 @@ export class FabulousaAI extends AI {
     );
 
     this.log = new Logger('FabulousaAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.designSystems = new Map();
     this.componentStyles = new Map();
 
@@ -220,7 +222,7 @@ export class FabulousaAI extends AI {
       action: 'DESIGN_SYSTEM_CREATED',
       entity: id,
       details: { name, colorCount: designSystem.colors.length },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Design system created', { id, name });
@@ -376,7 +378,7 @@ export class FabulousaAI extends AI {
       action: 'DESIGN_SYSTEM_EXPORTED',
       entity: designSystemId,
       details: { format, tokenCount, sizeBytes },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Design system exported', { designSystemId, format, tokenCount });

@@ -16,7 +16,9 @@
  *  the currency of achievement — fairly, consistently, and without bias."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ────────────────────────────────────────────────────────────────────────────
 // Input / Output Types
@@ -157,7 +159,7 @@ export class GradeBot extends Bot {
     );
 
     this.log = new Logger('GradeBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   // ──────────────────────────────────────────────────────────────────────────

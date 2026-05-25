@@ -18,12 +18,14 @@
  *            → AlertBot (signal)
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { SentinelAgent } from './agents/SentinelAgent';
 import { AstrologerAgent } from './agents/AstrologerAgent';
 import { TelescopeBot } from './bots/TelescopeBot';
 import { StarMapBot } from './bots/StarMapBot';
 import { AlertBot } from './bots/AlertBot';
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Interfaces
@@ -120,7 +122,7 @@ export class TheObservatoryAI extends AI {
     );
 
     this.log = new Logger('TheObservatoryAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.observations = new Map();
     this.anomalies = new Map();
     this.patterns = new Map();

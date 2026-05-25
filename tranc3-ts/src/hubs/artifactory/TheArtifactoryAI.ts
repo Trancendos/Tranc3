@@ -18,13 +18,15 @@
  *            Archivist ensures long-term integrity
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { LibrarianAgent } from './agents/LibrarianAgent';
 import { ArchivistAgent } from './agents/ArchivistAgent';
 import { PackerBot } from './bots/PackerBot';
 import { UnpackerBot } from './bots/UnpackerBot';
 import { ChecksumBot } from './bots/ChecksumBot';
 import { VersionerBot } from './bots/VersionerBot';
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Interfaces
@@ -123,7 +125,7 @@ export class TheArtifactoryAI extends AI {
     );
 
     this.log = new Logger('TheArtifactoryAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.artifacts = new Map();
     this.versions = new Map();
     this.registries = new Map();

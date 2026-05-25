@@ -15,7 +15,9 @@
  * "First impressions matter — register with precision."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -90,7 +92,7 @@ export class RegistrarBot extends Bot {
     );
 
     this.log = new Logger('RegistrarBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.registry = new Map();
   }
 

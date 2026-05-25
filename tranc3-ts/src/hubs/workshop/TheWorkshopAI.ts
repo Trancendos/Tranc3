@@ -12,13 +12,15 @@
  *            MergeMaster resolves conflicts and orchestrates merges
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { BranchManagerAgent } from './agents/BranchManagerAgent';
 import { MergeMasterAgent } from './agents/MergeMasterAgent';
 import { CommitBot } from './bots/CommitBot';
 import { PushBot } from './bots/PushBot';
 import { PullBot } from './bots/PullBot';
 import { CloneBot } from './bots/CloneBot';
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Interfaces
@@ -144,7 +146,7 @@ export class TheWorkshopAI extends AI {
     );
 
     this.log = new Logger('TheWorkshopAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.repositories = new Map();
     this.commits = new Map();
     this.mergeRequests = new Map();

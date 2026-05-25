@@ -12,13 +12,15 @@
  *            Sprite handles 2D overlay compositing
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { MeshWeaverAgent } from './agents/MeshWeaverAgent';
 import { PhysicistAgent } from './agents/PhysicistAgent';
 import { Voxel1Bot } from './bots/Voxel1Bot';
 import { ColliderBot } from './bots/ColliderBot';
 import { RayTracerBot } from './bots/RayTracerBot';
 import { SpriteBot } from './bots/SpriteBot';
+
+const auditLedger = new AuditLedger();
 
 // ───────────────────────────────────────────
 // Domain Interfaces
@@ -173,7 +175,7 @@ export class TranceFlowAI extends AI {
     );
 
     this.log = new Logger('TranceFlowAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.scenes = new Map();
     this.renderQueue = [];
     this.voxelGrids = new Map();
@@ -213,7 +215,7 @@ export class TranceFlowAI extends AI {
       action: 'SCENE_CREATED',
       entity: id,
       details: { name: scene.name, meshCount: scene.meshes.length },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Scene created', { sceneId: id, name: scene.name });
@@ -329,7 +331,7 @@ export class TranceFlowAI extends AI {
       action: 'MESH_COMPOSED',
       entity: mesh.id,
       details: { source, type: mesh.type, vertices: mesh.vertices, faces: mesh.faces },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Mesh composed', { meshId: mesh.id, source, type: mesh.type });
@@ -454,7 +456,7 @@ export class TranceFlowAI extends AI {
       action: 'RENDER_JOB_SUBMITTED',
       entity: job.id,
       details: { sceneId: scene.id, resolution, samples: job.samples, priority: job.priority },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Render job submitted', { jobId: job.id, sceneId: scene.id, priority: job.priority });
@@ -497,7 +499,7 @@ export class TranceFlowAI extends AI {
         duration: job.completedAt - job.startedAt!,
         outputFormat: job.outputFormat,
       },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Render job completed', {

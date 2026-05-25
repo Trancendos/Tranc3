@@ -10,9 +10,8 @@
  * Act: Execute audit findings and update compliance records
  */
 
-import { Agent, Bot } from '../../../core/definitions';
+import { AuditLedger, Agent, Bot } from '../../../core/definitions'
 import { Logger } from '../../../core/logger';
-import { AuditLedger } from '../../../core/audit';
 
 const logger = new Logger('AuditorAgent');
 

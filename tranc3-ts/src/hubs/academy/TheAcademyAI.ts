@@ -19,12 +19,14 @@
  *            → BellBot (ring)
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { ProfessorAgent } from './agents/ProfessorAgent';
 import { DeanAgent } from './agents/DeanAgent';
 import { ChalkBot } from './bots/ChalkBot';
 import { GradeBot } from './bots/GradeBot';
 import { BellBot } from './bots/BellBot';
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────
 // Domain Interfaces
@@ -125,7 +127,7 @@ export class TheAcademyAI extends AI {
     );
 
     this.log = new Logger('TheAcademyAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.students = new Map();
     this.courses = new Map();
     this.certifications = new Map();

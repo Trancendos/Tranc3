@@ -11,13 +11,15 @@
  *            Welder joins concepts, Polisher refines output
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { AlchemistAgent } from './agents/AlchemistAgent';
 import { ArchitectAgent } from './agents/ArchitectAgent';
 import { MixerBot } from './bots/MixerBot';
 import { BlenderBot } from './bots/BlenderBot';
 import { WelderBot } from './bots/WelderBot';
 import { PolisherBot } from './bots/PolisherBot';
+
+const auditLedger = new AuditLedger();
 
 // ───────────────────────────────────────────────────────
 // Domain Interfaces
@@ -88,7 +90,7 @@ export class ImaginariumAI extends AI {
     );
 
     this.log = new Logger('ImaginariumAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.ideaSpaces = new Map();
     this.sessions = new Map();
     this.concepts = new Map();
@@ -138,7 +140,7 @@ export class ImaginariumAI extends AI {
       action: 'CONCEPT_CREATED',
       entity: id,
       details: { name, domain, tagCount: tags.length },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Concept created', { id, name, domain });
@@ -227,7 +229,7 @@ export class ImaginariumAI extends AI {
       action: 'SESSION_STARTED',
       entity: id,
       details: { prompt: prompt.slice(0, 100), ideaSpaceId },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Creative session started', { id, prompt: prompt.slice(0, 50) });

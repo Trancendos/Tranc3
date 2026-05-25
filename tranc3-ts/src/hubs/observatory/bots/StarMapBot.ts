@@ -15,7 +15,9 @@
  * "Every entity is a star. The StarMap reveals the constellation they form."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -147,7 +149,7 @@ export class StarMapBot extends Bot {
     );
 
     this.log = new Logger('StarMapBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async handle(input: StarMapInput): Promise<PlotResult> {

@@ -16,7 +16,9 @@
  *  thing as 'I eat what I see'!" — The Dormouse, mostly asleep
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -125,7 +127,7 @@ export class DormouseAgent extends Agent {
   constructor() {
     super('SID-CHAOSPARTY-DORMOUSE');
     this.log = new Logger('DormouseAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.assessmentHistory = [];
     this.calmHistory = [];
     this.stabilisationHistory = [];
@@ -137,7 +139,7 @@ export class DormouseAgent extends Agent {
   // Agent Lifecycle: Perceive → Decide → Act
   // ─────────────────────────────────────────────────────────────────────────
 
-  protected async perceive(input: DormouseInput): Promise<DormouseInput> {
+  public async perceive(input: DormouseInput): Promise<DormouseInput> {
     this.log.info('Perceiving chaos calming operation', { operation: input.operation });
 
     // Enrich with current state if not provided
@@ -167,7 +169,7 @@ export class DormouseAgent extends Agent {
     return input;
   }
 
-  protected async decide(input: DormouseInput): Promise<string> {
+  public async decide(input: DormouseInput): Promise<string> {
     this.log.info('Deciding calming action', { operation: input.operation });
 
     switch (input.operation) {
@@ -178,7 +180,7 @@ export class DormouseAgent extends Agent {
     }
   }
 
-  protected async act(input: DormouseInput, decision: string): Promise<DormouseResult> {
+  public async act(input: DormouseInput, decision: string): Promise<DormouseResult> {
     this.log.info('Acting on calming decision', { decision });
 
     switch (decision) {

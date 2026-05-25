@@ -13,7 +13,9 @@
  *   - Track remote changes and divergence
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -92,7 +94,7 @@ export class PullBot extends Bot {
     );
 
     this.log = new Logger('PullBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async process(input: PullInput): Promise<PullResult> {
@@ -207,10 +209,11 @@ export class PullBot extends Bot {
     };
 
     this.audit.append({
-      botId: 'NID-WORKSHOP-PULL',
+      actor: 'NID-WORKSHOP-PULL',
+      entity: 'PULL_EXECUTED',
       action: 'PULL_EXECUTED',
       details: { remote, branch, method, commits: appliedCommits, conflicts: conflicts.length },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Pull completed', {

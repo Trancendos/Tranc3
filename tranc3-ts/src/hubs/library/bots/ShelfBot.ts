@@ -12,7 +12,9 @@
  *   - Manage Dewey-organized aisle/stack/shelf hierarchy
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────
 // Input / Output Types
@@ -93,7 +95,7 @@ export class ShelfBot extends Bot {
     );
 
     this.log = new Logger('ShelfBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.shelfMap = new Map();
     this.history = [];
     this.occupancyMap = new Map();

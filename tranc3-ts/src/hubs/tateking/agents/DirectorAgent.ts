@@ -14,7 +14,9 @@
  *   - Provide style and mood recommendations
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ───────────────────────────────────────────
 // Domain Types
@@ -100,7 +102,7 @@ export class DirectorAgent extends Agent {
     );
 
     this.log = new Logger('DirectorAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
 
     this.registerTool('analyzePacing', this.analyzePacing.bind(this));
     this.registerTool('suggestStyle', this.suggestStyle.bind(this));
@@ -115,7 +117,7 @@ export class DirectorAgent extends Agent {
   // Abstract Implementations
   // ───────────────────────────────────────
 
-  protected async perceive(input: unknown): Promise<unknown> {
+  public async perceive(input: unknown): Promise<unknown> {
     const { project, direction } = input as DirectionInput;
 
     // Count all clips across tracks
@@ -144,7 +146,7 @@ export class DirectorAgent extends Agent {
     return perception;
   }
 
-  protected async decide(perception: unknown): Promise<DirectorDecision> {
+  public async decide(perception: unknown): Promise<DirectorDecision> {
     const p = perception as { direction: string; totalClips: number; totalDuration: number };
 
     // Decide based on the direction keyword and project state
@@ -170,12 +172,12 @@ export class DirectorAgent extends Agent {
     return 'ANALYZE_PACING';
   }
 
-  protected async act(decision: DirectorDecision, perception: unknown): Promise<DirectionResult> {
+  public async act(decision: DirectorDecision, perception: unknown): Promise<DirectionResult> {
     const p = perception as DirectionInput;
     this.log.info('Director acting on decision', { decision, projectId: p.project.id });
 
     let pacing: PacingAnalysis;
-    let style: StyleRecommendation;
+    let style: StyleRecommendation | undefined;
     let cutSuggestions: CutSuggestion[] = [];
     let overallScore = 0.5;
     const notes: string[] = [];
@@ -238,7 +240,7 @@ export class DirectorAgent extends Agent {
       action: 'DIRECTION_APPLIED',
       entity: p.project.id,
       details: { decision, overallScore, noteCount: notes.length },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.episodeCount++;

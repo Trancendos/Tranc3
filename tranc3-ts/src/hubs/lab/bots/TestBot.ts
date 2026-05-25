@@ -13,7 +13,7 @@
  *   - Generate test reports with failure analysis
  */
 
-import { Bot, Logger } from '../../../core/definitions';
+import { AuditLedger, Bot, Logger } from '../../../core/definitions'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types

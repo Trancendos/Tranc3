@@ -13,7 +13,9 @@
  *   - Enforce branching strategy rules (GitFlow, trunk-based, etc.)
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -100,7 +102,7 @@ export class BranchManagerAgent extends Agent {
     );
 
     this.log = new Logger('BranchManagerAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.protectedBranches = new Set(['main', 'master', 'develop', 'release', 'production', 'staging']);
     this.branchHistory = new Map();
   }
@@ -109,7 +111,7 @@ export class BranchManagerAgent extends Agent {
   // Agent Lifecycle: Perceive → Decide → Act
   // ───────────────────────────────────────────────────────────────────────────
 
-  protected async perceive(input: BranchManagerInput): Promise<BranchManagerInput> {
+  public async perceive(input: BranchManagerInput): Promise<BranchManagerInput> {
     this.log.info('Perceiving branch operation', { operation: input.operation });
 
     // Enrich input with current state context
@@ -124,7 +126,7 @@ export class BranchManagerAgent extends Agent {
     return input;
   }
 
-  protected async decide(input: BranchManagerInput): Promise<string> {
+  public async decide(input: BranchManagerInput): Promise<string> {
     this.log.info('Deciding branch action', { operation: input.operation });
 
     switch (input.operation) {
@@ -149,7 +151,7 @@ export class BranchManagerAgent extends Agent {
     }
   }
 
-  protected async act(input: BranchManagerInput, decision: string): Promise<BranchManagerResult> {
+  public async act(input: BranchManagerInput, decision: string): Promise<BranchManagerResult> {
     this.log.info('Acting on branch decision', { decision });
 
     switch (decision) {
@@ -229,11 +231,11 @@ export class BranchManagerAgent extends Agent {
     // Record in history
     this.recordHistory(input.repository?.name ?? 'unknown', 'create', branchName, author);
 
-    this.audit.append({
-      agentId: this.id,
+    this.audit.append({ actor: this.id,
+      entity: 'BRANCH_CREATE',
       action: 'BRANCH_CREATE',
       details: { branchName, startPoint, author },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Branch created', { branchName, startPoint, author });
@@ -286,11 +288,11 @@ export class BranchManagerAgent extends Agent {
 
     this.recordHistory(input.repository?.name ?? 'unknown', 'delete', branchName, author);
 
-    this.audit.append({
-      agentId: this.id,
+    this.audit.append({ actor: this.id,
+      entity: 'BRANCH_DELETE',
       action: 'BRANCH_DELETE',
       details: { branchName, author },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Branch deleted', { branchName, author });
@@ -391,11 +393,11 @@ export class BranchManagerAgent extends Agent {
 
     this.protectedBranches.add(branchName);
 
-    this.audit.append({
-      agentId: this.id,
+    this.audit.append({ actor: this.id,
+      entity: 'BRANCH_PROTECT',
       action: 'BRANCH_PROTECT',
       details: { branchName },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Branch protected', { branchName });

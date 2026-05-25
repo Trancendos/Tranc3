@@ -10,9 +10,8 @@
  * Act: Dispatch inference to selected provider with fallback handling
  */
 
-import { Agent, Bot } from '../../../core/definitions';
+import { AuditLedger, Agent, Bot } from '../../../core/definitions'
 import { Logger } from '../../../core/logger';
-import { AuditLedger } from '../../../core/audit';
 
 const logger = new Logger('SynapseAgent');
 

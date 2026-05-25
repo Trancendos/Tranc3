@@ -15,7 +15,9 @@
  * "No room! No room! — But there's plenty of room for timed chaos."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -97,7 +99,7 @@ export class PocketWatchBot extends Bot {
     );
 
     this.log = new Logger('PocketWatchBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.bombs = new Map();
     this.bombCounter = 0;
   }

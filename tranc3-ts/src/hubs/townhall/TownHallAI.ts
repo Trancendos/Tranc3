@@ -19,9 +19,8 @@
  *   NID-TOWNHALL-STAMP    — StampBot (official seals, signatures, certification)
  */
 
-import { AI, Agent, Bot, AuditEntry } from '../../core/definitions';
+import { AuditLedger,  AI, Agent, Bot, AuditEntry  } from '../../core/definitions'
 import { Logger } from '../../core/logger';
-import { AuditLedger } from '../../core/audit';
 import { AuditorAgent } from './agents/AuditorAgent';
 import { BailiffAgent } from './agents/BailiffAgent';
 import { GavelBot } from './bots/GavelBot';

@@ -14,7 +14,9 @@
  *   - Provide physics profiling and debugging data
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ───────────────────────────────────────────
 // Domain Types
@@ -122,7 +124,7 @@ export class PhysicistAgent extends Agent {
     );
 
     this.log = new Logger('PhysicistAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.sceneStates = new Map();
     this.agentState = {
       scenesSimulated: 0,
@@ -147,7 +149,7 @@ export class PhysicistAgent extends Agent {
   // Abstract Method Implementations
   // ───────────────────────────────────────
 
-  protected async perceive(input: unknown): Promise<unknown> {
+  public async perceive(input: unknown): Promise<unknown> {
     const { scene, deltaTime, collisions } = input as {
       scene: { id: string; meshes: Array<{ id: string }>; physics?: { gravity: { x: number; y: number; z: number }; timeStep: number; solverIterations: number; collisionMargin: number } };
       deltaTime: number;
@@ -203,7 +205,7 @@ export class PhysicistAgent extends Agent {
     return perception;
   }
 
-  protected async decide(perception: unknown): Promise<PhysicistDecision[]> {
+  public async decide(perception: unknown): Promise<PhysicistDecision[]> {
     const p = perception as {
       bodyCount: number;
       collisionCount: number;
@@ -235,7 +237,7 @@ export class PhysicistAgent extends Agent {
     return pipeline;
   }
 
-  protected async act(decision: PhysicistDecision | PhysicistDecision[], perception: unknown): Promise<PhysicsStepResult> {
+  public async act(decision: PhysicistDecision | PhysicistDecision[], perception: unknown): Promise<PhysicsStepResult> {
     const p = perception as { sceneId: string; deltaTime: number; collisionCount: number };
     const decisions = Array.isArray(decision) ? decision : [decision];
     const sceneState = this.sceneStates.get(p.sceneId)!;
@@ -425,7 +427,7 @@ export class PhysicistAgent extends Agent {
         totalEnergy: result.totalEnergy.toFixed(2),
         constraintViolations,
       },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.episodeCount++;

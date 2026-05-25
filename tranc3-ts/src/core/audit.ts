@@ -14,7 +14,7 @@
  */
 
 import { createHash, createSign, createVerify, generateKeyPairSync } from 'crypto';
-import { AuditEntry } from './definitions';
+import { AuditEntry } from './definitions'
 import { Logger } from './logger';
 
 const logger = new Logger('AuditLedger');

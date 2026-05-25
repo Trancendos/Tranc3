@@ -21,7 +21,9 @@
  *             foundation — methodical, fair, and unwavering.
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────
 // Input / Output Types
@@ -195,7 +197,7 @@ export class DeanAgent extends Agent {
   constructor() {
     super('SID-ACADEMY-DEAN');
     this.log = new Logger('DeanAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.scheduleStore = new Map();
     this.accreditationStore = new Map();
     this.scheduleCounter = 0;

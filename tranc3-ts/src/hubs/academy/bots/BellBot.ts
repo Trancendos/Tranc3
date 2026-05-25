@@ -17,7 +17,9 @@
  *  is a heartbeat of the Academy, synchronising the rhythm of learning."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ────────────────────────────────────────────────────────────────────────────
 // Input / Output Types
@@ -82,9 +84,9 @@ export interface BellHistory {
 
 export interface BellStats {
   totalRings: number;
-  byBellType: Record<BellInput['bellType'], number>;
-  byPriority: Record<BellInput['priority'], number>;
-  byStatus: Record<BellSignal['status'], number>;
+  byBellType: Record<NonNullable<BellInput['bellType']>, number>;
+  byPriority: Record<NonNullable<BellInput['priority']>, number>;
+  byStatus: Record<NonNullable<BellSignal['status']>, number>;
   emergencyRings: number;
   averageResponseTime: number;
   scheduleCompliance: number;
@@ -165,7 +167,7 @@ const BELL_DEFAULTS: Record<BellInput['bellType'], {
   },
 };
 
-const PRIORITY_ORDER: Record<BellInput['priority'], number> = {
+const PRIORITY_ORDER: Record<NonNullable<BellInput['priority']>, number> = {
   critical: 4,
   high: 3,
   normal: 2,
@@ -197,7 +199,7 @@ export class BellBot extends Bot {
     );
 
     this.log = new Logger('BellBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -266,7 +268,7 @@ export class BellBot extends Bot {
     const activeSignals = Array.from(signalStore.values())
       .filter(s => s.status === 'ringing');
     const collision = activeSignals.find(s =>
-      PRIORITY_ORDER[s.priority] > PRIORITY_ORDER[resolvedPriority]
+      PRIORITY_ORDER[s.priority!] > PRIORITY_ORDER[resolvedPriority!]
     );
 
     if (collision) {
@@ -513,21 +515,21 @@ export class BellBot extends Bot {
   private buildStats(): BellStats {
     const all = Array.from(signalStore.values());
 
-    const byBellType: Record<BellInput['bellType'], number> = {
+    const byBellType: Record<NonNullable<BellInput['bellType']>, number> = {
       class_start: 0, class_end: 0, exam_start: 0, exam_end: 0,
       announcement: 0, emergency: 0, graduation: 0,
     };
-    const byPriority: Record<BellInput['priority'], number> = {
+    const byPriority: Record<NonNullable<BellInput['priority']>, number> = {
       low: 0, normal: 0, high: 0, critical: 0,
     };
-    const byStatus: Record<BellSignal['status'], number> = {
+    const byStatus: Record<NonNullable<BellSignal['status']>, number> = {
       ringing: 0, acknowledged: 0, silenced: 0, expired: 0, cancelled: 0,
     };
 
     for (const signal of all) {
-      byBellType[signal.bellType]++;
-      byPriority[signal.priority]++;
-      byStatus[signal.status]++;
+      byBellType[signal.bellType!]++;
+      byPriority[signal.priority!]++;
+      byStatus[signal.status!]++;
     }
 
     const emergencyRings = all.filter(s => s.bellType === 'emergency').length;

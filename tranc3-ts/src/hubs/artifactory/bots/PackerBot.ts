@@ -16,7 +16,9 @@
  * "Pack light, pack right, pack tight."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -170,7 +172,7 @@ export class PackerBot extends Bot {
     );
 
     this.log = new Logger('PackerBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async process(input: PackerInput): Promise<PackResult> {

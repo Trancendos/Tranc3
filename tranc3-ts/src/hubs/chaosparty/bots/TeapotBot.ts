@@ -15,7 +15,9 @@
  * "Why is a raven like a writing desk? — Have some more tea."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -187,7 +189,7 @@ export class TeapotBot extends Bot {
     );
 
     this.log = new Logger('TeapotBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async process(input: TeapotInput): Promise<BrewResult> {

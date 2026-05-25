@@ -233,7 +233,7 @@ export class TriggerBot extends Bot {
   /**
    * Simplified cron evaluator.
    * Format: minute hour dayOfMonth month dayOfWeek
-   * Supports: *, specific values, ranges (1-5), lists (1,3,5), steps (*/5)
+   * Supports: *, specific values, ranges (1-5), lists (1,3,5), steps (*&#47;5)
    */
   private evaluateCron(cron: string, date: Date): boolean {
     const parts = cron.trim().split(/\s+/);

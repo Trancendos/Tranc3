@@ -15,7 +15,9 @@
  * "The broker's ledger never sleeps — every order finds its destiny."
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -98,6 +100,16 @@ export interface BrokerResult {
   timestamp: number;
 }
 
+// Re-exported type aliases for barrel compatibility
+export type BrokerPerception = BrokerInput;
+export type BrokerDecision = string;
+export type OrderCreation = OrderRecord;
+export type OrderMatch = MatchResult;
+export type TradeExecution = ExecutionResult;
+export type OrderCancellation = OrderRecord;
+export type PositionRecord = PositionSummary;
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Order Store (Simulated)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -120,7 +132,7 @@ export class BrokerAgent extends Agent {
   constructor() {
     super('SID-ARCADIANEXCHANGE-BROKER');
     this.log = new Logger('BrokerAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.orders = new Map();
     this.positions = new Map();
     this.orderCounter = 0;
@@ -131,7 +143,7 @@ export class BrokerAgent extends Agent {
   // Agent Lifecycle: Perceive → Decide → Act
   // ─────────────────────────────────────────────────────────────────────────
 
-  protected async perceive(input: BrokerInput): Promise<BrokerInput> {
+  public async perceive(input: BrokerInput): Promise<BrokerInput> {
     this.log.info('Perceiving broker operation', { operation: input.operation });
 
     if (input.operation === 'list') {
@@ -150,7 +162,7 @@ export class BrokerAgent extends Agent {
     return input;
   }
 
-  protected async decide(input: BrokerInput): Promise<string> {
+  public async decide(input: BrokerInput): Promise<string> {
     this.log.info('Deciding broker action', { operation: input.operation });
 
     switch (input.operation) {
@@ -162,7 +174,7 @@ export class BrokerAgent extends Agent {
     }
   }
 
-  protected async act(input: BrokerInput, decision: string): Promise<BrokerResult> {
+  public async act(input: BrokerInput, decision: string): Promise<BrokerResult> {
     this.log.info('Acting on broker decision', { decision });
 
     switch (decision) {

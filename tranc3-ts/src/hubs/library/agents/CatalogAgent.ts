@@ -17,7 +17,9 @@
  *             volume can be found, every subject traced, every thread followed.
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────
 // Input / Output Types
@@ -143,7 +145,7 @@ export class CatalogAgent extends Agent {
   constructor() {
     super('SID-LIBRARY-CATALOG');
     this.log = new Logger('CatalogAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.indexStore = new Map();
     this.searchCache = new Map();
   }

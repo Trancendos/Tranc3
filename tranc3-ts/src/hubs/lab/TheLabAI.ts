@@ -11,13 +11,15 @@
  *            Hounds sniffs out issues, SyntaxSage analyses code structure
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { HoundsAgent } from './agents/HoundsAgent';
 import { SyntaxSageAgent } from './agents/SyntaxSageAgent';
 import { LintBot } from './bots/LintBot';
 import { CompileBot } from './bots/CompileBot';
 import { DebugBot } from './bots/DebugBot';
 import { TestBot } from './bots/TestBot';
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────
 // Domain Interfaces
@@ -143,7 +145,7 @@ export class TheLabAI extends AI {
     );
 
     this.log = new Logger('TheLabAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.codeFiles = new Map();
     this.diagnostics = new Map();
     this.testSuites = new Map();

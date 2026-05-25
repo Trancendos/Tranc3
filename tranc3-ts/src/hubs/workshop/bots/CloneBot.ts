@@ -13,7 +13,9 @@
  *   - Report clone results with repository metadata
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -86,7 +88,7 @@ export class CloneBot extends Bot {
     );
 
     this.log = new Logger('CloneBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async process(input: CloneInput): Promise<CloneResult> {
@@ -182,7 +184,8 @@ export class CloneBot extends Bot {
     };
 
     this.audit.append({
-      botId: 'NID-WORKSHOP-CLONE',
+      actor: 'NID-WORKSHOP-CLONE',
+      entity: 'CLONE_EXECUTED',
       action: 'CLONE_EXECUTED',
       details: {
         url,
@@ -192,7 +195,7 @@ export class CloneBot extends Bot {
         objects: objectsReceived,
         submodules,
       },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Clone completed', {
@@ -299,10 +302,11 @@ export class CloneBot extends Bot {
     };
 
     this.audit.append({
-      botId: 'NID-WORKSHOP-CLONE',
+      actor: 'NID-WORKSHOP-CLONE',
+      entity: 'CLONE_MIRROR',
       action: 'CLONE_MIRROR',
       details: { url, targetPath, objects: objectsReceived },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Mirror clone completed', { url, targetPath, objects: objectsReceived });

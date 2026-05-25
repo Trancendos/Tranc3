@@ -16,7 +16,9 @@
  * "Unpack with care — every layer reveals truth."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -105,7 +107,7 @@ export class UnpackerBot extends Bot {
     );
 
     this.log = new Logger('UnpackerBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async process(input: UnpackerInput): Promise<UnpackResult> {

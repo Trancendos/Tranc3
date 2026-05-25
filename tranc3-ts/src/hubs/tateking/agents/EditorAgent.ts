@@ -14,7 +14,9 @@
  *   - Manage keyframe animations for effects
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ───────────────────────────────────────────
 // Domain Types
@@ -81,7 +83,7 @@ export class EditorAgent extends Agent {
     );
 
     this.log = new Logger('EditorAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.editHistory = [];
 
     this.registerTool('trimClip', this.trimClip.bind(this));
@@ -98,7 +100,7 @@ export class EditorAgent extends Agent {
   // Abstract Implementations
   // ───────────────────────────────────────
 
-  protected async perceive(input: unknown): Promise<unknown> {
+  public async perceive(input: unknown): Promise<unknown> {
     const { project, instructions } = input as {
       project: { id: string; duration: number; tracks: Array<{ id: string; type: string; clips: Array<{ id: string; duration: number }> }> };
       instructions: Record<string, unknown>;
@@ -122,7 +124,7 @@ export class EditorAgent extends Agent {
     return perception;
   }
 
-  protected async decide(perception: unknown): Promise<EditorDecision> {
+  public async decide(perception: unknown): Promise<EditorDecision> {
     const p = perception as { instructions: Record<string, unknown>; instructionKeys: string[] };
 
     const keys = p.instructionKeys;
@@ -148,7 +150,7 @@ export class EditorAgent extends Agent {
     return 'APPLY_TRIM'; // default
   }
 
-  protected async act(decision: EditorDecision, perception: unknown): Promise<EditResult> {
+  public async act(decision: EditorDecision, perception: unknown): Promise<EditResult> {
     const p = perception as { projectId: string; instructions: Record<string, unknown> };
     this.log.info('Editor acting on decision', { decision, projectId: p.projectId });
 
@@ -184,7 +186,7 @@ export class EditorAgent extends Agent {
       action: 'EDIT_APPLIED',
       entity: p.projectId,
       details: { decision, applied: result.applied, changesMade: result.changesMade },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.episodeCount++;

@@ -16,7 +16,9 @@
  * The March Hare doesn't answer — it just breaks both and observes.
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -118,7 +120,7 @@ export class MarchHareAgent extends Agent {
   constructor() {
     super('SID-CHAOSPARTY-MARCHHARE');
     this.log = new Logger('MarchHareAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.plans = new Map();
     this.executions = new Map();
     this.escalations = [];
@@ -129,7 +131,7 @@ export class MarchHareAgent extends Agent {
   // Agent Lifecycle: Perceive → Decide → Act
   // ─────────────────────────────────────────────────────────────────────────
 
-  protected async perceive(input: MarchHareInput): Promise<MarchHareInput> {
+  public async perceive(input: MarchHareInput): Promise<MarchHareInput> {
     this.log.info('Perceiving chaos operation', { operation: input.operation });
 
     // Validate scenario references
@@ -153,7 +155,7 @@ export class MarchHareAgent extends Agent {
     return input;
   }
 
-  protected async decide(input: MarchHareInput): Promise<string> {
+  public async decide(input: MarchHareInput): Promise<string> {
     this.log.info('Deciding chaos action', { operation: input.operation });
 
     switch (input.operation) {
@@ -164,7 +166,7 @@ export class MarchHareAgent extends Agent {
     }
   }
 
-  protected async act(input: MarchHareInput, decision: string): Promise<MarchHareResult> {
+  public async act(input: MarchHareInput, decision: string): Promise<MarchHareResult> {
     this.log.info('Acting on chaos decision', { decision });
 
     switch (decision) {

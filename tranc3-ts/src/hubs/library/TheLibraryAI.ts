@@ -18,12 +18,14 @@
  *            → DustJacketBot (wrap)
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { CatalogAgent } from './agents/CatalogAgent';
 import { ScholarAgent } from './agents/ScholarAgent';
 import { ShelfBot } from './bots/ShelfBot';
 import { IndexBot } from './bots/IndexBot';
 import { DustJacketBot } from './bots/DustJacketBot';
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────
 // Domain Interfaces
@@ -129,7 +131,7 @@ export class TheLibraryAI extends AI {
     );
 
     this.log = new Logger('TheLibraryAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.volumes = new Map();
     this.catalog = new Map();
     this.annotations = new Map();

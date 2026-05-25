@@ -15,7 +15,9 @@
  * "The book never lies — every order has its place in the queue."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -144,7 +146,7 @@ export class OrderBookBot extends Bot {
     );
 
     this.log = new Logger('OrderBookBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async handle(input: OrderBookInput): Promise<MatchResult> {

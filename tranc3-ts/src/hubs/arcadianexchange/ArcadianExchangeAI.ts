@@ -17,12 +17,14 @@
  *            AnalystAgent provides market intelligence and forecasting
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { BrokerAgent } from './agents/BrokerAgent';
 import { AnalystAgent } from './agents/AnalystAgent';
 import { OrderBookBot } from './bots/OrderBookBot';
 import { TickerBot } from './bots/TickerBot';
 import { SettlementBot } from './bots/SettlementBot';
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Interfaces
@@ -115,7 +117,7 @@ export class ArcadianExchangeAI extends AI {
     );
 
     this.log = new Logger('ArcadianExchangeAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.orders = new Map();
     this.trades = new Map();
     this.quotes = new Map();

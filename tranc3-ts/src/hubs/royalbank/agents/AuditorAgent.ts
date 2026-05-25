@@ -15,7 +15,9 @@
  * "The Auditor sees what the Teller overlooks. Trust is verified, not assumed."
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -203,7 +205,7 @@ export class AuditorAgent extends Agent {
   constructor() {
     super('SID-ROYALBANK-AUDITOR');
     this.log = new Logger('AuditorAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.fraudAlerts = new Map();
     this.alertCounter = 0;
   }
@@ -212,7 +214,7 @@ export class AuditorAgent extends Agent {
   // Agent Lifecycle: Perceive → Decide → Act
   // ─────────────────────────────────────────────────────────────────────────
 
-  protected async perceive(input: AuditorInput): Promise<AuditorInput> {
+  public async perceive(input: AuditorInput): Promise<AuditorInput> {
     this.log.info('Perceiving audit operation', { operation: input.operation });
 
     // Validate operation-specific requirements
@@ -232,7 +234,7 @@ export class AuditorAgent extends Agent {
     return input;
   }
 
-  protected async decide(input: AuditorInput): Promise<string> {
+  public async decide(input: AuditorInput): Promise<string> {
     this.log.info('Deciding audit action', { operation: input.operation });
 
     switch (input.operation) {
@@ -244,7 +246,7 @@ export class AuditorAgent extends Agent {
     }
   }
 
-  protected async act(input: AuditorInput, decision: string): Promise<AuditorResult> {
+  public async act(input: AuditorInput, decision: string): Promise<AuditorResult> {
     this.log.info('Acting on audit decision', { decision });
 
     switch (decision) {

@@ -19,9 +19,8 @@
  *   NID-LUMINOUS-AXON     — AxonBot (output dispatch, result propagation)
  */
 
-import { AI, Agent, Bot, AuditEntry } from '../../core/definitions';
+import { AuditLedger,  AI, Agent, Bot, AuditEntry  } from '../../core/definitions'
 import { Logger } from '../../core/logger';
-import { AuditLedger } from '../../core/audit';
 import { SynapseAgent } from './agents/SynapseAgent';
 import { CortexAgent } from './agents/CortexAgent';
 import { Neuron1Bot } from './bots/Neuron1Bot';

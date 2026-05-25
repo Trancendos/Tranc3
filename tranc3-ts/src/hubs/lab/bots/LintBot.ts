@@ -61,7 +61,7 @@ export interface LintResult {
 // Built-in Lint Rules
 // ─────────────────────────────────────────────────────────────
 
-interface LintRule {
+export interface LintRule {
   id: string;
   description: string;
   severity: 'error' | 'warning' | 'info';

@@ -13,7 +13,9 @@
  *   - Maintain index statistics and coverage metrics
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────
 // Input / Output Types
@@ -131,7 +133,7 @@ export class IndexBot extends Bot {
     );
 
     this.log = new Logger('IndexBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.lookupCount = 0;
   }
 

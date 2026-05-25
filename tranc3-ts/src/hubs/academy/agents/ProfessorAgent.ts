@@ -20,7 +20,9 @@
  *             from where the student is to where they must be.
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────
 // Input / Output Types
@@ -191,7 +193,7 @@ export class ProfessorAgent extends Agent {
   constructor() {
     super('SID-ACADEMY-PROFESSOR');
     this.log = new Logger('ProfessorAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.lectureStore = new Map();
     this.assessmentStore = new Map();
     this.mentorshipStore = new Map();

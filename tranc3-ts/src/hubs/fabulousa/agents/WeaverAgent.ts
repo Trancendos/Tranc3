@@ -14,7 +14,9 @@
  *   - Manage style dependency graphs
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ───────────────────────────────────────────
 // Domain Types
@@ -35,6 +37,15 @@ export interface StyleDependency {
   provides: string[];
   conflicts: string[];
 }
+
+
+// Re-exported type aliases for barrel compatibility
+export type DependencyGraph = Map<string, StyleDependency[]>;
+export interface ConflictReport {
+  conflicts: Array<{ property: string; sources: string[] }>;
+  resolved: boolean;
+}
+
 
 export interface WovenOutput {
   designSystemId: string;
@@ -72,7 +83,7 @@ export class WeaverAgent extends Agent {
     );
 
     this.log = new Logger('WeaverAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.wovenOutputs = new Map();
 
     this.registerTool('resolveDependencies', this.resolveDependencies.bind(this));
@@ -87,7 +98,7 @@ export class WeaverAgent extends Agent {
   // Abstract Implementations
   // ───────────────────────────────────────
 
-  protected async perceive(input: unknown): Promise<unknown> {
+  public async perceive(input: unknown): Promise<unknown> {
     const { designSystem, components } = input as WeaveInput;
 
     const perception = {
@@ -102,7 +113,7 @@ export class WeaverAgent extends Agent {
     return perception;
   }
 
-  protected async decide(perception: unknown): Promise<WeaverDecision> {
+  public async decide(perception: unknown): Promise<WeaverDecision> {
     const p = perception as { componentCount: number; components: string[] };
 
     if (p.componentCount > 5) {
@@ -115,7 +126,7 @@ export class WeaverAgent extends Agent {
     return 'COMPOSE_CSS';
   }
 
-  protected async act(decision: WeaverDecision, perception: unknown): Promise<WovenOutput> {
+  public async act(decision: WeaverDecision, perception: unknown): Promise<WovenOutput> {
     const p = perception as WeaveInput;
     this.log.info('Weaver acting on decision', { decision, designSystemId: p.designSystem.id });
 
@@ -179,7 +190,7 @@ export class WeaverAgent extends Agent {
       action: 'STYLES_WOVEN',
       entity: p.designSystem.id,
       details: { decision, componentCount: p.components.length, totalDeclarations, estimatedGzipKB },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.episodeCount++;

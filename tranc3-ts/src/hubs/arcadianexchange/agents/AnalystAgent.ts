@@ -15,7 +15,9 @@
  * "The Analyst reads the market's pulse — past patterns illuminate future paths."
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -107,6 +109,11 @@ export interface AnalystResult {
   timestamp: number;
 }
 
+// Re-exported type aliases for barrel compatibility
+export type AnalystPerception = AnalystInput;
+export type AnalystDecision = string;
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Simulated Market Data
 // ─────────────────────────────────────────────────────────────────────────────
@@ -135,7 +142,7 @@ export class AnalystAgent extends Agent {
   constructor() {
     super('SID-ARCADIANEXCHANGE-ANALYST');
     this.log = new Logger('AnalystAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.alertCounter = 0;
   }
 
@@ -143,7 +150,7 @@ export class AnalystAgent extends Agent {
   // Agent Lifecycle: Perceive → Decide → Act
   // ─────────────────────────────────────────────────────────────────────────
 
-  protected async perceive(input: AnalystInput): Promise<AnalystInput> {
+  public async perceive(input: AnalystInput): Promise<AnalystInput> {
     this.log.info('Perceiving analyst operation', { operation: input.operation });
 
     if (input.operation === 'evaluate' && !input.asset) {
@@ -164,7 +171,7 @@ export class AnalystAgent extends Agent {
     return input;
   }
 
-  protected async decide(input: AnalystInput): Promise<string> {
+  public async decide(input: AnalystInput): Promise<string> {
     this.log.info('Deciding analyst action', { operation: input.operation });
 
     switch (input.operation) {
@@ -176,7 +183,7 @@ export class AnalystAgent extends Agent {
     }
   }
 
-  protected async act(input: AnalystInput, decision: string): Promise<AnalystResult> {
+  public async act(input: AnalystInput, decision: string): Promise<AnalystResult> {
     this.log.info('Acting on analyst decision', { decision });
 
     switch (decision) {

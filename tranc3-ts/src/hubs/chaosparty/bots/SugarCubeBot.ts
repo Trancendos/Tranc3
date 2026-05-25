@@ -15,7 +15,9 @@
  * "A little sweetness goes a long way in chaos."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -154,7 +156,7 @@ export class SugarCubeBot extends Bot {
     );
 
     this.log = new Logger('SugarCubeBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.perturbationHistory = new Map();
   }
 

@@ -16,7 +16,9 @@
  * "Version is truth. Every increment is a contract."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -99,7 +101,7 @@ export class VersionerBot extends Bot {
     );
 
     this.log = new Logger('VersionerBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.versionStore = new Map();
   }
 

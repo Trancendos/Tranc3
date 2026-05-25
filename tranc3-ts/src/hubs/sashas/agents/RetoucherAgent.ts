@@ -9,9 +9,8 @@
  * Act: Apply corrections and enhancements
  */
 
-import { Agent, Bot } from '../../../core/definitions';
+import { AuditLedger, Agent, Bot } from '../../../core/definitions'
 import { Logger } from '../../../core/logger';
-import { AuditLedger } from '../../../core/audit';
 
 const logger = new Logger('RetoucherAgent');
 

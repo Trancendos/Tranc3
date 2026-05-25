@@ -15,7 +15,9 @@
  * "A good broker makes both sides feel like they won."
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -93,7 +95,7 @@ export class BrokerAgent extends Agent {
   constructor() {
     super('SID-APIMARKETPLACE-BROKER');
     this.log = new Logger('BrokerAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.lifecycles = [];
     this.contractRegistry = new Map();
   }
@@ -102,7 +104,7 @@ export class BrokerAgent extends Agent {
   // Agent Lifecycle: Perceive → Decide → Act
   // ─────────────────────────────────────────────────────────────────────────
 
-  protected async perceive(input: BrokerInput): Promise<BrokerInput> {
+  public async perceive(input: BrokerInput): Promise<BrokerInput> {
     this.log.info('Perceiving broker operation', { operation: input.operation });
 
     // Validate endpoint references
@@ -123,7 +125,7 @@ export class BrokerAgent extends Agent {
     return input;
   }
 
-  protected async decide(input: BrokerInput): Promise<string> {
+  public async decide(input: BrokerInput): Promise<string> {
     this.log.info('Deciding broker action', { operation: input.operation });
 
     switch (input.operation) {
@@ -135,7 +137,7 @@ export class BrokerAgent extends Agent {
     }
   }
 
-  protected async act(input: BrokerInput, decision: string): Promise<BrokerResult> {
+  public async act(input: BrokerInput, decision: string): Promise<BrokerResult> {
     this.log.info('Acting on broker decision', { decision });
 
     switch (decision) {

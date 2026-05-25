@@ -261,7 +261,7 @@ export class PolisherBot extends Bot {
   private trimConcept(params: TrimParams): {
     conceptId: string;
     tagsRemoved: number;
-    attributesRemoved: number;
+    attrsRemoved: number;
     trimmed: {
       tags: string[];
       attributes: Record<string, unknown>;
@@ -299,7 +299,7 @@ export class PolisherBot extends Bot {
     return {
       conceptId: concept.id,
       tagsRemoved,
-      attributesRemoved,
+      attrsRemoved,
       trimmed: {
         tags: trimmedTags,
         attributes: trimmedAttributes,

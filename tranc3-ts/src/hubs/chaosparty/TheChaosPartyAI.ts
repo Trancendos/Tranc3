@@ -18,13 +18,15 @@
  *            Dormouse monitors and calms the chaos
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { MarchHareAgent } from './agents/MarchHareAgent';
 import { DormouseAgent } from './agents/DormouseAgent';
 import { TeapotBot } from './bots/TeapotBot';
 import { PocketWatchBot } from './bots/PocketWatchBot';
 import { SugarCubeBot } from './bots/SugarCubeBot';
 import { JamTartBot } from './bots/JamTartBot';
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Interfaces
@@ -115,7 +117,7 @@ export class TheChaosPartyAI extends AI {
     );
 
     this.log = new Logger('TheChaosPartyAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.scenarios = new Map();
     this.events = new Map();
     this.timeBombs = new Map();

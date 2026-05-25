@@ -15,7 +15,9 @@
  * "The telescope sees what the eye cannot — every photon tells a story."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -160,7 +162,7 @@ export class TelescopeBot extends Bot {
     );
 
     this.log = new Logger('TelescopeBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async handle(input: TelescopeInput): Promise<ScanResult> {

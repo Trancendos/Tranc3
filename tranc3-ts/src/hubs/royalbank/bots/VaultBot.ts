@@ -15,7 +15,9 @@
  * "The vault remembers every lock, every key, and every hand that turned it."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -113,7 +115,7 @@ export class VaultBot extends Bot {
     );
 
     this.log = new Logger('VaultBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async handle(input: VaultInput): Promise<SecureResult> {

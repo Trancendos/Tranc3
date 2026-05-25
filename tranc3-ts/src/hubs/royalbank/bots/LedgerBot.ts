@@ -15,7 +15,9 @@
  * "What is written in the ledger cannot be unwritten — only reversed with another entry."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -91,7 +93,7 @@ const accountBalances: Map<string, { balance: number; currency: CurrencyType }> 
 // LedgerBot Implementation
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const ledgerBot = new LedgerBot();
+
 
 export class LedgerBot extends Bot {
   private readonly log: Logger;
@@ -109,7 +111,7 @@ export class LedgerBot extends Bot {
     );
 
     this.log = new Logger('LedgerBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.transactionCounter = 0;
     this.proofs = new Map();
     this.lastProofHash = null;
@@ -316,3 +318,6 @@ export class LedgerBot extends Bot {
     };
   }
 }
+
+// Singleton instance
+export const ledgerBot = new LedgerBot();

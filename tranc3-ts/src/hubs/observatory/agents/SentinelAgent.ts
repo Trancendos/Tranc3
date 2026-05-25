@@ -14,7 +14,9 @@
  * "The Sentinel never sleeps. Every shadow is examined, every flicker weighed."
  */
 
-import { Agent, Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -72,6 +74,7 @@ export interface AnomalyDetection {
   type: 'spike' | 'drop' | 'drift' | 'oscillation' | 'flatline' | 'unknown';
   severity: 'low' | 'medium' | 'high' | 'critical';
   detectedAt: number;
+  unit: string;
 }
 
 export interface ClassificationResult {
@@ -173,7 +176,7 @@ export class SentinelAgent extends Agent {
   constructor() {
     super('SID-OBSERVATORY-SENTINEL');
     this.log = new Logger('SentinelAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.watchedItems = new Map();
     this.detections = new Map();
   }
@@ -360,6 +363,7 @@ export class SentinelAgent extends Agent {
           type,
           severity,
           detectedAt: Date.now(),
+          unit: 'ms',
         };
 
         detections.push(detection);

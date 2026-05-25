@@ -12,13 +12,15 @@
  *            Weaver composes workflows, EventBroker routes events
  */
 
-import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions';
+import { AI, Agent, Bot, Logger, AuditLedger } from '../../core/definitions'
 import { WeaverAgent } from './agents/WeaverAgent';
 import { EventBrokerAgent } from './agents/EventBrokerAgent';
 import { TriggerBot } from './bots/TriggerBot';
 import { ActionBot } from './bots/ActionBot';
 import { ConditionBot } from './bots/ConditionBot';
 import { LoopBot } from './bots/LoopBot';
+
+const auditLedger = new AuditLedger();
 
 // ───────────────────────────────────────────────────────
 // Domain Interfaces
@@ -106,7 +108,7 @@ export class DigitalGridAI extends AI {
     );
 
     this.log = new Logger('DigitalGridAI');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.workflows = new Map();
     this.executions = new Map();
     this.subscriptions = new Map();
@@ -161,7 +163,7 @@ export class DigitalGridAI extends AI {
       action: 'WORKFLOW_CREATED',
       entity: id,
       details: { name, stepCount: steps.length },
-      timestamp: Date.now(),
+      timestamp: new Date(),
     });
 
     this.log.info('Workflow created', { id, name, stepCount: steps.length });

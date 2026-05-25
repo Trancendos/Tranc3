@@ -15,7 +15,9 @@
  * "A contract is only as strong as its validation."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -94,7 +96,7 @@ export class ValidatorBot extends Bot {
     );
 
     this.log = new Logger('ValidatorBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async process(input: ValidatorInput): Promise<ValidateResult> {

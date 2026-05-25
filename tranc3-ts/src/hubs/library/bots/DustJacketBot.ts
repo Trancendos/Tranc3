@@ -14,7 +14,9 @@
  *     and restoration of damaged wraps
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────
 // Input / Output Types
@@ -101,7 +103,7 @@ export class DustJacketBot extends Bot {
     );
 
     this.log = new Logger('DustJacketBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.wraps = new Map();
     this.wrapCounter = 0;
   }

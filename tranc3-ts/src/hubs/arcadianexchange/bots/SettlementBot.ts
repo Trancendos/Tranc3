@@ -16,7 +16,9 @@
  * "Every trade is a promise. Settlement is the honouring of that promise."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -137,7 +139,7 @@ export class SettlementBot extends Bot {
     );
 
     this.log = new Logger('SettlementBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.settlements = new Map();
     this.currentBatch = `BATCH-${batchCounter}`;
   }

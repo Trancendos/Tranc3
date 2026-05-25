@@ -15,7 +15,9 @@
  * "Every request finds its destination — or a meaningful 404."
  */
 
-import { Bot, Logger, AuditLedger } from '../../../core/definitions';
+import { Bot, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -129,7 +131,7 @@ export class RouterBot extends Bot {
     );
 
     this.log = new Logger('RouterBot');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
   }
 
   private async process(input: RouterInput): Promise<RouteResult> {

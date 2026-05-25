@@ -16,7 +16,9 @@
  *  preserve the ability to understand what came before."
  */
 
-import { Agent, Logger, AuditLedger } from '../../../core/definitions';
+import { Agent, Logger, AuditLedger } from '../../../core/definitions'
+
+const auditLedger = new AuditLedger();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Types
@@ -126,7 +128,7 @@ export class ArchivistAgent extends Agent {
   constructor() {
     super('SID-ARTIFACTORY-ARCHIVIST');
     this.log = new Logger('ArchivistAgent');
-    this.audit = AuditLedger.getInstance();
+    this.audit = auditLedger;
     this.archives = new Map();
     this.restores = [];
     this.retentionPolicies = new Map();
@@ -142,7 +144,7 @@ export class ArchivistAgent extends Agent {
   // Agent Lifecycle: Perceive → Decide → Act
   // ─────────────────────────────────────────────────────────────────────────
 
-  protected async perceive(input: ArchivistInput): Promise<ArchivistInput> {
+  public async perceive(input: ArchivistInput): Promise<ArchivistInput> {
     this.log.info('Perceiving archive operation', { operation: input.operation });
 
     // Validate artifact references
@@ -163,7 +165,7 @@ export class ArchivistAgent extends Agent {
     return input;
   }
 
-  protected async decide(input: ArchivistInput): Promise<string> {
+  public async decide(input: ArchivistInput): Promise<string> {
     this.log.info('Deciding archive action', { operation: input.operation });
 
     switch (input.operation) {
@@ -175,7 +177,7 @@ export class ArchivistAgent extends Agent {
     }
   }
 
-  protected async act(input: ArchivistInput, decision: string): Promise<ArchivistResult> {
+  public async act(input: ArchivistInput, decision: string): Promise<ArchivistResult> {
     this.log.info('Acting on archive decision', { decision });
 
     switch (decision) {
