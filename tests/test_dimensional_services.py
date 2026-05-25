@@ -16,14 +16,28 @@ os.environ.setdefault("JWT_SECRET", "test-jwt-secret-dimensionals-000001")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from shared_core.dimensionals import (
+from Dimensional.dimensionals import (
     DimensionalServiceBus,
     DimensionalServiceRegistry,
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
 )
-from shared_core.dimensionals.underverse import UnderverseRegistry
+from Dimensional.dimensionals.underverse import UnderverseRegistry
+
+
+def _run_coro(coro):
+    """Run a coroutine using asyncio.run() to avoid event-loop pollution."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop and loop.is_running():
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            return pool.submit(asyncio.run, coro).result()
+    return asyncio.run(coro)
 
 
 # ---------------------------------------------------------------------------
@@ -142,22 +156,19 @@ class TestDimensionalServiceBus:
         assert "messages_sent" in stats
 
     def test_start_and_stop(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.bus.start())
+        _run_coro(self.bus.start())
         assert self.bus.is_running is True
-        loop.run_until_complete(self.bus.stop())
+        _run_coro(self.bus.stop())
         assert self.bus.is_running is False
 
     def test_double_start_safe(self):
         """Starting an already-running bus should not raise."""
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.bus.start())
-        loop.run_until_complete(self.bus.start())  # second start — should be no-op
-        loop.run_until_complete(self.bus.stop())
+        _run_coro(self.bus.start())
+        _run_coro(self.bus.start())  # second start — should be no-op
+        _run_coro(self.bus.stop())
 
     def test_stop_without_start_safe(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.bus.stop())  # Should not raise
+        _run_coro(self.bus.stop())  # Should not raise
 
 
 # ---------------------------------------------------------------------------
@@ -205,25 +216,22 @@ class TestFluidicIntegration:
 
     def test_bus_starts_with_fluidic_router(self):
         bus = DimensionalServiceBus()
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(bus.start())
+        _run_coro(bus.start())
         # Either attribute is acceptable (or neither — we just must not crash)
         has_router = hasattr(bus, "_fluidic_router") or hasattr(bus, "fluidic_router")
         assert has_router or True
-        loop.run_until_complete(bus.stop())
+        _run_coro(bus.stop())
 
     def test_bus_starts_with_causal_bus(self):
         bus = DimensionalServiceBus()
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(bus.start())
+        _run_coro(bus.start())
         has_causal = hasattr(bus, "_causal_bus") or hasattr(bus, "causal_bus")
         assert has_causal or True
-        loop.run_until_complete(bus.stop())
+        _run_coro(bus.stop())
 
     def test_bus_stats_running_after_start(self):
         bus = DimensionalServiceBus()
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(bus.start())
+        _run_coro(bus.start())
         stats = bus.get_stats()
         assert stats.get("running") is True
-        loop.run_until_complete(bus.stop())
+        _run_coro(bus.stop())

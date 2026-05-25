@@ -20,8 +20,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from shared_core.infinity.nomenclature import SentinelChannel, Tier
-from shared_core.infinity.worker_bridges import (
+from Dimensional.infinity.nomenclature import SentinelChannel, Tier
+from Dimensional.infinity.worker_bridges import (
     AdminConfigTunerBridge,
     BridgeStatus,
     DefenseSentinelBridge,
