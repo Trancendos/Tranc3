@@ -22,6 +22,7 @@ from Dimensional.nexus.raft.raft_core import (
 # RaftConfig Tests
 # ──────────────────────────────────────────────
 
+
 class TestRaftConfig:
     def test_default_config(self):
         config = RaftConfig()
@@ -52,6 +53,7 @@ class TestRaftConfig:
 # RaftLogEntry Tests
 # ──────────────────────────────────────────────
 
+
 class TestRaftLogEntry:
     def test_create_entry(self):
         entry = RaftLogEntry(index=1, term=1, command="set", data={"key": "val"})
@@ -70,6 +72,7 @@ class TestRaftLogEntry:
 # ──────────────────────────────────────────────
 # RaftLog Tests
 # ──────────────────────────────────────────────
+
 
 class TestRaftLog:
     def test_create_empty_log(self):
@@ -156,6 +159,7 @@ class TestRaftLog:
 # RaftNode Tests
 # ──────────────────────────────────────────────
 
+
 class TestRaftNode:
     def test_create_node(self):
         node = RaftNode()
@@ -197,8 +201,10 @@ class TestRaftNode:
 
     def test_register_command_handler(self):
         node = RaftNode()
+
         def handler(data):
             return data
+
         node.register_command_handler("set", handler)
         assert "set" in node._command_handlers
 
@@ -256,6 +262,7 @@ class TestRaftNode:
 # ──────────────────────────────────────────────
 # NexusCluster Tests
 # ──────────────────────────────────────────────
+
 
 class TestNexusCluster:
     def test_create_cluster(self):
@@ -323,6 +330,7 @@ class TestNexusCluster:
 # NexusClusterNode Tests
 # ──────────────────────────────────────────────
 
+
 class TestNexusClusterNode:
     def test_create_cluster_node(self):
         node = NexusClusterNode(node_id="node-1", address="localhost:8050")
@@ -339,6 +347,7 @@ class TestNexusClusterNode:
 # ──────────────────────────────────────────────
 # Integration Tests
 # ──────────────────────────────────────────────
+
 
 class TestRaftIntegration:
     def test_log_replication_flow(self):

@@ -28,14 +28,17 @@ logger = logging.getLogger(__name__)
 # Enums
 # ──────────────────────────────────────────────
 
+
 class NodeRole(str, Enum):
     """Role of a sentinel cluster node."""
+
     PRIMARY = "primary"
     REPLICA = "replica"
 
 
 class NodeState(str, Enum):
     """State of a sentinel cluster node."""
+
     ONLINE = "online"
     OFFLINE = "offline"
     SYNCING = "syncing"
@@ -45,6 +48,7 @@ class NodeState(str, Enum):
 
 class ClusterHealth(str, Enum):
     """Health status of the cluster."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     CRITICAL = "critical"
@@ -53,6 +57,7 @@ class ClusterHealth(str, Enum):
 
 class FailoverPolicy(str, Enum):
     """Policy for failover behavior."""
+
     AUTOMATIC = "automatic"
     MANUAL = "manual"
     PRIORITY_BASED = "priority_based"
@@ -62,8 +67,10 @@ class FailoverPolicy(str, Enum):
 # Models
 # ──────────────────────────────────────────────
 
+
 class SentinelClusterNode(BaseModel):
     """A node in the sentinel cluster."""
+
     node_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
     host: str = "localhost"
     port: int = 6379
@@ -95,6 +102,7 @@ class SentinelClusterNode(BaseModel):
 
 class ClusterPartition(BaseModel):
     """Represents a network partition in the cluster."""
+
     partition_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:10])
     isolated_nodes: List[str] = Field(default_factory=list)
     majority_nodes: List[str] = Field(default_factory=list)
@@ -105,6 +113,7 @@ class ClusterPartition(BaseModel):
 
 class ClusterConfig(BaseModel):
     """Configuration for the sentinel cluster."""
+
     cluster_name: str = "sentinel-cluster"
     min_replicas: int = 2
     failover_policy: FailoverPolicy = FailoverPolicy.AUTOMATIC
@@ -117,6 +126,7 @@ class ClusterConfig(BaseModel):
 # ──────────────────────────────────────────────
 # Sentinel Cluster
 # ──────────────────────────────────────────────
+
 
 class SentinelCluster:
     """Manages a sentinel cluster with primary-replica topology and failover."""
@@ -185,7 +195,8 @@ class SentinelCluster:
             return None
 
         candidates = [
-            n for n in self._nodes.values()
+            n
+            for n in self._nodes.values()
             if n.role == NodeRole.REPLICA and n.state == NodeState.ONLINE
         ]
 
@@ -202,7 +213,9 @@ class SentinelCluster:
         logger.info(f"Failover: promoted node {new_primary.node_id} to primary")
         return new_primary
 
-    def perform_failover(self, target_node_id: Optional[str] = None) -> Optional[SentinelClusterNode]:
+    def perform_failover(
+        self, target_node_id: Optional[str] = None
+    ) -> Optional[SentinelClusterNode]:
         """Manually trigger failover, optionally to a specific node."""
         if self._primary_id:
             old_primary = self._nodes.get(self._primary_id)
@@ -223,7 +236,8 @@ class SentinelCluster:
     def detect_partition(self, offline_node_ids: List[str]) -> Optional[ClusterPartition]:
         """Detect a network partition based on which nodes went offline."""
         online_ids = [
-            nid for nid, n in self._nodes.items()
+            nid
+            for nid, n in self._nodes.items()
             if n.state == NodeState.ONLINE and nid not in offline_node_ids
         ]
 
@@ -339,6 +353,7 @@ class SentinelCluster:
 # Sentinel Cluster Manager
 # ──────────────────────────────────────────────
 
+
 class SentinelClusterManager:
     """Top-level manager for multiple sentinel clusters."""
 
@@ -371,8 +386,7 @@ class SentinelClusterManager:
         return {
             "cluster_count": len(self._clusters),
             "clusters": {
-                name: cluster.get_cluster_status()
-                for name, cluster in self._clusters.items()
+                name: cluster.get_cluster_status() for name, cluster in self._clusters.items()
             },
         }
 
@@ -396,6 +410,7 @@ def get_sentinel_cluster_manager() -> SentinelClusterManager:
 # FastAPI Application — Sentinel Cluster Management
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def create_sentinel_cluster_app():
     """Create the Sentinel Cluster FastAPI application for cluster management."""
     from fastapi import FastAPI, Request
@@ -406,7 +421,9 @@ def create_sentinel_cluster_app():
         description="Sentinel Station Cluster Management — Redis Cluster HA with automatic failover",
         version="0.1.0",
     )
-    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+    app.add_middleware(
+        CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+    )
 
     @app.get("/", tags=["sentinel-cluster"])
     async def root():
@@ -471,7 +488,12 @@ def create_sentinel_cluster_app():
             address=body.get("address", f"sentinel-{node_id}:6379"),
             role=body.get("role", "replica"),
         )
-        return {"action": "add_node", "cluster_name": cluster_name, "node_id": node_id, "status": "added"}
+        return {
+            "action": "add_node",
+            "cluster_name": cluster_name,
+            "node_id": node_id,
+            "status": "added",
+        }
 
     @app.delete("/clusters/{cluster_name}/nodes/{node_id}", tags=["cluster-nodes"])
     async def remove_cluster_node(cluster_name: str, node_id: str):
@@ -481,7 +503,12 @@ def create_sentinel_cluster_app():
         if cluster is None:
             return {"error": "cluster not found", "cluster_name": cluster_name}
         removed = cluster.remove_node(node_id)
-        return {"action": "remove_node", "cluster_name": cluster_name, "node_id": node_id, "removed": removed}
+        return {
+            "action": "remove_node",
+            "cluster_name": cluster_name,
+            "node_id": node_id,
+            "removed": removed,
+        }
 
     @app.post("/clusters/{cluster_name}/failover", tags=["cluster-ops"])
     async def cluster_failover(cluster_name: str, request: Request):

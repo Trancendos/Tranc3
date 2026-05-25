@@ -77,6 +77,7 @@ NEXUS_EVENT_BUFFER_SIZE = int(os.environ.get("NEXUS_EVENT_BUFFER_SIZE", "10000")
 
 class NexusServiceHealth(BaseModel):
     """Health status of a single AI/Agent/Bot service in the Nexus."""
+
     service_id: str
     service_name: str
     pillar: str
@@ -91,6 +92,7 @@ class NexusServiceHealth(BaseModel):
 
 class NexusHealthSummary(BaseModel):
     """Aggregated health across all AI/Agent/Bot services in the Nexus."""
+
     total_services: int = 0
     healthy: int = 0
     degraded: int = 0
@@ -104,6 +106,7 @@ class NexusHealthSummary(BaseModel):
 
 class NexusAccessDecision(BaseModel):
     """Result of a tier-aware access control decision for Nexus traffic."""
+
     allowed: bool
     reason: str = ""
     matched_policy: Optional[str] = None
@@ -122,6 +125,7 @@ class NexusEvent(BaseModel):
     movement, coordination, and traffic. They are NOT general platform
     events — those flow through the HIVE or Sentinel Station directly.
     """
+
     event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     channel: str  # SentinelChannel name
     source_dimension: str  # Which AI/Agent/Bot service emitted this
@@ -136,6 +140,7 @@ class NexusEvent(BaseModel):
 
 class NexusTopologyNode(BaseModel):
     """A node in the Nexus topology graph — an AI/Agent/Bot service."""
+
     node_id: str
     node_type: str  # ai_complex, agent, bot, gateway, coordinator
     tier: int
@@ -147,6 +152,7 @@ class NexusTopologyNode(BaseModel):
 
 class NexusTopologyEdge(BaseModel):
     """An edge in the Nexus topology — traffic flow between AI/Agent/Bot services."""
+
     source: str
     target: str
     edge_type: str  # task_dispatch, inference_route, data_flow, coordination
@@ -170,8 +176,12 @@ class CausalOrderingEngine:
     network delays and concurrent AI/Agent/Bot operations.
     """
 
-    def __init__(self, node_id: str, known_nodes: Optional[Set[str]] = None,
-                 buffer_size: Optional[int] = None):
+    def __init__(
+        self,
+        node_id: str,
+        known_nodes: Optional[Set[str]] = None,
+        buffer_size: Optional[int] = None,
+    ):
         self.node_id = node_id
         self.clock: Dict[str, int] = {node_id: 0}
         self.known_nodes: Set[str] = known_nodes or {node_id}
@@ -208,7 +218,9 @@ class CausalOrderingEngine:
 
     def concurrent(self, clock_a: Dict[str, int], clock_b: Dict[str, int]) -> bool:
         """Check if two events are concurrent (no causal relationship)."""
-        return not self.happened_before(clock_a, clock_b) and not self.happened_before(clock_b, clock_a)
+        return not self.happened_before(clock_a, clock_b) and not self.happened_before(
+            clock_b, clock_a
+        )
 
     def compute_causality_hash(self, event: NexusEvent) -> str:
         """Compute a deterministic hash for causal chain verification."""
@@ -226,7 +238,7 @@ class CausalOrderingEngine:
             event.causality_hash = self.compute_causality_hash(event)
             self._event_buffer.append(event)
             if len(self._event_buffer) > self._buffer_size:
-                self._event_buffer = self._event_buffer[-self._buffer_size:]
+                self._event_buffer = self._event_buffer[-self._buffer_size :]
         return event
 
     async def get_ordered_events(
@@ -514,12 +526,19 @@ class HealthAggregator:
             """UPDATE service_health
                SET status=?, last_heartbeat=?, response_time_ms=?, error_count=?, metadata=?
                WHERE service_id=?""",
-            (status, datetime.now(timezone.utc).isoformat(),
-             response_time_ms, self._services.get(service_id, NexusServiceHealth(
-                 service_id=service_id, service_name="", pillar="",
-                 tier_requirement=5)).error_count,
-             json.dumps(metadata or {}),
-             service_id),
+            (
+                status,
+                datetime.now(timezone.utc).isoformat(),
+                response_time_ms,
+                self._services.get(
+                    service_id,
+                    NexusServiceHealth(
+                        service_id=service_id, service_name="", pillar="", tier_requirement=5
+                    ),
+                ).error_count,
+                json.dumps(metadata or {}),
+                service_id,
+            ),
         )
         conn.execute(
             """INSERT INTO health_history (service_id, status, response_time_ms)
@@ -587,37 +606,43 @@ class HealthAggregator:
                     hb_time = datetime.fromisoformat(svc.last_heartbeat).timestamp()
                     elapsed = now - hb_time
                     if elapsed > self._thresholds["heartbeat_timeout_seconds"]:
-                        anomalies.append({
-                            "type": "heartbeat_timeout",
-                            "service_id": svc.service_id,
-                            "service_name": svc.service_name,
-                            "elapsed_seconds": round(elapsed, 1),
-                            "threshold": self._thresholds["heartbeat_timeout_seconds"],
-                            "severity": "high",
-                        })
+                        anomalies.append(
+                            {
+                                "type": "heartbeat_timeout",
+                                "service_id": svc.service_id,
+                                "service_name": svc.service_name,
+                                "elapsed_seconds": round(elapsed, 1),
+                                "threshold": self._thresholds["heartbeat_timeout_seconds"],
+                                "severity": "high",
+                            }
+                        )
                 except (ValueError, TypeError):
                     pass
 
             # Check response time
             if svc.response_time_ms and svc.response_time_ms > self._thresholds["response_time_ms"]:
-                anomalies.append({
-                    "type": "high_response_time",
-                    "service_id": svc.service_id,
-                    "service_name": svc.service_name,
-                    "response_time_ms": svc.response_time_ms,
-                    "threshold_ms": self._thresholds["response_time_ms"],
-                    "severity": "medium",
-                })
+                anomalies.append(
+                    {
+                        "type": "high_response_time",
+                        "service_id": svc.service_id,
+                        "service_name": svc.service_name,
+                        "response_time_ms": svc.response_time_ms,
+                        "threshold_ms": self._thresholds["response_time_ms"],
+                        "severity": "medium",
+                    }
+                )
 
             # Check error rate
             if svc.error_count > 10:
-                anomalies.append({
-                    "type": "high_error_count",
-                    "service_id": svc.service_id,
-                    "service_name": svc.service_name,
-                    "error_count": svc.error_count,
-                    "severity": "high",
-                })
+                anomalies.append(
+                    {
+                        "type": "high_error_count",
+                        "service_id": svc.service_id,
+                        "service_name": svc.service_name,
+                        "error_count": svc.error_count,
+                        "severity": "high",
+                    }
+                )
 
         return anomalies
 
@@ -696,13 +721,9 @@ class EventRouter:
         """Get the complete routing table for topology visualization."""
         async with self._lock:
             return {
-                "channels": {
-                    ch: list(subs) for ch, subs in self._subscriptions.items()
-                },
+                "channels": {ch: list(subs) for ch, subs in self._subscriptions.items()},
                 "total_channels": len(self._subscriptions),
-                "total_subscriptions": sum(
-                    len(subs) for subs in self._subscriptions.values()
-                ),
+                "total_subscriptions": sum(len(subs) for subs in self._subscriptions.values()),
             }
 
 
@@ -965,7 +986,11 @@ class NexusWSManager:
         for ws in dead:
             self.disconnect(ws)
         # Broadcast to channel subscribers
-        ch = event.channel.value if isinstance(event.channel, SentinelChannel) else str(event.channel)
+        ch = (
+            event.channel.value
+            if isinstance(event.channel, SentinelChannel)
+            else str(event.channel)
+        )
         dead = []
         for ws in self._channel_subs.get(ch, []):
             try:
@@ -1066,8 +1091,7 @@ def create_nexus_app() -> FastAPI:
         """Get recent Nexus events in causal order."""
         nexus = get_nexus()
         return [
-            e.model_dump()
-            for e in await nexus.causal_engine.get_ordered_events(channel, limit)
+            e.model_dump() for e in await nexus.causal_engine.get_ordered_events(channel, limit)
         ]
 
     @app.get("/events/routing")
@@ -1157,11 +1181,19 @@ def create_nexus_app() -> FastAPI:
             "tier_hierarchy": "HUMAN(0) → ORCHESTRATOR(1) → PRIME(2) → AI(3) → AGENT(4) → BOT(5)",
             "channels": [ch.value for ch in SentinelChannel],
             "endpoints": [
-                "/health", "/health/anomalies", "/health/service/{id}",
-                "/access/check", "/access/tiers",
-                "/events/emit", "/events/recent", "/events/routing",
-                "/topology", "/topology/nodes", "/topology/edges",
-                "/services/register", "/services/heartbeat",
+                "/health",
+                "/health/anomalies",
+                "/health/service/{id}",
+                "/access/check",
+                "/access/tiers",
+                "/events/emit",
+                "/events/recent",
+                "/events/routing",
+                "/topology",
+                "/topology/nodes",
+                "/topology/edges",
+                "/services/register",
+                "/services/heartbeat",
                 "/status",
                 "/ws/events (WebSocket)",
                 "/dashboard",
@@ -1174,6 +1206,7 @@ def create_nexus_app() -> FastAPI:
     async def cluster_status():
         """Get the Nexus Cluster status with Raft consensus information."""
         from Dimensional.nexus.raft.raft_core import get_nexus_cluster
+
         cluster = get_nexus_cluster()
         return cluster.get_cluster_status()
 
@@ -1181,6 +1214,7 @@ def create_nexus_app() -> FastAPI:
     async def cluster_add_node(node_id: str):
         """Add a node to the Nexus Cluster."""
         from Dimensional.nexus.raft.raft_core import get_nexus_cluster
+
         cluster = get_nexus_cluster()
         await cluster.add_node(node_id)
         return {"action": "add_node", "node_id": node_id, "status": "added"}
@@ -1189,6 +1223,7 @@ def create_nexus_app() -> FastAPI:
     async def cluster_remove_node(node_id: str):
         """Remove a node from the Nexus Cluster."""
         from Dimensional.nexus.raft.raft_core import get_nexus_cluster
+
         cluster = get_nexus_cluster()
         await cluster.remove_node(node_id)
         return {"action": "remove_node", "node_id": node_id, "status": "removed"}
@@ -1197,6 +1232,7 @@ def create_nexus_app() -> FastAPI:
     async def cluster_propose(request: Request):
         """Propose a command to the Nexus Cluster via Raft consensus."""
         from Dimensional.nexus.raft.raft_core import get_nexus_cluster
+
         body = await request.json()
         cluster = get_nexus_cluster()
         result = await cluster.propose(body.get("command", {}))
@@ -1208,6 +1244,7 @@ def create_nexus_app() -> FastAPI:
     async def pillar_locations():
         """Get all pillar entity locations and their configurations."""
         from Dimensional.pillars.entities import get_pillar_registry
+
         registry = get_pillar_registry()
         return registry.get_full_summary()
 
@@ -1215,6 +1252,7 @@ def create_nexus_app() -> FastAPI:
     async def pillar_location_detail(location: str):
         """Get pillar entities for a specific location."""
         from Dimensional.pillars.entities import get_pillar_registry
+
         registry = get_pillar_registry()
         entities = registry.get_by_location(location)
         return {
@@ -1227,6 +1265,7 @@ def create_nexus_app() -> FastAPI:
     async def pillar_tiers():
         """Get pillar entities grouped by tier."""
         from Dimensional.pillars.entities import get_pillar_registry, EntityTier
+
         registry = get_pillar_registry()
         result = {}
         for tier in EntityTier:
@@ -1248,7 +1287,9 @@ def create_nexus_app() -> FastAPI:
                     msg = json.loads(data)
                     if msg.get("type") == "subscribe" and "channel" in msg:
                         _ws_manager._channel_subs[msg["channel"]].append(ws)
-                        await ws.send_text(json.dumps({"type": "subscribed", "channel": msg["channel"]}))
+                        await ws.send_text(
+                            json.dumps({"type": "subscribed", "channel": msg["channel"]})
+                        )
                 except (json.JSONDecodeError, KeyError):
                     pass
         except WebSocketDisconnect:
@@ -1276,4 +1317,5 @@ app = create_nexus_app()
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=NEXUS_PORT)

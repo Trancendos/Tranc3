@@ -49,6 +49,7 @@ logger = logging.getLogger("nexus.raft")
 
 class RaftState(str, Enum):
     """Raft node states."""
+
     FOLLOWER = "follower"
     CANDIDATE = "candidate"
     LEADER = "leader"
@@ -60,6 +61,7 @@ class RaftState(str, Enum):
 @dataclass
 class RaftConfig:
     """Configuration for a Raft node."""
+
     node_id: str = ""
     election_timeout_min_ms: int = 150
     election_timeout_max_ms: int = 300
@@ -82,6 +84,7 @@ class RaftConfig:
 @dataclass
 class RaftLogEntry:
     """A single entry in the Raft log."""
+
     index: int
     term: int
     command: str
@@ -132,7 +135,7 @@ class RaftLog:
             return list(self._entries)
         if start_index > len(self._entries):
             return []
-        return list(self._entries[start_index - 1:])
+        return list(self._entries[start_index - 1 :])
 
     @property
     def last_index(self) -> int:
@@ -207,7 +210,8 @@ class RaftNode:
         self._start_time: Optional[float] = None
         logger.info(
             "RaftNode %s initialized (cluster_size=%d)",
-            self._config.node_id, self._config.cluster_size,
+            self._config.node_id,
+            self._config.cluster_size,
         )
 
     @property
@@ -308,7 +312,8 @@ class RaftNode:
         self._votes_received = {self._config.node_id}
         logger.info(
             "Node %s: starting election for term %d",
-            self._config.node_id, self._current_term,
+            self._config.node_id,
+            self._current_term,
         )
         # In a real implementation, we'd send RequestVote RPCs
         # For in-process simulation, check if we have majority
@@ -322,7 +327,8 @@ class RaftNode:
         self._leader_id = self._config.node_id
         logger.info(
             "Node %s: became leader for term %d",
-            self._config.node_id, self._current_term,
+            self._config.node_id,
+            self._current_term,
         )
         # Initialize leader state
         for peer_id in self._peers:
@@ -354,7 +360,9 @@ class RaftNode:
         entry = self._log.append(self._current_term, command, data)
         logger.info(
             "Node %s: proposed command '%s' at index %d",
-            self._config.node_id, command, entry.index,
+            self._config.node_id,
+            command,
+            entry.index,
         )
         return entry
 
@@ -372,8 +380,12 @@ class RaftNode:
         return False
 
     def receive_append_entries(
-        self, term: int, leader_id: str, prev_log_index: int,
-        prev_log_term: int, entries: List[RaftLogEntry],
+        self,
+        term: int,
+        leader_id: str,
+        prev_log_index: int,
+        prev_log_term: int,
+        entries: List[RaftLogEntry],
         leader_commit: int,
     ) -> bool:
         """Handle an AppendEntries RPC from the leader."""
@@ -433,6 +445,7 @@ class RaftNode:
 @dataclass
 class NexusClusterNode:
     """Represents a node in the Nexus cluster."""
+
     node_id: str
     address: str = ""
     state: RaftState = RaftState.FOLLOWER
@@ -491,7 +504,7 @@ class NexusCluster:
         if not self._nodes:
             for i in range(self._cluster_size):
                 config = RaftConfig(
-                    node_id=f"node-{i+1}",
+                    node_id=f"node-{i + 1}",
                     cluster_size=self._cluster_size,
                 )
                 node = RaftNode(config)
@@ -530,7 +543,9 @@ class NexusCluster:
                         term=leader.current_term,
                         leader_id=leader.node_id,
                         prev_log_index=entry.index - 1,
-                        prev_log_term=leader.log.get(entry.index - 1).term if entry.index > 1 else 0,
+                        prev_log_term=leader.log.get(entry.index - 1).term
+                        if entry.index > 1
+                        else 0,
                         entries=[entry],
                         leader_commit=entry.index,
                     )
@@ -580,9 +595,7 @@ class NexusCluster:
             "node_count": len(self._nodes),
             "leader_id": self._leader_id,
             "majority": self.majority,
-            "nodes": {
-                nid: node.get_status() for nid, node in self._nodes.items()
-            },
+            "nodes": {nid: node.get_status() for nid, node in self._nodes.items()},
             "three_bridges": {
                 "nexus": {
                     "name": "The Nexus",

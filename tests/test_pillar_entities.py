@@ -5,7 +5,6 @@ Comprehensive tests for the 9 platform locations, entity hierarchy,
 tier system, and pillar registry.
 """
 
-
 from Dimensional.pillars.entities import (
     EntityTier,
     EntityType,
@@ -22,6 +21,7 @@ from Dimensional.pillars.entities import (
 # ──────────────────────────────────────────────
 # EntityTier Tests
 # ──────────────────────────────────────────────
+
 
 class TestEntityTier:
     def test_tier_values(self):
@@ -44,6 +44,7 @@ class TestEntityTier:
 # EntityType Tests
 # ──────────────────────────────────────────────
 
+
 class TestEntityType:
     def test_entity_types(self):
         assert EntityType.HUMAN == "human"
@@ -57,6 +58,7 @@ class TestEntityType:
 # ──────────────────────────────────────────────
 # PillarLocation Tests
 # ──────────────────────────────────────────────
+
 
 class TestPillarLocation:
     def test_nine_locations(self):
@@ -82,6 +84,7 @@ class TestPillarLocation:
 # ──────────────────────────────────────────────
 # PillarEntity Tests
 # ──────────────────────────────────────────────
+
 
 class TestPillarEntity:
     def test_create_entity(self):
@@ -162,6 +165,7 @@ class TestPillarEntity:
 # PillarLocationConfig Tests
 # ──────────────────────────────────────────────
 
+
 class TestPillarLocationConfig:
     def test_create_config(self):
         config = PillarLocationConfig(
@@ -188,6 +192,7 @@ class TestPillarLocationConfig:
 # ──────────────────────────────────────────────
 # PillarRegistry Tests
 # ──────────────────────────────────────────────
+
 
 class TestPillarRegistry:
     def test_create_registry(self):
@@ -237,53 +242,81 @@ class TestPillarRegistry:
 
     def test_get_by_location(self):
         registry = PillarRegistry()
-        registry.register(PillarEntity(
-            name="Nexus AI", entity_type=EntityType.AI, tier=EntityTier.AI,
-            location=PillarLocation.NEXUS,
-        ))
-        registry.register(PillarEntity(
-            name="Hive AI", entity_type=EntityType.AI, tier=EntityTier.AI,
-            location=PillarLocation.HIVE,
-        ))
+        registry.register(
+            PillarEntity(
+                name="Nexus AI",
+                entity_type=EntityType.AI,
+                tier=EntityTier.AI,
+                location=PillarLocation.NEXUS,
+            )
+        )
+        registry.register(
+            PillarEntity(
+                name="Hive AI",
+                entity_type=EntityType.AI,
+                tier=EntityTier.AI,
+                location=PillarLocation.HIVE,
+            )
+        )
         nexus_entities = registry.get_by_location(PillarLocation.NEXUS)
         assert len(nexus_entities) == 1
         assert nexus_entities[0].name == "Nexus AI"
 
     def test_get_by_tier(self):
         registry = PillarRegistry()
-        registry.register(PillarEntity(
-            name="AI 1", entity_type=EntityType.AI, tier=EntityTier.AI,
-            location=PillarLocation.NEXUS,
-        ))
-        registry.register(PillarEntity(
-            name="Agent 1", entity_type=EntityType.AGENT, tier=EntityTier.AGENT,
-            location=PillarLocation.NEXUS,
-        ))
+        registry.register(
+            PillarEntity(
+                name="AI 1",
+                entity_type=EntityType.AI,
+                tier=EntityTier.AI,
+                location=PillarLocation.NEXUS,
+            )
+        )
+        registry.register(
+            PillarEntity(
+                name="Agent 1",
+                entity_type=EntityType.AGENT,
+                tier=EntityTier.AGENT,
+                location=PillarLocation.NEXUS,
+            )
+        )
         ai_entities = registry.get_by_tier(EntityTier.AI)
         assert len(ai_entities) == 1
 
     def test_get_by_type(self):
         registry = PillarRegistry()
-        registry.register(PillarEntity(
-            name="Agent A", entity_type=EntityType.AGENT, tier=EntityTier.AGENT,
-            location=PillarLocation.NEXUS,
-        ))
-        registry.register(PillarEntity(
-            name="Bot 1", entity_type=EntityType.BOT, tier=EntityTier.BOT,
-            location=PillarLocation.NEXUS,
-        ))
+        registry.register(
+            PillarEntity(
+                name="Agent A",
+                entity_type=EntityType.AGENT,
+                tier=EntityTier.AGENT,
+                location=PillarLocation.NEXUS,
+            )
+        )
+        registry.register(
+            PillarEntity(
+                name="Bot 1",
+                entity_type=EntityType.BOT,
+                tier=EntityTier.BOT,
+                location=PillarLocation.NEXUS,
+            )
+        )
         agents = registry.get_by_type(EntityType.AGENT)
         assert len(agents) == 1
 
     def test_get_children(self):
         registry = PillarRegistry()
         parent = PillarEntity(
-            name="AI", entity_type=EntityType.AI, tier=EntityTier.AI,
+            name="AI",
+            entity_type=EntityType.AI,
+            tier=EntityTier.AI,
             location=PillarLocation.NEXUS,
         )
         registry.register(parent)
         child = PillarEntity(
-            name="Agent", entity_type=EntityType.AGENT, tier=EntityTier.AGENT,
+            name="Agent",
+            entity_type=EntityType.AGENT,
+            tier=EntityTier.AGENT,
             location=PillarLocation.NEXUS,
             parent_id=parent.entity_id,
         )
@@ -296,12 +329,16 @@ class TestPillarRegistry:
     def test_get_parent(self):
         registry = PillarRegistry()
         parent = PillarEntity(
-            name="AI", entity_type=EntityType.AI, tier=EntityTier.AI,
+            name="AI",
+            entity_type=EntityType.AI,
+            tier=EntityTier.AI,
             location=PillarLocation.NEXUS,
         )
         registry.register(parent)
         child = PillarEntity(
-            name="Agent", entity_type=EntityType.AGENT, tier=EntityTier.AGENT,
+            name="Agent",
+            entity_type=EntityType.AGENT,
+            tier=EntityTier.AGENT,
             location=PillarLocation.NEXUS,
             parent_id=parent.entity_id,
         )
@@ -312,28 +349,40 @@ class TestPillarRegistry:
 
     def test_location_count(self):
         registry = PillarRegistry()
-        registry.register(PillarEntity(
-            name="Nexus AI", entity_type=EntityType.AI, tier=EntityTier.AI,
-            location=PillarLocation.NEXUS,
-        ))
+        registry.register(
+            PillarEntity(
+                name="Nexus AI",
+                entity_type=EntityType.AI,
+                tier=EntityTier.AI,
+                location=PillarLocation.NEXUS,
+            )
+        )
         assert registry.location_count == 1
 
     def test_get_location_summary(self):
         registry = PillarRegistry()
-        registry.register(PillarEntity(
-            name="Nexus AI", entity_type=EntityType.AI, tier=EntityTier.AI,
-            location=PillarLocation.NEXUS,
-        ))
+        registry.register(
+            PillarEntity(
+                name="Nexus AI",
+                entity_type=EntityType.AI,
+                tier=EntityTier.AI,
+                location=PillarLocation.NEXUS,
+            )
+        )
         summary = registry.get_location_summary(PillarLocation.NEXUS)
         assert summary["entity_count"] == 1
         assert summary["location"] == "nexus"
 
     def test_get_full_summary(self):
         registry = PillarRegistry()
-        registry.register(PillarEntity(
-            name="Nexus AI", entity_type=EntityType.AI, tier=EntityTier.AI,
-            location=PillarLocation.NEXUS,
-        ))
+        registry.register(
+            PillarEntity(
+                name="Nexus AI",
+                entity_type=EntityType.AI,
+                tier=EntityTier.AI,
+                location=PillarLocation.NEXUS,
+            )
+        )
         summary = registry.get_full_summary()
         assert "total_entities" in summary
         assert "active_locations" in summary
@@ -344,6 +393,7 @@ class TestPillarRegistry:
 # ──────────────────────────────────────────────
 # Seed Location Tests
 # ──────────────────────────────────────────────
+
 
 class TestSeedLocation:
     def test_seed_single_location(self):
@@ -424,6 +474,7 @@ class TestSeedLocation:
 # ──────────────────────────────────────────────
 # Singleton Tests
 # ──────────────────────────────────────────────
+
 
 class TestPillarRegistrySingleton:
     def test_get_registry(self):

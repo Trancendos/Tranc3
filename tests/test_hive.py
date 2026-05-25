@@ -288,7 +288,9 @@ class TestPipelineManager:
     async def test_replication_factor_capped(self):
         """Replication factor is capped at HIVE_MAX_REPLICATION."""
         pipeline = await self.manager.create_pipeline(
-            name="test", source_id="src-1", sink_ids=["sink-1"],
+            name="test",
+            source_id="src-1",
+            sink_ids=["sink-1"],
             replication_factor=100,
         )
         assert pipeline.replication_factor <= 5
@@ -485,6 +487,7 @@ class TestHiveSingleton:
         """get_hive returns a Hive instance."""
         # Reset singleton
         import Dimensional.hive.hive_core as _hc
+
         _hc._hive_instance = None
         hive = get_hive()
         assert isinstance(hive, Hive)
@@ -493,6 +496,7 @@ class TestHiveSingleton:
     def test_get_hive_singleton(self):
         """get_hive returns the same instance on repeated calls."""
         import Dimensional.hive.hive_core as _hc
+
         _hc._hive_instance = None
         h1 = get_hive()
         h2 = get_hive()
@@ -601,6 +605,7 @@ class TestHiveApp:
     async def test_hive_root_endpoint(self):
         """HIVE root endpoint returns system info."""
         from httpx import AsyncClient, ASGITransport
+
         app = create_hive_app()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/")
@@ -614,6 +619,7 @@ class TestHiveApp:
     async def test_hive_status_endpoint(self):
         """HIVE status endpoint returns comprehensive status."""
         from httpx import AsyncClient, ASGITransport
+
         app = create_hive_app()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/status")
@@ -625,6 +631,7 @@ class TestHiveApp:
     async def test_hive_health_endpoint(self):
         """HIVE health endpoint returns health summary."""
         from httpx import AsyncClient, ASGITransport
+
         app = create_hive_app()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/health")

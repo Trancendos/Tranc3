@@ -29,8 +29,10 @@ logger = logging.getLogger(__name__)
 # Enums
 # ──────────────────────────────────────────────
 
+
 class EntityTier(int, Enum):
     """Entity tier levels."""
+
     HUMAN = 0
     ORCHESTRATOR = 1
     PRIME = 2
@@ -41,6 +43,7 @@ class EntityTier(int, Enum):
 
 class EntityType(str, Enum):
     """Entity type classification."""
+
     HUMAN = "human"
     ORCHESTRATOR = "orchestrator"
     PRIME = "prime"
@@ -51,6 +54,7 @@ class EntityType(str, Enum):
 
 class PillarLocation(str, Enum):
     """The 9 platform locations."""
+
     INFINITY_ONE = "infinity_one"
     NEXUS = "nexus"
     HIVE = "hive"
@@ -66,8 +70,10 @@ class PillarLocation(str, Enum):
 # Models
 # ──────────────────────────────────────────────
 
+
 class PillarEntity(BaseModel):
     """A pillar entity with tier, type, and location assignment."""
+
     entity_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:16])
     name: str
     entity_type: EntityType
@@ -92,6 +98,7 @@ class PillarEntity(BaseModel):
 
 class PillarLocationConfig(BaseModel):
     """Configuration for a pillar location."""
+
     location: PillarLocation
     display_name: str
     description: str = ""
@@ -167,6 +174,7 @@ LOCATIONS: List[PillarLocation] = list(PillarLocation)
 # ──────────────────────────────────────────────
 # Pillar Registry
 # ──────────────────────────────────────────────
+
 
 class PillarRegistry:
     """Registry for pillar entities across all locations."""
@@ -246,8 +254,7 @@ class PillarRegistry:
             "display_name": config.display_name if config else location.value,
             "entity_count": len(entities),
             "entities": {
-                tier.name: len([e for e in entities if e.tier == tier])
-                for tier in EntityTier
+                tier.name: len([e for e in entities if e.tier == tier]) for tier in EntityTier
             },
         }
 
@@ -256,10 +263,7 @@ class PillarRegistry:
         return {
             "total_entities": self.total_entities,
             "active_locations": self.location_count,
-            "locations": {
-                loc.value: self.get_location_summary(loc)
-                for loc in PillarLocation
-            },
+            "locations": {loc.value: self.get_location_summary(loc) for loc in PillarLocation},
             "by_tier": {
                 tier.name: len([eid for eid in self._by_tier[tier] if eid in self._entities])
                 for tier in EntityTier

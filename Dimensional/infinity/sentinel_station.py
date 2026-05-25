@@ -386,7 +386,9 @@ class RedisConnectionManager:
             return []
         messages = []
         try:
-            msg = await asyncio.wait_for(self._pubsub.get_message(ignore_subscribe_messages=True), timeout=timeout)
+            msg = await asyncio.wait_for(
+                self._pubsub.get_message(ignore_subscribe_messages=True), timeout=timeout
+            )
             while msg:
                 messages.append(msg)
                 msg = self._pubsub.get_message(ignore_subscribe_messages=True)
@@ -623,7 +625,7 @@ class SentinelStation:
                         # Strip Redis channel prefix (e.g., "sentinel:")
                         prefix = self._config.redis_channel_prefix
                         if channel.startswith(prefix):
-                            channel = channel[len(prefix):]
+                            channel = channel[len(prefix) :]
 
                         data = msg.get("data", b"")
                         if isinstance(data, bytes):
@@ -700,7 +702,8 @@ class SentinelStation:
             "subscribed_channels": list(self._subscribed_channels),
             "fallback": self._fallback.get_stats(),
             "uptime_seconds": (
-                time.time() - time.mktime(datetime.fromisoformat(self._stats["started_at"]).timetuple())
+                time.time()
+                - time.mktime(datetime.fromisoformat(self._stats["started_at"]).timetuple())
                 if self._stats["started_at"]
                 else 0
             ),

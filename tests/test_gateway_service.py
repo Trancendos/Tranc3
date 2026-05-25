@@ -43,12 +43,14 @@ def client():
 
     os.environ["GATEWAY_DB_PATH"] = tmp_path
     os.environ["GATEWAY_PORT"] = "8040"
-    os.environ["API_KEYS"] = ",".join([
-        TEST_API_KEY,
-        TEST_API_KEY_USER,
-        TEST_API_KEY_AGENT,
-        TEST_API_KEY_BOT,
-    ])
+    os.environ["API_KEYS"] = ",".join(
+        [
+            TEST_API_KEY,
+            TEST_API_KEY_USER,
+            TEST_API_KEY_AGENT,
+            TEST_API_KEY_BOT,
+        ]
+    )
 
     import importlib
 

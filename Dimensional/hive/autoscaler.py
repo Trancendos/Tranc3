@@ -53,6 +53,7 @@ logger = logging.getLogger("hive.autoscaler")
 
 class ScalingPolicyType(str, Enum):
     """Type of scaling policy."""
+
     THRESHOLD = "threshold"
     PREDICTIVE = "predictive"
     SCHEDULED = "scheduled"
@@ -60,6 +61,7 @@ class ScalingPolicyType(str, Enum):
 
 class ScalingStatus(str, Enum):
     """Auto-scaler engine status."""
+
     ACTIVE = "active"
     PAUSED = "paused"
     STOPPED = "stopped"
@@ -67,6 +69,7 @@ class ScalingStatus(str, Enum):
 
 class ScalingDirection(str, Enum):
     """Direction of a scaling action."""
+
     UP = "up"
     DOWN = "down"
     NONE = "none"
@@ -77,6 +80,7 @@ class ScalingDirection(str, Enum):
 
 class ThroughputMetrics(BaseModel):
     """Metrics snapshot for a HIVE swarm."""
+
     swarm_id: str = ""
     tasks_per_second: float = 0.0
     active_nodes: int = 0
@@ -97,6 +101,7 @@ class ThroughputMetrics(BaseModel):
 
 class ScalingPolicyConfig(BaseModel):
     """Configuration for a scaling policy."""
+
     policy_type: ScalingPolicyType = ScalingPolicyType.THRESHOLD
     scale_up_threshold: float = 0.8
     scale_down_threshold: float = 0.3
@@ -108,6 +113,7 @@ class ScalingPolicyConfig(BaseModel):
 
 class ScalingAction(BaseModel):
     """Record of a scaling action taken."""
+
     action_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
     swarm_id: str = ""
     direction: ScalingDirection = ScalingDirection.NONE
@@ -247,8 +253,10 @@ class CooldownManager:
         now = time.time()
         actions = self._action_history.get(swarm_id, [])
         recent = [
-            a for a in actions
-            if now - (datetime.fromisoformat(a.timestamp).timestamp() if a.timestamp else 0) < window_seconds
+            a
+            for a in actions
+            if now - (datetime.fromisoformat(a.timestamp).timestamp() if a.timestamp else 0)
+            < window_seconds
         ]
         if len(recent) < max_actions:
             return False
@@ -308,7 +316,9 @@ class ScalingDecisionEngine:
                 reason=f"load_factor_{load:.2f}_above_{self._policy.scale_up_threshold}",
             )
             self._cooldown_mgr.set_cooldown(
-                metrics.swarm_id, "scale_up", self._policy.cooldown_seconds,
+                metrics.swarm_id,
+                "scale_up",
+                self._policy.cooldown_seconds,
             )
             self._cooldown_mgr.record_action(action)
             return action
@@ -326,7 +336,9 @@ class ScalingDecisionEngine:
                 reason=f"load_factor_{load:.2f}_below_{self._policy.scale_down_threshold}",
             )
             self._cooldown_mgr.set_cooldown(
-                metrics.swarm_id, "scale_down", self._policy.cooldown_seconds,
+                metrics.swarm_id,
+                "scale_down",
+                self._policy.cooldown_seconds,
             )
             self._cooldown_mgr.record_action(action)
             return action
@@ -359,7 +371,8 @@ class AutoScalerEngine:
         self._metrics_collector = MetricsCollector(max_samples=max_samples)
         self._cooldown_manager = CooldownManager()
         self._decision_engine = ScalingDecisionEngine(
-            policy=self._policy, cooldown_mgr=self._cooldown_manager,
+            policy=self._policy,
+            cooldown_mgr=self._cooldown_manager,
         )
         self._swarms: Dict[str, Dict[str, Any]] = {}
         self._actions: List[ScalingAction] = []

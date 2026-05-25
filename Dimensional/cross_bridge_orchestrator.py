@@ -29,8 +29,10 @@ logger = logging.getLogger(__name__)
 # Enums
 # ──────────────────────────────────────────────
 
+
 class BridgeTarget(str, Enum):
     """Target bridge for a workflow step."""
+
     INFINITY = "infinity"
     NEXUS = "nexus"
     HIVE = "hive"
@@ -38,6 +40,7 @@ class BridgeTarget(str, Enum):
 
 class StepStatus(str, Enum):
     """Status of a workflow step."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -48,6 +51,7 @@ class StepStatus(str, Enum):
 
 class WorkflowStatus(str, Enum):
     """Status of an orchestration workflow."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -60,8 +64,10 @@ class WorkflowStatus(str, Enum):
 # Models
 # ──────────────────────────────────────────────
 
+
 class OrchestrationStep(BaseModel):
     """A single step in a cross-bridge orchestration workflow."""
+
     step_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
     name: str
     bridge: BridgeTarget
@@ -81,6 +87,7 @@ class OrchestrationStep(BaseModel):
 
 class OrchestrationWorkflow(BaseModel):
     """A cross-bridge orchestration workflow with ordered steps."""
+
     workflow_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:16])
     name: str
     steps: List[OrchestrationStep] = Field(default_factory=list)
@@ -94,6 +101,7 @@ class OrchestrationWorkflow(BaseModel):
 # ──────────────────────────────────────────────
 # Bridge Dispatcher
 # ──────────────────────────────────────────────
+
 
 class BridgeDispatcher:
     """Dispatches commands to the appropriate bridge."""
@@ -109,7 +117,9 @@ class BridgeDispatcher:
         """Remove a handler for a bridge target."""
         self._handlers.pop(bridge, None)
 
-    async def dispatch(self, bridge: BridgeTarget, action: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def dispatch(
+        self, bridge: BridgeTarget, action: str, payload: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Dispatch a command to the appropriate bridge handler."""
         handler = self._handlers.get(bridge)
         if handler is None:
@@ -137,6 +147,7 @@ class BridgeDispatcher:
 # ──────────────────────────────────────────────
 # Step Executor
 # ──────────────────────────────────────────────
+
 
 class StepExecutor:
     """Executes individual workflow steps with retry logic."""
@@ -183,6 +194,7 @@ class StepExecutor:
 # Compensation Manager
 # ──────────────────────────────────────────────
 
+
 class CompensationManager:
     """Manages saga compensation for failed workflows."""
 
@@ -195,7 +207,8 @@ class CompensationManager:
 
         # Find completed steps with compensation actions, in reverse order
         compensatable_steps = [
-            step for step in reversed(workflow.steps)
+            step
+            for step in reversed(workflow.steps)
             if step.status == StepStatus.COMPLETED and step.compensation_action
         ]
 
@@ -230,6 +243,7 @@ class CompensationManager:
 # ──────────────────────────────────────────────
 # Cross-Bridge Orchestrator
 # ──────────────────────────────────────────────
+
 
 class CrossBridgeOrchestrator:
     """Top-level orchestrator for cross-bridge workflows."""

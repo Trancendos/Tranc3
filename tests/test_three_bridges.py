@@ -49,6 +49,7 @@ def run_async(coro):
 
 # ── InfinityBridge Unit Tests ──────────────────────────────────────────────────
 
+
 class TestUserContext:
     """Tests for the UserContext data model."""
 
@@ -187,6 +188,7 @@ class TestPresenceTracker:
         pt = PresenceTracker(idle_timeout_seconds=0)
         pt.update_presence("u1", "loc-a")
         import time
+
         time.sleep(0.01)
         idle = pt.get_idle_users()
         assert "u1" in idle
@@ -373,6 +375,7 @@ class TestInfinityBridgeEnums:
 
 # ── Cross-Bridge Integration Tests ─────────────────────────────────────────────
 
+
 class TestThreeBridgeSeparation:
     """Tests that enforce the three-bridge traffic separation.
 
@@ -453,23 +456,23 @@ class TestThreeBridgeSeparation:
         bridge = InfinityBridge()
         # These methods should NOT exist on InfinityBridge
         assert not hasattr(bridge, "register_service")  # Nexus method
-        assert not hasattr(bridge, "register_source")   # HIVE method
-        assert not hasattr(bridge, "register_sink")     # HIVE method
-        assert not hasattr(bridge, "create_swarm")      # HIVE method
+        assert not hasattr(bridge, "register_source")  # HIVE method
+        assert not hasattr(bridge, "register_sink")  # HIVE method
+        assert not hasattr(bridge, "create_swarm")  # HIVE method
 
     def test_nexus_no_user_or_data_methods(self):
         """Nexus should NOT have user context or data pipeline methods."""
         nexus = Nexus()
-        assert not hasattr(nexus, "connect_user")       # InfinityBridge method
-        assert not hasattr(nexus, "register_source")     # HIVE method
-        assert not hasattr(nexus, "create_pipeline")     # HIVE method
+        assert not hasattr(nexus, "connect_user")  # InfinityBridge method
+        assert not hasattr(nexus, "register_source")  # HIVE method
+        assert not hasattr(nexus, "create_pipeline")  # HIVE method
 
     def test_hive_no_user_or_ai_methods(self):
         """HIVE should NOT have user context or AI service methods."""
         hive = Hive()
-        assert not hasattr(hive, "connect_user")        # InfinityBridge method
-        assert not hasattr(hive, "register_service")    # Nexus method
-        assert not hasattr(hive, "emit_event_nexus")    # Nexus method
+        assert not hasattr(hive, "connect_user")  # InfinityBridge method
+        assert not hasattr(hive, "register_service")  # Nexus method
+        assert not hasattr(hive, "emit_event_nexus")  # Nexus method
 
 
 class TestThreeBridgeNomenclature:
@@ -485,6 +488,7 @@ class TestThreeBridgeNomenclature:
     def test_transfer_systems_dict(self):
         """TRANSFER_SYSTEMS dict has entries for all three."""
         from Dimensional.infinity.nomenclature import TRANSFER_SYSTEMS
+
         assert TransferSystem.NEXUS in TRANSFER_SYSTEMS
         assert TransferSystem.HIVE in TRANSFER_SYSTEMS
         assert TransferSystem.BRIDGE in TRANSFER_SYSTEMS
@@ -492,18 +496,23 @@ class TestThreeBridgeNomenclature:
     def test_nexus_transfer_description(self):
         """Nexus is described as handling AI/Agent/Bot traffic."""
         from Dimensional.infinity.nomenclature import TRANSFER_SYSTEMS
+
         nexus_info = TRANSFER_SYSTEMS[TransferSystem.NEXUS]
-        assert "AI" in nexus_info["transfers"] or "intelligence" in nexus_info["description"].lower()
+        assert (
+            "AI" in nexus_info["transfers"] or "intelligence" in nexus_info["description"].lower()
+        )
 
     def test_hive_transfer_description(self):
         """HIVE is described as handling data traffic."""
         from Dimensional.infinity.nomenclature import TRANSFER_SYSTEMS
+
         hive_info = TRANSFER_SYSTEMS[TransferSystem.HIVE]
         assert "Data" in hive_info["transfers"] or "data" in hive_info["description"].lower()
 
     def test_bridge_transfer_description(self):
         """Bridge (InfinityBridge) is described as handling user traffic."""
         from Dimensional.infinity.nomenclature import TRANSFER_SYSTEMS
+
         bridge_info = TRANSFER_SYSTEMS[TransferSystem.BRIDGE]
         assert "User" in bridge_info["transfers"] or "user" in bridge_info["description"].lower()
 
@@ -521,6 +530,7 @@ class TestInfinityBridgeSingleton:
         """get_infinity_bridge() returns the same instance."""
         # Reset singleton for testing
         import Dimensional.infinity.bridge.bridge_core as bc
+
         bc._bridge_instance = None
         b1 = get_infinity_bridge()
         b2 = get_infinity_bridge()
@@ -530,6 +540,7 @@ class TestInfinityBridgeSingleton:
     def test_get_sentinel_bridge_returns_same_instance(self):
         """get_sentinel_bridge() returns the same instance."""
         import Dimensional.infinity.bridge.bridge_core as bc
+
         bc._sentinel_bridge_instance = None
         sb1 = get_sentinel_bridge()
         sb2 = get_sentinel_bridge()

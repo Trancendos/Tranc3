@@ -25,6 +25,7 @@ from Dimensional.infinity.sentinel_cluster import (
 # SentinelClusterNode Tests
 # ──────────────────────────────────────────────
 
+
 class TestSentinelClusterNode:
     def test_create_node(self):
         node = SentinelClusterNode(
@@ -77,6 +78,7 @@ class TestSentinelClusterNode:
 # ClusterPartition Tests
 # ──────────────────────────────────────────────
 
+
 class TestClusterPartition:
     def test_create_partition(self):
         partition = ClusterPartition(
@@ -97,6 +99,7 @@ class TestClusterPartition:
 # ──────────────────────────────────────────────
 # ClusterConfig Tests
 # ──────────────────────────────────────────────
+
 
 class TestClusterConfig:
     def test_default_config(self):
@@ -122,6 +125,7 @@ class TestClusterConfig:
 # SentinelCluster Tests
 # ──────────────────────────────────────────────
 
+
 class TestSentinelCluster:
     def test_create_cluster(self):
         cluster = SentinelCluster()
@@ -130,9 +134,7 @@ class TestSentinelCluster:
 
     def test_add_primary_node(self):
         cluster = SentinelCluster()
-        node = SentinelClusterNode(
-            node_id="node-1", role=NodeRole.PRIMARY, priority=1
-        )
+        node = SentinelClusterNode(node_id="node-1", role=NodeRole.PRIMARY, priority=1)
         cluster.add_node(node)
         assert cluster.node_count == 1
         assert cluster.primary is not None
@@ -140,13 +142,9 @@ class TestSentinelCluster:
 
     def test_add_replica_node(self):
         cluster = SentinelCluster()
-        primary = SentinelClusterNode(
-            node_id="node-1", role=NodeRole.PRIMARY, priority=1
-        )
+        primary = SentinelClusterNode(node_id="node-1", role=NodeRole.PRIMARY, priority=1)
         cluster.add_node(primary)
-        replica = SentinelClusterNode(
-            node_id="node-2", role=NodeRole.REPLICA, priority=100
-        )
+        replica = SentinelClusterNode(node_id="node-2", role=NodeRole.REPLICA, priority=100)
         cluster.add_node(replica)
         assert cluster.node_count == 2
         assert len(cluster.replicas) == 1
@@ -161,12 +159,8 @@ class TestSentinelCluster:
 
     def test_remove_primary_triggers_failover(self):
         cluster = SentinelCluster()
-        primary = SentinelClusterNode(
-            node_id="node-1", role=NodeRole.PRIMARY, priority=1
-        )
-        replica = SentinelClusterNode(
-            node_id="node-2", role=NodeRole.REPLICA, priority=100
-        )
+        primary = SentinelClusterNode(node_id="node-1", role=NodeRole.PRIMARY, priority=1)
+        replica = SentinelClusterNode(node_id="node-2", role=NodeRole.REPLICA, priority=100)
         cluster.add_node(primary)
         cluster.add_node(replica)
         cluster.remove_node("node-1")
@@ -188,15 +182,9 @@ class TestSentinelCluster:
 
     def test_perform_failover(self):
         cluster = SentinelCluster()
-        primary = SentinelClusterNode(
-            node_id="node-1", role=NodeRole.PRIMARY, priority=1
-        )
-        replica1 = SentinelClusterNode(
-            node_id="node-2", role=NodeRole.REPLICA, priority=50
-        )
-        replica2 = SentinelClusterNode(
-            node_id="node-3", role=NodeRole.REPLICA, priority=100
-        )
+        primary = SentinelClusterNode(node_id="node-1", role=NodeRole.PRIMARY, priority=1)
+        replica1 = SentinelClusterNode(node_id="node-2", role=NodeRole.REPLICA, priority=50)
+        replica2 = SentinelClusterNode(node_id="node-3", role=NodeRole.REPLICA, priority=100)
         cluster.add_node(primary)
         cluster.add_node(replica1)
         cluster.add_node(replica2)
@@ -207,15 +195,9 @@ class TestSentinelCluster:
 
     def test_perform_failover_specific_target(self):
         cluster = SentinelCluster()
-        primary = SentinelClusterNode(
-            node_id="node-1", role=NodeRole.PRIMARY, priority=1
-        )
-        replica1 = SentinelClusterNode(
-            node_id="node-2", role=NodeRole.REPLICA, priority=100
-        )
-        replica2 = SentinelClusterNode(
-            node_id="node-3", role=NodeRole.REPLICA, priority=50
-        )
+        primary = SentinelClusterNode(node_id="node-1", role=NodeRole.PRIMARY, priority=1)
+        replica1 = SentinelClusterNode(node_id="node-2", role=NodeRole.REPLICA, priority=100)
+        replica2 = SentinelClusterNode(node_id="node-3", role=NodeRole.REPLICA, priority=50)
         cluster.add_node(primary)
         cluster.add_node(replica1)
         cluster.add_node(replica2)
@@ -227,9 +209,7 @@ class TestSentinelCluster:
         cluster = SentinelCluster()
         for i in range(1, 6):
             role = NodeRole.PRIMARY if i == 1 else NodeRole.REPLICA
-            cluster.add_node(SentinelClusterNode(
-                node_id=f"node-{i}", role=role, priority=i * 10
-            ))
+            cluster.add_node(SentinelClusterNode(node_id=f"node-{i}", role=role, priority=i * 10))
         partition = cluster.detect_partition(["node-4", "node-5"])
         assert partition is not None
         assert len(partition.isolated_nodes) == 2
@@ -242,9 +222,7 @@ class TestSentinelCluster:
         cluster = SentinelCluster()
         for i in range(1, 5):
             role = NodeRole.PRIMARY if i == 1 else NodeRole.REPLICA
-            cluster.add_node(SentinelClusterNode(
-                node_id=f"node-{i}", role=role, priority=i * 10
-            ))
+            cluster.add_node(SentinelClusterNode(node_id=f"node-{i}", role=role, priority=i * 10))
         partition = cluster.detect_partition(["node-3"])
         result = cluster.resolve_partition(partition.partition_id)
         assert result is True
@@ -263,33 +241,25 @@ class TestSentinelCluster:
 
     def test_get_health_healthy(self):
         cluster = SentinelCluster()
-        primary = SentinelClusterNode(
-            node_id="node-1", role=NodeRole.PRIMARY, priority=1
-        )
+        primary = SentinelClusterNode(node_id="node-1", role=NodeRole.PRIMARY, priority=1)
         for i in range(2, 5):
-            cluster.add_node(SentinelClusterNode(
-                node_id=f"node-{i}", role=NodeRole.REPLICA, priority=i * 10
-            ))
+            cluster.add_node(
+                SentinelClusterNode(node_id=f"node-{i}", role=NodeRole.REPLICA, priority=i * 10)
+            )
         cluster.add_node(primary)
         health = cluster.get_health()
         assert health in (ClusterHealth.HEALTHY, ClusterHealth.DEGRADED)
 
     def test_get_health_no_primary(self):
         cluster = SentinelCluster()
-        cluster.add_node(SentinelClusterNode(
-            node_id="node-1", role=NodeRole.REPLICA, priority=100
-        ))
+        cluster.add_node(SentinelClusterNode(node_id="node-1", role=NodeRole.REPLICA, priority=100))
         health = cluster.get_health()
         assert health == ClusterHealth.CRITICAL
 
     def test_get_cluster_status(self):
         cluster = SentinelCluster()
-        primary = SentinelClusterNode(
-            node_id="node-1", role=NodeRole.PRIMARY, priority=1
-        )
-        replica = SentinelClusterNode(
-            node_id="node-2", role=NodeRole.REPLICA, priority=100
-        )
+        primary = SentinelClusterNode(node_id="node-1", role=NodeRole.PRIMARY, priority=1)
+        replica = SentinelClusterNode(node_id="node-2", role=NodeRole.REPLICA, priority=100)
         cluster.add_node(primary)
         cluster.add_node(replica)
         status = cluster.get_cluster_status()
@@ -299,12 +269,8 @@ class TestSentinelCluster:
 
     def test_start_stop(self):
         cluster = SentinelCluster()
-        primary = SentinelClusterNode(
-            node_id="node-1", role=NodeRole.PRIMARY, priority=1
-        )
-        replica = SentinelClusterNode(
-            node_id="node-2", role=NodeRole.REPLICA, priority=100
-        )
+        primary = SentinelClusterNode(node_id="node-1", role=NodeRole.PRIMARY, priority=1)
+        replica = SentinelClusterNode(node_id="node-2", role=NodeRole.REPLICA, priority=100)
         cluster.add_node(primary)
         cluster.add_node(replica)
         loop = asyncio.new_event_loop()
@@ -344,12 +310,8 @@ class TestSentinelCluster:
     def test_manual_failover_policy(self):
         config = ClusterConfig(failover_policy=FailoverPolicy.MANUAL)
         cluster = SentinelCluster(config)
-        primary = SentinelClusterNode(
-            node_id="node-1", role=NodeRole.PRIMARY, priority=1
-        )
-        replica = SentinelClusterNode(
-            node_id="node-2", role=NodeRole.REPLICA, priority=100
-        )
+        primary = SentinelClusterNode(node_id="node-1", role=NodeRole.PRIMARY, priority=1)
+        replica = SentinelClusterNode(node_id="node-2", role=NodeRole.REPLICA, priority=100)
         cluster.add_node(primary)
         cluster.add_node(replica)
         cluster.remove_node("node-1")
@@ -358,12 +320,8 @@ class TestSentinelCluster:
 
     def test_online_nodes(self):
         cluster = SentinelCluster()
-        primary = SentinelClusterNode(
-            node_id="node-1", role=NodeRole.PRIMARY, priority=1
-        )
-        replica = SentinelClusterNode(
-            node_id="node-2", role=NodeRole.REPLICA, priority=100
-        )
+        primary = SentinelClusterNode(node_id="node-1", role=NodeRole.PRIMARY, priority=1)
+        replica = SentinelClusterNode(node_id="node-2", role=NodeRole.REPLICA, priority=100)
         cluster.add_node(primary)
         cluster.add_node(replica)
         assert len(cluster.online_nodes) == 2
@@ -374,6 +332,7 @@ class TestSentinelCluster:
 # ──────────────────────────────────────────────
 # SentinelClusterManager Tests
 # ──────────────────────────────────────────────
+
 
 class TestSentinelClusterManager:
     def test_create_manager(self):
@@ -415,6 +374,7 @@ class TestSentinelClusterManager:
 # ──────────────────────────────────────────────
 # Singleton Tests
 # ──────────────────────────────────────────────
+
 
 class TestSentinelClusterSingleton:
     def test_get_manager(self):

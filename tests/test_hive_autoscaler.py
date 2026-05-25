@@ -26,6 +26,7 @@ from Dimensional.hive.autoscaler import (
 # ThroughputMetrics Tests
 # ──────────────────────────────────────────────
 
+
 class TestThroughputMetrics:
     def test_create_metrics(self):
         metrics = ThroughputMetrics(
@@ -68,6 +69,7 @@ class TestThroughputMetrics:
 # ScalingPolicyConfig Tests
 # ──────────────────────────────────────────────
 
+
 class TestScalingPolicyConfig:
     def test_default_config(self):
         config = ScalingPolicyConfig()
@@ -94,6 +96,7 @@ class TestScalingPolicyConfig:
 # ScalingAction Tests
 # ──────────────────────────────────────────────
 
+
 class TestScalingAction:
     def test_create_action(self):
         action = ScalingAction(
@@ -118,6 +121,7 @@ class TestScalingAction:
 # ──────────────────────────────────────────────
 # MetricsCollector Tests
 # ──────────────────────────────────────────────
+
 
 class TestMetricsCollector:
     def test_record_and_get_latest(self):
@@ -171,16 +175,30 @@ class TestMetricsCollector:
         collector = MetricsCollector()
         loop = asyncio.new_event_loop()
         try:
-            loop.run_until_complete(collector.record(ThroughputMetrics(
-                swarm_id="swarm-1",
-                tasks_per_second=100.0, active_nodes=5, pending_tasks=0,
-                cpu_utilization=0.5, memory_utilization=0.5,
-            )))
-            loop.run_until_complete(collector.record(ThroughputMetrics(
-                swarm_id="swarm-2",
-                tasks_per_second=200.0, active_nodes=3, pending_tasks=0,
-                cpu_utilization=0.5, memory_utilization=0.5,
-            )))
+            loop.run_until_complete(
+                collector.record(
+                    ThroughputMetrics(
+                        swarm_id="swarm-1",
+                        tasks_per_second=100.0,
+                        active_nodes=5,
+                        pending_tasks=0,
+                        cpu_utilization=0.5,
+                        memory_utilization=0.5,
+                    )
+                )
+            )
+            loop.run_until_complete(
+                collector.record(
+                    ThroughputMetrics(
+                        swarm_id="swarm-2",
+                        tasks_per_second=200.0,
+                        active_nodes=3,
+                        pending_tasks=0,
+                        cpu_utilization=0.5,
+                        memory_utilization=0.5,
+                    )
+                )
+            )
             ids = loop.run_until_complete(collector.get_all_swarm_ids())
             assert "swarm-1" in ids
             assert "swarm-2" in ids
@@ -192,14 +210,18 @@ class TestMetricsCollector:
         loop = asyncio.new_event_loop()
         try:
             for i in range(5):
-                loop.run_until_complete(collector.record(ThroughputMetrics(
-                    swarm_id="swarm-1",
-                    tasks_per_second=float(i * 20),
-                    active_nodes=1,
-                    pending_tasks=0,
-                    cpu_utilization=0.5,
-                    memory_utilization=0.5,
-                )))
+                loop.run_until_complete(
+                    collector.record(
+                        ThroughputMetrics(
+                            swarm_id="swarm-1",
+                            tasks_per_second=float(i * 20),
+                            active_nodes=1,
+                            pending_tasks=0,
+                            cpu_utilization=0.5,
+                            memory_utilization=0.5,
+                        )
+                    )
+                )
             trend = loop.run_until_complete(collector.get_load_trend("swarm-1"))
             assert trend is not None
         finally:
@@ -209,11 +231,18 @@ class TestMetricsCollector:
         collector = MetricsCollector()
         loop = asyncio.new_event_loop()
         try:
-            loop.run_until_complete(collector.record(ThroughputMetrics(
-                swarm_id="swarm-1",
-                tasks_per_second=100.0, active_nodes=5, pending_tasks=0,
-                cpu_utilization=0.5, memory_utilization=0.5,
-            )))
+            loop.run_until_complete(
+                collector.record(
+                    ThroughputMetrics(
+                        swarm_id="swarm-1",
+                        tasks_per_second=100.0,
+                        active_nodes=5,
+                        pending_tasks=0,
+                        cpu_utilization=0.5,
+                        memory_utilization=0.5,
+                    )
+                )
+            )
             loop.run_until_complete(collector.clear())
             latest = loop.run_until_complete(collector.get_latest("swarm-1"))
             assert latest is None
@@ -224,6 +253,7 @@ class TestMetricsCollector:
 # ──────────────────────────────────────────────
 # CooldownManager Tests
 # ──────────────────────────────────────────────
+
 
 class TestCooldownManager:
     def test_not_on_cooldown_initially(self):
@@ -275,6 +305,7 @@ class TestCooldownManager:
 # ScalingDecisionEngine Tests
 # ──────────────────────────────────────────────
 
+
 class TestScalingDecisionEngine:
     def test_evaluate_scale_up(self):
         engine = ScalingDecisionEngine()
@@ -321,6 +352,7 @@ class TestScalingDecisionEngine:
 # ──────────────────────────────────────────────
 # AutoScalerEngine Tests
 # ──────────────────────────────────────────────
+
 
 class TestAutoScalerEngine:
     def test_create_engine(self):
@@ -411,6 +443,7 @@ class TestAutoScalerEngine:
 # ──────────────────────────────────────────────
 # Singleton Tests
 # ──────────────────────────────────────────────
+
 
 class TestAutoScalerSingleton:
     def test_get_autoscaler(self):

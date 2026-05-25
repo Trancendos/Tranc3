@@ -25,6 +25,7 @@ from Dimensional.cross_bridge_orchestrator import (
 # OrchestrationStep Tests
 # ──────────────────────────────────────────────
 
+
 class TestOrchestrationStep:
     def test_create_step(self):
         step = OrchestrationStep(
@@ -65,6 +66,7 @@ class TestOrchestrationStep:
 # OrchestrationWorkflow Tests
 # ──────────────────────────────────────────────
 
+
 class TestOrchestrationWorkflow:
     def test_create_workflow(self):
         workflow = OrchestrationWorkflow(name="test-workflow")
@@ -90,15 +92,14 @@ class TestOrchestrationWorkflow:
 # BridgeDispatcher Tests
 # ──────────────────────────────────────────────
 
+
 class TestBridgeDispatcher:
     def test_dispatch_no_handler(self):
         """When no handler is registered, returns simulated response."""
         dispatcher = BridgeDispatcher()
         loop = asyncio.new_event_loop()
         try:
-            result = loop.run_until_complete(
-                dispatcher.dispatch(BridgeTarget.NEXUS, "test", {})
-            )
+            result = loop.run_until_complete(dispatcher.dispatch(BridgeTarget.NEXUS, "test", {}))
             assert result["simulated"] is True
             assert result["bridge"] == "nexus"
         finally:
@@ -146,6 +147,7 @@ class TestBridgeDispatcher:
 # StepExecutor Tests
 # ──────────────────────────────────────────────
 
+
 class TestStepExecutor:
     def test_execute_success(self):
         dispatcher = BridgeDispatcher()
@@ -155,9 +157,7 @@ class TestStepExecutor:
 
         dispatcher.register_handler(BridgeTarget.NEXUS, handler)
         executor = StepExecutor(dispatcher)
-        step = OrchestrationStep(
-            name="test", bridge=BridgeTarget.NEXUS, action="process"
-        )
+        step = OrchestrationStep(name="test", bridge=BridgeTarget.NEXUS, action="process")
         loop = asyncio.new_event_loop()
         try:
             result = loop.run_until_complete(executor.execute(step))
@@ -208,6 +208,7 @@ class TestStepExecutor:
 # ──────────────────────────────────────────────
 # CompensationManager Tests
 # ──────────────────────────────────────────────
+
 
 class TestCompensationManager:
     def test_compensate_no_compensatable_steps(self):
@@ -264,6 +265,7 @@ class TestCompensationManager:
 # ──────────────────────────────────────────────
 # CrossBridgeOrchestrator Tests
 # ──────────────────────────────────────────────
+
 
 class TestCrossBridgeOrchestrator:
     def test_create_orchestrator(self):
@@ -334,7 +336,11 @@ class TestCrossBridgeOrchestrator:
         try:
             result = loop.run_until_complete(orchestrator.execute(workflow))
             # CompensationManager sets COMPENSATING even when no compensatable steps ran
-            assert result.status in (WorkflowStatus.COMPENSATING, WorkflowStatus.COMPENSATED, WorkflowStatus.FAILED)
+            assert result.status in (
+                WorkflowStatus.COMPENSATING,
+                WorkflowStatus.COMPENSATED,
+                WorkflowStatus.FAILED,
+            )
         finally:
             loop.close()
 
@@ -374,6 +380,7 @@ class TestCrossBridgeOrchestrator:
 # ──────────────────────────────────────────────
 # Singleton Tests
 # ──────────────────────────────────────────────
+
 
 class TestOrchestratorSingleton:
     def test_get_orchestrator(self):

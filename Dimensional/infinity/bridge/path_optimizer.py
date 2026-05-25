@@ -60,6 +60,7 @@ class RouteType(str, Enum):
 
 class PathMetrics(BaseModel):
     """Real-time metrics for a bridge path."""
+
     path_id: str = ""
     source: str = ""
     target: str = ""
@@ -84,6 +85,7 @@ class PathMetrics(BaseModel):
 
 class PathScore(BaseModel):
     """Score for a bridge path from the optimization algorithm."""
+
     path_id: str = ""
     source: str = ""
     target: str = ""
@@ -98,6 +100,7 @@ class PathScore(BaseModel):
 
 class OptimizedRoute(BaseModel):
     """An optimized route across the InfinityBridge."""
+
     route_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
     source: str = ""
     target: str = ""
@@ -113,6 +116,7 @@ class OptimizedRoute(BaseModel):
 
 class PathOptimizerConfig(BaseModel):
     """Configuration for the path optimizer."""
+
     strategy: OptimizationStrategy = OptimizationStrategy.BALANCED
     latency_weight: float = 0.4
     load_weight: float = 0.3
@@ -148,10 +152,17 @@ class PathScorer:
         elif metrics.avg_latency_ms < 100:
             latency_score = 1.0 - (metrics.avg_latency_ms / 200.0)
         elif metrics.avg_latency_ms < self._config.degraded_latency_ms:
-            latency_score = 0.5 - (metrics.avg_latency_ms - 100) / (self._config.degraded_latency_ms - 100) * 0.3
+            latency_score = (
+                0.5
+                - (metrics.avg_latency_ms - 100) / (self._config.degraded_latency_ms - 100) * 0.3
+            )
         elif metrics.avg_latency_ms < self._config.unhealthy_latency_ms:
-            latency_score = 0.2 - (metrics.avg_latency_ms - self._config.degraded_latency_ms) / \
-                (self._config.unhealthy_latency_ms - self._config.degraded_latency_ms) * 0.15
+            latency_score = (
+                0.2
+                - (metrics.avg_latency_ms - self._config.degraded_latency_ms)
+                / (self._config.unhealthy_latency_ms - self._config.degraded_latency_ms)
+                * 0.15
+            )
         else:
             latency_score = 0.05
         latency_score = max(0.0, min(1.0, latency_score))
@@ -231,7 +242,9 @@ class PathHealthMonitor:
     async def record_latency(self, path_id: str, latency_ms: float) -> None:
         async with self._lock:
             if path_id not in self._latency_samples:
-                self._latency_samples[path_id] = deque(maxlen=self._config.metrics_retention_samples)
+                self._latency_samples[path_id] = deque(
+                    maxlen=self._config.metrics_retention_samples
+                )
             self._latency_samples[path_id].append(latency_ms)
 
     async def record_transition(self, path_id: str, success: bool = True) -> None:
@@ -242,7 +255,10 @@ class PathHealthMonitor:
                 self._error_counts[path_id] += 1
 
     async def get_path_metrics(
-        self, path_id: str, source: str = "", target: str = "",
+        self,
+        path_id: str,
+        source: str = "",
+        target: str = "",
         max_capacity: int = 1000,
     ) -> PathMetrics:
         async with self._lock:
@@ -294,16 +310,24 @@ class PathHealthMonitor:
             "health": metrics.health.value,
             "avg_latency_ms": metrics.avg_latency_ms,
             "error_rate": metrics.error_rate,
-            "degradation_type": "latency" if metrics.avg_latency_ms > self._config.degraded_latency_ms
-            else "errors" if metrics.error_rate > self._config.degraded_error_rate
+            "degradation_type": "latency"
+            if metrics.avg_latency_ms > self._config.degraded_latency_ms
+            else "errors"
+            if metrics.error_rate > self._config.degraded_error_rate
             else "unknown",
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     def _determine_health(self, avg_latency: float, error_rate: float) -> PathHealth:
-        if avg_latency > self._config.unhealthy_latency_ms or error_rate > self._config.unhealthy_error_rate:
+        if (
+            avg_latency > self._config.unhealthy_latency_ms
+            or error_rate > self._config.unhealthy_error_rate
+        ):
             return PathHealth.UNHEALTHY
-        if avg_latency > self._config.degraded_latency_ms or error_rate > self._config.degraded_error_rate:
+        if (
+            avg_latency > self._config.degraded_latency_ms
+            or error_rate > self._config.degraded_error_rate
+        ):
             return PathHealth.DEGRADED
         if avg_latency == 0 and error_rate == 0:
             return PathHealth.UNKNOWN
@@ -333,7 +357,10 @@ class FallbackRouter:
             self._topology[target].discard(source)
 
     async def find_alternative_paths(
-        self, source: str, target: str, exclude_paths: Optional[Set[str]] = None,
+        self,
+        source: str,
+        target: str,
+        exclude_paths: Optional[Set[str]] = None,
     ) -> List[List[str]]:
         exclude = exclude_paths or set()
         routes: List[List[str]] = []
@@ -363,7 +390,9 @@ class FallbackRouter:
         return routes
 
     async def get_fallback_route(
-        self, source: str, target: str,
+        self,
+        source: str,
+        target: str,
         scored_paths: Dict[str, PathScore],
         health_monitor: PathHealthMonitor,
     ) -> Optional[OptimizedRoute]:
@@ -374,7 +403,8 @@ class FallbackRouter:
             return None
         best_route = alternatives[0]
         return OptimizedRoute(
-            source=source, target=target,
+            source=source,
+            target=target,
             route_type=RouteType.FALLBACK,
             path_ids=["→".join(best_route)],
             hops=best_route,
@@ -487,16 +517,23 @@ class PathOptimizationEngine:
         return score
 
     async def get_optimal_route(
-        self, source: str, target: str, strategy: Optional[OptimizationStrategy] = None,
+        self,
+        source: str,
+        target: str,
+        strategy: Optional[OptimizationStrategy] = None,
     ) -> Optional[OptimizedRoute]:
         candidate_paths = {
-            pid: (s, t) for pid, (s, t) in self._path_registry.items()
+            pid: (s, t)
+            for pid, (s, t) in self._path_registry.items()
             if s == source and t == target
         }
         if not candidate_paths:
             if self._config.enable_fallback:
                 return await self._fallback_router.get_fallback_route(
-                    source, target, self._score_cache, self._health_monitor,
+                    source,
+                    target,
+                    self._score_cache,
+                    self._health_monitor,
                 )
             return None
         scored: Dict[str, PathScore] = {}
@@ -510,7 +547,8 @@ class PathOptimizationEngine:
         best_score = scored[best_path_id]
         metrics = await self._health_monitor.get_path_metrics(best_path_id)
         return OptimizedRoute(
-            source=source, target=target,
+            source=source,
+            target=target,
             route_type=RouteType.DIRECT,
             path_ids=[best_path_id],
             hops=[source, target],

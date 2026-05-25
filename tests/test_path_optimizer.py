@@ -25,6 +25,7 @@ from Dimensional.infinity.bridge.path_optimizer import (
 
 # ── PathMetrics Tests ────────────────────────────────────────────────────────
 
+
 class TestPathMetrics:
     def test_create_metrics(self):
         metrics = PathMetrics(
@@ -80,6 +81,7 @@ class TestPathMetrics:
 
 # ── PathOptimizerConfig Tests ────────────────────────────────────────────────
 
+
 class TestPathOptimizerConfig:
     def test_default_config(self):
         config = PathOptimizerConfig()
@@ -102,6 +104,7 @@ class TestPathOptimizerConfig:
 
 
 # ── PathScorer Tests ─────────────────────────────────────────────────────────
+
 
 class TestPathScorer:
     def test_score_healthy_path(self):
@@ -161,6 +164,7 @@ class TestPathScorer:
 
 # ── PathHealthMonitor Tests ──────────────────────────────────────────────────
 
+
 class TestPathHealthMonitor:
     def test_record_latency(self):
         loop = asyncio.new_event_loop()
@@ -175,9 +179,7 @@ class TestPathHealthMonitor:
         try:
             monitor = PathHealthMonitor()
             loop.run_until_complete(monitor.record_latency("path-1", 30.0))
-            metrics = loop.run_until_complete(
-                monitor.get_path_metrics("path-1", "A", "B")
-            )
+            metrics = loop.run_until_complete(monitor.get_path_metrics("path-1", "A", "B"))
             assert isinstance(metrics, PathMetrics)
             assert metrics.avg_latency_ms == 30.0
         finally:
@@ -196,9 +198,7 @@ class TestPathHealthMonitor:
         loop = asyncio.new_event_loop()
         try:
             monitor = PathHealthMonitor()
-            loop.run_until_complete(
-                monitor.set_health_override("path-1", PathHealth.DEGRADED)
-            )
+            loop.run_until_complete(monitor.set_health_override("path-1", PathHealth.DEGRADED))
         finally:
             loop.close()
 
@@ -206,9 +206,7 @@ class TestPathHealthMonitor:
         loop = asyncio.new_event_loop()
         try:
             monitor = PathHealthMonitor()
-            loop.run_until_complete(
-                monitor.set_health_override("path-1", PathHealth.DEGRADED)
-            )
+            loop.run_until_complete(monitor.set_health_override("path-1", PathHealth.DEGRADED))
             loop.run_until_complete(monitor.clear_health_override("path-1"))
         finally:
             loop.close()
@@ -229,6 +227,7 @@ class TestPathHealthMonitor:
 
 
 # ── FallbackRouter Tests ─────────────────────────────────────────────────────
+
 
 class TestFallbackRouter:
     def test_register_path(self):
@@ -255,9 +254,7 @@ class TestFallbackRouter:
             loop.run_until_complete(router.register_path("A", "B"))
             loop.run_until_complete(router.register_path("A", "C"))
             loop.run_until_complete(router.register_path("C", "B"))
-            paths = loop.run_until_complete(
-                router.find_alternative_paths("A", "B")
-            )
+            paths = loop.run_until_complete(router.find_alternative_paths("A", "B"))
             assert isinstance(paths, list)
         finally:
             loop.close()
@@ -282,6 +279,7 @@ class TestFallbackRouter:
 
 
 # ── PathOptimizationEngine Tests ─────────────────────────────────────────────
+
 
 class TestPathOptimizationEngine:
     def test_register_path(self):
@@ -328,9 +326,7 @@ class TestPathOptimizationEngine:
             engine.register_path("A", "B", max_capacity=100)
             loop.run_until_complete(engine.start())
             try:
-                route = loop.run_until_complete(
-                    engine.get_optimal_route("A", "B")
-                )
+                route = loop.run_until_complete(engine.get_optimal_route("A", "B"))
                 assert route is None or isinstance(route, OptimizedRoute)
             finally:
                 loop.run_until_complete(engine.stop())
@@ -385,14 +381,13 @@ class TestPathOptimizationEngine:
 
 # ── PathOptimizer Singleton Tests ────────────────────────────────────────────
 
+
 class TestPathOptimizerSingleton:
     def test_get_path_optimizer_returns_engine(self):
         optimizer = get_path_optimizer()
         assert isinstance(optimizer, PathOptimizationEngine)
 
     def test_get_path_optimizer_with_config(self):
-        config = PathOptimizerConfig(
-            strategy=OptimizationStrategy.LOWEST_LATENCY
-        )
+        config = PathOptimizerConfig(strategy=OptimizationStrategy.LOWEST_LATENCY)
         optimizer = get_path_optimizer(config=config)
         assert isinstance(optimizer, PathOptimizationEngine)
