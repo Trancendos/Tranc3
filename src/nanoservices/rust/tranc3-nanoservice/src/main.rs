@@ -3,14 +3,17 @@
 /*                                                                            */
 /* Tokio-based async runtime for the Tranc3 adaptive storage nanoservice.     */
 /* Initializes the storage router, CRUSH engine, adaptive capacity manager,   */
-/* HSM security module, and HTTP health/metrics server.                       */
+/* HSM security module, HTTP health/metrics server, and ecosystem protocols   */
+/* (A2A relay, Three-Bridge routing, Sentinel Station health).                */
 /*                                                                            */
 /* Entity Taxonomy: PID/AID/SID/NID                                           */
 /* Author: Drew Porter / Trancendos                                           */
 /* License: MIT                                                               */
 /******************************************************************************/
 
+mod a2a;
 mod adaptive;
+mod bridge;
 mod crush;
 mod hsm;
 mod storage;
@@ -29,7 +32,9 @@ use prometheus::{Encoder, Registry, TextEncoder};
 use tokio::net::TcpListener;
 use tracing::{error, info};
 
+use crate::a2a::A2ARouter;
 use crate::adaptive::AdaptiveCapacityManager;
+use crate::bridge::SentinelStation;
 use crate::crush::CRUSHEngine;
 use crate::storage::StorageRouter;
 
@@ -41,14 +46,13 @@ struct AppState {
     storage_router: Arc<StorageRouter>,
     crush_engine: Arc<CRUSHEngine>,
     adaptive_manager: Arc<AdaptiveCapacityManager>,
+    a2a_router: Arc<A2ARouter>,
+    sentinel_station: Arc<SentinelStation>,
     registry: Arc<Registry>,
 }
 
 /******************************************************************************/
 /* Body Type Alias                                                            */
-/*                                                                            */
-/* In hyper 1.x, Response<B> requires B: Body. bytes::Bytes does not         */
-/* implement Body. We use http_body_util::Full<Bytes> which does.            */
 /******************************************************************************/
 
 type BoxBody = Full<Bytes>;
@@ -101,6 +105,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     ));
     info!("Adaptive capacity manager initialized");
 
+    // ── A2A Router ────────────────────────────────────────────────────────
+    let a2a_router = Arc::new(A2ARouter::new());
+    info!("A2A router initialized");
+
+    // ── Sentinel Station (Three-Bridge Coordinator) ──────────────────────
+    let sentinel_station = Arc::new(SentinelStation::new());
+    info!("Sentinel Station initialized — Three-Bridge architecture active");
+
     // ── Metrics Registry ──────────────────────────────────────────────────
     let registry = Arc::new(Registry::new());
     info!("Prometheus metrics registry initialized");
@@ -110,6 +122,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         storage_router,
         crush_engine,
         adaptive_manager,
+        a2a_router,
+        sentinel_station,
         registry,
     });
 
@@ -263,6 +277,225 @@ async fn handle_request(
                 .header("Content-Type", "application/json")
                 .body(full(serde_json::to_string_pretty(&status).unwrap_or_default()))
                 .unwrap())
+        }
+
+        // ── A2A: Relay Message ────────────────────────────────────────────
+        ("POST", "/v1/a2a/relay") => {
+            let body = req.into_body()
+                .collect()
+                .await?
+                .to_bytes();
+            match serde_json::from_slice::<crate::a2a::A2AMessage>(&body) {
+                Ok(message) => {
+                    match state.a2a_router.relay_message(message).await {
+                        Ok(response) => Ok(Response::builder()
+                            .status(200)
+                            .header("Content-Type", "application/json")
+                            .body(full(serde_json::to_string_pretty(&response).unwrap_or_default()))
+                            .unwrap()),
+                        Err(e) => Ok(Response::builder()
+                            .status(503)
+                            .header("Content-Type", "application/json")
+                            .body(full(serde_json::to_string_pretty(&serde_json::json!({
+                                "error": e,
+                            })).unwrap_or_default()))
+                            .unwrap()),
+                    }
+                }
+                Err(e) => Ok(Response::builder()
+                    .status(400)
+                    .header("Content-Type", "application/json")
+                    .body(full(serde_json::to_string_pretty(&serde_json::json!({
+                        "error": format!("Invalid A2A message: {}", e),
+                    })).unwrap_or_default()))
+                    .unwrap()),
+            }
+        }
+
+        // ── A2A: Register Agent ──────────────────────────────────────────
+        ("POST", "/v1/a2a/register") => {
+            let body = req.into_body()
+                .collect()
+                .await?
+                .to_bytes();
+            match serde_json::from_slice::<crate::a2a::AgentCard>(&body) {
+                Ok(card) => {
+                    state.a2a_router.register_agent(card).await;
+                    Ok(Response::builder()
+                        .status(201)
+                        .header("Content-Type", "application/json")
+                        .body(full("{\"status\":\"registered\"}"))
+                        .unwrap())
+                }
+                Err(e) => Ok(Response::builder()
+                    .status(400)
+                    .header("Content-Type", "application/json")
+                    .body(full(serde_json::to_string_pretty(&serde_json::json!({
+                        "error": format!("Invalid agent card: {}", e),
+                    })).unwrap_or_default()))
+                    .unwrap()),
+            }
+        }
+
+        // ── A2A: Broadcast ────────────────────────────────────────────────
+        ("POST", "/v1/a2a/broadcast") => {
+            let body = req.into_body()
+                .collect()
+                .await?
+                .to_bytes();
+            match serde_json::from_slice::<serde_json::Value>(&body) {
+                Ok(payload) => {
+                    let sender = payload.get("sender").and_then(|v| v.as_str()).unwrap_or("unknown");
+                    let skill = payload.get("skill").and_then(|v| v.as_str());
+                    let tier = payload.get("tier").and_then(|v| v.as_u64()).map(|t| t as u8);
+                    let broadcast_payload = payload.get("payload").cloned().unwrap_or(serde_json::json!({}));
+                    let responses = state.a2a_router.broadcast(sender, skill, tier, broadcast_payload).await;
+                    Ok(Response::builder()
+                        .status(200)
+                        .header("Content-Type", "application/json")
+                        .body(full(serde_json::to_string_pretty(&responses).unwrap_or_default()))
+                        .unwrap())
+                }
+                Err(e) => Ok(Response::builder()
+                    .status(400)
+                    .header("Content-Type", "application/json")
+                    .body(full(format!("Invalid broadcast payload: {}", e)))
+                    .unwrap()),
+            }
+        }
+
+        // ── A2A: Health / Status ──────────────────────────────────────────
+        ("GET", "/v1/a2a/health") => {
+            let health = state.a2a_router.health_check().await;
+            Ok(Response::builder()
+                .status(200)
+                .header("Content-Type", "application/json")
+                .body(full(serde_json::to_string_pretty(&health).unwrap_or_default()))
+                .unwrap())
+        }
+
+        // ── Three-Bridge: Route Traffic ───────────────────────────────────
+        ("POST", "/v1/bridge/route") => {
+            let body = req.into_body()
+                .collect()
+                .await?
+                .to_bytes();
+            match serde_json::from_slice::<crate::bridge::BridgeTrafficPacket>(&body) {
+                Ok(packet) => {
+                    match state.sentinel_station.route_traffic(packet).await {
+                        Ok(result) => Ok(Response::builder()
+                            .status(200)
+                            .header("Content-Type", "application/json")
+                            .body(full(serde_json::to_string_pretty(&result).unwrap_or_default()))
+                            .unwrap()),
+                        Err(e) => Ok(Response::builder()
+                            .status(503)
+                            .header("Content-Type", "application/json")
+                            .body(full(serde_json::to_string_pretty(&serde_json::json!({
+                                "error": e,
+                            })).unwrap_or_default()))
+                            .unwrap()),
+                    }
+                }
+                Err(e) => Ok(Response::builder()
+                    .status(400)
+                    .header("Content-Type", "application/json")
+                    .body(full(serde_json::to_string_pretty(&serde_json::json!({
+                        "error": format!("Invalid traffic packet: {}", e),
+                    })).unwrap_or_default()))
+                    .unwrap()),
+            }
+        }
+
+        // ── Three-Bridge: Classify Traffic ────────────────────────────────
+        ("POST", "/v1/bridge/classify") => {
+            let body = req.into_body()
+                .collect()
+                .await?
+                .to_bytes();
+            match serde_json::from_slice::<serde_json::Value>(&body) {
+                Ok(payload) => {
+                    let traffic_class_str = payload.get("traffic_class")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("user_request");
+                    // Attempt to parse the traffic class
+                    let result = match traffic_class_str {
+                        "user_request" => Some(crate::bridge::TrafficClass::UserRequest),
+                        "user_auth" => Some(crate::bridge::TrafficClass::UserAuth),
+                        "user_dashboard" => Some(crate::bridge::TrafficClass::UserDashboard),
+                        "agent_request" => Some(crate::bridge::TrafficClass::AgentRequest),
+                        "agent_broadcast" => Some(crate::bridge::TrafficClass::AgentBroadcast),
+                        "agent_discovery" => Some(crate::bridge::TrafficClass::AgentDiscovery),
+                        "bot_delegation" => Some(crate::bridge::TrafficClass::BotDelegation),
+                        "a2a_message" => Some(crate::bridge::TrafficClass::A2AMessage),
+                        "data_queue" => Some(crate::bridge::TrafficClass::DataQueue),
+                        "data_transport" => Some(crate::bridge::TrafficClass::DataTransport),
+                        "swarm_dispatch" => Some(crate::bridge::TrafficClass::SwarmDispatch),
+                        "swarm_consensus" => Some(crate::bridge::TrafficClass::SwarmConsensus),
+                        "estate_scan" => Some(crate::bridge::TrafficClass::EstateScan),
+                        "escalation" => Some(crate::bridge::TrafficClass::Escalation),
+                        _ => None,
+                    };
+
+                    match result {
+                        Some(tc) => {
+                            let bridge = state.sentinel_station.classify_traffic(&tc);
+                            Ok(Response::builder()
+                                .status(200)
+                                .header("Content-Type", "application/json")
+                                .body(full(serde_json::to_string_pretty(&serde_json::json!({
+                                    "traffic_class": traffic_class_str,
+                                    "target_bridge": format!("{}", bridge),
+                                })).unwrap_or_default()))
+                                .unwrap())
+                        }
+                        None => Ok(Response::builder()
+                            .status(400)
+                            .header("Content-Type", "application/json")
+                            .body(full(format!("Unknown traffic class: {}", traffic_class_str)))
+                            .unwrap()),
+                    }
+                }
+                Err(e) => Ok(Response::builder()
+                    .status(400)
+                    .body(full(format!("Invalid JSON: {}", e)))
+                    .unwrap()),
+            }
+        }
+
+        // ── Sentinel Station: Health Aggregation ──────────────────────────
+        ("GET", "/v1/sentinel/health") => {
+            let health = state.sentinel_station.aggregate_health();
+            Ok(Response::builder()
+                .status(200)
+                .header("Content-Type", "application/json")
+                .body(full(serde_json::to_string_pretty(&health).unwrap_or_default()))
+                .unwrap())
+        }
+
+        // ── Sentinel Station: Add Routing Rule ────────────────────────────
+        ("POST", "/v1/sentinel/routing-rule") => {
+            let body = req.into_body()
+                .collect()
+                .await?
+                .to_bytes();
+            match serde_json::from_slice::<crate::bridge::RoutingRule>(&body) {
+                Ok(rule) => {
+                    state.sentinel_station.add_routing_rule(rule).await;
+                    Ok(Response::builder()
+                        .status(201)
+                        .header("Content-Type", "application/json")
+                        .body(full("{\"status\":\"rule_added\"}"))
+                        .unwrap())
+                }
+                Err(e) => Ok(Response::builder()
+                    .status(400)
+                    .header("Content-Type", "application/json")
+                    .body(full(serde_json::to_string_pretty(&serde_json::json!({
+                        "error": format!("Invalid routing rule: {}", e),
+                    })).unwrap_or_default()))
+                    .unwrap()),
+            }
         }
 
         // ── 404 ────────────────────────────────────────────────────────────

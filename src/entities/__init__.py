@@ -19,7 +19,31 @@ from .platform import (
     get_entity_for_port,
 )
 
+from .lifecycle import (
+    LifecycleEmitter,
+    LifecycleEvent,
+    LifecycleContext,
+    LifecycleListener,
+)
+
+from .ollama import (
+    OllamaClient,
+    OllamaConfig,
+    OllamaMessage,
+    OllamaToolCall,
+    OllamaToolSchema,
+    OllamaChatResponse,
+)
+
+from .tiers import (
+    Prime,
+    Sovereign,
+    HILAApproval,
+    HealthReport,
+)
+
 __all__ = [
+    # Platform entities
     "Agent",
     "Bot",
     "LOCATION_ABBREVS",
@@ -34,4 +58,21 @@ __all__ = [
     "get_entity_by_pid",
     "get_entity_for_location",
     "get_entity_for_port",
+    # Lifecycle
+    "LifecycleEmitter",
+    "LifecycleEvent",
+    "LifecycleContext",
+    "LifecycleListener",
+    # Ollama
+    "OllamaClient",
+    "OllamaConfig",
+    "OllamaMessage",
+    "OllamaToolCall",
+    "OllamaToolSchema",
+    "OllamaChatResponse",
+    # Tier 1 & 2
+    "Prime",
+    "Sovereign",
+    "HILAApproval",
+    "HealthReport",
 ]
