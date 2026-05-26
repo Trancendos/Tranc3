@@ -51,6 +51,7 @@ class TaskCategory(Enum):
 @dataclass
 class RoadmapTask:
     """A single task in the roadmap."""
+
     task_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     title: str = ""
     description: str = ""
@@ -96,6 +97,7 @@ class RoadmapTask:
 @dataclass
 class RoadmapMilestone:
     """A milestone grouping multiple tasks."""
+
     milestone_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     name: str = ""
     description: str = ""
@@ -132,10 +134,12 @@ class PriorityCalculator:
         effort_score = max(0, 1.0 - (task.estimated_effort_hours / 100.0))
         dep_score = min(1.0, len(task.dependencies) / 5.0)
 
-        return (risk_score * risk_weight +
-                impact_score * impact_weight +
-                effort_score * effort_weight +
-                dep_score * dependency_weight)
+        return (
+            risk_score * risk_weight
+            + impact_score * impact_weight
+            + effort_score * effort_weight
+            + dep_score * dependency_weight
+        )
 
 
 class DependencyResolver:
@@ -213,6 +217,7 @@ class SHIRoadmapAdvisor:
         if self._available is None:
             try:
                 import urllib.request
+
                 req = urllib.request.Request(f"{self.shi_url}/health", method="GET")
                 with urllib.request.urlopen(req, timeout=3) as resp:
                     self._available = resp.status == 200
@@ -225,6 +230,7 @@ class SHIRoadmapAdvisor:
             return self._heuristic_breakdown(task)
         try:
             import urllib.request
+
             prompt = f"Break down this task into subtasks: {task.title} — {task.description}"
             data = json.dumps({"prompt": prompt, "max_tokens": 512}).encode()
             req = urllib.request.Request(
@@ -245,16 +251,18 @@ class SHIRoadmapAdvisor:
         subtasks = []
         phases = ["Design & Planning", "Implementation", "Testing", "Documentation", "Integration"]
         for i, phase_name in enumerate(phases):
-            subtasks.append(RoadmapTask(
-                title=f"{task.title} — {phase_name}",
-                description=f"{phase_name} phase for: {task.description}",
-                category=task.category,
-                priority=task.priority,
-                phase=task.phase,
-                estimated_effort_hours=task.estimated_effort_hours / len(phases),
-                dependencies=[subtasks[-1].task_id] if subtasks else [],
-                tags=task.tags + [phase_name.lower().replace(" ", "-")],
-            ))
+            subtasks.append(
+                RoadmapTask(
+                    title=f"{task.title} — {phase_name}",
+                    description=f"{phase_name} phase for: {task.description}",
+                    category=task.category,
+                    priority=task.priority,
+                    phase=task.phase,
+                    estimated_effort_hours=task.estimated_effort_hours / len(phases),
+                    dependencies=[subtasks[-1].task_id] if subtasks else [],
+                    tags=task.tags + [phase_name.lower().replace(" ", "-")],
+                )
+            )
         return subtasks
 
     def _parse_subtasks(self, text: str, parent: RoadmapTask) -> List[RoadmapTask]:
@@ -262,16 +270,18 @@ class SHIRoadmapAdvisor:
         subtasks = []
         for line in lines[:10]:
             if len(line) > 5:
-                subtasks.append(RoadmapTask(
-                    title=line[:100],
-                    description=f"Subtask of {parent.title}: {line}",
-                    category=parent.category,
-                    priority=parent.priority,
-                    phase=parent.phase,
-                    estimated_effort_hours=parent.estimated_effort_hours / max(1, len(lines)),
-                    dependencies=[],
-                    tags=parent.tags,
-                ))
+                subtasks.append(
+                    RoadmapTask(
+                        title=line[:100],
+                        description=f"Subtask of {parent.title}: {line}",
+                        category=parent.category,
+                        priority=parent.priority,
+                        phase=parent.phase,
+                        estimated_effort_hours=parent.estimated_effort_hours / max(1, len(lines)),
+                        dependencies=[],
+                        tags=parent.tags,
+                    )
+                )
         return subtasks if subtasks else self._heuristic_breakdown(parent)
 
 
@@ -352,8 +362,11 @@ class RoadmapGenerator:
         if not milestone:
             return {"error": "Milestone not found"}
         total = len(milestone.tasks)
-        completed = sum(1 for tid in milestone.tasks
-                       if self.tasks.get(tid, RoadmapTask()).status == RoadmapStatus.COMPLETED)
+        completed = sum(
+            1
+            for tid in milestone.tasks
+            if self.tasks.get(tid, RoadmapTask()).status == RoadmapStatus.COMPLETED
+        )
         milestone.completion_percentage = (completed / total * 100) if total > 0 else 0
         return {
             "milestone_id": milestone_id,

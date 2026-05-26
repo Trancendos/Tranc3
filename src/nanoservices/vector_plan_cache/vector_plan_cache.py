@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class CacheBackend(Enum):
     """Vector store backend."""
+
     CHROMADB = "chromadb"
     LANCEDB = "lancedb"
     MEMORY = "memory"
@@ -28,6 +29,7 @@ class CacheBackend(Enum):
 
 class PlanStatus(Enum):
     """Status of a cached plan."""
+
     OPTIMAL = "optimal"
     SUBOPTIMAL = "suboptimal"
     STALE = "stale"
@@ -38,6 +40,7 @@ class PlanStatus(Enum):
 @dataclass
 class NRCQueryEmbedding:
     """Vector embedding of an NRC query for semantic search."""
+
     query_id: str
     nrc_dsl: str
     embedding: List[float]
@@ -52,14 +55,15 @@ class NRCQueryEmbedding:
         if not self.relation_fingerprint:
             # Extract relation names from DSL for quick fingerprinting
             relations = sorted(set(w for w in self.nrc_dsl.split() if w.isidentifier()))
-            self.relation_fingerprint = hashlib.sha3_256(
-                ":".join(relations).encode()
-            ).hexdigest()[:12]
+            self.relation_fingerprint = hashlib.sha3_256(":".join(relations).encode()).hexdigest()[
+                :12
+            ]
 
 
 @dataclass
 class CachedPlan:
     """An optimized NRC query plan stored in the vector cache."""
+
     plan_id: str
     query_id: str
     query_embedding: NRCQueryEmbedding
@@ -78,6 +82,7 @@ class CachedPlan:
 @dataclass
 class CacheSearchResult:
     """Result from a vector similarity search in the plan cache."""
+
     cached_plan: CachedPlan
     similarity_score: float
     distance: float
@@ -102,9 +107,9 @@ class SimpleTextEncoder:
         tokens = text.lower().split()
         ngrams = tokens[:]
         for i in range(len(tokens) - 1):
-            ngrams.append(f"{tokens[i]}_{tokens[i+1]}")
+            ngrams.append(f"{tokens[i]}_{tokens[i + 1]}")
         for i in range(len(tokens) - 2):
-            ngrams.append(f"{tokens[i]}_{tokens[i+1]}_{tokens[i+2]}")
+            ngrams.append(f"{tokens[i]}_{tokens[i + 1]}_{tokens[i + 2]}")
 
         for token in ngrams:
             # Feature hashing
@@ -137,13 +142,17 @@ class InMemoryVectorStore:
         self._vectors: Dict[str, List[float]] = {}
         self._metadata: Dict[str, Dict[str, Any]] = {}
 
-    def add(self, ids: List[str], vectors: List[List[float]], metadatas: List[Dict[str, Any]]) -> None:
+    def add(
+        self, ids: List[str], vectors: List[List[float]], metadatas: List[Dict[str, Any]]
+    ) -> None:
         """Add vectors to the store."""
         for id_, vec, meta in zip(ids, vectors, metadatas):
             self._vectors[id_] = vec
             self._metadata[id_] = meta
 
-    def query(self, query_vector: List[float], top_k: int = 10) -> List[Tuple[str, float, Dict[str, Any]]]:
+    def query(
+        self, query_vector: List[float], top_k: int = 10
+    ) -> List[Tuple[str, float, Dict[str, Any]]]:
         """Query for similar vectors using cosine similarity."""
         results = []
         for id_, vec in self._vectors.items():
@@ -181,7 +190,9 @@ class ChromaDBPlanStore:
     if ChromaDB is not installed.
     """
 
-    def __init__(self, collection_name: str = "trancex_nrc_plans", persist_dir: Optional[str] = None):
+    def __init__(
+        self, collection_name: str = "trancex_nrc_plans", persist_dir: Optional[str] = None
+    ):
         self.collection_name = collection_name
         self.persist_dir = persist_dir
         self._client = None
@@ -191,6 +202,7 @@ class ChromaDBPlanStore:
 
         try:
             import chromadb
+
             if persist_dir:
                 self._client = chromadb.PersistentClient(path=persist_dir)
             else:
@@ -204,14 +216,18 @@ class ChromaDBPlanStore:
         except ImportError:
             logger.info("ChromaDB not available, using in-memory vector store")
 
-    def add(self, ids: List[str], vectors: List[List[float]], metadatas: List[Dict[str, Any]]) -> None:
+    def add(
+        self, ids: List[str], vectors: List[List[float]], metadatas: List[Dict[str, Any]]
+    ) -> None:
         """Add vectors to the store."""
         if self._use_chromadb and self._collection:
             self._collection.add(ids=ids, embeddings=vectors, metadatas=metadatas)
         else:
             self._fallback.add(ids, vectors, metadatas)
 
-    def query(self, query_vector: List[float], top_k: int = 10) -> List[Tuple[str, float, Dict[str, Any]]]:
+    def query(
+        self, query_vector: List[float], top_k: int = 10
+    ) -> List[Tuple[str, float, Dict[str, Any]]]:
         """Query for similar vectors."""
         if self._use_chromadb and self._collection:
             results = self._collection.query(
@@ -261,13 +277,16 @@ class LanceDBPlanStore:
 
         try:
             import lancedb
+
             self._db = lancedb.connect(self.uri)
             self._use_lancedb = True
             logger.info(f"LanceDB plan store initialized: {table_name}")
         except ImportError:
             logger.info("LanceDB not available, using in-memory vector store")
 
-    def add(self, ids: List[str], vectors: List[List[float]], metadatas: List[Dict[str, Any]]) -> None:
+    def add(
+        self, ids: List[str], vectors: List[List[float]], metadatas: List[Dict[str, Any]]
+    ) -> None:
         """Add vectors to the store."""
         if self._use_lancedb and self._db:
             data = []
@@ -286,7 +305,9 @@ class LanceDBPlanStore:
         else:
             self._fallback.add(ids, vectors, metadatas)
 
-    def query(self, query_vector: List[float], top_k: int = 10) -> List[Tuple[str, float, Dict[str, Any]]]:
+    def query(
+        self, query_vector: List[float], top_k: int = 10
+    ) -> List[Tuple[str, float, Dict[str, Any]]]:
         """Query for similar vectors."""
         if self._use_lancedb and self._table is not None:
             try:
@@ -355,13 +376,15 @@ class VectorPlanCache:
         self._store.add(
             ids=[plan.plan_id],
             vectors=[embedding],
-            metadatas=[{
-                "query_id": plan.query_id,
-                "schema_hash": plan.query_embedding.schema_hash,
-                "status": plan.status.value,
-                "generation": plan.generation,
-                "backend": plan.backend,
-            }],
+            metadatas=[
+                {
+                    "query_id": plan.query_id,
+                    "schema_hash": plan.query_embedding.schema_hash,
+                    "status": plan.status.value,
+                    "generation": plan.generation,
+                    "backend": plan.backend,
+                }
+            ],
         )
 
         # Store in local index
@@ -375,9 +398,7 @@ class VectorPlanCache:
         logger.info(f"Cached plan {plan.plan_id} for query {plan.query_id}")
         return plan.plan_id
 
-    def search_similar(
-        self, nrc_dsl: str, top_k: int = 5
-    ) -> List[CacheSearchResult]:
+    def search_similar(self, nrc_dsl: str, top_k: int = 5) -> List[CacheSearchResult]:
         """Search for similar plans using vector similarity."""
         query_embedding = self.encoder.encode(nrc_dsl)
 
@@ -390,12 +411,14 @@ class VectorPlanCache:
                 plan.hit_count += 1
                 plan.last_used = time.time()
                 self._hit_count += 1
-                return [CacheSearchResult(
-                    cached_plan=plan,
-                    similarity_score=1.0,
-                    distance=0.0,
-                    exact_match=True,
-                )]
+                return [
+                    CacheSearchResult(
+                        cached_plan=plan,
+                        similarity_score=1.0,
+                        distance=0.0,
+                        exact_match=True,
+                    )
+                ]
 
         # Vector similarity search
         results = self._store.query(query_embedding, top_k=top_k)
@@ -418,12 +441,14 @@ class VectorPlanCache:
                 else:
                     self._miss_count += 1
 
-                search_results.append(CacheSearchResult(
-                    cached_plan=plan,
-                    similarity_score=similarity,
-                    distance=1.0 - similarity,
-                    exact_match=exact,
-                ))
+                search_results.append(
+                    CacheSearchResult(
+                        cached_plan=plan,
+                        similarity_score=similarity,
+                        distance=1.0 - similarity,
+                        exact_match=exact,
+                    )
+                )
 
         if not search_results:
             self._miss_count += 1

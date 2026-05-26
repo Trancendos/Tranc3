@@ -32,6 +32,7 @@ from typing import Any, Dict, List, Optional
 # Types
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class InferenceBackend(str, Enum):
     OLLAMA = "ollama"
     VLLM = "vllm"
@@ -50,6 +51,7 @@ class ModelStatus(str, Enum):
 @dataclass
 class ModelInfo:
     """Information about a loaded model."""
+
     name: str
     backend: InferenceBackend
     size_bytes: int = 0
@@ -66,6 +68,7 @@ class ModelInfo:
 @dataclass
 class InferenceRequest:
     """An inference request."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     model: str = "mistral:7b-instruct-v0.2-q4_K_M"
     prompt: str = ""
@@ -82,6 +85,7 @@ class InferenceRequest:
 @dataclass
 class InferenceResponse:
     """Response from an inference request."""
+
     id: str = ""
     request_id: str = ""
     model: str = ""
@@ -96,6 +100,7 @@ class InferenceResponse:
 @dataclass
 class InferenceMetrics:
     """Metrics for the inference gateway."""
+
     total_requests: int = 0
     total_errors: int = 0
     total_tokens_generated: int = 0
@@ -110,6 +115,7 @@ class InferenceMetrics:
 # Ollama Backend
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class OllamaBackend:
     """Ollama-based inference backend — zero cost, local execution."""
 
@@ -121,6 +127,7 @@ class OllamaBackend:
         """Check if Ollama is running and accessible."""
         try:
             import httpx
+
             async with httpx.AsyncClient() as client:
                 resp = await client.get(f"{self.base_url}/api/tags", timeout=3.0)
                 self._available = resp.status_code == 200
@@ -133,6 +140,7 @@ class OllamaBackend:
         """List available models from Ollama."""
         try:
             import httpx
+
             async with httpx.AsyncClient() as client:
                 resp = await client.get(f"{self.base_url}/api/tags", timeout=5.0)
                 if resp.status_code == 200:
@@ -147,13 +155,15 @@ class OllamaBackend:
                             if q in name:
                                 quant = q
                                 break
-                        models.append(ModelInfo(
-                            name=name,
-                            backend=InferenceBackend.OLLAMA,
-                            size_bytes=size,
-                            quantization=quant,
-                            status=ModelStatus.READY,
-                        ))
+                        models.append(
+                            ModelInfo(
+                                name=name,
+                                backend=InferenceBackend.OLLAMA,
+                                size_bytes=size,
+                                quantization=quant,
+                                status=ModelStatus.READY,
+                            )
+                        )
                     return models
         except Exception:
             pass
@@ -164,6 +174,7 @@ class OllamaBackend:
         start_time = time.monotonic()
         try:
             import httpx
+
             async with httpx.AsyncClient(timeout=120.0) as client:
                 payload = {
                     "model": request.model,
@@ -221,6 +232,7 @@ class OllamaBackend:
         start_time = time.monotonic()
         try:
             import httpx
+
             async with httpx.AsyncClient(timeout=120.0) as client:
                 payload = {
                     "model": model,
@@ -270,10 +282,11 @@ class OllamaBackend:
 # SHI Gateway
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class SHIGateway:
     """
     Self-Hosted Inference Gateway.
-    
+
     Routes inference requests to the best available backend (Ollama, vLLM, etc.)
     with automatic fallback, caching, and metrics collection.
     """
@@ -311,7 +324,7 @@ class SHIGateway:
     async def infer(self, request: InferenceRequest) -> InferenceResponse:
         """
         Run inference with automatic backend selection and fallback.
-        
+
         Fallback chain: Ollama → vLLM → cached → error
         """
         self._metrics.total_requests += 1
@@ -389,14 +402,13 @@ class SHIGateway:
         # Rolling average latency
         total = self._metrics.total_requests
         self._metrics.avg_latency_ms = (
-            (self._metrics.avg_latency_ms * (total - 1) + response.latency_ms) / total
-        )
+            self._metrics.avg_latency_ms * (total - 1) + response.latency_ms
+        ) / total
         # Update model info
         if response.model in self._models:
             model = self._models[response.model]
             model.inference_count += 1
             model.last_used = datetime.now(timezone.utc).isoformat()
             model.avg_latency_ms = (
-                (model.avg_latency_ms * (model.inference_count - 1) + response.latency_ms)
-                / model.inference_count
-            )
+                model.avg_latency_ms * (model.inference_count - 1) + response.latency_ms
+            ) / model.inference_count

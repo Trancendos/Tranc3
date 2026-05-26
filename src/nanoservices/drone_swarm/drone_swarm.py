@@ -52,6 +52,7 @@ class SwarmTaskType(Enum):
 @dataclass
 class GeoPosition:
     """3D geographic position."""
+
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0
@@ -61,19 +62,24 @@ class GeoPosition:
 
     def distance_to(self, other: GeoPosition) -> float:
         return math.sqrt(
-            (self.x - other.x) ** 2 +
-            (self.y - other.y) ** 2 +
-            (self.z - other.z) ** 2
+            (self.x - other.x) ** 2 + (self.y - other.y) ** 2 + (self.z - other.z) ** 2
         )
 
     def to_dict(self) -> Dict[str, float]:
-        return {"x": self.x, "y": self.y, "z": self.z,
-                "lat": self.latitude, "lon": self.longitude, "alt": self.altitude}
+        return {
+            "x": self.x,
+            "y": self.y,
+            "z": self.z,
+            "lat": self.latitude,
+            "lon": self.longitude,
+            "alt": self.altitude,
+        }
 
 
 @dataclass
 class DroneSpec:
     """Physical specification of a drone."""
+
     max_speed: float = 15.0
     max_altitude: float = 120.0
     battery_capacity: float = 100.0
@@ -86,6 +92,7 @@ class DroneSpec:
 @dataclass
 class SimDrone:
     """Simulated drone entity."""
+
     drone_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     name: str = ""
     state: DroneState = DroneState.IDLE
@@ -141,6 +148,7 @@ class SimDrone:
 @dataclass
 class SwarmTask:
     """A task assigned to the swarm."""
+
     task_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     task_type: SwarmTaskType = SwarmTaskType.SURVEY
     target_area: GeoPosition = field(default_factory=GeoPosition)
@@ -168,41 +176,46 @@ class SwarmTask:
 class FormationController:
     """Controls drone formation patterns."""
 
-    def compute_formation(self, center: GeoPosition, formation: FormationType,
-                           num_drones: int, spacing: float = 10.0) -> List[GeoPosition]:
+    def compute_formation(
+        self, center: GeoPosition, formation: FormationType, num_drones: int, spacing: float = 10.0
+    ) -> List[GeoPosition]:
         positions = []
         if formation == FormationType.LINE:
             for i in range(num_drones):
                 offset = (i - num_drones / 2) * spacing
-                positions.append(GeoPosition(
-                    x=center.x + offset, y=center.y, z=center.z
-                ))
+                positions.append(GeoPosition(x=center.x + offset, y=center.y, z=center.z))
         elif formation == FormationType.V_SHAPE:
             for i in range(num_drones):
                 row = i // 2 + 1
                 side = 1 if i % 2 == 0 else -1
-                positions.append(GeoPosition(
-                    x=center.x - row * spacing * 0.7,
-                    y=center.y + side * row * spacing * 0.5,
-                    z=center.z,
-                ))
+                positions.append(
+                    GeoPosition(
+                        x=center.x - row * spacing * 0.7,
+                        y=center.y + side * row * spacing * 0.5,
+                        z=center.z,
+                    )
+                )
         elif formation == FormationType.CIRCLE:
             for i in range(num_drones):
                 angle = 2 * math.pi * i / num_drones
-                positions.append(GeoPosition(
-                    x=center.x + spacing * math.cos(angle),
-                    y=center.y + spacing * math.sin(angle),
-                    z=center.z,
-                ))
+                positions.append(
+                    GeoPosition(
+                        x=center.x + spacing * math.cos(angle),
+                        y=center.y + spacing * math.sin(angle),
+                        z=center.z,
+                    )
+                )
         elif formation == FormationType.GRID:
             cols = int(math.ceil(math.sqrt(num_drones)))
             for i in range(num_drones):
                 row, col = divmod(i, cols)
-                positions.append(GeoPosition(
-                    x=center.x + col * spacing - (cols - 1) * spacing / 2,
-                    y=center.y + row * spacing,
-                    z=center.z,
-                ))
+                positions.append(
+                    GeoPosition(
+                        x=center.x + col * spacing - (cols - 1) * spacing / 2,
+                        y=center.y + row * spacing,
+                        z=center.z,
+                    )
+                )
         elif formation == FormationType.DIAMOND:
             half = num_drones // 2
             for i in range(num_drones):
@@ -212,20 +225,24 @@ class FormationController:
                 else:
                     row = num_drones - 1 - i
                     spread = num_drones - i
-                positions.append(GeoPosition(
-                    x=center.x + row * spacing * 0.7,
-                    y=center.y + (i % 2 * 2 - 1) * spread * spacing * 0.3,
-                    z=center.z,
-                ))
+                positions.append(
+                    GeoPosition(
+                        x=center.x + row * spacing * 0.7,
+                        y=center.y + (i % 2 * 2 - 1) * spread * spacing * 0.3,
+                        z=center.z,
+                    )
+                )
         else:
             for i in range(num_drones):
                 angle = random.uniform(0, 2 * math.pi)
                 r = random.uniform(0, spacing * 2)
-                positions.append(GeoPosition(
-                    x=center.x + r * math.cos(angle),
-                    y=center.y + r * math.sin(angle),
-                    z=center.z + random.uniform(-2, 2),
-                ))
+                positions.append(
+                    GeoPosition(
+                        x=center.x + r * math.cos(angle),
+                        y=center.y + r * math.sin(angle),
+                        z=center.z + random.uniform(-2, 2),
+                    )
+                )
         return positions
 
 
@@ -233,8 +250,11 @@ class TaskAllocator:
     """Allocates swarm tasks to individual drones using auction-based allocation."""
 
     def allocate(self, task: SwarmTask, drones: Dict[str, SimDrone]) -> List[str]:
-        available = {did: d for did, d in drones.items()
-                     if d.state == DroneState.IDLE and d.battery_level > 20}
+        available = {
+            did: d
+            for did, d in drones.items()
+            if d.state == DroneState.IDLE and d.battery_level > 20
+        }
         if not available:
             return []
 
@@ -292,8 +312,9 @@ class SwarmCoordinator:
                         neighbors.append(other.drone_id)
             drone.neighbors = neighbors
 
-    def set_formation(self, formation: FormationType, center: Optional[GeoPosition] = None,
-                       spacing: float = 10.0):
+    def set_formation(
+        self, formation: FormationType, center: Optional[GeoPosition] = None, spacing: float = 10.0
+    ):
         self.current_formation = formation
         if center is None:
             positions = [d.position for d in self.drones.values()]
@@ -334,8 +355,11 @@ class SwarmCoordinator:
 
     def get_swarm_status(self) -> Dict[str, Any]:
         active = sum(1 for d in self.drones.values() if d.state != DroneState.OFFLINE)
-        avg_battery = (sum(d.battery_level for d in self.drones.values()) /
-                      len(self.drones)) if self.drones else 0
+        avg_battery = (
+            (sum(d.battery_level for d in self.drones.values()) / len(self.drones))
+            if self.drones
+            else 0
+        )
         return {
             "swarm_id": self.swarm_id,
             "total_drones": len(self.drones),
@@ -367,9 +391,9 @@ class MultiDroneSwarmSimulation:
         self.simulation_time: float = 0.0
         self._id = str(uuid.uuid4())[:8]
 
-    def create_swarm(self, swarm_id: Optional[str] = None,
-                      num_drones: int = 5,
-                      spec: Optional[DroneSpec] = None) -> SwarmCoordinator:
+    def create_swarm(
+        self, swarm_id: Optional[str] = None, num_drones: int = 5, spec: Optional[DroneSpec] = None
+    ) -> SwarmCoordinator:
         sid = swarm_id or f"swarm-{str(uuid.uuid4())[:6]}"
         drones = []
         drone_spec = spec or DroneSpec()
@@ -399,9 +423,9 @@ class MultiDroneSwarmSimulation:
             return True
         return False
 
-    def create_task(self, task_type: SwarmTaskType,
-                     target: GeoPosition,
-                     priority: int = 0) -> SwarmTask:
+    def create_task(
+        self, task_type: SwarmTaskType, target: GeoPosition, priority: int = 0
+    ) -> SwarmTask:
         task = SwarmTask(
             task_type=task_type,
             target_area=target,
@@ -414,14 +438,12 @@ class MultiDroneSwarmSimulation:
         best_swarm = None
         best_score = -1
         for sid, swarm in self.swarms.items():
-            active = sum(1 for d in swarm.drones.values()
-                        if d.state == DroneState.IDLE)
+            active = sum(1 for d in swarm.drones.values() if d.state == DroneState.IDLE)
             if active > 0:
                 center_x = sum(d.position.x for d in swarm.drones.values()) / len(swarm.drones)
                 center_y = sum(d.position.y for d in swarm.drones.values()) / len(swarm.drones)
                 dist = math.sqrt(
-                    (center_x - task.target_area.x) ** 2 +
-                    (center_y - task.target_area.y) ** 2
+                    (center_x - task.target_area.x) ** 2 + (center_y - task.target_area.y) ** 2
                 )
                 score = active / (1 + dist)
                 if score > best_score:
@@ -445,8 +467,7 @@ class MultiDroneSwarmSimulation:
             "simulation_time": round(self.simulation_time, 2),
             "total_drones": len(self.all_drones),
             "total_swarms": len(self.swarms),
-            "swarm_statuses": {sid: s.get_swarm_status()
-                              for sid, s in self.swarms.items()},
+            "swarm_statuses": {sid: s.get_swarm_status() for sid, s in self.swarms.items()},
         }
 
     def get_simulation_status(self) -> Dict[str, Any]:
@@ -457,8 +478,11 @@ class MultiDroneSwarmSimulation:
             "total_swarms": len(self.swarms),
             "total_tasks": len(self.global_tasks),
             "drone_summary": {
-                did: {"state": d.state.value, "battery": round(d.battery_level, 2),
-                      "position": d.position.to_dict()}
+                did: {
+                    "state": d.state.value,
+                    "battery": round(d.battery_level, 2),
+                    "position": d.position.to_dict(),
+                }
                 for did, d in self.all_drones.items()
             },
         }

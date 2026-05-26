@@ -35,6 +35,10 @@ ignore = [
 "train.py" = ["E402"]
 "tranc3-bots/*" = ["E402", "E702"]
 "src/neural/attention_router.py" = ["C416"]
+# Nanoservices: re-export __init__ files and research/simulation modules
+"src/nanoservices/**/__init__.py" = ["F401"]
+"src/nanoservices/**" = ["B007", "B905", "E741", "E712", "W291", "W293"]
+"shared_core/__init__.py" = ["F401"]
 
 [tool.ruff.format]
 quote-style = "double"

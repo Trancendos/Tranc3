@@ -26,20 +26,23 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ──────────────────────────────────────────────────────────────
 
+
 class SymbiosisType(Enum):
     """Types of symbiotic relationships."""
-    MUTUALISM = "mutualism"           # Both benefit
-    COMMENSALISM = "commensalism"     # One benefits, other neutral
-    PARASITISM = "parasitism"         # One benefits, other harmed
-    AMENSALISM = "amensalism"         # One harmed, other neutral
-    SYNERGISM = "synergism"           # Combined effect > sum
-    SYNCHRONY = "synchrony"          # Temporal coordination
-    ENDOSYMBIOSIS = "endosymbiosis"   # One inside another
-    COEVOLUTION = "coevolution"       # Reciprocal adaptation
+
+    MUTUALISM = "mutualism"  # Both benefit
+    COMMENSALISM = "commensalism"  # One benefits, other neutral
+    PARASITISM = "parasitism"  # One benefits, other harmed
+    AMENSALISM = "amensalism"  # One harmed, other neutral
+    SYNERGISM = "synergism"  # Combined effect > sum
+    SYNCHRONY = "synchrony"  # Temporal coordination
+    ENDOSYMBIOSIS = "endosymbiosis"  # One inside another
+    COEVOLUTION = "coevolution"  # Reciprocal adaptation
 
 
 class CollectiveRole(Enum):
     """Roles agents can play in the collective."""
+
     LEADER = "leader"
     FOLLOWER = "follower"
     SPECIALIST = "specialist"
@@ -54,17 +57,19 @@ class CollectiveRole(Enum):
 
 class CommunicationMode(Enum):
     """Modes of inter-agent communication."""
+
     DIRECT = "direct"
-    STIGMERGIC = "stigmergic"     # Environment-mediated
+    STIGMERGIC = "stigmergic"  # Environment-mediated
     BROADCAST = "broadcast"
-    QUORUM = "quorum"             # Threshold-based
-    PHEROMONE = "pheromone"       # Chemical-like signaling
-    RESONANCE = "resonance"       # Frequency-based
-    TELEMETRIC = "telemetric"     # Remote sensing
+    QUORUM = "quorum"  # Threshold-based
+    PHEROMONE = "pheromone"  # Chemical-like signaling
+    RESONANCE = "resonance"  # Frequency-based
+    TELEMETRIC = "telemetric"  # Remote sensing
 
 
 class CollectiveDecision(Enum):
     """Types of collective decisions."""
+
     CONSENSUS = "consensus"
     MAJORITY = "majority"
     WEIGHTED = "weighted"
@@ -76,17 +81,19 @@ class CollectiveDecision(Enum):
 
 class EmergenceLevel(Enum):
     """Levels of emergent collective behavior."""
+
     NONE = 0
-    COORDINATION = 1       # Simple coordination
-    COOPERATION = 2        # Active cooperation
-    COLLABORATION = 3      # Deep collaboration
-    INTEGRATION = 4        # Full integration
-    SUPERORGANISM = 5      # Unified collective entity
-    TRANSCENDENCE = 6      # Beyond individual comprehension
+    COORDINATION = 1  # Simple coordination
+    COOPERATION = 2  # Active cooperation
+    COLLABORATION = 3  # Deep collaboration
+    INTEGRATION = 4  # Full integration
+    SUPERORGANISM = 5  # Unified collective entity
+    TRANSCENDENCE = 6  # Beyond individual comprehension
 
 
 class CollectiveState(Enum):
     """States of the collective."""
+
     FORMING = "forming"
     STORMING = "storming"
     NORMING = "norming"
@@ -98,9 +105,11 @@ class CollectiveState(Enum):
 
 # ─── Data Models ────────────────────────────────────────────────────────
 
+
 @dataclass
 class SymbioticAgent:
     """An agent in the symbiotic collective."""
+
     id: str = ""
     name: str = ""
     capabilities: List[str] = field(default_factory=list)
@@ -121,8 +130,18 @@ class SymbioticAgent:
             self.id = str(uuid.uuid4())
         if not self.capabilities:
             self.capabilities = random.sample(
-                ["reasoning", "perception", "memory", "planning", "learning",
-                 "communication", "creativity", "analysis", "synthesis", "evaluation"],
+                [
+                    "reasoning",
+                    "perception",
+                    "memory",
+                    "planning",
+                    "learning",
+                    "communication",
+                    "creativity",
+                    "analysis",
+                    "synthesis",
+                    "evaluation",
+                ],
                 k=random.randint(2, 5),
             )
         if not self.communication_preferences:
@@ -145,6 +164,7 @@ class SymbioticAgent:
 @dataclass
 class SymbioticRelation:
     """A symbiotic relationship between agents."""
+
     id: str = ""
     agent_a_id: str = ""
     agent_b_id: str = ""
@@ -176,6 +196,7 @@ class SymbioticRelation:
 @dataclass
 class StigmergicSignal:
     """A stigmergic (environment-mediated) signal."""
+
     id: str = ""
     agent_id: str = ""
     signal_type: str = ""
@@ -194,7 +215,7 @@ class StigmergicSignal:
 
     def decay(self) -> float:
         """Apply decay and return new intensity."""
-        self.intensity *= (1.0 - self.decay_rate)
+        self.intensity *= 1.0 - self.decay_rate
         return self.intensity
 
     def to_dict(self) -> Dict[str, Any]:
@@ -210,6 +231,7 @@ class StigmergicSignal:
 @dataclass
 class CollectiveDecisionRecord:
     """Record of a collective decision."""
+
     id: str = ""
     decision_type: CollectiveDecision = CollectiveDecision.CONSENSUS
     proposal: str = ""
@@ -241,14 +263,19 @@ class CollectiveDecisionRecord:
 
 # ─── Core Engine ────────────────────────────────────────────────────────
 
+
 class SymbiosisEngine:
     """Engine for managing symbiotic relationships."""
 
     def __init__(self):
         self.relations: Dict[str, SymbioticRelation] = {}
 
-    def form_symbiosis(self, a: SymbioticAgent, b: SymbioticAgent,
-                        symbiosis_type: SymbiosisType = SymbiosisType.MUTUALISM) -> SymbioticRelation:
+    def form_symbiosis(
+        self,
+        a: SymbioticAgent,
+        b: SymbioticAgent,
+        symbiosis_type: SymbiosisType = SymbiosisType.MUTUALISM,
+    ) -> SymbioticRelation:
         """Form a symbiotic relationship between two agents."""
         compatibility = self._compute_compatibility(a, b)
 
@@ -276,8 +303,9 @@ class SymbiosisEngine:
 
         return relation
 
-    def evaluate_symbiosis(self, relation: SymbioticRelation,
-                            a: SymbioticAgent, b: SymbioticAgent) -> Dict[str, float]:
+    def evaluate_symbiosis(
+        self, relation: SymbioticRelation, a: SymbioticAgent, b: SymbioticAgent
+    ) -> Dict[str, float]:
         """Evaluate the health of a symbiotic relationship."""
         a.fitness += relation.benefit_a
         b.fitness += relation.benefit_b
@@ -313,8 +341,9 @@ class StigmergicChannel:
         self.decay_rate = decay_rate
         self.signals: Dict[str, StigmergicSignal] = {}
 
-    def deposit(self, agent_id: str, signal_type: str,
-                content: Dict[str, Any], location: str = "") -> StigmergicSignal:
+    def deposit(
+        self, agent_id: str, signal_type: str, content: Dict[str, Any], location: str = ""
+    ) -> StigmergicSignal:
         """Deposit a stigmergic signal."""
         signal = StigmergicSignal(
             agent_id=agent_id,
@@ -326,8 +355,9 @@ class StigmergicChannel:
         self.signals[signal.id] = signal
         return signal
 
-    def sense(self, location: str = "", signal_type: str = "",
-              min_intensity: float = 0.1) -> List[StigmergicSignal]:
+    def sense(
+        self, location: str = "", signal_type: str = "", min_intensity: float = 0.1
+    ) -> List[StigmergicSignal]:
         """Sense stigmergic signals at a location."""
         results = []
         for signal in list(self.signals.values()):
@@ -426,8 +456,12 @@ class CollectiveIntelligenceEngine:
 
         return self.get_collective_stats()
 
-    def decide(self, proposal: str, proposer_id: str,
-               decision_type: CollectiveDecision = CollectiveDecision.CONSENSUS) -> CollectiveDecisionRecord:
+    def decide(
+        self,
+        proposal: str,
+        proposer_id: str,
+        decision_type: CollectiveDecision = CollectiveDecision.CONSENSUS,
+    ) -> CollectiveDecisionRecord:
         """Make a collective decision."""
         votes: Dict[str, float] = {}
         for agent in self.agents.values():
@@ -438,7 +472,9 @@ class CollectiveIntelligenceEngine:
 
         if decision_type == CollectiveDecision.CONSENSUS:
             avg = sum(votes.values()) / len(votes) if votes else 0
-            consensus_level = 1.0 - (sum(abs(v - avg) for v in votes.values()) / len(votes)) if votes else 0
+            consensus_level = (
+                1.0 - (sum(abs(v - avg) for v in votes.values()) / len(votes)) if votes else 0
+            )
             outcome = "approved" if consensus_level > 0.5 and avg > 0.5 else "rejected"
         elif decision_type == CollectiveDecision.MAJORITY:
             yes = sum(1 for v in votes.values() if v > 0.5)
@@ -525,14 +561,19 @@ class CollectiveIntelligenceEngine:
             "relation_count": len(self.symbiosis_engine.relations),
             "emergence_level": self.emergence_level.value,
             "collective_state": self.collective_state.value,
-            "avg_fitness": sum(a.fitness for a in agent_list) / len(agent_list) if agent_list else 0,
-            "avg_partners": sum(len(a.symbiosis_partners) for a in agent_list) / len(agent_list) if agent_list else 0,
+            "avg_fitness": sum(a.fitness for a in agent_list) / len(agent_list)
+            if agent_list
+            else 0,
+            "avg_partners": sum(len(a.symbiosis_partners) for a in agent_list) / len(agent_list)
+            if agent_list
+            else 0,
             "active_signals": len(self.stigmergic_channel.signals),
             "decision_count": len(self.decisions),
         }
 
 
 # ─── Service ────────────────────────────────────────────────────────────
+
 
 class SymbioticCollectiveService:
     """Main service for symbiotic collective intelligence."""

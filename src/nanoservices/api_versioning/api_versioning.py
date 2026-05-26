@@ -96,7 +96,9 @@ class VersionRegistry:
 
     def __init__(self):
         self._versions: Dict[str, List[APIVersion]] = {}  # service -> versions
-        self._endpoints: Dict[str, Dict[str, APIEndpoint]] = {}  # "METHOD path" -> {semver -> endpoint}
+        self._endpoints: Dict[
+            str, Dict[str, APIEndpoint]
+        ] = {}  # "METHOD path" -> {semver -> endpoint}
 
     def register_version(self, service_name: str, version: APIVersion) -> None:
         if service_name not in self._versions:
@@ -110,7 +112,9 @@ class VersionRegistry:
             self._endpoints[key] = {}
         self._endpoints[key][endpoint.version.semver] = endpoint
 
-    def get_endpoint(self, method: str, path: str, version: Optional[APIVersion] = None) -> Optional[APIEndpoint]:
+    def get_endpoint(
+        self, method: str, path: str, version: Optional[APIVersion] = None
+    ) -> Optional[APIEndpoint]:
         key = f"{method} {path}"
         endpoints = self._endpoints.get(key, {})
         if not endpoints:
@@ -123,7 +127,11 @@ class VersionRegistry:
                 return exact
 
             # Latest compatible
-            compatible = [e for v, e in endpoints.items() if APIVersion(*map(int, v.split("."))).is_compatible_with(version)]
+            compatible = [
+                e
+                for v, e in endpoints.items()
+                if APIVersion(*map(int, v.split("."))).is_compatible_with(version)
+            ]
             if compatible:
                 return max(compatible, key=lambda e: e.version)
 
@@ -142,15 +150,20 @@ class VersionRegistry:
         for key, versions in self._endpoints.items():
             method, path = key.split(" ", 1)
             for semver, endpoint in versions.items():
-                if endpoint.deprecated or endpoint.version.status in (VersionStatus.DEPRECATED, VersionStatus.SUNSET):
-                    notices.append(DeprecationNotice(
-                        endpoint_path=path,
-                        method=method,
-                        version=semver,
-                        deprecation_date=endpoint.version.deprecation_date or time.time(),
-                        sunset_date=endpoint.version.sunset_date,
-                        replacement=endpoint.replacement_path,
-                    ))
+                if endpoint.deprecated or endpoint.version.status in (
+                    VersionStatus.DEPRECATED,
+                    VersionStatus.SUNSET,
+                ):
+                    notices.append(
+                        DeprecationNotice(
+                            endpoint_path=path,
+                            method=method,
+                            version=semver,
+                            deprecation_date=endpoint.version.deprecation_date or time.time(),
+                            sunset_date=endpoint.version.sunset_date,
+                            replacement=endpoint.replacement_path,
+                        )
+                    )
         return notices
 
     def get_all_versions(self, service_name: str) -> List[APIVersion]:
@@ -171,7 +184,13 @@ class APIVersionNegotiator:
     def register_endpoint(self, endpoint: APIEndpoint) -> None:
         self._registry.register_endpoint(endpoint)
 
-    def negotiate(self, method: str, path: str, requested_version: Optional[str] = None, accept_header: Optional[str] = None) -> NegotiationResult:
+    def negotiate(
+        self,
+        method: str,
+        path: str,
+        requested_version: Optional[str] = None,
+        accept_header: Optional[str] = None,
+    ) -> NegotiationResult:
         version = self._parse_version(requested_version, accept_header)
         endpoint = self._registry.get_endpoint(method, path, version)
         result = NegotiationResult()
@@ -195,7 +214,11 @@ class APIVersionNegotiator:
 
         # Check for newer version available
         latest = self._registry.get_endpoint(method, path)
-        if latest and latest.version > endpoint.version and latest.version.status == VersionStatus.ACTIVE:
+        if (
+            latest
+            and latest.version > endpoint.version
+            and latest.version.status == VersionStatus.ACTIVE
+        ):
             result.warnings.append(f"Newer version available: v{latest.version.semver}")
 
         # Fallback tracking
@@ -205,16 +228,22 @@ class APIVersionNegotiator:
         self._negotiation_log.append(result)
         return result
 
-    def _parse_version(self, requested_version: Optional[str], accept_header: Optional[str]) -> Optional[APIVersion]:
+    def _parse_version(
+        self, requested_version: Optional[str], accept_header: Optional[str]
+    ) -> Optional[APIVersion]:
         if requested_version:
             match = re.match(r"(\d+)\.(\d+)(?:\.(\d+))?", requested_version)
             if match:
-                return APIVersion(int(match.group(1)), int(match.group(2)), int(match.group(3) or 0))
+                return APIVersion(
+                    int(match.group(1)), int(match.group(2)), int(match.group(3) or 0)
+                )
 
         if accept_header:
             match = re.search(r"v(\d+)\.(\d+)(?:\.(\d+))?", accept_header)
             if match:
-                return APIVersion(int(match.group(1)), int(match.group(2)), int(match.group(3) or 0))
+                return APIVersion(
+                    int(match.group(1)), int(match.group(2)), int(match.group(3) or 0)
+                )
 
         return None
 
@@ -233,13 +262,25 @@ class APIVersionNegotiatorService:
 
     def initialize(self) -> None:
         # Register default API versions for core services
-        for svc in ["nsa_broker", "dnf_orchestrator", "shi_gateway", "quantum_solver", "genetic_optimizer"]:
+        for svc in [
+            "nsa_broker",
+            "dnf_orchestrator",
+            "shi_gateway",
+            "quantum_solver",
+            "genetic_optimizer",
+        ]:
             self._negotiator.register_version(svc, APIVersion(1, 0, 0, VersionStatus.ACTIVE))
             self._negotiator.register_version(svc, APIVersion(1, 1, 0, VersionStatus.ACTIVE))
 
         logger.info("APIVersionNegotiatorService initialized with %d core service versions", 5)
 
-    def negotiate(self, method: str, path: str, requested_version: Optional[str] = None, accept_header: Optional[str] = None) -> NegotiationResult:
+    def negotiate(
+        self,
+        method: str,
+        path: str,
+        requested_version: Optional[str] = None,
+        accept_header: Optional[str] = None,
+    ) -> NegotiationResult:
         return self._negotiator.negotiate(method, path, requested_version, accept_header)
 
     def register_endpoint(self, endpoint: APIEndpoint) -> None:

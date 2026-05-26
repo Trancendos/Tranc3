@@ -26,8 +26,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ────────────────────────────────────────────────────────────────
 
+
 class BioNeuronType(Enum):
     """Biologically-inspired neuron types."""
+
     PYRAMIDAL = "pyramidal"
     INTERNEURON = "interneuron"
     PURKINJE = "purkinje"
@@ -39,6 +41,7 @@ class BioNeuronType(Enum):
 
 class ReceptorType(Enum):
     """Neurotransmitter receptor types."""
+
     AMPA = "ampa"
     NMDA = "nmda"
     GABA_A = "gaba_a"
@@ -51,6 +54,7 @@ class ReceptorType(Enum):
 
 class BCIState(Enum):
     """Brain-computer interface states."""
+
     DISCONNECTED = "disconnected"
     CALIBRATING = "calibrating"
     CONNECTED = "connected"
@@ -61,6 +65,7 @@ class BCIState(Enum):
 
 class NeuralModulation(Enum):
     """Neuromodulatory systems."""
+
     DOPAMINE = "dopamine"
     SEROTONIN = "serotonin"
     NORADRENALINE = "noradrenaline"
@@ -71,6 +76,7 @@ class NeuralModulation(Enum):
 
 class InterfaceMode(Enum):
     """Bio-digital interface modes."""
+
     READ_ONLY = "read_only"
     WRITE_ONLY = "write_only"
     BIDIRECTIONAL = "bidirectional"
@@ -80,9 +86,11 @@ class InterfaceMode(Enum):
 
 # ─── Data Models ──────────────────────────────────────────────────────────
 
+
 @dataclass
 class BioNeuronParams:
     """Parameters for a bio-realistic neuron."""
+
     neuron_type: BioNeuronType = BioNeuronType.PYRAMIDAL
     membrane_resistance: float = 100.0  # MOhm
     membrane_capacitance: float = 200.0  # pF
@@ -106,6 +114,7 @@ class BioNeuronParams:
 @dataclass
 class SynapticReceptor:
     """A synaptic receptor with neurotransmitter dynamics."""
+
     receptor_type: ReceptorType
     conductance: float = 1.0  # nS
     reversal_potential: float = 0.0  # mV
@@ -125,6 +134,7 @@ class SynapticReceptor:
 @dataclass
 class NeuralSignal:
     """A neural signal with temporal dynamics."""
+
     signal_id: str
     source_neuron: str
     signal_type: str  # "spike", "lfp", "eeg", "ecog"
@@ -148,6 +158,7 @@ class NeuralSignal:
 @dataclass
 class BCISession:
     """A brain-computer interface session."""
+
     session_id: str
     interface_mode: InterfaceMode = InterfaceMode.BIDIRECTIONAL
     state: BCIState = BCIState.DISCONNECTED
@@ -157,9 +168,7 @@ class BCISession:
     signals_written: int = 0
     calibration_score: float = 0.0
     latency_ms: float = 5.0
-    created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -176,6 +185,7 @@ class BCISession:
 
 
 # ─── Bio-Digital Neuron Simulation ───────────────────────────────────────
+
 
 class BioDigitalNeuron:
     """Bio-realistic neuron with conductance-based synapses.
@@ -263,6 +273,7 @@ class BioDigitalNeuron:
 
 # ─── Neural Oscillator ────────────────────────────────────────────────────
 
+
 class NeuralOscillator:
     """Simulates neural oscillations (brain rhythms).
 
@@ -304,6 +315,7 @@ class NeuralOscillator:
 
 
 # ─── Brain-Computer Interface ─────────────────────────────────────────────
+
 
 class BrainComputerInterface:
     """Simulated brain-computer interface with signal processing.
@@ -362,15 +374,18 @@ class BrainComputerInterface:
 
         # Simulate signal acquisition
         import random
+
         signals = []
         for ch in range(self.num_channels):
             # Generate synthetic neural signal
-            noise = [random.gauss(0, 1) for _ in range(int(self.sampling_rate * duration_ms / 1000))]
+            noise = [
+                random.gauss(0, 1) for _ in range(int(self.sampling_rate * duration_ms / 1000))
+            ]
             # Add some oscillatory components
             for i, _ in enumerate(noise):
                 t = i / self.sampling_rate
                 noise[i] += 10.0 * math.sin(2 * math.pi * 10 * t)  # Alpha
-                noise[i] += 5.0 * math.sin(2 * math.pi * 20 * t)   # Beta
+                noise[i] += 5.0 * math.sin(2 * math.pi * 20 * t)  # Beta
             signals.append(noise)
 
         self.session.signals_read += 1
@@ -381,7 +396,8 @@ class BrainComputerInterface:
             "channels": self.num_channels,
             "duration_ms": duration_ms,
             "sampling_rate": self.sampling_rate,
-            "signal_power": sum(sum(s ** 2 for s in ch) / len(ch) for ch in signals) / self.num_channels,
+            "signal_power": sum(sum(s**2 for s in ch) / len(ch) for ch in signals)
+            / self.num_channels,
         }
 
     def write_stimulation(self, pattern: Dict[str, Any]) -> Dict[str, Any]:
@@ -412,16 +428,19 @@ class BrainComputerInterface:
 
         # Band power features
         for band_name, (low, high) in [
-            ("delta", (1, 4)), ("theta", (4, 8)), ("alpha", (8, 13)),
-            ("beta", (13, 30)), ("gamma", (30, 100)),
+            ("delta", (1, 4)),
+            ("theta", (4, 8)),
+            ("alpha", (8, 13)),
+            ("beta", (13, 30)),
+            ("gamma", (30, 100)),
         ]:
             powers = []
             for ch in signals:
                 # Simplified band power estimation
                 n = len(ch)
-                power = sum(
-                    x * x for x in ch[int(n * low / 250):int(n * high / 250)]
-                ) / max(1, n * (high - low) / 250)
+                power = sum(x * x for x in ch[int(n * low / 250) : int(n * high / 250)]) / max(
+                    1, n * (high - low) / 250
+                )
                 powers.append(power)
             features[f"{band_name}_power"] = [sum(powers) / len(powers)]
 
@@ -442,6 +461,7 @@ class BrainComputerInterface:
 
 
 # ─── Main Service ─────────────────────────────────────────────────────────
+
 
 class BioDigitalInterfaceService:
     """Bio-Digital Neural Interface Service for the Tranc3 ecosystem.
@@ -523,6 +543,7 @@ class BioDigitalInterfaceService:
             for i, neuron in enumerate(neurons):
                 # Random background input
                 import random
+
                 bg_input = random.gauss(0, 0.5)
                 spiked = neuron.step(dt, bg_input)
                 if spiked:

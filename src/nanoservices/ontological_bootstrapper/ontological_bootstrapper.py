@@ -27,8 +27,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ──────────────────────────────────────────────────────────────
 
+
 class OntologicalStatus(Enum):
     """Status of an ontological entity."""
+
     POTENTIAL = "potential"
     EMERGING = "emerging"
     EXISTENT = "existent"
@@ -40,6 +42,7 @@ class OntologicalStatus(Enum):
 
 class BootstrapPhase(Enum):
     """Phases of ontological bootstrapping."""
+
     NULL = "null"
     SELF_REFERENCE = "self_reference"
     FIXED_POINT = "fixed_point"
@@ -50,6 +53,7 @@ class BootstrapPhase(Enum):
 
 class ExistenceMode(Enum):
     """Modes of existence."""
+
     CONTINGENT = "contingent"
     NECESSARY = "necessary"
     POSSIBLE = "possible"
@@ -60,6 +64,7 @@ class ExistenceMode(Enum):
 
 class RelationType(Enum):
     """Types of ontological relations."""
+
     IDENTITY = "identity"
     DEPENDENCE = "dependence"
     COMPOSITION = "composition"
@@ -72,6 +77,7 @@ class RelationType(Enum):
 
 class ParadoxType(Enum):
     """Types of self-referential paradoxes."""
+
     RUSSELL = "russell"
     LIAR = "liar"
     GODEL = "godel"
@@ -82,9 +88,11 @@ class ParadoxType(Enum):
 
 # ─── Data Models ────────────────────────────────────────────────────────
 
+
 @dataclass
 class OntologicalEntity:
     """An entity in the ontological framework."""
+
     id: str = ""
     name: str = ""
     definition: str = ""
@@ -123,6 +131,7 @@ class OntologicalEntity:
 @dataclass
 class OntologicalRelation:
     """A relation between ontological entities."""
+
     id: str = ""
     source_id: str = ""
     target_id: str = ""
@@ -151,6 +160,7 @@ class OntologicalRelation:
 @dataclass
 class FixedPoint:
     """A fixed point in the self-referential system."""
+
     id: str = ""
     entity_id: str = ""
     iteration: int = 0
@@ -177,6 +187,7 @@ class FixedPoint:
 @dataclass
 class BootstrapResult:
     """Result of an ontological bootstrap process."""
+
     id: str = ""
     entity_id: str = ""
     phase_reached: BootstrapPhase = BootstrapPhase.NULL
@@ -207,6 +218,7 @@ class BootstrapResult:
 
 
 # ─── Core Engine ────────────────────────────────────────────────────────
+
 
 class SelfReferenceEngine:
     """Engine for self-referential reasoning and Gödelian self-reference."""
@@ -245,7 +257,9 @@ class SelfReferenceEngine:
         """Create a self-referential statement about an entity."""
         return f"This statement asserts the {entity.status.value} existence of '{entity.name}'"
 
-    def detect_paradox(self, entity: OntologicalEntity, relations: List[OntologicalRelation]) -> ParadoxType:
+    def detect_paradox(
+        self, entity: OntologicalEntity, relations: List[OntologicalRelation]
+    ) -> ParadoxType:
         """Detect self-referential paradoxes."""
         self_refs = [r for r in relations if r.is_self_referential]
 
@@ -262,15 +276,25 @@ class SelfReferenceEngine:
 
         return ParadoxType.NONE
 
-    def compute_self_reference_depth(self, entity_id: str, entities: Dict[str, OntologicalEntity],
-                                      relations: Dict[str, OntologicalRelation]) -> int:
+    def compute_self_reference_depth(
+        self,
+        entity_id: str,
+        entities: Dict[str, OntologicalEntity],
+        relations: Dict[str, OntologicalRelation],
+    ) -> int:
         """Compute the depth of self-referential chains."""
         visited: set = set()
         depth = self._trace_references(entity_id, entities, relations, visited, 0)
         return depth
 
-    def _trace_references(self, entity_id: str, entities: Dict[str, OntologicalEntity],
-                          relations: Dict[str, OntologicalRelation], visited: set, depth: int) -> int:
+    def _trace_references(
+        self,
+        entity_id: str,
+        entities: Dict[str, OntologicalEntity],
+        relations: Dict[str, OntologicalRelation],
+        visited: set,
+        depth: int,
+    ) -> int:
         """Recursively trace reference chains."""
         if entity_id in visited or depth > 20:
             return depth
@@ -292,9 +316,12 @@ class FixedPointFinder:
         self.max_iterations = max_iterations
         self.convergence_threshold = convergence_threshold
 
-    def find_fixed_point(self, entity: OntologicalEntity,
-                         entities: Dict[str, OntologicalEntity],
-                         relations: Dict[str, OntologicalRelation]) -> FixedPoint:
+    def find_fixed_point(
+        self,
+        entity: OntologicalEntity,
+        entities: Dict[str, OntologicalEntity],
+        relations: Dict[str, OntologicalRelation],
+    ) -> FixedPoint:
         """Iterate to find a fixed point for the entity."""
         current_hash = self._hash_entity(entity)
         prev_hash = ""
@@ -323,11 +350,14 @@ class FixedPointFinder:
 
     def _hash_entity(self, entity: OntologicalEntity) -> str:
         """Hash an entity's state."""
-        state_str = json.dumps({
-            "name": entity.name,
-            "status": entity.status.value,
-            "confidence": round(entity.confidence, 4),
-        }, sort_keys=True)
+        state_str = json.dumps(
+            {
+                "name": entity.name,
+                "status": entity.status.value,
+                "confidence": round(entity.confidence, 4),
+            },
+            sort_keys=True,
+        )
         return hashlib.sha256(state_str.encode()).hexdigest()[:16]
 
     def _hash_distance(self, h1: str, h2: str) -> float:
@@ -337,9 +367,12 @@ class FixedPointFinder:
         diffs = sum(c1 != c2 for c1, c2 in zip(h1, h2))
         return diffs / len(h1)
 
-    def _apply_self_reference(self, entity: OntologicalEntity,
-                               entities: Dict[str, OntologicalEntity],
-                               relations: Dict[str, OntologicalRelation]) -> OntologicalEntity:
+    def _apply_self_reference(
+        self,
+        entity: OntologicalEntity,
+        entities: Dict[str, OntologicalEntity],
+        relations: Dict[str, OntologicalRelation],
+    ) -> OntologicalEntity:
         """Apply self-referential update to an entity."""
         entity.self_reference_depth += 1
 
@@ -368,9 +401,13 @@ class OntologicalBootstrapper:
         self.bootstrap_results: Dict[str, BootstrapResult] = {}
         self._phase = BootstrapPhase.NULL
 
-    def create_entity(self, name: str, definition: str = "",
-                      existence_mode: ExistenceMode = ExistenceMode.POSSIBLE,
-                      properties: Optional[Dict[str, Any]] = None) -> OntologicalEntity:
+    def create_entity(
+        self,
+        name: str,
+        definition: str = "",
+        existence_mode: ExistenceMode = ExistenceMode.POSSIBLE,
+        properties: Optional[Dict[str, Any]] = None,
+    ) -> OntologicalEntity:
         """Create a new ontological entity."""
         entity = OntologicalEntity(
             name=name,
@@ -381,9 +418,13 @@ class OntologicalBootstrapper:
         self.entities[entity.id] = entity
         return entity
 
-    def relate(self, source_id: str, target_id: str,
-               relation_type: RelationType = RelationType.DEPENDENCE,
-               strength: float = 1.0) -> OntologicalRelation:
+    def relate(
+        self,
+        source_id: str,
+        target_id: str,
+        relation_type: RelationType = RelationType.DEPENDENCE,
+        strength: float = 1.0,
+    ) -> OntologicalRelation:
         """Create a relation between entities."""
         relation = OntologicalRelation(
             source_id=source_id,
@@ -481,6 +522,7 @@ class OntologicalBootstrapper:
 
 # ─── Service ────────────────────────────────────────────────────────────
 
+
 class OntologicalBootstrapperService:
     """Main service for ontological bootstrapping."""
 
@@ -490,12 +532,24 @@ class OntologicalBootstrapperService:
 
     def initialize(self) -> Dict[str, Any]:
         """Initialize with base ontology."""
-        being = self.bootstrapper.create_entity("Being", "That which exists", ExistenceMode.NECESSARY)
-        nothing = self.bootstrapper.create_entity("Nothing", "That which does not exist", ExistenceMode.IMPOSSIBLE)
-        becoming = self.bootstrapper.create_entity("Becoming", "The process of coming into existence", ExistenceMode.POSSIBLE)
-        self_ref = self.bootstrapper.create_entity("Self", "That which refers to itself", ExistenceMode.SELF_CAUSED)
-        observer = self.bootstrapper.create_entity("Observer", "That which perceives Being", ExistenceMode.CONTINGENT)
-        truth = self.bootstrapper.create_entity("Truth", "That which is self-consistent", ExistenceMode.NECESSARY)
+        being = self.bootstrapper.create_entity(
+            "Being", "That which exists", ExistenceMode.NECESSARY
+        )
+        nothing = self.bootstrapper.create_entity(
+            "Nothing", "That which does not exist", ExistenceMode.IMPOSSIBLE
+        )
+        becoming = self.bootstrapper.create_entity(
+            "Becoming", "The process of coming into existence", ExistenceMode.POSSIBLE
+        )
+        self_ref = self.bootstrapper.create_entity(
+            "Self", "That which refers to itself", ExistenceMode.SELF_CAUSED
+        )
+        observer = self.bootstrapper.create_entity(
+            "Observer", "That which perceives Being", ExistenceMode.CONTINGENT
+        )
+        truth = self.bootstrapper.create_entity(
+            "Truth", "That which is self-consistent", ExistenceMode.NECESSARY
+        )
 
         self.bootstrapper.relate(being.id, becoming.id, RelationType.EMERGENCE)
         self.bootstrapper.relate(nothing.id, becoming.id, RelationType.DEPENDENCE)
@@ -515,8 +569,9 @@ class OntologicalBootstrapperService:
             "bootstrap_results": {k: v["phase_reached"] for k, v in results.items()},
         }
 
-    def create_entity(self, name: str, definition: str = "",
-                      existence_mode: str = "possible") -> Dict[str, Any]:
+    def create_entity(
+        self, name: str, definition: str = "", existence_mode: str = "possible"
+    ) -> Dict[str, Any]:
         """Create a new ontological entity."""
         mode = ExistenceMode(existence_mode)
         entity = self.bootstrapper.create_entity(name, definition, mode)

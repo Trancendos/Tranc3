@@ -37,18 +37,18 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
 class QuantumAlgorithm(str, Enum):
-    QAOA = "qaoa"          # Quantum Approximate Optimization
-    VQE = "vqe"            # Variational Quantum Eigensolver
-    GROVER = "grover"       # Grover's Search
-    QUBO_SOLVER = "qubo"   # Quadratic Unconstrained Binary Optimization
-    ANNEALING = "annealing" # Simulated Quantum Annealing
+    QAOA = "qaoa"  # Quantum Approximate Optimization
+    VQE = "vqe"  # Variational Quantum Eigensolver
+    GROVER = "grover"  # Grover's Search
+    QUBO_SOLVER = "qubo"  # Quadratic Unconstrained Binary Optimization
+    ANNEALING = "annealing"  # Simulated Quantum Annealing
 
 
 class QuantumBackend(str, Enum):
-    QISKIT_AER = "qiskit_aer"         # Local simulator
-    QISKIT_RUNTIME = "qiskit_runtime" # IBM Quantum (free tier)
-    FAKE_BACKEND = "fake_backend"      # Noise-simulated backend
-    STATEVECTOR = "statevector"        # Exact statevector simulation
+    QISKIT_AER = "qiskit_aer"  # Local simulator
+    QISKIT_RUNTIME = "qiskit_runtime"  # IBM Quantum (free tier)
+    FAKE_BACKEND = "fake_backend"  # Noise-simulated backend
+    STATEVECTOR = "statevector"  # Exact statevector simulation
 
 
 class SolverStatus(str, Enum):
@@ -68,11 +68,14 @@ class QUBOProblem:
     Quadratic Unconstrained Binary Optimization problem.
     minimize: x^T Q x  where x ∈ {0,1}^n
     """
+
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
     name: str = ""
     num_variables: int = 0
     linear_terms: Dict[str, float] = field(default_factory=dict)  # var -> coefficient
-    quadratic_terms: Dict[Tuple[str, str], float] = field(default_factory=dict)  # (var1, var2) -> coefficient
+    quadratic_terms: Dict[Tuple[str, str], float] = field(
+        default_factory=dict
+    )  # (var1, var2) -> coefficient
     constant: float = 0.0
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -114,6 +117,7 @@ class QUBOProblem:
 @dataclass
 class QuantumCircuitSpec:
     """Specification for a parameterized quantum circuit."""
+
     name: str
     algorithm: QuantumAlgorithm
     num_qubits: int
@@ -137,6 +141,7 @@ class QuantumCircuitSpec:
 @dataclass
 class QuantumResult:
     """Result from a quantum computation."""
+
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     problem_id: str = ""
     algorithm: QuantumAlgorithm = QuantumAlgorithm.QAOA
@@ -189,26 +194,29 @@ class QuantumCircuitLibrary:
                     gate
                     for d in range(depth)
                     for gate in [
-                        *[{"gate": "zz", "qubits": [i, i+1], "param": f"gamma_{d}_{i}"} for i in range(num_qubits - 1)],
-                        *[{"gate": "rx", "qubit": i, "param": f"beta_{d}_{i}"} for i in range(num_qubits)],
+                        *[
+                            {"gate": "zz", "qubits": [i, i + 1], "param": f"gamma_{d}_{i}"}
+                            for i in range(num_qubits - 1)
+                        ],
+                        *[
+                            {"gate": "rx", "qubit": i, "param": f"beta_{d}_{i}"}
+                            for i in range(num_qubits)
+                        ],
                     ]
                 ],
                 # Measurement
                 *[{"gate": "measure", "qubit": i, "classical_bit": i} for i in range(num_qubits)],
             ],
             "parameters": {
-                f"gamma_{d}_{i}": 0.0
-                for d in range(depth)
-                for i in range(num_qubits - 1)
-            } | {
-                f"beta_{d}_{i}": 0.0
-                for d in range(depth)
-                for i in range(num_qubits)
-            },
+                f"gamma_{d}_{i}": 0.0 for d in range(depth) for i in range(num_qubits - 1)
+            }
+            | {f"beta_{d}_{i}": 0.0 for d in range(depth) for i in range(num_qubits)},
         }
 
     @staticmethod
-    def vqe_circuit(num_qubits: int, depth: int = 2, entanglement: str = "linear") -> Dict[str, Any]:
+    def vqe_circuit(
+        num_qubits: int, depth: int = 2, entanglement: str = "linear"
+    ) -> Dict[str, Any]:
         """Generate VQE ansatz circuit specification (EfficientSU2 style)."""
         return {
             "algorithm": "vqe",
@@ -221,32 +229,32 @@ class QuantumCircuitLibrary:
                     gate
                     for d in range(depth)
                     for gate in [
-                        *[{"gate": "ry", "qubit": i, "param": f"theta_{d}_{i}"} for i in range(num_qubits)],
-                        *[{"gate": "rz", "qubit": i, "param": f"phi_{d}_{i}"} for i in range(num_qubits)],
-                        *[{"gate": "cx", "qubits": [i, i+1]} for i in range(num_qubits - 1)],
+                        *[
+                            {"gate": "ry", "qubit": i, "param": f"theta_{d}_{i}"}
+                            for i in range(num_qubits)
+                        ],
+                        *[
+                            {"gate": "rz", "qubit": i, "param": f"phi_{d}_{i}"}
+                            for i in range(num_qubits)
+                        ],
+                        *[{"gate": "cx", "qubits": [i, i + 1]} for i in range(num_qubits - 1)],
                     ]
                 ],
                 # Final rotation layer
-                *[{"gate": "ry", "qubit": i, "param": f"theta_final_{i}"} for i in range(num_qubits)],
+                *[
+                    {"gate": "ry", "qubit": i, "param": f"theta_final_{i}"}
+                    for i in range(num_qubits)
+                ],
             ],
-            "parameters": {
-                f"theta_{d}_{i}": 0.0
-                for d in range(depth)
-                for i in range(num_qubits)
-            } | {
-                f"phi_{d}_{i}": 0.0
-                for d in range(depth)
-                for i in range(num_qubits)
-            } | {
-                f"theta_final_{i}": 0.0
-                for i in range(num_qubits)
-            },
+            "parameters": {f"theta_{d}_{i}": 0.0 for d in range(depth) for i in range(num_qubits)}
+            | {f"phi_{d}_{i}": 0.0 for d in range(depth) for i in range(num_qubits)}
+            | {f"theta_final_{i}": 0.0 for i in range(num_qubits)},
         }
 
     @staticmethod
     def grover_circuit(num_qubits: int, oracle_type: str = "general") -> Dict[str, Any]:
         """Generate Grover's search circuit specification."""
-        iterations = max(1, int(math.pi / 4 * math.sqrt(2 ** num_qubits)))
+        iterations = max(1, int(math.pi / 4 * math.sqrt(2**num_qubits)))
         return {
             "algorithm": "grover",
             "num_qubits": num_qubits + 1,  # +1 for oracle ancilla
@@ -403,7 +411,11 @@ class QuantumSolver:
                 var = f"{i}_{j}"
                 # Cost term
                 cost = resources[j].get("cost", 1.0)
-                capability_match = 1.0 if resources[j].get("capability") in tasks[i].get("required_capabilities", []) else 10.0
+                capability_match = (
+                    1.0
+                    if resources[j].get("capability") in tasks[i].get("required_capabilities", [])
+                    else 10.0
+                )
                 linear[var] = cost * capability_match
 
         # Constraint: each task assigned to exactly one resource
@@ -449,7 +461,9 @@ class QuantumSolver:
             "results_stored": len(self._results),
         }
 
-    def _build_circuit(self, algorithm: QuantumAlgorithm, num_qubits: int, depth: int) -> Dict[str, Any]:
+    def _build_circuit(
+        self, algorithm: QuantumAlgorithm, num_qubits: int, depth: int
+    ) -> Dict[str, Any]:
         """Build a quantum circuit specification for the given algorithm."""
         if algorithm == QuantumAlgorithm.QAOA:
             return self._circuit_library.qaoa_circuit(num_qubits, depth)
@@ -608,8 +622,12 @@ class HybridSolver:
         return {
             "method": "genetic",
             "genetic_result": genetic_result.to_dict(),
-            "solution": genetic_result.best_individual.chromosome if genetic_result.best_individual else {},
-            "fitness": genetic_result.best_individual.fitness if genetic_result.best_individual else {},
+            "solution": genetic_result.best_individual.chromosome
+            if genetic_result.best_individual
+            else {},
+            "fitness": genetic_result.best_individual.fitness
+            if genetic_result.best_individual
+            else {},
         }
 
     def _map_to_qubo(self, genetic_result) -> QUBOProblem:

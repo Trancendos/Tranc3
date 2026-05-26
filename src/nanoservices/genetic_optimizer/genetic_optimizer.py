@@ -47,6 +47,7 @@ class ObjectiveType(str, Enum):
 @dataclass
 class Objective:
     """An optimization objective."""
+
     name: str
     type: ObjectiveType = ObjectiveType.MINIMIZE
     weight: float = 1.0
@@ -66,6 +67,7 @@ class Objective:
 @dataclass
 class GeneSpec:
     """Specification for a single gene (parameter) in the chromosome."""
+
     name: str
     min_value: float = 0.0
     max_value: float = 1.0
@@ -93,6 +95,7 @@ class GeneSpec:
 @dataclass
 class Individual:
     """A single individual in the genetic population."""
+
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
     chromosome: Dict[str, Any] = field(default_factory=dict)
     fitness: Dict[str, float] = field(default_factory=dict)
@@ -114,6 +117,7 @@ class Individual:
 @dataclass
 class OptimizationResult:
     """Result of a genetic optimization run."""
+
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     best_individual: Optional[Individual] = None
     pareto_front: List[Individual] = field(default_factory=list)
@@ -252,7 +256,10 @@ class GeneticOptimizer:
             current_fitness = self._weighted_fitness(best)
 
             # Check convergence
-            if prev_best_fitness is not None and abs(current_fitness - prev_best_fitness) < target_convergence:
+            if (
+                prev_best_fitness is not None
+                and abs(current_fitness - prev_best_fitness) < target_convergence
+            ):
                 stagnant_count += 1
             else:
                 stagnant_count = 0
@@ -313,7 +320,9 @@ class GeneticOptimizer:
     def _tournament_selection(self, tournament_size: int = 3) -> List[Individual]:
         selected = []
         for _ in range(self._population_size):
-            candidates = random.sample(self._population, min(tournament_size, len(self._population)))
+            candidates = random.sample(
+                self._population, min(tournament_size, len(self._population))
+            )
             best = min(candidates, key=lambda ind: self._weighted_fitness(ind))
             selected.append(best)
         return selected
@@ -334,8 +343,14 @@ class GeneticOptimizer:
                 offspring.append(Individual(chromosome=child1_chrom, generation=self._generation))
                 offspring.append(Individual(chromosome=child2_chrom, generation=self._generation))
             else:
-                offspring.append(Individual(chromosome=dict(parents[i].chromosome), generation=self._generation))
-                offspring.append(Individual(chromosome=dict(parents[i + 1].chromosome), generation=self._generation))
+                offspring.append(
+                    Individual(chromosome=dict(parents[i].chromosome), generation=self._generation)
+                )
+                offspring.append(
+                    Individual(
+                        chromosome=dict(parents[i + 1].chromosome), generation=self._generation
+                    )
+                )
         return offspring
 
     def _mutate(self, population: List[Individual]) -> List[Individual]:
@@ -347,11 +362,15 @@ class GeneticOptimizer:
                     elif spec.value_type == "int":
                         delta = random.gauss(0, (spec.max_value - spec.min_value) * 0.1)
                         new_val = int(individual.chromosome.get(name, 0) + delta)
-                        individual.chromosome[name] = max(int(spec.min_value), min(int(spec.max_value), new_val))
+                        individual.chromosome[name] = max(
+                            int(spec.min_value), min(int(spec.max_value), new_val)
+                        )
                     else:
                         delta = random.gauss(0, (spec.max_value - spec.min_value) * 0.1)
                         new_val = individual.chromosome.get(name, 0.0) + delta
-                        individual.chromosome[name] = max(spec.min_value, min(spec.max_value, new_val))
+                        individual.chromosome[name] = max(
+                            spec.min_value, min(spec.max_value, new_val)
+                        )
         return population
 
     def _non_dominated_sort(self) -> List[List[Individual]]:
@@ -395,8 +414,8 @@ class GeneticOptimizer:
         """Check if p dominates q (Pareto dominance)."""
         at_least_one_better = False
         for obj in self._objectives:
-            p_val = p.fitness.get(obj.name, float('inf'))
-            q_val = q.fitness.get(obj.name, float('inf'))
+            p_val = p.fitness.get(obj.name, float("inf"))
+            q_val = q.fitness.get(obj.name, float("inf"))
 
             if obj.type == ObjectiveType.MINIMIZE:
                 if p_val > q_val:
@@ -446,7 +465,7 @@ class GeneticOptimizer:
             if spec.value_type == "categorical":
                 size *= len(spec.categories) if spec.categories else 100
             elif spec.value_type == "int":
-                size *= (int(spec.max_value) - int(spec.min_value) + 1)
+                size *= int(spec.max_value) - int(spec.min_value) + 1
             else:
                 size *= 1000  # Discretized float approximation
         return size

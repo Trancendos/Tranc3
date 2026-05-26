@@ -59,6 +59,7 @@ class ResourceType(str, Enum):
 @dataclass
 class ForgejoConfig:
     """Forgejo server configuration — the Git source of truth."""
+
     url: str = "https://forgejo.local"
     token: str = ""
     repository: str = "Trancendos/Tranc3"
@@ -79,6 +80,7 @@ class ForgejoConfig:
 @dataclass
 class FluxSyncStatus:
     """Status of a FluxCD sync operation."""
+
     source_name: str
     source_type: str  # GitRepository, OCIRepository, Bucket
     url: str
@@ -104,6 +106,7 @@ class FluxSyncStatus:
 @dataclass
 class DriftEvent:
     """Detected configuration drift."""
+
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     resource_kind: ResourceType = ResourceType.CUSTOM
     resource_name: str = ""
@@ -135,6 +138,7 @@ class DriftEvent:
 @dataclass
 class KustomizeOverlay:
     """Kustomize overlay for environment-specific configuration."""
+
     environment: str  # dev, staging, prod
     namespace: str = ""
     replicas: Dict[str, int] = field(default_factory=dict)
@@ -166,28 +170,35 @@ class KustomizeOverlay:
         if self.replicas:
             patches = []
             for name, count in self.replicas.items():
-                patches.append({
-                    "patch": f'[{{"op": "replace", "path": "/spec/replicas", "value": {count}}}]',
-                    "target": {"kind": "Deployment", "name": name},
-                })
+                patches.append(
+                    {
+                        "patch": f'[{{"op": "replace", "path": "/spec/replicas", "value": {count}}}]',
+                        "target": {"kind": "Deployment", "name": name},
+                    }
+                )
             kustomization.setdefault("patches", []).extend(patches)
 
         if self.images:
             kustomization["images"] = [
-                {"name": name, "newTag": tag}
-                for name, tag in self.images.items()
+                {"name": name, "newTag": tag} for name, tag in self.images.items()
             ]
 
         if self.config_map_patches:
             for cm_name, data in self.config_map_patches.items():
-                kustomization.setdefault("patches", []).append({
-                    "patch": json.dumps([{
-                        "op": "replace",
-                        "path": "/data",
-                        "value": data,
-                    }]),
-                    "target": {"kind": "ConfigMap", "name": cm_name},
-                })
+                kustomization.setdefault("patches", []).append(
+                    {
+                        "patch": json.dumps(
+                            [
+                                {
+                                    "op": "replace",
+                                    "path": "/data",
+                                    "value": data,
+                                }
+                            ]
+                        ),
+                        "target": {"kind": "ConfigMap", "name": cm_name},
+                    }
+                )
 
         return kustomization
 
@@ -231,37 +242,43 @@ class DriftDetector:
 
             if not declared:
                 # Extra resource not in Git — drift
-                drifts.append(DriftEvent(
-                    resource_name=key,
-                    severity=DriftSeverity.MEDIUM,
-                    declared_state={},
-                    actual_state=actual,
-                    diff={"action": "delete", "reason": "resource not in git"},
-                ))
+                drifts.append(
+                    DriftEvent(
+                        resource_name=key,
+                        severity=DriftSeverity.MEDIUM,
+                        declared_state={},
+                        actual_state=actual,
+                        diff={"action": "delete", "reason": "resource not in git"},
+                    )
+                )
                 continue
 
             if not actual:
                 # Missing resource — drift
-                drifts.append(DriftEvent(
-                    resource_name=key,
-                    severity=DriftSeverity.HIGH,
-                    declared_state=declared,
-                    actual_state={},
-                    diff={"action": "create", "reason": "resource missing from cluster"},
-                ))
+                drifts.append(
+                    DriftEvent(
+                        resource_name=key,
+                        severity=DriftSeverity.HIGH,
+                        declared_state=declared,
+                        actual_state={},
+                        diff={"action": "create", "reason": "resource missing from cluster"},
+                    )
+                )
                 continue
 
             # Deep compare
             diff = self._deep_diff(declared, actual)
             if diff:
                 severity = self._classify_drift(diff)
-                drifts.append(DriftEvent(
-                    resource_name=key,
-                    severity=severity,
-                    declared_state=declared,
-                    actual_state=actual,
-                    diff=diff,
-                ))
+                drifts.append(
+                    DriftEvent(
+                        resource_name=key,
+                        severity=severity,
+                        declared_state=declared,
+                        actual_state=actual,
+                        diff=diff,
+                    )
+                )
 
         self._drift_history.extend(drifts)
         return drifts
@@ -343,7 +360,10 @@ class DriftDetector:
                             pass
 
                     # Auto-heal if enabled
-                    if self._auto_heal and drift.severity in (DriftSeverity.HIGH, DriftSeverity.CRITICAL):
+                    if self._auto_heal and drift.severity in (
+                        DriftSeverity.HIGH,
+                        DriftSeverity.CRITICAL,
+                    ):
                         drift.auto_healed = True
                         drift.healed_at = time.time()
 
@@ -428,108 +448,123 @@ class IGIGitOps:
         manifests: Dict[str, str] = {}
 
         # GitRepository source pointing to Forgejo
-        manifests["gitrepository.yaml"] = json.dumps({
-            "apiVersion": "source.toolkit.fluxcd.io/v1",
-            "kind": "GitRepository",
-            "metadata": {
-                "name": "tranc3",
-                "namespace": "flux-system",
+        manifests["gitrepository.yaml"] = json.dumps(
+            {
+                "apiVersion": "source.toolkit.fluxcd.io/v1",
+                "kind": "GitRepository",
+                "metadata": {
+                    "name": "tranc3",
+                    "namespace": "flux-system",
+                },
+                "spec": {
+                    "url": f"{self._forgejo.url}/{self._forgejo.repository}.git",
+                    "ref": {"branch": self._forgejo.branch},
+                    "interval": "1m0s",
+                    "secretRef": {"name": "forgejo-auth"} if self._forgejo.token else None,
+                },
             },
-            "spec": {
-                "url": f"{self._forgejo.url}/{self._forgejo.repository}.git",
-                "ref": {"branch": self._forgejo.branch},
-                "interval": "1m0s",
-                "secretRef": {"name": "forgejo-auth"} if self._forgejo.token else None,
-            },
-        }, indent=2)
+            indent=2,
+        )
 
         # Kustomization for base
-        manifests["kustomization-base.yaml"] = json.dumps({
-            "apiVersion": "kustomize.toolkit.fluxcd.io/v1",
-            "kind": "Kustomization",
-            "metadata": {
-                "name": "tranc3-base",
-                "namespace": "flux-system",
-            },
-            "spec": {
-                "interval": "5m0s",
-                "path": f"./{self._forgejo.flux_path}base",
-                "prune": True,
-                "sourceRef": {
-                    "kind": "GitRepository",
-                    "name": "tranc3",
+        manifests["kustomization-base.yaml"] = json.dumps(
+            {
+                "apiVersion": "kustomize.toolkit.fluxcd.io/v1",
+                "kind": "Kustomization",
+                "metadata": {
+                    "name": "tranc3-base",
+                    "namespace": "flux-system",
                 },
-                "validation": "client",
-                "healthChecks": [
-                    {
-                        "apiVersion": "apps/v1",
-                        "kind": "Deployment",
-                        "name": "tranc3-api",
-                        "namespace": "tranc3",
+                "spec": {
+                    "interval": "5m0s",
+                    "path": f"./{self._forgejo.flux_path}base",
+                    "prune": True,
+                    "sourceRef": {
+                        "kind": "GitRepository",
+                        "name": "tranc3",
                     },
-                ],
+                    "validation": "client",
+                    "healthChecks": [
+                        {
+                            "apiVersion": "apps/v1",
+                            "kind": "Deployment",
+                            "name": "tranc3-api",
+                            "namespace": "tranc3",
+                        },
+                    ],
+                },
             },
-        }, indent=2)
+            indent=2,
+        )
 
         # Kustomization for environment overlay
         env = self._environment
         overlay_path = f"./{self._forgejo.flux_path}overlays/{env}"
-        manifests[f"kustomization-{env}.yaml"] = json.dumps({
-            "apiVersion": "kustomize.toolkit.fluxcd.io/v1",
-            "kind": "Kustomization",
-            "metadata": {
-                "name": f"tranc3-{env}",
-                "namespace": "flux-system",
-            },
-            "spec": {
-                "interval": "5m0s",
-                "path": overlay_path,
-                "prune": True,
-                "sourceRef": {
-                    "kind": "GitRepository",
-                    "name": "tranc3",
+        manifests[f"kustomization-{env}.yaml"] = json.dumps(
+            {
+                "apiVersion": "kustomize.toolkit.fluxcd.io/v1",
+                "kind": "Kustomization",
+                "metadata": {
+                    "name": f"tranc3-{env}",
+                    "namespace": "flux-system",
                 },
-                "dependsOn": [{"name": "tranc3-base"}],
-                "postBuild": {
-                    "substituteFrom": [
-                        {"kind": "ConfigMap", "name": f"tranc3-{env}-vars"},
+                "spec": {
+                    "interval": "5m0s",
+                    "path": overlay_path,
+                    "prune": True,
+                    "sourceRef": {
+                        "kind": "GitRepository",
+                        "name": "tranc3",
+                    },
+                    "dependsOn": [{"name": "tranc3-base"}],
+                    "postBuild": {
+                        "substituteFrom": [
+                            {"kind": "ConfigMap", "name": f"tranc3-{env}-vars"},
+                        ],
+                    },
+                },
+            },
+            indent=2,
+        )
+
+        # Forgejo notification (replaces GitHub notification)
+        manifests["notification.yaml"] = json.dumps(
+            {
+                "apiVersion": "notification.toolkit.fluxcd.io/v1beta3",
+                "kind": "Provider",
+                "metadata": {
+                    "name": "forgejo",
+                    "namespace": "flux-system",
+                },
+                "spec": {
+                    "type": "forgejo",
+                    "address": self._forgejo.url,
+                    "secretRef": {"name": "forgejo-token"},
+                },
+            },
+            indent=2,
+        )
+
+        # Alert rules
+        manifests["alert.yaml"] = json.dumps(
+            {
+                "apiVersion": "notification.toolkit.fluxcd.io/v1beta3",
+                "kind": "Alert",
+                "metadata": {
+                    "name": "tranc3-drift-alert",
+                    "namespace": "flux-system",
+                },
+                "spec": {
+                    "providerRef": {"name": "forgejo"},
+                    "eventSeverity": "info",
+                    "eventSources": [
+                        {"kind": "Kustomization", "name": "tranc3-base"},
+                        {"kind": "Kustomization", "name": f"tranc3-{env}"},
                     ],
                 },
             },
-        }, indent=2)
-
-        # Forgejo notification (replaces GitHub notification)
-        manifests["notification.yaml"] = json.dumps({
-            "apiVersion": "notification.toolkit.fluxcd.io/v1beta3",
-            "kind": "Provider",
-            "metadata": {
-                "name": "forgejo",
-                "namespace": "flux-system",
-            },
-            "spec": {
-                "type": "forgejo",
-                "address": self._forgejo.url,
-                "secretRef": {"name": "forgejo-token"},
-            },
-        }, indent=2)
-
-        # Alert rules
-        manifests["alert.yaml"] = json.dumps({
-            "apiVersion": "notification.toolkit.fluxcd.io/v1beta3",
-            "kind": "Alert",
-            "metadata": {
-                "name": "tranc3-drift-alert",
-                "namespace": "flux-system",
-            },
-            "spec": {
-                "providerRef": {"name": "forgejo"},
-                "eventSeverity": "info",
-                "eventSources": [
-                    {"kind": "Kustomization", "name": "tranc3-base"},
-                    {"kind": "Kustomization", "name": f"tranc3-{env}"},
-                ],
-            },
-        }, indent=2)
+            indent=2,
+        )
 
         return manifests
 

@@ -54,10 +54,11 @@ logger = logging.getLogger(__name__)
 
 try:
     from shared_core.infinity.adaptive_intelligence import (
-        InfinityHealthOrchestrator,
+        InfinityHealthOrchestrator,  # noqa: F401
         create_orchestrator,
         SUBSYSTEM_AVAILABILITY,
     )
+
     _ORCHESTRATOR_AVAILABLE = True
 except ImportError:
     _ORCHESTRATOR_AVAILABLE = False
@@ -65,12 +66,14 @@ except ImportError:
 
 try:
     from shared_core.infinity.proactive_defense import ProactiveDefenseLayer
+
     _DEFENSE_AVAILABLE = True
 except ImportError:
     _DEFENSE_AVAILABLE = False
 
 try:
     from shared_core.infinity.fluidic_gateway import InfinityFluidicGateway
+
     _GATEWAY_AVAILABLE = True
 except ImportError:
     _GATEWAY_AVAILABLE = False
@@ -124,9 +127,7 @@ class InfinityWorkerKit:
 
         # Fluidic Gateway
         if _GATEWAY_AVAILABLE:
-            self.gateway: Any = InfinityFluidicGateway(
-                node_id=f"{service_name}-gateway"
-            )
+            self.gateway: Any = InfinityFluidicGateway(node_id=f"{service_name}-gateway")
         else:
             self.gateway = _NullFluidicGateway()
 
@@ -197,6 +198,7 @@ class InfinityWorkerKit:
         async def prometheus_metrics():
             """Prometheus-compatible metrics endpoint."""
             from fastapi.responses import PlainTextResponse
+
             metrics_text = kit.health.get_prometheus_metrics()
             return PlainTextResponse(content=metrics_text, media_type="text/plain; version=0.0.4")
 
@@ -274,55 +276,100 @@ class _NullHealthOrchestrator:
         self.service_name = service_name
         self._start_time = time.time()
 
-    async def start(self, app: Any) -> None: pass
-    async def stop(self) -> None: pass
-    def register_daemon(self, name: str, **kw) -> None: pass
-    def should_fire(self, name: str) -> bool: return False
-    def record_fire(self, name: str) -> None: pass
-    def record_metric(self, name: str, value: float) -> None: pass
-    def record_request(self, latency_ms: float = 0.0, error: bool = False) -> None: pass
-    def update_health(self, score: float) -> None: pass
+    async def start(self, app: Any) -> None:
+        pass
+
+    async def stop(self) -> None:
+        pass
+
+    def register_daemon(self, name: str, **kw) -> None:
+        pass
+
+    def should_fire(self, name: str) -> bool:
+        return False
+
+    def record_fire(self, name: str) -> None:
+        pass
+
+    def record_metric(self, name: str, value: float) -> None:
+        pass
+
+    def record_request(self, latency_ms: float = 0.0, error: bool = False) -> None:
+        pass
+
+    def update_health(self, score: float) -> None:
+        pass
+
     def get_health_summary(self) -> dict:
         return {"service": self.service_name, "score": 1.0, "tier": "EXCELLENT", "subsystems": {}}
+
     def get_prometheus_metrics(self) -> str:
-        return f"# HELP up Service is up\n# TYPE up gauge\nup{{service=\"{self.service_name}\"}} 1\n"
-    def get_pulse_stats(self) -> dict: return {}
-    def get_defense_incidents(self) -> list: return []
+        return f'# HELP up Service is up\n# TYPE up gauge\nup{{service="{self.service_name}"}} 1\n'
+
+    def get_pulse_stats(self) -> dict:
+        return {}
+
+    def get_defense_incidents(self) -> list:
+        return []
 
 
 class _NullDefenseLayer:
     async def evaluate_request(self, request_dict: dict) -> Any:
         from dataclasses import dataclass
+
         @dataclass
         class _R:
             allowed: bool = True
             threat_score: float = 0.0
             reason: str = "passthrough"
+
         return _R()
 
-    def unblock_ip(self, ip: str) -> None: pass
-    def get_blocked_ips(self) -> list: return []
-    def get_stats(self) -> dict: return {"service": "null", "evaluations": 0}
+    def unblock_ip(self, ip: str) -> None:
+        pass
+
+    def get_blocked_ips(self) -> list:
+        return []
+
+    def get_stats(self) -> dict:
+        return {"service": "null", "evaluations": 0}
 
 
 class _NullFluidicGateway:
-    async def start(self) -> None: pass
-    async def stop(self) -> None: pass
+    async def start(self) -> None:
+        pass
+
+    async def stop(self) -> None:
+        pass
+
     async def route(self, role: str, user_id: str) -> Any:
         from dataclasses import dataclass
+
         @dataclass
         class _R:
             target_location: str = "arcadia"
             resolved_url: str = "http://localhost:8042"
             routed: bool = True
+
         return _R()
 
-    def record_route_success(self, loc: str, ms: float) -> None: pass
-    def record_route_error(self, loc: str) -> None: pass
-    def update_location_health(self, loc: str, h: bool) -> None: pass
-    def get_topology(self) -> dict: return {}
-    def get_routing_history(self) -> list: return []
-    def get_stats(self) -> dict: return {"route_count": 0}
+    def record_route_success(self, loc: str, ms: float) -> None:
+        pass
+
+    def record_route_error(self, loc: str) -> None:
+        pass
+
+    def update_location_health(self, loc: str, h: bool) -> None:
+        pass
+
+    def get_topology(self) -> dict:
+        return {}
+
+    def get_routing_history(self) -> list:
+        return []
+
+    def get_stats(self) -> dict:
+        return {"route_count": 0}
 
 
 # ---------------------------------------------------------------------------
@@ -332,16 +379,21 @@ class _NullFluidicGateway:
 
 def _make_sentinel_fn(sentinel: Any) -> Callable:
     """Create a publish callback from a SentinelStation instance."""
+
     async def _publish(channel: str, event_type: str, payload: dict) -> None:
         try:
             from shared_core.infinity.sentinel_station import SentinelEvent, SentinelChannel
+
             ch = SentinelChannel(channel) if isinstance(channel, str) else channel
-            await sentinel.publish(SentinelEvent(
-                channel=ch,
-                event_type=event_type,
-                source="worker_kit",
-                payload=payload,
-            ))
+            await sentinel.publish(
+                SentinelEvent(
+                    channel=ch,
+                    event_type=event_type,
+                    source="worker_kit",
+                    payload=payload,
+                )
+            )
         except Exception as exc:
             logger.debug("Sentinel publish error: %s", exc)
+
     return _publish

@@ -119,7 +119,11 @@ class Trace:
         for span in self.spans:
             if span.context.parent_span_id and span.context.parent_span_id in span_by_id:
                 parent = span_by_id[span.context.parent_span_id]
-                if parent.service_name and span.service_name and parent.service_name != span.service_name:
+                if (
+                    parent.service_name
+                    and span.service_name
+                    and parent.service_name != span.service_name
+                ):
                     if span.service_name not in graph[parent.service_name]:
                         graph[parent.service_name].append(span.service_name)
         return dict(graph)
@@ -145,7 +149,12 @@ class TraceCollector:
         self._total_sampled += 1
         self._traces[trace.trace_id] = trace
         if len(self._traces) > self._max_traces:
-            oldest_key = min(self._traces.keys(), key=lambda k: min(s.start_time for s in self._traces[k].spans) if self._traces[k].spans else 0)
+            oldest_key = min(
+                self._traces.keys(),
+                key=lambda k: (
+                    min(s.start_time for s in self._traces[k].spans) if self._traces[k].spans else 0
+                ),
+            )
             del self._traces[oldest_key]
         return True
 
@@ -153,7 +162,11 @@ class TraceCollector:
         return self._traces.get(trace_id)
 
     def get_recent_traces(self, limit: int = 50) -> List[Trace]:
-        traces = sorted(self._traces.values(), key=lambda t: min(s.start_time for s in t.spans) if t.spans else 0, reverse=True)
+        traces = sorted(
+            self._traces.values(),
+            key=lambda t: min(s.start_time for s in t.spans) if t.spans else 0,
+            reverse=True,
+        )
         return traces[:limit]
 
     def get_error_traces(self, limit: int = 50) -> List[Trace]:
@@ -177,21 +190,35 @@ class Tracer:
         span_id = uuid.uuid4().hex[:12]
         context = SpanContext(trace_id=trace_id, span_id=span_id)
         span = Span(
-            context=context, name=name, kind=SpanKind.SERVER,
-            service_name=self._service_name, attributes=attributes or {},
+            context=context,
+            name=name,
+            kind=SpanKind.SERVER,
+            service_name=self._service_name,
+            attributes=attributes or {},
         )
         self._active_spans[span_id] = span
         self._current_trace_id = trace_id
         return span
 
-    def start_span(self, name: str, parent: Optional[Span] = None, kind: SpanKind = SpanKind.INTERNAL, attributes: Optional[Dict[str, Any]] = None) -> Span:
-        trace_id = parent.context.trace_id if parent else (self._current_trace_id or uuid.uuid4().hex[:16])
+    def start_span(
+        self,
+        name: str,
+        parent: Optional[Span] = None,
+        kind: SpanKind = SpanKind.INTERNAL,
+        attributes: Optional[Dict[str, Any]] = None,
+    ) -> Span:
+        trace_id = (
+            parent.context.trace_id if parent else (self._current_trace_id or uuid.uuid4().hex[:16])
+        )
         parent_id = parent.context.span_id if parent else None
         span_id = uuid.uuid4().hex[:12]
         context = SpanContext(trace_id=trace_id, span_id=span_id, parent_span_id=parent_id)
         span = Span(
-            context=context, name=name, kind=kind,
-            service_name=self._service_name, attributes=attributes or {},
+            context=context,
+            name=name,
+            kind=kind,
+            service_name=self._service_name,
+            attributes=attributes or {},
         )
         self._active_spans[span_id] = span
         return span
@@ -221,7 +248,9 @@ class Tracer:
         if not trace_id:
             return None
         parent_id = headers.get("parent-span-id") or None
-        return SpanContext(trace_id=trace_id, span_id=span_id or uuid.uuid4().hex[:12], parent_span_id=parent_id)
+        return SpanContext(
+            trace_id=trace_id, span_id=span_id or uuid.uuid4().hex[:12], parent_span_id=parent_id
+        )
 
 
 class LatencyAnalyzer:
@@ -277,7 +306,9 @@ class DistributedTracingService:
         self._analyzer = LatencyAnalyzer(self._collector)
 
     def initialize(self) -> None:
-        logger.info("DistributedTracingService initialized (sample_rate=%.2f)", self._collector._sample_rate)
+        logger.info(
+            "DistributedTracingService initialized (sample_rate=%.2f)", self._collector._sample_rate
+        )
 
     def get_tracer(self, service_name: str) -> Tracer:
         if service_name not in self._tracers:

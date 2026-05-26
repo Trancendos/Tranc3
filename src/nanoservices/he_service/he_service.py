@@ -35,6 +35,7 @@ class HEContextConfig(Enum):
 @dataclass
 class HECiphertext:
     """Homomorphic encryption ciphertext."""
+
     ciphertext_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     scheme: HEScheme = HEScheme.BFV
     data: List[int] = field(default_factory=list)
@@ -57,6 +58,7 @@ class HECiphertext:
 @dataclass
 class HEContext:
     """Homomorphic encryption context / parameters."""
+
     context_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     scheme: HEScheme = HEScheme.BFV
     security_level: int = 128
@@ -92,7 +94,7 @@ class BFVScheme:
     def __init__(self, poly_modulus_degree: int = 4096, plain_modulus: int = 65537):
         self.n = poly_modulus_degree
         self.t = plain_modulus
-        self.q = 2 ** 60
+        self.q = 2**60
         self._sk = [random.randint(0, 1) for _ in range(poly_modulus_degree)]
         self._pk_noise = [random.randint(-10, 10) for _ in range(poly_modulus_degree)]
 
@@ -147,11 +149,11 @@ class CKKSScheme:
 
     def __init__(self, poly_modulus_degree: int = 8192):
         self.n = poly_modulus_degree
-        self.scale = 2 ** 40
+        self.scale = 2**40
 
     def encrypt(self, value: float) -> HECiphertext:
         scaled = int(value * self.scale)
-        encoded = [(scaled + random.randint(-100, 100)) % (2 ** 60) for _ in range(min(8, self.n))]
+        encoded = [(scaled + random.randint(-100, 100)) % (2**60) for _ in range(min(8, self.n))]
         return HECiphertext(
             scheme=HEScheme.CKKS,
             data=encoded,
@@ -166,17 +168,23 @@ class CKKSScheme:
 
     def add(self, ct1: HECiphertext, ct2: HECiphertext) -> HECiphertext:
         max_len = max(len(ct1.data), len(ct2.data))
-        result = [(ct1.data[i] if i < len(ct1.data) else 0) +
-                  (ct2.data[i] if i < len(ct2.data) else 0) for i in range(max_len)]
-        return HECiphertext(scheme=HEScheme.CKKS, data=result,
-                           noise_level=ct1.noise_level + ct2.noise_level)
+        result = [
+            (ct1.data[i] if i < len(ct1.data) else 0) + (ct2.data[i] if i < len(ct2.data) else 0)
+            for i in range(max_len)
+        ]
+        return HECiphertext(
+            scheme=HEScheme.CKKS, data=result, noise_level=ct1.noise_level + ct2.noise_level
+        )
 
     def multiply(self, ct1: HECiphertext, ct2: HECiphertext) -> HECiphertext:
         max_len = max(len(ct1.data), len(ct2.data))
-        result = [(ct1.data[i] if i < len(ct1.data) else 1) *
-                  (ct2.data[i] if i < len(ct2.data) else 1) for i in range(max_len)]
-        return HECiphertext(scheme=HEScheme.CKKS, data=result,
-                           noise_level=ct1.noise_level + ct2.noise_level + 0.1)
+        result = [
+            (ct1.data[i] if i < len(ct1.data) else 1) * (ct2.data[i] if i < len(ct2.data) else 1)
+            for i in range(max_len)
+        ]
+        return HECiphertext(
+            scheme=HEScheme.CKKS, data=result, noise_level=ct1.noise_level + ct2.noise_level + 0.1
+        )
 
 
 class HEService:
@@ -200,10 +208,13 @@ class HEService:
         }
         self._id = str(uuid.uuid4())[:8]
 
-    def create_context(self, scheme: HEScheme = HEScheme.BFV,
-                        security_level: int = 128,
-                        poly_modulus_degree: int = 4096,
-                        multiplicative_depth: int = 3) -> HEContext:
+    def create_context(
+        self,
+        scheme: HEScheme = HEScheme.BFV,
+        security_level: int = 128,
+        poly_modulus_degree: int = 4096,
+        multiplicative_depth: int = 3,
+    ) -> HEContext:
         ctx = HEContext(
             scheme=scheme,
             security_level=security_level,
@@ -275,7 +286,8 @@ class HEService:
             "total_ciphertexts": len(self.ciphertexts),
             "supported_schemes": [s.value for s in HEScheme],
             "avg_noise_level": round(
-                sum(ct.noise_level for ct in self.ciphertexts.values()) /
-                max(1, len(self.ciphertexts)), 4
+                sum(ct.noise_level for ct in self.ciphertexts.values())
+                / max(1, len(self.ciphertexts)),
+                4,
             ),
         }

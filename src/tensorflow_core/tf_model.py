@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 def TFAvailable() -> bool:
     """Return True if TensorFlow can be imported in this environment."""
     try:
-
         return True
     except ImportError:
         return False

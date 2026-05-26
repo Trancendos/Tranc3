@@ -24,8 +24,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ────────────────────────────────────────────────────────────────
 
+
 class EthicalPrinciple(Enum):
     """Core ethical principles in the constitution."""
+
     BENEFICENCE = "beneficence"
     NON_MALEFICENCE = "non_maleficence"
     AUTONOMY = "autonomy"
@@ -42,6 +44,7 @@ class EthicalPrinciple(Enum):
 
 class EthicalSeverity(Enum):
     """Severity levels for ethical violations."""
+
     INFO = "info"
     WARNING = "warning"
     VIOLATION = "violation"
@@ -51,6 +54,7 @@ class EthicalSeverity(Enum):
 
 class MoralFramework(Enum):
     """Moral reasoning frameworks."""
+
     UTILITARIAN = "utilitarian"
     DEONTOLOGICAL = "deontological"
     VIRTUE_ETHICS = "virtue_ethics"
@@ -61,6 +65,7 @@ class MoralFramework(Enum):
 
 class EvaluationResult(Enum):
     """Results of ethical evaluation."""
+
     APPROVED = "approved"
     APPROVED_WITH_CONDITIONS = "approved_with_conditions"
     REQUIRES_REVIEW = "requires_review"
@@ -70,6 +75,7 @@ class EvaluationResult(Enum):
 
 class RightsCategory(Enum):
     """Categories of rights in the constitution."""
+
     HUMAN_RIGHTS = "human_rights"
     DIGITAL_RIGHTS = "digital_rights"
     DATA_RIGHTS = "data_rights"
@@ -80,9 +86,11 @@ class RightsCategory(Enum):
 
 # ─── Data Models ──────────────────────────────────────────────────────────
 
+
 @dataclass
 class ConstitutionalArticle:
     """An article in the ethical constitution."""
+
     article_id: str
     principle: EthicalPrinciple
     title: str
@@ -107,6 +115,7 @@ class ConstitutionalArticle:
 @dataclass
 class EthicalEvaluation:
     """Result of an ethical evaluation."""
+
     evaluation_id: str
     action_description: str
     result: EvaluationResult
@@ -116,9 +125,7 @@ class EthicalEvaluation:
     conditions: List[str] = field(default_factory=list)
     reasoning: str = ""
     framework_used: MoralFramework = MoralFramework.DEONTOLOGICAL
-    evaluated_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    evaluated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def is_ethical(self) -> bool:
         return self.result in (EvaluationResult.APPROVED, EvaluationResult.APPROVED_WITH_CONDITIONS)
@@ -138,14 +145,13 @@ class EthicalEvaluation:
 @dataclass
 class EthicalPrecedent:
     """A precedent from previous ethical evaluations."""
+
     precedent_id: str
     action_type: str
     evaluation_result: EvaluationResult
     principle_involved: EthicalPrinciple
     rationale: str
-    created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -159,6 +165,7 @@ class EthicalPrecedent:
 @dataclass
 class RightsDeclaration:
     """A rights declaration in the constitution."""
+
     right_id: str
     category: RightsCategory
     title: str
@@ -177,6 +184,7 @@ class RightsDeclaration:
 
 
 # ─── Moral Reasoners ─────────────────────────────────────────────────────
+
 
 class UtilitarianReasoner:
     """Utilitarian moral reasoning: maximize overall welfare."""
@@ -266,6 +274,7 @@ class VirtueEthicsReasoner:
 
 # ─── Conflict Resolution ─────────────────────────────────────────────────
 
+
 class EthicalConflictResolver:
     """Resolves conflicts between ethical principles."""
 
@@ -306,6 +315,7 @@ class EthicalConflictResolver:
 
 # ─── Main Service ─────────────────────────────────────────────────────────
 
+
 class EthicalConstitutionService:
     """Ethical Constitution Engine for the Tranc3 ecosystem.
 
@@ -329,46 +339,143 @@ class EthicalConstitutionService:
     def _initialize_constitution(self) -> None:
         """Initialize with core constitutional articles."""
         articles = [
-            ConstitutionalArticle("art_1", EthicalPrinciple.NON_MALEFICENCE, "Do No Harm",
-                "The system shall not cause harm to humans, communities, or the environment.", True, 1),
-            ConstitutionalArticle("art_2", EthicalPrinciple.BENEFICENCE, "Maximize Benefit",
-                "The system shall strive to maximize beneficial outcomes for all stakeholders.", True, 2),
-            ConstitutionalArticle("art_3", EthicalPrinciple.AUTONOMY, "Respect Autonomy",
-                "The system shall respect human autonomy and informed consent.", True, 1),
-            ConstitutionalArticle("art_4", EthicalPrinciple.JUSTICE, "Ensure Justice",
-                "The system shall promote fair and equitable treatment for all.", True, 2),
-            ConstitutionalArticle("art_5", EthicalPrinciple.TRANSPARENCY, "Maintain Transparency",
-                "The system shall be transparent in its operations and decisions.", True, 2),
-            ConstitutionalArticle("art_6", EthicalPrinciple.PRIVACY, "Protect Privacy",
-                "The system shall protect individual privacy and data rights.", True, 1),
-            ConstitutionalArticle("art_7", EthicalPrinciple.FAIRNESS, "Ensure Fairness",
-                "The system shall avoid discrimination and ensure fair outcomes.", True, 2),
-            ConstitutionalArticle("art_8", EthicalPrinciple.ACCOUNTABILITY, "Maintain Accountability",
-                "The system shall be accountable for its actions and decisions.", True, 2),
-            ConstitutionalArticle("art_9", EthicalPrinciple.HUMAN_DIGNITY, "Respect Human Dignity",
-                "The system shall respect and protect human dignity at all times.", True, 1),
-            ConstitutionalArticle("art_10", EthicalPrinciple.SUSTAINABILITY, "Ensure Sustainability",
-                "The system shall operate sustainably for current and future generations.", False, 3),
-            ConstitutionalArticle("art_11", EthicalPrinciple.PRECAUTION, "Apply Precaution",
-                "The system shall apply the precautionary principle with novel capabilities.", True, 3),
-            ConstitutionalArticle("art_12", EthicalPrinciple.SOLIDARITY, "Promote Solidarity",
-                "The system shall promote solidarity and collective well-being.", False, 4),
+            ConstitutionalArticle(
+                "art_1",
+                EthicalPrinciple.NON_MALEFICENCE,
+                "Do No Harm",
+                "The system shall not cause harm to humans, communities, or the environment.",
+                True,
+                1,
+            ),
+            ConstitutionalArticle(
+                "art_2",
+                EthicalPrinciple.BENEFICENCE,
+                "Maximize Benefit",
+                "The system shall strive to maximize beneficial outcomes for all stakeholders.",
+                True,
+                2,
+            ),
+            ConstitutionalArticle(
+                "art_3",
+                EthicalPrinciple.AUTONOMY,
+                "Respect Autonomy",
+                "The system shall respect human autonomy and informed consent.",
+                True,
+                1,
+            ),
+            ConstitutionalArticle(
+                "art_4",
+                EthicalPrinciple.JUSTICE,
+                "Ensure Justice",
+                "The system shall promote fair and equitable treatment for all.",
+                True,
+                2,
+            ),
+            ConstitutionalArticle(
+                "art_5",
+                EthicalPrinciple.TRANSPARENCY,
+                "Maintain Transparency",
+                "The system shall be transparent in its operations and decisions.",
+                True,
+                2,
+            ),
+            ConstitutionalArticle(
+                "art_6",
+                EthicalPrinciple.PRIVACY,
+                "Protect Privacy",
+                "The system shall protect individual privacy and data rights.",
+                True,
+                1,
+            ),
+            ConstitutionalArticle(
+                "art_7",
+                EthicalPrinciple.FAIRNESS,
+                "Ensure Fairness",
+                "The system shall avoid discrimination and ensure fair outcomes.",
+                True,
+                2,
+            ),
+            ConstitutionalArticle(
+                "art_8",
+                EthicalPrinciple.ACCOUNTABILITY,
+                "Maintain Accountability",
+                "The system shall be accountable for its actions and decisions.",
+                True,
+                2,
+            ),
+            ConstitutionalArticle(
+                "art_9",
+                EthicalPrinciple.HUMAN_DIGNITY,
+                "Respect Human Dignity",
+                "The system shall respect and protect human dignity at all times.",
+                True,
+                1,
+            ),
+            ConstitutionalArticle(
+                "art_10",
+                EthicalPrinciple.SUSTAINABILITY,
+                "Ensure Sustainability",
+                "The system shall operate sustainably for current and future generations.",
+                False,
+                3,
+            ),
+            ConstitutionalArticle(
+                "art_11",
+                EthicalPrinciple.PRECAUTION,
+                "Apply Precaution",
+                "The system shall apply the precautionary principle with novel capabilities.",
+                True,
+                3,
+            ),
+            ConstitutionalArticle(
+                "art_12",
+                EthicalPrinciple.SOLIDARITY,
+                "Promote Solidarity",
+                "The system shall promote solidarity and collective well-being.",
+                False,
+                4,
+            ),
         ]
         for art in articles:
             self.constitution[art.article_id] = art
 
         # Core rights
         rights = [
-            RightsDeclaration("right_1", RightsCategory.HUMAN_RIGHTS, "Right to Life",
-                "Every human has the fundamental right to life and safety.", True),
-            RightsDeclaration("right_2", RightsCategory.DIGITAL_RIGHTS, "Right to Digital Privacy",
-                "Every individual has the right to digital privacy.", False),
-            RightsDeclaration("right_3", RightsCategory.DATA_RIGHTS, "Right to Data Sovereignty",
-                "Individuals own their data and control its use.", False),
-            RightsDeclaration("right_4", RightsCategory.HUMAN_RIGHTS, "Right to Explanation",
-                "Every person has the right to understand AI decisions affecting them.", True),
-            RightsDeclaration("right_5", RightsCategory.COLLECTIVE_RIGHTS, "Right to Collective Governance",
-                "Communities have the right to govern AI systems affecting them.", False),
+            RightsDeclaration(
+                "right_1",
+                RightsCategory.HUMAN_RIGHTS,
+                "Right to Life",
+                "Every human has the fundamental right to life and safety.",
+                True,
+            ),
+            RightsDeclaration(
+                "right_2",
+                RightsCategory.DIGITAL_RIGHTS,
+                "Right to Digital Privacy",
+                "Every individual has the right to digital privacy.",
+                False,
+            ),
+            RightsDeclaration(
+                "right_3",
+                RightsCategory.DATA_RIGHTS,
+                "Right to Data Sovereignty",
+                "Individuals own their data and control its use.",
+                False,
+            ),
+            RightsDeclaration(
+                "right_4",
+                RightsCategory.HUMAN_RIGHTS,
+                "Right to Explanation",
+                "Every person has the right to understand AI decisions affecting them.",
+                True,
+            ),
+            RightsDeclaration(
+                "right_5",
+                RightsCategory.COLLECTIVE_RIGHTS,
+                "Right to Collective Governance",
+                "Communities have the right to govern AI systems affecting them.",
+                False,
+            ),
         ]
         for r in rights:
             self.rights[r.right_id] = r
@@ -390,9 +497,10 @@ class EthicalConstitutionService:
 
         for framework in frameworks:
             if framework == MoralFramework.UTILITARIAN:
-                stakeholders = context.get("stakeholders", [
-                    {"name": "society", "impact": 0.5, "probability": 1.0, "weight": 1.0}
-                ])
+                stakeholders = context.get(
+                    "stakeholders",
+                    [{"name": "society", "impact": 0.5, "probability": 1.0, "weight": 1.0}],
+                )
                 score, reasoning = self.utilitarian.evaluate(action_description, stakeholders)
                 principle_scores["utilitarian"] = score
                 all_reasoning.append(reasoning)
@@ -411,7 +519,9 @@ class EthicalConstitutionService:
                 all_reasoning.append(reasoning)
 
         # Overall score
-        overall = sum(principle_scores.values()) / len(principle_scores) if principle_scores else 0.5
+        overall = (
+            sum(principle_scores.values()) / len(principle_scores) if principle_scores else 0.5
+        )
 
         # Check against constitutional articles
         for art_id, article in self.constitution.items():
@@ -422,7 +532,9 @@ class EthicalConstitutionService:
                         conditions.append(f"Mandatory compliance with {article.title}")
 
         # Determine result
-        if violations and any("priority_1" in str(v) or "Human Dignity" in str(v) for v in violations):
+        if violations and any(
+            "priority_1" in str(v) or "Human Dignity" in str(v) for v in violations
+        ):
             result = EvaluationResult.PROHIBITED
         elif len(violations) > 2:
             result = EvaluationResult.REJECTED

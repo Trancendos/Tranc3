@@ -25,8 +25,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ────────────────────────────────────────────────────────────────
 
+
 class StorageMedium(Enum):
     """Holographic storage medium types."""
+
     LITHIUM_NIOBATE = "lithium_niobate"
     PHOTOPOLYMER = "photopolymer"
     PHOTOREFRACTIVE_POLYMER = "photorefractive_polymer"
@@ -37,6 +39,7 @@ class StorageMedium(Enum):
 
 class MultiplexingMethod(Enum):
     """Holographic multiplexing strategies."""
+
     ANGULAR = "angular"
     WAVELENGTH = "wavelength"
     PHASE_CODED = "phase_coded"
@@ -49,6 +52,7 @@ class MultiplexingMethod(Enum):
 
 class DataEncoding(Enum):
     """Data encoding schemes for holographic storage."""
+
     BINARY_AMPLITUDE = "binary_amplitude"
     BINARY_PHASE = "binary_phase"
     GRAY_SCALE = "gray_scale"
@@ -58,6 +62,7 @@ class DataEncoding(Enum):
 
 class StorageState(Enum):
     """Storage volume states."""
+
     EMPTY = "empty"
     RECORDING = "recording"
     READING = "reading"
@@ -69,9 +74,11 @@ class StorageState(Enum):
 
 # ─── Data Models ──────────────────────────────────────────────────────────
 
+
 @dataclass
 class HolographicPage:
     """A single holographic data page."""
+
     page_id: str
     angular_offset: float = 0.0  # degrees
     wavelength_nm: float = 532.0
@@ -81,9 +88,7 @@ class HolographicPage:
     signal_to_noise: float = 10.0
     bit_error_rate: float = 1e-6
     is_recorded: bool = False
-    created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -101,6 +106,7 @@ class HolographicPage:
 @dataclass
 class StorageVolume:
     """A volumetric holographic storage medium."""
+
     volume_id: str
     medium: StorageMedium = StorageMedium.LITHIUM_NIOBATE
     thickness_mm: float = 1.0
@@ -118,7 +124,7 @@ class StorageVolume:
 
     def total_capacity_tb(self) -> float:
         """Calculate capacity in terabytes."""
-        return self.total_capacity_bits() / (8 * 1024 ** 4)
+        return self.total_capacity_bits() / (8 * 1024**4)
 
     def used_capacity_bits(self) -> int:
         """Calculate used capacity."""
@@ -147,6 +153,7 @@ class StorageVolume:
 @dataclass
 class HolographicChannel:
     """A channel for holographic read/write operations."""
+
     channel_id: str
     laser_wavelength_nm: float = 532.0
     laser_power_mw: float = 100.0
@@ -167,6 +174,7 @@ class HolographicChannel:
 
 
 # ─── Holographic Storage Engine ───────────────────────────────────────────
+
 
 class HolographicStorageEngine:
     """Simulates holographic data storage operations.
@@ -278,8 +286,12 @@ class HolographicStorageEngine:
         data_bits = len(data) * 8
         page_size = max(1, int(math.sqrt(data_bits)))
         data_matrix = [
-            [1 if (data[i * page_size + j] if i * page_size + j < len(data) else 0) & (1 << k) else 0
-             for j in range(page_size)]
+            [
+                1
+                if (data[i * page_size + j] if i * page_size + j < len(data) else 0) & (1 << k)
+                else 0
+                for j in range(page_size)
+            ]
             for i in range(page_size)
             for k in [0]
         ]
@@ -298,7 +310,7 @@ class HolographicStorageEngine:
         page = HolographicPage(
             page_id=pid,
             angular_offset=angular_offset,
-            data_matrix=data_matrix[:min(len(data_matrix), page_size)],
+            data_matrix=data_matrix[: min(len(data_matrix), page_size)],
             page_size_bits=data_bits,
             diffraction_efficiency=eta,
             signal_to_noise=snr,
@@ -328,6 +340,7 @@ class HolographicStorageEngine:
 
         # Simulate read noise
         import random
+
         read_ber = page.bit_error_rate * (1.0 + random.gauss(0, 0.1))
         read_snr = page.signal_to_noise * (1.0 + random.gauss(0, 0.05))
 
@@ -356,6 +369,7 @@ class HolographicStorageEngine:
 
 
 # ─── Main Service ─────────────────────────────────────────────────────────
+
 
 class HolographicStorageService:
     """Holographic Data Storage Service for the Tranc3 ecosystem.
@@ -424,8 +438,7 @@ class HolographicStorageService:
     def get_holographic_storage_status(self) -> Dict[str, Any]:
         """Get service status."""
         total_pages = sum(
-            len([p for p in v.pages.values() if p.is_recorded])
-            for v in self.volumes.values()
+            len([p for p in v.pages.values() if p.is_recorded]) for v in self.volumes.values()
         )
         total_capacity = sum(v.total_capacity_tb() for v in self.volumes.values())
         return {

@@ -43,6 +43,7 @@ class PropertyType(Enum):
 @dataclass
 class VerificationProperty:
     """A property to be formally verified."""
+
     property_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     name: str = ""
     description: str = ""
@@ -69,6 +70,7 @@ class VerificationProperty:
 @dataclass
 class ProofObligation:
     """A proof obligation generated from verification."""
+
     obligation_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     property_id: str = ""
     goal: str = ""
@@ -91,6 +93,7 @@ class ProofObligation:
 @dataclass
 class VerificationResult:
     """Result of a formal verification attempt."""
+
     result_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     property_id: str = ""
     status: VerificationStatus = VerificationStatus.PENDING
@@ -118,8 +121,7 @@ class VerificationResult:
 class Lean4TemplateGenerator:
     """Generates Lean 4 code templates for verification."""
 
-    def generate_safety_proof(self, property_name: str,
-                               spec: str) -> str:
+    def generate_safety_proof(self, property_name: str, spec: str) -> str:
         lean_code = (
             "import Mathlib.Tactic\n\n"
             f"-- Safety property: {property_name}\n"
@@ -128,9 +130,7 @@ class Lean4TemplateGenerator:
         )
         return lean_code
 
-    def generate_invariant_proof(self, property_name: str,
-                                  invariant: str,
-                                  transition: str) -> str:
+    def generate_invariant_proof(self, property_name: str, invariant: str, transition: str) -> str:
         lean_code = (
             "import Mathlib.Tactic\n\n"
             f"-- Invariant: {property_name}\n"
@@ -140,8 +140,7 @@ class Lean4TemplateGenerator:
         )
         return lean_code
 
-    def generate_termination_proof(self, property_name: str,
-                                     measure: str) -> str:
+    def generate_termination_proof(self, property_name: str, measure: str) -> str:
         lean_code = (
             "import Mathlib.Tactic\n\n"
             f"-- Termination: {property_name}\n"
@@ -151,8 +150,7 @@ class Lean4TemplateGenerator:
         )
         return lean_code
 
-    def generate_type_safety_proof(self, property_name: str,
-                                    type_spec: str) -> str:
+    def generate_type_safety_proof(self, property_name: str, type_spec: str) -> str:
         lean_code = (
             "import Mathlib.Tactic\n\n"
             f"-- Type safety: {property_name}\n"
@@ -179,7 +177,9 @@ class Lean4Prover:
             try:
                 result = subprocess.run(
                     [self.lean_path, "--version"],
-                    capture_output=True, text=True, timeout=5,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
                 )
                 self._available = result.returncode == 0
             except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -194,7 +194,9 @@ class Lean4Prover:
             with tempfile_file(lean_code, suffix=".lean") as path:
                 result = subprocess.run(
                     [self.lean_path, str(path)],
-                    capture_output=True, text=True, timeout=timeout,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
                 )
                 if result.returncode == 0:
                     return VerificationResult(
@@ -247,9 +249,9 @@ class Lean4Prover:
 class ModelCheckerSimulator:
     """Simulates model checking for finite-state systems."""
 
-    def check_safety(self, states: List[Dict[str, Any]],
-                      transitions: List[Tuple[int, int, str]],
-                      invariant: str) -> VerificationResult:
+    def check_safety(
+        self, states: List[Dict[str, Any]], transitions: List[Tuple[int, int, str]], invariant: str
+    ) -> VerificationResult:
         violated_state = None
         for state in states:
             if not self._evaluate_invariant(state, invariant):
@@ -269,9 +271,12 @@ class ModelCheckerSimulator:
             explanation=f"Safety invariant '{invariant}' holds for all {len(states)} states",
         )
 
-    def check_liveness(self, states: List[Dict[str, Any]],
-                        transitions: List[Tuple[int, int, str]],
-                        liveness_property: str) -> VerificationResult:
+    def check_liveness(
+        self,
+        states: List[Dict[str, Any]],
+        transitions: List[Tuple[int, int, str]],
+        liveness_property: str,
+    ) -> VerificationResult:
         reachable = set()
         for src, dst, label in transitions:
             reachable.add(dst)
@@ -294,10 +299,13 @@ def tempfile_file(content: str, suffix: str = ".lean") -> Any:
     class TempFileRef:
         def __init__(self, path: str):
             self.path = path
+
         def __str__(self) -> str:
             return self.path
+
         def __enter__(self):
             return self
+
         def __exit__(self, *args):
             try:
                 os.unlink(self.path)
@@ -305,7 +313,7 @@ def tempfile_file(content: str, suffix: str = ".lean") -> Any:
                 pass
 
     fd, path = tempfile.mkstemp(suffix=suffix)
-    with os.fdopen(fd, 'w') as f:
+    with os.fdopen(fd, "w") as f:
         f.write(content)
     return TempFileRef(path)
 
@@ -332,9 +340,13 @@ class FormalVerificationService:
         self.model_checker = ModelCheckerSimulator()
         self._id = str(uuid.uuid4())[:8]
 
-    def register_property(self, name: str, description: str,
-                           property_type: PropertyType = PropertyType.SAFETY,
-                           formal_spec: str = "") -> VerificationProperty:
+    def register_property(
+        self,
+        name: str,
+        description: str,
+        property_type: PropertyType = PropertyType.SAFETY,
+        formal_spec: str = "",
+    ) -> VerificationProperty:
         prop = VerificationProperty(
             name=name,
             description=description,
@@ -348,13 +360,9 @@ class FormalVerificationService:
                 name, formal_spec, "transition"
             )
         elif property_type == PropertyType.TERMINATION:
-            prop.lean_code = self.template_gen.generate_termination_proof(
-                name, formal_spec
-            )
+            prop.lean_code = self.template_gen.generate_termination_proof(name, formal_spec)
         elif property_type == PropertyType.TYPE_SAFETY:
-            prop.lean_code = self.template_gen.generate_type_safety_proof(
-                name, formal_spec
-            )
+            prop.lean_code = self.template_gen.generate_type_safety_proof(name, formal_spec)
         self.properties[prop.property_id] = prop
         return prop
 
@@ -400,25 +408,33 @@ class FormalVerificationService:
             self.obligations[obl.obligation_id] = obl
         return obligations
 
-    def model_check(self, property_id: str,
-                     states: List[Dict[str, Any]],
-                     transitions: List[Tuple[int, int, str]]) -> VerificationResult:
+    def model_check(
+        self,
+        property_id: str,
+        states: List[Dict[str, Any]],
+        transitions: List[Tuple[int, int, str]],
+    ) -> VerificationResult:
         prop = self.properties.get(property_id)
         if not prop:
-            return VerificationResult(status=VerificationStatus.ERROR, explanation="Property not found")
+            return VerificationResult(
+                status=VerificationStatus.ERROR, explanation="Property not found"
+            )
         if prop.property_type in (PropertyType.SAFETY, PropertyType.INVARIANT):
             return self.model_checker.check_safety(states, transitions, prop.formal_spec)
         elif prop.property_type == PropertyType.LIVENESS:
             return self.model_checker.check_liveness(states, transitions, prop.formal_spec)
-        return VerificationResult(status=VerificationStatus.UNKNOWN, explanation="Unsupported for model checking")
+        return VerificationResult(
+            status=VerificationStatus.UNKNOWN, explanation="Unsupported for model checking"
+        )
 
     def get_service_status(self) -> Dict[str, Any]:
         return {
             "service_id": self._id,
             "lean4_available": self.prover.is_available(),
             "total_properties": len(self.properties),
-            "proved_properties": sum(1 for p in self.properties.values()
-                                     if p.status == VerificationStatus.PROVED),
+            "proved_properties": sum(
+                1 for p in self.properties.values() if p.status == VerificationStatus.PROVED
+            ),
             "total_obligations": len(self.obligations),
             "total_results": len(self.results),
             "property_types": list(set(p.property_type.value for p in self.properties.values())),

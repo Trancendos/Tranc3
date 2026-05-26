@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class BackendChoice(Enum):
     """Available NRC execution backends."""
+
     POSTGRES = "postgres"
     SPARK = "spark"
     WASM_EDGE = "wasm_edge"
@@ -33,6 +34,7 @@ class BackendChoice(Enum):
 
 class JoinStrategy(Enum):
     """Join execution strategies."""
+
     HASH_JOIN = "hash_join"
     MERGE_JOIN = "merge_join"
     NESTED_LOOP = "nested_loop"
@@ -42,10 +44,11 @@ class JoinStrategy(Enum):
 
 class ShredDepth(Enum):
     """NRC nested collection shred depth levels."""
-    DEEP = 3       # Full nested shred
-    MEDIUM = 2     # Partial shred
-    SHALLOW = 1    # Minimal shred
-    NONE = 0       # No shred (flat)
+
+    DEEP = 3  # Full nested shred
+    MEDIUM = 2  # Partial shred
+    SHALLOW = 1  # Minimal shred
+    NONE = 0  # No shred (flat)
 
 
 @dataclass
@@ -54,6 +57,7 @@ class NRCPlanGene:
 
     Represents one decision point in the query execution plan.
     """
+
     relation_id: str
     backend: BackendChoice = BackendChoice.POSTGRES
     join_strategy: JoinStrategy = JoinStrategy.HASH_JOIN
@@ -72,6 +76,7 @@ class NRCPlanChromosome:
 
     Encodes all optimization decisions for a query execution plan.
     """
+
     plan_id: str = ""
     genes: List[NRCPlanGene] = field(default_factory=list)
     generation: int = 0
@@ -115,6 +120,7 @@ class NRCQueryContext:
 
     Contains query metadata, schema information, and constraints.
     """
+
     query_id: str
     nrc_dsl: str
     relations: List[str]
@@ -123,7 +129,11 @@ class NRCQueryContext:
     max_cost: float = 1.0
     min_accuracy: float = 0.95
     available_backends: List[BackendChoice] = field(
-        default_factory=lambda: [BackendChoice.POSTGRES, BackendChoice.SPARK, BackendChoice.IN_MEMORY]
+        default_factory=lambda: [
+            BackendChoice.POSTGRES,
+            BackendChoice.SPARK,
+            BackendChoice.IN_MEMORY,
+        ]
     )
     schema_stats: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     historical_performance: Dict[str, List[Dict[str, float]]] = field(default_factory=dict)
@@ -171,7 +181,12 @@ class NRCFitnessEvaluator:
     def evaluate(self, chromosome: NRCPlanChromosome, context: NRCQueryContext) -> Dict[str, float]:
         """Evaluate a plan chromosome across all objectives."""
         if not chromosome.genes:
-            return {"latency": float("inf"), "cost": float("inf"), "accuracy": 0.0, "resource_util": 0.0}
+            return {
+                "latency": float("inf"),
+                "cost": float("inf"),
+                "accuracy": 0.0,
+                "resource_util": 0.0,
+            }
 
         total_latency = 0.0
         total_cost = 0.0
@@ -187,7 +202,14 @@ class NRCFitnessEvaluator:
             gpu_benefit = 0.2 if gene.gpu_accelerate else 1.0
             wasm_overhead = 1.2 if gene.wasm_offload else 1.0
 
-            gene_latency = base_latency * backend_mult * depth_mult * parallel_benefit * gpu_benefit * wasm_overhead
+            gene_latency = (
+                base_latency
+                * backend_mult
+                * depth_mult
+                * parallel_benefit
+                * gpu_benefit
+                * wasm_overhead
+            )
             total_latency += gene_latency
 
             # Cost estimation
@@ -339,7 +361,11 @@ class NRCGeneticOperators:
             if random.random() < self.mutation_prob:
                 # Polynomial mutation for parallelism
                 u = random.random()
-                delta = (2 * u) ** (1.0 / (self.mutation_eta + 1)) - 1 if u < 0.5 else 1 - (2 * (1 - u)) ** (1.0 / (self.mutation_eta + 1))
+                delta = (
+                    (2 * u) ** (1.0 / (self.mutation_eta + 1)) - 1
+                    if u < 0.5
+                    else 1 - (2 * (1 - u)) ** (1.0 / (self.mutation_eta + 1))
+                )
                 gene.parallelism = max(1, min(64, int(gene.parallelism + delta * 8)))
 
         return mutated
@@ -383,13 +409,16 @@ class NSGAIIPlanOptimizer:
                 # Use historical performance to bias initial choices
                 hist = context.historical_performance.get(rel, [])
                 preferred_backend = (
-                    BackendChoice(hist[-1]["backend"]) if hist and "backend" in hist[-1]
+                    BackendChoice(hist[-1]["backend"])
+                    if hist and "backend" in hist[-1]
                     else random.choice(context.available_backends)
                 )
 
                 gene = NRCPlanGene(
                     relation_id=rel,
-                    backend=preferred_backend if random.random() < 0.7 else random.choice(context.available_backends),
+                    backend=preferred_backend
+                    if random.random() < 0.7
+                    else random.choice(context.available_backends),
                     join_strategy=random.choice(list(JoinStrategy)),
                     shred_depth=random.choice(list(ShredDepth)),
                     wasm_offload=random.random() < 0.3,
@@ -457,12 +486,16 @@ class NSGAIIPlanOptimizer:
             ind.crowding_distance = 0.0
 
         for obj_idx in range(n_objectives):
-            obj_name = list(front[0].fitness.keys())[obj_idx] if front[0].fitness else f"obj_{obj_idx}"
+            obj_name = (
+                list(front[0].fitness.keys())[obj_idx] if front[0].fitness else f"obj_{obj_idx}"
+            )
 
             # Sort by objective value
             # For latency/cost: ascending. For accuracy/resource: descending.
             reverse = obj_name in ("accuracy", "resource_util")
-            sorted_front = sorted(front, key=lambda x: x.fitness.get(obj_name, 0) if x.fitness else 0, reverse=reverse)
+            sorted_front = sorted(
+                front, key=lambda x: x.fitness.get(obj_name, 0) if x.fitness else 0, reverse=reverse
+            )
 
             sorted_front[0].crowding_distance = float("inf")
             sorted_front[-1].crowding_distance = float("inf")
@@ -472,8 +505,16 @@ class NSGAIIPlanOptimizer:
             obj_range = obj_max - obj_min if obj_max != obj_min else 1.0
 
             for i in range(1, len(sorted_front) - 1):
-                val_next = sorted_front[i + 1].fitness.get(obj_name, 0) if sorted_front[i + 1].fitness else 0
-                val_prev = sorted_front[i - 1].fitness.get(obj_name, 0) if sorted_front[i - 1].fitness else 0
+                val_next = (
+                    sorted_front[i + 1].fitness.get(obj_name, 0)
+                    if sorted_front[i + 1].fitness
+                    else 0
+                )
+                val_prev = (
+                    sorted_front[i - 1].fitness.get(obj_name, 0)
+                    if sorted_front[i - 1].fitness
+                    else 0
+                )
                 sorted_front[i].crowding_distance += (val_next - val_prev) / obj_range
 
     def _dominates(self, p: NRCPlanChromosome, q: NRCPlanChromosome) -> bool:
@@ -497,9 +538,7 @@ class NSGAIIPlanOptimizer:
 
         return better_in_one
 
-    def optimize(
-        self, context: NRCQueryContext, callback: Any = None
-    ) -> NRCPlanChromosome:
+    def optimize(self, context: NRCQueryContext, callback: Any = None) -> NRCPlanChromosome:
         """Run full NSGA-II optimization for an NRC query.
 
         Returns the best-compromise plan from the final Pareto front.
@@ -572,9 +611,16 @@ class NSGAIIPlanOptimizer:
         # Quantum escalation: if best plan's latency/cost is above threshold,
         # escalate to quantum solver
         final_fronts = self.fast_non_dominated_sort(population)
-        best_plan = min(final_fronts[0], key=lambda x: x.fitness.get("latency", float("inf")) if x.fitness else float("inf"))
+        best_plan = min(
+            final_fronts[0],
+            key=lambda x: x.fitness.get("latency", float("inf")) if x.fitness else float("inf"),
+        )
 
-        if best_plan.fitness and best_plan.fitness.get("latency", float("inf")) > self.quantum_escalation_threshold * context.max_latency_ms:
+        if (
+            best_plan.fitness
+            and best_plan.fitness.get("latency", float("inf"))
+            > self.quantum_escalation_threshold * context.max_latency_ms
+        ):
             logger.info(f"Quantum escalation triggered for query {context.query_id}")
             best_plan = self._quantum_escalate(best_plan, context)
 
@@ -589,7 +635,10 @@ class NSGAIIPlanOptimizer:
         """
         escalated = copy.deepcopy(plan)
         for gene in escalated.genes:
-            if gene.estimated_rows > 100000 and BackendChoice.QUANTUM_QAOA in context.available_backends:
+            if (
+                gene.estimated_rows > 100000
+                and BackendChoice.QUANTUM_QAOA in context.available_backends
+            ):
                 gene.backend = BackendChoice.QUANTUM_QAOA
                 gene.join_strategy = JoinStrategy.HASH_JOIN
                 gene.gpu_accelerate = False
@@ -645,7 +694,10 @@ class GeneticQueryOptimizer:
         if cache_key in self._plan_cache:
             cached = self._plan_cache[cache_key]
             # Verify cached plan still meets constraints
-            if cached.fitness and cached.fitness.get("latency", float("inf")) <= context.max_latency_ms:
+            if (
+                cached.fitness
+                and cached.fitness.get("latency", float("inf")) <= context.max_latency_ms
+            ):
                 logger.info(f"Using cached plan for query {context.query_id}")
                 return cached
 

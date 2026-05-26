@@ -27,8 +27,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ────────────────────────────────────────────────────────────────
 
+
 class QKProtocol(Enum):
     """Quantum key distribution protocols."""
+
     BB84 = "bb84"
     E91 = "e91"
     B92 = "b92"
@@ -38,13 +40,15 @@ class QKProtocol(Enum):
 
 class QubitBasis(Enum):
     """Measurement bases for qubits."""
+
     RECTILINEAR = "z"  # |0⟩, |1⟩
-    DIAGONAL = "x"     # |+⟩, |−⟩
-    CIRCULAR = "y"     # |+i⟩, |−i⟩
+    DIAGONAL = "x"  # |+⟩, |−⟩
+    CIRCULAR = "y"  # |+i⟩, |−i⟩
 
 
 class EntanglementState(Enum):
     """Entanglement generation states."""
+
     NONE = "none"
     GENERATING = "generating"
     ENTANGLED = "entangled"
@@ -55,6 +59,7 @@ class EntanglementState(Enum):
 
 class QuantumNodeType(Enum):
     """Types of nodes in the quantum network."""
+
     END_NODE = "end_node"
     REPEATER = "repeater"
     SWITCH = "switch"
@@ -64,6 +69,7 @@ class QuantumNodeType(Enum):
 
 class ChannelType(Enum):
     """Quantum channel types."""
+
     FIBER = "fiber"
     FREE_SPACE = "free_space"
     SATELLITE_LINK = "satellite_link"
@@ -72,12 +78,14 @@ class ChannelType(Enum):
 
 # ─── Data Models ──────────────────────────────────────────────────────────
 
+
 @dataclass
 class Qubit:
     """Simulated qubit with state vector."""
+
     qubit_id: str
     alpha: complex = complex(1, 0)  # |0⟩ amplitude
-    beta: complex = complex(0, 0)   # |1⟩ amplitude
+    beta: complex = complex(0, 0)  # |1⟩ amplitude
     basis: Optional[QubitBasis] = None
     measured: bool = False
     measurement_result: Optional[int] = None
@@ -141,6 +149,7 @@ class Qubit:
 @dataclass
 class QuantumNode:
     """A node in the quantum network."""
+
     node_id: str
     node_type: QuantumNodeType = QuantumNodeType.END_NODE
     position_km: float = 0.0
@@ -163,6 +172,7 @@ class QuantumNode:
 @dataclass
 class QuantumChannel:
     """A quantum communication channel."""
+
     channel_id: str
     source_node: str
     target_node: str
@@ -192,6 +202,7 @@ class QuantumChannel:
 @dataclass
 class QKSession:
     """A quantum key distribution session."""
+
     session_id: str
     protocol: QKProtocol = QKProtocol.BB84
     alice_node: str = ""
@@ -202,9 +213,7 @@ class QKSession:
     final_key_length: int = 0
     qber: float = 0.0  # Quantum Bit Error Rate
     is_secure: bool = False
-    created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -221,6 +230,7 @@ class QKSession:
 
 
 # ─── QKD Protocols ───────────────────────────────────────────────────────
+
 
 class BB84Protocol:
     """BB84 Quantum Key Distribution Protocol.
@@ -241,10 +251,16 @@ class BB84Protocol:
         """Execute BB84 protocol to generate a shared key."""
         # Step 1: Alice prepares qubits
         alice_bits = [random.randint(0, 1) for _ in range(key_length * 4)]
-        alice_bases = [random.choice([QubitBasis.RECTILINEAR, QubitBasis.DIAGONAL]) for _ in range(key_length * 4)]
+        alice_bases = [
+            random.choice([QubitBasis.RECTILINEAR, QubitBasis.DIAGONAL])
+            for _ in range(key_length * 4)
+        ]
 
         # Step 2: Bob measures in random bases
-        bob_bases = [random.choice([QubitBasis.RECTILINEAR, QubitBasis.DIAGONAL]) for _ in range(key_length * 4)]
+        bob_bases = [
+            random.choice([QubitBasis.RECTILINEAR, QubitBasis.DIAGONAL])
+            for _ in range(key_length * 4)
+        ]
         bob_results = []
 
         for i, (bit, a_basis, b_basis) in enumerate(zip(alice_bits, alice_bases, bob_bases)):
@@ -280,8 +296,7 @@ class BB84Protocol:
         # Step 4: Error estimation (sacrifice some bits)
         sample_size = max(1, len(sifted_alice) // 4)
         errors = sum(
-            1 for a, b in zip(sifted_alice[:sample_size], sifted_bob[:sample_size])
-            if a != b
+            1 for a, b in zip(sifted_alice[:sample_size], sifted_bob[:sample_size]) if a != b
         )
         qber = errors / sample_size if sample_size > 0 else 1.0
 
@@ -298,7 +313,7 @@ class BB84Protocol:
         # Step 7: Privacy amplification (hash)
         if corrected:
             key_str = "".join(str(b) for b in corrected)
-            final_key = hashlib.sha256(key_str.encode()).hexdigest()[:key_length // 4]
+            final_key = hashlib.sha256(key_str.encode()).hexdigest()[: key_length // 4]
         else:
             final_key = ""
 
@@ -358,8 +373,7 @@ class E91Protocol:
 
         # Sift same-basis measurements
         sifted = [
-            (a, b) for a, b, ab, bb in zip(alice_bits, bob_bits, alice_bases, bob_bases)
-            if ab == bb
+            (a, b) for a, b, ab, bb in zip(alice_bits, bob_bits, alice_bases, bob_bases) if ab == bb
         ]
         # _alice_sifted = [s[0] for s in sifted]  # noqa: F841
         # _bob_sifted = [s[1] for s in sifted]  # noqa: F841
@@ -380,6 +394,7 @@ class E91Protocol:
 
 
 # ─── Quantum Repeater ────────────────────────────────────────────────────
+
 
 class QuantumRepeater:
     """Quantum repeater for long-distance entanglement distribution.
@@ -455,6 +470,7 @@ class QuantumRepeater:
 
 
 # ─── Quantum Network ─────────────────────────────────────────────────────
+
 
 class QuantumNetwork:
     """Quantum internet network with nodes, channels, and protocols."""
@@ -644,13 +660,15 @@ class QuantumNetwork:
     def _get_channel(self, node_a: str, node_b: str) -> Optional[QuantumChannel]:
         """Get channel between two nodes."""
         for ch in self.channels.values():
-            if (ch.source_node == node_a and ch.target_node == node_b) or \
-               (ch.source_node == node_b and ch.target_node == node_a):
+            if (ch.source_node == node_a and ch.target_node == node_b) or (
+                ch.source_node == node_b and ch.target_node == node_a
+            ):
                 return ch
         return None
 
 
 # ─── Main Service ─────────────────────────────────────────────────────────
+
 
 class QuantumInternetService:
     """Quantum Internet Simulation Service for the Tranc3 ecosystem.
@@ -670,25 +688,31 @@ class QuantumInternetService:
     ) -> Dict[str, Any]:
         """Create a linear quantum network with repeaters."""
         # Create end nodes
-        self.network.add_node(QuantumNode(
-            node_id="alice",
-            node_type=QuantumNodeType.END_NODE,
-            position_km=0.0,
-        ))
-        self.network.add_node(QuantumNode(
-            node_id="bob",
-            node_type=QuantumNodeType.END_NODE,
-            position_km=spacing_km * (num_nodes - 1),
-        ))
+        self.network.add_node(
+            QuantumNode(
+                node_id="alice",
+                node_type=QuantumNodeType.END_NODE,
+                position_km=0.0,
+            )
+        )
+        self.network.add_node(
+            QuantumNode(
+                node_id="bob",
+                node_type=QuantumNodeType.END_NODE,
+                position_km=spacing_km * (num_nodes - 1),
+            )
+        )
 
         # Create repeaters
         for i in range(1, num_nodes - 1):
             rid = f"repeater_{i}"
-            self.network.add_node(QuantumNode(
-                node_id=rid,
-                node_type=QuantumNodeType.REPEATER,
-                position_km=spacing_km * i,
-            ))
+            self.network.add_node(
+                QuantumNode(
+                    node_id=rid,
+                    node_type=QuantumNodeType.REPEATER,
+                    position_km=spacing_km * i,
+                )
+            )
             self.network.add_repeater(QuantumRepeater(rid))
 
         # Create channels
@@ -697,12 +721,14 @@ class QuantumInternetService:
             n1 = nodes[i]
             n2 = nodes[i + 1]
             dist = abs(self.network.nodes[n2].position_km - self.network.nodes[n1].position_km)
-            self.network.add_channel(QuantumChannel(
-                channel_id=f"ch_{n1}_{n2}",
-                source_node=n1,
-                target_node=n2,
-                length_km=dist,
-            ))
+            self.network.add_channel(
+                QuantumChannel(
+                    channel_id=f"ch_{n1}_{n2}",
+                    source_node=n1,
+                    target_node=n2,
+                    length_km=dist,
+                )
+            )
 
         return {
             "nodes": len(self.network.nodes),

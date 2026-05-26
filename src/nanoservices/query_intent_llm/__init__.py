@@ -1,4 +1,5 @@
 """Query Intent LLM — TranceX Phase 8."""
+
 from .query_intent_llm import (
     ConversionResult,
     ConversionStatus,

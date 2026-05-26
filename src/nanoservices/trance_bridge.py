@@ -23,17 +23,19 @@ logger = logging.getLogger(__name__)
 
 class NRCDialect(Enum):
     """Supported NRC dialects."""
-    TRANCE_SCALA = "trance_scala"       # Original TraNCE Scala DSL
-    TRANCEX_PYTHON = "trancex_python"   # Python NRC DSL
-    TRANCEX_GO = "trancex_go"           # Go NRC DSL
-    TRANCEX_RUST = "trancex_rust"       # Rust NRC DSL
-    TRANCEX_WASM = "trancex_wasm"       # WASM NRC DSL
-    SQL_LIKE = "sql_like"               # SQL-like syntax
-    MONGO_LIKE = "mongo_like"           # MongoDB-like syntax
+
+    TRANCE_SCALA = "trance_scala"  # Original TraNCE Scala DSL
+    TRANCEX_PYTHON = "trancex_python"  # Python NRC DSL
+    TRANCEX_GO = "trancex_go"  # Go NRC DSL
+    TRANCEX_RUST = "trancex_rust"  # Rust NRC DSL
+    TRANCEX_WASM = "trancex_wasm"  # WASM NRC DSL
+    SQL_LIKE = "sql_like"  # SQL-like syntax
+    MONGO_LIKE = "mongo_like"  # MongoDB-like syntax
 
 
 class QueryType(Enum):
     """NRC query types."""
+
     SELECT = "select"
     PROJECT = "project"
     JOIN = "join"
@@ -47,6 +49,7 @@ class QueryType(Enum):
 
 class CompilationTarget(Enum):
     """NRC query compilation targets."""
+
     SCALA_JVM = "scala_jvm"
     PYTHON_CPython = "python_cpython"
     GO_NATIVE = "go_native"
@@ -59,6 +62,7 @@ class CompilationTarget(Enum):
 @dataclass
 class NRCQueryDefinition:
     """Complete NRC query definition with metadata."""
+
     query_id: str = ""
     dsl: str = ""
     dialect: NRCDialect = NRCDialect.TRANCEX_PYTHON
@@ -115,6 +119,7 @@ class NRCQueryDefinition:
 @dataclass
 class CompilationRequest:
     """Request to compile an NRC query to a target."""
+
     request_id: str = ""
     query: Optional[NRCQueryDefinition] = None
     target: CompilationTarget = CompilationTarget.PYTHON_CPython
@@ -130,6 +135,7 @@ class CompilationRequest:
 @dataclass
 class CompilationResult:
     """Result of NRC query compilation."""
+
     result_id: str = ""
     request: Optional[CompilationRequest] = None
     success: bool = False
@@ -152,7 +158,9 @@ class NRCQueryParser:
     TranceX Python/Go/Rust DSLs.
     """
 
-    def parse(self, dsl: str, dialect: NRCDialect = NRCDialect.TRANCEX_PYTHON) -> NRCQueryDefinition:
+    def parse(
+        self, dsl: str, dialect: NRCDialect = NRCDialect.TRANCEX_PYTHON
+    ) -> NRCQueryDefinition:
         """Parse an NRC DSL string into a structured query definition."""
         if dialect == NRCDialect.TRANCE_SCALA:
             return self._parse_scala(dsl)
@@ -171,7 +179,7 @@ class NRCQueryParser:
         )
 
         # Extract generators: x <- Relation
-        generators = re.findall(r'(\w+)\s*<-\s*(\w+)', dsl)
+        generators = re.findall(r"(\w+)\s*<-\s*(\w+)", dsl)
         for var, rel in generators:
             query.relations.append(rel)
             query.variables[var] = "Any"
@@ -199,7 +207,9 @@ class NRCQueryParser:
         )
 
         # Extract FROM relations
-        from_match = re.search(r'FROM\s+(.+?)(?:\s+WHERE|\s+NEST|\s+GROUP|\s*$)', dsl, re.IGNORECASE)
+        from_match = re.search(
+            r"FROM\s+(.+?)(?:\s+WHERE|\s+NEST|\s+GROUP|\s*$)", dsl, re.IGNORECASE
+        )
         if from_match:
             relations = [r.strip() for r in from_match.group(1).split(",")]
             query.relations = relations
@@ -233,7 +243,7 @@ class NRCQueryParser:
         )
 
         # TranceX DSL: { projections } FROM relations WHERE conditions
-        from_match = re.search(r'FROM\s+(.+?)(?:\s+WHERE|\s+NEST|\s+JOIN|\s*$)', dsl, re.IGNORECASE)
+        from_match = re.search(r"FROM\s+(.+?)(?:\s+WHERE|\s+NEST|\s+JOIN|\s*$)", dsl, re.IGNORECASE)
         if from_match:
             relations = [r.strip() for r in from_match.group(1).split(",")]
             query.relations = relations
@@ -351,9 +361,31 @@ class ScalaBridge:
         elif query.query_type == QueryType.NEST:
             outer = var_names[0] if var_names else "x"
             inner = var_names[1] if len(var_names) > 1 else "y"
-            return "[[" + inner + " for " + inner + " in " + outer + ".nested] for " + outer + " in " + relations[0] + "]"
+            return (
+                "[["
+                + inner
+                + " for "
+                + inner
+                + " in "
+                + outer
+                + ".nested] for "
+                + outer
+                + " in "
+                + relations[0]
+                + "]"
+            )
         elif query.query_type == QueryType.FILTER:
-            return "[" + var_names[0] + " for " + var_names[0] + " in " + relations[0] + " if condition(" + var_names[0] + ")]"
+            return (
+                "["
+                + var_names[0]
+                + " for "
+                + var_names[0]
+                + " in "
+                + relations[0]
+                + " if condition("
+                + var_names[0]
+                + ")]"
+            )
         else:
             return "# NRC Query: " + query.dsl + "\nresult = list(" + relations[0] + ")"
 
@@ -404,7 +436,7 @@ class ScalaBridge:
                 "// NRC Nested Query: " + query.dsl + "\n"
                 "fn process_nested(data: &[Value]) -> Vec<Vec<Value>> {\n"
                 "    data.iter().map(|x| {\n"
-                "        x.get(\"nested\")\n"
+                '        x.get("nested")\n'
                 "            .and_then(|n| n.as_array())\n"
                 "            .cloned()\n"
                 "            .unwrap_or_default()\n"
@@ -420,7 +452,7 @@ class ScalaBridge:
         nesting = query.nesting_depth
 
         return {
-            "estimated_latency_ms": 10.0 * n_relations * (2 ** nesting),
+            "estimated_latency_ms": 10.0 * n_relations * (2**nesting),
             "memory_mb": 1.0 * n_relations * (nesting + 1),
             "complexity": float(n_relations * (nesting + 1)),
         }
@@ -468,19 +500,19 @@ class TranceBridge:
         result = await self.scala_bridge.compile_query(request)
 
         # Record in history
-        self._query_history.append({
-            "query_id": query.query_id,
-            "dialect": dialect.value,
-            "target": target.value,
-            "success": result.success,
-            "compilation_time_ms": result.compilation_time_ms,
-        })
+        self._query_history.append(
+            {
+                "query_id": query.query_id,
+                "dialect": dialect.value,
+                "target": target.value,
+                "success": result.success,
+                "compilation_time_ms": result.compilation_time_ms,
+            }
+        )
 
         return result
 
-    def translate_dialect(
-        self, dsl: str, from_dialect: NRCDialect, to_dialect: NRCDialect
-    ) -> str:
+    def translate_dialect(self, dsl: str, from_dialect: NRCDialect, to_dialect: NRCDialect) -> str:
         """Translate an NRC query between dialects."""
         query = self.parser.parse(dsl, from_dialect)
 
@@ -510,7 +542,8 @@ class TranceBridge:
         return {
             "total_queries": total,
             "success_rate": successful / total if total > 0 else 0,
-            "avg_compilation_time_ms": sum(q["compilation_time_ms"] for q in self._query_history) / total,
+            "avg_compilation_time_ms": sum(q["compilation_time_ms"] for q in self._query_history)
+            / total,
             "dialect_distribution": {
                 d: sum(1 for q in self._query_history if q["dialect"] == d)
                 for d in set(q["dialect"] for q in self._query_history)

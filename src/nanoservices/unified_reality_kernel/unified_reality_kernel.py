@@ -25,8 +25,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ────────────────────────────────────────────────────────────────
 
+
 class RealityLayer(Enum):
     """Reality computation layers."""
+
     PHYSICAL = "physical"
     DIGITAL = "digital"
     VIRTUAL = "virtual"
@@ -39,6 +41,7 @@ class RealityLayer(Enum):
 
 class SyncMode(Enum):
     """State synchronization modes."""
+
     REAL_TIME = "real_time"
     PERIODIC = "periodic"
     ON_DEMAND = "on_demand"
@@ -48,6 +51,7 @@ class SyncMode(Enum):
 
 class KernelState(Enum):
     """Reality kernel states."""
+
     INITIALIZING = "initializing"
     RUNNING = "running"
     SYNCING = "syncing"
@@ -59,6 +63,7 @@ class KernelState(Enum):
 
 class ConsistencyLevel(Enum):
     """State consistency guarantees."""
+
     STRONG = "strong"
     EVENTUAL = "eventual"
     CAUSAL = "causal"
@@ -68,6 +73,7 @@ class ConsistencyLevel(Enum):
 
 class EntityType(Enum):
     """Types of entities across realities."""
+
     AGENT = "agent"
     OBJECT = "object"
     ENVIRONMENT = "environment"
@@ -79,9 +85,11 @@ class EntityType(Enum):
 
 # ─── Data Models ──────────────────────────────────────────────────────────
 
+
 @dataclass
 class RealityEntity:
     """An entity that exists across one or more reality layers."""
+
     entity_id: str
     entity_type: EntityType = EntityType.OBJECT
     name: str = ""
@@ -89,9 +97,7 @@ class RealityEntity:
     properties: Dict[str, Any] = field(default_factory=dict)
     state_version: int = 0
     is_synchronized: bool = True
-    created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -107,12 +113,11 @@ class RealityEntity:
 @dataclass
 class RealityState:
     """State snapshot of a reality layer."""
+
     state_id: str
     layer: RealityLayer
     entities: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     version: int = 0
     consistency: ConsistencyLevel = ConsistencyLevel.EVENTUAL
 
@@ -129,6 +134,7 @@ class RealityState:
 @dataclass
 class CrossRealityMapping:
     """Mapping between entities across reality layers."""
+
     mapping_id: str
     source_entity: str
     source_layer: RealityLayer
@@ -152,15 +158,14 @@ class CrossRealityMapping:
 @dataclass
 class RealityEvent:
     """An event that propagates across reality layers."""
+
     event_id: str
     source_layer: RealityLayer
     event_type: str
     data: Dict[str, Any] = field(default_factory=dict)
     target_layers: List[RealityLayer] = field(default_factory=list)
     propagation_delay_ms: float = 0.0
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     is_propagated: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
@@ -174,6 +179,7 @@ class RealityEvent:
 
 
 # ─── State Synchronizer ──────────────────────────────────────────────────
+
 
 class StateSynchronizer:
     """Synchronizes state across reality layers.
@@ -217,7 +223,9 @@ class StateSynchronizer:
         if tgt_state:
             for eid, src_entity in src_state.entities.items():
                 if eid in tgt_state.entities:
-                    if src_entity.get("state_version", 0) != tgt_state.entities[eid].get("state_version", 0):
+                    if src_entity.get("state_version", 0) != tgt_state.entities[eid].get(
+                        "state_version", 0
+                    ):
                         conflicts += 1
                 synced_entities += 1
         else:
@@ -253,6 +261,7 @@ class StateSynchronizer:
 
 # ─── Event Propagator ─────────────────────────────────────────────────────
 
+
 class EventPropagator:
     """Propagates events across reality layers."""
 
@@ -285,6 +294,7 @@ class EventPropagator:
 
 
 # ─── Main Service ─────────────────────────────────────────────────────────
+
 
 class UnifiedRealityKernelService:
     """Unified Reality Kernel Service for the Tranc3 ecosystem.
@@ -369,16 +379,10 @@ class UnifiedRealityKernelService:
     ) -> Dict[str, Any]:
         """Synchronize state between two reality layers."""
         # Take snapshots first
-        source_entities = {
-            eid: e for eid, e in self.entities.items()
-            if source in e.layers
-        }
+        source_entities = {eid: e for eid, e in self.entities.items() if source in e.layers}
         self.synchronizer.snapshot(source, source_entities)
 
-        target_entities = {
-            eid: e for eid, e in self.entities.items()
-            if target in e.layers
-        }
+        target_entities = {eid: e for eid, e in self.entities.items() if target in e.layers}
         self.synchronizer.snapshot(target, target_entities)
 
         return self.synchronizer.sync_layers(source, target)

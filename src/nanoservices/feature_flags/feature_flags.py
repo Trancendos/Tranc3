@@ -94,11 +94,23 @@ class FeatureFlagService:
         # Register core feature flags
         core_flags = [
             ("quantum_solver.enabled", "Quantum Solver", "Enable QAOA/VQE quantum optimization"),
-            ("chaos_engineering.enabled", "Chaos Engineering", "Enable fault injection experiments"),
+            (
+                "chaos_engineering.enabled",
+                "Chaos Engineering",
+                "Enable fault injection experiments",
+            ),
             ("genetic_optimizer.enabled", "Genetic Optimizer", "Enable NSGA-II optimization"),
             ("auto_healing.enabled", "Auto Healing", "Enable proactive self-repair"),
-            ("predictive_scaling.enabled", "Predictive Scaling", "Enable anticipatory resource provisioning"),
-            ("circuit_breaker.enabled", "Circuit Breaker Mesh", "Enable inter-service fault tolerance"),
+            (
+                "predictive_scaling.enabled",
+                "Predictive Scaling",
+                "Enable anticipatory resource provisioning",
+            ),
+            (
+                "circuit_breaker.enabled",
+                "Circuit Breaker Mesh",
+                "Enable inter-service fault tolerance",
+            ),
             ("event_sourcing.enabled", "Event Sourcing", "Enable CQRS event sourcing"),
             ("neural_symbolic.enabled", "Neural Symbolic", "Enable neural-symbolic reasoning"),
             ("consciousness.enabled", "Consciousness Field", "Enable IIT consciousness simulation"),
@@ -109,12 +121,24 @@ class FeatureFlagService:
 
         logger.info("FeatureFlagService initialized with %d core flags", len(core_flags))
 
-    def create_flag(self, key: str, name: str, description: str = "", state: FlagState = FlagState.DISABLED, default_value: Any = False, owner: str = "") -> FeatureFlag:
+    def create_flag(
+        self,
+        key: str,
+        name: str,
+        description: str = "",
+        state: FlagState = FlagState.DISABLED,
+        default_value: Any = False,
+        owner: str = "",
+    ) -> FeatureFlag:
         if key in self._flags:
             return self._flags[key]
         flag = FeatureFlag(
-            key=key, name=name, description=description,
-            state=state, default_value=default_value, owner=owner,
+            key=key,
+            name=name,
+            description=description,
+            state=state,
+            default_value=default_value,
+            owner=owner,
         )
         self._flags[key] = flag
         self._audit_action(key, "created", None, state.value, owner)
@@ -128,7 +152,9 @@ class FeatureFlagService:
 
         # Kill switch overrides everything
         if flag.state == FlagState.KILL_SWITCH:
-            return FlagEvaluation(flag_key=flag_key, enabled=False, reason="kill_switch", variant="disabled")
+            return FlagEvaluation(
+                flag_key=flag_key, enabled=False, reason="kill_switch", variant="disabled"
+            )
 
         # Disabled state
         if flag.state == FlagState.DISABLED:
@@ -139,15 +165,21 @@ class FeatureFlagService:
                         user_id = context.get("user_id", "")
                         if user_id in rule.user_ids:
                             return FlagEvaluation(
-                                flag_key=flag_key, enabled=True, reason="user_override",
-                                rule_name=rule.name, variant=rule.variant,
+                                flag_key=flag_key,
+                                enabled=True,
+                                reason="user_override",
+                                rule_name=rule.name,
+                                variant=rule.variant,
                             )
                     if rule.strategy == RolloutStrategy.SERVICE_LIST:
                         service = context.get("service_name", "")
                         if service in rule.service_names:
                             return FlagEvaluation(
-                                flag_key=flag_key, enabled=True, reason="service_override",
-                                rule_name=rule.name, variant=rule.variant,
+                                flag_key=flag_key,
+                                enabled=True,
+                                reason="service_override",
+                                rule_name=rule.name,
+                                variant=rule.variant,
                             )
             return FlagEvaluation(flag_key=flag_key, enabled=False, reason="disabled")
 
@@ -161,27 +193,60 @@ class FeatureFlagService:
             if result is not None:
                 return result
 
-        return FlagEvaluation(flag_key=flag_key, enabled=True, reason="enabled_default", variant="default")
+        return FlagEvaluation(
+            flag_key=flag_key, enabled=True, reason="enabled_default", variant="default"
+        )
 
-    def _evaluate_rule(self, rule: FlagRule, context: Dict[str, Any], flag_key: str) -> Optional[FlagEvaluation]:
+    def _evaluate_rule(
+        self, rule: FlagRule, context: Dict[str, Any], flag_key: str
+    ) -> Optional[FlagEvaluation]:
         if rule.strategy == RolloutStrategy.ALL:
-            return FlagEvaluation(flag_key=flag_key, enabled=True, reason="rule_all", variant=rule.variant, rule_name=rule.name)
+            return FlagEvaluation(
+                flag_key=flag_key,
+                enabled=True,
+                reason="rule_all",
+                variant=rule.variant,
+                rule_name=rule.name,
+            )
 
         if rule.strategy == RolloutStrategy.PERCENTAGE:
             user_id = context.get("user_id", str(random.random()))
             bucket = self._hash_bucket(f"{flag_key}:{user_id}")
             if bucket < rule.percentage / 100.0:
-                return FlagEvaluation(flag_key=flag_key, enabled=True, reason="rule_percentage", variant=rule.variant, rule_name=rule.name)
-            return FlagEvaluation(flag_key=flag_key, enabled=False, reason="rule_percentage_excluded", rule_name=rule.name)
+                return FlagEvaluation(
+                    flag_key=flag_key,
+                    enabled=True,
+                    reason="rule_percentage",
+                    variant=rule.variant,
+                    rule_name=rule.name,
+                )
+            return FlagEvaluation(
+                flag_key=flag_key,
+                enabled=False,
+                reason="rule_percentage_excluded",
+                rule_name=rule.name,
+            )
 
         if rule.strategy == RolloutStrategy.USER_LIST:
             if context.get("user_id", "") in rule.user_ids:
-                return FlagEvaluation(flag_key=flag_key, enabled=True, reason="rule_user_list", variant=rule.variant, rule_name=rule.name)
+                return FlagEvaluation(
+                    flag_key=flag_key,
+                    enabled=True,
+                    reason="rule_user_list",
+                    variant=rule.variant,
+                    rule_name=rule.name,
+                )
             return None  # Fall through to next rule
 
         if rule.strategy == RolloutStrategy.SERVICE_LIST:
             if context.get("service_name", "") in rule.service_names:
-                return FlagEvaluation(flag_key=flag_key, enabled=True, reason="rule_service_list", variant=rule.variant, rule_name=rule.name)
+                return FlagEvaluation(
+                    flag_key=flag_key,
+                    enabled=True,
+                    reason="rule_service_list",
+                    variant=rule.variant,
+                    rule_name=rule.name,
+                )
             return None
 
         if rule.strategy == RolloutStrategy.GRADUAL:
@@ -192,16 +257,38 @@ class FeatureFlagService:
                 user_id = context.get("user_id", str(random.random()))
                 bucket = self._hash_bucket(f"{flag_key}:{user_id}")
                 if bucket < progress:
-                    return FlagEvaluation(flag_key=flag_key, enabled=True, reason="rule_gradual", variant=rule.variant, rule_name=rule.name)
+                    return FlagEvaluation(
+                        flag_key=flag_key,
+                        enabled=True,
+                        reason="rule_gradual",
+                        variant=rule.variant,
+                        rule_name=rule.name,
+                    )
             return None
 
         if rule.strategy == RolloutStrategy.SCHEDULED:
             now = time.time()
             if rule.start_time and now < rule.start_time:
-                return FlagEvaluation(flag_key=flag_key, enabled=False, reason="rule_scheduled_not_started", rule_name=rule.name)
+                return FlagEvaluation(
+                    flag_key=flag_key,
+                    enabled=False,
+                    reason="rule_scheduled_not_started",
+                    rule_name=rule.name,
+                )
             if rule.end_time and now > rule.end_time:
-                return FlagEvaluation(flag_key=flag_key, enabled=False, reason="rule_scheduled_expired", rule_name=rule.name)
-            return FlagEvaluation(flag_key=flag_key, enabled=True, reason="rule_scheduled_active", variant=rule.variant, rule_name=rule.name)
+                return FlagEvaluation(
+                    flag_key=flag_key,
+                    enabled=False,
+                    reason="rule_scheduled_expired",
+                    rule_name=rule.name,
+                )
+            return FlagEvaluation(
+                flag_key=flag_key,
+                enabled=True,
+                reason="rule_scheduled_active",
+                variant=rule.variant,
+                rule_name=rule.name,
+            )
 
         return None
 
@@ -244,11 +331,23 @@ class FeatureFlagService:
         self._audit_action(flag_key, "rule_added", None, rule.name)
         return True
 
-    def _audit_action(self, flag_key: str, action: str, old_value: Any = None, new_value: Any = None, actor: str = "") -> None:
-        self._audit.append(FlagAuditEntry(
-            flag_key=flag_key, action=action, old_value=old_value,
-            new_value=new_value, actor=actor,
-        ))
+    def _audit_action(
+        self,
+        flag_key: str,
+        action: str,
+        old_value: Any = None,
+        new_value: Any = None,
+        actor: str = "",
+    ) -> None:
+        self._audit.append(
+            FlagAuditEntry(
+                flag_key=flag_key,
+                action=action,
+                old_value=old_value,
+                new_value=new_value,
+                actor=actor,
+            )
+        )
 
     def get_flag(self, key: str) -> Optional[FeatureFlag]:
         return self._flags.get(key)
@@ -265,18 +364,24 @@ class FeatureFlagService:
     def add_change_listener(self, listener: Callable[[str, FlagState, FlagState], None]) -> None:
         self._change_listeners.append(listener)
 
-    def gradual_rollout(self, flag_key: str, start_time: float, end_time: float, actor: str = "") -> bool:
+    def gradual_rollout(
+        self, flag_key: str, start_time: float, end_time: float, actor: str = ""
+    ) -> bool:
         flag = self._flags.get(flag_key)
         if not flag:
             return False
         flag.state = FlagState.ENABLED
-        flag.rules.append(FlagRule(
-            name="gradual_rollout",
-            strategy=RolloutStrategy.GRADUAL,
-            start_time=start_time,
-            end_time=end_time,
-            priority=100,
-        ))
+        flag.rules.append(
+            FlagRule(
+                name="gradual_rollout",
+                strategy=RolloutStrategy.GRADUAL,
+                start_time=start_time,
+                end_time=end_time,
+                priority=100,
+            )
+        )
         flag.updated_at = time.time()
-        self._audit_action(flag_key, "gradual_rollout_started", None, f"{start_time}-{end_time}", actor)
+        self._audit_action(
+            flag_key, "gradual_rollout_started", None, f"{start_time}-{end_time}", actor
+        )
         return True

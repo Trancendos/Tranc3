@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class KernelBackend(Enum):
     """GPU kernel compilation backends."""
+
     CUDA = "cuda"
     OPENCL = "opencl"
     METAL = "metal"
@@ -31,6 +32,7 @@ class KernelBackend(Enum):
 
 class KernelType(Enum):
     """Types of GPU kernels."""
+
     JOIN = "join"
     AGGREGATE = "aggregate"
     FILTER = "filter"
@@ -45,6 +47,7 @@ class KernelType(Enum):
 
 class TuningStatus(Enum):
     """TVM auto-tuning status."""
+
     PENDING = "pending"
     TUNING = "tuning"
     COMPLETED = "completed"
@@ -55,6 +58,7 @@ class TuningStatus(Enum):
 @dataclass
 class KernelSpec:
     """Specification for a GPU kernel to be generated."""
+
     spec_id: str = ""
     kernel_type: KernelType = KernelType.JOIN
     backend: KernelBackend = KernelBackend.CUDA
@@ -73,6 +77,7 @@ class KernelSpec:
 @dataclass
 class TuningConfig:
     """TVM auto-tuning configuration."""
+
     n_trials: int = 1000
     early_stopping: int = 100
     target_device: str = "nvidia/geforce-rtx-4090"
@@ -87,6 +92,7 @@ class TuningConfig:
 @dataclass
 class TuningResult:
     """Result from TVM auto-tuning."""
+
     result_id: str = ""
     kernel_spec: Optional[KernelSpec] = None
     status: TuningStatus = TuningStatus.PENDING
@@ -107,6 +113,7 @@ class TuningResult:
 @dataclass
 class CompiledKernel:
     """A compiled and tuned GPU kernel ready for deployment."""
+
     kernel_id: str = ""
     spec: Optional[KernelSpec] = None
     tuning_result: Optional[TuningResult] = None
@@ -122,8 +129,10 @@ class CompiledKernel:
             self.kernel_id = f"gpu-{uuid.uuid4().hex[:8]}"
         if not self.checksum and self.spec:
             self.checksum = hashlib.sha3_256(
-                json.dumps({"type": self.spec.kernel_type.value, "backend": self.spec.backend.value},
-                           sort_keys=True).encode()
+                json.dumps(
+                    {"type": self.spec.kernel_type.value, "backend": self.spec.backend.value},
+                    sort_keys=True,
+                ).encode()
             ).hexdigest()[:16]
 
 
@@ -287,9 +296,7 @@ class QuantumTVMTuner:
     def __init__(self, quantum_solver=None):
         self.quantum_solver = quantum_solver
 
-    async def quantum_tune(
-        self, spec: KernelSpec, classical_result: TuningResult
-    ) -> TuningResult:
+    async def quantum_tune(self, spec: KernelSpec, classical_result: TuningResult) -> TuningResult:
         """Apply quantum optimization to TVM tuning search space.
 
         Models the TVM configuration space as a QUBO problem and
@@ -314,9 +321,10 @@ class QuantumTVMTuner:
                         kernel_spec=spec,
                         status=TuningStatus.QUANTUM_ESCALATED,
                         best_latency_ms=quantum_latency,
-                        best_throughput_gflops=classical_result.best_throughput_gflops * (
-                            classical_result.best_latency_ms / quantum_latency
-                        ) if quantum_latency > 0 else classical_result.best_throughput_gflops,
+                        best_throughput_gflops=classical_result.best_throughput_gflops
+                        * (classical_result.best_latency_ms / quantum_latency)
+                        if quantum_latency > 0
+                        else classical_result.best_throughput_gflops,
                         n_trials_completed=classical_result.n_trials_completed + 100,
                         tuning_time_seconds=classical_result.tuning_time_seconds + 2.0,
                         best_config=quantum_config,
@@ -327,17 +335,26 @@ class QuantumTVMTuner:
 
         return classical_result
 
-    def _build_tvm_qubo(
-        self, spec: KernelSpec, classical: TuningResult
-    ) -> Dict[str, Any]:
+    def _build_tvm_qubo(self, spec: KernelSpec, classical: TuningResult) -> Dict[str, Any]:
         """Model TVM tuning as a QUBO optimization problem."""
         # Configuration variables as binary decisions
         config_vars = {
-            "block_128": 0, "block_256": 1, "block_512": 2,
-            "tile_16": 3, "tile_32": 4, "tile_64": 5,
-            "unroll_1": 6, "unroll_2": 7, "unroll_4": 8, "unroll_8": 9,
-            "vec_1": 10, "vec_2": 11, "vec_4": 12,
-            "shared_16kb": 13, "shared_32kb": 14, "shared_48kb": 15,
+            "block_128": 0,
+            "block_256": 1,
+            "block_512": 2,
+            "tile_16": 3,
+            "tile_32": 4,
+            "tile_64": 5,
+            "unroll_1": 6,
+            "unroll_2": 7,
+            "unroll_4": 8,
+            "unroll_8": 9,
+            "vec_1": 10,
+            "vec_2": 11,
+            "vec_4": 12,
+            "shared_16kb": 13,
+            "shared_32kb": 14,
+            "shared_48kb": 15,
         }
 
         # QUBO matrix (simplified for illustration)
@@ -345,18 +362,18 @@ class QuantumTVMTuner:
         qubo_matrix = [[0.0] * n_vars for _ in range(n_vars)]
 
         # Penalty for invalid combinations
-        for i in range(3):      # block size (one-hot)
+        for i in range(3):  # block size (one-hot)
             for j in range(3):
                 if i != j:
-                    qubo_matrix[config_vars[f"block_{[128,256,512][i]}"]][
-                        config_vars[f"block_{[128,256,512][j]}"]
+                    qubo_matrix[config_vars[f"block_{[128, 256, 512][i]}"]][
+                        config_vars[f"block_{[128, 256, 512][j]}"]
                     ] = 10.0
 
-        for i in range(3):      # tile size (one-hot)
+        for i in range(3):  # tile size (one-hot)
             for j in range(3):
                 if i != j:
-                    qubo_matrix[config_vars[f"tile_{[16,32,64][i]}"]][
-                        config_vars[f"tile_{[16,32,64][j]}"]
+                    qubo_matrix[config_vars[f"tile_{[16, 32, 64][i]}"]][
+                        config_vars[f"tile_{[16, 32, 64][j]}"]
                     ] = 10.0
 
         return {
@@ -425,7 +442,7 @@ class BiomedicalAccelerator:
         self,
         operation: str,
         sequence_length: int = 3_000_000_000,  # Human genome
-        variant_count: int = 4_000_000,        # ~4M variants per genome
+        variant_count: int = 4_000_000,  # ~4M variants per genome
         dtype: str = "float32",
     ) -> CompiledKernel:
         """Generate a GPU kernel for a genomic NRC query operation."""
@@ -436,7 +453,7 @@ class BiomedicalAccelerator:
             backend=KernelBackend.CUDA,
             input_shapes=[
                 (sequence_length // 1000, 4),  # Sequence encoding
-                (variant_count // 1000, 10),   # Variant features
+                (variant_count // 1000, 10),  # Variant features
             ],
             output_shape=(variant_count // 1000, 5),
             dtype=dtype,
@@ -457,7 +474,7 @@ class BiomedicalAccelerator:
     async def accelerate_protein_query(
         self,
         protein_length: int = 300,  # Average protein
-        embedding_dim: int = 1280,   # ESM-2 embedding dim
+        embedding_dim: int = 1280,  # ESM-2 embedding dim
     ) -> CompiledKernel:
         """Generate GPU kernel for protein structure NRC queries."""
         spec = KernelSpec(
@@ -522,13 +539,13 @@ class GPUKernelService:
         kernel = await self.generator.compile_kernel(spec)
 
         # Quantum escalation if enabled and kernel is complex
-        if (self.quantum_escalation
-                and kernel.tuning_result
-                and spec.estimated_flops > 1_000_000_000
-                and self.quantum_tuner.quantum_solver):
-            kernel.tuning_result = await self.quantum_tuner.quantum_tune(
-                spec, kernel.tuning_result
-            )
+        if (
+            self.quantum_escalation
+            and kernel.tuning_result
+            and spec.estimated_flops > 1_000_000_000
+            and self.quantum_tuner.quantum_solver
+        ):
+            kernel.tuning_result = await self.quantum_tuner.quantum_tune(spec, kernel.tuning_result)
 
         self._kernels[kernel.kernel_id] = kernel
         return kernel
@@ -562,12 +579,14 @@ class GPUKernelService:
         """Get GPU kernel service metrics."""
         total_kernels = len(self._kernels)
         quantum_escalated = sum(
-            1 for k in self._kernels.values()
+            1
+            for k in self._kernels.values()
             if k.tuning_result and k.tuning_result.quantum_escalated
         )
         avg_runtime = (
             sum(k.runtime_ms for k in self._kernels.values()) / total_kernels
-            if total_kernels > 0 else 0
+            if total_kernels > 0
+            else 0
         )
 
         return {

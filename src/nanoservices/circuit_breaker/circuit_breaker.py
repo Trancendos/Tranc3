@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 class CircuitState(Enum):
-    CLOSED = "closed"          # Normal operation
-    OPEN = "open"              # Failing — reject requests
-    HALF_OPEN = "half_open"    # Testing recovery
+    CLOSED = "closed"  # Normal operation
+    OPEN = "open"  # Failing — reject requests
+    HALF_OPEN = "half_open"  # Testing recovery
 
 
 class FailureType(Enum):
@@ -141,7 +141,10 @@ class CircuitBreaker:
             # Check slow call rate
             if self._metrics.total_calls > 0:
                 slow_rate = self._metrics.slow_calls / self._metrics.total_calls
-                if slow_rate > self._config.slow_call_rate_threshold and self._state == CircuitState.CLOSED:
+                if (
+                    slow_rate > self._config.slow_call_rate_threshold
+                    and self._state == CircuitState.CLOSED
+                ):
                     self._transition(CircuitState.OPEN)
             # Reset window
             self._metrics.window_start = now
@@ -156,7 +159,9 @@ class CircuitBreaker:
             self._half_open_calls = 0
             self._metrics.consecutive_successes = 0
 
-        logger.info("Circuit %s: %s → %s", self._config.service_name, old_state.value, new_state.value)
+        logger.info(
+            "Circuit %s: %s → %s", self._config.service_name, old_state.value, new_state.value
+        )
         for listener in self._listeners:
             try:
                 listener(old_state, new_state)

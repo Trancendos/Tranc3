@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 class ROS2TopicType(Enum):
     """ROS2 standard topic types."""
+
     SENSOR_MSGS_IMAGE = "sensor_msgs/Image"
     SENSOR_MSGS_LASER_SCAN = "sensor_msgs/LaserScan"
     SENSOR_MSGS_IMU = "sensor_msgs/Imu"
@@ -50,6 +51,7 @@ class ROS2TopicType(Enum):
 
 class ROS2QoSPolicy(Enum):
     """ROS2 Quality of Service policies."""
+
     RELIABLE = "reliable"
     BEST_EFFORT = "best_effort"
     TRANSIENT_LOCAL = "transient_local"
@@ -58,12 +60,14 @@ class ROS2QoSPolicy(Enum):
 
 class ROS2Reliability(Enum):
     """ROS2 reliability levels."""
+
     RELIABLE = "reliable"
     BEST_EFFORT = "best_effort"
 
 
 class FlowNodeType(Enum):
     """Types of nodes in a robot task flow."""
+
     SENSOR_INPUT = "sensor_input"
     SENSOR_FUSION = "sensor_fusion"
     PERCEPTION = "perception"
@@ -81,6 +85,7 @@ class FlowNodeType(Enum):
 @dataclass
 class ROS2NodeConfig:
     """Configuration for a ROS2 node within the DNF extension."""
+
     node_id: str = ""
     node_name: str = ""
     namespace: str = "/"
@@ -96,6 +101,7 @@ class ROS2NodeConfig:
 @dataclass
 class ROS2Message:
     """Represents a ROS2 message with metadata."""
+
     msg_id: str = ""
     topic: str = ""
     topic_type: ROS2TopicType = ROS2TopicType.STD_MSGS_STRING
@@ -142,6 +148,7 @@ class ROS2Message:
 @dataclass
 class ROS2Subscription:
     """Tracks a ROS2 topic subscription."""
+
     sub_id: str = ""
     topic: str = ""
     topic_type: ROS2TopicType = ROS2TopicType.STD_MSGS_STRING
@@ -159,6 +166,7 @@ class ROS2Subscription:
 @dataclass
 class ROS2Publisher:
     """Tracks a ROS2 topic publisher."""
+
     pub_id: str = ""
     topic: str = ""
     topic_type: ROS2TopicType = ROS2TopicType.STD_MSGS_STRING
@@ -174,6 +182,7 @@ class ROS2Publisher:
 @dataclass
 class FlowNode:
     """A node in a robot task flow DAG."""
+
     node_id: str = ""
     node_type: FlowNodeType = FlowNodeType.SENSOR_INPUT
     label: str = ""
@@ -199,6 +208,7 @@ class FlowNode:
 @dataclass
 class FlowEdge:
     """An edge in a robot task flow DAG."""
+
     edge_id: str = ""
     source_node: str = ""  # node_id
     target_node: str = ""  # node_id
@@ -215,6 +225,7 @@ class FlowEdge:
 @dataclass
 class RobotTaskFlow:
     """Complete robot task flow DAG with ROS2 integration."""
+
     flow_id: str = ""
     name: str = ""
     description: str = ""
@@ -465,12 +476,14 @@ class DNFROS2Extension:
 
         # Connect inputs to fusion
         for input_node in input_nodes:
-            flow.edges.append(FlowEdge(
-                source_node=input_node.node_id,
-                target_node=fusion_node.node_id,
-                topic=f"{input_node.label}_data",
-                topic_type=input_node.config.get("topic_type", ROS2TopicType.STD_MSGS_STRING),
-            ))
+            flow.edges.append(
+                FlowEdge(
+                    source_node=input_node.node_id,
+                    target_node=fusion_node.node_id,
+                    topic=f"{input_node.label}_data",
+                    topic_type=input_node.config.get("topic_type", ROS2TopicType.STD_MSGS_STRING),
+                )
+            )
 
         # Create perception node
         perception_node = FlowNode(
@@ -479,11 +492,13 @@ class DNFROS2Extension:
             dependencies=[fusion_node.node_id],
         )
         flow.nodes.append(perception_node)
-        flow.edges.append(FlowEdge(
-            source_node=fusion_node.node_id,
-            target_node=perception_node.node_id,
-            topic="fused_data",
-        ))
+        flow.edges.append(
+            FlowEdge(
+                source_node=fusion_node.node_id,
+                target_node=perception_node.node_id,
+                topic="fused_data",
+            )
+        )
 
         # Create sink
         sink_node = FlowNode(
@@ -492,11 +507,13 @@ class DNFROS2Extension:
             dependencies=[perception_node.node_id],
         )
         flow.nodes.append(sink_node)
-        flow.edges.append(FlowEdge(
-            source_node=perception_node.node_id,
-            target_node=sink_node.node_id,
-            topic="perception_result",
-        ))
+        flow.edges.append(
+            FlowEdge(
+                source_node=perception_node.node_id,
+                target_node=sink_node.node_id,
+                topic="perception_result",
+            )
+        )
 
         # Validate and store
         errors = flow.validate()
@@ -704,7 +721,10 @@ class DNFROS2Extension:
         elif node.node_type == FlowNodeType.PERCEPTION:
             return {
                 "success": True,
-                "data": {"objects_detected": 3, "classifications": ["obstacle", "path", "landmark"]},
+                "data": {
+                    "objects_detected": 3,
+                    "classifications": ["obstacle", "path", "landmark"],
+                },
             }
         elif node.node_type == FlowNodeType.PLANNING:
             return {

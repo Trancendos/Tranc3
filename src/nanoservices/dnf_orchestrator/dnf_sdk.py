@@ -50,6 +50,7 @@ StepHandler = Callable[[Dict[str, Any]], Coroutine[Any, Any, Dict[str, Any]]]
 @dataclass
 class FlowStep:
     """A single step in a flow DAG."""
+
     id: str
     name: str
     service_name: str = ""
@@ -79,6 +80,7 @@ class FlowStep:
 @dataclass
 class StepResult:
     """Result of a step execution."""
+
     step_id: str
     status: StepStatus = StepStatus.IDLE
     output: Dict[str, Any] = field(default_factory=dict)
@@ -104,6 +106,7 @@ class StepResult:
 @dataclass
 class FlowDefinition:
     """Complete flow DAG definition."""
+
     id: str
     name: str
     version: str = "1.0.0"
@@ -148,6 +151,7 @@ class FlowDefinition:
 @dataclass
 class FlowExecution:
     """Running instance of a flow."""
+
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     flow_id: str = ""
     flow_version: str = ""
@@ -330,14 +334,17 @@ class FlowRunner:
             for step in definition.steps:
                 if step.id in completed:
                     continue
-                if step.id in execution.step_results and execution.step_results[step.id].status == StepStatus.RUNNING:
+                if (
+                    step.id in execution.step_results
+                    and execution.step_results[step.id].status == StepStatus.RUNNING
+                ):
                     continue
                 deps_met = all(dep in completed for dep in step.depends_on)
                 if deps_met and step.id not in completed:
                     # Check if dep failed
                     deps_failed = any(
-                        execution.step_results.get(dep) and
-                        execution.step_results[dep].status == StepStatus.FAILED
+                        execution.step_results.get(dep)
+                        and execution.step_results[dep].status == StepStatus.FAILED
                         for dep in step.depends_on
                     )
                     if deps_failed:
@@ -369,7 +376,9 @@ class FlowRunner:
                 for k, v in result.output.items():
                     execution.output[f"{step.id}.{k}"] = v
 
-    async def _run_step(self, step: FlowStep, definition: FlowDefinition, execution: FlowExecution) -> None:
+    async def _run_step(
+        self, step: FlowStep, definition: FlowDefinition, execution: FlowExecution
+    ) -> None:
         result = StepResult(step_id=step.id, status=StepStatus.RUNNING, started_at=time.time())
         execution.step_results[step.id] = result
 

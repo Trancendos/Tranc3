@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 class MetricType(Enum):
     """Prometheus metric types."""
+
     COUNTER = "counter"
     GAUGE = "gauge"
     HISTOGRAM = "histogram"
@@ -39,6 +40,7 @@ class MetricType(Enum):
 
 class AlertSeverity(Enum):
     """Alert severity levels."""
+
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"
@@ -48,6 +50,7 @@ class AlertSeverity(Enum):
 @dataclass
 class MetricLabel:
     """Label for dimensional metrics."""
+
     name: str
     value: str
 
@@ -55,6 +58,7 @@ class MetricLabel:
 @dataclass
 class MetricSample:
     """A single metric sample with timestamp."""
+
     value: float
     timestamp: float = 0.0
     labels: List[MetricLabel] = field(default_factory=list)
@@ -67,6 +71,7 @@ class MetricSample:
 @dataclass
 class NanoServiceMetric:
     """A Prometheus-compatible metric for nanoservices."""
+
     name: str = ""
     help_text: str = ""
     metric_type: MetricType = MetricType.GAUGE
@@ -75,9 +80,9 @@ class NanoServiceMetric:
     unit: str = ""
 
     # Histogram-specific fields
-    bucket_boundaries: List[float] = field(default_factory=lambda: [
-        0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0
-    ])
+    bucket_boundaries: List[float] = field(
+        default_factory=lambda: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+    )
     bucket_counts: List[int] = field(default_factory=list)
     sum_value: float = 0.0
     count_value: int = 0
@@ -147,21 +152,21 @@ class NanoServiceMetric:
             for i, boundary in enumerate(self.bucket_boundaries):
                 le_labels = self.labels + [MetricLabel("le", str(boundary))]
                 le_label_str = ", ".join(f'{l.name}="{l.value}"' for l in le_labels)
-                count = sum(self.bucket_counts[:i + 1])  # Cumulative
-                lines.append(f'{self.name}_bucket{{{le_label_str}}} {count}')
+                count = sum(self.bucket_counts[: i + 1])  # Cumulative
+                lines.append(f"{self.name}_bucket{{{le_label_str}}} {count}")
 
             # +Inf bucket
             inf_labels = self.labels + [MetricLabel("le", "+Inf")]
             inf_label_str = ", ".join(f'{l.name}="{l.value}"' for l in inf_labels)
-            lines.append(f'{self.name}_bucket{{{inf_label_str}}} {self.count_value}')
+            lines.append(f"{self.name}_bucket{{{inf_label_str}}} {self.count_value}")
 
-            lines.append(f'{self.name}_sum{label_str} {self.sum_value}')
-            lines.append(f'{self.name}_count{label_str} {self.count_value}')
+            lines.append(f"{self.name}_sum{label_str} {self.sum_value}")
+            lines.append(f"{self.name}_count{label_str} {self.count_value}")
 
         elif self.metric_type == MetricType.SUMMARY:
             # Summary format: _sum, _count, quantiles
-            lines.append(f'{self.name}_sum{label_str} {self.sum_value}')
-            lines.append(f'{self.name}_count{label_str} {self.count_value}')
+            lines.append(f"{self.name}_sum{label_str} {self.sum_value}")
+            lines.append(f"{self.name}_count{label_str} {self.count_value}")
             if self.samples:
                 sorted_samples = sorted(s.value for s in self.samples)
                 for q in [0.5, 0.9, 0.95, 0.99]:
@@ -169,11 +174,11 @@ class NanoServiceMetric:
                     idx = min(idx, len(sorted_samples) - 1)
                     q_labels = self.labels + [MetricLabel("quantile", str(q))]
                     q_label_str = ", ".join(f'{l.name}="{l.value}"' for l in q_labels)
-                    lines.append(f'{self.name}{q_label_str} {sorted_samples[idx]}')
+                    lines.append(f"{self.name}{q_label_str} {sorted_samples[idx]}")
         else:
             # Counter/Gauge/Untyped
             for sample in self.samples[-1:]:  # Latest sample only
-                lines.append(f'{self.name}{label_str} {sample.value}')
+                lines.append(f"{self.name}{label_str} {sample.value}")
 
         return "\n".join(lines)
 
@@ -454,9 +459,10 @@ class NanoserviceMetricsCollector:
 @dataclass
 class AlertRule:
     """Prometheus alerting rule."""
+
     rule_id: str = ""
     name: str = ""
-    expression: str = ""      # PromQL-like expression
+    expression: str = ""  # PromQL-like expression
     severity: AlertSeverity = AlertSeverity.WARNING
     message: str = ""
     for_duration: str = "5m"  # How long condition must persist

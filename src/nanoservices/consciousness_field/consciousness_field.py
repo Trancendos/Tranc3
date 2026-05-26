@@ -26,8 +26,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ──────────────────────────────────────────────────────────────
 
+
 class ConsciousnessLevel(Enum):
     """Levels of consciousness based on IIT."""
+
     NONE = 0
     MINIMAL = 1
     BASIC = 2
@@ -40,6 +42,7 @@ class ConsciousnessLevel(Enum):
 
 class AwarenessMode(Enum):
     """Modes of awareness."""
+
     UNCONSCIOUS = "unconscious"
     PRECONSCIOUS = "preconscious"
     CONSCIOUS = "conscious"
@@ -49,6 +52,7 @@ class AwarenessMode(Enum):
 
 class WorkspaceState(Enum):
     """States of the global workspace."""
+
     IDLE = "idle"
     PROCESSING = "processing"
     BROADCASTING = "broadcasting"
@@ -58,6 +62,7 @@ class WorkspaceState(Enum):
 
 class PhenomenalQuality(Enum):
     """Types of phenomenal qualities (qualia categories)."""
+
     SENSORY = "sensory"
     EMOTIONAL = "emotional"
     COGNITIVE = "cognitive"
@@ -70,6 +75,7 @@ class PhenomenalQuality(Enum):
 
 class FieldTopology(Enum):
     """Topology of the consciousness field."""
+
     UNIFORM = "uniform"
     LOCALIZED = "localized"
     WAVE = "wave"
@@ -80,6 +86,7 @@ class FieldTopology(Enum):
 
 class IntegrationMethod(Enum):
     """Methods for information integration."""
+
     IIT_PHI = "iit_phi"
     MUTUAL_INFORMATION = "mutual_information"
     TRANSFER_ENTROPY = "transfer_entropy"
@@ -89,9 +96,11 @@ class IntegrationMethod(Enum):
 
 # ─── Data Models ────────────────────────────────────────────────────────
 
+
 @dataclass
 class QualiaNode:
     """A node representing a phenomenal quality."""
+
     id: str = ""
     quality: PhenomenalQuality = PhenomenalQuality.SENSORY
     intensity: float = 0.5
@@ -118,6 +127,7 @@ class QualiaNode:
 @dataclass
 class MicroState:
     """A micro-state in the consciousness field."""
+
     id: str = ""
     node_values: List[float] = field(default_factory=list)
     entropy: float = 0.0
@@ -142,6 +152,7 @@ class MicroState:
 @dataclass
 class GlobalWorkspace:
     """The global workspace for consciousness broadcasting."""
+
     id: str = ""
     state: WorkspaceState = WorkspaceState.IDLE
     active_content: Dict[str, Any] = field(default_factory=dict)
@@ -180,6 +191,7 @@ class GlobalWorkspace:
 @dataclass
 class ConsciousnessSnapshot:
     """A snapshot of the consciousness field state."""
+
     id: str = ""
     timestamp: str = ""
     phi_value: float = 0.0
@@ -217,6 +229,7 @@ class ConsciousnessSnapshot:
 
 # ─── Core Engines ───────────────────────────────────────────────────────
 
+
 class IITComputer:
     """Integrated Information Theory computation engine."""
 
@@ -245,7 +258,7 @@ class IITComputer:
 
     def compute_phi(self, micro_state: Optional[MicroState] = None) -> float:
         """Compute phi (Φ) — integrated information.
-        
+
         Uses a simplified MIP (Minimum Information Partition) approach.
         """
         if micro_state and micro_state.node_values:
@@ -420,10 +433,7 @@ class ConsciousnessFieldSimulator:
         if consciousness_level.value >= 7:
             awareness = AwarenessMode.HYPER_CONSCIOUS
 
-        active_qualia = [
-            qn.id for qn in self.qualia_nodes.values()
-            if qn.intensity > 0.3
-        ]
+        active_qualia = [qn.id for qn in self.qualia_nodes.values() if qn.intensity > 0.3]
 
         self._update_self_model(phi, consciousness_level)
 
@@ -446,7 +456,9 @@ class ConsciousnessFieldSimulator:
 
         self.field_energy = phi * len(active_qualia) * 0.1
 
-        micro.entropy = self.iit.compute_entropy([qn.intensity for qn in self.qualia_nodes.values()])
+        micro.entropy = self.iit.compute_entropy(
+            [qn.intensity for qn in self.qualia_nodes.values()]
+        )
         micro.integration = phi
 
         return snapshot
@@ -467,7 +479,9 @@ class ConsciousnessFieldSimulator:
             phis = [s.phi_value for s in self._history]
             self._self_model["avg_phi"] = sum(phis) / len(phis)
             self._self_model["max_phi"] = max(phis)
-            self._self_model["coherence"] = min(1.0, self._self_model["avg_phi"] / max(self._self_model["max_phi"], 0.01))
+            self._self_model["coherence"] = min(
+                1.0, self._self_model["avg_phi"] / max(self._self_model["max_phi"], 0.01)
+            )
 
     def get_field_stats(self) -> Dict[str, Any]:
         """Get consciousness field statistics."""
@@ -488,6 +502,7 @@ class ConsciousnessFieldSimulator:
 
 
 # ─── Service ────────────────────────────────────────────────────────────
+
 
 class ConsciousnessFieldService:
     """Main service for consciousness field simulation."""
@@ -517,11 +532,13 @@ class ConsciousnessFieldService:
         history = []
         for _ in range(steps):
             snapshot = self.simulator.step()
-            history.append({
-                "phi": snapshot.phi_value,
-                "level": snapshot.consciousness_level.value,
-                "awareness": snapshot.awareness_mode.value,
-            })
+            history.append(
+                {
+                    "phi": snapshot.phi_value,
+                    "level": snapshot.consciousness_level.value,
+                    "awareness": snapshot.awareness_mode.value,
+                }
+            )
 
         phis = [h["phi"] for h in history]
         return {

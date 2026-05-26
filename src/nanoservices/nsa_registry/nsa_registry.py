@@ -25,6 +25,7 @@ from typing import Any, Callable, Dict, List, Optional, Set
 
 class ServiceTier(int, Enum):
     """Tranc3 entity tier hierarchy."""
+
     TIER_1_SENTINEL = 1
     TIER_2_INFRASTRUCTURE = 2
     TIER_3_INTELLIGENCE = 3
@@ -44,6 +45,7 @@ class ServiceStatus(str, Enum):
 @dataclass
 class Capability:
     """Describes a nanoservice capability."""
+
     name: str
     version: str = "1.0.0"
     input_schema: Optional[Dict[str, Any]] = None
@@ -73,6 +75,7 @@ class Capability:
 @dataclass
 class HealthReport:
     """Health status for a registered nanoservice."""
+
     service_id: str
     status: ServiceStatus
     latency_ms: float = 0.0
@@ -111,6 +114,7 @@ class HealthReport:
 @dataclass
 class RegisteredService:
     """A fully registered nanoservice with all metadata."""
+
     id: str
     name: str
     tier: ServiceTier
@@ -314,17 +318,18 @@ class NSARegistry:
         """Get the healthiest service matching criteria."""
         services = await self.discover(capability=capability, tier=tier)
         healthy = [
-            s for s in services
-            if s.health and s.health.is_healthy(max_latency_ms, max_error_rate)
+            s for s in services if s.health and s.health.is_healthy(max_latency_ms, max_error_rate)
         ]
         if not healthy:
             return None
         # Sort by: lowest error rate, then lowest latency, then lowest request count
-        healthy.sort(key=lambda s: (
-            s.health.error_rate,
-            s.health.latency_ms,
-            s.health.request_count,
-        ))
+        healthy.sort(
+            key=lambda s: (
+                s.health.error_rate,
+                s.health.latency_ms,
+                s.health.request_count,
+            )
+        )
         return healthy[0]
 
     async def update_health(self, service_id: str, report: HealthReport) -> bool:
@@ -357,9 +362,7 @@ class NSARegistry:
                     svc.health.status = ServiceStatus.READY
             return True
 
-    async def record_request(
-        self, service_id: str, latency_ms: float, success: bool
-    ) -> None:
+    async def record_request(self, service_id: str, latency_ms: float, success: bool) -> None:
         """Record a request result for load/health tracking."""
         async with self._lock:
             svc = self._services.get(service_id)

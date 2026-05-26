@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class LoopPhase(Enum):
     """Phases of the adaptive loop cycle."""
+
     OBSERVE = "observe"
     ANALYZE = "analyze"
     PLAN = "plan"
@@ -32,6 +33,7 @@ class LoopPhase(Enum):
 
 class AdaptationType(Enum):
     """Types of adaptations the loop can make."""
+
     RE_OPTIMIZE = "re_optimize"
     SCALE_UP = "scale_up"
     SCALE_DOWN = "scale_down"
@@ -46,6 +48,7 @@ class AdaptationType(Enum):
 
 class AlertSeverity(Enum):
     """Alert severity levels."""
+
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"
@@ -54,6 +57,7 @@ class AlertSeverity(Enum):
 @dataclass
 class Observation:
     """An observation from the system monitoring layer."""
+
     observation_id: str = ""
     source: str = ""
     metric_name: str = ""
@@ -71,6 +75,7 @@ class Observation:
 @dataclass
 class AdaptationAction:
     """An action taken by the adaptive loop."""
+
     action_id: str = ""
     adaptation_type: AdaptationType = AdaptationType.RE_OPTIMIZE
     target: str = ""
@@ -89,6 +94,7 @@ class AdaptationAction:
 @dataclass
 class LoopCycleResult:
     """Result from a single adaptive loop cycle."""
+
     cycle_id: str = ""
     phase: LoopPhase = LoopPhase.OBSERVE
     observations: List[Observation] = field(default_factory=list)
@@ -161,22 +167,28 @@ class MetricsCollector:
                 continue
 
             # Some metrics are "below threshold = bad" (hit_rate, availability)
-            below_threshold_bad = name in ("cache_hit_rate", "drone_availability", "gpu_utilization", "optimization_quality")
+            below_threshold_bad = name in (
+                "cache_hit_rate",
+                "drone_availability",
+                "gpu_utilization",
+                "optimization_quality",
+            )
 
-            is_anomaly = (
-                (current < threshold and below_threshold_bad) or
-                (current > threshold and not below_threshold_bad)
+            is_anomaly = (current < threshold and below_threshold_bad) or (
+                current > threshold and not below_threshold_bad
             )
 
             if is_anomaly:
-                anomalies.append(Observation(
-                    source="metrics_collector",
-                    metric_name=name,
-                    metric_value=current,
-                    threshold=threshold,
-                    anomaly=True,
-                    labels={"direction": "below" if current < threshold else "above"},
-                ))
+                anomalies.append(
+                    Observation(
+                        source="metrics_collector",
+                        metric_name=name,
+                        metric_value=current,
+                        threshold=threshold,
+                        anomaly=True,
+                        labels={"direction": "below" if current < threshold else "above"},
+                    )
+                )
 
         return anomalies
 
@@ -327,12 +339,14 @@ class AdaptiveLoopEngine:
 
         for obs in observations:
             if obs.anomaly:
-                analysis["anomalies"].append({
-                    "metric": obs.metric_name,
-                    "value": obs.metric_value,
-                    "threshold": obs.threshold,
-                    "source": obs.source,
-                })
+                analysis["anomalies"].append(
+                    {
+                        "metric": obs.metric_name,
+                        "value": obs.metric_value,
+                        "threshold": obs.threshold,
+                        "source": obs.source,
+                    }
+                )
 
         # Analyze trends
         for metric in ["query_latency_ms", "cache_hit_rate", "drift_signal_count"]:
@@ -358,36 +372,44 @@ class AdaptiveLoopEngine:
 
         for rec in analysis.get("recommendations", []):
             if rec == "re_optimize":
-                actions.append(AdaptationAction(
-                    adaptation_type=AdaptationType.RE_OPTIMIZE,
-                    target="query_planner",
-                    reason="Query latency exceeds threshold",
-                    confidence=0.8,
-                ))
+                actions.append(
+                    AdaptationAction(
+                        adaptation_type=AdaptationType.RE_OPTIMIZE,
+                        target="query_planner",
+                        reason="Query latency exceeds threshold",
+                        confidence=0.8,
+                    )
+                )
             elif rec == "cache_update":
-                actions.append(AdaptationAction(
-                    adaptation_type=AdaptationType.CACHE_UPDATE,
-                    target="vector_plan_cache",
-                    reason="Cache hit rate below threshold",
-                    confidence=0.7,
-                ))
+                actions.append(
+                    AdaptationAction(
+                        adaptation_type=AdaptationType.CACHE_UPDATE,
+                        target="vector_plan_cache",
+                        reason="Cache hit rate below threshold",
+                        confidence=0.7,
+                    )
+                )
             elif rec == "drift_heal":
-                actions.append(AdaptationAction(
-                    adaptation_type=AdaptationType.DRIFT_HEAL,
-                    target="igi_gitops",
-                    reason="Drift signals detected",
-                    confidence=0.75,
-                ))
+                actions.append(
+                    AdaptationAction(
+                        adaptation_type=AdaptationType.DRIFT_HEAL,
+                        target="igi_gitops",
+                        reason="Drift signals detected",
+                        confidence=0.75,
+                    )
+                )
 
         # Check for quantum escalation opportunity
         latency_trend = analysis.get("trends", {}).get("query_latency_ms", "stable")
         if latency_trend == "increasing":
-            actions.append(AdaptationAction(
-                adaptation_type=AdaptationType.QUANTUM_ESCALATE,
-                target="quantum_solver",
-                reason="Query latency trend is increasing",
-                confidence=0.6,
-            ))
+            actions.append(
+                AdaptationAction(
+                    adaptation_type=AdaptationType.QUANTUM_ESCALATE,
+                    target="quantum_solver",
+                    reason="Query latency trend is increasing",
+                    confidence=0.6,
+                )
+            )
 
         return actions
 
@@ -433,14 +455,22 @@ class AdaptiveLoopEngine:
         summary = self.metrics.get_summary()
 
         for metric_name, data in summary.items():
-            if data["trend"] == "decreasing" and metric_name in ("query_latency_ms", "drift_signal_count"):
+            if data["trend"] == "decreasing" and metric_name in (
+                "query_latency_ms",
+                "drift_signal_count",
+            ):
                 improvements[metric_name] = -0.1  # 10% improvement
-            elif data["trend"] == "increasing" and metric_name in ("cache_hit_rate", "drone_availability"):
+            elif data["trend"] == "increasing" and metric_name in (
+                "cache_hit_rate",
+                "drone_availability",
+            ):
                 improvements[metric_name] = 0.1
 
         return improvements
 
-    def _adapt_policies(self, observations: List[Observation], improvements: Dict[str, float]) -> None:
+    def _adapt_policies(
+        self, observations: List[Observation], improvements: Dict[str, float]
+    ) -> None:
         """Adapt internal policies based on observations and improvements."""
         # Adjust cycle interval based on activity level
         anomaly_count = sum(1 for o in observations if o.anomaly)

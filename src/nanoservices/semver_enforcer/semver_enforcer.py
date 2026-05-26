@@ -17,17 +17,17 @@ logger = logging.getLogger(__name__)
 
 
 class ChangeType(Enum):
-    PATCH = "patch"          # Bug fix, backward compatible
-    MINOR = "minor"          # New feature, backward compatible
-    MAJOR = "major"          # Breaking change
+    PATCH = "patch"  # Bug fix, backward compatible
+    MINOR = "minor"  # New feature, backward compatible
+    MAJOR = "major"  # Breaking change
     PRERELEASE = "prerelease"
     BUILD = "build"
 
 
 class CompatibilityLevel(Enum):
-    FULL = "full"           # No breaking changes
-    PARTIAL = "partial"     # Some features deprecated
-    BREAKING = "breaking"   # Breaking changes present
+    FULL = "full"  # No breaking changes
+    PARTIAL = "partial"  # Some features deprecated
+    BREAKING = "breaking"  # Breaking changes present
     UNKNOWN = "unknown"
 
 
@@ -41,7 +41,9 @@ class SemVer:
 
     @classmethod
     def parse(cls, version_str: str) -> "SemVer":
-        match = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9.]+))?(?:\+([a-zA-Z0-9.]+))?$", version_str.strip())
+        match = re.match(
+            r"^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9.]+))?(?:\+([a-zA-Z0-9.]+))?$", version_str.strip()
+        )
         if not match:
             raise ValueError(f"Invalid semver: {version_str}")
         return cls(
@@ -213,7 +215,12 @@ class SemVerEnforcer:
         self._current = release.version
         self._releases.append(release)
         self._pending_changes.clear()
-        logger.info("Released v%s (%d changes, compatibility: %s)", release.version.string, len(release.changes), release.compatibility.value)
+        logger.info(
+            "Released v%s (%d changes, compatibility: %s)",
+            release.version.string,
+            len(release.changes),
+            release.compatibility.value,
+        )
 
     def get_releases(self, limit: int = 20) -> List[ReleaseRecord]:
         return self._releases[-limit:]
@@ -243,22 +250,48 @@ class SemVerEnforcerService:
     def initialize(self) -> None:
         # Register all nanoservice components
         components = [
-            ("nsa_broker", "1.0.0"), ("nsa_client", "1.0.0"), ("nsa_registry", "1.0.0"),
-            ("dnf_orchestrator", "1.0.0"), ("shi_gateway", "1.0.0"), ("quantum_solver", "1.0.0"),
-            ("genetic_optimizer", "1.0.0"), ("fmd_distiller", "1.0.0"), ("zkp_service", "1.0.0"),
-            ("did_identity", "1.0.0"), ("he_service", "1.0.0"), ("mpc_service", "1.0.0"),
-            ("pqc_service", "1.0.0"), ("wasm_edge", "1.0.0"), ("neural_symbolic", "1.0.0"),
-            ("temporal_reasoning", "1.0.0"), ("neuromorphic", "1.0.0"), ("bio_digital_interface", "1.0.0"),
+            ("nsa_broker", "1.0.0"),
+            ("nsa_client", "1.0.0"),
+            ("nsa_registry", "1.0.0"),
+            ("dnf_orchestrator", "1.0.0"),
+            ("shi_gateway", "1.0.0"),
+            ("quantum_solver", "1.0.0"),
+            ("genetic_optimizer", "1.0.0"),
+            ("fmd_distiller", "1.0.0"),
+            ("zkp_service", "1.0.0"),
+            ("did_identity", "1.0.0"),
+            ("he_service", "1.0.0"),
+            ("mpc_service", "1.0.0"),
+            ("pqc_service", "1.0.0"),
+            ("wasm_edge", "1.0.0"),
+            ("neural_symbolic", "1.0.0"),
+            ("temporal_reasoning", "1.0.0"),
+            ("neuromorphic", "1.0.0"),
+            ("bio_digital_interface", "1.0.0"),
         ]
         for name, version in components:
             self._enforcer.register_component(name, version)
 
-        logger.info("SemVerEnforcerService initialized with %d components at v%s", len(components), self._enforcer.current_version.string)
+        logger.info(
+            "SemVerEnforcerService initialized with %d components at v%s",
+            len(components),
+            self._enforcer.current_version.string,
+        )
 
-    def record_change(self, change_type: ChangeType, description: str, component: str = "", author: str = "", migration_notes: str = "") -> SemVer:
+    def record_change(
+        self,
+        change_type: ChangeType,
+        description: str,
+        component: str = "",
+        author: str = "",
+        migration_notes: str = "",
+    ) -> SemVer:
         change = ChangeRecord(
-            change_type=change_type, description=description,
-            component=component, author=author, migration_notes=migration_notes,
+            change_type=change_type,
+            description=description,
+            component=component,
+            author=author,
+            migration_notes=migration_notes,
         )
         return self._enforcer.record_change(change)
 

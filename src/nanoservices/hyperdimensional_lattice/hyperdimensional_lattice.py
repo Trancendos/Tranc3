@@ -28,8 +28,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ──────────────────────────────────────────────────────────────
 
+
 class VectorType(Enum):
     """Types of hyperdimensional vectors."""
+
     BINARY = "binary"
     BIPOLAR = "bipolar"
     TERNARY = "ternary"
@@ -40,6 +42,7 @@ class VectorType(Enum):
 
 class BindingOperation(Enum):
     """Operations for binding hypervectors."""
+
     XOR = "xor"
     MULTIPLY = "multiply"
     CONVOLUTION = "convolution"
@@ -50,6 +53,7 @@ class BindingOperation(Enum):
 
 class LatticeTopology(Enum):
     """Topology types for concept lattice."""
+
     EUCLIDEAN = "euclidean"
     MANHATTAN = "manhattan"
     COSINE = "cosine"
@@ -60,6 +64,7 @@ class LatticeTopology(Enum):
 
 class ProjectionMethod(Enum):
     """Methods for cross-dimensional projection."""
+
     RANDOM = "random"
     PCA = "pca"
     TSNE = "tsne"
@@ -70,6 +75,7 @@ class ProjectionMethod(Enum):
 
 class ConceptRole(Enum):
     """Roles a concept can play in the lattice."""
+
     PRIMITIVE = "primitive"
     COMPOSITE = "composite"
     ABSTRACT = "abstract"
@@ -80,6 +86,7 @@ class ConceptRole(Enum):
 
 class LatticeState(Enum):
     """States of the hyperdimensional lattice."""
+
     EMPTY = "empty"
     INITIALIZING = "initializing"
     ACTIVE = "active"
@@ -90,9 +97,11 @@ class LatticeState(Enum):
 
 # ─── Data Models ────────────────────────────────────────────────────────
 
+
 @dataclass
 class Hypervector:
     """A high-dimensional vector representation."""
+
     id: str = ""
     data: List[float] = field(default_factory=list)
     dimension: int = 10000
@@ -118,7 +127,9 @@ class Hypervector:
         elif self.vector_type == VectorType.TERNARY:
             self.data = [random.choice([-1, 0, 1]) for _ in range(self.dimension)]
         elif self.vector_type == VectorType.REAL_VALUED:
-            self.data = [random.gauss(0, 1) / math.sqrt(self.dimension) for _ in range(self.dimension)]
+            self.data = [
+                random.gauss(0, 1) / math.sqrt(self.dimension) for _ in range(self.dimension)
+            ]
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -134,6 +145,7 @@ class Hypervector:
 @dataclass
 class ConceptNode:
     """A concept node in the hyperdimensional lattice."""
+
     id: str = ""
     concept: str = ""
     hypervector: Optional[Hypervector] = None
@@ -168,6 +180,7 @@ class ConceptNode:
 @dataclass
 class ConceptRelation:
     """A relation between two concepts in the lattice."""
+
     id: str = ""
     source_id: str = ""
     target_id: str = ""
@@ -196,6 +209,7 @@ class ConceptRelation:
 @dataclass
 class LatticeProjection:
     """A low-dimensional projection of the lattice."""
+
     id: str = ""
     method: ProjectionMethod = ProjectionMethod.RANDOM
     target_dimensions: int = 3
@@ -220,6 +234,7 @@ class LatticeProjection:
 
 # ─── Core Engine ────────────────────────────────────────────────────────
 
+
 class HyperdimensionalVectorOps:
     """Operations on hyperdimensional vectors using VSA paradigm."""
 
@@ -231,7 +246,12 @@ class HyperdimensionalVectorOps:
         """Create a new random hypervector."""
         return Hypervector(dimension=self.dimension, vector_type=self.vector_type, label=label)
 
-    def bind(self, a: Hypervector, b: Hypervector, operation: BindingOperation = BindingOperation.MULTIPLY) -> Hypervector:
+    def bind(
+        self,
+        a: Hypervector,
+        b: Hypervector,
+        operation: BindingOperation = BindingOperation.MULTIPLY,
+    ) -> Hypervector:
         """Bind two hypervectors (creates association)."""
         if len(a.data) != len(b.data):
             raise ValueError("Vector dimensions must match for binding")
@@ -254,7 +274,12 @@ class HyperdimensionalVectorOps:
             label=f"bind({a.label},{b.label})",
         )
 
-    def unbind(self, bound: Hypervector, key: Hypervector, operation: BindingOperation = BindingOperation.MULTIPLY) -> Hypervector:
+    def unbind(
+        self,
+        bound: Hypervector,
+        key: Hypervector,
+        operation: BindingOperation = BindingOperation.MULTIPLY,
+    ) -> Hypervector:
         """Unbind to recover original vector."""
         if operation == BindingOperation.MULTIPLY:
             data = [bound.data[i] * key.data[i] for i in range(len(bound.data))]
@@ -301,7 +326,9 @@ class HyperdimensionalVectorOps:
             label=f"bundle({labels}...)",
         )
 
-    def similarity(self, a: Hypervector, b: Hypervector, metric: LatticeTopology = LatticeTopology.COSINE) -> float:
+    def similarity(
+        self, a: Hypervector, b: Hypervector, metric: LatticeTopology = LatticeTopology.COSINE
+    ) -> float:
         """Compute similarity between two hypervectors."""
         if len(a.data) != len(b.data) or len(a.data) == 0:
             return 0.0
@@ -353,9 +380,13 @@ class ConceptLattice:
         self.state = LatticeState.EMPTY
         self._concept_vectors: Dict[str, Hypervector] = {}
 
-    def add_concept(self, concept: str, role: ConceptRole = ConceptRole.PRIMITIVE,
-                    parent_ids: Optional[List[str]] = None,
-                    metadata: Optional[Dict[str, Any]] = None) -> ConceptNode:
+    def add_concept(
+        self,
+        concept: str,
+        role: ConceptRole = ConceptRole.PRIMITIVE,
+        parent_ids: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> ConceptNode:
         """Add a concept to the lattice."""
         hv = self.vector_ops.create_vector(label=concept)
         node = ConceptNode(
@@ -373,8 +404,14 @@ class ConceptLattice:
 
         return node
 
-    def relate(self, source_id: str, target_id: str, relation_type: str = "association",
-               weight: float = 1.0, bidirectional: bool = True) -> ConceptRelation:
+    def relate(
+        self,
+        source_id: str,
+        target_id: str,
+        relation_type: str = "association",
+        weight: float = 1.0,
+        bidirectional: bool = True,
+    ) -> ConceptRelation:
         """Create a relation between two concepts."""
         if source_id not in self.nodes or target_id not in self.nodes:
             raise ValueError("Both nodes must exist in the lattice")
@@ -399,8 +436,9 @@ class ConceptLattice:
 
         return relation
 
-    def find_similar(self, concept: str, top_k: int = 5,
-                     metric: LatticeTopology = LatticeTopology.COSINE) -> List[Tuple[str, float]]:
+    def find_similar(
+        self, concept: str, top_k: int = 5, metric: LatticeTopology = LatticeTopology.COSINE
+    ) -> List[Tuple[str, float]]:
         """Find similar concepts to a given concept."""
         if concept not in self._concept_vectors:
             return []
@@ -428,7 +466,10 @@ class ConceptLattice:
             raise ValueError("No valid concept vectors found for composition")
 
         bundled = self.vector_ops.bundle(vectors)
-        label = new_concept or f"composite_{'_'.join(self.nodes[cid].concept[:4] for cid in concept_ids[:3])}"
+        label = (
+            new_concept
+            or f"composite_{'_'.join(self.nodes[cid].concept[:4] for cid in concept_ids[:3])}"
+        )
 
         node = ConceptNode(
             concept=label,
@@ -448,7 +489,7 @@ class ConceptLattice:
 
     def analogize(self, a_id: str, b_id: str, c_id: str) -> ConceptNode:
         """Perform analogical reasoning: A:B :: C:D.
-        
+
         Computes D = C + (B - A) in hyperdimensional space.
         """
         a = self.nodes.get(a_id)
@@ -486,8 +527,9 @@ class ConceptLattice:
 
         return d_concept
 
-    def project(self, target_dim: int = 3,
-                method: ProjectionMethod = ProjectionMethod.RANDOM) -> LatticeProjection:
+    def project(
+        self, target_dim: int = 3, method: ProjectionMethod = ProjectionMethod.RANDOM
+    ) -> LatticeProjection:
         """Project the lattice into lower dimensions for visualization."""
         if not self.nodes:
             return LatticeProjection(method=method, target_dimensions=target_dim)
@@ -562,6 +604,7 @@ class ConceptLattice:
 
 # ─── Service ────────────────────────────────────────────────────────────
 
+
 class HyperdimensionalLatticeService:
     """Main service for hyperdimensional lattice operations."""
 
@@ -574,9 +617,21 @@ class HyperdimensionalLatticeService:
     def initialize(self) -> Dict[str, Any]:
         """Initialize the service with base concept space."""
         primitives = [
-            "existence", "change", "cause", "time", "space",
-            "form", "function", "relation", "system", "information",
-            "energy", "matter", "consciousness", "entropy", "order",
+            "existence",
+            "change",
+            "cause",
+            "time",
+            "space",
+            "form",
+            "function",
+            "relation",
+            "system",
+            "information",
+            "energy",
+            "matter",
+            "consciousness",
+            "entropy",
+            "order",
         ]
 
         for concept in primitives:
@@ -607,9 +662,13 @@ class HyperdimensionalLatticeService:
             "fundamental_relations": len(fundamental_relations),
         }
 
-    def add_concept(self, concept: str, role: str = "primitive",
-                    parent_concepts: Optional[List[str]] = None,
-                    metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def add_concept(
+        self,
+        concept: str,
+        role: str = "primitive",
+        parent_concepts: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """Add a new concept to the lattice."""
         role_enum = ConceptRole(role)
         parent_ids = []

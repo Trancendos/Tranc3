@@ -24,8 +24,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ────────────────────────────────────────────────────────────────
 
+
 class NeuronType(Enum):
     """Spiking neuron models available in the neuromorphic engine."""
+
     LIF = "leaky_integrate_and_fire"
     IZHIKEVICH = "izhikevich"
     ADC_EXP = "adaptive_exponential"
@@ -35,6 +37,7 @@ class NeuronType(Enum):
 
 class SynapseType(Enum):
     """Synaptic connection types."""
+
     EXCITATORY = "excitatory"
     INHIBITORY = "inhibitory"
     MODULATORY = "modulatory"
@@ -43,6 +46,7 @@ class SynapseType(Enum):
 
 class PlasticityRule(Enum):
     """Synaptic plasticity rules for learning."""
+
     STDP = "spike_timing_dependent_plasticity"
     HEBBIAN = "hebbian"
     ANTI_HEBBIAN = "anti_hebbian"
@@ -53,6 +57,7 @@ class PlasticityRule(Enum):
 
 class NetworkState(Enum):
     """Neuromorphic network lifecycle states."""
+
     INITIALIZING = "initializing"
     IDLE = "idle"
     RUNNING = "running"
@@ -64,6 +69,7 @@ class NetworkState(Enum):
 
 class ChipModel(Enum):
     """Simulated neuromorphic chip architectures."""
+
     LOIHI_1 = "loihi_1"
     LOIHI_2 = "loihi_2"
     TRUE_NORTH = "truenorth"
@@ -75,9 +81,11 @@ class ChipModel(Enum):
 
 # ─── Data Models ──────────────────────────────────────────────────────────
 
+
 @dataclass
 class NeuronParameters:
     """Parameters for a spiking neuron model."""
+
     neuron_type: NeuronType = NeuronType.LIF
     threshold: float = 1.0
     decay_current: float = 0.9
@@ -107,6 +115,7 @@ class NeuronParameters:
 @dataclass
 class SynapticConnection:
     """A synaptic connection between two neurons."""
+
     pre_neuron: str
     post_neuron: str
     weight: float = 1.0
@@ -131,6 +140,7 @@ class SynapticConnection:
 @dataclass
 class SpikeEvent:
     """A single spike event in the network."""
+
     neuron_id: str
     time_step: int
     payload: float = 1.0
@@ -146,6 +156,7 @@ class SpikeEvent:
 @dataclass
 class NeuromorphicCore:
     """Represents a neuromorphic processing core."""
+
     core_id: str
     chip_model: ChipModel = ChipModel.LOIHI_2
     neuron_count: int = 1024
@@ -173,6 +184,7 @@ class NeuromorphicCore:
 @dataclass
 class NetworkTopology:
     """Complete neuromorphic network topology."""
+
     network_id: str
     cores: List[NeuromorphicCore] = field(default_factory=list)
     neuron_params: Dict[str, NeuronParameters] = field(default_factory=dict)
@@ -195,6 +207,7 @@ class NetworkTopology:
 
 
 # ─── Lava-Inspired Process Model ─────────────────────────────────────────
+
 
 class LIFNeuron:
     """Leaky Integrate-and-Fire neuron simulation.
@@ -229,12 +242,8 @@ class LIFNeuron:
             return False
 
         # Integrate
-        self.current = (
-            self.params.decay_current * self.current + input_current
-        )
-        self.voltage = (
-            self.params.decay_voltage * self.voltage + self.current
-        )
+        self.current = self.params.decay_current * self.current + input_current
+        self.voltage = self.params.decay_voltage * self.voltage + self.current
 
         # Fire
         spiked = self.voltage >= self.params.threshold
@@ -280,13 +289,7 @@ class IzhikevichNeuron:
 
     def step(self, input_current: float) -> bool:
         """Advance one time step."""
-        dv = (
-            0.04 * self.v * self.v
-            + 5.0 * self.v
-            + 140.0
-            - self.u
-            + input_current
-        )
+        dv = 0.04 * self.v * self.v + 5.0 * self.v + 140.0 - self.u + input_current
         du = self.params.iz_a * (self.params.iz_b * self.v - self.u)
         self.v += dv * 0.1  # Scale for numerical stability
         self.u += du * 0.1
@@ -310,6 +313,7 @@ class IzhikevichNeuron:
 
 
 # ─── Synaptic Plasticity ──────────────────────────────────────────────────
+
 
 class STDPPlasticity:
     """Spike-Timing-Dependent Plasticity learning rule.
@@ -406,16 +410,15 @@ class HomeostaticPlasticity:
         """Scale incoming weights to maintain target firing rate."""
         if not spike_history:
             return incoming_weights
-        recent = spike_history[-self.window_size:]
+        recent = spike_history[-self.window_size :]
         actual_rate = sum(recent) / len(recent) if recent else 0.0
-        scaling_factor = 1.0 + self.learning_rate * (
-            self.target_rate - actual_rate
-        )
+        scaling_factor = 1.0 + self.learning_rate * (self.target_rate - actual_rate)
         scaling_factor = max(0.5, min(2.0, scaling_factor))
         return [w * scaling_factor for w in incoming_weights]
 
 
 # ─── Neuromorphic Network ────────────────────────────────────────────────
+
 
 class NeuromorphicNetwork:
     """Complete spiking neural network with plasticity.
@@ -530,10 +533,7 @@ class NeuromorphicNetwork:
             elif conn.plasticity == PlasticityRule.HOMEOSTATIC:
                 post = self.neurons.get(conn.post_neuron)
                 if post:
-                    incoming = [
-                        c.weight
-                        for c in self.connection_map.get(conn.post_neuron, [])
-                    ]
+                    incoming = [c.weight for c in self.connection_map.get(conn.post_neuron, [])]
                     scaled = self.homeostatic.scale(post.spike_history, incoming)
                     for i, c in enumerate(self.connection_map.get(conn.post_neuron, [])):
                         if i < len(scaled):
@@ -559,9 +559,7 @@ class NeuromorphicNetwork:
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get network statistics."""
-        total_spikes = sum(
-            sum(n.spike_history) for n in self.neurons.values()
-        )
+        total_spikes = sum(sum(n.spike_history) for n in self.neurons.values())
         total_steps = max(self.current_step, 1)
         return {
             "network_id": self.network_id,
@@ -575,6 +573,7 @@ class NeuromorphicNetwork:
 
 
 # ─── Neuromorphic Chip Simulator ─────────────────────────────────────────
+
 
 class NeuromorphicChipSimulator:
     """Simulates a neuromorphic chip with multiple cores.
@@ -675,6 +674,7 @@ class NeuromorphicChipSimulator:
 
         # Create random connections
         import random
+
         neuron_ids = list(network.neurons.keys())
         conn_count = 0
         attempts = 0
@@ -683,14 +683,10 @@ class NeuromorphicChipSimulator:
             post = random.choice(neuron_ids)
             if pre != post:
                 syn_type = (
-                    SynapseType.EXCITATORY
-                    if random.random() < 0.8
-                    else SynapseType.INHIBITORY
+                    SynapseType.EXCITATORY if random.random() < 0.8 else SynapseType.INHIBITORY
                 )
                 plasticity = (
-                    PlasticityRule.STDP
-                    if random.random() < 0.5
-                    else PlasticityRule.HOMEOSTATIC
+                    PlasticityRule.STDP if random.random() < 0.5 else PlasticityRule.HOMEOSTATIC
                 )
                 conn = SynapticConnection(
                     pre_neuron=pre,
@@ -709,12 +705,8 @@ class NeuromorphicChipSimulator:
 
     def get_chip_utilization(self) -> Dict[str, Any]:
         """Get chip resource utilization."""
-        total_neurons = sum(
-            len(n.neurons) for n in self.networks.values()
-        )
-        total_synapses = sum(
-            len(n.connections) for n in self.networks.values()
-        )
+        total_neurons = sum(len(n.neurons) for n in self.networks.values())
+        total_synapses = sum(len(n.connections) for n in self.networks.values())
         max_neurons = self.specs["cores_per_chip"] * self.specs["neurons_per_core"]
         max_synapses = self.specs["cores_per_chip"] * self.specs["synapses_per_core"]
         return {
@@ -733,6 +725,7 @@ class NeuromorphicChipSimulator:
 
 # ─── Spike Encoding ───────────────────────────────────────────────────────
 
+
 class SpikeEncoder:
     """Convert real-valued data to spike trains."""
 
@@ -750,6 +743,7 @@ class SpikeEncoder:
             train = [1 if (val * max_rate) > (i / num_steps) else 0 for i in range(num_steps)]
             # More accurate Poisson-like
             import random
+
             train = [1 if random.random() < rate else 0 for _ in range(num_steps)]
             spike_trains.append(train)
         return spike_trains
@@ -778,6 +772,7 @@ class SpikeEncoder:
         """Population coding: value → distributed representation across neurons."""
         spike_trains = []
         import random
+
         for val in values:
             normalized = max(0.0, min(1.0, val))
             for n in range(num_neurons):
@@ -809,6 +804,7 @@ class SpikeEncoder:
 
 # ─── Main Service ─────────────────────────────────────────────────────────
 
+
 class NeuromorphicService:
     """Neuromorphic Computing Service for the Tranc3 ecosystem.
 
@@ -830,9 +826,7 @@ class NeuromorphicService:
         neuron_type: NeuronType = NeuronType.LIF,
     ) -> Dict[str, Any]:
         """Create a new spiking neural network."""
-        network = self.chip.create_network(
-            network_id, num_neurons, num_connections, neuron_type
-        )
+        network = self.chip.create_network(network_id, num_neurons, num_connections, neuron_type)
         return {
             "network_id": network_id,
             "neurons": len(network.neurons),
@@ -871,7 +865,9 @@ class NeuromorphicService:
             "network_id": network_id,
             "steps_simulated": num_steps,
             "total_spikes": total_spikes,
-            "spike_rate": total_spikes / (len(network.neurons) * num_steps) if network.neurons else 0,
+            "spike_rate": total_spikes / (len(network.neurons) * num_steps)
+            if network.neurons
+            else 0,
             "output_spike_counts": {
                 nid: sum(network.neurons[nid].spike_history)
                 for nid in network.output_neurons
@@ -904,7 +900,9 @@ class NeuromorphicService:
             "num_channels": len(trains),
             "num_steps": num_steps if method != "delta" else len(data),
             "total_spikes": total_spikes,
-            "spike_density": total_spikes / (len(trains) * max(len(t) for t in trains)) if trains else 0,
+            "spike_density": total_spikes / (len(trains) * max(len(t) for t in trains))
+            if trains
+            else 0,
         }
 
     def get_chip_status(self) -> Dict[str, Any]:
@@ -913,10 +911,7 @@ class NeuromorphicService:
 
     def list_networks(self) -> List[Dict[str, Any]]:
         """List all networks on the chip."""
-        return [
-            network.get_statistics()
-            for network in self.chip.networks.values()
-        ]
+        return [network.get_statistics() for network in self.chip.networks.values()]
 
     def delete_network(self, network_id: str) -> bool:
         """Delete a network from the chip."""

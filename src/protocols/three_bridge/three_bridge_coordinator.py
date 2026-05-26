@@ -29,6 +29,7 @@ logger = logging.getLogger("tranc3.three_bridge")
 # Types
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class BridgeDomain(str, Enum):
     INFINITY = "infinity"
     NEXUS = "nexus"
@@ -44,6 +45,7 @@ class BridgeStatus(str, Enum):
 
 class TrafficClass(str, Enum):
     """Traffic classifications mapped to bridge domains."""
+
     # InfinityBridge
     USER_REQUEST = "user_request"
     USER_AUTH = "user_auth"
@@ -82,8 +84,8 @@ TRAFFIC_TO_BRIDGE: Dict[TrafficClass, BridgeDomain] = {
     TrafficClass.SWARM_CONSENSUS: BridgeDomain.HIVE,
     TrafficClass.ESTATE_SCAN: BridgeDomain.HIVE,
     TrafficClass.INTERNAL_HEALTH: BridgeDomain.INFINITY,  # Default, handled by Sentinel
-    TrafficClass.CROSS_BRIDGE: BridgeDomain.INFINITY,     # Sentinel decides
-    TrafficClass.UNKNOWN: BridgeDomain.INFINITY,           # Sentinel decides
+    TrafficClass.CROSS_BRIDGE: BridgeDomain.INFINITY,  # Sentinel decides
+    TrafficClass.UNKNOWN: BridgeDomain.INFINITY,  # Sentinel decides
 }
 
 
@@ -92,10 +94,10 @@ TRAFFIC_TO_BRIDGE: Dict[TrafficClass, BridgeDomain] = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-
 @dataclass
 class BridgeTrafficPacket:
     """A packet of traffic flowing through the bridge system."""
+
     id: str = field(default_factory=lambda: f"pkt-{uuid.uuid4().hex[:12]}")
     traffic_class: TrafficClass = TrafficClass.UNKNOWN
     target_bridge: BridgeDomain = BridgeDomain.INFINITY
@@ -127,6 +129,7 @@ class BridgeTrafficPacket:
 @dataclass
 class BridgeHealthReport:
     """Health report for a bridge."""
+
     domain: BridgeDomain
     status: BridgeStatus = BridgeStatus.ACTIVE
     packets_processed: int = 0
@@ -141,6 +144,7 @@ class BridgeHealthReport:
 @dataclass
 class RoutingRule:
     """Custom routing rule for traffic."""
+
     traffic_pattern: str = "*"
     source_pattern: str = "*"
     target_bridge: BridgeDomain = BridgeDomain.INFINITY
@@ -151,6 +155,7 @@ class RoutingRule:
 @dataclass
 class EscalationRequest:
     """Request to escalate a packet across bridges."""
+
     packet_id: str = ""
     from_bridge: BridgeDomain = BridgeDomain.INFINITY
     to_bridge: BridgeDomain = BridgeDomain.INFINITY
@@ -162,6 +167,7 @@ class EscalationRequest:
 @dataclass
 class EscalationResult:
     """Result of a cross-bridge escalation."""
+
     success: bool = False
     packet_id: str = ""
     from_bridge: BridgeDomain = BridgeDomain.INFINITY
@@ -172,6 +178,7 @@ class EscalationResult:
 # ─────────────────────────────────────────────────────────────────────────────
 # Bridge Interface
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class IBridge:
     """Abstract base class for bridges."""
@@ -194,6 +201,7 @@ class IBridge:
 # ─────────────────────────────────────────────────────────────────────────────
 # Bridge Implementations
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class InfinityBridge(IBridge):
     """
@@ -290,7 +298,8 @@ class InfinityBridge(IBridge):
         actions = []
         now = time.time()
         expired = [
-            uid for uid, session in self._active_sessions.items()
+            uid
+            for uid, session in self._active_sessions.items()
             if now - session.get("authenticated_at", 0) > 3600  # 1 hour timeout
         ]
         for uid in expired:
@@ -404,10 +413,7 @@ class NexusBridge(IBridge):
         actions = []
         # _now = time.time()  # noqa: assigned but unused
         # Clean channels with no recent activity
-        stale_channels = [
-            ch for ch, msgs in self._channels.items()
-            if len(msgs) == 0
-        ]
+        stale_channels = [ch for ch, msgs in self._channels.items() if len(msgs) == 0]
         for ch in stale_channels:
             del self._channels[ch]
             actions.append(f"Removed empty channel: {ch}")
@@ -522,8 +528,7 @@ class HIVEBridge(IBridge):
         actions = []
         # Clean estates with consensus reached
         completed = [
-            eid for eid, estate in self._estates.items()
-            if estate.get("consensus") is not None
+            eid for eid, estate in self._estates.items() if estate.get("consensus") is not None
         ]
         for eid in completed:
             del self._estates[eid]
@@ -534,6 +539,7 @@ class HIVEBridge(IBridge):
 # ─────────────────────────────────────────────────────────────────────────────
 # Sentinel Station — Central Coordinator
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class SentinelStation:
     """
@@ -563,6 +569,7 @@ class SentinelStation:
 
         # Check routing rules for overrides
         import re
+
         for rule in self._routing_rules:
             if not rule.enabled:
                 continue
@@ -637,7 +644,9 @@ class SentinelStation:
             message=f"Escalated packet {request.packet_id} from {request.from_bridge.value} to {request.to_bridge.value}",
         )
         self._escalation_log.append(result)
-        logger.info(f"Sentinel: Escalated {request.packet_id}: {request.from_bridge.value} → {request.to_bridge.value}")
+        logger.info(
+            f"Sentinel: Escalated {request.packet_id}: {request.from_bridge.value} → {request.to_bridge.value}"
+        )
 
         return result
 
@@ -696,15 +705,21 @@ class SentinelStation:
                 recommendations.append(f"Restart {domain.value} bridge")
 
             if health.error_rate > 0.1:
-                anomalies.append(f"{domain.value} bridge has high error rate: {health.error_rate * 100:.1f}%")
+                anomalies.append(
+                    f"{domain.value} bridge has high error rate: {health.error_rate * 100:.1f}%"
+                )
                 recommendations.append(f"Investigate {domain.value} bridge error patterns")
 
             if health.packets_pending > 100:
-                anomalies.append(f"{domain.value} bridge has {health.packets_pending} pending packets")
+                anomalies.append(
+                    f"{domain.value} bridge has {health.packets_pending} pending packets"
+                )
                 recommendations.append(f"Scale {domain.value} bridge capacity")
 
             if health.average_latency_ms > 1000:
-                anomalies.append(f"{domain.value} bridge has high latency: {health.average_latency_ms:.0f}ms")
+                anomalies.append(
+                    f"{domain.value} bridge has high latency: {health.average_latency_ms:.0f}ms"
+                )
                 recommendations.append(f"Optimize {domain.value} bridge processing")
 
             # Run proactive cleanup
@@ -731,8 +746,7 @@ class SentinelStation:
         return {
             "status": "healthy",
             "bridges_active": sum(
-                1 for b in self._bridges.values()
-                if b.health_check().status != BridgeStatus.OFFLINE
+                1 for b in self._bridges.values() if b.health_check().status != BridgeStatus.OFFLINE
             ),
             "bridges_total": len(self._bridges),
             "routing_rules": len(self._routing_rules),

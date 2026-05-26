@@ -864,4 +864,3 @@ class AdvancedCodeGenerator:
 # ---------------------------------------------------------------------------
 
 code_generator = AdvancedCodeGenerator()
-

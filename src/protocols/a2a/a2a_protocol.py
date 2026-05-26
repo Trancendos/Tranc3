@@ -36,8 +36,10 @@ logger = logging.getLogger("tranc3.a2a")
 # A2A Types
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class A2AMessageType(str, Enum):
     """Types of A2A messages"""
+
     REQUEST = "request"
     RESPONSE = "response"
     NOTIFICATION = "notification"
@@ -50,6 +52,7 @@ class A2AMessageType(str, Enum):
 
 class A2AResponseStatus(str, Enum):
     """Status codes for A2A responses"""
+
     SUCCESS = "success"
     FAILURE = "failure"
     TIMEOUT = "timeout"
@@ -59,6 +62,7 @@ class A2AResponseStatus(str, Enum):
 
 class A2APriority(int, Enum):
     """Message priority levels"""
+
     LOW = 0
     NORMAL = 5
     HIGH = 10
@@ -70,9 +74,11 @@ class A2APriority(int, Enum):
 # Data Classes
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class AgentSkill:
     """Describes a single capability an agent can perform."""
+
     id: str
     name: str
     description: str
@@ -108,6 +114,7 @@ class AgentCard:
     Describes an agent's capabilities, skills, and endpoints.
     Used for agent discovery and routing decisions.
     """
+
     id: str
     name: str
     description: str
@@ -152,6 +159,7 @@ class AgentCard:
 @dataclass
 class A2ASecurityContext:
     """Security context for A2A message authorization."""
+
     auth_tier: int = 5
     permissions: List[str] = field(default_factory=list)
     token: str = ""
@@ -172,6 +180,7 @@ class A2AMessage:
     Structured envelope for A2A communication.
     Compatible with Google's A2A protocol specification.
     """
+
     id: str = field(default_factory=lambda: f"msg-{uuid.uuid4().hex[:12]}")
     type: A2AMessageType = A2AMessageType.REQUEST
     sender: str = ""
@@ -242,6 +251,7 @@ class A2AMessage:
 @dataclass
 class A2AResponse:
     """Response to an A2A message."""
+
     id: str = field(default_factory=lambda: f"res-{uuid.uuid4().hex[:12]}")
     correlation_id: str = ""
     status: A2AResponseStatus = A2AResponseStatus.SUCCESS
@@ -267,6 +277,7 @@ class A2AResponse:
 @dataclass
 class A2ARouteRule:
     """Routing rule for the A2A router."""
+
     sender_pattern: str = "*"
     recipient_pattern: str = "*"
     skill_pattern: str = "*"
@@ -278,6 +289,7 @@ class A2ARouteRule:
 # ─────────────────────────────────────────────────────────────────────────────
 # Transport Layer
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class A2ATransport:
     """Abstract base class for A2A transports."""
@@ -394,6 +406,7 @@ class HttpA2ATransport(A2ATransport):
 # A2A Router
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class A2ARouter:
     """
     Routes A2A messages between agents.
@@ -417,7 +430,9 @@ class A2ARouter:
                 self._skill_index[skill.id] = []
             self._skill_index[skill.id].append(card.id)
 
-        logger.info(f"A2A Router: Registered agent {card.id} ({card.name}) with {len(card.skills)} skills")
+        logger.info(
+            f"A2A Router: Registered agent {card.id} ({card.name}) with {len(card.skills)} skills"
+        )
 
     def unregister(self, agent_id: str) -> None:
         """Unregister an agent."""
@@ -468,6 +483,7 @@ class A2ARouter:
 
         # Check routing rules
         import re
+
         for rule in self._rules:
             if not rule.enabled:
                 continue
@@ -506,6 +522,7 @@ class A2ARouter:
 # ─────────────────────────────────────────────────────────────────────────────
 # A2A Client
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class A2AClient:
     """
@@ -682,6 +699,7 @@ class A2AClient:
 # ─────────────────────────────────────────────────────────────────────────────
 # A2A Network — Top-Level Coordinator
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class A2ANetwork:
     """

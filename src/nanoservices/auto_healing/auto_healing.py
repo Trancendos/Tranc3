@@ -291,7 +291,9 @@ class SelfHealingEngine:
     def register_action_handler(self, action: RepairAction, handler: Any) -> None:
         self._action_handlers[action] = handler
 
-    def diagnose(self, health: HealthCheck, anomaly: Optional[Anomaly] = None) -> Optional[RepairAction]:
+    def diagnose(
+        self, health: HealthCheck, anomaly: Optional[Anomaly] = None
+    ) -> Optional[RepairAction]:
         if anomaly is None:
             return None
 
@@ -311,7 +313,9 @@ class SelfHealingEngine:
 
         return None
 
-    def execute_repair(self, action: RepairAction, target_service: str, anomaly_id: str = "") -> RepairRecord:
+    def execute_repair(
+        self, action: RepairAction, target_service: str, anomaly_id: str = ""
+    ) -> RepairRecord:
         start = time.time()
         handler = self._action_handlers.get(action)
         success = False
@@ -361,13 +365,19 @@ class AutoHealingDiagnosticsService:
 
     def initialize(self) -> None:
         metrics = [
-            "latency_ms", "error_rate", "throughput_rps",
-            "memory_usage_mb", "cpu_percent", "queue_depth",
+            "latency_ms",
+            "error_rate",
+            "throughput_rps",
+            "memory_usage_mb",
+            "cpu_percent",
+            "queue_depth",
             "active_connections",
         ]
         for m in metrics:
             self._detector.register_metric(m)
-        logger.info("AutoHealingDiagnosticsService initialized with %d metric baselines", len(metrics))
+        logger.info(
+            "AutoHealingDiagnosticsService initialized with %d metric baselines", len(metrics)
+        )
 
     def report_health(self, check: HealthCheck) -> Optional[Anomaly]:
         self._service_health[check.service_name] = check
@@ -379,7 +389,9 @@ class AutoHealingDiagnosticsService:
         self._detector.observe("memory_usage_mb", check.memory_usage_mb, check.service_name)
         self._detector.observe("cpu_percent", check.cpu_percent, check.service_name)
         self._detector.observe("queue_depth", float(check.queue_depth), check.service_name)
-        self._detector.observe("active_connections", float(check.active_connections), check.service_name)
+        self._detector.observe(
+            "active_connections", float(check.active_connections), check.service_name
+        )
 
         if anomaly:
             action = self._healer.diagnose(check, anomaly)
@@ -387,7 +399,9 @@ class AutoHealingDiagnosticsService:
                 self._healer.execute_repair(action, check.service_name, anomaly.id)
                 logger.warning(
                     "Anomaly detected in %s: %s → repair: %s",
-                    check.service_name, anomaly.description, action.value,
+                    check.service_name,
+                    anomaly.description,
+                    action.value,
                 )
 
         return anomaly
@@ -415,7 +429,9 @@ class AutoHealingDiagnosticsService:
                 anomaly = Anomaly(
                     anomaly_type=AnomalyType.RESPONSE_ANOMALY,
                     service_name=name,
-                    severity=DiagnosticSeverity.HIGH if health.status == HealthStatus.UNHEALTHY else DiagnosticSeverity.MEDIUM,
+                    severity=DiagnosticSeverity.HIGH
+                    if health.status == HealthStatus.UNHEALTHY
+                    else DiagnosticSeverity.MEDIUM,
                     description=f"Service {name} is {health.status.value}",
                 )
                 new_anomalies.append(anomaly)
