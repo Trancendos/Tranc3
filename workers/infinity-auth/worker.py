@@ -27,6 +27,7 @@ Zero-cost: FastAPI + SQLite + python-jose. No CF Workers or KV.
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 import hashlib
 import hmac
 import json
@@ -333,10 +334,41 @@ class RateLimiter:
 
 # ── FastAPI Application ────────────────────────────────────────────────────────
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    await worker_kit.startup(app)
+    worker_kit.health.register_daemon("auth_health_reporter", baseline_interval=60.0)
+    logger.info("Infinity-Auth smart adaptive layer started")
+
+    async def _bg_loop():
+        while True:
+            try:
+                await asyncio.sleep(30)
+                if worker_kit.health.should_fire("auth_health_reporter"):
+                    summary = worker_kit.health.get_health_summary()
+                    if hasattr(summary, "to_dict"):
+                        summary = summary.to_dict()
+                    worker_kit.health.update_health(summary.get("health_score", 1.0))
+                    worker_kit.health.record_fire("auth_health_reporter")
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                pass
+
+    task = asyncio.create_task(_bg_loop())
+    try:
+        yield
+    finally:
+        task.cancel()
+        await worker_kit.shutdown()
+        logger.info("Infinity-Auth smart adaptive layer stopped")
+
+
 app = FastAPI(
     title="Infinity Auth — OAuth2/SSO API",
     description="Self-hosted authentication for Trancendos with tier-aware JWT claims",
     version="2.0.0",
+    lifespan=_lifespan,
 )
 
 app.add_middleware(
@@ -386,7 +418,8 @@ async def rate_limit_check(request: Request) -> None:
 @app.get("/health")
 async def health():
     """Health check endpoint."""
-    health_summary = worker_kit.health.get_health_summary()
+    health_summary_obj = worker_kit.health.get_health_summary()
+    health_summary = health_summary_obj.to_dict() if hasattr(health_summary_obj, "to_dict") else health_summary_obj
     return {
         "status": "healthy",
         "service": "infinity-auth",
@@ -759,37 +792,6 @@ async def update_user_role(
 # ── Startup / Shutdown (Phase 22.6) ─────────────────────────────────────────
 
 
-@app.on_event("startup")
-async def _on_startup():
-    """Start the smart adaptive worker kit for infinity-auth."""
-    await worker_kit.startup(app)
-    worker_kit.health.register_daemon("auth_health_reporter", baseline_interval=60.0)
-    logger.info("Infinity-Auth smart adaptive layer started")
-
-    # Background health reporting loop
-    async def _bg_loop():
-        import asyncio
-        while True:
-            try:
-                await asyncio.sleep(30)
-                if worker_kit.health.should_fire("auth_health_reporter"):
-                    summary = worker_kit.health.get_health_summary()
-                    worker_kit.health.update_health(summary.get("health_score", 1.0))
-                    worker_kit.health.record_fire("auth_health_reporter")
-            except asyncio.CancelledError:
-                break
-            except Exception:
-                pass
-
-    import asyncio
-    asyncio.create_task(_bg_loop())
-
-
-@app.on_event("shutdown")
-async def _on_shutdown():
-    """Stop the smart adaptive worker kit for infinity-auth."""
-    await worker_kit.shutdown()
-    logger.info("Infinity-Auth smart adaptive layer stopped")
 
 
 if __name__ == "__main__":

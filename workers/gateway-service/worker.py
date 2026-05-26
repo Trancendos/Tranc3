@@ -291,7 +291,7 @@ async def _lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Tranc3 Gateway Service",
-    version="0.7.0",
+    version="0.8.0",
     lifespan=_lifespan,
 )
 
@@ -558,7 +558,7 @@ async def health():
     return {
         "status": "ok",
         "service": "gateway-service",
-        "version": "0.7.0",
+        "version": "0.8.0",
         "upstream_workers": len(UPSTREAM_WORKERS),
         "ws_connections": ws_auth_manager.connection_count,
         "sentinel_station": {
@@ -620,7 +620,7 @@ async def api_overview(request: Request):
     return {
         "platform": {
             "name": "Tranc3",
-            "version": "0.7.0",
+            "version": "0.8.0",
             "status": "operational"
             if reachable >= 6
             else "degraded"

@@ -44,6 +44,17 @@ python-multipart==0.0.29
 # Fixes: CVE-2026-28684 (path traversal in dotenv loading)
 python-dotenv==1.2.2
 
+# === Web Framework ===
+fastapi>=0.115.0
+httpx>=0.27.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+sse-starlette>=2.0.0
+uvicorn>=0.29.0
+structlog>=24.0.0
+python-jose[cryptography]>=3.3.0
+email-validator>=2.0.0
+
 # === Testing ===
 # Fixes: CVE-2025-71176 (tempfile race condition)
 pytest==9.0.3

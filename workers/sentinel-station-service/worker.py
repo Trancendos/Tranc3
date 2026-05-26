@@ -258,6 +258,7 @@ async def _lifespan(app: FastAPI):
 
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
+                    if hasattr(summary, "to_dict"): summary = summary.to_dict()
                     worker_kit.health.update_health(summary.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
                     # Broadcast sentinel health to the platform channel
@@ -354,7 +355,8 @@ class SubscriptionCreate(BaseModel):
 async def health():
     """Health check endpoint."""
     sentinel_health = await sentinel.health_check()
-    health_summary = worker_kit.health.get_health_summary()
+    health_summary_obj = worker_kit.health.get_health_summary()
+    health_summary = health_summary_obj.to_dict() if hasattr(health_summary_obj, "to_dict") else health_summary_obj
     return {
         "status": "ok",
         "service": "sentinel-station-service",

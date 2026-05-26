@@ -476,7 +476,8 @@ async def _lifespan(app: FastAPI):
                 # Health reporter daemon
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    score = summary.get("health_score", 1.0)
+                    if hasattr(summary, "to_dict"): summary = summary.to_dict()
+                    score = (summary.to_dict() if hasattr(summary, "to_dict") else summary).get("health_score", 1.0)
                     worker_kit.health.update_health(score)
                     worker_kit.health.record_fire("health_reporter")
 
@@ -676,7 +677,8 @@ def _log_gate_routing(
 @app.get("/health")
 async def health():
     """Health check for the Infinity Portal service."""
-    health_summary = worker_kit.health.get_health_summary()
+    health_summary_obj = worker_kit.health.get_health_summary()
+    health_summary = health_summary_obj.to_dict() if hasattr(health_summary_obj, "to_dict") else health_summary_obj
     return {
         "status": "healthy",
         "service": "infinity-portal",

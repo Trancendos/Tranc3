@@ -318,6 +318,7 @@ async def _lifespan(app: FastAPI):
                 await asyncio.sleep(15)
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
+                    if hasattr(summary, "to_dict"): summary = summary.to_dict()
                     worker_kit.health.update_health(summary.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
                     await sentinel.publish(SentinelEvent(
@@ -466,7 +467,8 @@ def _identity_from_row(row: sqlite3.Row) -> dict:
 @app.get("/health")
 async def health():
     """Health check for the Infinity-One service."""
-    health_summary = worker_kit.health.get_health_summary()
+    health_summary_obj = worker_kit.health.get_health_summary()
+    health_summary = health_summary_obj.to_dict() if hasattr(health_summary_obj, "to_dict") else health_summary_obj
     return {
         "status": "healthy",
         "service": "infinity-one",
