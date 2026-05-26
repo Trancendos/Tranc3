@@ -16,16 +16,17 @@ mocks or by testing the pure-Python CRUSH maths directly.
 
 from __future__ import annotations
 
+
 import pytest
 
 # ---------------------------------------------------------------------------
 # Module-level imports (verified importable)
 # ---------------------------------------------------------------------------
-from Dimensional.architecture.microceph_provider import (
+from shared_core.architecture.microceph_provider import (
     DEFAULT_POOLS,
-    MAX_PG_COUNT,
     MICROCEPH_CMD,
     MIN_PG_COUNT,
+    MAX_PG_COUNT,
     OSD_TARGET_PG_PER_OSD,
     CephHealthStatus,
     CrushBucket,
@@ -39,10 +40,11 @@ from Dimensional.architecture.microceph_provider import (
     RgwCredentials,
     crush_hash,
     crush_place,
+    straw2_choose,
     get_microceph_provider,
     shutdown_microceph_provider,
-    straw2_choose,
 )
+
 
 # ===========================================================================
 # Constants
@@ -453,7 +455,7 @@ class TestSingletonHelpers:
     @pytest.mark.asyncio
     async def test_get_provider_returns_instance(self):
         """get_microceph_provider() should return a MicroCephProvider instance."""
-        from Dimensional.architecture.microceph_provider import MicroCephProvider
+        from shared_core.architecture.microceph_provider import MicroCephProvider
 
         provider = await get_microceph_provider()
         assert isinstance(provider, MicroCephProvider)
