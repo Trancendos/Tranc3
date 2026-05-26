@@ -121,7 +121,9 @@ class InfinityAgent:
         if role not in ("alpha", "beta"):
             raise ValueError(f"Agent role must be 'alpha' or 'beta' — got {role!r}")
         self.dna = AgentDNA(sid=sid, location_pid=location_pid, name=name, role=role)
-        self._queue: asyncio.PriorityQueue[tuple[int, int, AgentTask]] = asyncio.PriorityQueue(maxsize=self._QUEUE_MAXSIZE)
+        self._queue: asyncio.PriorityQueue[tuple[int, int, AgentTask]] = asyncio.PriorityQueue(
+            maxsize=self._QUEUE_MAXSIZE
+        )
         self._enqueue_counter: int = 0
         self._handlers: dict[str, Callable[[AgentTask], Coroutine[Any, Any, dict]]] = {}
         self._running = False

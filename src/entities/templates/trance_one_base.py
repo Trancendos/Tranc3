@@ -127,7 +127,9 @@ class TrancOne:
         if name != canonical:
             logger.warning(
                 "TrancOne slot %d canonical name is %r; ignoring custom name %r — using canonical.",
-                slot, canonical, name,
+                slot,
+                canonical,
+                name,
             )
         self.dna = TrancOneDNA(aid=aid, name=canonical, slot=slot, opt_in_required=slot == 3)
         self._primes: dict[str, T2ance] = {}

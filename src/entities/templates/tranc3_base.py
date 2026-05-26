@@ -207,6 +207,7 @@ class Tranc3:
         self, peer: str, rps: float, latency_ms: float, queue: int = 0, slots: int = 0
     ) -> None:
         """Feed live metrics into the gas/kinetic subsystem."""
+        self._last_latency_ms = latency_ms
         if self._gas:
             self._gas.observe(peer, rps=rps, latency_ms=latency_ms, queue=queue, slots=slots)
         if peer in self._kinetic:
@@ -317,7 +318,7 @@ class Tranc3:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
+                pass  # expected — task was cancelled by us
         logger.info("%s stopped after %d cycles", self.dna, self._cycle_count)
 
     async def _cycle_loop(self) -> None:

@@ -1546,7 +1546,9 @@ async def reset_entity_overrides(
     pid: str,
     request: Request,
     entity_type: str | None = Query(None, description="Limit reset to a specific entity_type"),
-    slot: str | None = Query(None, description="Limit reset to a specific slot (pass empty string for no-slot rows)"),
+    slot: str | None = Query(
+        None, description="Limit reset to a specific slot (pass empty string for no-slot rows)"
+    ),
 ):
     """Reset name overrides for an entity — restores code defaults.
 
@@ -1591,7 +1593,12 @@ async def reset_entity_overrides(
             channel=SentinelChannel.PLATFORM,
             event_type="entity_overrides_reset",
             source="infinity_admin",
-            payload={"pid": pid, "overrides_cleared": count, "entity_type": entity_type, "slot": slot},
+            payload={
+                "pid": pid,
+                "overrides_cleared": count,
+                "entity_type": entity_type,
+                "slot": slot,
+            },
         )
     )
 
