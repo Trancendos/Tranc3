@@ -77,13 +77,9 @@ class NRCQueryDefinition:
 
     def to_scala(self) -> str:
         """Convert this NRC query to TraNCE Scala DSL format."""
-        # TraNCE Scala syntax:
-        # for (x <- R1; y <- R2) yield (x.a, y.b)
-        # { for (x <- R1) yield { for (y <- x.nested) yield y.field } }
         if self.dialect == NRCDialect.TRANCE_SCALA:
             return self.dsl
 
-        parts = []
         generators = []
         for i, rel in enumerate(self.relations):
             var = f"x{i}"
@@ -97,9 +93,9 @@ class NRCQueryDefinition:
         elif self.query_type == QueryType.NEST:
             outer = self.relations[0] if self.relations else "R"
             inner = self.relations[1] if len(self.relations) > 1 else "nested"
-            return f"{{ for (x <- {outer}) yield {{ for (y <- x.{inner}) yield y }} }}"
+            return "{ for (x <- " + outer + ") yield { for (y <- x." + inner + ") yield y } }"
         elif self.query_type == QueryType.UNNEST:
-            return f"for (x <- R; y <- x.nested) yield y"
+            return "for (x <- R; y <- x.nested) yield y"
         elif self.query_type == QueryType.JOIN:
             return f"for ({gen_str}; if x0.key == x1.key) yield (x0, x1)"
         else:
@@ -110,9 +106,8 @@ class NRCQueryDefinition:
         if self.dialect == NRCDialect.TRANCEX_PYTHON:
             return self.dsl
 
-        # Python list comprehension style
         generators = [f"x{i} in {rel}" for i, rel in enumerate(self.relations)]
-        gen_str = " for ".join(generatives for generatives in generators)
+        gen_str = " for ".join(generators)
 
         if self.query_type == QueryType.NEST:
             return f"[{self.to_python()} for nested_query]"
@@ -170,13 +165,14 @@ class NRCQueryParser:
 
     def _parse_scala(self, dsl: str) -> NRCQueryDefinition:
         """Parse TraNCE Scala for-comprehension NRC syntax."""
+        import re
+
         query = NRCQueryDefinition(
             dsl=dsl,
             dialect=NRCDialect.TRANCE_SCALA,
         )
 
         # Extract generators: x <- Relation
-        import re
         generators = re.findall(r'(\w+)\s*<-\s*(\w+)', dsl)
         for var, rel in generators:
             query.relations.append(rel)
@@ -197,12 +193,13 @@ class NRCQueryParser:
 
     def _parse_sql_like(self, dsl: str) -> NRCQueryDefinition:
         """Parse SQL-like NRC syntax."""
+        import re
+
         query = NRCQueryDefinition(
             dsl=dsl,
             dialect=NRCDialect.SQL_LIKE,
         )
 
-        import re
         # Extract FROM relations
         from_match = re.search(r'FROM\s+(.+?)(?:\s+WHERE|\s+NEST|\s+GROUP|\s*$)', dsl, re.IGNORECASE)
         if from_match:
@@ -230,14 +227,14 @@ class NRCQueryParser:
 
     def _parse_trancex(self, dsl: str) -> NRCQueryDefinition:
         """Parse TranceX native NRC DSL."""
+        import re
+
         query = NRCQueryDefinition(
             dsl=dsl,
             dialect=NRCDialect.TRANCEX_PYTHON,
         )
 
-        import re
         # TranceX DSL: { projections } FROM relations WHERE conditions
-        # Extract relations
         from_match = re.search(r'FROM\s+(.+?)(?:\s+WHERE|\s+NEST|\s+JOIN|\s*$)', dsl, re.IGNORECASE)
         if from_match:
             relations = [r.strip() for r in from_match.group(1).split(",")]
@@ -352,64 +349,72 @@ class ScalaBridge:
 
         if query.query_type == QueryType.COMPREHENSION:
             gens = ", ".join(f"{v} for {v} in {r}" for v, r in zip(var_names, relations))
-            return f"[({', '.join(var_names)}) for {gens}]"
+            return "[(" + ", ".join(var_names) + ") for " + gens + "]"
         elif query.query_type == QueryType.NEST:
             outer = var_names[0] if var_names else "x"
             inner = var_names[1] if len(var_names) > 1 else "y"
-            return f"[[{inner} for {inner} in {outer}.nested] for {outer} in {relations[0]}]"
+            return "[[" + inner + " for " + inner + " in " + outer + ".nested] for " + outer + " in " + relations[0] + "]"
         elif query.query_type == QueryType.FILTER:
-            return f"[{var_names[0]} for {var_names[0]} in {relations[0]} if condition({var_names[0]})]"
+            return "[" + var_names[0] + " for " + var_names[0] + " in " + relations[0] + " if condition(" + var_names[0] + ")]"
         else:
-            return f"# NRC Query: {query.dsl}\nresult = list({relations[0]})"
+            return "# NRC Query: " + query.dsl + "\nresult = list(" + relations[0] + ")"
 
     def _transpile_to_go(self, query: NRCQueryDefinition) -> str:
         """Transpile NRC query to Go code."""
         relations = query.relations or ["data"]
 
         if query.query_type == QueryType.COMPREHENSION:
-            return f"""// NRC Query: {query.dsl}
-func process(data []interface{}) []interface{} {{
-    var result []interface{}
-    for _, x := range data {{
-        result = append(result, x)
-    }}
-    return result
-}}"""
+            return (
+                "// NRC Query: " + query.dsl + "\n"
+                "func process(data []interface{}) []interface{} {\n"
+                "    var result []interface{}\n"
+                "    for _, x := range data {\n"
+                "        result = append(result, x)\n"
+                "    }\n"
+                "    return result\n"
+                "}"
+            )
         elif query.query_type == QueryType.NEST:
-            return f"""// NRC Nested Query: {query.dsl}
-func processNested(data []interface{}) [][]interface{} {{
-    var result [][]interface{}
-    for _, x := range data {{
-        var nested []interface{{}}
-        for _, y := range x.Nested {{
-            nested = append(nested, y)
-        }}
-        result = append(result, nested)
-    }}
-    return result
-}}"""
+            return (
+                "// NRC Nested Query: " + query.dsl + "\n"
+                "func processNested(data []interface{}) [][]interface{} {\n"
+                "    var result [][]interface{}\n"
+                "    for _, x := range data {\n"
+                "        var nested []interface{}\n"
+                "        for _, y := range x.Nested {\n"
+                "            nested = append(nested, y)\n"
+                "        }\n"
+                "        result = append(result, nested)\n"
+                "    }\n"
+                "    return result\n"
+                "}"
+            )
         else:
-            return f"// NRC Query: {query.dsl}\n// Auto-generated Go code"
+            return "// NRC Query: " + query.dsl + "\n// Auto-generated Go code"
 
     def _transpile_to_rust(self, query: NRCQueryDefinition) -> str:
         """Transpile NRC query to Rust code."""
         if query.query_type == QueryType.COMPREHENSION:
-            return f"""// NRC Query: {query.dsl}
-fn process(data: &[Value]) -> Vec<Value> {{
-    data.iter().cloned().collect()
-}}"""
+            return (
+                "// NRC Query: " + query.dsl + "\n"
+                "fn process(data: &[Value]) -> Vec<Value> {\n"
+                "    data.iter().cloned().collect()\n"
+                "}"
+            )
         elif query.query_type == QueryType.NEST:
-            return f"""// NRC Nested Query: {query.dsl}
-fn process_nested(data: &[Value]) -> Vec<Vec<Value>> {{
-    data.iter().map(|x| {{
-        x.get("nested")
-            .and_then(|n| n.as_array())
-            .cloned()
-            .unwrap_or_default()
-    }}).collect()
-}}"""
+            return (
+                "// NRC Nested Query: " + query.dsl + "\n"
+                "fn process_nested(data: &[Value]) -> Vec<Vec<Value>> {\n"
+                "    data.iter().map(|x| {\n"
+                "        x.get(\"nested\")\n"
+                "            .and_then(|n| n.as_array())\n"
+                "            .cloned()\n"
+                "            .unwrap_or_default()\n"
+                "    }).collect()\n"
+                "}"
+            )
         else:
-            return f"// NRC Query: {query.dsl}\n// Auto-generated Rust code"
+            return "// NRC Query: " + query.dsl + "\n// Auto-generated Rust code"
 
     def _estimate_performance(self, query: NRCQueryDefinition) -> Dict[str, float]:
         """Estimate query performance characteristics."""
@@ -489,7 +494,7 @@ class TranceBridge:
             # Generate SQL-like representation
             relations = ", ".join(query.relations) if query.relations else "R"
             projections = ", ".join(query.variables.keys()) if query.variables else "*"
-            result = f"SELECT {projections} FROM {relations}"
+            result = "SELECT " + projections + " FROM " + relations
             if query.query_type == QueryType.FILTER:
                 result += " WHERE condition"
             return result

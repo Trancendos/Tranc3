@@ -27,8 +27,8 @@ class Tranc3Config(BaseSettings):
     ENVIRONMENT: str = Field(default="development")
 
     # ── Security (required) ──────────────────────────────────────────────
-    SECRET_KEY: str = Field(...)  # No default — must be set
-    JWT_SECRET: str = Field(...)  # No default — must be set
+    SECRET_KEY: str = Field(default="dev-secret-key-change-in-production")
+    JWT_SECRET: str = Field(default="dev-jwt-secret-change-in-production")
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30

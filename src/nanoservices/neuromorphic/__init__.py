@@ -1,0 +1,43 @@
+"""Neuromorphic Computing Service — Phase 10"""
+
+from .neuromorphic import (
+    NeuronType,
+    SynapseType,
+    PlasticityRule,
+    NetworkState,
+    ChipModel,
+    NeuronParameters,
+    SynapticConnection,
+    SpikeEvent,
+    NeuromorphicCore,
+    NetworkTopology,
+    LIFNeuron,
+    IzhikevichNeuron,
+    STDPPlasticity,
+    HomeostaticPlasticity,
+    NeuromorphicNetwork,
+    NeuromorphicChipSimulator,
+    SpikeEncoder,
+    NeuromorphicService,
+)
+
+__all__ = [
+    "NeuronType",
+    "SynapseType",
+    "PlasticityRule",
+    "NetworkState",
+    "ChipModel",
+    "NeuronParameters",
+    "SynapticConnection",
+    "SpikeEvent",
+    "NeuromorphicCore",
+    "NetworkTopology",
+    "LIFNeuron",
+    "IzhikevichNeuron",
+    "STDPPlasticity",
+    "HomeostaticPlasticity",
+    "NeuromorphicNetwork",
+    "NeuromorphicChipSimulator",
+    "SpikeEncoder",
+    "NeuromorphicService",
+]
