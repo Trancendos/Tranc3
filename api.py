@@ -157,6 +157,18 @@ except ImportError as _qiskit_err:
     QuantumNeuralCore = None  # type: ignore[assignment,misc]
     logging.getLogger(__name__).warning("Quantum core unavailable (qiskit): %s", _qiskit_err)
 
+try:
+    from src.observability.proactive_health import ProactiveHealthMonitor
+except ImportError as _e:
+    ProactiveHealthMonitor = None  # type: ignore[assignment,misc]
+    logging.getLogger(__name__).warning("ProactiveHealthMonitor unavailable: %s", _e)
+
+try:
+    from src.entities.auto_evolve import AutoEvolve
+except ImportError as _e:
+    AutoEvolve = None  # type: ignore[assignment,misc]
+    logging.getLogger(__name__).warning("AutoEvolve unavailable: %s", _e)
+
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
 logger = logging.getLogger("tranc3.api")
@@ -198,6 +210,8 @@ db_user_manager = None
 _start_time = time.time()
 _feedback_count = 0  # codeql[py/unused-global]
 EVOLUTION_TRIGGER = 100  # codeql[py/unused-global]
+_health_monitor = None
+_auto_evolve = None
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -205,7 +219,7 @@ EVOLUTION_TRIGGER = 100  # codeql[py/unused-global]
 async def lifespan(app: FastAPI):
     global model, tokenizer, personality_matrix, redis_client, feature_flags
     global quantum_core, consciousness_model, neuromorphic, evolution_engine
-    global db_manager, db_user_manager
+    global db_manager, db_user_manager, _health_monitor, _auto_evolve
 
     logger.info("TRANC3 starting up...")
     cfg = Config()
@@ -317,10 +331,38 @@ async def lifespan(app: FastAPI):
         )  # codeql[py/cleartext-logging]
         model = None
 
+    # Proactive health monitor
+    if ProactiveHealthMonitor is not None:
+        try:
+            _health_monitor = ProactiveHealthMonitor()
+            await _health_monitor.start()
+            logger.info("Proactive health monitor started")
+        except Exception as e:
+            logger.warning("ProactiveHealthMonitor failed to start: %s", sanitize_for_log(e))
+
+    # AutoEvolve scheduler
+    if AutoEvolve is not None:
+        try:
+            _auto_evolve = AutoEvolve()
+            await _auto_evolve.start()
+            logger.info("AutoEvolve scheduler started")
+        except Exception as e:
+            logger.warning("AutoEvolve failed to start: %s", sanitize_for_log(e))
+
     logger.info("TRANC3 API ready ✓")
     yield
 
     logger.info("TRANC3 shutting down")
+    if _auto_evolve is not None:
+        try:
+            await _auto_evolve.stop()
+        except Exception:
+            pass
+    if _health_monitor is not None:
+        try:
+            await _health_monitor.stop()
+        except Exception:
+            pass
     if redis_client:
         redis_client.close()
 
@@ -621,6 +663,20 @@ async def health():
         components["spark_tools"] = len(registry.list_tools())
     except Exception:
         components["spark_tools"] = 0
+
+    # ── Proactive health monitor ──────────────────────────────────────────
+    if _health_monitor is not None:
+        components["health_monitor"] = "healthy"
+        components["health_monitor_alerts"] = _health_monitor.status().get("total_alerts", 0)
+    else:
+        components["health_monitor"] = "unavailable"
+
+    # ── AutoEvolve scheduler ──────────────────────────────────────────────
+    if _auto_evolve is not None:
+        components["auto_evolve"] = "healthy"
+        components["auto_evolve_registered"] = _auto_evolve.status().get("registered", 0)
+    else:
+        components["auto_evolve"] = "unavailable"
 
     degraded = any(str(v).startswith(("degraded", "unavailable")) for v in components.values())
     overall = "degraded" if degraded else "healthy"
