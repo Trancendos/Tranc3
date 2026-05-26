@@ -49,11 +49,11 @@ jobs:
           mkdir -p logs .security_telemetry .security_learning
           python -c "
           import json, os, sys
-          from shared_core.security_automation.adaptive_scanner import AdaptiveScanner
+          from Dimensional.security_automation.adaptive_scanner import AdaptiveScanner
 
           scanner = AdaptiveScanner()
           violations = scanner.scan_path('src/')
-          violations += scanner.scan_path('shared_core/')
+          violations += scanner.scan_path('Dimensional/')
           scanner.save()
 
           # Categorize by severity and confidence
@@ -113,11 +113,11 @@ jobs:
         run: |
           python -c "
           import json
-          from shared_core.security_automation.predictor import ViolationPredictor
+          from Dimensional.security_automation.predictor import ViolationPredictor
 
           predictor = ViolationPredictor()
           predictions = predictor.predict_path('src/')
-          predictions += predictor.predict_path('shared_core/')
+          predictions += predictor.predict_path('Dimensional/')
 
           # Top 10 highest risk areas
           predictions.sort(key=lambda p: p.risk_score, reverse=True)
@@ -143,11 +143,11 @@ jobs:
         if: always()
         run: |
           python -c "
-          from shared_core.security_automation.remediator_v2 import AutoRemediatorV2
+          from Dimensional.security_automation.remediator_v2 import AutoRemediatorV2
 
           remediator = AutoRemediatorV2(dry_run=True)
           results = remediator.fix_path('src/')
-          results += remediator.fix_path('shared_core/')
+          results += remediator.fix_path('Dimensional/')
 
           print(f'Dry-run: {len(results)} fixes available')
           for r in results[:10]:
@@ -209,7 +209,7 @@ jobs:
           mkdir -p logs
           python -c "
           import json, os, sys
-          from shared_core.security_automation.telemetry import SecurityTelemetry
+          from Dimensional.security_automation.telemetry import SecurityTelemetry
 
           telemetry = SecurityTelemetry(storage_dir='.security_telemetry')
 
@@ -345,7 +345,7 @@ jobs:
           mkdir -p logs
           python -c "
           import json
-          from shared_core.orchestration.config_drift import ConfigDriftDetector
+          from Dimensional.orchestration.config_drift import ConfigDriftDetector
 
           detector = ConfigDriftDetector(
               root_dir='.',

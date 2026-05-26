@@ -33,69 +33,54 @@ import json
 import logging
 import os
 import sqlite3
+import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+# Phase 22: Infinity Ecosystem security
+from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensional.infinity.nomenclature import (
+    ECOSYSTEM_NAME,
+    INFINITY_LOCATIONS,
+    PILLAR_ACCENT_COLORS,
+    PILLAR_DISPLAY_NAMES,
+    PILLAR_PRIME_MAP,
+    PRIMES,
+    TRANSFER_SYSTEMS,
+    UNIVERSE_NAME,
+    InfinityLocation,
+    InfinityRole,
+    Pillar,
+    SentinelChannel,
+    Tier,
+    TransferSystem,
+)
+from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensional.infinity.rbac import Permission, RBACEngine
+
+# Phase 22.3: Sentinel Station
+from Dimensional.infinity.sentinel_station import (
+    SentinelStation,
+    get_sentinel_station,
+)
+
 # Phase 22.4: Dimensional Services
-from shared_core.dimensionals import (
+from Dimensional.dimensionals import (
+    DimensionalServiceBus,
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
 )
 
-# Phase 22: Infinity Ecosystem security
-from shared_core.infinity.auth_gateway import AuthGatewayMiddleware
-from shared_core.infinity.nomenclature import (
-    ECOSYSTEM_NAME,
-    INFINITY_LOCATIONS,
-    PILLAR_PRIME_MAP,
-    PRIMES,
-    TRANSFER_SYSTEMS,
-    UNIVERSE_NAME,
-    Pillar,
-    SentinelChannel,
-    Tier,
-)
-from shared_core.infinity.owasp_hardening import OWASPHardeningMiddleware
-from shared_core.infinity.rbac import RBACEngine
-
-# Phase 22.3: Sentinel Station
-from shared_core.infinity.sentinel_station import (
-    SentinelEvent,
-    get_sentinel_station,
-)
-
-# Phase 22.4: Dimensional Services
-try:
-    from shared_core.dimensionals import (
-        get_dimensional_bus,
-        get_dimensional_registry,
-        get_underverse_registry,
-    )
-
-    _DIMENSIONAL_AVAILABLE = True
-except ImportError:
-    _DIMENSIONAL_AVAILABLE = False
-
-    def get_dimensional_bus():  # type: ignore[misc]
-        return None
-
-    def get_dimensional_registry():  # type: ignore[misc]
-        return None
-
-    def get_underverse_registry():  # type: ignore[misc]
-        return None
-
-
 # Phase 22.6: Smart Adaptive Intelligence
-from shared_core.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 # Phase 25: Platform Entity Registry (entity name management)
 try:
@@ -111,6 +96,7 @@ except Exception:  # pragma: no cover
 
     def get_entity_by_pid(pid: str):  # type: ignore[misc]
         return None
+
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -140,9 +126,9 @@ underverse_registry = get_underverse_registry()
 # Phase 22.6: Smart adaptive worker kit (admin gets higher defense thresholds)
 worker_kit = InfinityWorkerKit(
     "infinity-admin",
-    defense_threshold=5,  # Stricter: only 5 violations before block
+    defense_threshold=5,          # Stricter: only 5 violations before block
     defense_window_seconds=300,
-    defense_block_seconds=1800,  # 30-min block for admin violations
+    defense_block_seconds=1800,   # 30-min block for admin violations
 )
 
 # ---------------------------------------------------------------------------
@@ -201,28 +187,10 @@ class AdminDatabase:
                 created_at TEXT NOT NULL
             );
 
-            CREATE TABLE IF NOT EXISTS entity_overrides (
-                id TEXT PRIMARY KEY,
-                location_pid TEXT NOT NULL,
-                entity_type TEXT NOT NULL,
-                slot TEXT NOT NULL DEFAULT '',
-                original_name TEXT NOT NULL,
-                override_name TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                updated_by TEXT,
-                UNIQUE(location_pid, entity_type, slot)
-            );
-
             CREATE INDEX IF NOT EXISTS idx_config_category ON system_config(category);
             CREATE INDEX IF NOT EXISTS idx_actions_actor ON admin_actions(actor_id);
             CREATE INDEX IF NOT EXISTS idx_actions_type ON admin_actions(action_type);
             CREATE INDEX IF NOT EXISTS idx_compliance_type ON compliance_events(event_type);
-            CREATE INDEX IF NOT EXISTS idx_overrides_pid ON entity_overrides(location_pid);
-
-            -- Migration: normalise legacy NULL slots to '' so ON CONFLICT upsert fires correctly.
-            -- SQLite UNIQUE treats each NULL as distinct; '' is the correct sentinel for no-slot rows.
-            -- This UPDATE is a no-op when no NULL rows exist (idempotent on every startup).
-            UPDATE entity_overrides SET slot = '' WHERE slot IS NULL;
         """)
         self._conn.commit()
 
@@ -242,7 +210,6 @@ db = AdminDatabase()
 
 class ConfigUpdate(BaseModel):
     """Update a system configuration value."""
-
     value: str
     category: str = Field(default="general")
     description: str | None = None
@@ -250,7 +217,6 @@ class ConfigUpdate(BaseModel):
 
 class FeatureFlagUpdate(BaseModel):
     """Update a feature flag."""
-
     enabled: bool
     description: str | None = None
     pillar: str | None = None
@@ -259,7 +225,6 @@ class FeatureFlagUpdate(BaseModel):
 
 class AdminActionLog(BaseModel):
     """Log entry for an admin action."""
-
     id: str
     action_type: str
     actor_id: str
@@ -268,67 +233,6 @@ class AdminActionLog(BaseModel):
     target_id: str | None
     details: str | None
     created_at: str
-
-
-# Phase 25: Entity name management models
-
-
-class EntityNameUpdate(BaseModel):
-    """Request body for renaming any named entity (location, AI, agent, bot)."""
-
-    new_name: str = Field(..., min_length=1, max_length=120, description="The new display name")
-    reason: str | None = Field(
-        default=None, max_length=500, description="Optional reason for rename"
-    )
-
-
-class EntityOverrideRecord(BaseModel):
-    """A single persisted name override."""
-
-    id: str
-    location_pid: str
-    entity_type: str
-    slot: str | None
-    original_name: str
-    override_name: str
-    updated_at: str
-    updated_by: str | None
-
-
-class AgentDetail(BaseModel):
-    """Detail for a Tier 4 Agent."""
-
-    code_name: str
-    description: str | None
-    sid: str | None
-    has_override: bool = False
-
-
-class BotDetail(BaseModel):
-    """Detail for a Tier 5 Bot."""
-
-    code_name: str
-    description: str | None
-    nid: str | None
-    has_override: bool = False
-
-
-class EntityDetail(BaseModel):
-    """Full detail for a platform entity with overrides applied."""
-
-    pid: str
-    location: str
-    pillar: str | None
-    lead_ai: str | None
-    aid: str | None
-    primes: list[str]
-    agent_alpha: AgentDetail | None
-    agent_beta: AgentDetail | None
-    bots: dict[str, BotDetail | None]
-    worker_port: int | None
-    worker_path: str | None
-    overrides_applied: dict[str, str]
-    platform_available: bool
 
 
 # ---------------------------------------------------------------------------
@@ -364,18 +268,16 @@ async def _lifespan(app: FastAPI):
     _seed_default_config()
 
     # Publish startup event
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.PLATFORM,
-            event_type="infinity_admin_started",
-            source="infinity_admin",
-            payload={
-                "port": PORT,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "smart_adaptive": True,
-            },
-        )
-    )
+    await sentinel.publish(SentinelEvent(
+        channel=SentinelChannel.PLATFORM,
+        event_type="infinity_admin_started",
+        source="infinity_admin",
+        payload={
+            "port": PORT,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "smart_adaptive": True,
+        },
+    ))
 
     logger.info("Infinity-Admin ready — management OS for the Trancendos Universe ✨")
 
@@ -387,35 +289,29 @@ async def _lifespan(app: FastAPI):
                 # Health reporter
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    if hasattr(summary, "to_dict"):
-                        summary = summary.to_dict()
-                    worker_kit.health.update_health(summary.get("health_score", 1.0))
+                    summary_dict = summary.to_dict(); worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
-                    await sentinel.publish(
-                        SentinelEvent(
-                            channel=SentinelChannel.PLATFORM,
-                            event_type="health_report",
-                            source="infinity_admin",
-                            payload=summary,
-                        )
-                    )
+                    await sentinel.publish(SentinelEvent(
+                        channel=SentinelChannel.PLATFORM,
+                        event_type="health_report",
+                        source="infinity_admin",
+                        payload=summary_dict,
+                    ))
                 # Defense reporter — publish incidents to security channel
                 if worker_kit.health.should_fire("defense_reporter"):
                     defense_incidents = worker_kit.health.get_defense_incidents()
                     defense_stats = worker_kit.defense.get_stats()
                     worker_kit.health.record_fire("defense_reporter")
                     if defense_stats.get("incidents", 0) > 0:
-                        await sentinel.publish(
-                            SentinelEvent(
-                                channel=SentinelChannel.SECURITY,
-                                event_type="defense_report",
-                                source="infinity_admin",
-                                payload={
-                                    "stats": defense_stats,
-                                    "incidents": defense_incidents[:10],
-                                },
-                            )
-                        )
+                        await sentinel.publish(SentinelEvent(
+                            channel=SentinelChannel.SECURITY,
+                            event_type="defense_report",
+                            source="infinity_admin",
+                            payload={
+                                "stats": defense_stats,
+                                "incidents": defense_incidents[:10],
+                            },
+                        ))
             except asyncio.CancelledError:
                 break
             except Exception as exc:
@@ -447,31 +343,11 @@ def _seed_default_config() -> None:
         ("mfa_required", "false", "security", "Whether MFA is required for all users"),
         ("session_timeout", "3600", "auth", "Session timeout in seconds"),
         ("max_login_attempts", "5", "security", "Maximum login attempts before lockout"),
-        (
-            "sentinel_redis_enabled",
-            "false",
-            "infrastructure",
-            "Whether Redis is enabled for Sentinel Station",
-        ),
-        (
-            "dimensional_bus_enabled",
-            "true",
-            "infrastructure",
-            "Whether the Dimensional Service Bus is active",
-        ),
-        (
-            "nexus_transfer_enabled",
-            "true",
-            "transfer",
-            "Whether The Nexus transfer system is active",
-        ),
+        ("sentinel_redis_enabled", "false", "infrastructure", "Whether Redis is enabled for Sentinel Station"),
+        ("dimensional_bus_enabled", "true", "infrastructure", "Whether the Dimensional Service Bus is active"),
+        ("nexus_transfer_enabled", "true", "transfer", "Whether The Nexus transfer system is active"),
         ("hive_transfer_enabled", "true", "transfer", "Whether The HIVE transfer system is active"),
-        (
-            "bridge_transfer_enabled",
-            "true",
-            "transfer",
-            "Whether The Infinity Bridge transfer system is active",
-        ),
+        ("bridge_transfer_enabled", "true", "transfer", "Whether The Infinity Bridge transfer system is active"),
     ]
 
     now = datetime.now(timezone.utc).isoformat()
@@ -534,7 +410,6 @@ app.add_middleware(
         "/admin/transfer",
         "/admin/audit",
         "/admin/actions",
-        "/admin/entities",
     },
 )
 
@@ -578,12 +453,7 @@ def _log_admin_action(
 @app.get("/health")
 async def health():
     """Health check for the Infinity-Admin service."""
-    health_summary_obj = worker_kit.health.get_health_summary()
-    health_summary = (
-        health_summary_obj.to_dict()
-        if hasattr(health_summary_obj, "to_dict")
-        else health_summary_obj
-    )
+    health_summary = worker_kit.health.get_health_summary()
     return {
         "status": "healthy",
         "service": "infinity-admin",
@@ -591,8 +461,8 @@ async def health():
         "purpose": "Administrative Management OS for the Trancendos Universe",
         "dimensional_bus": dimensional_bus.is_running,
         "sentinel": sentinel.is_running,
-        "health_score": health_summary.get("health_score", 1.0),
-        "health_tier": health_summary.get("tier", "EXCELLENT"),
+        "health_score": health_summary.to_dict().get("health_score", 1.0),
+        "health_tier": health_summary.to_dict().get("health_tier", "EXCELLENT"),
         "smart_adaptive": True,
         "defense_blocked_ips": len(worker_kit.defense.get_blocked_ips()),
     }
@@ -612,7 +482,9 @@ async def list_config(category: str | None = None):
             (category,),
         ).fetchall()
     else:
-        rows = db.execute("SELECT * FROM system_config ORDER BY category, key").fetchall()
+        rows = db.execute(
+            "SELECT * FROM system_config ORDER BY category, key"
+        ).fetchall()
 
     return {"config": [dict(r) for r in rows], "total": len(rows)}
 
@@ -684,27 +556,12 @@ async def update_feature(key: str, flag: FeatureFlagUpdate, request: Request):
     if existing:
         db.execute(
             "UPDATE feature_flags SET enabled = ?, description = ?, pillar = ?, tier_required = ?, updated_at = ? WHERE key = ?",
-            (
-                1 if flag.enabled else 0,
-                flag.description,
-                flag.pillar,
-                flag.tier_required or 0,
-                now,
-                key,
-            ),
+            (1 if flag.enabled else 0, flag.description, flag.pillar, flag.tier_required or 0, now, key),
         )
     else:
         db.execute(
             "INSERT INTO feature_flags (key, enabled, description, pillar, tier_required, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (
-                key,
-                1 if flag.enabled else 0,
-                flag.description,
-                flag.pillar,
-                flag.tier_required or 0,
-                now,
-                now,
-            ),
+            (key, 1 if flag.enabled else 0, flag.description, flag.pillar, flag.tier_required or 0, now, now),
         )
     db.commit()
 
@@ -729,19 +586,17 @@ async def update_feature(key: str, flag: FeatureFlagUpdate, request: Request):
 async def list_primes():
     """List all Prime entities and their governance status."""
     primes_data = []
-    for _prime_id, prime in PRIMES.items():
-        primes_data.append(
-            {
-                "id": prime.id,
-                "name": prime.name,
-                "tier": prime.tier.value,
-                "tier_name": prime.tier.display_name,
-                "pillar": prime.pillar.value,
-                "pillar_name": prime.pillar.display_name,
-                "pillar_accent": prime.pillar.accent_color,
-                "description": prime.description,
-            }
-        )
+    for prime_id, prime in PRIMES.items():
+        primes_data.append({
+            "id": prime.id,
+            "name": prime.name,
+            "tier": prime.tier.value,
+            "tier_name": prime.tier.display_name,
+            "pillar": prime.pillar.value,
+            "pillar_name": prime.pillar.display_name,
+            "pillar_accent": prime.pillar.accent_color,
+            "description": prime.description,
+        })
 
     return {"primes": primes_data, "total": len(primes_data)}
 
@@ -754,16 +609,14 @@ async def list_pillars():
         prime_id = PILLAR_PRIME_MAP.get(pillar)
         prime = PRIMES.get(prime_id)
 
-        pillars_data.append(
-            {
-                "id": pillar.value,
-                "name": pillar.display_name,
-                "accent_color": pillar.accent_color,
-                "prime_id": prime_id,
-                "prime_name": prime.name if prime else "Unassigned",
-                "prime_tier": prime.tier.display_name if prime else None,
-            }
-        )
+        pillars_data.append({
+            "id": pillar.value,
+            "name": pillar.display_name,
+            "accent_color": pillar.accent_color,
+            "prime_id": prime_id,
+            "prime_name": prime.name if prime else "Unassigned",
+            "prime_tier": prime.tier.display_name if prime else None,
+        })
 
     return {"pillars": pillars_data, "total": len(pillars_data)}
 
@@ -771,19 +624,18 @@ async def list_pillars():
 @app.get("/admin/tiers")
 async def list_tiers():
     """List the complete tier system with descriptions."""
+    from Dimensional.infinity.nomenclature import TIER_NAMES, TIER_DESCRIPTIONS
 
     tiers_data = []
     for tier in Tier:
-        tiers_data.append(
-            {
-                "value": tier.value,
-                "name": tier.display_name,
-                "description": tier.description,
-                "is_intelligence": tier.is_intelligence,
-                "is_governance": tier.is_governance,
-                "infinity_designation": tier.infinity_designation,
-            }
-        )
+        tiers_data.append({
+            "value": tier.value,
+            "name": tier.display_name,
+            "description": tier.description,
+            "is_intelligence": tier.is_intelligence,
+            "is_governance": tier.is_governance,
+            "infinity_designation": tier.infinity_designation,
+        })
 
     return {"tiers": tiers_data, "total": len(tiers_data)}
 
@@ -869,15 +721,13 @@ async def transfer_systems_status():
         ).fetchone()
         enabled = config_row["value"] == "true" if config_row else True
 
-        systems.append(
-            {
-                "id": ts.value,
-                "name": info.get("name", ""),
-                "transfers": info.get("transfers", ""),
-                "description": info.get("description", ""),
-                "enabled": enabled,
-            }
-        )
+        systems.append({
+            "id": ts.value,
+            "name": info.get("name", ""),
+            "transfers": info.get("transfers", ""),
+            "description": info.get("description", ""),
+            "enabled": enabled,
+        })
 
     return {"transfer_systems": systems, "total": len(systems)}
 
@@ -892,14 +742,12 @@ async def list_locations():
     """List all Infinity Locations with their configuration."""
     locations = []
     for loc, info in INFINITY_LOCATIONS.items():
-        locations.append(
-            {
-                "id": loc.value,
-                "name": info.get("name", ""),
-                "purpose": info.get("purpose", ""),
-                "description": info.get("description", ""),
-            }
-        )
+        locations.append({
+            "id": loc.value,
+            "name": info.get("name", ""),
+            "purpose": info.get("purpose", ""),
+            "description": info.get("description", ""),
+        })
 
     return {"locations": locations, "total": len(locations)}
 
@@ -933,9 +781,7 @@ async def audit_log(
         params + [limit, offset],
     ).fetchall()
 
-    total = db.execute(f"SELECT COUNT(*) as cnt FROM admin_actions{where}", params).fetchone()[
-        "cnt"
-    ]
+    total = db.execute(f"SELECT COUNT(*) as cnt FROM admin_actions{where}", params).fetchone()["cnt"]
 
     return {"actions": [dict(r) for r in rows], "total": total}
 
@@ -974,8 +820,8 @@ async def compliance_events(
 @app.get("/admin/sentinel")
 async def sentinel_status():
     """Get Sentinel Station status and channel information."""
-    from shared_core.infinity.nomenclature import SENTINEL_CHANNELS
-    from shared_core.infinity.sentinel_config import sentinel_config
+    from Dimensional.infinity.sentinel_config import sentinel_config
+    from Dimensional.infinity.nomenclature import SENTINEL_CHANNELS
 
     return {
         "running": sentinel.is_running,
@@ -1032,623 +878,16 @@ async def ecosystem_overview():
             ts.value: {"name": info.get("name", ""), "transfers": info.get("transfers", "")}
             for ts, info in TRANSFER_SYSTEMS.items()
         },
-        "locations": {loc.value: info.get("name", "") for loc, info in INFINITY_LOCATIONS.items()},
+        "locations": {
+            loc.value: info.get("name", "")
+            for loc, info in INFINITY_LOCATIONS.items()
+        },
         "admin": {
             "config_entries": system_config_count,
             "feature_flags": feature_flag_count,
             "audit_actions": audit_action_count,
         },
     }
-
-
-# ---------------------------------------------------------------------------
-# Phase 25: Platform Entity Name Management
-# ---------------------------------------------------------------------------
-# The PLATFORM_ENTITIES dict in src/entities/platform.py is the canonical
-# code-level source of truth. Entity overrides are persisted in the
-# entity_overrides SQLite table and merged at request time — no code deploys
-# needed to rename locations, AIs, agents, or bots.
-
-
-def _resolve_entity_detail(pid: str) -> EntityDetail | None:
-    """Load a platform entity, merge DB overrides, return full detail."""
-    if not _PLATFORM_ENTITIES_AVAILABLE:
-        return None
-
-    entity = get_entity_by_pid(pid)
-    if entity is None:
-        return None
-
-    # Load all overrides for this PID
-    ov_rows = db.execute(
-        "SELECT entity_type, slot, override_name FROM entity_overrides WHERE location_pid = ?",
-        (pid,),
-    ).fetchall()
-    overrides: dict[str, str] = {}
-    for r in ov_rows:
-        key = r["entity_type"] if not r["slot"] else f"{r['entity_type']}_{r['slot']}"
-        overrides[key] = r["override_name"]
-
-    # Resolve location name
-    location = overrides.get("location", entity.location)
-
-    # Resolve lead AI name
-    lead_ai = overrides.get("lead_ai", entity.lead_ai)
-
-    # Resolve primes list
-    raw_primes: list[str] = list(entity.primes) if entity.primes else []
-    primes: list[str] = []
-    for i, p in enumerate(raw_primes):
-        primes.append(overrides.get(f"prime_{i}", p))
-
-    # Resolve agents
-    def _agent(attr: str, role: str) -> AgentDetail | None:
-        ag = getattr(entity, attr, None)
-        if ag is None:
-            return None
-        name = overrides.get(f"agent_{role}", ag.code_name)
-        return AgentDetail(
-            code_name=name,
-            description=getattr(ag, "description", None),
-            sid=getattr(ag, "sid", None),
-            has_override=f"agent_{role}" in overrides,
-        )
-
-    # Resolve bots
-    def _bot(attr: str, slot: str) -> BotDetail | None:
-        b = getattr(entity, attr, None)
-        if b is None:
-            return None
-        name = overrides.get(f"bot_{slot}", b.code_name)
-        return BotDetail(
-            code_name=name,
-            description=getattr(b, "description", None),
-            nid=getattr(b, "nid", None),
-            has_override=f"bot_{slot}" in overrides,
-        )
-
-    return EntityDetail(
-        pid=entity.pid,
-        location=location,
-        pillar=entity.pillar.value if entity.pillar else None,
-        lead_ai=lead_ai,
-        aid=getattr(entity, "aid", None),
-        primes=primes,
-        agent_alpha=_agent("agent_alpha", "alpha"),
-        agent_beta=_agent("agent_beta", "beta"),
-        bots={
-            "01": _bot("bot_01", "01"),
-            "02": _bot("bot_02", "02"),
-            "03": _bot("bot_03", "03"),
-            "04": _bot("bot_04", "04"),
-        },
-        worker_port=getattr(entity, "worker_port", None),
-        worker_path=getattr(entity, "worker_path", None),
-        overrides_applied=overrides,
-        platform_available=True,
-    )
-
-
-def _upsert_override(
-    location_pid: str,
-    entity_type: str,
-    slot: str | None,
-    original_name: str,
-    override_name: str,
-    updated_by: str,
-) -> None:
-    """Insert or replace an entity name override in the DB."""
-    slot_val = slot if slot is not None else ""  # sentinel — SQLite UNIQUE treats NULL as distinct
-    now = datetime.now(timezone.utc).isoformat()
-    db.execute(
-        """INSERT INTO entity_overrides
-               (id, location_pid, entity_type, slot, original_name, override_name, updated_at, updated_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT(location_pid, entity_type, slot)
-           DO UPDATE SET override_name=excluded.override_name,
-                         updated_at=excluded.updated_at,
-                         updated_by=excluded.updated_by""",
-        (
-            uuid.uuid4().hex[:16],
-            location_pid,
-            entity_type,
-            slot_val,
-            original_name,
-            override_name,
-            now,
-            updated_by,
-        ),
-    )
-    db.commit()
-
-
-@app.get("/admin/entities")
-async def list_entities(pillar: str | None = None):
-    """List all 43 platform entities with current names (DB overrides applied).
-
-    Returns a summary of each entity: PID, location name, lead AI, prime count,
-    worker port, and how many name overrides are active.
-    """
-    if not _PLATFORM_ENTITIES_AVAILABLE:
-        return {
-            "entities": [],
-            "total": 0,
-            "platform_available": False,
-            "message": "Platform entity registry not accessible from this worker",
-        }
-
-    # Preload all overrides in one query — avoids N+1 (3 queries × 43 entities = 129 queries)
-    all_ov_rows = db.execute(
-        "SELECT location_pid, entity_type, slot, override_name FROM entity_overrides"
-    ).fetchall()
-    ov_loc_map: dict[str, str] = {}
-    ov_ai_map: dict[str, str] = {}
-    ov_count_map: dict[str, int] = {}
-    for row in all_ov_rows:
-        lpid = row["location_pid"]
-        ov_count_map[lpid] = ov_count_map.get(lpid, 0) + 1
-        if row["entity_type"] == "location" and not row["slot"]:
-            ov_loc_map[lpid] = row["override_name"]
-        elif row["entity_type"] == "lead_ai" and not row["slot"]:
-            ov_ai_map[lpid] = row["override_name"]
-
-    results = []
-    for location_name, entity in PLATFORM_ENTITIES.items():
-        if pillar and (entity.pillar is None or entity.pillar.value != pillar):
-            continue
-
-        pid = getattr(entity, "pid", None)
-        if not pid:
-            continue
-
-        results.append(
-            {
-                "pid": pid,
-                "location": ov_loc_map.get(pid, location_name),
-                "location_original": location_name,
-                "pillar": entity.pillar.value if entity.pillar else None,
-                "lead_ai": ov_ai_map.get(pid, entity.lead_ai),
-                "lead_ai_original": entity.lead_ai,
-                "prime_count": len(entity.primes) if entity.primes else 0,
-                "worker_port": getattr(entity, "worker_port", None),
-                "active_overrides": ov_count_map.get(pid, 0),
-            }
-        )
-
-    results.sort(key=lambda x: x["pid"])
-    return {
-        "entities": results,
-        "total": len(results),
-        "platform_available": True,
-    }
-
-
-@app.get("/admin/entities/{pid}")
-async def get_entity(pid: str):
-    """Get full detail for a platform entity with all overrides applied."""
-    detail = _resolve_entity_detail(pid)
-    if detail is None:
-        if not _PLATFORM_ENTITIES_AVAILABLE:
-            raise HTTPException(
-                status_code=503,
-                detail="Platform entity registry not accessible from this worker",
-            )
-        raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
-
-    return detail.model_dump()
-
-
-@app.patch("/admin/entities/{pid}/name")
-async def rename_location(pid: str, body: EntityNameUpdate, request: Request):
-    """Rename a Location (App). Does not require a code deploy.
-
-    entity_type: 'location', slot: NULL
-    """
-    user = getattr(request.state, "user", {})
-    actor = user.get("sub", "unknown")
-
-    entity = get_entity_by_pid(pid)
-    if entity is None:
-        if not _PLATFORM_ENTITIES_AVAILABLE:
-            raise HTTPException(
-                status_code=503,
-                detail="Platform entity registry not accessible from this worker",
-            )
-        raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
-
-    original = entity.location
-    _upsert_override(pid, "location", None, original, body.new_name, actor)
-
-    _log_admin_action(
-        action_type="entity_rename_location",
-        actor_id=actor,
-        actor_username=user.get("username"),
-        target_type="entity_location",
-        target_id=pid,
-        details={"original": original, "new_name": body.new_name, "reason": body.reason},
-    )
-
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.PLATFORM,
-            event_type="entity_renamed",
-            source="infinity_admin",
-            payload={
-                "pid": pid,
-                "entity_type": "location",
-                "original": original,
-                "new_name": body.new_name,
-            },
-        )
-    )
-
-    return {
-        "message": "Location renamed",
-        "pid": pid,
-        "original": original,
-        "new_name": body.new_name,
-    }
-
-
-@app.patch("/admin/entities/{pid}/lead-ai")
-async def rename_lead_ai(pid: str, body: EntityNameUpdate, request: Request):
-    """Rename the Tier 3 Lead AI for a platform entity.
-
-    entity_type: 'lead_ai', slot: NULL
-    """
-    user = getattr(request.state, "user", {})
-    actor = user.get("sub", "unknown")
-
-    entity = get_entity_by_pid(pid)
-    if entity is None:
-        if not _PLATFORM_ENTITIES_AVAILABLE:
-            raise HTTPException(
-                status_code=503,
-                detail="Platform entity registry not accessible from this worker",
-            )
-        raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
-
-    original = entity.lead_ai or ""
-    _upsert_override(pid, "lead_ai", None, original, body.new_name, actor)
-
-    _log_admin_action(
-        action_type="entity_rename_lead_ai",
-        actor_id=actor,
-        actor_username=user.get("username"),
-        target_type="entity_lead_ai",
-        target_id=pid,
-        details={"original": original, "new_name": body.new_name, "tier": 3, "reason": body.reason},
-    )
-
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.PLATFORM,
-            event_type="entity_renamed",
-            source="infinity_admin",
-            payload={
-                "pid": pid,
-                "entity_type": "lead_ai",
-                "original": original,
-                "new_name": body.new_name,
-            },
-        )
-    )
-
-    return {
-        "message": "Lead AI renamed",
-        "pid": pid,
-        "original": original,
-        "new_name": body.new_name,
-        "tier": 3,
-    }
-
-
-@app.patch("/admin/entities/{pid}/primes/{prime_idx}")
-async def rename_prime(pid: str, prime_idx: int, body: EntityNameUpdate, request: Request):
-    """Rename or reassign a Tier 2 Prime at a given index (0-based).
-
-    entity_type: 'prime', slot: str(prime_idx)
-    """
-    user = getattr(request.state, "user", {})
-    actor = user.get("sub", "unknown")
-
-    entity = get_entity_by_pid(pid)
-    if entity is None:
-        if not _PLATFORM_ENTITIES_AVAILABLE:
-            raise HTTPException(
-                status_code=503,
-                detail="Platform entity registry not accessible from this worker",
-            )
-        raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
-
-    primes = list(entity.primes) if entity.primes else []
-    if prime_idx < 0 or prime_idx >= len(primes):
-        raise HTTPException(
-            status_code=400,
-            detail=f"prime_idx {prime_idx} out of range (entity has {len(primes)} prime(s))",
-        )
-
-    original = primes[prime_idx]
-    slot = str(prime_idx)
-    _upsert_override(pid, "prime", slot, original, body.new_name, actor)
-
-    _log_admin_action(
-        action_type="entity_rename_prime",
-        actor_id=actor,
-        actor_username=user.get("username"),
-        target_type="entity_prime",
-        target_id=f"{pid}:prime:{prime_idx}",
-        details={
-            "original": original,
-            "new_name": body.new_name,
-            "prime_idx": prime_idx,
-            "tier": 2,
-            "reason": body.reason,
-        },
-    )
-
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.PLATFORM,
-            event_type="entity_renamed",
-            source="infinity_admin",
-            payload={
-                "pid": pid,
-                "entity_type": "prime",
-                "slot": slot,
-                "original": original,
-                "new_name": body.new_name,
-            },
-        )
-    )
-
-    return {
-        "message": "Prime renamed",
-        "pid": pid,
-        "prime_idx": prime_idx,
-        "original": original,
-        "new_name": body.new_name,
-        "tier": 2,
-    }
-
-
-@app.patch("/admin/entities/{pid}/agents/{role}")
-async def rename_agent(pid: str, role: str, body: EntityNameUpdate, request: Request):
-    """Rename a Tier 4 Agent. role must be 'alpha' or 'beta'.
-
-    entity_type: 'agent', slot: 'alpha' | 'beta'
-    """
-    user = getattr(request.state, "user", {})
-    actor = user.get("sub", "unknown")
-
-    if role not in ("alpha", "beta"):
-        raise HTTPException(status_code=400, detail="role must be 'alpha' or 'beta'")
-
-    entity = get_entity_by_pid(pid)
-    if entity is None:
-        if not _PLATFORM_ENTITIES_AVAILABLE:
-            raise HTTPException(
-                status_code=503,
-                detail="Platform entity registry not accessible from this worker",
-            )
-        raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
-
-    agent = entity.agent_alpha if role == "alpha" else entity.agent_beta
-    if agent is None:
-        raise HTTPException(status_code=404, detail=f"Entity '{pid}' has no agent_{role}")
-
-    original = agent.code_name
-    _upsert_override(pid, "agent", role, original, body.new_name, actor)
-
-    _log_admin_action(
-        action_type="entity_rename_agent",
-        actor_id=actor,
-        actor_username=user.get("username"),
-        target_type="entity_agent",
-        target_id=f"{pid}:agent:{role}",
-        details={
-            "original": original,
-            "new_name": body.new_name,
-            "role": role,
-            "tier": 4,
-            "reason": body.reason,
-        },
-    )
-
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.PLATFORM,
-            event_type="entity_renamed",
-            source="infinity_admin",
-            payload={
-                "pid": pid,
-                "entity_type": "agent",
-                "slot": role,
-                "original": original,
-                "new_name": body.new_name,
-            },
-        )
-    )
-
-    return {
-        "message": "Agent renamed",
-        "pid": pid,
-        "role": role,
-        "original": original,
-        "new_name": body.new_name,
-        "tier": 4,
-    }
-
-
-@app.patch("/admin/entities/{pid}/bots/{slot}")
-async def rename_bot(pid: str, slot: str, body: EntityNameUpdate, request: Request):
-    """Rename a Tier 5 Bot. slot must be '01', '02', '03', or '04'.
-
-    entity_type: 'bot', slot: '01' | '02' | '03' | '04'
-    """
-    user = getattr(request.state, "user", {})
-    actor = user.get("sub", "unknown")
-
-    valid_slots = ("01", "02", "03", "04")
-    if slot not in valid_slots:
-        raise HTTPException(status_code=400, detail=f"slot must be one of {valid_slots}")
-
-    entity = get_entity_by_pid(pid)
-    if entity is None:
-        if not _PLATFORM_ENTITIES_AVAILABLE:
-            raise HTTPException(
-                status_code=503,
-                detail="Platform entity registry not accessible from this worker",
-            )
-        raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
-
-    bot = getattr(entity, f"bot_{slot}", None)
-    if bot is None:
-        raise HTTPException(status_code=404, detail=f"Entity '{pid}' has no bot_{slot}")
-
-    original = bot.code_name
-    _upsert_override(pid, "bot", slot, original, body.new_name, actor)
-
-    _log_admin_action(
-        action_type="entity_rename_bot",
-        actor_id=actor,
-        actor_username=user.get("username"),
-        target_type="entity_bot",
-        target_id=f"{pid}:bot:{slot}",
-        details={
-            "original": original,
-            "new_name": body.new_name,
-            "slot": slot,
-            "tier": 5,
-            "reason": body.reason,
-        },
-    )
-
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.PLATFORM,
-            event_type="entity_renamed",
-            source="infinity_admin",
-            payload={
-                "pid": pid,
-                "entity_type": "bot",
-                "slot": slot,
-                "original": original,
-                "new_name": body.new_name,
-            },
-        )
-    )
-
-    return {
-        "message": "Bot renamed",
-        "pid": pid,
-        "slot": slot,
-        "original": original,
-        "new_name": body.new_name,
-        "tier": 5,
-    }
-
-
-@app.get("/admin/entities/{pid}/overrides")
-async def list_entity_overrides(pid: str):
-    """List all active name overrides for a given entity PID."""
-    if _PLATFORM_ENTITIES_AVAILABLE and get_entity_by_pid(pid) is None:
-        raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
-
-    rows = db.execute(
-        "SELECT * FROM entity_overrides WHERE location_pid = ? ORDER BY entity_type, slot",
-        (pid,),
-    ).fetchall()
-
-    return {"pid": pid, "overrides": [dict(r) for r in rows], "total": len(rows)}
-
-
-@app.delete("/admin/entities/{pid}/overrides")
-async def reset_entity_overrides(
-    pid: str,
-    request: Request,
-    entity_type: str | None = Query(None, description="Limit reset to a specific entity_type"),
-    slot: str | None = Query(
-        None, description="Limit reset to a specific slot (pass empty string for no-slot rows)"
-    ),
-):
-    """Reset name overrides for an entity — restores code defaults.
-
-    Pass no query params to reset all overrides for the entity.
-    Pass ?entity_type=lead_ai to reset only that type.
-    Pass ?entity_type=location&slot= to reset a specific no-slot row.
-    Pass ?entity_type=agent&slot=alpha to reset a specific slotted row.
-    """
-    user = getattr(request.state, "user", {})
-    actor = user.get("sub", "unknown")
-
-    conditions = ["location_pid = ?"]
-    params: list[Any] = [pid]
-    if entity_type:
-        conditions.append("entity_type = ?")
-        params.append(entity_type)
-    if slot is not None:
-        conditions.append("slot = ?")
-        params.append("" if slot in ("null", "") else slot)
-    where = " AND ".join(conditions)
-
-    count_row = db.execute(
-        f"SELECT COUNT(*) as cnt FROM entity_overrides WHERE {where}",
-        tuple(params),
-    ).fetchone()
-    count = count_row["cnt"]
-
-    db.execute(f"DELETE FROM entity_overrides WHERE {where}", tuple(params))
-    db.commit()
-
-    _log_admin_action(
-        action_type="entity_overrides_reset",
-        actor_id=actor,
-        actor_username=user.get("username"),
-        target_type="entity",
-        target_id=pid,
-        details={"overrides_cleared": count, "entity_type": entity_type, "slot": slot},
-    )
-
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.PLATFORM,
-            event_type="entity_overrides_reset",
-            source="infinity_admin",
-            payload={
-                "pid": pid,
-                "overrides_cleared": count,
-                "entity_type": entity_type,
-                "slot": slot,
-            },
-        )
-    )
-
-    return {
-        "message": "Entity overrides reset to code defaults",
-        "pid": pid,
-        "entity_type": entity_type,
-        "slot": slot,
-        "overrides_cleared": count,
-    }
-
-
-@app.get("/admin/entities/{pid}/overrides/{entity_type}")
-async def get_entity_overrides_by_type(pid: str, entity_type: str, slot: str | None = None):
-    """Get overrides for a specific entity type (and optional slot) within an entity."""
-    conditions = ["location_pid = ?", "entity_type = ?"]
-    params: list[Any] = [pid, entity_type]
-
-    if slot is not None:
-        conditions.append("slot = ?")
-        params.append(slot)
-
-    rows = db.execute(
-        f"SELECT * FROM entity_overrides WHERE {' AND '.join(conditions)} ORDER BY slot",
-        params,
-    ).fetchall()
-
-    return {"pid": pid, "entity_type": entity_type, "overrides": [dict(r) for r in rows]}
 
 
 # ---------------------------------------------------------------------------

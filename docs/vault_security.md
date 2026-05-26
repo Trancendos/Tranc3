@@ -37,7 +37,7 @@ A byte container that automatically zeroizes its memory contents when deleted or
 
 **Usage:**
 ```python
-from shared_core.architecture.vault_security import SecureBytes
+from Dimensional.architecture.vault_security import SecureBytes
 
 # Context manager — auto-zeroize on exit
 with SecureBytes(b"sensitive_data", lock_memory=True) as secret:
@@ -63,7 +63,7 @@ Loads secrets from multiple sources with automatic memory zeroization. The conte
 
 **Usage:**
 ```python
-from shared_core.architecture.vault_security import VaultSecretLoader, SoftHSM2Provider
+from Dimensional.architecture.vault_security import VaultSecretLoader, SoftHSM2Provider
 
 loader = VaultSecretLoader(
     hsm_provider=SoftHSM2Provider(token="tranc3", pin="123456"),
@@ -112,7 +112,7 @@ pip install python-pkcs11
 
 **Usage:**
 ```python
-from shared_core.architecture.vault_security import SoftHSM2Provider, HSMKeyType
+from Dimensional.architecture.vault_security import SoftHSM2Provider, HSMKeyType
 
 hsm = SoftHSM2Provider(token="tranc3", pin="123456")
 hsm.initialize()
@@ -151,7 +151,7 @@ yubihsm-setup
 
 **Usage:**
 ```python
-from shared_core.architecture.vault_security import YubiHSM2Provider, HSMKeyType
+from Dimensional.architecture.vault_security import YubiHSM2Provider, HSMKeyType
 
 hsm = YubiHSM2Provider(
     connector_url="http://localhost:12345",
@@ -197,7 +197,7 @@ Records all vault access events in a chain-linked, append-only log.
 
 **Usage:**
 ```python
-from shared_core.architecture.vault_security import VaultAuditLogger
+from Dimensional.architecture.vault_security import VaultAuditLogger
 
 audit = VaultAuditLogger(log_dir="logs/vault-audit")
 
@@ -266,7 +266,7 @@ YubiHSM 2 is an optional production hardening upgrade. The full vault security s
 ## File Structure
 
 ```text
-shared_core/architecture/
+Dimensional/architecture/
 ├── vault_security.py        # Main vault security module
 ├── audit_ledger.py          # Existing audit ledger (complementary)
 ├── sentinel.py              # Security sentinel daemon

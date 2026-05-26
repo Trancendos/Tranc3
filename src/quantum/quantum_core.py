@@ -10,7 +10,7 @@ from qiskit import QuantumCircuit
 from qiskit.circuit.library import QFT
 from qiskit_aer import AerSimulator
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

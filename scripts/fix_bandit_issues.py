@@ -11,7 +11,7 @@ import re
 import sys
 from pathlib import Path
 
-from shared_core.path_validation import validate_path
+from Dimensional.path_validation import validate_path
 
 PROJECT_DIR = Path(__file__).parent.parent
 

@@ -43,7 +43,7 @@ jobs:
             --tb=short \
             -m "not integration and not chaos" \
             --ignore=tests/test_full_suite.py \
-            --cov=shared_core \
+            --cov=Dimensional \
             --cov=src \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \

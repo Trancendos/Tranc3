@@ -25,8 +25,9 @@ Channel Mapping:
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.hive.hive_core import Hive, HiveEvent, get_hive
@@ -104,7 +105,6 @@ class HiveSentinelBridge:
         else:
             try:
                 from Dimensional.infinity.sentinel_station import get_sentinel_station
-
                 self._sentinel_station = get_sentinel_station()
             except Exception as e:
                 logger.warning(f"Could not get Sentinel Station: {e}")
@@ -119,9 +119,7 @@ class HiveSentinelBridge:
                         self._on_sentinel_event,
                     )
                 self._handler_registered = True
-                logger.info(
-                    f"HIVE bridge subscribed to {len(HIVE_PRIMARY_CHANNELS)} Sentinel channels"
-                )
+                logger.info(f"HIVE bridge subscribed to {len(HIVE_PRIMARY_CHANNELS)} Sentinel channels")
             except Exception as e:
                 logger.warning(f"Could not subscribe to Sentinel channels: {e}")
 
@@ -134,11 +132,11 @@ class HiveSentinelBridge:
 
         try:
             # Extract event details from SentinelEvent
-            if hasattr(event, "channel"):
+            if hasattr(event, 'channel'):
                 channel = event.channel
-                payload = event.payload if hasattr(event, "payload") else {}
-                event_type = event.event_type if hasattr(event, "event_type") else ""
-                source = event.source if hasattr(event, "source") else "sentinel"
+                payload = event.payload if hasattr(event, 'payload') else {}
+                event_type = event.event_type if hasattr(event, 'event_type') else ""
+                source = event.source if hasattr(event, 'source') else "sentinel"
             elif isinstance(event, dict):
                 channel = event.get("channel", "hive")
                 payload = event.get("payload", {})
@@ -205,7 +203,9 @@ class HiveSentinelBridge:
 
         try:
             # Map to HIVE SentinelChannel
-            hive_channel = SENTINEL_TO_HIVE_MAP.get(channel.lower(), SentinelChannel.HIVE)
+            hive_channel = SENTINEL_TO_HIVE_MAP.get(
+                channel.lower(), SentinelChannel.HIVE
+            )
 
             await self.hive.emit_event(
                 channel=hive_channel.value,

@@ -85,7 +85,6 @@ def _try_async_schedule(coro):
     except RuntimeError:
         return False
 
-
 logger = logging.getLogger(__name__)
 
 # ── Optional imports (graceful degradation) ──────────────────────────────────

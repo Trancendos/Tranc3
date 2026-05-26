@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional  # noqa: E402
 
 import aiohttp  # noqa: E402
 
-from shared_core.sanitize import sanitize_for_log  # noqa: E402
+from Dimensional.sanitize import sanitize_for_log  # noqa: E402
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
 
 

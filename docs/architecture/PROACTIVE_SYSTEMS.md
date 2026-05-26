@@ -1,6 +1,6 @@
 # Proactive Systems Architecture
 
-**Module:** `shared_core/architecture/` + `src/adaptive/`
+**Module:** `Dimensional/architecture/` + `src/adaptive/`
 **Phase:** 10 (Intelligent Adaptive Proactive Systems)
 **Last Updated:** May 23, 2026
 
@@ -14,11 +14,11 @@ The Proactive Systems architecture enables the Tranc3 platform to autonomously a
 
 | Module | Location | Purpose |
 |--------|----------|---------|
-| `proactive_orchestrator.py` | `shared_core/architecture/` | Central decision engine, health analysis, healing, zero-cost enforcement |
-| `adaptive_pulse.py` | `shared_core/architecture/` | Dynamic heartbeat control based on system health |
-| `auto_config.py` | `shared_core/architecture/` | Environment-aware configuration with hot-reload |
-| `proactive_metrics.py` | `shared_core/architecture/` | Unified metrics collection and Prometheus export |
-| `proactive_wiring.py` | `shared_core/architecture/` | Component lifecycle and bridge connection management |
+| `proactive_orchestrator.py` | `Dimensional/architecture/` | Central decision engine, health analysis, healing, zero-cost enforcement |
+| `adaptive_pulse.py` | `Dimensional/architecture/` | Dynamic heartbeat control based on system health |
+| `auto_config.py` | `Dimensional/architecture/` | Environment-aware configuration with hot-reload |
+| `proactive_metrics.py` | `Dimensional/architecture/` | Unified metrics collection and Prometheus export |
+| `proactive_wiring.py` | `Dimensional/architecture/` | Component lifecycle and bridge connection management |
 | `predictive_scaler.py` | `src/adaptive/` | Load forecasting and zero-cost-constrained autoscaling |
 
 ## Data Flow

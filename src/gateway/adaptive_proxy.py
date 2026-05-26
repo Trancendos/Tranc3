@@ -7,9 +7,9 @@ import logging
 import time
 from typing import Any, Dict, Optional
 
-from shared_core.models import ServiceHealth, ServiceInfo
-from shared_core.registry import ServiceRegistry
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.models import ServiceHealth, ServiceInfo
+from Dimensional.registry import ServiceRegistry
+from Dimensional.sanitize import sanitize_for_log
 from src.fluidic.fluid_router import FluidicRouter, fluid_router
 from src.resilience.circuit_breaker import CircuitBreakerConfig, resilience
 

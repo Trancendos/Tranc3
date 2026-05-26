@@ -36,18 +36,18 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Set
 
 from Dimensional.infinity.nomenclature import (
     InfinityLocation,
     SentinelChannel,
+    TransferSystem,
 )
 
 logger = logging.getLogger(__name__)
 
 
 # ── Enums ──────────────────────────────────────────────────────────────────────
-
 
 class UserTier(int, Enum):
     """User privilege tiers within the InfinityBridge.
@@ -57,7 +57,6 @@ class UserTier(int, Enum):
         1 = ORCHESTRATOR (system-level)
         2+ = service tiers below
     """
-
     HUMAN = 0
     ORCHESTRATOR = 1
     PRIME = 2
@@ -65,7 +64,6 @@ class UserTier(int, Enum):
 
 class SessionStatus(str, Enum):
     """Status of a user session on the InfinityBridge."""
-
     CONNECTING = "connecting"
     ACTIVE = "active"
     IDLE = "idle"
@@ -75,7 +73,6 @@ class SessionStatus(str, Enum):
 
 class ContextType(str, Enum):
     """Types of user context propagated through the InfinityBridge."""
-
     SESSION = "session"
     NAVIGATION = "navigation"
     PRESENCE = "presence"
@@ -86,7 +83,6 @@ class ContextType(str, Enum):
 
 class BridgeEvent(str, Enum):
     """Events specific to InfinityBridge traffic."""
-
     USER_CONNECT = "user_connect"
     USER_DISCONNECT = "user_disconnect"
     USER_TRANSITION = "user_transition"
@@ -101,7 +97,6 @@ class BridgeEvent(str, Enum):
 
 # ── Data Models ────────────────────────────────────────────────────────────────
 
-
 @dataclass
 class UserContext:
     """A user's context window carried through the InfinityBridge.
@@ -109,7 +104,6 @@ class UserContext:
     Contains all the information about a user's current state that
     needs to travel with them as they move through the platform.
     """
-
     user_id: str
     session_id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
     location: str = InfinityLocation.PORTAL.value
@@ -147,7 +141,6 @@ class InfinityBridgeEvent:
     Represents user traffic flowing through the Light Bridge —
     connect, disconnect, transition, and context propagation events.
     """
-
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
     event_type: str = BridgeEvent.CONTEXT_UPDATE.value
     user_id: str = ""
@@ -180,7 +173,6 @@ class BridgePath:
     Each path has a status (open/closed) and tracks the number of
     active users traversing it.
     """
-
     source: str
     target: str
     is_open: bool = True
@@ -207,7 +199,6 @@ class BridgePath:
 
 
 # ── Context Manager ────────────────────────────────────────────────────────────
-
 
 class ContextWindow:
     """Manages user context windows and their lifecycle.
@@ -255,18 +246,11 @@ class ContextWindow:
         self._conn.execute(
             "INSERT OR REPLACE INTO user_contexts VALUES (?,?,?,?,?,?,?,?,?,?)",
             (
-                context.user_id,
-                context.session_id,
-                context.location,
-                context.previous_location,
-                context.tier,
-                context.status.value
-                if isinstance(context.status, SessionStatus)
-                else context.status,
+                context.user_id, context.session_id, context.location,
+                context.previous_location, context.tier,
+                context.status.value if isinstance(context.status, SessionStatus) else context.status,
                 ",".join(context.context_types),
-                str(context.metadata),
-                context.connected_at,
-                context.last_active,
+                str(context.metadata), context.connected_at, context.last_active,
             ),
         )
         self._conn.commit()
@@ -341,14 +325,12 @@ class ContextWindow:
     @property
     def active_users(self) -> int:
         return sum(
-            1
-            for ctx in self._contexts.values()
+            1 for ctx in self._contexts.values()
             if ctx.status in (SessionStatus.ACTIVE, SessionStatus.TRANSITIONING)
         )
 
 
 # ── Presence Tracker ───────────────────────────────────────────────────────────
-
 
 class PresenceTracker:
     """Tracks user presence across Infinity locations.
@@ -399,8 +381,7 @@ class PresenceTracker:
         """Get user_ids that have been idle past the timeout."""
         now = time.time()
         return [
-            uid
-            for uid, pres in self._presence.items()
+            uid for uid, pres in self._presence.items()
             if now - pres.get("timestamp", 0) > self._idle_timeout
         ]
 
@@ -426,7 +407,6 @@ class PresenceTracker:
 
 
 # ── Bridge Path Manager ────────────────────────────────────────────────────────
-
 
 class BridgePathManager:
     """Manages the Light Bridge paths between Infinity locations.
@@ -474,8 +454,9 @@ class BridgePathManager:
             path.avg_transition_ms = transition_ms
         else:
             path.avg_transition_ms = (
-                path.avg_transition_ms * (path.total_transitions - 1) + transition_ms
-            ) / path.total_transitions
+                (path.avg_transition_ms * (path.total_transitions - 1) + transition_ms)
+                / path.total_transitions
+            )
 
     def get_open_paths(self) -> List[BridgePath]:
         """Get all open bridge paths."""
@@ -503,7 +484,6 @@ class BridgePathManager:
 
 
 # ── InfinityBridge Core ────────────────────────────────────────────────────────
-
 
 class InfinityBridge:
     """The InfinityBridge — User Context & Human Traffic Coordinator.
@@ -840,7 +820,6 @@ class InfinityBridge:
 
 # ── Sentinel Bridge ────────────────────────────────────────────────────────────
 
-
 class InfinitySentinelBridge:
     """Bidirectional bridge between the InfinityBridge and Sentinel Station.
 
@@ -889,7 +868,6 @@ class InfinitySentinelBridge:
         else:
             try:
                 from Dimensional.infinity.sentinel_station import get_sentinel_station
-
                 self._sentinel_station = get_sentinel_station()
             except Exception as e:
                 logger.warning(f"Could not get Sentinel Station: {e}")

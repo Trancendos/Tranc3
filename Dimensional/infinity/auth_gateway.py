@@ -33,12 +33,12 @@ import os
 import time
 from typing import Any, Dict, List, Optional, Set
 
-from fastapi import Request, Response, WebSocket
+from fastapi import Request, Response, WebSocket, WebSocketDisconnect
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp
 
-from Dimensional.infinity.nomenclature import Tier
+from Dimensional.infinity.nomenclature import InfinityRole, Tier
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,6 @@ DEFAULT_WS_IDLE_TIMEOUT = 300  # seconds (5 minutes)
 
 # ── JWT Validation ───────────────────────────────────────────────
 
-
 def _extract_bearer_token(request: Request) -> Optional[str]:
     """Extract Bearer token from Authorization header."""
     auth_header = request.headers.get("Authorization", "")
@@ -107,16 +106,14 @@ def _extract_api_key(request: Request) -> Optional[str]:
     return request.headers.get("X-API-Key")
 
 
-def _validate_jwt_token(
-    token: str, secret: str, algorithm: str = "HS256"
-) -> Optional[Dict[str, Any]]:
+def _validate_jwt_token(token: str, secret: str, algorithm: str = "HS256") -> Optional[Dict[str, Any]]:
     """Validate a JWT token and return its payload.
 
     Returns None if the token is invalid, expired, or malformed.
     The payload includes tier, role, and pillar claims for RBAC/ABAC.
     """
     try:
-        from jose import jwt
+        from jose import jwt, JWTError
 
         payload = jwt.decode(token, secret, algorithms=[algorithm])
 
@@ -196,7 +193,6 @@ def _tier_to_role(tier: str) -> str:
 
 
 # ── Auth Gateway Middleware ───────────────────────────────────────
-
 
 class AuthGatewayMiddleware(BaseHTTPMiddleware):
     """
@@ -303,7 +299,6 @@ class AuthGatewayMiddleware(BaseHTTPMiddleware):
 
 # ── WebSocket Authentication ─────────────────────────────────────
 
-
 class WebSocketAuthManager:
     """
     WebSocket authentication and connection management for the Infinity Ecosystem.
@@ -373,18 +368,13 @@ class WebSocketAuthManager:
 
         return None
 
-    def register_connection(
-        self, websocket: WebSocket, user: Optional[Dict[str, Any]] = None
-    ) -> bool:
+    def register_connection(self, websocket: WebSocket, user: Optional[Dict[str, Any]] = None) -> bool:
         """Register a WebSocket connection with user metadata.
 
         Returns True if registered, False if max connections reached.
         """
         if not self.can_connect():
-            logger.warning(
-                "WebSocket connection rejected — max connections (%d) reached",
-                self._max_connections,
-            )
+            logger.warning("WebSocket connection rejected — max connections (%d) reached", self._max_connections)
             return False
 
         self._connections[websocket] = {

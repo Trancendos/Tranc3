@@ -12,7 +12,7 @@
 Phase 22 delivers a complete architectural overhaul of the Tranc3 AI Platform under the
 **Infinity Ecosystem** umbrella. Twelve discrete workstreams landed in this phase, spanning
 nomenclature codification, hardened authentication, a real-time event bus, dimensional
-shared-core services, three new Infinity worker microservices, a smart adaptive intelligence
+Dimensional services, three new Infinity worker microservices, a smart adaptive intelligence
 layer, a redesigned dashboard SPA, and a comprehensive test suite of 159 passing unit tests.
 
 ---
@@ -23,7 +23,7 @@ layer, a redesigned dashboard SPA, and a comprehensive test suite of 159 passing
 
 - Created `INFINITY_ARCHITECTURE.md` — canonical reference covering all naming conventions,
   tier structures (0-Human → 5-Bot), pillars, primes, and the full ecosystem topology.
-- Created `shared_core/infinity/nomenclature.py` with programmatic definitions for:
+- Created `Dimensional/infinity/nomenclature.py` with programmatic definitions for:
   - `Tier` enum (0–5), `Pillar` enum (8 pillars), `InfinityRole` enum, `InfinityLocation` enum
   - `SentinelChannel` enum with `PLATFORM`, `SECURITY`, `BRIDGE`, `AGENTS`, `MODELS`, etc.
   - `ROLE_TIER_MAP` and `ROLE_INFINITY_ROLE_MAP` as DRY module-level constants
@@ -31,24 +31,24 @@ layer, a redesigned dashboard SPA, and a comprehensive test suite of 159 passing
   - `INFINITY_LOCATIONS` dict (keyed by `InfinityLocation`, values: `{name, purpose, description}`)
   - `GATE_ROUTING` dict mapping role strings → `InfinityLocation` enum members
   - `PILLAR_DISPLAY_NAMES` dict keyed by `Pillar` enum members
-- Created `shared_core/infinity/__init__.py` with canonical exports.
+- Created `Dimensional/infinity/__init__.py` with canonical exports.
 
 ### 22.2 — Authentication Middleware: JWT/OAuth2 + OWASP + RBAC + ABAC
 
-- `shared_core/infinity/auth_gateway.py` — JWT/OAuth2 authentication middleware with
+- `Dimensional/infinity/auth_gateway.py` — JWT/OAuth2 authentication middleware with
   token validation, expiry checking, and claim extraction.
-- `shared_core/infinity/rbac.py` — `RBACEngine` with `check_permission()`, `check_access()`,
+- `Dimensional/infinity/rbac.py` — `RBACEngine` with `check_permission()`, `check_access()`,
   and `get_user_permissions(user_dict)` methods. `Permission` enum uses integer bitmask values.
-- `shared_core/infinity/abac.py` — Attribute-Based Access Control engine for fine-grained
+- `Dimensional/infinity/abac.py` — Attribute-Based Access Control engine for fine-grained
   policy evaluation based on subject, resource, and environment attributes.
-- `shared_core/infinity/owasp_hardening.py` — OWASP Top 10 hardening middleware covering
+- `Dimensional/infinity/owasp_hardening.py` — OWASP Top 10 hardening middleware covering
   injection prevention, XSS protection, CSRF tokens, security headers, and rate limiting.
 - Gateway service updated to use RBAC and ABAC; WebSocket authentication added.
 
 ### 22.3 — Sentinel Station: Real-Time Event Bus (Redis Pub/Sub)
 
-- `shared_core/infinity/sentinel_config.py` — channel configuration and channel-to-topic mapping.
-- `shared_core/infinity/sentinel_station.py` — `SentinelStation` Redis Pub/Sub hub with
+- `Dimensional/infinity/sentinel_config.py` — channel configuration and channel-to-topic mapping.
+- `Dimensional/infinity/sentinel_station.py` — `SentinelStation` Redis Pub/Sub hub with
   `publish()`, `subscribe()`, SSE fan-out, and graceful fallback when Redis is unavailable.
 - Fixed `SentinelChannel` enum: channel name is `AGENTS` (plural), not `AGENT`.
 - Integrated Sentinel Station into `gateway-service/worker.py`.
@@ -57,14 +57,14 @@ layer, a redesigned dashboard SPA, and a comprehensive test suite of 159 passing
 
 ### 22.4 — Dimensional Services: Shared-Core Refactoring
 
-- `shared_core/dimensionals/__init__.py` — package init with canonical exports.
-- `shared_core/dimensionals/registry.py` — `DimensionalServiceRegistry` with pillar associations,
+- `Dimensional/dimensionals/__init__.py` — package init with canonical exports.
+- `Dimensional/dimensionals/registry.py` — `DimensionalServiceRegistry` with pillar associations,
   tier requirements, health tracking, capability routing, and watcher callbacks.
   Exposes `register()`, `heartbeat()`, `list_all()`, `get_by_capability()`, `get_stats()`.
-- `shared_core/dimensionals/service_bus.py` — `DimensionalServiceBus` with message routing,
+- `Dimensional/dimensionals/service_bus.py` — `DimensionalServiceBus` with message routing,
   Sentinel Station integration, FluidicRouter + CausalEventBus wiring, and
   `fluidic_routes` / `causal_events` stat counters.
-- `shared_core/dimensionals/underverse.py` — `UnderverseRegistry` for per-app nanoservice
+- `Dimensional/dimensionals/underverse.py` — `UnderverseRegistry` for per-app nanoservice
   management with capability indexing, dimensional grouping, and pillar summaries.
 - Singleton factory functions: `get_dimensional_registry()`, `get_dimensional_bus()`,
   `get_underverse_registry()`.
@@ -93,7 +93,7 @@ layer, a redesigned dashboard SPA, and a comprehensive test suite of 159 passing
 
 ### 22.7 — Smart Adaptive Intelligence Layer
 
-- `shared_core/infinity/adaptive_intelligence.py` — `InfinityHealthOrchestrator`:
+- `Dimensional/infinity/adaptive_intelligence.py` — `InfinityHealthOrchestrator`:
   unified smart adaptive layer wiring together:
   - `AdaptivePulseController` — dynamic daemon interval compression on degradation
   - `AnomalyDetector` — Z-score statistical anomaly detection on all metrics
@@ -106,15 +106,15 @@ layer, a redesigned dashboard SPA, and a comprehensive test suite of 159 passing
   - `ReactiveState` — observable state for live topology updates
   Uses `AIConfig` dataclass for configuration; `HealthSummary` dataclass for reporting.
 
-- `shared_core/infinity/proactive_defense.py` — `ProactiveDefenseLayer`:
+- `Dimensional/infinity/proactive_defense.py` — `ProactiveDefenseLayer`:
   proactive security with `evaluate_request()`, `get_stats()`, `get_blocked_ips()`, and
   configurable `violation_threshold`, `violation_window_seconds`, `block_duration_seconds`.
 
-- `shared_core/infinity/fluidic_gateway.py` — `InfinityFluidicGateway`:
+- `Dimensional/infinity/fluidic_gateway.py` — `InfinityFluidicGateway`:
   fluidic routing for Infinity services with weighted cell routing, role-based dispatch
   via `GATE_ROUTING`, causal bus integration, and `RouteResult` typed returns.
 
-- `shared_core/infinity/worker_integration.py` — `InfinityWorkerKit`:
+- `Dimensional/infinity/worker_integration.py` — `InfinityWorkerKit`:
   drop-in bundle composing `InfinityHealthOrchestrator` + `ProactiveDefenseLayer` +
   `InfinityFluidicGateway`. One-call `startup(app, sentinel)` mounts `/health/smart`,
   `/defense/stats`, `/defense/blocked-ips`, `/routing/topology`, `/routing/history`.
@@ -201,7 +201,7 @@ Five new test modules, **159 tests**, all passing:
 
 ### `InfinityHealthOrchestrator`
 ```python
-from shared_core.infinity.adaptive_intelligence import InfinityHealthOrchestrator, AIConfig
+from Dimensional.infinity.adaptive_intelligence import InfinityHealthOrchestrator, AIConfig
 
 orch = InfinityHealthOrchestrator(AIConfig(service_name="my-service"))
 orch.register_daemon("session_cleaner", baseline_interval=300.0)
@@ -213,7 +213,7 @@ d = summary.to_dict()  # → {"health_score": 0.95, "pulse_mode": "steady", ...}
 
 ### `ProactiveDefenseLayer`
 ```python
-from shared_core.infinity.proactive_defense import ProactiveDefenseLayer
+from Dimensional.infinity.proactive_defense import ProactiveDefenseLayer
 
 defense = ProactiveDefenseLayer(violation_threshold=5, violation_window_seconds=60)
 result = await defense.evaluate_request({"ip": "1.2.3.4", "path": "/api", "method": "GET"})
@@ -224,7 +224,7 @@ blocked = defense.get_blocked_ips()  # → list[str]
 
 ### `InfinityFluidicGateway`
 ```python
-from shared_core.infinity.fluidic_gateway import InfinityFluidicGateway
+from Dimensional.infinity.fluidic_gateway import InfinityFluidicGateway
 
 gw = InfinityFluidicGateway("my-service")
 result = await gw.route("user", "user-123")  # → RouteResult
@@ -234,7 +234,7 @@ gw.record_route_success(result.target_location, latency_ms=42.0)
 
 ### `InfinityWorkerKit`
 ```python
-from shared_core.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 kit = InfinityWorkerKit("my-service")
 await kit.startup(app, sentinel=sentinel_station)
@@ -246,7 +246,7 @@ await kit.shutdown()
 
 ### `DimensionalServiceBus`
 ```python
-from shared_core.dimensionals import DimensionalServiceBus, get_dimensional_bus
+from Dimensional.dimensionals import DimensionalServiceBus, get_dimensional_bus
 
 bus = get_dimensional_bus()  # singleton
 await bus.start()

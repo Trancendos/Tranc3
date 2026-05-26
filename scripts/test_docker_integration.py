@@ -25,7 +25,7 @@ from typing import Dict
 
 import yaml
 
-from shared_core.path_validation import validate_path
+from Dimensional.path_validation import validate_path
 
 # Expected worker ports from docker-compose.production.yml
 # P0-P2 workers have fixed port assignments from the roadmap

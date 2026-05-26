@@ -28,9 +28,9 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from shared_core.error_handlers import safe_error_detail
-from shared_core.sanitize import sanitize_for_log
-from shared_core.url_validation import SSRFError, validate_webhook_url
+from Dimensional.error_handlers import safe_error_detail
+from Dimensional.sanitize import sanitize_for_log
+from Dimensional.url_validation import SSRFError, validate_webhook_url
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -393,7 +393,7 @@ class NotificationDispatcher:
 
         The URL is validated against SSRF protections before any network
         request is made.  Only HTTPS URLs to public, non-reserved hosts
-        are permitted.  See shared_core.url_validation for details.
+        are permitted.  See Dimensional.url_validation for details.
         """
         import urllib.request
         from urllib.parse import urlparse
