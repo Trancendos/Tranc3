@@ -150,12 +150,17 @@ def _cosine_similarity(a: List[float], b: List[float]) -> float:
         norm_a = float(np.linalg.norm(va))
         norm_b = float(np.linalg.norm(vb))
     else:
-        dot = sum(x * y for x, y in zip(a, b, strict=False))
-        norm_a = math.sqrt(sum(x * x for x in a))
-        norm_b = math.sqrt(sum(x * x for x in b))
-    if norm_a == 0 or norm_b == 0:
-        return 0.0
-    return dot / (norm_a * norm_b)
+        # Performance optimization: Single pass loop avoids generator overhead
+        dot = 0.0
+        norm_a_sq = 0.0
+        norm_b_sq = 0.0
+        for x, y in zip(a, b, strict=False):
+            dot += x * y
+            norm_a_sq += x * x
+            norm_b_sq += y * y
+        if norm_a_sq == 0 or norm_b_sq == 0:
+            return 0.0
+        return dot / math.sqrt(norm_a_sq * norm_b_sq)
 
 
 def _signature_similarity(
@@ -342,9 +347,13 @@ class MetaLearner:
             # Exploration: occasionally pick a random top-5 prototype
             import random
 
-            if random.random() < self._exploration_rate and len(scores) > 1:  # nosec B311 — non-cryptographic random usage
+            if (
+                random.random() < self._exploration_rate and len(scores) > 1
+            ):  # nosec B311 — non-cryptographic random usage
                 top_n = min(5, len(scores))
-                choice_idx = random.randint(0, top_n - 1)  # nosec B311 — non-cryptographic exploration sampling
+                choice_idx = random.randint(
+                    0, top_n - 1
+                )  # nosec B311 — non-cryptographic exploration sampling
                 best_pid, best_score = scores[choice_idx]
             else:
                 best_pid, best_score = scores[0]
@@ -406,9 +415,13 @@ class MetaLearner:
 
         # Signature similarity (weight: 0.15)
         if input_signature and proto.input_signature:
-            score += 0.15 * _signature_similarity(input_signature, proto.input_signature)
+            score += 0.15 * _signature_similarity(
+                input_signature, proto.input_signature
+            )
         if output_signature and proto.output_signature:
-            score += 0.05 * _signature_similarity(output_signature, proto.output_signature)
+            score += 0.05 * _signature_similarity(
+                output_signature, proto.output_signature
+            )
 
         # Embedding similarity (weight: 0.15)
         if embedding and proto.embedding:
