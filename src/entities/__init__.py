@@ -2,6 +2,20 @@
 Trancendos Platform Entity Registry
 """
 
+from .lifecycle import (
+    LifecycleContext,
+    LifecycleEmitter,
+    LifecycleEvent,
+    LifecycleListener,
+)
+from .ollama import (
+    OllamaChatResponse,
+    OllamaClient,
+    OllamaConfig,
+    OllamaMessage,
+    OllamaToolCall,
+    OllamaToolSchema,
+)
 from .platform import (
     LOCATION_ABBREVS,
     PILLAR_ABBREVS,
@@ -18,28 +32,18 @@ from .platform import (
     get_entity_for_location,
     get_entity_for_port,
 )
-
-from .lifecycle import (
-    LifecycleEmitter,
-    LifecycleEvent,
-    LifecycleContext,
-    LifecycleListener,
+from .templates import (
+    InfinityAgent,
+    InfinityBot,
+    T2ance,
+    Tranc3,
+    TrancOne,
 )
-
-from .ollama import (
-    OllamaClient,
-    OllamaConfig,
-    OllamaMessage,
-    OllamaToolCall,
-    OllamaToolSchema,
-    OllamaChatResponse,
-)
-
 from .tiers import (
+    HealthReport,
+    HILAApproval,
     Prime,
     Sovereign,
-    HILAApproval,
-    HealthReport,
 )
 
 __all__ = [
@@ -75,4 +79,10 @@ __all__ = [
     "Sovereign",
     "HILAApproval",
     "HealthReport",
+    # AI tier base templates
+    "InfinityAgent",
+    "InfinityBot",
+    "T2ance",
+    "Tranc3",
+    "TrancOne",
 ]
