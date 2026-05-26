@@ -1,7 +1,8 @@
 # Exact-pinned — Do NOT use >= or ~=
-# Fixes CVE-2024-33663 (algorithm confusion) and CVE-2024-29370 (JWE DoS)
 fastapi==0.115.12
 uvicorn==0.34.3
 pydantic==2.11.5
+httpx==0.28.1
+sse-starlette==2.3.6
 python-jose[cryptography]==3.4.0
 email-validator==2.2.0
