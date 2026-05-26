@@ -1,0 +1,8 @@
+# Tranc3 Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tranc3
+  labels:
+    app.kubernetes.io/part-of: tranc3
+    pod-security.kubernetes.io/enforce: restricted

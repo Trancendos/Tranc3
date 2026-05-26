@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tranc3 InfinityBridge — User Traffic Dashboard</title>
+<style>
+  :root {
+    --bg-deep: #0a0e17;
+    --bg-panel: #111827;
+    --bg-card: #1a2236;
+    --border: #2a3550;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-dim: #64748b;
+    --accent-purple: #8b5cf6;
+    --accent-violet: #a78bfa;
+    --accent-cyan: #06b6d4;
+    --accent-blue: #3b82f6;
+    --accent-amber: #f59e0b;
+    --accent-green: #10b981;
+    --accent-red: #ef4444;
+    --accent-pink: #ec4899;
+    --accent-teal: #14b8a6;
+    --session-active: #10b981;
+    --session-idle: #f59e0b;
+    --session-transitioning: #8b5cf6;
+    --session-connecting: #06b6d4;
+    --session-disconnected: #64748b;
+    --infinity-glow: rgba(139, 92, 246, 0.15);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--bg-panel) 0%, #0f172a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-violet));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 18px; color: white;
+    text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+  }
+  .header-title { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+  .header-subtitle { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .bridge-badges { display: flex; gap: 8px; }
+  .bridge-badge {
+    font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .bridge-badge.nexus { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+  .bridge-badge.hive { background: rgba(245,158,11,0.2); color: var(--accent-amber); }
+  .bridge-badge.infinity { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-green);
+    animation: pulse 2s infinite;
+  }
+  .status-dot.disconnected { background: var(--accent-red); animation: none; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .status-text { font-size: 13px; color: var(--text-secondary); }
+
+  /* Navigation */
+  .nav {
+    display: flex; gap: 2px; padding: 8px 24px 0;
+    background: var(--bg-panel); border-bottom: 1px solid var(--border);
+  }
+  .nav-tab {
+    padding: 10px 20px; font-size: 13px; font-weight: 500;
+    color: var(--text-dim); cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.2s;
+  }
+  .nav-tab:hover { color: var(--text-secondary); }
+  .nav-tab.active { color: var(--accent-purple); border-bottom-color: var(--accent-purple); }
+
+  /* Main */
+  .main { padding: 20px 24px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Three Bridges Indicator */
+  .bridges-indicator {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-bottom: 20px;
+  }
+  .bridge-indicator {
+    padding: 16px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 12px;
+    text-align: center; position: relative; overflow: hidden;
+  }
+  .bridge-indicator::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .bridge-indicator.nexus::before { background: var(--accent-cyan); }
+  .bridge-indicator.hive::before { background: var(--accent-amber); }
+  .bridge-indicator.infinity::before { background: var(--accent-purple); }
+  .bridge-indicator-name {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    font-weight: 600; margin-bottom: 4px;
+  }
+  .bridge-indicator.nexus .bridge-indicator-name { color: var(--accent-cyan); }
+  .bridge-indicator.hive .bridge-indicator-name { color: var(--accent-amber); }
+  .bridge-indicator.infinity .bridge-indicator-name { color: var(--accent-purple); }
+  .bridge-indicator-traffic { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+
+  /* Stats Row */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px; margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .stat-card.purple::before { background: linear-gradient(90deg, var(--accent-purple), transparent); }
+  .stat-card.green::before { background: linear-gradient(90deg, var(--accent-green), transparent); }
+  .stat-card.cyan::before { background: linear-gradient(90deg, var(--accent-cyan), transparent); }
+  .stat-card.amber::before { background: linear-gradient(90deg, var(--accent-amber), transparent); }
+  .stat-card.blue::before { background: linear-gradient(90deg, var(--accent-blue), transparent); }
+  .stat-card.red::before { background: linear-gradient(90deg, var(--accent-red), transparent); }
+  .stat-card.teal::before { background: linear-gradient(90deg, var(--accent-teal), transparent); }
+  .stat-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
+  .stat-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+  /* Panels */
+  .panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .panel-full { grid-column: 1 / -1; }
+  .panel-header {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .panel-title { font-size: 14px; font-weight: 600; }
+  .panel-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+  .panel-body { padding: 16px 18px; max-height: 400px; overflow-y: auto; }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* User Cards */
+  .user-list { display: flex; flex-direction: column; gap: 10px; }
+  .user-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px; background: var(--bg-panel);
+    border-radius: 8px; border: 1px solid var(--border);
+  }
+  .user-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0;
+  }
+  .user-avatar.active { background: rgba(16,185,129,0.15); color: var(--session-active); }
+  .user-avatar.idle { background: rgba(245,158,11,0.15); color: var(--session-idle); }
+  .user-avatar.transitioning { background: rgba(139,92,246,0.15); color: var(--session-transitioning); }
+  .user-avatar.disconnected { background: rgba(100,116,139,0.15); color: var(--session-disconnected); }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { font-size: 13px; font-weight: 600; }
+  .user-location { font-size: 11px; color: var(--text-dim); }
+  .session-badge {
+    font-size: 10px; padding: 2px 6px; border-radius: 4px;
+    font-weight: 600; text-transform: uppercase;
+  }
+  .session-badge.active { background: rgba(16,185,129,0.2); color: var(--session-active); }
+  .session-badge.idle { background: rgba(245,158,11,0.2); color: var(--session-idle); }
+  .session-badge.transitioning { background: rgba(139,92,246,0.2); color: var(--session-transitioning); }
+  .session-badge.connecting { background: rgba(6,182,212,0.2); color: var(--session-connecting); }
+  .session-badge.disconnected { background: rgba(100,116,139,0.2); color: var(--session-disconnected); }
+  .user-meta { display: flex; gap: 12px; font-size: 11px; color: var(--text-dim); }
+
+  /* Location Map */
+  .location-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .location-card {
+    padding: 16px; background: var(--bg-panel);
+    border: 1px solid var(--border); border-radius: 10px;
+    position: relative; overflow: hidden;
+  }
+  .location-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent-purple);
+  }
+  .location-name { font-size: 13px; font-weight: 600; color: var(--accent-purple); }
+  .location-count { font-size: 24px; font-weight: 700; margin-top: 6px; }
+  .location-label { font-size: 11px; color: var(--text-dim); }
+
+  /* Bridge Path */
+  .path-list { display: flex; flex-direction: column; gap: 10px; }
+  .path-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px; background: var(--bg-panel);
+    border-radius: 8px; border: 1px solid var(--border);
+  }
+  .path-source { color: var(--accent-cyan); font-weight: 600; font-size: 13px; }
+  .path-arrow { color: var(--accent-purple); font-size: 18px; }
+  .path-target { color: var(--accent-purple); font-weight: 600; font-size: 13px; }
+  .path-status {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px;
+    font-weight: 700; text-transform: uppercase;
+  }
+  .path-status.open { background: rgba(16,185,129,0.2); color: var(--accent-green); }
+  .path-status.closed { background: rgba(239,68,68,0.2); color: var(--accent-red); }
+  .path-meta { display: flex; gap: 12px; font-size: 11px; color: var(--text-dim); }
+
+  /* Event Feed */
+  .event-feed { display: flex; flex-direction: column; gap: 6px; }
+  .event-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px; background: var(--bg-panel);
+    border-radius: 6px; border-left: 3px solid var(--accent-purple);
+    font-size: 12px;
+  }
+  .event-item.user_connect { border-left-color: var(--accent-green); }
+  .event-item.user_disconnect { border-left-color: var(--accent-red); }
+  .event-item.user_transition { border-left-color: var(--accent-purple); }
+  .event-item.context_update { border-left-color: var(--accent-cyan); }
+  .event-item.presence_update { border-left-color: var(--accent-amber); }
+  .event-time { color: var(--text-dim); white-space: nowrap; flex-shrink: 0; font-family: monospace; font-size: 11px; }
+  .event-type { color: var(--accent-purple); font-weight: 600; white-space: nowrap; }
+  .event-detail { color: var(--text-primary); }
+  .event-source { color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .panel-grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .bridges-indicator { grid-template-columns: 1fr; }
+  }
+
+  /* Animations */
+  .fade-in { animation: fadeIn 0.3s ease-in; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .live-dot { display: inline-block; width: 6px; height: 6px; background: var(--accent-purple); border-radius: 50%; margin-right: 6px; animation: pulse 1.5s infinite; }
+</style>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">&#x221E;</div>
+    <div>
+      <div class="header-title">InfinityBridge</div>
+      <div class="header-subtitle">User Context &amp; Human Traffic</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="bridge-badges">
+      <span class="bridge-badge nexus">Nexus</span>
+      <span class="bridge-badge hive">HIVE</span>
+      <span class="bridge-badge infinity">Infinity</span>
+    </div>
+    <div class="status-dot" id="wsStatus"></div>
+    <span class="status-text" id="wsStatusText">Connecting...</span>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <div class="nav-tab active" data-tab="overview">Overview</div>
+  <div class="nav-tab" data-tab="users">Users</div>
+  <div class="nav-tab" data-tab="paths">Light Bridges</div>
+  <div class="nav-tab" data-tab="locations">Locations</div>
+  <div class="nav-tab" data-tab="events">Events</div>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- Three Bridges Indicator -->
+  <div class="bridges-indicator">
+    <div class="bridge-indicator nexus">
+      <div class="bridge-indicator-name">The Nexus</div>
+      <div class="bridge-indicator-traffic">AI · Agent · Bot Traffic</div>
+    </div>
+    <div class="bridge-indicator hive">
+      <div class="bridge-indicator-name">The HIVE</div>
+      <div class="bridge-indicator-traffic">Data Movement · Swarm Systems</div>
+    </div>
+    <div class="bridge-indicator infinity">
+      <div class="bridge-indicator-name">InfinityBridge</div>
+      <div class="bridge-indicator-traffic">User Context · Human Traffic</div>
+    </div>
+  </div>
+
+  <!-- Overview Tab -->
+  <div class="tab-content active" id="tab-overview">
+    <div class="stats-row">
+      <div class="stat-card purple">
+        <div class="stat-label">Total Users</div>
+        <div class="stat-value" id="statTotal">&mdash;</div>
+        <div class="stat-sub">Registered sessions</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Active</div>
+        <div class="stat-value" id="statActive">&mdash;</div>
+        <div class="stat-sub">Active sessions</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Idle</div>
+        <div class="stat-value" id="statIdle">&mdash;</div>
+        <div class="stat-sub">Idle sessions</div>
+      </div>
+      <div class="stat-card cyan">
+        <div class="stat-label">Transitions</div>
+        <div class="stat-value" id="statTransitions">&mdash;</div>
+        <div class="stat-sub">Location changes</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Open Bridges</div>
+        <div class="stat-value" id="statBridges">&mdash;</div>
+        <div class="stat-sub">Light bridge paths</div>
+      </div>
+      <div class="stat-card teal">
+        <div class="stat-label">Events</div>
+        <div class="stat-value" id="statEvents">&mdash;</div>
+        <div class="stat-sub">Events emitted</div>
+      </div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title"><span class="live-dot"></span>Live Event Feed</span>
+          <span class="panel-badge" id="eventRate">0/min</span>
+        </div>
+        <div class="panel-body" id="liveEvents">
+          <div style="color:var(--text-dim);text-align:center;padding:40px;">Waiting for events...</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Active Users</span>
+          <span class="panel-badge" id="activeUsersBadge">&mdash;</span>
+        </div>
+        <div class="panel-body" id="activeUsers">
+          <div style="color:var(--text-dim);text-align:center;padding:40px;">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Users Tab -->
+  <div class="tab-content" id="tab-users">
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title">All User Sessions</span>
+          <span class="panel-badge" id="userCount">&mdash;</span>
+        </div>
+        <div class="panel-body" id="userList" style="max-height: 600px;">
+          <div style="color:var(--text-dim);text-align:center;padding:40px;">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Light Bridges Tab -->
+  <div class="tab-content" id="tab-paths">
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title">Light Bridge Paths</span>
+          <span class="panel-badge" id="pathCount">&mdash;</span>
+        </div>
+        <div class="panel-body" id="pathList" style="max-height: 500px;">
+          <div style="color:var(--text-dim);text-align:center;padding:40px;">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Locations Tab -->
+  <div class="tab-content" id="tab-locations">
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title">Infinity Locations</span>
+          <span class="panel-badge" id="locationCount">&mdash;</span>
+        </div>
+        <div class="panel-body">
+          <div class="location-grid" id="locationGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Events Tab -->
+  <div class="tab-content" id="tab-events">
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title"><span class="live-dot"></span>InfinityBridge Event Stream</span>
+          <span class="panel-badge" id="evRate">0/min</span>
+        </div>
+        <div class="panel-body" id="eventStream" style="max-height: 600px;">
+          <div style="color:var(--text-dim);text-align:center;padding:40px;">Waiting for events...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Configuration ──────────────────────────────────────────────────────────────
+const BRIDGE_BASE = window.location.origin;
+const WS_URL = (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + '/ws';
+const SESSION_COLORS = {
+  active: '#10b981', idle: '#f59e0b', transitioning: '#8b5cf6',
+  connecting: '#06b6d4', disconnected: '#64748b'
+};
+const EVENT_TYPES = ['user_connect', 'user_disconnect', 'user_transition', 'context_update', 'presence_update'];
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let ws = null;
+let bridgeEvents = [];
+let eventCount = 0;
+let eventTimes = [];
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── WebSocket ──────────────────────────────────────────────────────────────────
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+  ws.onopen = () => {
+    document.getElementById('wsStatus').classList.remove('disconnected');
+    document.getElementById('wsStatusText').textContent = 'Live';
+  };
+  ws.onmessage = (msg) => {
+    try { handleEvent(JSON.parse(msg.data)); } catch(e) {}
+  };
+  ws.onclose = () => {
+    document.getElementById('wsStatus').classList.add('disconnected');
+    document.getElementById('wsStatusText').textContent = 'Reconnecting...';
+    setTimeout(connectWS, 3000);
+  };
+  ws.onerror = () => {};
+}
+
+function handleEvent(event) {
+  bridgeEvents.unshift(event);
+  if (bridgeEvents.length > 500) bridgeEvents.pop();
+  eventCount++;
+  eventTimes.push(Date.now());
+  eventTimes = eventTimes.filter(t => t > Date.now() - 60000);
+  updateLiveEventFeed();
+  updateOverviewStats();
+}
+
+// ── API ────────────────────────────────────────────────────────────────────────
+async function api(path) {
+  try { return await (await fetch(BRIDGE_BASE + path)).json(); } catch(e) { return null; }
+}
+
+async function loadStatus() {
+  const status = await api('/status');
+  if (!status) return;
+  const users = status.users || {};
+  const paths = status.paths || {};
+  const stats = status.stats || {};
+  document.getElementById('statTotal').textContent = users.total || 0;
+  document.getElementById('statActive').textContent = users.active || 0;
+  document.getElementById('statIdle').textContent = (users.total || 0) - (users.active || 0);
+  document.getElementById('statTransitions').textContent = stats.total_transitions || 0;
+  document.getElementById('statBridges').textContent = paths.open || 0;
+  document.getElementById('statEvents').textContent = stats.events_emitted || 0;
+}
+
+async function loadUsers() {
+  const users = await api('/users');
+  if (!users) return;
+  document.getElementById('userCount').textContent = users.length;
+  document.getElementById('activeUsersBadge').textContent = users.filter(u => u.status === 'active').length + ' active';
+  const el = document.getElementById('userList');
+  const activeEl = document.getElementById('activeUsers');
+  if (users.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:40px;">No user sessions</div>';
+    activeEl.innerHTML = el.innerHTML;
+    return;
+  }
+  const renderUser = (u) => `
+    <div class="user-item fade-in">
+      <div class="user-avatar ${u.status || 'active'}">${(u.user_id || '?')[0].toUpperCase()}</div>
+      <div class="user-info">
+        <div class="user-name">${u.user_id || '?'}</div>
+        <div class="user-location">${u.location || '?'} &middot; Tier ${u.tier !== undefined ? u.tier : 0}</div>
+      </div>
+      <span class="session-badge ${u.status || 'active'}">${u.status || 'active'}</span>
+      <div class="user-meta">
+        <span>${u.session_id ? u.session_id.substring(0, 8) : ''}</span>
+      </div>
+    </div>
+  `;
+  el.innerHTML = users.map(renderUser).join('');
+  activeEl.innerHTML = users.filter(u => u.status === 'active').slice(0, 10).map(renderUser).join('');
+}
+
+async function loadPaths() {
+  const paths = await api('/paths');
+  if (!paths) return;
+  document.getElementById('pathCount').textContent = paths.length;
+  const el = document.getElementById('pathList');
+  if (paths.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:40px;">No bridge paths</div>';
+    return;
+  }
+  el.innerHTML = paths.map(p => `
+    <div class="path-item fade-in">
+      <span class="path-source">${p.source || '?'}</span>
+      <span class="path-arrow">&rarr;</span>
+      <span class="path-target">${p.target || '?'}</span>
+      <span class="path-status ${p.is_open ? 'open' : 'closed'}">${p.is_open ? 'OPEN' : 'CLOSED'}</span>
+      <div class="path-meta">
+        <span>${p.total_transitions || 0} transitions</span>
+        <span>${(p.avg_transition_ms || 0).toFixed(1)}ms avg</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function loadLocations() {
+  const status = await api('/status');
+  if (!status) return;
+  const locCounts = status.location_counts || {};
+  const locNames = Object.keys(locCounts);
+  document.getElementById('locationCount').textContent = locNames.length;
+  const el = document.getElementById('locationGrid');
+  if (locNames.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:40px;grid-column:1/-1;">No locations with users</div>';
+    return;
+  }
+  el.innerHTML = locNames.map(loc => `
+    <div class="location-card fade-in">
+      <div class="location-name">${loc.replace(/_/g, ' ')}</div>
+      <div class="location-count">${locCounts[loc]}</div>
+      <div class="location-label">user${locCounts[loc] !== 1 ? 's' : ''}</div>
+    </div>
+  `).join('');
+}
+
+// ── UI Updates ─────────────────────────────────────────────────────────────────
+function updateLiveEventFeed() {
+  const display = bridgeEvents.slice(0, 20);
+  const el = document.getElementById('liveEvents');
+  if (display.length === 0) return;
+  el.innerHTML = display.map(e => `
+    <div class="event-item ${e.event_type || ''} fade-in">
+      <div class="event-time">${(e.timestamp || '').slice(11, 19)}</div>
+      <div class="event-type">${e.event_type || '?'}</div>
+      <div class="event-detail">${e.user_id || ''} ${e.source_location || ''} ${e.target_location ? '&rarr; ' + e.target_location : ''}</div>
+    </div>
+  `).join('');
+  const streamEl = document.getElementById('eventStream');
+  streamEl.innerHTML = bridgeEvents.slice(0, 50).map(e => `
+    <div class="event-item ${e.event_type || ''} fade-in">
+      <div class="event-time">${(e.timestamp || '').slice(11, 19)}</div>
+      <div class="event-type">${e.event_type || '?'}</div>
+      <div class="event-detail">${e.user_id || ''} ${e.source_location || ''} ${e.target_location ? '&rarr; ' + e.target_location : ''}</div>
+    </div>
+  `).join('');
+}
+
+function updateOverviewStats() {
+  const rate = eventTimes.length;
+  document.getElementById('eventRate').textContent = rate + '/min';
+  document.getElementById('evRate').textContent = rate + '/min';
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+async function init() {
+  connectWS();
+  await Promise.all([loadStatus(), loadUsers(), loadPaths(), loadLocations()]);
+  setInterval(async () => {
+    await Promise.all([loadStatus(), loadUsers(), loadPaths(), loadLocations()]);
+  }, 10000);
+}
+
+init();
+</script>
+</body>
+</html>

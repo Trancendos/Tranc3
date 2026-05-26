@@ -364,8 +364,6 @@ class HybridInferenceEngine:
         """
         if self._tf_available is None:
             try:
-                import tensorflow as _tf  # noqa: F401
-
                 self._tf_available = True
             except ImportError:
                 self._tf_available = False
@@ -452,8 +450,6 @@ class HybridInferenceEngine:
         # TensorFlow
         if self._tf_available is None:
             try:
-                import tensorflow as _tf  # noqa: F401
-
                 self._tf_available = True
             except ImportError:
                 self._tf_available = False

@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import pytest
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # Tranc3Config (src/core/config.py)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -504,9 +503,9 @@ class TestVerifyModelIntegrity:
         assert verify_model_integrity("/nonexistent/path/model.pt") is False
 
     def test_existing_file_no_hash(self):
-        from src.core.security import verify_model_integrity
-
         import tempfile
+
+        from src.core.security import verify_model_integrity
 
         with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(b"test model data")
@@ -518,9 +517,9 @@ class TestVerifyModelIntegrity:
             os.unlink(path)
 
     def test_existing_file_wrong_hash(self):
-        from src.core.security import verify_model_integrity
-
         import tempfile
+
+        from src.core.security import verify_model_integrity
 
         with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(b"test model data")
@@ -531,10 +530,10 @@ class TestVerifyModelIntegrity:
             os.unlink(path)
 
     def test_existing_file_correct_hash(self):
-        from src.core.security import verify_model_integrity
-
         import hashlib
         import tempfile
+
+        from src.core.security import verify_model_integrity
 
         content = b"test model data for hash"
         with tempfile.NamedTemporaryFile(delete=False) as f:
@@ -570,7 +569,6 @@ class TestStartupValidator:
     def test_validate_startup_dev_ok(self):
         """In development mode, missing optional vars should only warn."""
         import src.core.startup_validator as sv_mod
-
         from src.core.startup_validator import validate_startup
 
         env = self._clean_env(
@@ -589,7 +587,6 @@ class TestStartupValidator:
     def test_validate_startup_prod_missing_secret_key(self):
         """In production, missing SECRET_KEY should raise RuntimeError."""
         import src.core.startup_validator as sv_mod
-
         from src.core.startup_validator import validate_startup
 
         env = self._clean_env("SECRET_KEY", "JWT_SECRET", "DATABASE_URL", "REDIS_URL")
@@ -602,7 +599,6 @@ class TestStartupValidator:
     def test_validate_startup_prod_missing_jwt_secret(self):
         """In production, missing JWT_SECRET should raise RuntimeError."""
         import src.core.startup_validator as sv_mod
-
         from src.core.startup_validator import validate_startup
 
         env = self._clean_env("JWT_SECRET")
@@ -618,7 +614,6 @@ class TestStartupValidator:
     def test_validate_startup_prod_wildcard_cors(self):
         """In production, CORS_ORIGINS=* should raise RuntimeError."""
         import src.core.startup_validator as sv_mod
-
         from src.core.startup_validator import validate_startup
 
         env = {}
@@ -635,7 +630,6 @@ class TestStartupValidator:
     def test_validate_startup_prod_missing_database_url(self):
         """In production, missing DATABASE_URL should raise RuntimeError."""
         import src.core.startup_validator as sv_mod
-
         from src.core.startup_validator import validate_startup
 
         env = self._clean_env("DATABASE_URL")
@@ -651,7 +645,6 @@ class TestStartupValidator:
     def test_validate_startup_prod_missing_redis_url(self):
         """In production, missing REDIS_URL should raise RuntimeError."""
         import src.core.startup_validator as sv_mod
-
         from src.core.startup_validator import validate_startup
 
         env = self._clean_env("REDIS_URL")
@@ -667,7 +660,6 @@ class TestStartupValidator:
     def test_validate_startup_prod_short_secret_key(self):
         """In production, a short SECRET_KEY should raise RuntimeError."""
         import src.core.startup_validator as sv_mod
-
         from src.core.startup_validator import validate_startup
 
         env = {}
@@ -684,7 +676,6 @@ class TestStartupValidator:
     def test_validate_startup_prod_short_jwt_secret(self):
         """In production, a short JWT_SECRET should raise RuntimeError."""
         import src.core.startup_validator as sv_mod
-
         from src.core.startup_validator import validate_startup
 
         env = {}
@@ -701,7 +692,6 @@ class TestStartupValidator:
     def test_validate_startup_prod_require_auth_no_api_key(self):
         """In production with REQUIRE_AUTH=true but no TRANC3_API_KEY, should raise."""
         import src.core.startup_validator as sv_mod
-
         from src.core.startup_validator import validate_startup
 
         env = self._clean_env("TRANC3_API_KEY")
@@ -719,7 +709,6 @@ class TestStartupValidator:
     def test_validate_startup_prod_success(self):
         """In production with all required vars, should pass without raising."""
         import src.core.startup_validator as sv_mod
-
         from src.core.startup_validator import validate_startup
 
         env = {}
@@ -735,7 +724,6 @@ class TestStartupValidator:
     def test_validate_startup_dev_generates_secret_key(self):
         """In development, missing SECRET_KEY should be auto-generated."""
         import src.core.startup_validator as sv_mod
-
         from src.core.startup_validator import validate_startup
 
         env = self._clean_env("SECRET_KEY", "JWT_SECRET")
@@ -747,7 +735,6 @@ class TestStartupValidator:
     def test_validate_startup_dev_generates_jwt_secret(self):
         """In development, missing JWT_SECRET should be auto-generated."""
         import src.core.startup_validator as sv_mod
-
         from src.core.startup_validator import validate_startup
 
         env = self._clean_env("JWT_SECRET")

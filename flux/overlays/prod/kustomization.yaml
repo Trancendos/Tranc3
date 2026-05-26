@@ -1,0 +1,104 @@
+# flux/overlays/prod/kustomization.yaml
+# Production overlay — 3 replicas, HA, priority class, health checks
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - target:
+      kind: Deployment
+      name: nsa-broker
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: nsa-broker
+      spec:
+        replicas: 3
+        template:
+          spec:
+            priorityClassName: tranc3-critical
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: topology.kubernetes.io/zone
+                whenUnsatisfiable: DoNotSchedule
+                labelSelector:
+                  matchLabels:
+                    app: nsa-broker
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  - labelSelector:
+                      matchLabels:
+                        app: nsa-broker
+                    topologyKey: kubernetes.io/hostname
+            nodeSelector:
+              environment: production
+  - target:
+      kind: Deployment
+      name: shi-gateway
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: shi-gateway
+      spec:
+        replicas: 3
+        template:
+          spec:
+            priorityClassName: tranc3-critical
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: topology.kubernetes.io/zone
+                whenUnsatisfiable: DoNotSchedule
+                labelSelector:
+                  matchLabels:
+                    app: shi-gateway
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  - labelSelector:
+                      matchLabels:
+                        app: shi-gateway
+                    topologyKey: kubernetes.io/hostname
+            nodeSelector:
+              environment: production
+  - target:
+      kind: Deployment
+      name: dnf-orchestrator
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: dnf-orchestrator
+      spec:
+        replicas: 3
+        template:
+          spec:
+            priorityClassName: tranc3-critical
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: topology.kubernetes.io/zone
+                whenUnsatisfiable: DoNotSchedule
+                labelSelector:
+                  matchLabels:
+                    app: dnf-orchestrator
+            affinity:
+              podAntiAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  - labelSelector:
+                      matchLabels:
+                        app: dnf-orchestrator
+                    topologyKey: kubernetes.io/hostname
+            nodeSelector:
+              environment: production
+configMapGenerator:
+  - name: environment-config
+    behavior: replace
+    literals:
+      - LOG_LEVEL=WARNING
+      - ENVIRONMENT=production
+namespace: tranc3
+commonAnnotations:
+  environment: production
+  validation: strict

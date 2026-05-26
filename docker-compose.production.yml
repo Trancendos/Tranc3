@@ -202,6 +202,74 @@ services:
       test: ["CMD", "ipfs", "id"]
       <<: *healthcheck-default
 
+  # ── Watchtower — Zero-Cost Auto-Update (Apache 2.0) ─────────────────
+  # Polls Docker Hub every 5 minutes; only updates containers labelled
+  # com.centurylinklabs.watchtower.enable=true
+  # Sends Slack/webhook notification on update if WATCHTOWER_NOTIFICATION_URL set.
+  watchtower:
+    image: containrrr/watchtower:1.7.1
+    container_name: tranc3-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: --interval 300 --cleanup --label-enable --rolling-restart
+    environment:
+      - WATCHTOWER_NOTIFICATIONS_LEVEL=info
+      - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFICATION_URL:-}
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=false"
+
+  # ── NATS — High-Throughput Inter-Worker Messaging (Apache 2.0) ───────
+  # Lightweight alternative to Redis pub/sub for high-volume event streams.
+  # JetStream enabled for durable queues (replaces SQLite queue for >1k msg/s).
+  # 15MB binary, 1M+ msg/s throughput.
+  nats:
+    image: nats:2.10-alpine
+    container_name: tranc3-nats
+    restart: unless-stopped
+    command: ["-js", "-sd", "/data", "--http_port", "8222"]
+    ports:
+      - "4222:4222"   # Client connections
+      - "8222:8222"   # HTTP monitoring
+      - "6222:6222"   # Cluster routing (future)
+    volumes:
+      - nats-data:/data
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=false"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Grafana Tempo — Distributed Tracing Backend ───────────────────────
+  # Receives OTLP spans from workers via OpenTelemetry exporter.
+  # Integrates with existing Grafana (auto-datasource provisioned).
+  tempo:
+    image: grafana/tempo:2.3.0
+    container_name: tranc3-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/config.yml"]
+    volumes:
+      - tempo-data:/tmp/tempo
+      - ./monitoring/tempo.yml:/etc/tempo/config.yml:ro
+    ports:
+      - "3200:3200"   # HTTP query API
+      - "4317:4317"   # OTLP gRPC receiver
+    networks:
+      - tranc3-net
+    labels:
+      - "traefik.enable=false"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3200/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
   # ═══════════════════════════════════════════════════════════════════════
   # P0 WORKERS — Critical Path
   # ═══════════════════════════════════════════════════════════════════════
@@ -612,6 +680,21 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8029/health"]
       <<: *healthcheck-default
 
+  # ── Infinity Admin — Entity & Config Management (Port 8044) ──────────────
+  infinity-admin:
+    <<: *worker-common
+    build:
+      context: .
+      dockerfile: workers/infinity-admin-service/Dockerfile
+    container_name: infinity-admin-worker
+    ports:
+      - "8044:8044"
+    volumes:
+      - admin-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8044/health"]
+      <<: *healthcheck-default
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════
@@ -634,6 +717,8 @@ volumes:
     driver: local
   void-data:
     driver: local
+  admin-data:
+    driver: local
   auth-data:
     driver: local
   users-data:
@@ -655,6 +740,10 @@ volumes:
   files-data:
     driver: local
   identity-data:
+    driver: local
+  nats-data:
+    driver: local
+  tempo-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

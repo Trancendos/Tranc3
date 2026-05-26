@@ -1,0 +1,32 @@
+# Tranc3 Base — FluxCD Kustomization
+# This is the base configuration deployed to all environments.
+# FluxCD watches Forgejo and reconciles this state automatically.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - api-deployment.yaml
+  - web-deployment.yaml
+  - nsa-broker-deployment.yaml
+  - shi-gateway-deployment.yaml
+  - dnf-orchestrator-deployment.yaml
+  - redis-statefulset.yaml
+  - services.yaml
+  - configmaps.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: tranc3
+  app.kubernetes.io/managed-by: flux
+  source: forgejo
+
+images:
+  - name: tranc3-api
+    newName: registry.local/tranc3/api
+    newTag: latest
+  - name: tranc3-web
+    newName: registry.local/tranc3/web
+    newTag: latest
+  - name: nsa-broker
+    newName: registry.local/tranc3/nsa-broker
+    newTag: latest

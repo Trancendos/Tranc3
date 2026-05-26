@@ -41,6 +41,7 @@ from shared_core.security_automation.adaptive_scanner import (
     AdaptiveViolation,
     Confidence,
 )
+from shared_core.security_automation.predictor import Prediction, ViolationPredictor
 from shared_core.security_automation.remediator import AutoRemediator
 from shared_core.security_automation.remediator_v2 import (
     AutoRemediatorV2,
@@ -49,8 +50,7 @@ from shared_core.security_automation.remediator_v2 import (
 )
 from shared_core.security_automation.scanner import SecurityScanner, Violation
 from shared_core.security_automation.telemetry import SecurityTelemetry
-from shared_core.security_automation.watchdog import SecurityWatchdog, ScanAlert
-from shared_core.security_automation.predictor import ViolationPredictor, Prediction
+from shared_core.security_automation.watchdog import ScanAlert, SecurityWatchdog
 
 __all__ = [
     # Core scanner

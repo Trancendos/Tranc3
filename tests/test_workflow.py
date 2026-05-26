@@ -17,7 +17,6 @@ from src.workflow.builder import (
 )
 from src.workflow.nodes import NodeType
 
-
 # ── WorkflowDefinition tests ────────────────────────────────────────────────
 
 

@@ -11,7 +11,6 @@ from unittest.mock import patch
 
 import pytest
 
-
 # ============================================================================
 # PersonalityProfile tests (matrix.py)
 # ============================================================================
@@ -466,7 +465,7 @@ class TestPersonalitySpawner:
 
     def test_spawn_traversal_repo_name_blocked(self):
         """Repo name with traversal characters should be blocked."""
-        from shared_core.path_validation import PathTraversalError
+        from Dimensional.path_validation import PathTraversalError
 
         profiles = {"the-guardian": self._guardian_profile()}
         spawner = self._make_spawner_with_profiles(profiles)
@@ -483,68 +482,68 @@ class TestPathValidation:
 
     def test_sanitize_filename_normal(self):
         """Normal filenames should pass through unchanged."""
-        from shared_core.path_validation import sanitize_filename
+        from Dimensional.path_validation import sanitize_filename
 
         assert sanitize_filename("my-repo") == "my-repo"
 
     def test_sanitize_filename_strips_path_separators(self):
         """Path separators should be stripped from filenames."""
-        from shared_core.path_validation import sanitize_filename
+        from Dimensional.path_validation import sanitize_filename
 
         result = sanitize_filename("dir/subdir")
         assert "/" not in result
 
     def test_sanitize_filename_strips_dots(self):
         """Leading dots should be stripped (prevents hidden files / traversal)."""
-        from shared_core.path_validation import sanitize_filename
+        from Dimensional.path_validation import sanitize_filename
 
         result = sanitize_filename(".hidden")
         assert not result.startswith(".")
 
     def test_sanitize_filename_empty_raises(self):
         """Empty filenames should raise ValueError."""
-        from shared_core.path_validation import sanitize_filename
+        from Dimensional.path_validation import sanitize_filename
 
         with pytest.raises(ValueError, match="must not be empty"):
             sanitize_filename("")
 
     def test_safe_join_normal(self):
         """safe_join with normal components should return a valid path."""
-        from shared_core.path_validation import safe_join
+        from Dimensional.path_validation import safe_join
 
         result = safe_join("/tmp", "subdir", "file.txt")
         assert str(result).startswith("/tmp")
 
     def test_safe_join_traversal_raises(self):
         """safe_join with traversal components should raise PathTraversalError."""
-        from shared_core.path_validation import PathTraversalError, safe_join
+        from Dimensional.path_validation import PathTraversalError, safe_join
 
         with pytest.raises(PathTraversalError):
             safe_join("/tmp", "..", "etc", "passwd")
 
     def test_safe_join_empty_component_raises(self):
         """safe_join with empty components should raise ValueError."""
-        from shared_core.path_validation import safe_join
+        from Dimensional.path_validation import safe_join
 
         with pytest.raises(ValueError, match="Empty"):
             safe_join("/tmp", "", "file")
 
     def test_validate_path_normal(self):
         """validate_path with a normal path should succeed."""
-        from shared_core.path_validation import validate_path
+        from Dimensional.path_validation import validate_path
 
         result = validate_path("subdir/file.txt", "/tmp")
         assert str(result).startswith("/tmp")
 
     def test_validate_path_traversal_raises(self):
         """validate_path with traversal should raise PathTraversalError."""
-        from shared_core.path_validation import PathTraversalError, validate_path
+        from Dimensional.path_validation import PathTraversalError, validate_path
 
         with pytest.raises(PathTraversalError):
             validate_path("../../etc/passwd", "/tmp")
 
     def test_path_traversal_error_is_value_error(self):
         """PathTraversalError should be a subclass of ValueError."""
-        from shared_core.path_validation import PathTraversalError
+        from Dimensional.path_validation import PathTraversalError
 
         assert issubclass(PathTraversalError, ValueError)

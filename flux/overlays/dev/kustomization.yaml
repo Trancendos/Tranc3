@@ -1,0 +1,38 @@
+# flux/overlays/dev/kustomization.yaml
+# Development overlay — single replica, debug logging, reduced resources
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - target:
+      kind: Deployment
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: not-important
+      spec:
+        replicas: 1
+        template:
+          spec:
+            containers:
+              - name: not-important
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 64Mi
+                  limits:
+                    cpu: 250m
+                    memory: 256Mi
+            nodeSelector:
+              environment: dev
+configMapGenerator:
+  - name: environment-config
+    behavior: replace
+    literals:
+      - LOG_LEVEL=DEBUG
+      - ENVIRONMENT=development
+namespace: tranc3-dev
+commonAnnotations:
+  environment: development

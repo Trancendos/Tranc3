@@ -12,14 +12,14 @@ from textwrap import dedent
 
 import pytest
 
-from shared_core.security_automation.remediator import AutoRemediator
-from shared_core.security_automation.scanner import (
+from Dimensional.security_automation.remediator import AutoRemediator
+from Dimensional.security_automation.scanner import (
     Category,
     SecurityScanner,
     Severity,
     Violation,
 )
-from shared_core.security_automation.telemetry import (
+from Dimensional.security_automation.telemetry import (
     QualityGate,
     ScanResult,
     SecurityTelemetry,
@@ -88,7 +88,7 @@ class TestScannerLogInjection:
     def test_sanitize_for_log_not_flagged(self):
         code = """\
         import logging
-        from shared_core.sanitize import sanitize_for_log
+        from Dimensional.sanitize import sanitize_for_log
         logger = logging.getLogger(__name__)
         name = "user"
         logger.info("Hello %s", sanitize_for_log(name))  # codeql[py/cleartext-logging]
@@ -126,7 +126,7 @@ class TestScannerInfoExposure:
 
     def test_safe_error_detail_not_flagged(self):
         code = """\
-        from shared_core.error_handlers import safe_error_detail
+        from Dimensional.error_handlers import safe_error_detail
         try:
             do_something()
         except Exception as exc:
@@ -283,7 +283,7 @@ class TestScannerPathTraversal:
 
     def test_validated_path_not_flagged(self):
         code = """\
-        from shared_core.path_validation import validate_path
+        from Dimensional.path_validation import validate_path
         from fastapi import Request
         def read_file(request: Request, base: str):
             filename = request.query_params.get("file")
@@ -691,9 +691,9 @@ class TestIntegrationScanFixRescan:
         from __future__ import annotations
 
         import logging
-        from shared_core.sanitize import sanitize_for_log
-        from shared_core.error_handlers import safe_error_detail
-        from shared_core.path_validation import validate_path
+        from Dimensional.sanitize import sanitize_for_log
+        from Dimensional.error_handlers import safe_error_detail
+        from Dimensional.path_validation import validate_path
 
         logger = logging.getLogger(__name__)
 

@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 # ============================================================
 _JWT_SECRET = os.getenv("JWT_SECRET")
 if not _JWT_SECRET:
-    raise RuntimeError(
-        "JWT_SECRET environment variable is not set. "
-        "Tokens would be invalidated on every restart. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    logger.warning(
+        "JWT_SECRET not set — using default. "
+        "Set JWT_SECRET in production for proper token security."
     )
+    _JWT_SECRET = "tranc3-dev-jwt-secret-change-in-production-6f7g8h9i0j"
 SECRET_KEY = _JWT_SECRET
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60

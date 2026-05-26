@@ -3,6 +3,7 @@
 # Full test suite with sample data, logic validation, and error code verification
 
 import json
+
 import pytest
 
 torch = pytest.importorskip("torch", reason="torch not installed — ML tests skipped")
@@ -59,13 +60,13 @@ def sample_emotions():
 
 class TestErrorCatalog:
     def test_all_error_codes_have_definitions(self):
-        from src.errors.error_catalog import ErrorCode, CATALOG
+        from src.errors.error_catalog import CATALOG, ErrorCode
 
         for code in ErrorCode:
             assert code in CATALOG, f"ErrorCode {code} has no definition in CATALOG"
 
     def test_error_format_response(self):
-        from src.errors.error_catalog import format_error_response, ErrorCode
+        from src.errors.error_catalog import ErrorCode, format_error_response
 
         resp = format_error_response(ErrorCode.AUTH_TOKEN_EXPIRED)
         assert "error" in resp
@@ -304,7 +305,7 @@ class TestBilling:
         assert result["allowed"] is True
 
     def test_free_tier_blocks_at_limit(self):
-        from src.monetisation.billing import TierEnforcer, TIERS
+        from src.monetisation.billing import TIERS, TierEnforcer
 
         e = TierEnforcer()
         limit = TIERS["free"]["req_per_hour"]
@@ -525,8 +526,9 @@ class TestIntelligenceBlockchain:
         assert bc.is_valid() is True
 
     def test_homomorphic_crypto_aggregation(self):
-        from src.distributed.intelligence_blockchain import HomomorphicCrypto
         import torch.nn as nn
+
+        from src.distributed.intelligence_blockchain import HomomorphicCrypto
 
         crypto = HomomorphicCrypto(epsilon=1.0)
         model = nn.Linear(4, 4)
@@ -595,6 +597,7 @@ class TestAPIIntegration:
             ),
         ):
             from fastapi.testclient import TestClient
+
             from api import app
 
             return TestClient(app, raise_server_exceptions=False)

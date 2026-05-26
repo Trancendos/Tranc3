@@ -1,0 +1,98 @@
+# FluxCD GitRepository — Points to Forgejo (NOT GitHub)
+# This is the source of truth for all GitOps operations.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: tranc3-forgejo
+  namespace: flux-system
+spec:
+  url: https://forgejo.local/Trancendos/Tranc3.git
+  ref:
+    branch: main
+  interval: 1m0s
+  secretRef:
+    name: forgejo-auth
+---
+# Forgejo authentication secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: forgejo-auth
+  namespace: flux-system
+type: Opaque
+stringData:
+  username: git
+  password: ${FORGEJO_TOKEN}
+---
+# Base Kustomization — reconciles the base manifests
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tranc3-base
+  namespace: flux-system
+spec:
+  interval: 5m0s
+  path: ./src/nanoservices/igi_gitops/flux/base
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: tranc3-forgejo
+  validation: client
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: nsa-broker
+      namespace: tranc3
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: shi-gateway
+      namespace: tranc3
+---
+# Production Kustomization — overlays base with prod-specific config
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tranc3-production
+  namespace: flux-system
+spec:
+  interval: 5m0s
+  path: ./src/nanoservices/igi_gitops/flux/overlays/prod
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: tranc3-forgejo
+  dependsOn:
+    - name: tranc3-base
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: tranc3-prod-vars
+---
+# Forgejo Notification Provider
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: forgejo-notifier
+  namespace: flux-system
+spec:
+  type: generic
+  address: https://forgejo.local/api/v1/repos/Trancendos/Tranc3/statuses
+  secretRef:
+    name: forgejo-auth
+---
+# Drift Alert — notifies Forgejo on reconciliation failures
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: tranc3-drift-alert
+  namespace: flux-system
+spec:
+  providerRef:
+    name: forgejo-notifier
+  eventSeverity: info
+  eventSources:
+    - kind: Kustomization
+      name: tranc3-base
+    - kind: Kustomization
+      name: tranc3-production
+  summary: "Tranc3 GitOps drift detected — auto-healing initiated"

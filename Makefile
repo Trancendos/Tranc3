@@ -1,7 +1,72 @@
-# TRANC3 Makefile — RR Round 1 P2 action
-# Usage: make dev | make test | make deploy | make setup
+# TRANC3 Makefile
+# Usage: make bootstrap | make dev | make test | make deploy | make doctor
 
-.PHONY: dev test deploy setup lint migrate clean frontend
+.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend
+
+# ── Bootstrap (single-command platform setup) ─────────────────────────────────
+bootstrap:
+	@echo "Running Tranc3 platform bootstrap..."
+	@bash scripts/bootstrap.sh --env dev
+
+bootstrap-prod:
+	@echo "Running Tranc3 production bootstrap..."
+	@bash scripts/bootstrap.sh --env production --skip-deps
+
+bootstrap-start:
+	@echo "Bootstrapping and starting P0 workers..."
+	@bash scripts/bootstrap.sh --env dev --start
+
+# ── Doctor (validate platform health) ─────────────────────────────────────────
+doctor:
+	@echo "Tranc3 Platform Doctor"
+	@echo "========================"
+	@python3 -c "import sys; sys.path.insert(0,'.');  \
+		pkgs = ['fastapi','pydantic','httpx','structlog','uvicorn'];  \
+		[print(f'  OK  {p}') if __import__(p) else None for p in pkgs]"
+	@echo "--- Advanced systems ---"
+	@python3 -c "import sys; sys.path.insert(0,'.');  \
+		opts = [('ncps','Liquid NNs'),('deap','Genetic GA'),('pygad','Simple GA'),  \
+			('pyswarms','PSO'),('prometheus_client','Prometheus'),  \
+			('opentelemetry.api','OTel API'),('cachetools','Cachetools'),  \
+			('nats','NATS'),('diskcache','DiskCache')];  \
+		[print(f'  OK  {l}') if __import__(p) is not None else None for p,l in opts if __import__(p,*(None,None,['']))is not None]" 2>/dev/null || true
+	@echo "--- Worker requirements ---"
+	@for d in workers/*/; do \
+		if [ ! -f "$$d/requirements-worker.txt" ]; then \
+			echo "  MISS $$d requirements-worker.txt"; \
+		else \
+			echo "  OK   $$d"; \
+		fi; \
+	done
+	@echo "Doctor complete."
+
+# ── Monitor (live worker health dashboard in terminal) ────────────────────────
+monitor:
+	@echo "Monitoring P0/P1 workers..."
+	@python3 -c "
+import asyncio, httpx, time
+
+WORKERS = [
+    ('infinity-ws',   'http://localhost:8004/health'),
+    ('infinity-auth', 'http://localhost:8005/health'),
+    ('users-svc',     'http://localhost:8006/health'),
+    ('monitoring',    'http://localhost:8007/health'),
+    ('notifications', 'http://localhost:8008/health'),
+    ('infinity-ai',   'http://localhost:8009/health'),
+]
+
+async def check():
+    async with httpx.AsyncClient(timeout=2.0) as c:
+        for name, url in WORKERS:
+            try:
+                r = await c.get(url)
+                status = 'UP  ' if r.status_code == 200 else f'ERR {r.status_code}'
+            except Exception as e:
+                status = f'DOWN ({type(e).__name__})'
+            print(f'  {status}  {name} ({url})')
+
+asyncio.run(check())
+"
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 setup:

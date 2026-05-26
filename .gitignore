@@ -67,9 +67,15 @@ Thumbs.db
 .adstar/
 .automate/
 
-# SQLite dev DB
+# SQLite dev DB (extensions and extensionless test artifacts)
 *.db
 *.db-shm
 *.db-wal
+bridge-test
+bridge-pause-test
+*-test
+*-pause-test
 spawned/
 node_modules/
+deploy/terraform/.terraform/
+src/nanoservices/rust/tranc3-nanoservice/Cargo.lock

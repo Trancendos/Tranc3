@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tranc3 The Nexus — AI, Agent & Bot Traffic Dashboard</title>
+<style>
+  :root {
+    --bg-deep: #0a0e17;
+    --bg-panel: #111827;
+    --bg-card: #1a2236;
+    --border: #2a3550;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-dim: #64748b;
+    --accent-cyan: #06b6d4;
+    --accent-blue: #3b82f6;
+    --accent-purple: #8b5cf6;
+    --accent-green: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-pink: #ec4899;
+    --tier0: #f59e0b;
+    --tier1: #8b5cf6;
+    --tier2: #3b82f6;
+    --tier3: #06b6d4;
+    --tier4: #10b981;
+    --tier5: #64748b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--bg-panel) 0%, #0f172a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 18px; color: white;
+  }
+  .header-title { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+  .header-subtitle { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .bridge-badges { display: flex; gap: 8px; }
+  .bridge-badge {
+    font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .bridge-badge.nexus { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+  .bridge-badge.hive { background: rgba(245,158,11,0.2); color: var(--accent-amber); }
+  .bridge-badge.infinity { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-green);
+    animation: pulse 2s infinite;
+  }
+  .status-dot.disconnected { background: var(--accent-red); animation: none; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .status-text { font-size: 13px; color: var(--text-secondary); }
+
+  /* Navigation Tabs */
+  .nav {
+    display: flex;
+    gap: 2px;
+    padding: 8px 24px 0;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-tab {
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .nav-tab:hover { color: var(--text-secondary); }
+  .nav-tab.active {
+    color: var(--accent-cyan);
+    border-bottom-color: var(--accent-cyan);
+  }
+
+  /* Main Grid */
+  .main { padding: 20px 24px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Stats Row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .stat-card.cyan::before { background: linear-gradient(90deg, var(--accent-cyan), transparent); }
+  .stat-card.green::before { background: linear-gradient(90deg, var(--accent-green), transparent); }
+  .stat-card.amber::before { background: linear-gradient(90deg, var(--accent-amber), transparent); }
+  .stat-card.red::before { background: linear-gradient(90deg, var(--accent-red), transparent); }
+  .stat-card.purple::before { background: linear-gradient(90deg, var(--accent-purple), transparent); }
+  .stat-card.blue::before { background: linear-gradient(90deg, var(--accent-blue), transparent); }
+  .stat-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
+  .stat-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+  /* Panels */
+  .panel-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel-full { grid-column: 1 / -1; }
+  .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .panel-title { font-size: 14px; font-weight: 600; }
+  .panel-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--accent-cyan);
+  }
+  .panel-body { padding: 16px 18px; max-height: 400px; overflow-y: auto; }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* Service Cards */
+  .service-list { display: flex; flex-direction: column; gap: 10px; }
+  .service-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-panel);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .service-status-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .service-status-dot.healthy { background: var(--accent-green); }
+  .service-status-dot.degraded { background: var(--accent-amber); }
+  .service-status-dot.unhealthy { background: var(--accent-red); }
+  .service-status-dot.unknown { background: var(--text-dim); }
+  .service-info { flex: 1; min-width: 0; }
+  .service-name { font-size: 13px; font-weight: 600; }
+  .service-dim { font-size: 11px; color: var(--text-dim); }
+  .service-metrics { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); }
+  .tier-badge {
+    font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;
+  }
+  .tier-0 { background: rgba(245,158,11,0.2); color: var(--tier0); }
+  .tier-1 { background: rgba(139,92,246,0.2); color: var(--tier1); }
+  .tier-2 { background: rgba(59,130,246,0.2); color: var(--tier2); }
+  .tier-3 { background: rgba(6,182,212,0.2); color: var(--tier3); }
+  .tier-4 { background: rgba(16,185,129,0.2); color: var(--tier4); }
+  .tier-5 { background: rgba(100,116,139,0.2); color: var(--tier5); }
+
+  /* Event Feed */
+  .event-feed { display: flex; flex-direction: column; gap: 6px; }
+  .event-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px; background: var(--bg-panel);
+    border-radius: 6px; border-left: 3px solid var(--accent-cyan);
+    font-size: 12px;
+  }
+  .event-item.SECURITY { border-left-color: var(--accent-red); }
+  .event-item.AGENTS { border-left-color: var(--accent-green); }
+  .event-item.MODELS { border-left-color: var(--accent-purple); }
+  .event-item.WORKFLOWS { border-left-color: var(--accent-blue); }
+  .event-item.HIVE { border-left-color: var(--accent-amber); }
+  .event-item.PLATFORM { border-left-color: var(--accent-cyan); }
+  .event-time { color: var(--text-dim); white-space: nowrap; flex-shrink: 0; font-family: monospace; font-size: 11px; }
+  .event-channel { color: var(--accent-cyan); font-weight: 600; white-space: nowrap; }
+  .event-type { color: var(--text-primary); }
+  .event-source { color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+
+  /* Topology */
+  .topo-container { position: relative; min-height: 300px; }
+  .topo-canvas { width: 100%; height: 400px; }
+  .topo-legend { display: flex; gap: 16px; padding: 12px 0; flex-wrap: wrap; }
+  .topo-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); }
+  .topo-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Access Log */
+  .access-log { display: flex; flex-direction: column; gap: 6px; }
+  .access-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; background: var(--bg-panel);
+    border-radius: 6px; font-size: 12px;
+  }
+  .access-verdict {
+    font-size: 10px; font-weight: 700; padding: 2px 8px;
+    border-radius: 4px; text-transform: uppercase;
+  }
+  .access-verdict.allowed { background: rgba(16,185,129,0.2); color: var(--accent-green); }
+  .access-verdict.denied { background: rgba(239,68,68,0.2); color: var(--accent-red); }
+  .access-detail { color: var(--text-secondary); flex: 1; }
+
+  /* Tier Hierarchy */
+  .tier-viz { display: flex; flex-direction: column; gap: 8px; }
+  .tier-row {
+    display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+    background: var(--bg-panel); border-radius: 8px;
+  }
+  .tier-num { font-size: 20px; font-weight: 800; width: 30px; text-align: center; }
+  .tier-name { font-size: 13px; font-weight: 600; min-width: 120px; }
+  .tier-desc { font-size: 11px; color: var(--text-dim); }
+  .tier-bar { height: 6px; border-radius: 3px; flex: 1; }
+
+  /* Channel Grid */
+  .channel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .channel-card {
+    padding: 12px; background: var(--bg-panel); border-radius: 8px;
+    border: 1px solid var(--border); text-align: center;
+  }
+  .channel-name { font-size: 12px; font-weight: 600; color: var(--accent-cyan); }
+  .channel-count { font-size: 22px; font-weight: 700; margin-top: 4px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .panel-grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .header { padding: 12px 16px; }
+    .main { padding: 16px; }
+  }
+
+  /* Animations */
+  .fade-in { animation: fadeIn 0.3s ease-in; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .live-dot { display: inline-block; width: 6px; height: 6px; background: var(--accent-green); border-radius: 50%; margin-right: 6px; animation: pulse 1.5s infinite; }
+</style>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">N</div>
+    <div>
+      <div class="header-title">The Nexus</div>
+      <div class="header-subtitle">AI, Agent &amp; Bot Traffic Coordination</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="bridge-badges">
+      <span class="bridge-badge nexus">Nexus</span>
+      <span class="bridge-badge hive">HIVE</span>
+      <span class="bridge-badge infinity">Infinity</span>
+    </div>
+    <div class="status-dot" id="wsStatus"></div>
+    <span class="status-text" id="wsStatusText">Connecting...</span>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <div class="nav-tab active" data-tab="overview">Overview</div>
+  <div class="nav-tab" data-tab="health">Health</div>
+  <div class="nav-tab" data-tab="events">Events</div>
+  <div class="nav-tab" data-tab="topology">Topology</div>
+  <div class="nav-tab" data-tab="access">Access</div>
+  <div class="nav-tab" data-tab="tiers">Tiers</div>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- Overview Tab -->
+  <div class="tab-content active" id="tab-overview">
+    <div class="stats-row" id="overviewStats">
+      <div class="stat-card cyan">
+        <div class="stat-label">Services</div>
+        <div class="stat-value" id="statServices">—</div>
+        <div class="stat-sub">Registered dimensional services</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Healthy</div>
+        <div class="stat-value" id="statHealthy">—</div>
+        <div class="stat-sub">Services reporting healthy</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Events</div>
+        <div class="stat-value" id="statEvents">—</div>
+        <div class="stat-sub">Events processed</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Topology Nodes</div>
+        <div class="stat-value" id="statNodes">—</div>
+        <div class="stat-sub">Connected dimensions</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Channels</div>
+        <div class="stat-value" id="statChannels">11</div>
+        <div class="stat-sub">Sentinel channels active</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Anomalies</div>
+        <div class="stat-value" id="statAnomalies">—</div>
+        <div class="stat-sub">Detected anomalies</div>
+      </div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title"><span class="live-dot"></span>Live Event Feed</span>
+          <span class="panel-badge" id="eventRate">0/s</span>
+        </div>
+        <div class="panel-body" id="liveEvents">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Waiting for events...</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Service Health</span>
+          <span class="panel-badge" id="healthBadge">—</span>
+        </div>
+        <div class="panel-body" id="serviceList">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Health Tab -->
+  <div class="tab-content" id="tab-health">
+    <div class="stats-row">
+      <div class="stat-card green">
+        <div class="stat-label">Healthy</div>
+        <div class="stat-value" id="hHealthy">—</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Degraded</div>
+        <div class="stat-value" id="hDegraded">—</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Unhealthy</div>
+        <div class="stat-value" id="hUnhealthy">—</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Unknown</div>
+        <div class="stat-value" id="hUnknown">—</div>
+      </div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title">All Services</span>
+          <span class="panel-badge" id="hTotal">— total</span>
+        </div>
+        <div class="panel-body" id="hServiceList">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Loading...</div>
+        </div>
+      </div>
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title">Anomalies</span>
+        </div>
+        <div class="panel-body" id="hAnomalies">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">No anomalies</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Events Tab -->
+  <div class="tab-content" id="tab-events">
+    <div class="stats-row">
+      <div class="stat-card cyan">
+        <div class="stat-label">Total Events</div>
+        <div class="stat-value" id="eTotal">—</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Routed</div>
+        <div class="stat-value" id="eRouted">—</div>
+      </div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title"><span class="live-dot"></span>Event Stream</span>
+          <span class="panel-badge" id="eRate">0/s</span>
+        </div>
+        <div class="panel-body" id="eStream" style="max-height: 600px;">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Waiting for events...</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Channels</span>
+        </div>
+        <div class="panel-body">
+          <div class="channel-grid" id="channelGrid"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Routing Table</span>
+        </div>
+        <div class="panel-body" id="routingTable">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Topology Tab -->
+  <div class="tab-content" id="tab-topology">
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title">Dimensional Topology</span>
+        </div>
+        <div class="panel-body">
+          <canvas class="topo-canvas" id="topoCanvas"></canvas>
+          <div class="topo-legend">
+            <div class="topo-legend-item"><div class="topo-legend-dot" style="background:var(--tier0)"></div>Tier 0 — HUMAN</div>
+            <div class="topo-legend-item"><div class="topo-legend-dot" style="background:var(--tier1)"></div>Tier 1 — ORCHESTRATOR</div>
+            <div class="topo-legend-item"><div class="topo-legend-dot" style="background:var(--tier2)"></div>Tier 2 — PRIME</div>
+            <div class="topo-legend-item"><div class="topo-legend-dot" style="background:var(--tier3)"></div>Tier 3 — AI</div>
+            <div class="topo-legend-item"><div class="topo-legend-dot" style="background:var(--tier4)"></div>Tier 4 — AGENT</div>
+            <div class="topo-legend-item"><div class="topo-legend-dot" style="background:var(--tier5)"></div>Tier 5 — BOT</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Nodes</span><span class="panel-badge" id="tNodes">0</span></div>
+        <div class="panel-body" id="tNodeList"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Edges</span><span class="panel-badge" id="tEdges">0</span></div>
+        <div class="panel-body" id="tEdgeList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Access Tab -->
+  <div class="tab-content" id="tab-access">
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title">Access Control Check</span>
+        </div>
+        <div class="panel-body">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Subject</label>
+              <input id="acSubject" value="ai-service" style="width:100%;padding:8px 12px;background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;">
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Resource</label>
+              <input id="acResource" value="nexus-events" style="width:100%;padding:8px 12px;background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;">
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Action</label>
+              <input id="acAction" value="read" style="width:100%;padding:8px 12px;background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;">
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Subject Tier</label>
+              <select id="acSubTier" style="width:100%;padding:8px 12px;background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;">
+                <option value="0">0 — HUMAN</option>
+                <option value="1">1 — ORCHESTRATOR</option>
+                <option value="2">2 — PRIME</option>
+                <option value="3" selected>3 — AI</option>
+                <option value="4">4 — AGENT</option>
+                <option value="5">5 — BOT</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Resource Tier</label>
+              <select id="acResTier" style="width:100%;padding:8px 12px;background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;">
+                <option value="0">0 — HUMAN</option>
+                <option value="1">1 — ORCHESTRATOR</option>
+                <option value="2">2 — PRIME</option>
+                <option value="3" selected>3 — AI</option>
+                <option value="4">4 — AGENT</option>
+                <option value="5">5 — BOT</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:flex-end;">
+              <button id="acCheck" style="padding:8px 20px;background:var(--accent-cyan);color:var(--bg-deep);border:none;border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;">Check Access</button>
+            </div>
+          </div>
+          <div id="acResult" style="margin-top:16px;display:none;"></div>
+        </div>
+      </div>
+      <div class="panel panel-full">
+        <div class="panel-header"><span class="panel-title">Access Decision Log</span></div>
+        <div class="panel-body" id="accessLog" style="max-height:400px;">
+          <div style="color:var(--text-dim);text-align:center;padding:20px;">No access checks yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tiers Tab -->
+  <div class="tab-content" id="tab-tiers">
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header"><span class="panel-title">Tier Hierarchy</span></div>
+        <div class="panel-body">
+          <div class="tier-viz">
+            <div class="tier-row">
+              <div class="tier-num" style="color:var(--tier0)">0</div>
+              <div class="tier-name" style="color:var(--tier0)">HUMAN</div>
+              <div class="tier-bar" style="background:linear-gradient(90deg,var(--tier0),transparent);"></div>
+              <div class="tier-desc">Override authority, maximum access</div>
+            </div>
+            <div class="tier-row">
+              <div class="tier-num" style="color:var(--tier1)">1</div>
+              <div class="tier-name" style="color:var(--tier1)">ORCHESTRATOR</div>
+              <div class="tier-bar" style="background:linear-gradient(90deg,var(--tier1),transparent);width:85%;"></div>
+              <div class="tier-desc">System-level coordination</div>
+            </div>
+            <div class="tier-row">
+              <div class="tier-num" style="color:var(--tier2)">2</div>
+              <div class="tier-name" style="color:var(--tier2)">PRIME</div>
+              <div class="tier-bar" style="background:linear-gradient(90deg,var(--tier2),transparent);width:70%;"></div>
+              <div class="tier-desc">Strategic decision-making</div>
+            </div>
+            <div class="tier-row">
+              <div class="tier-num" style="color:var(--tier3)">3</div>
+              <div class="tier-name" style="color:var(--tier3)">AI</div>
+              <div class="tier-bar" style="background:linear-gradient(90deg,var(--tier3),transparent);width:55%;"></div>
+              <div class="tier-desc">The overarching ML/LLM Complex</div>
+            </div>
+            <div class="tier-row">
+              <div class="tier-num" style="color:var(--tier4)">4</div>
+              <div class="tier-name" style="color:var(--tier4)">AGENT</div>
+              <div class="tier-bar" style="background:linear-gradient(90deg,var(--tier4),transparent);width:40%;"></div>
+              <div class="tier-desc">Lower-level autonomous AI</div>
+            </div>
+            <div class="tier-row">
+              <div class="tier-num" style="color:var(--tier5)">5</div>
+              <div class="tier-name" style="color:var(--tier5)">BOT</div>
+              <div class="tier-bar" style="background:linear-gradient(90deg,var(--tier5),transparent);width:25%;"></div>
+              <div class="tier-desc">Stateless service worker/function</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── Configuration ───────────────────────────────────────────────────────────
+const NEXUS_BASE = window.location.origin;
+const WS_URL = (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + '/ws/events';
+const CHANNELS = ['PLATFORM','AGENTS','MODELS','WORKFLOWS','SECURITY','HIVE','NEXUS','BRIDGE','PILLARS','INFRASTRUCTURE','EVENTS'];
+const TIER_NAMES = ['HUMAN','ORCHESTRATOR','PRIME','AI','AGENT','BOT'];
+const TIER_COLORS = ['#f59e0b','#8b5cf6','#3b82f6','#06b6d4','#10b981','#64748b'];
+const CHANNEL_COLORS = {'PLATFORM':'#06b6d4','AGENTS':'#10b981','MODELS':'#8b5cf6','WORKFLOWS':'#3b82f6','SECURITY':'#ef4444','HIVE':'#f59e0b','NEXUS':'#ec4899','BRIDGE':'#14b8a6','PILLARS':'#a78bfa','INFRASTRUCTURE':'#64748b','EVENTS':'#f97316'};
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let ws = null;
+let events = [];
+let accessDecisions = [];
+let eventCount = 0;
+let eventTimes = [];
+let channelCounts = {};
+CHANNELS.forEach(c => channelCounts[c] = 0);
+
+// ─── Navigation ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'topology') renderTopology();
+  });
+});
+
+// ─── WebSocket ───────────────────────────────────────────────────────────────
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+  ws.onopen = () => {
+    document.getElementById('wsStatus').classList.remove('disconnected');
+    document.getElementById('wsStatusText').textContent = 'Live';
+    CHANNELS.forEach(ch => {
+      try { ws.send(JSON.stringify({type:'subscribe',channel:ch})); } catch(e) {}
+    });
+  };
+  ws.onmessage = (msg) => {
+    try {
+      const data = JSON.parse(msg.data);
+      if (data.type === 'subscribed') return;
+      handleEvent(data);
+    } catch(e) {}
+  };
+  ws.onclose = () => {
+    document.getElementById('wsStatus').classList.add('disconnected');
+    document.getElementById('wsStatusText').textContent = 'Reconnecting...';
+    setTimeout(connectWS, 3000);
+  };
+  ws.onerror = () => {};
+}
+
+function handleEvent(event) {
+  events.unshift(event);
+  if (events.length > 500) events.pop();
+  eventCount++;
+  eventTimes.push(Date.now());
+  eventTimes = eventTimes.filter(t => t > Date.now() - 60000);
+  const ch = event.channel || 'UNKNOWN';
+  if (channelCounts[ch] !== undefined) channelCounts[ch]++;
+  updateLiveEventFeed();
+  updateOverviewStats();
+}
+
+// ─── API Calls ───────────────────────────────────────────────────────────────
+async function api(path, opts = {}) {
+  try {
+    const res = await fetch(NEXUS_BASE + path, opts);
+    return await res.json();
+  } catch(e) { return null; }
+}
+
+async function loadHealth() {
+  const summary = await api('/health');
+  if (!summary) return;
+  document.getElementById('statServices').textContent = summary.total_services || 0;
+  document.getElementById('statHealthy').textContent = summary.healthy || 0;
+  document.getElementById('hHealthy').textContent = summary.healthy || 0;
+  document.getElementById('hDegraded').textContent = summary.degraded || 0;
+  document.getElementById('hUnhealthy').textContent = summary.unhealthy || 0;
+  document.getElementById('hUnknown').textContent = summary.unknown || 0;
+  document.getElementById('hTotal').textContent = (summary.total_services || 0) + ' total';
+  document.getElementById('healthBadge').textContent = summary.healthy + '/' + summary.total_services;
+  // Service list
+  const svcList = document.getElementById('serviceList');
+  const hSvcList = document.getElementById('hServiceList');
+  if (summary.services && summary.services.length > 0) {
+    const html = summary.services.map(s => `
+      <div class="service-item fade-in">
+        <div class="service-status-dot ${s.status}"></div>
+        <div class="service-info">
+          <div class="service-name">${s.service_id}</div>
+          <div class="service-dim">${s.dimension || '—'} · Tier ${s.tier !== undefined ? s.tier : '—'}</div>
+        </div>
+        <span class="tier-badge tier-${s.tier || 5}">${TIER_NAMES[s.tier] || 'T' + s.tier}</span>
+        <div class="service-metrics">
+          <span>ERR ${((s.error_rate || 0) * 100).toFixed(1)}%</span>
+          <span>${(s.latency_ms || 0).toFixed(0)}ms</span>
+        </div>
+      </div>
+    `).join('');
+    svcList.innerHTML = html;
+    hSvcList.innerHTML = html;
+  } else {
+    svcList.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:40px;">No services registered</div>';
+    hSvcList.innerHTML = svcList.innerHTML;
+  }
+  return summary;
+}
+
+async function loadAnomalies() {
+  const anomalies = await api('/health/anomalies');
+  if (!anomalies) return;
+  const count = (anomalies.stale_heartbeats?.length || 0) + (anomalies.high_error_rates?.length || 0);
+  document.getElementById('statAnomalies').textContent = count;
+  const el = document.getElementById('hAnomalies');
+  if (count === 0) {
+    el.innerHTML = '<div style="color:var(--accent-green);text-align:center;padding:20px;">✓ No anomalies detected</div>';
+  } else {
+    let html = '';
+    (anomalies.stale_heartbeats || []).forEach(s => {
+      html += `<div class="event-item SECURITY" style="border-left-color:var(--accent-amber);"><div class="event-time">⚠</div><div class="event-type">Stale heartbeat: ${s.service_id}</div><div class="event-source">${s.seconds_since || '?'}s ago</div></div>`;
+    });
+    (anomalies.high_error_rates || []).forEach(s => {
+      html += `<div class="event-item SECURITY"><div class="event-time">⚠</div><div class="event-type">High error rate: ${s.service_id}</div><div class="event-source">${((s.error_rate||0)*100).toFixed(1)}%</div></div>`;
+    });
+    el.innerHTML = html;
+  }
+}
+
+async function loadEvents() {
+  const recent = await api('/events/recent?limit=50');
+  if (!recent) return;
+  events = recent;
+  document.getElementById('statEvents').textContent = events.length;
+  document.getElementById('eTotal').textContent = events.length;
+  updateLiveEventFeed();
+  updateEventStream();
+}
+
+async function loadRouting() {
+  const rt = await api('/events/routing');
+  if (!rt) return;
+  const el = document.getElementById('routingTable');
+  let html = '<div style="font-size:12px;">';
+  for (const [ch, subs] of Object.entries(rt)) {
+    html += `<div style="padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--accent-cyan);font-weight:600;">${ch}</span>: ${subs.length} subscriber(s)</div>`;
+  }
+  html += '</div>';
+  el.innerHTML = html || '<div style="color:var(--text-dim);text-align:center;padding:20px;">No routing entries</div>';
+}
+
+async function loadTopology() {
+  const topo = await api('/topology');
+  if (!topo) return;
+  document.getElementById('statNodes').textContent = (topo.nodes?.length || 0);
+  document.getElementById('tNodes').textContent = topo.nodes?.length || 0;
+  document.getElementById('tEdges').textContent = topo.edges?.length || 0;
+  // Node list
+  const nodeList = document.getElementById('tNodeList');
+  if (topo.nodes && topo.nodes.length > 0) {
+    nodeList.innerHTML = topo.nodes.map(n => `
+      <div class="service-item" style="margin-bottom:6px;">
+        <span class="tier-badge tier-${n.tier || 5}">${n.tier || '?'}</span>
+        <div class="service-info">
+          <div class="service-name">${n.node_id}</div>
+          <div class="service-dim">${n.dimension || ''} · ${n.service_type || ''}</div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    nodeList.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:20px;">No nodes</div>';
+  }
+  // Edge list
+  const edgeList = document.getElementById('tEdgeList');
+  if (topo.edges && topo.edges.length > 0) {
+    edgeList.innerHTML = topo.edges.map(e => `
+      <div class="service-item" style="margin-bottom:6px;">
+        <div class="service-info">
+          <div class="service-name">${e.source} → ${e.target}</div>
+          <div class="service-dim">${e.edge_type || ''}</div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    edgeList.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:20px;">No edges</div>';
+  }
+  window._topoData = topo;
+  renderTopology();
+}
+
+async function loadStatus() {
+  const status = await api('/status');
+  if (!status) return;
+}
+
+// ─── UI Updates ──────────────────────────────────────────────────────────────
+function updateLiveEventFeed() {
+  const el = document.getElementById('liveEvents');
+  const display = events.slice(0, 20);
+  if (display.length === 0) return;
+  el.innerHTML = display.map(e => `
+    <div class="event-item ${e.channel || ''} fade-in">
+      <div class="event-time">${(e.timestamp || '').slice(11, 19)}</div>
+      <div class="event-channel">${e.channel || '?'}</div>
+      <div class="event-type">${e.event_type || '?'}</div>
+      <div class="event-source">${e.source_dimension || ''} T${e.source_tier !== undefined ? e.source_tier : '?'}</div>
+    </div>
+  `).join('');
+}
+
+function updateEventStream() {
+  const el = document.getElementById('eStream');
+  const display = events.slice(0, 50);
+  if (display.length === 0) return;
+  el.innerHTML = display.map(e => `
+    <div class="event-item ${e.channel || ''} fade-in">
+      <div class="event-time">${(e.timestamp || '').slice(11, 19)}</div>
+      <div class="event-channel">${e.channel || '?'}</div>
+      <div class="event-type">${e.event_type || '?'}</div>
+      <div class="event-source">${e.source_dimension || ''} T${e.source_tier !== undefined ? e.source_tier : '?'}</div>
+    </div>
+  `).join('');
+}
+
+function updateOverviewStats() {
+  const rate = eventTimes.length;
+  document.getElementById('eventRate').textContent = rate + '/min';
+  document.getElementById('eRate').textContent = rate + '/min';
+  document.getElementById('statEvents').textContent = eventCount;
+  document.getElementById('eTotal').textContent = eventCount;
+  document.getElementById('eRouted').textContent = eventCount;
+}
+
+function updateChannelGrid() {
+  const el = document.getElementById('channelGrid');
+  el.innerHTML = CHANNELS.map(ch => `
+    <div class="channel-card">
+      <div class="channel-name" style="color:${CHANNEL_COLORS[ch] || 'var(--accent-cyan)'}">${ch}</div>
+      <div class="channel-count">${channelCounts[ch] || 0}</div>
+    </div>
+  `).join('');
+}
+
+// ─── Topology Visualization ─────────────────────────────────────────────────
+function renderTopology() {
+  const canvas = document.getElementById('topoCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = 400;
+  ctx.fillStyle = '#0a0e17';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const topo = window._topoData;
+  if (!topo || !topo.nodes || topo.nodes.length === 0) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '14px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No topology data — register services to populate', canvas.width / 2, 200);
+    return;
+  }
+
+  const cx = canvas.width / 2;
+  const cy = 200;
+  const radius = Math.min(cx - 80, 160);
+  const nodes = topo.nodes;
+  const positions = {};
+
+  nodes.forEach((node, i) => {
+    const angle = (2 * Math.PI * i / nodes.length) - Math.PI / 2;
+    const x = cx + radius * Math.cos(angle);
+    const y = cy + radius * Math.sin(angle);
+    positions[node.node_id] = { x, y };
+  });
+
+  // Draw edges
+  if (topo.edges) {
+    topo.edges.forEach(edge => {
+      const from = positions[edge.source];
+      const to = positions[edge.target];
+      if (from && to) {
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // Arrow
+        const angle = Math.atan2(to.y - from.y, to.x - from.x);
+        const arrowX = to.x - 20 * Math.cos(angle);
+        const arrowY = to.y - 20 * Math.sin(angle);
+        ctx.beginPath();
+        ctx.moveTo(arrowX, arrowY);
+        ctx.lineTo(arrowX - 8 * Math.cos(angle - 0.4), arrowY - 8 * Math.sin(angle - 0.4));
+        ctx.lineTo(arrowX - 8 * Math.cos(angle + 0.4), arrowY - 8 * Math.sin(angle + 0.4));
+        ctx.fillStyle = 'rgba(100, 116, 139, 0.5)';
+        ctx.fill();
+      }
+    });
+  }
+
+  // Draw nodes
+  nodes.forEach((node, i) => {
+    const pos = positions[node.node_id];
+    const tier = node.tier !== undefined ? node.tier : 5;
+    const color = TIER_COLORS[tier];
+
+    // Glow
+    const gradient = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, 30);
+    gradient.addColorStop(0, color + '40');
+    gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(pos.x - 30, pos.y - 30, 60, 60);
+
+    // Circle
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 16, 0, 2 * Math.PI);
+    ctx.fillStyle = color + '30';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Tier number
+    ctx.fillStyle = color;
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('T' + tier, pos.x, pos.y);
+
+    // Label
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillText(node.node_id, pos.x, pos.y + 28);
+  });
+}
+
+// ─── Access Check ────────────────────────────────────────────────────────────
+document.getElementById('acCheck').addEventListener('click', async () => {
+  const subject = document.getElementById('acSubject').value;
+  const resource = document.getElementById('acResource').value;
+  const action = document.getElementById('acAction').value;
+  const subject_tier = parseInt(document.getElementById('acSubTier').value);
+  const resource_tier = parseInt(document.getElementById('acResTier').value);
+
+  const result = await api('/access/check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, resource, action, subject_tier, resource_tier, context: {} })
+  });
+
+  if (!result) return;
+
+  const resultEl = document.getElementById('acResult');
+  resultEl.style.display = 'block';
+  const allowed = result.allowed;
+  resultEl.innerHTML = `
+    <div style="padding:16px;background:${allowed ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'};border:1px solid ${allowed ? 'var(--accent-green)' : 'var(--accent-red)'};border-radius:8px;">
+      <div style="font-size:18px;font-weight:700;color:${allowed ? 'var(--accent-green)' : 'var(--accent-red)'};">${allowed ? '✓ ALLOWED' : '✗ DENIED'}</div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-top:8px;">${result.reason || '—'}</div>
+      <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--text-dim);">
+        <span>Tier: ${result.tier_valid ? '✓' : '✗'}</span>
+        <span>RBAC: ${result.rbac_result !== null ? (result.rbac_result ? '✓' : '✗') : '—'}</span>
+        <span>ABAC: ${result.abac_result !== null ? (result.abac_result ? '✓' : '✗') : '—'}</span>
+        <span>${result.evaluation_time_ms?.toFixed(2) || '?'}ms</span>
+      </div>
+    </div>
+  `;
+
+  // Log it
+  accessDecisions.unshift({ time: new Date().toLocaleTimeString(), ...result, subject, resource, action });
+  if (accessDecisions.length > 50) accessDecisions.pop();
+  const logEl = document.getElementById('accessLog');
+  logEl.innerHTML = accessDecisions.map(d => `
+    <div class="access-item fade-in">
+      <span class="access-verdict ${d.allowed ? 'allowed' : 'denied'}">${d.allowed ? 'ALLOW' : 'DENY'}</span>
+      <span class="access-detail">${d.subject} → ${d.resource} (${d.action})</span>
+      <span style="font-size:11px;color:var(--text-dim);">${d.time}</span>
+    </div>
+  `).join('');
+});
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+async function init() {
+  updateChannelGrid();
+  connectWS();
+  await Promise.all([
+    loadHealth(),
+    loadAnomalies(),
+    loadEvents(),
+    loadRouting(),
+    loadTopology(),
+    loadStatus(),
+  ]);
+  // Periodic refresh
+  setInterval(async () => {
+    await loadHealth();
+    await loadAnomalies();
+    updateChannelGrid();
+  }, 10000);
+}
+
+init();
+</script>
+</body>
+</html>

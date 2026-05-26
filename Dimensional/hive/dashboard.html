@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tranc3 HIVE — Data Flow & Swarm Dashboard</title>
+<style>
+  :root {
+    --bg-deep: #0a0e17;
+    --bg-panel: #111827;
+    --bg-card: #1a2236;
+    --border: #2a3550;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-dim: #64748b;
+    --accent-amber: #f59e0b;
+    --accent-orange: #f97316;
+    --accent-cyan: #06b6d4;
+    --accent-blue: #3b82f6;
+    --accent-purple: #8b5cf6;
+    --accent-green: #10b981;
+    --accent-red: #ef4444;
+    --accent-pink: #ec4899;
+    --accent-teal: #14b8a6;
+    --priority-critical: #ef4444;
+    --priority-high: #f97316;
+    --priority-normal: #f59e0b;
+    --priority-low: #3b82f6;
+    --priority-background: #64748b;
+    --swarm-forming: #8b5cf6;
+    --swarm-active: #10b981;
+    --swarm-scaling: #06b6d4;
+    --swarm-draining: #f59e0b;
+    --swarm-completed: #64748b;
+    --swarm-failed: #ef4444;
+    --pipeline-pending: #64748b;
+    --pipeline-running: #10b981;
+    --pipeline-paused: #f59e0b;
+    --pipeline-completed: #3b82f6;
+    --pipeline-failed: #ef4444;
+    --hive-glow: rgba(245, 158, 11, 0.15);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--bg-panel) 0%, #0f172a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent-amber), var(--accent-orange));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 18px; color: white;
+    text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+  }
+  .header-title { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+  .header-subtitle { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .bridge-badges { display: flex; gap: 8px; }
+  .bridge-badge {
+    font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .bridge-badge.nexus { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+  .bridge-badge.hive { background: rgba(245,158,11,0.2); color: var(--accent-amber); }
+  .bridge-badge.infinity { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-green);
+    animation: pulse 2s infinite;
+  }
+  .status-dot.disconnected { background: var(--accent-red); animation: none; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .status-text { font-size: 13px; color: var(--text-secondary); }
+
+  /* Navigation Tabs */
+  .nav {
+    display: flex;
+    gap: 2px;
+    padding: 8px 24px 0;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-tab {
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .nav-tab:hover { color: var(--text-secondary); }
+  .nav-tab.active {
+    color: var(--accent-amber);
+    border-bottom-color: var(--accent-amber);
+  }
+
+  /* Main Grid */
+  .main { padding: 20px 24px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Stats Row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .stat-card.amber::before { background: linear-gradient(90deg, var(--accent-amber), transparent); }
+  .stat-card.green::before { background: linear-gradient(90deg, var(--accent-green), transparent); }
+  .stat-card.cyan::before { background: linear-gradient(90deg, var(--accent-cyan), transparent); }
+  .stat-card.red::before { background: linear-gradient(90deg, var(--accent-red), transparent); }
+  .stat-card.purple::before { background: linear-gradient(90deg, var(--accent-purple), transparent); }
+  .stat-card.blue::before { background: linear-gradient(90deg, var(--accent-blue), transparent); }
+  .stat-card.orange::before { background: linear-gradient(90deg, var(--accent-orange), transparent); }
+  .stat-card.teal::before { background: linear-gradient(90deg, var(--accent-teal), transparent); }
+  .stat-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
+  .stat-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+  /* Panels */
+  .panel-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel-full { grid-column: 1 / -1; }
+  .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .panel-title { font-size: 14px; font-weight: 600; }
+  .panel-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--accent-amber);
+  }
+  .panel-body { padding: 16px 18px; max-height: 400px; overflow-y: auto; }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* Data Source/Sink Cards */
+  .entity-list { display: flex; flex-direction: column; gap: 10px; }
+  .entity-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-panel);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .entity-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .entity-icon.source { background: rgba(6,182,212,0.15); }
+  .entity-icon.sink { background: rgba(139,92,246,0.15); }
+  .entity-info { flex: 1; min-width: 0; }
+  .entity-name { font-size: 13px; font-weight: 600; }
+  .entity-dim { font-size: 11px; color: var(--text-dim); }
+  .entity-metrics { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); }
+  .priority-badge {
+    font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600;
+    text-transform: uppercase;
+  }
+  .priority-CRITICAL { background: rgba(239,68,68,0.2); color: var(--priority-critical); }
+  .priority-HIGH { background: rgba(249,115,22,0.2); color: var(--priority-high); }
+  .priority-NORMAL { background: rgba(245,158,11,0.2); color: var(--priority-normal); }
+  .priority-LOW { background: rgba(59,130,246,0.2); color: var(--priority-low); }
+  .priority-BACKGROUND { background: rgba(100,116,139,0.2); color: var(--priority-background); }
+
+  /* Swarm Cards */
+  .swarm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .swarm-card {
+    padding: 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .swarm-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .swarm-card.ACTIVE::before { background: var(--swarm-active); }
+  .swarm-card.FORMING::before { background: var(--swarm-forming); }
+  .swarm-card.SCALING::before { background: var(--swarm-scaling); }
+  .swarm-card.DRAINING::before { background: var(--swarm-draining); }
+  .swarm-card.COMPLETED::before { background: var(--swarm-completed); }
+  .swarm-card.FAILED::before { background: var(--swarm-failed); }
+  .swarm-name { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .swarm-status {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px;
+    font-weight: 700; text-transform: uppercase; display: inline-block;
+  }
+  .swarm-status.FORMING { background: rgba(139,92,246,0.2); color: var(--swarm-forming); }
+  .swarm-status.ACTIVE { background: rgba(16,185,129,0.2); color: var(--swarm-active); }
+  .swarm-status.SCALING { background: rgba(6,182,212,0.2); color: var(--swarm-scaling); }
+  .swarm-status.DRAINING { background: rgba(245,158,11,0.2); color: var(--swarm-draining); }
+  .swarm-status.COMPLETED { background: rgba(100,116,139,0.2); color: var(--swarm-completed); }
+  .swarm-status.FAILED { background: rgba(239,68,68,0.2); color: var(--swarm-failed); }
+  .swarm-stats { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--text-secondary); }
+  .swarm-progress { margin-top: 10px; }
+  .progress-bar {
+    height: 6px; background: var(--bg-deep); border-radius: 3px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 3px; transition: width 0.5s ease;
+  }
+  .progress-fill.ACTIVE { background: var(--swarm-active); }
+  .progress-fill.FORMING { background: var(--swarm-forming); }
+  .progress-fill.COMPLETED { background: var(--swarm-completed); }
+  .progress-label { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+  /* Pipeline Cards */
+  .pipeline-list { display: flex; flex-direction: column; gap: 10px; }
+  .pipeline-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: var(--bg-panel);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .pipeline-flow {
+    display: flex; align-items: center; gap: 6px; font-size: 12px;
+    flex: 1; min-width: 0;
+  }
+  .pipeline-source { color: var(--accent-cyan); font-weight: 600; }
+  .pipeline-arrow { color: var(--accent-amber); font-size: 16px; }
+  .pipeline-sink { color: var(--accent-purple); font-weight: 600; }
+  .pipeline-status {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px;
+    font-weight: 700; text-transform: uppercase;
+  }
+  .pipeline-status.PENDING { background: rgba(100,116,139,0.2); color: var(--pipeline-pending); }
+  .pipeline-status.RUNNING { background: rgba(16,185,129,0.2); color: var(--pipeline-running); }
+  .pipeline-status.PAUSED { background: rgba(245,158,11,0.2); color: var(--pipeline-paused); }
+  .pipeline-status.COMPLETED { background: rgba(59,130,246,0.2); color: var(--pipeline-completed); }
+  .pipeline-status.FAILED { background: rgba(239,68,68,0.2); color: var(--pipeline-failed); }
+  .pipeline-meta { display: flex; gap: 12px; font-size: 11px; color: var(--text-dim); }
+
+  /* Event Feed */
+  .event-feed { display: flex; flex-direction: column; gap: 6px; }
+  .event-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px; background: var(--bg-panel);
+    border-radius: 6px; border-left: 3px solid var(--accent-amber);
+    font-size: 12px;
+  }
+  .event-item.CRITICAL { border-left-color: var(--accent-red); }
+  .event-item.HIGH { border-left-color: var(--accent-orange); }
+  .event-item.NORMAL { border-left-color: var(--accent-amber); }
+  .event-item.LOW { border-left-color: var(--accent-blue); }
+  .event-item.BACKGROUND { border-left-color: var(--text-dim); }
+  .event-time { color: var(--text-dim); white-space: nowrap; flex-shrink: 0; font-family: monospace; font-size: 11px; }
+  .event-priority { color: var(--accent-amber); font-weight: 600; white-space: nowrap; }
+  .event-type { color: var(--text-primary); }
+  .event-source { color: var(--text-dim); margin-left: auto; white-space: nowrap; }
+
+  /* Flow Monitor */
+  .flow-viz { position: relative; min-height: 300px; }
+  .flow-canvas { width: 100%; height: 400px; }
+  .flow-legend { display: flex; gap: 16px; padding: 12px 0; flex-wrap: wrap; }
+  .flow-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); }
+  .flow-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Three Bridges Indicator */
+  .bridges-indicator {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .bridge-indicator {
+    padding: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .bridge-indicator::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .bridge-indicator.nexus::before { background: var(--accent-cyan); }
+  .bridge-indicator.hive::before { background: var(--accent-amber); }
+  .bridge-indicator.infinity::before { background: var(--accent-purple); }
+  .bridge-indicator-name {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    font-weight: 600; margin-bottom: 4px;
+  }
+  .bridge-indicator.nexus .bridge-indicator-name { color: var(--accent-cyan); }
+  .bridge-indicator.hive .bridge-indicator-name { color: var(--accent-amber); }
+  .bridge-indicator.infinity .bridge-indicator-name { color: var(--accent-purple); }
+  .bridge-indicator-traffic {
+    font-size: 11px; color: var(--text-dim); line-height: 1.4;
+  }
+
+  /* Chunk Tracker */
+  .chunk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+  .chunk-card {
+    padding: 10px; background: var(--bg-panel); border-radius: 6px;
+    border: 1px solid var(--border); text-align: center;
+  }
+  .chunk-status { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .chunk-count { font-size: 20px; font-weight: 700; margin-top: 4px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .panel-grid { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .bridges-indicator { grid-template-columns: 1fr; }
+    .header { padding: 12px 16px; }
+    .main { padding: 16px; }
+  }
+
+  /* Animations */
+  .fade-in { animation: fadeIn 0.3s ease-in; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .live-dot { display: inline-block; width: 6px; height: 6px; background: var(--accent-amber); border-radius: 50%; margin-right: 6px; animation: pulse 1.5s infinite; }
+
+  /* Data flow animation */
+  @keyframes flowPulse {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  }
+  .flow-active { animation: flowPulse 2s infinite; }
+</style>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">H</div>
+    <div>
+      <div class="header-title">The HIVE</div>
+      <div class="header-subtitle">Data Flow &amp; Swarm Coordination</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="bridge-badges">
+      <span class="bridge-badge nexus">Nexus</span>
+      <span class="bridge-badge hive">HIVE</span>
+      <span class="bridge-badge infinity">Infinity</span>
+    </div>
+    <div class="status-dot" id="wsStatus"></div>
+    <span class="status-text" id="wsStatusText">Connecting...</span>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <div class="nav-tab active" data-tab="overview">Overview</div>
+  <div class="nav-tab" data-tab="pipelines">Pipelines</div>
+  <div class="nav-tab" data-tab="swarms">Swarms</div>
+  <div class="nav-tab" data-tab="flow">Flow</div>
+  <div class="nav-tab" data-tab="sources">Sources &amp; Sinks</div>
+  <div class="nav-tab" data-tab="events">Events</div>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- Three Bridges Indicator -->
+  <div class="bridges-indicator">
+    <div class="bridge-indicator nexus">
+      <div class="bridge-indicator-name">The Nexus</div>
+      <div class="bridge-indicator-traffic">AI · Agent · Bot Traffic</div>
+    </div>
+    <div class="bridge-indicator hive">
+      <div class="bridge-indicator-name">The HIVE</div>
+      <div class="bridge-indicator-traffic">Data Movement · Swarm Systems</div>
+    </div>
+    <div class="bridge-indicator infinity">
+      <div class="bridge-indicator-name">InfinityBridge</div>
+      <div class="bridge-indicator-traffic">User Context · Human Traffic</div>
+    </div>
+  </div>
+
+  <!-- Overview Tab -->
+  <div class="tab-content active" id="tab-overview">
+    <div class="stats-row" id="overviewStats">
+      <div class="stat-card amber">
+        <div class="stat-label">Data Sources</div>
+        <div class="stat-value" id="statSources">&mdash;</div>
+        <div class="stat-sub">Registered sources</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Data Sinks</div>
+        <div class="stat-value" id="statSinks">&mdash;</div>
+        <div class="stat-sub">Registered sinks</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Pipelines</div>
+        <div class="stat-value" id="statPipelines">&mdash;</div>
+        <div class="stat-sub">Active pipelines</div>
+      </div>
+      <div class="stat-card cyan">
+        <div class="stat-label">Swarms</div>
+        <div class="stat-value" id="statSwarms">&mdash;</div>
+        <div class="stat-sub">Active swarms</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-label">Throughput</div>
+        <div class="stat-value" id="statThroughput">&mdash;</div>
+        <div class="stat-sub">Chunks / minute</div>
+      </div>
+      <div class="stat-card teal">
+        <div class="stat-label">Avg Latency</div>
+        <div class="stat-value" id="statLatency">&mdash;</div>
+        <div class="stat-sub">End-to-end ms</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Replication</div>
+        <div class="stat-value" id="statReplication">&mdash;</div>
+        <div class="stat-sub">Max replication factor</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Errors</div>
+        <div class="stat-value" id="statErrors">&mdash;</div>
+        <div class="stat-sub">Pipeline failures</div>
+      </div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title"><span class="live-dot"></span>HIVE Event Feed</span>
+          <span class="panel-badge" id="eventRate">0/min</span>
+        </div>
+        <div class="panel-body" id="liveEvents">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Waiting for events...</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Pipeline Summary</span>
+          <span class="panel-badge" id="pipelineBadge">&mdash;</span>
+        </div>
+        <div class="panel-body" id="pipelineSummary">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Loading...</div>
+        </div>
+      </div>
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title">Data Flow Topology</span>
+          <span class="panel-badge" id="flowBadge">Live</span>
+        </div>
+        <div class="panel-body">
+          <canvas class="flow-canvas" id="flowCanvas"></canvas>
+          <div class="flow-legend">
+            <div class="flow-legend-item"><div class="flow-legend-dot" style="background:var(--accent-cyan)"></div>Source</div>
+            <div class="flow-legend-item"><div class="flow-legend-dot" style="background:var(--accent-amber)"></div>Pipeline</div>
+            <div class="flow-legend-item"><div class="flow-legend-dot" style="background:var(--accent-purple)"></div>Sink</div>
+            <div class="flow-legend-item"><div class="flow-legend-dot" style="background:var(--accent-green)"></div>Swarm Node</div>
+            <div class="flow-legend-item"><div class="flow-legend-dot" style="background:var(--priority-critical)"></div>Critical</div>
+            <div class="flow-legend-item"><div class="flow-legend-dot" style="background:var(--priority-high)"></div>High</div>
+            <div class="flow-legend-item"><div class="flow-legend-dot" style="background:var(--priority-normal)"></div>Normal</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipelines Tab -->
+  <div class="tab-content" id="tab-pipelines">
+    <div class="stats-row">
+      <div class="stat-card green">
+        <div class="stat-label">Running</div>
+        <div class="stat-value" id="pRunning">&mdash;</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Paused</div>
+        <div class="stat-value" id="pPaused">&mdash;</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value" id="pPending">&mdash;</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Failed</div>
+        <div class="stat-value" id="pFailed">&mdash;</div>
+      </div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title">All Pipelines</span>
+          <span class="panel-badge" id="pTotal">&mdash; total</span>
+        </div>
+        <div class="panel-body" id="pipelineList" style="max-height: 600px;">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Loading...</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Chunk Status</span>
+        </div>
+        <div class="panel-body">
+          <div class="chunk-grid" id="chunkGrid"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Priority Distribution</span>
+        </div>
+        <div class="panel-body" id="priorityDist">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Swarms Tab -->
+  <div class="tab-content" id="tab-swarms">
+    <div class="stats-row">
+      <div class="stat-card green">
+        <div class="stat-label">Active</div>
+        <div class="stat-value" id="sActive">&mdash;</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Forming</div>
+        <div class="stat-value" id="sForming">&mdash;</div>
+      </div>
+      <div class="stat-card cyan">
+        <div class="stat-label">Scaling</div>
+        <div class="stat-value" id="sScaling">&mdash;</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Draining</div>
+        <div class="stat-value" id="sDraining">&mdash;</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Completed</div>
+        <div class="stat-value" id="sCompleted">&mdash;</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Failed</div>
+        <div class="stat-value" id="sFailed">&mdash;</div>
+      </div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title">Swarm Overview</span>
+          <span class="panel-badge" id="sTotal">&mdash; total</span>
+        </div>
+        <div class="panel-body">
+          <div class="swarm-grid" id="swarmGrid">
+            <div style="color: var(--text-dim); text-align: center; padding: 40px; grid-column: 1 / -1;">Loading...</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title">Swarm Nodes</span>
+          <span class="panel-badge" id="sNodes">&mdash; nodes</span>
+        </div>
+        <div class="panel-body" id="swarmNodeList" style="max-height: 400px;">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flow Tab -->
+  <div class="tab-content" id="tab-flow">
+    <div class="stats-row">
+      <div class="stat-card amber">
+        <div class="stat-label">Throughput</div>
+        <div class="stat-value" id="fThroughput">&mdash;</div>
+        <div class="stat-sub">Chunks / min</div>
+      </div>
+      <div class="stat-card teal">
+        <div class="stat-label">Avg Latency</div>
+        <div class="stat-value" id="fLatency">&mdash;</div>
+        <div class="stat-sub">ms</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">P50 Latency</div>
+        <div class="stat-value" id="fP50">&mdash;</div>
+        <div class="stat-sub">ms</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-label">P99 Latency</div>
+        <div class="stat-value" id="fP99">&mdash;</div>
+        <div class="stat-sub">ms</div>
+      </div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title"><span class="live-dot"></span>Throughput Over Time</span>
+        </div>
+        <div class="panel-body">
+          <canvas id="throughputChart" height="200"></canvas>
+        </div>
+      </div>
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title">Latency Distribution</span>
+        </div>
+        <div class="panel-body">
+          <canvas id="latencyChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sources & Sinks Tab -->
+  <div class="tab-content" id="tab-sources">
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Data Sources</span>
+          <span class="panel-badge" id="srcCount">&mdash;</span>
+        </div>
+        <div class="panel-body" id="sourceList" style="max-height: 500px;">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Loading...</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Data Sinks</span>
+          <span class="panel-badge" id="sinkCount">&mdash;</span>
+        </div>
+        <div class="panel-body" id="sinkList" style="max-height: 500px;">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Events Tab -->
+  <div class="tab-content" id="tab-events">
+    <div class="stats-row">
+      <div class="stat-card amber">
+        <div class="stat-label">Total Events</div>
+        <div class="stat-value" id="evTotal">&mdash;</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Critical</div>
+        <div class="stat-value" id="evCritical">&mdash;</div>
+      </div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel panel-full">
+        <div class="panel-header">
+          <span class="panel-title"><span class="live-dot"></span>HIVE Event Stream</span>
+          <span class="panel-badge" id="evRate">0/min</span>
+        </div>
+        <div class="panel-body" id="eventStream" style="max-height: 600px;">
+          <div style="color: var(--text-dim); text-align: center; padding: 40px;">Waiting for events...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Configuration ──────────────────────────────────────────────────────────────
+const HIVE_BASE = window.location.origin;
+const WS_URL = (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + '/ws';
+const PRIORITIES = ['CRITICAL', 'HIGH', 'NORMAL', 'LOW', 'BACKGROUND'];
+const PRIORITY_COLORS = {
+  CRITICAL: '#ef4444', HIGH: '#f97316', NORMAL: '#f59e0b', LOW: '#3b82f6', BACKGROUND: '#64748b'
+};
+const SWARM_STATUSES = ['FORMING', 'ACTIVE', 'SCALING', 'DRAINING', 'COMPLETED', 'FAILED'];
+const SWARM_COLORS = {
+  FORMING: '#8b5cf6', ACTIVE: '#10b981', SCALING: '#06b6d4',
+  DRAINING: '#f59e0b', COMPLETED: '#64748b', FAILED: '#ef4444'
+};
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let ws = null;
+let hiveEvents = [];
+let eventCount = 0;
+let eventTimes = [];
+let hiveData = { sources: [], sinks: [], pipelines: [], swarms: [], flow: {} };
+let throughputHistory = [];
+let latencyHistory = [];
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'flow') { renderThroughputChart(); renderLatencyChart(); }
+    if (tab.dataset.tab === 'overview') renderFlowTopology();
+  });
+});
+
+// ── WebSocket ──────────────────────────────────────────────────────────────────
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+  ws.onopen = () => {
+    document.getElementById('wsStatus').classList.remove('disconnected');
+    document.getElementById('wsStatusText').textContent = 'Live';
+  };
+  ws.onmessage = (msg) => {
+    try {
+      const data = JSON.parse(msg.data);
+      handleEvent(data);
+    } catch(e) {}
+  };
+  ws.onclose = () => {
+    document.getElementById('wsStatus').classList.add('disconnected');
+    document.getElementById('wsStatusText').textContent = 'Reconnecting...';
+    setTimeout(connectWS, 3000);
+  };
+  ws.onerror = () => {};
+}
+
+function handleEvent(event) {
+  hiveEvents.unshift(event);
+  if (hiveEvents.length > 500) hiveEvents.pop();
+  eventCount++;
+  eventTimes.push(Date.now());
+  eventTimes = eventTimes.filter(t => t > Date.now() - 60000);
+  updateLiveEventFeed();
+  updateOverviewStats();
+}
+
+// ── API Calls ──────────────────────────────────────────────────────────────────
+async function api(path, opts = {}) {
+  try {
+    const res = await fetch(HIVE_BASE + path, opts);
+    return await res.json();
+  } catch(e) { return null; }
+}
+
+async function loadStatus() {
+  const status = await api('/status');
+  if (!status) return;
+  // Sources & sinks
+  hiveData.sources = status.sources || [];
+  hiveData.sinks = status.sinks || [];
+  hiveData.pipelines = status.pipelines || [];
+  hiveData.swarms = status.swarms || [];
+  document.getElementById('statSources').textContent = hiveData.sources.length;
+  document.getElementById('statSinks').textContent = hiveData.sinks.length;
+  document.getElementById('statPipelines').textContent = hiveData.pipelines.length;
+  document.getElementById('statSwarms').textContent = hiveData.swarms.length;
+  document.getElementById('srcCount').textContent = hiveData.sources.length;
+  document.getElementById('sinkCount').textContent = hiveData.sinks.length;
+  // Replication
+  const maxRepl = hiveData.pipelines.reduce((m, p) => Math.max(m, p.replication || 1), 0);
+  document.getElementById('statReplication').textContent = maxRepl || '&mdash;';
+}
+
+async function loadHealth() {
+  const health = await api('/health');
+  if (!health) return;
+  const stats = health.flow_stats || {};
+  const throughput = stats.throughput_per_minute || 0;
+  const latency = stats.avg_latency_ms || 0;
+  hiveData.flow = stats;
+  document.getElementById('statThroughput').textContent = throughput.toFixed(1);
+  document.getElementById('statLatency').textContent = latency.toFixed(0);
+  document.getElementById('fThroughput').textContent = throughput.toFixed(1);
+  document.getElementById('fLatency').textContent = latency.toFixed(0);
+  document.getElementById('fP50').textContent = (stats.p50_latency_ms || latency).toFixed(0);
+  document.getElementById('fP99').textContent = (stats.p99_latency_ms || 0).toFixed(0);
+  // Track history
+  throughputHistory.push({ t: Date.now(), v: throughput });
+  latencyHistory.push({ t: Date.now(), v: latency });
+  if (throughputHistory.length > 60) throughputHistory.shift();
+  if (latencyHistory.length > 60) latencyHistory.shift();
+}
+
+async function loadSources() {
+  const sources = await api('/sources');
+  if (!sources) return;
+  hiveData.sources = sources;
+  document.getElementById('statSources').textContent = sources.length;
+  document.getElementById('srcCount').textContent = sources.length;
+  const el = document.getElementById('sourceList');
+  if (sources.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:40px;">No sources registered</div>';
+    return;
+  }
+  el.innerHTML = sources.map(s => `
+    <div class="entity-item fade-in">
+      <div class="entity-icon source">&#9889;</div>
+      <div class="entity-info">
+        <div class="entity-name">${s.source_id || s.name || '?'}</div>
+        <div class="entity-dim">${s.schema_type || 'raw'} &middot; ${s.format || 'json'}</div>
+      </div>
+      <span class="priority-badge priority-${s.priority || 'NORMAL'}">${s.priority || 'NORMAL'}</span>
+    </div>
+  `).join('');
+}
+
+async function loadSinks() {
+  const sinks = await api('/sinks');
+  if (!sinks) return;
+  hiveData.sinks = sinks;
+  document.getElementById('statSinks').textContent = sinks.length;
+  document.getElementById('sinkCount').textContent = sinks.length;
+  const el = document.getElementById('sinkList');
+  if (sinks.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:40px;">No sinks registered</div>';
+    return;
+  }
+  el.innerHTML = sinks.map(s => `
+    <div class="entity-item fade-in">
+      <div class="entity-icon sink">&#9650;</div>
+      <div class="entity-info">
+        <div class="entity-name">${s.sink_id || s.name || '?'}</div>
+        <div class="entity-dim">${s.protocol || 'http'} &middot; ${s.endpoint || 'local'}</div>
+      </div>
+      <span class="priority-badge priority-${s.priority || 'NORMAL'}">${s.priority || 'NORMAL'}</span>
+    </div>
+  `).join('');
+}
+
+async function loadPipelines() {
+  const pipelines = await api('/pipelines');
+  if (!pipelines) return;
+  hiveData.pipelines = pipelines;
+  document.getElementById('statPipelines').textContent = pipelines.length;
+  // Status counts
+  const counts = { PENDING: 0, RUNNING: 0, PAUSED: 0, COMPLETED: 0, FAILED: 0 };
+  pipelines.forEach(p => { if (counts[p.status] !== undefined) counts[p.status]++; });
+  document.getElementById('pRunning').textContent = counts.RUNNING;
+  document.getElementById('pPaused').textContent = counts.PAUSED;
+  document.getElementById('pPending').textContent = counts.PENDING;
+  document.getElementById('pFailed').textContent = counts.FAILED;
+  document.getElementById('pTotal').textContent = pipelines.length + ' total';
+  document.getElementById('pipelineBadge').textContent = counts.RUNNING + ' running';
+  document.getElementById('statErrors').textContent = counts.FAILED;
+  // Pipeline list
+  const el = document.getElementById('pipelineList');
+  if (pipelines.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:40px;">No pipelines</div>';
+    return;
+  }
+  el.innerHTML = pipelines.map(p => `
+    <div class="pipeline-item fade-in">
+      <div class="pipeline-flow">
+        <span class="pipeline-source">${p.source_id || '?'}</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-sink">${p.sink_id || '?'}</span>
+      </div>
+      <span class="pipeline-status ${p.status || 'PENDING'}">${p.status || 'PENDING'}</span>
+      <span class="priority-badge priority-${p.priority || 'NORMAL'}">${p.priority || 'NORMAL'}</span>
+      <div class="pipeline-meta">
+        <span>R:${p.replication || 1}</span>
+        <span>${p.chunks_processed || 0} chunks</span>
+      </div>
+    </div>
+  `).join('');
+  // Pipeline summary on overview
+  const summaryEl = document.getElementById('pipelineSummary');
+  summaryEl.innerHTML = pipelines.slice(0, 8).map(p => `
+    <div class="pipeline-item" style="margin-bottom:6px;">
+      <div class="pipeline-flow">
+        <span class="pipeline-source">${p.source_id || '?'}</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-sink">${p.sink_id || '?'}</span>
+      </div>
+      <span class="pipeline-status ${p.status || 'PENDING'}">${p.status || 'PENDING'}</span>
+    </div>
+  `).join('');
+  // Chunk grid
+  loadChunkStatus(pipelines);
+  // Priority distribution
+  loadPriorityDist(pipelines);
+}
+
+function loadChunkStatus(pipelines) {
+  const chunkStatuses = {};
+  pipelines.forEach(p => {
+    if (p.chunk_status) {
+      for (const [status, count] of Object.entries(p.chunk_status)) {
+        chunkStatuses[status] = (chunkStatuses[status] || 0) + count;
+      }
+    }
+  });
+  const el = document.getElementById('chunkGrid');
+  const statuses = Object.keys(chunkStatuses);
+  if (statuses.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:20px;grid-column:1/-1;">No chunk data</div>';
+    return;
+  }
+  el.innerHTML = statuses.map(s => `
+    <div class="chunk-card">
+      <div class="chunk-status">${s}</div>
+      <div class="chunk-count">${chunkStatuses[s]}</div>
+    </div>
+  `).join('');
+}
+
+function loadPriorityDist(pipelines) {
+  const counts = {};
+  pipelines.forEach(p => { counts[p.priority || 'NORMAL'] = (counts[p.priority || 'NORMAL'] || 0) + 1; });
+  const el = document.getElementById('priorityDist');
+  el.innerHTML = PRIORITIES.map(p => {
+    const count = counts[p] || 0;
+    const pct = pipelines.length > 0 ? (count / pipelines.length * 100) : 0;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span class="priority-badge priority-${p}" style="min-width:80px;">${p}</span>
+        <div style="flex:1;height:8px;background:var(--bg-deep);border-radius:4px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${PRIORITY_COLORS[p]};border-radius:4px;"></div>
+        </div>
+        <span style="font-size:12px;color:var(--text-secondary);min-width:30px;text-align:right;">${count}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadSwarms() {
+  const swarms = await api('/swarms');
+  if (!swarms) return;
+  hiveData.swarms = swarms;
+  document.getElementById('statSwarms').textContent = swarms.length;
+  const counts = { FORMING: 0, ACTIVE: 0, SCALING: 0, DRAINING: 0, COMPLETED: 0, FAILED: 0 };
+  let totalNodes = 0;
+  swarms.forEach(s => {
+    if (counts[s.status] !== undefined) counts[s.status]++;
+    totalNodes += (s.node_count || s.nodes?.length || 0);
+  });
+  document.getElementById('sActive').textContent = counts.ACTIVE;
+  document.getElementById('sForming').textContent = counts.FORMING;
+  document.getElementById('sScaling').textContent = counts.SCALING;
+  document.getElementById('sDraining').textContent = counts.DRAINING;
+  document.getElementById('sCompleted').textContent = counts.COMPLETED;
+  document.getElementById('sFailed').textContent = counts.FAILED;
+  document.getElementById('sTotal').textContent = swarms.length + ' total';
+  document.getElementById('sNodes').textContent = totalNodes + ' nodes';
+  // Swarm grid
+  const el = document.getElementById('swarmGrid');
+  if (swarms.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:40px;grid-column:1/-1;">No swarms</div>';
+    return;
+  }
+  el.innerHTML = swarms.map(s => {
+    const progress = s.task_progress || 0;
+    const nodeCount = s.node_count || s.nodes?.length || 0;
+    return `
+      <div class="swarm-card ${s.status || 'FORMING'} fade-in">
+        <div class="swarm-name">${s.swarm_id || s.name || '?'}</div>
+        <span class="swarm-status ${s.status || 'FORMING'}">${s.status || 'FORMING'}</span>
+        <div class="swarm-stats">
+          <span>&#9881; ${nodeCount} nodes</span>
+          <span>&#9650; ${s.pipelines?.length || 0} pipelines</span>
+        </div>
+        <div class="swarm-progress">
+          <div class="progress-bar">
+            <div class="progress-fill ${s.status || 'FORMING'}" style="width:${(progress * 100).toFixed(0)}%"></div>
+          </div>
+          <div class="progress-label">${(progress * 100).toFixed(1)}% complete</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  // Node list
+  const nodeListEl = document.getElementById('swarmNodeList');
+  let allNodes = [];
+  swarms.forEach(s => {
+    (s.nodes || []).forEach(n => {
+      allNodes.push({ ...n, swarm_id: s.swarm_id || s.name });
+    });
+  });
+  if (allNodes.length === 0) {
+    nodeListEl.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:20px;">No swarm nodes</div>';
+  } else {
+    nodeListEl.innerHTML = allNodes.map(n => `
+      <div class="entity-item" style="margin-bottom:6px;">
+        <div class="entity-icon source" style="background:rgba(16,185,129,0.15);">&#9679;</div>
+        <div class="entity-info">
+          <div class="entity-name">${n.node_id || '?'}</div>
+          <div class="entity-dim">Swarm: ${n.swarm_id} &middot; Cap: ${n.capabilities?.join(', ') || 'general'}</div>
+        </div>
+        <div class="entity-metrics">
+          <span>Load: ${((n.load || 0) * 100).toFixed(0)}%</span>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+// ── UI Updates ─────────────────────────────────────────────────────────────────
+function updateLiveEventFeed() {
+  const display = hiveEvents.slice(0, 20);
+  const el = document.getElementById('liveEvents');
+  if (display.length === 0) return;
+  el.innerHTML = display.map(e => `
+    <div class="event-item ${e.priority || 'NORMAL'} fade-in">
+      <div class="event-time">${(e.timestamp || '').slice(11, 19)}</div>
+      <div class="event-priority">${e.priority || 'NORMAL'}</div>
+      <div class="event-type">${e.event_type || e.type || '?'}</div>
+      <div class="event-source">${e.source || ''}</div>
+    </div>
+  `).join('');
+  // Events tab
+  const streamEl = document.getElementById('eventStream');
+  streamEl.innerHTML = hiveEvents.slice(0, 50).map(e => `
+    <div class="event-item ${e.priority || 'NORMAL'} fade-in">
+      <div class="event-time">${(e.timestamp || '').slice(11, 19)}</div>
+      <div class="event-priority">${e.priority || 'NORMAL'}</div>
+      <div class="event-type">${e.event_type || e.type || '?'}</div>
+      <div class="event-source">${e.source || ''}</div>
+    </div>
+  `).join('');
+}
+
+function updateOverviewStats() {
+  const rate = eventTimes.length;
+  document.getElementById('eventRate').textContent = rate + '/min';
+  document.getElementById('evRate').textContent = rate + '/min';
+  document.getElementById('evTotal').textContent = eventCount;
+  const criticalCount = hiveEvents.filter(e => e.priority === 'CRITICAL').length;
+  document.getElementById('evCritical').textContent = criticalCount;
+}
+
+// ── Flow Topology Canvas ───────────────────────────────────────────────────────
+function renderFlowTopology() {
+  const canvas = document.getElementById('flowCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = 400;
+  ctx.fillStyle = '#0a0e17';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const sources = hiveData.sources || [];
+  const sinks = hiveData.sinks || [];
+  const pipelines = hiveData.pipelines || [];
+  const swarms = hiveData.swarms || [];
+
+  if (sources.length === 0 && sinks.length === 0) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '14px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data flow topology \u2014 register sources, sinks, and pipelines to populate', canvas.width / 2, 200);
+    return;
+  }
+
+  const cx = canvas.width / 2;
+  const cy = 200;
+  const leftX = 120;
+  const rightX = canvas.width - 120;
+
+  // Draw sources on the left
+  const sourcePositions = {};
+  sources.forEach((s, i) => {
+    const y = 60 + (sources.length > 1 ? i * (280 / (sources.length - 1)) : 140);
+    sourcePositions[s.source_id || s.name || i] = { x: leftX, y };
+    // Glow
+    const gradient = ctx.createRadialGradient(leftX, y, 0, leftX, y, 30);
+    gradient.addColorStop(0, 'rgba(6, 182, 212, 0.3)');
+    gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(leftX - 30, y - 30, 60, 60);
+    // Circle
+    ctx.beginPath();
+    ctx.arc(leftX, y, 18, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(6, 182, 212, 0.2)';
+    ctx.fill();
+    ctx.strokeStyle = '#06b6d4';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Label
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText((s.source_id || s.name || 'src' + i).substring(0, 16), leftX, y + 32);
+  });
+
+  // Draw sinks on the right
+  const sinkPositions = {};
+  sinks.forEach((s, i) => {
+    const y = 60 + (sinks.length > 1 ? i * (280 / (sinks.length - 1)) : 140);
+    sinkPositions[s.sink_id || s.name || i] = { x: rightX, y };
+    // Glow
+    const gradient = ctx.createRadialGradient(rightX, y, 0, rightX, y, 30);
+    gradient.addColorStop(0, 'rgba(139, 92, 246, 0.3)');
+    gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(rightX - 30, y - 30, 60, 60);
+    // Circle
+    ctx.beginPath();
+    ctx.arc(rightX, y, 18, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(139, 92, 246, 0.2)';
+    ctx.fill();
+    ctx.strokeStyle = '#8b5cf6';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Label
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText((s.sink_id || s.name || 'sink' + i).substring(0, 16), rightX, y + 32);
+  });
+
+  // Draw pipelines as connections with swarm nodes in middle
+  pipelines.forEach((p, i) => {
+    const srcPos = sourcePositions[p.source_id || ''];
+    const snkPos = sinkPositions[p.sink_id || ''];
+    if (!srcPos && !snkPos) return;
+    const from = srcPos || { x: leftX, y: 200 };
+    const to = snkPos || { x: rightX, y: 200 };
+
+    // Pipeline line (amber)
+    const status = p.status || 'PENDING';
+    const color = status === 'RUNNING' ? '#10b981' : status === 'PAUSED' ? '#f59e0b' : status === 'FAILED' ? '#ef4444' : '#64748b';
+    ctx.beginPath();
+    ctx.moveTo(from.x + 20, from.y);
+    const midX = (from.x + to.x) / 2;
+    ctx.bezierCurveTo(midX, from.y, midX, to.y, to.x - 20, to.y);
+    ctx.strokeStyle = color + '80';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Pipeline label in middle
+    const labelX = midX;
+    const labelY = (from.y + to.y) / 2;
+    ctx.fillStyle = color;
+    ctx.font = 'bold 9px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText((p.pipeline_id || 'p' + i).substring(0, 14), labelX, labelY - 6);
+  });
+
+  // Draw swarm nodes in center
+  swarms.forEach((s, i) => {
+    const nodeCount = s.node_count || s.nodes?.length || 0;
+    const x = cx + (i - (swarms.length - 1) / 2) * 60;
+    const y = cy;
+    const status = s.status || 'FORMING';
+    const color = SWARM_COLORS[status] || '#64748b';
+
+    // Glow
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, 35);
+    gradient.addColorStop(0, color + '30');
+    gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x - 35, y - 35, 70, 70);
+
+    // Hexagonal shape for swarms
+    ctx.beginPath();
+    for (let j = 0; j < 6; j++) {
+      const angle = (Math.PI / 3) * j - Math.PI / 6;
+      const hx = x + 22 * Math.cos(angle);
+      const hy = y + 22 * Math.sin(angle);
+      if (j === 0) ctx.moveTo(hx, hy);
+      else ctx.lineTo(hx, hy);
+    }
+    ctx.closePath();
+    ctx.fillStyle = color + '20';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Node count inside
+    ctx.fillStyle = color;
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(nodeCount, x, y);
+
+    // Swarm label
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText((s.swarm_id || s.name || 'swarm' + i).substring(0, 12), x, y + 34);
+  });
+
+  // Column labels
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = 'bold 12px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('SOURCES', leftX, 30);
+  ctx.fillText('SWARMS', cx, 30);
+  ctx.fillText('SINKS', rightX, 30);
+}
+
+// ── Charts (simple canvas-based) ───────────────────────────────────────────────
+function renderThroughputChart() {
+  const canvas = document.getElementById('throughputChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = 200;
+  ctx.fillStyle = '#0a0e17';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (throughputHistory.length < 2) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Collecting data...', canvas.width / 2, 100);
+    return;
+  }
+
+  const maxVal = Math.max(...throughputHistory.map(h => h.v), 1);
+  const pad = { top: 20, right: 20, bottom: 30, left: 50 };
+  const w = canvas.width - pad.left - pad.right;
+  const h = canvas.height - pad.top - pad.bottom;
+
+  // Grid lines
+  ctx.strokeStyle = '#1a2236';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (h / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(pad.left + w, y);
+    ctx.stroke();
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText((maxVal - (maxVal / 4) * i).toFixed(0), pad.left - 8, y + 4);
+  }
+
+  // Line
+  ctx.beginPath();
+  throughputHistory.forEach((point, i) => {
+    const x = pad.left + (i / (throughputHistory.length - 1)) * w;
+    const y = pad.top + h - (point.v / maxVal) * h;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Fill
+  const lastX = pad.left + w;
+  ctx.lineTo(lastX, pad.top + h);
+  ctx.lineTo(pad.left, pad.top + h);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(245, 158, 11, 0.1)';
+  ctx.fill();
+
+  // Label
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '11px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Chunks / Minute', canvas.width / 2, canvas.height - 5);
+}
+
+function renderLatencyChart() {
+  const canvas = document.getElementById('latencyChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = 200;
+  ctx.fillStyle = '#0a0e17';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (latencyHistory.length < 2) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Collecting data...', canvas.width / 2, 100);
+    return;
+  }
+
+  const maxVal = Math.max(...latencyHistory.map(h => h.v), 1);
+  const pad = { top: 20, right: 20, bottom: 30, left: 50 };
+  const w = canvas.width - pad.left - pad.right;
+  const h = canvas.height - pad.top - pad.bottom;
+
+  // Grid lines
+  ctx.strokeStyle = '#1a2236';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (h / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(pad.left + w, y);
+    ctx.stroke();
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText((maxVal - (maxVal / 4) * i).toFixed(0) + 'ms', pad.left - 8, y + 4);
+  }
+
+  // Line
+  ctx.beginPath();
+  latencyHistory.forEach((point, i) => {
+    const x = pad.left + (i / (latencyHistory.length - 1)) * w;
+    const y = pad.top + h - (point.v / maxVal) * h;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#14b8a6';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Fill
+  const lastX = pad.left + w;
+  ctx.lineTo(lastX, pad.top + h);
+  ctx.lineTo(pad.left, pad.top + h);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(20, 184, 166, 0.1)';
+  ctx.fill();
+
+  // Label
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '11px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Avg Latency (ms)', canvas.width / 2, canvas.height - 5);
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+async function init() {
+  connectWS();
+  await Promise.all([
+    loadStatus(),
+    loadHealth(),
+    loadSources(),
+    loadSinks(),
+    loadPipelines(),
+    loadSwarms(),
+  ]);
+  renderFlowTopology();
+  // Periodic refresh
+  setInterval(async () => {
+    await Promise.all([loadStatus(), loadHealth(), loadPipelines(), loadSwarms()]);
+    renderFlowTopology();
+    renderThroughputChart();
+    renderLatencyChart();
+  }, 10000);
+}
+
+init();
+</script>
+</body>
+</html>

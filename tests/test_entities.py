@@ -21,7 +21,6 @@ from src.entities.platform import (
     get_entity_for_port,
 )
 
-
 # ── Pillar enum ──────────────────────────────────────────────────────
 
 

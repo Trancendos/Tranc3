@@ -16,7 +16,6 @@ from src.analytics.predictive import (
     UserSignal,
 )
 
-
 # ── UserSignal ───────────────────────────────────────────────────────
 
 

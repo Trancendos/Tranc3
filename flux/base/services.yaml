@@ -1,0 +1,85 @@
+# flux/base/services.yaml
+# Headless ClusterIP services for nanoservice mesh communication
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nsa-broker
+  namespace: tranc3
+  labels:
+    app: nsa-broker
+spec:
+  clusterIP: None  # Headless for direct pod addressing
+  selector:
+    app: nsa-broker
+  ports:
+    - name: http
+      port: 7780
+      targetPort: 7780
+    - name: metrics
+      port: 7781
+      targetPort: 7781
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shi-gateway
+  namespace: tranc3
+  labels:
+    app: shi-gateway
+spec:
+  clusterIP: None
+  selector:
+    app: shi-gateway
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dnf-orchestrator
+  namespace: tranc3
+  labels:
+    app: dnf-orchestrator
+spec:
+  clusterIP: None
+  selector:
+    app: dnf-orchestrator
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: daas-stream
+  namespace: tranc3
+  labels:
+    app: daas-stream
+spec:
+  clusterIP: None
+  selector:
+    app: daas-stream
+  ports:
+    - name: http
+      port: 8090
+      targetPort: 8090
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fmd-distiller
+  namespace: tranc3
+  labels:
+    app: fmd-distiller
+spec:
+  clusterIP: None
+  selector:
+    app: fmd-distiller
+  ports:
+    - name: http
+      port: 8070
+      targetPort: 8070

@@ -54,7 +54,7 @@ class TestAdaptiveScanner:
 
     def test_scan_path_returns_adaptive_violations(self, tmp_path):
         """AdaptiveScanner should wrap scanner results with confidence scores."""
-        from shared_core.security_automation.adaptive_scanner import (
+        from Dimensional.security_automation.adaptive_scanner import (
             AdaptiveScanner,
             Confidence,
         )
@@ -76,7 +76,7 @@ class TestAdaptiveScanner:
 
     def test_suppression_filtering(self, tmp_path):
         """Suppressed violations should be filtered from results."""
-        from shared_core.security_automation.adaptive_scanner import AdaptiveScanner
+        from Dimensional.security_automation.adaptive_scanner import AdaptiveScanner
 
         code_file = tmp_path / "test_bare.py"
         code_file.write_text("try:\n    pass\nexcept:\n    pass\n")
@@ -98,7 +98,7 @@ class TestAdaptiveScanner:
 
     def test_mark_false_positive(self, tmp_path):
         """Marking a violation as false positive should add suppression."""
-        from shared_core.security_automation.adaptive_scanner import AdaptiveScanner
+        from Dimensional.security_automation.adaptive_scanner import AdaptiveScanner
 
         code_file = tmp_path / "test_bare.py"
         code_file.write_text("try:\n    pass\nexcept:\n    pass\n")
@@ -116,7 +116,7 @@ class TestAdaptiveScanner:
 
     def test_context_aware_confidence(self, tmp_path):
         """Test files should have confidence_level attribute on violations."""
-        from shared_core.security_automation.adaptive_scanner import (
+        from Dimensional.security_automation.adaptive_scanner import (
             AdaptiveScanner,
             Confidence,
         )
@@ -135,7 +135,7 @@ class TestAdaptiveScanner:
 
     def test_save_and_load(self, tmp_path):
         """Adaptive scanner should persist learning data."""
-        from shared_core.security_automation.adaptive_scanner import AdaptiveScanner
+        from Dimensional.security_automation.adaptive_scanner import AdaptiveScanner
 
         learning_dir = tmp_path / ".security_learning"
         learning_dir.mkdir()
@@ -164,8 +164,8 @@ class TestAutoRemediatorV2:
 
     def test_preview_does_not_modify_files(self, tmp_path):
         """Preview mode should not modify any files."""
-        from shared_core.security_automation.remediator_v2 import AutoRemediatorV2
-        from shared_core.security_automation.scanner import SecurityScanner
+        from Dimensional.security_automation.remediator_v2 import AutoRemediatorV2
+        from Dimensional.security_automation.scanner import SecurityScanner
 
         code_file = tmp_path / "mixed_return.py"
         original = "def foo():\n    if True:\n        return 1\n"
@@ -185,8 +185,8 @@ class TestAutoRemediatorV2:
 
     def test_remediate_creates_session(self, tmp_path):
         """Remediate should create a session with results."""
-        from shared_core.security_automation.remediator_v2 import AutoRemediatorV2
-        from shared_core.security_automation.scanner import SecurityScanner
+        from Dimensional.security_automation.remediator_v2 import AutoRemediatorV2
+        from Dimensional.security_automation.scanner import SecurityScanner
 
         code_file = tmp_path / "mixed.py"
         code_file.write_text("def foo(x):\n    if x > 0:\n        return x\n")
@@ -201,8 +201,8 @@ class TestAutoRemediatorV2:
 
     def test_preview_returns_fix_results(self, tmp_path):
         """Preview should return FixResult objects."""
-        from shared_core.security_automation.remediator_v2 import AutoRemediatorV2, FixResult
-        from shared_core.security_automation.scanner import SecurityScanner
+        from Dimensional.security_automation.remediator_v2 import AutoRemediatorV2, FixResult
+        from Dimensional.security_automation.scanner import SecurityScanner
 
         code_file = tmp_path / "mixed.py"
         code_file.write_text("def foo(x):\n    if x > 0:\n        return x\n")
@@ -227,7 +227,7 @@ class TestViolationPredictor:
 
     def test_import_risk_detection(self, tmp_path):
         """Should detect import-based risk signals."""
-        from shared_core.security_automation.predictor import ViolationPredictor
+        from Dimensional.security_automation.predictor import ViolationPredictor
 
         code_file = tmp_path / "risky.py"
         code_file.write_text("import hashlib\nimport os\n\nh = hashlib.md5()\n")
@@ -247,13 +247,13 @@ class TestViolationPredictor:
 
     def test_safe_pattern_reduces_risk(self, tmp_path):
         """Files with safe patterns should have lower risk."""
-        from shared_core.security_automation.predictor import ViolationPredictor
+        from Dimensional.security_automation.predictor import ViolationPredictor
 
         # File with both risky import and safe pattern
         code_file = tmp_path / "safe.py"
         code_file.write_text(
             "import os\n\n"
-            "from shared_core.path_validation import validate_path\n\n"
+            "from Dimensional.path_validation import validate_path\n\n"
             "def handler(path):\n    safe_path = validate_path(path)\n"
         )
 
@@ -268,7 +268,7 @@ class TestViolationPredictor:
 
     def test_get_hotspots(self, tmp_path):
         """Should return hotspots sorted by risk."""
-        from shared_core.security_automation.predictor import ViolationPredictor
+        from Dimensional.security_automation.predictor import ViolationPredictor
 
         code_file = tmp_path / "complex.py"
         code_file.write_text(
@@ -298,7 +298,7 @@ class TestStorageFactory:
         """LocalStorageProvider should read/write files correctly."""
         import asyncio
 
-        from shared_core.architecture.storage_factory import LocalStorageProvider
+        from Dimensional.architecture.storage_factory import LocalStorageProvider
 
         root = Path(tmp_path) / "storage"
 
@@ -324,7 +324,7 @@ class TestStorageFactory:
 
     def test_factory_creates_provider(self, tmp_path):
         """Factory should create a storage provider."""
-        from shared_core.architecture.storage_factory import StorageFactory
+        from Dimensional.architecture.storage_factory import StorageFactory
 
         # StorageFactory is instantiated and get_provider is an instance method
         factory = StorageFactory()
@@ -338,7 +338,7 @@ class TestStorageFactory:
         """LocalStorageProvider should prevent path traversal attacks."""
         import asyncio
 
-        from shared_core.architecture.storage_factory import LocalStorageProvider
+        from Dimensional.architecture.storage_factory import LocalStorageProvider
 
         root = Path(tmp_path) / "storage"
         provider = LocalStorageProvider(root=root)
@@ -360,7 +360,7 @@ class TestVaultSecretLoader:
 
     def test_load_from_env(self):
         """Should load secrets from environment variables."""
-        from shared_core.architecture.vault import VaultSecretLoader
+        from Dimensional.architecture.vault import VaultSecretLoader
 
         os.environ["TEST_VAULT_SECRET"] = "super-secret-123"
         try:
@@ -372,7 +372,7 @@ class TestVaultSecretLoader:
 
     def test_load_with_default(self):
         """Should return default when secret not found."""
-        from shared_core.architecture.vault import VaultSecretLoader
+        from Dimensional.architecture.vault import VaultSecretLoader
 
         loader = VaultSecretLoader()
         value = loader.load("NONEXISTENT_SECRET_XYZ", default="fallback")
@@ -380,7 +380,7 @@ class TestVaultSecretLoader:
 
     def test_load_optional_returns_none(self):
         """load_optional should return None for missing secrets."""
-        from shared_core.architecture.vault import VaultSecretLoader
+        from Dimensional.architecture.vault import VaultSecretLoader
 
         loader = VaultSecretLoader()
         value = loader.load_optional("NONEXISTENT_SECRET_XYZ")
@@ -388,7 +388,7 @@ class TestVaultSecretLoader:
 
     def test_secret_context_manager(self):
         """Using secret() context manager should work and zeroize after use."""
-        from shared_core.architecture.vault import VaultSecretLoader
+        from Dimensional.architecture.vault import VaultSecretLoader
 
         os.environ["TEST_ZEROIZE_KEY"] = "zeroize-me-456"
         try:
@@ -401,7 +401,7 @@ class TestVaultSecretLoader:
 
     def test_detect_leaks(self):
         """Should detect potential secret leaks in environment."""
-        from shared_core.architecture.vault import VaultSecretLoader
+        from Dimensional.architecture.vault import VaultSecretLoader
 
         os.environ["LEAKED_API_KEY"] = "sk-proj-abc123def456ghi789jkl012mno345pqr678stu901vwx234"
         try:
@@ -413,7 +413,7 @@ class TestVaultSecretLoader:
 
     def test_access_log(self):
         """Should log secret accesses."""
-        from shared_core.architecture.vault import VaultSecretLoader
+        from Dimensional.architecture.vault import VaultSecretLoader
 
         os.environ["TEST_ACCESS_LOG"] = "access-log-value"
         try:
@@ -438,7 +438,7 @@ class TestAuditLedger:
 
     def test_append_and_verify(self, tmp_path):
         """Should append records and verify chain integrity."""
-        from shared_core.architecture.audit_ledger import AuditLedger
+        from Dimensional.architecture.audit_ledger import AuditLedger
 
         ledger = AuditLedger(storage_dir=str(tmp_path))
 
@@ -452,7 +452,7 @@ class TestAuditLedger:
 
     def test_chain_tampering_detected(self, tmp_path):
         """Should detect if the ledger file is tampered with."""
-        from shared_core.architecture.audit_ledger import AuditLedger
+        from Dimensional.architecture.audit_ledger import AuditLedger
 
         ledger = AuditLedger(storage_dir=str(tmp_path))
         ledger.append(event_type="test", actor="test", details={"k": "v"})
@@ -471,7 +471,7 @@ class TestAuditLedger:
 
     def test_query_records(self, tmp_path):
         """Should query records by event_type and actor."""
-        from shared_core.architecture.audit_ledger import AuditLedger
+        from Dimensional.architecture.audit_ledger import AuditLedger
 
         ledger = AuditLedger(storage_dir=str(tmp_path))
         ledger.append(event_type="login", actor="alice", details={})
@@ -497,14 +497,14 @@ class TestSentinel:
 
     def test_sentinel_creation(self, tmp_path):
         """Should create a Sentinel instance."""
-        from shared_core.architecture.sentinel import Sentinel
+        from Dimensional.architecture.sentinel import Sentinel
 
         sentinel = Sentinel(check_interval=300)
         assert sentinel.get_state().value == "stopped"
 
     def test_sentinel_check_now(self, tmp_path):
         """Should execute a check and return a report."""
-        from shared_core.architecture.sentinel import Sentinel
+        from Dimensional.architecture.sentinel import Sentinel
 
         sentinel = Sentinel(
             check_interval=300,
@@ -517,7 +517,7 @@ class TestSentinel:
 
     def test_sentinel_get_stats(self, tmp_path):
         """Should return statistics."""
-        from shared_core.architecture.sentinel import Sentinel
+        from Dimensional.architecture.sentinel import Sentinel
 
         sentinel = Sentinel(check_interval=300)
         stats = sentinel.get_stats()
@@ -534,7 +534,7 @@ class TestEnhancedServiceRegistry:
 
     def test_register_and_resolve(self):
         """Should register services and resolve capabilities."""
-        from shared_core.orchestration.enhanced_registry import (
+        from Dimensional.orchestration.enhanced_registry import (
             EnhancedServiceRegistry,
         )
 
@@ -553,7 +553,7 @@ class TestEnhancedServiceRegistry:
 
     def test_routing_strategies(self):
         """Different routing strategies should work."""
-        from shared_core.orchestration.enhanced_registry import (
+        from Dimensional.orchestration.enhanced_registry import (
             EnhancedServiceRegistry,
             RoutingStrategy,
         )
@@ -582,7 +582,7 @@ class TestEnhancedServiceRegistry:
 
     def test_metrics_tracking(self):
         """Should track request metrics."""
-        from shared_core.orchestration.enhanced_registry import EnhancedServiceRegistry
+        from Dimensional.orchestration.enhanced_registry import EnhancedServiceRegistry
 
         registry = EnhancedServiceRegistry()
         registry.register(
@@ -606,7 +606,7 @@ class TestEnhancedServiceRegistry:
 
     def test_event_log(self):
         """Should emit discovery events."""
-        from shared_core.orchestration.enhanced_registry import EnhancedServiceRegistry
+        from Dimensional.orchestration.enhanced_registry import EnhancedServiceRegistry
 
         registry = EnhancedServiceRegistry()
         registry.register(
@@ -622,7 +622,7 @@ class TestEnhancedServiceRegistry:
 
     def test_routing_topology(self):
         """Should return routing topology."""
-        from shared_core.orchestration.enhanced_registry import EnhancedServiceRegistry
+        from Dimensional.orchestration.enhanced_registry import EnhancedServiceRegistry
 
         registry = EnhancedServiceRegistry()
         registry.register(
@@ -647,7 +647,7 @@ class TestCircuitBreaker:
 
     def test_initial_state_is_closed(self):
         """Circuit breaker should start in CLOSED state."""
-        from shared_core.orchestration.health_monitor import CircuitBreaker, CircuitState
+        from Dimensional.orchestration.health_monitor import CircuitBreaker, CircuitState
 
         cb = CircuitBreaker(name="test-cb")
         assert cb.state == CircuitState.CLOSED
@@ -655,7 +655,7 @@ class TestCircuitBreaker:
 
     def test_opens_after_consecutive_failures(self):
         """Circuit should OPEN after N consecutive failures."""
-        from shared_core.orchestration.health_monitor import CircuitBreaker, CircuitState
+        from Dimensional.orchestration.health_monitor import CircuitBreaker, CircuitState
 
         cb = CircuitBreaker(name="test-cb", failure_threshold=3, cooldown_seconds=0.1)
         for _ in range(3):
@@ -666,7 +666,7 @@ class TestCircuitBreaker:
 
     def test_rejects_requests_when_open(self):
         """OPEN circuit should reject requests."""
-        from shared_core.orchestration.health_monitor import CircuitBreaker, CircuitState
+        from Dimensional.orchestration.health_monitor import CircuitBreaker, CircuitState
 
         cb = CircuitBreaker(name="test-cb", failure_threshold=2, cooldown_seconds=0.1)
         cb.record_failure()
@@ -676,7 +676,7 @@ class TestCircuitBreaker:
 
     def test_transitions_to_half_open_after_cooldown(self):
         """After cooldown, circuit should transition to HALF_OPEN."""
-        from shared_core.orchestration.health_monitor import CircuitBreaker, CircuitState
+        from Dimensional.orchestration.health_monitor import CircuitBreaker, CircuitState
 
         cb = CircuitBreaker(name="test-cb", failure_threshold=2, cooldown_seconds=0.05)
         cb.record_failure()
@@ -689,7 +689,7 @@ class TestCircuitBreaker:
 
     def test_closes_on_success_in_half_open(self):
         """Circuit should CLOSE after successes in HALF_OPEN."""
-        from shared_core.orchestration.health_monitor import CircuitBreaker, CircuitState
+        from Dimensional.orchestration.health_monitor import CircuitBreaker, CircuitState
 
         cb = CircuitBreaker(
             name="test-cb", failure_threshold=2, cooldown_seconds=0.05, success_threshold=2
@@ -705,7 +705,7 @@ class TestCircuitBreaker:
 
     def test_reset(self):
         """Manual reset should close the circuit."""
-        from shared_core.orchestration.health_monitor import CircuitBreaker, CircuitState
+        from Dimensional.orchestration.health_monitor import CircuitBreaker, CircuitState
 
         cb = CircuitBreaker(name="test-cb", failure_threshold=2)
         cb.record_failure()
@@ -715,7 +715,7 @@ class TestCircuitBreaker:
 
     def test_exponential_backoff_cooldown(self):
         """Cooldown should increase with repeated openings."""
-        from shared_core.orchestration.health_monitor import CircuitBreaker
+        from Dimensional.orchestration.health_monitor import CircuitBreaker
 
         cb = CircuitBreaker(
             name="test-cb", failure_threshold=2, cooldown_seconds=10.0, max_cooldown=300.0
@@ -737,7 +737,7 @@ class TestCircuitBreaker:
 
     def test_to_dict(self):
         """Should serialize circuit breaker state."""
-        from shared_core.orchestration.health_monitor import CircuitBreaker
+        from Dimensional.orchestration.health_monitor import CircuitBreaker
 
         cb = CircuitBreaker(name="test-cb", failure_threshold=5)
         d = cb.to_dict()
@@ -751,7 +751,7 @@ class TestAdaptiveHealthMonitor:
 
     def test_register_and_get_status(self):
         """Should register a service and return its status."""
-        from shared_core.orchestration.health_monitor import (
+        from Dimensional.orchestration.health_monitor import (
             AdaptiveHealthMonitor,
             HealthStatus,
         )
@@ -767,7 +767,7 @@ class TestAdaptiveHealthMonitor:
 
     def test_deregister_service(self):
         """Should deregister a service."""
-        from shared_core.orchestration.health_monitor import AdaptiveHealthMonitor
+        from Dimensional.orchestration.health_monitor import AdaptiveHealthMonitor
 
         monitor = AdaptiveHealthMonitor()
         monitor.register_service(name="rem-svc", health_url="http://rem/health")
@@ -776,7 +776,7 @@ class TestAdaptiveHealthMonitor:
 
     def test_latency_stats_empty(self):
         """Should handle empty latency history."""
-        from shared_core.orchestration.health_monitor import AdaptiveHealthMonitor
+        from Dimensional.orchestration.health_monitor import AdaptiveHealthMonitor
 
         monitor = AdaptiveHealthMonitor()
         monitor.register_service(name="svc", health_url="http://svc/health")
@@ -786,7 +786,7 @@ class TestAdaptiveHealthMonitor:
 
     def test_health_trend_unknown(self):
         """Should return unknown for insufficient data."""
-        from shared_core.orchestration.health_monitor import AdaptiveHealthMonitor
+        from Dimensional.orchestration.health_monitor import AdaptiveHealthMonitor
 
         monitor = AdaptiveHealthMonitor()
         monitor.register_service(name="trend-svc", health_url="http://trend/health")
@@ -796,7 +796,7 @@ class TestAdaptiveHealthMonitor:
 
     def test_on_status_change_callback(self):
         """Should accept status change callbacks."""
-        from shared_core.orchestration.health_monitor import AdaptiveHealthMonitor
+        from Dimensional.orchestration.health_monitor import AdaptiveHealthMonitor
 
         monitor = AdaptiveHealthMonitor()
         called = []
@@ -814,7 +814,7 @@ class TestConfigDriftDetector:
 
     def test_capture_baseline(self, tmp_path):
         """Should capture a baseline of current state."""
-        from shared_core.orchestration.config_drift import ConfigDriftDetector
+        from Dimensional.orchestration.config_drift import ConfigDriftDetector
 
         # Create a config file
         env_file = tmp_path / ".env"
@@ -832,7 +832,7 @@ class TestConfigDriftDetector:
 
     def test_detect_file_drift(self, tmp_path):
         """Should detect when a config file changes."""
-        from shared_core.orchestration.config_drift import ConfigDriftDetector
+        from Dimensional.orchestration.config_drift import ConfigDriftDetector
 
         # Create initial file
         env_file = tmp_path / ".env"
@@ -855,7 +855,7 @@ class TestConfigDriftDetector:
 
     def test_detect_env_drift(self, tmp_path):
         """Should detect environment variable drift."""
-        from shared_core.orchestration.config_drift import ConfigDriftDetector
+        from Dimensional.orchestration.config_drift import ConfigDriftDetector
 
         os.environ["DRIFT_TEST_VAR"] = "original"
         try:
@@ -878,7 +878,7 @@ class TestConfigDriftDetector:
 
     def test_service_param_drift(self, tmp_path):
         """Should detect service parameter drift."""
-        from shared_core.orchestration.config_drift import ConfigDriftDetector
+        from Dimensional.orchestration.config_drift import ConfigDriftDetector
 
         detector = ConfigDriftDetector(baseline_dir=str(tmp_path / "baseline"))
         detector.register_service_param("api_port", 8000)
@@ -893,7 +893,7 @@ class TestConfigDriftDetector:
 
     def test_no_drift_when_unchanged(self, tmp_path):
         """Should report no drift when nothing has changed."""
-        from shared_core.orchestration.config_drift import ConfigDriftDetector
+        from Dimensional.orchestration.config_drift import ConfigDriftDetector
 
         env_file = tmp_path / ".env"
         env_file.write_text("KEY=val\n")
@@ -910,7 +910,7 @@ class TestConfigDriftDetector:
 
     def test_drift_report_serialization(self, tmp_path):
         """DriftReport should serialize to dict."""
-        from shared_core.orchestration.config_drift import ConfigDriftDetector
+        from Dimensional.orchestration.config_drift import ConfigDriftDetector
 
         env_file = tmp_path / ".env"
         env_file.write_text("KEY=val\n")
@@ -937,7 +937,7 @@ class TestSmartDependencyGraph:
 
     def test_add_nodes_and_edges(self):
         """Should add nodes and edges correctly."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("api", node_type="service")
@@ -952,7 +952,7 @@ class TestSmartDependencyGraph:
 
     def test_cycle_detection_on_add(self):
         """Should prevent cycles when adding edges."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("a")
@@ -968,7 +968,7 @@ class TestSmartDependencyGraph:
 
     def test_impact_analysis(self):
         """Should compute impact of node failure."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("db", node_type="database")
@@ -989,7 +989,7 @@ class TestSmartDependencyGraph:
 
     def test_topological_sort(self):
         """Should return nodes in topological order (dependents before dependencies in this implementation)."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("db")
@@ -1012,7 +1012,7 @@ class TestSmartDependencyGraph:
 
     def test_startup_and_shutdown_order(self):
         """Startup order should be reverse of shutdown order."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("db")
@@ -1026,7 +1026,7 @@ class TestSmartDependencyGraph:
 
     def test_resilience_score(self):
         """Should compute resilience scores."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("db1", node_type="database", health="healthy")
@@ -1042,7 +1042,7 @@ class TestSmartDependencyGraph:
 
     def test_single_points_of_failure(self):
         """Should identify single points of failure."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("db", node_type="database")
@@ -1062,7 +1062,7 @@ class TestSmartDependencyGraph:
 
     def test_remove_node(self):
         """Should remove a node and its edges."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("a")
@@ -1075,7 +1075,7 @@ class TestSmartDependencyGraph:
 
     def test_get_subgraph(self):
         """Should return a subgraph starting from a root."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("a")
@@ -1090,7 +1090,7 @@ class TestSmartDependencyGraph:
 
     def test_impact_analysis_serialization(self):
         """ImpactAnalysis should serialize correctly."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("db", node_type="database")
@@ -1105,7 +1105,7 @@ class TestSmartDependencyGraph:
 
     def test_update_node_health(self):
         """Should update node health and trigger impact analysis."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("db", node_type="database", health="healthy")
@@ -1123,7 +1123,7 @@ class TestSmartDependencyGraph:
 
     def test_get_dependencies_and_dependents(self):
         """Should return dependencies and dependents."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("a")
@@ -1143,7 +1143,7 @@ class TestSmartDependencyGraph:
 
     def test_to_dict(self):
         """Should serialize the entire graph."""
-        from shared_core.orchestration.dependency_graph import SmartDependencyGraph
+        from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
 
         graph = SmartDependencyGraph()
         graph.add_node("a", node_type="service")
