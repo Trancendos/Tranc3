@@ -49,7 +49,7 @@ from pydantic import BaseModel, EmailStr, Field
 from shared_core.sanitize import sanitize_for_log
 
 # Phase 22.5: Infinity Ecosystem nomenclature
-from shared_core.infinity.nomenclature import InfinityRole, SentinelChannel, Tier
+from shared_core.infinity.nomenclature import InfinityRole, Tier
 
 # Phase 22.6: Smart Adaptive Intelligence
 from shared_core.infinity.worker_integration import InfinityWorkerKit
@@ -268,10 +268,12 @@ def create_access_token(
 
     try:
         from jose import jwt
+
         return jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM)
     except ImportError:
         # Fallback: simple base64-encoded token (for development)
         import base64
+
         return base64.urlsafe_b64encode(json.dumps(claims).encode()).decode()
 
 
@@ -334,6 +336,7 @@ class RateLimiter:
 
 # ── FastAPI Application ────────────────────────────────────────────────────────
 
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     await worker_kit.startup(app)
@@ -386,9 +389,9 @@ security = HTTPBearer()
 # Phase 22.6: Smart adaptive worker kit for auth service
 worker_kit = InfinityWorkerKit(
     "infinity-auth",
-    defense_threshold=5,          # Strict: auth service is high-value target
-    defense_window_seconds=120,   # 2-minute violation window
-    defense_block_seconds=3600,   # 1-hour block for auth violations
+    defense_threshold=5,  # Strict: auth service is high-value target
+    defense_window_seconds=120,  # 2-minute violation window
+    defense_block_seconds=3600,  # 1-hour block for auth violations
 )
 
 
@@ -419,7 +422,11 @@ async def rate_limit_check(request: Request) -> None:
 async def health():
     """Health check endpoint."""
     health_summary_obj = worker_kit.health.get_health_summary()
-    health_summary = health_summary_obj.to_dict() if hasattr(health_summary_obj, "to_dict") else health_summary_obj
+    health_summary = (
+        health_summary_obj.to_dict()
+        if hasattr(health_summary_obj, "to_dict")
+        else health_summary_obj
+    )
     return {
         "status": "healthy",
         "service": "infinity-auth",
@@ -790,8 +797,6 @@ async def update_user_role(
 
 
 # ── Startup / Shutdown (Phase 22.6) ─────────────────────────────────────────
-
-
 
 
 if __name__ == "__main__":

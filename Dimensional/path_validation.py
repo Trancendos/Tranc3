@@ -22,8 +22,11 @@ _TRAVERSAL_PATTERN = re.compile(r"(?:\.\.)|(?:\x00)")
 
 
 try:
-    from shared_core.path_validation import PathTraversalError  # re-export for unified exception identity
+    from shared_core.path_validation import (
+        PathTraversalError,
+    )  # re-export for unified exception identity
 except ImportError:
+
     class PathTraversalError(ValueError):  # type: ignore[no-redef]
         """Raised when a path escapes its allowed base directory."""
 
