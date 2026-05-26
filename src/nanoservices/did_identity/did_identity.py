@@ -36,6 +36,7 @@ class CredentialStatus(Enum):
 @dataclass
 class DIDDocument:
     """W3C DID Document."""
+
     did: str = ""
     method: DIDMethod = DIDMethod.DID_KEY
     controller: str = ""
@@ -63,6 +64,7 @@ class DIDDocument:
 @dataclass
 class VerifiableCredential:
     """W3C Verifiable Credential."""
+
     credential_id: str = field(default_factory=lambda: f"urn:uuid:{uuid.uuid4()}")
     issuer_did: str = ""
     subject_did: str = ""
@@ -98,6 +100,7 @@ class VerifiableCredential:
 @dataclass
 class VerifiablePresentation:
     """W3C Verifiable Presentation."""
+
     presentation_id: str = field(default_factory=lambda: f"urn:uuid:{uuid.uuid4()}")
     holder_did: str = ""
     credentials: List[VerifiableCredential] = field(default_factory=list)
@@ -134,12 +137,14 @@ class DIDKeyMethod:
             did=did,
             method=DIDMethod.DID_KEY,
             controller=did,
-            verification_methods=[{
-                "id": key_id,
-                "type": "Ed25519VerificationKey2020",
-                "controller": did,
-                "publicKeyMultibase": did[8:],
-            }],
+            verification_methods=[
+                {
+                    "id": key_id,
+                    "type": "Ed25519VerificationKey2020",
+                    "controller": did,
+                    "publicKeyMultibase": did[8:],
+                }
+            ],
             authentication=[key_id],
             assertion_methods=[key_id],
         )
@@ -166,19 +171,23 @@ class DIDWebMethod:
             did=did,
             method=DIDMethod.DID_WEB,
             controller=did,
-            verification_methods=[{
-                "id": key_id,
-                "type": "JsonWebKey2020",
-                "controller": did,
-                "publicKeyJwk": {"kty": "OKP", "crv": "Ed25519"},
-            }],
+            verification_methods=[
+                {
+                    "id": key_id,
+                    "type": "JsonWebKey2020",
+                    "controller": did,
+                    "publicKeyJwk": {"kty": "OKP", "crv": "Ed25519"},
+                }
+            ],
             authentication=[key_id],
             assertion_methods=[key_id],
-            service_endpoints=[{
-                "id": f"{did}#agent",
-                "type": "Tranc3Agent",
-                "serviceEndpoint": f"https://{did[8:].replace(':', '/')}/agent",
-            }],
+            service_endpoints=[
+                {
+                    "id": f"{did}#agent",
+                    "type": "Tranc3Agent",
+                    "serviceEndpoint": f"https://{did[8:].replace(':', '/')}/agent",
+                }
+            ],
         )
 
 
@@ -203,28 +212,37 @@ class DIDTranc3Method:
             did=did,
             method=DIDMethod.DID_TRANC3,
             controller=did,
-            verification_methods=[{
-                "id": key_id,
-                "type": "NanoserviceVerificationKey2024",
-                "controller": did,
-                "publicKeyHex": hashlib.sha256(did.encode()).hexdigest()[:48],
-            }],
+            verification_methods=[
+                {
+                    "id": key_id,
+                    "type": "NanoserviceVerificationKey2024",
+                    "controller": did,
+                    "publicKeyHex": hashlib.sha256(did.encode()).hexdigest()[:48],
+                }
+            ],
             authentication=[key_id],
             assertion_methods=[key_id],
-            service_endpoints=[{
-                "id": f"{did}#nsa-endpoint",
-                "type": "NanoserviceAgent",
-                "serviceEndpoint": f"nanoservice://{namespace}.tranc3.local",
-            }],
+            service_endpoints=[
+                {
+                    "id": f"{did}#nsa-endpoint",
+                    "type": "NanoserviceAgent",
+                    "serviceEndpoint": f"nanoservice://{namespace}.tranc3.local",
+                }
+            ],
         )
 
 
 class CredentialIssuer:
     """Issues verifiable credentials."""
 
-    def issue(self, issuer_did: str, subject_did: str,
-              credential_type: str, claims: Dict[str, Any],
-              expiration_days: int = 365) -> VerifiableCredential:
+    def issue(
+        self,
+        issuer_did: str,
+        subject_did: str,
+        credential_type: str,
+        claims: Dict[str, Any],
+        expiration_days: int = 365,
+    ) -> VerifiableCredential:
         vc = VerifiableCredential(
             issuer_did=issuer_did,
             subject_did=subject_did,
@@ -233,16 +251,20 @@ class CredentialIssuer:
         )
         if expiration_days > 0:
             from datetime import timedelta
+
             exp = datetime.now(timezone.utc) + timedelta(days=expiration_days)
             vc.expiration_date = exp.isoformat()
 
         proof_value = hashlib.sha256(
-            json.dumps({
-                "issuer": issuer_did,
-                "subject": subject_did,
-                "claims": claims,
-                "issued": vc.issuance_date,
-            }, sort_keys=True).encode()
+            json.dumps(
+                {
+                    "issuer": issuer_did,
+                    "subject": subject_did,
+                    "claims": claims,
+                    "issued": vc.issuance_date,
+                },
+                sort_keys=True,
+            ).encode()
         ).hexdigest()
 
         vc.proof = {
@@ -297,15 +319,17 @@ class DIDIdentityService:
         self.issuer = CredentialIssuer()
         self._id = str(uuid.uuid4())[:8]
 
-    def create_did(self, method: DIDMethod = DIDMethod.DID_KEY,
-                    **kwargs: Any) -> Tuple[str, DIDDocument]:
+    def create_did(
+        self, method: DIDMethod = DIDMethod.DID_KEY, **kwargs: Any
+    ) -> Tuple[str, DIDDocument]:
         handler = self.methods.get(method)
         if not handler:
             raise ValueError(f"Unsupported DID method: {method}")
 
         if method == DIDMethod.DID_WEB:
-            did, pub, priv = handler.create(kwargs.get("domain", "tranc3.local"),
-                                             kwargs.get("path"))
+            did, pub, priv = handler.create(
+                kwargs.get("domain", "tranc3.local"), kwargs.get("path")
+            )
         elif method == DIDMethod.DID_TRANC3:
             did, pub, priv = handler.create(kwargs.get("namespace", "default"))
         else:
@@ -328,11 +352,15 @@ class DIDIdentityService:
                 return doc
         return None
 
-    def issue_credential(self, issuer_did: str, subject_did: str,
-                          credential_type: str, claims: Dict[str, Any],
-                          expiration_days: int = 365) -> VerifiableCredential:
-        vc = self.issuer.issue(issuer_did, subject_did, credential_type,
-                               claims, expiration_days)
+    def issue_credential(
+        self,
+        issuer_did: str,
+        subject_did: str,
+        credential_type: str,
+        claims: Dict[str, Any],
+        expiration_days: int = 365,
+    ) -> VerifiableCredential:
+        vc = self.issuer.issue(issuer_did, subject_did, credential_type, claims, expiration_days)
         self.credentials[vc.credential_id] = vc
         return vc
 
@@ -349,20 +377,23 @@ class DIDIdentityService:
         self.issuer.revoke(vc, reason)
         return True
 
-    def create_presentation(self, holder_did: str,
-                             credential_ids: List[str]) -> VerifiablePresentation:
-        creds = [self.credentials[cid] for cid in credential_ids
-                 if cid in self.credentials]
+    def create_presentation(
+        self, holder_did: str, credential_ids: List[str]
+    ) -> VerifiablePresentation:
+        creds = [self.credentials[cid] for cid in credential_ids if cid in self.credentials]
         vp = VerifiablePresentation(
             holder_did=holder_did,
             credentials=creds,
         )
         proof_value = hashlib.sha256(
-            json.dumps({
-                "holder": holder_did,
-                "credentials": [c.credential_id for c in creds],
-                "created": vp.created,
-            }, sort_keys=True).encode()
+            json.dumps(
+                {
+                    "holder": holder_did,
+                    "credentials": [c.credential_id for c in creds],
+                    "created": vp.created,
+                },
+                sort_keys=True,
+            ).encode()
         ).hexdigest()
         vp.proof = {
             "type": "Ed25519Signature2020",
@@ -379,8 +410,9 @@ class DIDIdentityService:
             "service_id": self._id,
             "total_dids": len(self.dids),
             "total_credentials": len(self.credentials),
-            "active_credentials": sum(1 for c in self.credentials.values()
-                                      if c.status == CredentialStatus.ACTIVE),
+            "active_credentials": sum(
+                1 for c in self.credentials.values() if c.status == CredentialStatus.ACTIVE
+            ),
             "total_presentations": len(self.presentations),
             "supported_methods": [m.value for m in self.methods.keys()],
         }

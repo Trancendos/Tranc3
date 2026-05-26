@@ -24,13 +24,16 @@ class OllamaToolParameter:
 @dataclass
 class OllamaToolSchema:
     """Schema for a tool that Ollama can call — mirrors the TypeScript OllamaToolSchema."""
+
     name: str
     description: str
-    parameters: Dict[str, Any] = field(default_factory=lambda: {
-        "type": "object",
-        "properties": {},
-        "required": [],
-    })
+    parameters: Dict[str, Any] = field(
+        default_factory=lambda: {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        }
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -46,6 +49,7 @@ class OllamaToolSchema:
 @dataclass
 class OllamaToolCall:
     """A tool call requested by Ollama."""
+
     name: str
     arguments: Dict[str, Any]
 
@@ -53,6 +57,7 @@ class OllamaToolCall:
 @dataclass
 class OllamaMessage:
     """A single message in the Ollama conversation."""
+
     role: str  # system, user, assistant, tool
     content: str
     tool_calls: Optional[List[OllamaToolCall]] = None
@@ -78,6 +83,7 @@ class OllamaMessage:
 @dataclass
 class OllamaChatResponse:
     """Ollama API response for chat completions."""
+
     message: OllamaMessage
     done: bool = True
     model: str = ""
@@ -88,6 +94,7 @@ class OllamaChatResponse:
 @dataclass
 class OllamaConfig:
     """Configuration for Ollama integration."""
+
     base_url: str = "http://localhost:11434"
     model: str = "llama3.2"
     system_prompt: str = ""
@@ -115,6 +122,7 @@ class OllamaClient:
         """Lazy-create aiohttp session."""
         if self._session is None or self._session.closed:
             import aiohttp
+
             self._session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=self.config.request_timeout_s),
             )
@@ -184,6 +192,7 @@ class OllamaClient:
         """Check if Ollama is reachable."""
         try:
             import aiohttp
+
             async with aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=3),
             ) as session:
@@ -196,6 +205,7 @@ class OllamaClient:
         """List available models."""
         try:
             import aiohttp
+
             async with aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=5),
             ) as session:

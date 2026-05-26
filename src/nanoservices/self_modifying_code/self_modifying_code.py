@@ -49,6 +49,7 @@ class SafetyLevel(Enum):
 @dataclass
 class CodeMutation:
     """A proposed code mutation."""
+
     mutation_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     target_module: str = ""
     target_function: str = ""
@@ -84,6 +85,7 @@ class CodeMutation:
 @dataclass
 class CodeSnapshot:
     """Snapshot of code at a point in time."""
+
     snapshot_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     module: str = ""
     code_hash: str = ""
@@ -105,6 +107,7 @@ class CodeSnapshot:
 @dataclass
 class FitnessFunction:
     """Evaluates the fitness of a code mutation."""
+
     name: str = ""
     description: str = ""
     weight: float = 1.0
@@ -125,7 +128,11 @@ class CodeAnalyzer:
     def analyze_complexity(self, code: str) -> Dict[str, Any]:
         try:
             tree = ast.parse(code)
-            functions = [node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
+            functions = [
+                node
+                for node in ast.walk(tree)
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            ]
             classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
             total_lines = len(code.split("\n"))
             return {
@@ -141,13 +148,26 @@ class CodeAnalyzer:
 
     def check_safety(self, code: str) -> SafetyLevel:
         dangerous_patterns = [
-            "os.system", "subprocess.call", "eval(", "exec(",
-            "import os", "import sys", "shutil.rmtree",
-            "__import__", "open(", "write(", "remove(",
+            "os.system",
+            "subprocess.call",
+            "eval(",
+            "exec(",
+            "import os",
+            "import sys",
+            "shutil.rmtree",
+            "__import__",
+            "open(",
+            "write(",
+            "remove(",
         ]
         caution_patterns = [
-            "import ", "from os", "global ", "setattr(",
-            "delattr(", "globals()", "locals()",
+            "import ",
+            "from os",
+            "global ",
+            "setattr(",
+            "delattr(",
+            "globals()",
+            "locals()",
         ]
         for pattern in dangerous_patterns:
             if pattern in code:
@@ -164,7 +184,7 @@ class CodeAnalyzer:
             for node in ast.walk(tree):
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     start = node.lineno - 1
-                    end = node.end_lineno if hasattr(node, 'end_lineno') else start + 1
+                    end = node.end_lineno if hasattr(node, "end_lineno") else start + 1
                     lines = code.split("\n")
                     func_code = "\n".join(lines[start:end])
                     functions[node.name] = func_code
@@ -187,28 +207,34 @@ class MutationEngine:
                         for delta in [-1, 1, 2]:
                             new_value = original_value + delta
                             if new_value > 0:
-                                mutations.append(CodeMutation(
+                                mutations.append(
+                                    CodeMutation(
+                                        mutation_type=MutationType.PARAMETER_TUNING,
+                                        safety_level=SafetyLevel.SAFE,
+                                        diff_description=f"Change constant from {original_value} to {new_value}",
+                                        original_code=str(original_value),
+                                        mutated_code=str(new_value),
+                                    )
+                                )
+                    elif isinstance(original_value, float):
+                        for factor in [0.8, 0.9, 1.1, 1.2]:
+                            new_value = round(original_value * factor, 4)
+                            mutations.append(
+                                CodeMutation(
                                     mutation_type=MutationType.PARAMETER_TUNING,
                                     safety_level=SafetyLevel.SAFE,
                                     diff_description=f"Change constant from {original_value} to {new_value}",
                                     original_code=str(original_value),
                                     mutated_code=str(new_value),
-                                ))
-                    elif isinstance(original_value, float):
-                        for factor in [0.8, 0.9, 1.1, 1.2]:
-                            new_value = round(original_value * factor, 4)
-                            mutations.append(CodeMutation(
-                                mutation_type=MutationType.PARAMETER_TUNING,
-                                safety_level=SafetyLevel.SAFE,
-                                diff_description=f"Change constant from {original_value} to {new_value}",
-                                original_code=str(original_value),
-                                mutated_code=str(new_value),
-                            ))
+                                )
+                            )
         except SyntaxError:
             pass
         return mutations[:20]
 
-    def swap_algorithm(self, function_code: str, alternatives: Optional[Dict[str, str]] = None) -> List[CodeMutation]:
+    def swap_algorithm(
+        self, function_code: str, alternatives: Optional[Dict[str, str]] = None
+    ) -> List[CodeMutation]:
         if not alternatives:
             alternatives = {
                 "bubble_sort": "sorted(data)",
@@ -217,13 +243,15 @@ class MutationEngine:
             }
         mutations = []
         for name, replacement in alternatives.items():
-            mutations.append(CodeMutation(
-                mutation_type=MutationType.ALGORITHM_SWAP,
-                safety_level=SafetyLevel.CAUTION,
-                diff_description=f"Swap with {name}",
-                original_code=function_code[:100],
-                mutated_code=replacement,
-            ))
+            mutations.append(
+                CodeMutation(
+                    mutation_type=MutationType.ALGORITHM_SWAP,
+                    safety_level=SafetyLevel.CAUTION,
+                    diff_description=f"Swap with {name}",
+                    original_code=function_code[:100],
+                    mutated_code=replacement,
+                )
+            )
         return mutations
 
 
@@ -251,11 +279,10 @@ class SelfModifyingCodeEngine:
         self.current_generation = 0
         self._id = str(uuid.uuid4())[:8]
 
-    def add_fitness_function(self, name: str, weight: float = 1.0,
-                              evaluate: Optional[Callable] = None):
-        self.fitness_functions.append(FitnessFunction(
-            name=name, weight=weight, evaluate=evaluate
-        ))
+    def add_fitness_function(
+        self, name: str, weight: float = 1.0, evaluate: Optional[Callable] = None
+    ):
+        self.fitness_functions.append(FitnessFunction(name=name, weight=weight, evaluate=evaluate))
 
     def analyze_code(self, code: str) -> Dict[str, Any]:
         complexity = self.analyzer.analyze_complexity(code)
@@ -277,8 +304,9 @@ class SelfModifyingCodeEngine:
         self.snapshots[snapshot.snapshot_id] = snapshot
         return snapshot
 
-    def propose_mutations(self, module: str, code: str,
-                           max_mutations: int = 10) -> List[CodeMutation]:
+    def propose_mutations(
+        self, module: str, code: str, max_mutations: int = 10
+    ) -> List[CodeMutation]:
         safety = self.analyzer.check_safety(code)
         param_mutations = self.mutation_engine.tune_parameters(code)
         algo_mutations = self.mutation_engine.swap_algorithm(code)
@@ -295,12 +323,12 @@ class SelfModifyingCodeEngine:
                 if len(accepted) >= max_mutations:
                     break
 
-        logger.info("Proposed %d mutations for %s (safety: %s)",
-                    len(accepted), module, safety.value)
+        logger.info(
+            "Proposed %d mutations for %s (safety: %s)", len(accepted), module, safety.value
+        )
         return accepted
 
-    def evaluate_fitness(self, mutation_id: str,
-                          metrics: Dict[str, Any]) -> float:
+    def evaluate_fitness(self, mutation_id: str, metrics: Dict[str, Any]) -> float:
         mutation = self.mutations.get(mutation_id)
         if not mutation:
             return 0.0
@@ -310,8 +338,7 @@ class SelfModifyingCodeEngine:
         mutation.fitness_score = total_score
         return total_score
 
-    def test_mutation(self, mutation_id: str,
-                       test_fn: Optional[Callable] = None) -> Dict[str, Any]:
+    def test_mutation(self, mutation_id: str, test_fn: Optional[Callable] = None) -> Dict[str, Any]:
         mutation = self.mutations.get(mutation_id)
         if not mutation:
             return {"error": "Mutation not found"}
@@ -360,8 +387,9 @@ class SelfModifyingCodeEngine:
         logger.info("Rolled back mutation %s", mutation_id)
         return True
 
-    def evolve(self, module: str, code: str, metrics: Dict[str, Any],
-               generations: int = 5) -> Dict[str, Any]:
+    def evolve(
+        self, module: str, code: str, metrics: Dict[str, Any], generations: int = 5
+    ) -> Dict[str, Any]:
         self.create_snapshot(module, code)
         best_mutation = None
         best_score = -1.0
@@ -376,11 +404,13 @@ class SelfModifyingCodeEngine:
                 if score > best_score and mut.status == MutationStatus.TESTED:
                     best_score = score
                     best_mutation = mut
-            history.append({
-                "generation": gen,
-                "mutations_proposed": len(mutations),
-                "best_score": best_score,
-            })
+            history.append(
+                {
+                    "generation": gen,
+                    "mutations_proposed": len(mutations),
+                    "best_score": best_score,
+                }
+            )
 
         if best_mutation:
             self.accept_mutation(best_mutation.mutation_id)
@@ -399,10 +429,12 @@ class SelfModifyingCodeEngine:
             "engine_id": self._id,
             "current_generation": self.current_generation,
             "total_mutations": len(self.mutations),
-            "accepted_mutations": sum(1 for m in self.mutations.values()
-                                      if m.status == MutationStatus.ACCEPTED),
-            "rejected_mutations": sum(1 for m in self.mutations.values()
-                                      if m.status == MutationStatus.REJECTED),
+            "accepted_mutations": sum(
+                1 for m in self.mutations.values() if m.status == MutationStatus.ACCEPTED
+            ),
+            "rejected_mutations": sum(
+                1 for m in self.mutations.values() if m.status == MutationStatus.REJECTED
+            ),
             "total_snapshots": len(self.snapshots),
             "fitness_functions": len(self.fitness_functions),
             "safety_threshold": self.safety_threshold.value,

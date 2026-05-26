@@ -37,6 +37,7 @@ logger = logging.getLogger("tranc3.hil_a")
 # Types
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class HILAActionStatus(str, Enum):
     PENDING = "pending"
     APPROVED = "approved"
@@ -93,12 +94,12 @@ DEFAULT_CATEGORY_TIERS: Dict[HILAActionCategory, int] = {
 
 # Default timeout per tier (ms) — higher tiers get less time
 DEFAULT_TIER_TIMEOUTS: Dict[int, int] = {
-    0: 3600000,   # Tier 0 (Human): 1 hour
-    1: 300000,    # Tier 1 (Sovereign): 5 minutes
-    2: 120000,    # Tier 2 (Prime): 2 minutes
-    3: 60000,     # Tier 3 (AI): 1 minute
-    4: 30000,     # Tier 4 (Agent): 30 seconds
-    5: 10000,     # Tier 5 (Bot): 10 seconds
+    0: 3600000,  # Tier 0 (Human): 1 hour
+    1: 300000,  # Tier 1 (Sovereign): 5 minutes
+    2: 120000,  # Tier 2 (Prime): 2 minutes
+    3: 60000,  # Tier 3 (AI): 1 minute
+    4: 30000,  # Tier 4 (Agent): 30 seconds
+    5: 10000,  # Tier 5 (Bot): 10 seconds
 }
 
 
@@ -106,9 +107,11 @@ DEFAULT_TIER_TIMEOUTS: Dict[int, int] = {
 # Data Classes
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class HILADecision:
     """A decision made at a specific tier."""
+
     id: str = field(default_factory=lambda: f"dec-{uuid.uuid4().hex[:12]}")
     tier: int = 5
     decided_by: str = ""
@@ -134,6 +137,7 @@ class HILADecision:
 @dataclass
 class HILAAction:
     """An action requiring approval through the HIL-A chain."""
+
     id: str = field(default_factory=lambda: f"hila-{uuid.uuid4().hex[:12]}")
     name: str = ""
     category: HILAActionCategory = HILAActionCategory.READ
@@ -179,6 +183,7 @@ class HILAAction:
 @dataclass
 class HILAConfig:
     """Configuration for the HIL-A protocol."""
+
     tier_timeouts: Dict[int, int] = field(default_factory=lambda: dict(DEFAULT_TIER_TIMEOUTS))
     auto_escalate_on_timeout: bool = True
     human_override_enabled: bool = True
@@ -190,6 +195,7 @@ class HILAConfig:
 # ─────────────────────────────────────────────────────────────────────────────
 # Tier Handler Interface
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class HILATierHandler:
     """Abstract handler that can approve/reject actions at a specific tier."""
@@ -212,6 +218,7 @@ class HILATierHandler:
 # ─────────────────────────────────────────────────────────────────────────────
 # HIL-A Chain Manager
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class HILAChain:
     """
@@ -272,7 +279,9 @@ class HILAChain:
         )
 
         self._actions[action.id] = action
-        logger.info(f"Action submitted: {action.id} '{name}' (category={category.value}, minTier={minimum_tier}, currentTier={requested_by_tier})")
+        logger.info(
+            f"Action submitted: {action.id} '{name}' (category={category.value}, minTier={minimum_tier}, currentTier={requested_by_tier})"
+        )
 
         # If the requesting tier already meets the minimum, auto-approve
         if requested_by_tier <= minimum_tier:
@@ -303,7 +312,9 @@ class HILAChain:
 
         # Check if the approving tier meets the minimum
         if tier > action.minimum_approval_tier:
-            logger.warning(f"Tier {tier} insufficient for action {action_id} (requires tier {action.minimum_approval_tier})")
+            logger.warning(
+                f"Tier {tier} insufficient for action {action_id} (requires tier {action.minimum_approval_tier})"
+            )
             decision = HILADecision(
                 tier=tier,
                 decided_by=approved_by,
@@ -377,7 +388,9 @@ class HILAChain:
             return action
 
         # Check max escalation hops
-        escalation_count = sum(1 for d in action.decisions if d.decision == HILADecisionType.ESCALATE)
+        escalation_count = sum(
+            1 for d in action.decisions if d.decision == HILADecisionType.ESCALATE
+        )
         if escalation_count >= self._config.max_escalation_hops:
             logger.warning(f"Action {action_id} exceeded max escalation hops — forcing to Tier 0")
             action.current_tier = 0
@@ -400,7 +413,9 @@ class HILAChain:
         self._clear_tier_timer(action_id)
         self._start_tier_timer(action_id)
 
-        logger.info(f"Action escalated: {action_id} → Tier {next_tier}" + (f" ({reason})" if reason else ""))
+        logger.info(
+            f"Action escalated: {action_id} → Tier {next_tier}" + (f" ({reason})" if reason else "")
+        )
         self._emit(action_id, "escalated")
         return action
 
@@ -418,7 +433,9 @@ class HILAChain:
             return None
 
         if target_tier > action.current_tier:
-            logger.warning(f"Cannot delegate to lower tier: {target_tier} < current {action.current_tier}")
+            logger.warning(
+                f"Cannot delegate to lower tier: {target_tier} < current {action.current_tier}"
+            )
             return action
 
         decision = HILADecision(
@@ -511,7 +528,8 @@ class HILAChain:
         action.decisions.append(hil_decision)
         action.current_tier = 0
         action.status = (
-            HILAActionStatus.APPROVED if decision == HILADecisionType.APPROVE
+            HILAActionStatus.APPROVED
+            if decision == HILADecisionType.APPROVE
             else HILAActionStatus.REJECTED
         )
         action.updated_at = time.time()
@@ -587,7 +605,11 @@ class HILAChain:
             by_status[action.status.value] = by_status.get(action.status.value, 0) + 1
             by_category[action.category.value] = by_category.get(action.category.value, 0) + 1
 
-        approved = [a for a in all_actions if a.status in (HILAActionStatus.APPROVED, HILAActionStatus.COMPLETED)]
+        approved = [
+            a
+            for a in all_actions
+            if a.status in (HILAActionStatus.APPROVED, HILAActionStatus.COMPLETED)
+        ]
         avg_time = 0.0
         if approved:
             total_time = sum(
@@ -605,7 +627,8 @@ class HILAChain:
             "averageEscalations": sum(
                 sum(1 for d in a.decisions if d.decision == HILADecisionType.ESCALATE)
                 for a in all_actions
-            ) / max(len(all_actions), 1),
+            )
+            / max(len(all_actions), 1),
             "averageTimeToApprovalMs": avg_time * 1000,
         }
 
@@ -656,7 +679,9 @@ class HILAChain:
                     anomalies.append(f"Action {action.id} has been pending for {age_s:.0f}s")
                     recommendations.append(f"Review and manually resolve action {action.id}")
 
-            escalation_count = sum(1 for d in action.decisions if d.decision == HILADecisionType.ESCALATE)
+            escalation_count = sum(
+                1 for d in action.decisions if d.decision == HILADecisionType.ESCALATE
+            )
             if escalation_count >= 3:
                 anomalies.append(f"Action {action.id} has been escalated {escalation_count} times")
                 recommendations.append(f"Consider human review of action {action.id}")
@@ -666,8 +691,9 @@ class HILAChain:
     def health_check(self) -> Dict[str, Any]:
         """Health check for the HIL-A chain."""
         anomalies = self.scan_for_anomalies()
-        pending = len(self.query_actions(status=HILAActionStatus.PENDING)) + \
-                  len(self.query_actions(status=HILAActionStatus.ESCALATED))
+        pending = len(self.query_actions(status=HILAActionStatus.PENDING)) + len(
+            self.query_actions(status=HILAActionStatus.ESCALATED)
+        )
         handler_count = sum(len(h) for h in self._handlers.values())
 
         status = "healthy"
@@ -718,7 +744,9 @@ class HILAChain:
         action.updated_at = time.time()
         self._clear_tier_timer(action_id)
 
-        logger.info(f"Action auto-approved: {action_id} (tier {tier} ≥ minimum {action.minimum_approval_tier})")
+        logger.info(
+            f"Action auto-approved: {action_id} (tier {tier} ≥ minimum {action.minimum_approval_tier})"
+        )
         self._emit(action_id, "approved")
 
     def _start_tier_timer(self, action_id: str) -> None:

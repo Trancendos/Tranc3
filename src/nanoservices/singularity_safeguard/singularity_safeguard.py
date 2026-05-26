@@ -24,8 +24,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ────────────────────────────────────────────────────────────────
 
+
 class RiskLevel(Enum):
     """Risk assessment levels for self-modification."""
+
     MINIMAL = "minimal"
     LOW = "low"
     MODERATE = "moderate"
@@ -36,6 +38,7 @@ class RiskLevel(Enum):
 
 class SafeguardState(Enum):
     """Singularity safeguard operational states."""
+
     ACTIVE = "active"
     MONITORING = "monitoring"
     THROTTLED = "throttled"
@@ -46,6 +49,7 @@ class SafeguardState(Enum):
 
 class ImprovementCategory(Enum):
     """Categories of self-improvement."""
+
     PERFORMANCE = "performance"
     CAPABILITY = "capability"
     EFFICIENCY = "efficiency"
@@ -58,6 +62,7 @@ class ImprovementCategory(Enum):
 
 class ContainmentLevel(Enum):
     """Containment protocol levels."""
+
     OPEN = "open"
     SANDBOXED = "sandboxed"
     QUARANTINED = "quarantined"
@@ -67,6 +72,7 @@ class ContainmentLevel(Enum):
 
 class AuditAction(Enum):
     """Audit trail actions."""
+
     PROPOSED = "proposed"
     ANALYZED = "analyzed"
     APPROVED = "approved"
@@ -79,9 +85,11 @@ class AuditAction(Enum):
 
 # ─── Data Models ──────────────────────────────────────────────────────────
 
+
 @dataclass
 class CapabilityMetric:
     """Metric for tracking system capabilities."""
+
     metric_id: str
     name: str
     current_value: float = 0.0
@@ -117,6 +125,7 @@ class CapabilityMetric:
 @dataclass
 class ImprovementProposal:
     """A proposed self-improvement."""
+
     proposal_id: str
     category: ImprovementCategory
     description: str
@@ -127,9 +136,7 @@ class ImprovementProposal:
     containment_required: ContainmentLevel = ContainmentLevel.SANDBOXED
     rollback_possible: bool = True
     audit_trail: List[Dict[str, Any]] = field(default_factory=list)
-    created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def risk_benefit_ratio(self) -> float:
         """Calculate risk-benefit ratio."""
@@ -153,6 +160,7 @@ class ImprovementProposal:
 @dataclass
 class AlignmentCheck:
     """Alignment verification result."""
+
     check_id: str
     timestamp: str
     alignment_score: float  # 0.0 to 1.0
@@ -180,15 +188,14 @@ class AlignmentCheck:
 @dataclass
 class RecursiveAuditEntry:
     """Audit trail entry for recursive improvement tracking."""
+
     entry_id: str
     proposal_id: str
     action: AuditAction
     actor: str
     details: str
     risk_assessment: RiskLevel
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -203,6 +210,7 @@ class RecursiveAuditEntry:
 
 
 # ─── Safety Monitors ─────────────────────────────────────────────────────
+
 
 class CapabilityGrowthMonitor:
     """Monitors capability growth rates for runaway detection.
@@ -282,14 +290,8 @@ class CapabilityGrowthMonitor:
 
     def get_runaway_risk(self) -> Dict[str, Any]:
         """Assess overall runaway self-improvement risk."""
-        exponential_count = sum(
-            1 for mid in self.metrics
-            if self._detect_exponential_growth(mid)
-        )
-        threshold_count = sum(
-            1 for m in self.metrics.values()
-            if m.is_approaching_threshold()
-        )
+        exponential_count = sum(1 for mid in self.metrics if self._detect_exponential_growth(mid))
+        threshold_count = sum(1 for m in self.metrics.values() if m.is_approaching_threshold())
 
         total = len(self.metrics)
         if total == 0:
@@ -367,8 +369,10 @@ class AlignmentVerifier:
             recommendations.append("reject_unless_override_with_consensus")
 
         # Check containment
-        if proposal.risk_level in (RiskLevel.HIGH, RiskLevel.CRITICAL) and \
-           proposal.containment_required in (ContainmentLevel.OPEN, ContainmentLevel.SANDBED):
+        if proposal.risk_level in (
+            RiskLevel.HIGH,
+            RiskLevel.CRITICAL,
+        ) and proposal.containment_required in (ContainmentLevel.OPEN, ContainmentLevel.SANDBED):
             anomalies.append("insufficient_containment")
             recommendations.append("increase_containment_level")
 
@@ -378,7 +382,9 @@ class AlignmentVerifier:
         alignment_score = max(0.0, min(1.0, base_score))
 
         # Goal preservation score
-        goal_preservation = 1.0 if proposal.category != ImprovementCategory.GOAL_MODIFICATION else 0.3
+        goal_preservation = (
+            1.0 if proposal.category != ImprovementCategory.GOAL_MODIFICATION else 0.3
+        )
 
         # Value consistency
         value_consistency = 1.0 if not anomalies else max(0.0, 1.0 - len(anomalies) * 0.15)
@@ -459,6 +465,7 @@ class ContainmentManager:
 
 # ─── Main Service ─────────────────────────────────────────────────────────
 
+
 class SingularitySafeguardService:
     """Singularity Safeguard Service for the Tranc3 ecosystem.
 
@@ -535,7 +542,9 @@ class SingularitySafeguardService:
             risk_level=risk,
             expected_benefit=expected_benefit,
             estimated_risk=estimated_risk,
-            containment_required=ContainmentLevel.SANDBOXED if risk in (RiskLevel.LOW, RiskLevel.MODERATE) else ContainmentLevel.QUARANTINED,
+            containment_required=ContainmentLevel.SANDBOXED
+            if risk in (RiskLevel.LOW, RiskLevel.MODERATE)
+            else ContainmentLevel.QUARANTINED,
         )
 
         # Alignment check
@@ -545,7 +554,11 @@ class SingularitySafeguardService:
         runaway = self.growth_monitor.get_runaway_risk()
 
         # Decision
-        approved = alignment.is_aligned() and runaway["risk_level"] in ("minimal", "low", "moderate")
+        approved = alignment.is_aligned() and runaway["risk_level"] in (
+            "minimal",
+            "low",
+            "moderate",
+        )
 
         # Auto-freeze if runaway detected
         if self.enable_auto_freeze and runaway["risk_level"] in ("critical",):
@@ -575,8 +588,11 @@ class SingularitySafeguardService:
         self.state = SafeguardState.EMERGENCY_STOP
         self.containment_manager.initiate_lockdown(reason)
         self._add_audit_entry(
-            "system", AuditAction.ESCALATED, "safeguard",
-            f"Emergency stop: {reason}", RiskLevel.EXISTENTIAL,
+            "system",
+            AuditAction.ESCALATED,
+            "safeguard",
+            f"Emergency stop: {reason}",
+            RiskLevel.EXISTENTIAL,
         )
         return {
             "emergency_stop": True,

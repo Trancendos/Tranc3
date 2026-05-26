@@ -78,7 +78,6 @@ class SearchResult:
 
 def _faiss_available() -> bool:
     try:
-
         return True
     except ImportError:
         return False

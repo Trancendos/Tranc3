@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class DroneState(Enum):
     """Drone operational states."""
+
     IDLE = "idle"
     TAKEOFF = "takeoff"
     HOVERING = "hovering"
@@ -35,6 +36,7 @@ class DroneState(Enum):
 
 class SensorType(Enum):
     """Types of drone sensors."""
+
     CAMERA_RGB = "camera_rgb"
     CAMERA_THERMAL = "camera_thermal"
     LIDAR = "lidar"
@@ -50,6 +52,7 @@ class SensorType(Enum):
 
 class SwarmFormation(Enum):
     """Drone swarm formation patterns."""
+
     LINE = "line"
     V_SHAPE = "v_shape"
     CIRCLE = "circle"
@@ -62,6 +65,7 @@ class SwarmFormation(Enum):
 @dataclass
 class GeoCoordinate:
     """Geographic coordinate with altitude."""
+
     latitude: float = 0.0
     longitude: float = 0.0
     altitude_m: float = 0.0
@@ -71,6 +75,7 @@ class GeoCoordinate:
 @dataclass
 class DroneSensorReading:
     """A single sensor reading from a drone."""
+
     reading_id: str = ""
     drone_id: str = ""
     sensor_type: SensorType = SensorType.CAMERA_RGB
@@ -88,11 +93,14 @@ class DroneSensorReading:
 @dataclass
 class DroneCapabilities:
     """Capabilities of a drone."""
+
     max_altitude_m: float = 120.0
     max_speed_ms: float = 15.0
     max_flight_time_min: float = 30.0
     max_payload_kg: float = 2.0
-    sensors: List[SensorType] = field(default_factory=lambda: [SensorType.CAMERA_RGB, SensorType.GPS])
+    sensors: List[SensorType] = field(
+        default_factory=lambda: [SensorType.CAMERA_RGB, SensorType.GPS]
+    )
     wasm_runtime: bool = True
     edge_compute_tflops: float = 0.5
     battery_capacity_mah: float = 5000.0
@@ -102,6 +110,7 @@ class DroneCapabilities:
 @dataclass
 class DroneNode:
     """Represents a single drone in the swarm."""
+
     drone_id: str = ""
     name: str = ""
     state: DroneState = DroneState.IDLE
@@ -128,12 +137,16 @@ class DroneNode:
     @property
     def can_execute_wasm(self) -> bool:
         """Check if drone can execute WASM modules."""
-        return self.capabilities.wasm_runtime and self.state not in (DroneState.OFFLINE, DroneState.EMERGENCY)
+        return self.capabilities.wasm_runtime and self.state not in (
+            DroneState.OFFLINE,
+            DroneState.EMERGENCY,
+        )
 
 
 @dataclass
 class DroneMission:
     """A mission assigned to one or more drones."""
+
     mission_id: str = ""
     name: str = ""
     waypoints: List[GeoCoordinate] = field(default_factory=list)
@@ -213,9 +226,7 @@ class WasmEdgeDroneExecutor:
         self.wasm_manager = wasm_manager
         self._deployed_modules: Dict[str, str] = {}  # drone_id -> module_id
 
-    async def deploy_query_to_drone(
-        self, drone: DroneNode, nrc_query: str
-    ) -> Optional[str]:
+    async def deploy_query_to_drone(self, drone: DroneNode, nrc_query: str) -> Optional[str]:
         """Deploy an NRC query as a WASM module to a drone."""
         if not drone.can_execute_wasm:
             logger.warning(f"Drone {drone.drone_id} cannot execute WASM")
@@ -224,6 +235,7 @@ class WasmEdgeDroneExecutor:
         if self.wasm_manager:
             try:
                 from ..wasm_edge import NRCQueryWasm, EdgeTier
+
                 query = NRCQueryWasm(
                     query_id=f"drone-{drone.drone_id}",
                     nrc_dsl=nrc_query,
@@ -243,9 +255,7 @@ class WasmEdgeDroneExecutor:
         self._deployed_modules[drone.drone_id] = module_id
         return module_id
 
-    async def execute_on_drone(
-        self, drone: DroneNode, sensor_data: bytes
-    ) -> Optional[bytes]:
+    async def execute_on_drone(self, drone: DroneNode, sensor_data: bytes) -> Optional[bytes]:
         """Execute the deployed WASM module on a drone with sensor data."""
         if not drone.wasm_module_id:
             return None
@@ -253,6 +263,7 @@ class WasmEdgeDroneExecutor:
         if self.wasm_manager and drone.wasm_module_id in self.wasm_manager._module_registry:
             try:
                 from ..wasm_edge import EdgeTier
+
                 runtime = self.wasm_manager.runtimes[EdgeTier.AERIAL]
                 result = await runtime.execute(drone.wasm_module_id, sensor_data)
                 return result.output if result.success else None
@@ -387,11 +398,19 @@ class SwarmCoordinator:
     def _generate_sensor_value(self, sensor: SensorType) -> Any:
         """Generate a simulated sensor value."""
         if sensor == SensorType.GPS:
-            return {"lat": 37.7749 + (uuid.uuid4().int % 1000) * 0.0001,
-                    "lon": -122.4194 + (uuid.uuid4().int % 1000) * 0.0001}
+            return {
+                "lat": 37.7749 + (uuid.uuid4().int % 1000) * 0.0001,
+                "lon": -122.4194 + (uuid.uuid4().int % 1000) * 0.0001,
+            }
         elif sensor == SensorType.IMU:
-            return {"accel_x": 0.1, "accel_y": 0.2, "accel_z": -9.8,
-                    "gyro_x": 0.0, "gyro_y": 0.0, "gyro_z": 0.0}
+            return {
+                "accel_x": 0.1,
+                "accel_y": 0.2,
+                "accel_z": -9.8,
+                "gyro_x": 0.0,
+                "gyro_y": 0.0,
+                "gyro_z": 0.0,
+            }
         elif sensor == SensorType.BAROMETER:
             return {"pressure_hpa": 1013.25, "altitude_m": 50.0}
         elif sensor == SensorType.GAS_SENSOR:

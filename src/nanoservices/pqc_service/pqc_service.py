@@ -48,6 +48,7 @@ class NISTLevel(Enum):
 @dataclass
 class PQCPublicKey:
     """Post-quantum public key."""
+
     key_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     algorithm: PQCAlgorithm = PQCAlgorithm.ML_KEM_768
     key_type: PQCKeyType = PQCKeyType.KEM
@@ -69,6 +70,7 @@ class PQCPublicKey:
 @dataclass
 class PQCPrivateKey:
     """Post-quantum private key."""
+
     key_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     algorithm: PQCAlgorithm = PQCAlgorithm.ML_KEM_768
     key_data: str = ""
@@ -86,6 +88,7 @@ class PQCPrivateKey:
 @dataclass
 class PQCCiphertext:
     """PQC KEM ciphertext."""
+
     ciphertext_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     algorithm: PQCAlgorithm = PQCAlgorithm.ML_KEM_768
     data: str = ""
@@ -102,6 +105,7 @@ class PQCCiphertext:
 @dataclass
 class PQCSignature:
     """PQC digital signature."""
+
     signature_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     algorithm: PQCAlgorithm = PQCAlgorithm.ML_DSA_65
     data: str = ""
@@ -126,7 +130,9 @@ class MLKEMSimulator:
     liboqs-python upgrade path for production.
     """
 
-    def keygen(self, algorithm: PQCAlgorithm = PQCAlgorithm.ML_KEM_768) -> Tuple[PQCPublicKey, PQCPrivateKey]:
+    def keygen(
+        self, algorithm: PQCAlgorithm = PQCAlgorithm.ML_KEM_768
+    ) -> Tuple[PQCPublicKey, PQCPrivateKey]:
         seed = uuid.uuid4().hex + uuid.uuid4().hex
         pk_data = hashlib.sha512(f"pk-{seed}".encode()).hexdigest()
         sk_data = hashlib.sha512(f"sk-{seed}".encode()).hexdigest()
@@ -171,7 +177,9 @@ class MLDSASimulator:
     NIST FIPS 204. Python-native simulation.
     """
 
-    def keygen(self, algorithm: PQCAlgorithm = PQCAlgorithm.ML_DSA_65) -> Tuple[PQCPublicKey, PQCPrivateKey]:
+    def keygen(
+        self, algorithm: PQCAlgorithm = PQCAlgorithm.ML_DSA_65
+    ) -> Tuple[PQCPublicKey, PQCPrivateKey]:
         seed = uuid.uuid4().hex + uuid.uuid4().hex
         pk_data = hashlib.sha512(f"pk-dsa-{seed}".encode()).hexdigest()
         sk_data = hashlib.sha512(f"sk-dsa-{seed}".encode()).hexdigest()
@@ -274,7 +282,9 @@ class PQCService:
         self.sphincs = SPHINCSPlusSimulator()
         self._id = str(uuid.uuid4())[:8]
 
-    def generate_kem_keypair(self, algorithm: PQCAlgorithm = PQCAlgorithm.ML_KEM_768) -> Tuple[PQCPublicKey, PQCPrivateKey]:
+    def generate_kem_keypair(
+        self, algorithm: PQCAlgorithm = PQCAlgorithm.ML_KEM_768
+    ) -> Tuple[PQCPublicKey, PQCPrivateKey]:
         pk, sk = self.ml_kem.keygen(algorithm)
         self.public_keys[pk.key_id] = pk
         self.private_keys[sk.key_id] = sk
@@ -296,7 +306,9 @@ class PQCService:
             return None
         return self.ml_kem.decapsulate(sk, ct)
 
-    def generate_sign_keypair(self, algorithm: PQCAlgorithm = PQCAlgorithm.ML_DSA_65) -> Tuple[PQCPublicKey, PQCPrivateKey]:
+    def generate_sign_keypair(
+        self, algorithm: PQCAlgorithm = PQCAlgorithm.ML_DSA_65
+    ) -> Tuple[PQCPublicKey, PQCPrivateKey]:
         pk, sk = self.ml_dsa.keygen(algorithm)
         self.public_keys[pk.key_id] = pk
         self.private_keys[sk.key_id] = sk
@@ -334,8 +346,7 @@ class PQCService:
         self.signatures[sig.signature_id] = sig
         return sig
 
-    def hybrid_sign(self, message: bytes,
-                    classical_key: Optional[bytes] = None) -> Dict[str, Any]:
+    def hybrid_sign(self, message: bytes, classical_key: Optional[bytes] = None) -> Dict[str, Any]:
         pqc_pk, pqc_sk = self.generate_sign_keypair()
         pqc_sig = self.ml_dsa.sign(pqc_sk, message)
         classical_sig = hashlib.sha256(message + (classical_key or b"")).hexdigest()

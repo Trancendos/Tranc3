@@ -56,7 +56,9 @@ class LifecycleEmitter:
     def owner_name(self) -> str:
         return self._owner_name
 
-    def on_lifecycle(self, event: LifecycleEvent, listener: LifecycleListener) -> "LifecycleEmitter":
+    def on_lifecycle(
+        self, event: LifecycleEvent, listener: LifecycleListener
+    ) -> "LifecycleEmitter":
         """Register a listener for a specific lifecycle event."""
         key = event.value if isinstance(event, LifecycleEvent) else event
         if key not in self._listeners:
@@ -64,9 +66,11 @@ class LifecycleEmitter:
         self._listeners[key].append(listener)
         return self
 
-    def once_lifecycle(self, event: LifecycleEvent, listener: LifecycleListener) -> "LifecycleEmitter":
+    def once_lifecycle(
+        self, event: LifecycleEvent, listener: LifecycleListener
+    ) -> "LifecycleEmitter":
         """Register a one-time listener for a specific lifecycle event."""
-        # _key = event.value if isinstance(event, LifecycleEvent) else event  # noqa: assigned but unused
+        # _key = event.value if isinstance(event, LifecycleEvent) else event
 
         def wrapper(ctx: LifecycleContext) -> None:
             self.remove_lifecycle_listener(event, wrapper)
@@ -80,14 +84,18 @@ class LifecycleEmitter:
         self._any_listeners.append(listener)
         return self
 
-    def remove_lifecycle_listener(self, event: LifecycleEvent, listener: LifecycleListener) -> "LifecycleEmitter":
+    def remove_lifecycle_listener(
+        self, event: LifecycleEvent, listener: LifecycleListener
+    ) -> "LifecycleEmitter":
         """Remove a specific listener."""
         key = event.value if isinstance(event, LifecycleEvent) else event
         if key in self._listeners:
-            self._listeners[key] = [l for l in self._listeners[key] if l != listener]
+            self._listeners[key] = [cb for cb in self._listeners[key] if cb != listener]
         return self
 
-    async def emit_lifecycle(self, event: LifecycleEvent, details: Optional[Dict[str, Any]] = None) -> None:
+    async def emit_lifecycle(
+        self, event: LifecycleEvent, details: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Emit a lifecycle event with standardised context."""
         ctx = LifecycleContext(
             entity=self._owner_name,
@@ -115,7 +123,9 @@ class LifecycleEmitter:
             except Exception:
                 pass
 
-    def emit_lifecycle_sync(self, event: LifecycleEvent, details: Optional[Dict[str, Any]] = None) -> None:
+    def emit_lifecycle_sync(
+        self, event: LifecycleEvent, details: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Synchronous emit — for use in constructors where async isn't possible."""
         ctx = LifecycleContext(
             entity=self._owner_name,

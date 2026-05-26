@@ -28,6 +28,7 @@ from .lifecycle import LifecycleEmitter, LifecycleEvent
 @dataclass
 class HILAApproval:
     """HIL-A approval decision from a tier authority."""
+
     action_id: str
     approved_by: str
     tier: int
@@ -39,6 +40,7 @@ class HILAApproval:
 @dataclass
 class HealthReport:
     """Standardised health check report for any tier."""
+
     name: str
     tier: int
     running: bool
@@ -82,7 +84,9 @@ class Prime:
 
         # Lifecycle hooks
         self.lifecycle = LifecycleEmitter(name or prime_id)
-        self.lifecycle.emit_lifecycle_sync(LifecycleEvent.INIT, {"id": self.id, "tier": 2, "pillar": pillar})
+        self.lifecycle.emit_lifecycle_sync(
+            LifecycleEvent.INIT, {"id": self.id, "tier": 2, "pillar": pillar}
+        )
 
     @property
     def running(self) -> bool:
@@ -93,20 +97,26 @@ class Prime:
         if self._running:
             return
         self._running = True
-        await self.lifecycle.emit_lifecycle(LifecycleEvent.START, {
-            "managedAIs": len(self._ais),
-        })
+        await self.lifecycle.emit_lifecycle(
+            LifecycleEvent.START,
+            {
+                "managedAIs": len(self._ais),
+            },
+        )
         # Start all managed AIs (if they have a start method)
         for ai in self._ais.values():
             if hasattr(ai, "start") and asyncio.iscoroutinefunction(ai.start):
                 try:
                     await ai.start()
                 except Exception as e:
-                    await self.lifecycle.emit_lifecycle(LifecycleEvent.ERROR, {
-                        "aiId": getattr(ai, "id", "unknown"),
-                        "phase": "start",
-                        "error": str(e),
-                    })
+                    await self.lifecycle.emit_lifecycle(
+                        LifecycleEvent.ERROR,
+                        {
+                            "aiId": getattr(ai, "id", "unknown"),
+                            "phase": "start",
+                            "error": str(e),
+                        },
+                    )
 
     async def stop(self) -> None:
         """Stop this Prime and all managed AIs."""
@@ -118,14 +128,20 @@ class Prime:
                 try:
                     await ai.stop()
                 except Exception as e:
-                    await self.lifecycle.emit_lifecycle(LifecycleEvent.ERROR, {
-                        "aiId": getattr(ai, "id", "unknown"),
-                        "phase": "stop",
-                        "error": str(e),
-                    })
-        await self.lifecycle.emit_lifecycle(LifecycleEvent.STOP, {
-            "managedAIs": len(self._ais),
-        })
+                    await self.lifecycle.emit_lifecycle(
+                        LifecycleEvent.ERROR,
+                        {
+                            "aiId": getattr(ai, "id", "unknown"),
+                            "phase": "stop",
+                            "error": str(e),
+                        },
+                    )
+        await self.lifecycle.emit_lifecycle(
+            LifecycleEvent.STOP,
+            {
+                "managedAIs": len(self._ais),
+            },
+        )
 
     def register_ai(self, ai: Any) -> None:
         """Register a Tier 3 AI under this Prime's domain."""
@@ -160,14 +176,20 @@ class Prime:
                 elif hasattr(ai, "run_all_agent_cycles"):
                     results[ai_id] = await ai.run_all_agent_cycles(observation)
             except Exception as e:
-                await self.lifecycle.emit_lifecycle(LifecycleEvent.ERROR, {
-                    "aiId": ai_id,
-                    "phase": "runCoordinatedCycle",
-                    "error": str(e),
-                })
-        await self.lifecycle.emit_lifecycle(LifecycleEvent.CYCLE, {
-            "aisProcessed": len(results),
-        })
+                await self.lifecycle.emit_lifecycle(
+                    LifecycleEvent.ERROR,
+                    {
+                        "aiId": ai_id,
+                        "phase": "runCoordinatedCycle",
+                        "error": str(e),
+                    },
+                )
+        await self.lifecycle.emit_lifecycle(
+            LifecycleEvent.CYCLE,
+            {
+                "aisProcessed": len(results),
+            },
+        )
         return results
 
     def approve_action(self, action_id: str, reason: str = "Approved by Prime") -> HILAApproval:
@@ -204,12 +226,14 @@ class Prime:
                 ai_bots = len(ai.listBotNames())
             total_agents += ai_agents
             total_bots += ai_bots
-            sub_healths.append({
-                "id": getattr(ai, "id", "unknown"),
-                "running": ai_running,
-                "agents": ai_agents,
-                "bots": ai_bots,
-            })
+            sub_healths.append(
+                {
+                    "id": getattr(ai, "id", "unknown"),
+                    "running": ai_running,
+                    "agents": ai_agents,
+                    "bots": ai_bots,
+                }
+            )
 
         return HealthReport(
             name=self.name,
@@ -276,18 +300,24 @@ class Sovereign:
             return
         self._running = True
         self._emergency_stop = False
-        await self.lifecycle.emit_lifecycle(LifecycleEvent.START, {
-            "managedPrimes": len(self._primes),
-        })
+        await self.lifecycle.emit_lifecycle(
+            LifecycleEvent.START,
+            {
+                "managedPrimes": len(self._primes),
+            },
+        )
         for prime in self._primes.values():
             try:
                 await prime.start()
             except Exception as e:
-                await self.lifecycle.emit_lifecycle(LifecycleEvent.ERROR, {
-                    "primeId": prime.id,
-                    "phase": "start",
-                    "error": str(e),
-                })
+                await self.lifecycle.emit_lifecycle(
+                    LifecycleEvent.ERROR,
+                    {
+                        "primeId": prime.id,
+                        "phase": "start",
+                        "error": str(e),
+                    },
+                )
 
     async def stop(self) -> None:
         """Stop the Sovereign and all managed Primes."""
@@ -298,14 +328,20 @@ class Sovereign:
             try:
                 await prime.stop()
             except Exception as e:
-                await self.lifecycle.emit_lifecycle(LifecycleEvent.ERROR, {
-                    "primeId": prime.id,
-                    "phase": "stop",
-                    "error": str(e),
-                })
-        await self.lifecycle.emit_lifecycle(LifecycleEvent.STOP, {
-            "managedPrimes": len(self._primes),
-        })
+                await self.lifecycle.emit_lifecycle(
+                    LifecycleEvent.ERROR,
+                    {
+                        "primeId": prime.id,
+                        "phase": "stop",
+                        "error": str(e),
+                    },
+                )
+        await self.lifecycle.emit_lifecycle(
+            LifecycleEvent.STOP,
+            {
+                "managedPrimes": len(self._primes),
+            },
+        )
 
     def register_prime(self, prime: Prime) -> None:
         """Register a Tier 2 Prime under this Sovereign."""
@@ -361,10 +397,13 @@ class Sovereign:
     async def emergency_stop(self, reason: str = "Manual emergency stop") -> None:
         """EMERGENCY STOP — halts all cycles across the entire ecosystem."""
         self._emergency_stop = True
-        await self.lifecycle.emit_lifecycle(LifecycleEvent.ERROR, {
-            "type": "emergency_stop",
-            "reason": reason,
-        })
+        await self.lifecycle.emit_lifecycle(
+            LifecycleEvent.ERROR,
+            {
+                "type": "emergency_stop",
+                "reason": reason,
+            },
+        )
         # Stop all Primes
         for prime in self._primes.values():
             try:
@@ -394,14 +433,20 @@ class Sovereign:
             try:
                 results[prime_id] = await prime.run_coordinated_cycle(observation)
             except Exception as e:
-                await self.lifecycle.emit_lifecycle(LifecycleEvent.ERROR, {
-                    "primeId": prime_id,
-                    "phase": "runEcosystemCycle",
-                    "error": str(e),
-                })
-        await self.lifecycle.emit_lifecycle(LifecycleEvent.CYCLE, {
-            "primesProcessed": len(results),
-        })
+                await self.lifecycle.emit_lifecycle(
+                    LifecycleEvent.ERROR,
+                    {
+                        "primeId": prime_id,
+                        "phase": "runEcosystemCycle",
+                        "error": str(e),
+                    },
+                )
+        await self.lifecycle.emit_lifecycle(
+            LifecycleEvent.CYCLE,
+            {
+                "primesProcessed": len(results),
+            },
+        )
         return results
 
     def health_check(self) -> HealthReport:
@@ -416,15 +461,17 @@ class Sovereign:
             total_ais += ph.managed_entities
             total_agents += ph.total_agents
             total_bots += ph.total_bots
-            prime_healths.append({
-                "name": ph.name,
-                "tier": ph.tier,
-                "running": ph.running,
-                "managedAIs": ph.managed_entities,
-                "totalAgents": ph.total_agents,
-                "totalBots": ph.total_bots,
-                "subHealths": ph.sub_healths,
-            })
+            prime_healths.append(
+                {
+                    "name": ph.name,
+                    "tier": ph.tier,
+                    "running": ph.running,
+                    "managedAIs": ph.managed_entities,
+                    "totalAgents": ph.total_agents,
+                    "totalBots": ph.total_bots,
+                    "subHealths": ph.sub_healths,
+                }
+            )
 
         return HealthReport(
             name=self.name,

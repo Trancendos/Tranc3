@@ -34,7 +34,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path as PathLib
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
@@ -44,27 +44,21 @@ from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 # Phase 22: Infinity Ecosystem security integration
-from shared_core.infinity.abac import ABACEngine, Policy, PolicyEffect, get_default_policies
+from shared_core.infinity.abac import ABACEngine, get_default_policies
 from shared_core.infinity.auth_gateway import AuthGatewayMiddleware, WebSocketAuthManager
-from shared_core.infinity.nomenclature import InfinityRole, SentinelChannel, Tier
+from shared_core.infinity.nomenclature import InfinityRole, Pillar, SentinelChannel, Tier
 from shared_core.infinity.owasp_hardening import OWASPHardeningMiddleware
-from shared_core.infinity.rbac import ENDPOINT_PERMISSIONS, Permission, RBACEngine
+from shared_core.infinity.rbac import RBACEngine
 
 # Phase 22.3: Sentinel Station event bus integration
 from shared_core.infinity.sentinel_station import (
     SentinelEvent,
-    SentinelStation,
     SharedSSEGenerator,
     get_sentinel_station,
 )
 
 # Phase 22.4: Dimensional Services integration
 from shared_core.dimensionals import (
-    DimensionalServiceBus,
-    DimensionalServiceRegistry,
-    DimensionalServiceStatus,
-    UnderverseModule,
-    UnderverseRegistry,
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
@@ -128,7 +122,7 @@ from shared_core.infinity.worker_integration import InfinityWorkerKit  # noqa: E
 
 worker_kit = InfinityWorkerKit(
     "gateway-service",
-    defense_threshold=20,         # Gateway is public-facing — moderate threshold
+    defense_threshold=20,  # Gateway is public-facing — moderate threshold
     defense_window_seconds=300,
     defense_block_seconds=900,
 )
@@ -258,12 +252,14 @@ async def _lifespan(app: FastAPI):
                 if worker_kit.health.should_fire("gateway_reporter"):
                     summary = worker_kit.health.get_health_summary()
                     worker_kit.health.record_fire("gateway_reporter")
-                    await sentinel.publish(SentinelEvent(
-                        channel=SentinelChannel.PLATFORM,
-                        event_type="gateway_health_report",
-                        source="gateway",
-                        payload=summary,
-                    ))
+                    await sentinel.publish(
+                        SentinelEvent(
+                            channel=SentinelChannel.PLATFORM,
+                            event_type="gateway_health_report",
+                            source="gateway",
+                            payload=summary,
+                        )
+                    )
             except asyncio.CancelledError:
                 break
             except Exception as exc:
@@ -291,7 +287,7 @@ async def _lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Tranc3 Gateway Service",
-    version="0.7.0",
+    version="0.8.0",
     lifespan=_lifespan,
 )
 
@@ -558,7 +554,7 @@ async def health():
     return {
         "status": "ok",
         "service": "gateway-service",
-        "version": "0.7.0",
+        "version": "0.8.0",
         "upstream_workers": len(UPSTREAM_WORKERS),
         "ws_connections": ws_auth_manager.connection_count,
         "sentinel_station": {
@@ -620,7 +616,7 @@ async def api_overview(request: Request):
     return {
         "platform": {
             "name": "Tranc3",
-            "version": "0.7.0",
+            "version": "0.8.0",
             "status": "operational"
             if reachable >= 6
             else "degraded"
@@ -982,7 +978,9 @@ async def check_access(
             "granted": abac_result,
             "resource_type": resource_type,
             "action": action,
-        } if resource_type else None,
+        }
+        if resource_type
+        else None,
         "overall": rbac_result and abac_result,
     }
 

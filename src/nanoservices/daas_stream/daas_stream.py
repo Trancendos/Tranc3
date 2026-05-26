@@ -64,6 +64,7 @@ class PolicyEffect(str, Enum):
 @dataclass
 class StreamRecord:
     """A single record in a data stream."""
+
     key: str
     value: bytes
     headers: Dict[str, str] = field(default_factory=dict)
@@ -87,6 +88,7 @@ class StreamRecord:
 @dataclass
 class StreamConfig:
     """Configuration for a data stream."""
+
     name: str
     topic: str
     partitions: int = 3
@@ -116,6 +118,7 @@ class StreamConfig:
 @dataclass
 class PolicyRule:
     """An OPA-style policy rule for data sovereignty enforcement."""
+
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
     name: str = ""
     description: str = ""
@@ -144,13 +147,13 @@ class PolicyRule:
         for key, value in self.conditions.items():
             if isinstance(value, list):
                 values = ", ".join(f'"{v}"' for v in value)
-                conditions_parts.append(f'{key} in [{values}]')
+                conditions_parts.append(f"{key} in [{values}]")
             elif isinstance(value, str):
                 conditions_parts.append(f'{key} == "{value}"')
             elif isinstance(value, (int, float)):
-                conditions_parts.append(f'{key} == {value}')
+                conditions_parts.append(f"{key} == {value}")
             elif isinstance(value, bool):
-                conditions_parts.append(f'{key} == {"true" if value else "false"}')
+                conditions_parts.append(f"{key} == {'true' if value else 'false'}")
 
         conditions_str = "\n    ".join(conditions_parts)
         effect_str = "true" if self.effect == PolicyEffect.ALLOW else "false"
@@ -169,6 +172,7 @@ rule_{self.id} {{
 @dataclass
 class LineageEntry:
     """Tracks data lineage — origin, transformation, and consumer."""
+
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     data_id: str = ""
     source: str = ""
@@ -289,13 +293,15 @@ class OPAPolicyEngine:
         return True
 
     def _log_decision(self, context: Dict, effect: PolicyEffect, reason: str, rule_id: str) -> None:
-        self._decision_log.append({
-            "timestamp": time.time(),
-            "context": context,
-            "effect": effect.value,
-            "reason": reason,
-            "rule_id": rule_id,
-        })
+        self._decision_log.append(
+            {
+                "timestamp": time.time(),
+                "context": context,
+                "effect": effect.value,
+                "reason": reason,
+                "rule_id": rule_id,
+            }
+        )
 
 
 class DataLineageTracker:
@@ -497,51 +503,59 @@ class DaaSService:
     def _register_default_policies(self) -> None:
         """Register built-in data sovereignty policies."""
         # GDPR: EU data cannot leave EU
-        self._policy_engine.add_policy(PolicyRule(
-            name="GDPR Cross-Border Restriction",
-            description="EU data cannot be transferred to non-EU jurisdictions",
-            effect=PolicyEffect.DENY,
-            conditions={
-                "source_jurisdiction": "EU",
-                "target_jurisdiction": "US",
-            },
-            priority=100,
-        ))
+        self._policy_engine.add_policy(
+            PolicyRule(
+                name="GDPR Cross-Border Restriction",
+                description="EU data cannot be transferred to non-EU jurisdictions",
+                effect=PolicyEffect.DENY,
+                conditions={
+                    "source_jurisdiction": "EU",
+                    "target_jurisdiction": "US",
+                },
+                priority=100,
+            )
+        )
 
         # Restricted data requires explicit authorization
-        self._policy_engine.add_policy(PolicyRule(
-            name="Restricted Data Access",
-            description="Restricted data requires explicit authorization",
-            effect=PolicyEffect.DENY,
-            conditions={
-                "data_classification": "restricted",
-                "authorized": False,
-            },
-            priority=90,
-        ))
+        self._policy_engine.add_policy(
+            PolicyRule(
+                name="Restricted Data Access",
+                description="Restricted data requires explicit authorization",
+                effect=PolicyEffect.DENY,
+                conditions={
+                    "data_classification": "restricted",
+                    "authorized": False,
+                },
+                priority=90,
+            )
+        )
 
         # Top secret data — always deny remote access
-        self._policy_engine.add_policy(PolicyRule(
-            name="Top Secret Local Only",
-            description="Top secret data can only be accessed locally",
-            effect=PolicyEffect.DENY,
-            conditions={
-                "data_classification": "top_secret",
-                "access_type": "remote",
-            },
-            priority=100,
-        ))
+        self._policy_engine.add_policy(
+            PolicyRule(
+                name="Top Secret Local Only",
+                description="Top secret data can only be accessed locally",
+                effect=PolicyEffect.DENY,
+                conditions={
+                    "data_classification": "top_secret",
+                    "access_type": "remote",
+                },
+                priority=100,
+            )
+        )
 
         # Allow public data by default
-        self._policy_engine.add_policy(PolicyRule(
-            name="Public Data Allow",
-            description="Public data is accessible by default",
-            effect=PolicyEffect.ALLOW,
-            conditions={
-                "data_classification": "public",
-            },
-            priority=0,
-        ))
+        self._policy_engine.add_policy(
+            PolicyRule(
+                name="Public Data Allow",
+                description="Public data is accessible by default",
+                effect=PolicyEffect.ALLOW,
+                conditions={
+                    "data_classification": "public",
+                },
+                priority=0,
+            )
+        )
 
     async def start(self) -> None:
         """Start the DaaS service."""

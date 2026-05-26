@@ -27,8 +27,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ────────────────────────────────────────────────────────────────
 
+
 class ModalityType(Enum):
     """Types of input modalities."""
+
     TEXT = "text"
     IMAGE = "image"
     AUDIO = "audio"
@@ -45,18 +47,20 @@ class ModalityType(Enum):
 
 class FusionStrategy(Enum):
     """Multi-modal fusion strategies."""
-    EARLY = "early"           # Feature-level fusion
-    LATE = "late"             # Decision-level fusion
-    HYBRID = "hybrid"         # Mixed early/late
-    ATTENTION = "attention"   # Cross-modal attention
-    TENSOR = "tensor"         # Tensor fusion
-    GATED = "gated"           # Gated fusion
-    ADAPTIVE = "adaptive"     # Learned fusion weights
+
+    EARLY = "early"  # Feature-level fusion
+    LATE = "late"  # Decision-level fusion
+    HYBRID = "hybrid"  # Mixed early/late
+    ATTENTION = "attention"  # Cross-modal attention
+    TENSOR = "tensor"  # Tensor fusion
+    GATED = "gated"  # Gated fusion
+    ADAPTIVE = "adaptive"  # Learned fusion weights
     HIERARCHICAL = "hierarchical"
 
 
 class AlignmentMethod(Enum):
     """Cross-modal alignment methods."""
+
     CONTRASTIVE = "contrastive"
     CANONICAL = "canonical_correlation"
     ATTENTION = "cross_attention"
@@ -67,6 +71,7 @@ class AlignmentMethod(Enum):
 
 class FusionState(Enum):
     """Fusion engine states."""
+
     IDLE = "idle"
     ENCODING = "encoding"
     ALIGNING = "aligning"
@@ -78,18 +83,18 @@ class FusionState(Enum):
 
 # ─── Data Models ──────────────────────────────────────────────────────────
 
+
 @dataclass
 class ModalityInput:
     """Input from a single modality."""
+
     input_id: str
     modality: ModalityType
     data: Any = None
     embedding: List[float] = field(default_factory=list)
     confidence: float = 1.0
     metadata: Dict[str, Any] = field(default_factory=dict)
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -103,6 +108,7 @@ class ModalityInput:
 @dataclass
 class CrossModalAlignment:
     """Alignment between two modalities."""
+
     alignment_id: str
     source_modality: ModalityType
     target_modality: ModalityType
@@ -124,6 +130,7 @@ class CrossModalAlignment:
 @dataclass
 class FusionResult:
     """Result of multi-modal fusion."""
+
     result_id: str
     strategy: FusionStrategy
     fused_representation: List[float] = field(default_factory=list)
@@ -132,9 +139,7 @@ class FusionResult:
     uncertainty: float = 0.0
     emergent_insights: List[str] = field(default_factory=list)
     reasoning_chain: List[str] = field(default_factory=list)
-    created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -149,6 +154,7 @@ class FusionResult:
 
 
 # ─── Modality Encoders ────────────────────────────────────────────────────
+
 
 class ModalityEncoder:
     """Encodes raw inputs into modality-specific embeddings."""
@@ -170,13 +176,13 @@ class ModalityEncoder:
         # Convert hex hash to embedding vector
         embedding = []
         for i in range(0, min(len(h), self.embedding_dim * 2), 2):
-            val = int(h[i:i+2], 16) / 255.0 - 0.5
+            val = int(h[i : i + 2], 16) / 255.0 - 0.5
             embedding.append(val)
 
         # Pad or truncate to target dimension
         while len(embedding) < self.embedding_dim:
             embedding.append(0.0)
-        embedding = embedding[:self.embedding_dim]
+        embedding = embedding[: self.embedding_dim]
 
         modality_input.embedding = embedding
         return embedding
@@ -231,6 +237,7 @@ class CrossModalAttention:
 
 
 # ─── Fusion Engine ────────────────────────────────────────────────────────
+
 
 class FusionEngine:
     """Multi-modal fusion engine with multiple strategies."""
@@ -306,11 +313,13 @@ class FusionEngine:
         """Early fusion: concatenate and project."""
         all_emb = []
         for mod, emb in embeddings.items():
-            all_emb.extend(emb[:self.embedding_dim // len(embeddings)] if len(embeddings) > 1 else emb)
+            all_emb.extend(
+                emb[: self.embedding_dim // len(embeddings)] if len(embeddings) > 1 else emb
+            )
 
         # Normalize
         norm = math.sqrt(sum(x * x for x in all_emb)) or 1.0
-        fused = [x / norm for x in all_emb[:self.embedding_dim]]
+        fused = [x / norm for x in all_emb[: self.embedding_dim]]
         while len(fused) < self.embedding_dim:
             fused.append(0.0)
 
@@ -365,7 +374,9 @@ class FusionEngine:
             fused = [x / total_weight for x in fused]
             contributions = {m: w / total_weight for m, w in contributions.items()}
 
-        confidence = min(1.0, total_weight / (len(mods) * (len(mods) - 1))) if len(mods) > 1 else 0.5
+        confidence = (
+            min(1.0, total_weight / (len(mods) * (len(mods) - 1))) if len(mods) > 1 else 0.5
+        )
         return fused, contributions, confidence
 
     def _tensor_fusion(
@@ -381,7 +392,7 @@ class FusionEngine:
         fused = [1.0] * self.embedding_dim
         for mod, emb in embeddings.items():
             for i in range(min(len(fused), len(emb))):
-                fused[i] *= (emb[i] + 0.1)  # Add small constant to prevent zeroing
+                fused[i] *= emb[i] + 0.1  # Add small constant to prevent zeroing
 
         # Normalize
         norm = math.sqrt(sum(x * x for x in fused)) or 1.0
@@ -438,7 +449,7 @@ class FusionEngine:
 
         # Check for modality complementarity
         for i, m1 in enumerate(mods):
-            for m2 in mods[i+1:]:
+            for m2 in mods[i + 1 :]:
                 e1 = embeddings[m1]
                 e2 = embeddings[m2]
                 if e1 and e2:
@@ -450,6 +461,7 @@ class FusionEngine:
 
 
 # ─── Main Service ─────────────────────────────────────────────────────────
+
 
 class TranscendentFusionService:
     """Transcendent Multi-Modal Fusion Service for the Tranc3 ecosystem.

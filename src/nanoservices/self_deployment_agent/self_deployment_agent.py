@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 class DeploymentState(Enum):
     """States a deployment can be in."""
+
     IDLE = "idle"
     PLANNING = "planning"
     DEPLOYING = "deploying"
@@ -37,6 +38,7 @@ class DeploymentState(Enum):
 
 class DeploymentAction(Enum):
     """Actions the agent can take."""
+
     DEPLOY = "deploy"
     ROLLBACK = "rollback"
     HEAL = "heal"
@@ -50,6 +52,7 @@ class DeploymentAction(Enum):
 @dataclass
 class DeploymentConfig:
     """Configuration for a deployment operation."""
+
     service_name: str
     image_tag: str
     forgejo_repo: str = "https://forgejo.local/tranc3/infra"
@@ -85,6 +88,7 @@ class DeploymentConfig:
 @dataclass
 class DeploymentResult:
     """Result of a deployment operation."""
+
     success: bool
     action: DeploymentAction
     service_name: str
@@ -114,6 +118,7 @@ class DeploymentResult:
 @dataclass
 class DriftReport:
     """Report of configuration drift detected in the cluster."""
+
     service_name: str
     has_drift: bool
     expected_state: Dict[str, Any] = field(default_factory=dict)
@@ -143,9 +148,13 @@ class KustomizeBuilder:
         self.base_path = Path(base_path)
         self.overlays_path = Path(overlays_path)
 
-    def generate_kustomization(self, resources: List[str], namespace: str = "default",
-                                patches: Optional[List[Dict]] = None,
-                                images: Optional[List[Dict]] = None) -> Dict[str, Any]:
+    def generate_kustomization(
+        self,
+        resources: List[str],
+        namespace: str = "default",
+        patches: Optional[List[Dict]] = None,
+        images: Optional[List[Dict]] = None,
+    ) -> Dict[str, Any]:
         kustomization = {
             "apiVersion": "kustomize.config.k8s.io/v1beta1",
             "kind": "Kustomization",
@@ -166,7 +175,9 @@ class KustomizeBuilder:
         try:
             result = subprocess.run(
                 ["kubectl", "kustomize", str(overlay_dir)],
-                capture_output=True, text=True, timeout=30
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if result.returncode == 0:
                 return result.stdout
@@ -187,7 +198,9 @@ class FluxCDClient:
         try:
             result = subprocess.run(
                 ["flux", "reconcile", resource_type, name, "--namespace", self.namespace],
-                capture_output=True, text=True, timeout=60
+                capture_output=True,
+                text=True,
+                timeout=60,
             )
             return result.returncode == 0
         except (subprocess.TimeoutExpired, FileNotFoundError) as e:
@@ -198,7 +211,9 @@ class FluxCDClient:
         try:
             result = subprocess.run(
                 ["flux", "get", "kustomization", name, "--namespace", self.namespace, "-o", "json"],
-                capture_output=True, text=True, timeout=30
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if result.returncode == 0:
                 return json.loads(result.stdout)
@@ -211,7 +226,9 @@ class FluxCDClient:
         try:
             result = subprocess.run(
                 ["flux", "suspend", "kustomization", name, "--namespace", self.namespace],
-                capture_output=True, text=True, timeout=30
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             return result.returncode == 0
         except (subprocess.TimeoutExpired, FileNotFoundError) as e:
@@ -222,7 +239,9 @@ class FluxCDClient:
         try:
             result = subprocess.run(
                 ["flux", "resume", "kustomization", name, "--namespace", self.namespace],
-                capture_output=True, text=True, timeout=30
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             return result.returncode == 0
         except (subprocess.TimeoutExpired, FileNotFoundError) as e:
@@ -243,8 +262,9 @@ class ForgejoClient:
             headers["Authorization"] = f"token {self.token}"
         return headers
 
-    def create_commit(self, repo: str, branch: str, file_path: str,
-                      content: str, message: str) -> Optional[str]:
+    def create_commit(
+        self, repo: str, branch: str, file_path: str, content: str, message: str
+    ) -> Optional[str]:
         sha = hashlib.sha256(content.encode()).hexdigest()[:12]
         logger.info("Forgejo commit %s to %s/%s:%s — %s", sha, repo, branch, file_path, message)
         return sha
@@ -257,8 +277,9 @@ class ForgejoClient:
         logger.info("Forgejo create branch %s in %s from %s", branch, repo, ref)
         return True
 
-    def create_pull_request(self, repo: str, title: str, head: str,
-                            base: str = "main", body: str = "") -> Optional[int]:
+    def create_pull_request(
+        self, repo: str, title: str, head: str, base: str = "main", body: str = ""
+    ) -> Optional[int]:
         pr_id = abs(hash(title)) % 10000
         logger.info("Forgejo PR #%d: %s (%s→%s)", pr_id, title, head, base)
         return pr_id
@@ -271,14 +292,23 @@ class ForgejoClient:
 class HealthChecker:
     """Verifies deployment health via Kubernetes probes and custom checks."""
 
-    def check_deployment_health(self, service_name: str, namespace: str = "default",
-                                 timeout: float = 120.0) -> Tuple[bool, Dict[str, Any]]:
+    def check_deployment_health(
+        self, service_name: str, namespace: str = "default", timeout: float = 120.0
+    ) -> Tuple[bool, Dict[str, Any]]:
         details: Dict[str, Any] = {"service": service_name, "namespace": namespace}
         try:
             result = subprocess.run(
-                ["kubectl", "rollout", "status", f"deployment/{service_name}",
-                 f"--namespace={namespace}", f"--timeout={timeout}s"],
-                capture_output=True, text=True, timeout=timeout + 10
+                [
+                    "kubectl",
+                    "rollout",
+                    "status",
+                    f"deployment/{service_name}",
+                    f"--namespace={namespace}",
+                    f"--timeout={timeout}s",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=timeout + 10,
             )
             healthy = result.returncode == 0
             details["output"] = result.stdout[:500] if result.stdout else ""
@@ -295,9 +325,17 @@ class HealthChecker:
     def check_pods_ready(self, service_name: str, namespace: str = "default") -> Tuple[int, int]:
         try:
             result = subprocess.run(
-                ["kubectl", "get", "pods", f"-l=app={service_name}",
-                 f"--namespace={namespace}", "--no-headers"],
-                capture_output=True, text=True, timeout=15
+                [
+                    "kubectl",
+                    "get",
+                    "pods",
+                    f"-l=app={service_name}",
+                    f"--namespace={namespace}",
+                    "--no-headers",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=15,
             )
             if result.returncode != 0:
                 return 0, 0
@@ -327,7 +365,7 @@ class DriftDetector:
                 has_drift=False,
                 severity="unknown",
                 auto_healable=False,
-                details={"message": "Could not fetch cluster status — simulating no drift"}
+                details={"message": "Could not fetch cluster status — simulating no drift"},
             )
 
         conditions = status.get("status", {}).get("conditions", [])
@@ -347,12 +385,14 @@ class DriftDetector:
             has_drift=True,
             severity="medium",
             auto_healable=True,
-            diff=[{"field": "status.conditions", "expected": "Ready=True", "actual": "Ready=Unknown"}],
+            diff=[
+                {"field": "status.conditions", "expected": "Ready=True", "actual": "Ready=Unknown"}
+            ],
         )
 
-    def heuristic_drift_check(self, service_name: str,
-                               expected_replicas: int = 1,
-                               expected_image: str = "") -> DriftReport:
+    def heuristic_drift_check(
+        self, service_name: str, expected_replicas: int = 1, expected_image: str = ""
+    ) -> DriftReport:
         logger.info("Heuristic drift check for %s", service_name)
         return DriftReport(
             service_name=service_name,
@@ -397,7 +437,9 @@ class SelfDeploymentAgent:
         start_time = time.time()
         self.state = DeploymentState.PLANNING
 
-        logger.info("Deployment %s starting for %s:%s", self._deploy_id, cfg.service_name, cfg.image_tag)
+        logger.info(
+            "Deployment %s starting for %s:%s", self._deploy_id, cfg.service_name, cfg.image_tag
+        )
 
         try:
             kustomization = self.kustomize.generate_kustomization(
@@ -446,7 +488,9 @@ class SelfDeploymentAgent:
                 service_name=cfg.service_name,
                 state=self.state,
                 commit_sha=commit_sha,
-                message="Deployment successful" if healthy else "Deployed but health check inconclusive",
+                message="Deployment successful"
+                if healthy
+                else "Deployed but health check inconclusive",
                 details=health_details,
                 duration_seconds=time.time() - start_time,
             )
@@ -467,8 +511,9 @@ class SelfDeploymentAgent:
             self.deployment_history.append(result)
             return result
 
-    def _rollback(self, cfg: DeploymentConfig, start_time: float,
-                  current_sha: str, reason: Dict[str, Any]) -> DeploymentResult:
+    def _rollback(
+        self, cfg: DeploymentConfig, start_time: float, current_sha: str, reason: Dict[str, Any]
+    ) -> DeploymentResult:
         self.state = DeploymentState.ROLLING_BACK
         logger.info("Rolling back %s from commit %s", cfg.service_name, current_sha)
 
@@ -508,8 +553,12 @@ class SelfDeploymentAgent:
             self.drift_reports.append(report)
             return report
 
-        logger.warning("Drift detected for %s (severity=%s, auto_healable=%s)",
-                       svc, report.severity, report.auto_healable)
+        logger.warning(
+            "Drift detected for %s (severity=%s, auto_healable=%s)",
+            svc,
+            report.severity,
+            report.auto_healable,
+        )
 
         if report.auto_healable:
             logger.info("Auto-healing drift for %s", svc)
@@ -587,6 +636,8 @@ class SelfDeploymentAgent:
             "config": self.config.to_dict(),
             "deployment_count": len(self.deployment_history),
             "drift_report_count": len(self.drift_reports),
-            "last_deployment": self.deployment_history[-1].to_dict() if self.deployment_history else None,
+            "last_deployment": self.deployment_history[-1].to_dict()
+            if self.deployment_history
+            else None,
             "last_drift": self.drift_reports[-1].to_dict() if self.drift_reports else None,
         }

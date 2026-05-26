@@ -68,7 +68,9 @@ class SteadyStateHypothesis:
 class ChaosExperiment:
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     name: str = ""
-    fault: FaultSpec = field(default_factory=lambda: FaultSpec(fault_type=FaultType.LATENCY_INJECTION, target_service=""))
+    fault: FaultSpec = field(
+        default_factory=lambda: FaultSpec(fault_type=FaultType.LATENCY_INJECTION, target_service="")
+    )
     hypotheses: List[SteadyStateHypothesis] = field(default_factory=list)
     state: ExperimentState = ExperimentState.PLANNED
     blast_radius: BlastRadius = BlastRadius.SINGLE_SERVICE
@@ -119,7 +121,9 @@ class FaultInjector:
         self._active_faults[fault.target_service] = fault
         logger.info(
             "Injected %s fault into %s (experiment %s)",
-            fault.fault_type.value, fault.target_service, experiment_id,
+            fault.fault_type.value,
+            fault.target_service,
+            experiment_id,
         )
         return True
 
@@ -146,7 +150,9 @@ class SteadyStateValidator:
     def validate_before(self, hypotheses: List[SteadyStateHypothesis]) -> bool:
         return all(self._check(h) for h in hypotheses)
 
-    def validate_after(self, hypotheses: List[SteadyStateHypothesis]) -> List[SteadyStateHypothesis]:
+    def validate_after(
+        self, hypotheses: List[SteadyStateHypothesis]
+    ) -> List[SteadyStateHypothesis]:
         results = []
         for h in hypotheses:
             checked = self._check(h)
@@ -178,7 +184,11 @@ class ChaosEngineeringService:
         self._safety_enabled = True
 
     def initialize(self) -> None:
-        logger.info("ChaosEngineeringService initialized (auto_rollback=%s, max_concurrent=%d)", self._auto_rollback, self._max_concurrent)
+        logger.info(
+            "ChaosEngineeringService initialized (auto_rollback=%s, max_concurrent=%d)",
+            self._auto_rollback,
+            self._max_concurrent,
+        )
 
     def create_experiment(
         self,
@@ -217,10 +227,15 @@ class ChaosEngineeringService:
         exp = self._experiments.get(experiment_id)
         if not exp:
             return ChaosReport(
-                experiment_id=experiment_id, experiment_name="unknown",
-                fault_type=FaultType.LATENCY_INJECTION, target="unknown",
-                duration_seconds=0, hypotheses_passed=0, hypotheses_total=0,
-                state=ExperimentState.FAILED, resilience_score=0.0,
+                experiment_id=experiment_id,
+                experiment_name="unknown",
+                fault_type=FaultType.LATENCY_INJECTION,
+                target="unknown",
+                duration_seconds=0,
+                hypotheses_passed=0,
+                hypotheses_total=0,
+                state=ExperimentState.FAILED,
+                resilience_score=0.0,
             )
 
         # Safety check
@@ -229,7 +244,10 @@ class ChaosEngineeringService:
             exp.state = ExperimentState.ABORTED
             return self._make_report(exp)
 
-        if not self._safety_enabled and exp.blast_radius in (BlastRadius.CLUSTER, BlastRadius.GLOBAL):
+        if not self._safety_enabled and exp.blast_radius in (
+            BlastRadius.CLUSTER,
+            BlastRadius.GLOBAL,
+        ):
             exp.state = ExperimentState.ABORTED
             exp.result_summary = "Aborted: safety disabled for high blast radius"
             return self._make_report(exp)
@@ -256,19 +274,27 @@ class ChaosEngineeringService:
         while elapsed < exp.fault.duration_seconds:
             # Probabilistic fault behavior
             if random.random() > exp.fault.probability:
-                exp.observations.append({"time": elapsed, "event": "fault_skipped", "probability": exp.fault.probability})
+                exp.observations.append(
+                    {
+                        "time": elapsed,
+                        "event": "fault_skipped",
+                        "probability": exp.fault.probability,
+                    }
+                )
 
             elapsed += check_interval
 
         # Post-flight: validate steady state recovery
         results = self._validator.validate_after(exp.hypotheses)
         for h in results:
-            exp.observations.append({
-                "hypothesis": h.name,
-                "passed": h.passed,
-                "expected": h.expected_value,
-                "actual": h.actual_value,
-            })
+            exp.observations.append(
+                {
+                    "hypothesis": h.name,
+                    "passed": h.passed,
+                    "expected": h.expected_value,
+                    "actual": h.actual_value,
+                }
+            )
 
         # Auto-rollback
         if self._auto_rollback:
@@ -290,7 +316,9 @@ class ChaosEngineeringService:
         findings = []
         for h in exp.hypotheses:
             if not h.passed:
-                findings.append(f"FAILED: {h.name} — expected {h.expected_value}, got {h.actual_value}")
+                findings.append(
+                    f"FAILED: {h.name} — expected {h.expected_value}, got {h.actual_value}"
+                )
             else:
                 findings.append(f"PASSED: {h.name}")
 

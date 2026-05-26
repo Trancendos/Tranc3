@@ -35,64 +35,69 @@ logger = logging.getLogger(__name__)
 
 class FlowState(Enum):
     """States of a fluid service."""
-    SOLID = "solid"         # Frozen, not flowing
-    LIQUID = "liquid"       # Flowing, adapting to container
-    GAS = "gas"             # Expanding to fill space
-    PLASMA = "plasma"       # Supercharged, ionized state
+
+    SOLID = "solid"  # Frozen, not flowing
+    LIQUID = "liquid"  # Flowing, adapting to container
+    GAS = "gas"  # Expanding to fill space
+    PLASMA = "plasma"  # Supercharged, ionized state
     SUPERFLUID = "superfluid"  # Zero viscosity, perfect flow
 
 
 class ContainerShape(Enum):
     """Shapes of flow containers."""
-    PIPELINE = "pipeline"       # Linear flow
-    RESERVOIR = "reservoir"     # Accumulation buffer
-    VORTEX = "vortex"           # Circular/spiral processing
-    DELTA = "delta"             # Fan-out distribution
-    CONVERGENT = "convergent"   # Fan-in aggregation
-    POROUS = "porous"           # Filter/mesh processing
-    SPHERICAL = "spherical"     # All-to-all communication
-    FRACTAL = "fractal"         # Self-similar recursive processing
+
+    PIPELINE = "pipeline"  # Linear flow
+    RESERVOIR = "reservoir"  # Accumulation buffer
+    VORTEX = "vortex"  # Circular/spiral processing
+    DELTA = "delta"  # Fan-out distribution
+    CONVERGENT = "convergent"  # Fan-in aggregation
+    POROUS = "porous"  # Filter/mesh processing
+    SPHERICAL = "spherical"  # All-to-all communication
+    FRACTAL = "fractal"  # Self-similar recursive processing
 
 
 class FluidProperty(Enum):
     """Physical properties mapped to service behavior."""
-    VISCOSITY = "viscosity"         # Resistance to flow/changes
-    DENSITY = "density"             # Resource consumption per unit
+
+    VISCOSITY = "viscosity"  # Resistance to flow/changes
+    DENSITY = "density"  # Resource consumption per unit
     SURFACE_TENSION = "surface_tension"  # Clustering/cohesion strength
     COMPRESSIBILITY = "compressibility"  # How much load it can absorb
-    VOLATILITY = "volatility"       # Tendency to scale up rapidly
-    CONDUCTIVITY = "conductivity"   # Communication throughput
-    ELASTICITY = "elasticity"       # Ability to recover from strain
-    TURBIDITY = "turbidity"         # Processing complexity/opacity
+    VOLATILITY = "volatility"  # Tendency to scale up rapidly
+    CONDUCTIVITY = "conductivity"  # Communication throughput
+    ELASTICITY = "elasticity"  # Ability to recover from strain
+    TURBIDITY = "turbidity"  # Processing complexity/opacity
 
 
 class PressureType(Enum):
     """Types of pressure in the fluid system."""
-    THROUGHPUT = "throughput"   # Requests per second
-    MEMORY = "memory"           # Memory utilization
-    CPU = "cpu"                 # CPU utilization
-    NETWORK = "network"         # Bandwidth pressure
-    LATENCY = "latency"         # Response time pressure
+
+    THROUGHPUT = "throughput"  # Requests per second
+    MEMORY = "memory"  # Memory utilization
+    CPU = "cpu"  # CPU utilization
+    NETWORK = "network"  # Bandwidth pressure
+    LATENCY = "latency"  # Response time pressure
     BACKPRESSURE = "backpressure"  # Downstream resistance
 
 
 @dataclass
 class FluidProperties:
     """Physical-like properties of a fluid service."""
-    viscosity: float = 0.5       # 0.0 (instant) to 1.0 (very slow adaptation)
-    density: float = 0.5         # Resource usage per unit
+
+    viscosity: float = 0.5  # 0.0 (instant) to 1.0 (very slow adaptation)
+    density: float = 0.5  # Resource usage per unit
     surface_tension: float = 0.3  # Clustering strength
     compressibility: float = 0.7  # Load absorption capacity
-    volatility: float = 0.3       # Tendency to scale up
-    conductivity: float = 0.8     # Communication throughput
-    elasticity: float = 0.6       # Recovery from strain
-    turbidity: float = 0.2        # Processing complexity
+    volatility: float = 0.3  # Tendency to scale up
+    conductivity: float = 0.8  # Communication throughput
+    elasticity: float = 0.6  # Recovery from strain
+    turbidity: float = 0.2  # Processing complexity
 
     def effective_flow_rate(self, pressure: float) -> float:
         """Calculate effective flow rate given pressure (Poiseuille-like)."""
         # Simplified: flow_rate = pressure / viscosity
         if self.viscosity <= 0:
-            return float('inf')
+            return float("inf")
         return pressure / self.viscosity
 
     def expansion_factor(self, available_space: float) -> float:
@@ -113,16 +118,17 @@ class LiquidicService:
     Liquidic services flow to fill containers, adapt their shape
     to constraints, and merge/split based on pressure gradients.
     """
+
     service_id: str = ""
     name: str = ""
     flow_state: FlowState = FlowState.LIQUID
     properties: FluidProperties = field(default_factory=FluidProperties)
     current_pressure: Dict[PressureType, float] = field(default_factory=dict)
-    capacity: float = 100.0       # Max throughput units
-    current_load: float = 0.0     # Current throughput usage
+    capacity: float = 100.0  # Max throughput units
+    current_load: float = 0.0  # Current throughput usage
     container_id: Optional[str] = None
-    temperature: float = 20.0     # System "temperature" (load indicator)
-    flow_rate: float = 0.0        # Current flow rate
+    temperature: float = 20.0  # System "temperature" (load indicator)
+    flow_rate: float = 0.0  # Current flow rate
     connected_services: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -139,12 +145,12 @@ class LiquidicService:
     def state_transition_temperature(self) -> float:
         """Temperature at which state transitions occur."""
         if self.flow_state == FlowState.SOLID:
-            return 0.0   # Melting point
+            return 0.0  # Melting point
         elif self.flow_state == FlowState.LIQUID:
             return 100.0  # Boiling point
         elif self.flow_state == FlowState.GAS:
             return 10000.0  # Ionization point
-        return float('inf')
+        return float("inf")
 
     def apply_pressure(self, pressure_type: PressureType, magnitude: float) -> float:
         """Apply pressure to the service and return resulting flow."""
@@ -188,18 +194,20 @@ class GasService:
     Gas services expand to fill all available space, scaling
     horizontally without explicit configuration.
     """
+
     service_id: str = ""
     name: str = ""
-    properties: FluidProperties = field(default_factory=lambda: FluidProperties(
-        viscosity=0.1, density=0.2, compressibility=0.95,
-        volatility=0.8, conductivity=0.9
-    ))
+    properties: FluidProperties = field(
+        default_factory=lambda: FluidProperties(
+            viscosity=0.1, density=0.2, compressibility=0.95, volatility=0.8, conductivity=0.9
+        )
+    )
     instances: int = 1
     max_instances: int = 100
     min_instances: int = 1
-    volume: float = 1.0        # Current service volume
+    volume: float = 1.0  # Current service volume
     max_volume: float = 100.0  # Maximum expandable volume
-    pressure: float = 1.0      # Current internal pressure
+    pressure: float = 1.0  # Current internal pressure
     temperature: float = 20.0
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -268,13 +276,14 @@ class FlowContainer:
     Like physical containers shape liquids and gases, flow containers
     define the execution environment and constraints for services.
     """
+
     container_id: str = ""
     name: str = ""
     shape: ContainerShape = ContainerShape.PIPELINE
-    capacity: float = 1000.0       # Total capacity units
-    current_fill: float = 0.0      # Current fill level
-    inlet_pressure: float = 1.0    # Pressure at inlet
-    outlet_pressure: float = 0.5   # Pressure at outlet
+    capacity: float = 1000.0  # Total capacity units
+    current_fill: float = 0.0  # Current fill level
+    inlet_pressure: float = 1.0  # Pressure at inlet
+    outlet_pressure: float = 0.5  # Pressure at outlet
     max_temperature: float = 1000.0  # Overheat threshold
     contained_services: List[str] = field(default_factory=list)
     properties: Dict[str, Any] = field(default_factory=dict)
@@ -323,16 +332,17 @@ class PressureValve:
     Regulates flow rates between containers to prevent
     resource exhaustion and ensure smooth operation.
     """
+
     valve_id: str = ""
     name: str = ""
     source_container: str = ""  # container_id
     target_container: str = ""  # container_id
-    max_flow_rate: float = 100.0   # Max throughput units/sec
+    max_flow_rate: float = 100.0  # Max throughput units/sec
     current_flow_rate: float = 0.0
-    opening_ratio: float = 1.0     # 0.0 (closed) to 1.0 (fully open)
+    opening_ratio: float = 1.0  # 0.0 (closed) to 1.0 (fully open)
     trigger_pressure: float = 0.8  # Open when source pressure > this
     release_pressure: float = 0.3  # Close when source pressure < this
-    valve_type: str = "safety"     # safety, regulator, check
+    valve_type: str = "safety"  # safety, regulator, check
     is_open: bool = True
     total_flow_through: float = 0.0
 
@@ -345,9 +355,7 @@ class PressureValve:
         if source_pressure >= self.trigger_pressure:
             self.is_open = True
             # Flow proportional to opening ratio and pressure
-            self.current_flow_rate = (
-                self.max_flow_rate * self.opening_ratio * source_pressure
-            )
+            self.current_flow_rate = self.max_flow_rate * self.opening_ratio * source_pressure
         elif source_pressure <= self.release_pressure:
             self.is_open = False
             self.current_flow_rate = 0.0
@@ -399,7 +407,9 @@ class LiquidicFlowEngine:
         return service.service_id
 
     def create_container(
-        self, name: str, shape: ContainerShape = ContainerShape.PIPELINE,
+        self,
+        name: str,
+        shape: ContainerShape = ContainerShape.PIPELINE,
         capacity: float = 1000.0,
     ) -> FlowContainer:
         """Create a flow container."""
@@ -409,19 +419,27 @@ class LiquidicFlowEngine:
         return container
 
     def create_valve(
-        self, name: str, source: str, target: str,
+        self,
+        name: str,
+        source: str,
+        target: str,
         max_flow_rate: float = 100.0,
     ) -> PressureValve:
         """Create a pressure valve between containers."""
         valve = PressureValve(
-            name=name, source_container=source, target_container=target,
+            name=name,
+            source_container=source,
+            target_container=target,
             max_flow_rate=max_flow_rate,
         )
         self._valves[valve.valve_id] = valve
         return valve
 
     def flow_through(
-        self, service_id: str, container_id: str, volume: float = 1.0,
+        self,
+        service_id: str,
+        container_id: str,
+        volume: float = 1.0,
     ) -> bool:
         """Flow a service into a container."""
         container = self._containers.get(container_id)
@@ -435,7 +453,7 @@ class LiquidicFlowEngine:
             return False
 
         if container.add_service(service_id, volume):
-            if hasattr(service, 'container_id'):
+            if hasattr(service, "container_id"):
                 service.container_id = container_id
             self._log_flow("flow_in", service_id, container_id, volume)
             return True
@@ -458,7 +476,7 @@ class LiquidicFlowEngine:
         """Auto-scale gas services based on container pressure."""
         scaling = {}
         for sid, gas in self._gas_services.items():
-            container = self._containers.get(getattr(gas, 'container_id', ''))
+            container = self._containers.get(getattr(gas, "container_id", ""))
             if container and container.fill_ratio > 0.7:
                 new_instances = gas.expand(container.capacity - container.current_fill)
                 if new_instances > 0:
@@ -485,14 +503,14 @@ class LiquidicFlowEngine:
                 continue
 
             per_service = available_capacity / n_services
-            distribution[container_id] = {
-                sid: per_service for sid in container.contained_services
-            }
+            distribution[container_id] = {sid: per_service for sid in container.contained_services}
 
         return distribution
 
     def find_flow_path(
-        self, source_container: str, target_container: str,
+        self,
+        source_container: str,
+        target_container: str,
     ) -> List[str]:
         """Find a flow path between two containers through valves."""
         # Build adjacency from valves
@@ -558,8 +576,7 @@ class LiquidicFlowEngine:
                 "total_load": total_liquidic_load,
                 "states": {
                     state.value: sum(
-                        1 for s in self._liquidic_services.values()
-                        if s.flow_state == state
+                        1 for s in self._liquidic_services.values() if s.flow_state == state
                     )
                     for state in FlowState
                 },
@@ -581,10 +598,12 @@ class LiquidicFlowEngine:
 
     def _log_flow(self, event_type: str, service_id: str, container_id: str, volume: float):
         """Log a flow event."""
-        self._flow_log.append({
-            "timestamp": time.time(),
-            "event": event_type,
-            "service_id": service_id,
-            "container_id": container_id,
-            "volume": volume,
-        })
+        self._flow_log.append(
+            {
+                "timestamp": time.time(),
+                "event": event_type,
+                "service_id": service_id,
+                "container_id": container_id,
+                "volume": volume,
+            }
+        )

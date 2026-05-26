@@ -53,7 +53,10 @@ class ConfigSnapshot:
     timestamp: float = field(default_factory=time.time)
 
     def compute_hash(self) -> str:
-        content = json.dumps({k: {"v": str(e.value), "s": e.source.value} for k, e in sorted(self.entries.items())}, sort_keys=True)
+        content = json.dumps(
+            {k: {"v": str(e.value), "s": e.source.value} for k, e in sorted(self.entries.items())},
+            sort_keys=True,
+        )
         self.hash = hashlib.sha256(content.encode()).hexdigest()
         return self.hash
 
@@ -83,16 +86,38 @@ class ConfigSchema:
     def service_name(self) -> str:
         return self._service_name
 
-    def add_required(self, key: str, value_type: str = "str", default: Any = None, sensitive: bool = False, description: str = "") -> None:
+    def add_required(
+        self,
+        key: str,
+        value_type: str = "str",
+        default: Any = None,
+        sensitive: bool = False,
+        description: str = "",
+    ) -> None:
         self._required_keys[key] = ConfigEntry(
-            key=key, value=default, schema_type=value_type,
-            required=True, sensitive=sensitive, description=description,
+            key=key,
+            value=default,
+            schema_type=value_type,
+            required=True,
+            sensitive=sensitive,
+            description=description,
         )
 
-    def add_optional(self, key: str, value_type: str = "str", default: Any = None, sensitive: bool = False, description: str = "") -> None:
+    def add_optional(
+        self,
+        key: str,
+        value_type: str = "str",
+        default: Any = None,
+        sensitive: bool = False,
+        description: str = "",
+    ) -> None:
         self._optional_keys[key] = ConfigEntry(
-            key=key, value=default, schema_type=value_type,
-            required=False, sensitive=sensitive, description=description,
+            key=key,
+            value=default,
+            schema_type=value_type,
+            required=False,
+            sensitive=sensitive,
+            description=description,
         )
 
     def validate(self, snapshot: ConfigSnapshot) -> List[str]:
@@ -111,12 +136,21 @@ class ConfigSchema:
             else:
                 continue
             if entry.value is not None and not self._type_matches(entry.value, expected_type):
-                errors.append(f"Type mismatch for {key}: expected {expected_type}, got {type(entry.value).__name__}")
+                errors.append(
+                    f"Type mismatch for {key}: expected {expected_type}, got {type(entry.value).__name__}"
+                )
 
         return errors
 
     def _type_matches(self, value: Any, expected_type: str) -> bool:
-        type_map = {"str": str, "int": int, "float": float, "bool": bool, "list": list, "dict": dict}
+        type_map = {
+            "str": str,
+            "int": int,
+            "float": float,
+            "bool": bool,
+            "list": list,
+            "dict": dict,
+        }
         expected = type_map.get(expected_type)
         if expected is None:
             return True
@@ -163,21 +197,33 @@ class ConfigDriftDetector:
 
                     if current_val is None and baseline_val is not None:
                         drifted_keys.append(key)
-                        details.append({"key": key, "change": "removed", "was": str(baseline_val.value)})
+                        details.append(
+                            {"key": key, "change": "removed", "was": str(baseline_val.value)}
+                        )
                         if baseline_val.required:
                             severity = DriftSeverity.CRITICAL
                         elif severity == DriftSeverity.LOW:
                             severity = DriftSeverity.MEDIUM
                     elif current_val is not None and baseline_val is None:
                         drifted_keys.append(key)
-                        details.append({"key": key, "change": "added", "now": str(current_val.value)})
-                    elif current_val and baseline_val and str(current_val.value) != str(baseline_val.value):
+                        details.append(
+                            {"key": key, "change": "added", "now": str(current_val.value)}
+                        )
+                    elif (
+                        current_val
+                        and baseline_val
+                        and str(current_val.value) != str(baseline_val.value)
+                    ):
                         drifted_keys.append(key)
-                        details.append({
-                            "key": key, "change": "modified",
-                            "was": str(baseline_val.value), "now": str(current_val.value),
-                            "source_change": f"{baseline_val.source.value} → {current_val.source.value}",
-                        })
+                        details.append(
+                            {
+                                "key": key,
+                                "change": "modified",
+                                "was": str(baseline_val.value),
+                                "now": str(current_val.value),
+                                "source_change": f"{baseline_val.source.value} → {current_val.source.value}",
+                            }
+                        )
                         if current_val.sensitive:
                             severity = DriftSeverity.HIGH
                         elif baseline_val.required:
@@ -235,9 +281,13 @@ class ConfigDriftDetectorService:
         core_schema = ConfigSchema("tranc3_core")
         core_schema.add_required("LOG_LEVEL", "str", "INFO", description="Logging level")
         core_schema.add_required("NANOSERVICE_POOL_SIZE", "int", 10, description="Worker pool size")
-        core_schema.add_optional("ENABLE_QUANTUM", "bool", False, description="Quantum solver toggle")
+        core_schema.add_optional(
+            "ENABLE_QUANTUM", "bool", False, description="Quantum solver toggle"
+        )
         core_schema.add_optional("MAX_CONCURRENT_FLOWS", "int", 100, description="DNF flow limit")
-        core_schema.add_optional("SHI_FALLBACK_ENABLED", "bool", True, description="SHI fallback chain")
+        core_schema.add_optional(
+            "SHI_FALLBACK_ENABLED", "bool", True, description="SHI fallback chain"
+        )
         self._detector.register_schema(core_schema)
 
         logger.info("ConfigDriftDetectorService initialized with core schema")
@@ -253,7 +303,9 @@ class ConfigDriftDetectorService:
         if report:
             logger.warning(
                 "Config drift detected in %s: %d keys drifted (severity=%s)",
-                current.service_name, len(report.drifted_keys), report.severity.value,
+                current.service_name,
+                len(report.drifted_keys),
+                report.severity.value,
             )
         return report
 

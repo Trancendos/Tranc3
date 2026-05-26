@@ -40,6 +40,7 @@ class MPCPartyState(Enum):
 @dataclass
 class MPCParty:
     """A party in the MPC protocol."""
+
     party_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     name: str = ""
     state: MPCPartyState = MPCPartyState.CONNECTED
@@ -61,6 +62,7 @@ class MPCParty:
 @dataclass
 class MPCSession:
     """An MPC computation session."""
+
     session_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     protocol: MPCProtocol = MPCProtocol.SHAMIR_SECRET_SHARING
     parties: List[str] = field(default_factory=list)
@@ -94,7 +96,7 @@ class ShamirSecretSharing:
     Python-native, 0-cost implementation.
     """
 
-    def __init__(self, prime: int = 2 ** 127 - 1):
+    def __init__(self, prime: int = 2**127 - 1):
         self.prime = prime
 
     def share(self, secret: int, threshold: int, num_shares: int) -> List[Tuple[int, int]]:
@@ -128,48 +130,57 @@ class ShamirSecretSharing:
 class AdditiveSecretSharing:
     """Additive secret sharing for n-party computation."""
 
-    def share(self, secret: int, num_parties: int, modulus: int = 2 ** 32) -> List[int]:
+    def share(self, secret: int, num_parties: int, modulus: int = 2**32) -> List[int]:
         shares = [random.randint(0, modulus - 1) for _ in range(num_parties - 1)]
         last_share = (secret - sum(shares)) % modulus
         shares.append(last_share)
         return shares
 
-    def reconstruct(self, shares: List[int], modulus: int = 2 ** 32) -> int:
+    def reconstruct(self, shares: List[int], modulus: int = 2**32) -> int:
         return sum(shares) % modulus
 
 
 class GarbledCircuitSimulator:
     """Simulates Yao's Garbled Circuit protocol."""
 
-    def garble(self, circuit_description: str,
-               inputs: Dict[str, int]) -> Dict[str, Any]:
+    def garble(self, circuit_description: str, inputs: Dict[str, int]) -> Dict[str, Any]:
         wire_labels = {}
         for wire_id, value in inputs.items():
-            label_0 = hashlib.sha256(f"{wire_id}:0:{uuid.uuid4().hex[:8]}".encode()).hexdigest()[:16]
-            label_1 = hashlib.sha256(f"{wire_id}:1:{uuid.uuid4().hex[:8]}".encode()).hexdigest()[:16]
+            label_0 = hashlib.sha256(f"{wire_id}:0:{uuid.uuid4().hex[:8]}".encode()).hexdigest()[
+                :16
+            ]
+            label_1 = hashlib.sha256(f"{wire_id}:1:{uuid.uuid4().hex[:8]}".encode()).hexdigest()[
+                :16
+            ]
             wire_labels[wire_id] = {"0": label_0, "1": label_1}
 
         garbled_tables = []
         for gate_id in range(len(inputs) // 2):
-            garbled_tables.append({
-                "gate_id": gate_id,
-                "type": "AND",
-                "entries": [hashlib.sha256(f"{gate_id}:{i}".encode()).hexdigest()[:16]
-                           for i in range(4)],
-            })
+            garbled_tables.append(
+                {
+                    "gate_id": gate_id,
+                    "type": "AND",
+                    "entries": [
+                        hashlib.sha256(f"{gate_id}:{i}".encode()).hexdigest()[:16] for i in range(4)
+                    ],
+                }
+            )
 
         return {
             "circuit": circuit_description,
             "wire_labels": wire_labels,
             "garbled_tables": garbled_tables,
-            "input_encoding": {k: v[str(min(1, val))] for k, v, val in
-                              zip(inputs.keys(),
-                                  [wire_labels[k] for k in inputs.keys()],
-                                  inputs.values())},
+            "input_encoding": {
+                k: v[str(min(1, val))]
+                for k, v, val in zip(
+                    inputs.keys(), [wire_labels[k] for k in inputs.keys()], inputs.values()
+                )
+            },
         }
 
-    def evaluate(self, garbled_circuit: Dict[str, Any],
-                  encoded_inputs: Dict[str, str]) -> Dict[str, Any]:
+    def evaluate(
+        self, garbled_circuit: Dict[str, Any], encoded_inputs: Dict[str, str]
+    ) -> Dict[str, Any]:
         return {
             "result": hashlib.sha256(
                 json.dumps(encoded_inputs, sort_keys=True).encode()
@@ -181,8 +192,7 @@ class GarbledCircuitSimulator:
 class ObliviousTransferSimulator:
     """Simulates 1-out-of-2 Oblivious Transfer."""
 
-    def transfer(self, sender_messages: List[str],
-                  receiver_choice: int) -> str:
+    def transfer(self, sender_messages: List[str], receiver_choice: int) -> str:
         if receiver_choice < 0 or receiver_choice >= len(sender_messages):
             raise ValueError("Invalid receiver choice")
         return sender_messages[receiver_choice]
@@ -222,10 +232,9 @@ class MPCService:
             return True
         return False
 
-    def create_session(self, protocol: MPCProtocol,
-                        party_ids: List[str],
-                        threshold: int = 0,
-                        function: str = "") -> MPCSession:
+    def create_session(
+        self, protocol: MPCProtocol, party_ids: List[str], threshold: int = 0, function: str = ""
+    ) -> MPCSession:
         active_parties = [pid for pid in party_ids if pid in self.parties]
         if len(active_parties) < 2:
             raise ValueError("Need at least 2 parties for MPC")
@@ -255,8 +264,9 @@ class MPCService:
         session.status = "shared"
         return result
 
-    def shamir_reconstruct(self, session_id: str,
-                            share_dict: Optional[Dict[str, List[int]]] = None) -> Optional[int]:
+    def shamir_reconstruct(
+        self, session_id: str, share_dict: Optional[Dict[str, List[int]]] = None
+    ) -> Optional[int]:
         session = self.sessions.get(session_id)
         if not session:
             return None
@@ -269,7 +279,7 @@ class MPCService:
         if len(shares) < session.threshold:
             logger.warning("Not enough shares: %d < %d", len(shares), session.threshold)
             return None
-        result = self.shamir.reconstruct(shares[:session.threshold])
+        result = self.shamir.reconstruct(shares[: session.threshold])
         session.result = result
         session.status = "completed"
         session.completed_at = datetime.now(timezone.utc).isoformat()
@@ -283,8 +293,7 @@ class MPCService:
     def additive_reconstruct(self, shares: List[int]) -> int:
         return self.additive.reconstruct(shares)
 
-    def garbled_circuit_compute(self, circuit: str,
-                                 inputs: Dict[str, int]) -> Dict[str, Any]:
+    def garbled_circuit_compute(self, circuit: str, inputs: Dict[str, int]) -> Dict[str, Any]:
         garbled = self.garbled.garble(circuit, inputs)
         encoded = garbled.get("input_encoding", {})
         result = self.garbled.evaluate(garbled, encoded)
@@ -297,10 +306,10 @@ class MPCService:
         return {
             "service_id": self._id,
             "total_parties": len(self.parties),
-            "active_parties": sum(1 for p in self.parties.values()
-                                  if p.state == MPCPartyState.COMPUTING),
+            "active_parties": sum(
+                1 for p in self.parties.values() if p.state == MPCPartyState.COMPUTING
+            ),
             "total_sessions": len(self.sessions),
-            "completed_sessions": sum(1 for s in self.sessions.values()
-                                      if s.status == "completed"),
+            "completed_sessions": sum(1 for s in self.sessions.values() if s.status == "completed"),
             "supported_protocols": [p.value for p in MPCProtocol],
         }

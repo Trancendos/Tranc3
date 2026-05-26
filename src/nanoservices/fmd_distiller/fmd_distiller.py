@@ -44,7 +44,7 @@ class DistillationStatus(str, Enum):
 class ModelFormat(str, Enum):
     PYTORCH = "pytorch"
     ONNX = "onnx"
-    GGUF = "gguf"        # For Ollama
+    GGUF = "gguf"  # For Ollama
     SAFETENSORS = "safetensors"
     TORCHSCRIPT = "torchscript"
 
@@ -54,7 +54,7 @@ class QuantizationLevel(str, Enum):
     FP16 = "fp16"
     INT8 = "int8"
     INT4 = "int4"
-    Q4_K_M = "q4_k_m"   # GGUF quantization
+    Q4_K_M = "q4_k_m"  # GGUF quantization
     Q5_K_M = "q5_k_m"
     Q8_0 = "q8_0"
 
@@ -62,6 +62,7 @@ class QuantizationLevel(str, Enum):
 @dataclass
 class TeacherConfig:
     """Configuration for the teacher model (MaaS)."""
+
     model_name: str = "llama3:70b"
     provider: str = "ollama"  # ollama, vllm, openai_compatible
     endpoint: str = "http://localhost:11434"
@@ -83,6 +84,7 @@ class TeacherConfig:
 @dataclass
 class StudentConfig:
     """Configuration for the student model being distilled."""
+
     model_name: str = "llama3:8b"
     architecture: str = "llama"
     hidden_size: int = 4096
@@ -112,6 +114,7 @@ class StudentConfig:
 @dataclass
 class DistillationHyperparams:
     """Hyperparameters for the distillation training loop."""
+
     learning_rate: float = 2e-5
     batch_size: int = 8
     num_epochs: int = 3
@@ -145,6 +148,7 @@ class DistillationHyperparams:
 @dataclass
 class DistillationMetrics:
     """Metrics tracked during distillation."""
+
     epoch: int = 0
     step: int = 0
     total_steps: int = 0
@@ -180,6 +184,7 @@ class DistillationMetrics:
 @dataclass
 class FederatedNode:
     """A participating node in federated distillation."""
+
     node_id: str
     endpoint: str
     data_samples: int = 0
@@ -201,6 +206,7 @@ class FederatedNode:
 @dataclass
 class DistillationJob:
     """A complete distillation job with all configuration and state."""
+
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     name: str = ""
     teacher: TeacherConfig = field(default_factory=TeacherConfig)
@@ -276,7 +282,7 @@ class DistillationLoss:
             if t_p > 0 and s_p > 0:
                 kl += t_p * math.log(t_p / s_p)
 
-        return kl * (temperature ** 2)
+        return kl * (temperature**2)
 
     @staticmethod
     def task_loss(predictions: List[float], targets: List[float]) -> float:
@@ -298,9 +304,7 @@ class DistillationLoss:
         Compute combined distillation loss.
         Returns (total_loss, kl_loss, task_loss).
         """
-        kl_loss = DistillationLoss.kl_divergence_loss(
-            student_logits, teacher_logits, temperature
-        )
+        kl_loss = DistillationLoss.kl_divergence_loss(student_logits, teacher_logits, temperature)
         task_loss = DistillationLoss.task_loss(student_logits, targets)
         total = alpha * kl_loss + (1 - alpha) * task_loss
         return total, kl_loss, task_loss

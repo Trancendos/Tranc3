@@ -36,16 +36,17 @@ class LTLFormulaType(Enum):
     AND = "and"
     OR = "or"
     IMPLIES = "implies"
-    NEXT = "next"          # X
+    NEXT = "next"  # X
     EVENTUALLY = "eventually"  # F
-    ALWAYS = "always"      # G
-    UNTIL = "until"        # U
-    RELEASE = "release"    # R
+    ALWAYS = "always"  # G
+    UNTIL = "until"  # U
+    RELEASE = "release"  # R
 
 
 @dataclass
 class TimePoint:
     """A point in time."""
+
     timestamp: float = 0.0
     label: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -57,6 +58,7 @@ class TimePoint:
 @dataclass
 class TimeInterval:
     """A closed interval of time [start, end]."""
+
     start: float = 0.0
     end: float = 1.0
     label: str = ""
@@ -93,12 +95,18 @@ class TimeInterval:
         return TemporalRelation.BEFORE
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"start": self.start, "end": self.end, "duration": self.duration, "label": self.label}
+        return {
+            "start": self.start,
+            "end": self.end,
+            "duration": self.duration,
+            "label": self.label,
+        }
 
 
 @dataclass
 class TemporalEvent:
     """An event occurring at a time point or interval."""
+
     event_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     name: str = ""
     interval: TimeInterval = field(default_factory=TimeInterval)
@@ -117,6 +125,7 @@ class TemporalEvent:
 @dataclass
 class TemporalFact:
     """A fact that holds during a time interval."""
+
     fact_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     predicate: str = ""
     arguments: List[str] = field(default_factory=list)
@@ -139,6 +148,7 @@ class TemporalFact:
 @dataclass
 class LTLFormula:
     """Linear Temporal Logic formula."""
+
     formula_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     formula_type: LTLFormulaType = LTLFormulaType.ATOMIC
     proposition: str = ""
@@ -198,8 +208,14 @@ class AllenAlgebraEngine:
             return {r2}
         if r2 == TemporalRelation.EQUALS:
             return {r1}
-        return {TemporalRelation.BEFORE, TemporalRelation.AFTER, TemporalRelation.DURING,
-                TemporalRelation.CONTAINS, TemporalRelation.OVERLAPS, TemporalRelation.EQUALS}
+        return {
+            TemporalRelation.BEFORE,
+            TemporalRelation.AFTER,
+            TemporalRelation.DURING,
+            TemporalRelation.CONTAINS,
+            TemporalRelation.OVERLAPS,
+            TemporalRelation.EQUALS,
+        }
 
 
 class EventCalculusEngine:
@@ -239,8 +255,9 @@ class EventCalculusEngine:
                 return False
         return True
 
-    def trajectory(self, fluent: str, start: float, end: float,
-                    step: float = 1.0) -> List[Tuple[float, bool]]:
+    def trajectory(
+        self, fluent: str, start: float, end: float, step: float = 1.0
+    ) -> List[Tuple[float, bool]]:
         result = []
         t = start
         while t <= end:
@@ -327,9 +344,14 @@ class TemporalReasoningEngine:
         self.ltl_checker = LTLModelChecker()
         self._id = str(uuid.uuid4())[:8]
 
-    def add_fact(self, predicate: str, arguments: List[str],
-                  start: float, end: float,
-                  confidence: float = 1.0) -> TemporalFact:
+    def add_fact(
+        self,
+        predicate: str,
+        arguments: List[str],
+        start: float,
+        end: float,
+        confidence: float = 1.0,
+    ) -> TemporalFact:
         fact = TemporalFact(
             predicate=predicate,
             arguments=arguments,
@@ -339,8 +361,9 @@ class TemporalReasoningEngine:
         self.facts[fact.fact_id] = fact
         return fact
 
-    def add_event(self, name: str, start: float, end: float,
-                   properties: Optional[Dict[str, Any]] = None) -> TemporalEvent:
+    def add_event(
+        self, name: str, start: float, end: float, properties: Optional[Dict[str, Any]] = None
+    ) -> TemporalEvent:
         event = TemporalEvent(
             name=name,
             interval=TimeInterval(start=start, end=end),
@@ -351,51 +374,57 @@ class TemporalReasoningEngine:
         return event
 
     def query_holds_at(self, predicate: str, t: float) -> List[TemporalFact]:
-        return [f for f in self.facts.values()
-                if f.predicate == predicate and f.holds_at(t)]
+        return [f for f in self.facts.values() if f.predicate == predicate and f.holds_at(t)]
 
-    def query_holds_during(self, predicate: str, start: float,
-                            end: float) -> List[TemporalFact]:
+    def query_holds_during(self, predicate: str, start: float, end: float) -> List[TemporalFact]:
         interval = TimeInterval(start=start, end=end)
-        return [f for f in self.facts.values()
-                if f.predicate == predicate
-                and f.interval.relation_to(interval) in (
-                    TemporalRelation.DURING, TemporalRelation.EQUALS,
-                    TemporalRelation.OVERLAPS, TemporalRelation.STARTS,
-                    TemporalRelation.FINISHES, TemporalRelation.CONTAINS,
-                )]
+        return [
+            f
+            for f in self.facts.values()
+            if f.predicate == predicate
+            and f.interval.relation_to(interval)
+            in (
+                TemporalRelation.DURING,
+                TemporalRelation.EQUALS,
+                TemporalRelation.OVERLAPS,
+                TemporalRelation.STARTS,
+                TemporalRelation.FINISHES,
+                TemporalRelation.CONTAINS,
+            )
+        ]
 
-    def query_interval_relation(self, interval_a: TimeInterval,
-                                 interval_b: TimeInterval) -> TemporalRelation:
+    def query_interval_relation(
+        self, interval_a: TimeInterval, interval_b: TimeInterval
+    ) -> TemporalRelation:
         return self.allen.relate(interval_a, interval_b)
 
     def check_ltl(self, formula: LTLFormula, trace: List[Set[str]]) -> bool:
         return self.ltl_checker.check(formula, trace)
 
-    def event_calculus_initiates(self, event_name: str, fluent: str,
-                                  interval: TimeInterval):
+    def event_calculus_initiates(self, event_name: str, fluent: str, interval: TimeInterval):
         self.event_calculus.initiates(event_name, fluent, interval)
 
-    def event_calculus_terminates(self, event_name: str, fluent: str,
-                                   interval: TimeInterval):
+    def event_calculus_terminates(self, event_name: str, fluent: str, interval: TimeInterval):
         self.event_calculus.terminates(event_name, fluent, interval)
 
     def fluent_holds_at(self, fluent: str, t: float) -> bool:
         return self.event_calculus.holds_at(fluent, t)
 
-    def get_timeline(self, start: float, end: float,
-                      step: float = 1.0) -> List[Dict[str, Any]]:
+    def get_timeline(self, start: float, end: float, step: float = 1.0) -> List[Dict[str, Any]]:
         timeline = []
         t = start
         while t <= end:
             active_facts = [f.to_dict() for f in self.facts.values() if f.holds_at(t)]
-            active_events = [e.to_dict() for e in self.events.values()
-                           if e.interval.contains_point(t)]
-            timeline.append({
-                "time": t,
-                "active_facts": len(active_facts),
-                "active_events": len(active_events),
-            })
+            active_events = [
+                e.to_dict() for e in self.events.values() if e.interval.contains_point(t)
+            ]
+            timeline.append(
+                {
+                    "time": t,
+                    "active_facts": len(active_facts),
+                    "active_events": len(active_events),
+                }
+            )
             t += step
         return timeline
 

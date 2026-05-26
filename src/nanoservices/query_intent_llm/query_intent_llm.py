@@ -23,22 +23,24 @@ logger = logging.getLogger(__name__)
 
 class IntentCategory(Enum):
     """Categories of user query intent."""
-    SELECT = "select"               # Retrieve data
-    AGGREGATE = "aggregate"         # Sum, count, avg
-    FILTER = "filter"               # Where-like filtering
-    JOIN = "join"                   # Combine relations
-    NEST = "nest"                   # Nested collection construction
-    UNNEST = "unnest"               # Flatten nested collections
-    SHRED = "shred"                 # Deep nested processing
-    COMPARE = "compare"             # Comparative analysis
-    TEMPORAL = "temporal"           # Time-based queries
-    BIOMEDICAL = "biomedical"       # Genomic/clinical queries
-    DRONE = "drone"                 # Aerial/drone sensor queries
-    EDGE = "edge"                   # Edge computing queries
+
+    SELECT = "select"  # Retrieve data
+    AGGREGATE = "aggregate"  # Sum, count, avg
+    FILTER = "filter"  # Where-like filtering
+    JOIN = "join"  # Combine relations
+    NEST = "nest"  # Nested collection construction
+    UNNEST = "unnest"  # Flatten nested collections
+    SHRED = "shred"  # Deep nested processing
+    COMPARE = "compare"  # Comparative analysis
+    TEMPORAL = "temporal"  # Time-based queries
+    BIOMEDICAL = "biomedical"  # Genomic/clinical queries
+    DRONE = "drone"  # Aerial/drone sensor queries
+    EDGE = "edge"  # Edge computing queries
 
 
 class ConversionStatus(Enum):
     """Status of NL→NRC conversion."""
+
     SUCCESS = "success"
     PARTIAL = "partial"
     AMBIGUOUS = "ambiguous"
@@ -49,6 +51,7 @@ class ConversionStatus(Enum):
 @dataclass
 class NRCQuery:
     """A parsed NRC query definition."""
+
     query_id: str = ""
     dsl: str = ""
     intent: IntentCategory = IntentCategory.SELECT
@@ -94,6 +97,7 @@ class NRCQuery:
 @dataclass
 class ConversionResult:
     """Result of NL→NRC conversion."""
+
     conversion_id: str = ""
     status: ConversionStatus = ConversionStatus.SUCCESS
     query: Optional[NRCQuery] = None
@@ -121,27 +125,65 @@ class IntentParser:
     # Keywords for intent classification
     INTENT_KEYWORDS = {
         IntentCategory.SELECT: ["show", "get", "find", "list", "retrieve", "fetch", "select"],
-        IntentCategory.AGGREGATE: ["count", "sum", "average", "total", "min", "max", "aggregate", "how many"],
+        IntentCategory.AGGREGATE: [
+            "count",
+            "sum",
+            "average",
+            "total",
+            "min",
+            "max",
+            "aggregate",
+            "how many",
+        ],
         IntentCategory.FILTER: ["where", "filter", "only", "with", "having", "condition"],
         IntentCategory.JOIN: ["join", "combine", "merge", "link", "connect", "relate", "with"],
         IntentCategory.NEST: ["nest", "group", "collect", "bundle", "nested"],
         IntentCategory.UNNEST: ["unnest", "flatten", "expand", "spread", "unpack"],
         IntentCategory.SHRED: ["shred", "deep", "recursive", "traverse", "walk"],
         IntentCategory.COMPARE: ["compare", "versus", "difference", "contrast", "against"],
-        IntentCategory.TEMPORAL: ["when", "timeline", "over time", "trend", "history", "before", "after"],
-        IntentCategory.BIOMEDICAL: ["genomic", "gene", "patient", "clinical", "sequence", "variant", "dna", "protein"],
-        IntentCategory.DRONE: ["drone", "sensor", "flight", "aerial", "altitude", "coordinates", "swarm"],
+        IntentCategory.TEMPORAL: [
+            "when",
+            "timeline",
+            "over time",
+            "trend",
+            "history",
+            "before",
+            "after",
+        ],
+        IntentCategory.BIOMEDICAL: [
+            "genomic",
+            "gene",
+            "patient",
+            "clinical",
+            "sequence",
+            "variant",
+            "dna",
+            "protein",
+        ],
+        IntentCategory.DRONE: [
+            "drone",
+            "sensor",
+            "flight",
+            "aerial",
+            "altitude",
+            "coordinates",
+            "swarm",
+        ],
         IntentCategory.EDGE: ["edge", "iot", "device", "wasm", "offline", "latency"],
     }
 
     # Relation name patterns
-    RELATION_PATTERN = re.compile(r'\b(from|in|of)\s+(\w+)\b', re.IGNORECASE)
+    RELATION_PATTERN = re.compile(r"\b(from|in|of)\s+(\w+)\b", re.IGNORECASE)
 
     # Projection patterns
-    PROJECTION_PATTERN = re.compile(r'\b(show|select|get|display)\s+([\w\s,]+?)(?:\s+from|\s+where|\s+in|$)', re.IGNORECASE)
+    PROJECTION_PATTERN = re.compile(
+        r"\b(show|select|get|display)\s+([\w\s,]+?)(?:\s+from|\s+where|\s+in|$)", re.IGNORECASE
+    )
 
     # Filter patterns
-    FILTER_PATTERN = re.compile(r'\b(where|with|having|filter)\s+([\w\s<>=!]+?)(?:\s+and|\s+or|\s+join|$)', re.IGNORECASE)
+    FILTER_PATTERN = re.compile(
+        r"\b(where|with|having|filter)\s+([\w\s<>=!]+?)(?:\s+and|\s+or|\s+join|$)", re.IGNORECASE
+    )
 
     def classify_intent(self, text: str) -> Tuple[IntentCategory, float]:
         """Classify the intent category of a natural language query."""
@@ -258,7 +300,7 @@ Example output:
 
     async def _llm_convert(self, natural_language: str) -> Optional[ConversionResult]:
         """Use LLM to convert natural language to NRC."""
-        prompt = f"{self.SYSTEM_PROMPT}\n\nConvert this query: \"{natural_language}\""
+        prompt = f'{self.SYSTEM_PROMPT}\n\nConvert this query: "{natural_language}"'
 
         if self.shi_gateway and hasattr(self.shi_gateway, "infer"):
             response = await self.shi_gateway.infer(prompt)
@@ -354,7 +396,9 @@ Example output:
             explanation=f"Heuristic conversion with {confidence:.0%} confidence",
             confidence=confidence,
             ambiguities=ambiguities,
-            refinement_suggestions=self._generate_refinement_suggestions(query) if ambiguities else [],
+            refinement_suggestions=self._generate_refinement_suggestions(query)
+            if ambiguities
+            else [],
             fallback_used=True,
         )
 
@@ -362,7 +406,9 @@ Example output:
         """Generate suggestions for refining an ambiguous query."""
         suggestions = []
         if not query.relations:
-            suggestions.append("Specify which data relations to query (e.g., 'FROM patients, variants')")
+            suggestions.append(
+                "Specify which data relations to query (e.g., 'FROM patients, variants')"
+            )
         if len(query.relations) > 1 and not query.joins:
             suggestions.append("Specify join conditions between relations (e.g., 'ON patient_id')")
         if not query.filters and query.intent == IntentCategory.FILTER:
@@ -389,7 +435,8 @@ Example output:
             "success_rate": success / total if total > 0 else 0,
             "fallback_rate": fallback / total if total > 0 else 0,
             "avg_confidence": sum(r.confidence for r in self._conversion_history) / total,
-            "avg_processing_time_ms": sum(r.processing_time_ms for r in self._conversion_history) / total,
+            "avg_processing_time_ms": sum(r.processing_time_ms for r in self._conversion_history)
+            / total,
         }
 
 

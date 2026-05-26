@@ -56,14 +56,12 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 from shared_core.infinity.nomenclature import SentinelChannel
 from shared_core.infinity.sentinel_config import (
-    ChannelConfig,
     FallbackConfig,
     RedisConfig,
-    RetryConfig,
     SentinelStationConfig,
     sentinel_config,
 )
@@ -388,7 +386,9 @@ class RedisConnectionManager:
             return []
         messages = []
         try:
-            msg = await asyncio.wait_for(self._pubsub.get_message(ignore_subscribe_messages=True), timeout=timeout)
+            msg = await asyncio.wait_for(
+                self._pubsub.get_message(ignore_subscribe_messages=True), timeout=timeout
+            )
             while msg:
                 messages.append(msg)
                 msg = self._pubsub.get_message(ignore_subscribe_messages=True)
@@ -505,8 +505,8 @@ class SentinelStation:
 
     async def publish(
         self,
-        channel: str,
-        payload: Dict[str, Any],
+        channel: Union[str, "SentinelEvent"],
+        payload: Optional[Dict[str, Any]] = None,
         event_type: str = "",
         source: str = "",
     ) -> SentinelEvent:
@@ -517,15 +517,33 @@ class SentinelStation:
         for cross-gateway events, while the fallback handles local
         subscribers within the same process.
 
+        Accepts either positional-keyword form::
+
+            await station.publish("agents", {"type": "agent_created"})
+
+        or single-argument form with a pre-built SentinelEvent::
+
+            await station.publish(SentinelEvent(channel="agents", ...))
+
         Args:
             channel: SentinelChannel name (e.g., "agents", "workflows")
-            payload: Event data dictionary
+                     *or* a pre-built SentinelEvent object.
+            payload: Event data dictionary (omit when passing a SentinelEvent)
             event_type: Type of event (e.g., "agent_created")
             source: Source service identifier
 
         Returns:
             The published SentinelEvent
         """
+        # Support single-arg form: sentinel.publish(SentinelEvent(...))
+        if isinstance(channel, SentinelEvent):
+            ev = channel
+            channel = str(ev.channel)
+            payload = ev.payload
+            event_type = ev.event_type
+            source = ev.source
+        if payload is None:
+            payload = {}
         event = SentinelEvent(
             channel=channel,
             event_type=event_type,
@@ -625,7 +643,7 @@ class SentinelStation:
                         # Strip Redis channel prefix (e.g., "sentinel:")
                         prefix = self._config.redis_channel_prefix
                         if channel.startswith(prefix):
-                            channel = channel[len(prefix):]
+                            channel = channel[len(prefix) :]
 
                         data = msg.get("data", b"")
                         if isinstance(data, bytes):
@@ -702,7 +720,8 @@ class SentinelStation:
             "subscribed_channels": list(self._subscribed_channels),
             "fallback": self._fallback.get_stats(),
             "uptime_seconds": (
-                time.time() - time.mktime(datetime.fromisoformat(self._stats["started_at"]).timetuple())
+                time.time()
+                - time.mktime(datetime.fromisoformat(self._stats["started_at"]).timetuple())
                 if self._stats["started_at"]
                 else 0
             ),

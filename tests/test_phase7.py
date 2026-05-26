@@ -5,8 +5,8 @@ Comprehensive tests for all Phase 7 advanced architecture modules.
 """
 
 import asyncio
+import json
 import sys
-import time
 import traceback
 
 # Test results tracking
@@ -19,6 +19,7 @@ _results = {
 
 def phase7_test(name: str):
     """Decorator to register a test (renamed to avoid pytest fixture conflict)."""
+
     def decorator(fn):
         async def wrapper():
             try:
@@ -30,8 +31,10 @@ def phase7_test(name: str):
                 _results["errors"].append((name, str(e)))
                 print(f"  ✗ {name}: {e}")
                 traceback.print_exc()
+
         wrapper._name = name
         return wrapper
+
     return decorator
 
 
@@ -39,9 +42,10 @@ def phase7_test(name: str):
 # NSA Registry Tests
 # ============================================================
 
+
 @phase7_test("NSA Registry: register and discover services")
 async def test_nsa_registry_basic():
-    from nanoservices.nsa_registry import NSARegistry, ServiceTier, Capability, ServiceStatus
+    from nanoservices.nsa_registry import NSARegistry, ServiceTier, Capability
 
     registry = NSARegistry()
     await registry.start()
@@ -78,7 +82,7 @@ async def test_nsa_registry_basic():
 
 @phase7_test("NSA Registry: health monitoring and heartbeat")
 async def test_nsa_registry_health():
-    from nanoservices.nsa_registry import NSARegistry, ServiceTier, Capability, HealthReport, ServiceStatus
+    from nanoservices.nsa_registry import NSARegistry, ServiceTier, Capability, ServiceStatus
 
     registry = NSARegistry(heartbeat_timeout_s=0.5, health_check_interval_s=0.2)
     await registry.start()
@@ -105,31 +109,53 @@ async def test_nsa_registry_health():
 
 @phase7_test("NSA Registry: get_healthiest service")
 async def test_nsa_registry_healthiest():
-    from nanoservices.nsa_registry import NSARegistry, ServiceTier, Capability, HealthReport, ServiceStatus
+    from nanoservices.nsa_registry import (
+        NSARegistry,
+        ServiceTier,
+        Capability,
+        HealthReport,
+        ServiceStatus,
+    )
 
     registry = NSARegistry()
 
     # Register two services with same capability
     svc1 = await registry.register(
-        name="svc_1", tier=ServiceTier.TIER_3_INTELLIGENCE,
+        name="svc_1",
+        tier=ServiceTier.TIER_3_INTELLIGENCE,
         capabilities=[Capability(name="inference")],
-        shm_segment="nsa_svc1", pid=1, endpoint="http://localhost:1",
+        shm_segment="nsa_svc1",
+        pid=1,
+        endpoint="http://localhost:1",
     )
     svc2 = await registry.register(
-        name="svc_2", tier=ServiceTier.TIER_3_INTELLIGENCE,
+        name="svc_2",
+        tier=ServiceTier.TIER_3_INTELLIGENCE,
         capabilities=[Capability(name="inference")],
-        shm_segment="nsa_svc2", pid=2, endpoint="http://localhost:2",
+        shm_segment="nsa_svc2",
+        pid=2,
+        endpoint="http://localhost:2",
     )
 
     # Set health — svc2 is healthier
-    await registry.update_health(svc1.id, HealthReport(
-        service_id=svc1.id, status=ServiceStatus.BUSY,
-        latency_ms=200.0, error_rate=0.05,
-    ))
-    await registry.update_health(svc2.id, HealthReport(
-        service_id=svc2.id, status=ServiceStatus.READY,
-        latency_ms=10.0, error_rate=0.001,
-    ))
+    await registry.update_health(
+        svc1.id,
+        HealthReport(
+            service_id=svc1.id,
+            status=ServiceStatus.BUSY,
+            latency_ms=200.0,
+            error_rate=0.05,
+        ),
+    )
+    await registry.update_health(
+        svc2.id,
+        HealthReport(
+            service_id=svc2.id,
+            status=ServiceStatus.READY,
+            latency_ms=10.0,
+            error_rate=0.001,
+        ),
+    )
 
     best = await registry.get_healthiest(capability="inference")
     assert best is not None
@@ -140,9 +166,10 @@ async def test_nsa_registry_healthiest():
 # SHI Gateway Tests
 # ============================================================
 
+
 @phase7_test("SHI Gateway: creation and configuration")
 async def test_shi_gateway_creation():
-    from nanoservices.shi_gateway import SHIGateway, InferenceBackend, ModelStatus
+    from nanoservices.shi_gateway import SHIGateway
 
     gateway = SHIGateway()
     assert gateway is not None
@@ -164,9 +191,10 @@ async def test_shi_gateway_fallback():
 # IGI GitOps Tests
 # ============================================================
 
+
 @phase7_test("IGI GitOps: Forgejo configuration")
 async def test_igi_forgejo_config():
-    from nanoservices.igi_gitops import IGIGitOps, ForgejoConfig, KustomizeOverlay
+    from nanoservices.igi_gitops import IGIGitOps, ForgejoConfig
 
     forgejo = ForgejoConfig(
         url="https://forgejo.local",
@@ -189,7 +217,7 @@ async def test_igi_forgejo_config():
 
 @phase7_test("IGI GitOps: Kustomize overlays")
 async def test_igi_kustomize_overlays():
-    from nanoservices.igi_gitops import IGIGitOps, ForgejoConfig, KustomizeOverlay
+    from nanoservices.igi_gitops import IGIGitOps, KustomizeOverlay
 
     gitops = IGIGitOps(environment="production")
 
@@ -210,7 +238,7 @@ async def test_igi_kustomize_overlays():
 
 @phase7_test("IGI GitOps: drift detection")
 async def test_igi_drift_detection():
-    from nanoservices.igi_gitops import DriftDetector, DriftSeverity, ResourceType
+    from nanoservices.igi_gitops import DriftDetector
 
     detector = DriftDetector(auto_heal=True)
 
@@ -232,9 +260,10 @@ async def test_igi_drift_detection():
 # DNF Orchestrator Tests
 # ============================================================
 
+
 @phase7_test("DNF Flow Builder: create and validate flow")
 async def test_dnf_flow_builder():
-    from nanoservices.dnf_orchestrator import FlowBuilder, FlowDefinition
+    from nanoservices.dnf_orchestrator import FlowBuilder
 
     flow = (
         FlowBuilder("etl_pipeline", "ETL Pipeline")
@@ -254,7 +283,7 @@ async def test_dnf_flow_builder():
 
 @phase7_test("DNF Flow Runner: execute simple flow")
 async def test_dnf_flow_runner():
-    from nanoservices.dnf_orchestrator import FlowBuilder, FlowRunner, StepStatus
+    from nanoservices.dnf_orchestrator import FlowBuilder, FlowRunner
 
     runner = FlowRunner()
 
@@ -295,6 +324,7 @@ async def test_dnf_flow_runner():
 # FMD Distiller Tests
 # ============================================================
 
+
 @phase7_test("FMD Distillation Loss: KL divergence and combined loss")
 async def test_fmd_distillation_loss():
     from nanoservices.fmd_distiller import DistillationLoss
@@ -329,7 +359,10 @@ async def test_fmd_quantization():
 @phase7_test("FMD Distiller: create and run job")
 async def test_fmd_distiller_job():
     from nanoservices.fmd_distiller import (
-        FMDistiller, TeacherConfig, StudentConfig, DistillationHyperparams,
+        FMDistiller,
+        TeacherConfig,
+        StudentConfig,
+        DistillationHyperparams,
     )
 
     distiller = FMDistiller()
@@ -350,27 +383,36 @@ async def test_fmd_distiller_job():
 # DaaS Stream Tests
 # ============================================================
 
+
 @phase7_test("DaaS Stream: create stream and publish")
 async def test_daas_stream_basic():
     from nanoservices.daas_stream import (
-        DaaSService, StreamConfig, StreamRecord,
-        DataClassification, Jurisdiction,
+        DaaSService,
+        StreamConfig,
+        StreamRecord,
+        DataClassification,
+        Jurisdiction,
     )
 
     daas = DaaSService()
     await daas.start()
 
-    daas.create_stream(StreamConfig(
-        name="test-events",
-        topic="test-events",
-        classification=DataClassification.PUBLIC,
-        jurisdiction=Jurisdiction.LOCAL_ONLY,
-    ))
+    daas.create_stream(
+        StreamConfig(
+            name="test-events",
+            topic="test-events",
+            classification=DataClassification.PUBLIC,
+            jurisdiction=Jurisdiction.LOCAL_ONLY,
+        )
+    )
 
-    success, reason = await daas.publish("test-events", StreamRecord(
-        key="event_1",
-        value=b'{"type": "test"}',
-    ))
+    success, reason = await daas.publish(
+        "test-events",
+        StreamRecord(
+            key="event_1",
+            value=b'{"type": "test"}',
+        ),
+    )
 
     assert success, f"Publish failed: {reason}"
     await daas.stop()
@@ -383,18 +425,22 @@ async def test_daas_gdpr_policy():
     daas = DaaSService()
 
     # EU data to US should be denied
-    effect, reason = daas.evaluate_access({
-        "source_jurisdiction": "EU",
-        "target_jurisdiction": "US",
-        "action": "read",
-    })
+    effect, reason = daas.evaluate_access(
+        {
+            "source_jurisdiction": "EU",
+            "target_jurisdiction": "US",
+            "action": "read",
+        }
+    )
     assert effect == PolicyEffect.DENY
 
     # Public data should be allowed
-    effect, reason = daas.evaluate_access({
-        "data_classification": "public",
-        "action": "read",
-    })
+    effect, reason = daas.evaluate_access(
+        {
+            "data_classification": "public",
+            "action": "read",
+        }
+    )
     assert effect == PolicyEffect.ALLOW
 
 
@@ -411,7 +457,12 @@ async def test_daas_rego_bundle():
 
 @phase7_test("DaaS Lineage: track data origin")
 async def test_daas_lineage():
-    from nanoservices.daas_stream import DataLineageTracker, LineageEntry, DataClassification, Jurisdiction
+    from nanoservices.daas_stream import (
+        DataLineageTracker,
+        LineageEntry,
+        DataClassification,
+        Jurisdiction,
+    )
 
     tracker = DataLineageTracker()
 
@@ -435,10 +486,14 @@ async def test_daas_lineage():
 # Genetic Optimizer Tests
 # ============================================================
 
+
 @phase7_test("Genetic Optimizer: basic optimization")
 async def test_genetic_optimizer_basic():
     from nanoservices.genetic_optimizer import (
-        GeneticOptimizer, GeneSpec, Objective, ObjectiveType,
+        GeneticOptimizer,
+        GeneSpec,
+        Objective,
+        ObjectiveType,
     )
 
     def fitness_fn(chromosome):
@@ -472,6 +527,7 @@ async def test_genetic_optimizer_basic():
 # Quantum Solver Tests
 # ============================================================
 
+
 @phase7_test("Quantum Solver: QUBO problem creation and evaluation")
 async def test_quantum_qubo():
     from nanoservices.quantum_solver import QUBOProblem
@@ -493,7 +549,12 @@ async def test_quantum_qubo():
 
 @phase7_test("Quantum Solver: solve QUBO")
 async def test_quantum_solve():
-    from nanoservices.quantum_solver import QuantumSolver, QUBOProblem, QuantumAlgorithm, SolverStatus
+    from nanoservices.quantum_solver import (
+        QuantumSolver,
+        QUBOProblem,
+        QuantumAlgorithm,
+        SolverStatus,
+    )
 
     solver = QuantumSolver(max_qubits=20)
 
@@ -551,6 +612,7 @@ async def test_quantum_circuit_library():
 # Run All Tests
 # ============================================================
 
+
 async def run_all_tests():
     """Run all registered tests."""
     print("\n" + "=" * 60)
@@ -558,18 +620,18 @@ async def run_all_tests():
     print("=" * 60)
 
     import __main__
-    tests = [
-        obj for name, obj in vars(__main__).items()
-        if callable(obj) and hasattr(obj, '_name')
-    ]
+
+    tests = [obj for name, obj in vars(__main__).items() if callable(obj) and hasattr(obj, "_name")]
 
     if not tests:
         # Also check this module
         import sys
+
         this_module = sys.modules[__name__]
         tests = [
-            obj for name, obj in vars(this_module).items()
-            if callable(obj) and hasattr(obj, '_name')
+            obj
+            for name, obj in vars(this_module).items()
+            if callable(obj) and hasattr(obj, "_name")
         ]
 
     for test_fn in tests:

@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class DriftSeverity(Enum):
     """Severity levels for drift predictions."""
+
     INFO = "info"
     LOW = "low"
     MEDIUM = "medium"
@@ -32,29 +33,32 @@ class DriftSeverity(Enum):
 
 class DriftCategory(Enum):
     """Categories of infrastructure drift."""
-    CONFIG = "config"               # Configuration mismatch
-    RESOURCE = "resource"           # Resource limit changes
-    VERSION = "version"             # Image/tag version drift
-    POLICY = "policy"               # Policy violation
-    SCALING = "scaling"             # Replica/HPA drift
-    NETWORK = "network"             # Service/network changes
-    SECRET = "secret"               # Secret rotation needed
-    DEPENDENCY = "dependency"       # Dependency version drift
-    COMPLIANCE = "compliance"       # Compliance drift
+
+    CONFIG = "config"  # Configuration mismatch
+    RESOURCE = "resource"  # Resource limit changes
+    VERSION = "version"  # Image/tag version drift
+    POLICY = "policy"  # Policy violation
+    SCALING = "scaling"  # Replica/HPA drift
+    NETWORK = "network"  # Service/network changes
+    SECRET = "secret"  # Secret rotation needed
+    DEPENDENCY = "dependency"  # Dependency version drift
+    COMPLIANCE = "compliance"  # Compliance drift
 
 
 class PredictionConfidence(Enum):
     """Confidence levels for drift predictions."""
-    SPECULATIVE = auto()   # < 40% confidence
-    POSSIBLE = auto()      # 40-60% confidence
-    LIKELY = auto()        # 60-80% confidence
-    PROBABLE = auto()      # 80-95% confidence
-    CERTAIN = auto()       # > 95% confidence
+
+    SPECULATIVE = auto()  # < 40% confidence
+    POSSIBLE = auto()  # 40-60% confidence
+    LIKELY = auto()  # 60-80% confidence
+    PROBABLE = auto()  # 80-95% confidence
+    CERTAIN = auto()  # > 95% confidence
 
 
 @dataclass
 class DriftSignal:
     """A single drift signal from monitoring data."""
+
     signal_id: str = ""
     source: str = ""
     category: DriftCategory = DriftCategory.CONFIG
@@ -75,6 +79,7 @@ class DriftSignal:
 @dataclass
 class DriftPrediction:
     """A predicted drift event with confidence scoring."""
+
     prediction_id: str = ""
     signals: List[DriftSignal] = field(default_factory=list)
     category: DriftCategory = DriftCategory.CONFIG
@@ -107,6 +112,7 @@ class DriftPrediction:
 @dataclass
 class DriftAnalysisReport:
     """Complete drift analysis report for a time window."""
+
     report_id: str = ""
     time_window_start: float = 0.0
     time_window_end: float = 0.0
@@ -133,28 +139,45 @@ class LogAnalyzer:
     # Patterns that indicate drift
     DRIFT_PATTERNS = {
         DriftCategory.CONFIG: [
-            "configmap updated", "configuration changed", "settings modified",
-            "env var changed", "resource limit adjusted",
+            "configmap updated",
+            "configuration changed",
+            "settings modified",
+            "env var changed",
+            "resource limit adjusted",
         ],
         DriftCategory.VERSION: [
-            "image pull", "tag updated", "version mismatch",
-            "rollback triggered", "image digest changed",
+            "image pull",
+            "tag updated",
+            "version mismatch",
+            "rollback triggered",
+            "image digest changed",
         ],
         DriftCategory.SCALING: [
-            "replicas changed", "hpa triggered", "scale up",
-            "scale down", "autoscaler",
+            "replicas changed",
+            "hpa triggered",
+            "scale up",
+            "scale down",
+            "autoscaler",
         ],
         DriftCategory.NETWORK: [
-            "service updated", "endpoint changed", "ingress modified",
-            "network policy", "dns changed",
+            "service updated",
+            "endpoint changed",
+            "ingress modified",
+            "network policy",
+            "dns changed",
         ],
         DriftCategory.SECRET: [
-            "secret rotated", "certificate expiring", "token refreshed",
+            "secret rotated",
+            "certificate expiring",
+            "token refreshed",
             "credential updated",
         ],
         DriftCategory.POLICY: [
-            "policy violation", "admission denied", "opa evaluation",
-            "gatekeeper", "constraint violation",
+            "policy violation",
+            "admission denied",
+            "opa evaluation",
+            "gatekeeper",
+            "constraint violation",
         ],
     }
 
@@ -310,7 +333,9 @@ Respond in JSON format as a list of predictions."""
 
         for category, cat_signals in by_category.items():
             # Count signals and calculate trend
-            high_severity = sum(1 for s in cat_signals if s.severity in (DriftSeverity.HIGH, DriftSeverity.CRITICAL))
+            high_severity = sum(
+                1 for s in cat_signals if s.severity in (DriftSeverity.HIGH, DriftSeverity.CRITICAL)
+            )
             total = len(cat_signals)
 
             # Confidence based on signal count and severity
@@ -388,7 +413,9 @@ class PredictiveDriftService:
         new_signals = self.log_analyzer.analyze_logs(log_entries)
         self._signals.extend(new_signals)
         self._prune_old_signals()
-        logger.info(f"Ingested {len(new_signals)} drift signals from {len(log_entries)} log entries")
+        logger.info(
+            f"Ingested {len(new_signals)} drift signals from {len(log_entries)} log entries"
+        )
         return len(new_signals)
 
     async def ingest_signals(self, signals: List[DriftSignal]) -> None:
@@ -482,8 +509,12 @@ class PredictiveDriftService:
         first_half = signals[:mid]
         second_half = signals[mid:]
 
-        high_first = sum(1 for s in first_half if s.severity in (DriftSeverity.HIGH, DriftSeverity.CRITICAL))
-        high_second = sum(1 for s in second_half if s.severity in (DriftSeverity.HIGH, DriftSeverity.CRITICAL))
+        high_first = sum(
+            1 for s in first_half if s.severity in (DriftSeverity.HIGH, DriftSeverity.CRITICAL)
+        )
+        high_second = sum(
+            1 for s in second_half if s.severity in (DriftSeverity.HIGH, DriftSeverity.CRITICAL)
+        )
 
         if high_second > high_first * 1.2:
             direction = "increasing"

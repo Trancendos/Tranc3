@@ -29,6 +29,7 @@ logger = logging.getLogger("tranc3.bridge")
 # Types
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class BridgeTransport(str, Enum):
     HTTP = "http"
     STDIO = "stdio"
@@ -38,6 +39,7 @@ class BridgeTransport(str, Enum):
 @dataclass
 class BridgeEndpoint:
     """A registered bridge endpoint."""
+
     id: str
     ecosystem: str  # 'typescript' or 'python'
     service: str
@@ -50,6 +52,7 @@ class BridgeEndpoint:
 @dataclass
 class JsonRpcRequest:
     """JSON-RPC 2.0 request."""
+
     jsonrpc: str = "2.0"
     id: str = ""
     method: str = ""
@@ -71,6 +74,7 @@ class JsonRpcRequest:
 @dataclass
 class JsonRpcResponse:
     """JSON-RPC 2.0 response."""
+
     jsonrpc: str = "2.0"
     id: str = ""
     result: Any = None
@@ -89,6 +93,7 @@ class JsonRpcResponse:
 @dataclass
 class BridgeConfig:
     """Bridge configuration."""
+
     python_base_url: str = "http://localhost:8000"
     typescript_base_url: str = "http://localhost:3000"
     transport: BridgeTransport = BridgeTransport.HTTP
@@ -102,6 +107,7 @@ class BridgeConfig:
 # ─────────────────────────────────────────────────────────────────────────────
 # Ecosystem Bridge
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class EcosystemBridge:
     """
@@ -166,7 +172,9 @@ class EcosystemBridge:
     def register_endpoint(self, endpoint: BridgeEndpoint) -> None:
         """Register a bridge endpoint."""
         self._endpoints[endpoint.id] = endpoint
-        logger.info(f"Registered bridge endpoint: {endpoint.id} ({endpoint.ecosystem}/{endpoint.service})")
+        logger.info(
+            f"Registered bridge endpoint: {endpoint.id} ({endpoint.ecosystem}/{endpoint.service})"
+        )
 
     def get_endpoint(self, endpoint_id: str) -> Optional[BridgeEndpoint]:
         """Get a registered endpoint."""
@@ -210,7 +218,9 @@ class EcosystemBridge:
                     response = JsonRpcResponse.from_dict(data)
 
                     if response.error:
-                        raise Exception(f"RPC Error {response.error.get('code')}: {response.error.get('message')}")
+                        raise Exception(
+                            f"RPC Error {response.error.get('code')}: {response.error.get('message')}"
+                        )
 
                     return response.result
 
@@ -290,7 +300,9 @@ class EcosystemBridge:
             try:
                 health = await self.check_health()
                 if health["bridge"] != "healthy":
-                    logger.warning(f"Bridge health: {health['bridge']} (python={health['python']}, typescript={health['typescript']})")
+                    logger.warning(
+                        f"Bridge health: {health['bridge']} (python={health['python']}, typescript={health['typescript']})"
+                    )
             except Exception as e:
                 logger.error(f"Health check failed: {e}")
 
@@ -301,9 +313,11 @@ class EcosystemBridge:
 # Unified Ecosystem Registry
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class EcosystemEntity:
     """Entity information shared between Python and TypeScript."""
+
     pid: str = ""
     aid: str = ""
     location: str = ""
@@ -395,8 +409,9 @@ class EcosystemRegistry:
         """Load entities from the Python platform.py module."""
         try:
             from ..entities.platform import PLATFORM_ENTITIES
+
             count = 0
-            for location, entity in PLATFORM_ENTITIES.items():
+            for _location, entity in PLATFORM_ENTITIES.items():
                 ecosystem_entity = EcosystemEntity(
                     pid=entity.pid,
                     aid=entity.aid,

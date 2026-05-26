@@ -25,8 +25,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ──────────────────────────────────────────────────────────────
 
+
 class Nucleotide(Enum):
     """DNA/RNA nucleotides."""
+
     A = "adenine"
     T = "thymine"
     G = "guanine"
@@ -36,6 +38,7 @@ class Nucleotide(Enum):
 
 class AminoAcid(Enum):
     """Standard amino acids."""
+
     ALA = "alanine"
     ARG = "arginine"
     ASN = "asparagine"
@@ -60,6 +63,7 @@ class AminoAcid(Enum):
 
 class GeneFunction(Enum):
     """Types of gene functions."""
+
     STRUCTURAL = "structural"
     ENZYMATIC = "enzymatic"
     REGULATORY = "regulatory"
@@ -72,6 +76,7 @@ class GeneFunction(Enum):
 
 class CircuitType(Enum):
     """Genetic circuit types."""
+
     REPRESSILATOR = "repressilator"
     TOGGLE_SWITCH = "toggle_switch"
     OSCILLATOR = "oscillator"
@@ -84,6 +89,7 @@ class CircuitType(Enum):
 
 class MutationType(Enum):
     """Types of genetic mutations."""
+
     POINT = "point"
     INSERTION = "insertion"
     DELETION = "deletion"
@@ -95,6 +101,7 @@ class MutationType(Enum):
 
 class SelectionPressure(Enum):
     """Types of selection pressure."""
+
     FITNESS = "fitness"
     NEUTRAL = "neutral"
     DIVERSIFYING = "diversifying"
@@ -105,6 +112,7 @@ class SelectionPressure(Enum):
 
 class OrganismState(Enum):
     """States of a synthetic organism."""
+
     EMBRYONIC = "embryonic"
     GROWING = "growing"
     MATURE = "mature"
@@ -115,9 +123,11 @@ class OrganismState(Enum):
 
 # ─── Data Models ────────────────────────────────────────────────────────
 
+
 @dataclass
 class Gene:
     """A synthetic gene."""
+
     id: str = ""
     name: str = ""
     sequence: str = ""
@@ -151,12 +161,12 @@ class Gene:
         elif mutation_type == MutationType.DUPLICATION and seq:
             idx = random.randint(0, len(seq) - 1)
             length = min(random.randint(1, 10), len(seq) - idx)
-            dup = seq[idx:idx + length]
+            dup = seq[idx : idx + length]
             seq[idx:idx] = dup
         elif mutation_type == MutationType.INVERSION and len(seq) > 2:
             idx = random.randint(0, len(seq) - 2)
             length = min(random.randint(2, 10), len(seq) - idx)
-            seq[idx:idx + length] = reversed(seq[idx:idx + length])
+            seq[idx : idx + length] = reversed(seq[idx : idx + length])
 
         return Gene(
             name=self.name + "'",
@@ -180,6 +190,7 @@ class Gene:
 @dataclass
 class GeneticCircuit:
     """A synthetic genetic circuit."""
+
     id: str = ""
     name: str = ""
     circuit_type: CircuitType = CircuitType.TOGGLE_SWITCH
@@ -212,9 +223,9 @@ class GeneticCircuit:
         alpha, beta = 50.0, 2.0
         results = []
         for _ in range(steps):
-            da = -a + alpha / (1 + c ** beta)
-            db = -b + alpha / (1 + a ** beta)
-            dc = -c + alpha / (1 + b ** beta)
+            da = -a + alpha / (1 + c**beta)
+            db = -b + alpha / (1 + a**beta)
+            dc = -c + alpha / (1 + b**beta)
             a = max(0.0, a + da * dt)
             b = max(0.0, b + db * dt)
             c = max(0.0, c + dc * dt)
@@ -227,8 +238,8 @@ class GeneticCircuit:
         alpha1, alpha2, beta, gamma = 10.0, 10.0, 2.0, 2.0
         results = []
         for _ in range(steps):
-            du = alpha1 / (1 + v ** beta) - u
-            dv = alpha2 / (1 + u ** gamma) - v
+            du = alpha1 / (1 + v**beta) - u
+            dv = alpha2 / (1 + u**gamma) - v
             u = max(0.0, u + du * dt)
             v = max(0.0, v + dv * dt)
             results.append({"geneA": u, "geneB": v})
@@ -240,7 +251,7 @@ class GeneticCircuit:
         k_prod, k_deg, k_act, n = 2.0, 1.0, 5.0, 3
         results = []
         for i in range(steps):
-            inhibition = k_act / (1 + x ** n)
+            inhibition = k_act / (1 + x**n)
             dx = (k_prod * inhibition - k_deg * x) * dt
             x = max(0.0, x + dx)
             results.append({"output": x})
@@ -248,7 +259,9 @@ class GeneticCircuit:
 
     def _simulate_generic(self, steps: int, dt: float) -> List[Dict[str, float]]:
         """Generic circuit simulation with mass-action kinetics."""
-        species: Dict[str, float] = {f"s{i}": random.uniform(0.1, 5.0) for i in range(min(3, len(self.genes)))}
+        species: Dict[str, float] = {
+            f"s{i}": random.uniform(0.1, 5.0) for i in range(min(3, len(self.genes)))
+        }
         if not species:
             species = {"s0": 1.0}
         results = []
@@ -275,6 +288,7 @@ class GeneticCircuit:
 @dataclass
 class MetabolicNetwork:
     """A simplified metabolic network."""
+
     id: str = ""
     metabolites: List[str] = field(default_factory=list)
     reactions: List[Dict[str, Any]] = field(default_factory=list)
@@ -286,17 +300,24 @@ class MetabolicNetwork:
         if not self.id:
             self.id = str(uuid.uuid4())
 
-    def add_reaction(self, name: str, substrates: Dict[str, float],
-                     products: Dict[str, float], reversible: bool = True,
-                     max_flux: float = 10.0) -> None:
+    def add_reaction(
+        self,
+        name: str,
+        substrates: Dict[str, float],
+        products: Dict[str, float],
+        reversible: bool = True,
+        max_flux: float = 10.0,
+    ) -> None:
         """Add a reaction to the network."""
-        self.reactions.append({
-            "name": name,
-            "substrates": substrates,
-            "products": products,
-            "reversible": reversible,
-            "max_flux": max_flux,
-        })
+        self.reactions.append(
+            {
+                "name": name,
+                "substrates": substrates,
+                "products": products,
+                "reversible": reversible,
+                "max_flux": max_flux,
+            }
+        )
         for m in list(substrates.keys()) + list(products.keys()):
             if m not in self.metabolites:
                 self.metabolites.append(m)
@@ -307,8 +328,7 @@ class MetabolicNetwork:
         for rxn in self.reactions:
             base_flux = rxn["max_flux"] * random.uniform(0.3, 0.9)
             substrate_limit = min(
-                1.0 / abs(s) if s != 0 else 10.0
-                for s in rxn["substrates"].values()
+                1.0 / abs(s) if s != 0 else 10.0 for s in rxn["substrates"].values()
             )
             self.fluxes[rxn["name"]] = min(base_flux, substrate_limit * rxn["max_flux"])
 
@@ -328,6 +348,7 @@ class MetabolicNetwork:
 @dataclass
 class SyntheticOrganism:
     """A synthetic organism with genome and phenotype."""
+
     id: str = ""
     name: str = ""
     genome: List[Gene] = field(default_factory=list)
@@ -347,8 +368,7 @@ class SyntheticOrganism:
     def evaluate_fitness(self) -> float:
         """Evaluate organism fitness based on phenotype."""
         circuit_score = sum(
-            len(c.genes) * c.genes[0].expression_level if c.genes else 0.5
-            for c in self.circuits
+            len(c.genes) * c.genes[0].expression_level if c.genes else 0.5 for c in self.circuits
         )
         gene_score = sum(g.expression_level * g.promoter_strength for g in self.genome)
         metabolic_score = self.metabolism.biomass_rate if self.metabolism else 0.5
@@ -381,6 +401,7 @@ class SyntheticOrganism:
 @dataclass
 class Population:
     """A population of synthetic organisms."""
+
     id: str = ""
     organisms: List[SyntheticOrganism] = field(default_factory=list)
     generation: int = 0
@@ -418,7 +439,9 @@ class Population:
         else:
             return random.sample(self.organisms, min(2, len(self.organisms)))
 
-    def crossover(self, parent1: SyntheticOrganism, parent2: SyntheticOrganism) -> SyntheticOrganism:
+    def crossover(
+        self, parent1: SyntheticOrganism, parent2: SyntheticOrganism
+    ) -> SyntheticOrganism:
         """Genetic crossover between two organisms."""
         child_genome = []
         min_genes = min(len(parent1.genome), len(parent2.genome))
@@ -470,16 +493,19 @@ class Population:
                     org.state = OrganismState.SENESCING
 
             self.organisms.sort(key=lambda o: o.fitness, reverse=True)
-            survivors = self.organisms[:self.carrying_capacity]
+            survivors = self.organisms[: self.carrying_capacity]
 
-            new_organisms = list(survivors[:max(2, self.carrying_capacity // 4)])
+            new_organisms = list(survivors[: max(2, self.carrying_capacity // 4)])
             while len(new_organisms) < self.carrying_capacity:
                 parents = self.select()
                 if len(parents) >= 2 and random.random() < self.crossover_rate:
                     child = self.crossover(parents[0], parents[1])
                     new_organisms.append(child)
                 elif parents:
-                    clone_genome = [g.mutate(MutationType.POINT) if random.random() < self.mutation_rate else g for g in parents[0].genome]
+                    clone_genome = [
+                        g.mutate(MutationType.POINT) if random.random() < self.mutation_rate else g
+                        for g in parents[0].genome
+                    ]
                     clone = SyntheticOrganism(
                         name=f"org_gen{self.generation}_{len(new_organisms)}",
                         genome=clone_genome,
@@ -492,13 +518,15 @@ class Population:
             self.organisms = new_organisms
 
             fitnesses = [o.fitness for o in self.organisms]
-            history.append({
-                "generation": self.generation,
-                "avg_fitness": sum(fitnesses) / len(fitnesses) if fitnesses else 0,
-                "max_fitness": max(fitnesses) if fitnesses else 0,
-                "min_fitness": min(fitnesses) if fitnesses else 0,
-                "population_size": len(self.organisms),
-            })
+            history.append(
+                {
+                    "generation": self.generation,
+                    "avg_fitness": sum(fitnesses) / len(fitnesses) if fitnesses else 0,
+                    "max_fitness": max(fitnesses) if fitnesses else 0,
+                    "min_fitness": min(fitnesses) if fitnesses else 0,
+                    "population_size": len(self.organisms),
+                }
+            )
 
         return {
             "final_generation": self.generation,
@@ -520,6 +548,7 @@ class Population:
 
 # ─── Service ────────────────────────────────────────────────────────────
 
+
 class BioSyntheticEvolutionService:
     """Main service for bio-synthetic evolution."""
 
@@ -532,9 +561,12 @@ class BioSyntheticEvolutionService:
     def initialize(self) -> Dict[str, Any]:
         """Initialize the service with a default population."""
         genes = [
-            Gene(name=f"gene_{i}", function=random.choice(list(GeneFunction)),
-                 expression_level=random.uniform(0.5, 2.0),
-                 promoter_strength=random.uniform(0.3, 1.0))
+            Gene(
+                name=f"gene_{i}",
+                function=random.choice(list(GeneFunction)),
+                expression_level=random.uniform(0.5, 2.0),
+                promoter_strength=random.uniform(0.3, 1.0),
+            )
             for i in range(10)
         ]
 
@@ -545,26 +577,41 @@ class BioSyntheticEvolutionService:
 
         metabolism = MetabolicNetwork()
         metabolism.add_reaction("glycolysis", {"glucose": -1.0}, {"pyruvate": 2.0, "ATP": 2.0})
-        metabolism.add_reaction("tca_cycle", {"pyruvate": -1.0}, {"CO2": 3.0, "ATP": 1.0, "NADH": 4.0})
-        metabolism.add_reaction("oxidative_phosphorylation", {"NADH": -1.0, "O2": -0.5}, {"ATP": 2.5, "H2O": 1.0})
+        metabolism.add_reaction(
+            "tca_cycle", {"pyruvate": -1.0}, {"CO2": 3.0, "ATP": 1.0, "NADH": 4.0}
+        )
+        metabolism.add_reaction(
+            "oxidative_phosphorylation", {"NADH": -1.0, "O2": -0.5}, {"ATP": 2.5, "H2O": 1.0}
+        )
         metabolism.simulate_flux()
 
         organisms = []
         for i in range(20):
             org = SyntheticOrganism(
                 name=f"ancestor_{i}",
-                genome=[Gene(name=f"gene_{j}_{i}", function=random.choice(list(GeneFunction)),
-                             expression_level=random.uniform(0.5, 2.0),
-                             promoter_strength=random.uniform(0.3, 1.0))
-                        for j in range(random.randint(5, 15))],
-                circuits=[GeneticCircuit(name=f"circuit_{i}_{k}",
-                                         circuit_type=random.choice(list(CircuitType)),
-                                         genes=genes[:random.randint(2, 5)])
-                          for k in range(random.randint(1, 3))],
+                genome=[
+                    Gene(
+                        name=f"gene_{j}_{i}",
+                        function=random.choice(list(GeneFunction)),
+                        expression_level=random.uniform(0.5, 2.0),
+                        promoter_strength=random.uniform(0.3, 1.0),
+                    )
+                    for j in range(random.randint(5, 15))
+                ],
+                circuits=[
+                    GeneticCircuit(
+                        name=f"circuit_{i}_{k}",
+                        circuit_type=random.choice(list(CircuitType)),
+                        genes=genes[: random.randint(2, 5)],
+                    )
+                    for k in range(random.randint(1, 3))
+                ],
                 metabolism=MetabolicNetwork(),
                 generation=0,
             )
-            org.metabolism.add_reaction("glycolysis", {"glucose": -1.0}, {"pyruvate": 2.0, "ATP": 2.0})
+            org.metabolism.add_reaction(
+                "glycolysis", {"glucose": -1.0}, {"pyruvate": 2.0, "ATP": 2.0}
+            )
             org.metabolism.simulate_flux()
             org.evaluate_fitness()
             org.state = OrganismState.MATURE
@@ -586,19 +633,25 @@ class BioSyntheticEvolutionService:
             "population_id": pop.id,
         }
 
-    def create_organism(self, name: str, gene_count: int = 10,
-                        circuit_count: int = 1) -> Dict[str, Any]:
+    def create_organism(
+        self, name: str, gene_count: int = 10, circuit_count: int = 1
+    ) -> Dict[str, Any]:
         """Create a new synthetic organism."""
         genes = [
-            Gene(name=f"{name}_gene_{i}", function=random.choice(list(GeneFunction)),
-                 expression_level=random.uniform(0.5, 2.0),
-                 promoter_strength=random.uniform(0.3, 1.0))
+            Gene(
+                name=f"{name}_gene_{i}",
+                function=random.choice(list(GeneFunction)),
+                expression_level=random.uniform(0.5, 2.0),
+                promoter_strength=random.uniform(0.3, 1.0),
+            )
             for i in range(gene_count)
         ]
         circuits = [
-            GeneticCircuit(name=f"{name}_circuit_{i}",
-                           circuit_type=random.choice(list(CircuitType)),
-                           genes=genes[:random.randint(2, min(5, gene_count))])
+            GeneticCircuit(
+                name=f"{name}_circuit_{i}",
+                circuit_type=random.choice(list(CircuitType)),
+                genes=genes[: random.randint(2, min(5, gene_count))],
+            )
             for i in range(circuit_count)
         ]
         org = SyntheticOrganism(name=name, genome=genes, circuits=circuits)

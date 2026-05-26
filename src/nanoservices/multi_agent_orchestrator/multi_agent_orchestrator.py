@@ -51,6 +51,7 @@ class MessageType(Enum):
 @dataclass
 class AgentMessage:
     """Message exchanged between agents."""
+
     message_id: str = field(default_factory=lambda: str(uuid.uuid4())[:12])
     sender_id: str = ""
     recipient_id: str = ""
@@ -65,6 +66,7 @@ class AgentMessage:
 @dataclass
 class AgentCapability:
     """Describes what an agent can do."""
+
     name: str
     description: str = ""
     input_schema: Dict[str, Any] = field(default_factory=dict)
@@ -76,6 +78,7 @@ class AgentCapability:
 @dataclass
 class AgentProfile:
     """Profile of a registered agent."""
+
     agent_id: str
     name: str = ""
     role: AgentRole = AgentRole.WORKER
@@ -91,6 +94,7 @@ class AgentProfile:
 @dataclass
 class OrchestratedTask:
     """A task being orchestrated across agents."""
+
     task_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     name: str = ""
     description: str = ""
@@ -124,6 +128,7 @@ class OrchestratedTask:
 @dataclass
 class ConsensusProposal:
     """A proposal requiring multi-agent consensus."""
+
     proposal_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     proposer_id: str = ""
     content: Any = None
@@ -197,8 +202,7 @@ class MessageBus:
 class CapabilityMatcher:
     """Matches tasks to agents based on capabilities."""
 
-    def find_agents(self, required_caps: List[str],
-                    agents: Dict[str, AgentProfile]) -> List[str]:
+    def find_agents(self, required_caps: List[str], agents: Dict[str, AgentProfile]) -> List[str]:
         candidates = []
         for agent_id, profile in agents.items():
             if profile.state not in (AgentState.IDLE, AgentState.WAITING):
@@ -219,9 +223,13 @@ class ConsensusEngine:
         self.default_quorum = default_quorum
         self.proposals: Dict[str, ConsensusProposal] = {}
 
-    def propose(self, proposer_id: str, content: Any,
-                voters: Optional[Set[str]] = None,
-                quorum: Optional[float] = None) -> ConsensusProposal:
+    def propose(
+        self,
+        proposer_id: str,
+        content: Any,
+        voters: Optional[Set[str]] = None,
+        quorum: Optional[float] = None,
+    ) -> ConsensusProposal:
         proposal = ConsensusProposal(
             proposer_id=proposer_id,
             content=content,
@@ -229,12 +237,14 @@ class ConsensusEngine:
             voters=voters or set(),
         )
         self.proposals[proposal.proposal_id] = proposal
-        self.message_bus.send(AgentMessage(
-            sender_id=proposer_id,
-            message_type=MessageType.CONSENSUS_REQUEST,
-            content={"proposal_id": proposal.proposal_id, "content": content},
-            correlation_id=proposal.proposal_id,
-        ))
+        self.message_bus.send(
+            AgentMessage(
+                sender_id=proposer_id,
+                message_type=MessageType.CONSENSUS_REQUEST,
+                content={"proposal_id": proposal.proposal_id, "content": content},
+                correlation_id=proposal.proposal_id,
+            )
+        )
         return proposal
 
     def vote(self, proposal_id: str, voter_id: str, vote: str) -> bool:
@@ -249,12 +259,14 @@ class ConsensusEngine:
             proposal.votes_abstain += 1
         proposal.voters.add(voter_id)
 
-        self.message_bus.send(AgentMessage(
-            sender_id=voter_id,
-            message_type=MessageType.CONSENSUS_VOTE,
-            content={"proposal_id": proposal_id, "vote": vote},
-            correlation_id=proposal_id,
-        ))
+        self.message_bus.send(
+            AgentMessage(
+                sender_id=voter_id,
+                message_type=MessageType.CONSENSUS_VOTE,
+                content={"proposal_id": proposal_id, "vote": vote},
+                correlation_id=proposal_id,
+            )
+        )
         return True
 
     def resolve(self, proposal_id: str) -> Optional[bool]:
@@ -293,10 +305,14 @@ class MultiAgentOrchestrator:
     def _register_self(self):
         self.message_bus.register(f"orchestrator-{self._orchestrator_id}")
 
-    def register_agent(self, agent_id: str, name: str = "",
-                        role: AgentRole = AgentRole.WORKER,
-                        capabilities: Optional[List[AgentCapability]] = None,
-                        handler: Optional[Callable] = None) -> AgentProfile:
+    def register_agent(
+        self,
+        agent_id: str,
+        name: str = "",
+        role: AgentRole = AgentRole.WORKER,
+        capabilities: Optional[List[AgentCapability]] = None,
+        handler: Optional[Callable] = None,
+    ) -> AgentProfile:
         profile = AgentProfile(
             agent_id=agent_id,
             name=name or agent_id,
@@ -305,8 +321,12 @@ class MultiAgentOrchestrator:
         )
         self.agents[agent_id] = profile
         self.message_bus.register(agent_id, handler)
-        logger.info("Agent registered: %s (%s) with %d capabilities",
-                    agent_id, role.value, len(profile.capabilities))
+        logger.info(
+            "Agent registered: %s (%s) with %d capabilities",
+            agent_id,
+            role.value,
+            len(profile.capabilities),
+        )
         return profile
 
     def unregister_agent(self, agent_id: str) -> bool:
@@ -317,25 +337,28 @@ class MultiAgentOrchestrator:
         return False
 
     def delegate_task(self, task: OrchestratedTask) -> OrchestratedTask:
-        candidates = self.capability_matcher.find_agents(
-            task.required_capabilities, self.agents
-        )
+        candidates = self.capability_matcher.find_agents(task.required_capabilities, self.agents)
         if not candidates:
             task.status = "no_agents_available"
-            logger.warning("No agents available for task %s requiring %s",
-                          task.task_id, task.required_capabilities)
+            logger.warning(
+                "No agents available for task %s requiring %s",
+                task.task_id,
+                task.required_capabilities,
+            )
             return task
 
         for agent_id in candidates[:3]:
             task.assigned_agents.append(agent_id)
             self.agents[agent_id].state = AgentState.EXECUTING
-            self.message_bus.send(AgentMessage(
-                sender_id=f"orchestrator-{self._orchestrator_id}",
-                recipient_id=agent_id,
-                message_type=MessageType.TASK_ASSIGN,
-                content=task.to_dict(),
-                correlation_id=task.task_id,
-            ))
+            self.message_bus.send(
+                AgentMessage(
+                    sender_id=f"orchestrator-{self._orchestrator_id}",
+                    recipient_id=agent_id,
+                    message_type=MessageType.TASK_ASSIGN,
+                    content=task.to_dict(),
+                    correlation_id=task.task_id,
+                )
+            )
 
         task.status = "delegated"
         self.tasks[task.task_id] = task
@@ -346,13 +369,15 @@ class MultiAgentOrchestrator:
         if not task:
             return False
 
-        self.message_bus.send(AgentMessage(
-            sender_id=agent_id,
-            recipient_id=f"orchestrator-{self._orchestrator_id}",
-            message_type=MessageType.TASK_RESULT,
-            content={"task_id": task_id, "result": result},
-            correlation_id=task_id,
-        ))
+        self.message_bus.send(
+            AgentMessage(
+                sender_id=agent_id,
+                recipient_id=f"orchestrator-{self._orchestrator_id}",
+                message_type=MessageType.TASK_RESULT,
+                content={"task_id": task_id, "result": result},
+                correlation_id=task_id,
+            )
+        )
 
         task.result = result
         task.status = "completed"
@@ -367,8 +392,9 @@ class MultiAgentOrchestrator:
 
         return True
 
-    def request_consensus(self, proposer_id: str, content: Any,
-                           voters: Optional[Set[str]] = None) -> ConsensusProposal:
+    def request_consensus(
+        self, proposer_id: str, content: Any, voters: Optional[Set[str]] = None
+    ) -> ConsensusProposal:
         return self.consensus_engine.propose(proposer_id, content, voters)
 
     def cast_vote(self, proposal_id: str, voter_id: str, vote: str) -> bool:
@@ -377,11 +403,13 @@ class MultiAgentOrchestrator:
     def heartbeat(self, agent_id: str) -> bool:
         if agent_id in self.agents:
             self.agents[agent_id].last_heartbeat = datetime.now(timezone.utc).isoformat()
-            self.message_bus.send(AgentMessage(
-                sender_id=agent_id,
-                message_type=MessageType.HEARTBEAT,
-                content={"status": self.agents[agent_id].state.value},
-            ))
+            self.message_bus.send(
+                AgentMessage(
+                    sender_id=agent_id,
+                    message_type=MessageType.HEARTBEAT,
+                    content={"status": self.agents[agent_id].state.value},
+                )
+            )
             return True
         return False
 
@@ -402,16 +430,15 @@ class MultiAgentOrchestrator:
         }
 
     def get_orchestrator_status(self) -> Dict[str, Any]:
-        active_agents = sum(1 for a in self.agents.values()
-                          if a.state != AgentState.OFFLINE)
+        active_agents = sum(1 for a in self.agents.values() if a.state != AgentState.OFFLINE)
         return {
             "orchestrator_id": self._orchestrator_id,
             "created_at": self._created_at,
             "total_agents": len(self.agents),
             "active_agents": active_agents,
             "total_tasks": len(self.tasks),
-            "completed_tasks": sum(1 for t in self.tasks.values()
-                                  if t.status == "completed"),
-            "pending_consensus": sum(1 for p in self.consensus_engine.proposals.values()
-                                    if p.status == "voting"),
+            "completed_tasks": sum(1 for t in self.tasks.values() if t.status == "completed"),
+            "pending_consensus": sum(
+                1 for p in self.consensus_engine.proposals.values() if p.status == "voting"
+            ),
         }

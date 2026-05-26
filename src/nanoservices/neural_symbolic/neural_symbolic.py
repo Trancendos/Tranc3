@@ -45,6 +45,7 @@ class ReasoningStatus(Enum):
 @dataclass
 class Symbol:
     """A symbolic term or predicate."""
+
     name: str
     arity: int = 0
     sort: str = "individual"
@@ -57,6 +58,7 @@ class Symbol:
 @dataclass
 class Predicate:
     """A logical predicate with arguments."""
+
     name: str = ""
     arguments: List[Symbol] = field(default_factory=list)
     negated: bool = False
@@ -78,14 +80,17 @@ class Predicate:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Predicate):
             return False
-        return (self.name == other.name and
-                [a.name for a in self.arguments] == [a.name for a in other.arguments] and
-                self.negated == other.negated)
+        return (
+            self.name == other.name
+            and [a.name for a in self.arguments] == [a.name for a in other.arguments]
+            and self.negated == other.negated
+        )
 
 
 @dataclass
 class Rule:
     """An inference rule: IF antecedents THEN consequent."""
+
     rule_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     name: str = ""
     antecedents: List[Predicate] = field(default_factory=list)
@@ -110,6 +115,7 @@ class Rule:
 @dataclass
 class Fact:
     """A known fact in the knowledge base."""
+
     fact_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     predicate: Predicate = field(default_factory=Predicate)
     source: str = "asserted"
@@ -128,6 +134,7 @@ class Fact:
 @dataclass
 class ProofStep:
     """A single step in a reasoning proof."""
+
     step_number: int = 0
     rule_applied: Optional[str] = None
     derived_fact: Optional[Fact] = None
@@ -138,6 +145,7 @@ class ProofStep:
 @dataclass
 class ReasoningResult:
     """Result of a reasoning query."""
+
     query: Predicate = field(default_factory=Predicate)
     proven: bool = False
     confidence: float = 0.0
@@ -166,8 +174,9 @@ class KnowledgeBase:
         self.rules: Dict[str, Rule] = {}
         self._predicate_index: Dict[str, Set[str]] = {}
 
-    def assert_fact(self, predicate: Predicate, source: str = "asserted",
-                     confidence: float = 1.0) -> Fact:
+    def assert_fact(
+        self, predicate: Predicate, source: str = "asserted", confidence: float = 1.0
+    ) -> Fact:
         fact = Fact(predicate=predicate, source=source, confidence=confidence)
         self.facts[fact.fact_id] = fact
         key = predicate.name
@@ -222,8 +231,7 @@ class NeuralPredicateEvaluator:
         self.shi_url = shi_url
         self._models: Dict[str, Dict[str, Any]] = {}
 
-    def register_predicate_model(self, predicate_name: str,
-                                  model_config: Optional[Dict] = None):
+    def register_predicate_model(self, predicate_name: str, model_config: Optional[Dict] = None):
         self._models[predicate_name] = model_config or {
             "type": "heuristic",
             "default_confidence": 0.8,
@@ -268,10 +276,7 @@ class ForwardChainer:
                     for bindings in bindings_list:
                         new_pred = self._apply_bindings(rule.consequent, bindings)
                         neural_conf = self.neural_eval.evaluate(new_pred)
-                        confidence = rule.weight * min(
-                            neural_conf,
-                            max(0.5, 1.0 - step * 0.01)
-                        )
+                        confidence = rule.weight * min(neural_conf, max(0.5, 1.0 - step * 0.01))
                         new_pred.confidence = confidence
                         new_fact = self.kb.assert_fact(
                             new_pred, source=f"rule:{rule.rule_id}", confidence=confidence
@@ -315,8 +320,9 @@ class BackwardChainer:
         result.explanation = self._explain(steps)
         return result
 
-    def _prove_recursive(self, goal: Predicate, depth: int,
-                          steps: List[ProofStep], visited: Set[str]) -> Tuple[bool, Dict[str, str], List[ProofStep]]:
+    def _prove_recursive(
+        self, goal: Predicate, depth: int, steps: List[ProofStep], visited: Set[str]
+    ) -> Tuple[bool, Dict[str, str], List[ProofStep]]:
         goal_key = f"{goal.name}({','.join(a.name for a in goal.arguments)})"
         if goal_key in visited:
             return False, {}, steps
@@ -390,9 +396,13 @@ class BackwardChainer:
         explanations = []
         for step in steps:
             if step.rule_applied:
-                explanations.append(f"Applied rule {step.rule_applied} (confidence: {step.confidence:.2f})")
+                explanations.append(
+                    f"Applied rule {step.rule_applied} (confidence: {step.confidence:.2f})"
+                )
             elif step.derived_fact:
-                explanations.append(f"Found fact {step.derived_fact.predicate.name} (confidence: {step.confidence:.2f})")
+                explanations.append(
+                    f"Found fact {step.derived_fact.predicate.name} (confidence: {step.confidence:.2f})"
+                )
         return "; ".join(explanations)
 
 
@@ -416,8 +426,7 @@ class NeuralSymbolicReasoner:
         self.backward_chainer = BackwardChainer(self.kb, self.neural_eval)
         self._id = str(uuid.uuid4())[:8]
 
-    def assert_fact(self, name: str, args: List[str],
-                     confidence: float = 1.0) -> Fact:
+    def assert_fact(self, name: str, args: List[str], confidence: float = 1.0) -> Fact:
         predicate = Predicate(
             name=name,
             arguments=[Symbol(name=a) for a in args],
@@ -425,17 +434,27 @@ class NeuralSymbolicReasoner:
         )
         return self.kb.assert_fact(predicate)
 
-    def add_rule(self, name: str, antecedents: List[Tuple[str, List[str]]],
-                 consequent: Tuple[str, List[str]], weight: float = 1.0) -> str:
-        ant_preds = [Predicate(name=n, arguments=[Symbol(name=a) for a in args])
-                     for n, args in antecedents]
+    def add_rule(
+        self,
+        name: str,
+        antecedents: List[Tuple[str, List[str]]],
+        consequent: Tuple[str, List[str]],
+        weight: float = 1.0,
+    ) -> str:
+        ant_preds = [
+            Predicate(name=n, arguments=[Symbol(name=a) for a in args]) for n, args in antecedents
+        ]
         con_name, con_args = consequent
         con_pred = Predicate(name=con_name, arguments=[Symbol(name=a) for a in con_args])
         rule = Rule(name=name, antecedents=ant_preds, consequent=con_pred, weight=weight)
         return self.kb.add_rule(rule)
 
-    def query(self, name: str, args: List[str],
-              direction: InferenceDirection = InferenceDirection.BACKWARD) -> ReasoningResult:
+    def query(
+        self,
+        name: str,
+        args: List[str],
+        direction: InferenceDirection = InferenceDirection.BACKWARD,
+    ) -> ReasoningResult:
         predicate = Predicate(
             name=name,
             arguments=[Symbol(name=a) for a in args],
@@ -463,10 +482,13 @@ class NeuralSymbolicReasoner:
             )
 
     def register_neural_predicate(self, name: str, confidence: float = 0.8):
-        self.neural_eval.register_predicate_model(name, {
-            "type": "heuristic",
-            "default_confidence": confidence,
-        })
+        self.neural_eval.register_predicate_model(
+            name,
+            {
+                "type": "heuristic",
+                "default_confidence": confidence,
+            },
+        )
 
     def get_reasoner_status(self) -> Dict[str, Any]:
         return {

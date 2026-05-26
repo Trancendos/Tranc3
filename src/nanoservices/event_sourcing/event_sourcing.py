@@ -88,7 +88,9 @@ class EventStore:
             if event.version != last_version + 1:
                 logger.warning(
                     "Version conflict for %s: expected %d, got %d",
-                    event.aggregate_id, last_version + 1, event.version,
+                    event.aggregate_id,
+                    last_version + 1,
+                    event.version,
                 )
                 return False
 
@@ -98,8 +100,8 @@ class EventStore:
 
         # Trim if needed
         if len(self._events) > self._max_events:
-            self._events = self._events[len(self._events) - self._max_events:]
-            self._events = self._events[-self._max_events:]
+            self._events = self._events[len(self._events) - self._max_events :]
+            self._events = self._events[-self._max_events :]
             # Rebuild index
             self._event_index = {e.id: i for i, e in enumerate(self._events)}
 
@@ -108,7 +110,9 @@ class EventStore:
     def get_events(self, aggregate_id: str = "", from_version: int = 0) -> List[Event]:
         if not aggregate_id:
             return list(self._events)
-        return [e for e in self._events if e.aggregate_id == aggregate_id and e.version >= from_version]
+        return [
+            e for e in self._events if e.aggregate_id == aggregate_id and e.version >= from_version
+        ]
 
     def get_event(self, event_id: str) -> Optional[Event]:
         idx = self._event_index.get(event_id)
@@ -161,7 +165,9 @@ class ProjectionEngine:
             self._apply_event(event, projection)
 
         projection.updated_at = time.time()
-        logger.info("Rebuilt projection %s with %d events", projection_name, len(self._store.get_events()))
+        logger.info(
+            "Rebuilt projection %s with %d events", projection_name, len(self._store.get_events())
+        )
         return projection
 
     def update(self, event: Event) -> None:
@@ -212,7 +218,9 @@ class AggregateRoot:
         self._version = event.version
         # Subclasses override to apply event to state
 
-    def _raise_event(self, event_type: EventType, data: Dict[str, Any], metadata: Dict[str, Any] = None) -> None:
+    def _raise_event(
+        self, event_type: EventType, data: Dict[str, Any], metadata: Dict[str, Any] = None
+    ) -> None:
         self._version += 1
         event = Event(
             event_type=event_type,
@@ -292,19 +300,23 @@ class EventSourcingCQRSService:
         if proj:
             if "faults" not in proj.state:
                 proj.state["faults"] = []
-            proj.state["faults"].append({
-                "service": event.aggregate_id,
-                "fault_type": event.data.get("fault_type"),
-                "timestamp": event.timestamp,
-            })
+            proj.state["faults"].append(
+                {
+                    "service": event.aggregate_id,
+                    "fault_type": event.data.get("fault_type"),
+                    "timestamp": event.timestamp,
+                }
+            )
 
     def _on_scaling_event(self, event: Event) -> None:
         proj = self._projections.get_projection("scaling_history")
         if proj:
             if "events" not in proj.state:
                 proj.state["events"] = []
-            proj.state["events"].append({
-                "service": event.aggregate_id,
-                "direction": event.data.get("direction"),
-                "timestamp": event.timestamp,
-            })
+            proj.state["events"].append(
+                {
+                    "service": event.aggregate_id,
+                    "direction": event.data.get("direction"),
+                    "timestamp": event.timestamp,
+                }
+            )

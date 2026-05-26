@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 class AgentState(Enum):
     """States of the AI query agent."""
+
     IDLE = "idle"
     UNDERSTANDING = "understanding"
     PLANNING = "planning"
@@ -43,15 +44,17 @@ class AgentState(Enum):
 
 class QueryComplexity(Enum):
     """Complexity levels for queries."""
-    SIMPLE = "simple"           # Single relation, basic filter
-    MODERATE = "moderate"       # Join + filter
-    COMPLEX = "complex"         # Nested query + join
-    ADVANCED = "advanced"       # Multi-level nesting + optimization
-    EXPERT = "expert"           # Requires genetic optimization
+
+    SIMPLE = "simple"  # Single relation, basic filter
+    MODERATE = "moderate"  # Join + filter
+    COMPLEX = "complex"  # Nested query + join
+    ADVANCED = "advanced"  # Multi-level nesting + optimization
+    EXPERT = "expert"  # Requires genetic optimization
 
 
 class ActionType(Enum):
     """Types of actions the agent can take."""
+
     TRANSLATE_NL_TO_NRC = "translate_nl_to_nrc"
     PARSE_NRC = "parse_nrc"
     OPTIMIZE_PLAN = "optimize_plan"
@@ -68,6 +71,7 @@ class ActionType(Enum):
 @dataclass
 class QueryTask:
     """A query task for the agent to process."""
+
     task_id: str = ""
     natural_language: str = ""
     nrc_query: str = ""
@@ -90,6 +94,7 @@ class QueryTask:
 @dataclass
 class AgentAction:
     """An action taken by the agent."""
+
     action_id: str = ""
     action_type: ActionType = ActionType.TRANSLATE_NL_TO_NRC
     input_data: Dict[str, Any] = field(default_factory=dict)
@@ -107,6 +112,7 @@ class AgentAction:
 @dataclass
 class ReasoningStep:
     """A single reasoning step in the agent's thought process."""
+
     step_id: str = ""
     thought: str = ""
     action: Optional[AgentAction] = None
@@ -124,6 +130,7 @@ class ReasoningStep:
 @dataclass
 class AgentSession:
     """A complete agent session with full reasoning trace."""
+
     session_id: str = ""
     task: Optional[QueryTask] = None
     state: AgentState = AgentState.IDLE
@@ -210,7 +217,9 @@ class AIQueryAgent:
             ],
         }
 
-    async def process_query(self, natural_language: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def process_query(
+        self, natural_language: str, context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """Process a natural language query through the full agent pipeline."""
         task = QueryTask(
             natural_language=natural_language,
@@ -373,7 +382,8 @@ class AIQueryAgent:
 
         # Extract potential relation names (capitalized words)
         import re
-        relations = re.findall(r'\b[A-Z][a-zA-Z]+\b', nl)
+
+        relations = re.findall(r"\b[A-Z][a-zA-Z]+\b", nl)
         if not relations:
             relations = ["data"]
 
@@ -386,7 +396,9 @@ class AIQueryAgent:
         elif any(w in nl_lower for w in ["join", "combine", "merge"]):
             return patterns["join"].format(relations=", ".join(relations), key="id")
         elif any(w in nl_lower for w in ["nest", "hierarchical", "nested"]):
-            return patterns["nest"].format(outer=relations[0], inner=relations[1] if len(relations) > 1 else "nested")
+            return patterns["nest"].format(
+                outer=relations[0], inner=relations[1] if len(relations) > 1 else "nested"
+            )
         elif any(w in nl_lower for w in ["find", "where", "filter"]):
             return patterns["find"].format(relations=", ".join(relations), condition="condition")
         else:
@@ -413,10 +425,18 @@ class AIQueryAgent:
 
         # Try genetic optimizer
         if self.genetic_optimizer:
-            return {"success": True, "plan": {"query": nrc_query, "optimized": True}, "source": "genetic"}
+            return {
+                "success": True,
+                "plan": {"query": nrc_query, "optimized": True},
+                "source": "genetic",
+            }
 
         # Default plan
-        return {"success": True, "plan": {"query": nrc_query, "backend": "default"}, "source": "default"}
+        return {
+            "success": True,
+            "plan": {"query": nrc_query, "backend": "default"},
+            "source": "default",
+        }
 
     async def _action_execute(self, action: AgentAction, session: AgentSession) -> Dict[str, Any]:
         """Execute the NRC query."""
@@ -450,11 +470,15 @@ class AIQueryAgent:
         """Cache a query plan."""
         return {"success": True, "cached": True}
 
-    async def _action_query_cache(self, action: AgentAction, session: AgentSession) -> Dict[str, Any]:
+    async def _action_query_cache(
+        self, action: AgentAction, session: AgentSession
+    ) -> Dict[str, Any]:
         """Query the plan cache."""
         return {"success": True, "found": False}
 
-    async def _action_escalate_quantum(self, action: AgentAction, session: AgentSession) -> Dict[str, Any]:
+    async def _action_escalate_quantum(
+        self, action: AgentAction, session: AgentSession
+    ) -> Dict[str, Any]:
         """Escalate to quantum solver."""
         return {"success": True, "quantum_escalated": True}
 
@@ -468,11 +492,18 @@ class AIQueryAgent:
 
     async def _action_explain(self, action: AgentAction, session: AgentSession) -> Dict[str, Any]:
         """Explain query results."""
-        return {"success": True, "explanation": "Query results contain matched records from the specified relations."}
+        return {
+            "success": True,
+            "explanation": "Query results contain matched records from the specified relations.",
+        }
 
     async def _action_clarify(self, action: AgentAction, session: AgentSession) -> Dict[str, Any]:
         """Request clarification from user."""
-        return {"success": True, "clarification_needed": True, "questions": ["Could you specify which relation?"]}
+        return {
+            "success": True,
+            "clarification_needed": True,
+            "questions": ["Could you specify which relation?"],
+        }
 
     async def _query_cache_for(self, nrc_query: str) -> Optional[Dict[str, Any]]:
         """Look up cached plan."""
@@ -539,11 +570,11 @@ class AIQueryAgent:
             "failed": failed,
             "success_rate": completed / total if total > 0 else 0,
             "avg_iterations": (
-                sum(s.iterations_used for s in self._sessions.values()) / total
-                if total > 0 else 0
+                sum(s.iterations_used for s in self._sessions.values()) / total if total > 0 else 0
             ),
             "avg_duration_ms": (
                 sum(s.total_duration_ms for s in self._sessions.values()) / total
-                if total > 0 else 0
+                if total > 0
+                else 0
             ),
         }

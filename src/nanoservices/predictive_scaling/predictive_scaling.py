@@ -197,7 +197,11 @@ class PredictiveScalingEngine:
         # Forecast future load
         steps = max(1, int(self._forecast_horizon / 60))
         base_forecast = smoother.forecast(steps)
-        seasonal_factor = seasonal.get_seasonal_factor(time.time() + self._forecast_horizon) if seasonal.is_ready else 1.0
+        seasonal_factor = (
+            seasonal.get_seasonal_factor(time.time() + self._forecast_horizon)
+            if seasonal.is_ready
+            else 1.0
+        )
         forecast = base_forecast * seasonal_factor
 
         # Normalize to 0-1 utilization
@@ -233,12 +237,18 @@ class PredictiveScalingEngine:
 
         logger.info(
             "Scaling decision: %s %s for %s — current=%.1f target=%.1f confidence=%.2f",
-            direction.value, obs.resource_type.value, obs.service_name,
-            obs.value, target, confidence,
+            direction.value,
+            obs.resource_type.value,
+            obs.service_name,
+            obs.value,
+            target,
+            confidence,
         )
         return decision
 
-    def get_forecast(self, service_name: str, resource_type: ResourceType, steps: int = 5) -> List[float]:
+    def get_forecast(
+        self, service_name: str, resource_type: ResourceType, steps: int = 5
+    ) -> List[float]:
         key = f"{service_name}:{resource_type.value}"
         smoother = self._smoothers.get(key)
         if not smoother or not smoother.is_ready:
@@ -247,7 +257,11 @@ class PredictiveScalingEngine:
         forecasts = []
         for i in range(1, steps + 1):
             base = smoother.forecast(i)
-            factor = seasonal.get_seasonal_factor(time.time() + i * 60) if seasonal and seasonal.is_ready else 1.0
+            factor = (
+                seasonal.get_seasonal_factor(time.time() + i * 60)
+                if seasonal and seasonal.is_ready
+                else 1.0
+            )
             forecasts.append(base * factor)
         return forecasts
 

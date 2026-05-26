@@ -25,8 +25,10 @@ logger = logging.getLogger(__name__)
 
 # ─── Enums ────────────────────────────────────────────────────────────────
 
+
 class PhysicsDomain(Enum):
     """Physics simulation domains."""
+
     CLASSICAL_MECHANICS = "classical_mechanics"
     FLUID_DYNAMICS = "fluid_dynamics"
     THERMODYNAMICS = "thermodynamics"
@@ -41,6 +43,7 @@ class PhysicsDomain(Enum):
 
 class SimulationState(Enum):
     """Simulation lifecycle states."""
+
     CREATED = "created"
     CONFIGURING = "configuring"
     INITIALIZING = "initializing"
@@ -53,6 +56,7 @@ class SimulationState(Enum):
 
 class SolverType(Enum):
     """Numerical solver types."""
+
     EULER = "euler"
     RK4 = "runge_kutta_4"
     VERLET = "verlet"
@@ -65,6 +69,7 @@ class SolverType(Enum):
 
 class BoundaryCondition(Enum):
     """Boundary condition types."""
+
     PERIODIC = "periodic"
     DIRICHLET = "dirichlet"
     NEUMANN = "neumann"
@@ -75,9 +80,11 @@ class BoundaryCondition(Enum):
 
 # ─── Data Models ──────────────────────────────────────────────────────────
 
+
 @dataclass
 class Vector3D:
     """3D vector for physics computations."""
+
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0
@@ -92,7 +99,7 @@ class Vector3D:
         return Vector3D(self.x * scalar, self.y * scalar, self.z * scalar)
 
     def magnitude(self) -> float:
-        return math.sqrt(self.x ** 2 + self.y ** 2 + self.z ** 2)
+        return math.sqrt(self.x**2 + self.y**2 + self.z**2)
 
     def normalize(self) -> "Vector3D":
         mag = self.magnitude()
@@ -117,6 +124,7 @@ class Vector3D:
 @dataclass
 class PhysicalBody:
     """A physical body in the simulation."""
+
     body_id: str
     mass: float = 1.0
     position: Vector3D = field(default_factory=Vector3D)
@@ -141,6 +149,7 @@ class PhysicalBody:
 @dataclass
 class SimulationConfig:
     """Configuration for a physics simulation."""
+
     domain: PhysicsDomain = PhysicsDomain.CLASSICAL_MECHANICS
     solver: SolverType = SolverType.RK4
     boundary: BoundaryCondition = BoundaryCondition.PERIODIC
@@ -166,6 +175,7 @@ class SimulationConfig:
 @dataclass
 class SimulationResult:
     """Result from a physics simulation."""
+
     simulation_id: str
     domain: PhysicsDomain
     state: SimulationState
@@ -175,9 +185,7 @@ class SimulationResult:
     bodies: List[Dict[str, Any]] = field(default_factory=list)
     field_data: Dict[str, Any] = field(default_factory=dict)
     convergence_metric: float = 0.0
-    created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -192,6 +200,7 @@ class SimulationResult:
 
 
 # ─── Physics Solvers ─────────────────────────────────────────────────────
+
 
 class ClassicalMechanicsSolver:
     """N-body gravitational/electromagnetic simulation.
@@ -272,10 +281,7 @@ class ClassicalMechanicsSolver:
 
     def compute_total_energy(self) -> float:
         """Compute total energy (kinetic + potential)."""
-        ke = sum(
-            0.5 * b.mass * b.velocity.magnitude() ** 2
-            for b in self.bodies
-        )
+        ke = sum(0.5 * b.mass * b.velocity.magnitude() ** 2 for b in self.bodies)
         pe = 0.0
         for i, b1 in enumerate(self.bodies):
             for j, b2 in enumerate(self.bodies):
@@ -308,10 +314,17 @@ class FluidDynamicsSolver:
 
         # D2Q9 lattice velocities and weights
         self.c = [
-            (0, 0), (1, 0), (0, 1), (-1, 0), (0, -1),
-            (1, 1), (-1, 1), (-1, -1), (1, -1),
+            (0, 0),
+            (1, 0),
+            (0, 1),
+            (-1, 0),
+            (0, -1),
+            (1, 1),
+            (-1, 1),
+            (-1, -1),
+            (1, -1),
         ]
-        self.w = [4/9, 1/9, 1/9, 1/9, 1/9, 1/36, 1/36, 1/36, 1/36]
+        self.w = [4 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 9, 1 / 36, 1 / 36, 1 / 36, 1 / 36]
 
         # Distribution functions (flattened for performance)
         n = grid_size * grid_size * 9
@@ -332,7 +345,9 @@ class FluidDynamicsSolver:
                 self.uy[x][y] = 0.0
                 for i in range(9):
                     cu = self.c[i][0] * self.ux[x][y] + self.c[i][1] * self.uy[x][y]
-                    self.f[(x * self.grid_size + y) * 9 + i] = self.w[i] * self.rho[x][y] * (1.0 + 3.0 * cu + 4.5 * cu * cu)
+                    self.f[(x * self.grid_size + y) * 9 + i] = (
+                        self.w[i] * self.rho[x][y] * (1.0 + 3.0 * cu + 4.5 * cu * cu)
+                    )
 
     def step(self) -> Dict[str, Any]:
         """Execute one LBM step: collide + stream."""
@@ -445,6 +460,7 @@ class ThermodynamicsSolver:
 
 # ─── Universal Simulator ─────────────────────────────────────────────────
 
+
 class UniversalSimulator:
     """Multi-physics simulation engine.
 
@@ -483,9 +499,7 @@ class UniversalSimulator:
             )
         else:
             # Generic solver placeholder for other domains
-            solver = ClassicalMechanicsSolver(
-                self._default_bodies(), config.dt
-            )
+            solver = ClassicalMechanicsSolver(self._default_bodies(), config.dt)
 
         self.solvers[sim_id] = solver
         self.simulations[sim_id] = {
@@ -581,10 +595,7 @@ class UniversalSimulator:
 
     def list_simulations(self) -> List[Dict[str, Any]]:
         """List all simulations."""
-        return [
-            self.get_simulation_status(sid)
-            for sid in self.simulations
-        ]
+        return [self.get_simulation_status(sid) for sid in self.simulations]
 
     def delete_simulation(self, sim_id: str) -> bool:
         """Delete a simulation."""
@@ -607,6 +618,7 @@ class UniversalSimulator:
 
 
 # ─── Main Service ─────────────────────────────────────────────────────────
+
 
 class UniversalSimulatorService:
     """Universal Simulator Service for the Tranc3 ecosystem.

@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 class WasmRuntime(Enum):
     """Supported WASM runtimes (all 0-cost)."""
+
     WASMEDGE = "wasmedge"
     WASMTIME = "wasmtime"
     SPIN = "spin"
@@ -36,17 +37,19 @@ class WasmRuntime(Enum):
 
 class EdgeTier(Enum):
     """Edge deployment tiers."""
-    CLOUD = auto()        # Full cloud compute
-    FOG = auto()          # Near-edge fog nodes
-    MIST = auto()         # Far-edge mist devices
-    AERIAL = auto()       # Drone/aerial compute
-    IOT = auto()          # Constrained IoT sensors
-    NANO = auto()         # Ultra-constrained nanoscale
+
+    CLOUD = auto()  # Full cloud compute
+    FOG = auto()  # Near-edge fog nodes
+    MIST = auto()  # Far-edge mist devices
+    AERIAL = auto()  # Drone/aerial compute
+    IOT = auto()  # Constrained IoT sensors
+    NANO = auto()  # Ultra-constrained nanoscale
 
 
 @dataclass
 class WasmModule:
     """Represents a compiled WASM module for edge deployment."""
+
     module_id: str
     name: str
     bytecode: bytes
@@ -68,6 +71,7 @@ class WasmModule:
 @dataclass
 class EdgeExecutionResult:
     """Result from WASM edge execution."""
+
     execution_id: str
     module_id: str
     success: bool
@@ -82,6 +86,7 @@ class EdgeExecutionResult:
 @dataclass
 class NRCQueryWasm:
     """NRC query packaged as a WASM-compiled edge function."""
+
     query_id: str
     nrc_dsl: str
     compiled_wasm: Optional[WasmModule] = None
@@ -91,13 +96,16 @@ class NRCQueryWasm:
 
     def to_bytes(self) -> bytes:
         """Serialize the NRC query definition for WASM compilation."""
-        payload = json.dumps({
-            "query_id": self.query_id,
-            "nrc_dsl": self.nrc_dsl,
-            "target_tier": self.target_tier.name,
-            "parameters": self.parameters,
-            "schema_version": self.schema_version,
-        }, sort_keys=True).encode("utf-8")
+        payload = json.dumps(
+            {
+                "query_id": self.query_id,
+                "nrc_dsl": self.nrc_dsl,
+                "target_tier": self.target_tier.name,
+                "parameters": self.parameters,
+                "schema_version": self.schema_version,
+            },
+            sort_keys=True,
+        ).encode("utf-8")
         return payload
 
 
@@ -111,7 +119,7 @@ class WasmEdgeCompiler:
     - Spin component compilation
     """
 
-    RUST_TEMPLATE = '''
+    RUST_TEMPLATE = """
 // Auto-generated NRC WASM edge module by TranceX
 use std::alloc::{alloc, dealloc, Layout};
 
@@ -189,7 +197,7 @@ fn evaluate_nrc(data: &serde_json::Value) -> serde_json::Value {{
     }}
     data.clone()
 }}
-'''
+"""
 
     def __init__(self, cargo_path: str = "cargo", wasm_target: str = "wasm32-wasip1"):
         self.cargo_path = cargo_path
@@ -198,16 +206,14 @@ fn evaluate_nrc(data: &serde_json::Value) -> serde_json::Value {{
 
     def generate_rust_source(self, query: NRCQueryWasm) -> str:
         """Generate Rust source code from an NRC query definition."""
-        nrc_comment = query.nrc_dsl[:200].replace('"', '\\"').replace('\n', '\\n')
+        nrc_comment = query.nrc_dsl[:200].replace('"', '\\"').replace("\n", "\\n")
         source = self.RUST_TEMPLATE.format(
             query=query.nrc_dsl[:100].replace('"', '\\"'),
             nrc_comment=nrc_comment,
         )
         return source
 
-    async def compile_rust_to_wasm(
-        self, rust_source: str, name: str, tier: EdgeTier
-    ) -> WasmModule:
+    async def compile_rust_to_wasm(self, rust_source: str, name: str, tier: EdgeTier) -> WasmModule:
         """Compile Rust source code to WASM using cargo + wasm32-wasip1 target.
 
         In production, this invokes `cargo build --target wasm32-wasip1`.
@@ -286,8 +292,7 @@ crate-type = ["cdylib"]
 
                 if result.returncode == 0:
                     wasm_path = (
-                        project_dir / "target" / self.wasm_target / "release"
-                        / f"{name}.wasm"
+                        project_dir / "target" / self.wasm_target / "release" / f"{name}.wasm"
                     )
                     if wasm_path.exists():
                         return wasm_path.read_bytes()
@@ -306,70 +311,78 @@ crate-type = ["cdylib"]
         # Minimal WASM module structure:
         # \0asm (magic) + version 1
         # Type section, Function section, Memory section, Export section, Code section
-        magic = b'\x00asm'
-        version = struct.pack('<I', 1)
+        magic = b"\x00asm"
+        version = struct.pack("<I", 1)
 
         # Type section (section id 1)
         # Type 0: () -> i32
         # Type 1: (i32) -> i32  (wasip1 allocate)
         # Type 2: () -> ()      (execute stub)
-        type_entries = b''
+        type_entries = b""
         # () -> i32
-        type_entries += b'\x60' + b'\x00' + b'\x01\x7f'
+        type_entries += b"\x60" + b"\x00" + b"\x01\x7f"
         # (i32) -> i32
-        type_entries += b'\x60' + b'\x01\x7f' + b'\x01\x7f'
+        type_entries += b"\x60" + b"\x01\x7f" + b"\x01\x7f"
         # () -> ()
-        type_entries += b'\x60' + b'\x00' + b'\x00'
+        type_entries += b"\x60" + b"\x00" + b"\x00"
 
-        type_section = b'\x01' + self._encode_vector(type_entries)
+        type_section = b"\x01" + self._encode_vector(type_entries)
 
         # Function section (section id 3)
         # func 0 -> type 0 (get_output_ptr), func 1 -> type 0 (get_output_len)
         # func 2 -> type 1 (allocate), func 3 -> type 2 (execute)
-        func_entries = b'\x04' + bytes([0, 0, 1, 2])
-        func_section = b'\x03' + self._encode_vector(func_entries)
+        func_entries = b"\x04" + bytes([0, 0, 1, 2])
+        func_section = b"\x03" + self._encode_vector(func_entries)
 
         # Memory section (section id 5)
         # 1 memory, no max, initial pages
-        mem_entries = b'\x01' + b'\x00' + self._encode_leb128(memory_pages)
-        mem_section = b'\x05' + self._encode_vector(mem_entries)
+        mem_entries = b"\x01" + b"\x00" + self._encode_leb128(memory_pages)
+        mem_section = b"\x05" + self._encode_vector(mem_entries)
 
         # Export section (section id 7)
-        export_entries = b''
+        export_entries = b""
         exports = [
             ("get_output_ptr", 0, 0),  # func_idx=0, kind=func
-            ("get_output_len", 0, 1),   # func_idx=1
-            ("allocate", 0, 2),          # func_idx=2
-            ("execute", 0, 3),           # func_idx=3
-            ("memory", 2, 0),            # mem_idx=0, kind=memory
+            ("get_output_len", 0, 1),  # func_idx=1
+            ("allocate", 0, 2),  # func_idx=2
+            ("execute", 0, 3),  # func_idx=3
+            ("memory", 2, 0),  # mem_idx=0, kind=memory
         ]
         for exp_name, exp_kind, exp_idx in exports:
             name_bytes = exp_name.encode("utf-8")
             export_entries += bytes([len(name_bytes)]) + name_bytes
             export_entries += bytes([exp_kind, exp_idx])
-        export_section = b'\x07' + self._encode_vector(export_entries)
+        export_section = b"\x07" + self._encode_vector(export_entries)
 
         # Code section (section id 10)
-        code_entries = b''
+        code_entries = b""
         # Function 0: () -> i32 { i32.const 0 }
-        body0 = b'\x41\x00\x0b'  # i32.const 0, end
+        body0 = b"\x41\x00\x0b"  # i32.const 0, end
         code_entries += self._encode_vector(body0)
 
         # Function 1: () -> i32 { i32.const 0 }
-        body1 = b'\x41\x00\x0b'
+        body1 = b"\x41\x00\x0b"
         code_entries += self._encode_vector(body1)
 
         # Function 2: (i32) -> i32 { local.get 0 }
-        body2 = b'\x20\x00\x0b'  # local.get 0, end
+        body2 = b"\x20\x00\x0b"  # local.get 0, end
         code_entries += self._encode_vector(body2)
 
         # Function 3: () -> () { nop }
-        body3 = b'\x01\x00\x0b'  # 0 locals, end
+        body3 = b"\x01\x00\x0b"  # 0 locals, end
         code_entries += self._encode_vector(body3)
 
-        code_section = b'\x0a' + self._encode_vector(code_entries)
+        code_section = b"\x0a" + self._encode_vector(code_entries)
 
-        wasm = magic + version + type_section + func_section + mem_section + export_section + code_section
+        wasm = (
+            magic
+            + version
+            + type_section
+            + func_section
+            + mem_section
+            + export_section
+            + code_section
+        )
         return wasm
 
     @staticmethod
@@ -547,9 +560,7 @@ class WasmEdgeRuntime:
         if isinstance(data, list):
             return [self._evaluate_nested(item, depth + 1, max_depth) for item in data]
         elif isinstance(data, dict):
-            return {
-                k: self._evaluate_nested(v, depth + 1, max_depth) for k, v in data.items()
-            }
+            return {k: self._evaluate_nested(v, depth + 1, max_depth) for k, v in data.items()}
         return data
 
     def get_metrics(self) -> Dict[str, Any]:
@@ -565,8 +576,7 @@ class WasmEdgeRuntime:
             "successful": len(successful),
             "failed": len(failed),
             "avg_execution_time_ms": (
-                sum(r.execution_time_ms for r in successful) / len(successful)
-                if successful else 0
+                sum(r.execution_time_ms for r in successful) / len(successful) if successful else 0
             ),
             "total_gas_used": sum(r.gas_used for r in self._execution_log),
             "modules_loaded": len(self._modules),
@@ -593,14 +603,16 @@ class SpinEdgeApp:
         trigger: str = "http",
     ) -> None:
         """Add an NRC query component to the Spin application."""
-        self.components.append({
-            "id": component_name,
-            "source": {"url": f"file:///{wasm_module.module_id}.wasm"},
-            "route": route,
-            "trigger": trigger,
-            "memory_limit": wasm_module.memory_pages * 64 * 1024,
-            "cpu_cycles": wasm_module.cpu_cycles_limit,
-        })
+        self.components.append(
+            {
+                "id": component_name,
+                "source": {"url": f"file:///{wasm_module.module_id}.wasm"},
+                "route": route,
+                "trigger": trigger,
+                "memory_limit": wasm_module.memory_pages * 64 * 1024,
+                "cpu_cycles": wasm_module.cpu_cycles_limit,
+            }
+        )
 
     def generate_spin_toml(self) -> str:
         """Generate spin.toml configuration file."""
@@ -608,10 +620,10 @@ class SpinEdgeApp:
         for comp in self.components:
             components_str += f"""
 [[component]]
-id = "{comp['id']}"
-source = "{comp['source']['url']}"
+id = "{comp["id"]}"
+source = "{comp["source"]["url"]}"
 [component.trigger]
-route = "{comp['route']}"
+route = "{comp["route"]}"
 [component.build]
 command = "cargo build --target wasm32-wasip1 --release"
 """
@@ -676,9 +688,7 @@ class WasmEdgeManager:
         """Compile an NRC query to WASM and deploy to the appropriate tier."""
         name = name or f"nrc-{query.query_id}"
         rust_source = self.compiler.generate_rust_source(query)
-        module = await self.compiler.compile_rust_to_wasm(
-            rust_source, name, query.target_tier
-        )
+        module = await self.compiler.compile_rust_to_wasm(rust_source, name, query.target_tier)
 
         # Deploy to tier-specific runtime
         runtime = self.runtimes[query.target_tier]
@@ -699,10 +709,7 @@ class WasmEdgeManager:
     ) -> EdgeExecutionResult:
         """Execute an NRC query on its target edge tier."""
         # Find deployed module for this query
-        matching = [
-            m for m in self._module_registry.values()
-            if m.name == f"nrc-{query.query_id}"
-        ]
+        matching = [m for m in self._module_registry.values() if m.name == f"nrc-{query.query_id}"]
 
         if not matching:
             # Auto-compile and deploy
@@ -730,10 +737,7 @@ class WasmEdgeManager:
 
     def get_tier_metrics(self) -> Dict[str, Any]:
         """Get metrics from all edge tier runtimes."""
-        return {
-            tier.name: runtime.get_metrics()
-            for tier, runtime in self.runtimes.items()
-        }
+        return {tier.name: runtime.get_metrics() for tier, runtime in self.runtimes.items()}
 
     def list_deployed_modules(self) -> List[Dict[str, Any]]:
         """List all deployed WASM modules across tiers."""

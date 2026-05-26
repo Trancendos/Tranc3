@@ -49,6 +49,7 @@ HTTP_PORT = 7780
 # Types
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class ServiceStatus(str, Enum):
     STARTING = "Starting"
     READY = "Ready"
@@ -69,6 +70,7 @@ class IpcMessageType(str, Enum):
 @dataclass
 class ServiceId:
     """Unique identifier for a nanoservice."""
+
     name: str
 
     def __str__(self) -> str:
@@ -86,6 +88,7 @@ class ServiceId:
 @dataclass
 class IpcMessage:
     """Message envelope for IPC communication."""
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     source: ServiceId = field(default_factory=lambda: ServiceId("unknown"))
     target: ServiceId = field(default_factory=lambda: ServiceId("unknown"))
@@ -96,16 +99,18 @@ class IpcMessage:
     ttl_ms: int = 30000
 
     def to_json(self) -> str:
-        return json.dumps({
-            "id": self.id,
-            "source": str(self.source),
-            "target": str(self.target),
-            "msg_type": self.msg_type,
-            "payload": self.payload,
-            "timestamp": self.timestamp,
-            "priority": self.priority,
-            "ttl_ms": self.ttl_ms,
-        })
+        return json.dumps(
+            {
+                "id": self.id,
+                "source": str(self.source),
+                "target": str(self.target),
+                "msg_type": self.msg_type,
+                "payload": self.payload,
+                "timestamp": self.timestamp,
+                "priority": self.priority,
+                "ttl_ms": self.ttl_ms,
+            }
+        )
 
     @classmethod
     def from_json(cls, data: str) -> "IpcMessage":
@@ -125,6 +130,7 @@ class IpcMessage:
 @dataclass
 class NanoserviceRecord:
     """Registration record for a nanoservice."""
+
     id: ServiceId
     name: str
     tier: int
@@ -140,6 +146,7 @@ class NanoserviceRecord:
 # ─────────────────────────────────────────────────────────────────────────────
 # Shared Memory Ring Buffer
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class ShmRingBuffer:
     """
@@ -185,7 +192,7 @@ class ShmRingBuffer:
 
                 # Write payload
                 payload_offset = offset + SLOT_HEADER_SIZE
-                self._buffer[payload_offset:payload_offset + len(encoded)] = encoded
+                self._buffer[payload_offset : payload_offset + len(encoded)] = encoded
                 return i
 
         raise BufferError("All slots occupied — backpressure required")
@@ -207,7 +214,7 @@ class ShmRingBuffer:
 
         # Read payload
         payload_offset = offset + SLOT_HEADER_SIZE
-        encoded = bytes(self._buffer[payload_offset:payload_offset + length])
+        encoded = bytes(self._buffer[payload_offset : payload_offset + length])
 
         # Mark slot as available
         self._buffer[offset] = 0
@@ -248,6 +255,7 @@ class ShmRingBuffer:
 # Nanoservice Client
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class NanoserviceClient:
     """
     Client for connecting to the NSA Broker and communicating
@@ -276,6 +284,7 @@ class NanoserviceClient:
         # Connect to the broker's HTTP endpoint
         try:
             import httpx
+
             async with httpx.AsyncClient() as client:
                 resp = await client.post(
                     f"{self.broker_url}/register",
@@ -328,6 +337,7 @@ class NanoserviceClient:
             # Target segment doesn't exist — try via broker HTTP
             try:
                 import httpx
+
                 async with httpx.AsyncClient() as client:
                     await client.post(
                         f"{self.broker_url}/send",
@@ -401,6 +411,7 @@ class NanoserviceClient:
 # Service Registry (HTTP-based discovery)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class ServiceRegistry:
     """Discover and monitor nanoservices via the NSA Broker HTTP endpoint."""
 
@@ -411,6 +422,7 @@ class ServiceRegistry:
         """List all registered nanoservices."""
         try:
             import httpx
+
             async with httpx.AsyncClient() as client:
                 resp = await client.get(f"{self.broker_url}/services", timeout=5.0)
                 if resp.status_code == 200:
@@ -434,6 +446,7 @@ class ServiceRegistry:
         """Check NSA broker health."""
         try:
             import httpx
+
             async with httpx.AsyncClient() as client:
                 resp = await client.get(f"{self.broker_url}/health", timeout=5.0)
                 if resp.status_code == 200:
@@ -446,6 +459,7 @@ class ServiceRegistry:
         """Get broker statistics."""
         try:
             import httpx
+
             async with httpx.AsyncClient() as client:
                 resp = await client.get(f"{self.broker_url}/stats", timeout=5.0)
                 if resp.status_code == 200:
