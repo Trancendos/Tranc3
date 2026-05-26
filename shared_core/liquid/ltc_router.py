@@ -23,10 +23,12 @@ _TORCH_AVAILABLE = False
 
 try:
     import torch  # type: ignore  # noqa: F401
+
     _TORCH_AVAILABLE = True
     try:
         from ncps.torch import CfC  # type: ignore  # noqa: F401
         from ncps.wirings import AutoNCP  # type: ignore  # noqa: F401
+
         _NCPS_AVAILABLE = True
     except ImportError:
         pass
@@ -45,10 +47,10 @@ class RouteCell:
     """
 
     name: str
-    tau_base: float = 1.0        # baseline time constant (seconds)
-    tau_min: float = 0.1         # minimum tau under pressure
-    tau_max: float = 10.0        # maximum tau at rest
-    state: float = 0.5           # x ∈ [0, 1] — current routing weight
+    tau_base: float = 1.0  # baseline time constant (seconds)
+    tau_min: float = 0.1  # minimum tau under pressure
+    tau_max: float = 10.0  # maximum tau at rest
+    state: float = 0.5  # x ∈ [0, 1] — current routing weight
     _last_update: float = field(default_factory=time.monotonic, repr=False)
 
     def step(self, signal: float, dt: float | None = None) -> float:
@@ -122,6 +124,7 @@ class LiquidRouter:
         try:
             from ncps.torch import CfC
             from ncps.wirings import AutoNCP
+
             wiring = AutoNCP(units=units, output_size=len(self._cells))
             self._ncps_model = CfC(input_size=input_size, wiring=wiring)
             self._ncps_model.eval()
@@ -176,12 +179,15 @@ class LiquidRouter:
 
     def _route_ncps(self, signals: Dict[str, float], dt: float | None) -> LiquidRoutingResult:
         import torch
+
         sig_vals = [signals.get(n, 0.0) for n in self._cells]
-        x = torch.tensor([sig_vals], dtype=torch.float32)
+        # CfC expects 3D input of shape (batch_size, seq_len, input_size)
+        x = torch.tensor([[sig_vals]], dtype=torch.float32)
         timespan = torch.tensor([[dt or 1.0]], dtype=torch.float32)
         with torch.no_grad():
             out, _ = self._ncps_model(x, timespans=timespan)
-        raw = {name: float(v) for name, v in zip(self._cells, out[0].tolist(), strict=False)}
+        # out shape is (batch_size, seq_len, output_size); extract first step of first batch
+        raw = {name: float(v) for name, v in zip(self._cells, out[0][0].tolist(), strict=False)}
         weights = self._softmax(raw)
         target = max(weights, key=weights.get)
         return LiquidRoutingResult(

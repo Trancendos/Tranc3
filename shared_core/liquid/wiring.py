@@ -14,6 +14,7 @@ def build_ncp_wiring(units: int, output_size: int) -> Optional[Any]:
     """Build an AutoNCP wiring for use in LiquidRouter.enable_ncps(). Returns None if ncps absent."""
     try:
         from ncps.wirings import AutoNCP  # type: ignore
+
         return AutoNCP(units=units, output_size=output_size)
     except ImportError:
         return None

@@ -26,7 +26,9 @@ Population = List[Individual]
 
 def _dominates(a: Tuple[float, ...], b: Tuple[float, ...]) -> bool:
     """Return True if a Pareto-dominates b (all objectives ≤, at least one <)."""
-    return all(x <= y for x, y in zip(a, b, strict=False)) and any(x < y for x, y in zip(a, b, strict=False))
+    return all(x <= y for x, y in zip(a, b, strict=False)) and any(
+        x < y for x, y in zip(a, b, strict=False)
+    )
 
 
 def _fast_nondominated_sort(pop: List[Individual]) -> List[List[int]]:
@@ -166,6 +168,7 @@ class GeneticOptimizer:
         self._deap_available = False
         try:
             import deap  # noqa: F401
+
             self._deap_available = True
         except ImportError:
             pass
@@ -197,7 +200,9 @@ class GeneticOptimizer:
                     child[key] = self._rng.randint(int(lo), int(hi))
                 else:
                     span = float(hi) - float(lo)
-                    child[key] = max(float(lo), min(float(hi), child[key] + self._rng.gauss(0, span * 0.1)))
+                    child[key] = max(
+                        float(lo), min(float(hi), child[key] + self._rng.gauss(0, span * 0.1))
+                    )
         child.pop("_fitness", None)
         return child
 
@@ -225,7 +230,9 @@ class GeneticOptimizer:
                 if self._rng.random() < self._cx_rate and len(pop) >= 2:
                     a, b = self._rng.sample(pop, 2)
                     c1, c2 = self._crossover(a, b)
-                    offspring.extend([self._evaluate(self._mutate(c1)), self._evaluate(self._mutate(c2))])
+                    offspring.extend(
+                        [self._evaluate(self._mutate(c1)), self._evaluate(self._mutate(c2))]
+                    )
                 else:
                     parent = self._rng.choice(pop)
                     offspring.append(self._evaluate(self._mutate(parent)))
@@ -237,10 +244,7 @@ class GeneticOptimizer:
         fronts = _fast_nondominated_sort(pop)
         pareto: List[Individual] = []
         if fronts:
-            pareto = [
-                {k: v for k, v in pop[i].items() if not k.startswith("_")}
-                for i in fronts[0]
-            ]
+            pareto = [{k: v for k, v in pop[i].items() if not k.startswith("_")} for i in fronts[0]]
 
         best = min(pop, key=lambda x: x["_fitness"])
         best_clean = {k: v for k, v in best.items() if not k.startswith("_")}
@@ -256,22 +260,25 @@ class GeneticOptimizer:
         """DEAP-backed NSGA-II with proper crowding distance."""
         from deap import algorithms, base, creator, tools  # type: ignore
 
-        # Re-create each time to avoid DEAP's global state issues
-        if not hasattr(creator, "FitnessMultiGA"):
-            n_obj = len(self._fitness.evaluate(self._random_individual()))
+        # Re-create each time to avoid DEAP's global state issues.
+        # Use n_obj-scoped class names to avoid collisions when multiple
+        # GeneticOptimizer instances have different objective counts.
+        n_obj = len(self._fitness.evaluate(self._random_individual()))
+        fit_name = f"FitnessMultiGA_{n_obj}"
+        ind_name = f"IndividualGA_{n_obj}"
+        if not hasattr(creator, fit_name):
             weights = tuple(-1.0 for _ in range(n_obj))
-            creator.create("FitnessMultiGA", base.Fitness, weights=weights)
-            creator.create("IndividualGA", list, fitness=creator.FitnessMultiGA)
+            creator.create(fit_name, base.Fitness, weights=weights)
+            creator.create(ind_name, list, fitness=getattr(creator, fit_name))
 
         toolbox = base.Toolbox()
         keys = list(self._gene_space.keys())
 
         def make_individual():
             vals = [
-                self._rng.uniform(float(lo), float(hi))
-                for _, (lo, hi) in self._gene_space.items()
+                self._rng.uniform(float(lo), float(hi)) for _, (lo, hi) in self._gene_space.items()
             ]
-            return creator.IndividualGA(vals)
+            return getattr(creator, ind_name)(vals)
 
         def evaluate_individual(ind):
             config = dict(zip(keys, ind, strict=False))
@@ -280,14 +287,21 @@ class GeneticOptimizer:
         toolbox.register("individual", make_individual)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
         toolbox.register("evaluate", evaluate_individual)
-        toolbox.register("mate", tools.cxSimulatedBinaryBounded,
-                         low=[float(lo) for _, (lo, _) in self._gene_space.items()],
-                         up=[float(hi) for _, (_, hi) in self._gene_space.items()],
-                         eta=20.0)
-        toolbox.register("mutate", tools.mutPolynomialBounded,
-                         low=[float(lo) for _, (lo, _) in self._gene_space.items()],
-                         up=[float(hi) for _, (_, hi) in self._gene_space.items()],
-                         eta=20.0, indpb=self._mut_rate)
+        toolbox.register(
+            "mate",
+            tools.cxSimulatedBinaryBounded,
+            low=[float(lo) for _, (lo, _) in self._gene_space.items()],
+            up=[float(hi) for _, (_, hi) in self._gene_space.items()],
+            eta=20.0,
+        )
+        toolbox.register(
+            "mutate",
+            tools.mutPolynomialBounded,
+            low=[float(lo) for _, (lo, _) in self._gene_space.items()],
+            up=[float(hi) for _, (_, hi) in self._gene_space.items()],
+            eta=20.0,
+            indpb=self._mut_rate,
+        )
         toolbox.register("select", tools.selNSGA2)
 
         pop = toolbox.population(n=pop_size)
@@ -295,11 +309,16 @@ class GeneticOptimizer:
             ind.fitness.values = toolbox.evaluate(ind)
 
         algorithms.eaMuPlusLambda(
-            pop, toolbox,
-            mu=pop_size, lambda_=pop_size,
-            cxpb=self._cx_rate, mutpb=self._mut_rate,
+            pop,
+            toolbox,
+            mu=pop_size,
+            lambda_=pop_size,
+            cxpb=self._cx_rate,
+            mutpb=self._mut_rate,
             ngen=generations,
-            stats=None, halloffame=None, verbose=False,
+            stats=None,
+            halloffame=None,
+            verbose=False,
         )
 
         pareto_front = tools.sortNondominated(pop, len(pop), first_front_only=True)[0]

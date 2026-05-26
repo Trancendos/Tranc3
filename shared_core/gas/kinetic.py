@@ -27,7 +27,7 @@ def _maxwell_boltzmann_pdf(v: float, T: float) -> float:
     """
     if T <= 0 or v < 0:
         return 0.0
-    return (v ** 2) * math.exp(-v ** 2 / (2.0 * T))
+    return (v**2) * math.exp(-(v**2) / (2.0 * T))
 
 
 class MaxwellBoltzmannSelector:
@@ -57,7 +57,9 @@ class MaxwellBoltzmannSelector:
             v = max(0.001, velocities.get(w, 1.0))
             probs[w] = _maxwell_boltzmann_pdf(v, self._temperature)
 
-        total = sum(probs.values()) or 1.0
+        total = sum(probs.values())
+        if total == 0.0:
+            return {w: 1.0 / len(workers) for w in workers}
         return {w: p / total for w, p in probs.items()}
 
     def select(self, workers: List[str], velocities: Dict[str, float]) -> str:

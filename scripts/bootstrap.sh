@@ -116,12 +116,13 @@ fi
 
 cp "$REPO_ROOT/.env.example" "$ENV_FILE"
 
-# Inject generated secrets using sed
-sed -i "s|^SECRET_KEY=.*|SECRET_KEY=${SECRET_KEY}|" "$ENV_FILE"
-sed -i "s|^JWT_SECRET=.*|JWT_SECRET=${JWT_SECRET}|" "$ENV_FILE"
+# Inject generated secrets using sed (portable: BSD sed on macOS needs '' arg)
+_sed_i() { if [[ "$OSTYPE" == "darwin"* ]]; then sed -i '' "$@"; else sed -i "$@"; fi; }
+_sed_i "s|^SECRET_KEY=.*|SECRET_KEY=${SECRET_KEY}|" "$ENV_FILE"
+_sed_i "s|^JWT_SECRET=.*|JWT_SECRET=${JWT_SECRET}|" "$ENV_FILE"
 
 # Set environment mode
-sed -i "s|^ENVIRONMENT=.*|ENVIRONMENT=${ENV_MODE}|" "$ENV_FILE"
+_sed_i "s|^ENVIRONMENT=.*|ENVIRONMENT=${ENV_MODE}|" "$ENV_FILE"
 
 # Set sensible defaults for self-hosted zero-cost stack
 if ! grep -q "^OLLAMA_URL=" "$ENV_FILE"; then

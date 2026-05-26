@@ -38,16 +38,17 @@ def genome_to_config(genome: str) -> Dict[str, Any]:
     return json.loads(raw.decode())
 
 
-def mutate_genome(genome: str, mutation_rate: float = 0.01, rng: random.Random | None = None) -> str:
+def mutate_genome(
+    genome: str, mutation_rate: float = 0.01, rng: random.Random | None = None
+) -> str:
     """Apply random point mutations (SNP-style) to a genome string."""
     r = rng or random
-    return "".join(
-        r.choice(_NUCLEOTIDES) if r.random() < mutation_rate else n
-        for n in genome
-    )
+    return "".join(r.choice(_NUCLEOTIDES) if r.random() < mutation_rate else n for n in genome)
 
 
-def crossover_genomes(parent_a: str, parent_b: str, rng: random.Random | None = None) -> Tuple[str, str]:
+def crossover_genomes(
+    parent_a: str, parent_b: str, rng: random.Random | None = None
+) -> Tuple[str, str]:
     """Single-point crossover — produces two offspring genomes."""
     r = rng or random
     if len(parent_a) != len(parent_b):
@@ -102,7 +103,9 @@ class GenomeConfig:
             return self
         return GenomeConfig(new_config)
 
-    def crossover(self, other: "GenomeConfig", rng: random.Random | None = None) -> Tuple["GenomeConfig", "GenomeConfig"]:
+    def crossover(
+        self, other: "GenomeConfig", rng: random.Random | None = None
+    ) -> Tuple["GenomeConfig", "GenomeConfig"]:
         child_a_genome, child_b_genome = crossover_genomes(self._genome, other._genome, rng=rng)
         results = []
         for g in (child_a_genome, child_b_genome):

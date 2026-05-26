@@ -29,17 +29,17 @@ class WorkerMolecule:
     """
 
     name: str
-    mass: float = 1.0               # capacity weight
-    velocity: float = 10.0          # current RPS
-    queue_depth: int = 0            # pending requests
-    avg_latency_ms: float = 50.0    # thermal temperature
-    capacity: int = 100             # max concurrent slots
-    active_slots: int = 0           # currently occupied slots
+    mass: float = 1.0  # capacity weight
+    velocity: float = 10.0  # current RPS
+    queue_depth: int = 0  # pending requests
+    avg_latency_ms: float = 50.0  # thermal temperature
+    capacity: int = 100  # max concurrent slots
+    active_slots: int = 0  # currently occupied slots
 
     @property
     def kinetic_energy(self) -> float:
         """½mv² — higher energy = more routing preference."""
-        return 0.5 * self.mass * self.velocity ** 2
+        return 0.5 * self.mass * self.velocity**2
 
     @property
     def pressure(self) -> float:
@@ -94,7 +94,7 @@ class PressureBalancer:
     """
 
     # Pressure thresholds (dimensionless)
-    SCALE_UP_PRESSURE = 5000.0    # queue_depth × latency_ms
+    SCALE_UP_PRESSURE = 5000.0  # queue_depth × latency_ms
     SCALE_DOWN_PRESSURE = 500.0
 
     def __init__(
@@ -103,9 +103,7 @@ class PressureBalancer:
         scale_up_threshold: float = SCALE_UP_PRESSURE,
         scale_down_threshold: float = SCALE_DOWN_PRESSURE,
     ) -> None:
-        self._molecules: Dict[str, WorkerMolecule] = {
-            w: WorkerMolecule(name=w) for w in workers
-        }
+        self._molecules: Dict[str, WorkerMolecule] = {w: WorkerMolecule(name=w) for w in workers}
         self._scale_up_thresh = scale_up_threshold
         self._scale_down_thresh = scale_down_threshold
 
@@ -139,9 +137,12 @@ class PressureBalancer:
 
         if not candidates:
             # Absolute fallback
+            if not self._molecules:
+                raise ValueError("No workers available in the balancer")
             name = next(iter(self._molecules))
             return GasPressureResult(
-                selected=name, weight=1.0,
+                selected=name,
+                weight=1.0,
                 all_weights={name: 1.0},
                 system_pressure=0.0,
                 scale_up_signal=False,
@@ -164,7 +165,8 @@ class PressureBalancer:
             all_weights=weights,
             system_pressure=system_pressure,
             scale_up_signal=system_pressure > self._scale_up_thresh,
-            scale_down_signal=system_pressure < self._scale_down_thresh and len(self._molecules) > 1,
+            scale_down_signal=system_pressure < self._scale_down_thresh
+            and len(self._molecules) > 1,
             elapsed_ms=elapsed,
         )
 

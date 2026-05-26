@@ -16,6 +16,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 try:
     from cachetools import LRUCache  # type: ignore
+
     _CACHETOOLS = True
 except ImportError:
     _CACHETOOLS = False
@@ -167,12 +168,12 @@ class PredictivePrefetcher:
 
         self._log.append(key)
         if len(self._log) > self._max_history:
-            self._log = self._log[-self._max_history // 2:]
+            self._log = self._log[-self._max_history // 2 :]
 
-        # Trigger prefetch for predictions from previous key
-        if self._prefetch_cb and self._log and len(self._log) >= 2:
-            prev = self._log[-2]
-            for predicted_key in self.predict(prev):
+        # Trigger prefetch for predictions from the current key
+        if self._prefetch_cb and self._log:
+            current = self._log[-1]
+            for predicted_key in self.predict(current):
                 self._prefetch_cb(predicted_key)
 
     def predict(self, key: str) -> List[str]:
@@ -181,10 +182,7 @@ class PredictivePrefetcher:
             return []
         counts = self._transitions[key]
         total = sum(counts.values())
-        return [
-            k for k, c in counts.most_common(self._lookahead)
-            if c / total >= self._confidence
-        ]
+        return [k for k, c in counts.most_common(self._lookahead) if c / total >= self._confidence]
 
     def clear_history(self) -> None:
         self._log.clear()
