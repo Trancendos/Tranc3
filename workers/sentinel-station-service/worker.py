@@ -116,18 +116,15 @@ worker_kit = InfinityWorkerKit(
 # ReactiveState for live Sentinel topology observable by other services
 if _REACTIVE_AVAILABLE:
     sentinel_topology_state = StateStore()
-    # Set initial state
-    try:
-        sentinel_topology_state.set(
-            {
-                "channels": {},
-                "subscribers": 0,
-                "events_published": 0,
-                "redis_connected": False,
-            }
-        )
-    except Exception:
-        sentinel_topology_state = None
+    sentinel_topology_state.create(
+        "topology",
+        {
+            "channels": {},
+            "subscribers": 0,
+            "events_published": 0,
+            "redis_connected": False,
+        },
+    )
 else:
     sentinel_topology_state = None
 

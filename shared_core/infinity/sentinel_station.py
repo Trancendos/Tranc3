@@ -56,7 +56,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 from shared_core.infinity.nomenclature import SentinelChannel
 from shared_core.infinity.sentinel_config import (
@@ -505,8 +505,8 @@ class SentinelStation:
 
     async def publish(
         self,
-        channel: str,
-        payload: Dict[str, Any],
+        channel: Union[str, "SentinelEvent"],
+        payload: Optional[Dict[str, Any]] = None,
         event_type: str = "",
         source: str = "",
     ) -> SentinelEvent:
@@ -517,15 +517,33 @@ class SentinelStation:
         for cross-gateway events, while the fallback handles local
         subscribers within the same process.
 
+        Accepts either positional-keyword form::
+
+            await station.publish("agents", {"type": "agent_created"})
+
+        or single-argument form with a pre-built SentinelEvent::
+
+            await station.publish(SentinelEvent(channel="agents", ...))
+
         Args:
             channel: SentinelChannel name (e.g., "agents", "workflows")
-            payload: Event data dictionary
+                     *or* a pre-built SentinelEvent object.
+            payload: Event data dictionary (omit when passing a SentinelEvent)
             event_type: Type of event (e.g., "agent_created")
             source: Source service identifier
 
         Returns:
             The published SentinelEvent
         """
+        # Support single-arg form: sentinel.publish(SentinelEvent(...))
+        if isinstance(channel, SentinelEvent):
+            ev = channel
+            channel = str(ev.channel)
+            payload = ev.payload
+            event_type = ev.event_type
+            source = ev.source
+        if payload is None:
+            payload = {}
         event = SentinelEvent(
             channel=channel,
             event_type=event_type,

@@ -356,13 +356,17 @@ async def _lifespan(app: FastAPI):
             except asyncio.CancelledError:
                 break
             except Exception:
-                pass
+                pass  # swallow background loop errors — not critical path
 
     task = asyncio.create_task(_bg_loop())
     try:
         yield
     finally:
         task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
         await worker_kit.shutdown()
         logger.info("Infinity-Auth smart adaptive layer stopped")
 

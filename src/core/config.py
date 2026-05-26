@@ -87,7 +87,7 @@ class Tranc3Config(BaseSettings):
     @field_validator("SECRET_KEY", mode="after")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
-        if v == "dev-secret-key-change-in-production":
+        if not v or not v.strip() or v == "dev-secret-key-change-in-production":
             raise ValueError(
                 "SECRET_KEY must be set to a real secret. Set the SECRET_KEY environment variable."
             )
@@ -96,7 +96,7 @@ class Tranc3Config(BaseSettings):
     @field_validator("JWT_SECRET", mode="after")
     @classmethod
     def validate_jwt_secret(cls, v: str) -> str:
-        if v == "dev-jwt-secret-change-in-production":
+        if not v or not v.strip() or v == "dev-jwt-secret-change-in-production":
             raise ValueError(
                 "JWT_SECRET must be set to a real secret. Set the JWT_SECRET environment variable."
             )
