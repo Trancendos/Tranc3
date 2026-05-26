@@ -221,8 +221,8 @@ class T2ance:
 
         if degraded:
             snap.weaknesses.append(f"{len(degraded)} managed AIs in critical state")
-        if len(self._hila_queue) > 5:
-            snap.weaknesses.append(f"HIL-A backlog: {len(self._hila_queue)} items")
+        if len(self.pending_hila()) > 5:
+            snap.weaknesses.append(f"HIL-A backlog: {len(self.pending_hila())} items")
 
         if not self._managed:
             snap.opportunities.append("Register Tier 3 Lead AIs for governance")
@@ -255,8 +255,9 @@ class T2ance:
     # ------------------------------------------------------------------
 
     async def coordinate(self) -> None:
-        """Trigger one governance cycle across all managed Tier 3 AIs."""
-        tasks = [ai.on_cycle() for ai in self._managed.values()]
+        """Trigger one governance cycle across managed Tier 3 AIs not yet started."""
+        # Skip AIs whose own _cycle_loop is already running to avoid re-entrancy
+        tasks = [ai.on_cycle() for ai in self._managed.values() if not ai._running]
         if tasks:
             results = await asyncio.gather(*tasks, return_exceptions=True)
             for r in results:
@@ -286,9 +287,11 @@ class T2ance:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
-        for ai in self._managed.values():
-            await ai.stop()
+                pass  # expected — task was cancelled by us
+        await asyncio.gather(
+            *[ai.stop() for ai in self._managed.values()],
+            return_exceptions=True,
+        )
         logger.info("%s stopped after %d cycles", self.dna, self._cycle_count)
 
     async def _govern_loop(self) -> None:

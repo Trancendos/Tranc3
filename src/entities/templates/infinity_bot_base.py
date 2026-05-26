@@ -117,8 +117,8 @@ class InfinityBot:
         if slot not in valid_slots:
             raise ValueError(f"Bot slot must be one of {valid_slots} — got {slot!r}")
         self.dna = BotDNA(nid=nid, location_pid=location_pid, name=name, slot=slot)
-        self._base_interval = interval_seconds
-        self._interval = interval_seconds
+        self._base_interval = max(self._MIN_INTERVAL, min(self._MAX_INTERVAL, interval_seconds))
+        self._interval = self._base_interval
         self._max_retries = max_retries
         self._running = False
         self._task: asyncio.Task | None = None
@@ -178,7 +178,7 @@ class InfinityBot:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
+                pass  # expected — task was cancelled by us
         logger.info(
             "%s stopped (total=%d, success=%d, health=%.2f)",
             self.dna,
@@ -196,6 +196,7 @@ class InfinityBot:
             success = False
 
             for attempt in range(self._max_retries + 1):
+                run.started_at = time.monotonic()  # reset for accurate per-attempt latency
                 try:
                     result = await self.run_task()
                     run.result = result or {}
@@ -235,7 +236,12 @@ class InfinityBot:
                 self._runs = self._runs[-self._MAX_HISTORY :]
 
             # Emit metrics hook
-            await self.on_metrics(run)
+            try:
+                await self.on_metrics(run)
+            except asyncio.CancelledError:
+                raise  # propagate cancellation
+            except Exception as exc:
+                logger.warning("%s on_metrics raised: %s", self.dna, exc)
 
             try:
                 await asyncio.sleep(self._interval)

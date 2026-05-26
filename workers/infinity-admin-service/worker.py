@@ -79,7 +79,6 @@ from shared_core.infinity.worker_integration import InfinityWorkerKit
 try:
     from src.entities.platform import (
         PLATFORM_ENTITIES,
-        get_all_ids,
         get_entity_by_pid,
     )
 
@@ -90,9 +89,6 @@ except Exception:  # pragma: no cover
 
     def get_entity_by_pid(pid: str):  # type: ignore[misc]
         return None
-
-    def get_all_ids() -> dict:  # type: ignore[misc]
-        return {}
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -187,7 +183,7 @@ class AdminDatabase:
                 id TEXT PRIMARY KEY,
                 location_pid TEXT NOT NULL,
                 entity_type TEXT NOT NULL,
-                slot TEXT,
+                slot TEXT NOT NULL DEFAULT '',
                 original_name TEXT NOT NULL,
                 override_name TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
@@ -200,6 +196,11 @@ class AdminDatabase:
             CREATE INDEX IF NOT EXISTS idx_actions_type ON admin_actions(action_type);
             CREATE INDEX IF NOT EXISTS idx_compliance_type ON compliance_events(event_type);
             CREATE INDEX IF NOT EXISTS idx_overrides_pid ON entity_overrides(location_pid);
+
+            -- Migration: normalise legacy NULL slots to '' so ON CONFLICT upsert fires correctly.
+            -- SQLite UNIQUE treats each NULL as distinct; '' is the correct sentinel for no-slot rows.
+            -- This UPDATE is a no-op when no NULL rows exist (idempotent on every startup).
+            UPDATE entity_overrides SET slot = '' WHERE slot IS NULL;
         """)
         self._conn.commit()
 
@@ -1043,7 +1044,7 @@ def _resolve_entity_detail(pid: str) -> EntityDetail | None:
     ).fetchall()
     overrides: dict[str, str] = {}
     for r in ov_rows:
-        key = r["entity_type"] if r["slot"] is None else f"{r['entity_type']}_{r['slot']}"
+        key = r["entity_type"] if not r["slot"] else f"{r['entity_type']}_{r['slot']}"
         overrides[key] = r["override_name"]
 
     # Resolve location name
@@ -1115,6 +1116,7 @@ def _upsert_override(
     updated_by: str,
 ) -> None:
     """Insert or replace an entity name override in the DB."""
+    slot_val = slot if slot is not None else ""  # sentinel — SQLite UNIQUE treats NULL as distinct
     now = datetime.now(timezone.utc).isoformat()
     db.execute(
         """INSERT INTO entity_overrides
@@ -1128,7 +1130,7 @@ def _upsert_override(
             uuid.uuid4().hex[:16],
             location_pid,
             entity_type,
-            slot,
+            slot_val,
             original_name,
             override_name,
             now,
@@ -1153,6 +1155,21 @@ async def list_entities(pillar: str | None = None):
             "message": "Platform entity registry not accessible from this worker",
         }
 
+    # Preload all overrides in one query — avoids N+1 (3 queries × 43 entities = 129 queries)
+    all_ov_rows = db.execute(
+        "SELECT location_pid, entity_type, slot, override_name FROM entity_overrides"
+    ).fetchall()
+    ov_loc_map: dict[str, str] = {}
+    ov_ai_map: dict[str, str] = {}
+    ov_count_map: dict[str, int] = {}
+    for row in all_ov_rows:
+        lpid = row["location_pid"]
+        ov_count_map[lpid] = ov_count_map.get(lpid, 0) + 1
+        if row["entity_type"] == "location" and not row["slot"]:
+            ov_loc_map[lpid] = row["override_name"]
+        elif row["entity_type"] == "lead_ai" and not row["slot"]:
+            ov_ai_map[lpid] = row["override_name"]
+
     results = []
     for location_name, entity in PLATFORM_ENTITIES.items():
         if pillar and (entity.pillar is None or entity.pillar.value != pillar):
@@ -1162,33 +1179,17 @@ async def list_entities(pillar: str | None = None):
         if not pid:
             continue
 
-        # Count active overrides for this entity
-        ov_count = db.execute(
-            "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ?",
-            (pid,),
-        ).fetchone()["cnt"]
-
-        # Get location/lead_ai overrides quickly
-        ov_loc = db.execute(
-            "SELECT override_name FROM entity_overrides WHERE location_pid=? AND entity_type='location' AND slot IS NULL",
-            (pid,),
-        ).fetchone()
-        ov_ai = db.execute(
-            "SELECT override_name FROM entity_overrides WHERE location_pid=? AND entity_type='lead_ai' AND slot IS NULL",
-            (pid,),
-        ).fetchone()
-
         results.append(
             {
                 "pid": pid,
-                "location": ov_loc["override_name"] if ov_loc else location_name,
+                "location": ov_loc_map.get(pid, location_name),
                 "location_original": location_name,
                 "pillar": entity.pillar.value if entity.pillar else None,
-                "lead_ai": ov_ai["override_name"] if ov_ai else entity.lead_ai,
+                "lead_ai": ov_ai_map.get(pid, entity.lead_ai),
                 "lead_ai_original": entity.lead_ai,
                 "prime_count": len(entity.primes) if entity.primes else 0,
                 "worker_port": getattr(entity, "worker_port", None),
-                "active_overrides": ov_count,
+                "active_overrides": ov_count_map.get(pid, 0),
             }
         )
 
@@ -1226,6 +1227,11 @@ async def rename_location(pid: str, body: EntityNameUpdate, request: Request):
 
     entity = get_entity_by_pid(pid)
     if entity is None:
+        if not _PLATFORM_ENTITIES_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="Platform entity registry not accessible from this worker",
+            )
         raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
 
     original = entity.location
@@ -1273,6 +1279,11 @@ async def rename_lead_ai(pid: str, body: EntityNameUpdate, request: Request):
 
     entity = get_entity_by_pid(pid)
     if entity is None:
+        if not _PLATFORM_ENTITIES_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="Platform entity registry not accessible from this worker",
+            )
         raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
 
     original = entity.lead_ai or ""
@@ -1321,6 +1332,11 @@ async def rename_prime(pid: str, prime_idx: int, body: EntityNameUpdate, request
 
     entity = get_entity_by_pid(pid)
     if entity is None:
+        if not _PLATFORM_ENTITIES_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="Platform entity registry not accessible from this worker",
+            )
         raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
 
     primes = list(entity.primes) if entity.primes else []
@@ -1388,6 +1404,11 @@ async def rename_agent(pid: str, role: str, body: EntityNameUpdate, request: Req
 
     entity = get_entity_by_pid(pid)
     if entity is None:
+        if not _PLATFORM_ENTITIES_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="Platform entity registry not accessible from this worker",
+            )
         raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
 
     agent = entity.agent_alpha if role == "alpha" else entity.agent_beta
@@ -1452,6 +1473,11 @@ async def rename_bot(pid: str, slot: str, body: EntityNameUpdate, request: Reque
 
     entity = get_entity_by_pid(pid)
     if entity is None:
+        if not _PLATFORM_ENTITIES_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="Platform entity registry not accessible from this worker",
+            )
         raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
 
     bot = getattr(entity, f"bot_{slot}", None)
@@ -1516,21 +1542,39 @@ async def list_entity_overrides(pid: str):
 
 
 @app.delete("/admin/entities/{pid}/overrides")
-async def reset_entity_overrides(pid: str, request: Request):
-    """Reset ALL name overrides for an entity — restores code defaults.
+async def reset_entity_overrides(
+    pid: str,
+    request: Request,
+    entity_type: str | None = Query(None, description="Limit reset to a specific entity_type"),
+    slot: str | None = Query(None, description="Limit reset to a specific slot (pass empty string for no-slot rows)"),
+):
+    """Reset name overrides for an entity — restores code defaults.
 
-    Optionally pass ?entity_type=lead_ai&slot=null to reset a single field.
+    Pass no query params to reset all overrides for the entity.
+    Pass ?entity_type=lead_ai to reset only that type.
+    Pass ?entity_type=location&slot= to reset a specific no-slot row.
+    Pass ?entity_type=agent&slot=alpha to reset a specific slotted row.
     """
     user = getattr(request.state, "user", {})
     actor = user.get("sub", "unknown")
 
+    conditions = ["location_pid = ?"]
+    params: list[Any] = [pid]
+    if entity_type:
+        conditions.append("entity_type = ?")
+        params.append(entity_type)
+    if slot is not None:
+        conditions.append("slot = ?")
+        params.append("" if slot in ("null", "") else slot)
+    where = " AND ".join(conditions)
+
     count_row = db.execute(
-        "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ?",
-        (pid,),
+        f"SELECT COUNT(*) as cnt FROM entity_overrides WHERE {where}",
+        tuple(params),
     ).fetchone()
     count = count_row["cnt"]
 
-    db.execute("DELETE FROM entity_overrides WHERE location_pid = ?", (pid,))
+    db.execute(f"DELETE FROM entity_overrides WHERE {where}", tuple(params))
     db.commit()
 
     _log_admin_action(
@@ -1539,7 +1583,7 @@ async def reset_entity_overrides(pid: str, request: Request):
         actor_username=user.get("username"),
         target_type="entity",
         target_id=pid,
-        details={"overrides_cleared": count},
+        details={"overrides_cleared": count, "entity_type": entity_type, "slot": slot},
     )
 
     await sentinel.publish(
@@ -1547,13 +1591,15 @@ async def reset_entity_overrides(pid: str, request: Request):
             channel=SentinelChannel.PLATFORM,
             event_type="entity_overrides_reset",
             source="infinity_admin",
-            payload={"pid": pid, "overrides_cleared": count},
+            payload={"pid": pid, "overrides_cleared": count, "entity_type": entity_type, "slot": slot},
         )
     )
 
     return {
         "message": "Entity overrides reset to code defaults",
         "pid": pid,
+        "entity_type": entity_type,
+        "slot": slot,
         "overrides_cleared": count,
     }
 

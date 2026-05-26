@@ -123,10 +123,16 @@ class TrancOne:
     ) -> None:
         if slot not in (1, 2, 3):
             raise ValueError(f"TrancOne slot must be 1, 2, or 3 — got {slot}")
-        self.dna = TrancOneDNA(aid=aid, name=name, slot=slot, opt_in_required=opt_in_required)
+        canonical = ORCHESTRATOR_SLOTS[slot]
+        if name != canonical:
+            logger.warning(
+                "TrancOne slot %d canonical name is %r; ignoring custom name %r — using canonical.",
+                slot, canonical, name,
+            )
+        self.dna = TrancOneDNA(aid=aid, name=canonical, slot=slot, opt_in_required=slot == 3)
         self._primes: dict[str, T2ance] = {}
         self._running = False
-        self._active = not opt_in_required  # tAImra starts inactive
+        self._active = slot != 3  # tAImra (slot 3) starts inactive; requires explicit activate()
         self._cycle_count = 0
         self._error_count = 0
         self._swot: SWOTSnapshot = SWOTSnapshot()
@@ -188,12 +194,14 @@ class TrancOne:
         )
         prime = self._primes.get(target_aid)
         if prime:
-            # Cascade to all managed Tier 3 AIs first
-            for managed_aid, managed_ai in prime._managed.items():
-                await managed_ai.stop()
-                record.cascaded_to.append(managed_aid)
-            # Stop the Prime itself
-            await prime.stop()
+            # prime.stop() cascades to its managed AIs internally
+            record.cascaded_to.extend(prime._managed.keys())
+            try:
+                await prime.stop()
+            except Exception as exc:
+                logger.warning(
+                    "%s emergency_stop cascade failed for %s: %s", self.dna, target_aid, exc
+                )
         self._emergency_stops.append(record)
         logger.warning("%s EMERGENCY STOP: %s — reason: %s", self.dna, target_aid, reason)
         return record
@@ -330,9 +338,11 @@ class TrancOne:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
-        for prime in self._primes.values():
-            await prime.stop()
+                pass  # expected — task was cancelled by us
+        await asyncio.gather(
+            *[prime.stop() for prime in self._primes.values()],
+            return_exceptions=True,
+        )
         logger.info("%s orchestration stopped after %d cycles", self.dna, self._cycle_count)
 
     async def _orchestrate_loop(self) -> None:

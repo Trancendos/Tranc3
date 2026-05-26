@@ -20,6 +20,7 @@ Design principles:
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import time
 import uuid
@@ -120,7 +121,8 @@ class InfinityAgent:
         if role not in ("alpha", "beta"):
             raise ValueError(f"Agent role must be 'alpha' or 'beta' — got {role!r}")
         self.dna = AgentDNA(sid=sid, location_pid=location_pid, name=name, role=role)
-        self._queue: asyncio.Queue[AgentTask] = asyncio.Queue(maxsize=self._QUEUE_MAXSIZE)
+        self._queue: asyncio.PriorityQueue[tuple[int, int, AgentTask]] = asyncio.PriorityQueue(maxsize=self._QUEUE_MAXSIZE)
+        self._enqueue_counter: int = 0
         self._handlers: dict[str, Callable[[AgentTask], Coroutine[Any, Any, dict]]] = {}
         self._running = False
         self._task: asyncio.Task | None = None
@@ -143,6 +145,11 @@ class InfinityAgent:
         handler: Callable[[AgentTask], Coroutine[Any, Any, dict]],
     ) -> None:
         """Register an async handler for a given task_type."""
+        if not inspect.iscoroutinefunction(handler):
+            raise TypeError(
+                f"Handler for '{task_type}' must be an async function (coroutinefunction), "
+                f"got {handler!r}"
+            )
         self._handlers[task_type] = handler
         logger.debug("%s registered handler for '%s'", self.dna, task_type)
 
@@ -155,7 +162,8 @@ class InfinityAgent:
     ) -> AgentTask:
         """Enqueue a task for processing. Raises QueueFull if backlog is at capacity."""
         task = AgentTask(task_type=task_type, payload=payload, priority=priority)
-        await self._queue.put(task)
+        self._enqueue_counter += 1
+        await self._queue.put((priority, self._enqueue_counter, task))
         return task
 
     def enqueue_nowait(
@@ -163,7 +171,8 @@ class InfinityAgent:
     ) -> AgentTask:
         """Enqueue without blocking. Raises QueueFull if at capacity."""
         task = AgentTask(task_type=task_type, payload=payload, priority=priority)
-        self._queue.put_nowait(task)
+        self._enqueue_counter += 1
+        self._queue.put_nowait((priority, self._enqueue_counter, task))
         return task
 
     # ------------------------------------------------------------------
@@ -184,7 +193,7 @@ class InfinityAgent:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
+                pass  # expected — task was cancelled by us
         logger.info(
             "%s stopped (completed=%d, failed=%d)",
             self.dna,
@@ -195,18 +204,21 @@ class InfinityAgent:
     async def _process_loop(self) -> None:
         while self._running:
             try:
-                task = await asyncio.wait_for(self._queue.get(), timeout=5.0)
-                await self._execute(task)
-                self._queue.task_done()
-                self._cycle_count += 1
+                _, _, task = await asyncio.wait_for(self._queue.get(), timeout=5.0)
             except asyncio.TimeoutError:
-                continue  # idle tick
+                continue  # idle tick — no task dequeued
             except asyncio.CancelledError:
+                # loop cancelled externally; exit cleanly without marking an item done
                 break
+            try:
+                await self._execute(task)
+                self._cycle_count += 1
             except Exception as exc:
                 self._error_count += 1
                 self._health_score = max(0.0, self._health_score - 0.05)
                 logger.error("%s process loop error: %s", self.dna, exc)
+            finally:
+                self._queue.task_done()
 
     async def _execute(self, task: AgentTask) -> None:
         handler = self._handlers.get(task.task_type)
