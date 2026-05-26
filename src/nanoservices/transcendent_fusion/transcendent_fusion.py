@@ -14,7 +14,6 @@ with uncertainty quantification and confidence propagation.
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import math
 import uuid
@@ -159,7 +158,6 @@ class ModalityEncoder:
 
     def encode(self, modality_input: ModalityInput) -> List[float]:
         """Encode input into fixed-dimension embedding."""
-        import random
         if modality_input.embedding:
             return modality_input.embedding
 
@@ -200,7 +198,7 @@ class CrossModalAttention:
     ) -> Tuple[List[float], float]:
         """Compute cross-modal attention scores."""
         # Simplified attention: dot product with softmax
-        seq_len = max(1, len(query) // self.head_dim)
+        # _seq_len = max(1, len(query) // self.head_dim)  # noqa: F841
         attention_weights = []
         weighted_sum = [0.0] * self.head_dim
 

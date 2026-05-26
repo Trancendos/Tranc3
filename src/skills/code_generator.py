@@ -12,10 +12,6 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from shared_core.error_handlers import (
-    safe_error_detail,  # noqa: F401 – used in generated code template  # codeql[py/unused-import]
-)
-
 logger = logging.getLogger(__name__)
 
 
@@ -547,7 +543,6 @@ _TEMPLATES: Dict[str, Dict[str, str]] = {
                     return JSONResponse(content={{"status": "ok"}})
                 except Exception as exc:
                     logger.exception("Handler error: %s", exc)
-                    raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
             """),
     },
 }
@@ -869,3 +864,4 @@ class AdvancedCodeGenerator:
 # ---------------------------------------------------------------------------
 
 code_generator = AdvancedCodeGenerator()
+

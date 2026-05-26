@@ -10,7 +10,6 @@ Fallback: If Ollama is unavailable, agents fall back to rule-based decide().
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 

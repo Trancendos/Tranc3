@@ -20,7 +20,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("tranc3.three_bridge")
 
@@ -91,7 +91,6 @@ TRAFFIC_TO_BRIDGE: Dict[TrafficClass, BridgeDomain] = {
 # Data Classes
 # ─────────────────────────────────────────────────────────────────────────────
 
-from typing import Tuple  # noqa: E402
 
 
 @dataclass
@@ -403,7 +402,7 @@ class NexusBridge(IBridge):
     def scan_and_cleanup(self) -> List[str]:
         """Clean up stale channels and discovered agents."""
         actions = []
-        now = time.time()
+        # _now = time.time()  # noqa: assigned but unused
         # Clean channels with no recent activity
         stale_channels = [
             ch for ch, msgs in self._channels.items()
@@ -616,19 +615,19 @@ class SentinelStation:
             self._escalation_log.append(result)
             return result
 
-        # Create a cross-bridge packet
-        packet = BridgeTrafficPacket(
-            id=request.packet_id,
-            traffic_class=TrafficClass.CROSS_BRIDGE,
-            target_bridge=request.to_bridge,
-            source=f"sentinel-escalation:{request.from_bridge.value}",
-            destination=request.to_bridge.value,
-            payload={"reason": request.reason, "authorized_by": request.authorized_by},
-            priority=request.priority,
-            requires_escalation=False,
-        )
+        # Create a cross-bridge packet (commented out — not currently used)
+        # packet = BridgeTrafficPacket(
+        #     id=request.packet_id,
+        #     traffic_class=TrafficClass.CROSS_BRIDGE,
+        #     target_bridge=request.to_bridge,
+        #     source=f"sentinel-escalation:{request.from_bridge.value}",
+        #     destination=request.to_bridge.value,
+        #     payload={"reason": request.reason, "authorized_by": request.authorized_by},
+        #     priority=request.priority,
+        #     requires_escalation=False,
+        # )
 
-        result_packet = to_bridge.process_packet(packet)
+        # _result_packet = to_bridge.process_packet(packet)  # noqa: assigned but unused
 
         result = EscalationResult(
             success=True,

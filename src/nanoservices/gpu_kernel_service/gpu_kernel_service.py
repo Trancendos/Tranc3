@@ -12,10 +12,9 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import time
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -228,7 +227,6 @@ def nrc_shred_{kernel_id}(N, D, depth):
     async def _tvm_compile(self, spec: KernelSpec, code: str) -> Optional[CompiledKernel]:
         """Attempt real TVM compilation."""
         try:
-            import tvm
             # In production, this would run the full TVM compilation pipeline
             logger.info(f"TVM compilation for {spec.spec_id} (real TVM available)")
         except ImportError:

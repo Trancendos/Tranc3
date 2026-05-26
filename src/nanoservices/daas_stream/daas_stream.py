@@ -21,12 +21,9 @@ Integration with Tranc3:
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import json
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
@@ -251,7 +248,7 @@ class OPAPolicyEngine:
             try:
                 effect = custom_rule(context)
                 if effect != PolicyEffect.ALLOW:
-                    reason = f"Custom rule denied access"
+                    reason = "Custom rule denied access"
                     self._log_decision(context, effect, reason, "custom")
                     return effect, reason
             except Exception:

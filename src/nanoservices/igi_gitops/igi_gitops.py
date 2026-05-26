@@ -23,16 +23,12 @@ Integration with Tranc3:
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
-import os
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional
 
 
 class GitOpsStatus(str, Enum):
@@ -187,7 +183,7 @@ class KustomizeOverlay:
                 kustomization.setdefault("patches", []).append({
                     "patch": json.dumps([{
                         "op": "replace",
-                        "path": f"/data",
+                        "path": "/data",
                         "value": data,
                     }]),
                     "target": {"kind": "ConfigMap", "name": cm_name},

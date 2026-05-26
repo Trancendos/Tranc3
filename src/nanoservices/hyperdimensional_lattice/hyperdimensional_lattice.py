@@ -14,8 +14,6 @@ reasoning over abstract concept spaces.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 import math
 import random

@@ -13,16 +13,12 @@ for bio-digital convergence applications.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
-import math
 import random
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -542,10 +538,10 @@ class BioSyntheticEvolutionService:
             for i in range(10)
         ]
 
-        circuits = [
-            GeneticCircuit(name="repressilator", circuit_type=CircuitType.REPRESSILATOR, genes=genes[:3]),
-            GeneticCircuit(name="toggle_switch", circuit_type=CircuitType.TOGGLE_SWITCH, genes=genes[3:5]),
-        ]
+        # circuits = [  # noqa: F841
+        #     GeneticCircuit(name="repressilator", circuit_type=CircuitType.REPRESSILATOR, genes=genes[:3]),
+        #     GeneticCircuit(name="toggle_switch", circuit_type=CircuitType.TOGGLE_SWITCH, genes=genes[3:5]),
+        # ]
 
         metabolism = MetabolicNetwork()
         metabolism.add_reaction("glycolysis", {"glucose": -1.0}, {"pyruvate": 2.0, "ATP": 2.0})

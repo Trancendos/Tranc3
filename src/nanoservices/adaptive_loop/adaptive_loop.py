@@ -10,13 +10,12 @@ All dependencies are 0-cost (free/open-source).
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

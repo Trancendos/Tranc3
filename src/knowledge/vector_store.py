@@ -78,7 +78,6 @@ class SearchResult:
 
 def _faiss_available() -> bool:
     try:
-        import faiss  # noqa: F401
 
         return True
     except ImportError:

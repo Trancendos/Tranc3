@@ -21,9 +21,8 @@ import json
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Set
 
 
 class FlowStatus(str, Enum):
@@ -345,7 +344,7 @@ class FlowRunner:
                         execution.step_results[step.id] = StepResult(
                             step_id=step.id,
                             status=StepStatus.SKIPPED,
-                            error=f"dependency failed",
+                            error="dependency failed",
                         )
                         completed.add(step.id)
                         continue

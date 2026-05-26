@@ -13,7 +13,6 @@ quantum repeater chains for long-distance quantum communication.
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import math
 import random
@@ -21,7 +20,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -362,8 +361,8 @@ class E91Protocol:
             (a, b) for a, b, ab, bb in zip(alice_bits, bob_bits, alice_bases, bob_bases)
             if ab == bb
         ]
-        alice_sifted = [s[0] for s in sifted]
-        bob_sifted = [s[1] for s in sifted]
+        # _alice_sifted = [s[0] for s in sifted]  # noqa: F841
+        # _bob_sifted = [s[1] for s in sifted]  # noqa: F841
 
         errors = sum(1 for a, b in sifted if a != b)
         qber = errors / len(sifted) if sifted else 1.0

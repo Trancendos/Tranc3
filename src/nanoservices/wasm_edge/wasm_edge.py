@@ -13,7 +13,6 @@ import asyncio
 import hashlib
 import json
 import logging
-import os
 import struct
 import subprocess
 import tempfile
@@ -22,7 +21,7 @@ import uuid
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -446,7 +445,7 @@ class WasmEdgeRuntime:
             )
 
         gas = gas_limit or self.default_gas_limit
-        mem_limit = memory_limit_mb or self.default_memory_limit_mb
+        # _mem_limit = memory_limit_mb or self.default_memory_limit_mb  # noqa: F841
         start = time.monotonic()
 
         try:

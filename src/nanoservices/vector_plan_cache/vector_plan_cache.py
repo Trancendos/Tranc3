@@ -10,12 +10,10 @@ All dependencies are 0-cost (free/open-source).
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import time
-import uuid
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -272,7 +270,6 @@ class LanceDBPlanStore:
     def add(self, ids: List[str], vectors: List[List[float]], metadatas: List[Dict[str, Any]]) -> None:
         """Add vectors to the store."""
         if self._use_lancedb and self._db:
-            import lancedb
             data = []
             for id_, vec, meta in zip(ids, vectors, metadatas):
                 row = {"id": id_, "vector": vec}

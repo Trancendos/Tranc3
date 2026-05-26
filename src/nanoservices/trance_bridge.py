@@ -10,15 +10,13 @@ All dependencies are 0-cost (free/open-source).
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
-import json
 import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum, auto
-from typing import Any, Dict, List, Optional, Tuple
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -361,7 +359,7 @@ class ScalaBridge:
 
     def _transpile_to_go(self, query: NRCQueryDefinition) -> str:
         """Transpile NRC query to Go code."""
-        relations = query.relations or ["data"]
+        # _relations = query.relations or ["data"]  # noqa: F841
 
         if query.query_type == QueryType.COMPREHENSION:
             return (

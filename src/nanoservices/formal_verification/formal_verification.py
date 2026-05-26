@@ -8,8 +8,6 @@ upgrade path.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 import subprocess
 import uuid
@@ -393,7 +391,7 @@ class FormalVerificationService:
         if prop.property_type in (PropertyType.LIVENESS, PropertyType.TERMINATION):
             obl = ProofObligation(
                 property_id=property_id,
-                goal=f"∀ s, ∃ n, measure (iterate n s) < measure s",
+                goal="∀ s, ∃ n, measure (iterate n s) < measure s",
                 hypotheses=[],
                 tactics=["intro s", "sorry"],
             )

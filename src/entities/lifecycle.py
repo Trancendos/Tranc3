@@ -12,7 +12,7 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 
 class LifecycleEvent(str, Enum):
@@ -66,7 +66,7 @@ class LifecycleEmitter:
 
     def once_lifecycle(self, event: LifecycleEvent, listener: LifecycleListener) -> "LifecycleEmitter":
         """Register a one-time listener for a specific lifecycle event."""
-        key = event.value if isinstance(event, LifecycleEvent) else event
+        # _key = event.value if isinstance(event, LifecycleEvent) else event  # noqa: assigned but unused
 
         def wrapper(ctx: LifecycleContext) -> None:
             self.remove_lifecycle_listener(event, wrapper)

@@ -28,12 +28,10 @@ Quantum-Classical Hybrid Flow:
 from __future__ import annotations
 
 import asyncio
-import json
 import math
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -358,7 +356,7 @@ class QuantumSolver:
 
         # Compile circuit
         result.status = SolverStatus.COMPILING
-        circuit_spec = self._build_circuit(algorithm, problem.num_variables, depth)
+        # circuit_spec = self._build_circuit(algorithm, problem.num_variables, depth)  # noqa: F841
 
         # Execute (simulated for code generation — would use Qiskit in production)
         result.status = SolverStatus.EXECUTING

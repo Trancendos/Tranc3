@@ -12,8 +12,6 @@ as mechanisms for emergent consciousness in artificial systems.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 import math
 import random
@@ -21,7 +19,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -394,7 +392,7 @@ class ConsciousnessFieldSimulator:
                 "content": f"step_{self._step_count}_{module_name}",
             }
 
-        broadcast_winner = self.gwt.compete_for_access(inputs)
+        # _broadcast_winner = self.gwt.compete_for_access(inputs)  # noqa: F841
 
         consciousness_level = ConsciousnessLevel.NONE
         if phi > 0.1:

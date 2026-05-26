@@ -8,8 +8,6 @@ evaluation.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 import random
 import uuid
@@ -445,7 +443,7 @@ class NeuralSymbolicReasoner:
         if direction in (InferenceDirection.BACKWARD, InferenceDirection.BIDIRECTIONAL):
             return self.backward_chainer.prove(predicate)
         else:
-            derived = self.forward_chainer.infer()
+            # _derived = self.forward_chainer.infer()  # noqa: F841
             matches = self.kb.match_predicate(predicate)
             if matches:
                 fact, bindings = matches[0]
