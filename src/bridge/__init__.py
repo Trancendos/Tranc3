@@ -23,6 +23,19 @@ from .ecosystem_bridge import (
     EcosystemEntity,
 )
 
+from .energy_constants import (
+    BridgeType,
+    EnergyClass,
+    cost_for,
+    priority_for,
+    BRIDGE_DEFAULT_ENERGY,
+    DIALITHIUM_PRIORITY,
+    CRYSTAL_BASE_COST,
+    LIGHTNING_BURST_LIMIT_MS,
+    LIGHT_AMBIENT_TICK_HZ,
+    TRILITHIUM_STABILITY_FACTOR,
+)
+
 __all__ = [
     "BridgeConfig",
     "BridgeEndpoint",
@@ -32,4 +45,15 @@ __all__ = [
     "EcosystemBridge",
     "EcosystemRegistry",
     "EcosystemEntity",
+    # Energy constants
+    "BridgeType",
+    "EnergyClass",
+    "cost_for",
+    "priority_for",
+    "BRIDGE_DEFAULT_ENERGY",
+    "DIALITHIUM_PRIORITY",
+    "CRYSTAL_BASE_COST",
+    "LIGHTNING_BURST_LIMIT_MS",
+    "LIGHT_AMBIENT_TICK_HZ",
+    "TRILITHIUM_STABILITY_FACTOR",
 ]
