@@ -366,7 +366,7 @@ async def _lifespan(app: FastAPI):
         try:
             await task
         except asyncio.CancelledError:
-            pass
+            pass  # expected: task was cancelled, shutdown can proceed
         await worker_kit.shutdown()
         logger.info("Infinity-Auth smart adaptive layer stopped")
 
