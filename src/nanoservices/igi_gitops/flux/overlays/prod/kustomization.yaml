@@ -1,0 +1,60 @@
+# Production Overlay — 3 replicas, high availability, resource limits
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: tranc3-prod
+
+commonLabels:
+  environment: production
+
+patches:
+  - target:
+      kind: Deployment
+      name: tranc3-api
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Deployment
+      name: tranc3-web
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target:
+      kind: Deployment
+      name: shi-gateway
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 2
+
+images:
+  - name: tranc3-api
+    newTag: v1.0.0
+  - name: tranc3-web
+    newTag: v1.0.0
+  - name: nsa-broker
+    newTag: v1.0.0
+  - name: shi-gateway
+    newTag: v1.0.0
+
+# Production-specific: PodDisruptionBudget for HA
+patchesStrategicMerge:
+  - |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: nsa-broker
+      namespace: tranc3
+    spec:
+      template:
+        spec:
+          priorityClassName: system-cluster-critical
+          tolerations:
+            - key: "CriticalAddonsOnly"
+              operator: "Exists"

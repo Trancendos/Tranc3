@@ -1,0 +1,278 @@
+# flux/base/deployments.yaml
+# Core nanoservice deployments — NSA Broker, SHI Gateway, DNF Orchestrator
+# All deployments use hostIPC for /dev/shm shared memory IPC
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nsa-broker
+  namespace: tranc3
+  labels:
+    app: nsa-broker
+    tier: tier-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nsa-broker
+  template:
+    metadata:
+      labels:
+        app: nsa-broker
+        tier: tier-1
+    spec:
+      hostIPC: true  # Required for /dev/shm shared memory IPC
+      containers:
+        - name: nsa-broker
+          image: forgejo.local/trancendos/nsa-broker:latest
+          ports:
+            - containerPort: 7780
+              name: http
+            - containerPort: 7781
+              name: metrics
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          env:
+            - name: SHM_DIR
+              value: "/dev/shm"
+            - name: SHM_PREFIX
+              value: "nsa_"
+            - name: RING_BUFFER_SLOTS
+              value: "64"
+            - name: SLOT_SIZE
+              value: "1024"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shi-gateway
+  namespace: tranc3
+  labels:
+    app: shi-gateway
+    tier: tier-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shi-gateway
+  template:
+    metadata:
+      labels:
+        app: shi-gateway
+        tier: tier-1
+    spec:
+      hostIPC: true
+      containers:
+        - name: shi-gateway
+          image: forgejo.local/trancendos/shi-gateway:latest
+          ports:
+            - containerPort: 8000
+              name: http
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          env:
+            - name: OLLAMA_HOST
+              value: "http://ollama:11434"
+            - name: INFERENCE_TIMEOUT
+              value: "30"
+            - name: FALLBACK_CHAIN
+              value: "ollama,vllm,local"
+          volumeMounts:
+            - name: model-cache
+              mountPath: /models
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: model-cache
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dnf-orchestrator
+  namespace: tranc3
+  labels:
+    app: dnf-orchestrator
+    tier: tier-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dnf-orchestrator
+  template:
+    metadata:
+      labels:
+        app: dnf-orchestrator
+        tier: tier-1
+    spec:
+      hostIPC: true
+      containers:
+        - name: dnf-orchestrator
+          image: forgejo.local/trancendos/dnf-orchestrator:latest
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          env:
+            - name: MAX_CONCURRENT_STEPS
+              value: "10"
+            - name: STEP_TIMEOUT
+              value: "60"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: daas-stream
+  namespace: tranc3
+  labels:
+    app: daas-stream
+    tier: tier-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: daas-stream
+  template:
+    metadata:
+      labels:
+        app: daas-stream
+        tier: tier-2
+    spec:
+      containers:
+        - name: daas-stream
+          image: forgejo.local/trancendos/daas-stream:latest
+          ports:
+            - containerPort: 8090
+              name: http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          env:
+            - name: REDPANDA_BROKERS
+              value: "redpanda:9092"
+            - name: OPA_URL
+              value: "http://opa:8181"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fmd-distiller
+  namespace: tranc3
+  labels:
+    app: fmd-distiller
+    tier: tier-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fmd-distiller
+  template:
+    metadata:
+      labels:
+        app: fmd-distiller
+        tier: tier-2
+    spec:
+      containers:
+        - name: fmd-distiller
+          image: forgejo.local/trancendos/fmd-distiller:latest
+          ports:
+            - containerPort: 8070
+              name: http
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              cpu: "4"
+              memory: 8Gi
+          env:
+            - name: DISTILLATION_TEMPERATURE
+              value: "4.0"
+            - name: ALPHA
+              value: "0.7"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]

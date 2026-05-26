@@ -282,7 +282,7 @@ class CodeExecNode(BaseNode):
         original_stdout = sys.stdout
 
         async def _exec() -> Dict[str, Any]:
-            nonlocal local_ns
+            # nonlocal local_ns  # removed: never assigned in scope
             sys.stdout = stdout_capture
             try:
                 exec(compile(code, "<workflow_node>", "exec"), safe_globals, local_ns)  # noqa: S102  # nosec B102

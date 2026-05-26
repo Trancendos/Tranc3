@@ -1,0 +1,88 @@
+# flux/flux-system.yaml
+# FluxCD system manifests — GitRepository pointing to Forgejo (NOT GitHub)
+# All GitOps source-of-truth is Forgejo at forgejo.local/Trancendos/Tranc3.git
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: tranc3-flux
+  namespace: flux-system
+spec:
+  url: https://forgejo.local/Trancendos/Tranc3.git
+  ref:
+    branch: main
+  interval: 1m
+  secretRef:
+    name: forgejo-auth
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tranc3-base
+  namespace: flux-system
+spec:
+  sourceRef:
+    kind: GitRepository
+    name: tranc3-flux
+  path: ./flux/base
+  interval: 5m
+  prune: true
+  validation: client
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: nsa-broker
+      namespace: tranc3
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: shi-gateway
+      namespace: tranc3
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: dnf-orchestrator
+      namespace: tranc3
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tranc3-production
+  namespace: flux-system
+spec:
+  sourceRef:
+    kind: GitRepository
+    name: tranc3-flux
+  path: ./flux/overlays/prod
+  interval: 5m
+  prune: true
+  validation: client
+  dependsOn:
+    - name: tranc3-base
+---
+# Forgejo notification provider for drift alerts
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: forgejo-notifications
+  namespace: flux-system
+spec:
+  type: generic
+  address: https://forgejo.local/api/v1/repos/Trancendos/Tranc3/issues
+  secretRef:
+    name: forgejo-notifications-secret
+---
+# Alert on drift detection
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: drift-detection-alert
+  namespace: flux-system
+spec:
+  providerRef:
+    name: forgejo-notifications
+  eventSeverity: info
+  eventSources:
+    - kind: Kustomization
+      name: tranc3-base
+    - kind: Kustomization
+      name: tranc3-production
+  summary: "Tranc3 GitOps drift detected — auto-healing initiated"

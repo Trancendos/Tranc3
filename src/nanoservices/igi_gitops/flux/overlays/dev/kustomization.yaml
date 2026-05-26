@@ -1,0 +1,25 @@
+# Dev Overlay — single replica, debug logging, minimal resources
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: tranc3-dev
+
+commonLabels:
+  environment: dev
+
+patches:
+  - target:
+      kind: Deployment
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 1
+
+images:
+  - name: tranc3-api
+    newTag: dev-latest
+  - name: tranc3-web
+    newTag: dev-latest

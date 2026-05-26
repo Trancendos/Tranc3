@@ -65,4 +65,10 @@ __all__ = [
     "LazyLoader",
 ]
 
-__version__ = "0.1.0"
+# Infinity Ecosystem package
+from . import infinity  # noqa: F401
+
+# Dimensional Services package (Shared-Core = Dimensional's)
+from . import dimensionals  # noqa: F401
+
+__version__ = "0.7.0"

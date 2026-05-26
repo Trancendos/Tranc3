@@ -1,0 +1,33 @@
+# Staging Overlay — 2 replicas, info logging
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: tranc3-staging
+
+commonLabels:
+  environment: staging
+
+patches:
+  - target:
+      kind: Deployment
+      name: tranc3-api
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 2
+  - target:
+      kind: Deployment
+      name: tranc3-web
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 2
+
+images:
+  - name: tranc3-api
+    newTag: staging-latest
+  - name: tranc3-web
+    newTag: staging-latest

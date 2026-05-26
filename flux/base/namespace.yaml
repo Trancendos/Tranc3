@@ -1,0 +1,12 @@
+# flux/base/namespace.yaml
+# Tranc3 namespace with restricted pod security standards
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tranc3
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    scheduler.alpha.kubernetes.io/defaultTolerations: '[{"operator": "Equal", "effect": "NoSchedule", "key": "tranc3", "value": "nanoservice"}]'

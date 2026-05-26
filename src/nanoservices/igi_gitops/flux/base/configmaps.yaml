@@ -1,0 +1,44 @@
+# Tranc3 ConfigMaps — shared configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tranc3-config
+  namespace: tranc3
+data:
+  NSA_BROKER_URL: "http://nsa-broker:7780"
+  SHI_GATEWAY_URL: "http://shi-gateway:7781"
+  DNF_ORCHESTRATOR_URL: "http://dnf-orchestrator:7782"
+  FORGEJO_URL: "https://forgejo.local"
+  FORGEJO_REPO: "Trancendos/Tranc3"
+  LOG_LEVEL: "info"
+  ENVIRONMENT: "base"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tranc3-dev-vars
+  namespace: tranc3
+data:
+  ENVIRONMENT: "dev"
+  LOG_LEVEL: "debug"
+  REPLICA_COUNT: "1"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tranc3-staging-vars
+  namespace: tranc3
+data:
+  ENVIRONMENT: "staging"
+  LOG_LEVEL: "info"
+  REPLICA_COUNT: "2"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tranc3-prod-vars
+  namespace: tranc3
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "warn"
+  REPLICA_COUNT: "3"

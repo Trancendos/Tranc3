@@ -1,0 +1,159 @@
+# NSA Broker Deployment — Rust shared-memory IPC broker
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nsa-broker
+  namespace: tranc3
+  labels:
+    app: nsa-broker
+    tier: "2"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nsa-broker
+  template:
+    metadata:
+      labels:
+        app: nsa-broker
+        tier: "2"
+    spec:
+      hostIPC: true  # Required for /dev/shm access
+      containers:
+        - name: nsa-broker
+          image: nsa-broker:latest
+          ports:
+            - containerPort: 7780
+              name: http
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 7780
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 7780
+            initialDelaySeconds: 3
+            periodSeconds: 5
+      volumes:
+        - name: shm
+          hostPath:
+            path: /dev/shm
+            type: DirectoryOrCreate
+---
+# SHI Gateway Deployment — Self-Hosted Inference
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shi-gateway
+  namespace: tranc3
+  labels:
+    app: shi-gateway
+    tier: "3"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shi-gateway
+  template:
+    metadata:
+      labels:
+        app: shi-gateway
+        tier: "3"
+    spec:
+      hostIPC: true
+      containers:
+        - name: shi-gateway
+          image: shi-gateway:latest
+          ports:
+            - containerPort: 7781
+              name: http
+          env:
+            - name: OLLAMA_HOST
+              value: "http://ollama:11434"
+            - name: NSA_BROKER_URL
+              value: "http://nsa-broker:7780"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm
+            - name: models
+              mountPath: /models
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 7781
+            initialDelaySeconds: 10
+            periodSeconds: 15
+      volumes:
+        - name: shm
+          hostPath:
+            path: /dev/shm
+            type: DirectoryOrCreate
+        - name: models
+          persistentVolumeClaim:
+            claimName: models-pvc
+---
+# DNF Orchestrator Deployment — Distributed Nano-Flows
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dnf-orchestrator
+  namespace: tranc3
+  labels:
+    app: dnf-orchestrator
+    tier: "2"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dnf-orchestrator
+  template:
+    metadata:
+      labels:
+        app: dnf-orchestrator
+        tier: "2"
+    spec:
+      hostIPC: true
+      containers:
+        - name: dnf-orchestrator
+          image: dnf-orchestrator:latest
+          ports:
+            - containerPort: 7782
+              name: http
+          env:
+            - name: NSA_BROKER_URL
+              value: "http://nsa-broker:7780"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: shm
+          hostPath:
+            path: /dev/shm
+            type: DirectoryOrCreate

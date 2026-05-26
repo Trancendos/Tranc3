@@ -1,0 +1,49 @@
+# flux/overlays/staging/kustomization.yaml
+# Staging overlay — 2 replicas, info logging, moderate resources
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - target:
+      kind: Deployment
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: not-important
+      spec:
+        replicas: 2
+        template:
+          spec:
+            containers:
+              - name: not-important
+                resources:
+                  requests:
+                    cpu: 100m
+                    memory: 128Mi
+                  limits:
+                    cpu: 500m
+                    memory: 512Mi
+            affinity:
+              podAntiAffinity:
+                preferredDuringSchedulingIgnoredDuringExecution:
+                  - weight: 100
+                    podAffinityTerm:
+                      labelSelector:
+                        matchExpressions:
+                          - key: app
+                            operator: In
+                            values: [nsa-broker, shi-gateway, dnf-orchestrator]
+                      topologyKey: kubernetes.io/hostname
+            nodeSelector:
+              environment: staging
+configMapGenerator:
+  - name: environment-config
+    behavior: replace
+    literals:
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=staging
+namespace: tranc3-staging
+commonAnnotations:
+  environment: staging

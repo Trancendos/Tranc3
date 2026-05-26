@@ -82,6 +82,22 @@ from Dimensional.dimensionals import (
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
+# Phase 25: Platform Entity Registry (entity name management)
+try:
+    from src.entities.platform import (
+        PLATFORM_ENTITIES,
+        get_entity_by_pid,
+    )
+
+    _PLATFORM_ENTITIES_AVAILABLE = True
+except Exception:  # pragma: no cover
+    _PLATFORM_ENTITIES_AVAILABLE = False
+    PLATFORM_ENTITIES = {}
+
+    def get_entity_by_pid(pid: str):  # type: ignore[misc]
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
