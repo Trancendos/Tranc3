@@ -72,6 +72,28 @@ from shared_core.infinity.sentinel_station import (
     get_sentinel_station,
 )
 
+# Phase 22.4: Dimensional Services
+try:
+    from shared_core.dimensionals import (
+        get_dimensional_bus,
+        get_dimensional_registry,
+        get_underverse_registry,
+    )
+
+    _DIMENSIONAL_AVAILABLE = True
+except ImportError:
+    _DIMENSIONAL_AVAILABLE = False
+
+    def get_dimensional_bus():  # type: ignore[misc]
+        return None
+
+    def get_dimensional_registry():  # type: ignore[misc]
+        return None
+
+    def get_underverse_registry():  # type: ignore[misc]
+        return None
+
+
 # Phase 22.6: Smart Adaptive Intelligence
 from shared_core.infinity.worker_integration import InfinityWorkerKit
 
