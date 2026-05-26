@@ -16,10 +16,9 @@ import copy
 import random
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from .fitness import FitnessEvaluator, LatencyThroughputFitness
-from .genome import GenomeConfig
 
 Individual = Dict[str, Any]
 Population = List[Individual]
@@ -27,7 +26,7 @@ Population = List[Individual]
 
 def _dominates(a: Tuple[float, ...], b: Tuple[float, ...]) -> bool:
     """Return True if a Pareto-dominates b (all objectives ≤, at least one <)."""
-    return all(x <= y for x, y in zip(a, b)) and any(x < y for x, y in zip(a, b))
+    return all(x <= y for x, y in zip(a, b, strict=False)) and any(x < y for x, y in zip(a, b, strict=False))
 
 
 def _fast_nondominated_sort(pop: List[Individual]) -> List[List[int]]:
@@ -255,7 +254,7 @@ class GeneticOptimizer:
 
     def _evolve_deap(self, generations: int, pop_size: int) -> EvolutionResult:
         """DEAP-backed NSGA-II with proper crowding distance."""
-        from deap import base, creator, tools, algorithms  # type: ignore
+        from deap import algorithms, base, creator, tools  # type: ignore
 
         # Re-create each time to avoid DEAP's global state issues
         if not hasattr(creator, "FitnessMultiGA"):
@@ -275,7 +274,7 @@ class GeneticOptimizer:
             return creator.IndividualGA(vals)
 
         def evaluate_individual(ind):
-            config = {k: v for k, v in zip(keys, ind)}
+            config = dict(zip(keys, ind, strict=False))
             return self._fitness.evaluate(config)
 
         toolbox.register("individual", make_individual)
@@ -305,14 +304,14 @@ class GeneticOptimizer:
 
         pareto_front = tools.sortNondominated(pop, len(pop), first_front_only=True)[0]
         best = tools.selBest(pop, k=1)[0]
-        best_config = {k: v for k, v in zip(keys, best)}
+        best_config = dict(zip(keys, best, strict=False))
 
         return EvolutionResult(
             best_config=best_config,
             best_fitness=tuple(best.fitness.values),
             generations_run=generations,
             population_size=pop_size,
-            pareto_front=[{k: v for k, v in zip(keys, ind)} for ind in pareto_front],
+            pareto_front=[dict(zip(keys, ind, strict=False)) for ind in pareto_front],
         )
 
     async def evolve(self, generations: int = 50, pop_size: int = 40) -> EvolutionResult:

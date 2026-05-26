@@ -9,11 +9,10 @@ Designed for the Luminous AI Gateway request cache and The Digital Grid result c
 
 from __future__ import annotations
 
-import asyncio
 import time
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional
 
 try:
     from cachetools import LRUCache  # type: ignore

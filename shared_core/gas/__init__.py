@@ -10,8 +10,8 @@ Models worker pool as a gas system:
 All pure Python — zero external dependencies.
 """
 
-from .pressure import PressureBalancer, WorkerMolecule, GasPressureResult
-from .kinetic import MaxwellBoltzmannSelector, KineticEnergyTracker
+from .kinetic import KineticEnergyTracker, MaxwellBoltzmannSelector
+from .pressure import GasPressureResult, PressureBalancer, WorkerMolecule
 
 __all__ = [
     "PressureBalancer",

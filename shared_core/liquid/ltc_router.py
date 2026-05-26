@@ -16,17 +16,17 @@ from __future__ import annotations
 import math
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 _NCPS_AVAILABLE = False
 _TORCH_AVAILABLE = False
 
 try:
-    import torch  # type: ignore
+    import torch  # type: ignore  # noqa: F401
     _TORCH_AVAILABLE = True
     try:
-        from ncps.torch import CfC  # type: ignore
-        from ncps.wirings import AutoNCP  # type: ignore
+        from ncps.torch import CfC  # type: ignore  # noqa: F401
+        from ncps.wirings import AutoNCP  # type: ignore  # noqa: F401
         _NCPS_AVAILABLE = True
     except ImportError:
         pass
@@ -120,7 +120,6 @@ class LiquidRouter:
         if not _NCPS_AVAILABLE:
             return False
         try:
-            import torch
             from ncps.torch import CfC
             from ncps.wirings import AutoNCP
             wiring = AutoNCP(units=units, output_size=len(self._cells))
@@ -136,7 +135,7 @@ class LiquidRouter:
         t = self._softmax_temp
         exp_vals = [math.exp(v / t) for v in values.values()]
         total = sum(exp_vals) or 1.0
-        return {k: e / total for k, e in zip(keys, exp_vals)}
+        return {k: e / total for k, e in zip(keys, exp_vals, strict=False)}
 
     def route(
         self,
@@ -182,7 +181,7 @@ class LiquidRouter:
         timespan = torch.tensor([[dt or 1.0]], dtype=torch.float32)
         with torch.no_grad():
             out, _ = self._ncps_model(x, timespans=timespan)
-        raw = {name: float(v) for name, v in zip(self._cells, out[0].tolist())}
+        raw = {name: float(v) for name, v in zip(self._cells, out[0].tolist(), strict=False)}
         weights = self._softmax(raw)
         target = max(weights, key=weights.get)
         return LiquidRoutingResult(

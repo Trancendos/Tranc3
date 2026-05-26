@@ -9,7 +9,7 @@ with proper ODE solvers. Falls back to the hand-coded LTC analogue
 from src/fluidic/fluid_router.py otherwise.
 """
 
-from .ltc_router import LiquidRouter, RouteCell, LiquidRoutingResult
+from .ltc_router import LiquidRouter, LiquidRoutingResult, RouteCell
 from .wiring import AutoWiring, build_ncp_wiring
 
 __all__ = [
