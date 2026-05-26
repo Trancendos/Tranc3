@@ -680,6 +680,21 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8029/health"]
       <<: *healthcheck-default
 
+  # ── Infinity Admin — Entity & Config Management (Port 8044) ──────────────
+  infinity-admin:
+    <<: *worker-common
+    build:
+      context: .
+      dockerfile: workers/infinity-admin-service/Dockerfile
+    container_name: infinity-admin-worker
+    ports:
+      - "8044:8044"
+    volumes:
+      - admin-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8044/health"]
+      <<: *healthcheck-default
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════
@@ -701,6 +716,8 @@ volumes:
   ipfs-data:
     driver: local
   void-data:
+    driver: local
+  admin-data:
     driver: local
   auth-data:
     driver: local
