@@ -38,7 +38,7 @@ import logging
 import time
 from typing import Any, Dict
 
-from shared_core.error_handlers import safe_error_detail
+from Dimensional.error_handlers import safe_error_detail
 
 logger = logging.getLogger(__name__)
 

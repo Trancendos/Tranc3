@@ -332,9 +332,9 @@ Version updated from 0.7.0 to 0.8.0 across:
 ## Files Created/Modified
 
 ### New Files
-- `shared_core/infinity/hil_a.py` — HIL-A Chain Protocol Engine
-- `shared_core/infinity/zkp.py` — ZKP Authentication Module
-- `shared_core/infinity/worker_bridges.py` — Worker Integration Bridges
+- `Dimensional/infinity/hil_a.py` — HIL-A Chain Protocol Engine
+- `Dimensional/infinity/zkp.py` — ZKP Authentication Module
+- `Dimensional/infinity/worker_bridges.py` — Worker Integration Bridges
 - `tests/test_hil_a.py` — HIL-A Test Suite (60 tests)
 - `tests/test_zkp.py` — ZKP Test Suite (108 tests)
 - `tests/test_worker_bridges.py` — Bridges Test Suite (76 tests)
@@ -342,12 +342,12 @@ Version updated from 0.7.0 to 0.8.0 across:
 - `PHASE23_ENHANCEMENT.md` — This document
 
 ### Modified Files
-- `shared_core/infinity/__init__.py` — Added exports for HIL-A, ZKP, and Worker Bridges
+- `Dimensional/infinity/__init__.py` — Added exports for HIL-A, ZKP, and Worker Bridges
 - `dashboard/styles.css` — Complete rewrite with design token system, themes, building blocks, widgets
 - `dashboard/index.html` — Complete rewrite with ARIA accessibility, theme toggle, builder view
 - `dashboard/app.js` — Complete rewrite with theme engine, layout engine, toast system, builder
-- `shared_core/infinity/oci_adaptive_provider.py` — Fixed aiohttp optional import
-- `shared_core/infinity/microceph_provider.py` — Fixed aiohttp optional import
+- `Dimensional/infinity/oci_adaptive_provider.py` — Fixed aiohttp optional import
+- `Dimensional/infinity/microceph_provider.py` — Fixed aiohttp optional import
 
 ---
 

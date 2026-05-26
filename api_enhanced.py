@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
-from shared_core.error_handlers import safe_error_detail
+from Dimensional.error_handlers import safe_error_detail
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("tranc3.api")

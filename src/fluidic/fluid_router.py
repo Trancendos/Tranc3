@@ -8,9 +8,9 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from shared_core.models import ServiceHealth, ServiceInfo
-from shared_core.registry import ServiceRegistry
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.models import ServiceHealth, ServiceInfo
+from Dimensional.registry import ServiceRegistry
+from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 

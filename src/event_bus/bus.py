@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 from src.event_bus.types import (
     DEFAULT_EVENT_BUS_CONFIG,
     DeliveryResult,

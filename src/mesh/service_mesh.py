@@ -25,7 +25,7 @@ from typing import Any, Callable
 
 import httpx
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 from src.mesh.circuit_breaker import CircuitBreaker
 from src.mesh.types import (
     DEFAULT_MESH_CONFIG,

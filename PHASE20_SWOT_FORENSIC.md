@@ -15,7 +15,7 @@
 |-----------|-------|---------------|
 | Service Coverage | 42% | 30 workers existed across P0–P3, but no P4 AI/ML-intelligent workers |
 | Test Coverage | 68% | 345 tests across P0–P3; no P4-specific tests existed |
-| Security Posture | 55% | Vault existed in shared_core but no standalone XOR-encrypted vault service; no hash-chained audit ledger |
+| Security Posture | 55% | Vault existed in Dimensional but no standalone XOR-encrypted vault service; no hash-chained audit ledger |
 | Observability | 35% | No centralized dashboard; service health was endpoint-only, no visual control plane |
 | AI/ML Integration | 10% | Placeholder AI gateway; no model routing, benchmarking, workflow DAGs, or agent orchestration |
 | Infrastructure-as-Code | 60% | Docker Compose had 30 services; 8 P4 slots were empty |

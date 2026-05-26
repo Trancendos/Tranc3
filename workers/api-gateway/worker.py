@@ -42,7 +42,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 
 # ── Configuration ───────────────────────────────────────────────
 

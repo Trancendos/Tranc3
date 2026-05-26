@@ -27,7 +27,7 @@ graph TB
         MON[Monitoring<br/>Prometheus + Grafana]
     end
 
-    subgraph "Shared Core Backend"
+    subgraph "Dimensional Backend"
         SF[StorageFactory<br/>TrueNAS Provider]
         VL[VaultSecretLoader<br/>Memory-Mapped]
         AL[AuditLedger<br/>ZFS-Backed Ledger]
@@ -108,7 +108,7 @@ graph TB
         GD[Dashboard Server<br/>Dev Preview]
     end
 
-    subgraph "Shared Core Backend"
+    subgraph "Dimensional Backend"
         SF[StorageFactory<br/>Hybrid Provider]
         VL[VaultSecretLoader<br/>Hybrid Secret Store]
         AL[AuditLedger<br/>Dual-Write Ledger]
@@ -185,7 +185,7 @@ graph TB
         GH_CI[CI/CD Pipeline<br/>Build + Test + Deploy]
     end
 
-    subgraph "Shared Core Backend"
+    subgraph "Dimensional Backend"
         SF[StorageFactory<br/>Cloud-Only Provider]
         VL[VaultSecretLoader<br/>R2-Backed Secrets]
         AL[AuditLedger<br/>R2 Append-Only]

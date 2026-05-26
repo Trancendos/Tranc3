@@ -33,11 +33,12 @@ import json
 import logging
 import os
 import sqlite3
+import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -51,29 +52,58 @@ from shared_core.dimensionals import (
 )
 
 # Phase 22: Infinity Ecosystem security
-from shared_core.infinity.auth_gateway import AuthGatewayMiddleware
-from shared_core.infinity.nomenclature import (
+from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensional.infinity.nomenclature import (
     ECOSYSTEM_NAME,
     INFINITY_LOCATIONS,
+    PILLAR_ACCENT_COLORS,
+    PILLAR_DISPLAY_NAMES,
     PILLAR_PRIME_MAP,
     PRIMES,
     TRANSFER_SYSTEMS,
     UNIVERSE_NAME,
+    InfinityLocation,
+    InfinityRole,
     Pillar,
     SentinelChannel,
     Tier,
+    TransferSystem,
 )
-from shared_core.infinity.owasp_hardening import OWASPHardeningMiddleware
-from shared_core.infinity.rbac import RBACEngine
+from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensional.infinity.rbac import Permission, RBACEngine
 
 # Phase 22.3: Sentinel Station
-from shared_core.infinity.sentinel_station import (
-    SentinelEvent,
+from Dimensional.infinity.sentinel_station import (
+    SentinelStation,
     get_sentinel_station,
 )
 
+# Phase 22.4: Dimensional Services
+from Dimensional.dimensionals import (
+    DimensionalServiceBus,
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
+)
+
 # Phase 22.6: Smart Adaptive Intelligence
-from shared_core.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
+
+# Phase 25: Platform Entity Registry (entity name management)
+try:
+    from src.entities.platform import (
+        PLATFORM_ENTITIES,
+        get_entity_by_pid,
+    )
+
+    _PLATFORM_ENTITIES_AVAILABLE = True
+except Exception:  # pragma: no cover
+    _PLATFORM_ENTITIES_AVAILABLE = False
+    PLATFORM_ENTITIES = {}
+
+    def get_entity_by_pid(pid: str):  # type: ignore[misc]
+        return None
+
 
 # Phase 25: Platform Entity Registry (entity name management)
 try:
@@ -118,9 +148,9 @@ underverse_registry = get_underverse_registry()
 # Phase 22.6: Smart adaptive worker kit (admin gets higher defense thresholds)
 worker_kit = InfinityWorkerKit(
     "infinity-admin",
-    defense_threshold=5,  # Stricter: only 5 violations before block
+    defense_threshold=5,          # Stricter: only 5 violations before block
     defense_window_seconds=300,
-    defense_block_seconds=1800,  # 30-min block for admin violations
+    defense_block_seconds=1800,   # 30-min block for admin violations
 )
 
 # ---------------------------------------------------------------------------
@@ -220,7 +250,6 @@ db = AdminDatabase()
 
 class ConfigUpdate(BaseModel):
     """Update a system configuration value."""
-
     value: str
     category: str = Field(default="general")
     description: str | None = None
@@ -228,7 +257,6 @@ class ConfigUpdate(BaseModel):
 
 class FeatureFlagUpdate(BaseModel):
     """Update a feature flag."""
-
     enabled: bool
     description: str | None = None
     pillar: str | None = None
@@ -237,7 +265,6 @@ class FeatureFlagUpdate(BaseModel):
 
 class AdminActionLog(BaseModel):
     """Log entry for an admin action."""
-
     id: str
     action_type: str
     actor_id: str
@@ -342,18 +369,16 @@ async def _lifespan(app: FastAPI):
     _seed_default_config()
 
     # Publish startup event
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.PLATFORM,
-            event_type="infinity_admin_started",
-            source="infinity_admin",
-            payload={
-                "port": PORT,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "smart_adaptive": True,
-            },
-        )
-    )
+    await sentinel.publish(SentinelEvent(
+        channel=SentinelChannel.PLATFORM,
+        event_type="infinity_admin_started",
+        source="infinity_admin",
+        payload={
+            "port": PORT,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "smart_adaptive": True,
+        },
+    ))
 
     logger.info("Infinity-Admin ready — management OS for the Trancendos Universe ✨")
 
@@ -365,35 +390,29 @@ async def _lifespan(app: FastAPI):
                 # Health reporter
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    if hasattr(summary, "to_dict"):
-                        summary = summary.to_dict()
-                    worker_kit.health.update_health(summary.get("health_score", 1.0))
+                    summary_dict = summary.to_dict(); worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
-                    await sentinel.publish(
-                        SentinelEvent(
-                            channel=SentinelChannel.PLATFORM,
-                            event_type="health_report",
-                            source="infinity_admin",
-                            payload=summary,
-                        )
-                    )
+                    await sentinel.publish(SentinelEvent(
+                        channel=SentinelChannel.PLATFORM,
+                        event_type="health_report",
+                        source="infinity_admin",
+                        payload=summary_dict,
+                    ))
                 # Defense reporter — publish incidents to security channel
                 if worker_kit.health.should_fire("defense_reporter"):
                     defense_incidents = worker_kit.health.get_defense_incidents()
                     defense_stats = worker_kit.defense.get_stats()
                     worker_kit.health.record_fire("defense_reporter")
                     if defense_stats.get("incidents", 0) > 0:
-                        await sentinel.publish(
-                            SentinelEvent(
-                                channel=SentinelChannel.SECURITY,
-                                event_type="defense_report",
-                                source="infinity_admin",
-                                payload={
-                                    "stats": defense_stats,
-                                    "incidents": defense_incidents[:10],
-                                },
-                            )
-                        )
+                        await sentinel.publish(SentinelEvent(
+                            channel=SentinelChannel.SECURITY,
+                            event_type="defense_report",
+                            source="infinity_admin",
+                            payload={
+                                "stats": defense_stats,
+                                "incidents": defense_incidents[:10],
+                            },
+                        ))
             except asyncio.CancelledError:
                 break
             except Exception as exc:
@@ -425,31 +444,11 @@ def _seed_default_config() -> None:
         ("mfa_required", "false", "security", "Whether MFA is required for all users"),
         ("session_timeout", "3600", "auth", "Session timeout in seconds"),
         ("max_login_attempts", "5", "security", "Maximum login attempts before lockout"),
-        (
-            "sentinel_redis_enabled",
-            "false",
-            "infrastructure",
-            "Whether Redis is enabled for Sentinel Station",
-        ),
-        (
-            "dimensional_bus_enabled",
-            "true",
-            "infrastructure",
-            "Whether the Dimensional Service Bus is active",
-        ),
-        (
-            "nexus_transfer_enabled",
-            "true",
-            "transfer",
-            "Whether The Nexus transfer system is active",
-        ),
+        ("sentinel_redis_enabled", "false", "infrastructure", "Whether Redis is enabled for Sentinel Station"),
+        ("dimensional_bus_enabled", "true", "infrastructure", "Whether the Dimensional Service Bus is active"),
+        ("nexus_transfer_enabled", "true", "transfer", "Whether The Nexus transfer system is active"),
         ("hive_transfer_enabled", "true", "transfer", "Whether The HIVE transfer system is active"),
-        (
-            "bridge_transfer_enabled",
-            "true",
-            "transfer",
-            "Whether The Infinity Bridge transfer system is active",
-        ),
+        ("bridge_transfer_enabled", "true", "transfer", "Whether The Infinity Bridge transfer system is active"),
     ]
 
     now = datetime.now(timezone.utc).isoformat()
@@ -556,12 +555,7 @@ def _log_admin_action(
 @app.get("/health")
 async def health():
     """Health check for the Infinity-Admin service."""
-    health_summary_obj = worker_kit.health.get_health_summary()
-    health_summary = (
-        health_summary_obj.to_dict()
-        if hasattr(health_summary_obj, "to_dict")
-        else health_summary_obj
-    )
+    health_summary = worker_kit.health.get_health_summary()
     return {
         "status": "healthy",
         "service": "infinity-admin",
@@ -569,8 +563,8 @@ async def health():
         "purpose": "Administrative Management OS for the Trancendos Universe",
         "dimensional_bus": dimensional_bus.is_running,
         "sentinel": sentinel.is_running,
-        "health_score": health_summary.get("health_score", 1.0),
-        "health_tier": health_summary.get("tier", "EXCELLENT"),
+        "health_score": health_summary.to_dict().get("health_score", 1.0),
+        "health_tier": health_summary.to_dict().get("health_tier", "EXCELLENT"),
         "smart_adaptive": True,
         "defense_blocked_ips": len(worker_kit.defense.get_blocked_ips()),
     }
@@ -590,7 +584,9 @@ async def list_config(category: str | None = None):
             (category,),
         ).fetchall()
     else:
-        rows = db.execute("SELECT * FROM system_config ORDER BY category, key").fetchall()
+        rows = db.execute(
+            "SELECT * FROM system_config ORDER BY category, key"
+        ).fetchall()
 
     return {"config": [dict(r) for r in rows], "total": len(rows)}
 
@@ -662,27 +658,12 @@ async def update_feature(key: str, flag: FeatureFlagUpdate, request: Request):
     if existing:
         db.execute(
             "UPDATE feature_flags SET enabled = ?, description = ?, pillar = ?, tier_required = ?, updated_at = ? WHERE key = ?",
-            (
-                1 if flag.enabled else 0,
-                flag.description,
-                flag.pillar,
-                flag.tier_required or 0,
-                now,
-                key,
-            ),
+            (1 if flag.enabled else 0, flag.description, flag.pillar, flag.tier_required or 0, now, key),
         )
     else:
         db.execute(
             "INSERT INTO feature_flags (key, enabled, description, pillar, tier_required, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (
-                key,
-                1 if flag.enabled else 0,
-                flag.description,
-                flag.pillar,
-                flag.tier_required or 0,
-                now,
-                now,
-            ),
+            (key, 1 if flag.enabled else 0, flag.description, flag.pillar, flag.tier_required or 0, now, now),
         )
     db.commit()
 
@@ -707,19 +688,17 @@ async def update_feature(key: str, flag: FeatureFlagUpdate, request: Request):
 async def list_primes():
     """List all Prime entities and their governance status."""
     primes_data = []
-    for _prime_id, prime in PRIMES.items():
-        primes_data.append(
-            {
-                "id": prime.id,
-                "name": prime.name,
-                "tier": prime.tier.value,
-                "tier_name": prime.tier.display_name,
-                "pillar": prime.pillar.value,
-                "pillar_name": prime.pillar.display_name,
-                "pillar_accent": prime.pillar.accent_color,
-                "description": prime.description,
-            }
-        )
+    for prime_id, prime in PRIMES.items():
+        primes_data.append({
+            "id": prime.id,
+            "name": prime.name,
+            "tier": prime.tier.value,
+            "tier_name": prime.tier.display_name,
+            "pillar": prime.pillar.value,
+            "pillar_name": prime.pillar.display_name,
+            "pillar_accent": prime.pillar.accent_color,
+            "description": prime.description,
+        })
 
     return {"primes": primes_data, "total": len(primes_data)}
 
@@ -732,16 +711,14 @@ async def list_pillars():
         prime_id = PILLAR_PRIME_MAP.get(pillar)
         prime = PRIMES.get(prime_id)
 
-        pillars_data.append(
-            {
-                "id": pillar.value,
-                "name": pillar.display_name,
-                "accent_color": pillar.accent_color,
-                "prime_id": prime_id,
-                "prime_name": prime.name if prime else "Unassigned",
-                "prime_tier": prime.tier.display_name if prime else None,
-            }
-        )
+        pillars_data.append({
+            "id": pillar.value,
+            "name": pillar.display_name,
+            "accent_color": pillar.accent_color,
+            "prime_id": prime_id,
+            "prime_name": prime.name if prime else "Unassigned",
+            "prime_tier": prime.tier.display_name if prime else None,
+        })
 
     return {"pillars": pillars_data, "total": len(pillars_data)}
 
@@ -749,19 +726,18 @@ async def list_pillars():
 @app.get("/admin/tiers")
 async def list_tiers():
     """List the complete tier system with descriptions."""
+    from Dimensional.infinity.nomenclature import TIER_NAMES, TIER_DESCRIPTIONS
 
     tiers_data = []
     for tier in Tier:
-        tiers_data.append(
-            {
-                "value": tier.value,
-                "name": tier.display_name,
-                "description": tier.description,
-                "is_intelligence": tier.is_intelligence,
-                "is_governance": tier.is_governance,
-                "infinity_designation": tier.infinity_designation,
-            }
-        )
+        tiers_data.append({
+            "value": tier.value,
+            "name": tier.display_name,
+            "description": tier.description,
+            "is_intelligence": tier.is_intelligence,
+            "is_governance": tier.is_governance,
+            "infinity_designation": tier.infinity_designation,
+        })
 
     return {"tiers": tiers_data, "total": len(tiers_data)}
 
@@ -847,15 +823,13 @@ async def transfer_systems_status():
         ).fetchone()
         enabled = config_row["value"] == "true" if config_row else True
 
-        systems.append(
-            {
-                "id": ts.value,
-                "name": info.get("name", ""),
-                "transfers": info.get("transfers", ""),
-                "description": info.get("description", ""),
-                "enabled": enabled,
-            }
-        )
+        systems.append({
+            "id": ts.value,
+            "name": info.get("name", ""),
+            "transfers": info.get("transfers", ""),
+            "description": info.get("description", ""),
+            "enabled": enabled,
+        })
 
     return {"transfer_systems": systems, "total": len(systems)}
 
@@ -870,14 +844,12 @@ async def list_locations():
     """List all Infinity Locations with their configuration."""
     locations = []
     for loc, info in INFINITY_LOCATIONS.items():
-        locations.append(
-            {
-                "id": loc.value,
-                "name": info.get("name", ""),
-                "purpose": info.get("purpose", ""),
-                "description": info.get("description", ""),
-            }
-        )
+        locations.append({
+            "id": loc.value,
+            "name": info.get("name", ""),
+            "purpose": info.get("purpose", ""),
+            "description": info.get("description", ""),
+        })
 
     return {"locations": locations, "total": len(locations)}
 
@@ -911,9 +883,7 @@ async def audit_log(
         params + [limit, offset],
     ).fetchall()
 
-    total = db.execute(f"SELECT COUNT(*) as cnt FROM admin_actions{where}", params).fetchone()[
-        "cnt"
-    ]
+    total = db.execute(f"SELECT COUNT(*) as cnt FROM admin_actions{where}", params).fetchone()["cnt"]
 
     return {"actions": [dict(r) for r in rows], "total": total}
 
@@ -952,8 +922,8 @@ async def compliance_events(
 @app.get("/admin/sentinel")
 async def sentinel_status():
     """Get Sentinel Station status and channel information."""
-    from shared_core.infinity.nomenclature import SENTINEL_CHANNELS
-    from shared_core.infinity.sentinel_config import sentinel_config
+    from Dimensional.infinity.sentinel_config import sentinel_config
+    from Dimensional.infinity.nomenclature import SENTINEL_CHANNELS
 
     return {
         "running": sentinel.is_running,
@@ -1010,7 +980,10 @@ async def ecosystem_overview():
             ts.value: {"name": info.get("name", ""), "transfers": info.get("transfers", "")}
             for ts, info in TRANSFER_SYSTEMS.items()
         },
-        "locations": {loc.value: info.get("name", "") for loc, info in INFINITY_LOCATIONS.items()},
+        "locations": {
+            loc.value: info.get("name", "")
+            for loc, info in INFINITY_LOCATIONS.items()
+        },
         "admin": {
             "config_entries": system_config_count,
             "feature_flags": feature_flag_count,

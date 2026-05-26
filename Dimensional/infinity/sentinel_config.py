@@ -124,54 +124,52 @@ class SentinelStationConfig:
     redis_channel_prefix: str = "sentinel:"
 
     # Pre-configured channels based on nomenclature
-    channels: dict[str, ChannelConfig] = field(
-        default_factory=lambda: {
-            SentinelChannel.PLATFORM.value: ChannelConfig(
-                name=SentinelChannel.PLATFORM.value,
-                description="Platform-level events: topology changes, system alerts",
-            ),
-            SentinelChannel.AGENTS.value: ChannelConfig(
-                name=SentinelChannel.AGENTS.value,
-                description="Agent lifecycle events: creation, deletion, status changes",
-            ),
-            SentinelChannel.MODELS.value: ChannelConfig(
-                name=SentinelChannel.MODELS.value,
-                description="Model events: registration, routing changes",
-            ),
-            SentinelChannel.WORKFLOWS.value: ChannelConfig(
-                name=SentinelChannel.WORKFLOWS.value,
-                description="Workflow events: creation, execution, completion",
-            ),
-            SentinelChannel.SECURITY.value: ChannelConfig(
-                name=SentinelChannel.SECURITY.value,
-                description="Security events: vault access, audit entries, threat detection",
-            ),
-            SentinelChannel.HIVE.value: ChannelConfig(
-                name=SentinelChannel.HIVE.value,
-                description="Data transfer events through The HIVE",
-            ),
-            SentinelChannel.NEXUS.value: ChannelConfig(
-                name=SentinelChannel.NEXUS.value,
-                description="AI/Agent/Bot movement events through The Nexus",
-            ),
-            SentinelChannel.BRIDGE.value: ChannelConfig(
-                name=SentinelChannel.BRIDGE.value,
-                description="User transfer events across the Infinity Bridge",
-            ),
-            SentinelChannel.PILLARS.value: ChannelConfig(
-                name=SentinelChannel.PILLARS.value,
-                description="Prime status and pillar health events",
-            ),
-            SentinelChannel.INFRASTRUCTURE.value: ChannelConfig(
-                name=SentinelChannel.INFRASTRUCTURE.value,
-                description="Infrastructure health, node topology, and scaling events",
-            ),
-            SentinelChannel.EVENTS.value: ChannelConfig(
-                name=SentinelChannel.EVENTS.value,
-                description="General platform events and notifications",
-            ),
-        }
-    )
+    channels: dict[str, ChannelConfig] = field(default_factory=lambda: {
+        SentinelChannel.PLATFORM.value: ChannelConfig(
+            name=SentinelChannel.PLATFORM.value,
+            description="Platform-level events: topology changes, system alerts",
+        ),
+        SentinelChannel.AGENTS.value: ChannelConfig(
+            name=SentinelChannel.AGENTS.value,
+            description="Agent lifecycle events: creation, deletion, status changes",
+        ),
+        SentinelChannel.MODELS.value: ChannelConfig(
+            name=SentinelChannel.MODELS.value,
+            description="Model events: registration, routing changes",
+        ),
+        SentinelChannel.WORKFLOWS.value: ChannelConfig(
+            name=SentinelChannel.WORKFLOWS.value,
+            description="Workflow events: creation, execution, completion",
+        ),
+        SentinelChannel.SECURITY.value: ChannelConfig(
+            name=SentinelChannel.SECURITY.value,
+            description="Security events: vault access, audit entries, threat detection",
+        ),
+        SentinelChannel.HIVE.value: ChannelConfig(
+            name=SentinelChannel.HIVE.value,
+            description="Data transfer events through The HIVE",
+        ),
+        SentinelChannel.NEXUS.value: ChannelConfig(
+            name=SentinelChannel.NEXUS.value,
+            description="AI/Agent/Bot movement events through The Nexus",
+        ),
+        SentinelChannel.BRIDGE.value: ChannelConfig(
+            name=SentinelChannel.BRIDGE.value,
+            description="User transfer events across the Infinity Bridge",
+        ),
+        SentinelChannel.PILLARS.value: ChannelConfig(
+            name=SentinelChannel.PILLARS.value,
+            description="Prime status and pillar health events",
+        ),
+        SentinelChannel.INFRASTRUCTURE.value: ChannelConfig(
+            name=SentinelChannel.INFRASTRUCTURE.value,
+            description="Infrastructure health, node topology, and scaling events",
+        ),
+        SentinelChannel.EVENTS.value: ChannelConfig(
+            name=SentinelChannel.EVENTS.value,
+            description="General platform events and notifications",
+        ),
+    })
 
 
 # Singleton configuration instance

@@ -92,17 +92,17 @@ repos:
     hooks:
       - id: security-scanner
         name: Proactive Security Scanner
-        entry: python -m shared_core.security_automation gate
+        entry: python -m Dimensional.security_automation gate
         language: system
         types: [python]
         pass_filenames: false
-        args: [--max-critical, "0", --max-high, "0", --max-medium, "20", src/ shared_core/ workers/]
+        args: [--max-critical, "0", --max-high, "0", --max-medium, "20", src/ Dimensional/ workers/]
         verbose: true
       - id: security-autofix
         name: Security Auto-Fix (dry-run check)
-        entry: python -m shared_core.security_automation fix
+        entry: python -m Dimensional.security_automation fix
         language: system
         types: [python]
         pass_filenames: false
-        args: [--dry-run, src/ shared_core/ workers/]
+        args: [--dry-run, src/ Dimensional/ workers/]
         verbose: true

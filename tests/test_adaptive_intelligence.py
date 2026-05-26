@@ -45,7 +45,6 @@ def _run_coro(coro):
     if loop and loop.is_running():
         # We're inside an already-running loop (shouldn't happen in sync tests)
         import concurrent.futures
-
         with concurrent.futures.ThreadPoolExecutor() as pool:
             return pool.submit(asyncio.run, coro).result()
     return asyncio.run(coro)

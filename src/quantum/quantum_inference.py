@@ -12,7 +12,7 @@ import torch.nn as nn  # noqa: E402
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister  # noqa: E402
 from qiskit_aer import AerSimulator  # noqa: E402
 
-from shared_core.sanitize import sanitize_for_log  # noqa: E402
+from Dimensional.sanitize import sanitize_for_log  # noqa: E402
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
 
 

@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 
 try:
     from scipy.stats import entropy as _scipy_entropy
