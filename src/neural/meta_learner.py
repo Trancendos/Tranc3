@@ -149,6 +149,9 @@ def _cosine_similarity(a: List[float], b: List[float]) -> float:
         dot = float(np.dot(va, vb))
         norm_a = float(np.linalg.norm(va))
         norm_b = float(np.linalg.norm(vb))
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        return dot / (norm_a * norm_b)
     else:
         # Performance optimization: Single pass loop avoids generator overhead
         dot = 0.0
