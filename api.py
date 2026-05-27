@@ -350,10 +350,26 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning("AutoEvolve failed to start: %s", sanitize_for_log(e))
 
+    # Knowledge Brain (The Library) — start dream-cycle consolidation
+    _knowledge_brain = None
+    try:
+        from src.knowledge.knowledge_brain import get_brain as _get_brain  # codeql[py/cyclic-import]
+
+        _knowledge_brain = _get_brain()
+        await _knowledge_brain.start_dream_cycle()
+        logger.info("Knowledge Brain dream cycle started (The Library / Zimik)")
+    except Exception as _kb_exc:
+        logger.warning("Knowledge Brain unavailable: %s", sanitize_for_log(_kb_exc))
+
     logger.info("TRANC3 API ready ✓")
     yield
 
     logger.info("TRANC3 shutting down")
+    if _knowledge_brain is not None:
+        try:
+            await _knowledge_brain.stop_dream_cycle()
+        except Exception as _stop_exc:
+            logger.warning("Knowledge Brain stop error: %s", sanitize_for_log(_stop_exc))
     if _auto_evolve is not None:
         try:
             await _auto_evolve.stop()

@@ -1350,3 +1350,22 @@ try:
     )
 except Exception as _p5_exc:
     logger.warning("Phase 5 Spark tools unavailable: %s", _p5_exc)
+
+# ---------------------------------------------------------------------------
+# Knowledge Brain: The Library tools (9 tools)
+# Registers KnowledgeBrain tools — hybrid BM25+vector search, agent memory,
+# persistent knowledge graph backed by SQLite WAL.
+# ---------------------------------------------------------------------------
+try:
+    from src.mcp.spark_knowledge_tools import (
+        register_knowledge_tools as _reg_kb,  # codeql[py/cyclic-import]
+    )
+
+    _kb_count = _reg_kb(registry)
+    logger.info(
+        "Knowledge Brain Spark tools loaded: %d tools added (total=%d)",
+        _kb_count,
+        len(registry._tools),
+    )
+except Exception as _kb_exc:
+    logger.warning("Knowledge Brain Spark tools unavailable: %s", _kb_exc)
