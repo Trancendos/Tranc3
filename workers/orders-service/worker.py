@@ -161,11 +161,6 @@ async def health():
     }
 
 
-# TODO: Add specific CRUD endpoints for orders-service
-# The database class above provides create(), get(), list(), update(), delete() methods
-# Implement domain-specific endpoints based on business requirements
-
-
 @app.get("/")
 async def list_all(limit: int = 50, offset: int = 0):
     """List all orders."""
@@ -204,6 +199,83 @@ async def delete_by_id(order_id: str):
     if not db.delete("order_id", order_id):
         raise HTTPException(404, f"Not found: {order_id}")
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Domain-specific endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/by-user/{user_id}")
+async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
+    """List all orders placed by a specific user."""
+    return {"data": db.list(limit=limit, offset=offset, user_id=user_id)}
+
+
+@app.get("/by-status/{status}")
+async def get_by_status(status: str, limit: int = 50, offset: int = 0):
+    """List orders by status (pending, confirmed, shipped, delivered, cancelled)."""
+    valid = {"pending", "confirmed", "shipped", "delivered", "cancelled"}
+    if status not in valid:
+        raise HTTPException(400, f"Invalid status. Must be one of: {sorted(valid)}")
+    return {"data": db.list(limit=limit, offset=offset, status=status)}
+
+
+@app.post("/{order_id}/confirm")
+async def confirm_order(order_id: str):
+    """Confirm a pending order."""
+    item = db.get("order_id", order_id)
+    if not item:
+        raise HTTPException(404, f"Not found: {order_id}")
+    if item.get("status") != "pending":
+        raise HTTPException(409, f"Order status is '{item.get('status')}', not pending")
+    db.update("order_id", order_id, {"status": "confirmed"})
+    return {"ok": True, "order_id": order_id, "status": "confirmed"}
+
+
+@app.post("/{order_id}/ship")
+async def ship_order(order_id: str):
+    """Mark an order as shipped."""
+    item = db.get("order_id", order_id)
+    if not item:
+        raise HTTPException(404, f"Not found: {order_id}")
+    if item.get("status") != "confirmed":
+        raise HTTPException(409, f"Order must be confirmed before shipping, got '{item.get('status')}'")
+    db.update("order_id", order_id, {"status": "shipped"})
+    return {"ok": True, "order_id": order_id, "status": "shipped"}
+
+
+@app.post("/{order_id}/deliver")
+async def deliver_order(order_id: str):
+    """Mark an order as delivered."""
+    item = db.get("order_id", order_id)
+    if not item:
+        raise HTTPException(404, f"Not found: {order_id}")
+    if item.get("status") != "shipped":
+        raise HTTPException(409, f"Order must be shipped before delivery, got '{item.get('status')}'")
+    db.update("order_id", order_id, {"status": "delivered"})
+    return {"ok": True, "order_id": order_id, "status": "delivered"}
+
+
+@app.post("/{order_id}/cancel")
+async def cancel_order(order_id: str):
+    """Cancel an order (only pending or confirmed orders can be cancelled)."""
+    item = db.get("order_id", order_id)
+    if not item:
+        raise HTTPException(404, f"Not found: {order_id}")
+    if item.get("status") not in ("pending", "confirmed"):
+        raise HTTPException(409, f"Cannot cancel order with status '{item.get('status')}'")
+    db.update("order_id", order_id, {"status": "cancelled"})
+    return {"ok": True, "order_id": order_id, "status": "cancelled"}
+
+
+@app.get("/stats/summary")
+async def order_stats():
+    """Order counts and total revenue by status."""
+    conn = db._get_conn()
+    rows = conn.execute(
+        "SELECT status, COUNT(*) as count, SUM(total) as revenue FROM orders GROUP BY status"
+    ).fetchall()
+    return {"stats": [dict(r) for r in rows]}
 
 
 if __name__ == "__main__":

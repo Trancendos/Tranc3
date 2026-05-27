@@ -266,13 +266,102 @@ jobs:
           retention-days: 30
 
   # ──────────────────────────────────────────────────────────────
+  # DAST — Dynamic Application Security Testing (nuclei)
+  # Spins up the FastAPI backend, runs nuclei HTTP + CVE templates.
+  # Zero-cost: nuclei is Apache-2.0 open-source, single binary.
+  # ──────────────────────────────────────────────────────────────
+  dast:
+    name: DAST — nuclei (HTTP + CVE templates)
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --quiet fastapi uvicorn pydantic
+
+      - name: Install nuclei
+        run: |
+          if ! which nuclei 2>/dev/null; then
+            NUCLEI_VER="v3.3.7"
+            OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+            ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+            curl -sfL \
+              "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VER}/nuclei_${NUCLEI_VER:1}_${OS}_${ARCH}.zip" \
+              -o /tmp/nuclei.zip
+            unzip -q /tmp/nuclei.zip -d /tmp/nuclei-bin
+            install -m 0755 /tmp/nuclei-bin/nuclei /usr/local/bin/nuclei
+          fi
+          nuclei -version
+
+      - name: Start worker under test
+        run: |
+          mkdir -p logs
+          SECRET_KEY=ci-dast-test-key DATABASE_URL=sqlite:///./dast-test.db \
+            python3 -m uvicorn api:app --host 127.0.0.1 --port 9099 &
+          echo $! > /tmp/dast-worker.pid
+          # Wait for the worker to be ready (up to 30s)
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:9099/health && break || sleep 1
+          done
+        continue-on-error: true
+
+      - name: Update nuclei templates
+        run: nuclei -update-templates -silent || true
+
+      - name: Run nuclei DAST scan (HTTP misconfig + CVE)
+        run: |
+          nuclei \
+            -target http://127.0.0.1:9099 \
+            -tags http,misconfig,generic \
+            -severity low,medium,high,critical \
+            -json-export logs/nuclei-dast-results.json \
+            -silent \
+            -timeout 10 \
+            -rate-limit 50 \
+            -no-color || true
+        continue-on-error: true
+
+      - name: Stop worker under test
+        if: always()
+        run: |
+          if [ -f /tmp/dast-worker.pid ]; then
+            kill $(cat /tmp/dast-worker.pid) 2>/dev/null || true
+            rm -f /tmp/dast-worker.pid dast-test.db
+          fi
+
+      - name: Parse DAST results
+        run: |
+          if [ -f logs/nuclei-dast-results.json ]; then
+            echo "=== DAST Findings ==="
+            CRITICAL=$(grep -c '"severity":"critical"' logs/nuclei-dast-results.json 2>/dev/null || echo 0)
+            HIGH=$(grep -c '"severity":"high"' logs/nuclei-dast-results.json 2>/dev/null || echo 0)
+            MEDIUM=$(grep -c '"severity":"medium"' logs/nuclei-dast-results.json 2>/dev/null || echo 0)
+            echo "Critical: $CRITICAL | High: $HIGH | Medium: $MEDIUM"
+            if [ "$CRITICAL" -gt "0" ] || [ "$HIGH" -gt "5" ]; then
+              echo "::warning::DAST found $CRITICAL critical and $HIGH high severity issues"
+            fi
+          else
+            echo "No DAST results file produced (worker may not have started)"
+          fi
+        continue-on-error: true
+
+      - name: Upload nuclei DAST report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dast-nuclei-${{ github.run_number }}
+          path: logs/nuclei-dast-results.json
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────────────────
   # Security Dashboard — aggregated results summary
   # Replaces GitHub Actions security-dashboard.yml
   # ──────────────────────────────────────────────────────────────
   security-dashboard:
     name: Security Dashboard Summary
     runs-on: self-hosted
-    needs: [python-security, node-security, semgrep, trivy, secret-detection]
+    needs: [python-security, node-security, semgrep, trivy, secret-detection, dast]
     if: always()
     steps:
       - uses: actions/checkout@v4
@@ -292,6 +381,7 @@ jobs:
           echo "| Trivy | ${{ needs.trivy.result }} |
 | Semgrep (CodeQL replacement) | ${{ needs.semgrep.result }} |" | tee -a logs/security-dashboard.txt
           echo "| Secret Detection | ${{ needs.secret-detection.result }} |" | tee -a logs/security-dashboard.txt
+          echo "| DAST (nuclei) | ${{ needs.dast.result }} |" | tee -a logs/security-dashboard.txt
           echo "" | tee -a logs/security-dashboard.txt
           echo "See individual job logs for detailed findings." | tee -a logs/security-dashboard.txt
 
@@ -309,7 +399,7 @@ jobs:
   notify-citadel:
     name: Notify The Citadel
     runs-on: self-hosted
-    needs: [python-security, node-security, semgrep, trivy, secret-detection]
+    needs: [python-security, node-security, semgrep, trivy, secret-detection, dast]
     if: failure()
     steps:
       - name: Post security alert to The Citadel

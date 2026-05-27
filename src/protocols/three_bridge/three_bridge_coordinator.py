@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -180,22 +181,26 @@ class EscalationResult:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class IBridge:
+class IBridge(ABC):
     """Abstract base class for bridges."""
 
     @property
+    @abstractmethod
     def domain(self) -> BridgeDomain:
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket:
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def health_check(self) -> BridgeHealthReport:
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def scan_and_cleanup(self) -> List[str]:
         """Proactive scan and cleanup. Returns list of actions taken."""
-        raise NotImplementedError
+        ...
 
 
 # ─────────────────────────────────────────────────────────────────────────────
