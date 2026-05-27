@@ -23,6 +23,7 @@ import asyncio
 import logging
 import time
 import uuid
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -76,7 +77,7 @@ class BotRun:
 # ---------------------------------------------------------------------------
 
 
-class InfinityBot:
+class InfinityBot(ABC):
     """
     Tier 5 Bot — atomic service worker for a Trancendos location.
 
@@ -137,9 +138,10 @@ class InfinityBot:
     # Core task — override this
     # ------------------------------------------------------------------
 
+    @abstractmethod
     async def run_task(self) -> dict[str, Any]:
         """The bot's single micro-task. Override with specific logic."""
-        raise NotImplementedError(f"{self.dna} must implement run_task()")
+        ...
 
     # ------------------------------------------------------------------
     # Adaptive interval

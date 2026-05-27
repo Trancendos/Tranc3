@@ -26,6 +26,7 @@ import asyncio
 import logging
 import time
 import uuid
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -117,7 +118,7 @@ class HubPowerUp:
 # ---------------------------------------------------------------------------
 
 
-class Tranc3:
+class Tranc3(ABC):
     """
     Tier 3 AI — Lead AI base for any Trancendos location.
 
@@ -351,9 +352,10 @@ class Tranc3:
     async def on_cycle(self) -> None:
         """Called on every heartbeat cycle. Override for periodic work."""
 
+    @abstractmethod
     async def process(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Process an incoming request payload. Override in concrete classes."""
-        raise NotImplementedError(f"{self.dna} must implement process()")
+        ...
 
     # ------------------------------------------------------------------
     # Status
