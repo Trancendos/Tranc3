@@ -195,8 +195,13 @@ class TestInfinityBotBase:
     def test_slot_validation(self):
         from src.entities.templates.infinity_bot_base import InfinityBot
 
+        # Must use a concrete subclass — abstract class raises TypeError before __init__
+        class _ConcreteBot(InfinityBot):
+            async def run_task(self) -> dict:
+                return {}
+
         with pytest.raises(ValueError):
-            InfinityBot(nid="NID-X", location_pid="PID-X", name="X", slot="05")
+            _ConcreteBot(nid="NID-X", location_pid="PID-X", name="X", slot="05")
 
     @pytest.mark.asyncio
     async def test_run_task_lifecycle(self):

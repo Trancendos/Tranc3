@@ -1,0 +1,104 @@
+# Traefik Dynamic Configuration — mTLS and Middleware
+# =====================================================
+# Loaded automatically by the file provider (traefik.yml → providers.file).
+# Changes here take effect without restarting Traefik.
+
+tls:
+  options:
+    # ── Internal mTLS: worker-to-worker communication ─────────────────────────
+    # All services calling other internal services on :8443 must present a
+    # client certificate signed by the internal CA.
+    internal:
+      minVersion: "VersionTLS13"
+      clientAuth:
+        caFiles:
+          - /etc/traefik/certs/internal-ca.pem
+        clientAuthType: RequireAndVerifyClientCert
+      sniStrict: true
+      curvePreferences:
+        - CurveP256
+        - CurveP384
+
+    # ── External TLS: internet-facing routes (no client cert) ─────────────────
+    external:
+      minVersion: "VersionTLS12"
+      cipherSuites:
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+      curvePreferences:
+        - CurveP256
+        - CurveP384
+      sniStrict: false
+
+  # Internal self-signed certificate (used on :8443 internal entry point)
+  certificates:
+    - certFile: /etc/traefik/certs/internal-server.pem
+      keyFile: /etc/traefik/certs/internal-server-key.pem
+
+http:
+  middlewares:
+    # ── Rate limiting: global default ─────────────────────────────────────────
+    rate-limit-default:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1s
+
+    # ── Rate limiting: tight limit for auth endpoints ─────────────────────────
+    rate-limit-auth:
+      rateLimit:
+        average: 20
+        burst: 10
+        period: 1s
+
+    # ── Security headers for external responses ───────────────────────────────
+    secure-headers:
+      headers:
+        contentTypeNosniff: true
+        browserXssFilter: true
+        frameDeny: true
+        forceSTSHeader: true
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        contentSecurityPolicy: "default-src 'self'; frame-ancestors 'none'"
+        permissionsPolicy: "camera=(), microphone=(), geolocation=()"
+
+    # ── CORS for API routes ───────────────────────────────────────────────────
+    cors-api:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Request-ID
+          - X-Device-Posture
+          - X-Device-ID
+          - X-MFA-Verified
+        accessControlExposeHeaders:
+          - X-Request-ID
+        accessControlMaxAge: 3600
+
+    # ── Request ID injection ──────────────────────────────────────────────────
+    request-id:
+      plugin: {}  # Injected via Traefik request-id plugin if available;
+                  # fallback: use X-Request-ID from upstream or generate UUID
+
+    # ── Strip internal prefix (/internal/...) ────────────────────────────────
+    strip-internal-prefix:
+      stripPrefix:
+        prefixes:
+          - /internal
+
+    # ── Compress responses ────────────────────────────────────────────────────
+    compress:
+      compress: {}

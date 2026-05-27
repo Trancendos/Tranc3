@@ -767,3 +767,106 @@ class TestFullRequestFlow:
         )
         # Unhealthy device + no MFA → DENY (from _determine_policy during extraction)
         assert ctx.access_policy == AccessPolicy.DENY
+
+
+# ---------------------------------------------------------------------------
+# JIT Access Manager tests
+# ---------------------------------------------------------------------------
+
+
+class TestJITAccessManager:
+    def _mgr(self, max_duration: int = 3600):
+        from src.auth.zero_trust import JITAccessManager
+        return JITAccessManager(max_duration_seconds=max_duration)
+
+    def test_grant_returns_id(self):
+        mgr = self._mgr()
+        gid = mgr.grant(user_id="alice", path_pattern="/admin/*", granted_by="ops")
+        assert isinstance(gid, str) and len(gid) == 32
+
+    def test_check_active_grant(self):
+        mgr = self._mgr()
+        mgr.grant(user_id="alice", path_pattern="/admin/*", granted_by="ops", duration_seconds=60)
+        assert mgr.check(user_id="alice", path="/admin/config") is True
+
+    def test_check_no_grant(self):
+        mgr = self._mgr()
+        assert mgr.check(user_id="bob", path="/admin/secrets") is False
+
+    def test_check_wrong_user(self):
+        mgr = self._mgr()
+        mgr.grant(user_id="alice", path_pattern="/admin/*", granted_by="ops")
+        assert mgr.check(user_id="bob", path="/admin/config") is False
+
+    def test_check_path_mismatch(self):
+        mgr = self._mgr()
+        mgr.grant(user_id="alice", path_pattern="/admin/*", granted_by="ops")
+        assert mgr.check(user_id="alice", path="/api/data") is False
+
+    def test_revoke_grant(self):
+        mgr = self._mgr()
+        gid = mgr.grant(user_id="alice", path_pattern="/admin/*", granted_by="ops")
+        mgr.revoke(gid)
+        assert mgr.check(user_id="alice", path="/admin/config") is False
+
+    def test_revoke_unknown_returns_false(self):
+        mgr = self._mgr()
+        assert mgr.revoke("nonexistent-id") is False
+
+    def test_duration_exceeds_max_raises(self):
+        import pytest
+        mgr = self._mgr(max_duration=300)
+        with pytest.raises(ValueError):
+            mgr.grant(user_id="alice", path_pattern="/admin/*", granted_by="ops", duration_seconds=600)
+
+    def test_zero_duration_raises(self):
+        import pytest
+        mgr = self._mgr()
+        with pytest.raises(ValueError):
+            mgr.grant(user_id="alice", path_pattern="/admin/*", granted_by="ops", duration_seconds=0)
+
+    def test_list_grants_empty(self):
+        mgr = self._mgr()
+        assert mgr.list_grants() == []
+
+    def test_list_grants_populated(self):
+        mgr = self._mgr()
+        mgr.grant(user_id="alice", path_pattern="/admin/*", granted_by="ops")
+        mgr.grant(user_id="bob", path_pattern="/billing/*", granted_by="ops")
+        grants = mgr.list_grants()
+        assert len(grants) == 2
+
+    def test_list_grants_user_filter(self):
+        mgr = self._mgr()
+        mgr.grant(user_id="alice", path_pattern="/admin/*", granted_by="ops")
+        mgr.grant(user_id="bob", path_pattern="/billing/*", granted_by="ops")
+        alice_grants = mgr.list_grants(user_id="alice")
+        assert len(alice_grants) == 1
+        assert alice_grants[0]["user_id"] == "alice"
+
+    def test_get_grant_metadata(self):
+        mgr = self._mgr()
+        gid = mgr.grant(
+            user_id="alice", path_pattern="/admin/*", granted_by="sre",
+            duration_seconds=300, reason="incident-001",
+        )
+        info = mgr.get_grant(gid)
+        assert info is not None
+        assert info["user_id"] == "alice"
+        assert info["reason"] == "incident-001"
+        assert info["duration_seconds"] == 300
+        assert info["is_active"] is True
+
+    def test_use_count_incremented(self):
+        mgr = self._mgr()
+        gid = mgr.grant(user_id="alice", path_pattern="/admin/*", granted_by="ops")
+        mgr.check(user_id="alice", path="/admin/x")
+        mgr.check(user_id="alice", path="/admin/y")
+        info = mgr.get_grant(gid)
+        assert info["use_count"] == 2
+
+    def test_get_jit_manager_singleton(self):
+        from src.auth.zero_trust import get_jit_manager
+        m1 = get_jit_manager()
+        m2 = get_jit_manager()
+        assert m1 is m2
