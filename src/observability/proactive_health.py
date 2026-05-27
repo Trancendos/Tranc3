@@ -50,7 +50,7 @@ class ProactiveAlert:
     severity: str = "info"  # info | warning | critical
     message: str = ""
     context: dict[str, Any] = field(default_factory=dict)
-    raised_at: float = field(default_factory=time.monotonic)
+    raised_at: float = field(default_factory=time.time)
     acknowledged: bool = False
 
 
@@ -93,7 +93,8 @@ class ProactiveHealthMonitor:
 
     def _init_db(self) -> None:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self._db_path) as conn:
+        conn = sqlite3.connect(self._db_path)
+        try:
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS alerts (
                     alert_id TEXT PRIMARY KEY,
@@ -105,24 +106,30 @@ class ProactiveHealthMonitor:
                 )"""
             )
             conn.commit()
+        finally:
+            conn.close()
 
     def _persist_alert(self, alert: ProactiveAlert) -> None:
+        conn = None
         try:
-            with sqlite3.connect(self._db_path) as conn:
-                conn.execute(
-                    "INSERT OR IGNORE INTO alerts VALUES (?,?,?,?,?,?)",
-                    (
-                        alert.alert_id,
-                        alert.entity_id,
-                        alert.severity,
-                        alert.message,
-                        alert.raised_at,
-                        int(alert.acknowledged),
-                    ),
-                )
-                conn.commit()
+            conn = sqlite3.connect(self._db_path)
+            conn.execute(
+                "INSERT OR IGNORE INTO alerts VALUES (?,?,?,?,?,?)",
+                (
+                    alert.alert_id,
+                    alert.entity_id,
+                    alert.severity,
+                    alert.message,
+                    alert.raised_at,
+                    int(alert.acknowledged),
+                ),
+            )
+            conn.commit()
         except Exception as exc:
             logger.warning("ProactiveHealthMonitor: failed to persist alert: %s", exc)
+        finally:
+            if conn:
+                conn.close()
 
     # ------------------------------------------------------------------
     # Registration
@@ -203,6 +210,8 @@ class ProactiveHealthMonitor:
             context=context or {},
         )
         self._alerts.append(alert)
+        if len(self._alerts) > 1000:
+            self._alerts = self._alerts[-500:]
         self._persist_alert(alert)
         logger.log(
             logging.CRITICAL if severity == "critical" else logging.WARNING,
@@ -264,7 +273,7 @@ class ProactiveHealthMonitor:
         logger.info("ProactiveHealthMonitor started (%d entities)", len(self._entities))
         while self._running:
             try:
-                alerts = self.check_all()
+                alerts = await asyncio.to_thread(self.check_all)
                 if alerts:
                     logger.info(
                         "ProactiveHealthMonitor: %d new alerts this cycle", len(alerts)
@@ -278,6 +287,7 @@ class ProactiveHealthMonitor:
     async def start(self) -> None:
         if self._running:
             return
+        self._running = True
         self._task = asyncio.create_task(self.run(), name="proactive_health_monitor")
 
     async def stop(self) -> None:
@@ -287,7 +297,7 @@ class ProactiveHealthMonitor:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
+                pass  # expected: task was cancelled
 
     # ------------------------------------------------------------------
     # Status
@@ -309,5 +319,18 @@ class ProactiveHealthMonitor:
         for alert in self._alerts:
             if alert.alert_id == alert_id and not alert.acknowledged:
                 alert.acknowledged = True
+                conn = None
+                try:
+                    conn = sqlite3.connect(self._db_path)
+                    conn.execute(
+                        "UPDATE alerts SET acknowledged=1 WHERE alert_id=?",
+                        (alert_id,),
+                    )
+                    conn.commit()
+                except Exception as exc:
+                    logger.warning("ProactiveHealthMonitor: failed to persist ack: %s", exc)
+                finally:
+                    if conn:
+                        conn.close()
                 return True
         return False

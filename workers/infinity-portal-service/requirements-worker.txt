@@ -3,5 +3,6 @@ fastapi==0.115.12
 uvicorn==0.34.3
 pydantic==2.11.5
 httpx==0.28.1
+httpcore==1.0.9
 python-jose[cryptography]==3.4.0
 email-validator==2.2.0

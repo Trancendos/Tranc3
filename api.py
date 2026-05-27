@@ -356,13 +356,13 @@ async def lifespan(app: FastAPI):
     if _auto_evolve is not None:
         try:
             await _auto_evolve.stop()
-        except Exception:
-            pass
+        except Exception as _stop_exc:
+            logger.warning("AutoEvolve stop error: %s", _stop_exc)
     if _health_monitor is not None:
         try:
             await _health_monitor.stop()
-        except Exception:
-            pass
+        except Exception as _stop_exc:
+            logger.warning("ProactiveHealthMonitor stop error: %s", _stop_exc)
     if redis_client:
         redis_client.close()
 

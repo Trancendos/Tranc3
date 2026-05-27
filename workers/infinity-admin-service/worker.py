@@ -33,54 +33,40 @@ import json
 import logging
 import os
 import sqlite3
-import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
-# Phase 22.4: Dimensional Services
-from shared_core.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
 
 # Phase 22: Infinity Ecosystem security
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
 from Dimensional.infinity.nomenclature import (
     ECOSYSTEM_NAME,
     INFINITY_LOCATIONS,
-    PILLAR_ACCENT_COLORS,
-    PILLAR_DISPLAY_NAMES,
     PILLAR_PRIME_MAP,
     PRIMES,
     TRANSFER_SYSTEMS,
     UNIVERSE_NAME,
-    InfinityLocation,
-    InfinityRole,
     Pillar,
     SentinelChannel,
     Tier,
-    TransferSystem,
 )
 from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.rbac import Permission, RBACEngine
+from Dimensional.infinity.rbac import RBACEngine
 
 # Phase 22.3: Sentinel Station
 from Dimensional.infinity.sentinel_station import (
-    SentinelStation,
+    SentinelEvent,
     get_sentinel_station,
 )
 
 # Phase 22.4: Dimensional Services
 from Dimensional.dimensionals import (
-    DimensionalServiceBus,
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
@@ -88,22 +74,6 @@ from Dimensional.dimensionals import (
 
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
-
-# Phase 25: Platform Entity Registry (entity name management)
-try:
-    from src.entities.platform import (
-        PLATFORM_ENTITIES,
-        get_entity_by_pid,
-    )
-
-    _PLATFORM_ENTITIES_AVAILABLE = True
-except Exception:  # pragma: no cover
-    _PLATFORM_ENTITIES_AVAILABLE = False
-    PLATFORM_ENTITIES = {}
-
-    def get_entity_by_pid(pid: str):  # type: ignore[misc]
-        return None
-
 
 # Phase 25: Platform Entity Registry (entity name management)
 try:
@@ -390,7 +360,8 @@ async def _lifespan(app: FastAPI):
                 # Health reporter
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    summary_dict = summary.to_dict(); worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
+                    summary_dict = summary.to_dict()
+                    worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
                     await sentinel.publish(SentinelEvent(
                         channel=SentinelChannel.PLATFORM,
@@ -688,7 +659,7 @@ async def update_feature(key: str, flag: FeatureFlagUpdate, request: Request):
 async def list_primes():
     """List all Prime entities and their governance status."""
     primes_data = []
-    for prime_id, prime in PRIMES.items():
+    for _prime_id, prime in PRIMES.items():
         primes_data.append({
             "id": prime.id,
             "name": prime.name,
@@ -726,7 +697,6 @@ async def list_pillars():
 @app.get("/admin/tiers")
 async def list_tiers():
     """List the complete tier system with descriptions."""
-    from Dimensional.infinity.nomenclature import TIER_NAMES, TIER_DESCRIPTIONS
 
     tiers_data = []
     for tier in Tier:

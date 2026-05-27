@@ -284,14 +284,15 @@ from fastapi import FastAPI
 from Dimensional.architecture.adaptive_pulse import AdaptivePulse
 from Dimensional.architecture.proactive_orchestrator import ProactiveOrchestrator
 
-app = FastAPI(title="<service-name>-worker", version="1.0.0")
+from contextlib import asynccontextmanager
 
-# Startup / shutdown lifecycle
-@app.on_event("startup")
-async def startup(): ...
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup
+    yield
+    # shutdown
 
-@app.on_event("shutdown")
-async def shutdown(): ...
+app = FastAPI(title="<service-name>-worker", version="1.0.0", lifespan=lifespan)
 
 # Health endpoint (required)
 @app.get("/health")
@@ -364,8 +365,8 @@ from src.entities.platform import get_entity_by_pid
 
 ```
 # CORRECT
-fastapi==0.115.5
-pydantic==2.10.3
+fastapi==0.115.12
+pydantic==2.11.5
 
 # WRONG — never use ranges
 fastapi>=0.100
@@ -439,7 +440,7 @@ Pre-commit hooks run locally: ruff → black → isort → bandit → semgrep �
 
 ```
 Traefik (reverse proxy + TLS)
-  └── 29 FastAPI workers (ports 8004–8029)
+  └── 26 FastAPI workers (ports 8004–8029)
   └── Vault (Shamir unseal, secrets)
   └── Prometheus → Grafana dashboards
   └── Loki + Promtail (log aggregation)

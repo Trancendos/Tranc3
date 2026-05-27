@@ -54,7 +54,6 @@ logger = logging.getLogger(__name__)
 
 try:
     from Dimensional.infinity.adaptive_intelligence import (
-        InfinityHealthOrchestrator,
         create_orchestrator,
         SUBSYSTEM_AVAILABILITY,
     )

@@ -56,14 +56,12 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.infinity.sentinel_config import (
-    ChannelConfig,
     FallbackConfig,
     RedisConfig,
-    RetryConfig,
     SentinelStationConfig,
     sentinel_config,
 )
