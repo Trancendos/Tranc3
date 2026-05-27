@@ -94,6 +94,14 @@ diskcache==5.6.3
 #   15MB binary, 1M+ msg/s, replaces SQLite queue for high-volume paths
 nats-py==2.7.2
 
+# === Master Worker / BotSwarm / Task Orchestration ===
+# pyyaml: YAML task definition parsing — powers src/master/task_loader.py
+pyyaml==6.0.2
+# apscheduler: Cron/interval/date scheduling — drives src/master/master_worker.py
+apscheduler==3.10.4
+# watchdog: Filesystem events — hot-reload YAML task files without restart
+watchdog==4.0.0
+
 # === Security Scanning (dev-only) ===
 # Run: pip install -r requirements-security.txt
 # See: requirements-security.txt for scanning toolchain

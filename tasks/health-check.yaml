@@ -1,0 +1,47 @@
+name: health-check
+description: Ping every worker and report status to The Observatory
+version: "1.0"
+enabled: true
+tags:
+  - monitoring
+  - observability
+
+schedule:
+  type: interval
+  seconds: 60
+  timezone: UTC
+
+notify_on_failure: true
+notify_on_success: false
+
+steps:
+  - name: check-all-workers
+    bot: monitor
+    action: health_check
+    params:
+      targets:
+        - "http://localhost:8004/health"
+        - "http://localhost:8005/health"
+        - "http://localhost:8006/health"
+        - "http://localhost:8007/health"
+        - "http://localhost:8008/health"
+        - "http://localhost:8009/health"
+        - "http://localhost:8010/health"
+      timeout_seconds: 5
+    timeout_seconds: 30
+    retry:
+      max_attempts: 2
+      backoff_seconds: 3
+      backoff_multiplier: 1.5
+      max_backoff_seconds: 10
+
+  - name: report-to-observatory
+    bot: monitor
+    action: report_health
+    params:
+      service: health-check-swarm
+      include_timestamp: true
+    timeout_seconds: 10
+    retry:
+      max_attempts: 1
+      backoff_seconds: 0
