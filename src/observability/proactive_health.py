@@ -141,17 +141,19 @@ class ProactiveHealthMonitor:
         """Register any entity that exposes .dna.aid and .status()."""
         try:
             eid = entity.dna.aid
-            self._entities[eid] = entity
-            self._scores[eid] = []
-            self._ewma[eid] = 1.0
+            with self._lock:
+                self._entities[eid] = entity
+                self._scores[eid] = []
+                self._ewma[eid] = 1.0
             logger.debug("ProactiveHealthMonitor: registered %s", eid)
         except AttributeError as exc:
             logger.warning("ProactiveHealthMonitor.register: entity missing .dna.aid — %s", exc)
 
     def deregister(self, aid: str) -> None:
-        self._entities.pop(aid, None)
-        self._scores.pop(aid, None)
-        self._ewma.pop(aid, None)
+        with self._lock:
+            self._entities.pop(aid, None)
+            self._scores.pop(aid, None)
+            self._ewma.pop(aid, None)
 
     # ------------------------------------------------------------------
     # Core check

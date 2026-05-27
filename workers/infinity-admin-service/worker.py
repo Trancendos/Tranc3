@@ -837,29 +837,42 @@ async def audit_log(
     offset: int = Query(0, ge=0),
 ):
     """Get the admin audit log."""
-    params: list[Any] = []
-
-    if action_type:
-        params.append(action_type)
-    if actor_id:
-        params.append(actor_id)
-
-    _key = (bool(action_type), bool(actor_id))
-    _list_sql = {
-        (False, False): "SELECT * FROM admin_actions ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        (True, False): "SELECT * FROM admin_actions WHERE action_type = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        (False, True): "SELECT * FROM admin_actions WHERE actor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        (True, True): "SELECT * FROM admin_actions WHERE action_type = ? AND actor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-    }[_key]
-    _count_sql = {
-        (False, False): "SELECT COUNT(*) as cnt FROM admin_actions",
-        (True, False): "SELECT COUNT(*) as cnt FROM admin_actions WHERE action_type = ?",
-        (False, True): "SELECT COUNT(*) as cnt FROM admin_actions WHERE actor_id = ?",
-        (True, True): "SELECT COUNT(*) as cnt FROM admin_actions WHERE action_type = ? AND actor_id = ?",
-    }[_key]
-
-    rows = db.execute(_list_sql, params + [limit, offset]).fetchall()
-    total = db.execute(_count_sql, tuple(params)).fetchone()["cnt"]
+    if action_type and actor_id:
+        rows = db.execute(
+            "SELECT * FROM admin_actions WHERE action_type = ? AND actor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (action_type, actor_id, limit, offset),
+        ).fetchall()
+        total = db.execute(
+            "SELECT COUNT(*) as cnt FROM admin_actions WHERE action_type = ? AND actor_id = ?",
+            (action_type, actor_id),
+        ).fetchone()["cnt"]
+    elif action_type:
+        rows = db.execute(
+            "SELECT * FROM admin_actions WHERE action_type = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (action_type, limit, offset),
+        ).fetchall()
+        total = db.execute(
+            "SELECT COUNT(*) as cnt FROM admin_actions WHERE action_type = ?",
+            (action_type,),
+        ).fetchone()["cnt"]
+    elif actor_id:
+        rows = db.execute(
+            "SELECT * FROM admin_actions WHERE actor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (actor_id, limit, offset),
+        ).fetchall()
+        total = db.execute(
+            "SELECT COUNT(*) as cnt FROM admin_actions WHERE actor_id = ?",
+            (actor_id,),
+        ).fetchone()["cnt"]
+    else:
+        rows = db.execute(
+            "SELECT * FROM admin_actions ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (limit, offset),
+        ).fetchall()
+        total = db.execute(
+            "SELECT COUNT(*) as cnt FROM admin_actions",
+            (),
+        ).fetchone()["cnt"]
 
     return {"actions": [dict(r) for r in rows], "total": total}
 
@@ -871,21 +884,26 @@ async def compliance_events(
     limit: int = Query(100, ge=1, le=1000),
 ):
     """Get compliance and security events."""
-    params: list[Any] = []
-
-    if severity:
-        params.append(severity)
-    if pillar:
-        params.append(pillar)
-
-    _list_sql = {
-        (False, False): "SELECT * FROM compliance_events ORDER BY created_at DESC LIMIT ?",
-        (True, False): "SELECT * FROM compliance_events WHERE severity = ? ORDER BY created_at DESC LIMIT ?",
-        (False, True): "SELECT * FROM compliance_events WHERE pillar = ? ORDER BY created_at DESC LIMIT ?",
-        (True, True): "SELECT * FROM compliance_events WHERE severity = ? AND pillar = ? ORDER BY created_at DESC LIMIT ?",
-    }[(bool(severity), bool(pillar))]
-
-    rows = db.execute(_list_sql, params + [limit]).fetchall()
+    if severity and pillar:
+        rows = db.execute(
+            "SELECT * FROM compliance_events WHERE severity = ? AND pillar = ? ORDER BY created_at DESC LIMIT ?",
+            (severity, pillar, limit),
+        ).fetchall()
+    elif severity:
+        rows = db.execute(
+            "SELECT * FROM compliance_events WHERE severity = ? ORDER BY created_at DESC LIMIT ?",
+            (severity, limit),
+        ).fetchall()
+    elif pillar:
+        rows = db.execute(
+            "SELECT * FROM compliance_events WHERE pillar = ? ORDER BY created_at DESC LIMIT ?",
+            (pillar, limit),
+        ).fetchall()
+    else:
+        rows = db.execute(
+            "SELECT * FROM compliance_events ORDER BY created_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
 
     return {"events": [dict(r) for r in rows], "total": len(rows)}
 
@@ -1509,30 +1527,47 @@ async def reset_entity_overrides(
     user = getattr(request.state, "user", {})
     actor = user.get("sub", "unknown")
 
-    params: list[Any] = [pid]
-    if entity_type:
-        params.append(entity_type)
-    if slot is not None:
-        params.append("" if slot in ("null", "") else slot)
-
-    _key = (bool(entity_type), slot is not None)
-    _count_sql = {
-        (False, False): "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ?",
-        (True, False): "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ? AND entity_type = ?",
-        (False, True): "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ? AND slot = ?",
-        (True, True): "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ? AND entity_type = ? AND slot = ?",
-    }[_key]
-    _delete_sql = {
-        (False, False): "DELETE FROM entity_overrides WHERE location_pid = ?",
-        (True, False): "DELETE FROM entity_overrides WHERE location_pid = ? AND entity_type = ?",
-        (False, True): "DELETE FROM entity_overrides WHERE location_pid = ? AND slot = ?",
-        (True, True): "DELETE FROM entity_overrides WHERE location_pid = ? AND entity_type = ? AND slot = ?",
-    }[_key]
-
-    count_row = db.execute(_count_sql, tuple(params)).fetchone()
-    count = count_row["cnt"]
-
-    db.execute(_delete_sql, tuple(params))
+    _slot_val = "" if slot in ("null", "") else slot if slot is not None else None
+    if entity_type and slot is not None:
+        count_row = db.execute(
+            "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ? AND entity_type = ? AND slot = ?",
+            (pid, entity_type, _slot_val),
+        ).fetchone()
+        count = count_row["cnt"]
+        db.execute(
+            "DELETE FROM entity_overrides WHERE location_pid = ? AND entity_type = ? AND slot = ?",
+            (pid, entity_type, _slot_val),
+        )
+    elif entity_type:
+        count_row = db.execute(
+            "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ? AND entity_type = ?",
+            (pid, entity_type),
+        ).fetchone()
+        count = count_row["cnt"]
+        db.execute(
+            "DELETE FROM entity_overrides WHERE location_pid = ? AND entity_type = ?",
+            (pid, entity_type),
+        )
+    elif slot is not None:
+        count_row = db.execute(
+            "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ? AND slot = ?",
+            (pid, _slot_val),
+        ).fetchone()
+        count = count_row["cnt"]
+        db.execute(
+            "DELETE FROM entity_overrides WHERE location_pid = ? AND slot = ?",
+            (pid, _slot_val),
+        )
+    else:
+        count_row = db.execute(
+            "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ?",
+            (pid,),
+        ).fetchone()
+        count = count_row["cnt"]
+        db.execute(
+            "DELETE FROM entity_overrides WHERE location_pid = ?",
+            (pid,),
+        )
     db.commit()
 
     _log_admin_action(
@@ -1570,18 +1605,16 @@ async def reset_entity_overrides(
 @app.get("/admin/entities/{pid}/overrides/{entity_type}")
 async def get_entity_overrides_by_type(pid: str, entity_type: str, slot: str | None = None):
     """Get overrides for a specific entity type (and optional slot) within an entity."""
-    params: list[Any] = [pid, entity_type]
-
     if slot is not None:
-        params.append(slot)
-
-    _list_sql = (
-        "SELECT * FROM entity_overrides WHERE location_pid = ? AND entity_type = ? AND slot = ? ORDER BY slot"
-        if slot is not None
-        else "SELECT * FROM entity_overrides WHERE location_pid = ? AND entity_type = ? ORDER BY slot"
-    )
-
-    rows = db.execute(_list_sql, params).fetchall()
+        rows = db.execute(
+            "SELECT * FROM entity_overrides WHERE location_pid = ? AND entity_type = ? AND slot = ? ORDER BY slot",
+            (pid, entity_type, slot),
+        ).fetchall()
+    else:
+        rows = db.execute(
+            "SELECT * FROM entity_overrides WHERE location_pid = ? AND entity_type = ? ORDER BY slot",
+            (pid, entity_type),
+        ).fetchall()
 
     return {"pid": pid, "entity_type": entity_type, "overrides": [dict(r) for r in rows]}
 
