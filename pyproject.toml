@@ -16,6 +16,8 @@ extend-exclude = [
     ".forgejo",
     "docs/reference",
     "**/*.sh",
+    "aeonmind",      # separate package — has its own CI (aeonmind/python/.github/workflows)
+    "Dimensional",   # separate package — imported by workers, linted separately
 ]
 
 [tool.ruff.lint]
@@ -40,6 +42,8 @@ ignore = [
 "src/nanoservices/**/__init__.py" = ["F401"]
 "src/nanoservices/**" = ["B007", "B905", "E741", "E712", "W291", "W293"]
 "shared_core/__init__.py" = ["F401"]
+"workers/dimensional-nexus-service/worker.py" = ["E402"]
+"workers/hive-service/worker.py" = ["E402"]
 
 [tool.ruff.format]
 quote-style = "double"

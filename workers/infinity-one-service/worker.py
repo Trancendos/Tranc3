@@ -31,12 +31,11 @@ import json
 import logging
 import os
 import sqlite3
-import time
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,27 +44,19 @@ from pydantic import BaseModel, EmailStr, Field
 # Phase 22: Infinity Ecosystem security
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
 from Dimensional.infinity.nomenclature import (
-    InfinityLocation,
-    InfinityRole,
-    Pillar,
-    Prime,
-    PRIMES,
     SentinelChannel,
-    Tier,
 )
 from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.rbac import Permission, RBACEngine
+from Dimensional.infinity.rbac import RBACEngine
 
 # Phase 22.3: Sentinel Station
 from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
-    SentinelStation,
     get_sentinel_station,
 )
 
 # Phase 22.4: Dimensional Services
 from Dimensional.dimensionals import (
-    DimensionalServiceBus,
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
@@ -200,6 +191,7 @@ db = OneDatabase()
 
 class IdentityCreate(BaseModel):
     """Create a new identity in Infinity-One."""
+
     user_id: str
     username: str = Field(min_length=3, max_length=50)
     email: EmailStr
@@ -212,6 +204,7 @@ class IdentityCreate(BaseModel):
 
 class IdentityUpdate(BaseModel):
     """Update an existing identity."""
+
     display_name: str | None = None
     email: EmailStr | None = None
     avatar_url: str | None = None
@@ -223,6 +216,7 @@ class IdentityUpdate(BaseModel):
 
 class AppAccessGrant(BaseModel):
     """Grant app access to a user."""
+
     app_name: str = Field(min_length=1, max_length=100)
     app_role: str = Field(default="viewer")
     expires_at: str | None = None
@@ -230,6 +224,7 @@ class AppAccessGrant(BaseModel):
 
 class IdentityResponse(BaseModel):
     """Response for an identity."""
+
     user_id: str
     username: str
     email: str
@@ -250,6 +245,7 @@ class IdentityResponse(BaseModel):
 
 class AppAccessResponse(BaseModel):
     """Response for app access entry."""
+
     id: str
     user_id: str
     app_name: str
@@ -262,6 +258,7 @@ class AppAccessResponse(BaseModel):
 
 class IdentitySummary(BaseModel):
     """Summary of identities in the system."""
+
     total_identities: int
     active_identities: int
     by_role: dict
@@ -298,16 +295,18 @@ async def _lifespan(app: FastAPI):
     underverse_registry.heartbeat("identity_resolver")
 
     # Publish startup event
-    await sentinel.publish(SentinelEvent(
-        channel=SentinelChannel.PLATFORM,
-        event_type="infinity_one_started",
-        source="infinity_one",
-        payload={
-            "port": PORT,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "smart_adaptive": True,
-        },
-    ))
+    await sentinel.publish(
+        SentinelEvent(
+            channel=SentinelChannel.PLATFORM,
+            event_type="infinity_one_started",
+            source="infinity_one",
+            payload={
+                "port": PORT,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "smart_adaptive": True,
+            },
+        )
+    )
 
     logger.info("Infinity-One ready — single identity, multi-app access ✨")
 
@@ -318,14 +317,17 @@ async def _lifespan(app: FastAPI):
                 await asyncio.sleep(15)
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    summary_dict = summary.to_dict(); worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
+                    summary_dict = summary.to_dict()
+                    worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
-                    await sentinel.publish(SentinelEvent(
-                        channel=SentinelChannel.PLATFORM,
-                        event_type="health_report",
-                        source="infinity_one",
-                        payload=summary_dict,
-                    ))
+                    await sentinel.publish(
+                        SentinelEvent(
+                            channel=SentinelChannel.PLATFORM,
+                            event_type="health_report",
+                            source="infinity_one",
+                            payload=summary_dict,
+                        )
+                    )
             except asyncio.CancelledError:
                 break
             except Exception as exc:
@@ -497,7 +499,11 @@ async def create_identity(request: Request, identity: IdentityCreate):
         raise HTTPException(status_code=409, detail="Identity already exists")
 
     # Determine tier and infinity_role from role
-    from Dimensional.infinity.nomenclature import get_tier_for_role as _gtr, get_infinity_role_for_role as _girr
+    from Dimensional.infinity.nomenclature import (
+        get_tier_for_role as _gtr,
+        get_infinity_role_for_role as _girr,
+    )
+
     tier = _gtr(identity.role)
     infinity_role = _girr(identity.role)
 
@@ -535,12 +541,18 @@ async def create_identity(request: Request, identity: IdentityCreate):
     )
 
     # Publish Sentinel event
-    await sentinel.publish(SentinelEvent(
-        channel=SentinelChannel.BRIDGE,
-        event_type="identity_created",
-        source="infinity_one",
-        payload={"user_id": identity.user_id, "username": identity.username, "role": identity.role},
-    ))
+    await sentinel.publish(
+        SentinelEvent(
+            channel=SentinelChannel.BRIDGE,
+            event_type="identity_created",
+            source="infinity_one",
+            payload={
+                "user_id": identity.user_id,
+                "username": identity.username,
+                "role": identity.role,
+            },
+        )
+    )
 
     return IdentityResponse(
         user_id=identity.user_id,
@@ -656,7 +668,11 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
         updates.append("role = ?")
         params.append(update.role)
         # Update tier and infinity_role based on new role
-        from Dimensional.infinity.nomenclature import get_tier_for_role as _gtr, get_infinity_role_for_role as _girr
+        from Dimensional.infinity.nomenclature import (
+            get_tier_for_role as _gtr,
+            get_infinity_role_for_role as _girr,
+        )
+
         tier = _gtr(update.role)
         infinity_role = _girr(update.role)
         updates.append("tier = ?")
@@ -688,12 +704,14 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
     )
 
     # Publish Sentinel event
-    await sentinel.publish(SentinelEvent(
-        channel=SentinelChannel.BRIDGE,
-        event_type="identity_updated",
-        source="infinity_one",
-        payload={"user_id": user_id},
-    ))
+    await sentinel.publish(
+        SentinelEvent(
+            channel=SentinelChannel.BRIDGE,
+            event_type="identity_updated",
+            source="infinity_one",
+            payload={"user_id": user_id},
+        )
+    )
 
     return {"message": "Identity updated", "user_id": user_id}
 
@@ -723,12 +741,14 @@ async def deactivate_identity(user_id: str, request: Request):
         details={"username": row["username"]},
     )
 
-    await sentinel.publish(SentinelEvent(
-        channel=SentinelChannel.BRIDGE,
-        event_type="identity_deactivated",
-        source="infinity_one",
-        payload={"user_id": user_id, "username": row["username"]},
-    ))
+    await sentinel.publish(
+        SentinelEvent(
+            channel=SentinelChannel.BRIDGE,
+            event_type="identity_deactivated",
+            source="infinity_one",
+            payload={"user_id": user_id, "username": row["username"]},
+        )
+    )
 
     return {"message": "Identity deactivated", "user_id": user_id}
 
@@ -885,18 +905,16 @@ async def resolve_identity(identifier: str):
 async def identity_summary():
     """Get a summary of all identities in the system."""
     total = db.execute("SELECT COUNT(*) as cnt FROM identities").fetchone()["cnt"]
-    active = db.execute("SELECT COUNT(*) as cnt FROM identities WHERE is_active = 1").fetchone()["cnt"]
+    active = db.execute("SELECT COUNT(*) as cnt FROM identities WHERE is_active = 1").fetchone()[
+        "cnt"
+    ]
 
     # By role
-    role_rows = db.execute(
-        "SELECT role, COUNT(*) as cnt FROM identities GROUP BY role"
-    ).fetchall()
+    role_rows = db.execute("SELECT role, COUNT(*) as cnt FROM identities GROUP BY role").fetchall()
     by_role = {r["role"]: r["cnt"] for r in role_rows}
 
     # By tier
-    tier_rows = db.execute(
-        "SELECT tier, COUNT(*) as cnt FROM identities GROUP BY tier"
-    ).fetchall()
+    tier_rows = db.execute("SELECT tier, COUNT(*) as cnt FROM identities GROUP BY tier").fetchall()
     by_tier = {str(r["tier"]): r["cnt"] for r in tier_rows}
 
     # By pillar
@@ -923,8 +941,12 @@ async def identity_summary():
 async def stats():
     """Get Infinity-One service statistics."""
     total_identities = db.execute("SELECT COUNT(*) as cnt FROM identities").fetchone()["cnt"]
-    active_identities = db.execute("SELECT COUNT(*) as cnt FROM identities WHERE is_active = 1").fetchone()["cnt"]
-    total_app_access = db.execute("SELECT COUNT(*) as cnt FROM app_access WHERE is_revoked = 0").fetchone()["cnt"]
+    active_identities = db.execute(
+        "SELECT COUNT(*) as cnt FROM identities WHERE is_active = 1"
+    ).fetchone()["cnt"]
+    total_app_access = db.execute(
+        "SELECT COUNT(*) as cnt FROM app_access WHERE is_revoked = 0"
+    ).fetchone()["cnt"]
     total_devices = db.execute("SELECT COUNT(*) as cnt FROM devices").fetchone()["cnt"]
     total_events = db.execute("SELECT COUNT(*) as cnt FROM identity_events").fetchone()["cnt"]
 

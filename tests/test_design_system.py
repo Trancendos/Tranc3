@@ -26,20 +26,26 @@ async def _poll_until(condition, *, timeout: float = 2.0, interval: float = 0.01
 class TestEnergyConstants:
     def test_import(self):
         from src.bridge.energy_constants import (
-            EnergyClass,
             BridgeType,
+            BRIDGE_DEFAULT_ENERGY,
+            CRYSTAL_BASE_COST,
+            DIALITHIUM_PRIORITY,
+            EnergyClass,
+            LIGHT_AMBIENT_TICK_HZ,
+            LIGHTNING_BURST_LIMIT_MS,
             cost_for,
             priority_for,
-            BRIDGE_DEFAULT_ENERGY,
-            DIALITHIUM_PRIORITY,
-            CRYSTAL_BASE_COST,
-            LIGHTNING_BURST_LIMIT_MS,
-            LIGHT_AMBIENT_TICK_HZ,
         )
+
         assert DIALITHIUM_PRIORITY == 1
         assert CRYSTAL_BASE_COST == 0.6
         assert LIGHTNING_BURST_LIMIT_MS == 50.0
         assert LIGHT_AMBIENT_TICK_HZ == 10.0
+        assert EnergyClass is not None
+        assert BridgeType is not None
+        assert cost_for is not None
+        assert priority_for is not None
+        assert BRIDGE_DEFAULT_ENERGY is not None
 
     def test_cost_ordering(self):
         from src.bridge.energy_constants import EnergyClass, cost_for

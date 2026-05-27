@@ -196,8 +196,7 @@ class ProactiveHealthMonitor:
             return False
         # Declining trend if each step drops by threshold
         return all(
-            window[i] - window[i + 1] >= self._DEGRADATION_THRESHOLD
-            for i in range(len(window) - 1)
+            window[i] - window[i + 1] >= self._DEGRADATION_THRESHOLD for i in range(len(window) - 1)
         )
 
     def _raise_alert(
@@ -295,9 +294,7 @@ class ProactiveHealthMonitor:
             try:
                 alerts = await asyncio.to_thread(self.check_all)
                 if alerts:
-                    logger.info(
-                        "ProactiveHealthMonitor: %d new alerts this cycle", len(alerts)
-                    )
+                    logger.info("ProactiveHealthMonitor: %d new alerts this cycle", len(alerts))
             except asyncio.CancelledError:
                 break
             except Exception as exc:
@@ -371,9 +368,7 @@ class ProactiveHealthMonitor:
             ).fetchone()
             if row is None or row[0]:
                 return False
-            conn.execute(
-                "UPDATE alerts SET acknowledged=1 WHERE alert_id=?", (alert_id,)
-            )
+            conn.execute("UPDATE alerts SET acknowledged=1 WHERE alert_id=?", (alert_id,))
             conn.commit()
             return True
         except Exception as exc:
