@@ -1514,12 +1514,12 @@ async def reset_entity_overrides(
     where = " AND ".join(conditions)
 
     count_row = db.execute(
-        f"SELECT COUNT(*) as cnt FROM entity_overrides WHERE {where}",
+        "SELECT COUNT(*) as cnt FROM entity_overrides WHERE " + where,
         tuple(params),
     ).fetchone()
     count = count_row["cnt"]
 
-    db.execute(f"DELETE FROM entity_overrides WHERE {where}", tuple(params))
+    db.execute("DELETE FROM entity_overrides WHERE " + where, tuple(params))
     db.commit()
 
     _log_admin_action(

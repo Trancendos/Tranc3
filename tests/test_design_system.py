@@ -6,8 +6,16 @@ auto-evolve scheduler. All zero-cost, no external deps.
 from __future__ import annotations
 
 import asyncio
-import time
 import pytest
+
+
+async def _poll_until(condition, *, timeout: float = 2.0, interval: float = 0.01) -> None:
+    """Spin until *condition* returns True or *timeout* seconds elapse."""
+    deadline = asyncio.get_event_loop().time() + timeout
+    while asyncio.get_event_loop().time() < deadline:
+        if condition():
+            return
+        await asyncio.sleep(interval)
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +145,7 @@ class TestTranc3Base:
         ai = TestLeadAI(aid="AID-TST-05", location_pid="PID-TST", name="Test-AI-5")
         await ai.start()
         assert ai._running
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0)  # yield to let the task initialise
         await ai.stop()
         assert not ai._running
 
@@ -172,9 +180,8 @@ class TestInfinityAgentBase:
         agent.register_handler("ping", handler)
         await agent.start()
         task = await agent.enqueue("ping", {"msg": "hello"})
-        await asyncio.sleep(0.1)
+        await _poll_until(lambda: any(t.task_id == task.task_id for t in agent._completed))
         await agent.stop()
-        # Task should be completed
         assert any(t.task_id == task.task_id for t in agent._completed)
 
 
@@ -206,7 +213,7 @@ class TestInfinityBotBase:
 
         bot = CountBot()
         await bot.start()
-        await asyncio.sleep(0.2)
+        await _poll_until(lambda: bot.run_count >= 1)
         await bot.stop()
         assert bot.run_count >= 1
         assert bot.success_rate() > 0.0

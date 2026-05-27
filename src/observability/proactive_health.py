@@ -273,7 +273,7 @@ class ProactiveHealthMonitor:
         logger.info("ProactiveHealthMonitor started (%d entities)", len(self._entities))
         while self._running:
             try:
-                alerts = await asyncio.to_thread(self.check_all)
+                alerts = self.check_all()
                 if alerts:
                     logger.info(
                         "ProactiveHealthMonitor: %d new alerts this cycle", len(alerts)
@@ -333,4 +333,23 @@ class ProactiveHealthMonitor:
                     if conn:
                         conn.close()
                 return True
-        return False
+        # Alert may have been pruned from in-memory list; try persisted store directly.
+        conn = None
+        try:
+            conn = sqlite3.connect(self._db_path)
+            row = conn.execute(
+                "SELECT acknowledged FROM alerts WHERE alert_id=?", (alert_id,)
+            ).fetchone()
+            if row is None or row[0]:
+                return False
+            conn.execute(
+                "UPDATE alerts SET acknowledged=1 WHERE alert_id=?", (alert_id,)
+            )
+            conn.commit()
+            return True
+        except Exception as exc:
+            logger.warning("ProactiveHealthMonitor: failed to persist ack: %s", exc)
+            return False
+        finally:
+            if conn:
+                conn.close()

@@ -21,7 +21,7 @@ identity record, and lifecycle contract.
 
 ### Base class locations
 
-```
+```text
 src/entities/templates/
   trance_one_base.py      ← TrancOne   (T1)
   t2ance_base.py          ← T2ance     (T2)
@@ -93,7 +93,7 @@ from src.bridge.energy_constants import (
 
 ### Routing cost model
 
-```
+```text
 Dialithium ──▶ cost × 1.0   (highest priority, Crystal Bridge)
 Trilithium ──▶ cost × 0.8   (stability-weighted)
 Crystal    ──▶ cost × 0.6   (standard)
@@ -107,7 +107,7 @@ Light      ──▶ cost × 0.1   (ambient, Cell Bridge)
 
 Three specialised bridges handle different classes of inter-service communication.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                     Cross-Bridge Orchestrator                    │
 │          (Dimensional.cross_bridge_orchestrator)                 │
@@ -140,7 +140,7 @@ from Dimensional.three_bridge_coordinator import ThreeBridgeCoordinator
 The platform's core shared library is **`Dimensional`** (renamed from `shared_core` in Phase 24).
 All new imports **must** use `Dimensional.*`.
 
-```
+```text
 Dimensional/
   __init__.py
   bus.py                          ← event bus
@@ -254,7 +254,7 @@ snap: SWOTSnapshot = entity.assess_swot()
 
 HIL-A is the escalation mechanism for decisions exceeding an entity's authority threshold.
 
-```
+```text
 T5 Bot  ──escalates──▶  T4 Agent  ──escalates──▶  T3 Lead AI
 T3 Lead AI ──escalates──▶ T2 Prime ──escalates──▶ T1 Orchestrator
 ```
@@ -324,7 +324,7 @@ async def metrics(): ...
 
 ## 10. Inference Pipeline — 5-Tier Fallback
 
-```
+```text
 Request → infinity-ai (:8009) → AIGatewayRouter
   Tier 1: Ollama          localhost:11434  (zero-cost, local)
   Tier 2: HuggingFace     free inference API
@@ -363,7 +363,7 @@ from src.entities.platform import get_entity_by_pid
 
 ### Dependency pinning — exact versions only
 
-```
+```text
 # CORRECT
 fastapi==0.115.12
 pydantic==2.11.5
@@ -400,7 +400,7 @@ raise HTTPException(status_code=400, detail=ErrorCode.INVALID_PAYLOAD.value)
 
 ## 12. Testing Standards
 
-```
+```text
 tests/
   test_smoke.py          # fast sanity checks (<2 s)  — run first
   test_uat.py            # user acceptance / end-to-end journeys
@@ -424,7 +424,7 @@ Test bootstrap mode — no model weights required. `Tranc3Engine` falls back:
 
 All CI runs through Forgejo at `trancendos.com/the-workshop`. **No GitHub Actions.**
 
-```
+```text
 .forgejo/workflows/
   deploy-fly.yml          # backend + bots to Fly.io
   deploy-cloudflare.yml   # legacy CF Workers (phasing out)
@@ -438,7 +438,7 @@ Pre-commit hooks run locally: ruff → black → isort → bandit → semgrep �
 
 ## 14. Production Infrastructure
 
-```
+```text
 Traefik (reverse proxy + TLS)
   └── 26 FastAPI workers (ports 8004–8029)
   └── Vault (Shamir unseal, secrets)
