@@ -384,12 +384,73 @@ async def lifespan(app: FastAPI):
         redis_client.close()
 
 
+# ── OpenAPI tag metadata ──────────────────────────────────────────────────────
+_OPENAPI_TAGS = [
+    {
+        "name": "auth",
+        "description": "Authentication — register, obtain JWT tokens, refresh sessions. "
+        "Powered by **Infinity** (The Guardian / Orb of Orisis).",
+    },
+    {
+        "name": "inference",
+        "description": "Core AI inference — chat completions, emotion analysis, consciousness "
+        "scoring, feedback. Powered by **Luminous** (Cornelius MacIntyre).",
+    },
+    {
+        "name": "system",
+        "description": "Platform health, readiness, Prometheus metrics, and feature-flag state. "
+        "Sourced from **The Observatory** (Norman Hawkins).",
+    },
+    {
+        "name": "info",
+        "description": "Static capability discovery — supported languages and personality profiles.",
+    },
+    {
+        "name": "billing",
+        "description": "Subscription tiers, usage quotas, and Stripe checkout. "
+        "Handled by **Royal Bank of Arcadia** (Dorris Fontaine).",
+    },
+    {
+        "name": "compliance",
+        "description": "GDPR data-erasure and audit-log endpoints. "
+        "Governed by **The Town Hall** (Tristuran).",
+    },
+    {
+        "name": "admin",
+        "description": "Internal observability — file registry, circuit breakers, loop validator, "
+        "abuse detector, self-healing history. Requires Business or Enterprise tier.",
+    },
+    {
+        "name": "docs",
+        "description": "Error-code documentation lookup. No authentication required.",
+    },
+]
+
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="TRANC3 API",
     version="2.0.0",
-    description="Quantum-Conscious Multilingual AI Platform",
+    description=(
+        "# TRANC3 — Quantum-Conscious Multilingual AI Platform\n\n"
+        "Self-hosted, zero-cost platform built on FastAPI + SQLite. "
+        "All 43 Trancendos subsystems are wired through this gateway.\n\n"
+        "## Authentication\n"
+        "All protected endpoints require a Bearer JWT issued by `POST /auth/token`.\n\n"
+        "## Rate limits\n"
+        "| Tier | Requests / hour |\n"
+        "|---|---|\n"
+        "| Free | 100 |\n"
+        "| Pro | 1 000 |\n"
+        "| Business | 10 000 |\n"
+        "| Enterprise | unlimited |\n\n"
+        "## Canonical service names\n"
+        "Service names follow the Trancendos canonical entity registry. "
+        "See `PLATFORM_ENTITIES.md` for the full list of 43 entities."
+    ),
+    openapi_tags=_OPENAPI_TAGS,
     lifespan=lifespan,
+    contact={"name": "Trancendos Platform", "email": "ops@trancendos.com"},
+    license_info={"name": "Proprietary"},
 )
 
 app.add_middleware(
@@ -608,13 +669,123 @@ class RegisterRequest(BaseModel):
     password: str
 
 
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    expires_in: int
+
+
+class HealthComponent(BaseModel):
+    api: str
+    model: str
+    tokenizer: str
+    personality: str
+    quantum: str
+    consciousness: str
+    redis: Optional[str] = None
+    supabase: Optional[str] = None
+
+
+class HealthResponse(BaseModel):
+    status: str
+    version: str
+    timestamp: str
+    uptime_seconds: float
+    components: Dict
+
+
+class ReadyResponse(BaseModel):
+    ready: bool
+    timestamp: str
+
+
+class LanguagesResponse(BaseModel):
+    languages: List[str]
+    primary: str
+
+
+class PersonalitiesResponse(BaseModel):
+    personalities: List[str]
+
+
+class EmotionResponse(BaseModel):
+    dominant_emotion: str
+    emotion_scores: Dict[str, float]
+    text: str
+
+
+class FeedbackResponse(BaseModel):
+    message: str
+    impact: str
+
+
+class ConsciousnessResponse(BaseModel):
+    phi: float
+    is_conscious: bool
+    text: str
+    report: Dict
+
+
+class BillingUsageResponse(BaseModel):
+    requests_used: Optional[int] = None
+    requests_limit: Optional[int] = None
+    reset_at: Optional[str] = None
+    message: Optional[str] = None
+
+
+class CheckoutResponse(BaseModel):
+    checkout_url: str
+    tier: str
+
+
+class GDPREraseResponse(BaseModel):
+    message: str
+    user_id: str
+
+
+class AdminRegistryResponse(BaseModel):
+    files: Optional[List[Dict]] = None
+    integrity_ok: Optional[bool] = None
+
+
+class AdminCircuitsResponse(BaseModel):
+    circuits: Optional[Dict] = None
+
+
+class ErrorDocResponse(BaseModel):
+    code: str
+    title: str
+    http_status: Optional[int] = None
+    description: Optional[str] = None
+    remediation: Optional[str] = None
+
+
 # ── Auth ──────────────────────────────────────────────────────────────────────
-@app.post("/auth/register", tags=["auth"])
+@app.post(
+    "/auth/register",
+    tags=["auth"],
+    summary="Register a new user account",
+    description=(
+        "Create a new user account with a username and password. "
+        "Returns the created user record. Usernames must be unique."
+    ),
+    status_code=201,
+)
 async def register(req: RegisterRequest):
     return db_user_manager.create_user(req.username, req.password)
 
 
-@app.post("/auth/token", tags=["auth"])
+@app.post(
+    "/auth/token",
+    tags=["auth"],
+    response_model=TokenResponse,
+    summary="Obtain a JWT access token",
+    description=(
+        "Exchange username + password for a signed JWT (HS256, 1-hour expiry). "
+        "Include the returned `access_token` in the `Authorization: Bearer <token>` header "
+        "on all protected requests."
+    ),
+)
 async def login(req: TokenRequest):
     user = db_user_manager.authenticate_user(req.username, req.password)
     if not user:
@@ -623,7 +794,13 @@ async def login(req: TokenRequest):
     return {"access_token": token, "token_type": "bearer", "expires_in": 3600}
 
 
-@app.post("/auth/refresh", tags=["auth"])
+@app.post(
+    "/auth/refresh",
+    tags=["auth"],
+    response_model=TokenResponse,
+    summary="Refresh the caller's JWT",
+    description="Issue a fresh 1-hour JWT for the currently authenticated user.",
+)
 async def refresh_token(current_user: dict = Depends(get_current_user)):
     new_token = token_manager.create_access_token(
         {"sub": current_user["username"]},
@@ -633,7 +810,18 @@ async def refresh_token(current_user: dict = Depends(get_current_user)):
 
 
 # ── System ────────────────────────────────────────────────────────────────────
-@app.get("/health", tags=["system"])
+@app.get(
+    "/health",
+    tags=["system"],
+    response_model=HealthResponse,
+    summary="Platform health check",
+    description=(
+        "Returns liveness status of all major subsystems: model, tokenizer, "
+        "personality matrix, quantum core, consciousness engine, Redis, and Supabase. "
+        "Status is `healthy` if all components are up, `degraded` if any are unavailable. "
+        "No authentication required."
+    ),
+)
 async def health():
 
     components: dict = {
@@ -708,14 +896,34 @@ async def health():
     }
 
 
-@app.get("/ready", tags=["system"])
+@app.get(
+    "/ready",
+    tags=["system"],
+    response_model=ReadyResponse,
+    summary="Kubernetes readiness probe",
+    description=(
+        "Lightweight readiness check — returns `ready: true` once the API bootstrap is complete. "
+        "Does **not** require model weights; bootstrap mode is production-valid. "
+        "Use this as a Kubernetes readinessProbe target."
+    ),
+)
 async def ready():
     # Readiness: API itself is up and core bootstrap complete
     # Does NOT require model weights — bootstrap mode is production-valid
     return {"ready": True, "timestamp": datetime.datetime.utcnow().isoformat()}
 
 
-@app.get("/metrics", tags=["system"], response_class=PlainTextResponse)
+@app.get(
+    "/metrics",
+    tags=["system"],
+    response_class=PlainTextResponse,
+    summary="Prometheus metrics scrape endpoint",
+    description=(
+        "Exposes all platform metrics in Prometheus text format. "
+        "Scraped by **The Observatory** (Norman Hawkins) every 15 s. "
+        "Returns a plain-text comment if `prometheus_client` is not installed."
+    ),
+)
 async def metrics():
     try:
         from prometheus_client import generate_latest
@@ -725,7 +933,16 @@ async def metrics():
         return "# prometheus_client not available\n"
 
 
-@app.get("/features", tags=["system"])
+@app.get(
+    "/features",
+    tags=["system"],
+    summary="Active feature flags",
+    description=(
+        "Returns the current state of all feature flags (Redis-backed). "
+        "Flags include `QUANTUM_OPTIMIZATION`, `CONSCIOUSNESS_ENGINE`, and others. "
+        "Returns an error dict if Redis is unavailable."
+    ),
+)
 async def features():
     if not feature_flags:
         return {"error": "Feature flags unavailable — Redis required"}
@@ -733,7 +950,19 @@ async def features():
 
 
 # ── Inference ─────────────────────────────────────────────────────────────────
-@app.post("/chat", response_model=ChatResponse, tags=["inference"])
+@app.post(
+    "/chat",
+    response_model=ChatResponse,
+    tags=["inference"],
+    summary="Send a chat message to Luminous",
+    description=(
+        "Core inference endpoint. Sends a message through the full **Luminous** pipeline: "
+        "emotion detection → personality vector → quantum attention (if enabled) → "
+        "consciousness Φ scoring → response generation. "
+        "Supports streaming via `POST /ws/chat` WebSocket. "
+        "Rate-limited per tier (free: 100/hr, pro: 1 000/hr, business: 10 000/hr)."
+    ),
+)
 async def chat(
     chat_req: ChatRequest,
     background_tasks: BackgroundTasks,
@@ -940,7 +1169,13 @@ async def chat(
     return None
 
 
-@app.get("/languages", tags=["info"])
+@app.get(
+    "/languages",
+    tags=["info"],
+    response_model=LanguagesResponse,
+    summary="Supported languages",
+    description="Returns the list of BCP-47 language codes the tokenizer accepts and the primary language.",
+)
 async def languages():
     return {
         "languages": tokenizer.supported_languages if tokenizer else Config.supported_languages,
@@ -948,14 +1183,33 @@ async def languages():
     }
 
 
-@app.get("/personalities", tags=["info"])
+@app.get(
+    "/personalities",
+    tags=["info"],
+    response_model=PersonalitiesResponse,
+    summary="Available personality profiles",
+    description=(
+        "Returns all registered personality identifiers from **Turing's Hub** (Samantha Turing). "
+        "Pass one of these values as `personality` in `/chat` requests."
+    ),
+)
 async def personalities():
     if not personality_matrix:
         raise HTTPException(status_code=503, detail="Service not ready")
     return {"personalities": list(personality_matrix.personalities.keys())}
 
 
-@app.post("/analyze-emotion", tags=["inference"])
+@app.post(
+    "/analyze-emotion",
+    tags=["inference"],
+    response_model=EmotionResponse,
+    summary="Detect emotion in text",
+    description=(
+        "Run the **I-Mind** (Elouise) emotion detector over the supplied text. "
+        "Returns the dominant emotion label and a score distribution across all emotion classes. "
+        "Returns 503 if the emotion detector is unavailable."
+    ),
+)
 async def analyze_emotion(text: str, current_user: dict = Depends(get_current_user)):
     if not personality_matrix or not getattr(personality_matrix, "emotion_detector", None):
         raise HTTPException(status_code=503, detail="Emotion analysis unavailable")
@@ -964,7 +1218,17 @@ async def analyze_emotion(text: str, current_user: dict = Depends(get_current_us
     return {"dominant_emotion": dominant, "emotion_scores": scores, "text": text}
 
 
-@app.post("/feedback", tags=["inference"])
+@app.post(
+    "/feedback",
+    tags=["inference"],
+    response_model=FeedbackResponse,
+    summary="Submit quality feedback",
+    description=(
+        "Record a 1–5 star quality rating for a previous chat response. "
+        "Every 100 feedback events triggers a **self-evolution** cycle via the evolution engine, "
+        "automatically tuning Luminous's response strategy."
+    ),
+)
 async def feedback(
     request_id: str,
     rating: int = Field(..., ge=1, le=5),
@@ -989,7 +1253,18 @@ async def feedback(
     return {"message": "Feedback recorded", "impact": "evolution_queued"}
 
 
-@app.post("/consciousness/score", tags=["inference"])
+@app.post(
+    "/consciousness/score",
+    tags=["inference"],
+    response_model=ConsciousnessResponse,
+    summary="Compute Integrated Information Theory Φ score",
+    description=(
+        "Calculates the IIT Φ (phi) consciousness score for the provided text using the "
+        "**Luminous** bio-neural consciousness engine. "
+        "`phi > 2.0` is considered the consciousness threshold. "
+        "Returns 503 if the consciousness engine is unavailable."
+    ),
+)
 async def consciousness_score(text: str, current_user: dict = Depends(get_current_user)):
     if not consciousness_model:
         raise HTTPException(status_code=503, detail="Consciousness engine unavailable")
@@ -1007,17 +1282,41 @@ async def consciousness_score(text: str, current_user: dict = Depends(get_curren
 
 
 # ── Billing ───────────────────────────────────────────────────────────────────
-@app.get("/billing/tiers", tags=["billing"])
+@app.get(
+    "/billing/tiers",
+    tags=["billing"],
+    summary="Available subscription tiers",
+    description=(
+        "Returns the full tier catalogue: free, pro (£29/mo), business (£149/mo), enterprise. "
+        "Stripe price IDs are excluded from the response. Managed by **Royal Bank of Arcadia**."
+    ),
+)
 async def billing_tiers():
     return {t: {k: v for k, v in cfg.items() if k != "stripe_price_id"} for t, cfg in TIERS.items()}
 
 
-@app.get("/billing/usage", tags=["billing"])
+@app.get(
+    "/billing/usage",
+    tags=["billing"],
+    response_model=BillingUsageResponse,
+    summary="Current usage for the authenticated user",
+    description="Returns request count and rate-limit quota consumed in the current window.",
+)
 async def billing_usage(current_user: dict = Depends(get_current_user)):
     return tier_enforcer.get_usage(current_user["id"]) or {"message": "No usage recorded yet"}
 
 
-@app.post("/billing/checkout", tags=["billing"])
+@app.post(
+    "/billing/checkout",
+    tags=["billing"],
+    response_model=CheckoutResponse,
+    summary="Create a Stripe checkout session",
+    description=(
+        "Initiates a Stripe-hosted checkout flow for the requested tier upgrade. "
+        "Returns a one-time `checkout_url` that expires after 30 minutes. "
+        "Returns 503 if Stripe is not configured (zero-cost dev mode)."
+    ),
+)
 async def billing_checkout(tier: str, current_user: dict = Depends(get_current_user)):
     from src.monetisation.billing import (
         stripe_manager,  # noqa: F401  # intentional top-level import
@@ -1057,7 +1356,17 @@ async def stripe_webhook(request: Request):
 
 
 # ── Compliance ────────────────────────────────────────────────────────────────
-@app.delete("/memory/{user_id}", tags=["compliance"])
+@app.delete(
+    "/memory/{user_id}",
+    tags=["compliance"],
+    response_model=GDPREraseResponse,
+    summary="GDPR right-to-erasure (Article 17)",
+    description=(
+        "Permanently deletes all stored vectors and conversation history for `user_id`. "
+        "Users may erase their own data. Enterprise-tier users may erase any user's data. "
+        "The erasure event is written to **The Observatory** audit log."
+    ),
+)
 async def gdpr_erase(user_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["id"] != user_id and current_user.get("tier") != "enterprise":
         raise HTTPException(status_code=403, detail="Can only erase your own data")
@@ -1166,7 +1475,15 @@ if __name__ == "__main__":
 # ── Admin endpoints ───────────────────────────────────────────────────────────
 
 
-@app.get("/admin/registry", tags=["admin"])
+@app.get(
+    "/admin/registry",
+    tags=["admin"],
+    summary="File integrity registry",
+    description=(
+        "Lists all tracked files with their FID, version hash, and integrity verification status. "
+        "Requires Business or Enterprise tier. Managed by **The Workshop** (Larry Lowhammer)."
+    ),
+)
 async def admin_registry(current_user: dict = Depends(get_current_user)):
     """File registry — lists all files with FID, version, and integrity status."""
     if current_user.get("tier") not in ("enterprise", "business"):
@@ -1176,25 +1493,54 @@ async def admin_registry(current_user: dict = Depends(get_current_user)):
     return file_registry.verify_all()
 
 
-@app.get("/admin/registry/{fid}", tags=["admin"])
+@app.get(
+    "/admin/registry/{fid}",
+    tags=["admin"],
+    summary="File integrity status by FID",
+    description="Returns the hash, version, and integrity verification result for a single file.",
+)
 async def admin_registry_file(fid: str, current_user: dict = Depends(get_current_user)):
     """Get integrity status for a specific file by FID."""
     return file_registry.verify(fid)
 
 
-@app.get("/admin/circuits", tags=["admin"])
+@app.get(
+    "/admin/circuits",
+    tags=["admin"],
+    summary="Circuit breaker states",
+    description=(
+        "Returns the state (closed / open / half-open) and failure counters for every "
+        "registered circuit breaker. Used by **The Observatory** for automated alerting."
+    ),
+)
 async def admin_circuits(current_user: dict = Depends(get_current_user)):
     """Circuit breaker status for all subsystems."""
     return {name: cb.get_status() for name, cb in CIRCUITS.items()}
 
 
-@app.get("/admin/loops", tags=["admin"])
+@app.get(
+    "/admin/loops",
+    tags=["admin"],
+    summary="Loop validator statistics",
+    description=(
+        "Returns call-depth counters and cascade-prevention statistics from the loop validator. "
+        "Helps detect runaway recursion or infinite agent loops."
+    ),
+)
 async def admin_loops(current_user: dict = Depends(get_current_user)):
     """Loop validator statistics."""
     return loop_validator.get_stats()
 
 
-@app.get("/admin/abuse", tags=["admin"])
+@app.get(
+    "/admin/abuse",
+    tags=["admin"],
+    summary="IP abuse detection statistics",
+    description=(
+        "Returns counters for blocked IPs, prompt-injection attempts, and model-extraction probes. "
+        "Requires Business or Enterprise tier. Sourced from **Cryptex** (Renik)."
+    ),
+)
 async def admin_abuse(current_user: dict = Depends(get_current_user)):
     """IP abuse detection statistics."""
     if current_user.get("tier") not in ("enterprise", "business"):
@@ -1202,13 +1548,31 @@ async def admin_abuse(current_user: dict = Depends(get_current_user)):
     return abuse_detector.get_stats()
 
 
-@app.get("/admin/healing", tags=["admin"])
+@app.get(
+    "/admin/healing",
+    tags=["admin"],
+    summary="Self-healing action history",
+    description=(
+        "Returns the chronological list of autonomous remediation actions taken by the "
+        "self-healer — service restarts, circuit resets, and rate-limit adjustments."
+    ),
+)
 async def admin_healing(current_user: dict = Depends(get_current_user)):
     """Self-healing action history."""
     return {"history": self_healer.get_history()}
 
 
-@app.get("/errors/{error_code}", tags=["docs"])
+@app.get(
+    "/errors/{error_code}",
+    tags=["docs"],
+    response_model=ErrorDocResponse,
+    summary="Error code documentation",
+    description=(
+        "Look up the human-readable title, HTTP status, description, and remediation guidance "
+        "for any TRANC3 canonical error code (e.g. `SEC_INPUT_BLOCKED`, `RATE_LIMIT_EXCEEDED`). "
+        "No authentication required."
+    ),
+)
 async def error_docs(error_code: str):
     """Look up error code documentation — no auth required."""
     from src.errors.error_catalog import (  # noqa: F401  # intentional top-level import
