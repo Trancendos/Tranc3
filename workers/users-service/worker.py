@@ -21,6 +21,7 @@ Features:
 
 from __future__ import annotations
 
+import os
 import json
 import logging
 import sqlite3
@@ -159,7 +160,7 @@ class UsersDatabase:
 app = FastAPI(title="Trancendos Users Service", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
