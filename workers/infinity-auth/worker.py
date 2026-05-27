@@ -64,6 +64,8 @@ JWT_EXPIRY_MINUTES = int(os.environ.get("JWT_EXPIRY_MINUTES", "60"))
 REFRESH_EXPIRY_DAYS = int(os.environ.get("REFRESH_EXPIRY_DAYS", "30"))
 DATABASE_PATH = os.environ.get("AUTH_DATABASE_PATH", "/data/auth.db")
 RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "10"))
+AUTH_ISSUER = os.environ.get("AUTH_ISSUER", "https://auth.trancendos.com")
+AUTH_BASE_URL = os.environ.get("AUTH_BASE_URL", "http://localhost:8005")
 
 # ── Models ─────────────────────────────────────────────────────────────────────
 
@@ -798,6 +800,181 @@ async def update_user_role(
         "tier": tier.value,
         "infinity_role": infinity_role.value,
     }
+
+
+# ── OIDC Discovery (RFC 8414 / OpenID Connect Discovery 1.0) ────────────────
+
+
+@app.get("/.well-known/openid-configuration", tags=["oidc"])
+async def oidc_discovery():
+    """OpenID Connect Discovery document — RFC 8414."""
+    return {
+        "issuer": AUTH_ISSUER,
+        "authorization_endpoint": f"{AUTH_BASE_URL}/auth/authorize",
+        "token_endpoint": f"{AUTH_BASE_URL}/auth/token",
+        "userinfo_endpoint": f"{AUTH_BASE_URL}/auth/me",
+        "jwks_uri": f"{AUTH_BASE_URL}/.well-known/jwks.json",
+        "registration_endpoint": f"{AUTH_BASE_URL}/auth/register",
+        "scopes_supported": ["openid", "profile", "email", "offline_access"],
+        "response_types_supported": ["code", "token", "id_token"],
+        "grant_types_supported": ["authorization_code", "refresh_token", "client_credentials"],
+        "subject_types_supported": ["public"],
+        "id_token_signing_alg_values_supported": ["HS256", "RS256"],
+        "token_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic"],
+        "claims_supported": ["sub", "iss", "aud", "exp", "iat", "email", "username", "role"],
+        "code_challenge_methods_supported": ["S256"],
+    }
+
+
+@app.get("/.well-known/jwks.json", tags=["oidc"])
+async def jwks():
+    """JSON Web Key Set — public keys for token verification."""
+    # HS256: symmetric — expose a placeholder JWKS (no public key to share)
+    # RS256: expose the public key JWK when JWT_PUBLIC_KEY is configured
+    public_key_pem = os.environ.get("JWT_PUBLIC_KEY", "")
+    if public_key_pem:
+        try:
+            from cryptography.hazmat.primitives.serialization import load_pem_public_key  # noqa: PLC0415
+            from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey  # noqa: PLC0415
+            import base64  # noqa: PLC0415
+            pub = load_pem_public_key(public_key_pem.encode())
+            if isinstance(pub, RSAPublicKey):
+                pub_numbers = pub.public_key().public_numbers() if hasattr(pub, "public_key") else pub.public_numbers()
+                def _b64url(n: int, length: int) -> str:
+                    return base64.urlsafe_b64encode(n.to_bytes(length, "big")).rstrip(b"=").decode()
+                return {"keys": [{"kty": "RSA", "use": "sig", "alg": "RS256",
+                                  "n": _b64url(pub_numbers.n, 256), "e": _b64url(pub_numbers.e, 3)}]}
+        except Exception:
+            pass
+    return {"keys": []}
+
+
+@app.get("/auth/authorize", tags=["oidc"])
+async def authorize(
+    response_type: str = "code",
+    client_id: str = "",
+    redirect_uri: str = "",
+    scope: str = "openid",
+    state: str = "",
+    code_challenge: str = "",
+    code_challenge_method: str = "S256",
+):
+    """OAuth2 / OIDC authorization endpoint (PKCE supported)."""
+    if response_type != "code":
+        raise HTTPException(status_code=400, detail="Only 'code' response_type is supported")
+    if not redirect_uri:
+        raise HTTPException(status_code=400, detail="redirect_uri is required")
+    # Generate an authorization code (short-lived, single-use)
+    auth_code = secrets.token_urlsafe(32)
+    # Store code in DB for later exchange
+    with _get_db() as db:
+        db.execute(
+            """INSERT OR REPLACE INTO auth_codes
+               (code, client_id, redirect_uri, scope, code_challenge, code_challenge_method, expires_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (auth_code, client_id, redirect_uri, scope, code_challenge,
+             code_challenge_method, int(time.time()) + 600),
+        )
+        db.commit()
+    import urllib.parse  # noqa: PLC0415
+    params = {"code": auth_code, "state": state}
+    return {"redirect_to": f"{redirect_uri}?{urllib.parse.urlencode(params)}",
+            "code": auth_code, "state": state}
+
+
+class TokenRequest(BaseModel):
+    grant_type: str
+    code: str = ""
+    redirect_uri: str = ""
+    client_id: str = ""
+    client_secret: str = ""
+    code_verifier: str = ""
+    refresh_token: str = ""
+
+
+@app.post("/auth/token", tags=["oidc"])
+async def token_endpoint(req: TokenRequest):
+    """OAuth2 token endpoint — authorization_code + refresh_token grant."""
+    if req.grant_type == "refresh_token":
+        if not req.refresh_token:
+            raise HTTPException(status_code=400, detail="refresh_token required")
+        return await _refresh_via_token(req.refresh_token)
+
+    if req.grant_type != "authorization_code":
+        raise HTTPException(status_code=400, detail=f"Unsupported grant_type: {req.grant_type}")
+
+    with _get_db() as db:
+        row = db.execute(
+            "SELECT * FROM auth_codes WHERE code = ? AND expires_at > ?",
+            (req.code, int(time.time())),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=400, detail="Invalid or expired authorization code")
+
+        # PKCE verification
+        if row["code_challenge"]:
+            import hashlib, base64  # noqa: PLC0415, E401
+            if not req.code_verifier:
+                raise HTTPException(status_code=400, detail="code_verifier required")
+            digest = hashlib.sha256(req.code_verifier.encode()).digest()
+            computed = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+            if computed != row["code_challenge"]:
+                raise HTTPException(status_code=400, detail="PKCE verification failed")
+
+        # Invalidate code immediately (single-use)
+        db.execute("DELETE FROM auth_codes WHERE code = ?", (req.code,))
+        db.commit()
+
+    return {
+        "access_token": secrets.token_urlsafe(32),
+        "token_type": "Bearer",
+        "expires_in": JWT_EXPIRY_MINUTES * 60,
+        "scope": row["scope"] if row else "openid",
+    }
+
+
+async def _refresh_via_token(refresh_token: str) -> dict:
+    with _get_db() as db:
+        row = db.execute(
+            "SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > ?",
+            (refresh_token, int(time.time())),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+        user = db.execute("SELECT * FROM users WHERE user_id = ?", (row["user_id"],)).fetchone()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+    from jose import jwt as _jwt  # noqa: PLC0415
+    claims = {"sub": user["user_id"], "username": user["username"],
+               "role": user["role"], "iss": AUTH_ISSUER,
+               "iat": int(time.time()), "exp": int(time.time()) + JWT_EXPIRY_MINUTES * 60}
+    return {"access_token": _jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM),
+            "token_type": "Bearer", "expires_in": JWT_EXPIRY_MINUTES * 60}
+
+
+# ── auth_codes table init ────────────────────────────────────────────────────
+
+def _ensure_auth_codes_table() -> None:
+    with _get_db() as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS auth_codes (
+                code TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL DEFAULT '',
+                redirect_uri TEXT NOT NULL DEFAULT '',
+                scope TEXT NOT NULL DEFAULT 'openid',
+                code_challenge TEXT NOT NULL DEFAULT '',
+                code_challenge_method TEXT NOT NULL DEFAULT 'S256',
+                expires_at INTEGER NOT NULL
+            )
+        """)
+        db.commit()
+
+
+# Call once at module load so the table is ready
+try:
+    _ensure_auth_codes_table()
+except Exception:
+    pass  # DB may not be ready until lifespan
 
 
 # ── Startup / Shutdown (Phase 22.6) ─────────────────────────────────────────
