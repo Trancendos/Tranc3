@@ -83,6 +83,7 @@ def _try_async_schedule(coro):
         loop.call_soon_threadsafe(asyncio.ensure_future, coro)
         return True
     except RuntimeError:
+        coro.close()
         return False
 
 logger = logging.getLogger(__name__)

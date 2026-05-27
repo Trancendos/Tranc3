@@ -86,6 +86,7 @@ from src.security.ip_protection import (  # noqa: F401  # intentional top-level 
 from src.security.middleware import (  # noqa: F401  # intentional top-level import
     GovernanceMiddleware,
     SecurityHeadersMiddleware,
+    ZeroTrustASGIMiddleware,
 )
 from src.security.security_framework import (
     InputSanitizer,  # noqa: F401  # intentional top-level import
@@ -384,6 +385,7 @@ app.add_middleware(
 )
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(GovernanceMiddleware)
+app.add_middleware(ZeroTrustASGIMiddleware)
 
 # ── The Spark (MCP server) ────────────────────────────────────────────────────
 from src.mcp.server import router as _mcp_router  # codeql[py/cyclic-import]

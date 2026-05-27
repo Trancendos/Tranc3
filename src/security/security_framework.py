@@ -30,9 +30,34 @@ if not _JWT_SECRET:
         "Set JWT_SECRET in production for persistent token validity."
     )
 SECRET_KEY = _JWT_SECRET
-ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 REFRESH_TOKEN_EXPIRE_DAYS = 30
+
+# RS256 asymmetric signing (preferred for multi-service deployments).
+# Env vars may contain literal \n — normalise to real newlines.
+_PRIVATE_KEY_PEM = (os.getenv("JWT_PRIVATE_KEY") or "").replace("\\n", "\n").strip()
+_PUBLIC_KEY_PEM = (os.getenv("JWT_PUBLIC_KEY") or "").replace("\\n", "\n").strip()
+
+if _PRIVATE_KEY_PEM and _PUBLIC_KEY_PEM:
+    ALGORITHM = "RS256"
+    _SIGN_KEY: str = _PRIVATE_KEY_PEM
+    _VERIFY_KEY: str = _PUBLIC_KEY_PEM
+    logger.info("JWT configured with RS256 asymmetric signing")
+else:
+    # HS256 symmetric fallback — acceptable for single-service / dev environments.
+    ALGORITHM = "HS256"
+    _SIGN_KEY = SECRET_KEY
+    _VERIFY_KEY = SECRET_KEY
+    if _PRIVATE_KEY_PEM or _PUBLIC_KEY_PEM:
+        logger.warning(
+            "Only one of JWT_PRIVATE_KEY / JWT_PUBLIC_KEY is set — "
+            "both are required for RS256. Falling back to HS256."
+        )
+    else:
+        logger.warning(
+            "JWT_PRIVATE_KEY / JWT_PUBLIC_KEY not set — using HS256. "
+            "Set both env vars in production for RS256 asymmetric signing."
+        )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
@@ -73,19 +98,19 @@ class JWTManager:
             expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         )
         to_encode.update({"exp": expire, "type": "access", "iat": datetime.utcnow()})
-        return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        return jwt.encode(to_encode, _SIGN_KEY, algorithm=ALGORITHM)
 
     @staticmethod
     def create_refresh_token(data: dict) -> str:
         to_encode = data.copy()
         expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
         to_encode.update({"exp": expire, "type": "refresh", "iat": datetime.utcnow()})
-        return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        return jwt.encode(to_encode, _SIGN_KEY, algorithm=ALGORITHM)
 
     @staticmethod
     def decode_token(token: str) -> dict:
         try:
-            return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            return jwt.decode(token, _VERIFY_KEY, algorithms=[ALGORITHM])
         except JWTError as e:
             raise HTTPException(status_code=401, detail=f"Invalid token: {e}") from None
 
