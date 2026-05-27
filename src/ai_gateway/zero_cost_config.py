@@ -313,7 +313,7 @@ def _check_ollama_available(host: str) -> bool:
     try:
         import urllib.request
 
-        urllib.request.urlopen(f"{host}/api/tags", timeout=2)
+        urllib.request.urlopen(f"{host}/api/tags", timeout=2)  # noqa: S310 — pinging local Ollama only
         return True
     except Exception:
         return False

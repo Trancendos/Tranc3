@@ -92,7 +92,7 @@ class Tranc3Tokenizer:
 
         special_list = list(SPECIAL_TOKENS.keys())
 
-        tokenizer = Tokenizer(BPE(unk_token="<unk>"))  # nosec B106 — false positive: <unk> is a tokenizer token, not a password
+        tokenizer = Tokenizer(BPE(unk_token="<unk>"))  # nosec B106  # noqa: S106 — <unk> is a tokenizer sentinel, not a password
 
         tokenizer.pre_tokenizer = ByteLevel(add_prefix_space=False)
 

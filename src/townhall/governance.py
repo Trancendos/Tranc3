@@ -26,7 +26,7 @@ class PolicyStatus(str, Enum):
 
 
 class ComplianceResult(str, Enum):
-    PASS = "pass"  # nosec B105 — false positive: not a password
+    PASS = "pass"  # noqa: S105  # nosec B105 — enum value is a compliance status, not a password
 
     WARN = "warn"
     FAIL = "fail"
