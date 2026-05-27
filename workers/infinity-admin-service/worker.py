@@ -1503,23 +1503,30 @@ async def reset_entity_overrides(
     user = getattr(request.state, "user", {})
     actor = user.get("sub", "unknown")
 
-    conditions = ["location_pid = ?"]
     params: list[Any] = [pid]
     if entity_type:
-        conditions.append("entity_type = ?")
         params.append(entity_type)
     if slot is not None:
-        conditions.append("slot = ?")
         params.append("" if slot in ("null", "") else slot)
-    where = " AND ".join(conditions)
 
-    count_row = db.execute(
-        "SELECT COUNT(*) as cnt FROM entity_overrides WHERE " + where,
-        tuple(params),
-    ).fetchone()
+    _key = (bool(entity_type), slot is not None)
+    _count_sql = {
+        (False, False): "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ?",
+        (True, False): "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ? AND entity_type = ?",
+        (False, True): "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ? AND slot = ?",
+        (True, True): "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ? AND entity_type = ? AND slot = ?",
+    }[_key]
+    _delete_sql = {
+        (False, False): "DELETE FROM entity_overrides WHERE location_pid = ?",
+        (True, False): "DELETE FROM entity_overrides WHERE location_pid = ? AND entity_type = ?",
+        (False, True): "DELETE FROM entity_overrides WHERE location_pid = ? AND slot = ?",
+        (True, True): "DELETE FROM entity_overrides WHERE location_pid = ? AND entity_type = ? AND slot = ?",
+    }[_key]
+
+    count_row = db.execute(_count_sql, tuple(params)).fetchone()
     count = count_row["cnt"]
 
-    db.execute("DELETE FROM entity_overrides WHERE " + where, tuple(params))
+    db.execute(_delete_sql, tuple(params))
     db.commit()
 
     _log_admin_action(
