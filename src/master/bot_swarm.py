@@ -195,21 +195,13 @@ class BotSwarm:
             slot.queue.task_done()
 
     async def _dispatch(self, bot_type: str, action: str, params: Dict[str, Any]) -> Any:
-        """Dispatch to BotRegistry (async-safe wrapper)."""
+        """Dispatch through unified AdapterRegistry (priority-routed fallback chain)."""
         try:
-            import sys
-            # tranc3-bots is a sibling package — try direct import
-            bot_path = str(__import__("pathlib").Path(__file__).parent.parent.parent / "tranc3-bots")
-            if bot_path not in sys.path:
-                sys.path.insert(0, bot_path)
-            from bots.registry import BotRegistry
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None,
-                lambda: BotRegistry.run(bot_type, action=action, **params),
-            )
-            return result
-        except ImportError:
-            # Fallback: stub response when tranc3-bots is not on path
-            logger.debug("BotRegistry not available — returning stub for %s.%s", bot_type, action)
+            from src.master.adapters.registry import get_adapter  # noqa: PLC0415
+            adapter = get_adapter(bot_type)
+            dispatch_params = dict(params)
+            dispatch_params["_bot_type"] = bot_type
+            return await adapter.dispatch(action, dispatch_params)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("AdapterRegistry dispatch failed for %s.%s: %s", bot_type, action, exc)
             return {"stub": True, "bot": bot_type, "action": action, "params": params}

@@ -66,11 +66,26 @@ class TaskStep(BaseModel):
     @field_validator("bot")
     @classmethod
     def validate_bot_type(cls, v: str) -> str:
-        valid_bots = {
+        # Core 12 tranc3-bots types
+        _core = {
             "generate", "embed", "emotion", "tokenize", "consciousness",
             "personality", "predict", "code", "memory", "monitor",
             "search", "summarise",
         }
+        # AeonMind Tier-5 capabilities (15 types)
+        _aeonmind = {
+            "aeonmind", "translate", "classify", "extract", "validate",
+            "transform", "notify", "log", "cache", "route", "filter",
+            "enrich", "summarize", "generic",
+        }
+        # NanoCodeBot autonomous repair modes (9 FailureModes + root type)
+        _nanocode = {
+            "nanocode",
+            "compliance_metadata_missing", "stale_embedding",
+            "free_tier_approaching", "rate_limit_hit", "service_unreachable",
+            "config_drift", "memory_leak", "high_error_rate", "dependency_failed",
+        }
+        valid_bots = _core | _aeonmind | _nanocode
         if v not in valid_bots:
             raise ValueError(f"Unknown bot type '{v}'. Valid: {sorted(valid_bots)}")
         return v
