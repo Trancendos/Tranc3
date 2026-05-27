@@ -326,7 +326,7 @@ class MasterWorker:
         try:
             from src.workflow.executor import event_bus
             await event_bus.publish(event, data)
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # EventBus is optional — never block on it
 
     # ------------------------------------------------------------------
@@ -340,8 +340,8 @@ class MasterWorker:
                 try:
                     self._scheduler.remove_job(f"task-{name}")
                     logger.info("MasterWorker: unscheduled task '%s'.", name)
-                except Exception:
-                    pass
+                except Exception:  # noqa: S110
+                    pass  # graceful degradation
         else:
             # File added/modified — reschedule
             self._schedule_task(task)

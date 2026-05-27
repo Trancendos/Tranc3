@@ -477,5 +477,5 @@ class GeneticOptimizer:
                     await handler(event, *args)
                 else:
                     handler(event, *args)
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation

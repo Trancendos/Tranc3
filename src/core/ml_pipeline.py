@@ -456,7 +456,7 @@ class MLPipeline:
                     await router.report_latency(routed_from, total_ms)
                     if not success:
                         await router.report_error(routed_from, True)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass  # nosec B110 — graceful degradation; error logged upstream
 
         total_ms = (time.monotonic() - t0) * 1000

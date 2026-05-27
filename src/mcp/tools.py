@@ -139,7 +139,7 @@ class SparkToolRegistry:
             from src.mcp.tool_rag import rebuild_rag_index  # codeql[py/cyclic-import]
 
             rebuild_rag_index(list(self._tools.values()))
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
     def get(self, name: str) -> Optional[SparkTool]:
@@ -178,7 +178,7 @@ class SparkToolRegistry:
             rag = get_rag()
             if rag.is_ready():
                 return rag.select_tools(query, top_k=top_k)
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
         # Keyword fallback
@@ -728,7 +728,7 @@ class SparkToolRegistry:
             from src.mcp.tool_rag import rebuild_rag_index  # codeql[py/cyclic-import]
 
             rebuild_rag_index(list(self._tools.values()))
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
     # ------------------------------------------------------------------

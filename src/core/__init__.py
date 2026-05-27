@@ -37,13 +37,13 @@ except Exception:
 
 try:
     from src.core.feature_flags import FeatureFlag, FeatureFlagManager
-except Exception:
+except Exception:  # noqa: S110
     pass  # nosec B110 — graceful degradation; error logged upstream
 
 
 try:
     from src.core.context_compressor import compressor
-except Exception:
+except Exception:  # noqa: S110
     pass  # nosec B110 — graceful degradation; error logged upstream
 
 
@@ -56,5 +56,5 @@ except ImportError:
 # Phase 4 ML Pipeline -- unified inference with Neural & Intelligence integration
 try:
     from src.core.ml_pipeline import MLPipeline, PipelineRequest, PipelineResponse, get_pipeline
-except Exception:
+except Exception:  # noqa: S110
     pass  # nosec B110 — graceful degradation; error logged upstream

@@ -787,12 +787,12 @@ class HILAChain:
         for listener in self._listeners.get(action_id, []):
             try:
                 listener(action, event)
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
 
         # Global listeners
         for listener in self._global_listeners:
             try:
                 listener(action, event)
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation

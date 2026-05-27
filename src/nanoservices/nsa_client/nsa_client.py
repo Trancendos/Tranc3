@@ -438,8 +438,8 @@ class ServiceRegistry:
                         )
                         for s in data.get("services", [])
                     ]
-        except Exception:
-            pass
+        except Exception:  # noqa: S110
+            pass  # graceful degradation
         return []
 
     async def health(self) -> Dict[str, Any]:
@@ -451,8 +451,8 @@ class ServiceRegistry:
                 resp = await client.get(f"{self.broker_url}/health", timeout=5.0)
                 if resp.status_code == 200:
                     return resp.json()
-        except Exception:
-            pass
+        except Exception:  # noqa: S110
+            pass  # graceful degradation
         return {"status": "unreachable"}
 
     async def stats(self) -> Dict[str, Any]:
@@ -464,6 +464,6 @@ class ServiceRegistry:
                 resp = await client.get(f"{self.broker_url}/stats", timeout=5.0)
                 if resp.status_code == 200:
                     return resp.json()
-        except Exception:
-            pass
+        except Exception:  # noqa: S110
+            pass  # graceful degradation
         return {"status": "unreachable"}

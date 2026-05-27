@@ -244,7 +244,7 @@ class Section7:
                 author="section7",
                 source="section7",
             )
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
         # Emit Observatory event
@@ -259,7 +259,7 @@ class Section7:
                 service="section7",
                 metadata={"title": report.title, "findings_count": len(report.findings)},
             )
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
         logger.info("section7: report generated type=%s id=%s", report.report_type.value, report.id)

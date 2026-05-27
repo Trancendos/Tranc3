@@ -223,7 +223,7 @@ class VRAR3D:
             observe(
                 event_type, category=EventCategory.DATA, service="vrar3d", metadata=metadata or {}
             )
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
 

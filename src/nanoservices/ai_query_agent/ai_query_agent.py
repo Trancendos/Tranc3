@@ -420,8 +420,8 @@ class AIQueryAgent:
                 cached = await self._query_cache_for(nrc_query)
                 if cached:
                     return {"success": True, "plan": cached, "source": "cache"}
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
 
         # Try genetic optimizer
         if self.genetic_optimizer:

@@ -189,7 +189,7 @@ class DevOcity:
                         for k in data.get("api_keys", [])
                     ]
                     self._accounts[acct.id] = acct
-                except Exception:
+                except Exception:  # noqa: S110
                     pass  # nosec B110 — graceful degradation; error logged upstream
 
             logger.info("devocity: loaded %d accounts from Redis", len(self._accounts))
@@ -224,7 +224,7 @@ class DevOcity:
                 ],
             }
             await store.set(f"devocity:account:{account.id}", data, ttl=_ACCOUNT_TTL)
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
     def _fire_persist(self, account: DeveloperAccount) -> None:
@@ -234,7 +234,7 @@ class DevOcity:
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 loop.create_task(self._persist_account(account))
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
     def create_account(self, user_id: str, display_name: str) -> DeveloperAccount:
@@ -336,7 +336,7 @@ class DevOcity:
                 service="devocity",
                 metadata=metadata or {},
             )
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
 

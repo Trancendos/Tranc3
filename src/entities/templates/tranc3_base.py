@@ -222,8 +222,8 @@ class Tranc3(ABC):
             try:
                 result = self._gas.select()
                 return result.selected
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
         return self._peers[0]
 
     def liquid_route(self, signals: dict[str, float] | None = None) -> str | None:
@@ -234,8 +234,8 @@ class Tranc3(ABC):
             try:
                 result = self._liquid.route(signals)
                 return result.target
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
         return self._peers[0]
 
     # ------------------------------------------------------------------

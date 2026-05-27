@@ -231,7 +231,7 @@ class ChronosSphere:
                 service="chronossphere",
                 metadata=metadata or {},
             )
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
 

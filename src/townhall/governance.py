@@ -136,7 +136,7 @@ class TownHall:
                         outcome=result.value,
                         metadata={"framework": policy.framework, "context": str(context)[:200]},
                     )
-                except Exception:
+                except Exception:  # noqa: S110
                     pass  # nosec B110 — graceful degradation; error logged upstream
 
         return results

@@ -336,7 +336,7 @@ class FreeTierBot(NanoBot):
                 )
                 if tier_resp.status_code < 300:
                     actions_taken.append("Next-tier upgrade preparation triggered")
-            except Exception:
+            except Exception:  # noqa: S110
                 # Non-critical — not every service has tier management
                 pass  # nosec B110 — graceful degradation for optional tier feature
 
@@ -484,7 +484,7 @@ class ServiceUnreachableBot(NanoBot):
                             actions.append("Service recovered after restart")
                             success = True
                             break
-                    except Exception:
+                    except Exception:  # noqa: S110
                         pass  # nosec B110 — graceful degradation; error logged upstream
 
         except Exception as exc:

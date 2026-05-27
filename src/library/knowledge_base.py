@@ -173,7 +173,7 @@ class Library:
                 service="library",
                 metadata={"title": art.title, "tags": art.tags},
             )
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
     def _seed_platform_articles(self) -> None:

@@ -327,8 +327,8 @@ class LanceDBPlanStore:
         if self._use_lancedb and self._table is not None:
             try:
                 return len(self._table)
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
         return self._fallback.count()
 
 

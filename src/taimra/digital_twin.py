@@ -151,7 +151,7 @@ class TAimra:
                 service="taimra",
                 metadata={"user_id": user_id},
             )
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
 

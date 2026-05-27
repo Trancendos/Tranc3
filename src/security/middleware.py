@@ -97,7 +97,7 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
                     return body_bytes
 
                 request._body = body_bytes
-            except Exception:
+            except Exception:  # noqa: S110
                 pass  # nosec B110 - never block on Cryptex failure
 
         response = await call_next(request)

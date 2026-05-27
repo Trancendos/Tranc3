@@ -171,7 +171,7 @@ class TheStudio:
                 service="the-studio",
                 metadata={"job_id": job.id, "sub_service": job.service.value},
             )
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
 

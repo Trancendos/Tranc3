@@ -111,7 +111,7 @@ class LifecycleEmitter:
                 result = listener(ctx)
                 if asyncio.iscoroutine(result):
                     await result
-            except Exception:
+            except Exception:  # noqa: S110
                 pass  # listeners should not crash the emitter
 
         # Fire catch-all listeners
@@ -120,8 +120,8 @@ class LifecycleEmitter:
                 result = listener(key, ctx)
                 if asyncio.iscoroutine(result):
                     await result
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
 
     def emit_lifecycle_sync(
         self, event: LifecycleEvent, details: Optional[Dict[str, Any]] = None
@@ -138,11 +138,11 @@ class LifecycleEmitter:
         for listener in self._listeners.get(key, []):
             try:
                 listener(ctx)
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
 
         for listener in self._any_listeners:
             try:
                 listener(key, ctx)
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation

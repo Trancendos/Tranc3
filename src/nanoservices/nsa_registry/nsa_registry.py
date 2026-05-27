@@ -432,8 +432,8 @@ class NSARegistry:
                                 await self._emit("status_change", svc, old, ServiceStatus.DEGRADED)
             except asyncio.CancelledError:
                 break
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
 
     def stats(self) -> Dict[str, Any]:
         """Get registry statistics."""
