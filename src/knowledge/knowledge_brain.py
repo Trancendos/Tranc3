@@ -28,7 +28,7 @@ import uuid
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +80,7 @@ class SearchResult:
     page: KBPage
     score: float
     matched_by: str                 # "bm25" | "vector" | "hybrid"
+    excerpt: str = ""               # short snippet from page content
 
 
 # ---------------------------------------------------------------------------
@@ -207,7 +208,8 @@ def _infer_relation(context: str, target: str) -> str:
 class _KBStore:
     """Thin SQLite wrapper — pages + links tables."""
 
-    def __init__(self, db_path: Path = _DB_PATH) -> None:
+    def __init__(self, db_path: Union[str, Path] = _DB_PATH) -> None:
+        db_path = Path(db_path)
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(str(db_path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
@@ -281,6 +283,9 @@ class _KBStore:
 
     def count_pages(self) -> int:
         return self._conn.execute("SELECT COUNT(*) FROM pages").fetchone()[0]
+
+    def count_links(self) -> int:
+        return self._conn.execute("SELECT COUNT(*) FROM links").fetchone()[0]
 
     @staticmethod
     def _row_to_page(row: sqlite3.Row) -> KBPage:
@@ -453,7 +458,8 @@ class KnowledgeBrain:
             if page:
                 both = pid in bm25_ranked and pid in vector_ranked
                 matched_by = "hybrid" if both else ("bm25" if pid in bm25_ranked else "vector")
-                results.append(SearchResult(page=page, score=rrf_score, matched_by=matched_by))
+                excerpt = page.content[:200].rstrip()
+                results.append(SearchResult(page=page, score=rrf_score, matched_by=matched_by, excerpt=excerpt))
         return results
 
     async def _vector_query(self, query: str, top_k: int) -> List[str]:
@@ -695,8 +701,12 @@ class KnowledgeBrain:
     # ------------------------------------------------------------------
 
     def stats(self) -> Dict[str, Any]:
+        page_count = self._store.count_pages()
+        link_count = self._store.count_links()
         return {
-            "total_pages": self._store.count_pages(),
+            "page_count": page_count,
+            "link_count": link_count,
+            "total_pages": page_count,   # legacy alias
             "bm25_indexed": len(self._bm25._docs),
             "dream_interval_s": self._dream_interval,
             "dream_running": bool(self._dream_task and not self._dream_task.done()),
