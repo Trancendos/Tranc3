@@ -837,23 +837,29 @@ async def audit_log(
     offset: int = Query(0, ge=0),
 ):
     """Get the admin audit log."""
-    conditions = []
     params: list[Any] = []
 
     if action_type:
-        conditions.append("action_type = ?")
         params.append(action_type)
     if actor_id:
-        conditions.append("actor_id = ?")
         params.append(actor_id)
 
-    where = " WHERE " + " AND ".join(conditions) if conditions else ""
-    rows = db.execute(
-        f"SELECT * FROM admin_actions{where} ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        params + [limit, offset],
-    ).fetchall()
+    _key = (bool(action_type), bool(actor_id))
+    _list_sql = {
+        (False, False): "SELECT * FROM admin_actions ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        (True, False): "SELECT * FROM admin_actions WHERE action_type = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        (False, True): "SELECT * FROM admin_actions WHERE actor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        (True, True): "SELECT * FROM admin_actions WHERE action_type = ? AND actor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+    }[_key]
+    _count_sql = {
+        (False, False): "SELECT COUNT(*) as cnt FROM admin_actions",
+        (True, False): "SELECT COUNT(*) as cnt FROM admin_actions WHERE action_type = ?",
+        (False, True): "SELECT COUNT(*) as cnt FROM admin_actions WHERE actor_id = ?",
+        (True, True): "SELECT COUNT(*) as cnt FROM admin_actions WHERE action_type = ? AND actor_id = ?",
+    }[_key]
 
-    total = db.execute(f"SELECT COUNT(*) as cnt FROM admin_actions{where}", params).fetchone()["cnt"]
+    rows = db.execute(_list_sql, params + [limit, offset]).fetchall()
+    total = db.execute(_count_sql, tuple(params)).fetchone()["cnt"]
 
     return {"actions": [dict(r) for r in rows], "total": total}
 
@@ -865,21 +871,21 @@ async def compliance_events(
     limit: int = Query(100, ge=1, le=1000),
 ):
     """Get compliance and security events."""
-    conditions = []
     params: list[Any] = []
 
     if severity:
-        conditions.append("severity = ?")
         params.append(severity)
     if pillar:
-        conditions.append("pillar = ?")
         params.append(pillar)
 
-    where = " WHERE " + " AND ".join(conditions) if conditions else ""
-    rows = db.execute(
-        f"SELECT * FROM compliance_events{where} ORDER BY created_at DESC LIMIT ?",
-        params + [limit],
-    ).fetchall()
+    _list_sql = {
+        (False, False): "SELECT * FROM compliance_events ORDER BY created_at DESC LIMIT ?",
+        (True, False): "SELECT * FROM compliance_events WHERE severity = ? ORDER BY created_at DESC LIMIT ?",
+        (False, True): "SELECT * FROM compliance_events WHERE pillar = ? ORDER BY created_at DESC LIMIT ?",
+        (True, True): "SELECT * FROM compliance_events WHERE severity = ? AND pillar = ? ORDER BY created_at DESC LIMIT ?",
+    }[(bool(severity), bool(pillar))]
+
+    rows = db.execute(_list_sql, params + [limit]).fetchall()
 
     return {"events": [dict(r) for r in rows], "total": len(rows)}
 
@@ -1564,17 +1570,18 @@ async def reset_entity_overrides(
 @app.get("/admin/entities/{pid}/overrides/{entity_type}")
 async def get_entity_overrides_by_type(pid: str, entity_type: str, slot: str | None = None):
     """Get overrides for a specific entity type (and optional slot) within an entity."""
-    conditions = ["location_pid = ?", "entity_type = ?"]
     params: list[Any] = [pid, entity_type]
 
     if slot is not None:
-        conditions.append("slot = ?")
         params.append(slot)
 
-    rows = db.execute(
-        f"SELECT * FROM entity_overrides WHERE {' AND '.join(conditions)} ORDER BY slot",
-        params,
-    ).fetchall()
+    _list_sql = (
+        "SELECT * FROM entity_overrides WHERE location_pid = ? AND entity_type = ? AND slot = ? ORDER BY slot"
+        if slot is not None
+        else "SELECT * FROM entity_overrides WHERE location_pid = ? AND entity_type = ? ORDER BY slot"
+    )
+
+    rows = db.execute(_list_sql, params).fetchall()
 
     return {"pid": pid, "entity_type": entity_type, "overrides": [dict(r) for r in rows]}
 
