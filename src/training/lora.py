@@ -46,7 +46,7 @@ import logging
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -177,7 +177,7 @@ class LoRALinear(nn.Module):
 
         if self.use_dora:
             # DoRA: re-normalise base weight direction, scale by learned magnitude
-            w_norm = self.weight.norm(dim=1, keepdim=True).clamp(min=1e-8)
+            self.weight.norm(dim=1, keepdim=True).clamp(min=1e-8)
             adapted_w = (self.weight + (self.lora_B @ self.lora_A) * self.scale)
             adapted_norm = adapted_w.norm(dim=1, keepdim=True).clamp(min=1e-8)
             dora_out = F.linear(x, (self.dora_m / adapted_norm) * adapted_w, self.bias)
@@ -468,7 +468,7 @@ class LoRASaveLoad:
         payload = torch.load(path, map_location="cpu", weights_only=True)
         missing, unexpected = [], []
         state = payload.get("lora_state", payload)
-        param_names = {n for n, _ in model.named_parameters() if "lora_" in n}
+        {n for n, _ in model.named_parameters() if "lora_" in n}
         for k, v in state.items():
             if "lora_" not in k and "dora_m" not in k:
                 continue
@@ -478,7 +478,7 @@ class LoRASaveLoad:
                 for p in parts[:-1]:
                     obj = getattr(obj, p)
                 getattr(obj, parts[-1]).data.copy_(v)
-            except (AttributeError, RuntimeError) as e:
+            except (AttributeError, RuntimeError):
                 if strict:
                     raise
                 missing.append(k)

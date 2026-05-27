@@ -353,7 +353,9 @@ async def lifespan(app: FastAPI):
     # Knowledge Brain (The Library) — start dream-cycle consolidation
     _knowledge_brain = None
     try:
-        from src.knowledge.knowledge_brain import get_brain as _get_brain  # codeql[py/cyclic-import]
+        from src.knowledge.knowledge_brain import (
+            get_brain as _get_brain,  # codeql[py/cyclic-import]
+        )
 
         _knowledge_brain = _get_brain()
         await _knowledge_brain.start_dream_cycle()

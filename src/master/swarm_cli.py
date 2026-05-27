@@ -14,7 +14,6 @@ import argparse
 import asyncio
 import json
 import sys
-from pathlib import Path
 
 
 async def _cmd_list(tasks_dir: str) -> None:

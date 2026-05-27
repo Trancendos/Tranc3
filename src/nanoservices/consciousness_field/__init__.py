@@ -1,20 +1,20 @@
 """Consciousness Field nanoservice."""
 
 from .consciousness_field import (
-    ConsciousnessLevel,
     AwarenessMode,
-    WorkspaceState,
-    PhenomenalQuality,
-    FieldTopology,
-    IntegrationMethod,
-    QualiaNode,
-    MicroState,
-    GlobalWorkspace,
-    ConsciousnessSnapshot,
-    IITComputer,
-    GlobalWorkspaceEngine,
-    ConsciousnessFieldSimulator,
     ConsciousnessFieldService,
+    ConsciousnessFieldSimulator,
+    ConsciousnessLevel,
+    ConsciousnessSnapshot,
+    FieldTopology,
+    GlobalWorkspace,
+    GlobalWorkspaceEngine,
+    IITComputer,
+    IntegrationMethod,
+    MicroState,
+    PhenomenalQuality,
+    QualiaNode,
+    WorkspaceState,
 )
 
 __all__ = [

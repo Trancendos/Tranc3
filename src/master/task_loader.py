@@ -57,7 +57,6 @@ class TaskLoader:
         """Start filesystem watcher for hot-reload. Loads all tasks first."""
         self.load_all()
         try:
-            from watchdog.events import FileSystemEventHandler
             from watchdog.observers import Observer
 
             handler = _TaskFileHandler(self)
@@ -121,10 +120,17 @@ class TaskLoader:
         self.load_all()
 
 
-class _TaskFileHandler:
+try:
+    from watchdog.events import FileSystemEventHandler as _FSEHandler
+except ImportError:  # watchdog optional
+    _FSEHandler = object  # type: ignore[assignment,misc]
+
+
+class _TaskFileHandler(_FSEHandler):
     """Watchdog event handler — delegates to TaskLoader."""
 
     def __init__(self, loader: TaskLoader) -> None:
+        super().__init__()
         self._loader = loader
 
     def dispatch(self, event) -> None:  # type: ignore[override]

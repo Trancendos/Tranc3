@@ -26,7 +26,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Awaitable
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 import aiohttp
 
@@ -303,10 +303,10 @@ class A2ATransport(ABC):
     async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]:
         ...
 
-    async def start(self) -> None:
+    async def start(self) -> None:  # noqa: B027 — optional lifecycle hook
         pass
 
-    async def stop(self) -> None:
+    async def stop(self) -> None:  # noqa: B027 — optional lifecycle hook
         pass
 
 

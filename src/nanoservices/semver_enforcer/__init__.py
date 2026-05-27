@@ -1,10 +1,10 @@
 from .semver_enforcer import (
+    ChangelogGenerator,
+    ChangeRecord,
     ChangeType,
     CompatibilityLevel,
-    SemVer,
-    ChangeRecord,
     ReleaseRecord,
-    ChangelogGenerator,
+    SemVer,
     SemVerEnforcer,
     SemVerEnforcerService,
 )

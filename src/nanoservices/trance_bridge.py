@@ -546,6 +546,6 @@ class TranceBridge:
             / total,
             "dialect_distribution": {
                 d: sum(1 for q in self._query_history if q["dialect"] == d)
-                for d in set(q["dialect"] for q in self._query_history)
+                for d in {q["dialect"] for q in self._query_history}
             },
         }

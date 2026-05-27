@@ -22,7 +22,6 @@ import json
 import logging
 import math
 import time
-from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -338,7 +337,7 @@ def _generation_quality(seqs: List[List[int]]) -> Dict[str, float]:
         if not seq:
             continue
         all_unigrams.extend(seq)
-        all_bigrams.extend(zip(seq, seq[1:]))
+        all_bigrams.extend(zip(seq, seq[1:], strict=False))
 
         # Repetition: tokens already seen earlier in this sequence
         seen: set = set()

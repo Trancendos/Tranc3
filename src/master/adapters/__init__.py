@@ -16,9 +16,9 @@ from __future__ import annotations
 
 from .aeonmind_adapter import AeonMindAdapter
 from .nanocode_adapter import NanocodeAdapter
+from .registry import AdapterRegistry, get_adapter
 from .src_workers_adapter import SrcWorkersAdapter
 from .tranc3_bots_adapter import Tranc3BotsAdapter
-from .registry import AdapterRegistry, get_adapter
 
 __all__ = [
     "AdapterRegistry",
