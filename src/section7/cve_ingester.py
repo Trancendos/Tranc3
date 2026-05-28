@@ -308,6 +308,7 @@ class OpenCveCompatIngestor:
             url = f"{self._base_url}/api/cve?page=1&limit={self._max_items}"
             if self._search:
                 from urllib.parse import quote
+
                 url += f"&search={quote(self._search)}"
 
             headers: Dict[str, str] = {"User-Agent": "Tranc3-Section7-CVEIngestor/1.0"}
@@ -327,9 +328,7 @@ class OpenCveCompatIngestor:
                 cve_id = item.get("id", item.get("cve_id", "CVE-UNKNOWN"))
                 description = item.get("summary", item.get("description", "No description."))
                 severity = item.get("cvss", {}).get("v3", {}).get("severity", "UNKNOWN")
-                cvss_score = float(
-                    item.get("cvss", {}).get("v3", {}).get("score", 0.0) or 0.0
-                )
+                cvss_score = float(item.get("cvss", {}).get("v3", {}).get("score", 0.0) or 0.0)
                 records.append(
                     CveRecord(
                         cve_id=cve_id,

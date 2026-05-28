@@ -417,15 +417,9 @@ def test_nvd_parse_item():
             "description": {
                 "description_data": [{"lang": "en", "value": "A critical RCE vulnerability."}]
             },
-            "references": {
-                "reference_data": [{"url": "https://example.com/advisory"}]
-            },
+            "references": {"reference_data": [{"url": "https://example.com/advisory"}]},
         },
-        "impact": {
-            "baseMetricV3": {
-                "cvssV3": {"baseSeverity": "CRITICAL", "baseScore": 9.8}
-            }
-        },
+        "impact": {"baseMetricV3": {"cvssV3": {"baseSeverity": "CRITICAL", "baseScore": 9.8}}},
         "publishedDate": "2024-01-15T00:00Z",
         "configurations": {"nodes": []},
     }

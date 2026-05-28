@@ -27,6 +27,7 @@ Zero-cost: FastAPI + SQLite + python-jose. No CF Workers or KV.
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager, contextmanager
 import hashlib
 import hmac
 import json
@@ -36,7 +37,6 @@ import secrets
 import sqlite3
 import time
 import uuid
-from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -391,6 +391,13 @@ app.add_middleware(
 db = AuthDatabase()
 rate_limiter = RateLimiter()
 security = HTTPBearer()
+
+
+@contextmanager
+def _get_db():
+    """Context manager returning the module-level AuthDatabase singleton."""
+    yield db
+
 
 # Phase 22.6: Smart adaptive worker kit for auth service
 worker_kit = InfinityWorkerKit(
@@ -886,21 +893,22 @@ async def authorize(
     # Generate an authorization code (short-lived, single-use)
     auth_code = secrets.token_urlsafe(32)
     # Store code in DB for later exchange
-    db.execute(
-        """INSERT OR REPLACE INTO auth_codes
-            (code, client_id, redirect_uri, scope, code_challenge, code_challenge_method, expires_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (
-            auth_code,
-            client_id,
-            redirect_uri,
-            scope,
-            code_challenge,
-            code_challenge_method,
-            int(time.time()) + 600,
-        ),
-    )
-    db.commit()
+    with _get_db() as db:
+        db.execute(
+            """INSERT OR REPLACE INTO auth_codes
+               (code, client_id, redirect_uri, scope, code_challenge, code_challenge_method, expires_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                auth_code,
+                client_id,
+                redirect_uri,
+                scope,
+                code_challenge,
+                code_challenge_method,
+                int(time.time()) + 600,
+            ),
+        )
+        db.commit()
     import urllib.parse  # noqa: PLC0415
 
     params = {"code": auth_code, "state": state}
@@ -941,8 +949,8 @@ async def token_endpoint(req: TokenRequest):
 
     # PKCE verification
     if row["code_challenge"]:
-        import base64
-        import hashlib  # noqa: PLC0415, E401
+        import base64  # noqa: PLC0415
+        import hashlib  # noqa: PLC0415
 
         if not req.code_verifier:
             raise HTTPException(status_code=400, detail="code_verifier required")

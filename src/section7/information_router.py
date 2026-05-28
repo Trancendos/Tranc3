@@ -192,7 +192,9 @@ class InformationRouter:
                     "payload_keys": list(payload.keys()),
                 },
             )
-            logger.info("section7: recorded %s item %s in observatory", classification.value, item_id)
+            logger.info(
+                "section7: recorded %s item %s in observatory", classification.value, item_id
+            )
             return True
         except Exception as exc:
             logger.warning("section7: observatory record failed for %s: %s", item_id, exc)
@@ -245,9 +247,7 @@ class InformationRouter:
                 tags=[classification.value, source, "section7"],
                 metadata={"classification": classification.value, "source": source},
             )
-            logger.info(
-                "section7: catalogued %s item %s in library", classification.value, item_id
-            )
+            logger.info("section7: catalogued %s item %s in library", classification.value, item_id)
             return True
         except Exception as exc:
             logger.warning("section7: library catalogue failed for %s: %s", item_id, exc)

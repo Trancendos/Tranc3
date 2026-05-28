@@ -128,7 +128,7 @@ _ROLE_PERMISSIONS: Dict[str, FrozenSet[str]] = {
             Permission.PLATFORM_METRICS,
         }
     ),
-    "superadmin": frozenset(set(Permission)),
+    "superadmin": frozenset(Permission),
 }
 
 # Ordered role hierarchy (index = power level)

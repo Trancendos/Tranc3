@@ -121,7 +121,6 @@ class IntelligenceAgent:
         self._stats["ingested"] += 1
 
         try:
-
             cls = self._classify(item)
             summary = item.title or item.raw_content[:200]
             payload: Dict[str, Any] = {

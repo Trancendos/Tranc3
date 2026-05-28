@@ -187,7 +187,9 @@ def _decrypt_secret(ciphertext_hex: str) -> str:
 
 # Backwards-compat shim: attempt XOR-decrypt of legacy secrets stored before this fix.
 # Remove this shim once all secrets have been re-encrypted (rotate via PUT /secrets/{id}).
-def _legacy_xor_decrypt(ciphertext_hex: str, xor_key: str = "Tranc3Vault2024!ZeroCostCrypto") -> str:
+def _legacy_xor_decrypt(
+    ciphertext_hex: str, xor_key: str = "Tranc3Vault2024!ZeroCostCrypto"
+) -> str:
     """Decrypt a secret encrypted by the old (insecure) XOR cipher."""
     key_bytes = xor_key.encode()
     cipher_bytes = bytes.fromhex(ciphertext_hex)

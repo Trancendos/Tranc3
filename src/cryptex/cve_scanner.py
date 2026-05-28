@@ -162,9 +162,7 @@ class CveScanner:
                     actor="section7.cve_scanner",
                 )
 
-                mitigation_actions = list(
-                    {s.action.value for s in signals if hasattr(s, "action")}
-                )
+                mitigation_actions = list({s.action.value for s in signals if hasattr(s, "action")})
 
                 profile = CveRiskProfile(
                     cve_id=cve_id,
@@ -185,9 +183,7 @@ class CveScanner:
                 )
 
             except Exception as exc:
-                logger.warning(
-                    "cryptex.cve_scanner: analysis failed for %s: %s", cve_id, exc
-                )
+                logger.warning("cryptex.cve_scanner: analysis failed for %s: %s", cve_id, exc)
                 profiles.append(
                     CveRiskProfile(
                         cve_id=cve_id,
