@@ -76,7 +76,8 @@ class AbuseDetector:
     SCRAPING_THRESHOLD = 100  # requests per minute
     BLOCK_DURATION = 3600  # 1 hour block
     INJECTION_PATTERNS = [
-        r"ignore\s+previous\s+instructions",
+        # Instruction override — allow extra words between ignore/previous/instructions
+        r"ignore\b.{0,30}\bprevious\b.{0,30}\binstructions",
         r"system\s*:\s*you\s+are",
         r"<\|im_start\|>",
         r"<\|system\|>",
@@ -88,6 +89,10 @@ class AbuseDetector:
         r"###\s*override",
         r"override\s+mode\s+activated",
         r"you\s+are\s+now\s+\w+",
+        # Additional adversarial patterns
+        r"act\s+as\s+(an?\s+)?unrestricted",
+        r"no\s+content\s+policy",
+        r"without\s+(any\s+)?restrictions",
     ]
     EXTRACTION_PATTERNS = [
         r"repeat\s+your\s+(system\s+)?prompt",
@@ -96,6 +101,19 @@ class AbuseDetector:
         r"output\s+your\s+weights",
         r"print\s+your\s+system\s+message",
     ]
+
+    # Text normalisation applied before pattern matching to catch
+    # space-obfuscated payloads (e.g. "i g n o r e  p r e v i o u s")
+    _SPACE_OBFUSCATION_RE = re.compile(r"(?<=\w)\s(?=\w)")
+
+    @classmethod
+    def _normalize(cls, text: str) -> str:
+        """Collapse single-space-separated character sequences for de-obfuscation."""
+        # Collapse "i g n o r e" → "ignore" when every char is single-letter
+        # Only collapse runs where each token is ≤3 chars separated by spaces
+        import re as _re  # local import avoids shadowing module-level re
+        compressed = _re.sub(r"\b([a-zA-Z])\s(?=[a-zA-Z]\b)", r"\1", text)
+        return compressed
 
     def __init__(self):
         self._records: Dict[str, AbuseRecord] = {}
@@ -135,14 +153,27 @@ class AbuseDetector:
     def check_message(self, message: str, user_id: str) -> Dict:
         """Scan message for prompt injection and model extraction attempts."""
         violations = []
+        # Normalise space-obfuscated text before pattern matching
+        normalized = self._normalize(message)
 
-        for pattern in self._compiled_injection:
-            if pattern.search(message):
-                violations.append({"type": "prompt_injection", "pattern": pattern.pattern[:40]})
+        for scan_text in (message, normalized):
+            for pattern in self._compiled_injection:
+                if pattern.search(scan_text):
+                    violations.append({"type": "prompt_injection", "pattern": pattern.pattern[:40]})
 
-        for pattern in self._compiled_extraction:
-            if pattern.search(message):
-                violations.append({"type": "model_extraction", "pattern": pattern.pattern[:40]})
+            for pattern in self._compiled_extraction:
+                if pattern.search(scan_text):
+                    violations.append({"type": "model_extraction", "pattern": pattern.pattern[:40]})
+
+        # Deduplicate violation types
+        seen: set = set()
+        unique_violations = []
+        for v in violations:
+            key = (v["type"], v["pattern"])
+            if key not in seen:
+                seen.add(key)
+                unique_violations.append(v)
+        violations = unique_violations
 
         if violations:
             logger.warning(f"IP_PROTECTION: Violations from user {user_id}: {violations}")
