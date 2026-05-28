@@ -242,7 +242,7 @@ class TheArtifactory:
                 service="the-artifactory",
                 metadata=metadata or {},
             )
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
 

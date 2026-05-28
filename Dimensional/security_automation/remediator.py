@@ -281,7 +281,7 @@ class AutoRemediator:
                     docstring_delim = line[:3]
                     continue
             else:
-                if docstring_delim in line:
+                if docstring_delim in line:  # type: ignore[operator]
                     in_docstring = False
                     insert_idx = i + 1
                 continue

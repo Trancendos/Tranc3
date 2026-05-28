@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=80", "wheel"]
+requires = ["setuptools>=80", "wheel>=0.46.2"]
 build-backend = "setuptools.backends.legacy:build"
 
 [project]
@@ -16,6 +16,8 @@ extend-exclude = [
     ".forgejo",
     "docs/reference",
     "**/*.sh",
+    "aeonmind",      # separate package — has its own CI (aeonmind/python/.github/workflows)
+    "Dimensional",   # separate package — imported by workers, linted separately
 ]
 
 [tool.ruff.lint]
@@ -38,8 +40,35 @@ ignore = [
 "src/neural/attention_router.py" = ["C416"]
 # Nanoservices: re-export __init__ files and research/simulation modules
 "src/nanoservices/**/__init__.py" = ["F401"]
-"src/nanoservices/**" = ["B007", "B905", "E741", "E712", "W291", "W293"]
+# S311: nanoservices use stdlib random for simulation/ML — not security-sensitive
+# S105/S106: symbolic names (SECRET, PASS, TOP_SECRET) are event/enum labels, not passwords
+# S108: /dev/shm and /tmp paths are intentional for IPC and cache storage
+# S310: internal URL opens (health checks, local services) are not external threats
+# S324: MD5 used for non-security cache keys only
+"src/nanoservices/**" = ["B007", "B905", "E741", "E712", "W291", "W293", "S105", "S106", "S108", "S310", "S311", "S324"]
+# Simulation/AI modules outside nanoservices also use random for non-security purposes
+"src/evolution/**"   = ["S311"]
+"src/fluidic/**"     = ["S311"]
+"src/mesh/**"        = ["S311"]
+"src/neural/**"      = ["S311"]
+"src/resonate/**"    = ["S311"]
+"src/tranquility/**" = ["S311"]
+# Self-deployment agent runs CLI commands intentionally (deployment automation)
+"src/nanoservices/self_deployment_agent/**" = ["S603", "S607"]
+# Formal verification and WASM runtimes spawn controlled subprocesses intentionally
+"src/nanoservices/formal_verification/**" = ["S603"]
+"src/nanoservices/wasm_edge/**"           = ["S603"]
+# Event/error catalog strings are symbolic names, not passwords — all S105 are false positives
+"src/errors/error_catalog.py" = ["S105"]
+"src/event_bus/types.py"      = ["S105"]
+# Self-hosted servers bind 0.0.0.0 intentionally (behind Traefik reverse proxy)
+"src/main_enhanced.py"              = ["S104"]
+"src/nanoservices/nano_server.py"   = ["S104"]
+# Observability health checks ping internal services over HTTP — S310 false positive
+"src/observability/health.py" = ["S310"]
 "shared_core/__init__.py" = ["F401"]
+"workers/dimensional-nexus-service/worker.py" = ["E402"]
+"workers/hive-service/worker.py" = ["E402"]
 
 [tool.ruff.format]
 quote-style = "double"

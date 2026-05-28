@@ -447,7 +447,7 @@ def create_sentinel_cluster_app():
         """Create a new sentinel cluster."""
         mgr = get_sentinel_cluster_manager()
         body = await request.json() if request.headers.get("content-type") else {}
-        mgr.create_cluster(cluster_name, config=body.get("config"))
+        mgr.create_cluster(cluster_name, config=body.get("config"))  # type: ignore[arg-type,misc]
         return {"action": "create_cluster", "cluster_name": cluster_name, "status": "created"}
 
     @app.delete("/clusters/{cluster_name}", tags=["clusters"])
@@ -483,7 +483,7 @@ def create_sentinel_cluster_app():
         if cluster is None:
             return {"error": "cluster not found", "cluster_name": cluster_name}
         body = await request.json() if request.headers.get("content-type") else {}
-        cluster.add_node(
+        cluster.add_node(  # type: ignore[call-arg]
             node_id=node_id,
             address=body.get("address", f"sentinel-{node_id}:6379"),
             role=body.get("role", "replica"),
@@ -518,7 +518,7 @@ def create_sentinel_cluster_app():
         if cluster is None:
             return {"error": "cluster not found", "cluster_name": cluster_name}
         body = await request.json() if request.headers.get("content-type") else {}
-        result = await cluster.perform_failover(target_node_id=body.get("target_node_id"))
+        result = await cluster.perform_failover(target_node_id=body.get("target_node_id"))  # type: ignore[misc]
         return {"action": "failover", "cluster_name": cluster_name, "result": result}
 
     return app

@@ -325,9 +325,9 @@ class NSARegistry:
         # Sort by: lowest error rate, then lowest latency, then lowest request count
         healthy.sort(
             key=lambda s: (
-                s.health.error_rate,
-                s.health.latency_ms,
-                s.health.request_count,
+                s.health.error_rate,  # type: ignore[union-attr]
+                s.health.latency_ms,  # type: ignore[union-attr]
+                s.health.request_count,  # type: ignore[union-attr]
             )
         )
         return healthy[0]
@@ -432,8 +432,8 @@ class NSARegistry:
                                 await self._emit("status_change", svc, old, ServiceStatus.DEGRADED)
             except asyncio.CancelledError:
                 break
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
 
     def stats(self) -> Dict[str, Any]:
         """Get registry statistics."""

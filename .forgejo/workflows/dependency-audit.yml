@@ -187,10 +187,102 @@ jobs:
           path: worker-audit-report.md
           retention-days: 30
 
+  sbom-generation:
+    name: SBOM Generation (CycloneDX)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install SBOM tools
+        run: |
+          pip install --quiet cyclonedx-bom pip-licenses
+
+      - name: Install project dependencies (for license scan)
+        run: |
+          pip install --quiet -r requirements.txt || true
+
+      - name: Generate CycloneDX SBOM (JSON)
+        run: |
+          echo "::group::CycloneDX SBOM — Python"
+          cyclonedx-py environment \
+            --output-format json \
+            --output-file sbom-python.json \
+            || cyclonedx-py pip --pypi --output sbom-python.json || true
+          echo "::endgroup::"
+
+      - name: Generate CycloneDX SBOM (XML)
+        run: |
+          echo "::group::CycloneDX SBOM — XML format"
+          cyclonedx-py environment \
+            --output-format xml \
+            --output-file sbom-python.xml \
+            || true
+          echo "::endgroup::"
+
+      - name: Generate licence manifest
+        run: |
+          echo "::group::License manifest"
+          pip-licenses \
+            --format=json \
+            --output-file=licenses.json \
+            --with-urls \
+            --with-description \
+            || true
+          pip-licenses \
+            --format=markdown \
+            --output-file=licenses.md \
+            || true
+          cat licenses.md || true
+          echo "::endgroup::"
+
+      - name: Check for prohibited licences
+        run: |
+          echo "::group::Prohibited licence check (GPL, AGPL, SSPL)"
+          python3 - <<'PYEOF'
+          import json, sys
+          try:
+              with open("licenses.json") as f:
+                  data = json.load(f)
+          except Exception:
+              print("No licence data — skipping check")
+              sys.exit(0)
+          prohibited = ["GPL", "AGPL", "SSPL", "EUPL"]
+          flagged = []
+          for pkg in data:
+              lic = pkg.get("License", "")
+              if any(p in lic.upper() for p in prohibited):
+                  flagged.append(f"  ⚠️  {pkg['Name']} {pkg['Version']}: {lic}")
+          if flagged:
+              print("Potentially non-commercial-friendly licences detected:")
+              print("\n".join(flagged))
+              print("\nReview before production use.")
+          else:
+              print("✅ No prohibited licences detected.")
+          PYEOF
+          echo "::endgroup::"
+
+      - name: Upload SBOM artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-reports
+          path: |
+            sbom-python.json
+            sbom-python.xml
+            licenses.json
+            licenses.md
+          retention-days: 90
+
   audit-dashboard:
     name: Audit Dashboard
     runs-on: ubuntu-latest
-    needs: [python-audit, node-audit, worker-dependency-scan]
+    needs: [python-audit, node-audit, worker-dependency-scan, sbom-generation]
     if: always()
     steps:
       - name: Download all reports
@@ -248,5 +340,22 @@ jobs:
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## SBOM" >> $GITHUB_STEP_SUMMARY
+          if [ -f sbom-reports/sbom-python.json ]; then
+            PKG_COUNT=$(python3 -c "
+              import json
+              try:
+                d=json.load(open('sbom-reports/sbom-python.json'))
+                comps=d.get('components',d.get('dependencies',[]))
+                print(len(comps))
+              except: print('parse-error')
+            ")
+            echo "- CycloneDX SBOM components: ${PKG_COUNT}" >> $GITHUB_STEP_SUMMARY
+            echo "- Licence manifest: available (see sbom-reports artefact)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ No SBOM report found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "_Zero-cost audit powered by pip-audit, Safety, npm audit_" >> $GITHUB_STEP_SUMMARY
+          echo "_Zero-cost audit powered by pip-audit, Safety, npm audit, cyclonedx-bom, pip-licenses_" >> $GITHUB_STEP_SUMMARY

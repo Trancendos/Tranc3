@@ -128,10 +128,10 @@ class AgentRuntime:
         self._results: Dict[str, Any] = {}
 
         # Lazy-loaded components (initialized on start)
-        self._task_decomposer = None
-        self._tool_bridge = None
-        self._memory_stream = None
-        self._goal_manager = None
+        self._task_decomposer: Optional[Any] = None
+        self._tool_bridge: Optional[Any] = None
+        self._memory_stream: Optional[Any] = None
+        self._goal_manager: Optional[Any] = None
 
         # Observers
         self._state_observers: List[Callable[[AgentState, AgentState], None]] = []
@@ -213,6 +213,7 @@ class AgentRuntime:
         if self._goal_manager is None:
             self._init_components()
 
+        assert self._goal_manager is not None  # noqa: S101 — set by _init_components()
         goal_id = await self._goal_manager.add_goal(
             description=description,
             priority=priority,
@@ -257,7 +258,7 @@ class AgentRuntime:
 
         # Decompose if needed
         self._set_state(AgentState.PLANNING)
-        decomposition = await self._task_decomposer.decompose(active_goal.description)
+        decomposition = await self._task_decomposer.decompose(active_goal.description)  # type: ignore[union-attr]
 
         if not decomposition.subtasks:
             await self._goal_manager.mark_failed(active_goal.goal_id, "Could not decompose goal")

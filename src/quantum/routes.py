@@ -9,7 +9,7 @@ import logging
 from typing import Any, Dict
 
 from fastapi import APIRouter, Body
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 
 from Dimensional.error_handlers import safe_error_detail
 
@@ -43,7 +43,7 @@ async def thinktank_status() -> Dict[str, Any]:
 
 
 @router.post("/quantum/simulate")
-async def quantum_simulate(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def quantum_simulate(body: Dict[str, Any] = Body(...)) -> Response:
     """
     Run a quantum circuit simulation via Qiskit Aer.
     Body: { qubits: int, shots: int, circuit_type: str }
@@ -64,7 +64,7 @@ async def quantum_simulate(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
         job = sim.run(qc, shots=shots)
         result = job.result()
         counts = result.get_counts()
-        return {"qubits": qubits, "shots": shots, "counts": dict(counts)}
+        return {"qubits": qubits, "shots": shots, "counts": dict(counts)}  # type: ignore[return-value]
     except ImportError:
         return JSONResponse(
             {"error": "Required dependency not available"},
@@ -83,7 +83,7 @@ async def deepmind_plan(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     try:
         from src.deepmind.planning import PlanningEngine
 
-        engine = PlanningEngine()
+        engine = PlanningEngine()  # type: ignore[call-arg]
         problem = body.get("problem", "")
         depth = int(body.get("depth", 3))
         plan = (

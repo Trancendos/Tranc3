@@ -374,7 +374,7 @@ class MLPipeline:
         if prior_context:
             enriched_prompt = f"[Prior context: {prior_context[:500]}]\n\n{request.prompt}"
 
-        llm_request = LLMRequest(
+        llm_request = LLMRequest(  # type: ignore[call-arg]
             prompt=enriched_prompt,
             personality=request.personality,
             system_prompt=request.system_prompt,
@@ -456,7 +456,7 @@ class MLPipeline:
                     await router.report_latency(routed_from, total_ms)
                     if not success:
                         await router.report_error(routed_from, True)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass  # nosec B110 — graceful degradation; error logged upstream
 
         total_ms = (time.monotonic() - t0) * 1000

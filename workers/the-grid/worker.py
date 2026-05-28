@@ -12,6 +12,7 @@ Zero-cost: Pure in-process Python, SQLite storage, no external workflow engines.
 
 from __future__ import annotations
 
+import os
 import json
 import logging
 import sqlite3
@@ -469,7 +470,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )

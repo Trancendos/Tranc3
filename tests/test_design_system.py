@@ -6,8 +6,16 @@ auto-evolve scheduler. All zero-cost, no external deps.
 from __future__ import annotations
 
 import asyncio
-import time
 import pytest
+
+
+async def _poll_until(condition, *, timeout: float = 2.0, interval: float = 0.01) -> None:
+    """Spin until *condition* returns True or *timeout* seconds elapse."""
+    deadline = asyncio.get_event_loop().time() + timeout
+    while asyncio.get_event_loop().time() < deadline:
+        if condition():
+            return
+        await asyncio.sleep(interval)
 
 
 # ---------------------------------------------------------------------------
@@ -18,20 +26,26 @@ import pytest
 class TestEnergyConstants:
     def test_import(self):
         from src.bridge.energy_constants import (
-            EnergyClass,
             BridgeType,
+            BRIDGE_DEFAULT_ENERGY,
+            CRYSTAL_BASE_COST,
+            DIALITHIUM_PRIORITY,
+            EnergyClass,
+            LIGHT_AMBIENT_TICK_HZ,
+            LIGHTNING_BURST_LIMIT_MS,
             cost_for,
             priority_for,
-            BRIDGE_DEFAULT_ENERGY,
-            DIALITHIUM_PRIORITY,
-            CRYSTAL_BASE_COST,
-            LIGHTNING_BURST_LIMIT_MS,
-            LIGHT_AMBIENT_TICK_HZ,
         )
+
         assert DIALITHIUM_PRIORITY == 1
         assert CRYSTAL_BASE_COST == 0.6
         assert LIGHTNING_BURST_LIMIT_MS == 50.0
         assert LIGHT_AMBIENT_TICK_HZ == 10.0
+        assert EnergyClass is not None
+        assert BridgeType is not None
+        assert cost_for is not None
+        assert priority_for is not None
+        assert BRIDGE_DEFAULT_ENERGY is not None
 
     def test_cost_ordering(self):
         from src.bridge.energy_constants import EnergyClass, cost_for
@@ -137,7 +151,7 @@ class TestTranc3Base:
         ai = TestLeadAI(aid="AID-TST-05", location_pid="PID-TST", name="Test-AI-5")
         await ai.start()
         assert ai._running
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0)  # yield to let the task initialise
         await ai.stop()
         assert not ai._running
 
@@ -172,9 +186,8 @@ class TestInfinityAgentBase:
         agent.register_handler("ping", handler)
         await agent.start()
         task = await agent.enqueue("ping", {"msg": "hello"})
-        await asyncio.sleep(0.1)
+        await _poll_until(lambda: any(t.task_id == task.task_id for t in agent._completed))
         await agent.stop()
-        # Task should be completed
         assert any(t.task_id == task.task_id for t in agent._completed)
 
 
@@ -182,8 +195,13 @@ class TestInfinityBotBase:
     def test_slot_validation(self):
         from src.entities.templates.infinity_bot_base import InfinityBot
 
+        # Must use a concrete subclass — abstract class raises TypeError before __init__
+        class _ConcreteBot(InfinityBot):
+            async def run_task(self) -> dict:
+                return {}
+
         with pytest.raises(ValueError):
-            InfinityBot(nid="NID-X", location_pid="PID-X", name="X", slot="05")
+            _ConcreteBot(nid="NID-X", location_pid="PID-X", name="X", slot="05")
 
     @pytest.mark.asyncio
     async def test_run_task_lifecycle(self):
@@ -206,7 +224,7 @@ class TestInfinityBotBase:
 
         bot = CountBot()
         await bot.start()
-        await asyncio.sleep(0.2)
+        await _poll_until(lambda: bot.run_count >= 1)
         await bot.stop()
         assert bot.run_count >= 1
         assert bot.success_rate() > 0.0

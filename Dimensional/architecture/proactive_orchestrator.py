@@ -601,7 +601,7 @@ class AutoHealingEngine:
             if asyncio.iscoroutinefunction(plan.executor):
                 result = await plan.executor()
             else:
-                result = plan.executor()
+                result = plan.executor()  # type: ignore[misc]
 
             plan.status = ActionStatus.COMPLETED
             plan.completed_at = time.time()
@@ -1472,9 +1472,9 @@ class ProactiveOrchestrator:
             active_actions=len(self._healing_engine.get_active_heals()),
             pending_actions=len(self._action_dispatcher.get_pending()),
             failed_actions_24h=sum(
-                1
+                1  # type: ignore[misc]
                 for p in self._healing_engine._heal_history
-                if p.status == ActionStatus.FAILED and time.time() - p.completed_at < 86400.0
+                if p.status == ActionStatus.FAILED and time.time() - p.completed_at < 86400.0  # type: ignore[operator]
                 if p.completed_at
             ),
         )

@@ -124,7 +124,7 @@ class ComplexityRiskDetector:
                 continue
 
             # Calculate cyclomatic complexity
-            complexity = self._cyclomatic_complexity(node)
+            complexity = self._cyclomatic_complexity(node)  # type: ignore[arg-type]
 
             if complexity > 10:
                 signals.append(
@@ -320,7 +320,7 @@ class ViolationPredictor:
         Args:
             violations: List of Violation objects from a scan.
         """
-        counter = Counter()
+        counter = Counter()  # type: ignore[var-annotated]
         for v in violations:
             counter[v.file] += 1
 

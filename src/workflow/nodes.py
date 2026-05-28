@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Type
@@ -70,15 +71,16 @@ class NodeResult:
 # ---------------------------------------------------------------------------
 
 
-class BaseNode:
+class BaseNode(ABC):
     """Abstract base for all workflow nodes."""
 
     def __init__(self, config: NodeConfig) -> None:
         self.config = config
         self.logger = logging.getLogger(f"{__name__}.{config.type}.{config.id}")
 
-    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:  # noqa: E501
-        raise NotImplementedError(f"{self.__class__.__name__} must implement execute()")
+    @abstractmethod
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
+        ...
 
     async def _with_timeout(self, coro, timeout: float):
         """Wrap a coroutine with asyncio.timeout (Python 3.11+) or wait_for."""
@@ -840,7 +842,7 @@ class MergeNode(BaseNode):
         t0 = time.monotonic()
         strategy = self.config.config.get("strategy", "merge")  # merge | first | last
         if strategy == "first":
-            output = next(iter(inputs.values()), {}) if inputs else {}
+            output = next(iter(inputs.values()), {}) if inputs else {}  # type: ignore[var-annotated]
         elif strategy == "last":
             output = next(reversed(list(inputs.values())), {}) if inputs else {}
         else:

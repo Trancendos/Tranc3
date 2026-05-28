@@ -2,9 +2,61 @@
 # Pydantic-settings based configuration with hot-reload support
 # Replaces the scattered os.getenv() calls across the codebase
 
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 from pydantic import ConfigDict, Field, field_validator
+
+
+@dataclass
+class ModelConfig:
+    """Architecture hyperparameters for the TRANC3 transformer model."""
+
+    vocab_size: int = 119547
+    d_model: int = 768
+    n_heads: int = 12
+    n_layers: int = 12
+    d_ff: int = 3072
+    d_head: int = 64  # d_model // n_heads
+    max_seq_len: int = 2048
+    dropout: float = 0.1
+
+
+@dataclass
+class TrainingConfig:
+    """Hyperparameters and paths for the TRANC3 training loop."""
+
+    device: str = "auto"
+    learning_rate: float = 3e-4
+    beta1: float = 0.9
+    beta2: float = 0.95
+    weight_decay: float = 0.1
+    batch_size: int = 8
+    gradient_accumulation_steps: int = 4
+    grad_accum_steps: int = 4        # alias used by trainer
+    mixed_precision: bool = True
+    num_epochs: int = 3
+    warmup_steps: int = 500
+    max_steps: int = 100_000
+    data_dir: str = "./data"
+    checkpoint_dir: str = "./checkpoints"
+    run_name: str = "tranc3"
+    log_interval: int = 50
+    eval_every: int = 500
+    save_every: int = 1000
+    grad_clip: float = 1.0
+
+
+@dataclass
+class InferenceConfig:
+    """Runtime inference settings for the TRANC3 engine."""
+
+    device: str = "auto"
+    max_new_tokens: int = 512
+    temperature: float = 0.8
+    top_p: float = 0.9
+    top_k: int = 50
+    repetition_penalty: float = 1.1
 
 try:
     from pydantic_settings import BaseSettings
@@ -137,7 +189,7 @@ class Tranc3Config(BaseSettings):
         """Parse LLM_FALLBACK_PROVIDERS comma-separated string into a list."""
         return [p.strip() for p in self.LLM_FALLBACK_PROVIDERS.split(",")]
 
-    model_config = ConfigDict(
+    model_config = ConfigDict(  # type: ignore[typeddict-unknown-key,assignment]
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,

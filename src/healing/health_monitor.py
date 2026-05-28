@@ -169,7 +169,7 @@ class LogicCoreHealthMonitor:
         name: str,
         endpoint: str,
         health_endpoint: str,
-        config: dict = None,
+        config: Optional[dict] = None,
     ) -> None:
         """Register a service for continuous health monitoring."""
         if config is None:

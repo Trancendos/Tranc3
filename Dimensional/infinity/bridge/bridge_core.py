@@ -36,12 +36,11 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from Dimensional.infinity.nomenclature import (
     InfinityLocation,
     SentinelChannel,
-    TransferSystem,
 )
 
 logger = logging.getLogger(__name__)
@@ -922,7 +921,7 @@ class InfinitySentinelBridge:
                 payload=payload,
                 channel=channel,
             )
-            self._bridge._emit_event(bridge_event)
+            self._bridge._emit_event(bridge_event)  # type: ignore[union-attr]
             self._stats["sentinel_to_bridge"] += 1
         except Exception as e:
             self._stats["errors"] += 1

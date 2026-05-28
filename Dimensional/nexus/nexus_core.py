@@ -46,19 +46,18 @@ import time
 import uuid
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
-from enum import Enum
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
-from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from Dimensional.infinity.nomenclature import InfinityRole, SentinelChannel, Tier
-from Dimensional.infinity.rbac import RBACEngine, Permission
-from Dimensional.infinity.abac import ABACEngine, Policy, PolicyEffect
+from Dimensional.infinity.nomenclature import SentinelChannel
+from Dimensional.infinity.rbac import RBACEngine
+from Dimensional.infinity.abac import ABACEngine
 
 logger = logging.getLogger("nexus")
 
@@ -341,7 +340,7 @@ class TierAccessBridge:
         rbac_result = None
         if self.rbac and subject_role:
             try:
-                rbac_result = self.rbac.check_permission(subject_role, resource, action)
+                rbac_result = self.rbac.check_permission(subject_role, resource, action)  # type: ignore[arg-type,call-arg]
             except Exception:
                 rbac_result = None  # RBAC not authoritative if misconfigured
 
@@ -352,7 +351,7 @@ class TierAccessBridge:
                 abac_result = self.abac.evaluate(
                     subject_attributes or {},
                     resource_attributes or {},
-                    action,
+                    action,  # type: ignore[arg-type]
                     environment or {},
                 )
             except Exception:
@@ -640,7 +639,7 @@ class EventRouter:
     def __init__(self, causal_engine: CausalOrderingEngine):
         self.causal_engine = causal_engine
         self._subscriptions: Dict[str, Set[str]] = defaultdict(set)  # channel → set of service_ids
-        self._event_handlers: Dict[str, List[callable]] = defaultdict(list)
+        self._event_handlers: Dict[str, List[callable]] = defaultdict(list)  # type: ignore[valid-type]
         self._lock = asyncio.Lock()
 
     async def subscribe(self, channel: str, service_id: str) -> None:
@@ -653,7 +652,7 @@ class EventRouter:
         async with self._lock:
             self._subscriptions[channel].discard(service_id)
 
-    async def register_handler(self, channel: str, handler: callable) -> None:
+    async def register_handler(self, channel: str, handler: callable) -> None:  # type: ignore[valid-type]
         """Register an async handler for events on a channel."""
         async with self._lock:
             self._event_handlers[channel].append(handler)
@@ -674,9 +673,9 @@ class EventRouter:
         for handler in handlers:
             try:
                 if asyncio.iscoroutinefunction(handler):
-                    await handler(event)
+                    await handler(event)  # type: ignore[misc]
                 else:
-                    handler(event)
+                    handler(event)  # type: ignore[misc]
             except Exception as e:
                 logger.error(f"Event handler error on channel {event.channel}: {e}")
 

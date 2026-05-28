@@ -372,7 +372,7 @@ class AlignmentVerifier:
         if proposal.risk_level in (
             RiskLevel.HIGH,
             RiskLevel.CRITICAL,
-        ) and proposal.containment_required in (ContainmentLevel.OPEN, ContainmentLevel.SANDBED):
+        ) and proposal.containment_required in (ContainmentLevel.OPEN, ContainmentLevel.SANDBOXED):
             anomalies.append("insufficient_containment")
             recommendations.append("increase_containment_level")
 

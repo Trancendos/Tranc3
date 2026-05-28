@@ -155,7 +155,7 @@ class PressureBalancer:
         total_energy = sum(energies.values())
         weights = {n: e / total_energy for n, e in energies.items()}
 
-        selected = max(weights, key=weights.get)
+        selected = max(weights, key=weights.get)  # type: ignore[arg-type]
         system_pressure = sum(m.pressure for m in self._molecules.values())
 
         elapsed = (time.perf_counter() - t0) * 1000

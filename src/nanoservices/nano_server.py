@@ -300,11 +300,11 @@ async def memory(req: MemoryRequest):
         vs = VectorStore()
         if req.action == "store":
             embed = await _run("embed", text=req.text)
-            doc_id = await vs.store(req.key or req.text[:50], embed["embedding"])
+            doc_id = await vs.store(req.key or req.text[:50], embed["embedding"])  # type: ignore[call-arg,misc]
             return {"stored": True, "id": doc_id}
         elif req.action in ("recall", "search"):
             embed = await _run("embed", text=req.text)
-            results = await vs.search(embed["embedding"], top_k=req.top_k)
+            results = await vs.search(embed["embedding"], top_k=req.top_k)  # type: ignore[misc]
             return {"results": results}
         else:
             raise HTTPException(400, detail=f"Unknown memory action: {req.action}")

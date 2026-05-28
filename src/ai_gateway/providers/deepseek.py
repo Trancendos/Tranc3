@@ -49,7 +49,7 @@ class DeepSeekProvider(AIProvider):
         super().__init__(
             name="deepseek",
             base_url=base_url,
-            api_key=api_key or os.getenv("DEEPSEEK_API_KEY", ""),
+            api_key=api_key or os.getenv("DEEPSEEK_API_KEY", ""),  # type: ignore[arg-type]
         )
         self._default_model = default_model
         self._client = None

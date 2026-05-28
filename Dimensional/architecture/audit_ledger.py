@@ -307,8 +307,8 @@ class AuditLedger:
     def get_stats(self) -> Dict[str, Any]:
         """Return statistics about the audit ledger."""
         records = self._read_all_records()
-        event_types = {}
-        actors = {}
+        event_types = {}  # type: ignore[var-annotated]
+        actors = {}  # type: ignore[var-annotated]
         for r in records:
             event_types[r.event_type] = event_types.get(r.event_type, 0) + 1
             actors[r.actor] = actors.get(r.actor, 0) + 1
@@ -363,7 +363,7 @@ class AuditLedger:
 
         # Add HMAC signature
         signature = hmac.new(
-            self._signing_key.encode(),
+            self._signing_key.encode(),  # type: ignore[union-attr]
             raw_hash,
             hashlib.sha256,
         ).hexdigest()

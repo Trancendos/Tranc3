@@ -9,6 +9,7 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 
 from __future__ import annotations
 
+import os
 import logging
 import sqlite3
 import threading
@@ -143,7 +144,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -159,11 +160,6 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
     }
-
-
-# TODO: Add specific CRUD endpoints for identity-service
-# The database class above provides create(), get(), list(), update(), delete() methods
-# Implement domain-specific endpoints based on business requirements
 
 
 @app.get("/")
@@ -204,6 +200,78 @@ async def delete_by_id(identity_id: str):
     if not db.delete("identity_id", identity_id):
         raise HTTPException(404, f"Not found: {identity_id}")
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Domain-specific endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/by-user/{user_id}")
+async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
+    """List all identities for a given user across all providers."""
+    return {"data": db.list(limit=limit, offset=offset, user_id=user_id)}
+
+
+@app.get("/by-provider/{provider}")
+async def get_by_provider(provider: str, limit: int = 50, offset: int = 0):
+    """List all identities registered via a specific OAuth provider."""
+    return {"data": db.list(limit=limit, offset=offset, provider=provider)}
+
+
+@app.get("/by-provider/{provider}/{provider_id}")
+async def get_by_provider_id(provider: str, provider_id: str):
+    """Lookup a specific identity by provider + provider_id (e.g. google + sub)."""
+    conn = db._get_conn()
+    row = conn.execute(
+        "SELECT * FROM identities WHERE provider=? AND provider_id=?",
+        (provider, provider_id),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, f"Not found: {provider}/{provider_id}")
+    return dict(row)
+
+
+@app.post("/{identity_id}/verify")
+async def verify_identity(identity_id: str):
+    """Mark an identity as verified."""
+    if not db.update("identity_id", identity_id, {"verified": 1}):
+        raise HTTPException(404, f"Not found: {identity_id}")
+    return {"ok": True, "verified": True}
+
+
+@app.post("/{identity_id}/unverify")
+async def unverify_identity(identity_id: str):
+    """Remove verification from an identity."""
+    if not db.update("identity_id", identity_id, {"verified": 0}):
+        raise HTTPException(404, f"Not found: {identity_id}")
+    return {"ok": True, "verified": False}
+
+
+@app.get("/search")
+async def search_identities(
+    email: Optional[str] = None,
+    display_name: Optional[str] = None,
+    verified: Optional[int] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Search identities by email, display_name, or verified status."""
+    conn = db._get_conn()
+    query = "SELECT * FROM identities WHERE 1=1"
+    params: list = []
+    if email:
+        query += " AND email LIKE ?"
+        params.append(f"%{email}%")
+    if display_name:
+        query += " AND display_name LIKE ?"
+        params.append(f"%{display_name}%")
+    if verified is not None:
+        query += " AND verified=?"
+        params.append(verified)
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+    rows = conn.execute(query, params).fetchall()
+    return {"data": [dict(r) for r in rows], "count": len(rows)}
 
 
 if __name__ == "__main__":

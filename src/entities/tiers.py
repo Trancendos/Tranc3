@@ -408,15 +408,15 @@ class Sovereign:
         for prime in self._primes.values():
             try:
                 await prime.stop()
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
         # Stop all directly registered AIs
         for ai in self._ais.values():
             if hasattr(ai, "stop") and asyncio.iscoroutinefunction(ai.stop):
                 try:
                     await ai.stop()
-                except Exception:
-                    pass
+                except Exception:  # noqa: S110
+                    pass  # graceful degradation
 
     async def resume_from_emergency(self) -> None:
         """Resume from emergency stop."""

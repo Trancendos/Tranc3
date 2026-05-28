@@ -180,9 +180,9 @@ async def _handle_neural_mesh_emit(params: Dict[str, Any]) -> Dict[str, Any]:
 
         # Auto-register source node if absent
         if source_id not in mesh._nodes:
-            node = MeshNode(id=source_id, service_name="spark", host="internal", port=0)
+            node = MeshNode(id=source_id, service_name="spark", host="internal", port=0)  # type: ignore[call-arg]
             await mesh.register_node(node)
-        signal = Signal(
+        signal = Signal(  # type: ignore[call-arg]
             source_id=source_id,
             signal_type=signal_type,
             payload=payload,
@@ -863,7 +863,7 @@ async def _handle_nanobot_dispatch(params: Dict[str, Any]) -> Dict[str, Any]:
             fm_upper = failure_mode_str.upper()
             if fm_upper in FailureMode.__members__:
                 failure_mode = FailureMode[fm_upper]
-                report = await dispatcher.dispatch(failure_mode, config=override_cfg)
+                report = await dispatcher.dispatch(failure_mode, config=override_cfg)  # type: ignore[call-arg]
             else:
                 return _err(
                     f"Unknown failure_mode '{failure_mode_str}'. "
@@ -1361,11 +1361,11 @@ def register_phase4_tools(registry: Any) -> int:
     for t in PHASE4_TOOLS:
         try:
             tool = SparkTool(
-                name=t["name"],
-                description=t["description"],
-                input_schema=t["input_schema"],
-                handler=t["handler"],
-                category=t.get("category", "phase4"),
+                name=t["name"],  # type: ignore[arg-type]
+                description=t["description"],  # type: ignore[arg-type]
+                input_schema=t["input_schema"],  # type: ignore[arg-type]
+                handler=t["handler"],  # type: ignore[arg-type]
+                category=t.get("category", "phase4"),  # type: ignore[arg-type]
                 version="4.0.0",
             )
             registry.register(tool)

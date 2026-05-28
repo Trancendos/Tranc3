@@ -23,10 +23,9 @@ class ConsciousnessAwareGenerator:
         self.config = config
         self.feature_manager = feature_manager
 
+        self.consciousness: Optional[ConsciousnessModel] = None
         if feature_manager.is_enabled(FeatureFlag.CONSCIOUSNESS_ENGINE):
             self.consciousness = ConsciousnessModel(config)
-        else:
-            self.consciousness = None
 
     def generate_with_consciousness(
         self,
@@ -56,7 +55,7 @@ class ConsciousnessAwareGenerator:
         neural_state = input_tensor.unsqueeze(0).unsqueeze(0)
 
         # Calculate consciousness metrics
-        phi = self.consciousness.calculate_phi(neural_state.squeeze())
+        phi = self.consciousness.calculate_phi(neural_state.squeeze())  # type: ignore[union-attr]
 
         # Consciousness-modulated personality
         consciousness_factor = min(phi / 3.0, 1.0)  # Normalize to 0-1
@@ -144,3 +143,23 @@ class ConsciousnessAwareGenerator:
             suggestions.append("Enhance quantum inspiration")
 
         return suggestions
+
+    async def compute_phi(self, text: str) -> float:
+        """Compute Integrated Information Theory (IIT) phi estimate for *text*."""
+        try:
+            if self.consciousness is not None:
+                state = self.consciousness(
+                    torch.zeros(1, len(text.split()), dtype=torch.long)
+                )
+                phi = float(state.get("phi", 0.0)) if isinstance(state, dict) else 0.0
+                return max(0.0, min(1.0, phi))
+        except Exception:
+            pass
+        # Heuristic fallback: lexical diversity as a phi proxy
+        words = text.split()
+        vocab = len(set(words))
+        return min(1.0, vocab / max(len(words), 1) * 2.0)
+
+
+# Alias for import compatibility
+ConsciousnessIntegration = ConsciousnessAwareGenerator

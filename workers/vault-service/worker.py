@@ -226,7 +226,7 @@ app = FastAPI(
     version="0.1.0",
     lifespan=_lifespan,
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","), allow_methods=["*"], allow_headers=["*"])
 
 
 # ---------------------------------------------------------------------------

@@ -442,5 +442,5 @@ class FlowRunner:
                     await handler(event, execution)
                 else:
                     handler(event, execution)
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation

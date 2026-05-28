@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite, no external deps.
 
 from __future__ import annotations
 
+import os
 import json
 import logging
 import sqlite3
@@ -147,7 +148,7 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","), allow_methods=["*"], allow_headers=["*"])
 
 
 @app.get("/health")

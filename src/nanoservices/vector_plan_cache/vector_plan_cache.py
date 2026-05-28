@@ -54,7 +54,7 @@ class NRCQueryEmbedding:
             self.schema_hash = hashlib.sha3_256(self.nrc_dsl.encode()).hexdigest()[:16]
         if not self.relation_fingerprint:
             # Extract relation names from DSL for quick fingerprinting
-            relations = sorted(set(w for w in self.nrc_dsl.split() if w.isidentifier()))
+            relations = sorted({w for w in self.nrc_dsl.split() if w.isidentifier()})
             self.relation_fingerprint = hashlib.sha3_256(":".join(relations).encode()).hexdigest()[
                 :12
             ]
@@ -327,9 +327,20 @@ class LanceDBPlanStore:
         if self._use_lancedb and self._table is not None:
             try:
                 return len(self._table)
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
         return self._fallback.count()
+
+    def delete(self, ids: List[str]) -> None:
+        """Delete vectors by ID."""
+        if self._use_lancedb and self._table is not None:
+            try:
+                for id_ in ids:
+                    self._table.delete(f"id = '{id_}'")
+                return
+            except Exception as e:
+                logger.warning(f"LanceDB delete failed: {e}")
+        self._fallback.delete(ids)
 
 
 class VectorPlanCache:
@@ -357,9 +368,9 @@ class VectorPlanCache:
         if backend == CacheBackend.LANCEDB:
             self._store = LanceDBPlanStore()
         elif backend == CacheBackend.CHROMADB:
-            self._store = ChromaDBPlanStore()
+            self._store = ChromaDBPlanStore()  # type: ignore[assignment]
         else:
-            self._store = InMemoryVectorStore()
+            self._store = InMemoryVectorStore()  # type: ignore[assignment]
 
         self._plans: Dict[str, CachedPlan] = {}
         self._query_to_plan: Dict[str, str] = {}  # schema_hash -> plan_id
@@ -425,7 +436,7 @@ class VectorPlanCache:
         search_results = []
 
         for plan_id, similarity, meta in results:
-            plan = self._plans.get(plan_id)
+            plan = self._plans.get(plan_id)  # type: ignore[assignment]
             if plan:
                 # Check staleness
                 age_hours = (time.time() - plan.created_at) / 3600
@@ -472,7 +483,7 @@ class VectorPlanCache:
 
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
-        status_counts = {}
+        status_counts = {}  # type: ignore[var-annotated]
         for plan in self._plans.values():
             status_counts[plan.status.value] = status_counts.get(plan.status.value, 0) + 1
 

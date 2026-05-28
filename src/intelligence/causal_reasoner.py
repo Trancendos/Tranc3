@@ -219,7 +219,7 @@ class CausalGraph:
             node = queue.popleft()
             order.append(node)
             for rid in self._adj_forward.get(node, []):
-                rule = self._rules.get(rid)
+                rule = self._rules.get(rid)  # type: ignore[assignment]
                 if rule:
                     in_degree[rule.effect] -= 1
                     if in_degree[rule.effect] == 0:

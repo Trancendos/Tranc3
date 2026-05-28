@@ -545,13 +545,13 @@ class QuantumNetwork:
                 current_pair = QuantumRepeater("temp").entanglement_swap(current_pair, pairs[i])
 
         # Purify if below threshold
-        if current_pair["fidelity"] < target_fidelity and len(pairs) > 1:
+        if current_pair["fidelity"] < target_fidelity and len(pairs) > 1:  # type: ignore[operator]
             # Generate another pair for purification
             second_pair = {
                 "id": str(uuid.uuid4())[:8],
                 "source": node_a,
                 "target": node_b,
-                "fidelity": current_pair["fidelity"] * 0.9,
+                "fidelity": current_pair["fidelity"] * 0.9,  # type: ignore[operator]
                 "hops": current_pair.get("hops", 1),
             }
             temp_repeater = QuantumRepeater("purify")

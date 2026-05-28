@@ -7,6 +7,7 @@ Integrates with the aerial_drone_adapter for ROS2 bridge support.
 
 from __future__ import annotations
 
+import logging
 import math
 import random
 import uuid
@@ -14,8 +15,6 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -447,7 +446,7 @@ class MultiDroneSwarmSimulation:
                 )
                 score = active / (1 + dist)
                 if score > best_score:
-                    best_score = score
+                    best_score = score  # type: ignore[assignment]
                     best_swarm = swarm
 
         if best_swarm:

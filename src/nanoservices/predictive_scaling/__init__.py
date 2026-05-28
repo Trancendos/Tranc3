@@ -1,11 +1,11 @@
 from .predictive_scaling import (
-    ScalingDirection,
-    ScalingReason,
-    ResourceType,
-    LoadObservation,
-    ScalingDecision,
-    ScalingPolicy,
     DoubleExponentialSmoother,
-    SeasonalPatternDetector,
+    LoadObservation,
     PredictiveScalingEngine,
+    ResourceType,
+    ScalingDecision,
+    ScalingDirection,
+    ScalingPolicy,
+    ScalingReason,
+    SeasonalPatternDetector,
 )

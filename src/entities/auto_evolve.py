@@ -82,25 +82,36 @@ class AutoEvolve:
         if not hasattr(entity, "evolve"):
             return
         try:
-            best = await entity.evolve(
-                generations=self._generations, pop_size=self._pop_size
-            )
+            best = await entity.evolve(generations=self._generations, pop_size=self._pop_size)
             self._last_evolved[eid] = time.monotonic()
             if best:
                 import json
-                with sqlite3.connect(self._db_path) as conn:
-                    conn.execute(
-                        "INSERT OR REPLACE INTO evolution_results VALUES (?,?,?)",
-                        (eid, time.time(), json.dumps(best)),
-                    )
-                    conn.commit()
+
+                _best_json = json.dumps(best)
+                _ts = time.time()
+                _db_path = self._db_path
+
+                def _save() -> None:
+                    conn = sqlite3.connect(_db_path)
+                    try:
+                        conn.execute(
+                            "INSERT OR REPLACE INTO evolution_results VALUES (?,?,?)",
+                            (eid, _ts, _best_json),
+                        )
+                        conn.commit()
+                    finally:
+                        conn.close()
+
+                await asyncio.to_thread(_save)
                 logger.info("AutoEvolve: %s evolved — best=%s", eid, best)
         except Exception as exc:
             logger.warning("AutoEvolve: evolution failed for %s: %s", eid, exc)
 
     async def run(self) -> None:
         self._running = True
-        logger.info("AutoEvolve started (%d entities, interval=%.0fs)", len(self._entities), self._interval)
+        logger.info(
+            "AutoEvolve started (%d entities, interval=%.0fs)", len(self._entities), self._interval
+        )
         while self._running:
             now = time.monotonic()
             tasks = []
@@ -118,6 +129,7 @@ class AutoEvolve:
     async def start(self) -> None:
         if self._running:
             return
+        self._running = True
         self._task = asyncio.create_task(self.run(), name="auto_evolve")
 
     async def stop(self) -> None:
@@ -127,15 +139,12 @@ class AutoEvolve:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
+                pass  # expected: task was cancelled
 
     def status(self) -> dict[str, Any]:
         now = time.monotonic()
         return {
             "registered": len(self._entities),
             "interval_seconds": self._interval,
-            "last_evolved": {
-                eid: round(now - t, 1)
-                for eid, t in self._last_evolved.items()
-            },
+            "last_evolved": {eid: round(now - t, 1) for eid, t in self._last_evolved.items()},
         }

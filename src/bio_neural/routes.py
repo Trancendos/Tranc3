@@ -9,7 +9,7 @@ import logging
 from typing import Any, Dict
 
 from fastapi import APIRouter, Body
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 
 from Dimensional.error_handlers import safe_error_detail
 
@@ -35,7 +35,7 @@ async def luminous_status() -> Dict[str, Any]:
 
 
 @router.post("/consciousness/phi")
-async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Response:
     """
     Calculate Φ (integrated information) for a given state vector.
     Body: { state: list[float] }
@@ -56,7 +56,7 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
             state_arr = state_arr / state_arr.sum()
 
         phi = calc.calculate_phi(state_arr) if hasattr(calc, "calculate_phi") else 0.0
-        return {"phi": float(phi), "state_dim": len(state)}
+        return {"phi": float(phi), "state_dim": len(state)}  # type: ignore[return-value]
     except ImportError:
         return JSONResponse({"error": "Required dependency not available"}, status_code=503)
     except Exception as exc:
@@ -64,7 +64,7 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
 
 @router.post("/neuromorphic/process")
-async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Response:
     """
     Process input through the neuromorphic spiking network.
     Body: { input: list[float], timesteps: int }
@@ -82,13 +82,13 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
         processor = NeuromorphicProcessor({})
         tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)
         result = (
-            processor.process(tensor, timesteps=timesteps)
+            processor.process(tensor, timesteps=timesteps)  # type: ignore[call-arg]
             if hasattr(processor, "process")
             else {"note": "processor scaffold — wire input dimensions to activate"}
         )
         if hasattr(result, "tolist"):
             result = result.tolist()
-        return {"input_dim": len(input_data), "timesteps": timesteps, "output": result}
+        return {"input_dim": len(input_data), "timesteps": timesteps, "output": result}  # type: ignore[return-value]
     except ImportError:
         return JSONResponse({"error": "Required dependency not available"}, status_code=503)
     except Exception as exc:

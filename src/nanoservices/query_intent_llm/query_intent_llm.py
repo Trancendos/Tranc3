@@ -499,12 +499,12 @@ class QueryIntentService:
                     "fitness": best.cached_plan.fitness,
                     "exact_match": best.exact_match,
                 }
-                result["status"] = "cached"
+                result["status"] = "cached"  # type: ignore[assignment]
                 self._query_history.append(result)
                 return result
 
-        result["status"] = "new_query"
-        result["optimization_required"] = True
+        result["status"] = "new_query"  # type: ignore[assignment]
+        result["optimization_required"] = True  # type: ignore[assignment]
         self._query_history.append(result)
         return result
 

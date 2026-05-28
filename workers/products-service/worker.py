@@ -9,6 +9,7 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 
 from __future__ import annotations
 
+import os
 import logging
 import sqlite3
 import threading
@@ -142,7 +143,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -158,11 +159,6 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
     }
-
-
-# TODO: Add specific CRUD endpoints for products-service
-# The database class above provides create(), get(), list(), update(), delete() methods
-# Implement domain-specific endpoints based on business requirements
 
 
 @app.get("/")
@@ -203,6 +199,93 @@ async def delete_by_id(product_id: str):
     if not db.delete("product_id", product_id):
         raise HTTPException(404, f"Not found: {product_id}")
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Domain-specific endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/active")
+async def list_active(limit: int = 50, offset: int = 0):
+    """List all active products."""
+    return {"data": db.list(limit=limit, offset=offset, is_active=1)}
+
+
+@app.get("/by-category/{category}")
+async def get_by_category(category: str, limit: int = 50, offset: int = 0):
+    """List products in a specific category."""
+    return {"data": db.list(limit=limit, offset=offset, category=category)}
+
+
+@app.get("/search")
+async def search_products(
+    name: Optional[str] = None,
+    category: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    is_active: Optional[int] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Search products with price range and name filters."""
+    conn = db._get_conn()
+    query = "SELECT * FROM products WHERE 1=1"
+    params: list = []
+    if name:
+        query += " AND name LIKE ?"
+        params.append(f"%{name}%")
+    if category:
+        query += " AND category=?"
+        params.append(category)
+    if min_price is not None:
+        query += " AND price >= ?"
+        params.append(min_price)
+    if max_price is not None:
+        query += " AND price <= ?"
+        params.append(max_price)
+    if is_active is not None:
+        query += " AND is_active=?"
+        params.append(is_active)
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+    rows = conn.execute(query, params).fetchall()
+    return {"data": [dict(r) for r in rows], "count": len(rows)}
+
+
+@app.post("/{product_id}/activate")
+async def activate_product(product_id: str):
+    """Make a product available for purchase."""
+    if not db.update("product_id", product_id, {"is_active": 1}):
+        raise HTTPException(404, f"Not found: {product_id}")
+    return {"ok": True, "product_id": product_id, "is_active": True}
+
+
+@app.post("/{product_id}/deactivate")
+async def deactivate_product(product_id: str):
+    """Remove a product from sale without deleting it."""
+    if not db.update("product_id", product_id, {"is_active": 0}):
+        raise HTTPException(404, f"Not found: {product_id}")
+    return {"ok": True, "product_id": product_id, "is_active": False}
+
+
+@app.patch("/{product_id}/price")
+async def update_price(product_id: str, price: float):
+    """Update the price of a product."""
+    if price < 0:
+        raise HTTPException(400, "Price cannot be negative")
+    if not db.update("product_id", product_id, {"price": price}):
+        raise HTTPException(404, f"Not found: {product_id}")
+    return {"ok": True, "product_id": product_id, "price": price}
+
+
+@app.get("/categories")
+async def list_categories():
+    """List all distinct product categories."""
+    conn = db._get_conn()
+    rows = conn.execute(
+        "SELECT category, COUNT(*) as count FROM products WHERE is_active=1 GROUP BY category ORDER BY count DESC"
+    ).fetchall()
+    return {"categories": [dict(r) for r in rows]}
 
 
 if __name__ == "__main__":

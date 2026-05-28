@@ -1,0 +1,70 @@
+name: security-scan
+description: Periodic Cryptex threat scan, dependency audit, and log anomaly check
+version: "1.0"
+enabled: true
+tags:
+  - security
+  - cryptex
+  - compliance
+
+schedule:
+  type: cron
+  cron_expression: "0 */6 * * *"
+  timezone: UTC
+
+notify_on_failure: true
+notify_on_success: true
+
+steps:
+  - name: threat-scan
+    bot: monitor
+    action: threat_scan
+    params:
+      scan_type: quick
+      report_to_observatory: true
+    timeout_seconds: 60
+    retry:
+      max_attempts: 2
+      backoff_seconds: 10
+      backoff_multiplier: 2.0
+      max_backoff_seconds: 30
+
+  - name: dependency-audit
+    bot: code
+    action: audit_dependencies
+    params:
+      requirements_files:
+        - requirements.txt
+        - tranc3-bots/requirements.txt
+      fail_on_critical: true
+    timeout_seconds: 120
+    retry:
+      max_attempts: 1
+      backoff_seconds: 0
+
+  - name: log-anomaly-check
+    bot: search
+    action: search_logs
+    params:
+      patterns:
+        - "CRITICAL"
+        - "SecurityException"
+        - "blocked by Cryptex"
+      window_minutes: 360
+      summarise: true
+    timeout_seconds: 30
+    retry:
+      max_attempts: 2
+      backoff_seconds: 5
+
+  - name: summarise-findings
+    bot: summarise
+    action: create_security_summary
+    params:
+      include_audit: true
+      include_threats: true
+      output_format: json
+    timeout_seconds: 30
+    retry:
+      max_attempts: 1
+      backoff_seconds: 0

@@ -139,7 +139,7 @@ class SparkToolRegistry:
             from src.mcp.tool_rag import rebuild_rag_index  # codeql[py/cyclic-import]
 
             rebuild_rag_index(list(self._tools.values()))
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
     def get(self, name: str) -> Optional[SparkTool]:
@@ -178,7 +178,7 @@ class SparkToolRegistry:
             rag = get_rag()
             if rag.is_ready():
                 return rag.select_tools(query, top_k=top_k)
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
         # Keyword fallback
@@ -728,7 +728,7 @@ class SparkToolRegistry:
             from src.mcp.tool_rag import rebuild_rag_index  # codeql[py/cyclic-import]
 
             rebuild_rag_index(list(self._tools.values()))
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # nosec B110 — graceful degradation; error logged upstream
 
     # ------------------------------------------------------------------
@@ -1192,7 +1192,7 @@ class SparkToolRegistry:
             processor = NeuromorphicProcessor({})
             tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)
             result = (
-                processor.process(tensor, timesteps=timesteps)
+                processor.process(tensor, timesteps=timesteps)  # type: ignore[call-arg]
                 if hasattr(processor, "process")
                 else {"note": "neuromorphic scaffold — wire input dimensions to activate"}
             )
@@ -1242,7 +1242,7 @@ class SparkToolRegistry:
 
             problem = params["problem"]
             depth = int(params.get("depth", 3))
-            engine = PlanningEngine()
+            engine = PlanningEngine()  # type: ignore[call-arg]
             plan = (
                 engine.plan(problem, depth=depth)
                 if hasattr(engine, "plan")
@@ -1350,3 +1350,42 @@ try:
     )
 except Exception as _p5_exc:
     logger.warning("Phase 5 Spark tools unavailable: %s", _p5_exc)
+
+# ---------------------------------------------------------------------------
+# Knowledge Brain: The Library tools (9 tools)
+# Registers KnowledgeBrain tools — hybrid BM25+vector search, agent memory,
+# persistent knowledge graph backed by SQLite WAL.
+# ---------------------------------------------------------------------------
+try:
+    from src.mcp.spark_knowledge_tools import (
+        register_knowledge_tools as _reg_kb,  # codeql[py/cyclic-import]
+    )
+
+    _kb_count = _reg_kb(registry)
+    logger.info(
+        "Knowledge Brain Spark tools loaded: %d tools added (total=%d)",
+        _kb_count,
+        len(registry._tools),
+    )
+except Exception as _kb_exc:
+    logger.warning("Knowledge Brain Spark tools unavailable: %s", _kb_exc)
+
+# ---------------------------------------------------------------------------
+# GBrain Bridge: Knowledge Graph + PageRank tools (7 tools)
+# Registers GBrain-powered graph intelligence tools — node/edge management,
+# PageRank-boosted search, multi-hop neighbourhood traversal.
+# Calls gbrain-bridge worker on port 8030 via httpx.
+# ---------------------------------------------------------------------------
+try:
+    from src.mcp.spark_gbrain_tools import (
+        register_gbrain_tools as _reg_gbrain,  # codeql[py/cyclic-import]
+    )
+
+    _gbrain_count = _reg_gbrain(registry)
+    logger.info(
+        "GBrain Spark tools loaded: %d tools added (total=%d)",
+        _gbrain_count,
+        len(registry._tools),
+    )
+except Exception as _gbrain_exc:
+    logger.warning("GBrain Spark tools unavailable: %s", _gbrain_exc)

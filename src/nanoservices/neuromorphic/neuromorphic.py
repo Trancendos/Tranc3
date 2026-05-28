@@ -452,7 +452,7 @@ class NeuromorphicNetwork:
         if params.neuron_type == NeuronType.LIF:
             neuron = LIFNeuron(neuron_id, params)
         elif params.neuron_type == NeuronType.IZHIKEVICH:
-            neuron = IzhikevichNeuron(neuron_id, params)
+            neuron = IzhikevichNeuron(neuron_id, params)  # type: ignore[assignment]
         else:
             neuron = LIFNeuron(neuron_id, params)
 
@@ -485,7 +485,7 @@ class NeuromorphicNetwork:
         spikes: List[SpikeEvent] = []
 
         # Collect input currents for each neuron
-        input_currents: Dict[str, float] = {nid: 0.0 for nid in self.neurons}
+        input_currents: Dict[str, float] = dict.fromkeys(self.neurons, 0.0)
 
         # Process incoming spikes from connections (with delay)
         for conn in self.connections:

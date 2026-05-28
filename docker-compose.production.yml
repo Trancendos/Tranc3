@@ -54,39 +54,37 @@ services:
   # INFRASTRUCTURE LAYER
   # ═══════════════════════════════════════════════════════════════════════
 
-  # ── Traefik — Reverse Proxy & Load Balancer ──────────────────────────
+  # ── Traefik — Reverse Proxy & Load Balancer (mTLS-enabled) ──────────────────────────
   # Replaces: Cloudflare routing, CF Load Balancing
+  # mTLS: inter-service communication on :8443 requires client certs signed by
+  #       internal CA. Generate with: ./infra/traefik/scripts/gen-internal-certs.sh
   traefik:
     image: traefik:v3.0
     container_name: tranc3-traefik
     <<: *common
     command:
-      - "--api.dashboard=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=tranc3-net"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.metrics.address=:9090"
-      - "--metrics.prometheus=true"
-      - "--metrics.prometheus.entrypoint=metrics"
-      - "--log.level=INFO"
-      - "--accesslog=true"
-      - "--accesslog.format=json"
+      # Static config is loaded from mounted traefik.yml; command-line flags are minimal
+      - "--configfile=/etc/traefik/traefik.yml"
+      - "--ping=true"
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"   # Traefik dashboard
+      - "8080:8080"   # Traefik dashboard (disabled by default in traefik.yml)
+      - "8443:8443"   # Internal mTLS entry point (worker-to-worker)
       - "9090:9090"   # Metrics
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-config:/etc/traefik
+      - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./infra/traefik/certs:/etc/traefik/certs:ro
       - traefik-certs:/letsencrypt
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.trancendos.local`)"
       - "traefik.http.routers.traefik-dashboard.entrypoints=web"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      # Dashboard auth (protect with middleware in production)
+      - "traefik.http.routers.traefik-dashboard.middlewares=rate-limit-default@file"
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       <<: *healthcheck-default

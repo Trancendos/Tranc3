@@ -41,6 +41,7 @@ class UserManager:
             "hashed_password": pwd_context.hash(password),
             "tier": "free",
             "is_active": True,
+            "roles": ["user"],
         }
         return {"user_id": uid, "username": username}
 

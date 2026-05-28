@@ -389,20 +389,20 @@ class ZFSStorageProvider(SmartStorageProvider):
                 zstd_proc = await asyncio.create_subprocess_exec(
                     "zstd",
                     "-T0",  # multi-threaded zstd
-                    stdin=send_proc.stdout,
+                    stdin=send_proc.stdout,  # type: ignore[arg-type]
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
                 recv_proc = await asyncio.create_subprocess_exec(
                     *recv_cmd,
-                    stdin=zstd_proc.stdout,
+                    stdin=zstd_proc.stdout,  # type: ignore[arg-type]
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
             else:
                 recv_proc = await asyncio.create_subprocess_exec(
                     *recv_cmd,
-                    stdin=send_proc.stdout,
+                    stdin=send_proc.stdout,  # type: ignore[arg-type]
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
@@ -822,7 +822,7 @@ class OCISmartProvider(SmartStorageProvider):
             # OCI doesn't expose simple capacity via the health endpoint;
             # return nominal free-tier capacity
             free_tier_bytes = 20 * 1024**3  # 20 GB
-            return TierCapacity(
+            return TierCapacity(  # type: ignore[call-arg]
                 tier=StorageTier.OCI,
                 is_available=True,
                 total_bytes=free_tier_bytes,
@@ -961,7 +961,7 @@ class CloudflareR2Provider(SmartStorageProvider):
             used_gb = total_bytes / (1024**3)
             usage_pct = min(used_gb / free_tier_gb, 1.0)
 
-            return TierCapacity(
+            return TierCapacity(  # type: ignore[call-arg]
                 tier=StorageTier.R2,
                 is_available=True,
                 total_bytes=int(free_tier_gb * 1024**3),
@@ -1112,7 +1112,7 @@ class GCPStorageProvider(SmartStorageProvider):
             used_gb = total_bytes / (1024**3)
             usage_pct = min(used_gb / free_tier_gb, 1.0)
 
-            return TierCapacity(
+            return TierCapacity(  # type: ignore[call-arg]
                 tier=StorageTier.GCP,
                 is_available=True,
                 total_bytes=int(free_tier_gb * 1024**3),
@@ -1306,7 +1306,7 @@ class AzureCosmosProvider(SmartStorageProvider):
             used_gb = total_bytes / (1024**3)
             usage_pct = min(used_gb / free_tier_gb, 1.0)
 
-            return TierCapacity(
+            return TierCapacity(  # type: ignore[call-arg]
                 tier=StorageTier.AZURE,
                 is_available=True,
                 total_bytes=int(free_tier_gb * 1024**3),
@@ -1545,7 +1545,7 @@ class AWSDynamoProvider(SmartStorageProvider):
             used_gb = total_bytes / (1024**3)
             usage_pct = min(used_gb / free_tier_gb, 1.0)
 
-            return TierCapacity(
+            return TierCapacity(  # type: ignore[call-arg]
                 tier=StorageTier.AWS,
                 is_available=True,
                 total_bytes=int(free_tier_gb * 1024**3),

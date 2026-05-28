@@ -38,6 +38,7 @@ class QueryType(Enum):
 
     SELECT = "select"
     PROJECT = "project"
+    FILTER = "filter"
     JOIN = "join"
     NEST = "nest"
     UNNEST = "unnest"
@@ -284,7 +285,7 @@ class ScalaBridge:
     async def compile_query(self, request: CompilationRequest) -> CompilationResult:
         """Compile an NRC query through the Scala bridge."""
         cache_key = hashlib.sha3_256(
-            f"{request.query.dsl}:{request.target.value}".encode()
+            f"{request.query.dsl}:{request.target.value}".encode()  # type: ignore[union-attr]
         ).hexdigest()
 
         if cache_key in self._compilation_cache:
@@ -524,7 +525,7 @@ class TranceBridge:
             # Generate SQL-like representation
             relations = ", ".join(query.relations) if query.relations else "R"
             projections = ", ".join(query.variables.keys()) if query.variables else "*"
-            result = "SELECT " + projections + " FROM " + relations
+            result = "SELECT " + projections + " FROM " + relations  # noqa: S608 — DSL output, not executed
             if query.query_type == QueryType.FILTER:
                 result += " WHERE condition"
             return result
@@ -546,6 +547,6 @@ class TranceBridge:
             / total,
             "dialect_distribution": {
                 d: sum(1 for q in self._query_history if q["dialect"] == d)
-                for d in set(q["dialect"] for q in self._query_history)
+                for d in {q["dialect"] for q in self._query_history}
             },
         }

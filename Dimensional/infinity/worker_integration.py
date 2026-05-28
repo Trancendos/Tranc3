@@ -54,14 +54,13 @@ logger = logging.getLogger(__name__)
 
 try:
     from Dimensional.infinity.adaptive_intelligence import (
-        InfinityHealthOrchestrator,
         create_orchestrator,
         SUBSYSTEM_AVAILABILITY,
     )
     _ORCHESTRATOR_AVAILABLE = True
 except ImportError:
     _ORCHESTRATOR_AVAILABLE = False
-    SUBSYSTEM_AVAILABILITY: dict = {}
+    SUBSYSTEM_AVAILABILITY: dict = {}  # type: ignore[no-redef]
 
 try:
     from Dimensional.infinity.proactive_defense import ProactiveDefenseLayer

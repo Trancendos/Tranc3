@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Path, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 
 from src.lab.code_lab import TaskType, get_lab
 
@@ -19,7 +19,7 @@ async def lab_status() -> Dict[str, Any]:
 
 
 @router.post("/sessions")
-async def create_session(body: Dict[str, Any] = Body(default_factory=dict)) -> Dict[str, Any]:
+async def create_session(body: Dict[str, Any] = Body(default_factory=dict)) -> Response:
     raw_task = body.get("task_type", "generate")
     try:
         task_type = TaskType(raw_task)
@@ -31,7 +31,7 @@ async def create_session(body: Dict[str, Any] = Body(default_factory=dict)) -> D
         language=body.get("language", "python"),
         task_type=task_type,
     )
-    return session.to_dict()
+    return session.to_dict()  # type: ignore[return-value]
 
 
 @router.get("/sessions")
@@ -40,18 +40,18 @@ async def list_sessions(user_id: Optional[str] = Query(None)) -> list:
 
 
 @router.get("/sessions/{session_id}")
-async def get_session(session_id: str = Path(...)) -> Dict[str, Any]:
+async def get_session(session_id: str = Path(...)) -> Response:
     session = get_lab().get_session(session_id)
     if not session:
         return JSONResponse({"error": "Session not found"}, status_code=404)
-    return session.to_dict()
+    return session.to_dict()  # type: ignore[return-value]
 
 
 @router.post("/sessions/{session_id}/messages")
 async def send_message(
     session_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Dict[str, Any]:
+) -> Response:
     content = body.get("content")
     if not content:
         return JSONResponse({"error": "content is required"}, status_code=400)
@@ -62,14 +62,14 @@ async def send_message(
     )
     if msg is None:
         return JSONResponse({"error": "Session not found or not active"}, status_code=404)
-    return {"role": msg.role, "content": msg.content, "timestamp": msg.timestamp}
+    return {"role": msg.role, "content": msg.content, "timestamp": msg.timestamp}  # type: ignore[return-value]
 
 
 @router.post("/sessions/{session_id}/context")
 async def add_context(
     session_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Dict[str, Any]:
+) -> Response:
     filename = body.get("filename")
     content = body.get("content", "")
     if not filename:
@@ -77,14 +77,14 @@ async def add_context(
     ok = get_lab().add_context_file(session_id, filename, content)
     if not ok:
         return JSONResponse({"error": "Session not found"}, status_code=404)
-    return {"added": filename}
+    return {"added": filename}  # type: ignore[return-value]
 
 
 @router.post("/sessions/{session_id}/artifacts")
 async def save_artifact(
     session_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Dict[str, Any]:
+) -> Response:
     filename = body.get("filename")
     content = body.get("content", "")
     if not filename:
@@ -92,20 +92,20 @@ async def save_artifact(
     ok = get_lab().save_artifact(session_id, filename, content)
     if not ok:
         return JSONResponse({"error": "Session not found"}, status_code=404)
-    return {"saved": filename}
+    return {"saved": filename}  # type: ignore[return-value]
 
 
 @router.post("/sessions/{session_id}/close")
-async def close_session(session_id: str = Path(...)) -> Dict[str, Any]:
+async def close_session(session_id: str = Path(...)) -> Response:
     ok = get_lab().close_session(session_id)
     if not ok:
         return JSONResponse({"error": "Session not found"}, status_code=404)
-    return {"closed": session_id}
+    return {"closed": session_id}  # type: ignore[return-value]
 
 
 @router.delete("/sessions/{session_id}")
-async def delete_session(session_id: str = Path(...)) -> Dict[str, Any]:
+async def delete_session(session_id: str = Path(...)) -> Response:
     ok = get_lab().delete_session(session_id)
     if not ok:
         return JSONResponse({"error": "Session not found"}, status_code=404)
-    return {"deleted": session_id}
+    return {"deleted": session_id}  # type: ignore[return-value]

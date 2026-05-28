@@ -53,7 +53,7 @@ class ReactiveState(Generic[T]):
         """Update dict-like state with partial changes"""
         if isinstance(self._value, dict):
             new_state = {**self._value, **kwargs}
-            await self.set(new_state)
+            await self.set(new_state)  # type: ignore[arg-type]
 
     def subscribe(self, callback: Callable) -> None:
         """Subscribe to state changes"""

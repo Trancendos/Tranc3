@@ -165,8 +165,8 @@ class CircuitBreaker:
         for listener in self._listeners:
             try:
                 listener(old_state, new_state)
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
 
     def execute(self, func: Callable, *args: Any, **kwargs: Any) -> Any:
         if not self.allow_request():
@@ -215,8 +215,8 @@ class CircuitBreakerMesh:
         for listener in self._global_listeners:
             try:
                 listener(old, new)
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
 
     def get_mesh_status(self) -> Dict[str, Dict[str, Any]]:
         status = {}

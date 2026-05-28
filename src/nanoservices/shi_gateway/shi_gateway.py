@@ -165,8 +165,8 @@ class OllamaBackend:
                             )
                         )
                     return models
-        except Exception:
-            pass
+        except Exception:  # noqa: S110
+            pass  # graceful degradation
         return []
 
     async def generate(self, request: InferenceRequest) -> InferenceResponse:

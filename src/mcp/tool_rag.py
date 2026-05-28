@@ -90,8 +90,9 @@ class ToolRAG:
         self._embeddings = embeddings
 
         dim = embeddings.shape[1]
-        self._index = faiss.IndexFlatIP(dim)
-        self._index.add(embeddings)
+        index = faiss.IndexFlatIP(dim)
+        index.add(embeddings)
+        self._index = index
         self._indexed = True
         logger.info("tool_rag: indexed %d tools (dim=%d)", len(self._tools), dim)
 

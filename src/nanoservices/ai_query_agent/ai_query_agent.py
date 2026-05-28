@@ -296,10 +296,10 @@ class AIQueryAgent:
         task = session.task
 
         if session.state == AgentState.UNDERSTANDING:
-            step.thought = f"Need to translate NL query to NRC: '{task.natural_language[:50]}...'"
+            step.thought = f"Need to translate NL query to NRC: '{task.natural_language[:50]}...'"  # type: ignore[union-attr]
             step.action = AgentAction(
                 action_type=ActionType.TRANSLATE_NL_TO_NRC,
-                input_data={"natural_language": task.natural_language},
+                input_data={"natural_language": task.natural_language},  # type: ignore[union-attr]
                 reasoning="Translate natural language to NRC DSL using SHI or heuristics",
             )
 
@@ -307,7 +307,7 @@ class AIQueryAgent:
             step.thought = "Query translated. Now need to optimize the execution plan."
             step.action = AgentAction(
                 action_type=ActionType.OPTIMIZE_PLAN,
-                input_data={"nrc_query": task.nrc_query},
+                input_data={"nrc_query": task.nrc_query},  # type: ignore[union-attr]
                 reasoning="Optimize query plan using genetic optimizer or cache lookup",
             )
 
@@ -315,7 +315,7 @@ class AIQueryAgent:
             step.thought = "Plan optimized. Now executing the query."
             step.action = AgentAction(
                 action_type=ActionType.EXECUTE_QUERY,
-                input_data={"nrc_query": task.nrc_query, "plan": task.context.get("plan")},
+                input_data={"nrc_query": task.nrc_query, "plan": task.context.get("plan")},  # type: ignore[union-attr]
                 reasoning="Execute NRC query through available backend",
             )
 
@@ -323,7 +323,7 @@ class AIQueryAgent:
             step.thought = "Query executed. Evaluating results."
             step.action = AgentAction(
                 action_type=ActionType.VALIDATE_RESULT,
-                input_data={"results": task.results},
+                input_data={"results": task.results},  # type: ignore[union-attr]
                 reasoning="Validate query results and check for improvement opportunities",
             )
 
@@ -331,7 +331,7 @@ class AIQueryAgent:
             step.thought = "Results could be improved. Refining query."
             step.action = AgentAction(
                 action_type=ActionType.REFINE_QUERY,
-                input_data={"nrc_query": task.nrc_query, "results": task.results},
+                input_data={"nrc_query": task.nrc_query, "results": task.results},  # type: ignore[union-attr]
                 reasoning="Refine query based on evaluation feedback",
             )
 
@@ -361,14 +361,14 @@ class AIQueryAgent:
             try:
                 result = await self._translate_via_shi(nl)
                 if result.get("success"):
-                    session.task.nrc_query = result["nrc_query"]
+                    session.task.nrc_query = result["nrc_query"]  # type: ignore[union-attr]
                     return result
             except Exception as e:
                 logger.warning("SHI translation failed, using heuristics: %s", e)
 
         # Heuristic fallback
         nrc_query = self._heuristic_translate(nl)
-        session.task.nrc_query = nrc_query
+        session.task.nrc_query = nrc_query  # type: ignore[union-attr]
         return {"success": True, "nrc_query": nrc_query, "method": "heuristic"}
 
     async def _translate_via_shi(self, nl: str) -> Dict[str, Any]:
@@ -420,8 +420,8 @@ class AIQueryAgent:
                 cached = await self._query_cache_for(nrc_query)
                 if cached:
                     return {"success": True, "plan": cached, "source": "cache"}
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
 
         # Try genetic optimizer
         if self.genetic_optimizer:
@@ -443,7 +443,7 @@ class AIQueryAgent:
         # Simulated execution
         await asyncio.sleep(0.01)
         results = [{"id": i, "value": i * 10} for i in range(5)]
-        session.task.results = results
+        session.task.results = results  # type: ignore[union-attr]
         return {"success": True, "rows": len(results), "data": results}
 
     async def _action_validate(self, action: AgentAction, session: AgentSession) -> Dict[str, Any]:
@@ -453,7 +453,7 @@ class AIQueryAgent:
 
         if not results:
             issues.append("empty_result")
-        if len(results) != len(set(str(r) for r in results)):
+        if len(results) != len({str(r) for r in results}):
             issues.append("duplicates_found")
 
         is_valid = len(issues) == 0
@@ -487,7 +487,7 @@ class AIQueryAgent:
         nrc_query = action.input_data.get("nrc_query", "")
         # Add optimization hints
         refined = nrc_query + " /* refined */"
-        session.task.nrc_query = refined
+        session.task.nrc_query = refined  # type: ignore[union-attr]
         return {"success": True, "refined_query": refined}
 
     async def _action_explain(self, action: AgentAction, session: AgentSession) -> Dict[str, Any]:

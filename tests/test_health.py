@@ -359,3 +359,31 @@ class TestHealthCheckerWithServer:
         checker = HealthChecker(registry=custom)
         result = await checker.check_all()
         assert result["overall"] == SystemHealth.unhealthy.value
+
+
+# ---------------------------------------------------------------------------
+# GBrain Bridge registry
+# ---------------------------------------------------------------------------
+
+
+class TestGBrainRegistryEntry:
+    """Verify gbrain-bridge is correctly registered in SERVICE_REGISTRY."""
+
+    def test_gbrain_bridge_present(self):
+        assert "gbrain-bridge" in SERVICE_REGISTRY
+
+    def test_gbrain_bridge_url(self):
+        svc = SERVICE_REGISTRY["gbrain-bridge"]
+        assert "8030" in svc["url"]
+
+    def test_gbrain_bridge_priority(self):
+        svc = SERVICE_REGISTRY["gbrain-bridge"]
+        assert svc["priority"] == "P3"
+
+    def test_gbrain_bridge_named(self):
+        svc = SERVICE_REGISTRY["gbrain-bridge"]
+        assert "Library" in svc["named"] or "GBrain" in svc["named"]
+
+    def test_registry_has_p3_services(self):
+        p3 = {name for name, svc in SERVICE_REGISTRY.items() if svc["priority"] == "P3"}
+        assert len(p3) > 0

@@ -503,7 +503,7 @@ class LiquidicFlowEngine:
                 continue
 
             per_service = available_capacity / n_services
-            distribution[container_id] = {sid: per_service for sid in container.contained_services}
+            distribution[container_id] = dict.fromkeys(container.contained_services, per_service)
 
         return distribution
 
@@ -522,7 +522,7 @@ class LiquidicFlowEngine:
 
         # BFS
         visited = {source_container}
-        queue = [(source_container, [])]
+        queue = [(source_container, [])]  # type: ignore[var-annotated]
 
         while queue:
             current, path = queue.pop(0)

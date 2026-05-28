@@ -351,7 +351,7 @@ class EnhancedSkillRegistry:
                         v = v.strip()
                         # Handle inline lists: [a, b, c]
                         if v.startswith("[") and v.endswith("]"):
-                            v = [i.strip().strip('"').strip("'") for i in v[1:-1].split(",")]
+                            v = [i.strip().strip('"').strip("'") for i in v[1:-1].split(",")]  # type: ignore[assignment]
                         else:
                             v = v.strip('"').strip("'")
                         meta[k] = v

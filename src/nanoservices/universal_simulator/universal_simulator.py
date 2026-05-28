@@ -487,12 +487,12 @@ class UniversalSimulator:
                 bodies = self._default_bodies()
             solver = ClassicalMechanicsSolver(bodies, config.dt)
         elif config.domain == PhysicsDomain.FLUID_DYNAMICS:
-            solver = FluidDynamicsSolver(
+            solver = FluidDynamicsSolver(  # type: ignore[assignment]
                 grid_size=config.grid_resolution,
                 dt=config.dt,
             )
         elif config.domain == PhysicsDomain.THERMODYNAMICS:
-            solver = ThermodynamicsSolver(
+            solver = ThermodynamicsSolver(  # type: ignore[assignment]
                 grid_size=config.grid_resolution,
                 thermal_diffusivity=0.01,
                 dt=config.dt,

@@ -26,6 +26,7 @@ import asyncio
 import logging
 import time
 import uuid
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -117,7 +118,7 @@ class HubPowerUp:
 # ---------------------------------------------------------------------------
 
 
-class Tranc3:
+class Tranc3(ABC):
     """
     Tier 3 AI — Lead AI base for any Trancendos location.
 
@@ -221,8 +222,8 @@ class Tranc3:
             try:
                 result = self._gas.select()
                 return result.selected
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
         return self._peers[0]
 
     def liquid_route(self, signals: dict[str, float] | None = None) -> str | None:
@@ -233,8 +234,8 @@ class Tranc3:
             try:
                 result = self._liquid.route(signals)
                 return result.target
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
         return self._peers[0]
 
     # ------------------------------------------------------------------
@@ -348,12 +349,13 @@ class Tranc3:
     # Override points
     # ------------------------------------------------------------------
 
-    async def on_cycle(self) -> None:
+    async def on_cycle(self) -> None:  # noqa: B027 — optional hook, not abstract
         """Called on every heartbeat cycle. Override for periodic work."""
 
+    @abstractmethod
     async def process(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Process an incoming request payload. Override in concrete classes."""
-        raise NotImplementedError(f"{self.dna} must implement process()")
+        ...
 
     # ------------------------------------------------------------------
     # Status

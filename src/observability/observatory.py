@@ -136,7 +136,7 @@ class Observatory:
                 from src.basement.archive import get_basement
 
                 get_basement().ingest_observatory_event(event)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass  # nosec B110 — graceful degradation; error logged upstream
 
         return event

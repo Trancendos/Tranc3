@@ -4,15 +4,15 @@ Multi-party computation with Shamir, additive sharing, garbled circuits.
 """
 
 from .mpc_service import (
-    MPCProtocol,
-    MPCPartyState,
-    MPCParty,
-    MPCSession,
-    ShamirSecretSharing,
     AdditiveSecretSharing,
     GarbledCircuitSimulator,
-    ObliviousTransferSimulator,
+    MPCParty,
+    MPCPartyState,
+    MPCProtocol,
     MPCService,
+    MPCSession,
+    ObliviousTransferSimulator,
+    ShamirSecretSharing,
 )
 
 __all__ = [

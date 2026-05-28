@@ -5,7 +5,8 @@ RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 WORKDIR /app
 # Copy Dimensional package (monorepo path)
 COPY --chown=worker:worker requirements-worker.txt .
-RUN pip install --no-cache-dir -r requirements-worker.txt
+RUN pip install --no-cache-dir --upgrade "pip>=25.3" "setuptools>=78.1.1" "wheel>=0.46.2" \
+    && pip install --no-cache-dir -r requirements-worker.txt
 
 # Copy the Dimensional hive package
 COPY --chown=worker:worker Dimensional/ ./Dimensional/

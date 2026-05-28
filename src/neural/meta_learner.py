@@ -446,7 +446,7 @@ class MetaLearner:
 
     def stats(self) -> Dict[str, Any]:
         """Return statistics about the meta-learner."""
-        domains = defaultdict(int)
+        domains = defaultdict(int)  # type: ignore[var-annotated]
         for p in self._prototypes.values():
             domains[p.domain] += 1
         return {

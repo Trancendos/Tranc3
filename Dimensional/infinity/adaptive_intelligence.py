@@ -83,6 +83,7 @@ def _try_async_schedule(coro):
         loop.call_soon_threadsafe(asyncio.ensure_future, coro)
         return True
     except RuntimeError:
+        coro.close()
         return False
 
 logger = logging.getLogger(__name__)
@@ -285,7 +286,7 @@ class InfinityHealthOrchestrator:
                 "AdaptivePulseController ready for %s", sanitize_for_log(self.config.service_name)
             )
         else:
-            self.pulse = None
+            self.pulse = None  # type: ignore[assignment]
             logger.warning("AdaptivePulseController not available — pulse control disabled")
 
         # AnomalyDetector
@@ -297,39 +298,39 @@ class InfinityHealthOrchestrator:
             )
             self.anomaly_detector.add_handler(self._on_anomaly)
         else:
-            self.anomaly_detector = None
+            self.anomaly_detector = None  # type: ignore[assignment]
 
         # SelfRepairEngine + AdaptiveConfigTuner
         if _REPAIR_AVAILABLE:
             self.repair_engine = SelfRepairEngine()
             self.config_tuner = AdaptiveConfigTuner()
         else:
-            self.repair_engine = None
-            self.config_tuner = None
+            self.repair_engine = None  # type: ignore[assignment]
+            self.config_tuner = None  # type: ignore[assignment]
 
         # TelemetryCollector
         if _TELEMETRY_AVAILABLE:
             self.telemetry = TelemetryCollector.get_instance()
         else:
-            self.telemetry = None
+            self.telemetry = None  # type: ignore[assignment]
 
         # HotConfig
         if _HOTCONFIG_AVAILABLE and self.config.hotconfig_watch_paths:
             self.hot_config = HotConfig(watch_paths=self.config.hotconfig_watch_paths)
         else:
-            self.hot_config = None
+            self.hot_config = None  # type: ignore[assignment]
 
         # ForesightEngine
         if _FORESIGHT_AVAILABLE and self.config.foresight_enabled:
             self.foresight = ConversationTrajectoryPredictor()
         else:
-            self.foresight = None
+            self.foresight = None  # type: ignore[assignment]
 
         # DefenseEngine
         if _DEFENSE_AVAILABLE and self.config.defense_enabled:
             self.defense = DefenseEngine()
         else:
-            self.defense = None
+            self.defense = None  # type: ignore[assignment]
 
         # ReactiveState for service topology
         if _REACTIVE_AVAILABLE:
@@ -339,8 +340,8 @@ class InfinityHealthOrchestrator:
                 {"score": 1.0, "tier": "optimal", "pulse_mode": "steady"},
             )
         else:
-            self.state_store = None
-            self.health_state = None
+            self.state_store = None  # type: ignore[assignment]
+            self.health_state = None  # type: ignore[assignment]
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 

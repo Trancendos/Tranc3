@@ -13,6 +13,7 @@ Zero-cost: Ollama local inference, free-tier OpenRouter, HuggingFace free infere
 
 from __future__ import annotations
 
+import os
 import hashlib
 import json
 import logging
@@ -639,7 +640,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )

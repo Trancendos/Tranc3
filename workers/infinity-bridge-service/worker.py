@@ -22,11 +22,8 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from Dimensional.infinity.bridge.bridge_core import (
-    BridgeEvent,
     InfinityBridge,
     InfinityBridgeEvent,
-    SessionStatus,
-    UserContext,
     get_infinity_bridge,
 )
 
@@ -52,6 +49,7 @@ def get_bridge() -> InfinityBridge:
 def _on_bridge_event(event: InfinityBridgeEvent):
     """Broadcast bridge events to connected WebSocket clients."""
     import json
+
     data = json.dumps(event.to_dict())
     for ws in _ws_connections[:]:
         try:
@@ -70,7 +68,7 @@ def create_bridge_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -211,7 +209,7 @@ def create_bridge_app() -> FastAPI:
         _ws_connections.append(websocket)
         try:
             while True:
-                data = await websocket.receive_text()
+                await websocket.receive_text()
                 # Keep connection alive
         except WebSocketDisconnect:
             _ws_connections.remove(websocket)
@@ -225,11 +223,14 @@ if __name__ == "__main__":
 
     # Set up default bridge paths
     locations = [
-        "infinity_portal", "infinity_gate", "infinity_arcadia",
-        "infinity_citadel", "infinity_admin",
+        "infinity_portal",
+        "infinity_gate",
+        "infinity_arcadia",
+        "infinity_citadel",
+        "infinity_admin",
     ]
     for i, source in enumerate(locations):
-        for target in locations[i + 1:]:
+        for target in locations[i + 1 :]:
             bridge.open_bridge(source, target)
 
     logger.info(f"InfinityBridge worker starting on port {WORKER_PORT}")

@@ -56,9 +56,9 @@ class BCISignalProcessor:
         features = {k: v / total for k, v in features.items()}
 
         # Derive intent from dominant band
-        dominant_band = max(features, key=features.get).replace("_power", "")
-        features["dominant_band"] = dominant_band
-        features["intent_signal"] = self._band_to_intent(dominant_band)
+        dominant_band = max(features, key=features.get).replace("_power", "")  # type: ignore[arg-type]
+        features["dominant_band"] = dominant_band  # type: ignore[assignment]
+        features["intent_signal"] = self._band_to_intent(dominant_band)  # type: ignore[assignment]
         features["consciousness_estimate"] = features.get("gamma_power", 0) + features.get(
             "high_gamma_power", 0
         )

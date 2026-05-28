@@ -23,9 +23,10 @@ import json
 import logging
 import time
 import uuid
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Awaitable
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 import aiohttp
 
@@ -291,19 +292,21 @@ class A2ARouteRule:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class A2ATransport:
+class A2ATransport(ABC):
     """Abstract base class for A2A transports."""
 
+    @abstractmethod
     async def send(self, message: A2AMessage, endpoint: str) -> A2AResponse:
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]:
-        raise NotImplementedError
+        ...
 
-    async def start(self) -> None:
+    async def start(self) -> None:  # noqa: B027 — optional lifecycle hook
         pass
 
-    async def stop(self) -> None:
+    async def stop(self) -> None:  # noqa: B027 — optional lifecycle hook
         pass
 
 

@@ -37,7 +37,7 @@ import logging
 import re
 import secrets
 import time
-from typing import Any, Dict, FrozenSet, Optional, Set
+from typing import Dict, FrozenSet, Optional, Set
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
