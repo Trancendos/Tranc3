@@ -646,6 +646,12 @@ try:
 except ImportError:
     logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
+# ── Enhanced Capabilities (code gen, skills, planning, self-healing) ─────────
+# Migrated from legacy api_enhanced.py into the canonical entry point.
+from src.routers.enhanced_capabilities import router as _enhanced_router  # noqa: F401
+
+app.include_router(_enhanced_router)
+
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
 if os.path.isdir(_FRONTEND_DIST):

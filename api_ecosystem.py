@@ -2,6 +2,12 @@
 # Exposes Dimensional backend modules to the Dashboard frontend.
 # Runs standalone or mounted as a sub-app on the main api.py.
 #
+# DEPRECATED — do not extend this file.
+# The /api/ecosystem/* routes should be migrated into a dedicated router at
+# src/routers/ecosystem.py and included in the canonical entry point api.py.
+# This file is kept for backwards compatibility only. New development must go
+# to api.py and its router tree.
+#
 # Enhanced with:
 #   - Adaptive rate limiting (IAM-tier aware)
 #   - JWT + API Key authentication enforcement
