@@ -16,6 +16,20 @@ from Dimensional.sanitize import sanitize_for_log
 logger = logging.getLogger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# Map billing tiers to default RBAC roles
+_TIER_ROLE_MAP = {
+    "free": "user",
+    "pro": "operator",
+    "business": "operator",
+    "enterprise": "admin",
+    "admin": "admin",
+}
+
+
+def _tier_to_roles(tier: str) -> list:
+    """Return RBAC role list for a billing tier."""
+    return [_TIER_ROLE_MAP.get(tier, "user")]
+
 
 class DBUserManager:
     """
@@ -84,6 +98,7 @@ class DBUserManager:
             "tier": "free",
             "is_active": True,
             "created_at": datetime.datetime.utcnow(),
+            "roles": _tier_to_roles("free"),
         }
         return {"user_id": user_id, "username": username, "tier": "free"}
 
@@ -135,13 +150,17 @@ class DBUserManager:
                         "username": user.username,
                         "tier": user.tier,
                         "is_active": user.is_active,
+                        "roles": _tier_to_roles(user.tier),
                     }
             except Exception as e:
                 logger.error("DB get_user failed: %s", sanitize_for_log(e))
             finally:
                 session.close()
 
-        return self._fallback.get(username)
+        user = self._fallback.get(username)
+        if user and "roles" not in user:
+            user = {**user, "roles": _tier_to_roles(user.get("tier", "free"))}
+        return user
 
     def update_tier(self, username: str, new_tier: str) -> bool:
         session = self._get_session()

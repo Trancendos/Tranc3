@@ -389,6 +389,7 @@ class NodeCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     content: str = Field(default="", max_length=50000)
     source: str = Field(default="manual")
+    importance: float = Field(default=0.5, ge=0.0, le=1.0)
     tags: List[str] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -402,9 +403,18 @@ class EdgeCreate(BaseModel):
 
 class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=2000)
-    top_k: int = Field(default=10, ge=1, le=100)
+    # Accept both field name conventions: pipeline client sends max_results
+    max_results: int = Field(default=10, ge=1, le=100)
+    use_graph_expansion: bool = Field(default=True)
     relation_filter: Optional[str] = None
-    max_hops: int = Field(default=2, ge=0, le=4)
+
+    @property
+    def top_k(self) -> int:
+        return self.max_results
+
+    @property
+    def max_hops(self) -> int:
+        return 2 if self.use_graph_expansion else 0
 
 
 # ---------------------------------------------------------------------------
@@ -476,10 +486,11 @@ async def create_node(body: NodeCreate) -> Response:  # type: ignore[return-valu
     db = _db.conn()
     try:
         db.execute(
-            "INSERT INTO nodes (node_id, title, content, source, created_at, updated_at, tags, metadata) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO nodes "
+            "(node_id, title, content, source, importance, created_at, updated_at, tags, metadata) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
-                node_id, body.title, body.content, body.source,
+                node_id, body.title, body.content, body.source, body.importance,
                 now, now,
                 json.dumps(body.tags), json.dumps(body.metadata),
             ),
@@ -543,7 +554,7 @@ async def search(body: SearchRequest) -> Response:  # type: ignore[return-value]
         )
 
     # Log access to retrieved nodes
-    for r in direct[:body.top_k]:
+    for r in direct[:body.max_results]:
         db.execute(
             "INSERT INTO access_log VALUES (?, ?, ?, ?, ?)",
             (str(uuid.uuid4()), r["node_id"], time.time(), body.query[:200], r["relevance_score"]),
@@ -557,7 +568,7 @@ async def search(body: SearchRequest) -> Response:  # type: ignore[return-value]
     return {  # type: ignore[return-value]
         "query": body.query,
         "direct_results": direct,
-        "expanded_results": expanded[:body.top_k],
+        "expanded_results": expanded[:body.max_results],
         "total": len(direct) + len(expanded),
     }
 
