@@ -51,6 +51,12 @@ logger = logging.getLogger(WORKER_NAME)
 app = create_hive_app()
 
 
+@app.get("/health")
+async def health():
+    """Standard health check — required by CI worker-validation and Docker healthcheck."""
+    return {"status": "ok", "service": "hive", "port": WORKER_PORT}
+
+
 @app.on_event("startup")
 async def _worker_startup():
     """Initialize the HIVE with default data sources, sinks, and pipelines on startup."""
