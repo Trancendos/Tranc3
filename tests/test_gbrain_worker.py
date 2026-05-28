@@ -1,0 +1,472 @@
+# FID: TRANC3-TEST-016 | Version: 1.0.0 | Module: gbrain
+"""
+tests/test_gbrain_worker.py — Route-level tests for GBrain bridge worker.
+
+Uses httpx.AsyncClient + ASGITransport to exercise the FastAPI app
+in-process without starting a live uvicorn server.
+
+All tests use an isolated SQLite database in a tmp_path so each test
+run starts with a clean state.
+"""
+from __future__ import annotations
+
+import asyncio
+import importlib.util
+import sys
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+# ---------------------------------------------------------------------------
+# Worker module loader (handles hyphen in directory name)
+# ---------------------------------------------------------------------------
+
+_WORKER_PATH = Path(__file__).parent.parent / "workers" / "gbrain-bridge" / "worker.py"
+
+
+def _load_worker_module():
+    """Import workers/gbrain-bridge/worker.py by file path."""
+    spec = importlib.util.spec_from_file_location("gbrain_bridge_worker", _WORKER_PATH)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _run(coro):
+    """Run coroutine synchronously — safe for use inside sync test methods."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def _worker(tmp_path, monkeypatch):
+    """Yield the worker module with DB isolated to tmp_path."""
+    db_path = tmp_path / "gbrain.db"
+
+    # Remove cached module so each fixture gets a fresh instance
+    mod_key = "gbrain_bridge_worker"
+    if mod_key in sys.modules:
+        del sys.modules[mod_key]
+
+    # Load fresh module and patch DB_PATH before _DB.init() runs
+    spec = importlib.util.spec_from_file_location(mod_key, _WORKER_PATH)
+    mod = importlib.util.module_from_spec(spec)
+    # Patch DB_PATH on the module object before exec_module runs init
+    mod.__dict__["DB_PATH"] = db_path
+    spec.loader.exec_module(mod)
+
+    # Reinitialise the database with the patched path
+    # (_DB creates schema lazily on first conn() call)
+    mod._db._path = db_path
+    mod._db._conn = None
+    mod._db.conn()  # trigger schema creation synchronously
+
+    sys.modules[mod_key] = mod
+    yield mod
+
+
+def _client(app):
+    import httpx
+
+    return httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Health endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestHealthEndpoint:
+    def test_health_returns_200(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                return await c.get("/health")
+
+        resp = _run(_go())
+        assert resp.status_code == 200
+
+    def test_health_has_status_healthy(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                return (await c.get("/health")).json()
+
+        data = _run(_go())
+        assert data["status"] == "healthy"
+
+    def test_health_reports_node_count(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                return (await c.get("/health")).json()
+
+        data = _run(_go())
+        assert "nodes" in data
+        assert data["nodes"] == 0  # fresh DB
+
+
+# ---------------------------------------------------------------------------
+# Node CRUD
+# ---------------------------------------------------------------------------
+
+
+class TestNodeCRUD:
+    def test_create_node_returns_201(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                return await c.post(
+                    "/nodes",
+                    json={"title": "Test Node", "content": "hello", "source": "test"},
+                )
+
+        resp = _run(_go())
+        assert resp.status_code == 201
+
+    def test_create_node_returns_node_id(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r = await c.post(
+                    "/nodes",
+                    json={"title": "Node X", "content": "content", "source": "src"},
+                )
+                return r.json()
+
+        data = _run(_go())
+        assert "node_id" in data
+        assert len(data["node_id"]) == 36  # UUID4
+
+    def test_get_node_after_create(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                create = await c.post(
+                    "/nodes",
+                    json={"title": "Retrievable", "content": "body", "source": "s"},
+                )
+                nid = create.json()["node_id"]
+                return await c.get(f"/nodes/{nid}")
+
+        resp = _run(_go())
+        assert resp.status_code == 200
+        assert resp.json()["title"] == "Retrievable"
+
+    def test_get_nonexistent_node_returns_404(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                return await c.get("/nodes/00000000-0000-0000-0000-000000000000")
+
+        resp = _run(_go())
+        assert resp.status_code == 404
+
+    def test_create_multiple_nodes_increments_count(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                for i in range(3):
+                    await c.post(
+                        "/nodes",
+                        json={"title": f"Node {i}", "content": "c", "source": "s"},
+                    )
+                return (await c.get("/health")).json()
+
+        data = _run(_go())
+        assert data["nodes"] == 3
+
+    def test_create_node_with_tags(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r = await c.post(
+                    "/nodes",
+                    json={
+                        "title": "Tagged Node",
+                        "content": "content",
+                        "source": "s",
+                        "tags": ["ai", "knowledge"],
+                    },
+                )
+                return r
+
+        resp = _run(_go())
+        assert resp.status_code == 201
+
+    def test_create_node_with_metadata(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r = await c.post(
+                    "/nodes",
+                    json={
+                        "title": "Meta Node",
+                        "content": "data",
+                        "source": "s",
+                        "metadata": {"author": "Norman", "version": 1},
+                    },
+                )
+                return r
+
+        resp = _run(_go())
+        assert resp.status_code == 201
+
+
+# ---------------------------------------------------------------------------
+# Edge creation
+# ---------------------------------------------------------------------------
+
+
+class TestEdgeCreation:
+    def _make_node(self, worker_mod, title="N"):
+        async def _go():
+            async with _client(worker_mod.app) as c:
+                r = await c.post(
+                    "/nodes", json={"title": title, "content": "c", "source": "s"}
+                )
+                return r.json()["node_id"]
+
+        return _run(_go())
+
+    def test_create_edge_returns_201(self, _worker):
+        src = self._make_node(_worker, "Source")
+        tgt = self._make_node(_worker, "Target")
+
+        async def _go():
+            async with _client(_worker.app) as c:
+                return await c.post(
+                    "/edges",
+                    json={"source_id": src, "target_id": tgt, "relation": "related_to"},
+                )
+
+        resp = _run(_go())
+        assert resp.status_code == 201
+
+    def test_create_edge_returns_edge_id(self, _worker):
+        src = self._make_node(_worker, "A")
+        tgt = self._make_node(_worker, "B")
+
+        async def _go():
+            async with _client(_worker.app) as c:
+                r = await c.post(
+                    "/edges",
+                    json={"source_id": src, "target_id": tgt},
+                )
+                return r.json()
+
+        data = _run(_go())
+        assert "edge_id" in data
+
+    def test_edge_count_in_health(self, _worker):
+        src = self._make_node(_worker, "Src2")
+        tgt = self._make_node(_worker, "Tgt2")
+
+        async def _go():
+            async with _client(_worker.app) as c:
+                await c.post(
+                    "/edges",
+                    json={"source_id": src, "target_id": tgt},
+                )
+                return (await c.get("/health")).json()
+
+        data = _run(_go())
+        assert data["edges"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Graph stats
+# ---------------------------------------------------------------------------
+
+
+class TestGraphStats:
+    def test_stats_empty_graph(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                return (await c.get("/graph/stats")).json()
+
+        data = _run(_go())
+        assert data["node_count"] == 0
+        assert data["edge_count"] == 0
+
+    def test_stats_after_insertion(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r1 = await c.post("/nodes", json={"title": "X", "content": "x", "source": "s"})
+                r2 = await c.post("/nodes", json={"title": "Y", "content": "y", "source": "s"})
+                await c.post(
+                    "/edges",
+                    json={"source_id": r1.json()["node_id"], "target_id": r2.json()["node_id"]},
+                )
+                return (await c.get("/graph/stats")).json()
+
+        data = _run(_go())
+        assert data["node_count"] == 2
+        assert data["edge_count"] == 1
+
+    def test_stats_has_avg_importance(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                return (await c.get("/graph/stats")).json()
+
+        data = _run(_go())
+        assert "avg_importance" in data
+
+    def test_stats_avg_degree_empty(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                return (await c.get("/graph/stats")).json()
+
+        data = _run(_go())
+        assert data["avg_degree"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Search
+# ---------------------------------------------------------------------------
+
+
+class TestSearch:
+    def test_search_empty_graph_returns_200(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                return await c.post("/search", json={"query": "quantum consciousness"})
+
+        resp = _run(_go())
+        assert resp.status_code == 200
+
+    def test_search_returns_query_echo(self, _worker):
+        query = "test search query"
+
+        async def _go():
+            async with _client(_worker.app) as c:
+                return (await c.post("/search", json={"query": query})).json()
+
+        data = _run(_go())
+        assert data["query"] == query
+
+    def test_search_has_direct_and_expanded_results(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                return (await c.post("/search", json={"query": "test"})).json()
+
+        data = _run(_go())
+        assert "direct_results" in data
+        assert "expanded_results" in data
+        assert "total" in data
+
+    def test_search_after_node_insertion(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                await c.post(
+                    "/nodes",
+                    json={
+                        "title": "Consciousness Theory",
+                        "content": "IIT 4.0 integrated information theory",
+                        "source": "research",
+                    },
+                )
+                return (await c.post("/search", json={"query": "consciousness IIT"})).json()
+
+        data = _run(_go())
+        # Should find the node (or at minimum not error)
+        assert isinstance(data["direct_results"], list)
+
+
+# ---------------------------------------------------------------------------
+# PageRank recompute
+# ---------------------------------------------------------------------------
+
+
+class TestPageRankRecompute:
+    def test_recompute_on_empty_graph(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                return await c.post("/pagerank/recompute")
+
+        resp = _run(_go())
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "recomputed"
+
+    def test_recompute_returns_node_count(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                await c.post("/nodes", json={"title": "A", "content": "a", "source": "s"})
+                return (await c.post("/pagerank/recompute")).json()
+
+        data = _run(_go())
+        assert data["node_count"] >= 1
+
+    def test_recompute_with_graph_structure(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r1 = await c.post("/nodes", json={"title": "Hub", "content": "c", "source": "s"})
+                r2 = await c.post("/nodes", json={"title": "Leaf", "content": "c", "source": "s"})
+                nid1 = r1.json()["node_id"]
+                nid2 = r2.json()["node_id"]
+                await c.post("/edges", json={"source_id": nid1, "target_id": nid2})
+                result = await c.post("/pagerank/recompute")
+                return result.json()
+
+        data = _run(_go())
+        assert data["node_count"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Neighbourhood
+# ---------------------------------------------------------------------------
+
+
+class TestNeighbourhood:
+    def test_neighbourhood_nonexistent_node_404(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                return await c.get("/nodes/00000000-0000-0000-0000-000000000000/neighbourhood")
+
+        resp = _run(_go())
+        assert resp.status_code == 404
+
+    def test_neighbourhood_isolated_node_empty(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r = await c.post("/nodes", json={"title": "Isolated", "content": "alone", "source": "s"})
+                nid = r.json()["node_id"]
+                return (await c.get(f"/nodes/{nid}/neighbourhood")).json()
+
+        data = _run(_go())
+        assert "neighbourhood" in data
+        assert data["total"] == 0
+
+    def test_neighbourhood_with_connected_node(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r1 = await c.post("/nodes", json={"title": "Hub", "content": "c", "source": "s"})
+                r2 = await c.post("/nodes", json={"title": "Spoke", "content": "c", "source": "s"})
+                hub_id = r1.json()["node_id"]
+                spoke_id = r2.json()["node_id"]
+                await c.post(
+                    "/edges",
+                    json={"source_id": hub_id, "target_id": spoke_id, "relation": "links_to"},
+                )
+                return (await c.get(f"/nodes/{hub_id}/neighbourhood?max_hops=1")).json()
+
+        data = _run(_go())
+        assert data["total"] >= 1
+
+    def test_neighbourhood_respects_max_hops_param(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r = await c.post("/nodes", json={"title": "Root", "content": "c", "source": "s"})
+                nid = r.json()["node_id"]
+                # max_hops=1 should work without error
+                resp = await c.get(f"/nodes/{nid}/neighbourhood?max_hops=1")
+                return resp
+
+        resp = _run(_go())
+        assert resp.status_code == 200
