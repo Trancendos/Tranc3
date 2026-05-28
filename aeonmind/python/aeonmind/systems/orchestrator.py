@@ -18,7 +18,7 @@ import time
 import uuid  # noqa: F401
 from dataclasses import dataclass, field  # noqa: F401
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple  # noqa: UP035
+from typing import Any, Dict, List, Optional  # noqa: UP035
 
 import numpy as np
 
@@ -128,7 +128,7 @@ class LogicalOrchestrator:
         return bot
 
     def dispatch_task(self, entity_id: str, task_type: str,
-                      payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:  # noqa: UP045
+                      payload: Optional[dict[str, Any]] = None) -> dict[str, Any]:  # noqa: UP045
         """Dispatch a task to an entity."""
         payload = payload or {}
         self.metrics.total_tasks_dispatched += 1

@@ -10,7 +10,7 @@ temporal representation for downstream decision systems.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple  # noqa: UP035
+from typing import Optional  # noqa: UP035
 
 import numpy as np
 

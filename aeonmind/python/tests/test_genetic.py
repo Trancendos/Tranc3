@@ -2,7 +2,6 @@
 Tests for AeonMind DNA Evolution Engine.
 """
 
-import pytest  # noqa: I001
 import numpy as np
 
 from aeonmind.core.genetic_dna import DNAEvolutionEngine, GeneticConfig, Individual

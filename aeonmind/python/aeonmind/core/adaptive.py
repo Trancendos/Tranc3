@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math  # noqa: F401
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional, Tuple  # noqa: UP035
+from typing import Callable, List, Optional  # noqa: UP035
 
 import numpy as np
 
@@ -90,7 +90,7 @@ class AdaptiveMetaLearner:
         self._lr_history: List[float] = []  # noqa: UP006
 
     @classmethod
-    def with_parameters(cls, parameters: np.ndarray, config: Optional[AdaptiveConfig] = None) -> "AdaptiveMetaLearner":  # noqa: UP045
+    def with_parameters(cls, parameters: np.ndarray, config: Optional[AdaptiveConfig] = None) -> AdaptiveMetaLearner:  # noqa: UP045
         """Create a learner initialized with specific parameters."""
         learner = cls(len(parameters), config)
         learner.parameters = parameters.copy()

@@ -13,7 +13,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field  # noqa: F401
 from enum import Enum
-from typing import Dict, List, Optional, Tuple  # noqa: UP035
+from typing import List, Optional, Tuple  # noqa: UP035
 
 import numpy as np
 

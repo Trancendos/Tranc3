@@ -2,10 +2,9 @@
 Tests for AeonMind Fluidic-Liquidic Reservoir.
 """
 
-import pytest  # noqa: I001
 import numpy as np
 
-from aeonmind.core.fluidic_liquidic import LiquidReservoir, ReservoirConfig, FluidicState
+from aeonmind.core.fluidic_liquidic import FluidicState, LiquidReservoir, ReservoirConfig
 
 
 class TestLiquidReservoir:

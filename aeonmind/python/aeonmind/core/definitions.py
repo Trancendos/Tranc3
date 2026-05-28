@@ -90,7 +90,7 @@ class AgentEntity:
     tier: Tier = Tier.AGENT
     capabilities: List[str] = field(default_factory=list)  # noqa: UP006
     state: Dict[str, Any] = field(default_factory=dict)  # noqa: UP006
-    dna: Optional[List[float]] = None  # noqa: UP045
+    dna: Optional[list[float]] = None  # noqa: UP045
     confidence: float = 0.0
     metadata: Dict[str, Any] = field(default_factory=dict)  # noqa: UP006
     status: str = "idle"

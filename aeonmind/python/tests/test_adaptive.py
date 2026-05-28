@@ -2,10 +2,9 @@
 Tests for AeonMind Adaptive Meta-Learner.
 """
 
-import pytest  # noqa: I001
 import numpy as np
 
-from aeonmind.core.adaptive import AdaptiveMetaLearner, AdaptiveConfig
+from aeonmind.core.adaptive import AdaptiveConfig, AdaptiveMetaLearner
 
 
 class TestAdaptiveMetaLearner:

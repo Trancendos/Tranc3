@@ -2,14 +2,13 @@
 Tests for AeonMind Bot Services.
 """
 
-import pytest  # noqa: I001
 
 from aeonmind.services.bot_services import (
     BotCapability,
-    BotStatus,
     BotServiceConfig,
-    BotServiceWorker,
     BotServiceRegistry,
+    BotServiceWorker,
+    BotStatus,
 )
 
 
