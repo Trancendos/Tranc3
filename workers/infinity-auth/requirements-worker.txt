@@ -5,3 +5,4 @@ uvicorn==0.34.3
 pydantic==2.11.5
 python-jose[cryptography]==3.4.0
 email-validator==2.2.0
+pyotp==2.9.0

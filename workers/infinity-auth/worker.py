@@ -41,6 +41,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+import pyotp
+
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -544,9 +546,10 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     if row["mfa_enabled"]:
         if not credentials.totp_code:
             raise HTTPException(status_code=403, detail="MFA code required")
-        # TOTP verification would go here (pyotp)
-        # For now, accept any 6-digit code as placeholder
-        if not (credentials.totp_code.isdigit() and len(credentials.totp_code) == 6):
+        totp_secret = row["totp_secret"]
+        if not totp_secret:
+            raise HTTPException(status_code=500, detail="MFA misconfigured — contact support")
+        if not pyotp.TOTP(totp_secret).verify(credentials.totp_code, valid_window=1):
             raise HTTPException(status_code=403, detail="Invalid MFA code")
 
     # Get role for JWT claims
@@ -693,8 +696,8 @@ async def get_profile(user: dict = Depends(get_current_user)):
 @app.post("/auth/mfa/setup", response_model=TOTPSetupResponse)
 async def setup_mfa(user: dict = Depends(get_current_user)):
     """Set up TOTP multi-factor authentication."""
-    # Generate TOTP secret
-    totp_secret = secrets.token_hex(20)
+    # Generate TOTP secret (Base32 so any RFC 6238 authenticator can import it)
+    totp_secret = pyotp.random_base32()
     backup_codes = [secrets.token_hex(4).upper() for _ in range(10)]
 
     # Store TOTP secret
@@ -704,9 +707,9 @@ async def setup_mfa(user: dict = Depends(get_current_user)):
     )
     db.commit()
 
-    # Generate QR code URL (otpauth:// format)
+    # Build a standards-compliant otpauth:// provisioning URI
     username = user.get("username", "user")
-    qr_url = f"otpauth://totp/Trancendos:{username}?secret={totp_secret}&issuer=Trancendos"
+    qr_url = pyotp.TOTP(totp_secret).provisioning_uri(name=username, issuer_name="Trancendos")
 
     return TOTPSetupResponse(
         secret=totp_secret,
