@@ -225,7 +225,7 @@ class AuditLogger:
     def __init__(self, redis_client: redis.Redis):
         self.redis = redis_client
 
-    def log_event(self, event_type: str, user_id: str, details: Dict, ip: str = None):
+    def log_event(self, event_type: str, user_id: str, details: Dict, ip: Optional[str] = None):
         import json
 
         event = {

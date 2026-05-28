@@ -271,7 +271,7 @@ class ChainOfThoughtReasoner:
             "Synthesise sub-results into a unified answer.",
         ]
 
-    async def reason(self, problem: str, examples: List[Dict] = None) -> Dict:
+    async def reason(self, problem: str, examples: Optional[List[Dict]] = None) -> Dict:
         """Perform chain-of-thought reasoning on a problem.
 
         Args:
@@ -402,7 +402,7 @@ class StrategicPlanner:
         self,
         goal: str,
         state: Dict,
-        constraints: List[str] = None,
+        constraints: Optional[List[str]] = None,
     ) -> Dict:
         """Produce a structured plan for achieving ``goal`` given current state.
 

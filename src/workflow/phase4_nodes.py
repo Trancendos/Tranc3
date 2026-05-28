@@ -807,10 +807,10 @@ class ForesightNode:
                         IntentPredictor,  # noqa: F401  # intentional top-level import
                     )
 
-                    predictor = IntentPredictor()
+                    intent_predictor = IntentPredictor()
                     msg_key = cfg.get("message_key", "message")
                     message = str(inputs.get(msg_key, ""))
-                    intents = predictor.classify(message)
+                    intents = intent_predictor.classify(message)
                     primary = intents[0][0] if intents else "unknown"
                     output["intent"] = {
                         "primary": primary,

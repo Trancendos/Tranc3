@@ -128,10 +128,10 @@ class AgentRuntime:
         self._results: Dict[str, Any] = {}
 
         # Lazy-loaded components (initialized on start)
-        self._task_decomposer = None
-        self._tool_bridge = None
-        self._memory_stream = None
-        self._goal_manager = None
+        self._task_decomposer: Optional[Any] = None
+        self._tool_bridge: Optional[Any] = None
+        self._memory_stream: Optional[Any] = None
+        self._goal_manager: Optional[Any] = None
 
         # Observers
         self._state_observers: List[Callable[[AgentState, AgentState], None]] = []

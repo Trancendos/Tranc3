@@ -191,7 +191,7 @@ class WorkerBridge:
         payload: Dict[str, Any],
     ) -> bool:
         """Publish an event to Sentinel Station. Returns True if published."""
-        self._stats["last_event_at"] = time.time()
+        self._stats["last_event_at"] = time.time()  # type: ignore[assignment]
 
         if self._sentinel is None:
             self._stats["events_dropped"] += 1
@@ -239,7 +239,7 @@ class WorkerBridge:
         source: str = "",
     ) -> bool:
         """Publish a message to the Dimensional Service Bus. Returns True if sent."""
-        self._stats["last_event_at"] = time.time()
+        self._stats["last_event_at"] = time.time()  # type: ignore[assignment]
 
         if self._bus is None:
             self._stats["events_dropped"] += 1

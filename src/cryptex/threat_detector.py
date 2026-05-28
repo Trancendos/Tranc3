@@ -163,7 +163,7 @@ class Cryptex:
         self,
         path: str,
         body: str = "",
-        headers: Dict[str, str] = None,
+        headers: Optional[Dict[str, str]] = None,
         actor: Optional[str] = None,
         ip: Optional[str] = None,
     ) -> List[ThreatSignal]:

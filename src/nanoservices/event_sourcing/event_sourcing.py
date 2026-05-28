@@ -219,7 +219,7 @@ class AggregateRoot:
         # Subclasses override to apply event to state
 
     def _raise_event(
-        self, event_type: EventType, data: Dict[str, Any], metadata: Dict[str, Any] = None
+        self, event_type: EventType, data: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None
     ) -> None:
         self._version += 1
         event = Event(

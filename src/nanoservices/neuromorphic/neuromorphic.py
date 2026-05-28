@@ -452,7 +452,7 @@ class NeuromorphicNetwork:
         if params.neuron_type == NeuronType.LIF:
             neuron = LIFNeuron(neuron_id, params)
         elif params.neuron_type == NeuronType.IZHIKEVICH:
-            neuron = IzhikevichNeuron(neuron_id, params)
+            neuron = IzhikevichNeuron(neuron_id, params)  # type: ignore[assignment]
         else:
             neuron = LIFNeuron(neuron_id, params)
 

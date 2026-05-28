@@ -465,7 +465,7 @@ class SentinelStation:
         if self._running:
             return
 
-        self._stats["started_at"] = datetime.now(timezone.utc).isoformat()
+        self._stats["started_at"] = datetime.now(timezone.utc).isoformat()  # type: ignore[assignment]
 
         # Try Redis connection
         connected = await self._redis_mgr.connect()

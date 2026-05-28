@@ -115,7 +115,7 @@ class SpikingNeuralNetwork(nn.Module):
     def __init__(
         self,
         input_size: int = 768,
-        hidden_sizes: List[int] = None,
+        hidden_sizes: Optional[List[int]] = None,
         output_size: int = 768,
         timesteps: int = 20,
     ):

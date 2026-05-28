@@ -115,7 +115,7 @@ class LifecycleEmitter:
                 pass  # listeners should not crash the emitter
 
         # Fire catch-all listeners
-        for listener in self._any_listeners:
+        for listener in self._any_listeners:  # type: ignore[assignment]
             try:
                 result = listener(key, ctx)
                 if asyncio.iscoroutine(result):
@@ -141,7 +141,7 @@ class LifecycleEmitter:
             except Exception:  # noqa: S110
                 pass  # graceful degradation
 
-        for listener in self._any_listeners:
+        for listener in self._any_listeners:  # type: ignore[assignment]
             try:
                 listener(key, ctx)
             except Exception:  # noqa: S110

@@ -101,7 +101,7 @@ class DBUserManager:
                 if not user.is_active:
                     return None
                 # Update last login
-                user.last_login = datetime.datetime.utcnow()
+                user.last_login = datetime.datetime.utcnow()  # type: ignore[assignment]
                 session.commit()
                 return {
                     "id": str(user.id),
@@ -151,7 +151,7 @@ class DBUserManager:
 
                 user = session.query(User).filter(User.username == username).first()
                 if user:
-                    user.tier = new_tier
+                    user.tier = new_tier  # type: ignore[assignment]
                     session.commit()
                     return True
             except Exception as e:

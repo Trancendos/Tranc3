@@ -23,10 +23,9 @@ class ConsciousnessAwareGenerator:
         self.config = config
         self.feature_manager = feature_manager
 
+        self.consciousness: Optional[ConsciousnessModel] = None
         if feature_manager.is_enabled(FeatureFlag.CONSCIOUSNESS_ENGINE):
             self.consciousness = ConsciousnessModel(config)
-        else:
-            self.consciousness = None
 
     def generate_with_consciousness(
         self,

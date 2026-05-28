@@ -279,7 +279,7 @@ class _MemoryQueue:
     async def get(self, key: str) -> Optional[str]:
         return self._store.get(key)
 
-    async def set(self, key: str, value: str, ex: int = None):
+    async def set(self, key: str, value: str, ex: Optional[int] = None):
         self._store[key] = value
 
     async def llen(self, _key: str) -> int:

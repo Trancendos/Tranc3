@@ -318,7 +318,7 @@ class DimensionalServiceBus:
         if self._running:
             return
 
-        self._stats["started_at"] = datetime.now(timezone.utc).isoformat()
+        self._stats["started_at"] = datetime.now(timezone.utc).isoformat()  # type: ignore[assignment]
 
         # Subscribe to Sentinel Station for cross-gateway messages
         if self._sentinel.is_running or not self._sentinel.is_running:

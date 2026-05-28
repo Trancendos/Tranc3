@@ -15,7 +15,7 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import ClassVar, Dict, List
+from typing import Optional, ClassVar, Dict, List
 
 import httpx
 
@@ -600,7 +600,7 @@ class NanoCodeBotDispatcher:
         self,
         failure_mode: FailureMode,
         service_id: str,
-        context: Dict = None,
+        context: Optional[Dict] = None,
     ) -> BotResult:
         """Find the right bot for *failure_mode* and execute its repair."""
         if context is None:
@@ -630,7 +630,7 @@ class NanoCodeBotDispatcher:
             self._history = self._history[-5_000:]
         return result
 
-    async def dispatch_from_metrics(self, metrics: Dict, config: Dict = None) -> BotResult:
+    async def dispatch_from_metrics(self, metrics: Dict, config: Optional[Dict] = None) -> BotResult:
         """Infer failure modes from *metrics* and dispatch the first matched bot."""
         service_id = str(metrics.get("service_id", "auto"))
         context: Dict = {"endpoint": metrics.get("endpoint", "")}

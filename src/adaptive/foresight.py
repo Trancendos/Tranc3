@@ -111,7 +111,7 @@ class ConversationTrajectoryPredictor:
         intent = "question" if "?" in message else "request"
         self.record_turn(self._DEFAULT_SESSION, "neutral", intent)
 
-    def predict(self, context: Dict = None) -> ProbabilityVector:
+    def predict(self, context: Optional[Dict] = None) -> ProbabilityVector:
         """Stateless predict — wraps predict_trajectory for the default session."""
         return self.predict_trajectory(self._DEFAULT_SESSION)
 

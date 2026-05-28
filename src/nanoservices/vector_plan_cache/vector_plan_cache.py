@@ -368,9 +368,9 @@ class VectorPlanCache:
         if backend == CacheBackend.LANCEDB:
             self._store = LanceDBPlanStore()
         elif backend == CacheBackend.CHROMADB:
-            self._store = ChromaDBPlanStore()
+            self._store = ChromaDBPlanStore()  # type: ignore[assignment]
         else:
-            self._store = InMemoryVectorStore()
+            self._store = InMemoryVectorStore()  # type: ignore[assignment]
 
         self._plans: Dict[str, CachedPlan] = {}
         self._query_to_plan: Dict[str, str] = {}  # schema_hash -> plan_id
@@ -436,7 +436,7 @@ class VectorPlanCache:
         search_results = []
 
         for plan_id, similarity, meta in results:
-            plan = self._plans.get(plan_id)
+            plan = self._plans.get(plan_id)  # type: ignore[assignment]
             if plan:
                 # Check staleness
                 age_hours = (time.time() - plan.created_at) / 3600

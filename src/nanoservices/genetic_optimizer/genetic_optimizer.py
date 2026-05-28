@@ -398,7 +398,7 @@ class GeneticOptimizer:
             next_front = []
             for p in fronts[i]:
                 for q_id in dominated_by[p.id]:
-                    q = next((ind for ind in self._population if ind.id == q_id), None)
+                    q = next((ind for ind in self._population if ind.id == q_id), None)  # type: ignore[assignment]
                     if q:
                         dominate_count[q.id] -= 1
                         if dominate_count[q.id] == 0:

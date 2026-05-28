@@ -8,7 +8,7 @@ import logging
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict
+from typing import Optional, Any, Callable, Dict
 
 from Dimensional.sanitize import sanitize_for_log
 
@@ -230,7 +230,7 @@ class SelfHealer:
         self._actions[action_name] = handler
         logger.info("SelfHealer: registered action '%s'", sanitize_for_log(action_name))
 
-    def heal(self, action_name: str, context: Dict = None) -> Dict:
+    def heal(self, action_name: str, context: Optional[Dict] = None) -> Dict:
         handler = self._actions.get(action_name)
         if not handler:
             return {"healed": False, "reason": f"No handler for '{action_name}'"}

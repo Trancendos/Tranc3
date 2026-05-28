@@ -23,10 +23,9 @@ class SelfEvolvingInference:
         self.config = config
         self.feature_manager = feature_manager
 
+        self.evolution_engine: Optional[SelfEvolvingArchitecture] = None
         if feature_manager.is_enabled(FeatureFlag.SELF_EVOLUTION):
             self.evolution_engine = SelfEvolvingArchitecture(config)
-        else:
-            self.evolution_engine = None
 
     def adapt_model(
         self,

@@ -14,7 +14,7 @@ except ImportError:
 
     _bearer = HTTPBearer(auto_error=False)
 
-    async def get_current_user(credentials: HTTPAuthorizationCredentials = None):
+    async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = None):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Auth module not available",
