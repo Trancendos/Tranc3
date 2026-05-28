@@ -678,6 +678,93 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8029/health"]
       <<: *healthcheck-default
 
+  # ── P3 — Intelligence / AI Layer (8030–8038) ─────────────────────────────
+
+  gbrain-bridge:
+    <<: *worker-common
+    build: { context: ./workers/gbrain-bridge, dockerfile: Dockerfile }
+    container_name: gbrain-bridge-worker
+    ports: ["8030:8030"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8030/health"]
+      <<: *healthcheck-default
+
+  topology-service:
+    <<: *worker-common
+    build: { context: ./workers/topology-service, dockerfile: Dockerfile }
+    container_name: topology-service-worker
+    ports: ["8031:8031"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8031/health"]
+      <<: *healthcheck-default
+
+  ledger-service:
+    <<: *worker-common
+    build: { context: ./workers/ledger-service, dockerfile: Dockerfile }
+    container_name: ledger-service-worker
+    ports: ["8032:8032"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8032/health"]
+      <<: *healthcheck-default
+
+  model-router-service:
+    <<: *worker-common
+    build: { context: ./workers/model-router-service, dockerfile: Dockerfile }
+    container_name: model-router-service-worker
+    ports: ["8033:8033"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8033/health"]
+      <<: *healthcheck-default
+
+  workflow-engine-service:
+    <<: *worker-common
+    build: { context: ./workers/workflow-engine-service, dockerfile: Dockerfile }
+    container_name: workflow-engine-service-worker
+    ports: ["8034:8034"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8034/health"]
+      <<: *healthcheck-default
+
+  skills-benchmark-service:
+    <<: *worker-common
+    build: { context: ./workers/skills-benchmark-service, dockerfile: Dockerfile }
+    container_name: skills-benchmark-service-worker
+    ports: ["8035:8035"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8035/health"]
+      <<: *healthcheck-default
+
+  langchain-integration-service:
+    <<: *worker-common
+    build: { context: ./workers/langchain-integration-service, dockerfile: Dockerfile }
+    container_name: langchain-integration-service-worker
+    ports: ["8036:8036"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8036/health"]
+      <<: *healthcheck-default
+
+  deepagents-orchestrator-service:
+    <<: *worker-common
+    build: { context: ./workers/deepagents-orchestrator-service, dockerfile: Dockerfile }
+    container_name: deepagents-orchestrator-service-worker
+    ports: ["8037:8037"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8037/health"]
+      <<: *healthcheck-default
+
+  vault-service:
+    <<: *worker-common
+    build: { context: ./workers/vault-service, dockerfile: Dockerfile }
+    container_name: vault-service-worker
+    ports: ["8038:8038"]
+    environment:
+      VAULT_DB_PATH: /data/vault.db
+    volumes:
+      - vault-service-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8038/health"]
+      <<: *healthcheck-default
+
   # ── Infinity Admin — Entity & Config Management (Port 8044) ──────────────
   infinity-admin:
     <<: *worker-common
@@ -714,6 +801,8 @@ volumes:
   ipfs-data:
     driver: local
   void-data:
+    driver: local
+  vault-service-data:
     driver: local
   admin-data:
     driver: local
