@@ -60,7 +60,7 @@ try:
     _ORCHESTRATOR_AVAILABLE = True
 except ImportError:
     _ORCHESTRATOR_AVAILABLE = False
-    SUBSYSTEM_AVAILABILITY: dict = {}
+    SUBSYSTEM_AVAILABILITY: dict = {}  # type: ignore[no-redef]
 
 try:
     from Dimensional.infinity.proactive_defense import ProactiveDefenseLayer

@@ -483,7 +483,7 @@ class VectorPlanCache:
 
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
-        status_counts = {}
+        status_counts = {}  # type: ignore[var-annotated]
         for plan in self._plans.values():
             status_counts[plan.status.value] = status_counts.get(plan.status.value, 0) + 1
 

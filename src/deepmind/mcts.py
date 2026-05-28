@@ -94,7 +94,7 @@ class NeuralNetworkAdapter:
     so MCTS degrades gracefully to pure UCT.
     """
 
-    def __init__(self, policy_value_fn: Optional[callable] = None) -> None:
+    def __init__(self, policy_value_fn: Optional[callable] = None) -> None:  # type: ignore[valid-type]
         self._fn = policy_value_fn
 
     def evaluate(self, state: Any) -> Tuple[Dict[str, float], float]:

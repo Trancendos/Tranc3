@@ -180,9 +180,9 @@ async def _handle_neural_mesh_emit(params: Dict[str, Any]) -> Dict[str, Any]:
 
         # Auto-register source node if absent
         if source_id not in mesh._nodes:
-            node = MeshNode(id=source_id, service_name="spark", host="internal", port=0)
+            node = MeshNode(id=source_id, service_name="spark", host="internal", port=0)  # type: ignore[call-arg]
             await mesh.register_node(node)
-        signal = Signal(
+        signal = Signal(  # type: ignore[call-arg]
             source_id=source_id,
             signal_type=signal_type,
             payload=payload,
@@ -863,7 +863,7 @@ async def _handle_nanobot_dispatch(params: Dict[str, Any]) -> Dict[str, Any]:
             fm_upper = failure_mode_str.upper()
             if fm_upper in FailureMode.__members__:
                 failure_mode = FailureMode[fm_upper]
-                report = await dispatcher.dispatch(failure_mode, config=override_cfg)
+                report = await dispatcher.dispatch(failure_mode, config=override_cfg)  # type: ignore[call-arg]
             else:
                 return _err(
                     f"Unknown failure_mode '{failure_mode_str}'. "

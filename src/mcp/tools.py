@@ -1192,7 +1192,7 @@ class SparkToolRegistry:
             processor = NeuromorphicProcessor({})
             tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0)
             result = (
-                processor.process(tensor, timesteps=timesteps)
+                processor.process(tensor, timesteps=timesteps)  # type: ignore[call-arg]
                 if hasattr(processor, "process")
                 else {"note": "neuromorphic scaffold — wire input dimensions to activate"}
             )
@@ -1242,7 +1242,7 @@ class SparkToolRegistry:
 
             problem = params["problem"]
             depth = int(params.get("depth", 3))
-            engine = PlanningEngine()
+            engine = PlanningEngine()  # type: ignore[call-arg]
             plan = (
                 engine.plan(problem, depth=depth)
                 if hasattr(engine, "plan")

@@ -147,8 +147,8 @@ class Library:
 
     def stats(self) -> Dict[str, Any]:
         total = len(self._articles)
-        by_status = {}
-        by_source = {}
+        by_status = {}  # type: ignore[var-annotated]
+        by_source = {}  # type: ignore[var-annotated]
         for art in self._articles.values():
             by_status[art.status.value] = by_status.get(art.status.value, 0) + 1
             by_source[art.source] = by_source.get(art.source, 0) + 1

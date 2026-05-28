@@ -1525,7 +1525,7 @@ def get_all_ids() -> List[Dict]:
         result.append(
             {
                 "id": entity.aid,
-                "tier": 3,
+                "tier": 3,  # type: ignore[dict-item]
                 "name": entity.lead_ai,
                 "location": loc_name,
             }
@@ -1533,7 +1533,7 @@ def get_all_ids() -> List[Dict]:
         result.append(
             {
                 "id": entity.agent_alpha.sid,
-                "tier": 4,
+                "tier": 4,  # type: ignore[dict-item]
                 "name": entity.agent_alpha.code_name,
                 "location": loc_name,
                 "role": "Alpha",
@@ -1542,7 +1542,7 @@ def get_all_ids() -> List[Dict]:
         result.append(
             {
                 "id": entity.agent_beta.sid,
-                "tier": 4,
+                "tier": 4,  # type: ignore[dict-item]
                 "name": entity.agent_beta.code_name,
                 "location": loc_name,
                 "role": "Beta",
@@ -1558,7 +1558,7 @@ def get_all_ids() -> List[Dict]:
             result.append(
                 {
                     "id": bot.nid,
-                    "tier": 5,
+                    "tier": 5,  # type: ignore[dict-item]
                     "name": bot.code_name,
                     "location": loc_name,
                     "slot": slot,

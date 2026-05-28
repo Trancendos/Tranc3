@@ -320,7 +320,7 @@ class ViolationPredictor:
         Args:
             violations: List of Violation objects from a scan.
         """
-        counter = Counter()
+        counter = Counter()  # type: ignore[var-annotated]
         for v in violations:
             counter[v.file] += 1
 

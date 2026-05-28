@@ -360,7 +360,7 @@ class DriftDetector:
     def detect_drift(self, service_name: str) -> DriftReport:
         status = self.flux_client.get_kustomization_status(service_name)
         if status is None:
-            return DriftReport(
+            return DriftReport(  # type: ignore[call-arg]
                 service_name=service_name,
                 has_drift=False,
                 severity="unknown",

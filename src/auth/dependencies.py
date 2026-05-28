@@ -1,3 +1,4 @@
+from typing import Optional
 # src/auth/dependencies.py
 # Shim: re-export get_current_user from root-level auth.py
 # The MCP server imports from src.auth.dependencies for packaging consistency.
@@ -14,7 +15,7 @@ except ImportError:
 
     _bearer = HTTPBearer(auto_error=False)
 
-    async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = None):
+    async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = None):  # type: ignore[misc]
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Auth module not available",

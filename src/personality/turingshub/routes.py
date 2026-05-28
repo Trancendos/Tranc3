@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from fastapi import APIRouter, Body, Path
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 
 from Dimensional.error_handlers import safe_error_detail
 
@@ -55,7 +55,7 @@ async def list_personalities() -> Response:
             if hasattr(spawner, "list_profiles")
             else list(spawner._profiles.keys())
         )
-        return [{"id": pid, "profile": spawner._profiles.get(pid, {})} for pid in profiles]
+        return [{"id": pid, "profile": spawner._profiles.get(pid, {})} for pid in profiles]  # type: ignore[return-value]
     except Exception as exc:
         return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
 
@@ -66,7 +66,7 @@ async def get_personality(personality_id: str = Path(...)) -> Response:
     profile = spawner._profiles.get(personality_id)
     if not profile:
         return JSONResponse({"error": "Personality not found"}, status_code=404)
-    return {"id": personality_id, "profile": profile}
+    return {"id": personality_id, "profile": profile}  # type: ignore[return-value]
 
 
 @router.post("/spawn")

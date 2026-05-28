@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Path
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 
 from src.tranquility.wellbeing import get_tranquility
 
@@ -32,7 +32,7 @@ async def log_mood(
         notes=body.get("notes", ""),
         tags=body.get("tags"),
     )
-    return entry.to_dict()
+    return entry.to_dict()  # type: ignore[return-value]
 
 
 @router.post("/message/{user_id}")
@@ -52,7 +52,7 @@ async def get_profile(user_id: str = Path(...)) -> Response:
     profile = get_tranquility()._profiles.get(user_id)
     if not profile:
         return JSONResponse({"error": "Profile not found"}, status_code=404)
-    return profile.to_dict()
+    return profile.to_dict()  # type: ignore[return-value]
 
 
 @router.get("/export/{user_id}")
@@ -60,7 +60,7 @@ async def export_data(user_id: str = Path(...)) -> Response:
     data = get_tranquility().export_user_data(user_id)
     if data is None:
         return JSONResponse({"error": "No data found"}, status_code=404)
-    return data
+    return data  # type: ignore[return-value]
 
 
 @router.delete("/data/{user_id}")
@@ -68,4 +68,4 @@ async def delete_data(user_id: str = Path(...)) -> Response:
     deleted = get_tranquility().delete_user_data(user_id)
     if not deleted:
         return JSONResponse({"error": "No data found"}, status_code=404)
-    return {"deleted": user_id}
+    return {"deleted": user_id}  # type: ignore[return-value]

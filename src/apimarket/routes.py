@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Path, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 
 from src.apimarket.marketplace import AuthType, ConnectorStatus, get_marketplace
 
@@ -29,7 +29,7 @@ async def list_connectors(
             ss = ConnectorStatus(status)
         except ValueError:
             return JSONResponse({"error": "Unknown status"}, status_code=400)
-    return [c.to_dict() for c in get_marketplace().list_connectors(tag=tag, status=ss)]
+    return [c.to_dict() for c in get_marketplace().list_connectors(tag=tag, status=ss)]  # type: ignore[return-value]
 
 
 @router.get("/connectors/{connector_id}")
@@ -40,7 +40,7 @@ async def get_connector(connector_id: str = Path(...)) -> Response:
         connector = get_marketplace().find_by_slug(connector_id)
     if not connector:
         return JSONResponse({"error": "Connector not found"}, status_code=404)
-    return {**connector.to_dict(), "endpoints": [e.to_dict() for e in connector.endpoints]}
+    return {**connector.to_dict(), "endpoints": [e.to_dict() for e in connector.endpoints]}  # type: ignore[return-value]
 
 
 @router.post("/connectors")
@@ -65,7 +65,7 @@ async def register_connector(body: Dict[str, Any] = Body(...)) -> Response:
         tags=body.get("tags"),
         rate_limit_per_min=body.get("rate_limit_per_min", 60),
     )
-    return connector.to_dict()
+    return connector.to_dict()  # type: ignore[return-value]
 
 
 @router.post("/connectors/{connector_id}/endpoints")
@@ -82,4 +82,4 @@ async def add_endpoint(
     )
     if ep is None:
         return JSONResponse({"error": "Connector not found"}, status_code=404)
-    return ep.to_dict()
+    return ep.to_dict()  # type: ignore[return-value]

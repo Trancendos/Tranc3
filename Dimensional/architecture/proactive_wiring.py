@@ -1255,7 +1255,7 @@ class ProactiveSystemBootstrap:
                 pass
 
         # Get health profile if available
-        health_profile = {}
+        health_profile = {}  # type: ignore[var-annotated]
         if self._orchestrator and hasattr(self._orchestrator, "get_health_profile"):
             try:
                 hp = self._orchestrator.get_health_profile()
@@ -1264,7 +1264,7 @@ class ProactiveSystemBootstrap:
                 pass
 
         # Get zero-cost status if available
-        zero_cost_status = {}
+        zero_cost_status = {}  # type: ignore[var-annotated]
         if self._orchestrator and hasattr(self._orchestrator, "get_zero_cost_status"):
             try:
                 zc = self._orchestrator.get_zero_cost_status()

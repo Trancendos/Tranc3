@@ -420,7 +420,7 @@ class PathTraversalChecker(RuleChecker):
     _OS_MKDIR_OPS = {"mkdir", "makedirs"}
 
     def check(self, tree: ast.AST, source: str, filepath: str) -> List[Violation]:
-        violations = []
+        violations = []  # type: ignore[var-annotated]
 
         # Build set of variable names that have been validated in this scope
         validated_vars = self._find_validated_vars(tree)

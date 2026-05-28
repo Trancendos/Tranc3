@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from fastapi import APIRouter, Body, Path
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 
 from src.taimra.digital_twin import get_taimra
 
@@ -35,7 +35,7 @@ async def get_twin(user_id: str = Path(...)) -> Response:
     twin = get_taimra()._twins.get(user_id)
     if not twin:
         return JSONResponse({"error": "Twin not found"}, status_code=404)
-    return twin.to_dict()
+    return twin.to_dict()  # type: ignore[return-value]
 
 
 @router.post("/record/{user_id}")
@@ -63,7 +63,7 @@ async def export_twin(user_id: str = Path(...)) -> Response:
     data = get_taimra().export(user_id)
     if data is None:
         return JSONResponse({"error": "Twin not found"}, status_code=404)
-    return data
+    return data  # type: ignore[return-value]
 
 
 @router.delete("/twin/{user_id}")
@@ -71,4 +71,4 @@ async def delete_twin(user_id: str = Path(...)) -> Response:
     deleted = get_taimra().delete(user_id)
     if not deleted:
         return JSONResponse({"error": "Twin not found"}, status_code=404)
-    return {"deleted": user_id}
+    return {"deleted": user_id}  # type: ignore[return-value]

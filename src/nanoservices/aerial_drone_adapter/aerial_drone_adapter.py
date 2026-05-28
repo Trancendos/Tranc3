@@ -426,7 +426,7 @@ class SwarmCoordinator:
 
     def get_swarm_status(self) -> Dict[str, Any]:
         """Get overall swarm status."""
-        states = {}
+        states = {}  # type: ignore[var-annotated]
         for d in self.drones.values():
             states[d.state.value] = states.get(d.state.value, 0) + 1
 

@@ -582,7 +582,7 @@ class NSGAIIPlanOptimizer:
             for front in fronts:
                 self.crowding_distance(front)
 
-            new_population = []
+            new_population = []  # type: ignore[var-annotated]
             for front in fronts:
                 if len(new_population) + len(front) <= self.population_size:
                     new_population.extend(front)

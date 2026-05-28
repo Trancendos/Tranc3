@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Path
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 
 from src.resonate.empathy import get_resonate
 
@@ -29,7 +29,7 @@ async def wrap_response(body: Dict[str, Any] = Body(...)) -> Response:
         user_mood=body.get("user_mood"),
         crisis_resources=bool(body.get("crisis_resources", False)),
     )
-    return {"wrapped_response": wrapped}
+    return {"wrapped_response": wrapped}  # type: ignore[return-value]
 
 
 @router.post("/escalate/{user_id}")

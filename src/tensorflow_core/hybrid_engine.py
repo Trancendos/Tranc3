@@ -77,17 +77,17 @@ class ModelEnsemble:
         torch_out, tf_out = await asyncio.gather(torch_task, tf_task, return_exceptions=True)
 
         w_torch, w_tf = self._weights
-        torch_ok = isinstance(torch_out, np.ndarray)
-        tf_ok = isinstance(tf_out, np.ndarray)
+        torch_ok = isinstance(torch_out, np.ndarray)  # type: ignore[has-type]
+        tf_ok = isinstance(tf_out, np.ndarray)  # type: ignore[has-type]
 
         if not torch_ok:
-            if isinstance(torch_out, Exception):
-                logger.warning("Torch model failed: %s", torch_out)
+            if isinstance(torch_out, Exception):  # type: ignore[has-type]
+                logger.warning("Torch model failed: %s", torch_out)  # type: ignore[has-type]
             torch_out = None
 
         if not tf_ok:
-            if isinstance(tf_out, Exception):
-                logger.warning("TF model failed: %s", tf_out)
+            if isinstance(tf_out, Exception):  # type: ignore[has-type]
+                logger.warning("TF model failed: %s", tf_out)  # type: ignore[has-type]
             tf_out = None
 
         # Normalise weights based on availability

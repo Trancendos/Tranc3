@@ -842,7 +842,7 @@ class MergeNode(BaseNode):
         t0 = time.monotonic()
         strategy = self.config.config.get("strategy", "merge")  # merge | first | last
         if strategy == "first":
-            output = next(iter(inputs.values()), {}) if inputs else {}
+            output = next(iter(inputs.values()), {}) if inputs else {}  # type: ignore[var-annotated]
         elif strategy == "last":
             output = next(reversed(list(inputs.values())), {}) if inputs else {}
         else:

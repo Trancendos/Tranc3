@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Path, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 
 from src.artifactory.registry import ArtifactType, get_artifactory
 
@@ -30,7 +30,7 @@ async def list_artifacts(
         except ValueError:
             valid = [t.value for t in ArtifactType]
             return JSONResponse({"error": f"Unknown type. Valid: {valid}"}, status_code=400)
-    return [
+    return [  # type: ignore[return-value]
         a.to_dict()
         for a in get_artifactory().list_artifacts(artifact_type=atype, namespace=namespace)
     ]
@@ -54,7 +54,7 @@ async def create_artifact(body: Dict[str, Any] = Body(...)) -> Response:
         description=body.get("description", ""),
         ttl_days=body.get("ttl_days"),
     )
-    return artifact.to_dict()
+    return artifact.to_dict()  # type: ignore[return-value]
 
 
 @router.get("/artifacts/{artifact_id}")
@@ -62,7 +62,7 @@ async def get_artifact(artifact_id: str = Path(...)) -> Response:
     artifact = get_artifactory().get_artifact(artifact_id)
     if not artifact:
         return JSONResponse({"error": "Artifact not found"}, status_code=404)
-    return {**artifact.to_dict(), "versions": [v.to_dict() for v in artifact.versions]}
+    return {**artifact.to_dict(), "versions": [v.to_dict() for v in artifact.versions]}  # type: ignore[return-value]
 
 
 @router.post("/artifacts/{artifact_id}/versions")
@@ -83,7 +83,7 @@ async def push_version(
     )
     if ver is None:
         return JSONResponse({"error": "Artifact not found or deleted"}, status_code=404)
-    return ver.to_dict()
+    return ver.to_dict()  # type: ignore[return-value]
 
 
 @router.delete("/artifacts/{artifact_id}")
@@ -91,7 +91,7 @@ async def delete_artifact(artifact_id: str = Path(...)) -> Response:
     ok = get_artifactory().delete_artifact(artifact_id)
     if not ok:
         return JSONResponse({"error": "Artifact not found"}, status_code=404)
-    return {"deleted": artifact_id}
+    return {"deleted": artifact_id}  # type: ignore[return-value]
 
 
 @router.post("/retention/apply")

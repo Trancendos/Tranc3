@@ -379,7 +379,7 @@ class InfinityFluidicGateway:
         # Publish routing event to CausalEventBus
         if self.causal_bus and _MODELS_AVAILABLE:
             try:
-                event = EventMessage(
+                event = EventMessage(  # type: ignore[call-arg]
                     event_type="gateway.route",
                     payload={
                         "user_id": user_id,

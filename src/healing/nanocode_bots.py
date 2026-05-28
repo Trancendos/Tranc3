@@ -589,7 +589,7 @@ class NanoCodeBotDispatcher:
             RateLimitBot,
             ServiceUnreachableBot,
         ]:
-            instance = bot_cls()
+            instance = bot_cls()  # type: ignore[abstract]
             self._bots[instance.failure_mode] = instance
 
     # ------------------------------------------------------------------

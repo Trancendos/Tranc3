@@ -522,7 +522,7 @@ class LiquidicFlowEngine:
 
         # BFS
         visited = {source_container}
-        queue = [(source_container, [])]
+        queue = [(source_container, [])]  # type: ignore[var-annotated]
 
         while queue:
             current, path = queue.pop(0)

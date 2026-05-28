@@ -466,7 +466,7 @@ class LoRASaveLoad:
         layers exist.  Returns the full checkpoint dict.
         """
         payload = torch.load(path, map_location="cpu", weights_only=True)
-        missing, unexpected = [], []
+        missing, unexpected = [], []  # type: ignore[var-annotated]
         state = payload.get("lora_state", payload)
         {n for n, _ in model.named_parameters() if "lora_" in n}
         for k, v in state.items():

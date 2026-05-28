@@ -333,7 +333,7 @@ class SmartDependencyGraph:
 
     def _generate_mitigations(self, node_name: str, impacted: Dict[str, ImpactLevel]) -> List[str]:
         """Generate mitigation suggestions based on impact analysis."""
-        suggestions = []
+        suggestions = []  # type: ignore[var-annotated]
         node = self._nodes.get(node_name)
 
         if not node:

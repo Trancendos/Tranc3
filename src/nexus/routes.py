@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from fastapi import APIRouter, Body
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 
 from Dimensional.error_handlers import safe_error_detail
 
@@ -51,7 +51,7 @@ async def publish(body: Dict[str, Any] = Body(...)) -> Response:
         )
     except Exception as exc:
         return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
-    return {"published": msg.id, "topic": topic, "priority": priority.name}
+    return {"published": msg.id, "topic": topic, "priority": priority.name}  # type: ignore[return-value]
 
 
 @router.post("/send")
@@ -67,7 +67,7 @@ async def send_direct(body: Dict[str, Any] = Body(...)) -> Response:
         return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
     if msg is None:
         return JSONResponse({"error": "Recipient service not registered"}, status_code=404)
-    return {"sent": msg.id, "recipient": recipient}
+    return {"sent": msg.id, "recipient": recipient}  # type: ignore[return-value]
 
 
 @router.post("/route/inference")

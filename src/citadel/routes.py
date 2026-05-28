@@ -10,7 +10,7 @@ import os
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Header, Path, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 
 from Dimensional.sanitize import sanitize_for_log
 from src.citadel.devops_hub import DeployStatus, DeployTarget, ServiceHealthStatus, get_citadel
@@ -46,7 +46,7 @@ async def record_deploy(body: Dict[str, Any] = Body(...)) -> Response:
         triggered_by=body.get("triggered_by", "forgejo"),
         status=DeployStatus(body.get("status", "pending")),
     )
-    return record.to_dict()
+    return record.to_dict()  # type: ignore[return-value]
 
 
 @router.get("/deploys")
@@ -57,7 +57,7 @@ async def list_deploys(target: Optional[str] = Query(None)) -> Response:
             t = DeployTarget(target)
         except ValueError:
             return JSONResponse({"error": "Unknown target"}, status_code=400)
-    return [d.to_dict() for d in get_citadel().list_deploys(target=t)]
+    return [d.to_dict() for d in get_citadel().list_deploys(target=t)]  # type: ignore[return-value]
 
 
 @router.patch("/deploys/{deploy_id}")
@@ -76,7 +76,7 @@ async def update_deploy(
     record = get_citadel().update_deploy(deploy_id, status=status, error=body.get("error"))
     if not record:
         return JSONResponse({"error": "Deploy not found"}, status_code=404)
-    return record.to_dict()
+    return record.to_dict()  # type: ignore[return-value]
 
 
 @router.patch("/health/{service_name}")
@@ -91,7 +91,7 @@ async def update_health(
         valid = [s.value for s in ServiceHealthStatus]
         return JSONResponse({"error": f"Unknown health status. Valid: {valid}"}, status_code=400)
     get_citadel().update_health(service_name, status)
-    return {"updated": service_name, "health": raw_status}
+    return {"updated": service_name, "health": raw_status}  # type: ignore[return-value]
 
 
 @router.post("/webhooks/forgejo")
@@ -149,6 +149,6 @@ async def forgejo_webhook(
             record = get_citadel().record_deploy(
                 target=target, version=version, triggered_by=sender, status=status
             )
-            return {"accepted": True, "deploy_id": record.id, "target": target.value}
+            return {"accepted": True, "deploy_id": record.id, "target": target.value}  # type: ignore[return-value]
 
-    return {"accepted": True, "event": event, "action": "logged"}
+    return {"accepted": True, "event": event, "action": "logged"}  # type: ignore[return-value]

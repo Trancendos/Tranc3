@@ -176,9 +176,9 @@ class NeuralMeshNode:
                 payload = inputs.get(payload_key, inputs) if payload_key else inputs
                 ttl = int(cfg.get("ttl", 5))
                 if source_id not in mesh._nodes:
-                    node = MeshNode(id=source_id, service_name="workflow", host="internal", port=0)
+                    node = MeshNode(id=source_id, service_name="workflow", host="internal", port=0)  # type: ignore[call-arg]
                     await mesh.register_node(node)
-                signal = Signal(
+                signal = Signal(  # type: ignore[call-arg]
                     source_id=source_id,
                     signal_type=signal_type,
                     payload=dict(payload) if isinstance(payload, dict) else {"data": payload},
@@ -451,7 +451,7 @@ class AttentionRouteNode:
             # Resolve query from config or input
             query_key = cfg.get("query_input_key")
             query = str(inputs.get(query_key, "")) if query_key else cfg.get("query", "")
-            req = RoutingRequest(
+            req = RoutingRequest(  # type: ignore[call-arg]
                 query=query,
                 required_capabilities=list(cfg.get("required_capabilities", [])),
                 preferred_tags=list(cfg.get("preferred_tags", [])),
@@ -460,7 +460,7 @@ class AttentionRouteNode:
             )
             decision = await router.route(req)
             if decision is None:
-                output = {"routed": False, "primary_service": None, "candidates": []}
+                output = {"routed": False, "primary_service": None, "candidates": []}  # type: ignore[var-annotated]
             else:
                 output = {
                     "routed": True,

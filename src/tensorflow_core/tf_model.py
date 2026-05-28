@@ -163,7 +163,7 @@ class TFSequenceClassifier:
         try:
             tf = _get_tf()
             tensor_in = tf.constant(input_ids, dtype=tf.int32)
-            probs = self.model(tensor_in, training=False)
+            probs = self.model(tensor_in, training=False)  # type: ignore[misc]
             return probs.numpy()
         except Exception as exc:
             logger.error("TFSequenceClassifier.predict failed: %s", exc)
@@ -190,8 +190,8 @@ class TFSequenceClassifier:
             y = tf.constant(labels, dtype=tf.int32)
 
             with tf.GradientTape() as tape:
-                logits = self.model(x, training=True)
-                loss = self._loss_fn(y, logits)
+                logits = self.model(x, training=True)  # type: ignore[misc]
+                loss = self._loss_fn(y, logits)  # type: ignore[misc]
 
             grads = tape.gradient(loss, self.model.trainable_variables)  # type: ignore[union-attr]
             self._optimizer.apply_gradients(  # type: ignore[union-attr]
@@ -303,7 +303,7 @@ class TFReinforcementAgent:
             s = np.array(state, dtype=np.float32)
             if s.ndim == 1:
                 s = s[np.newaxis, :]
-            q_vals = self.q_network(tf.constant(s), training=False)
+            q_vals = self.q_network(tf.constant(s), training=False)  # type: ignore[misc]
             return int(tf.argmax(q_vals, axis=-1).numpy()[0])
         except Exception as exc:
             logger.warning("select_action failed, returning random: %s", exc)
@@ -337,18 +337,18 @@ class TFReinforcementAgent:
             gamma: float = batch.get("gamma", 0.99)
 
             # Compute target Q-values using the frozen target network
-            next_q = self.target_network(next_states, training=False)
+            next_q = self.target_network(next_states, training=False)  # type: ignore[misc]
             max_next_q = tf.reduce_max(next_q, axis=-1)
             targets = rewards + gamma * (1.0 - dones) * max_next_q  # (B,)
 
             B = states.shape[0]
 
             with tf.GradientTape() as tape:
-                q_vals = self.q_network(states, training=True)  # (B, action_dim)
+                q_vals = self.q_network(states, training=True)  # type: ignore[misc]  # (B, action_dim)
                 # Gather Q-values for the taken actions
                 indices = tf.stack([tf.range(B, dtype=tf.int32), actions], axis=1)
                 predicted_q = tf.gather_nd(q_vals, indices)  # (B,)
-                loss = self._loss_fn(targets, predicted_q)
+                loss = self._loss_fn(targets, predicted_q)  # type: ignore[misc]
 
             grads = tape.gradient(loss, self.q_network.trainable_variables)  # type: ignore[union-attr]
             self._optimizer.apply_gradients(  # type: ignore[union-attr]

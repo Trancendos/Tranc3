@@ -404,7 +404,7 @@ class QuantumSolver:
 
         # Build QUBO: minimize cost, maximize efficiency
         linear = {}
-        quadratic = {}
+        quadratic = {}  # type: ignore[var-annotated]
 
         for i in range(n_tasks):
             for j in range(n_resources):

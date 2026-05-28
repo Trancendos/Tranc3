@@ -315,7 +315,7 @@ class InferenceWorker:
         try:
             from src.core.consciousness_integration import ConsciousnessIntegration
 
-            ci = ConsciousnessIntegration()
+            ci = ConsciousnessIntegration()  # type: ignore[call-arg]
             phi = await ci.compute_phi(text)
         except Exception:
             # Fallback: heuristic phi estimate based on text complexity

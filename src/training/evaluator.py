@@ -445,7 +445,7 @@ def _cli() -> None:
     # Validation loader (if data available)
     eval_metrics: Optional[EvalMetrics] = None
     try:
-        val_ds = TranscDataset(split="val")
+        val_ds = TranscDataset(split="val")  # type: ignore[call-arg]
         val_loader = torch.utils.data.DataLoader(
             val_ds, batch_size=cfg.batch_size, shuffle=False
         )

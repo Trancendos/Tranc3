@@ -432,7 +432,7 @@ class GeneticOptimizer:
 
     def _select_new_population(self, fronts: List[List[Individual]]) -> List[Individual]:
         """Select individuals for the next generation from sorted fronts."""
-        new_pop = []
+        new_pop = []  # type: ignore[var-annotated]
         for front in fronts:
             if len(new_pop) + len(front) <= self._population_size:
                 new_pop.extend(front)

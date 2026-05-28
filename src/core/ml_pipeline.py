@@ -374,7 +374,7 @@ class MLPipeline:
         if prior_context:
             enriched_prompt = f"[Prior context: {prior_context[:500]}]\n\n{request.prompt}"
 
-        llm_request = LLMRequest(
+        llm_request = LLMRequest(  # type: ignore[call-arg]
             prompt=enriched_prompt,
             personality=request.personality,
             system_prompt=request.system_prompt,

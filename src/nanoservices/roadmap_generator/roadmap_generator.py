@@ -248,7 +248,7 @@ class SHIRoadmapAdvisor:
             return self._heuristic_breakdown(task)
 
     def _heuristic_breakdown(self, task: RoadmapTask) -> List[RoadmapTask]:
-        subtasks = []
+        subtasks = []  # type: ignore[var-annotated]
         phases = ["Design & Planning", "Implementation", "Testing", "Documentation", "Integration"]
         for i, phase_name in enumerate(phases):
             subtasks.append(

@@ -1239,7 +1239,7 @@ class VaultSecretLoader:
         self._cache_lock = threading.Lock()
 
     @asynccontextmanager  # type: ignore[arg-type]
-    async def secret(self, key: str) -> Generator[SecureBytes, None, None]:
+    async def secret(self, key: str) -> Generator[SecureBytes, None, None]:  # type: ignore[misc]
         """Load a secret as SecureBytes with automatic zeroization.
 
         The secret is automatically zeroized when the context manager exits,
@@ -1257,7 +1257,7 @@ class VaultSecretLoader:
                     del self._cache[key]
 
     @asynccontextmanager  # type: ignore[arg-type]
-    async def secrets(self, keys: List[str]) -> Generator[Dict[str, SecureBytes], None, None]:
+    async def secrets(self, keys: List[str]) -> Generator[Dict[str, SecureBytes], None, None]:  # type: ignore[misc]
         """Load multiple secrets as SecureBytes with automatic zeroization."""
         loaded: Dict[str, SecureBytes] = {}
         try:

@@ -228,7 +228,7 @@ class ProactiveDefenseLayer:
         # ── DefenseEngine firewall evaluation ─────────────────────────────
         if self.engine:
             try:
-                eval_result = self.engine.evaluate_request(
+                eval_result = self.engine.evaluate_request(  # type: ignore[call-arg]
                     {  # type: ignore[arg-type]
                         "source": source_ip,
                         "destination": self.service_name,

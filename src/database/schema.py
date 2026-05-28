@@ -61,10 +61,10 @@ Base = declarative_base()
 # ============================================================
 # USERS
 # ============================================================
-class User(Base):
+class User(Base):  # type: ignore[misc,valid-type]
     __tablename__ = "users"
 
-    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)
+    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)  # type: ignore[var-annotated]
     username = Column(String(64), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
@@ -93,11 +93,11 @@ class User(Base):
 # ============================================================
 # CONVERSATIONS
 # ============================================================
-class Conversation(Base):
+class Conversation(Base):  # type: ignore[misc,valid-type]
     __tablename__ = "conversations"
 
-    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)
-    user_id = Column(_GUID(), ForeignKey("users.id"), nullable=False)
+    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)  # type: ignore[var-annotated]
+    user_id = Column(_GUID(), ForeignKey("users.id"), nullable=False)  # type: ignore[var-annotated]
     title = Column(String(255), nullable=True)
     language = Column(String(10), default="en")
     personality = Column(String(64), default="tranc3-base")
@@ -119,11 +119,11 @@ class Conversation(Base):
 # ============================================================
 # MESSAGES
 # ============================================================
-class Message(Base):
+class Message(Base):  # type: ignore[misc,valid-type]
     __tablename__ = "messages"
 
-    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)
-    conversation_id = Column(_GUID(), ForeignKey("conversations.id"), nullable=False)
+    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)  # type: ignore[var-annotated]
+    conversation_id = Column(_GUID(), ForeignKey("conversations.id"), nullable=False)  # type: ignore[var-annotated]
     role = Column(String(20), nullable=False)  # user, assistant, system
     content = Column(Text, nullable=False)
     language = Column(String(10), default="en")
@@ -149,11 +149,11 @@ class Message(Base):
 # ============================================================
 # API KEYS
 # ============================================================
-class APIKey(Base):
+class APIKey(Base):  # type: ignore[misc,valid-type]
     __tablename__ = "api_keys"
 
-    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)
-    user_id = Column(_GUID(), ForeignKey("users.id"), nullable=False)
+    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)  # type: ignore[var-annotated]
+    user_id = Column(_GUID(), ForeignKey("users.id"), nullable=False)  # type: ignore[var-annotated]
     key_hash = Column(String(255), unique=True, nullable=False)
     name = Column(String(100), nullable=False)
     tier = Column(String(20), default="free")
@@ -171,12 +171,12 @@ class APIKey(Base):
 # ============================================================
 # FEEDBACK
 # ============================================================
-class Feedback(Base):
+class Feedback(Base):  # type: ignore[misc,valid-type]
     __tablename__ = "feedback"
 
-    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)
-    user_id = Column(_GUID(), ForeignKey("users.id"), nullable=False)
-    message_id = Column(_GUID(), ForeignKey("messages.id"), nullable=True)
+    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)  # type: ignore[var-annotated]
+    user_id = Column(_GUID(), ForeignKey("users.id"), nullable=False)  # type: ignore[var-annotated]
+    message_id = Column(_GUID(), ForeignKey("messages.id"), nullable=True)  # type: ignore[var-annotated]
     rating = Column(Integer, nullable=False)  # 1-5
     categories = Column(JSON, default=[])
     comments = Column(Text, nullable=True)
@@ -191,10 +191,10 @@ class Feedback(Base):
 # ============================================================
 # EVOLUTION EVENTS
 # ============================================================
-class EvolutionEvent(Base):
+class EvolutionEvent(Base):  # type: ignore[misc,valid-type]
     __tablename__ = "evolution_events"
 
-    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)
+    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)  # type: ignore[var-annotated]
     generation = Column(Integer, nullable=False)
     fitness_score = Column(Float, nullable=False)
     mutation_rate = Column(Float, nullable=False)
@@ -209,10 +209,10 @@ class EvolutionEvent(Base):
 # ============================================================
 # QUANTUM SESSIONS
 # ============================================================
-class QuantumSession(Base):
+class QuantumSession(Base):  # type: ignore[misc,valid-type]
     __tablename__ = "quantum_sessions"
 
-    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)
+    id = Column(_GUID(), primary_key=True, default=uuid.uuid4)  # type: ignore[var-annotated]
     request_id = Column(String(64), nullable=False)
     num_qubits = Column(Integer, nullable=False)
     circuit_type = Column(String(50), nullable=False)
@@ -228,7 +228,7 @@ class QuantumSession(Base):
 # ============================================================
 # SYSTEM METRICS
 # ============================================================
-class SystemMetric(Base):
+class SystemMetric(Base):  # type: ignore[misc,valid-type]
     __tablename__ = "system_metrics"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)

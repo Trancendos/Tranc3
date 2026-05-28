@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Path, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 
 from src.studio.hub import StudioServiceType, get_studio
 
@@ -32,7 +32,7 @@ async def submit_job(body: Dict[str, Any] = Body(...)) -> Response:
         valid = [s.value for s in StudioServiceType]
         return JSONResponse({"error": f"Unknown service. Valid: {valid}"}, status_code=400)
     job = get_studio().submit_job(service=service, payload=body.get("payload", {}))
-    return job.to_dict()
+    return job.to_dict()  # type: ignore[return-value]
 
 
 @router.get("/jobs")
@@ -45,7 +45,7 @@ async def list_jobs(
             svc = StudioServiceType(service)
         except ValueError:
             return JSONResponse({"error": "Unknown service"}, status_code=400)
-    return [j.to_dict() for j in get_studio().list_jobs(service=svc)]
+    return [j.to_dict() for j in get_studio().list_jobs(service=svc)]  # type: ignore[return-value]
 
 
 @router.get("/jobs/{job_id}")
@@ -53,4 +53,4 @@ async def get_job(job_id: str = Path(...)) -> Response:
     job = get_studio().get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)
-    return job.to_dict()
+    return job.to_dict()  # type: ignore[return-value]
