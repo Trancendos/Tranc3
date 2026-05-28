@@ -509,3 +509,10 @@ def enable_gradient_checkpointing(model: nn.Module) -> None:
             elif hasattr(module, "_gradient_checkpointing_func"):
                 pass  # already set up by HF-style API
     logger.info("Gradient checkpointing enabled (VRAM optimisation active)")
+
+
+# ---------------------------------------------------------------------------
+# EvalSuite integration — compare base model vs. LoRA checkpoint
+# Re-exported from eval_checkpoint.py (torch-free module) for API stability.
+# ---------------------------------------------------------------------------
+from src.training.eval_checkpoint import evaluate_checkpoint  # noqa: E402,F401

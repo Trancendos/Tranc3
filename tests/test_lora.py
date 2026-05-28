@@ -436,3 +436,155 @@ class TestLoRATrainer:
         trainable, total = lora_trainable_params(model)
         assert trainable < total
         assert trainable > 0
+
+
+# ---------------------------------------------------------------------------
+# evaluate_checkpoint() — async LoRA eval integration
+# ---------------------------------------------------------------------------
+
+
+class TestEvaluateCheckpoint:
+    """Tests for evaluate_checkpoint() in src/training/lora.py.
+
+    All tests run in bootstrap mode (no real model weights, no CUDA).
+    Uses asyncio.run() so no external pytest-asyncio plugin needed.
+    """
+
+    @staticmethod
+    def _stub_model():
+        """Minimal model stub with a generate() method."""
+        model = MagicMock()
+        model.generate = MagicMock(return_value="stub answer")
+        return model
+
+    @staticmethod
+    def _samples():
+        return [
+            {"prompt": "What is 2+2?", "reference": "4"},
+            {"prompt": "Capital of France?", "reference": "Paris"},
+        ]
+
+    def test_returns_tuple_of_two(self, tmp_path):
+        """evaluate_checkpoint should return a (base_result, lora_result) tuple."""
+        import asyncio
+        from src.training.lora import evaluate_checkpoint
+
+        model = self._stub_model()
+        result = asyncio.run(
+            evaluate_checkpoint(
+                base_model=model,
+                lora_checkpoint_path=str(tmp_path / "fake.pt"),
+                samples=self._samples(),
+                eval_name="test-eval",
+                results_dir=str(tmp_path / "results"),
+            )
+        )
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+
+    def test_base_result_has_scores(self, tmp_path):
+        """base_result should expose bleu and rouge_l attributes."""
+        import asyncio
+        from src.training.lora import evaluate_checkpoint
+
+        model = self._stub_model()
+        base_result, _ = asyncio.run(
+            evaluate_checkpoint(
+                base_model=model,
+                lora_checkpoint_path=str(tmp_path / "fake.pt"),
+                samples=self._samples(),
+                eval_name="test-base-scores",
+                results_dir=str(tmp_path / "results"),
+            )
+        )
+        assert hasattr(base_result, "bleu") or hasattr(base_result, "avg_bleu") or isinstance(base_result, dict)
+
+    def test_lora_result_has_scores(self, tmp_path):
+        """lora_result should expose the same score shape as base_result."""
+        import asyncio
+        from src.training.lora import evaluate_checkpoint
+
+        model = self._stub_model()
+        base_result, lora_result = asyncio.run(
+            evaluate_checkpoint(
+                base_model=model,
+                lora_checkpoint_path=str(tmp_path / "fake.pt"),
+                samples=self._samples(),
+                eval_name="test-lora-scores",
+                results_dir=str(tmp_path / "results"),
+            )
+        )
+        assert type(base_result) is type(lora_result)
+
+    def test_empty_samples_does_not_raise(self, tmp_path):
+        """evaluate_checkpoint with empty sample list should not raise."""
+        import asyncio
+        from src.training.lora import evaluate_checkpoint
+
+        model = self._stub_model()
+        result = asyncio.run(
+            evaluate_checkpoint(
+                base_model=model,
+                lora_checkpoint_path=str(tmp_path / "fake.pt"),
+                samples=[],
+                eval_name="test-empty",
+                results_dir=str(tmp_path / "results"),
+            )
+        )
+        assert isinstance(result, tuple)
+
+    def test_missing_checkpoint_gracefully_handled(self, tmp_path):
+        """Missing .pt file should not crash — lora_gen falls back gracefully."""
+        import asyncio
+        from src.training.lora import evaluate_checkpoint
+
+        model = self._stub_model()
+        # Path does not exist — LoRASaveLoad.load will raise → lora_gen falls back
+        result = asyncio.run(
+            evaluate_checkpoint(
+                base_model=model,
+                lora_checkpoint_path=str(tmp_path / "nonexistent.pt"),
+                samples=self._samples(),
+                eval_name="test-missing-ckpt",
+                results_dir=str(tmp_path / "results"),
+            )
+        )
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+
+    def test_results_dir_created(self, tmp_path):
+        """evaluate_checkpoint should create results_dir if it doesn't exist."""
+        import asyncio
+        from src.training.lora import evaluate_checkpoint
+
+        results_dir = tmp_path / "deep" / "nested" / "results"
+        model = self._stub_model()
+        asyncio.run(
+            evaluate_checkpoint(
+                base_model=model,
+                lora_checkpoint_path=str(tmp_path / "fake.pt"),
+                samples=self._samples(),
+                eval_name="test-dir-creation",
+                results_dir=str(results_dir),
+            )
+        )
+        # EvalSuite creates the directory; confirm it exists
+        assert results_dir.exists()
+
+    def test_default_eval_name(self, tmp_path):
+        """evaluate_checkpoint uses 'lora-eval' as default eval_name."""
+        import asyncio
+        import inspect
+        from src.training.lora import evaluate_checkpoint
+
+        sig = inspect.signature(evaluate_checkpoint)
+        assert sig.parameters["eval_name"].default == "lora-eval"
+
+    def test_default_results_dir(self, tmp_path):
+        """evaluate_checkpoint uses 'data/eval_results' as default results_dir."""
+        import asyncio
+        import inspect
+        from src.training.lora import evaluate_checkpoint
+
+        sig = inspect.signature(evaluate_checkpoint)
+        assert sig.parameters["results_dir"].default == "data/eval_results"
