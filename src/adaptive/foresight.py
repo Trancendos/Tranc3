@@ -104,6 +104,17 @@ class ConversationTrajectoryPredictor:
 
         return ProbabilityVector(scores).normalise()
 
+    _DEFAULT_SESSION = "_stateless"
+
+    def observe(self, message: str) -> None:
+        """Record a raw message string for stateless (session-free) usage."""
+        intent = "question" if "?" in message else "request"
+        self.record_turn(self._DEFAULT_SESSION, "neutral", intent)
+
+    def predict(self, context: Dict = None) -> ProbabilityVector:
+        """Stateless predict — wraps predict_trajectory for the default session."""
+        return self.predict_trajectory(self._DEFAULT_SESSION)
+
     def get_recommendation(self, trajectory: ProbabilityVector) -> str:
         top_traj, _ = trajectory.top(1)[0]
         return self.TRAJECTORIES.get(top_traj, "Maintain current approach")

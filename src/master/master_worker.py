@@ -138,8 +138,9 @@ class MasterWorker:
         try:
             from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-            self._scheduler = AsyncIOScheduler(timezone="UTC")
-            self._scheduler.start()
+            scheduler = AsyncIOScheduler(timezone="UTC")
+            scheduler.start()
+            self._scheduler = scheduler
             logger.info("APScheduler (AsyncIOScheduler) started.")
         except ImportError:
             logger.warning(

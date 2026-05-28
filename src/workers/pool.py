@@ -140,6 +140,7 @@ class WorkerPool:
         """Push a job onto the Redis queue. Returns job_id."""
         if not self._redis:
             self._redis = await self._connect_redis()
+        assert self._redis is not None  # noqa: S101
         await self._redis.lpush(_QUEUE_KEY, job.to_json())
         logger.debug("Submitted job %s (type=%s)", job.job_id, job.job_type)
         return job.job_id
@@ -148,6 +149,7 @@ class WorkerPool:
         """Poll Redis for a result until timeout."""
         if not self._redis:
             self._redis = await self._connect_redis()
+        assert self._redis is not None  # noqa: S101
         key = f"{_RESULT_PREFIX}{job_id}"
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
@@ -175,6 +177,7 @@ class WorkerPool:
         logger.info("Worker %s started", worker_id)
         if not self._redis:
             self._redis = await self._connect_redis()
+        assert self._redis is not None  # noqa: S101
         while self._running:
             try:
                 # BRPOP blocks up to 1 s then returns None

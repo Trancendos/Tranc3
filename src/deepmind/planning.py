@@ -578,3 +578,6 @@ class StrategicPlanner:
 
 # Module-level singleton — ready to use without instantiation
 planner = StrategicPlanner(PlanningConfig())
+
+# Alias for import compatibility
+PlanningEngine = StrategicPlanner

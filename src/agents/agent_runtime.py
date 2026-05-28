@@ -213,6 +213,7 @@ class AgentRuntime:
         if self._goal_manager is None:
             self._init_components()
 
+        assert self._goal_manager is not None  # noqa: S101 — set by _init_components()
         goal_id = await self._goal_manager.add_goal(
             description=description,
             priority=priority,

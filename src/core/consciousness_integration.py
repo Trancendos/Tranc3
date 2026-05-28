@@ -144,3 +144,6 @@ class ConsciousnessAwareGenerator:
             suggestions.append("Enhance quantum inspiration")
 
         return suggestions
+
+# Alias for import compatibility
+ConsciousnessIntegration = ConsciousnessAwareGenerator

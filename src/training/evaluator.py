@@ -418,8 +418,8 @@ def _cli() -> None:
     try:
         import torch
 
-        from src.core.tranc3_inference import AdvancedTransformerModel
-        from src.training.dataset import TranscDataset
+        from src.core.advanced_model import AdvancedTransformerModel
+        from src.training.dataset import ConversationDataset as TranscDataset
         from src.training.trainer import TrainingConfig, get_device
     except ImportError as exc:
         print(f"[Error] Missing dependency: {exc}")

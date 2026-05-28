@@ -84,6 +84,16 @@ class VectorStore:
             logger.error("VectorStore query failed: %s", sanitize_for_log(e))
             return []
 
+    def store(self, vector_id: str, embedding: List[float], metadata: Dict) -> bool:
+        """Alias for upsert — convenience method used by nanoservices."""
+        return self.upsert(vector_id, embedding, metadata)
+
+    def search(
+        self, embedding: List[float], top_k: int = 5, filter: Optional[Dict] = None
+    ) -> List[Dict]:
+        """Alias for query — convenience method used by nanoservices."""
+        return self.query(embedding, top_k, filter)
+
     def delete(self, vector_ids: List[str]) -> bool:
         """GDPR right-to-erasure — Gap G19 action."""
         try:

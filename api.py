@@ -144,11 +144,11 @@ except ImportError as _e:
 
 try:
     from src.personality.matrix import (
-        EnhancedPersonalityMatrix,  # noqa: F401  # intentional top-level import
+        PersonalityMatrix as EnhancedPersonalityMatrix,  # noqa: F401  # intentional top-level import
     )
 except ImportError as _e:
     EnhancedPersonalityMatrix = None  # type: ignore[assignment]
-    logging.getLogger(__name__).warning("EnhancedPersonalityMatrix unavailable: %s", _e)
+    logging.getLogger(__name__).warning("PersonalityMatrix unavailable: %s", _e)
 
 try:
     from src.quantum.quantum_core import (
