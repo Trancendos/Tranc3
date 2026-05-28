@@ -186,9 +186,7 @@ SERVICE_REGISTRY = {
         "priority": "P3",
         "named": "CDN Service",
     },
-    # ── P3 — Intelligence / AI Layer (8030–8037) ────────────────────────────
-    # NOTE: gbrain-bridge and vault-service both default to port 8030 in the
-    # worker source. Resolve this port conflict before running both in prod.
+    # ── P3 — Intelligence / AI Layer (8030–8038) ────────────────────────────
     "gbrain-bridge": {
         "url": "http://localhost:8030/health",
         "priority": "P3",
@@ -228,6 +226,11 @@ SERVICE_REGISTRY = {
         "url": "http://localhost:8037/health",
         "priority": "P3",
         "named": "DeepAgents Orchestrator",
+    },
+    "vault-service": {
+        "url": "http://localhost:8038/health",
+        "priority": "P3",
+        "named": "Vault Service (Secret Management)",
     },
     # ── Bots ────────────────────────────────────────────────────────────────
     "tranc3-bots": {
