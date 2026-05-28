@@ -432,6 +432,18 @@ _OPENAPI_TAGS = [
         "name": "docs",
         "description": "Error-code documentation lookup. No authentication required.",
     },
+    {
+        "name": "mcp",
+        "description": "Model Context Protocol (MCP) — JSON-RPC 2.0 tool registry, SSE event bus, "
+        "and workflow integration. Powered by **The Spark** (Norman Hawkins). "
+        "Endpoints: `/mcp/rpc`, `/mcp/sse`, `/mcp/tools`, `/mcp/health`, `/mcp/grid/status`.",
+    },
+    {
+        "name": "evaluation",
+        "description": "Model evaluation endpoints — BLEU, ROUGE-L, Exact Match, Token-F1, "
+        "hallucination scoring, and LoRA checkpoint comparison. "
+        "Powered by **Luminous** (Cornelius MacIntyre).",
+    },
 ]
 
 # ── App ───────────────────────────────────────────────────────────────────────
@@ -1606,3 +1618,55 @@ async def error_docs(error_code: str):
     except ValueError:
         raise HTTPException(status_code=404, detail=f"Error code '{error_code}' not found")
     return None
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Evaluation Endpoints — EvalSuite HTTP interface
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class _EvalRequest(BaseModel):
+    """Request body for POST /eval/score."""
+
+    hypothesis: str = Field(..., description="Model output to score")
+    reference: str = Field(..., description="Ground-truth reference text")
+    context: Optional[str] = Field(None, description="Source context for hallucination scoring")
+
+
+class _EvalScoreResponse(BaseModel):
+    """Metric scores for a single hypothesis/reference pair."""
+
+    bleu: float
+    rouge_l: float
+    exact_match: bool
+    token_f1: float
+    hallucination: float
+
+
+@app.post(
+    "/eval/score",
+    tags=["evaluation"],
+    response_model=_EvalScoreResponse,
+    summary="Score a single model output",
+    description=(
+        "Compute BLEU-4, ROUGE-L F1, Exact Match, Token-F1, and hallucination risk "
+        "for a single hypothesis/reference pair. No authentication required. "
+        "Powered by **Luminous** EvalSuite."
+    ),
+)
+async def eval_score(body: _EvalRequest) -> _EvalScoreResponse:
+    """Score a hypothesis against a reference string."""
+    from src.evaluation.model_eval import (
+        bleu_score as _bleu,
+        exact_match as _em,
+        hallucination_score as _hall,
+        rouge_l_score as _rouge,
+        token_f1 as _tf1,
+    )
+
+    return _EvalScoreResponse(
+        bleu=_bleu(body.hypothesis, [body.reference]),
+        rouge_l=_rouge(body.hypothesis, body.reference)["f1"],
+        exact_match=_em(body.hypothesis, body.reference),
+        token_f1=_tf1(body.hypothesis, body.reference)["f1"],
+        hallucination=_hall(body.hypothesis, body.context or body.reference),
+    )
