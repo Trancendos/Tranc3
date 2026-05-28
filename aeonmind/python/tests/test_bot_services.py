@@ -2,7 +2,6 @@
 Tests for AeonMind Bot Services.
 """
 
-
 from aeonmind.services.bot_services import (
     BotCapability,
     BotServiceConfig,

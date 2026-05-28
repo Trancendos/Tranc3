@@ -2,7 +2,6 @@
 Tests for AeonMind Definitions — Tier Hierarchy, Entity Types, Sentinel Channels.
 """
 
-
 from aeonmind.core.definitions import (
     TIER_DESCRIPTIONS,  # noqa: F401
     TIER_NAMES,  # noqa: F401

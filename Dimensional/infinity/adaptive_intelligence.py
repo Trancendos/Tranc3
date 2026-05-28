@@ -86,6 +86,7 @@ def _try_async_schedule(coro):
         coro.close()
         return False
 
+
 logger = logging.getLogger(__name__)
 
 # ── Optional imports (graceful degradation) ──────────────────────────────────

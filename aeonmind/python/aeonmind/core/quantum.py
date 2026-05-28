@@ -20,6 +20,7 @@ import numpy as np
 
 class EntanglingStrategy(Enum):
     """Entangling strategy for quantum circuits."""
+
     LINEAR = "linear"
     CIRCULAR = "circular"
     FULL = "full"
@@ -28,6 +29,7 @@ class EntanglingStrategy(Enum):
 @dataclass
 class QuantumCircuitConfig:
     """Configuration for the Quantum Decision Circuit."""
+
     n_qubits: int = 4
     n_layers: int = 2
     rotations_per_layer: int = 3
@@ -41,6 +43,7 @@ class QuantumCircuitConfig:
 @dataclass
 class OptimizationStep:
     """Result of a single optimization step."""
+
     step: int
     cost: float
     gradient_norm: float
@@ -50,6 +53,7 @@ class OptimizationStep:
 @dataclass
 class CircuitSummary:
     """Summary of the quantum circuit state."""
+
     n_qubits: int
     n_layers: int
     rotations_per_layer: int
@@ -70,9 +74,7 @@ class QuantumDecisionCircuit:
     def __init__(self, config: Optional[QuantumCircuitConfig] = None):  # noqa: UP045
         self.config = config or QuantumCircuitConfig()
         self._n_params = (
-            self.config.n_qubits
-            * self.config.rotations_per_layer
-            * self.config.n_layers
+            self.config.n_qubits * self.config.rotations_per_layer * self.config.n_layers
         )
         # Initialize parameters uniformly
         low, high = self.config.parameter_range
@@ -145,7 +147,7 @@ class QuantumDecisionCircuit:
     def _execute_numpy(self) -> np.ndarray:
         """Execute using pure NumPy state-vector simulation."""
         n = self.config.n_qubits
-        dim = 2 ** n
+        dim = 2**n
 
         # Initialize to |0...0⟩
         state = np.zeros(dim, dtype=complex)
@@ -181,7 +183,7 @@ class QuantumDecisionCircuit:
         """Apply Rx gate to the given qubit."""
         cos_a = math.cos(angle / 2)
         sin_a = math.sin(angle / 2)
-        dim = 2 ** n
+        dim = 2**n
         new_state = np.zeros_like(state)
         for i in range(dim):
             bit = (i >> (n - 1 - qubit)) & 1
@@ -196,7 +198,7 @@ class QuantumDecisionCircuit:
         """Apply Ry gate to the given qubit."""
         cos_a = math.cos(angle / 2)
         sin_a = math.sin(angle / 2)
-        dim = 2 ** n
+        dim = 2**n
         new_state = np.zeros_like(state)
         for i in range(dim):
             bit = (i >> (n - 1 - qubit)) & 1
@@ -210,7 +212,7 @@ class QuantumDecisionCircuit:
     def _apply_rz(self, state: np.ndarray, qubit: int, n: int, angle: float) -> np.ndarray:
         """Apply Rz gate to the given qubit."""
         new_state = state.copy()
-        dim = 2 ** n
+        dim = 2**n
         for i in range(dim):
             bit = (i >> (n - 1 - qubit)) & 1
             if bit == 1:
@@ -219,8 +221,9 @@ class QuantumDecisionCircuit:
                 new_state[i] *= np.exp(1j * angle / 2)
         return new_state
 
-    def _apply_rot(self, state: np.ndarray, qubit: int, n: int,
-                   phi: float, theta: float, omega: float) -> np.ndarray:
+    def _apply_rot(
+        self, state: np.ndarray, qubit: int, n: int, phi: float, theta: float, omega: float
+    ) -> np.ndarray:
         """Apply Rot(φ,θ,ω) = Rz(ω)·Ry(θ)·Rz(φ) gate."""
         state = self._apply_rz(state, qubit, n, phi)
         state = self._apply_ry(state, qubit, n, theta)
@@ -230,7 +233,7 @@ class QuantumDecisionCircuit:
     def _apply_entangling_numpy(self, state: np.ndarray, n: int) -> np.ndarray:
         """Apply entangling CNOT gates based on strategy."""
         new_state = state.copy()
-        dim = 2 ** n  # noqa: F841
+        dim = 2**n  # noqa: F841
 
         if self.config.entangling_strategy == EntanglingStrategy.LINEAR:
             pairs = [(i, i + 1) for i in range(n - 1)]
@@ -248,11 +251,10 @@ class QuantumDecisionCircuit:
 
         return new_state
 
-    def _apply_cnot_numpy(self, state: np.ndarray, control: int,
-                          target: int, n: int) -> np.ndarray:
+    def _apply_cnot_numpy(self, state: np.ndarray, control: int, target: int, n: int) -> np.ndarray:
         """Apply CNOT gate using state-vector manipulation."""
         new_state = state.copy()
-        dim = 2 ** n
+        dim = 2**n
         for i in range(dim):
             control_bit = (i >> (n - 1 - control)) & 1
             if control_bit == 1:
@@ -276,8 +278,11 @@ class QuantumDecisionCircuit:
         probs = self.execute(use_pennylane=use_pennylane)
         return float(np.max(probs))
 
-    def compute_cost(self, target: Optional[np.ndarray] = None,  # noqa: UP045
-                     cost_type: str = "entropy") -> float:
+    def compute_cost(
+        self,
+        target: Optional[np.ndarray] = None,  # noqa: UP045
+        cost_type: str = "entropy",
+    ) -> float:
         """Compute the cost function value.
 
         Args:
@@ -330,8 +335,13 @@ class QuantumDecisionCircuit:
 
         return gradients
 
-    def optimize(self, n_steps: int = 100, learning_rate: float = 0.01,
-                 use_pennylane: bool = True, gradient_clip: float = 1.0) -> int:
+    def optimize(
+        self,
+        n_steps: int = 100,
+        learning_rate: float = 0.01,
+        use_pennylane: bool = True,
+        gradient_clip: float = 1.0,
+    ) -> int:
         """Optimize circuit parameters using gradient descent.
 
         Uses the parameter shift rule for gradients with adaptive

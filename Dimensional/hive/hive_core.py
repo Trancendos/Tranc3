@@ -80,6 +80,7 @@ HIVE_MAX_REPLICATION = int(os.environ.get("HIVE_MAX_REPLICATION", "5"))
 
 class DataPriority(str, Enum):
     """Priority levels for data chunks moving through the HIVE."""
+
     CRITICAL = "critical"
     HIGH = "high"
     NORMAL = "normal"
@@ -89,6 +90,7 @@ class DataPriority(str, Enum):
 
 class SwarmStatus(str, Enum):
     """Status of a data-processing swarm."""
+
     FORMING = "forming"
     ACTIVE = "active"
     SCALING = "scaling"
@@ -99,6 +101,7 @@ class SwarmStatus(str, Enum):
 
 class PipelineStatus(str, Enum):
     """Status of a data pipeline."""
+
     PENDING = "pending"
     RUNNING = "running"
     PAUSED = "paused"
@@ -108,9 +111,12 @@ class PipelineStatus(str, Enum):
 
 class HiveDataSource(BaseModel):
     """A data source registered with the HIVE."""
+
     source_id: str = Field(default_factory=lambda: f"src-{uuid.uuid4().hex[:8]}")
     name: str
-    data_type: str = Field(description="Type of data: dataset, model_weights, config, logs, metrics, etc.")
+    data_type: str = Field(
+        description="Type of data: dataset, model_weights, config, logs, metrics, etc."
+    )
     pillar: str = Field(description="Which pillar this source belongs to")
     throughput_mbps: float = 0.0
     status: str = "unknown"
@@ -120,6 +126,7 @@ class HiveDataSource(BaseModel):
 
 class HiveDataSink(BaseModel):
     """A data sink (destination) registered with the HIVE."""
+
     sink_id: str = Field(default_factory=lambda: f"sink-{uuid.uuid4().hex[:8]}")
     name: str
     data_type: str
@@ -132,6 +139,7 @@ class HiveDataSink(BaseModel):
 
 class DataChunk(BaseModel):
     """A chunk of data moving through the HIVE."""
+
     chunk_id: str = Field(default_factory=lambda: f"chk-{uuid.uuid4().hex[:8]}")
     pipeline_id: str
     source_id: str
@@ -148,6 +156,7 @@ class DataChunk(BaseModel):
 
 class SwarmNode(BaseModel):
     """A node participating in a data-processing swarm."""
+
     node_id: str
     role: str = "worker"
     capacity: float = 1.0
@@ -159,9 +168,12 @@ class SwarmNode(BaseModel):
 
 class Swarm(BaseModel):
     """A data-processing swarm coordinated by the HIVE."""
+
     swarm_id: str = Field(default_factory=lambda: f"swarm-{uuid.uuid4().hex[:8]}")
     name: str
-    purpose: str = Field(description="What this swarm processes: ETL, aggregation, replication, etc.")
+    purpose: str = Field(
+        description="What this swarm processes: ETL, aggregation, replication, etc."
+    )
     status: SwarmStatus = SwarmStatus.FORMING
     nodes: List[SwarmNode] = Field(default_factory=list)
     data_type: str = ""
@@ -174,6 +186,7 @@ class Swarm(BaseModel):
 
 class DataPipeline(BaseModel):
     """A data pipeline managed by the HIVE."""
+
     pipeline_id: str = Field(default_factory=lambda: f"pipe-{uuid.uuid4().hex[:8]}")
     name: str
     source_id: str
@@ -192,6 +205,7 @@ class DataPipeline(BaseModel):
 
 class HiveEvent(BaseModel):
     """An event in the HIVE data flow."""
+
     event_id: str = Field(default_factory=lambda: f"hevt-{uuid.uuid4().hex[:8]}")
     channel: str
     source: str
@@ -204,6 +218,7 @@ class HiveEvent(BaseModel):
 
 class HiveHealthSummary(BaseModel):
     """Aggregate health of the HIVE data movement system."""
+
     total_sources: int = 0
     total_sinks: int = 0
     active_pipelines: int = 0
@@ -288,7 +303,9 @@ class FlowMonitor:
         """Get average throughput for a pipeline over the last 60s."""
         cutoff = time.time() - 60
         async with self._lock:
-            samples = [(t, v) for t, v in self._throughput_samples.get(pipeline_id, []) if t > cutoff]
+            samples = [
+                (t, v) for t, v in self._throughput_samples.get(pipeline_id, []) if t > cutoff
+            ]
             if not samples:
                 return 0.0
             return sum(v for _, v in samples) / len(samples)
@@ -407,9 +424,16 @@ class SwarmCoordinator:
             swarm.completed_tasks += tasks_completed
             swarm.failed_tasks += tasks_failed
             # Check completion
-            if swarm.total_tasks > 0 and swarm.completed_tasks + swarm.failed_tasks >= swarm.total_tasks:
-                swarm.status = SwarmStatus.COMPLETED if swarm.failed_tasks == 0 else SwarmStatus.FAILED
-                logger.info(f"Swarm {swarm_id} completed: {swarm.completed_tasks} done, {swarm.failed_tasks} failed")
+            if (
+                swarm.total_tasks > 0
+                and swarm.completed_tasks + swarm.failed_tasks >= swarm.total_tasks
+            ):
+                swarm.status = (
+                    SwarmStatus.COMPLETED if swarm.failed_tasks == 0 else SwarmStatus.FAILED
+                )
+                logger.info(
+                    f"Swarm {swarm_id} completed: {swarm.completed_tasks} done, {swarm.failed_tasks} failed"
+                )
 
     async def get_swarm(self, swarm_id: str) -> Optional[Swarm]:
         """Get a swarm by ID."""
@@ -603,7 +627,9 @@ class Hive:
         logger.info(f"HIVE source registered: {name} ({source.source_id}) — {data_type}")
         return source
 
-    async def update_source_status(self, source_id: str, status: str, throughput_mbps: float = 0.0) -> None:
+    async def update_source_status(
+        self, source_id: str, status: str, throughput_mbps: float = 0.0
+    ) -> None:
         """Update a data source's status and throughput."""
         async with self._lock:
             if source_id in self._sources:
@@ -632,7 +658,9 @@ class Hive:
         logger.info(f"HIVE sink registered: {name} ({sink.sink_id}) — {data_type}")
         return sink
 
-    async def update_sink_status(self, sink_id: str, status: str, consumption_rate_mbps: float = 0.0) -> None:
+    async def update_sink_status(
+        self, sink_id: str, status: str, consumption_rate_mbps: float = 0.0
+    ) -> None:
         """Update a data sink's status and consumption rate."""
         async with self._lock:
             if sink_id in self._sinks:
@@ -805,10 +833,14 @@ class Hive:
             "pillar_distribution": dict(
                 defaultdict(
                     int,
-                    {s.pillar: sum(1 for src in self._sources.values() if src.pillar == s.pillar)
-                     for s in self._sources.values()}
+                    {
+                        s.pillar: sum(1 for src in self._sources.values() if src.pillar == s.pillar)
+                        for s in self._sources.values()
+                    },
                 )
-            ) if self._sources else {},
+            )
+            if self._sources
+            else {},
             "sentinel_channels": [ch.value for ch in SentinelChannel],
         }
 
@@ -901,7 +933,9 @@ def create_hive_app() -> FastAPI:
         version="0.1.0",
         lifespan=_lifespan,
     )
-    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+    app.add_middleware(
+        CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+    )
 
     @app.get("/", tags=["hive"])
     async def hive_root():
@@ -932,11 +966,15 @@ def create_hive_app() -> FastAPI:
     # -- Source endpoints --
 
     @app.post("/sources", tags=["sources"])
-    async def register_source(name: str, data_type: str, pillar: str, metadata: Optional[str] = None):
+    async def register_source(
+        name: str, data_type: str, pillar: str, metadata: Optional[str] = None
+    ):
         """Register a data source with the HIVE."""
         hive = get_hive()
         meta = json.loads(metadata) if metadata else {}
-        source = await hive.register_source(name=name, data_type=data_type, pillar=pillar, metadata=meta)
+        source = await hive.register_source(
+            name=name, data_type=data_type, pillar=pillar, metadata=meta
+        )
         return source.model_dump()
 
     @app.get("/sources", tags=["sources"])
@@ -952,7 +990,9 @@ def create_hive_app() -> FastAPI:
         """Register a data sink with the HIVE."""
         hive = get_hive()
         meta = json.loads(metadata) if metadata else {}
-        sink = await hive.register_sink(name=name, data_type=data_type, pillar=pillar, metadata=meta)
+        sink = await hive.register_sink(
+            name=name, data_type=data_type, pillar=pillar, metadata=meta
+        )
         return sink.model_dump()
 
     @app.get("/sinks", tags=["sinks"])
@@ -1020,7 +1060,9 @@ def create_hive_app() -> FastAPI:
         return [s.model_dump() for s in swarms]
 
     @app.post("/swarms/{swarm_id}/nodes", tags=["swarms"])
-    async def add_swarm_node(swarm_id: str, node_id: str, role: str = "worker", capacity: float = 1.0):
+    async def add_swarm_node(
+        swarm_id: str, node_id: str, role: str = "worker", capacity: float = 1.0
+    ):
         """Add a processing node to a swarm."""
         hive = get_hive()
         node = SwarmNode(node_id=node_id, role=role, capacity=capacity)

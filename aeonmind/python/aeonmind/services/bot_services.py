@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional  # noqa: UP035
 
 class BotCapability(Enum):
     """Capabilities that a bot service worker can provide."""
+
     TRANSLATE = "translate"
     SUMMARIZE = "summarize"
     CLASSIFY = "classify"
@@ -42,6 +43,7 @@ class BotCapability(Enum):
 
 class BotStatus(Enum):
     """Status of a bot service worker."""
+
     IDLE = "idle"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -52,6 +54,7 @@ class BotStatus(Enum):
 @dataclass
 class BotExecutionResult:
     """Result of a bot execution."""
+
     bot_id: str
     capability: str
     status: BotStatus
@@ -65,6 +68,7 @@ class BotExecutionResult:
 @dataclass
 class BotServiceConfig:
     """Configuration for a bot service worker."""
+
     name: str = "unnamed-bot"
     capability: BotCapability = BotCapability.GENERIC
     stateless: bool = True

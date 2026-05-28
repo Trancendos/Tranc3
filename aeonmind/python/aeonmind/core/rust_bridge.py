@@ -23,6 +23,7 @@ def has_rust_bindings() -> bool:
     """Check if the Rust extension module is available."""
     try:
         import _aeonmind_rust  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -32,6 +33,7 @@ def rust_version() -> Optional[str]:  # noqa: UP045
     """Get the Rust extension module version, if available."""
     try:
         import _aeonmind_rust
+
         return getattr(_aeonmind_rust, "__version__", None)
     except ImportError:
         return None
@@ -56,6 +58,7 @@ class RustLiquidReservoir:
         if has_rust_bindings():
             try:
                 import _aeonmind_rust
+
                 self._rust_impl = _aeonmind_rust.RustLiquidReservoir(
                     input_size=self.config.input_size,
                     reservoir_size=self.config.reservoir_size,
@@ -96,6 +99,7 @@ class RustEvolutionEngine:
         if has_rust_bindings():
             try:
                 import _aeonmind_rust
+
                 self._rust_impl = _aeonmind_rust.RustEvolutionEngine(
                     population_size=self.config.population_size,
                     dna_length=self.config.dna_length,
@@ -129,6 +133,7 @@ class RustQuantumCircuit:
         if has_rust_bindings():
             try:
                 import _aeonmind_rust
+
                 self._rust_impl = _aeonmind_rust.RustQuantumCircuit(
                     n_qubits=self.config.n_qubits,
                     n_layers=self.config.n_layers,
@@ -160,6 +165,7 @@ class RustAdaptiveLearner:
         if has_rust_bindings():
             try:
                 import _aeonmind_rust
+
                 self._rust_impl = _aeonmind_rust.RustAdaptiveLearner(
                     n_params=n_params,
                     learning_rate=self.config.learning_rate,
