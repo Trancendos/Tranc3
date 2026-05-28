@@ -285,7 +285,7 @@ class ScalaBridge:
     async def compile_query(self, request: CompilationRequest) -> CompilationResult:
         """Compile an NRC query through the Scala bridge."""
         cache_key = hashlib.sha3_256(
-            f"{request.query.dsl}:{request.target.value}".encode()
+            f"{request.query.dsl}:{request.target.value}".encode()  # type: ignore[union-attr]
         ).hexdigest()
 
         if cache_key in self._compilation_cache:

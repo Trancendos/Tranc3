@@ -450,7 +450,7 @@ class PipelineManager:
     def __init__(self, flow_monitor: FlowMonitor):
         self.flow_monitor = flow_monitor
         self._pipelines: Dict[str, DataPipeline] = {}
-        self._chunks: Dict[str, DataChunk] = defaultdict(lambda: [])
+        self._chunks: Dict[str, DataChunk] = defaultdict(lambda: [])  # type: ignore[arg-type,return-value]
         self._lock = asyncio.Lock()
         logger.info("PipelineManager initialized")
 

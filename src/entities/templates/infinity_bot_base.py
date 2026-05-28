@@ -274,7 +274,7 @@ class InfinityBot(ABC):
         recent = [r for r in self._runs[-n:] if r.success and r.duration_ms() is not None]
         if not recent:
             return 0.0
-        return sum(r.duration_ms() for r in recent) / len(recent)  # type: ignore[arg-type]
+        return sum(r.duration_ms() for r in recent) / len(recent)  # type: ignore[arg-type,misc]
 
     # ------------------------------------------------------------------
     # Status

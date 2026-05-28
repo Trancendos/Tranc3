@@ -1361,11 +1361,11 @@ def register_phase4_tools(registry: Any) -> int:
     for t in PHASE4_TOOLS:
         try:
             tool = SparkTool(
-                name=t["name"],
-                description=t["description"],
-                input_schema=t["input_schema"],
-                handler=t["handler"],
-                category=t.get("category", "phase4"),
+                name=t["name"],  # type: ignore[arg-type]
+                description=t["description"],  # type: ignore[arg-type]
+                input_schema=t["input_schema"],  # type: ignore[arg-type]
+                handler=t["handler"],  # type: ignore[arg-type]
+                category=t.get("category", "phase4"),  # type: ignore[arg-type]
                 version="4.0.0",
             )
             registry.register(tool)

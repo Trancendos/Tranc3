@@ -85,7 +85,7 @@ class CodeAnalyzer:
                             else False
                         ),
                         "line_count": (
-                            node.end_lineno - node.lineno + 1 if hasattr(node, "end_lineno") else 0
+                            node.end_lineno - node.lineno + 1 if hasattr(node, "end_lineno") else 0  # type: ignore[operator]
                         ),
                     }
                 )

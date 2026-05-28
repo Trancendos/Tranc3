@@ -389,20 +389,20 @@ class ZFSStorageProvider(SmartStorageProvider):
                 zstd_proc = await asyncio.create_subprocess_exec(
                     "zstd",
                     "-T0",  # multi-threaded zstd
-                    stdin=send_proc.stdout,
+                    stdin=send_proc.stdout,  # type: ignore[arg-type]
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
                 recv_proc = await asyncio.create_subprocess_exec(
                     *recv_cmd,
-                    stdin=zstd_proc.stdout,
+                    stdin=zstd_proc.stdout,  # type: ignore[arg-type]
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
             else:
                 recv_proc = await asyncio.create_subprocess_exec(
                     *recv_cmd,
-                    stdin=send_proc.stdout,
+                    stdin=send_proc.stdout,  # type: ignore[arg-type]
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )

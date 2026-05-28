@@ -447,7 +447,7 @@ def create_sentinel_cluster_app():
         """Create a new sentinel cluster."""
         mgr = get_sentinel_cluster_manager()
         body = await request.json() if request.headers.get("content-type") else {}
-        mgr.create_cluster(cluster_name, config=body.get("config"))
+        mgr.create_cluster(cluster_name, config=body.get("config"))  # type: ignore[arg-type,misc]
         return {"action": "create_cluster", "cluster_name": cluster_name, "status": "created"}
 
     @app.delete("/clusters/{cluster_name}", tags=["clusters"])

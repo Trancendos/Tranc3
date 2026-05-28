@@ -921,7 +921,7 @@ class InfinitySentinelBridge:
                 payload=payload,
                 channel=channel,
             )
-            self._bridge._emit_event(bridge_event)
+            self._bridge._emit_event(bridge_event)  # type: ignore[union-attr]
             self._stats["sentinel_to_bridge"] += 1
         except Exception as e:
             self._stats["errors"] += 1

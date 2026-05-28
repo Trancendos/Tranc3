@@ -335,7 +335,7 @@ class GlobalWorkspaceEngine:
             relevance = content.get("relevance", 0.5)
             scores[module_name] = base * (salience * 0.4 + novelty * 0.3 + relevance * 0.3)
 
-        winner = max(scores, key=scores.get) if scores else None
+        winner = max(scores, key=scores.get) if scores else None  # type: ignore[arg-type]
         if winner and winner in inputs:
             self.workspace.broadcast(inputs[winner])
             self.workspace.attention_focus = winner
@@ -545,7 +545,7 @@ class ConsciousnessFieldService:
             "steps": steps,
             "phi_min": min(phis),
             "phi_max": max(phis),
-            "phi_avg": sum(phis) / len(phis),
+            "phi_avg": sum(phis) / len(phis),  # type: ignore[arg-type]
             "max_consciousness_level": max(h["level"] for h in history),
             "final_awareness": history[-1]["awareness"],
         }

@@ -72,7 +72,7 @@ class SwarmCoordinator:
             raise Exception("No valid swarm responses")
 
         # Consensus aggregation
-        consensus = self._swarm_consensus(valid_results)
+        consensus = self._swarm_consensus(valid_results)  # type: ignore[arg-type]
 
         return {
             "swarm_response": consensus,
@@ -131,7 +131,7 @@ class SwarmCoordinator:
         self.swarm_nodes = [
             node
             for node, health in zip(new_nodes, health_results, strict=False)
-            if not isinstance(health, Exception) and health.get("status") == "healthy"
+            if not isinstance(health, Exception) and health.get("status") == "healthy"  # type: ignore[union-attr]
         ]
 
     async def _check_node_health(self, node_url: str) -> Dict[str, Any]:

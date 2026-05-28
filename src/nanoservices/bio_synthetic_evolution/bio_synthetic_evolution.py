@@ -610,10 +610,10 @@ class BioSyntheticEvolutionService:
                 metabolism=MetabolicNetwork(),
                 generation=0,
             )
-            org.metabolism.add_reaction(
+            org.metabolism.add_reaction(  # type: ignore[union-attr]
                 "glycolysis", {"glucose": -1.0}, {"pyruvate": 2.0, "ATP": 2.0}
             )
-            org.metabolism.simulate_flux()
+            org.metabolism.simulate_flux()  # type: ignore[union-attr]
             org.evaluate_fitness()
             org.state = OrganismState.MATURE
             organisms.append(org)

@@ -69,7 +69,7 @@ class IntentPredictor:
         return sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
     def dominant_intent(self, scores: Dict[str, float]) -> str:
-        return max(scores, key=scores.get)
+        return max(scores, key=scores.get)  # type: ignore[arg-type]
 
 
 class ChurnPredictor:

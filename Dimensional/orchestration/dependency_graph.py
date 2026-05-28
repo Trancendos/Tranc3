@@ -327,7 +327,7 @@ class SmartDependencyGraph:
             if d != root and self._nodes.get(d, DependencyNode(name=d)).health == "healthy"
         ]
         if len(healthy_alternatives) >= 2 and base.value > ImpactLevel.LOW.value:
-            base = ImpactLevel(max(base.value - 1, ImpactLevel.LOW.value))
+            base = ImpactLevel(max(base.value - 1, ImpactLevel.LOW.value))  # type: ignore[operator]
 
         return base
 

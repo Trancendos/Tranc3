@@ -90,8 +90,8 @@ class DoubleExponentialSmoother:
             self._level = value
             self._trend = 0.0
         else:
-            new_level = self._alpha * value + (1 - self._alpha) * (self._level + self._trend)
-            new_trend = self._beta * (new_level - self._level) + (1 - self._beta) * self._trend
+            new_level = self._alpha * value + (1 - self._alpha) * (self._level + self._trend)  # type: ignore[operator]
+            new_trend = self._beta * (new_level - self._level) + (1 - self._beta) * self._trend  # type: ignore[operator]
             self._level = new_level
             self._trend = new_trend
         self._count += 1
@@ -191,7 +191,7 @@ class PredictiveScalingEngine:
 
         # Cooldown check
         last_time = self._last_scaling_time.get(key, 0.0)
-        if time.time() - last_time < policy.cooldown_seconds:
+        if time.time() - last_time < policy.cooldown_seconds:  # type: ignore[union-attr]
             return None
 
         # Forecast future load
@@ -205,17 +205,17 @@ class PredictiveScalingEngine:
         forecast = base_forecast * seasonal_factor
 
         # Normalize to 0-1 utilization
-        utilization = min(1.0, max(0.0, forecast / policy.max_value))
+        utilization = min(1.0, max(0.0, forecast / policy.max_value))  # type: ignore[union-attr]
 
         direction = ScalingDirection.HOLD
         reason = ScalingReason.LOAD_FORECAST
 
-        if utilization > policy.scale_up_threshold:
+        if utilization > policy.scale_up_threshold:  # type: ignore[union-attr]
             direction = ScalingDirection.SCALE_UP
-            target = min(policy.max_value, obs.value * 1.5)
-        elif utilization < policy.scale_down_threshold:
+            target = min(policy.max_value, obs.value * 1.5)  # type: ignore[union-attr]
+        elif utilization < policy.scale_down_threshold:  # type: ignore[union-attr]
             direction = ScalingDirection.SCALE_DOWN
-            target = max(policy.min_value, obs.value * 0.7)
+            target = max(policy.min_value, obs.value * 0.7)  # type: ignore[union-attr]
             reason = ScalingReason.COST_OPTIMIZATION
         else:
             return None

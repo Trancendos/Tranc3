@@ -506,12 +506,12 @@ class NSGAIIPlanOptimizer:
 
             for i in range(1, len(sorted_front) - 1):
                 val_next = (
-                    sorted_front[i + 1].fitness.get(obj_name, 0)
+                    sorted_front[i + 1].fitness.get(obj_name, 0)  # type: ignore[union-attr]
                     if sorted_front[i + 1].fitness
                     else 0
                 )
                 val_prev = (
-                    sorted_front[i - 1].fitness.get(obj_name, 0)
+                    sorted_front[i - 1].fitness.get(obj_name, 0)  # type: ignore[union-attr]
                     if sorted_front[i - 1].fitness
                     else 0
                 )

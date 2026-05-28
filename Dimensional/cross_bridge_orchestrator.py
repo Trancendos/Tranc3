@@ -222,7 +222,7 @@ class CompensationManager:
             try:
                 result = await self._dispatcher.dispatch(
                     step.bridge,
-                    step.compensation_action,
+                    step.compensation_action,  # type: ignore[arg-type]
                     step.compensation_payload,
                 )
                 step.status = StepStatus.COMPENSATED

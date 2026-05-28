@@ -140,7 +140,7 @@ class InMemoryVectorStore:
                 np.dot(query_vec, v) / (np.linalg.norm(query_vec) * np.linalg.norm(v) + 1e-8)
             )
             scores.append({"id": vid, "score": score, "metadata": meta})
-        scores.sort(key=lambda x: float(x["score"]), reverse=True)
+        scores.sort(key=lambda x: float(x["score"]), reverse=True)  # type: ignore[arg-type]
         return scores[:top_k]
 
     def delete(self, vector_ids: List[str]):

@@ -419,7 +419,7 @@ class ConceptLattice:
         source = self.nodes[source_id]
         target = self.nodes[target_id]
 
-        binding = self.vector_ops.bind(source.hypervector, target.hypervector)
+        binding = self.vector_ops.bind(source.hypervector, target.hypervector)  # type: ignore[arg-type]
 
         relation = ConceptRelation(
             source_id=source_id,
@@ -465,7 +465,7 @@ class ConceptLattice:
         if not vectors:
             raise ValueError("No valid concept vectors found for composition")
 
-        bundled = self.vector_ops.bundle(vectors)
+        bundled = self.vector_ops.bundle(vectors)  # type: ignore[arg-type]
         label = (
             new_concept
             or f"composite_{'_'.join(self.nodes[cid].concept[:4] for cid in concept_ids[:3])}"
@@ -496,11 +496,11 @@ class ConceptLattice:
         b = self.nodes.get(b_id)
         c = self.nodes.get(c_id)
 
-        if not all([a, b, c]) or not all([a.hypervector, b.hypervector, c.hypervector]):
+        if not all([a, b, c]) or not all([a.hypervector, b.hypervector, c.hypervector]):  # type: ignore[union-attr]
             raise ValueError("All concepts must exist with hypervectors")
 
         d_data = [
-            c.hypervector.data[i] + (b.hypervector.data[i] - a.hypervector.data[i])
+            c.hypervector.data[i] + (b.hypervector.data[i] - a.hypervector.data[i])  # type: ignore[union-attr]
             for i in range(self.dimension)
         ]
 
@@ -511,7 +511,7 @@ class ConceptLattice:
             data=d_data,
             dimension=self.dimension,
             vector_type=self.vector_ops.vector_type,
-            label=f"analogy({a.concept}:{b.concept}::{c.concept}:?)",
+            label=f"analogy({a.concept}:{b.concept}::{c.concept}:?)",  # type: ignore[union-attr]
         )
 
         d_concept = ConceptNode(
@@ -519,8 +519,8 @@ class ConceptLattice:
             hypervector=d_vector,
             role=ConceptRole.ABSTRACT,
             parent_ids=[a_id, b_id, c_id],
-            generation=max(a.generation, b.generation, c.generation) + 1,
-            metadata={"analogy": f"{a.concept}:{b.concept}::{c.concept}:?"},
+            generation=max(a.generation, b.generation, c.generation) + 1,  # type: ignore[union-attr]
+            metadata={"analogy": f"{a.concept}:{b.concept}::{c.concept}:?"},  # type: ignore[union-attr]
         )
         self.nodes[d_concept.id] = d_concept
         self._concept_vectors[d_concept.concept] = d_vector

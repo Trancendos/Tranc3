@@ -117,7 +117,7 @@ class TAimra:
         twin = self._twins.get(user_id)
         if not twin or twin.status == TwinStatus.OFFLINE or not twin.personality_affinity:
             return None
-        return max(twin.personality_affinity, key=twin.personality_affinity.get)
+        return max(twin.personality_affinity, key=twin.personality_affinity.get)  # type: ignore[arg-type]
 
     def delete(self, user_id: str) -> bool:
         """GDPR right to erasure — removes all twin data for a user."""

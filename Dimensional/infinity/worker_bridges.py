@@ -194,7 +194,7 @@ class WorkerBridge:
         self._stats["last_event_at"] = time.time()  # type: ignore[assignment]
 
         if self._sentinel is None:
-            self._stats["events_dropped"] += 1
+            self._stats["events_dropped"] += 1  # type: ignore[operator]
             logger.debug(
                 "WorkerBridge[%s]: Sentinel not wired — dropping event type=%s",
                 self._bridge_name,
@@ -219,12 +219,12 @@ class WorkerBridge:
                     payload=payload,
                 )
             )
-            self._stats["events_published"] += 1
+            self._stats["events_published"] += 1  # type: ignore[operator]
             return True
 
         except Exception as exc:
-            self._stats["errors"] += 1
-            self._stats["events_dropped"] += 1
+            self._stats["errors"] += 1  # type: ignore[operator]
+            self._stats["events_dropped"] += 1  # type: ignore[operator]
             logger.error(
                 "WorkerBridge[%s]: Sentinel publish error: %s",
                 self._bridge_name,
@@ -242,7 +242,7 @@ class WorkerBridge:
         self._stats["last_event_at"] = time.time()  # type: ignore[assignment]
 
         if self._bus is None:
-            self._stats["events_dropped"] += 1
+            self._stats["events_dropped"] += 1  # type: ignore[operator]
             logger.debug(
                 "WorkerBridge[%s]: Bus not wired — dropping message target=%s",
                 self._bridge_name,
@@ -252,12 +252,12 @@ class WorkerBridge:
 
         try:
             await self._bus.send(target, payload, source=source or self._bridge_name)
-            self._stats["events_published"] += 1
+            self._stats["events_published"] += 1  # type: ignore[operator]
             return True
 
         except Exception as exc:
-            self._stats["errors"] += 1
-            self._stats["events_dropped"] += 1
+            self._stats["errors"] += 1  # type: ignore[operator]
+            self._stats["events_dropped"] += 1  # type: ignore[operator]
             logger.error(
                 "WorkerBridge[%s]: Bus publish error: %s",
                 self._bridge_name,

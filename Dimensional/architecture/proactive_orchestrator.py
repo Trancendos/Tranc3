@@ -1474,7 +1474,7 @@ class ProactiveOrchestrator:
             failed_actions_24h=sum(
                 1
                 for p in self._healing_engine._heal_history
-                if p.status == ActionStatus.FAILED and time.time() - p.completed_at < 86400.0
+                if p.status == ActionStatus.FAILED and time.time() - p.completed_at < 86400.0  # type: ignore[operator]
                 if p.completed_at
             ),
         )

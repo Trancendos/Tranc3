@@ -440,11 +440,11 @@ class HybridStorageProvider(StorageProvider):
                 synced += 1
             except Exception as e:
                 logger.error("Cloud sync failed for %s: %s", sanitize_for_log(path), e)
-                self._sync_stats["total_failed"] += 1
+                self._sync_stats["total_failed"] += 1  # type: ignore[operator]
                 with self._sync_lock:
                     self._sync_queue.append(path)  # Re-queue
 
-        self._sync_stats["total_synced"] += synced
+        self._sync_stats["total_synced"] += synced  # type: ignore[operator]
         self._sync_stats["last_sync"] = datetime.now(timezone.utc).isoformat()  # type: ignore[assignment]
         return synced
 

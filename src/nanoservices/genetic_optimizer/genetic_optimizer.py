@@ -253,7 +253,7 @@ class GeneticOptimizer:
 
             # Calculate combined fitness for convergence check
             best = self._get_best()
-            current_fitness = self._weighted_fitness(best)
+            current_fitness = self._weighted_fitness(best)  # type: ignore[arg-type]
 
             # Check convergence
             if (

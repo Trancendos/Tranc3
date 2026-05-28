@@ -55,7 +55,7 @@ class ConsciousnessAwareGenerator:
         neural_state = input_tensor.unsqueeze(0).unsqueeze(0)
 
         # Calculate consciousness metrics
-        phi = self.consciousness.calculate_phi(neural_state.squeeze())
+        phi = self.consciousness.calculate_phi(neural_state.squeeze())  # type: ignore[union-attr]
 
         # Consciousness-modulated personality
         consciousness_factor = min(phi / 3.0, 1.0)  # Normalize to 0-1

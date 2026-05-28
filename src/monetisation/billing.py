@@ -143,10 +143,10 @@ class TierEnforcer:
 
     def _reset_windows_if_needed(self, record: UsageRecord):
         now = datetime.utcnow()
-        if now - record.hour_window_start >= timedelta(hours=1):
+        if now - record.hour_window_start >= timedelta(hours=1):  # type: ignore[operator]
             record.requests_this_hour = 0
             record.hour_window_start = now.replace(minute=0, second=0, microsecond=0)
-        if now - record.day_window_start >= timedelta(days=1):
+        if now - record.day_window_start >= timedelta(days=1):  # type: ignore[operator]
             record.requests_today = 0
             record.day_window_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 

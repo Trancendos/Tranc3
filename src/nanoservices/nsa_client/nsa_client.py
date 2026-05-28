@@ -188,7 +188,7 @@ class ShmRingBuffer:
             if self._buffer[offset] == 0:  # Not occupied
                 # Write header
                 self._buffer[offset] = 1  # occupied = true
-                struct.pack_into("!I", self._buffer, offset + 9, len(encoded))  # length
+                struct.pack_into("!I", self._buffer, offset + 9, len(encoded))  # length  # type: ignore[arg-type]
 
                 # Write payload
                 payload_offset = offset + SLOT_HEADER_SIZE
@@ -208,7 +208,7 @@ class ShmRingBuffer:
             return None
 
         # Read length
-        length = struct.unpack_from("!I", self._buffer, offset + 9)[0]
+        length = struct.unpack_from("!I", self._buffer, offset + 9)[0]  # type: ignore[arg-type]
         if length == 0 or length > SLOT_SIZE:
             return None
 

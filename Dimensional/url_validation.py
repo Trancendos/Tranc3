@@ -187,7 +187,7 @@ def validate_url(
         addr_infos = socket.getaddrinfo(hostname, parsed.port or 443, proto=socket.IPPROTO_TCP)
         for _family, _type, _proto, _canonname, sockaddr in addr_infos:
             ip_str = sockaddr[0]
-            if _is_ip_private(ip_str):
+            if _is_ip_private(ip_str):  # type: ignore[arg-type]
                 raise SSRFError(
                     f"URL resolves to private/reserved IP address: {ip_str} (hostname: {hostname})"
                 )

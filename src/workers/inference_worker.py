@@ -242,7 +242,7 @@ class InferenceWorker:
             # normalise
             total = sum(scores.values()) or 1.0
             scores = {k: round(v / total, 4) for k, v in scores.items()}
-            dominant = max(scores, key=scores.get)
+            dominant = max(scores, key=scores.get)  # type: ignore[arg-type]
             return {
                 "dominant": dominant,
                 "scores": scores,
@@ -275,7 +275,7 @@ class InferenceWorker:
 
         total = sum(scores.values()) or 1.0
         scores = {k: round(v / total, 4) for k, v in scores.items()}
-        dominant = max(scores, key=scores.get)
+        dominant = max(scores, key=scores.get)  # type: ignore[arg-type]
         return {"dominant": dominant, "scores": scores, "model": "tranc3-local"}
 
     async def _do_tokenize(self, p: dict) -> dict:

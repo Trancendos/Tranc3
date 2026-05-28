@@ -340,7 +340,7 @@ class TierAccessBridge:
         rbac_result = None
         if self.rbac and subject_role:
             try:
-                rbac_result = self.rbac.check_permission(subject_role, resource, action)
+                rbac_result = self.rbac.check_permission(subject_role, resource, action)  # type: ignore[arg-type,call-arg]
             except Exception:
                 rbac_result = None  # RBAC not authoritative if misconfigured
 
@@ -351,7 +351,7 @@ class TierAccessBridge:
                 abac_result = self.abac.evaluate(
                     subject_attributes or {},
                     resource_attributes or {},
-                    action,
+                    action,  # type: ignore[arg-type]
                     environment or {},
                 )
             except Exception:

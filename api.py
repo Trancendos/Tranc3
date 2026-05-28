@@ -258,7 +258,7 @@ async def lifespan(app: FastAPI):
 
     # Personality matrix
     try:
-        personality_matrix = EnhancedPersonalityMatrix(cfg)
+        personality_matrix = EnhancedPersonalityMatrix(cfg)  # type: ignore[arg-type]
         logger.info("Personality matrix ready")
     except Exception as e:
         logger.error(
@@ -774,7 +774,7 @@ class ErrorDocResponse(BaseModel):
     status_code=201,
 )
 async def register(req: RegisterRequest):
-    return db_user_manager.create_user(req.username, req.password)
+    return db_user_manager.create_user(req.username, req.password)  # type: ignore[union-attr]
 
 
 @app.post(
@@ -789,7 +789,7 @@ async def register(req: RegisterRequest):
     ),
 )
 async def login(req: TokenRequest):
-    user = db_user_manager.authenticate_user(req.username, req.password)
+    user = db_user_manager.authenticate_user(req.username, req.password)  # type: ignore[union-attr]
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = token_manager.create_access_token({"sub": user["username"]})
@@ -1019,8 +1019,8 @@ async def chat(
         detected_emotion = chat_req.user_emotion or "neutral"
         emotion_scores = {"neutral": 1.0}
         if personality_matrix and getattr(personality_matrix, "emotion_detector", None):
-            emotion_scores = personality_matrix.emotion_detector.detect_emotion(chat_req.message)
-            detected_emotion = personality_matrix.emotion_detector.get_dominant_emotion(
+            emotion_scores = personality_matrix.emotion_detector.detect_emotion(chat_req.message)  # type: ignore[union-attr]
+            detected_emotion = personality_matrix.emotion_detector.get_dominant_emotion(  # type: ignore[union-attr]
                 emotion_scores
             )
 
@@ -1215,8 +1215,8 @@ async def personalities():
 async def analyze_emotion(text: str, current_user: dict = Depends(get_current_user)):
     if not personality_matrix or not getattr(personality_matrix, "emotion_detector", None):
         raise HTTPException(status_code=503, detail="Emotion analysis unavailable")
-    scores = personality_matrix.emotion_detector.detect_emotion(text)
-    dominant = personality_matrix.emotion_detector.get_dominant_emotion(scores)
+    scores = personality_matrix.emotion_detector.detect_emotion(text)  # type: ignore[union-attr]
+    dominant = personality_matrix.emotion_detector.get_dominant_emotion(scores)  # type: ignore[union-attr]
     return {"dominant_emotion": dominant, "emotion_scores": scores, "text": text}
 
 

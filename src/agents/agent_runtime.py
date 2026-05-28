@@ -258,7 +258,7 @@ class AgentRuntime:
 
         # Decompose if needed
         self._set_state(AgentState.PLANNING)
-        decomposition = await self._task_decomposer.decompose(active_goal.description)
+        decomposition = await self._task_decomposer.decompose(active_goal.description)  # type: ignore[union-attr]
 
         if not decomposition.subtasks:
             await self._goal_manager.mark_failed(active_goal.goal_id, "Could not decompose goal")

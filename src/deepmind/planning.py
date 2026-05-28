@@ -378,7 +378,7 @@ class ChainOfThoughtReasoner:
         avg_len = np.mean([len(s.split()) for s in steps])
         length_factor = min(1.0, avg_len / 15.0)
         # Combine with slight random perturbation representing epistemic uncertainty
-        confidence = 0.5 * coverage + 0.4 * length_factor + 0.1 * np.random.uniform(0.8, 1.0)
+        confidence = 0.5 * coverage + 0.4 * length_factor + 0.1 * np.random.uniform(0.8, 1.0)  # type: ignore[operator]
         return float(np.clip(confidence, 0.0, 1.0))
 
 

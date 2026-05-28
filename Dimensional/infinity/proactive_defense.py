@@ -82,7 +82,7 @@ except ImportError:
     AdaptiveScanner = None  # type: ignore[assignment,misc]
 
 try:
-    from Dimensional.security_automation.predictor import ThreatPredictor
+    from Dimensional.security_automation.predictor import ThreatPredictor  # type: ignore[attr-defined]
 
     _PREDICTOR_AVAILABLE = True
 except ImportError:
@@ -229,7 +229,7 @@ class ProactiveDefenseLayer:
         if self.engine:
             try:
                 eval_result = self.engine.evaluate_request(
-                    {
+                    {  # type: ignore[arg-type]
                         "source": source_ip,
                         "destination": self.service_name,
                         "path": path,
@@ -308,7 +308,7 @@ class ProactiveDefenseLayer:
                     self.engine.create_incident(
                         title=f"Threat from {source_ip}",
                         description=f"Path: {path}, Level: {threat_level}",
-                        severity=threat_level,
+                        severity=threat_level,  # type: ignore[arg-type]
                         source=source_ip,
                         affected_services=[self.service_name],
                     )

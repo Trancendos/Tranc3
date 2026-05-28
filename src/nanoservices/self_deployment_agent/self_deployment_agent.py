@@ -535,7 +535,7 @@ class SelfDeploymentAgent:
             action=DeploymentAction.ROLLBACK,
             service_name=cfg.service_name,
             state=self.state,
-            commit_sha=rollback_sha,
+            commit_sha=rollback_sha,  # type: ignore[arg-type]
             message=f"Rollback {'successful' if rollback_healthy else 'failed'}",
             details={"original_sha": current_sha, "rollback_sha": rollback_sha, "reason": reason},
             duration_seconds=time.time() - start_time,
@@ -623,7 +623,7 @@ class SelfDeploymentAgent:
             action=DeploymentAction.DRAFT_RELEASE,
             service_name=config.service_name,
             state=DeploymentState.PLANNING,
-            commit_sha=commit_sha,
+            commit_sha=commit_sha,  # type: ignore[arg-type]
             message=f"Release PR #{pr_id} created on branch {branch_name}",
             details={"pr_id": pr_id, "branch": branch_name},
         )

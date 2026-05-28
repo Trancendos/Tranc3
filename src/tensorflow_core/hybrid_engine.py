@@ -93,7 +93,7 @@ class ModelEnsemble:
         # Normalise weights based on availability
         if torch_ok and tf_ok:
             effective_w_torch, effective_w_tf = w_torch, w_tf
-            ensemble = w_torch * torch_out + w_tf * tf_out
+            ensemble = w_torch * torch_out + w_tf * tf_out  # type: ignore[operator]
         elif torch_ok:
             effective_w_torch, effective_w_tf = 1.0, 0.0
             ensemble = torch_out  # type: ignore[assignment]
@@ -419,7 +419,7 @@ class HybridInferenceEngine:
                 logger.error("batch_infer task %d failed: %s", i, res)
                 output.append({"output": None, "error": str(res), "task": tasks[i].get("task")})
             else:
-                output.append(res)
+                output.append(res)  # type: ignore[arg-type]
 
         return output
 

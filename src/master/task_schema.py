@@ -58,7 +58,7 @@ class TaskStep(BaseModel):
     bot: str = Field(..., description="BotRegistry handler key (e.g. 'monitor', 'search')")
     action: str = Field(..., description="Action name passed as kwarg to the bot")
     params: Dict[str, Any] = Field(default_factory=dict)
-    retry: RetryPolicy = Field(default_factory=RetryPolicy)
+    retry: RetryPolicy = Field(default_factory=RetryPolicy)  # type: ignore[arg-type]
     timeout_seconds: float = Field(30.0, ge=1)
     depends_on: List[str] = Field(default_factory=list, description="Step names that must complete first")
     name: Optional[str] = None
@@ -96,7 +96,7 @@ class TaskDefinition(BaseModel):
     description: str = ""
     version: str = "1.0"
     enabled: bool = True
-    schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
+    schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)  # type: ignore[arg-type]
     steps: List[TaskStep] = Field(..., min_length=1)
     tags: List[str] = Field(default_factory=list)
     notify_on_failure: bool = True

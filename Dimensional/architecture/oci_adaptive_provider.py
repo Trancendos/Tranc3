@@ -467,7 +467,7 @@ def _oci_sign_headers(
     sig_string = "\n".join(sig_string_parts)
 
     private_key = serialization.load_pem_private_key(private_key_pem.encode(), password=None)
-    signature = private_key.sign(sig_string.encode(), padding.PKCS1v15(), hashes.SHA256())
+    signature = private_key.sign(sig_string.encode(), padding.PKCS1v15(), hashes.SHA256())  # type: ignore[union-attr,call-arg,arg-type]
     sig_b64 = base64.b64encode(signature).decode()
 
     key_id = f"{tenancy_ocid}/{user_ocid}/{fingerprint}"

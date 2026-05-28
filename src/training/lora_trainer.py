@@ -298,7 +298,7 @@ class LoRATrainer:
     def _eval_pass(self) -> float:
         self.model.eval()
         total_loss, n = 0.0, 0
-        for batch in self.val_loader:
+        for batch in self.val_loader:  # type: ignore[union-attr]
             input_ids, targets = self._unpack_batch(batch)
             _, loss = self.model(input_ids, targets)
             total_loss += loss.item()

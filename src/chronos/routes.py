@@ -101,10 +101,10 @@ async def create_event(body: Dict[str, Any] = Body(...)) -> Response:
             {"error": "user_id, title, start_ts, end_ts are required"}, status_code=400
         )
     event = get_chronos().create_event(
-        user_id=user_id,
-        title=title,
-        start_ts=float(start_ts),
-        end_ts=float(end_ts),
+        user_id=user_id,  # type: ignore[arg-type]
+        title=title,  # type: ignore[arg-type]
+        start_ts=float(start_ts),  # type: ignore[arg-type]
+        end_ts=float(end_ts),  # type: ignore[arg-type]
         description=body.get("description", ""),
         timezone=body.get("timezone", "UTC"),
         location=body.get("location"),

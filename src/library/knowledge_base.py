@@ -240,9 +240,9 @@ class Library:
         ]
         for a in seed_articles:
             art = Article(
-                title=a["title"],
-                body=a["body"],
-                tags=a["tags"],
+                title=a["title"],  # type: ignore[arg-type]
+                body=a["body"],  # type: ignore[arg-type]
+                tags=a["tags"],  # type: ignore[arg-type]
                 author="system",
                 source="internal",
                 status=ArticleStatus.PUBLISHED,

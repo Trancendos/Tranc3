@@ -1122,11 +1122,11 @@ class ProactiveSystemBootstrap:
                     event_type="proactive.alert",
                     source="ProactiveSystemBootstrap",
                     data={
-                        "alert_type": getattr(plan, "action", "unknown").value
+                        "alert_type": getattr(plan, "action", "unknown").value  # type: ignore[union-attr]
                         if hasattr(getattr(plan, "action", None), "value")
                         else str(getattr(plan, "action", "unknown")),
                         "target": getattr(plan, "target", "unknown"),
-                        "priority": getattr(plan, "priority", "unknown").value
+                        "priority": getattr(plan, "priority", "unknown").value  # type: ignore[union-attr]
                         if hasattr(getattr(plan, "priority", None), "value")
                         else str(getattr(plan, "priority", "medium")),
                         "description": getattr(plan, "description", ""),

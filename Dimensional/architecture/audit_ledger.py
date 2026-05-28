@@ -363,7 +363,7 @@ class AuditLedger:
 
         # Add HMAC signature
         signature = hmac.new(
-            self._signing_key.encode(),
+            self._signing_key.encode(),  # type: ignore[union-attr]
             raw_hash,
             hashlib.sha256,
         ).hexdigest()

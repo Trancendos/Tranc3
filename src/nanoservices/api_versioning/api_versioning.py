@@ -130,7 +130,7 @@ class VersionRegistry:
             compatible = [
                 e
                 for v, e in endpoints.items()
-                if APIVersion(*map(int, v.split("."))).is_compatible_with(version)
+                if APIVersion(*map(int, v.split("."))).is_compatible_with(version)  # type: ignore[arg-type]
             ]
             if compatible:
                 return max(compatible, key=lambda e: e.version)

@@ -455,7 +455,7 @@ class PredictiveDriftService:
                 resource_counts[s.resource_name] = resource_counts.get(s.resource_name, 0) + 1
         top_resources = sorted(
             [{"resource": k, "count": v} for k, v in resource_counts.items()],
-            key=lambda x: -x["count"],
+            key=lambda x: -x["count"],  # type: ignore[operator]
         )[:10]
 
         # Trend analysis

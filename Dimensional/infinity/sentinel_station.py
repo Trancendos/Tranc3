@@ -477,7 +477,7 @@ class SentinelStation:
             )
         else:
             self._circuit_breaker.record_failure()
-            self._stats["fallback_activations"] += 1
+            self._stats["fallback_activations"] += 1  # type: ignore[operator]
             logger.info("Sentinel Station started with in-process fallback (Redis unavailable)")
 
         self._running = True
@@ -533,11 +533,11 @@ class SentinelStation:
 
         # Always publish to in-process fallback (local subscribers)
         await self._fallback.publish(channel, event)
-        self._stats["events_delivered_local"] += self._fallback.get_subscriber_count(channel)
+        self._stats["events_delivered_local"] += self._fallback.get_subscriber_count(channel)  # type: ignore[operator]
 
         # Try Redis if circuit breaker allows
         if not self._circuit_breaker.is_open:
-            self._stats["redis_publish_attempts"] += 1
+            self._stats["redis_publish_attempts"] += 1  # type: ignore[operator]
             message = event.to_json()
 
             # Compress large messages
@@ -551,15 +551,15 @@ class SentinelStation:
 
             if receivers >= 0:
                 self._circuit_breaker.record_success()
-                self._stats["events_delivered_redis"] += receivers
+                self._stats["events_delivered_redis"] += receivers  # type: ignore[operator]
             else:
                 self._circuit_breaker.record_failure()
-                self._stats["redis_publish_failures"] += 1
+                self._stats["redis_publish_failures"] += 1  # type: ignore[operator]
         else:
             # Circuit is open — skip Redis, fallback only
-            self._stats["redis_publish_failures"] += 1
+            self._stats["redis_publish_failures"] += 1  # type: ignore[operator]
 
-        self._stats["events_published"] += 1
+        self._stats["events_published"] += 1  # type: ignore[operator]
         return event
 
     async def subscribe(self, channel: str, handler: Optional[Callable] = None) -> asyncio.Queue:
@@ -639,11 +639,11 @@ class SentinelStation:
                                 pass
 
                         event = SentinelEvent.from_json(data)
-                        self._stats["events_received"] += 1
+                        self._stats["events_received"] += 1  # type: ignore[operator]
 
                         # Distribute to in-process fallback subscribers
                         await self._fallback.publish(channel, event)
-                        self._stats["events_delivered_local"] += 1
+                        self._stats["events_delivered_local"] += 1  # type: ignore[operator]
 
             except asyncio.CancelledError:
                 break
@@ -700,7 +700,7 @@ class SentinelStation:
             "subscribed_channels": list(self._subscribed_channels),
             "fallback": self._fallback.get_stats(),
             "uptime_seconds": (
-                time.time() - time.mktime(datetime.fromisoformat(self._stats["started_at"]).timetuple())
+                time.time() - time.mktime(datetime.fromisoformat(self._stats["started_at"]).timetuple())  # type: ignore[arg-type]
                 if self._stats["started_at"]
                 else 0
             ),
