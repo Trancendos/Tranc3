@@ -12,9 +12,9 @@ Covers:
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
 
 # ── IntelligenceClass ─────────────────────────────────────────────────────────
 
@@ -123,8 +123,8 @@ def agent_with_mock_router():
     ],
 )
 def test_agent_classify(agent_with_mock_router, title, raw, source_type, expected_class):
-    from src.section7.intelligence_agent import IntelligenceItem, SourceType
     from src.section7.information_router import IntelligenceClass
+    from src.section7.intelligence_agent import IntelligenceItem, SourceType
 
     agent, _ = agent_with_mock_router
     item = IntelligenceItem(
@@ -296,7 +296,6 @@ def test_router_stats(isolated_router):
 
 
 def test_router_route_many(isolated_router):
-    from src.section7.information_router import IntelligenceClass
 
     items = [
         {
@@ -445,7 +444,6 @@ def test_nvd_parse_item():
 def vault_worker(monkeypatch):
     """Import vault-service worker with AES key set, isolated from real DB."""
     import importlib
-    import os
     import tempfile
 
     monkeypatch.setenv("VAULT_MASTER_KEY", "test-master-key-section7-fix-xyz")

@@ -18,7 +18,6 @@ Design principles:
 from __future__ import annotations
 
 import logging
-import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 from urllib.error import URLError
