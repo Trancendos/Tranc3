@@ -172,7 +172,7 @@ class FrontierAgent:
         return entity
 
     @classmethod
-    def from_entity(cls, entity: AgentEntity, config: Optional[FrontierAgentConfig] = None) -> FrontierAgent:  # noqa: UP045
+    def from_entity(cls, entity: AgentEntity, config: Optional[FrontierAgentConfig] = None) -> FrontierAgent:  # noqa: UP045, E501
         """Create a FrontierAgent from an AgentEntity."""
         agent = cls(config or FrontierAgentConfig(name=entity.name))
         agent.id = entity.id

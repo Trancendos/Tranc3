@@ -90,7 +90,7 @@ class AdaptiveMetaLearner:
         self._lr_history: List[float] = []  # noqa: UP006
 
     @classmethod
-    def with_parameters(cls, parameters: np.ndarray, config: Optional[AdaptiveConfig] = None) -> AdaptiveMetaLearner:  # noqa: UP045
+    def with_parameters(cls, parameters: np.ndarray, config: Optional[AdaptiveConfig] = None) -> AdaptiveMetaLearner:  # noqa: UP045, E501
         """Create a learner initialized with specific parameters."""
         learner = cls(len(parameters), config)
         learner.parameters = parameters.copy()
