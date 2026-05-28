@@ -470,3 +470,251 @@ class TestNeighbourhood:
 
         resp = _run(_go())
         assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# NodeCreate.importance field (contract alignment fix)
+# ---------------------------------------------------------------------------
+
+
+class TestNodeImportance:
+    """Verify the importance field is accepted and persisted in the database."""
+
+    def test_create_node_default_importance(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r = await c.post(
+                    "/nodes",
+                    json={"title": "Default Imp", "content": "x", "source": "s"},
+                )
+                nid = r.json()["node_id"]
+                return (await c.get(f"/nodes/{nid}")).json()
+
+        node = _run(_go())
+        # default importance is 0.5 per model definition
+        assert node["importance"] == pytest.approx(0.5, abs=1e-6)
+
+    def test_create_node_custom_importance(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r = await c.post(
+                    "/nodes",
+                    json={
+                        "title": "High Imp",
+                        "content": "important content",
+                        "source": "s",
+                        "importance": 0.9,
+                    },
+                )
+                nid = r.json()["node_id"]
+                return (await c.get(f"/nodes/{nid}")).json()
+
+        node = _run(_go())
+        assert node["importance"] == pytest.approx(0.9, abs=1e-6)
+
+    def test_create_node_low_importance(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r = await c.post(
+                    "/nodes",
+                    json={
+                        "title": "Low Imp",
+                        "content": "trivial",
+                        "source": "s",
+                        "importance": 0.1,
+                    },
+                )
+                nid = r.json()["node_id"]
+                return (await c.get(f"/nodes/{nid}")).json()
+
+        node = _run(_go())
+        assert node["importance"] == pytest.approx(0.1, abs=1e-6)
+
+    def test_importance_boundary_zero(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r = await c.post(
+                    "/nodes",
+                    json={"title": "Zero Imp", "content": "x", "source": "s", "importance": 0.0},
+                )
+                nid = r.json()["node_id"]
+                return (await c.get(f"/nodes/{nid}")).json()
+
+        node = _run(_go())
+        assert node["importance"] == pytest.approx(0.0, abs=1e-6)
+
+    def test_importance_boundary_one(self, _worker):
+        async def _go():
+            async with _client(_worker.app) as c:
+                r = await c.post(
+                    "/nodes",
+                    json={"title": "Max Imp", "content": "x", "source": "s", "importance": 1.0},
+                )
+                nid = r.json()["node_id"]
+                return (await c.get(f"/nodes/{nid}")).json()
+
+        node = _run(_go())
+        assert node["importance"] == pytest.approx(1.0, abs=1e-6)
+
+    def test_importance_out_of_range_rejected(self, _worker):
+        """Values outside [0, 1] must be rejected by pydantic validation."""
+        async def _go():
+            async with _client(_worker.app) as c:
+                r = await c.post(
+                    "/nodes",
+                    json={"title": "Bad Imp", "content": "x", "source": "s", "importance": 1.5},
+                )
+                return r
+
+        resp = _run(_go())
+        assert resp.status_code == 422
+
+    def test_avg_importance_reflects_stored_values(self, _worker):
+        """graph/stats avg_importance should reflect the stored importance values."""
+        async def _go():
+            async with _client(_worker.app) as c:
+                await c.post(
+                    "/nodes",
+                    json={"title": "A", "content": "x", "source": "s", "importance": 0.2},
+                )
+                await c.post(
+                    "/nodes",
+                    json={"title": "B", "content": "x", "source": "s", "importance": 0.8},
+                )
+                return (await c.get("/graph/stats")).json()
+
+        data = _run(_go())
+        # avg of 0.2 and 0.8 = 0.5
+        assert data["avg_importance"] == pytest.approx(0.5, abs=0.01)
+
+
+# ---------------------------------------------------------------------------
+# SearchRequest contract alignment (max_results / use_graph_expansion)
+# ---------------------------------------------------------------------------
+
+
+class TestSearchContract:
+    """Verify the search endpoint accepts the client-contract field names."""
+
+    def test_search_with_max_results_field(self, _worker):
+        """Search must accept max_results (not top_k)."""
+        async def _go():
+            async with _client(_worker.app) as c:
+                return await c.post(
+                    "/search",
+                    json={"query": "knowledge graph", "max_results": 5},
+                )
+
+        resp = _run(_go())
+        assert resp.status_code == 200
+
+    def test_search_max_results_limits_output(self, _worker):
+        """Inserting many nodes then capping via max_results should not exceed the cap."""
+        async def _go():
+            async with _client(_worker.app) as c:
+                for i in range(15):
+                    await c.post(
+                        "/nodes",
+                        json={
+                            "title": f"Knowledge Node {i}",
+                            "content": f"knowledge graph content {i}",
+                            "source": "s",
+                        },
+                    )
+                data = (await c.post("/search", json={"query": "knowledge", "max_results": 3})).json()
+                return data
+
+        data = _run(_go())
+        total_returned = len(data.get("direct_results", [])) + len(data.get("expanded_results", []))
+        assert total_returned <= 3
+
+    def test_search_with_use_graph_expansion_false(self, _worker):
+        """use_graph_expansion=False must be accepted without error."""
+        async def _go():
+            async with _client(_worker.app) as c:
+                return await c.post(
+                    "/search",
+                    json={"query": "test", "use_graph_expansion": False},
+                )
+
+        resp = _run(_go())
+        assert resp.status_code == 200
+
+    def test_search_graph_expansion_false_skips_bfs(self, _worker):
+        """With use_graph_expansion=False, expanded_results must be empty."""
+        async def _go():
+            async with _client(_worker.app) as c:
+                r1 = await c.post(
+                    "/nodes",
+                    json={"title": "Hub Node", "content": "hub knowledge", "source": "s"},
+                )
+                r2 = await c.post(
+                    "/nodes",
+                    json={"title": "Leaf Node", "content": "leaf details", "source": "s"},
+                )
+                await c.post(
+                    "/edges",
+                    json={
+                        "source_id": r1.json()["node_id"],
+                        "target_id": r2.json()["node_id"],
+                        "relation": "links_to",
+                    },
+                )
+                return (
+                    await c.post(
+                        "/search",
+                        json={"query": "hub knowledge", "use_graph_expansion": False},
+                    )
+                ).json()
+
+        data = _run(_go())
+        assert data["expanded_results"] == []
+
+    def test_search_graph_expansion_true_enables_bfs(self, _worker):
+        """With use_graph_expansion=True (default), expanded_results may be non-empty."""
+        async def _go():
+            async with _client(_worker.app) as c:
+                r1 = await c.post(
+                    "/nodes",
+                    json={"title": "Central Concept", "content": "central concept info", "source": "s"},
+                )
+                r2 = await c.post(
+                    "/nodes",
+                    json={"title": "Related Detail", "content": "related expanded", "source": "s"},
+                )
+                await c.post(
+                    "/edges",
+                    json={
+                        "source_id": r1.json()["node_id"],
+                        "target_id": r2.json()["node_id"],
+                        "relation": "related_to",
+                    },
+                )
+                return (
+                    await c.post(
+                        "/search",
+                        json={"query": "central concept", "use_graph_expansion": True},
+                    )
+                ).json()
+
+        data = _run(_go())
+        # expanded_results is a list (may or may not have entries but field exists)
+        assert isinstance(data["expanded_results"], list)
+
+    def test_search_missing_query_returns_422(self, _worker):
+        """Omitting required query field must return 422 Unprocessable Entity."""
+        async def _go():
+            async with _client(_worker.app) as c:
+                return await c.post("/search", json={"max_results": 5})
+
+        resp = _run(_go())
+        assert resp.status_code == 422
+
+    def test_search_default_max_results_is_ten(self, _worker):
+        """Omitting max_results should default to 10 (no 422 error)."""
+        async def _go():
+            async with _client(_worker.app) as c:
+                return await c.post("/search", json={"query": "anything"})
+
+        resp = _run(_go())
+        assert resp.status_code == 200

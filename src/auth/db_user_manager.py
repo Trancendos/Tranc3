@@ -177,6 +177,12 @@ class DBUserManager:
                 logger.error("DB update_tier failed: %s", sanitize_for_log(e))
             finally:
                 session.close()
+
+        # Sync in-memory fallback record if present
+        if username in self._fallback:
+            self._fallback[username]["tier"] = new_tier
+            self._fallback[username]["roles"] = _tier_to_roles(new_tier)
+            return True
         return False
 
     @staticmethod
