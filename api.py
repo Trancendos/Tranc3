@@ -652,6 +652,12 @@ from src.routers.enhanced_capabilities import router as _enhanced_router  # noqa
 
 app.include_router(_enhanced_router)
 
+# ── Ecosystem (hub states, citadel, defense, AI gateway, heartbeat) ──────────
+# Migrated from legacy api_ecosystem.py into the canonical entry point.
+from src.routers.ecosystem import router as _ecosystem_router  # noqa: F401
+
+app.include_router(_ecosystem_router)
+
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
 if os.path.isdir(_FRONTEND_DIST):
