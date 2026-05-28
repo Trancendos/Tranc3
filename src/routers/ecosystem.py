@@ -879,9 +879,7 @@ async def get_service_heartbeat_health(service_id: str):
 
 
 @router.get("/heartbeat/alerts")
-async def get_heartbeat_alerts(
-    service_id: Optional[str] = None, resolved: Optional[bool] = None
-):
+async def get_heartbeat_alerts(service_id: Optional[str] = None, resolved: Optional[bool] = None):
     """Get health alerts, optionally filtered by service or resolved status."""
     if not _DIMENSIONAL_AVAILABLE or _heartbeat_aggregator is None:
         return {"total": 0, "alerts": []}
