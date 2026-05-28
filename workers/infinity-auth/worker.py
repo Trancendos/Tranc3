@@ -531,7 +531,8 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     """
     # Find user
     row = db.execute(
-        "SELECT user_id, username, password_hash, mfa_enabled, totp_secret, role FROM users WHERE username = ? AND is_active = 1",
+        "SELECT user_id, username, password_hash, mfa_enabled, totp_secret, backup_codes, role"
+        " FROM users WHERE username = ? AND is_active = 1",
         (credentials.username,),
     ).fetchone()
 
@@ -549,8 +550,27 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
         totp_secret = row["totp_secret"]
         if not totp_secret:
             raise HTTPException(status_code=500, detail="MFA misconfigured — contact support")
-        if not pyotp.TOTP(totp_secret).verify(credentials.totp_code, valid_window=1):
-            raise HTTPException(status_code=403, detail="Invalid MFA code")
+        code = credentials.totp_code.strip()
+        if code.isdigit() and len(code) == 6:
+            # Standard TOTP path — ±30s clock drift tolerance
+            if not pyotp.TOTP(totp_secret).verify(code, valid_window=1):
+                raise HTTPException(status_code=403, detail="Invalid MFA code")
+        else:
+            # Backup code recovery path — constant-time comparison, one-time use
+            stored_codes: list[str] = json.loads(row["backup_codes"] or "[]")
+            matched_idx = next(
+                (i for i, c in enumerate(stored_codes) if hmac.compare_digest(c, code.upper())),
+                None,
+            )
+            if matched_idx is None:
+                raise HTTPException(status_code=403, detail="Invalid MFA code")
+            # Consume the code so it cannot be reused
+            remaining = stored_codes[:matched_idx] + stored_codes[matched_idx + 1 :]
+            db.execute(
+                "UPDATE users SET backup_codes = ? WHERE user_id = ?",
+                (json.dumps(remaining), row["user_id"]),
+            )
+            db.commit()
 
     # Get role for JWT claims
     user_id = row["user_id"]
