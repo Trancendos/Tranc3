@@ -189,7 +189,7 @@ class Tranc3Config(BaseSettings):
         """Parse LLM_FALLBACK_PROVIDERS comma-separated string into a list."""
         return [p.strip() for p in self.LLM_FALLBACK_PROVIDERS.split(",")]
 
-    model_config = ConfigDict(  # type: ignore[assignment]
+    model_config = ConfigDict(  # type: ignore[typeddict-unknown-key,assignment]
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,

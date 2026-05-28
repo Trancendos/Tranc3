@@ -162,9 +162,9 @@ class KustomizeBuilder:
             "namespace": namespace,
         }
         if patches:
-            kustomization["patches"] = patches
+            kustomization["patches"] = patches  # type: ignore[assignment]
         if images:
-            kustomization["images"] = images
+            kustomization["images"] = images  # type: ignore[assignment]
         return kustomization
 
     def build_overlay(self, overlay_name: str) -> Optional[str]:

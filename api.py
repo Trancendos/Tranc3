@@ -103,13 +103,13 @@ from src.validation.loop_validator import (  # noqa: F401  # intentional top-lev
 try:
     from src.adaptive.foresight import foresight  # noqa: F401  # intentional top-level import
 except ImportError as _e:
-    foresight = None  # type: ignore[assignment]
+    foresight = None  # type: ignore[assignment,misc]
     logging.getLogger(__name__).warning("Adaptive foresight unavailable: %s", _e)
 
 try:
     from src.analytics.predictive import analytics  # noqa: F401  # intentional top-level import
 except ImportError as _e:
-    analytics = None  # type: ignore[assignment]
+    analytics = None  # type: ignore[assignment,misc]
     logging.getLogger(__name__).warning("Predictive analytics unavailable: %s", _e)
 
 try:
@@ -117,7 +117,7 @@ try:
         ConsciousnessModel,  # noqa: F401  # intentional top-level import
     )
 except ImportError as _e:
-    ConsciousnessModel = None  # type: ignore[assignment]
+    ConsciousnessModel = None  # type: ignore[assignment,misc]
     logging.getLogger(__name__).warning("ConsciousnessEngine unavailable: %s", _e)
 
 try:
@@ -125,13 +125,13 @@ try:
         NeuromorphicProcessor,  # noqa: F401  # intentional top-level import
     )
 except ImportError as _e:
-    NeuromorphicProcessor = None  # type: ignore[assignment]
+    NeuromorphicProcessor = None  # type: ignore[assignment,misc]
     logging.getLogger(__name__).warning("NeuromorphicProcessor unavailable: %s", _e)
 
 try:
     from src.compliance.magna_carta import compliance  # noqa: F401  # intentional top-level import
 except ImportError as _e:
-    compliance = None  # type: ignore[assignment]
+    compliance = None  # type: ignore[assignment,misc]
     logging.getLogger(__name__).warning("Compliance module unavailable: %s", _e)
 
 try:
@@ -139,7 +139,7 @@ try:
         SelfEvolvingArchitecture,  # noqa: F401  # intentional top-level import
     )
 except ImportError as _e:
-    SelfEvolvingArchitecture = None  # type: ignore[assignment]
+    SelfEvolvingArchitecture = None  # type: ignore[assignment,misc]
     logging.getLogger(__name__).warning("SelfEvolvingArchitecture unavailable: %s", _e)
 
 try:
@@ -147,7 +147,7 @@ try:
         PersonalityMatrix as EnhancedPersonalityMatrix,  # noqa: F401  # intentional top-level import
     )
 except ImportError as _e:
-    EnhancedPersonalityMatrix = None  # type: ignore[assignment]
+    EnhancedPersonalityMatrix = None  # type: ignore[assignment,misc]
     logging.getLogger(__name__).warning("PersonalityMatrix unavailable: %s", _e)
 
 try:

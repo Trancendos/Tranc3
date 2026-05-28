@@ -77,7 +77,7 @@ try:
 except ImportError:
     _CAUSAL_AVAILABLE = False
     CausalEventBus = None  # type: ignore[assignment,misc]
-    _global_causal_bus = None
+    _global_causal_bus = None  # type: ignore[assignment]
 
 try:
     from src.fluidic.reactive_state import StateStore
@@ -292,7 +292,7 @@ class InfinityFluidicGateway:
         if _CAUSAL_AVAILABLE:
             self.causal_bus = CausalEventBus(node_id=f"gateway.{node_id}")
         else:
-            self.causal_bus = None
+            self.causal_bus = None  # type: ignore[assignment]
 
         # ReactiveState for live topology
         if _REACTIVE_AVAILABLE:
@@ -302,8 +302,8 @@ class InfinityFluidicGateway:
                 {loc: {"healthy": True, "weight": 1.0} for loc in INFINITY_LOCATION_REGISTRY},
             )
         else:
-            self.state_store = None
-            self.topology_state = None
+            self.state_store = None  # type: ignore[assignment]
+            self.topology_state = None  # type: ignore[assignment]
 
     async def start(self) -> None:
         """Start the fluidic gateway."""

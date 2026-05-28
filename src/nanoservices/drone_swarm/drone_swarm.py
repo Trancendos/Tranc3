@@ -446,7 +446,7 @@ class MultiDroneSwarmSimulation:
                 )
                 score = active / (1 + dist)
                 if score > best_score:
-                    best_score = score
+                    best_score = score  # type: ignore[assignment]
                     best_swarm = swarm
 
         if best_swarm:

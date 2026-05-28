@@ -149,8 +149,8 @@ class Tranc3Tokenizer:
             # Count pairs
             pair_freq: Dict[Tuple[str, str], int] = {}
             for word in corpus:
-                for a, b in zip(word, word[1:], strict=False):
-                    pair_freq[(a, b)] = pair_freq.get((a, b), 0) + 1
+                for a, b in zip(word, word[1:], strict=False):  # type: ignore[assignment,index,arg-type]
+                    pair_freq[(a, b)] = pair_freq.get((a, b), 0) + 1  # type: ignore[assignment,index,arg-type]
 
             if not pair_freq:
                 break

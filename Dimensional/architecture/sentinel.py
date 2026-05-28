@@ -486,7 +486,7 @@ class Sentinel:
             env_age_days = 0
             if env_path.exists():
                 mtime = env_path.stat().st_mtime
-                env_age_days = (time.time() - mtime) / 86400
+                env_age_days = (time.time() - mtime) / 86400  # type: ignore[assignment]
 
             passed = len(leaks) == 0 and len(missing) == 0
             severity = "high" if leaks else ("medium" if missing else "info")

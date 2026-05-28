@@ -296,7 +296,7 @@ class CrossBridgeOrchestrator:
                 workflow.steps[i].error = str(result)
                 failed = True
             else:
-                workflow.steps[i] = result
+                workflow.steps[i] = result  # type: ignore[assignment]
                 if workflow.steps[i].status == StepStatus.FAILED:
                     failed = True
 

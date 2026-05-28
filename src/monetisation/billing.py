@@ -116,8 +116,8 @@ class UsageRecord:
     requests_this_hour: int = 0
     requests_today: int = 0
     tokens_this_month: int = 0
-    hour_window_start: datetime = None
-    day_window_start: datetime = None
+    hour_window_start: Optional[datetime] = None
+    day_window_start: Optional[datetime] = None
 
     def __post_init__(self):
         now = datetime.utcnow()

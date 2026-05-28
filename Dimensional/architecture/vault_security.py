@@ -374,7 +374,7 @@ class VaultAuditLogger:
         if date:
             target = self._log_dir / f"vault-audit-{date}.jsonl"
         else:
-            target = self._current_file
+            target = self._current_file  # type: ignore[assignment]
 
         if not target or not target.exists():
             return True  # No records = valid chain
@@ -1316,7 +1316,7 @@ class VaultSecretLoader:
 
         # Source 3: Infinity Void vault
         if self._infinity_void_url and self._infinity_void_secret:
-            value = self._read_infinity_void(key)
+            value = self._read_infinity_void(key)  # type: ignore[assignment]
             if value is not None:
                 self._audit.log(
                     VaultAuditEvent(
@@ -1332,7 +1332,7 @@ class VaultSecretLoader:
 
         # Source 4: HSM-encrypted file
         if self._hsm and self._hsm.is_available():
-            value = self._read_hsm_encrypted(key)
+            value = self._read_hsm_encrypted(key)  # type: ignore[assignment]
             if value is not None:
                 self._audit.log(
                     VaultAuditEvent(
@@ -1633,7 +1633,7 @@ def create_vault_security(
             audit_logger=audit_logger,
         )
     elif hsm_type == "yubihsm2":
-        hsm = YubiHSM2Provider(
+        hsm = YubiHSM2Provider(  # type: ignore[assignment]
             connector_url=hsm_config.get("connector_url", "http://localhost:12345"),
             auth_key_id=hsm_config.get("auth_key_id", 1),
             auth_key_password=hsm_config.get("auth_key_password", b"password"),

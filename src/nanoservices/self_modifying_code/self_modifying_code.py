@@ -218,7 +218,7 @@ class MutationEngine:
                                 )
                     elif isinstance(original_value, float):
                         for factor in [0.8, 0.9, 1.1, 1.2]:
-                            new_value = round(original_value * factor, 4)
+                            new_value = round(original_value * factor, 4)  # type: ignore[assignment]
                             mutations.append(
                                 CodeMutation(
                                     mutation_type=MutationType.PARAMETER_TUNING,

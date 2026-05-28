@@ -163,7 +163,7 @@ class ProactiveDefenseLayer:
                 sanitize_for_log(service_name),
             )
         else:
-            self.engine = None
+            self.engine = None  # type: ignore[assignment]
             logger.warning(
                 "ProactiveDefenseLayer: DefenseEngine not available for %s",
                 sanitize_for_log(service_name),
@@ -172,7 +172,7 @@ class ProactiveDefenseLayer:
         if _ADAPTIVE_SCANNER:
             self.scanner = AdaptiveScanner()
         else:
-            self.scanner = None
+            self.scanner = None  # type: ignore[assignment]
 
         # Threat predictor (ML-based)
         if _PREDICTOR_AVAILABLE:

@@ -96,10 +96,10 @@ class ModelEnsemble:
             ensemble = w_torch * torch_out + w_tf * tf_out
         elif torch_ok:
             effective_w_torch, effective_w_tf = 1.0, 0.0
-            ensemble = torch_out
+            ensemble = torch_out  # type: ignore[assignment]
         elif tf_ok:
             effective_w_torch, effective_w_tf = 0.0, 1.0
-            ensemble = tf_out
+            ensemble = tf_out  # type: ignore[assignment]
         else:
             logger.error("Both models failed — returning zero prediction")
             # Attempt to infer shape from inputs
@@ -108,7 +108,7 @@ class ModelEnsemble:
                 out_shape = (arr.shape[0], 1)
             else:
                 out_shape = (1, 1)
-            ensemble = np.zeros(out_shape, dtype=np.float32)
+            ensemble = np.zeros(out_shape, dtype=np.float32)  # type: ignore[assignment]
             effective_w_torch, effective_w_tf = 0.0, 0.0
 
         return {
