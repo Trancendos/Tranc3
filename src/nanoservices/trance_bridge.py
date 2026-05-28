@@ -38,6 +38,7 @@ class QueryType(Enum):
 
     SELECT = "select"
     PROJECT = "project"
+    FILTER = "filter"
     JOIN = "join"
     NEST = "nest"
     UNNEST = "unnest"

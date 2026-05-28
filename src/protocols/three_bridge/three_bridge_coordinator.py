@@ -604,6 +604,32 @@ class SentinelStation:
 
         return bridge.process_packet(packet)
 
+    def _handle_health_packet(self, packet: "BridgeTrafficPacket") -> "BridgeTrafficPacket":
+        """Handle INTERNAL_HEALTH traffic — aggregate health from all bridges and return."""
+        health_summary: dict[str, Any] = {}
+        for domain, bridge in self._bridges.items():
+            try:
+                report = bridge.health_check()
+                health_summary[domain.value] = report.status
+            except Exception:  # noqa: S110 — graceful degradation
+                pass  # graceful degradation
+        packet.payload["health"] = health_summary
+        packet.metadata["handled_by"] = "sentinel"
+        return packet
+
+    def _handle_cross_bridge(self, packet: "BridgeTrafficPacket") -> "BridgeTrafficPacket":
+        """Handle CROSS_BRIDGE traffic — route to the target bridge specified in payload."""
+        target_domain_str = packet.payload.get("target_domain", "")
+        try:
+            target_domain = BridgeDomain(target_domain_str)
+            bridge = self._bridges.get(target_domain)
+            if bridge:
+                return bridge.process_packet(packet)
+        except (ValueError, KeyError):
+            pass
+        packet.metadata["cross_bridge_error"] = f"Unknown target domain: {target_domain_str}"
+        return packet
+
     def classify_traffic(self, traffic_class: TrafficClass) -> BridgeDomain:
         """Map a traffic class to a bridge domain."""
         return TRAFFIC_TO_BRIDGE.get(traffic_class, BridgeDomain.INFINITY)

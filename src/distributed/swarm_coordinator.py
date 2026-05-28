@@ -82,6 +82,7 @@ class SwarmCoordinator:
 
     async def _query_node(self, node_url: str, sub_problem: Dict[str, Any]) -> Dict[str, Any]:
         """Query individual swarm node"""
+        assert self.session is not None  # noqa: S101 — session is set by __aenter__
         async with self.session.post(
             f"{node_url}/reason",
             json=sub_problem,

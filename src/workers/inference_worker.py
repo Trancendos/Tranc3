@@ -79,6 +79,8 @@ class InferenceWorker:
 
     async def run(self):
         await self.start()
+        assert self._redis is not None  # noqa: S101 — set by start()
+        assert self._engine is not None  # noqa: S101 — set by start()
         while self._running:
             try:
                 item = await self._redis.brpop(_QUEUE_KEY, timeout=2)
@@ -117,6 +119,7 @@ class InferenceWorker:
                 worker_id=f"inference-{_WORKER_ID}",
             )
             key = f"{_RESULT_PREFIX}{job.job_id}"
+            assert self._redis is not None  # noqa: S101 — always set before _handle is called
             await self._redis.set(key, result.to_json(), ex=_RESULT_TTL)
             logger.info(
                 "Job %s [%s] done in %.1f ms",
@@ -158,6 +161,7 @@ class InferenceWorker:
         temperature = p.get("temperature", 0.8)
         top_p = p.get("top_p", 0.9)
 
+        assert self._engine is not None  # noqa: S101 — always set before _dispatch routes here
         return await self._engine.generate(
             prompt=prompt,
             personality=personality,
@@ -173,6 +177,7 @@ class InferenceWorker:
         text = p.get("text", "")
         pooling = p.get("pooling", "mean")  # "mean" | "cls" | "max"
 
+        assert self._engine is not None  # noqa: S101 — always set before _dispatch routes here
         if self._engine._bootstrap_mode or not self._engine._loaded:
             # Bootstrap: return a deterministic pseudo-embedding
             import hashlib

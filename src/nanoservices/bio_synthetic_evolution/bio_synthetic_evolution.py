@@ -104,6 +104,7 @@ class SelectionPressure(Enum):
 
     FITNESS = "fitness"
     NEUTRAL = "neutral"
+    TOURNAMENT = "tournament"
     DIVERSIFYING = "diversifying"
     STABILIZING = "stabilizing"
     DISRUPTIVE = "disruptive"

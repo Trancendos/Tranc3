@@ -60,9 +60,10 @@ class TaskLoader:
             from watchdog.observers import Observer
 
             handler = _TaskFileHandler(self)
-            self._observer = Observer()
-            self._observer.schedule(handler, str(self._dir), recursive=False)
-            self._observer.start()
+            observer = Observer()
+            observer.schedule(handler, str(self._dir), recursive=False)
+            observer.start()
+            self._observer = observer
             logger.info("TaskLoader: watching %s for changes.", self._dir)
         except ImportError:
             logger.warning(

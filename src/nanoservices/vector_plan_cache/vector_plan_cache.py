@@ -331,6 +331,17 @@ class LanceDBPlanStore:
                 pass  # graceful degradation
         return self._fallback.count()
 
+    def delete(self, ids: List[str]) -> None:
+        """Delete vectors by ID."""
+        if self._use_lancedb and self._table is not None:
+            try:
+                for id_ in ids:
+                    self._table.delete(f"id = '{id_}'")
+                return
+            except Exception as e:
+                logger.warning(f"LanceDB delete failed: {e}")
+        self._fallback.delete(ids)
+
 
 class VectorPlanCache:
     """Central vector plan cache for the TranceX ecosystem.

@@ -146,6 +146,8 @@ class WorkerPool:
 
     async def get_result(self, job_id: str, timeout: float = 30.0) -> Optional[JobResult]:
         """Poll Redis for a result until timeout."""
+        if not self._redis:
+            self._redis = await self._connect_redis()
         key = f"{_RESULT_PREFIX}{job_id}"
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
@@ -171,6 +173,8 @@ class WorkerPool:
 
     async def _worker_loop(self, worker_id: str):
         logger.info("Worker %s started", worker_id)
+        if not self._redis:
+            self._redis = await self._connect_redis()
         while self._running:
             try:
                 # BRPOP blocks up to 1 s then returns None
@@ -212,6 +216,7 @@ class WorkerPool:
             worker_id=worker_id,
         )
         key = f"{_RESULT_PREFIX}{job.job_id}"
+        assert self._redis is not None  # noqa: S101 — always initialised by _worker_loop
         await self._redis.set(key, result.to_json(), ex=_RESULT_TTL)
         logger.debug("Job %s done in %.1f ms", job.job_id, result.duration_ms)
 
