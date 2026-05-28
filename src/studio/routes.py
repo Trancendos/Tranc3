@@ -24,7 +24,7 @@ async def capabilities() -> Dict[str, Any]:
 
 
 @router.post("/jobs")
-async def submit_job(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def submit_job(body: Dict[str, Any] = Body(...)) -> Response:
     raw_service = body.get("service", "imaginarium")
     try:
         service = StudioServiceType(raw_service)
@@ -38,7 +38,7 @@ async def submit_job(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 @router.get("/jobs")
 async def list_jobs(
     service: Optional[str] = Query(None),
-) -> list:
+) -> Response:
     svc = None
     if service:
         try:
@@ -49,7 +49,7 @@ async def list_jobs(
 
 
 @router.get("/jobs/{job_id}")
-async def get_job(job_id: str = Path(...)) -> Dict[str, Any]:
+async def get_job(job_id: str = Path(...)) -> Response:
     job = get_studio().get_job(job_id)
     if not job:
         return JSONResponse({"error": "Job not found"}, status_code=404)

@@ -25,7 +25,7 @@ async def nexus_status() -> Dict[str, Any]:
 
 
 @router.post("/publish")
-async def publish(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def publish(body: Dict[str, Any] = Body(...)) -> Response:
     topic = body.get("topic")
     payload = body.get("payload", {})
     sender = body.get("sender", "api")
@@ -55,7 +55,7 @@ async def publish(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
 
 @router.post("/send")
-async def send_direct(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def send_direct(body: Dict[str, Any] = Body(...)) -> Response:
     recipient = body.get("recipient")
     payload = body.get("payload", {})
     sender = body.get("sender", "api")
@@ -71,7 +71,7 @@ async def send_direct(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
 
 @router.post("/route/inference")
-async def route_inference(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def route_inference(body: Dict[str, Any] = Body(...)) -> Response:
     prompt = body.get("prompt")
     if not prompt:
         return JSONResponse({"error": "prompt is required"}, status_code=400)

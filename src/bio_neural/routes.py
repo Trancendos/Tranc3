@@ -35,7 +35,7 @@ async def luminous_status() -> Dict[str, Any]:
 
 
 @router.post("/consciousness/phi")
-async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Response:
     """
     Calculate Φ (integrated information) for a given state vector.
     Body: { state: list[float] }
@@ -64,7 +64,7 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
 
 @router.post("/neuromorphic/process")
-async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Response:
     """
     Process input through the neuromorphic spiking network.
     Body: { input: list[float], timesteps: int }

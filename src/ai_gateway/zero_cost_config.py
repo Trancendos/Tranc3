@@ -203,11 +203,11 @@ class ZeroCostRoutingChain:
     models: Dict[str, str]  # provider -> default model
     estimated_cost_per_1k_requests: str = "$0.00"
 
-    def get_route_rules(self) -> List[Dict[str, Any]]:
+    def get_route_rules(self) -> "List[Any]":
         """Convert to RouteRule dicts for AIGateway."""
         from src.ai_gateway.types import RouteRule
 
-        rules = []
+        rules: List[Any] = []
         for priority, provider in enumerate(self.providers):
             model = self.models.get(provider, "")
             rules.append(

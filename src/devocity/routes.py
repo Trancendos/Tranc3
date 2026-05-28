@@ -24,7 +24,7 @@ async def list_guides() -> list:
 
 
 @router.post("/accounts")
-async def create_account(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def create_account(body: Dict[str, Any] = Body(...)) -> Response:
     user_id = body.get("user_id")
     display_name = body.get("display_name", "Developer")
     if not user_id:
@@ -34,7 +34,7 @@ async def create_account(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
 
 @router.get("/accounts/{account_id}")
-async def get_account(account_id: str = Path(...)) -> Dict[str, Any]:
+async def get_account(account_id: str = Path(...)) -> Response:
     account = get_devocity().get_account(account_id)
     if not account:
         return JSONResponse({"error": "Account not found"}, status_code=404)
@@ -45,7 +45,7 @@ async def get_account(account_id: str = Path(...)) -> Dict[str, Any]:
 async def issue_api_key(
     account_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Dict[str, Any]:
+) -> Response:
     name = body.get("name", "default")
     raw_scopes = body.get("scopes", ["read"])
     try:
@@ -65,7 +65,7 @@ async def issue_api_key(
 
 
 @router.get("/accounts/{account_id}/keys")
-async def list_keys(account_id: str = Path(...)) -> list:
+async def list_keys(account_id: str = Path(...)) -> Response:
     account = get_devocity().get_account(account_id)
     if not account:
         return JSONResponse({"error": "Account not found"}, status_code=404)
@@ -73,7 +73,7 @@ async def list_keys(account_id: str = Path(...)) -> list:
 
 
 @router.delete("/accounts/{account_id}/keys/{key_id}")
-async def revoke_key(account_id: str = Path(...), key_id: str = Path(...)) -> Dict[str, Any]:
+async def revoke_key(account_id: str = Path(...), key_id: str = Path(...)) -> Response:
     ok = get_devocity().revoke_api_key(account_id, key_id)
     if not ok:
         return JSONResponse({"error": "Account or key not found"}, status_code=404)
@@ -84,7 +84,7 @@ async def revoke_key(account_id: str = Path(...), key_id: str = Path(...)) -> Di
 async def register_webhook(
     account_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Dict[str, Any]:
+) -> Response:
     url = body.get("url")
     events = body.get("events", [])
     if not url:
@@ -96,7 +96,7 @@ async def register_webhook(
 
 
 @router.get("/accounts/{account_id}/webhooks")
-async def list_webhooks(account_id: str = Path(...)) -> list:
+async def list_webhooks(account_id: str = Path(...)) -> Response:
     account = get_devocity().get_account(account_id)
     if not account:
         return JSONResponse({"error": "Account not found"}, status_code=404)

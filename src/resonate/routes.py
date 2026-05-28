@@ -19,7 +19,7 @@ async def resonate_status() -> Dict[str, Any]:
 
 
 @router.post("/wrap")
-async def wrap_response(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def wrap_response(body: Dict[str, Any] = Body(...)) -> Response:
     response: Optional[str] = body.get("response")
     if not response:
         return JSONResponse({"error": "response text is required"}, status_code=400)

@@ -47,7 +47,7 @@ async def turings_hub_status() -> Dict[str, Any]:
 
 
 @router.get("/personalities")
-async def list_personalities() -> list:
+async def list_personalities() -> Response:
     spawner = _spawner()
     try:
         profiles = (
@@ -61,7 +61,7 @@ async def list_personalities() -> list:
 
 
 @router.get("/personalities/{personality_id}")
-async def get_personality(personality_id: str = Path(...)) -> Dict[str, Any]:
+async def get_personality(personality_id: str = Path(...)) -> Response:
     spawner = _spawner()
     profile = spawner._profiles.get(personality_id)
     if not profile:
@@ -70,7 +70,7 @@ async def get_personality(personality_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.post("/spawn")
-async def spawn_personality(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def spawn_personality(body: Dict[str, Any] = Body(...)) -> Response:
     """
     Spawn a new repo scaffold for a personality instance.
 

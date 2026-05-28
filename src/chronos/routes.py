@@ -22,7 +22,7 @@ async def chronos_status() -> Dict[str, Any]:
 
 
 @router.post("/tasks")
-async def create_task(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def create_task(body: Dict[str, Any] = Body(...)) -> Response:
     name = body.get("name")
     raw_type = body.get("schedule_type", "once")
     if not name:
@@ -45,7 +45,7 @@ async def create_task(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
 
 @router.get("/tasks")
-async def list_tasks(status: Optional[str] = Query(None)) -> list:
+async def list_tasks(status: Optional[str] = Query(None)) -> Response:
     ss = None
     if status:
         try:
@@ -56,7 +56,7 @@ async def list_tasks(status: Optional[str] = Query(None)) -> list:
 
 
 @router.get("/tasks/{task_id}")
-async def get_task(task_id: str = Path(...)) -> Dict[str, Any]:
+async def get_task(task_id: str = Path(...)) -> Response:
     task = get_chronos().get_task(task_id)
     if not task:
         return JSONResponse({"error": "Task not found"}, status_code=404)
@@ -64,7 +64,7 @@ async def get_task(task_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.post("/tasks/{task_id}/pause")
-async def pause_task(task_id: str = Path(...)) -> Dict[str, Any]:
+async def pause_task(task_id: str = Path(...)) -> Response:
     ok = get_chronos().pause_task(task_id)
     if not ok:
         return JSONResponse({"error": "Task not found"}, status_code=404)
@@ -72,7 +72,7 @@ async def pause_task(task_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.post("/tasks/{task_id}/resume")
-async def resume_task(task_id: str = Path(...)) -> Dict[str, Any]:
+async def resume_task(task_id: str = Path(...)) -> Response:
     ok = get_chronos().resume_task(task_id)
     if not ok:
         return JSONResponse({"error": "Task not found"}, status_code=404)
@@ -80,7 +80,7 @@ async def resume_task(task_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.delete("/tasks/{task_id}")
-async def delete_task(task_id: str = Path(...)) -> Dict[str, Any]:
+async def delete_task(task_id: str = Path(...)) -> Response:
     ok = get_chronos().delete_task(task_id)
     if not ok:
         return JSONResponse({"error": "Task not found"}, status_code=404)
@@ -91,7 +91,7 @@ async def delete_task(task_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.post("/events")
-async def create_event(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def create_event(body: Dict[str, Any] = Body(...)) -> Response:
     user_id = body.get("user_id")
     title = body.get("title")
     start_ts = body.get("start_ts")
@@ -127,7 +127,7 @@ async def list_events(
 
 
 @router.get("/events/{event_id}")
-async def get_event(event_id: str = Path(...)) -> Dict[str, Any]:
+async def get_event(event_id: str = Path(...)) -> Response:
     event = get_chronos().get_event(event_id)
     if not event:
         return JSONResponse({"error": "Event not found"}, status_code=404)
@@ -135,7 +135,7 @@ async def get_event(event_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.delete("/events/{event_id}")
-async def delete_event(event_id: str = Path(...)) -> Dict[str, Any]:
+async def delete_event(event_id: str = Path(...)) -> Response:
     ok = get_chronos().delete_event(event_id)
     if not ok:
         return JSONResponse({"error": "Event not found"}, status_code=404)

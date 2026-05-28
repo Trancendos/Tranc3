@@ -19,7 +19,7 @@ async def imind_status() -> Dict[str, Any]:
 
 
 @router.post("/assess")
-async def assess(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def assess(body: Dict[str, Any] = Body(...)) -> Response:
     text: Optional[str] = body.get("text")
     actor: Optional[str] = body.get("actor")
     if not text:

@@ -22,7 +22,7 @@ async def artifactory_status() -> Dict[str, Any]:
 async def list_artifacts(
     type: Optional[str] = Query(None),
     namespace: Optional[str] = Query(None),
-) -> list:
+) -> Response:
     atype = None
     if type:
         try:
@@ -37,7 +37,7 @@ async def list_artifacts(
 
 
 @router.post("/artifacts")
-async def create_artifact(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def create_artifact(body: Dict[str, Any] = Body(...)) -> Response:
     name = body.get("name")
     raw_type = body.get("type", "generic")
     if not name:
@@ -58,7 +58,7 @@ async def create_artifact(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
 
 @router.get("/artifacts/{artifact_id}")
-async def get_artifact(artifact_id: str = Path(...)) -> Dict[str, Any]:
+async def get_artifact(artifact_id: str = Path(...)) -> Response:
     artifact = get_artifactory().get_artifact(artifact_id)
     if not artifact:
         return JSONResponse({"error": "Artifact not found"}, status_code=404)
@@ -69,7 +69,7 @@ async def get_artifact(artifact_id: str = Path(...)) -> Dict[str, Any]:
 async def push_version(
     artifact_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Dict[str, Any]:
+) -> Response:
     version = body.get("version")
     if not version:
         return JSONResponse({"error": "version is required"}, status_code=400)
@@ -87,7 +87,7 @@ async def push_version(
 
 
 @router.delete("/artifacts/{artifact_id}")
-async def delete_artifact(artifact_id: str = Path(...)) -> Dict[str, Any]:
+async def delete_artifact(artifact_id: str = Path(...)) -> Response:
     ok = get_artifactory().delete_artifact(artifact_id)
     if not ok:
         return JSONResponse({"error": "Artifact not found"}, status_code=404)

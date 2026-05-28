@@ -19,7 +19,7 @@ async def lab_status() -> Dict[str, Any]:
 
 
 @router.post("/sessions")
-async def create_session(body: Dict[str, Any] = Body(default_factory=dict)) -> Dict[str, Any]:
+async def create_session(body: Dict[str, Any] = Body(default_factory=dict)) -> Response:
     raw_task = body.get("task_type", "generate")
     try:
         task_type = TaskType(raw_task)
@@ -40,7 +40,7 @@ async def list_sessions(user_id: Optional[str] = Query(None)) -> list:
 
 
 @router.get("/sessions/{session_id}")
-async def get_session(session_id: str = Path(...)) -> Dict[str, Any]:
+async def get_session(session_id: str = Path(...)) -> Response:
     session = get_lab().get_session(session_id)
     if not session:
         return JSONResponse({"error": "Session not found"}, status_code=404)
@@ -51,7 +51,7 @@ async def get_session(session_id: str = Path(...)) -> Dict[str, Any]:
 async def send_message(
     session_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Dict[str, Any]:
+) -> Response:
     content = body.get("content")
     if not content:
         return JSONResponse({"error": "content is required"}, status_code=400)
@@ -69,7 +69,7 @@ async def send_message(
 async def add_context(
     session_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Dict[str, Any]:
+) -> Response:
     filename = body.get("filename")
     content = body.get("content", "")
     if not filename:
@@ -84,7 +84,7 @@ async def add_context(
 async def save_artifact(
     session_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Dict[str, Any]:
+) -> Response:
     filename = body.get("filename")
     content = body.get("content", "")
     if not filename:
@@ -96,7 +96,7 @@ async def save_artifact(
 
 
 @router.post("/sessions/{session_id}/close")
-async def close_session(session_id: str = Path(...)) -> Dict[str, Any]:
+async def close_session(session_id: str = Path(...)) -> Response:
     ok = get_lab().close_session(session_id)
     if not ok:
         return JSONResponse({"error": "Session not found"}, status_code=404)
@@ -104,7 +104,7 @@ async def close_session(session_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.delete("/sessions/{session_id}")
-async def delete_session(session_id: str = Path(...)) -> Dict[str, Any]:
+async def delete_session(session_id: str = Path(...)) -> Response:
     ok = get_lab().delete_session(session_id)
     if not ok:
         return JSONResponse({"error": "Session not found"}, status_code=404)

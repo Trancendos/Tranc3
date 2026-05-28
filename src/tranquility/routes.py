@@ -22,7 +22,7 @@ async def tranquility_status() -> Dict[str, Any]:
 async def log_mood(
     user_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Dict[str, Any]:
+) -> Response:
     mood: Optional[int] = body.get("mood")
     if mood is None:
         return JSONResponse({"error": "mood (1-5) is required"}, status_code=400)
@@ -48,7 +48,7 @@ async def get_break_prompt(user_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.get("/profile/{user_id}")
-async def get_profile(user_id: str = Path(...)) -> Dict[str, Any]:
+async def get_profile(user_id: str = Path(...)) -> Response:
     profile = get_tranquility()._profiles.get(user_id)
     if not profile:
         return JSONResponse({"error": "Profile not found"}, status_code=404)
@@ -56,7 +56,7 @@ async def get_profile(user_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.get("/export/{user_id}")
-async def export_data(user_id: str = Path(...)) -> Dict[str, Any]:
+async def export_data(user_id: str = Path(...)) -> Response:
     data = get_tranquility().export_user_data(user_id)
     if data is None:
         return JSONResponse({"error": "No data found"}, status_code=404)
@@ -64,7 +64,7 @@ async def export_data(user_id: str = Path(...)) -> Dict[str, Any]:
 
 
 @router.delete("/data/{user_id}")
-async def delete_data(user_id: str = Path(...)) -> Dict[str, Any]:
+async def delete_data(user_id: str = Path(...)) -> Response:
     deleted = get_tranquility().delete_user_data(user_id)
     if not deleted:
         return JSONResponse({"error": "No data found"}, status_code=404)

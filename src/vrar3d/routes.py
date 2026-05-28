@@ -19,7 +19,7 @@ async def vrar3d_status() -> Dict[str, Any]:
 
 
 @router.get("/scenes")
-async def list_scenes(type: Optional[str] = Query(None)) -> list:
+async def list_scenes(type: Optional[str] = Query(None)) -> Response:
     stype = None
     if type:
         try:
@@ -31,7 +31,7 @@ async def list_scenes(type: Optional[str] = Query(None)) -> list:
 
 
 @router.get("/scenes/{scene_id}")
-async def get_scene(scene_id: str = Path(...)) -> Dict[str, Any]:
+async def get_scene(scene_id: str = Path(...)) -> Response:
     scene = get_vrar3d().get_scene(scene_id)
     if not scene:
         return JSONResponse({"error": "Scene not found"}, status_code=404)
@@ -42,7 +42,7 @@ async def get_scene(scene_id: str = Path(...)) -> Dict[str, Any]:
 async def recommend(
     mood: Optional[int] = Query(None),
     sensitivity_level: str = Query("none"),
-) -> Dict[str, Any]:
+) -> Response:
     scene = get_vrar3d().recommend_scene(mood=mood, sensitivity_level=sensitivity_level)
     if not scene:
         return JSONResponse({"error": "No suitable scene found"}, status_code=404)
@@ -50,7 +50,7 @@ async def recommend(
 
 
 @router.post("/sessions")
-async def start_session(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def start_session(body: Dict[str, Any] = Body(...)) -> Response:
     user_id = body.get("user_id")
     scene_id = body.get("scene_id")
     if not user_id or not scene_id:
@@ -69,7 +69,7 @@ async def start_session(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 async def end_session(
     session_id: str = Path(...),
     body: Dict[str, Any] = Body(default_factory=dict),
-) -> Dict[str, Any]:
+) -> Response:
     session = get_vrar3d().end_session(session_id, mood_after=body.get("mood_after"))
     if not session:
         return JSONResponse({"error": "Session not found or already ended"}, status_code=404)

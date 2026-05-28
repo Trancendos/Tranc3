@@ -43,7 +43,7 @@ async def thinktank_status() -> Dict[str, Any]:
 
 
 @router.post("/quantum/simulate")
-async def quantum_simulate(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def quantum_simulate(body: Dict[str, Any] = Body(...)) -> Response:
     """
     Run a quantum circuit simulation via Qiskit Aer.
     Body: { qubits: int, shots: int, circuit_type: str }

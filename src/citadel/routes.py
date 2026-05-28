@@ -30,7 +30,7 @@ async def inventory() -> list:
 
 
 @router.post("/deploys")
-async def record_deploy(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+async def record_deploy(body: Dict[str, Any] = Body(...)) -> Response:
     raw_target = body.get("target")
     version = body.get("version", "unknown")
     if not raw_target:
@@ -50,7 +50,7 @@ async def record_deploy(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
 
 
 @router.get("/deploys")
-async def list_deploys(target: Optional[str] = Query(None)) -> list:
+async def list_deploys(target: Optional[str] = Query(None)) -> Response:
     t = None
     if target:
         try:
@@ -64,7 +64,7 @@ async def list_deploys(target: Optional[str] = Query(None)) -> list:
 async def update_deploy(
     deploy_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Dict[str, Any]:
+) -> Response:
     raw_status = body.get("status")
     if not raw_status:
         return JSONResponse({"error": "status is required"}, status_code=400)
@@ -83,7 +83,7 @@ async def update_deploy(
 async def update_health(
     service_name: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Dict[str, Any]:
+) -> Response:
     raw_status = body.get("status", "unknown")
     try:
         status = ServiceHealthStatus(raw_status)
@@ -98,7 +98,7 @@ async def update_health(
 async def forgejo_webhook(
     request: Request,
     x_forgejo_signature: Optional[str] = Header(None, alias="X-Forgejo-Signature-256"),
-) -> Dict[str, Any]:
+) -> Response:
     """
     Receive push/workflow events from The Workshop (Forgejo).
     Automatically records deploy state changes when CI pipelines complete.
