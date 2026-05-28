@@ -115,6 +115,11 @@ class ConversationTrajectoryPredictor:
         """Stateless predict — wraps predict_trajectory for the default session."""
         return self.predict_trajectory(self._DEFAULT_SESSION)
 
+    def classify(self, text: str) -> List[Tuple[str, float]]:
+        """Return sorted (trajectory, probability) pairs — highest probability first."""
+        pv = self.predict()
+        return pv.top(len(pv.outcomes))
+
     def get_recommendation(self, trajectory: ProbabilityVector) -> str:
         top_traj, _ = trajectory.top(1)[0]
         return self.TRAJECTORIES.get(top_traj, "Maintain current approach")

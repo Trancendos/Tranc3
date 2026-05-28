@@ -33,12 +33,18 @@ class TrainingConfig:
     weight_decay: float = 0.1
     batch_size: int = 8
     gradient_accumulation_steps: int = 4
+    grad_accum_steps: int = 4        # alias used by trainer
     mixed_precision: bool = True
     num_epochs: int = 3
     warmup_steps: int = 500
+    max_steps: int = 100_000
     data_dir: str = "./data"
     checkpoint_dir: str = "./checkpoints"
+    run_name: str = "tranc3"
     log_interval: int = 50
+    eval_every: int = 500
+    save_every: int = 1000
+    grad_clip: float = 1.0
 
 
 @dataclass
