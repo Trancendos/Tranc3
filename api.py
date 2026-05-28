@@ -103,6 +103,8 @@ from src.validation.loop_validator import (  # noqa: F401  # intentional top-lev
     loop_validator,
     self_healer,
 )
+from src.gbrain.pipeline import AgentInteraction as _GBrainInteraction  # noqa: F401
+from src.gbrain.pipeline import get_pipeline as _get_gbrain_pipeline  # noqa: F401
 
 # Optional imports — guarded to prevent startup crash if dependencies are missing
 # These modules depend on heavy/optional libs (qiskit, torch, etc.)
@@ -1121,6 +1123,19 @@ async def chat(
 
         # Watermark response for IP protection
         response_text = watermarker.watermark(response_text, request_id)
+
+        # Fire-and-forget GBrain knowledge ingestion (The Library / Zimik)
+        asyncio.create_task(
+            _get_gbrain_pipeline().ingest(
+                _GBrainInteraction(
+                    prompt=chat_req.message,
+                    response=response_text,
+                    source="luminous-chat",
+                    user_id=str(user_id),
+                    session_id=request_id,
+                )
+            )
+        )
 
         processing_ms = (time.time() - start) * 1000
 
