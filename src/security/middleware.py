@@ -105,6 +105,56 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class RBACMiddleware(BaseHTTPMiddleware):
+    """
+    Populates ``request.state.user`` from a Bearer JWT so that
+    ``require_permission()`` can enforce RBAC without a separate dependency.
+
+    Runs before route handlers; silently skips unauthenticated requests so
+    public endpoints are unaffected.  The existing ``get_current_user``
+    dependency still works independently — this middleware is additive.
+    """
+
+    _PUBLIC_PREFIXES = frozenset({
+        "/health", "/ready", "/docs", "/openapi", "/redoc",
+        "/auth/register", "/auth/token", "/mcp/health",
+    })
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        path = request.url.path
+        if any(path.startswith(pfx) for pfx in self._PUBLIC_PREFIXES):
+            return await call_next(request)
+
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+            try:
+                from auth import token_manager as _tm  # lazy, avoids circular import
+
+                payload = _tm.decode_token(token)
+                username = payload.get("sub")
+                if username:
+                    user: dict | None = None
+                    try:
+                        import api as _api  # lazy import
+
+                        mgr = getattr(_api, "db_user_manager", None)
+                        if mgr:
+                            user = mgr.get_user(username)
+                    except Exception:
+                        pass
+                    if user is None:
+                        from auth import user_manager as _um
+
+                        user = _um.get_user(username)
+                    if user:
+                        request.state.user = user
+            except Exception:
+                pass  # invalid token → leave request.state.user unset
+
+        return await call_next(request)
+
+
 class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
     """
     ASGI wrapper around ZeroTrustMiddleware.

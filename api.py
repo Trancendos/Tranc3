@@ -48,6 +48,7 @@ if not _SECRET_KEY:
 # Core imports (required — no guard)
 from auth import get_current_user, token_manager  # codeql[py/cyclic-import]
 from src.auth.db_user_manager import DBUserManager  # noqa: F401  # intentional top-level import
+from src.auth.rbac import require_permission  # noqa: F401  # RBAC guards for protected routes
 from src.core.advanced_model import (
     AdvancedTransformerModel,  # noqa: F401  # intentional top-level import
 )
@@ -90,6 +91,7 @@ from src.security.ip_protection import (  # noqa: F401  # intentional top-level 
 )
 from src.security.middleware import (  # noqa: F401  # intentional top-level import
     GovernanceMiddleware,
+    RBACMiddleware,
     SecurityHeadersMiddleware,
     ZeroTrustASGIMiddleware,
 )
@@ -483,6 +485,7 @@ app.add_middleware(
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(GovernanceMiddleware)
 app.add_middleware(ZeroTrustASGIMiddleware)
+app.add_middleware(RBACMiddleware)
 
 # ── The Spark (MCP server) ────────────────────────────────────────────────────
 from src.mcp.server import router as _mcp_router  # codeql[py/cyclic-import]
@@ -1506,12 +1509,11 @@ if __name__ == "__main__":
         "Requires Business or Enterprise tier. Managed by **The Workshop** (Larry Lowhammer)."
     ),
 )
-async def admin_registry(current_user: dict = Depends(get_current_user)):
+async def admin_registry(
+    current_user: dict = Depends(get_current_user),
+    _perm: None = require_permission("admin:audit"),
+):
     """File registry — lists all files with FID, version, and integrity status."""
-    if current_user.get("tier") not in ("enterprise", "business"):
-        raise HTTPException(
-            status_code=403, detail="Admin access requires Business or Enterprise tier"
-        )
     return file_registry.verify_all()
 
 
@@ -1521,7 +1523,11 @@ async def admin_registry(current_user: dict = Depends(get_current_user)):
     summary="File integrity status by FID",
     description="Returns the hash, version, and integrity verification result for a single file.",
 )
-async def admin_registry_file(fid: str, current_user: dict = Depends(get_current_user)):
+async def admin_registry_file(
+    fid: str,
+    current_user: dict = Depends(get_current_user),
+    _perm: None = require_permission("admin:audit"),
+):
     """Get integrity status for a specific file by FID."""
     return file_registry.verify(fid)
 
@@ -1535,7 +1541,10 @@ async def admin_registry_file(fid: str, current_user: dict = Depends(get_current
         "registered circuit breaker. Used by **The Observatory** for automated alerting."
     ),
 )
-async def admin_circuits(current_user: dict = Depends(get_current_user)):
+async def admin_circuits(
+    current_user: dict = Depends(get_current_user),
+    _perm: None = require_permission("admin:config"),
+):
     """Circuit breaker status for all subsystems."""
     return {name: cb.get_status() for name, cb in CIRCUITS.items()}
 
@@ -1549,7 +1558,10 @@ async def admin_circuits(current_user: dict = Depends(get_current_user)):
         "Helps detect runaway recursion or infinite agent loops."
     ),
 )
-async def admin_loops(current_user: dict = Depends(get_current_user)):
+async def admin_loops(
+    current_user: dict = Depends(get_current_user),
+    _perm: None = require_permission("admin:config"),
+):
     """Loop validator statistics."""
     return loop_validator.get_stats()
 
@@ -1560,13 +1572,14 @@ async def admin_loops(current_user: dict = Depends(get_current_user)):
     summary="IP abuse detection statistics",
     description=(
         "Returns counters for blocked IPs, prompt-injection attempts, and model-extraction probes. "
-        "Requires Business or Enterprise tier. Sourced from **Cryptex** (Renik)."
+        "Requires admin:audit permission. Sourced from **Cryptex** (Renik)."
     ),
 )
-async def admin_abuse(current_user: dict = Depends(get_current_user)):
+async def admin_abuse(
+    current_user: dict = Depends(get_current_user),
+    _perm: None = require_permission("admin:audit"),
+):
     """IP abuse detection statistics."""
-    if current_user.get("tier") not in ("enterprise", "business"):
-        raise HTTPException(status_code=403, detail="Admin access required")
     return abuse_detector.get_stats()
 
 
@@ -1579,7 +1592,10 @@ async def admin_abuse(current_user: dict = Depends(get_current_user)):
         "self-healer — service restarts, circuit resets, and rate-limit adjustments."
     ),
 )
-async def admin_healing(current_user: dict = Depends(get_current_user)):
+async def admin_healing(
+    current_user: dict = Depends(get_current_user),
+    _perm: None = require_permission("admin:config"),
+):
     """Self-healing action history."""
     return {"history": self_healer.get_history()}
 
@@ -1649,11 +1665,14 @@ class _EvalScoreResponse(BaseModel):
     summary="Score a single model output",
     description=(
         "Compute BLEU-4, ROUGE-L F1, Exact Match, Token-F1, and hallucination risk "
-        "for a single hypothesis/reference pair. No authentication required. "
+        "for a single hypothesis/reference pair. Requires eval:score permission. "
         "Powered by **Luminous** EvalSuite."
     ),
 )
-async def eval_score(body: _EvalRequest) -> _EvalScoreResponse:
+async def eval_score(
+    body: _EvalRequest,
+    _perm: None = require_permission("eval:score"),
+) -> _EvalScoreResponse:
     """Score a hypothesis against a reference string."""
     from src.evaluation.model_eval import (
         bleu_score as _bleu,

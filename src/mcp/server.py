@@ -22,6 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: F401  # intentional top-level import
 from src.auth.dependencies import get_current_user  # codeql[py/cyclic-import]
+from src.auth.rbac import require_permission
 
 from .tools import registry
 
@@ -303,7 +304,9 @@ router = APIRouter(prefix="/mcp", tags=["mcp"])
 
 @router.post("/rpc")
 async def rpc_endpoint(
-    request: Request, current_user: dict = Depends(get_current_user)
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+    _perm: None = require_permission("mcp:call"),
 ) -> JSONResponse:
     """
     JSON-RPC 2.0 entry-point.  Accepts a single request object or a batch array.
