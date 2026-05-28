@@ -1369,3 +1369,23 @@ try:
     )
 except Exception as _kb_exc:
     logger.warning("Knowledge Brain Spark tools unavailable: %s", _kb_exc)
+
+# ---------------------------------------------------------------------------
+# GBrain Bridge: Knowledge Graph + PageRank tools (7 tools)
+# Registers GBrain-powered graph intelligence tools — node/edge management,
+# PageRank-boosted search, multi-hop neighbourhood traversal.
+# Calls gbrain-bridge worker on port 8030 via httpx.
+# ---------------------------------------------------------------------------
+try:
+    from src.mcp.spark_gbrain_tools import (
+        register_gbrain_tools as _reg_gbrain,  # codeql[py/cyclic-import]
+    )
+
+    _gbrain_count = _reg_gbrain(registry)
+    logger.info(
+        "GBrain Spark tools loaded: %d tools added (total=%d)",
+        _gbrain_count,
+        len(registry._tools),
+    )
+except Exception as _gbrain_exc:
+    logger.warning("GBrain Spark tools unavailable: %s", _gbrain_exc)

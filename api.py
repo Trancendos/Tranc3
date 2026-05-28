@@ -10,7 +10,12 @@ from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
 
 import redis as redis_lib
-import torch
+try:
+    import torch
+    _TORCH_AVAILABLE = True
+except ImportError:
+    torch = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import (
@@ -321,7 +326,8 @@ async def lifespan(app: FastAPI):
     try:
         model = AdvancedTransformerModel(cfg)
         if os.path.exists(cfg.model_path):
-            model.load_state_dict(torch.load(cfg.model_path, map_location="cpu"))
+            if _TORCH_AVAILABLE and torch is not None:
+                model.load_state_dict(torch.load(cfg.model_path, map_location="cpu"))
             logger.info("Model weights loaded")
         else:
             logger.warning("No model weights — echo mode active")
@@ -1062,7 +1068,7 @@ async def chat(
 
         # Quantum attention
         quantum_used = False
-        if quantum_core and use_quantum:
+        if quantum_core and use_quantum and _TORCH_AVAILABLE and torch is not None:
             try:
                 quantum_core.quantum_attention(torch.randn(1, 8, 64))
                 quantum_used = True
@@ -1073,7 +1079,7 @@ async def chat(
 
         # Consciousness Φ
         phi_score = None
-        if consciousness_model and use_consciousness:
+        if consciousness_model and use_consciousness and _TORCH_AVAILABLE and torch is not None:
             try:
                 phi_score = consciousness_model.calculate_phi(torch.randn(64))
                 record_phi(phi_score)
@@ -1270,6 +1276,8 @@ async def feedback(
 async def consciousness_score(text: str, current_user: dict = Depends(get_current_user)):
     if not consciousness_model:
         raise HTTPException(status_code=503, detail="Consciousness engine unavailable")
+    if not _TORCH_AVAILABLE or torch is None:
+        raise HTTPException(status_code=503, detail="Consciousness engine unavailable (torch not installed)")
     try:
         phi = consciousness_model.calculate_phi(torch.randn(64))
         report = (

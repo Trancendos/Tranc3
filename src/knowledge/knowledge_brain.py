@@ -697,6 +697,104 @@ class KnowledgeBrain:
         logger.debug("Dream consolidation done (pages=%d)", self._store.count_pages())
 
     # ------------------------------------------------------------------
+    # GBrain — PageRank importance scoring
+    # ------------------------------------------------------------------
+
+    async def compute_pagerank(
+        self,
+        damping: float = 0.85,
+        max_iter: int = 50,
+        tolerance: float = 1e-6,
+    ) -> Dict[str, float]:
+        """
+        GBrain-inspired PageRank over the knowledge graph.
+
+        Computes an importance score for every page based on its link
+        structure, then stores the score in page metadata for retrieval
+        boosting.  Returns a mapping of page_id → score.
+        """
+        async with self._lock:
+            pages = list(self._store.all_pages())
+            if not pages:
+                return {}
+
+            id_to_idx = {p.id: i for i, p in enumerate(pages)}
+            n = len(pages)
+
+            # Build out-link structure from KBLinks
+            out_links: Dict[int, List[int]] = {i: [] for i in range(n)}
+            for page in pages:
+                links = self._store.get_links_from(page.id)
+                for lnk in links:
+                    tgt_idx = id_to_idx.get(lnk.target_id)
+                    if tgt_idx is not None:
+                        out_links[id_to_idx[page.id]].append(tgt_idx)
+
+            # Initialise uniformly
+            scores = [1.0 / n] * n
+
+            for _ in range(max_iter):
+                new_scores = [(1 - damping) / n] * n
+                for src_idx, tgt_indices in out_links.items():
+                    if not tgt_indices:
+                        # Dangling node: distribute evenly
+                        contrib = damping * scores[src_idx] / n
+                        for j in range(n):
+                            new_scores[j] += contrib
+                    else:
+                        contrib = damping * scores[src_idx] / len(tgt_indices)
+                        for tgt_idx in tgt_indices:
+                            new_scores[tgt_idx] += contrib
+
+                delta = sum(abs(new_scores[i] - scores[i]) for i in range(n))
+                scores = new_scores
+                if delta < tolerance:
+                    break
+
+            # Persist scores into page metadata
+            result: Dict[str, float] = {}
+            now = time.time()
+            for i, page in enumerate(pages):
+                score = round(scores[i], 6)
+                page.metadata["pagerank"] = score
+                page.updated_at = now
+                self._store.upsert_page(page)
+                result[page.id] = score
+
+            logger.info(
+                "PageRank computed for %d pages (top: %.6f, bottom: %.6f)",
+                n, max(scores), min(scores),
+            )
+            return result
+
+    async def pagerank_boosted_search(
+        self,
+        query: str,
+        top_k: int = 10,
+        pagerank_weight: float = 0.3,
+    ) -> List["SearchResult"]:
+        """
+        Hybrid search with GBrain PageRank re-ranking.
+
+        Combines BM25/vector relevance (0.7 weight) with PageRank
+        importance (0.3 weight) for improved result quality.
+        """
+        raw_results = await self.search(query, top_k=top_k * 2)
+        if not raw_results:
+            return []
+
+        # Normalise relevance scores
+        max_score = max(r.score for r in raw_results) or 1.0
+        reranked = []
+        for result in raw_results:
+            pr = result.page.metadata.get("pagerank", 0.0)
+            combined = (1 - pagerank_weight) * (result.score / max_score) + pagerank_weight * pr
+            reranked.append((combined, result))
+
+        reranked.sort(key=lambda x: -x[0])
+        return [r for _, r in reranked[:top_k]]
+
+    # ------------------------------------------------------------------
     # Stats
     # ------------------------------------------------------------------
 

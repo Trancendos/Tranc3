@@ -117,6 +117,12 @@ diskcache==5.6.3
 #   15MB binary, 1M+ msg/s, replaces SQLite queue for high-volume paths
 nats-py==2.7.2
 
+# === Redis Client ===
+# redis: Used by api.py, src/core/redis_store.py, src/core/feature_flags.py,
+#   src/security/security_framework.py, src/mcp/tools.py for caching, session
+#   management, pub/sub, and feature flag evaluation. Also used by tranc3-bots.
+redis==7.4.0
+
 # === Master Worker / BotSwarm / Task Orchestration ===
 # pyyaml: YAML task definition parsing — powers src/master/task_loader.py
 pyyaml==6.0.2

@@ -81,6 +81,12 @@ SERVICE_REGISTRY = {
         "priority": "P2",
         "named": "Identity",
     },
+    # P3 — Knowledge & Intelligence Layer
+    "gbrain-bridge": {
+        "url": "http://localhost:8030/health",
+        "priority": "P3",
+        "named": "The Library (GBrain)",
+    },
 }
 
 
