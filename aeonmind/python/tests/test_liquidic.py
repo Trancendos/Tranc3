@@ -2,9 +2,10 @@
 Tests for AeonMind Fluidic-Liquidic Reservoir.
 """
 
+import pytest  # noqa: I001
 import numpy as np
 
-from aeonmind.core.fluidic_liquidic import FluidicState, LiquidReservoir, ReservoirConfig
+from aeonmind.core.fluidic_liquidic import LiquidReservoir, ReservoirConfig, FluidicState
 
 
 class TestLiquidReservoir:
@@ -47,9 +48,7 @@ class TestLiquidReservoir:
         assert len(features) == 50 + 8
 
     def test_adapt_spectral_radius(self):
-        reservoir = LiquidReservoir(
-            ReservoirConfig(input_size=5, reservoir_size=50, spectral_radius=0.5)
-        )
+        reservoir = LiquidReservoir(ReservoirConfig(input_size=5, reservoir_size=50, spectral_radius=0.5))  # noqa: E501
         reservoir.adapt_spectral_radius(0.9)
         # Spectral radius should be updated
         assert abs(reservoir.config.spectral_radius - 0.9) < 0.1

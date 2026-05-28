@@ -12,23 +12,23 @@ Custom Hierarchy:
   Bot   = Stateless service worker/function (Tier 5)
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import time
-from dataclasses import dataclass
+import uuid  # noqa: F401
+from dataclasses import dataclass, field  # noqa: F401
 from enum import Enum
-from typing import Any
+from typing import Any, Callable, Dict, List, Optional, Tuple  # noqa: UP035
 
 import numpy as np
 
-from ..core.definitions import AiComplex, SentinelChannel
+from ..core.definitions import Tier, SentinelChannel, AiComplex, AgentEntity, BotService  # noqa: F401
 from ..core.frontier_agent import FrontierAgent, FrontierAgentConfig
-from ..services.bot_services import BotServiceConfig, BotServiceWorker
+from ..services.bot_services import BotServiceWorker, BotServiceConfig
 
 
 class OrchestratorState(str, Enum):
     """State of the orchestrator."""
-
     INITIALIZING = "initializing"
     RUNNING = "running"
     PAUSED = "paused"
@@ -39,7 +39,6 @@ class OrchestratorState(str, Enum):
 @dataclass
 class OrchestratorConfig:
     """Configuration for the Logical Orchestrator."""
-
     max_ai_complexes: int = 10
     max_agents_per_complex: int = 50
     max_bots_per_complex: int = 100
@@ -52,7 +51,6 @@ class OrchestratorConfig:
 @dataclass
 class OrchestratorMetrics:
     """Runtime metrics for the orchestrator."""
-
     total_entities: int = 0
     total_agents: int = 0
     total_bots: int = 0
@@ -71,15 +69,15 @@ class LogicalOrchestrator:
     sentinel broadcast capabilities.
     """
 
-    def __init__(self, config: OrchestratorConfig | None = None):
+    def __init__(self, config: Optional[OrchestratorConfig] = None):  # noqa: UP045
         self.config = config or OrchestratorConfig()
         self.state = OrchestratorState.INITIALIZING
         self.metrics = OrchestratorMetrics()
         self._start_time = time.time()
-        self._ai_complexes: dict[str, AiComplex] = {}
-        self._agents: dict[str, FrontierAgent] = {}
-        self._bots: dict[str, BotServiceWorker] = {}
-        self._sentinel_channels: dict[SentinelChannel, list[str]] = {
+        self._ai_complexes: Dict[str, AiComplex] = {}  # noqa: UP006
+        self._agents: Dict[str, FrontierAgent] = {}  # noqa: UP006
+        self._bots: Dict[str, BotServiceWorker] = {}  # noqa: UP006
+        self._sentinel_channels: Dict[SentinelChannel, List[str]] = {  # noqa: UP006
             ch: [] for ch in SentinelChannel
         }
         self._ray_initialized = False
@@ -91,7 +89,6 @@ class LogicalOrchestrator:
         if self.config.use_ray:
             try:
                 import ray
-
                 if not ray.is_initialized():
                     ray.init(ignore_reinit_error=True)
                 self._ray_initialized = True
@@ -108,7 +105,7 @@ class LogicalOrchestrator:
         self._subscribe(ai.id, SentinelChannel.PLATFORM)
         return ai
 
-    def create_agent(self, name: str, config: FrontierAgentConfig | None = None) -> FrontierAgent:
+    def create_agent(self, name: str, config: Optional[FrontierAgentConfig] = None) -> FrontierAgent:  # noqa: UP045
         """Create a new Agent (Tier 4)."""
         agent_config = config or FrontierAgentConfig(name=name)
         agent = FrontierAgent(agent_config)
@@ -120,7 +117,6 @@ class LogicalOrchestrator:
     def create_bot(self, name: str, capability: str = "generic") -> BotServiceWorker:
         """Create a new Bot Service Worker (Tier 5)."""
         from ..services.bot_services import BotCapability
-
         try:
             cap = BotCapability(capability)
         except ValueError:
@@ -131,9 +127,8 @@ class LogicalOrchestrator:
         self._update_metrics()
         return bot
 
-    def dispatch_task(
-        self, entity_id: str, task_type: str, payload: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+    def dispatch_task(self, entity_id: str, task_type: str,
+                      payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:  # noqa: UP045
         """Dispatch a task to an entity."""
         payload = payload or {}
         self.metrics.total_tasks_dispatched += 1
@@ -152,7 +147,7 @@ class LogicalOrchestrator:
         else:
             return {"status": "error", "message": f"Entity {entity_id} not found"}
 
-    def dispatch_batch(self, tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def dispatch_batch(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:  # noqa: UP006
         """Dispatch a batch of tasks."""
         results = []
         for task in tasks:
@@ -164,7 +159,7 @@ class LogicalOrchestrator:
             results.append(result)
         return results
 
-    def run_evolution_round(self, agent_id: str, generations: int = 5) -> dict[str, Any]:
+    def run_evolution_round(self, agent_id: str, generations: int = 5) -> Dict[str, Any]:  # noqa: UP006
         """Run an evolution round for a specific agent."""
         if agent_id not in self._agents:
             return {"status": "error", "message": f"Agent {agent_id} not found"}
@@ -172,19 +167,18 @@ class LogicalOrchestrator:
         agent = self._agents[agent_id]
 
         def fitness_fn(dna):
-            return -float(np.sum(dna**2))
+            return -float(np.sum(dna ** 2))
 
         stats = agent.evolution.evolve(fitness_fn, generations=generations)
         self.metrics.total_evolution_rounds += 1
         return {"status": "completed", "best_fitness": stats.best_fitness}
 
-    def optimize_all_agents(self, max_steps: int = 50) -> dict[str, Any]:
+    def optimize_all_agents(self, max_steps: int = 50) -> Dict[str, Any]:  # noqa: UP006
         """Optimize all agents in the system."""
         results = {}
         for agent_id, agent in self._agents.items():
-
             def loss_fn(params):
-                return float(np.sum(params**2))
+                return float(np.sum(params ** 2))
 
             def grad_fn(params):
                 return 2.0 * params
@@ -203,15 +197,14 @@ class LogicalOrchestrator:
         if entity_id not in self._sentinel_channels[channel]:
             self._sentinel_channels[channel].append(entity_id)
 
-    def broadcast(
-        self, channel: SentinelChannel, message: Any, source_id: str | None = None
-    ) -> int:
+    def broadcast(self, channel: SentinelChannel, message: Any,
+                  source_id: Optional[str] = None) -> int:  # noqa: UP045
         """Broadcast a message on a sentinel channel."""
         recipients = self._sentinel_channels.get(channel, [])
         self.metrics.sentinel_messages_sent += len(recipients)
         return len(recipients)
 
-    def health_check(self) -> dict[str, Any]:
+    def health_check(self) -> Dict[str, Any]:  # noqa: UP006
         """Perform a health check."""
         self.metrics.uptime_seconds = time.time() - self._start_time
         return {
@@ -229,7 +222,7 @@ class LogicalOrchestrator:
             "ray_initialized": self._ray_initialized,
         }
 
-    def get_agent_summaries(self) -> dict[str, dict[str, Any]]:
+    def get_agent_summaries(self) -> Dict[str, Dict[str, Any]]:  # noqa: UP006
         """Get summaries of all agents."""
         return {aid: agent.summary() for aid, agent in self._agents.items()}
 
@@ -237,4 +230,6 @@ class LogicalOrchestrator:
         """Update orchestrator metrics."""
         self.metrics.total_agents = len(self._agents)
         self.metrics.total_bots = len(self._bots)
-        self.metrics.total_entities = len(self._ai_complexes) + len(self._agents) + len(self._bots)
+        self.metrics.total_entities = (
+            len(self._ai_complexes) + len(self._agents) + len(self._bots)
+        )

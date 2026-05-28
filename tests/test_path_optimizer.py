@@ -6,7 +6,7 @@ and the path optimization engine for intelligent routing
 across light bridges.
 """
 
-import asyncio
+import asyncio  # noqa: I001
 
 from Dimensional.infinity.bridge.path_optimizer import (
     FallbackRouter,

@@ -1,6 +1,6 @@
 """GPU Kernel Service — TranceX Phase 8."""
 
-from .gpu_kernel_service import (
+from .gpu_kernel_service import (  # noqa: I001
     BiomedicalAccelerator,
     CompiledKernel,
     GPUKernelService,

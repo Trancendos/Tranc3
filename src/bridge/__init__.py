@@ -12,7 +12,7 @@ The bridge uses a shared message format so that both sides can
 understand each other without translation layers.
 """
 
-from .ecosystem_bridge import (
+from .ecosystem_bridge import (  # noqa: I001
     BridgeConfig,
     BridgeEndpoint,
     BridgeTransport,

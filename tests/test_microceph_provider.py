@@ -14,7 +14,7 @@ No live Ceph cluster is required — all I/O-bound paths are exercised via
 mocks or by testing the pure-Python CRUSH maths directly.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import pytest
 

@@ -15,7 +15,7 @@ Tests cover:
 No live OCI connection is required — all network I/O is mocked.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 from unittest.mock import AsyncMock, MagicMock
 

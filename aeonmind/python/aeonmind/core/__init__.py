@@ -2,32 +2,30 @@
 AeonMind Core — Foundation modules for the Tranc3 Infinity Ecosystem.
 """
 
-from .adaptive import AdaptiveConfig, AdaptiveMetaLearner, AdaptiveSummary
-from .definitions import (
-    TIER_DESCRIPTIONS,
-    TIER_NAMES,
+from .definitions import (  # noqa: I001
+    Tier,
+    SentinelChannel,
+    BotService,
     AgentEntity,
     AiComplex,
-    BotService,
-    SentinelChannel,
-    Tier,
-    sentinel_channels,
+    TIER_NAMES,
+    TIER_DESCRIPTIONS,
     tier_hierarchy,
+    sentinel_channels,
 )
-from .fluidic_liquidic import FluidicState, LiquidReservoir, ReservoirConfig
+from .adaptive import AdaptiveMetaLearner, AdaptiveConfig, AdaptiveSummary
+from .genetic_dna import DNAEvolutionEngine, GeneticConfig, Individual, GenerationStats
+from .fluidic_liquidic import LiquidReservoir, ReservoirConfig, FluidicState
+from .quantum import QuantumDecisionCircuit, QuantumCircuitConfig
 from .frontier_agent import FrontierAgent, FrontierAgentConfig
-from .genetic_dna import DNAEvolutionEngine, GenerationStats, GeneticConfig, Individual
-from .quantum import QuantumCircuitConfig, QuantumDecisionCircuit
 from .rust_bridge import (
-    RustAdaptiveLearner,
-    RustEvolutionEngine,
-    RustLiquidReservoir,
-    RustQuantumCircuit,
     has_rust_bindings,
     rust_version,
-)
-from .rust_bridge import (
     tier_hierarchy as rust_tier_hierarchy,
+    RustLiquidReservoir,
+    RustEvolutionEngine,
+    RustQuantumCircuit,
+    RustAdaptiveLearner,
 )
 
 __all__ = [

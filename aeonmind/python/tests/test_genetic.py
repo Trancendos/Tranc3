@@ -2,6 +2,7 @@
 Tests for AeonMind DNA Evolution Engine.
 """
 
+import pytest  # noqa: I001
 import numpy as np
 
 from aeonmind.core.genetic_dna import DNAEvolutionEngine, GeneticConfig, Individual
@@ -24,7 +25,7 @@ class TestDNAEvolutionEngine:
         engine = DNAEvolutionEngine(GeneticConfig(population_size=10, dna_length=8))
 
         def sphere_fitness(dna):
-            return -float(np.sum(dna**2))  # negative because we maximize
+            return -float(np.sum(dna ** 2))  # negative because we maximize
 
         engine.evaluate(sphere_fitness)
         best = engine.best_individual()
@@ -35,7 +36,7 @@ class TestDNAEvolutionEngine:
         engine = DNAEvolutionEngine(GeneticConfig(population_size=20, dna_length=8))
 
         def sphere_fitness(dna):
-            return -float(np.sum(dna**2))
+            return -float(np.sum(dna ** 2))
 
         engine.evaluate(sphere_fitness)
         selected = engine.tournament_select()
@@ -64,7 +65,7 @@ class TestDNAEvolutionEngine:
         engine = DNAEvolutionEngine(config)
 
         def sphere_fitness(dna):
-            return -float(np.sum(dna**2))
+            return -float(np.sum(dna ** 2))
 
         engine.evaluate(sphere_fitness)
         stats = engine.evolve_generation()
@@ -80,9 +81,9 @@ class TestDNAEvolutionEngine:
         engine = DNAEvolutionEngine(config)
 
         def sphere_fitness(dna):
-            return -float(np.sum(dna**2))
+            return -float(np.sum(dna ** 2))
 
-        engine.evolve(sphere_fitness, generations=5)
+        final_stats = engine.evolve(sphere_fitness, generations=5)  # noqa: F841
         assert engine.generation == 5
 
     def test_population_diversity(self):
@@ -94,7 +95,7 @@ class TestDNAEvolutionEngine:
         engine = DNAEvolutionEngine(GeneticConfig(population_size=10, dna_length=8))
 
         def sphere_fitness(dna):
-            return -float(np.sum(dna**2))
+            return -float(np.sum(dna ** 2))
 
         engine.evaluate(sphere_fitness)
         best = engine.best_ever()
@@ -103,17 +104,15 @@ class TestDNAEvolutionEngine:
 
     def test_inject_random(self):
         engine = DNAEvolutionEngine(GeneticConfig(population_size=20, dna_length=8))
-        len(engine.population)
+        initial_size = len(engine.population)  # noqa: F841
         engine.inject_random(5)
         # Should not exceed population_size
         assert len(engine.population) <= engine.config.population_size
 
     def test_reset(self):
         engine = DNAEvolutionEngine()
-
         def fitness(dna):
-            return -float(np.sum(dna**2))
-
+            return -float(np.sum(dna ** 2))
         engine.evaluate(fitness)
         engine.evolve_generation()
         engine.reset()
