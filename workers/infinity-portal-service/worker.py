@@ -414,12 +414,12 @@ async def call_auth_service(method: str, path: str, json_data: dict | None = Non
         raise HTTPException(
             status_code=503,
             detail="Infinity Auth service unavailable. Please try again later.",
-        ) from e
-    except httpx.TimeoutException as e:
+        ) from None
+    except httpx.TimeoutException:
         raise HTTPException(
             status_code=504,
             detail="Infinity Auth service timeout. Please try again later.",
-        ) from e
+        ) from None
 
 
 # ---------------------------------------------------------------------------

@@ -14,8 +14,6 @@ All tests are zero-dependency — no FAISS, no torch required for the core paths
 
 from __future__ import annotations
 
-
-
 import pytest
 
 # ---------------------------------------------------------------------------

@@ -42,6 +42,7 @@ class TestMtlsStatus:
     def test_status_verify_default_true(self):
         with patch.dict(os.environ, {"MTLS_VERIFY": "true"}):
             import importlib
+
             import src.security.mtls_client as m
 
             importlib.reload(m)
@@ -64,6 +65,7 @@ class TestBuildSslKwargs:
     def test_verify_false_when_disabled(self, monkeypatch):
         monkeypatch.setenv("MTLS_VERIFY", "false")
         import importlib
+
         import src.security.mtls_client as m
 
         importlib.reload(m)
@@ -90,6 +92,7 @@ class TestGetMtlsClient:
 
         with patch.dict(sys.modules, {"httpx": None}):
             import importlib
+
             import src.security.mtls_client as m
 
             importlib.reload(m)
@@ -113,6 +116,7 @@ class TestGetMtlsClient:
 
         with patch.dict(sys.modules, {"httpx": None}):
             import importlib
+
             import src.security.mtls_client as m
 
             importlib.reload(m)
@@ -142,6 +146,7 @@ class TestInternalHelpers:
 
         with patch.dict(sys.modules, {"httpx": None}):
             import importlib
+
             import src.security.mtls_client as m
 
             importlib.reload(m)
@@ -154,6 +159,7 @@ class TestInternalHelpers:
 
         with patch.dict(sys.modules, {"httpx": None}):
             import importlib
+
             import src.security.mtls_client as m
 
             importlib.reload(m)

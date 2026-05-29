@@ -727,7 +727,7 @@ async def get_ai_model_catalog(provider: Optional[str] = None):
         }
     except Exception as exc:
         _log.error("Failed to get AI model catalog: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/ai/providers")
@@ -757,7 +757,7 @@ async def get_ai_provider_status():
         }
     except Exception as exc:
         _log.error("Failed to discover AI providers: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/ai/routing-chains")
@@ -795,7 +795,7 @@ async def get_ai_routing_chains():
         }
     except Exception as exc:
         _log.error("Failed to get routing chains: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/ai/optimal-chain")
@@ -815,7 +815,7 @@ async def get_optimal_routing_chain(chain_name: Optional[str] = None):
         }
     except Exception as exc:
         _log.error("Failed to get optimal chain: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------

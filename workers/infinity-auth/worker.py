@@ -27,7 +27,6 @@ Zero-cost: FastAPI + SQLite + python-jose. No CF Workers or KV.
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager, contextmanager
 import hashlib
 import hmac
 import json
@@ -37,12 +36,12 @@ import secrets
 import sqlite3
 import time
 import uuid
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 import pyotp
-
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -982,10 +981,10 @@ async def token_endpoint(req: TokenRequest):
     if not row:
         raise HTTPException(status_code=400, detail="Invalid or expired authorization code")
 
-    # PKCE verification
-    if row["code_challenge"]:
-        import base64  # noqa: PLC0415
-        import hashlib  # noqa: PLC0415
+        # PKCE verification
+        if row["code_challenge"]:
+            import base64
+            import hashlib  # noqa: PLC0415, E401
 
         if not req.code_verifier:
             raise HTTPException(status_code=400, detail="code_verifier required")
