@@ -9,3 +9,5 @@ import os
 # which instantiates Tranc3Config() at module level and requires both.
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-unit-tests-0000001")
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret-for-unit-tests-00001")
+os.environ.setdefault("DATABASE_URL", "sqlite:///./test.db")
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")

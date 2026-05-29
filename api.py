@@ -39,12 +39,33 @@ from Dimensional.sanitize import sanitize_for_log
 
 load_dotenv()
 
-# ── Fail fast on missing SECRET_KEY ──────────────────────────────────────────
+# ── Fail fast on missing critical secrets ────────────────────────────────────
 _SECRET_KEY = os.getenv("SECRET_KEY")
 if not _SECRET_KEY:
     raise RuntimeError(
         "SECRET_KEY is not set. "
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+
+_JWT_SECRET = os.getenv("JWT_SECRET")
+if not _JWT_SECRET:
+    raise RuntimeError(
+        "JWT_SECRET is not set. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+
+_DATABASE_URL = os.getenv("DATABASE_URL")
+if not _DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL is not set. "
+        "Set to your PostgreSQL connection string (e.g. postgresql://user:pass@host/db)."
+    )
+
+_REDIS_URL = os.getenv("REDIS_URL")
+if not _REDIS_URL:
+    raise RuntimeError(
+        "REDIS_URL is not set. "
+        "Set to your Redis connection string (e.g. redis://localhost:6379 or rediss://...)."
     )
 
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────

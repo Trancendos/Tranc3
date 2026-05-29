@@ -14,8 +14,11 @@ import time
 
 import pytest
 
-# ── Set SECRET_KEY before any test module is imported ────────────────────────
+# ── Set critical env vars before any test module is imported ─────────────────
 os.environ.setdefault("SECRET_KEY", "tranc3-test-secret-key-do-not-use-in-production")
+os.environ.setdefault("JWT_SECRET", "tranc3-test-jwt-secret-do-not-use-in-production")
+os.environ.setdefault("DATABASE_URL", "sqlite:///./test.db")
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 # ── Configure root test logger ────────────────────────────────────────────────
 logging.basicConfig(
