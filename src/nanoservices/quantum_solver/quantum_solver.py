@@ -404,7 +404,7 @@ class QuantumSolver:
 
         # Build QUBO: minimize cost, maximize efficiency
         linear = {}
-        quadratic = {}  # type: ignore[var-annotated]
+        quadratic = {}
 
         for i in range(n_tasks):
             for j in range(n_resources):
@@ -543,8 +543,8 @@ class QuantumSolver:
                     await handler(event, *args)
                 else:
                     handler(event, *args)
-            except Exception:  # noqa: S110
-                pass  # graceful degradation
+            except Exception:
+                pass
 
 
 class HybridSolver:

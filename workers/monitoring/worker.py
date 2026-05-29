@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import sqlite3
 import threading
 import uuid
@@ -524,7 +523,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

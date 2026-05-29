@@ -14,6 +14,7 @@ from __future__ import annotations  # noqa: I001
 
 from enum import Enum
 
+
 # ---------------------------------------------------------------------------
 # Crystal / energy classification
 # ---------------------------------------------------------------------------

@@ -213,7 +213,7 @@ class FixMixedReturn(ASTSafeTransformer):
 
             if has_explicit_return and has_implicit_return:
                 # Check if there's already a `return None` at the end
-                last_line_idx = self.find_function_end(source, node) - 1  # type: ignore[arg-type]
+                last_line_idx = self.find_function_end(source, node) - 1
                 if last_line_idx < len(lines):
                     last_line = lines[last_line_idx].strip()
                     if last_line == "return None" or last_line.startswith("return None  #"):
@@ -224,7 +224,7 @@ class FixMixedReturn(ASTSafeTransformer):
         functions_to_fix.sort(key=lambda n: n.lineno, reverse=True)
 
         for func in functions_to_fix:
-            end_line = self.find_function_end(source, func)  # type: ignore[arg-type]
+            end_line = self.find_function_end(source, func)
             if end_line <= len(lines):
                 # Get the indentation of the last line in the function
                 last_line = lines[end_line - 1]
@@ -608,7 +608,7 @@ class AutoRemediatorV2:
             for category, fixer in self.FIX_MAP.items():
                 cat_violations = [v for v in file_violations if v.category == category]
                 if cat_violations:
-                    modified, fixed_ids = fixer.fix(modified, cat_violations, filepath)  # type: ignore[attr-defined]
+                    modified, fixed_ids = fixer.fix(modified, cat_violations, filepath)
                     all_fixed_ids.extend(fixed_ids)
 
             if modified != source:
@@ -654,7 +654,7 @@ class AutoRemediatorV2:
         for category, fixer in self.FIX_MAP.items():
             cat_violations = [v for v in violations if v.category == category]
             if cat_violations:
-                modified, fixed_ids = fixer.fix(modified, cat_violations, filepath)  # type: ignore[attr-defined]
+                modified, fixed_ids = fixer.fix(modified, cat_violations, filepath)
                 all_fixed_ids.extend(fixed_ids)
 
         if modified == original:

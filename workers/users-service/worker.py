@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -176,7 +175,7 @@ async def require_internal_auth(
 app = FastAPI(title="Trancendos Users Service", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

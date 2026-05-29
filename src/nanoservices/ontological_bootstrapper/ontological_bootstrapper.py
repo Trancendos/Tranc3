@@ -238,7 +238,7 @@ class SelfReferenceEngine:
 
     def _sieve_primes(self, n: int) -> List[int]:
         """Generate first n prime numbers."""
-        primes = []  # type: ignore[var-annotated]
+        primes = []
         candidate = 2
         while len(primes) < n:
             is_prime = True

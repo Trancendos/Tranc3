@@ -36,12 +36,6 @@ RUN groupadd -r tranc3 && useradd -r -g tranc3 -d /app -s /sbin/nologin tranc3
 
 WORKDIR /app
 
-# Upgrade build tools first to fix CVEs in pip/setuptools/wheel
-# pip: CVE-2025-8869, CVE-2026-1703, CVE-2026-3219, CVE-2026-6357 → fix in >=25.3
-# setuptools: PYSEC-2025-49, CVE-2024-6345 → fix in >=78.1.1
-# wheel: CVE-2026-24049 → fix in >=0.46.2
-RUN pip install --no-cache-dir --upgrade "pip>=25.3" "setuptools>=78.1.1" "wheel>=0.46.2"
-
 # Install Python deps first (layer caching)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

@@ -7,11 +7,11 @@ Eliminates API costs and third-party uptime reliance.
 
 from .shi_gateway import (  # noqa: I001
     InferenceBackend,
-    InferenceMetrics,
+    ModelStatus,
+    ModelInfo,
     InferenceRequest,
     InferenceResponse,
-    ModelInfo,
-    ModelStatus,
+    InferenceMetrics,
     OllamaBackend,
     SHIGateway,
 )

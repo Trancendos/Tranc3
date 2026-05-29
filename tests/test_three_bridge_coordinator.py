@@ -14,15 +14,10 @@ Tests verify:
 """
 
 import asyncio
-
-from Dimensional.hive.hive_core import Hive
-from Dimensional.infinity.bridge.bridge_core import (
-    InfinityBridge,
-)
-from Dimensional.nexus.nexus_core import Nexus
-
+import pytest
 # Note: Direct _sentinel_station assignment used instead of patch.object
 # because sentinel_station is a property without a setter
+
 from Dimensional.three_bridge_coordinator import (
     BridgeIdentity,
     CoordinatorState,
@@ -30,6 +25,13 @@ from Dimensional.three_bridge_coordinator import (
     ThreeBridgeCoordinator,
     get_coordinator,
 )
+from Dimensional.infinity.bridge.bridge_core import (
+    InfinityBridge,
+    InfinitySentinelBridge,
+)
+from Dimensional.nexus.nexus_core import Nexus
+from Dimensional.hive.hive_core import Hive
+from Dimensional.infinity.nomenclature import SentinelChannel, TransferSystem
 
 
 def run_async(coro):
@@ -42,7 +44,6 @@ def run_async(coro):
 
 
 # ── Coordinator Lifecycle Tests ────────────────────────────────────────────
-
 
 class TestCoordinatorLifecycle:
     """Tests for the coordinator start/stop lifecycle."""
@@ -103,7 +104,6 @@ class TestCoordinatorLifecycle:
 
 # ── Bridge Health Tests ───────────────────────────────────────────────────
 
-
 class TestBridgeHealth:
     """Tests for bridge health monitoring."""
 
@@ -148,7 +148,6 @@ class TestBridgeHealth:
 
 
 # ── Unified Status Tests ──────────────────────────────────────────────────
-
 
 class TestUnifiedStatus:
     """Tests for the unified status endpoint."""
@@ -224,7 +223,6 @@ class TestUnifiedStatus:
 
 # ── Cross-Bridge Event Tests ──────────────────────────────────────────────
 
-
 class TestCrossBridgeEvents:
     """Tests for cross-bridge event tracking and forwarding."""
 
@@ -263,8 +261,10 @@ class TestCrossBridgeEvents:
         coordinator = ThreeBridgeCoordinator()
         coordinator._max_tracked_events = 5
         for i in range(10):
-            coordinator._track_cross_bridge_event(CrossBridgeEvent(event_type=f"event-{i}"))
-        _recent = coordinator.get_recent_cross_bridge_events()
+            coordinator._track_cross_bridge_event(
+                CrossBridgeEvent(event_type=f"event-{i}")
+            )
+        recent = coordinator.get_recent_cross_bridge_events()
         # Should only keep the last 5
         total = len(coordinator._cross_bridge_events)
         assert total <= 5
@@ -303,7 +303,6 @@ class TestCrossBridgeEvents:
 
 
 # ── Traffic Separation at Coordinator Level ───────────────────────────────
-
 
 class TestCoordinatorTrafficSeparation:
     """Tests that the coordinator enforces traffic separation."""
@@ -347,7 +346,6 @@ class TestCoordinatorTrafficSeparation:
 
 # ── Health Check Tests ────────────────────────────────────────────────────
 
-
 class TestHealthCheck:
     """Tests for the health check endpoint."""
 
@@ -384,14 +382,12 @@ class TestHealthCheck:
 
 # ── Singleton Tests ───────────────────────────────────────────────────────
 
-
 class TestCoordinatorSingleton:
     """Tests for the coordinator singleton pattern."""
 
     def test_get_coordinator_returns_same_instance(self):
         """get_coordinator() returns the same instance."""
         import Dimensional.three_bridge_coordinator as tbc
-
         tbc._coordinator_instance = None
         c1 = get_coordinator()
         c2 = get_coordinator()
@@ -400,7 +396,6 @@ class TestCoordinatorSingleton:
 
 
 # ── Integration: All Three Bridges Through Coordinator ────────────────────
-
 
 class TestAllThreeBridgesThroughCoordinator:
     """Integration tests that verify all three bridges work through coordinator."""

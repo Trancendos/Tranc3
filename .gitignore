@@ -80,6 +80,3 @@ aeonmind/python/*.egg-info/
 # Nexus test artifacts
 bridge-*
 nexus-*
-infra/traefik/certs/*.pem
-infra/traefik/certs/*.srl
-infra/traefik/certs/workers/

@@ -409,7 +409,7 @@ class Sentinel:
             return SentinelCheck(
                 check_type="security_scan",
                 passed=passed,
-                severity=severity,  # type: ignore[arg-type]
+                severity=severity,
                 message=f"Found {len(violations)} violations ({critical} critical, {high} high)",
                 details={
                     "violation_count": len(violations),
@@ -421,7 +421,7 @@ class Sentinel:
             return SentinelCheck(
                 check_type="security_scan",
                 passed=False,
-                severity="critical",  # type: ignore[arg-type]
+                severity="critical",
                 message=f"Security scan failed: {e}",
             )
 
@@ -436,7 +436,7 @@ class Sentinel:
                 return SentinelCheck(
                     check_type="config_drift",
                     passed=True,
-                    severity="info",  # type: ignore[arg-type]
+                    severity="info",
                     message="Baseline configuration established",
                     details={"keys_tracked": len(current)},
                 )
@@ -457,7 +457,7 @@ class Sentinel:
             return SentinelCheck(
                 check_type="config_drift",
                 passed=passed,
-                severity="medium" if not passed else "info",  # type: ignore[arg-type]
+                severity="medium" if not passed else "info",
                 message=f"Configuration drift detected in {len(drifted_keys)} keys"
                 if not passed
                 else "No configuration drift",
@@ -467,7 +467,7 @@ class Sentinel:
             return SentinelCheck(
                 check_type="config_drift",
                 passed=False,
-                severity="medium",  # type: ignore[arg-type]
+                severity="medium",
                 message=f"Config drift check failed: {e}",
             )
 
@@ -486,7 +486,7 @@ class Sentinel:
             env_age_days = 0
             if env_path.exists():
                 mtime = env_path.stat().st_mtime
-                env_age_days = (time.time() - mtime) / 86400  # type: ignore[assignment]
+                env_age_days = (time.time() - mtime) / 86400
 
             passed = len(leaks) == 0 and len(missing) == 0
             severity = "high" if leaks else ("medium" if missing else "info")
@@ -494,7 +494,7 @@ class Sentinel:
             return SentinelCheck(
                 check_type="secret_age",
                 passed=passed,
-                severity=severity,  # type: ignore[arg-type]
+                severity=severity,
                 message=f"Leaks: {len(leaks)}, Missing: {len(missing)}, .env age: {env_age_days:.0f} days",
                 details={
                     "leak_count": len(leaks),
@@ -506,7 +506,7 @@ class Sentinel:
             return SentinelCheck(
                 check_type="secret_age",
                 passed=True,  # Don't fail on secret check errors
-                severity="info",  # type: ignore[arg-type]
+                severity="info",
                 message=f"Secret age check skipped: {e}",
             )
 
@@ -544,7 +544,7 @@ class Sentinel:
             return SentinelCheck(
                 check_type="service_health",
                 passed=passed,
-                severity="high" if not passed else "info",  # type: ignore[arg-type]
+                severity="high" if not passed else "info",
                 message=f"API: {'healthy' if api_healthy else 'unhealthy'}, Redis: {'healthy' if redis_healthy else 'unhealthy'}",
                 details={
                     "api_healthy": api_healthy,
@@ -555,7 +555,7 @@ class Sentinel:
             return SentinelCheck(
                 check_type="service_health",
                 passed=True,  # Services may not be running in dev mode
-                severity="info",  # type: ignore[arg-type]
+                severity="info",
                 message=f"Service health check skipped: {e}",
             )
 
@@ -566,7 +566,7 @@ class Sentinel:
             return SentinelCheck(
                 check_type="ledger_integrity",
                 passed=is_valid,
-                severity="critical" if not is_valid else "info",  # type: ignore[arg-type]
+                severity="critical" if not is_valid else "info",
                 message="Audit ledger chain is intact"
                 if is_valid
                 else "AUDIT LEDGER TAMPERING DETECTED",
@@ -576,7 +576,7 @@ class Sentinel:
             return SentinelCheck(
                 check_type="ledger_integrity",
                 passed=False,
-                severity="critical",  # type: ignore[arg-type]
+                severity="critical",
                 message=f"Ledger integrity check failed: {e}",
             )
 

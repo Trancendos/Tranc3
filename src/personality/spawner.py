@@ -27,7 +27,7 @@ _PROFILES_DIR = Path(__file__).parent / "profiles"
 # In production, restrict this to a dedicated sandbox directory.
 _ALLOWED_OUTPUT_ROOTS = [
     Path.cwd().resolve(),  # current working directory
-    Path("/tmp").resolve(),  # noqa: S108  # nosec B108 — system temp, validated by safe_join below
+    Path("/tmp").resolve(),  # nosec B108 — system temp, validated by safe_join below
     Path.home().resolve(),  # user home
 ]
 

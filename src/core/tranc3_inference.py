@@ -179,10 +179,6 @@ class Tranc3Engine:
         if self._bootstrap_mode:
             return await self._bootstrap_response_async(prompt, personality, system_prompt)
 
-        # Both are guaranteed non-None here: bootstrap_mode=False means load() succeeded.
-        assert self._tokenizer is not None  # noqa: S101
-        assert self._model is not None  # noqa: S101
-
         # Build chat-formatted input
         sys_text = system_prompt or self._default_system(personality)
         input_ids = self._tokenizer.encode_chat(

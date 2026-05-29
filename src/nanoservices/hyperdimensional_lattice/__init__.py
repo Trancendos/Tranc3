@@ -1,19 +1,19 @@
 """Hyperdimensional Lattice nanoservice."""
 
 from .hyperdimensional_lattice import (
+    VectorType,
     BindingOperation,
-    ConceptLattice,
-    ConceptNode,
-    ConceptRelation,
-    ConceptRole,
-    HyperdimensionalLatticeService,
-    HyperdimensionalVectorOps,
-    Hypervector,
-    LatticeProjection,
-    LatticeState,
     LatticeTopology,
     ProjectionMethod,
-    VectorType,
+    ConceptRole,
+    LatticeState,
+    Hypervector,
+    ConceptNode,
+    ConceptRelation,
+    LatticeProjection,
+    HyperdimensionalVectorOps,
+    ConceptLattice,
+    HyperdimensionalLatticeService,
 )
 
 __all__ = [

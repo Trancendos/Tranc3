@@ -189,7 +189,7 @@ class TheLab:
             observe(
                 event_type, category=EventCategory.DATA, service="the-lab", metadata=metadata or {}
             )
-        except Exception:  # noqa: S110
+        except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
 

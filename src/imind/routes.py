@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse
 
 from src.imind.protocol import get_imind
 
@@ -19,10 +19,10 @@ async def imind_status() -> Dict[str, Any]:
 
 
 @router.post("/assess")
-async def assess(body: Dict[str, Any] = Body(...)) -> Response:
+async def assess(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     text: Optional[str] = body.get("text")
     actor: Optional[str] = body.get("actor")
     if not text:
         return JSONResponse({"error": "text is required"}, status_code=400)
     assessment = get_imind().assess(text, actor=actor)
-    return assessment.to_dict()  # type: ignore[return-value]
+    return assessment.to_dict()

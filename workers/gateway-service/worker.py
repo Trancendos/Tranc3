@@ -34,7 +34,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path as PathLib
-from typing import Any
+from typing import Any, Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
@@ -43,25 +43,31 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-# Phase 22.4: Dimensional Services integration
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
-
 # Phase 22: Infinity Ecosystem security integration
-from Dimensional.infinity.abac import ABACEngine, get_default_policies
+from Dimensional.infinity.abac import ABACEngine, Policy, PolicyEffect, get_default_policies
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware, WebSocketAuthManager
-from Dimensional.infinity.nomenclature import InfinityRole, Pillar, SentinelChannel, Tier
+from Dimensional.infinity.nomenclature import InfinityRole, SentinelChannel, Tier
 from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.rbac import RBACEngine
+from Dimensional.infinity.rbac import ENDPOINT_PERMISSIONS, Permission, RBACEngine
 
 # Phase 22.3: Sentinel Station event bus integration
 from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
+    SentinelStation,
     SharedSSEGenerator,
     get_sentinel_station,
+)
+
+# Phase 22.4: Dimensional Services integration
+from Dimensional.dimensionals import (
+    DimensionalServiceBus,
+    DimensionalServiceRegistry,
+    DimensionalServiceStatus,
+    UnderverseModule,
+    UnderverseRegistry,
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
 )
 
 # ---------------------------------------------------------------------------
@@ -128,7 +134,7 @@ from Dimensional.infinity.worker_integration import InfinityWorkerKit  # noqa: E
 
 worker_kit = InfinityWorkerKit(
     "gateway-service",
-    defense_threshold=20,  # Gateway is public-facing — moderate threshold
+    defense_threshold=20,         # Gateway is public-facing — moderate threshold
     defense_window_seconds=300,
     defense_block_seconds=900,
 )
@@ -258,14 +264,12 @@ async def _lifespan(app: FastAPI):
                 if worker_kit.health.should_fire("gateway_reporter"):
                     summary = worker_kit.health.get_health_summary().to_dict()
                     worker_kit.health.record_fire("gateway_reporter")
-                    await sentinel.publish(
-                        SentinelEvent(
-                            channel=SentinelChannel.PLATFORM,
-                            event_type="gateway_health_report",
-                            source="gateway",
-                            payload=summary,
-                        )
-                    )
+                    await sentinel.publish(SentinelEvent(
+                        channel=SentinelChannel.PLATFORM,
+                        event_type="gateway_health_report",
+                        source="gateway",
+                        payload=summary,
+                    ))
             except asyncio.CancelledError:
                 break
             except Exception as exc:
@@ -984,9 +988,7 @@ async def check_access(
             "granted": abac_result,
             "resource_type": resource_type,
             "action": action,
-        }
-        if resource_type
-        else None,
+        } if resource_type else None,
         "overall": rbac_result and abac_result,
     }
 

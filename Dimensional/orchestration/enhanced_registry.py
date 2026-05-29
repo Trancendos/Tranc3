@@ -486,7 +486,7 @@ class EnhancedServiceRegistry:
                 logger.error("Watcher error: %s", sanitize_for_log(str(e)))
 
     def _emit_discovery_event(
-        self, event_type: str, service_name: str, details: Dict[str, Any] = None  # type: ignore[assignment]
+        self, event_type: str, service_name: str, details: Dict[str, Any] = None
     ) -> None:
         """Emit a discovery event to watchers and log."""
         event = ServiceDiscoveryEvent(

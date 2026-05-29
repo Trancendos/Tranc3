@@ -173,7 +173,7 @@ class ShmRingBuffer:
         else:
             self._shm = shared_memory.SharedMemory(name=shm_name, create=False)
 
-        self._buffer: memoryview = self._shm.buf  # type: ignore[assignment]
+        self._buffer = self._shm.buf
 
     def write_message(self, msg: IpcMessage) -> int:
         """Write a message to the next available slot. Returns slot index."""
@@ -185,16 +185,14 @@ class ShmRingBuffer:
         for i in range(self.slot_count):
             offset = i * (SLOT_HEADER_SIZE + SLOT_SIZE)
             # Check occupied flag (byte 0 of header)
-            if self._buffer[offset] == 0:  # Not occupied  # type: ignore[index]
+            if self._buffer[offset] == 0:  # Not occupied
                 # Write header
-                self._buffer[offset] = 1  # occupied = true  # type: ignore[index]
-                struct.pack_into(
-                    "!I", self._buffer, offset + 9, len(encoded)
-                )  # length  # type: ignore[arg-type]
+                self._buffer[offset] = 1  # occupied = true
+                struct.pack_into("!I", self._buffer, offset + 9, len(encoded))  # length
 
                 # Write payload
                 payload_offset = offset + SLOT_HEADER_SIZE
-                self._buffer[payload_offset : payload_offset + len(encoded)] = encoded  # type: ignore[index]
+                self._buffer[payload_offset : payload_offset + len(encoded)] = encoded
                 return i
 
         raise BufferError("All slots occupied — backpressure required")
@@ -206,20 +204,20 @@ class ShmRingBuffer:
 
         offset = slot_index * (SLOT_HEADER_SIZE + SLOT_SIZE)
 
-        if self._buffer[offset] == 0:  # Not occupied  # type: ignore[index]
+        if self._buffer[offset] == 0:  # Not occupied
             return None
 
         # Read length
-        length = struct.unpack_from("!I", self._buffer, offset + 9)[0]  # type: ignore[arg-type]
+        length = struct.unpack_from("!I", self._buffer, offset + 9)[0]
         if length == 0 or length > SLOT_SIZE:
             return None
 
         # Read payload
         payload_offset = offset + SLOT_HEADER_SIZE
-        encoded = bytes(self._buffer[payload_offset : payload_offset + length])  # type: ignore[index]
+        encoded = bytes(self._buffer[payload_offset : payload_offset + length])
 
         # Mark slot as available
-        self._buffer[offset] = 0  # type: ignore[index]
+        self._buffer[offset] = 0
 
         return IpcMessage.from_json(encoded.decode("utf-8"))
 
@@ -236,7 +234,7 @@ class ShmRingBuffer:
         count = 0
         for i in range(self.slot_count):
             offset = i * (SLOT_HEADER_SIZE + SLOT_SIZE)
-            if self._buffer[offset] == 1:  # type: ignore[index]
+            if self._buffer[offset] == 1:
                 count += 1
         return count
 
@@ -440,8 +438,8 @@ class ServiceRegistry:
                         )
                         for s in data.get("services", [])
                     ]
-        except Exception:  # noqa: S110
-            pass  # graceful degradation
+        except Exception:
+            pass
         return []
 
     async def health(self) -> Dict[str, Any]:
@@ -453,8 +451,8 @@ class ServiceRegistry:
                 resp = await client.get(f"{self.broker_url}/health", timeout=5.0)
                 if resp.status_code == 200:
                     return resp.json()
-        except Exception:  # noqa: S110
-            pass  # graceful degradation
+        except Exception:
+            pass
         return {"status": "unreachable"}
 
     async def stats(self) -> Dict[str, Any]:
@@ -466,6 +464,6 @@ class ServiceRegistry:
                 resp = await client.get(f"{self.broker_url}/stats", timeout=5.0)
                 if resp.status_code == 200:
                     return resp.json()
-        except Exception:  # noqa: S110
-            pass  # graceful degradation
+        except Exception:
+            pass
         return {"status": "unreachable"}

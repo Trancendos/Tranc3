@@ -15,23 +15,26 @@ The Nexus is ONE of the three bridges through Sentinel Station:
     Bridge 3 — The HIVE       : Data movement and swarm system coordination
 """
 
+import asyncio
+import json
 import os
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
-from unittest.mock import MagicMock
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 # Ensure the project root is on sys.path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.nexus.nexus_core import (
     CausalOrderingEngine,
+    Nexus,
     EventRouter,
     HealthAggregator,
-    Nexus,
     NexusAccessDecision,
     NexusEvent,
     NexusHealthSummary,
@@ -41,6 +44,8 @@ from Dimensional.nexus.nexus_core import (
     TierAccessBridge,
     get_nexus,
 )
+from Dimensional.infinity.nomenclature import SentinelChannel, Tier
+
 
 # ---------------------------------------------------------------------------
 # Causal Ordering Engine Tests
@@ -215,9 +220,7 @@ class TestTierAccessBridge:
     def test_tier_check_allows_lower_tier(self):
         """Lower tier numbers (higher privilege) can access higher tier resources."""
         result = self.bridge.check_access(
-            subject="ai_system",
-            resource="bot_endpoints",
-            action="read",
+            subject="ai_system", resource="bot_endpoints", action="read",
             subject_tier=3,  # AI can access BOT endpoints
         )
         assert result.allowed is True
@@ -226,9 +229,7 @@ class TestTierAccessBridge:
     def test_tier_check_denies_higher_tier(self):
         """Higher tier numbers (lower privilege) cannot access lower tier resources."""
         result = self.bridge.check_access(
-            subject="bot_worker",
-            resource="ai_training",
-            action="read",
+            subject="bot_worker", resource="ai_training", action="read",
             subject_tier=5,  # BOT cannot access AI resources
         )
         assert result.allowed is False
@@ -239,9 +240,7 @@ class TestTierAccessBridge:
         """Explicit deny overrides all other checks."""
         self.bridge.add_deny("blocked_resource")
         result = self.bridge.check_access(
-            subject="human_user",
-            resource="blocked_resource",
-            action="read",
+            subject="human_user", resource="blocked_resource", action="read",
             subject_tier=0,  # Even HUMAN is denied
         )
         assert result.allowed is False
@@ -252,27 +251,17 @@ class TestTierAccessBridge:
         self.bridge.add_deny("temp_deny")
         self.bridge.remove_deny("temp_deny")
         result = self.bridge.check_access(
-            subject="bot",
-            resource="temp_deny",
-            action="read",
+            subject="bot", resource="temp_deny", action="read",
             subject_tier=5,
         )
         assert result.allowed is True
 
     def test_human_access_all(self):
         """Tier 0 (HUMAN) can access all resources."""
-        for resource in [
-            "admin_panel",
-            "orchestrator_api",
-            "prime_dashboard",
-            "ai_training",
-            "agent_tasks",
-            "bot_endpoints",
-        ]:
+        for resource in ["admin_panel", "orchestrator_api", "prime_dashboard",
+                         "ai_training", "agent_tasks", "bot_endpoints"]:
             result = self.bridge.check_access(
-                subject="human",
-                resource=resource,
-                action="read",
+                subject="human", resource=resource, action="read",
                 subject_tier=0,
             )
             assert result.allowed is True, f"HUMAN should access {resource}"
@@ -280,17 +269,13 @@ class TestTierAccessBridge:
     def test_bot_access_limited(self):
         """Tier 5 (BOT) can only access tier 5 resources."""
         result = self.bridge.check_access(
-            subject="bot",
-            resource="bot_endpoints",
-            action="read",
+            subject="bot", resource="bot_endpoints", action="read",
             subject_tier=5,
         )
         assert result.allowed is True
 
         result = self.bridge.check_access(
-            subject="bot",
-            resource="agent_tasks",
-            action="read",
+            subject="bot", resource="agent_tasks", action="read",
             subject_tier=5,
         )
         assert result.allowed is False
@@ -299,25 +284,19 @@ class TestTierAccessBridge:
         """Verify the tier hierarchy matches the mandatory custom definitions."""
         # AI = Tier 3, Agent = Tier 4, Bot = Tier 5
         ai_result = self.bridge.check_access(
-            subject="ai_complex",
-            resource="ai_training",
-            action="execute",
+            subject="ai_complex", resource="ai_training", action="execute",
             subject_tier=3,
         )
         assert ai_result.allowed is True
 
         agent_result = self.bridge.check_access(
-            subject="agent_entity",
-            resource="ai_training",
-            action="execute",
+            subject="agent_entity", resource="ai_training", action="execute",
             subject_tier=4,
         )
         assert agent_result.allowed is False  # Agent cannot access AI tier
 
         bot_result = self.bridge.check_access(
-            subject="bot_service",
-            resource="agent_tasks",
-            action="execute",
+            subject="bot_service", resource="agent_tasks", action="execute",
             subject_tier=5,
         )
         assert bot_result.allowed is False  # Bot cannot access Agent tier
@@ -325,9 +304,7 @@ class TestTierAccessBridge:
     def test_default_tier_is_bot(self):
         """Resources without explicit tier requirement default to tier 5 (BOT)."""
         result = self.bridge.check_access(
-            subject="bot",
-            resource="unknown_resource",
-            action="read",
+            subject="bot", resource="unknown_resource", action="read",
             subject_tier=5,
         )
         assert result.allowed is True
@@ -341,11 +318,8 @@ class TestTierAccessBridge:
         bridge.set_tier_requirement("resource", 5)
 
         result = bridge.check_access(
-            subject="user",
-            resource="resource",
-            action="read",
-            subject_tier=5,
-            subject_role="viewer",
+            subject="user", resource="resource", action="read",
+            subject_tier=5, subject_role="viewer",
         )
         assert result.allowed is True
         assert result.matched_policy == "rbac"
@@ -358,11 +332,8 @@ class TestTierAccessBridge:
         bridge.set_tier_requirement("resource", 5)
 
         result = bridge.check_access(
-            subject="user",
-            resource="resource",
-            action="read",
-            subject_tier=5,
-            subject_attributes={"department": "engineering"},
+            subject="user", resource="resource", action="read",
+            subject_tier=5, subject_attributes={"department": "engineering"},
         )
         assert result.allowed is True
         assert result.matched_policy == "abac"
@@ -379,11 +350,8 @@ class TestTierAccessBridge:
         bridge.set_tier_requirement("resource", 5)
 
         result = bridge.check_access(
-            subject="user",
-            resource="resource",
-            action="read",
-            subject_tier=5,
-            subject_role="viewer",
+            subject="user", resource="resource", action="read",
+            subject_tier=5, subject_role="viewer",
             subject_attributes={"department": "engineering"},
         )
         assert result.allowed is False
@@ -395,9 +363,7 @@ class TestTierAccessBridge:
         bridge.set_tier_requirement("resource", 3)
 
         result = bridge.check_access(
-            subject="ai",
-            resource="resource",
-            action="read",
+            subject="ai", resource="resource", action="read",
             subject_tier=3,
         )
         assert result.allowed is True
@@ -419,7 +385,6 @@ class TestHealthAggregator:
 
     def teardown_method(self):
         import shutil
-
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     @pytest.mark.asyncio
@@ -462,14 +427,12 @@ class TestHealthAggregator:
     @pytest.mark.asyncio
     async def test_get_summary_with_services(self):
         """Summary correctly aggregates service health."""
-        for i, (status, pillar) in enumerate(
-            [
-                ("healthy", "PLATFORM"),
-                ("healthy", "AGENTS"),
-                ("degraded", "MODELS"),
-                ("unhealthy", "SECURITY"),
-            ]
-        ):
+        for i, (status, pillar) in enumerate([
+            ("healthy", "PLATFORM"),
+            ("healthy", "AGENTS"),
+            ("degraded", "MODELS"),
+            ("unhealthy", "SECURITY"),
+        ]):
             health = NexusServiceHealth(
                 service_id=f"svc-{i}",
                 service_name=f"Service {i}",
@@ -531,8 +494,7 @@ class TestHealthAggregator:
         await self.aggregator.register_service(health)
         for _ in range(3):
             await self.aggregator.update_heartbeat(
-                service_id="svc-err",
-                status="unhealthy",
+                service_id="svc-err", status="unhealthy",
             )
         assert self.aggregator._services["svc-err"].error_count == 3
 
@@ -615,7 +577,6 @@ class TestEventRouter:
     @pytest.mark.asyncio
     async def test_handler_error_doesnt_block(self):
         """A failing handler doesn't block other handlers or publishing."""
-
         async def bad_handler(event):
             raise ValueError("Handler error")
 
@@ -633,7 +594,7 @@ class TestEventRouter:
             source_tier=3,
             event_type="test_event",
         )
-        _subscribers = await self.router.publish(event)
+        subscribers = await self.router.publish(event)
         assert len(good_received) == 1
 
     @pytest.mark.asyncio
@@ -661,7 +622,6 @@ class TestNexusIntegration:
 
     def teardown_method(self):
         import shutil
-
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     @pytest.mark.asyncio
@@ -680,10 +640,8 @@ class TestNexusIntegration:
     async def test_emit_event(self):
         """Events can be emitted through the Nexus."""
         await self.nexus.register_service(
-            service_id="svc-1",
-            service_name="Test",
-            pillar="PLATFORM",
-            tier_requirement=3,
+            service_id="svc-1", service_name="Test",
+            pillar="PLATFORM", tier_requirement=3,
         )
         event = await self.nexus.emit_event(
             channel="PLATFORM",
@@ -699,9 +657,7 @@ class TestNexusIntegration:
         """Access control decisions are made correctly."""
         self.nexus.access_bridge.set_tier_requirement("admin", 0)
         result = await self.nexus.check_access(
-            subject="bot",
-            resource="admin",
-            action="read",
+            subject="bot", resource="admin", action="read",
             subject_tier=5,
         )
         assert result.allowed is False
@@ -710,16 +666,12 @@ class TestNexusIntegration:
     async def test_get_topology(self):
         """Topology graph includes registered services."""
         await self.nexus.register_service(
-            service_id="svc-1",
-            service_name="Service 1",
-            pillar="PLATFORM",
-            tier_requirement=3,
+            service_id="svc-1", service_name="Service 1",
+            pillar="PLATFORM", tier_requirement=3,
         )
         await self.nexus.register_service(
-            service_id="svc-2",
-            service_name="Service 2",
-            pillar="AGENTS",
-            tier_requirement=4,
+            service_id="svc-2", service_name="Service 2",
+            pillar="AGENTS", tier_requirement=4,
         )
         await self.nexus.add_topology_edge("svc-1", "svc-2", "data_flow")
 
@@ -744,10 +696,8 @@ class TestNexusIntegration:
     async def test_service_subscribed_to_all_channels(self):
         """Registered services are subscribed to all Sentinel channels."""
         await self.nexus.register_service(
-            service_id="svc-1",
-            service_name="Test",
-            pillar="PLATFORM",
-            tier_requirement=3,
+            service_id="svc-1", service_name="Test",
+            pillar="PLATFORM", tier_requirement=3,
         )
         routing = await self.nexus.event_router.get_routing_table()
         assert routing["total_channels"] == len(SentinelChannel)
@@ -756,15 +706,11 @@ class TestNexusIntegration:
     async def test_heartbeat_updates_health(self):
         """Heartbeats update the health aggregator."""
         await self.nexus.register_service(
-            service_id="svc-1",
-            service_name="Test",
-            pillar="PLATFORM",
-            tier_requirement=3,
+            service_id="svc-1", service_name="Test",
+            pillar="PLATFORM", tier_requirement=3,
         )
         await self.nexus.health_aggregator.update_heartbeat(
-            service_id="svc-1",
-            status="healthy",
-            response_time_ms=100.0,
+            service_id="svc-1", status="healthy", response_time_ms=100.0,
         )
         summary = await self.nexus.health_aggregator.get_summary()
         assert summary.healthy == 1
@@ -801,9 +747,7 @@ class TestDataModels:
     def test_nexus_service_health_defaults(self):
         """NexusServiceHealth has correct defaults."""
         health = NexusServiceHealth(
-            service_id="test",
-            service_name="Test",
-            pillar="PLATFORM",
+            service_id="test", service_name="Test", pillar="PLATFORM",
             tier_requirement=3,
         )
         assert health.status == "unknown"
@@ -814,10 +758,8 @@ class TestDataModels:
     def test_nexus_event_auto_fields(self):
         """NexusEvent auto-generates id and timestamp."""
         event = NexusEvent(
-            channel="PLATFORM",
-            source_dimension="test",
-            source_tier=3,
-            event_type="test",
+            channel="PLATFORM", source_dimension="test",
+            source_tier=3, event_type="test",
         )
         assert event.event_id is not None
         assert event.timestamp is not None
@@ -840,10 +782,7 @@ class TestDataModels:
     def test_nexus_topology_node(self):
         """NexusTopologyNode model works correctly."""
         node = NexusTopologyNode(
-            node_id="test",
-            node_type="dimension",
-            tier=3,
-            pillar="PLATFORM",
+            node_id="test", node_type="dimension", tier=3, pillar="PLATFORM",
         )
         assert node.health_status == "unknown"
         assert node.connections == []
@@ -851,9 +790,7 @@ class TestDataModels:
     def test_nexus_topology_edge(self):
         """NexusTopologyEdge model works correctly."""
         edge = NexusTopologyEdge(
-            source="a",
-            target="b",
-            edge_type="data_flow",
+            source="a", target="b", edge_type="data_flow",
         )
         assert edge.sentinel_channel is None
         assert edge.bandwidth is None
@@ -871,14 +808,12 @@ class TestNexusWSManager:
     async def test_ws_manager_connect_disconnect(self):
         """WSManager tracks connections correctly."""
         from Dimensional.nexus.nexus_core import NexusWSManager
-
         manager = NexusWSManager()
         assert len(manager._connections) == 0
 
         class FakeWS:
             def __init__(self):
                 self.accepted = False
-
             async def accept(self):
                 self.accepted = True
 
@@ -894,7 +829,6 @@ class TestNexusWSManager:
     async def test_ws_manager_channel_subscribe(self):
         """WSManager tracks channel subscriptions."""
         from Dimensional.nexus.nexus_core import NexusWSManager
-
         manager = NexusWSManager()
 
         class FakeWS:
@@ -914,8 +848,7 @@ class TestNexusWSManager:
     @pytest.mark.asyncio
     async def test_ws_manager_broadcast(self):
         """WSManager broadcasts events to all connections."""
-        from Dimensional.nexus.nexus_core import NexusEvent, NexusWSManager
-
+        from Dimensional.nexus.nexus_core import NexusWSManager, NexusEvent
         manager = NexusWSManager()
 
         messages = []
@@ -923,7 +856,6 @@ class TestNexusWSManager:
         class FakeWS:
             async def accept(self):
                 pass
-
             async def send_text(self, msg):
                 messages.append(msg)
 
@@ -944,14 +876,12 @@ class TestNexusWSManager:
     @pytest.mark.asyncio
     async def test_ws_manager_broadcast_removes_dead(self):
         """WSManager removes connections that fail on broadcast."""
-        from Dimensional.nexus.nexus_core import NexusEvent, NexusWSManager
-
+        from Dimensional.nexus.nexus_core import NexusWSManager, NexusEvent
         manager = NexusWSManager()
 
         class DeadWS:
             async def accept(self):
                 pass
-
             async def send_text(self, msg):
                 raise ConnectionError("dead")
 
@@ -980,8 +910,7 @@ class TestDashboardEndpoint:
     @pytest.mark.asyncio
     async def test_dashboard_endpoint_exists(self):
         """Dashboard endpoint returns HTML when file exists."""
-        from httpx import ASGITransport, AsyncClient
-
+        from httpx import AsyncClient, ASGITransport
         from Dimensional.nexus.nexus_core import create_nexus_app
 
         app = create_nexus_app()
@@ -989,17 +918,12 @@ class TestDashboardEndpoint:
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.get("/dashboard")
             assert resp.status_code == 200
-            assert (
-                "Dimensional Nexus" in resp.text
-                or "Dashboard" in resp.text
-                or "html" in resp.text.lower()
-            )
+            assert "Dimensional Nexus" in resp.text or "Dashboard" in resp.text or "html" in resp.text.lower()
 
     @pytest.mark.asyncio
     async def test_root_includes_dashboard_endpoint(self):
         """Root endpoint lists the dashboard in available endpoints."""
-        from httpx import ASGITransport, AsyncClient
-
+        from httpx import AsyncClient, ASGITransport
         from Dimensional.nexus.nexus_core import create_nexus_app
 
         app = create_nexus_app()
@@ -1022,7 +946,6 @@ class TestNexusSentinelBridge:
     def test_bridge_creation(self):
         """Bridge can be created with or without a nexus."""
         from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
-
         bridge = NexusSentinelBridge()
         assert bridge._nexus is None
         assert bridge._sentinel_station is None
@@ -1032,7 +955,6 @@ class TestNexusSentinelBridge:
     def test_bridge_stats(self):
         """Bridge stats track forwarded events."""
         from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
-
         bridge = NexusSentinelBridge()
         stats = bridge.stats
         assert stats["nexus_to_sentinel"] == 0
@@ -1042,7 +964,6 @@ class TestNexusSentinelBridge:
     def test_bridge_pause_resume_sentinel(self):
         """Bridge can pause/resume forwarding to Sentinel."""
         from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
-
         bridge = NexusSentinelBridge()
         bridge.pause_sentinel_forward()
         assert bridge._forward_to_sentinel is False
@@ -1052,7 +973,6 @@ class TestNexusSentinelBridge:
     def test_bridge_pause_resume_nexus(self):
         """Bridge can pause/resume forwarding to Nexus."""
         from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
-
         bridge = NexusSentinelBridge()
         bridge.pause_nexus_forward()
         assert bridge._forward_to_nexus is False
@@ -1063,7 +983,6 @@ class TestNexusSentinelBridge:
     async def test_bridge_status(self):
         """Bridge status returns correct info."""
         from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
-
         bridge = NexusSentinelBridge()
         status = await bridge.get_status()
         assert status["bridge"] == "NexusSentinelBridge"
@@ -1076,8 +995,8 @@ class TestNexusSentinelBridge:
     @pytest.mark.asyncio
     async def test_bridge_on_sentinel_event(self):
         """Bridge forwards Sentinel events into the Nexus."""
+        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge, get_bridge
         from Dimensional.nexus.nexus_core import Nexus
-        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
 
         nexus = Nexus("bridge-test")
         bridge = NexusSentinelBridge(nexus)
@@ -1093,8 +1012,8 @@ class TestNexusSentinelBridge:
     @pytest.mark.asyncio
     async def test_bridge_on_sentinel_event_paused(self):
         """Bridge does not forward when Nexus forwarding is paused."""
-        from Dimensional.nexus.nexus_core import Nexus
         from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
+        from Dimensional.nexus.nexus_core import Nexus
 
         nexus = Nexus("bridge-pause-test")
         bridge = NexusSentinelBridge(nexus)
@@ -1110,10 +1029,9 @@ class TestNexusSentinelBridge:
 
     def test_bridge_singleton(self):
         """get_bridge returns a singleton instance."""
+        from Dimensional.nexus.sentinel_bridge import get_bridge
         # Reset singleton for test isolation
         import Dimensional.nexus.sentinel_bridge as _sb
-        from Dimensional.nexus.sentinel_bridge import get_bridge
-
         _sb._bridge_instance = None
         b1 = get_bridge()
         b2 = get_bridge()

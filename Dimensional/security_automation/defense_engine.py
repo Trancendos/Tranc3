@@ -454,7 +454,7 @@ class DefenseEngine:
         ]
 
         for d in defaults:
-            self.add_rule(**d)  # type: ignore[arg-type]
+            self.add_rule(**d)
 
 
 # Singleton instance for global use

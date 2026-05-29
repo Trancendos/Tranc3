@@ -14,9 +14,15 @@ The HIVE is ONE of the three bridges through Sentinel Station:
     Bridge 3 — The HIVE (THIS): Data movement and swarm system coordination
 """
 
+import asyncio
+import json
 import os
 import sys
 import tempfile
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -25,6 +31,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from Dimensional.hive.hive_core import (
     DataChunk,
+    DataPipeline,
     DataPriority,
     FlowMonitor,
     Hive,
@@ -41,6 +48,7 @@ from Dimensional.hive.hive_core import (
     create_hive_app,
     get_hive,
 )
+
 
 # ---------------------------------------------------------------------------
 # FlowMonitor Tests
@@ -176,8 +184,8 @@ class TestSwarmCoordinator:
     @pytest.mark.asyncio
     async def test_list_swarms_by_status(self):
         """List swarms can filter by status."""
-        _swarm = await self.coordinator.create_swarm(name="forming", purpose="test")
-        # _swarm is FORMING, not ACTIVE
+        swarm = await self.coordinator.create_swarm(name="forming", purpose="test")
+        # swarm is FORMING, not ACTIVE
         forming = await self.coordinator.list_swarms(status=SwarmStatus.FORMING)
         active = await self.coordinator.list_swarms(status=SwarmStatus.ACTIVE)
         assert len(forming) == 1
@@ -287,9 +295,7 @@ class TestPipelineManager:
     async def test_replication_factor_capped(self):
         """Replication factor is capped at HIVE_MAX_REPLICATION."""
         pipeline = await self.manager.create_pipeline(
-            name="test",
-            source_id="src-1",
-            sink_ids=["sink-1"],
+            name="test", source_id="src-1", sink_ids=["sink-1"],
             replication_factor=100,
         )
         assert pipeline.replication_factor <= 5
@@ -486,7 +492,6 @@ class TestHiveSingleton:
         """get_hive returns a Hive instance."""
         # Reset singleton
         import Dimensional.hive.hive_core as _hc
-
         _hc._hive_instance = None
         hive = get_hive()
         assert isinstance(hive, Hive)
@@ -495,7 +500,6 @@ class TestHiveSingleton:
     def test_get_hive_singleton(self):
         """get_hive returns the same instance on repeated calls."""
         import Dimensional.hive.hive_core as _hc
-
         _hc._hive_instance = None
         h1 = get_hive()
         h2 = get_hive()
@@ -603,8 +607,7 @@ class TestHiveApp:
     @pytest.mark.asyncio
     async def test_hive_root_endpoint(self):
         """HIVE root endpoint returns system info."""
-        from httpx import ASGITransport, AsyncClient
-
+        from httpx import AsyncClient, ASGITransport
         app = create_hive_app()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/")
@@ -617,8 +620,7 @@ class TestHiveApp:
     @pytest.mark.asyncio
     async def test_hive_status_endpoint(self):
         """HIVE status endpoint returns comprehensive status."""
-        from httpx import ASGITransport, AsyncClient
-
+        from httpx import AsyncClient, ASGITransport
         app = create_hive_app()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/status")
@@ -629,8 +631,7 @@ class TestHiveApp:
     @pytest.mark.asyncio
     async def test_hive_health_endpoint(self):
         """HIVE health endpoint returns health summary."""
-        from httpx import ASGITransport, AsyncClient
-
+        from httpx import AsyncClient, ASGITransport
         app = create_hive_app()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/health")

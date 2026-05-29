@@ -353,7 +353,7 @@ Respond in JSON format as a list of predictions."""
                 auto_heal = False
 
             # Affected resources
-            resources = list({s.resource_name for s in cat_signals if s.resource_name})
+            resources = list(set(s.resource_name for s in cat_signals if s.resource_name))
 
             # Remediation suggestion
             remediation_map = {
@@ -455,7 +455,7 @@ class PredictiveDriftService:
                 resource_counts[s.resource_name] = resource_counts.get(s.resource_name, 0) + 1
         top_resources = sorted(
             [{"resource": k, "count": v} for k, v in resource_counts.items()],
-            key=lambda x: -x["count"],  # type: ignore[operator]
+            key=lambda x: -x["count"],
         )[:10]
 
         # Trend analysis

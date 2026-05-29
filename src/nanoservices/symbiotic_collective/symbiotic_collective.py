@@ -428,8 +428,8 @@ class CollectiveIntelligenceEngine:
 
         # Evaluate existing relationships
         for rel in list(self.symbiosis_engine.relations.values()):
-            a = self.agents.get(rel.agent_a_id)  # type: ignore[assignment]
-            b = self.agents.get(rel.agent_b_id)  # type: ignore[assignment]
+            a = self.agents.get(rel.agent_a_id)
+            b = self.agents.get(rel.agent_b_id)
             if a and b:
                 self.symbiosis_engine.evaluate_symbiosis(rel, a, b)
                 if rel.stability < 0.1:

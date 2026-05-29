@@ -8,8 +8,8 @@ from .predictive_drift import (  # noqa: I001
     DriftSignal,
     LLMDriftPredictor,
     LogAnalyzer,
-    PredictionConfidence,
     PredictiveDriftService,
+    PredictionConfidence,
 )
 
 __all__ = [

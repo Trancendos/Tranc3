@@ -104,7 +104,6 @@ class SelectionPressure(Enum):
 
     FITNESS = "fitness"
     NEUTRAL = "neutral"
-    TOURNAMENT = "tournament"
     DIVERSIFYING = "diversifying"
     STABILIZING = "stabilizing"
     DISRUPTIVE = "disruptive"
@@ -610,11 +609,10 @@ class BioSyntheticEvolutionService:
                 metabolism=MetabolicNetwork(),
                 generation=0,
             )
-            if org.metabolism is not None:
-                org.metabolism.add_reaction(
-                    "glycolysis", {"glucose": -1.0}, {"pyruvate": 2.0, "ATP": 2.0}
-                )
-                org.metabolism.simulate_flux()
+            org.metabolism.add_reaction(
+                "glycolysis", {"glucose": -1.0}, {"pyruvate": 2.0, "ATP": 2.0}
+            )
+            org.metabolism.simulate_flux()
             org.evaluate_fitness()
             org.state = OrganismState.MATURE
             organisms.append(org)

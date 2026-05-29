@@ -8,8 +8,9 @@ clipping, and adaptive learning rate scheduling.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import math
 from dataclasses import dataclass, field
+from typing import Callable, List, Optional, Tuple
 
 import numpy as np
 
@@ -17,7 +18,6 @@ import numpy as np
 @dataclass
 class AdaptiveConfig:
     """Configuration for the AdaptiveMetaLearner."""
-
     learning_rate: float = 0.01
     memory_size: int = 10
     max_iterations: int = 1000
@@ -35,16 +35,14 @@ class AdaptiveConfig:
 @dataclass
 class LbfgsEntry:
     """Storage entry for L-BFGS two-loop recursion."""
-
     s: np.ndarray  # parameter difference
     y: np.ndarray  # gradient difference
-    rho: float  # 1 / (y^T s)
+    rho: float     # 1 / (y^T s)
 
 
 @dataclass
 class AdaptiveStep:
     """Result of a single optimization step."""
-
     iteration: int
     loss: float
     gradient_norm: float
@@ -55,7 +53,6 @@ class AdaptiveStep:
 @dataclass
 class AdaptiveSummary:
     """Summary of the adaptive optimization process."""
-
     total_steps: int
     final_loss: float
     final_gradient_norm: float
@@ -63,8 +60,8 @@ class AdaptiveSummary:
     best_loss: float
     best_iteration: int
     converged: bool
-    learning_rate_history: list[float] = field(default_factory=list)
-    loss_history: list[float] = field(default_factory=list)
+    learning_rate_history: List[float] = field(default_factory=list)
+    loss_history: List[float] = field(default_factory=list)
 
 
 class AdaptiveMetaLearner:
@@ -75,27 +72,25 @@ class AdaptiveMetaLearner:
     scheduling for efficient optimization.
     """
 
-    def __init__(self, n_params: int, config: AdaptiveConfig | None = None):
+    def __init__(self, n_params: int, config: Optional[AdaptiveConfig] = None):
         self.n_params = n_params
         self.config = config or AdaptiveConfig()
         self.parameters = np.random.randn(n_params) * 0.01
         self._velocity = np.zeros(n_params)
         self._moment_estimates_m = np.zeros(n_params)
         self._moment_estimates_v = np.zeros(n_params)
-        self._lbfgs_history: list[LbfgsEntry] = []
-        self._prev_gradient: np.ndarray | None = None
+        self._lbfgs_history: List[LbfgsEntry] = []
+        self._prev_gradient: Optional[np.ndarray] = None
         self._step_count = 0
         self._best_loss = float("inf")
-        self._best_params: np.ndarray | None = None
+        self._best_params: Optional[np.ndarray] = None
         self._best_iteration = 0
-        self._initial_loss: float | None = None
-        self._loss_history: list[float] = []
-        self._lr_history: list[float] = []
+        self._initial_loss: Optional[float] = None
+        self._loss_history: List[float] = []
+        self._lr_history: List[float] = []
 
     @classmethod
-    def with_parameters(
-        cls, parameters: np.ndarray, config: AdaptiveConfig | None = None
-    ) -> AdaptiveMetaLearner:
+    def with_parameters(cls, parameters: np.ndarray, config: Optional[AdaptiveConfig] = None) -> "AdaptiveMetaLearner":
         """Create a learner initialized with specific parameters."""
         learner = cls(len(parameters), config)
         learner.parameters = parameters.copy()
@@ -157,10 +152,12 @@ class AdaptiveMetaLearner:
 
         # Update momentum estimates (Adam-style)
         self._moment_estimates_m = (
-            self.config.beta1 * self._moment_estimates_m + (1 - self.config.beta1) * direction
+            self.config.beta1 * self._moment_estimates_m
+            + (1 - self.config.beta1) * direction
         )
         self._moment_estimates_v = (
-            self.config.beta2 * self._moment_estimates_v + (1 - self.config.beta2) * direction**2
+            self.config.beta2 * self._moment_estimates_v
+            + (1 - self.config.beta2) * direction ** 2
         )
 
         # Bias correction
@@ -196,7 +193,7 @@ class AdaptiveMetaLearner:
         self,
         loss_fn: Callable[[np.ndarray], float],
         grad_fn: Callable[[np.ndarray], np.ndarray],
-        callback: Callable[[int, float, float], None] | None = None,
+        callback: Optional[Callable[[int, float, float], None]] = None,
     ) -> AdaptiveSummary:
         """Run full optimization loop."""
         self._initial_loss = loss_fn(self.parameters)
@@ -226,13 +223,11 @@ class AdaptiveMetaLearner:
         return AdaptiveSummary(
             total_steps=self._step_count,
             final_loss=self._loss_history[-1] if self._loss_history else 0.0,
-            final_gradient_norm=step_result.gradient_norm if "step_result" in dir() else 0.0,
+            final_gradient_norm=step_result.gradient_norm if 'step_result' in dir() else 0.0,
             initial_loss=self._initial_loss or 0.0,
             best_loss=self._best_loss,
             best_iteration=self._best_iteration,
-            converged=step_result.gradient_norm < self.config.tolerance
-            if "step_result" in dir()
-            else False,
+            converged=step_result.gradient_norm < self.config.tolerance if 'step_result' in dir() else False,
             learning_rate_history=self._lr_history.copy(),
             loss_history=self._loss_history.copy(),
         )
@@ -242,9 +237,7 @@ class AdaptiveMetaLearner:
         if self._step_count < self.config.warmup_steps:
             scale = (self._step_count + 1) / self.config.warmup_steps
             return self.config.learning_rate * scale
-        return self.config.learning_rate * (
-            self.config.decay_rate ** (self._step_count - self.config.warmup_steps)
-        )
+        return self.config.learning_rate * (self.config.decay_rate ** (self._step_count - self.config.warmup_steps))
 
     def adapt_learning_rate(self, loss: float) -> float:
         """Adapt learning rate based on loss progress."""
@@ -263,9 +256,7 @@ class AdaptiveMetaLearner:
         return AdaptiveSummary(
             total_steps=self._step_count,
             final_loss=self._loss_history[-1] if self._loss_history else 0.0,
-            final_gradient_norm=float(np.linalg.norm(self._prev_gradient))
-            if self._prev_gradient is not None
-            else 0.0,
+            final_gradient_norm=float(np.linalg.norm(self._prev_gradient)) if self._prev_gradient is not None else 0.0,
             initial_loss=self._initial_loss or 0.0,
             best_loss=self._best_loss,
             best_iteration=self._best_iteration,

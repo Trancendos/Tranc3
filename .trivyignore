@@ -9,11 +9,3 @@
 # Trivy's vulnerability database may not yet reflect that 0.2.1 is the patched version.
 # This is a confirmed false positive — our pinned version IS the fix.
 CVE-2026-1260
-
-# CVE-2025-69872 — diskcache 5.6.3 arbitrary code execution via crafted cache file
-# Affects: diskcache == 5.6.3 (ALL available versions — no upstream fix released yet)
-# Attack vector: LOCAL — attacker must have write access to the cache directory.
-# Mitigation: cache directory restricted to service user (chmod 700).
-# Review: check quarterly for upstream fix; update requirements.txt when released.
-# Added: 2026-05
-CVE-2025-69872

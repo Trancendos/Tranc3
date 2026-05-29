@@ -1,11 +1,11 @@
 from .distributed_tracing import (
-    DistributedTracingService,
-    LatencyAnalyzer,
-    Span,
-    SpanContext,
     SpanKind,
     SpanStatus,
+    SpanContext,
+    Span,
     Trace,
     TraceCollector,
     Tracer,
+    LatencyAnalyzer,
+    DistributedTracingService,
 )

@@ -203,11 +203,11 @@ class ZeroCostRoutingChain:
     models: Dict[str, str]  # provider -> default model
     estimated_cost_per_1k_requests: str = "$0.00"
 
-    def get_route_rules(self) -> "List[Any]":
+    def get_route_rules(self) -> List[Dict[str, Any]]:
         """Convert to RouteRule dicts for AIGateway."""
         from src.ai_gateway.types import RouteRule
 
-        rules: List[Any] = []
+        rules = []
         for priority, provider in enumerate(self.providers):
             model = self.models.get(provider, "")
             rules.append(
@@ -313,7 +313,7 @@ def _check_ollama_available(host: str) -> bool:
     try:
         import urllib.request
 
-        urllib.request.urlopen(f"{host}/api/tags", timeout=2)  # noqa: S310 — pinging local Ollama only
+        urllib.request.urlopen(f"{host}/api/tags", timeout=2)
         return True
     except Exception:
         return False

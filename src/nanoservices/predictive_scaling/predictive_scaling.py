@@ -90,8 +90,8 @@ class DoubleExponentialSmoother:
             self._level = value
             self._trend = 0.0
         else:
-            new_level = self._alpha * value + (1 - self._alpha) * (self._level + self._trend)  # type: ignore[operator]
-            new_trend = self._beta * (new_level - self._level) + (1 - self._beta) * self._trend  # type: ignore[operator]
+            new_level = self._alpha * value + (1 - self._alpha) * (self._level + self._trend)
+            new_trend = self._beta * (new_level - self._level) + (1 - self._beta) * self._trend
             self._level = new_level
             self._trend = new_trend
         self._count += 1

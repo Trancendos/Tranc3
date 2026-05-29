@@ -15,7 +15,7 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import ClassVar, Dict, List, Optional
+from typing import ClassVar, Dict, List
 
 import httpx
 
@@ -67,13 +67,6 @@ class BotResult:
     action_taken: str
     duration_ms: float
     timestamp: float = field(default_factory=time.time)
-
-    def get(self, key: str, default=None):
-        if key == "actions_taken":
-            return [self.action_taken] if self.action_taken else []
-        if key == "bot_type":
-            return self.failure_mode.value
-        return getattr(self, key, default)
 
 
 # ---------------------------------------------------------------------------
@@ -343,7 +336,7 @@ class FreeTierBot(NanoBot):
                 )
                 if tier_resp.status_code < 300:
                     actions_taken.append("Next-tier upgrade preparation triggered")
-            except Exception:  # noqa: S110
+            except Exception:
                 # Non-critical — not every service has tier management
                 pass  # nosec B110 — graceful degradation for optional tier feature
 
@@ -491,7 +484,7 @@ class ServiceUnreachableBot(NanoBot):
                             actions.append("Service recovered after restart")
                             success = True
                             break
-                    except Exception:  # noqa: S110
+                    except Exception:
                         pass  # nosec B110 — graceful degradation; error logged upstream
 
         except Exception as exc:
@@ -589,7 +582,7 @@ class NanoCodeBotDispatcher:
             RateLimitBot,
             ServiceUnreachableBot,
         ]:
-            instance = bot_cls()  # type: ignore[abstract]
+            instance = bot_cls()
             self._bots[instance.failure_mode] = instance
 
     # ------------------------------------------------------------------
@@ -600,7 +593,7 @@ class NanoCodeBotDispatcher:
         self,
         failure_mode: FailureMode,
         service_id: str,
-        context: Optional[Dict] = None,
+        context: Dict = None,
     ) -> BotResult:
         """Find the right bot for *failure_mode* and execute its repair."""
         if context is None:
@@ -629,26 +622,6 @@ class NanoCodeBotDispatcher:
         if len(self._history) > 10_000:
             self._history = self._history[-5_000:]
         return result
-
-    async def dispatch_from_metrics(
-        self, metrics: Dict, config: Optional[Dict] = None
-    ) -> BotResult:
-        """Infer failure modes from *metrics* and dispatch the first matched bot."""
-        service_id = str(metrics.get("service_id", "auto"))
-        context: Dict = {"endpoint": metrics.get("endpoint", "")}
-        if config:
-            context.update(config)
-        modes = self._infer_failure_modes(metrics)
-        if not modes:
-            return BotResult(
-                bot_id="dispatcher",
-                failure_mode=FailureMode.SERVICE_UNREACHABLE,
-                service_id=service_id,
-                success=True,
-                action_taken="No failure modes detected",
-                duration_ms=0.0,
-            )
-        return await self.dispatch(modes[0], service_id, context)
 
     async def auto_dispatch(self, service_id: str, metrics: Dict) -> List[BotResult]:
         """

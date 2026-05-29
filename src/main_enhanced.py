@@ -188,7 +188,7 @@ class TRANC3Enhanced:
     async def think(
         self,
         prompt: str,
-        context: Optional[Dict] = None,
+        context: Dict = None,
         personality: str = "tranc3-base",
         system_prompt: Optional[str] = None,
         max_new_tokens: int = 256,
@@ -292,7 +292,7 @@ class TRANC3Enhanced:
             t = torch.nn.functional.pad(t, (0, 768 - len(t)))
         return t[:768].unsqueeze(0)
 
-    async def execute_workflow(self, workflow_def: Dict, inputs: Optional[Dict] = None) -> Dict:
+    async def execute_workflow(self, workflow_def: Dict, inputs: Dict = None) -> Dict:
         """Execute a workflow definition."""
         if inputs is None:
             inputs = {}
@@ -311,7 +311,7 @@ class TRANC3Enhanced:
             "error": state.error,
         }
 
-    async def call_mcp_tool(self, tool_name: str, params: Optional[Dict] = None) -> Dict:
+    async def call_mcp_tool(self, tool_name: str, params: Dict = None) -> Dict:
         """Call an MCP tool by name."""
         if params is None:
             params = {}

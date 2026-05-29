@@ -5,15 +5,15 @@ of nanoservice properties, protocol correctness, and safety invariants.
 """
 
 from .formal_verification import (
-    FormalVerificationService,
-    Lean4Prover,
-    Lean4TemplateGenerator,
-    ModelCheckerSimulator,
-    ProofObligation,
+    VerificationStatus,
     PropertyType,
     VerificationProperty,
+    ProofObligation,
     VerificationResult,
-    VerificationStatus,
+    Lean4TemplateGenerator,
+    Lean4Prover,
+    ModelCheckerSimulator,
+    FormalVerificationService,
 )
 
 __all__ = [

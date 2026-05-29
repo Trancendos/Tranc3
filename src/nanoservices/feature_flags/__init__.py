@@ -1,9 +1,9 @@
 from .feature_flags import (
-    FeatureFlag,
-    FeatureFlagService,
-    FlagAuditEntry,
-    FlagEvaluation,
-    FlagRule,
     FlagState,
     RolloutStrategy,
+    FlagRule,
+    FeatureFlag,
+    FlagEvaluation,
+    FlagAuditEntry,
+    FeatureFlagService,
 )

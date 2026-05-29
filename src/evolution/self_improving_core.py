@@ -57,7 +57,7 @@ class GeneticOperators:
 
     @staticmethod
     def tournament_select(population: List[Individual], k: int = 3) -> Individual:
-        contestants = np.random.choice(population, size=min(k, len(population)), replace=False)  # type: ignore[arg-type]
+        contestants = np.random.choice(population, size=min(k, len(population)), replace=False)
         return max(contestants, key=lambda ind: ind.fitness)
 
 

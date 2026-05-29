@@ -121,7 +121,7 @@ def run_cli(engine: Tranc3Engine):
         f"'switch <profile>' to change personality\n"
     )
 
-    history = []  # type: ignore[var-annotated]
+    history = []
 
     while True:
         try:

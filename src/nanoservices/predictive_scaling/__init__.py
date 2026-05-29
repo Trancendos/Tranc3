@@ -1,11 +1,11 @@
 from .predictive_scaling import (
-    DoubleExponentialSmoother,
-    LoadObservation,
-    PredictiveScalingEngine,
-    ResourceType,
-    ScalingDecision,
     ScalingDirection,
-    ScalingPolicy,
     ScalingReason,
+    ResourceType,
+    LoadObservation,
+    ScalingDecision,
+    ScalingPolicy,
+    DoubleExponentialSmoother,
     SeasonalPatternDetector,
+    PredictiveScalingEngine,
 )

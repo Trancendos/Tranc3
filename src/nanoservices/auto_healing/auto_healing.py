@@ -143,7 +143,7 @@ class StatisticalBaseline:
     def sigma_distance(self, value: float) -> float:
         if self.std_dev < 1e-10:
             return 0.0
-        return abs(value - self._mean) / self.std_dev  # type: ignore[operator]
+        return abs(value - self._mean) / self.std_dev
 
 
 class AnomalyDetector:

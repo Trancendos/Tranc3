@@ -18,7 +18,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import sqlite3
-import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -51,7 +50,7 @@ class ProactiveAlert:
     severity: str = "info"  # info | warning | critical
     message: str = ""
     context: dict[str, Any] = field(default_factory=dict)
-    raised_at: float = field(default_factory=time.time)
+    raised_at: float = field(default_factory=time.monotonic)
     acknowledged: bool = False
 
 
@@ -86,7 +85,6 @@ class ProactiveHealthMonitor:
         self._running = False
         self._task: asyncio.Task | None = None
         self._db_path = db_path
-        self._lock = threading.Lock()  # protects _entities, _scores, _ewma, _alerts
         self._init_db()
 
     # ------------------------------------------------------------------
@@ -95,8 +93,7 @@ class ProactiveHealthMonitor:
 
     def _init_db(self) -> None:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(self._db_path)
-        try:
+        with sqlite3.connect(self._db_path) as conn:
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS alerts (
                     alert_id TEXT PRIMARY KEY,
@@ -108,30 +105,24 @@ class ProactiveHealthMonitor:
                 )"""
             )
             conn.commit()
-        finally:
-            conn.close()
 
     def _persist_alert(self, alert: ProactiveAlert) -> None:
-        conn = None
         try:
-            conn = sqlite3.connect(self._db_path)
-            conn.execute(
-                "INSERT OR IGNORE INTO alerts VALUES (?,?,?,?,?,?)",
-                (
-                    alert.alert_id,
-                    alert.entity_id,
-                    alert.severity,
-                    alert.message,
-                    alert.raised_at,
-                    int(alert.acknowledged),
-                ),
-            )
-            conn.commit()
+            with sqlite3.connect(self._db_path) as conn:
+                conn.execute(
+                    "INSERT OR IGNORE INTO alerts VALUES (?,?,?,?,?,?)",
+                    (
+                        alert.alert_id,
+                        alert.entity_id,
+                        alert.severity,
+                        alert.message,
+                        alert.raised_at,
+                        int(alert.acknowledged),
+                    ),
+                )
+                conn.commit()
         except Exception as exc:
             logger.warning("ProactiveHealthMonitor: failed to persist alert: %s", exc)
-        finally:
-            if conn:
-                conn.close()
 
     # ------------------------------------------------------------------
     # Registration
@@ -141,19 +132,17 @@ class ProactiveHealthMonitor:
         """Register any entity that exposes .dna.aid and .status()."""
         try:
             eid = entity.dna.aid
-            with self._lock:
-                self._entities[eid] = entity
-                self._scores[eid] = []
-                self._ewma[eid] = 1.0
+            self._entities[eid] = entity
+            self._scores[eid] = []
+            self._ewma[eid] = 1.0
             logger.debug("ProactiveHealthMonitor: registered %s", eid)
         except AttributeError as exc:
             logger.warning("ProactiveHealthMonitor.register: entity missing .dna.aid — %s", exc)
 
     def deregister(self, aid: str) -> None:
-        with self._lock:
-            self._entities.pop(aid, None)
-            self._scores.pop(aid, None)
-            self._ewma.pop(aid, None)
+        self._entities.pop(aid, None)
+        self._scores.pop(aid, None)
+        self._ewma.pop(aid, None)
 
     # ------------------------------------------------------------------
     # Core check
@@ -196,7 +185,8 @@ class ProactiveHealthMonitor:
             return False
         # Declining trend if each step drops by threshold
         return all(
-            window[i] - window[i + 1] >= self._DEGRADATION_THRESHOLD for i in range(len(window) - 1)
+            window[i] - window[i + 1] >= self._DEGRADATION_THRESHOLD
+            for i in range(len(window) - 1)
         )
 
     def _raise_alert(
@@ -213,8 +203,6 @@ class ProactiveHealthMonitor:
             context=context or {},
         )
         self._alerts.append(alert)
-        if len(self._alerts) > 1000:
-            self._alerts = self._alerts[-500:]
         self._persist_alert(alert)
         logger.log(
             logging.CRITICAL if severity == "critical" else logging.WARNING,
@@ -226,60 +214,44 @@ class ProactiveHealthMonitor:
         return alert
 
     def check_all(self) -> list[ProactiveAlert]:
-        """Run one synchronous health check pass. Returns new alerts raised.
-
-        Safe to run in a thread via asyncio.to_thread: a threading.Lock
-        guards all shared state (_entities, _ewma, _scores, _alerts).
-        Entities are sampled outside the lock so slow entity.status() calls
-        don't block concurrent reads from status()/acknowledge_alert().
-        """
-        # Snapshot registered entities under brief lock
-        with self._lock:
-            entities_snapshot = list(self._entities.items())
-
-        # Sample each entity outside the lock (external calls may be slow)
-        samples: dict[str, HealthSample | None] = {
-            eid: self._sample_entity(eid, entity) for eid, entity in entities_snapshot
-        }
-
-        # Update shared state and raise alerts under lock
+        """Run one synchronous health check pass. Returns new alerts raised."""
         new_alerts: list[ProactiveAlert] = []
-        with self._lock:
-            for eid, sample in samples.items():
-                if sample is None:
-                    continue
-                ewma = self._update_ewma(eid, sample.health_score)
-                trending_down = self._detect_trend(eid, sample.health_score)
+        for eid, entity in list(self._entities.items()):
+            sample = self._sample_entity(eid, entity)
+            if sample is None:
+                continue
+            ewma = self._update_ewma(eid, sample.health_score)
+            trending_down = self._detect_trend(eid, sample.health_score)
 
-                if ewma < self._CRITICAL_THRESHOLD:
-                    a = self._raise_alert(
-                        eid,
-                        "critical",
-                        f"Health critical: EWMA={ewma:.2f}",
-                        {"ewma": ewma, "raw": sample.health_score},
-                    )
-                    new_alerts.append(a)
-                elif ewma < self._WARNING_THRESHOLD:
-                    a = self._raise_alert(
-                        eid,
-                        "warning",
-                        f"Health degraded: EWMA={ewma:.2f}",
-                        {"ewma": ewma, "raw": sample.health_score},
-                    )
-                    new_alerts.append(a)
-                elif trending_down:
-                    a = self._raise_alert(
-                        eid,
-                        "warning",
-                        f"Declining health trend ({self._TREND_WINDOW} samples)",
-                        {"samples": self._scores[eid][-self._TREND_WINDOW :]},
-                    )
-                    new_alerts.append(a)
+            if ewma < self._CRITICAL_THRESHOLD:
+                a = self._raise_alert(
+                    eid,
+                    "critical",
+                    f"Health critical: EWMA={ewma:.2f}",
+                    {"ewma": ewma, "raw": sample.health_score},
+                )
+                new_alerts.append(a)
+            elif ewma < self._WARNING_THRESHOLD:
+                a = self._raise_alert(
+                    eid,
+                    "warning",
+                    f"Health degraded: EWMA={ewma:.2f}",
+                    {"ewma": ewma, "raw": sample.health_score},
+                )
+                new_alerts.append(a)
+            elif trending_down:
+                a = self._raise_alert(
+                    eid,
+                    "warning",
+                    f"Declining health trend ({self._TREND_WINDOW} samples)",
+                    {"samples": self._scores[eid][-self._TREND_WINDOW :]},
+                )
+                new_alerts.append(a)
 
-                for threat in sample.swot_threats:
-                    if "CRITICAL" in threat.upper():
-                        a = self._raise_alert(eid, "critical", f"SWOT threat: {threat}")
-                        new_alerts.append(a)
+            for threat in sample.swot_threats:
+                if "CRITICAL" in threat.upper():
+                    a = self._raise_alert(eid, "critical", f"SWOT threat: {threat}")
+                    new_alerts.append(a)
 
         return new_alerts
 
@@ -292,9 +264,11 @@ class ProactiveHealthMonitor:
         logger.info("ProactiveHealthMonitor started (%d entities)", len(self._entities))
         while self._running:
             try:
-                alerts = await asyncio.to_thread(self.check_all)
+                alerts = self.check_all()
                 if alerts:
-                    logger.info("ProactiveHealthMonitor: %d new alerts this cycle", len(alerts))
+                    logger.info(
+                        "ProactiveHealthMonitor: %d new alerts this cycle", len(alerts)
+                    )
             except asyncio.CancelledError:
                 break
             except Exception as exc:
@@ -304,7 +278,6 @@ class ProactiveHealthMonitor:
     async def start(self) -> None:
         if self._running:
             return
-        self._running = True
         self._task = asyncio.create_task(self.run(), name="proactive_health_monitor")
 
     async def stop(self) -> None:
@@ -314,66 +287,27 @@ class ProactiveHealthMonitor:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass  # expected: task was cancelled
+                pass
 
     # ------------------------------------------------------------------
     # Status
     # ------------------------------------------------------------------
 
     def status(self) -> dict[str, Any]:
-        with self._lock:
-            unacked = [a for a in self._alerts if not a.acknowledged]
-            return {
-                "registered_entities": len(self._entities),
-                "total_alerts": len(self._alerts),
-                "unacknowledged_alerts": len(unacked),
-                "ewma_scores": {eid: round(s, 3) for eid, s in self._ewma.items()},
-                "critical_entities": [
-                    eid for eid, s in self._ewma.items() if s < self._CRITICAL_THRESHOLD
-                ],
-            }
+        unacked = [a for a in self._alerts if not a.acknowledged]
+        return {
+            "registered_entities": len(self._entities),
+            "total_alerts": len(self._alerts),
+            "unacknowledged_alerts": len(unacked),
+            "ewma_scores": {eid: round(s, 3) for eid, s in self._ewma.items()},
+            "critical_entities": [
+                eid for eid, s in self._ewma.items() if s < self._CRITICAL_THRESHOLD
+            ],
+        }
 
     def acknowledge_alert(self, alert_id: str) -> bool:
-        # Fast path: update in-memory list under lock
-        found_in_memory = False
-        with self._lock:
-            for alert in self._alerts:
-                if alert.alert_id == alert_id and not alert.acknowledged:
-                    alert.acknowledged = True
-                    found_in_memory = True
-                    break
-
-        if found_in_memory:
-            conn = None
-            try:
-                conn = sqlite3.connect(self._db_path)
-                conn.execute(
-                    "UPDATE alerts SET acknowledged=1 WHERE alert_id=?",
-                    (alert_id,),
-                )
-                conn.commit()
-            except Exception as exc:
-                logger.warning("ProactiveHealthMonitor: failed to persist ack: %s", exc)
-            finally:
-                if conn:
-                    conn.close()
-            return True
-
-        # Alert may have been pruned from in-memory list; try persisted store directly.
-        conn = None
-        try:
-            conn = sqlite3.connect(self._db_path)
-            row = conn.execute(
-                "SELECT acknowledged FROM alerts WHERE alert_id=?", (alert_id,)
-            ).fetchone()
-            if row is None or row[0]:
-                return False
-            conn.execute("UPDATE alerts SET acknowledged=1 WHERE alert_id=?", (alert_id,))
-            conn.commit()
-            return True
-        except Exception as exc:
-            logger.warning("ProactiveHealthMonitor: failed to persist ack: %s", exc)
-            return False
-        finally:
-            if conn:
-                conn.close()
+        for alert in self._alerts:
+            if alert.alert_id == alert_id and not alert.acknowledged:
+                alert.acknowledged = True
+                return True
+        return False

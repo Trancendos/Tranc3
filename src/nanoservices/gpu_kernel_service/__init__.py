@@ -8,10 +8,10 @@ from .gpu_kernel_service import (  # noqa: I001
     KernelSpec,
     KernelType,
     QuantumTVMTuner,
+    TVMKernelGenerator,
     TuningConfig,
     TuningResult,
     TuningStatus,
-    TVMKernelGenerator,
 )
 
 __all__ = [
