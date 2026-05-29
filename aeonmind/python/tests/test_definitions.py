@@ -3,13 +3,13 @@ Tests for AeonMind Definitions — Tier Hierarchy, Entity Types, Sentinel Channe
 """
 
 from aeonmind.core.definitions import (
-    Tier,
-    SentinelChannel,
-    BotService,
     AgentEntity,
     AiComplex,
-    tier_hierarchy,
+    BotService,
+    SentinelChannel,
+    Tier,
     sentinel_channels,
+    tier_hierarchy,
 )
 
 

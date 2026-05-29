@@ -180,7 +180,7 @@ class DNAEvolutionEngine:
         n_gens = generations or self.config.max_generations
         last_stats = None
 
-        for _i in range(n_gens):
+        for i in range(n_gens):
             self.evaluate(fitness_fn)
             last_stats = self.evolve_generation()
             if callback:

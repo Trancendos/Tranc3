@@ -2,7 +2,7 @@
 Tests for AeonMind Quantum Decision Circuit.
 """
 
-from aeonmind.core.quantum import QuantumDecisionCircuit, QuantumCircuitConfig
+from aeonmind.core.quantum import QuantumCircuitConfig, QuantumDecisionCircuit
 
 
 class TestQuantumCircuitConfig:
