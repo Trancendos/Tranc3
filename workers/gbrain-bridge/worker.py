@@ -473,7 +473,7 @@ async def health() -> Response:  # type: ignore[return-value]
             "edges": edge_count,
         }
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.post("/nodes", status_code=201)
@@ -494,7 +494,7 @@ async def create_node(body: NodeCreate) -> Response:  # type: ignore[return-valu
         )
         db.commit()
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"node_id": node_id, "title": body.title, "created_at": now}  # type: ignore[return-value]
 
 
@@ -529,7 +529,7 @@ async def create_edge(body: EdgeCreate) -> Response:  # type: ignore[return-valu
         )
         db.commit()
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"edge_id": edge_id, "source_id": body.source_id, "target_id": body.target_id}  # type: ignore[return-value]
 
 

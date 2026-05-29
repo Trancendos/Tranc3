@@ -92,7 +92,7 @@ class TestGetMtlsClient:
 
     def test_returns_client_when_httpx_present(self):
         try:
-            import httpx
+            import httpx  # noqa: F401
         except ImportError:
             pytest.skip("httpx not installed")
         from src.security.mtls_client import get_mtls_client
@@ -113,7 +113,7 @@ class TestGetMtlsClient:
 
     def test_async_returns_client_when_httpx_present(self):
         try:
-            import httpx
+            import httpx  # noqa: F401
         except ImportError:
             pytest.skip("httpx not installed")
         from src.security.mtls_client import get_async_mtls_client
