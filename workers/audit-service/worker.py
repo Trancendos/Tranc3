@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -134,6 +134,21 @@ app.add_middleware(
 )
 
 
+
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 @app.get("/health")
 async def health():
     with get_conn() as conn:
@@ -159,7 +174,7 @@ async def health():
     }
 
 
-@app.post("/audit", status_code=201)
+@_router.post("/audit", status_code=201)
 async def append_entry(entry: AuditIn):
     ts = entry.timestamp or time.time()
     prev_hash = _last_hash()
@@ -193,7 +208,7 @@ async def append_entry(entry: AuditIn):
     }
 
 
-@app.post("/audit/batch", status_code=201)
+@_router.post("/audit/batch", status_code=201)
 async def append_batch(batch: AuditBatchIn):
     results = []
     with get_conn() as conn:
@@ -226,7 +241,7 @@ async def append_batch(batch: AuditBatchIn):
     return {"inserted": len(results), "entries": results}
 
 
-@app.get("/audit")
+@_router.get("/audit")
 async def list_entries(
     actor: Optional[str] = None,
     action: Optional[str] = None,
@@ -262,7 +277,7 @@ async def list_entries(
     return {"total": total, "entries": [dict(r) for r in rows], "limit": limit, "offset": offset}
 
 
-@app.get("/audit/{entry_id}")
+@_router.get("/audit/{entry_id}")
 async def get_entry(entry_id: int):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM audit_log WHERE id = ?", (entry_id,)).fetchone()
@@ -271,7 +286,7 @@ async def get_entry(entry_id: int):
     return dict(row)
 
 
-@app.get("/audit/verify/chain")
+@_router.get("/audit/verify/chain")
 async def verify_chain():
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM audit_log ORDER BY id ASC").fetchall()
@@ -297,7 +312,7 @@ async def verify_chain():
     }
 
 
-@app.get("/stats")
+@_router.get("/stats")
 async def stats():
     with get_conn() as conn:
         total = conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0]
@@ -316,6 +331,9 @@ async def stats():
         "by_action": [dict(r) for r in by_action],
         "by_outcome": [dict(r) for r in by_outcome],
     }
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

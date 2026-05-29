@@ -29,7 +29,16 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
@@ -301,6 +310,21 @@ app.add_middleware(
 )
 
 
+
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
@@ -316,7 +340,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@app.post("/secrets", response_model=SecretResponse, status_code=201)
+@_router.post("/secrets", response_model=SecretResponse, status_code=201)
 async def create_secret(body: SecretCreate):
     conn = _get_db()
     now = _now()
@@ -348,7 +372,7 @@ async def create_secret(body: SecretCreate):
     )
 
 
-@app.get("/secrets", response_model=List[SecretResponse])
+@_router.get("/secrets", response_model=List[SecretResponse])
 async def list_secrets(
     active_only: bool = True, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)
 ):
@@ -377,7 +401,7 @@ async def list_secrets(
     ]
 
 
-@app.get("/secrets/{secret_id}", response_model=SecretResponse)
+@_router.get("/secrets/{secret_id}", response_model=SecretResponse)
 async def get_secret(secret_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM secrets WHERE id=?", (secret_id,)).fetchone()
@@ -400,7 +424,7 @@ async def get_secret(secret_id: str):
     )
 
 
-@app.put("/secrets/{secret_id}", response_model=SecretResponse)
+@_router.put("/secrets/{secret_id}", response_model=SecretResponse)
 async def update_secret(secret_id: str, body: SecretUpdate):
     conn = _get_db()
     row = conn.execute("SELECT * FROM secrets WHERE id=?", (secret_id,)).fetchone()
@@ -439,7 +463,7 @@ async def update_secret(secret_id: str, body: SecretUpdate):
     )
 
 
-@app.put("/secrets/{secret_id}/revoke")
+@_router.put("/secrets/{secret_id}/revoke")
 async def revoke_secret(secret_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM secrets WHERE id=?", (secret_id,)).fetchone()
@@ -454,7 +478,7 @@ async def revoke_secret(secret_id: str):
     return {"id": secret_id, "is_active": 0, "updated_at": now}
 
 
-@app.put("/secrets/{secret_id}/zeroize")
+@_router.put("/secrets/{secret_id}/zeroize")
 async def zeroize_secret(secret_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM secrets WHERE id=?", (secret_id,)).fetchone()
@@ -477,7 +501,7 @@ async def zeroize_secret(secret_id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/audit")
+@_router.get("/audit")
 async def get_audit_log(
     secret_id: Optional[str] = None,
     action: Optional[str] = None,
@@ -500,7 +524,7 @@ async def get_audit_log(
     return [dict(r) for r in rows]
 
 
-@app.get("/audit/verify")
+@_router.get("/audit/verify")
 async def verify_audit_chain():
     conn = _get_db()
     rows = conn.execute(
@@ -522,7 +546,7 @@ async def verify_audit_chain():
 # ---------------------------------------------------------------------------
 
 
-@app.get("/scan/leaks")
+@_router.get("/scan/leaks")
 async def scan_for_leaks():
     conn = _get_db()
     patterns = ["SECRET", "PASSWORD", "API_KEY", "TOKEN", "PRIVATE_KEY"]
@@ -551,7 +575,7 @@ async def scan_for_leaks():
 # ---------------------------------------------------------------------------
 
 
-@app.get("/stats")
+@_router.get("/stats")
 async def get_stats():
     conn = _get_db()
     total = conn.execute("SELECT COUNT(*) as c FROM secrets").fetchone()["c"]
@@ -617,7 +641,7 @@ async def _broadcast_event(event_type: str, data: dict) -> None:
         _connected_ws.remove(ws)
 
 
-@app.get("/events")
+@_router.get("/events")
 async def _sse_events():
     async def _generator():
         while True:
@@ -628,7 +652,7 @@ async def _sse_events():
     return EventSourceResponse(_generator())
 
 
-@app.get("/dashboard/summary")
+@_router.get("/dashboard/summary")
 async def _dashboard_summary():
     """Aggregated summary optimized for dashboard consumption."""
     stats = await _get_stats_async()
@@ -660,6 +684,9 @@ async def _get_stats_async() -> dict:
 def _get_stats() -> dict:
     """Return basic service stats for real-time endpoints (sync fallback)."""
     return {"service": SERVICE_NAME, "port": PORT}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

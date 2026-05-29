@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -146,6 +146,21 @@ app.add_middleware(
 )
 
 
+
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 @app.get("/health")
 async def health():
     with get_conn() as conn:
@@ -174,14 +189,14 @@ async def health():
 # --- Buckets ---
 
 
-@app.get("/buckets")
+@_router.get("/buckets")
 async def list_buckets():
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM buckets ORDER BY name").fetchall()
     return {"buckets": [dict(r) for r in rows]}
 
 
-@app.post("/buckets", status_code=201)
+@_router.post("/buckets", status_code=201)
 async def create_bucket(req: BucketCreate):
     with get_conn() as conn:
         if conn.execute("SELECT name FROM buckets WHERE name = ?", (req.name,)).fetchone():
@@ -195,7 +210,7 @@ async def create_bucket(req: BucketCreate):
     return {"name": req.name}
 
 
-@app.delete("/buckets/{bucket}")
+@_router.delete("/buckets/{bucket}")
 async def delete_bucket(bucket: str):
     with get_conn() as conn:
         if not conn.execute("SELECT name FROM buckets WHERE name = ?", (bucket,)).fetchone():
@@ -222,7 +237,7 @@ def _ensure_bucket(bucket: str) -> None:
 # --- Objects ---
 
 
-@app.get("/buckets/{bucket}/objects")
+@_router.get("/buckets/{bucket}/objects")
 async def list_objects(
     bucket: str,
     prefix: Optional[str] = None,
@@ -250,7 +265,7 @@ async def list_objects(
     return {"bucket": bucket, "total": total, "objects": [dict(r) for r in rows]}
 
 
-@app.put("/buckets/{bucket}/objects/{key:path}", status_code=201)
+@_router.put("/buckets/{bucket}/objects/{key:path}", status_code=201)
 async def upload_object(bucket: str, key: str, file: UploadFile = File(...)):
     _ensure_bucket(bucket)
     data = await file.read()
@@ -278,7 +293,7 @@ async def upload_object(bucket: str, key: str, file: UploadFile = File(...)):
     }
 
 
-@app.get("/buckets/{bucket}/objects/{key:path}/meta")
+@_router.get("/buckets/{bucket}/objects/{key:path}/meta")
 async def get_object_meta(bucket: str, key: str):
     _ensure_bucket(bucket)
     with get_conn() as conn:
@@ -290,7 +305,7 @@ async def get_object_meta(bucket: str, key: str):
     return dict(row)
 
 
-@app.get("/buckets/{bucket}/objects/{key:path}")
+@_router.get("/buckets/{bucket}/objects/{key:path}")
 async def download_object(bucket: str, key: str):
     _ensure_bucket(bucket)
     with get_conn() as conn:
@@ -305,7 +320,7 @@ async def download_object(bucket: str, key: str):
     return FileResponse(str(path), media_type=row["content_type"], headers={"ETag": row["etag"]})
 
 
-@app.delete("/buckets/{bucket}/objects/{key:path}")
+@_router.delete("/buckets/{bucket}/objects/{key:path}")
 async def delete_object(bucket: str, key: str):
     _ensure_bucket(bucket)
     with get_conn() as conn:
@@ -322,7 +337,7 @@ async def delete_object(bucket: str, key: str):
     return {"deleted": key, "bucket": bucket}
 
 
-@app.post("/buckets/{bucket}/objects/{key:path}/token")
+@_router.post("/buckets/{bucket}/objects/{key:path}/token")
 async def create_download_token(bucket: str, key: str, ttl: int = Query(3600)):
     _ensure_bucket(bucket)
     with get_conn() as conn:
@@ -339,7 +354,7 @@ async def create_download_token(bucket: str, key: str, ttl: int = Query(3600)):
     return {"token": token, "expires_in": ttl}
 
 
-@app.get("/download/{token}")
+@_router.get("/download/{token}")
 async def download_via_token(token: str):
     now = time.time()
     with get_conn() as conn:
@@ -351,13 +366,16 @@ async def download_via_token(token: str):
     return await download_object(row["bucket"], row["key"])
 
 
-@app.get("/stats")
+@_router.get("/stats")
 async def storage_stats():
     with get_conn() as conn:
         by_bucket = conn.execute(
             "SELECT bucket, COUNT(*) as objects, SUM(size) as bytes FROM objects GROUP BY bucket"
         ).fetchall()
     return {"buckets": [dict(r) for r in by_bucket]}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

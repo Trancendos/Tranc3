@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -185,6 +185,21 @@ app.add_middleware(
 )
 
 
+
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 @app.get("/health")
 async def health():
     with get_conn() as conn:
@@ -214,7 +229,7 @@ async def health():
 # --- Topics ---
 
 
-@app.post("/topics", status_code=201)
+@_router.post("/topics", status_code=201)
 async def create_topic(req: TopicCreate):
     with get_conn() as conn:
         existing = conn.execute("SELECT name FROM topics WHERE name = ?", (req.name,)).fetchone()
@@ -228,14 +243,14 @@ async def create_topic(req: TopicCreate):
     return {"name": req.name, "description": req.description}
 
 
-@app.get("/topics")
+@_router.get("/topics")
 async def list_topics():
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM topics ORDER BY name").fetchall()
     return {"topics": [dict(r) for r in rows]}
 
 
-@app.delete("/topics/{topic}")
+@_router.delete("/topics/{topic}")
 async def delete_topic(topic: str):
     with get_conn() as conn:
         if not conn.execute("SELECT name FROM topics WHERE name = ?", (topic,)).fetchone():
@@ -255,7 +270,7 @@ def _ensure_topic(topic: str) -> None:
 # --- Publish ---
 
 
-@app.post("/topics/{topic}/publish", status_code=201)
+@_router.post("/topics/{topic}/publish", status_code=201)
 async def publish(topic: str, req: PublishIn):
     _ensure_topic(topic)
     now = time.time()
@@ -270,7 +285,7 @@ async def publish(topic: str, req: PublishIn):
     return {"id": msg_id, "topic": topic, "enqueued_at": now}
 
 
-@app.post("/topics/{topic}/publish/batch", status_code=201)
+@_router.post("/topics/{topic}/publish/batch", status_code=201)
 async def publish_batch(topic: str, req: BatchPublishIn):
     _ensure_topic(topic)
     now = time.time()
@@ -290,7 +305,7 @@ async def publish_batch(topic: str, req: BatchPublishIn):
 # --- Consume ---
 
 
-@app.get("/topics/{topic}/consume")
+@_router.get("/topics/{topic}/consume")
 async def consume(
     topic: str,
     consumer_id: str = Query(...),
@@ -328,7 +343,7 @@ async def consume(
     }
 
 
-@app.post("/topics/{topic}/ack/{message_id}")
+@_router.post("/topics/{topic}/ack/{message_id}")
 async def ack(topic: str, message_id: str):
     now = time.time()
     with get_conn() as conn:
@@ -348,7 +363,7 @@ async def ack(topic: str, message_id: str):
     return {"acked": message_id}
 
 
-@app.post("/topics/{topic}/nack/{message_id}")
+@_router.post("/topics/{topic}/nack/{message_id}")
 async def nack(topic: str, message_id: str):
     now = time.time()
     with get_conn() as conn:
@@ -375,7 +390,7 @@ async def nack(topic: str, message_id: str):
     return {"nacked": message_id}
 
 
-@app.get("/topics/{topic}/dead-letters")
+@_router.get("/topics/{topic}/dead-letters")
 async def dead_letters(topic: str, limit: int = Query(50, le=500)):
     _ensure_topic(topic)
     with get_conn() as conn:
@@ -386,7 +401,7 @@ async def dead_letters(topic: str, limit: int = Query(50, le=500)):
     return {"dead_letters": [dict(r) for r in rows]}
 
 
-@app.get("/topics/{topic}/stats")
+@_router.get("/topics/{topic}/stats")
 async def topic_stats(topic: str):
     _ensure_topic(topic)
     with get_conn() as conn:
@@ -409,6 +424,9 @@ async def topic_stats(topic: str):
         "acknowledged": acked,
         "dead_letters": dlq,
     }
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":
