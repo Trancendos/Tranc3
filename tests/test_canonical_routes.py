@@ -86,7 +86,6 @@ def client():
     ):
         from fastapi.testclient import TestClient
 
-        import api as _api_mod
         from api import app
         from auth import get_current_user
 
