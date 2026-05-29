@@ -777,6 +777,7 @@ class TestFullRequestFlow:
 class TestJITAccessManager:
     def _mgr(self, max_duration: int = 3600):
         from src.auth.zero_trust import JITAccessManager
+
         return JITAccessManager(max_duration_seconds=max_duration)
 
     def test_grant_returns_id(self):
@@ -815,15 +816,21 @@ class TestJITAccessManager:
 
     def test_duration_exceeds_max_raises(self):
         import pytest
+
         mgr = self._mgr(max_duration=300)
         with pytest.raises(ValueError):
-            mgr.grant(user_id="alice", path_pattern="/admin/*", granted_by="ops", duration_seconds=600)
+            mgr.grant(
+                user_id="alice", path_pattern="/admin/*", granted_by="ops", duration_seconds=600
+            )
 
     def test_zero_duration_raises(self):
         import pytest
+
         mgr = self._mgr()
         with pytest.raises(ValueError):
-            mgr.grant(user_id="alice", path_pattern="/admin/*", granted_by="ops", duration_seconds=0)
+            mgr.grant(
+                user_id="alice", path_pattern="/admin/*", granted_by="ops", duration_seconds=0
+            )
 
     def test_list_grants_empty(self):
         mgr = self._mgr()
@@ -847,8 +854,11 @@ class TestJITAccessManager:
     def test_get_grant_metadata(self):
         mgr = self._mgr()
         gid = mgr.grant(
-            user_id="alice", path_pattern="/admin/*", granted_by="sre",
-            duration_seconds=300, reason="incident-001",
+            user_id="alice",
+            path_pattern="/admin/*",
+            granted_by="sre",
+            duration_seconds=300,
+            reason="incident-001",
         )
         info = mgr.get_grant(gid)
         assert info is not None
@@ -867,6 +877,7 @@ class TestJITAccessManager:
 
     def test_get_jit_manager_singleton(self):
         from src.auth.zero_trust import get_jit_manager
+
         m1 = get_jit_manager()
         m2 = get_jit_manager()
         assert m1 is m2

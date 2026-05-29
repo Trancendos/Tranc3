@@ -115,10 +115,18 @@ class RBACMiddleware(BaseHTTPMiddleware):
     dependency still works independently — this middleware is additive.
     """
 
-    _PUBLIC_PREFIXES = frozenset({
-        "/health", "/ready", "/docs", "/openapi", "/redoc",
-        "/auth/register", "/auth/token", "/mcp/health",
-    })
+    _PUBLIC_PREFIXES = frozenset(
+        {
+            "/health",
+            "/ready",
+            "/docs",
+            "/openapi",
+            "/redoc",
+            "/auth/register",
+            "/auth/token",
+            "/mcp/health",
+        }
+    )
 
     async def dispatch(self, request: Request, call_next) -> Response:
         path = request.url.path

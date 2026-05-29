@@ -48,7 +48,7 @@ class KBPage:
     title: str
     content: str
     tags: List[str] = field(default_factory=list)
-    source: str = "manual"          # "manual" | "agent" | "ingestion" | "dream"
+    source: str = "manual"  # "manual" | "agent" | "ingestion" | "dream"
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -68,7 +68,7 @@ class KBLink:
 
     source_id: str
     target_id: str
-    relation: str = "mentions"      # mentions | works_at | founded | part_of | …
+    relation: str = "mentions"  # mentions | works_at | founded | part_of | …
     weight: float = 1.0
     created_at: float = field(default_factory=time.time)
 
@@ -79,8 +79,8 @@ class SearchResult:
 
     page: KBPage
     score: float
-    matched_by: str                 # "bm25" | "vector" | "hybrid"
-    excerpt: str = ""               # short snippet from page content
+    matched_by: str  # "bm25" | "vector" | "hybrid"
+    excerpt: str = ""  # short snippet from page content
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +100,7 @@ class BM25Index:
     B = 0.75
 
     def __init__(self) -> None:
-        self._docs: Dict[str, List[str]] = {}      # id → token list
+        self._docs: Dict[str, List[str]] = {}  # id → token list
         self._df: Dict[str, int] = defaultdict(int)  # term → doc freq
         self._avgdl: float = 0.0
         self._dirty = False
@@ -158,7 +158,9 @@ class BM25Index:
             idf_den = self._df.get(tok, 0) + 0.5
             idf = math.log((idf_num / idf_den) + 1)
             tf = doc_tf.get(tok, 0)
-            tf_norm = tf * (self.K1 + 1) / (tf + self.K1 * (1 - self.B + self.B * dl / max(1, avgdl)))
+            tf_norm = (
+                tf * (self.K1 + 1) / (tf + self.K1 * (1 - self.B + self.B * dl / max(1, avgdl)))
+            )
             score += idf * tf_norm
         return score
 
@@ -182,8 +184,10 @@ _WIKILINK_RE = re.compile(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]")
 
 def _extract_wikilinks(content: str) -> List[Tuple[str, str]]:
     """Return list of (target_title, display_label) from [[target|label]] syntax."""
-    return [(m.group(1).strip(), (m.group(2) or m.group(1)).strip())
-            for m in _WIKILINK_RE.finditer(content)]
+    return [
+        (m.group(1).strip(), (m.group(2) or m.group(1)).strip())
+        for m in _WIKILINK_RE.finditer(content)
+    ]
 
 
 def _infer_relation(context: str, target: str) -> str:
@@ -248,6 +252,7 @@ class _KBStore:
 
     def upsert_page(self, page: KBPage) -> None:
         import json
+
         self._conn.execute(
             """INSERT INTO pages(id,title,content,tags,source,created_at,updated_at,metadata)
                VALUES(?,?,?,?,?,?,?,?)
@@ -255,8 +260,16 @@ class _KBStore:
                  title=excluded.title, content=excluded.content, tags=excluded.tags,
                  source=excluded.source, updated_at=excluded.updated_at,
                  metadata=excluded.metadata""",
-            (page.id, page.title, page.content, json.dumps(page.tags),
-             page.source, page.created_at, page.updated_at, json.dumps(page.metadata)),
+            (
+                page.id,
+                page.title,
+                page.content,
+                json.dumps(page.tags),
+                page.source,
+                page.created_at,
+                page.updated_at,
+                json.dumps(page.metadata),
+            ),
         )
         self._conn.commit()
 
@@ -272,8 +285,7 @@ class _KBStore:
 
     def delete_page(self, page_id: str) -> bool:
         c = self._conn.execute("DELETE FROM pages WHERE id=?", (page_id,))
-        self._conn.execute("DELETE FROM links WHERE source_id=? OR target_id=?",
-                           (page_id, page_id))
+        self._conn.execute("DELETE FROM links WHERE source_id=? OR target_id=?", (page_id, page_id))
         self._conn.commit()
         return c.rowcount > 0
 
@@ -290,6 +302,7 @@ class _KBStore:
     @staticmethod
     def _row_to_page(row: sqlite3.Row) -> KBPage:
         import json
+
         return KBPage(
             id=row["id"],
             title=row["title"],
@@ -314,18 +327,18 @@ class _KBStore:
         self._conn.commit()
 
     def get_links_from(self, source_id: str) -> List[KBLink]:
-        rows = self._conn.execute(
-            "SELECT * FROM links WHERE source_id=?", (source_id,)
-        ).fetchall()
-        return [KBLink(r["source_id"], r["target_id"], r["relation"],
-                       r["weight"], r["created_at"]) for r in rows]
+        rows = self._conn.execute("SELECT * FROM links WHERE source_id=?", (source_id,)).fetchall()
+        return [
+            KBLink(r["source_id"], r["target_id"], r["relation"], r["weight"], r["created_at"])
+            for r in rows
+        ]
 
     def get_links_to(self, target_id: str) -> List[KBLink]:
-        rows = self._conn.execute(
-            "SELECT * FROM links WHERE target_id=?", (target_id,)
-        ).fetchall()
-        return [KBLink(r["source_id"], r["target_id"], r["relation"],
-                       r["weight"], r["created_at"]) for r in rows]
+        rows = self._conn.execute("SELECT * FROM links WHERE target_id=?", (target_id,)).fetchall()
+        return [
+            KBLink(r["source_id"], r["target_id"], r["relation"], r["weight"], r["created_at"])
+            for r in rows
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -380,7 +393,7 @@ class KnowledgeBrain:
         self._bm25 = BM25Index()
         self._dream_interval = dream_interval_s
         self._dream_task: Optional[asyncio.Task] = None
-        self._vector_store = None       # lazy — loaded on first vector search
+        self._vector_store = None  # lazy — loaded on first vector search
         self._lock = asyncio.Lock()
 
         # Rebuild BM25 from persisted pages
@@ -459,7 +472,9 @@ class KnowledgeBrain:
                 both = pid in bm25_ranked and pid in vector_ranked
                 matched_by = "hybrid" if both else ("bm25" if pid in bm25_ranked else "vector")
                 excerpt = page.content[:200].rstrip()
-                results.append(SearchResult(page=page, score=rrf_score, matched_by=matched_by, excerpt=excerpt))
+                results.append(
+                    SearchResult(page=page, score=rrf_score, matched_by=matched_by, excerpt=excerpt)
+                )
         return results
 
     async def _vector_query(self, query: str, top_k: int) -> List[str]:
@@ -475,6 +490,7 @@ class KnowledgeBrain:
     def _get_vector_store(self):
         if self._vector_store is None:
             from src.knowledge.vector_store import VectorStore  # type: ignore
+
             self._vector_store = VectorStore()
         return self._vector_store
 
@@ -524,7 +540,7 @@ class KnowledgeBrain:
 
         # Expand one hop
         expanded_ids: List[str] = []
-        for pid in seed_ids[:3]:                    # only top-3 seeds to avoid explosion
+        for pid in seed_ids[:3]:  # only top-3 seeds to avoid explosion
             for link in self._store.get_links_from(pid):
                 if link.target_id not in seen:
                     seen.add(link.target_id)
@@ -539,8 +555,9 @@ class KnowledgeBrain:
             tokens = re.findall(r"\b[a-z]{2,}\b", query.lower())
             bm25_score = self._bm25.score(tokens, pid) if tokens else 0.0
             if bm25_score > 0:
-                expanded_results.append(SearchResult(page=page, score=bm25_score * 0.7,
-                                                      matched_by="graph_expanded"))
+                expanded_results.append(
+                    SearchResult(page=page, score=bm25_score * 0.7, matched_by="graph_expanded")
+                )
 
         combined = initial + expanded_results
         combined.sort(key=lambda r: r.score, reverse=True)
@@ -763,7 +780,9 @@ class KnowledgeBrain:
 
             logger.info(
                 "PageRank computed for %d pages (top: %.6f, bottom: %.6f)",
-                n, max(scores), min(scores),
+                n,
+                max(scores),
+                min(scores),
             )
             return result
 
@@ -804,7 +823,7 @@ class KnowledgeBrain:
         return {
             "page_count": page_count,
             "link_count": link_count,
-            "total_pages": page_count,   # legacy alias
+            "total_pages": page_count,  # legacy alias
             "bm25_indexed": len(self._bm25._docs),
             "dream_interval_s": self._dream_interval,
             "dream_running": bool(self._dream_task and not self._dream_task.done()),
@@ -828,10 +847,10 @@ def _parse_markdown(content: str, fallback_title: str) -> Tuple[str, str, List[s
     m = _FM_RE.match(content)
     if m:
         fm_block = m.group(1)
-        body = content[m.end():]
+        body = content[m.end() :]
         for line in fm_block.splitlines():
             if line.startswith("title:"):
-                title = line.split(":", 1)[1].strip().strip('"\'')
+                title = line.split(":", 1)[1].strip().strip("\"'")
             elif line.startswith("tags:"):
                 raw = line.split(":", 1)[1].strip()
                 tags = [t.strip().strip("\"'") for t in raw.strip("[]").split(",") if t.strip()]

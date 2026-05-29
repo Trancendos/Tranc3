@@ -56,6 +56,13 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
+# Phase 22.4: Dimensional Services
+from Dimensional.dimensionals import (
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
+)
+
 # Phase 22: Infinity Ecosystem security
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
 from Dimensional.infinity.nomenclature import (
@@ -74,13 +81,6 @@ from Dimensional.infinity.rbac import RBACEngine
 from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     get_sentinel_station,
-)
-
-# Phase 22.4: Dimensional Services
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
 )
 
 # Phase 22.6: Smart Adaptive Intelligence
@@ -410,16 +410,16 @@ async def call_auth_service(method: str, path: str, json_data: dict | None = Non
                 raise HTTPException(status_code=response.status_code, detail=error_detail)
 
             return response.json()
-    except httpx.ConnectError:
+    except httpx.ConnectError as e:
         raise HTTPException(
             status_code=503,
             detail="Infinity Auth service unavailable. Please try again later.",
-        )
-    except httpx.TimeoutException:
+        ) from e
+    except httpx.TimeoutException as e:
         raise HTTPException(
             status_code=504,
             detail="Infinity Auth service timeout. Please try again later.",
-        )
+        ) from e
 
 
 # ---------------------------------------------------------------------------

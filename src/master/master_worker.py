@@ -169,7 +169,9 @@ class MasterWorker:
                 if sc.hours:
                     kwargs["hours"] = sc.hours
                 if not kwargs:
-                    logger.warning("Task '%s': interval schedule missing time unit — skipping.", task.name)
+                    logger.warning(
+                        "Task '%s': interval schedule missing time unit — skipping.", task.name
+                    )
                     return
                 self._scheduler.add_job(
                     self._scheduled_run,
@@ -232,7 +234,9 @@ class MasterWorker:
         self._executions[execution.execution_id] = execution
         execution.status = "running"
 
-        await self._emit("task.started", {"execution_id": execution.execution_id, "task": task.name})
+        await self._emit(
+            "task.started", {"execution_id": execution.execution_id, "task": task.name}
+        )
         logger.info("MasterWorker: executing task '%s' (%s).", task.name, execution.execution_id)
 
         try:
@@ -326,6 +330,7 @@ class MasterWorker:
     async def _emit(self, event: str, data: Any) -> None:
         try:
             from src.workflow.executor import event_bus
+
             await event_bus.publish(event, data)
         except Exception:  # noqa: S110
             pass  # EventBus is optional — never block on it

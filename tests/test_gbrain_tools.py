@@ -11,7 +11,6 @@ Validates:
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -26,7 +25,6 @@ from src.mcp.spark_gbrain_tools import (
     _handle_gbrain_stats,
     register_gbrain_tools,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -170,7 +168,7 @@ class TestHandleGBrainAddEdge:
         """Verify default relation is injected when not provided."""
         with patch("src.mcp.spark_gbrain_tools._gbrain_post", new_callable=AsyncMock) as mock_post:
             mock_post.return_value = {"edge_id": "e1", "ok": True}
-            result = await _handle_gbrain_add_edge({"source_id": "a", "target_id": "b"})
+            await _handle_gbrain_add_edge({"source_id": "a", "target_id": "b"})
             call_payload = mock_post.call_args[0][1]
             assert call_payload["relation"] == "related_to"
             assert call_payload["weight"] == 1.0

@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Path, Query
-from fastapi.responses import Response, JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from src.apimarket.marketplace import AuthType, ConnectorStatus, get_marketplace
 

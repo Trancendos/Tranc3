@@ -7,12 +7,12 @@ grant/revoke), and the require_permission FastAPI dependency factory.
 
 No external dependencies required — pure Python, no CUDA, no torch.
 """
+
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Permission enum
@@ -504,7 +504,7 @@ class TestIntrospection:
 
 class TestGlobalSingleton:
     def test_rbac_manager_singleton_exists(self):
-        from src.auth.rbac import rbac_manager, RBACManager
+        from src.auth.rbac import RBACManager, rbac_manager
 
         assert isinstance(rbac_manager, RBACManager)
 
@@ -523,6 +523,7 @@ class TestRequirePermission:
     def test_require_permission_returns_depends(self):
         """require_permission() should return a FastAPI Depends object."""
         from fastapi.params import Depends
+
         from src.auth.rbac import require_permission
 
         dep = require_permission("admin:users")
@@ -536,6 +537,7 @@ class TestRequirePermission:
 
     def test_dependency_passes_for_authorized_user(self):
         import asyncio
+
         from src.auth.rbac import require_permission
 
         dep = require_permission("chat:basic")
@@ -548,7 +550,9 @@ class TestRequirePermission:
 
     def test_dependency_raises_403_for_unauthorized(self):
         import asyncio
+
         from fastapi import HTTPException
+
         from src.auth.rbac import require_permission
 
         dep = require_permission("admin:users")
@@ -561,7 +565,9 @@ class TestRequirePermission:
 
     def test_dependency_raises_401_for_no_user(self):
         import asyncio
+
         from fastapi import HTTPException
+
         from src.auth.rbac import require_permission
 
         dep = require_permission("chat:basic")
@@ -575,6 +581,7 @@ class TestRequirePermission:
 
     def test_dependency_superadmin_passes_any_permission(self):
         import asyncio
+
         from src.auth.rbac import require_permission
 
         dep = require_permission("platform:shutdown")
@@ -585,7 +592,9 @@ class TestRequirePermission:
 
     def test_dependency_403_detail_mentions_permission(self):
         import asyncio
+
         from fastapi import HTTPException
+
         from src.auth.rbac import require_permission
 
         perm = "knowledge:admin"
@@ -600,6 +609,7 @@ class TestRequirePermission:
     def test_dependency_falls_back_to_single_role_key(self):
         """Legacy 'role' key (singular) should also work."""
         import asyncio
+
         from src.auth.rbac import require_permission
 
         dep = require_permission("mcp:call")

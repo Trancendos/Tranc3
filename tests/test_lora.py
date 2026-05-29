@@ -14,10 +14,11 @@ Covers:
   - LoRASaveLoad: round-trip save/load
   - LoRATrainer: train() runs, returns metrics (mocked model + loader)
 """
+
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -29,6 +30,7 @@ nn = torch.nn
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _small_linear(in_f: int = 16, out_f: int = 32, bias: bool = True) -> "nn.Linear":
     lin = nn.Linear(in_f, out_f, bias=bias)
     nn.init.normal_(lin.weight)
@@ -37,6 +39,7 @@ def _small_linear(in_f: int = 16, out_f: int = 32, bias: bool = True) -> "nn.Lin
 
 def _tiny_model() -> "nn.Module":
     """A tiny 2-layer MLP with named linear layers to test apply_lora."""
+
     class TinyMLP(nn.Module):
         def __init__(self):
             super().__init__()
@@ -59,6 +62,7 @@ def _tiny_model() -> "nn.Module":
 class TestLoRAConfig:
     def _cfg(self, **kwargs):
         from src.training.lora import LoRAConfig
+
         return LoRAConfig(**kwargs)
 
     def test_default_scale(self):
@@ -86,6 +90,7 @@ class TestLoRAConfig:
 class TestLoRALinear:
     def _make(self, rank: int = 4, alpha: float = 8.0, bias: bool = True, dora: bool = False):
         from src.training.lora import LoRALinear
+
         base = _small_linear(bias=bias)
         return LoRALinear(base, rank=rank, alpha=alpha, use_dora=dora)
 
@@ -98,6 +103,7 @@ class TestLoRALinear:
     def test_zero_init_invariant(self):
         """lora_B is zeros at init → adapter contribution is 0 → output equals base."""
         from src.training.lora import LoRALinear
+
         base = _small_linear()
         lora = LoRALinear(base, rank=4, alpha=8.0)
         x = torch.randn(3, 16)
@@ -116,6 +122,7 @@ class TestLoRALinear:
 
     def test_merge_returns_plain_linear(self):
         from src.training.lora import LoRALinear
+
         base = _small_linear()
         lora = LoRALinear(base, rank=4, alpha=8.0)
         merged = lora.merge()
@@ -125,6 +132,7 @@ class TestLoRALinear:
     def test_merge_output_matches(self):
         """Merged linear output equals LoRA output (within fp32 tolerance)."""
         from src.training.lora import LoRALinear
+
         base = _small_linear()
         lora = LoRALinear(base, rank=4, alpha=8.0)
         # Randomly set lora_B so adapter actually contributes something
@@ -168,6 +176,7 @@ class TestApplyLora:
 
     def test_apply_replaces_target_layers(self):
         from src.training.lora import LoRAConfig, LoRALinear, apply_lora
+
         model = self._model()
         cfg = LoRAConfig(rank=4, alpha=8.0, target_modules=["q_proj", "v_proj", "out_proj"])
         n = apply_lora(model, cfg, verbose=False)
@@ -178,6 +187,7 @@ class TestApplyLora:
 
     def test_non_target_layer_unchanged(self):
         from src.training.lora import LoRAConfig, LoRALinear, apply_lora
+
         model = self._model()
         cfg = LoRAConfig(rank=4, alpha=8.0, target_modules=["q_proj", "v_proj", "out_proj"])
         apply_lora(model, cfg, verbose=False)
@@ -187,6 +197,7 @@ class TestApplyLora:
 
     def test_base_weights_frozen(self):
         from src.training.lora import LoRAConfig, apply_lora
+
         model = self._model()
         cfg = LoRAConfig(rank=4, alpha=8.0, target_modules=["q_proj", "v_proj", "out_proj"])
         apply_lora(model, cfg, verbose=False)
@@ -199,6 +210,7 @@ class TestApplyLora:
 
     def test_trainable_count_smaller_than_total(self):
         from src.training.lora import LoRAConfig, apply_lora, lora_trainable_params
+
         model = self._model()
         cfg = LoRAConfig(rank=4, alpha=8.0, target_modules=["q_proj", "v_proj", "out_proj"])
         apply_lora(model, cfg, verbose=False)
@@ -208,6 +220,7 @@ class TestApplyLora:
 
     def test_apply_returns_count(self):
         from src.training.lora import LoRAConfig, apply_lora
+
         model = self._model()
         cfg = LoRAConfig(rank=4, target_modules=["q_proj"])
         n = apply_lora(model, cfg, verbose=False)
@@ -215,7 +228,8 @@ class TestApplyLora:
 
     def test_idempotent_double_apply(self):
         """Applying LoRA twice should not double-wrap."""
-        from src.training.lora import LoRAConfig, LoRALinear, apply_lora
+        from src.training.lora import LoRAConfig, apply_lora
+
         model = self._model()
         cfg = LoRAConfig(rank=4, target_modules=["q_proj"])
         apply_lora(model, cfg, verbose=False)
@@ -226,6 +240,7 @@ class TestApplyLora:
 class TestRemoveLora:
     def test_remove_restores_plain_linear(self):
         from src.training.lora import LoRAConfig, LoRALinear, apply_lora, remove_lora
+
         model = _tiny_model()
         cfg = LoRAConfig(rank=4, target_modules=["q_proj", "v_proj"])
         apply_lora(model, cfg, verbose=False)
@@ -235,6 +250,7 @@ class TestRemoveLora:
 
     def test_remove_unfreezes_params(self):
         from src.training.lora import LoRAConfig, apply_lora, remove_lora
+
         model = _tiny_model()
         cfg = LoRAConfig(rank=4, target_modules=["q_proj"])
         apply_lora(model, cfg, verbose=False)
@@ -248,6 +264,7 @@ class TestMergeLora:
     def test_merge_output_identical(self):
         """After merge, model output must match pre-merge output."""
         from src.training.lora import LoRAConfig, apply_lora, merge_lora
+
         model = _tiny_model()
         cfg = LoRAConfig(rank=4, alpha=8.0, target_modules=["q_proj", "v_proj", "out_proj"])
         apply_lora(model, cfg, verbose=False)
@@ -265,6 +282,7 @@ class TestMergeLora:
 
     def test_merge_returns_count(self):
         from src.training.lora import LoRAConfig, apply_lora, merge_lora
+
         model = _tiny_model()
         cfg = LoRAConfig(rank=4, target_modules=["q_proj", "v_proj", "out_proj"])
         apply_lora(model, cfg, verbose=False)
@@ -280,6 +298,7 @@ class TestMergeLora:
 class TestLoraStateDict:
     def test_only_trainable_params(self):
         from src.training.lora import LoRAConfig, apply_lora, lora_state_dict
+
         model = _tiny_model()
         cfg = LoRAConfig(rank=4, target_modules=["q_proj", "v_proj"])
         apply_lora(model, cfg, verbose=False)
@@ -289,6 +308,7 @@ class TestLoraStateDict:
 
     def test_nonempty_after_apply(self):
         from src.training.lora import LoRAConfig, apply_lora, lora_state_dict
+
         model = _tiny_model()
         cfg = LoRAConfig(rank=4, target_modules=["q_proj"])
         apply_lora(model, cfg, verbose=False)
@@ -304,6 +324,7 @@ class TestLoraStateDict:
 class TestLoRASaveLoad:
     def test_save_creates_file(self, tmp_path):
         from src.training.lora import LoRAConfig, LoRASaveLoad, apply_lora
+
         model = _tiny_model()
         cfg = LoRAConfig(rank=4, target_modules=["q_proj"])
         apply_lora(model, cfg, verbose=False)
@@ -315,6 +336,7 @@ class TestLoRASaveLoad:
     def test_load_round_trip(self, tmp_path):
         """Save adapter, modify weights, load back — verify weights restored."""
         from src.training.lora import LoRAConfig, LoRASaveLoad, apply_lora
+
         model_a = _tiny_model()
         model_b = _tiny_model()
         cfg = LoRAConfig(rank=4, target_modules=["q_proj", "v_proj"])
@@ -332,9 +354,7 @@ class TestLoRASaveLoad:
         LoRASaveLoad.load(model_b, out)
 
         # After loading, model_b lora_B should match model_a
-        for (na, pa), (nb, pb) in zip(
-            model_a.named_parameters(), model_b.named_parameters()
-        ):
+        for (na, pa), (nb, pb) in zip(model_a.named_parameters(), model_b.named_parameters()):
             if "lora_B" in na:
                 assert torch.allclose(pa, pb, atol=1e-6), f"Mismatch in {na}"
 
@@ -358,6 +378,7 @@ class TestLoRATrainer:
 
     def _stub_model(self):
         """Tiny model that returns (logits, scalar_loss)."""
+
         class StubModel(nn.Module):
             def __init__(self):
                 super().__init__()
@@ -432,7 +453,7 @@ class TestLoRATrainer:
             total_steps=1,
             checkpoint_dir=str(tmp_path / "ckpts"),
         )
-        trainer = LoRATrainer(model, loader, cfg, device=torch.device("cpu"))
+        LoRATrainer(model, loader, cfg, device=torch.device("cpu"))
         trainable, total = lora_trainable_params(model)
         assert trainable < total
         assert trainable > 0
@@ -467,6 +488,7 @@ class TestEvaluateCheckpoint:
     def test_returns_tuple_of_two(self, tmp_path):
         """evaluate_checkpoint should return a (base_result, lora_result) tuple."""
         import asyncio
+
         from src.training.lora import evaluate_checkpoint
 
         model = self._stub_model()
@@ -485,6 +507,7 @@ class TestEvaluateCheckpoint:
     def test_base_result_has_scores(self, tmp_path):
         """base_result should expose bleu and rouge_l attributes."""
         import asyncio
+
         from src.training.lora import evaluate_checkpoint
 
         model = self._stub_model()
@@ -497,11 +520,16 @@ class TestEvaluateCheckpoint:
                 results_dir=str(tmp_path / "results"),
             )
         )
-        assert hasattr(base_result, "bleu") or hasattr(base_result, "avg_bleu") or isinstance(base_result, dict)
+        assert (
+            hasattr(base_result, "bleu")
+            or hasattr(base_result, "avg_bleu")
+            or isinstance(base_result, dict)
+        )
 
     def test_lora_result_has_scores(self, tmp_path):
         """lora_result should expose the same score shape as base_result."""
         import asyncio
+
         from src.training.lora import evaluate_checkpoint
 
         model = self._stub_model()
@@ -519,6 +547,7 @@ class TestEvaluateCheckpoint:
     def test_empty_samples_does_not_raise(self, tmp_path):
         """evaluate_checkpoint with empty sample list should not raise."""
         import asyncio
+
         from src.training.lora import evaluate_checkpoint
 
         model = self._stub_model()
@@ -536,6 +565,7 @@ class TestEvaluateCheckpoint:
     def test_missing_checkpoint_gracefully_handled(self, tmp_path):
         """Missing .pt file should not crash — lora_gen falls back gracefully."""
         import asyncio
+
         from src.training.lora import evaluate_checkpoint
 
         model = self._stub_model()
@@ -555,6 +585,7 @@ class TestEvaluateCheckpoint:
     def test_results_dir_created(self, tmp_path):
         """evaluate_checkpoint should create results_dir if it doesn't exist."""
         import asyncio
+
         from src.training.lora import evaluate_checkpoint
 
         results_dir = tmp_path / "deep" / "nested" / "results"
@@ -573,8 +604,8 @@ class TestEvaluateCheckpoint:
 
     def test_default_eval_name(self, tmp_path):
         """evaluate_checkpoint uses 'lora-eval' as default eval_name."""
-        import asyncio
         import inspect
+
         from src.training.lora import evaluate_checkpoint
 
         sig = inspect.signature(evaluate_checkpoint)
@@ -582,8 +613,8 @@ class TestEvaluateCheckpoint:
 
     def test_default_results_dir(self, tmp_path):
         """evaluate_checkpoint uses 'data/eval_results' as default results_dir."""
-        import asyncio
         import inspect
+
         from src.training.lora import evaluate_checkpoint
 
         sig = inspect.signature(evaluate_checkpoint)

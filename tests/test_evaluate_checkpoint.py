@@ -6,15 +6,12 @@ Runs in bootstrap mode: no CUDA, no real model weights, no torch dependency at
 the class level — only checked inside each test that needs it. EvalSuite is fully
 functional without heavy ML dependencies.
 """
+
 from __future__ import annotations
 
 import asyncio
 import inspect
-from pathlib import Path
 from unittest.mock import MagicMock
-
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -50,6 +47,7 @@ class TestEvaluateCheckpointSignature:
 
     def test_is_coroutine_function(self):
         import asyncio
+
         from src.training.eval_checkpoint import evaluate_checkpoint
 
         assert asyncio.iscoroutinefunction(evaluate_checkpoint)

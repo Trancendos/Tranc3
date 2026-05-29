@@ -9,8 +9,8 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import sqlite3
 import threading
 import uuid
@@ -205,6 +205,7 @@ async def delete_by_id(order_id: str):
 # Domain-specific endpoints
 # ---------------------------------------------------------------------------
 
+
 @app.get("/by-user/{user_id}")
 async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
     """List all orders placed by a specific user."""
@@ -239,7 +240,9 @@ async def ship_order(order_id: str):
     if not item:
         raise HTTPException(404, f"Not found: {order_id}")
     if item.get("status") != "confirmed":
-        raise HTTPException(409, f"Order must be confirmed before shipping, got '{item.get('status')}'")
+        raise HTTPException(
+            409, f"Order must be confirmed before shipping, got '{item.get('status')}'"
+        )
     db.update("order_id", order_id, {"status": "shipped"})
     return {"ok": True, "order_id": order_id, "status": "shipped"}
 
@@ -251,7 +254,9 @@ async def deliver_order(order_id: str):
     if not item:
         raise HTTPException(404, f"Not found: {order_id}")
     if item.get("status") != "shipped":
-        raise HTTPException(409, f"Order must be shipped before delivery, got '{item.get('status')}'")
+        raise HTTPException(
+            409, f"Order must be shipped before delivery, got '{item.get('status')}'"
+        )
     db.update("order_id", order_id, {"status": "delivered"})
     return {"ok": True, "order_id": order_id, "status": "delivered"}
 

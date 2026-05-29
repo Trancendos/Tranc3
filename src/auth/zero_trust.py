@@ -357,8 +357,8 @@ class JITAccessManager:
         jit.revoke(grant_id)
     """
 
-    DEFAULT_MAX_DURATION: int = 3600   # 1 hour hard cap
-    DEFAULT_TTL: int = 900             # 15 minutes default
+    DEFAULT_MAX_DURATION: int = 3600  # 1 hour hard cap
+    DEFAULT_TTL: int = 900  # 15 minutes default
 
     def __init__(self, max_duration_seconds: int = DEFAULT_MAX_DURATION) -> None:
         self._max_duration = max_duration_seconds
@@ -402,7 +402,12 @@ class JITAccessManager:
 
         self._logger.info(
             "JIT grant issued: user=%s path=%s ttl=%ds by=%s reason=%r id=%s",
-            user_id, path_pattern, duration_seconds, granted_by, reason, grant_id,
+            user_id,
+            path_pattern,
+            duration_seconds,
+            granted_by,
+            reason,
+            grant_id,
         )
         return grant_id
 
@@ -432,11 +437,7 @@ class JITAccessManager:
         with self._lock:
             self._purge_expired()
             for g in self._grants.values():
-                if (
-                    g.is_active
-                    and g.user_id == user_id
-                    and fnmatch.fnmatch(path, g.path_pattern)
-                ):
+                if g.is_active and g.user_id == user_id and fnmatch.fnmatch(path, g.path_pattern):
                     g.record_use()
                     return True
         return False

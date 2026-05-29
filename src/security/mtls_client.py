@@ -70,6 +70,7 @@ def _resolve_ca() -> Optional[str]:
 # Sync client (httpx.Client)
 # ---------------------------------------------------------------------------
 
+
 def get_mtls_client(**kwargs: Any):
     """
     Build a synchronous httpx.Client configured for internal mTLS.
@@ -116,6 +117,7 @@ def get_async_mtls_client(**kwargs: Any):
 # Convenience helpers (sync)
 # ---------------------------------------------------------------------------
 
+
 def internal_get(url: str, **kwargs: Any) -> Any:
     """Perform a GET request to an internal service using mTLS."""
     client = get_mtls_client()
@@ -137,6 +139,7 @@ def internal_post(url: str, **kwargs: Any) -> Any:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _build_ssl_kwargs() -> Dict[str, Any]:
     """Build SSL keyword arguments for httpx client construction."""
@@ -169,6 +172,7 @@ def _build_ssl_kwargs() -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Diagnostics
 # ---------------------------------------------------------------------------
+
 
 def mtls_status() -> Dict[str, Any]:
     """Return a status dict for health-check / observability use."""

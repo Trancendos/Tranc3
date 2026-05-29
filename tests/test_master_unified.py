@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -33,12 +32,14 @@ MINIMAL_STEP = {"bot": "monitor", "action": "ping", "params": {}, "timeout_secon
 def _task_with_bot(bot_type: str) -> dict:
     return {
         "name": f"{bot_type}-task",
-        "steps": [{
-            "bot": bot_type,
-            "action": "test",
-            "params": {},
-            "timeout_seconds": 5,
-        }],
+        "steps": [
+            {
+                "bot": bot_type,
+                "action": "test",
+                "params": {},
+                "timeout_seconds": 5,
+            }
+        ],
     }
 
 
@@ -110,8 +111,10 @@ class TestAdapterRegistry:
         from src.master.adapters.registry import AdapterRegistry
 
         reg = AdapterRegistry()
-        with patch.object(reg._tranc3, "is_available", return_value=False), \
-             patch.object(reg._src, "is_available", return_value=True):
+        with (
+            patch.object(reg._tranc3, "is_available", return_value=False),
+            patch.object(reg._src, "is_available", return_value=True),
+        ):
             adapter = reg.resolve("generate")
             assert adapter.name in ("src_workers", "stub")
 
@@ -198,9 +201,15 @@ class TestNanocodeAdapter:
         from src.master.adapters.nanocode_adapter import _NANOCODE_MODES
 
         expected = {
-            "compliance_metadata_missing", "stale_embedding",
-            "free_tier_approaching", "rate_limit_hit", "service_unreachable",
-            "config_drift", "memory_leak", "high_error_rate", "dependency_failed",
+            "compliance_metadata_missing",
+            "stale_embedding",
+            "free_tier_approaching",
+            "rate_limit_hit",
+            "service_unreachable",
+            "config_drift",
+            "memory_leak",
+            "high_error_rate",
+            "dependency_failed",
         }
         assert expected == _NANOCODE_MODES
 
@@ -267,9 +276,22 @@ class TestAeonMindAdapter:
     def test_aeonmind_expected_capabilities(self):
         from src.master.adapters.aeonmind_adapter import _AEONMIND_CAPABILITIES
 
-        for cap in ("translate", "classify", "extract", "validate", "transform",
-                    "notify", "log", "cache", "route", "filter", "enrich",
-                    "embed", "summarize", "generic"):
+        for cap in (
+            "translate",
+            "classify",
+            "extract",
+            "validate",
+            "transform",
+            "notify",
+            "log",
+            "cache",
+            "route",
+            "filter",
+            "enrich",
+            "embed",
+            "summarize",
+            "generic",
+        ):
             assert cap in _AEONMIND_CAPABILITIES
 
     @pytest.mark.asyncio
@@ -329,18 +351,42 @@ class TestExtendedTaskSchema:
     def test_all_core_bots_valid(self):
         from src.master.task_schema import TaskDefinition
 
-        for bot in ("generate", "embed", "emotion", "tokenize", "consciousness",
-                    "personality", "predict", "code", "memory", "monitor",
-                    "search", "summarise"):
+        for bot in (
+            "generate",
+            "embed",
+            "emotion",
+            "tokenize",
+            "consciousness",
+            "personality",
+            "predict",
+            "code",
+            "memory",
+            "monitor",
+            "search",
+            "summarise",
+        ):
             t = TaskDefinition.model_validate(_task_with_bot(bot))
             assert t.steps[0].bot == bot
 
     def test_all_aeonmind_capabilities_valid(self):
         from src.master.task_schema import TaskDefinition
 
-        for bot in ("aeonmind", "translate", "classify", "extract", "validate",
-                    "transform", "notify", "log", "cache", "route", "filter",
-                    "enrich", "summarize", "generic"):
+        for bot in (
+            "aeonmind",
+            "translate",
+            "classify",
+            "extract",
+            "validate",
+            "transform",
+            "notify",
+            "log",
+            "cache",
+            "route",
+            "filter",
+            "enrich",
+            "summarize",
+            "generic",
+        ):
             t = TaskDefinition.model_validate(_task_with_bot(bot))
             assert t.steps[0].bot == bot
 
@@ -353,9 +399,17 @@ class TestExtendedTaskSchema:
     def test_all_nanocode_failure_modes_valid(self):
         from src.master.task_schema import TaskDefinition
 
-        for bot in ("compliance_metadata_missing", "stale_embedding",
-                    "free_tier_approaching", "rate_limit_hit", "service_unreachable",
-                    "config_drift", "memory_leak", "high_error_rate", "dependency_failed"):
+        for bot in (
+            "compliance_metadata_missing",
+            "stale_embedding",
+            "free_tier_approaching",
+            "rate_limit_hit",
+            "service_unreachable",
+            "config_drift",
+            "memory_leak",
+            "high_error_rate",
+            "dependency_failed",
+        ):
             t = TaskDefinition.model_validate(_task_with_bot(bot))
             assert t.steps[0].bot == bot
 
@@ -369,20 +423,49 @@ class TestExtendedTaskSchema:
 
     def test_total_valid_bot_count(self):
         """Ensure we have at least 35 valid bot types across all 3 systems."""
-        from src.master.task_schema import TaskStep
 
         # Extract valid set from validator by triggering the code path
         from src.master.task_schema import TaskDefinition
+
         valid_count = 0
         # 12 core + 14 aeonmind (including root) + 10 nanocode (including root) = 36
         for bot in (
-            "generate", "embed", "emotion", "tokenize", "consciousness",
-            "personality", "predict", "code", "memory", "monitor", "search", "summarise",  # 12
-            "aeonmind", "translate", "classify", "extract", "validate", "transform",
-            "notify", "log", "cache", "route", "filter", "enrich", "summarize", "generic",  # 14
-            "nanocode", "compliance_metadata_missing", "stale_embedding",
-            "free_tier_approaching", "rate_limit_hit", "service_unreachable",
-            "config_drift", "memory_leak", "high_error_rate", "dependency_failed",  # 10
+            "generate",
+            "embed",
+            "emotion",
+            "tokenize",
+            "consciousness",
+            "personality",
+            "predict",
+            "code",
+            "memory",
+            "monitor",
+            "search",
+            "summarise",  # 12
+            "aeonmind",
+            "translate",
+            "classify",
+            "extract",
+            "validate",
+            "transform",
+            "notify",
+            "log",
+            "cache",
+            "route",
+            "filter",
+            "enrich",
+            "summarize",
+            "generic",  # 14
+            "nanocode",
+            "compliance_metadata_missing",
+            "stale_embedding",
+            "free_tier_approaching",
+            "rate_limit_hit",
+            "service_unreachable",
+            "config_drift",
+            "memory_leak",
+            "high_error_rate",
+            "dependency_failed",  # 10
         ):
             try:
                 TaskDefinition.model_validate(_task_with_bot(bot))
@@ -509,7 +592,6 @@ class TestYAMLRoundTrip:
 
     def test_mixed_bot_types_in_single_task(self, tmp_path: Path):
         from src.master.task_loader import TaskLoader
-        from src.master.task_schema import TaskDefinition
 
         task = {
             "name": "multi-bot-task",

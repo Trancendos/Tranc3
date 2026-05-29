@@ -2,7 +2,7 @@
 # Pydantic-settings based configuration with hot-reload support
 # Replaces the scattered os.getenv() calls across the codebase
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional
 
 from pydantic import ConfigDict, Field, field_validator
@@ -33,7 +33,7 @@ class TrainingConfig:
     weight_decay: float = 0.1
     batch_size: int = 8
     gradient_accumulation_steps: int = 4
-    grad_accum_steps: int = 4        # alias used by trainer
+    grad_accum_steps: int = 4  # alias used by trainer
     mixed_precision: bool = True
     num_epochs: int = 3
     warmup_steps: int = 500
@@ -57,6 +57,7 @@ class InferenceConfig:
     top_p: float = 0.9
     top_k: int = 50
     repetition_penalty: float = 1.1
+
 
 try:
     from pydantic_settings import BaseSettings

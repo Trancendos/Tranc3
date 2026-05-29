@@ -296,12 +296,10 @@ class A2ATransport(ABC):
     """Abstract base class for A2A transports."""
 
     @abstractmethod
-    async def send(self, message: A2AMessage, endpoint: str) -> A2AResponse:
-        ...
+    async def send(self, message: A2AMessage, endpoint: str) -> A2AResponse: ...
 
     @abstractmethod
-    async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]:
-        ...
+    async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]: ...
 
     async def start(self) -> None:  # noqa: B027 — optional lifecycle hook
         pass

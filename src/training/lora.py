@@ -60,6 +60,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import bitsandbytes as bnb  # type: ignore[import-untyped]
+
     _BNB_AVAILABLE = True
 except ImportError:
     _BNB_AVAILABLE = False
@@ -69,6 +70,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # LoRA configuration
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class LoRAConfig:
@@ -95,17 +97,23 @@ class LoRAConfig:
         Apply DoRA (Weight-Decomposed Low-Rank Adaptation) on top of LoRA.
         Improves adaptation at higher ranks.  Experimental.
     """
+
     rank: int = 8
     alpha: float = 16.0
     dropout: float = 0.05
-    target_modules: List[str] = field(default_factory=lambda: [
-        # AdvancedTransformerModel attention projections
-        "q_proj", "k_proj", "v_proj", "out_proj",
-        # Tranc3Model combined projection + FFN (selectively)
-        "qkv_proj",
-        # Feed-forward down projection (often most impactful)
-        "down_proj",
-    ])
+    target_modules: List[str] = field(
+        default_factory=lambda: [
+            # AdvancedTransformerModel attention projections
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "out_proj",
+            # Tranc3Model combined projection + FFN (selectively)
+            "qkv_proj",
+            # Feed-forward down projection (often most impactful)
+            "down_proj",
+        ]
+    )
     quantize_4bit: bool = False
     use_dora: bool = False
 
@@ -117,6 +125,7 @@ class LoRAConfig:
 # ---------------------------------------------------------------------------
 # LoRA linear layer
 # ---------------------------------------------------------------------------
+
 
 class LoRALinear(nn.Module):
     """A frozen ``nn.Linear`` augmented with trainable low-rank adapters.
@@ -170,15 +179,18 @@ class LoRALinear(nn.Module):
         base_out = F.linear(x, self.weight, self.bias)
 
         # Low-rank adapter: B @ A @ x * scale
-        lora_out = F.linear(
-            F.linear(self.lora_dropout(x), self.lora_A),
-            self.lora_B,
-        ) * self.scale
+        lora_out = (
+            F.linear(
+                F.linear(self.lora_dropout(x), self.lora_A),
+                self.lora_B,
+            )
+            * self.scale
+        )
 
         if self.use_dora:
             # DoRA: re-normalise base weight direction, scale by learned magnitude
             self.weight.norm(dim=1, keepdim=True).clamp(min=1e-8)
-            adapted_w = (self.weight + (self.lora_B @ self.lora_A) * self.scale)
+            adapted_w = self.weight + (self.lora_B @ self.lora_A) * self.scale
             adapted_norm = adapted_w.norm(dim=1, keepdim=True).clamp(min=1e-8)
             dora_out = F.linear(x, (self.dora_m / adapted_norm) * adapted_w, self.bias)
             return dora_out
@@ -205,6 +217,7 @@ class LoRALinear(nn.Module):
 # 4-bit quantised LoRA layer (QLoRA)
 # ---------------------------------------------------------------------------
 
+
 class QLoRALinear(nn.Module):
     """LoRA on top of a 4-bit quantised base weight (QLoRA).
 
@@ -212,12 +225,11 @@ class QLoRALinear(nn.Module):
     bitsandbytes is unavailable.
     """
 
-    def __new__(cls, base_linear: nn.Linear, rank: int, alpha: float,
-                dropout: float = 0.0, **kwargs) -> nn.Module:
+    def __new__(
+        cls, base_linear: nn.Linear, rank: int, alpha: float, dropout: float = 0.0, **kwargs
+    ) -> nn.Module:
         if not _BNB_AVAILABLE:
-            logger.warning(
-                "bitsandbytes not available — QLoRALinear falling back to LoRALinear"
-            )
+            logger.warning("bitsandbytes not available — QLoRALinear falling back to LoRALinear")
             return LoRALinear(base_linear, rank, alpha, dropout, **kwargs)
         instance = super().__new__(cls)
         return instance
@@ -251,32 +263,30 @@ class QLoRALinear(nn.Module):
             quant_type="nf4",
         )
         if base_linear.bias is not None:
-            self.base.bias = nn.Parameter(
-                base_linear.bias.data.clone(), requires_grad=False
-            )
+            self.base.bias = nn.Parameter(base_linear.bias.data.clone(), requires_grad=False)
 
         # Trainable LoRA adapters in bf16
-        self.lora_A = nn.Parameter(
-            torch.empty(rank, self.in_features, dtype=torch.bfloat16)
-        )
-        self.lora_B = nn.Parameter(
-            torch.zeros(self.out_features, rank, dtype=torch.bfloat16)
-        )
+        self.lora_A = nn.Parameter(torch.empty(rank, self.in_features, dtype=torch.bfloat16))
+        self.lora_B = nn.Parameter(torch.zeros(self.out_features, rank, dtype=torch.bfloat16))
         nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
         self.lora_dropout = nn.Dropout(p=dropout) if dropout > 0.0 else nn.Identity()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         base_out = self.base(x)
-        lora_out = F.linear(
-            F.linear(self.lora_dropout(x.to(torch.bfloat16)), self.lora_A),
-            self.lora_B,
-        ) * self.scale
+        lora_out = (
+            F.linear(
+                F.linear(self.lora_dropout(x.to(torch.bfloat16)), self.lora_A),
+                self.lora_B,
+            )
+            * self.scale
+        )
         return base_out + lora_out.to(base_out.dtype)
 
 
 # ---------------------------------------------------------------------------
 # Apply / remove / merge helpers
 # ---------------------------------------------------------------------------
+
 
 def _matches_target(name: str, target_modules: List[str]) -> bool:
     """Return True if *name* ends with any of the *target_modules* strings."""
@@ -332,8 +342,7 @@ def apply_lora(
         total = sum(p.numel() for p in model.parameters())
         pct = 100 * trainable / max(total, 1)
         logger.info(
-            "LoRA applied: %d layers wrapped (%s). "
-            "Trainable params: %s / %s (%.2f%%)",
+            "LoRA applied: %d layers wrapped (%s). Trainable params: %s / %s (%.2f%%)",
             len(replaced),
             ", ".join(replaced[:6]) + ("..." if len(replaced) > 6 else ""),
             f"{trainable:,}",
@@ -420,6 +429,7 @@ def lora_trainable_params(model: nn.Module) -> Tuple[int, int]:
 # Save / load helpers
 # ---------------------------------------------------------------------------
 
+
 class LoRASaveLoad:
     """Lightweight checkpoint utilities for LoRA adapters.
 
@@ -484,7 +494,9 @@ class LoRASaveLoad:
                 missing.append(k)
         logger.info(
             "LoRA adapter loaded from %s (missing=%d, unexpected=%d)",
-            path, len(missing), len(unexpected),
+            path,
+            len(missing),
+            len(unexpected),
         )
         return payload
 
@@ -492,6 +504,7 @@ class LoRASaveLoad:
 # ---------------------------------------------------------------------------
 # Gradient checkpointing utility
 # ---------------------------------------------------------------------------
+
 
 def enable_gradient_checkpointing(model: nn.Module) -> None:
     """Enable gradient checkpointing on transformer blocks to reduce VRAM.

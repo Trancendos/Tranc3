@@ -8,15 +8,14 @@ leader election, log replication, commitment, and cluster management.
 import asyncio
 
 from Dimensional.nexus.raft.raft_core import (
+    NexusCluster,
+    NexusClusterNode,
     RaftConfig,
     RaftLog,
     RaftLogEntry,
     RaftNode,
     RaftState,
-    NexusCluster,
-    NexusClusterNode,
 )
-
 
 # ──────────────────────────────────────────────
 # RaftConfig Tests

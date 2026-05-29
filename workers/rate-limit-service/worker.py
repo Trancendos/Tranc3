@@ -10,8 +10,8 @@ Zero-cost: In-memory token buckets (fast), SQLite for policy persistence.
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import sqlite3
 import threading
 import time
@@ -159,7 +159,12 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","), allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")

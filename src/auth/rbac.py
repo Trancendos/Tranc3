@@ -27,12 +27,12 @@ Usage
 
 Zero-cost: pure Python, no external dependencies.
 """
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import lru_cache
 from typing import Dict, FrozenSet, Optional, Set
 
 logger = logging.getLogger(__name__)
@@ -81,46 +81,54 @@ class Permission(str, Enum):
 # ---------------------------------------------------------------------------
 
 _ROLE_PERMISSIONS: Dict[str, FrozenSet[str]] = {
-    "guest": frozenset({
-        Permission.CHAT_BASIC,
-    }),
-    "user": frozenset({
-        Permission.CHAT_BASIC,
-        Permission.CHAT_ADVANCED,
-        Permission.EVAL_SCORE,
-        Permission.MCP_CALL,
-        Permission.KNOWLEDGE_READ,
-    }),
-    "operator": frozenset({
-        Permission.CHAT_BASIC,
-        Permission.CHAT_ADVANCED,
-        Permission.CHAT_UNLIMITED,
-        Permission.EVAL_SCORE,
-        Permission.EVAL_ADMIN,
-        Permission.MCP_CALL,
-        Permission.MCP_ADMIN,
-        Permission.KNOWLEDGE_READ,
-        Permission.KNOWLEDGE_WRITE,
-        Permission.PLATFORM_METRICS,
-    }),
-    "admin": frozenset({
-        Permission.CHAT_BASIC,
-        Permission.CHAT_ADVANCED,
-        Permission.CHAT_UNLIMITED,
-        Permission.EVAL_SCORE,
-        Permission.EVAL_ADMIN,
-        Permission.MCP_CALL,
-        Permission.MCP_ADMIN,
-        Permission.KNOWLEDGE_READ,
-        Permission.KNOWLEDGE_WRITE,
-        Permission.KNOWLEDGE_ADMIN,
-        Permission.ADMIN_USERS,
-        Permission.ADMIN_BILLING,
-        Permission.ADMIN_CONFIG,
-        Permission.ADMIN_AUDIT,
-        Permission.PLATFORM_METRICS,
-    }),
-    "superadmin": frozenset({p for p in Permission}),
+    "guest": frozenset(
+        {
+            Permission.CHAT_BASIC,
+        }
+    ),
+    "user": frozenset(
+        {
+            Permission.CHAT_BASIC,
+            Permission.CHAT_ADVANCED,
+            Permission.EVAL_SCORE,
+            Permission.MCP_CALL,
+            Permission.KNOWLEDGE_READ,
+        }
+    ),
+    "operator": frozenset(
+        {
+            Permission.CHAT_BASIC,
+            Permission.CHAT_ADVANCED,
+            Permission.CHAT_UNLIMITED,
+            Permission.EVAL_SCORE,
+            Permission.EVAL_ADMIN,
+            Permission.MCP_CALL,
+            Permission.MCP_ADMIN,
+            Permission.KNOWLEDGE_READ,
+            Permission.KNOWLEDGE_WRITE,
+            Permission.PLATFORM_METRICS,
+        }
+    ),
+    "admin": frozenset(
+        {
+            Permission.CHAT_BASIC,
+            Permission.CHAT_ADVANCED,
+            Permission.CHAT_UNLIMITED,
+            Permission.EVAL_SCORE,
+            Permission.EVAL_ADMIN,
+            Permission.MCP_CALL,
+            Permission.MCP_ADMIN,
+            Permission.KNOWLEDGE_READ,
+            Permission.KNOWLEDGE_WRITE,
+            Permission.KNOWLEDGE_ADMIN,
+            Permission.ADMIN_USERS,
+            Permission.ADMIN_BILLING,
+            Permission.ADMIN_CONFIG,
+            Permission.ADMIN_AUDIT,
+            Permission.PLATFORM_METRICS,
+        }
+    ),
+    "superadmin": frozenset(set(Permission)),
 }
 
 # Ordered role hierarchy (index = power level)

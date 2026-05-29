@@ -15,10 +15,10 @@ Zero-cost: FastAPI + SQLite cache + free public APIs, no paid deps.
 
 from __future__ import annotations
 
-import os
 import asyncio
 import logging
 import math
+import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -246,7 +246,12 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","), allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")

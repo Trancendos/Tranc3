@@ -45,9 +45,9 @@ class BenchmarkConfig:
     total_requests: int = 100
     warmup_requests: int = 10
     timeout_seconds: float = 30.0
-    think_time_ms: float = 0.0          # artificial delay between requests
+    think_time_ms: float = 0.0  # artificial delay between requests
     track_memory: bool = True
-    baseline_rps: Optional[float] = None    # regression threshold
+    baseline_rps: Optional[float] = None  # regression threshold
     baseline_p99_ms: Optional[float] = None
 
 
@@ -82,13 +82,13 @@ class BenchmarkResult:
     successful_requests: int = 0
     failed_requests: int = 0
     total_duration_s: float = 0.0
-    rps: float = 0.0                    # requests per second
+    rps: float = 0.0  # requests per second
     latency: LatencyStats = field(default_factory=LatencyStats)
     error_counts: Dict[str, int] = field(default_factory=dict)
     memory_peak_kb: float = 0.0
     memory_delta_kb: float = 0.0
-    rps_regression: bool = False        # True if RPS < baseline * 0.9
-    p99_regression: bool = False        # True if P99 > baseline * 1.1
+    rps_regression: bool = False  # True if RPS < baseline * 0.9
+    p99_regression: bool = False  # True if P99 > baseline * 1.1
     started_at: float = field(default_factory=time.time)
     finished_at: float = 0.0
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -178,7 +178,9 @@ class BenchmarkSuite:
         # Warm up
         if config.warmup_requests > 0:
             logger.debug("Warming up with %d requests", config.warmup_requests)
-            await self._run_batch(target, config.warmup_requests, 1, config.timeout_seconds, config.think_time_ms)
+            await self._run_batch(
+                target, config.warmup_requests, 1, config.timeout_seconds, config.think_time_ms
+            )
 
         # Memory baseline
         if config.track_memory:
@@ -247,6 +249,7 @@ class BenchmarkSuite:
 
     def compare(self, result_a: BenchmarkResult, result_b: BenchmarkResult) -> Dict[str, Any]:
         """Compare two benchmark results and return deltas."""
+
         def pct_change(a: float, b: float) -> float:
             if a == 0:
                 return 0.0
@@ -259,7 +262,8 @@ class BenchmarkSuite:
             "p50_delta_pct": pct_change(result_a.latency.median_ms, result_b.latency.median_ms),
             "p99_delta_pct": pct_change(result_a.latency.p99_ms, result_b.latency.p99_ms),
             "success_rate_delta": result_b.success_rate - result_a.success_rate,
-            "regression": result_b.rps < result_a.rps * 0.9 or result_b.latency.p99_ms > result_a.latency.p99_ms * 1.1,
+            "regression": result_b.rps < result_a.rps * 0.9
+            or result_b.latency.p99_ms > result_a.latency.p99_ms * 1.1,
         }
 
     # ------------------------------------------------------------------
@@ -339,6 +343,7 @@ class BenchmarkSuite:
     def _current_memory_kb() -> float:
         try:
             import resource
+
             return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         except Exception:
             return 0.0
@@ -365,8 +370,8 @@ async def benchmark_health_endpoint(
     """Benchmark the /health endpoint of the Tranc3 backend."""
     try:
         import httpx
-    except ImportError:
-        raise RuntimeError("httpx is required for HTTP benchmarks: pip install httpx")
+    except ImportError as e:
+        raise RuntimeError("httpx is required for HTTP benchmarks: pip install httpx") from e
 
     suite = BenchmarkSuite()
     client = httpx.AsyncClient(base_url=base_url, timeout=30.0)
@@ -393,8 +398,8 @@ async def benchmark_inference_endpoint(
     """Benchmark the /chat inference endpoint."""
     try:
         import httpx
-    except ImportError:
-        raise RuntimeError("httpx is required for HTTP benchmarks: pip install httpx")
+    except ImportError as e:
+        raise RuntimeError("httpx is required for HTTP benchmarks: pip install httpx") from e
 
     suite = BenchmarkSuite()
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}

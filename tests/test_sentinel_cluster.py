@@ -8,18 +8,17 @@ failover, partition handling, and cluster lifecycle.
 import asyncio
 
 from Dimensional.infinity.sentinel_cluster import (
+    ClusterConfig,
+    ClusterHealth,
+    ClusterPartition,
+    FailoverPolicy,
     NodeRole,
     NodeState,
-    ClusterHealth,
-    FailoverPolicy,
-    SentinelClusterNode,
-    ClusterPartition,
-    ClusterConfig,
     SentinelCluster,
     SentinelClusterManager,
+    SentinelClusterNode,
     get_sentinel_cluster_manager,
 )
-
 
 # ──────────────────────────────────────────────
 # SentinelClusterNode Tests

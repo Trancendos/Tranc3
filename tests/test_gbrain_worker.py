@@ -8,13 +8,13 @@ in-process without starting a live uvicorn server.
 All tests use an isolated SQLite database in a tmp_path so each test
 run starts with a clean state.
 """
+
 from __future__ import annotations
 
 import asyncio
 import importlib.util
 import sys
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -82,9 +82,7 @@ def _worker(tmp_path, monkeypatch):
 def _client(app):
     import httpx
 
-    return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    )
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
 
 # ---------------------------------------------------------------------------
@@ -228,9 +226,7 @@ class TestEdgeCreation:
     def _make_node(self, worker_mod, title="N"):
         async def _go():
             async with _client(worker_mod.app) as c:
-                r = await c.post(
-                    "/nodes", json={"title": title, "content": "c", "source": "s"}
-                )
+                r = await c.post("/nodes", json={"title": title, "content": "c", "source": "s"})
                 return r.json()["node_id"]
 
         return _run(_go())
@@ -435,7 +431,9 @@ class TestNeighbourhood:
     def test_neighbourhood_isolated_node_empty(self, _worker):
         async def _go():
             async with _client(_worker.app) as c:
-                r = await c.post("/nodes", json={"title": "Isolated", "content": "alone", "source": "s"})
+                r = await c.post(
+                    "/nodes", json={"title": "Isolated", "content": "alone", "source": "s"}
+                )
                 nid = r.json()["node_id"]
                 return (await c.get(f"/nodes/{nid}/neighbourhood")).json()
 
@@ -558,6 +556,7 @@ class TestNodeImportance:
 
     def test_importance_out_of_range_rejected(self, _worker):
         """Values outside [0, 1] must be rejected by pydantic validation."""
+
         async def _go():
             async with _client(_worker.app) as c:
                 r = await c.post(
@@ -571,6 +570,7 @@ class TestNodeImportance:
 
     def test_avg_importance_reflects_stored_values(self, _worker):
         """graph/stats avg_importance should reflect the stored importance values."""
+
         async def _go():
             async with _client(_worker.app) as c:
                 await c.post(
@@ -598,6 +598,7 @@ class TestSearchContract:
 
     def test_search_with_max_results_field(self, _worker):
         """Search must accept max_results (not top_k)."""
+
         async def _go():
             async with _client(_worker.app) as c:
                 return await c.post(
@@ -610,6 +611,7 @@ class TestSearchContract:
 
     def test_search_max_results_limits_output(self, _worker):
         """Inserting many nodes then capping via max_results should not exceed the cap."""
+
         async def _go():
             async with _client(_worker.app) as c:
                 for i in range(15):
@@ -621,7 +623,9 @@ class TestSearchContract:
                             "source": "s",
                         },
                     )
-                data = (await c.post("/search", json={"query": "knowledge", "max_results": 3})).json()
+                data = (
+                    await c.post("/search", json={"query": "knowledge", "max_results": 3})
+                ).json()
                 return data
 
         data = _run(_go())
@@ -630,6 +634,7 @@ class TestSearchContract:
 
     def test_search_with_use_graph_expansion_false(self, _worker):
         """use_graph_expansion=False must be accepted without error."""
+
         async def _go():
             async with _client(_worker.app) as c:
                 return await c.post(
@@ -642,6 +647,7 @@ class TestSearchContract:
 
     def test_search_graph_expansion_false_skips_bfs(self, _worker):
         """With use_graph_expansion=False, expanded_results must be empty."""
+
         async def _go():
             async with _client(_worker.app) as c:
                 r1 = await c.post(
@@ -672,11 +678,16 @@ class TestSearchContract:
 
     def test_search_graph_expansion_true_enables_bfs(self, _worker):
         """With use_graph_expansion=True (default), expanded_results may be non-empty."""
+
         async def _go():
             async with _client(_worker.app) as c:
                 r1 = await c.post(
                     "/nodes",
-                    json={"title": "Central Concept", "content": "central concept info", "source": "s"},
+                    json={
+                        "title": "Central Concept",
+                        "content": "central concept info",
+                        "source": "s",
+                    },
                 )
                 r2 = await c.post(
                     "/nodes",
@@ -703,6 +714,7 @@ class TestSearchContract:
 
     def test_search_missing_query_returns_422(self, _worker):
         """Omitting required query field must return 422 Unprocessable Entity."""
+
         async def _go():
             async with _client(_worker.app) as c:
                 return await c.post("/search", json={"max_results": 5})
@@ -712,6 +724,7 @@ class TestSearchContract:
 
     def test_search_default_max_results_is_ten(self, _worker):
         """Omitting max_results should default to 10 (no 422 error)."""
+
         async def _go():
             async with _client(_worker.app) as c:
                 return await c.post("/search", json={"query": "anything"})

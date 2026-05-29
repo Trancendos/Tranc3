@@ -9,8 +9,8 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import sqlite3
 import threading
 import uuid
@@ -204,6 +204,7 @@ async def delete_by_id(product_id: str):
 # ---------------------------------------------------------------------------
 # Domain-specific endpoints
 # ---------------------------------------------------------------------------
+
 
 @app.get("/active")
 async def list_active(limit: int = 50, offset: int = 0):
