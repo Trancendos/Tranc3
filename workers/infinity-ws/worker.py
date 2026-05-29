@@ -26,6 +26,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+import jwt as pyjwt
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -33,6 +34,15 @@ from pydantic import BaseModel
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.workers.infinity-ws")
+
+# ── Fail-fast on missing critical secrets ──────────────────────
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. The Nexus cannot authenticate WebSocket connections. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 
 # ── Models ───────────────────────────────────────────────────
 
@@ -223,31 +233,15 @@ class ConnectionManager:
 # ── JWT Verification (lightweight) ──────────────────────────
 
 
-def verify_token(token: str, secret: str = "change-me-in-production") -> dict[str, Any] | None:
-    """
-    Verify a JWT token and return its payload.
-    In production, use the full JWT auth module from src/auth/.
-    """
+def verify_token(token: str, secret: str = "") -> dict[str, Any] | None:
+    """Verify a JWT token signature and return its payload, or None on failure."""
+    key = secret or JWT_SECRET
     try:
-        import base64
-
-        parts = token.split(".")
-        if len(parts) != 3:
-            return None
-
-        # Decode payload (without full verification for now)
-        # Production: use python-jose or PyJWT
-        payload_b64 = parts[1]
-        # Add padding
-        padding = 4 - len(payload_b64) % 4
-        if padding != 4:
-            payload_b64 += "=" * padding
-
-        payload_bytes = base64.urlsafe_b64decode(payload_b64)
-        payload = json.loads(payload_bytes)
-
-        return payload
-    except Exception as e:
+        return pyjwt.decode(token, key, algorithms=["HS256"])
+    except pyjwt.ExpiredSignatureError:
+        logger.warning("token_verification_failed: token expired")
+        return None
+    except pyjwt.InvalidTokenError as e:
         logger.warning(
             "token_verification_failed: %s", sanitize_for_log(e)
         )  # codeql[py/cleartext-logging]
