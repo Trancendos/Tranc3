@@ -137,25 +137,20 @@ class TestVerifyToken:
         assert result is None
 
     def test_valid_jwt_structure(self):
-        import base64
+        import os
 
-        header = (
-            base64.urlsafe_b64encode(json.dumps({"alg": "HS256"}).encode()).decode().rstrip("=")
-        )
-        payload = (
-            base64.urlsafe_b64encode(json.dumps({"sub": "user123"}).encode()).decode().rstrip("=")
-        )
-        signature = "fakesig"
-        token = f"{header}.{payload}.{signature}"
+        import jwt as pyjwt
 
-        result = ws_mod.verify_token(token)
+        secret = os.environ.get("JWT_SECRET", "test-jwt-secret-for-unit-tests-00001")
+        token = pyjwt.encode({"sub": "user123"}, secret, algorithm="HS256")
+
+        result = ws_mod.verify_token(token, secret=secret)
         assert result is not None
         assert result.get("sub") == "user123"
 
     def test_malformed_base64(self):
         result = ws_mod.verify_token("a.b.c")
-        # May return None or partial payload depending on base64 decoding
-        assert isinstance(result, (dict, type(None)))
+        assert result is None
 
 
 class TestInfinityWSHTTP:

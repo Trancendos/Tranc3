@@ -21,6 +21,8 @@ for _var, _default in (
     ("JWT_SECRET", "tranc3-test-jwt-secret-do-not-use-in-production"),
     ("DATABASE_URL", "sqlite:///./test.db"),
     ("REDIS_URL", "redis://localhost:6379/0"),
+    ("MASTER_KEY_SEED", "tranc3-test-master-key-seed-do-not-use-in-prod"),
+    ("INTERNAL_SECRET", "tranc3-test-internal-secret-do-not-use-in-prod"),
 ):
     os.environ[_var] = os.environ.get(_var) or _default
 

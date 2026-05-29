@@ -13,5 +13,7 @@ for _var, _default in (
     ("JWT_SECRET", "test-jwt-secret-for-unit-tests-00001"),
     ("DATABASE_URL", "sqlite:///./test.db"),
     ("REDIS_URL", "redis://localhost:6379/0"),
+    ("MASTER_KEY_SEED", "test-master-key-seed-for-unit-tests-0001"),
+    ("INTERNAL_SECRET", "test-internal-secret-for-unit-tests-001"),
 ):
     os.environ[_var] = os.environ.get(_var) or _default
