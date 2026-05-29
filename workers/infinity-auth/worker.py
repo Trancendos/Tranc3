@@ -240,6 +240,15 @@ def verify_password(password: str, stored_hash: str) -> bool:
         return False
 
 
+def hash_backup_code(code: str) -> str:
+    """Hash a backup code with HMAC-SHA256 using the site key.
+
+    HMAC-SHA256 is site-specific so leaked hashes cannot be reversed via rainbow
+    tables, yet fast enough for one-time-use codes where bcrypt is overkill.
+    """
+    return hmac.new(JWT_SECRET.encode(), code.upper().encode(), hashlib.sha256).hexdigest()
+
+
 # ── JWT Token Management ───────────────────────────────────────────────────────
 
 
@@ -556,16 +565,17 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
             if not pyotp.TOTP(totp_secret).verify(code, valid_window=1):
                 raise HTTPException(status_code=403, detail="Invalid MFA code")
         else:
-            # Backup code recovery path — constant-time comparison, one-time use
-            stored_codes: list[str] = json.loads(row["backup_codes"] or "[]")
+            # Backup code recovery path — compare HMAC hashes, constant-time, one-time use
+            stored_hashes: list[str] = json.loads(row["backup_codes"] or "[]")
+            incoming_hash = hash_backup_code(code)
             matched_idx = next(
-                (i for i, c in enumerate(stored_codes) if hmac.compare_digest(c, code.upper())),
+                (i for i, h in enumerate(stored_hashes) if hmac.compare_digest(h, incoming_hash)),
                 None,
             )
             if matched_idx is None:
                 raise HTTPException(status_code=403, detail="Invalid MFA code")
-            # Consume the code so it cannot be reused
-            remaining = stored_codes[:matched_idx] + stored_codes[matched_idx + 1 :]
+            # Consume the hash so the code cannot be reused
+            remaining = stored_hashes[:matched_idx] + stored_hashes[matched_idx + 1 :]
             db.execute(
                 "UPDATE users SET backup_codes = ? WHERE user_id = ?",
                 (json.dumps(remaining), row["user_id"]),
@@ -718,12 +728,14 @@ async def setup_mfa(user: dict = Depends(get_current_user)):
     """Set up TOTP multi-factor authentication."""
     # Generate TOTP secret (Base32 so any RFC 6238 authenticator can import it)
     totp_secret = pyotp.random_base32()
-    backup_codes = [secrets.token_hex(4).upper() for _ in range(10)]
+    plaintext_codes = [secrets.token_hex(4).upper() for _ in range(10)]
+    # Hash before storage — HMAC-SHA256 with site key; plaintext only shown to user once
+    hashed_codes = [hash_backup_code(c) for c in plaintext_codes]
 
-    # Store TOTP secret
+    # Store TOTP secret and hashed backup codes
     db.execute(
         "UPDATE users SET totp_secret = ?, backup_codes = ? WHERE user_id = ?",
-        (totp_secret, json.dumps(backup_codes), user["sub"]),
+        (totp_secret, json.dumps(hashed_codes), user["sub"]),
     )
     db.commit()
 
@@ -734,7 +746,7 @@ async def setup_mfa(user: dict = Depends(get_current_user)):
     return TOTPSetupResponse(
         secret=totp_secret,
         qr_code_url=qr_url,
-        backup_codes=backup_codes,
+        backup_codes=plaintext_codes,  # plaintext shown once; DB holds hashes
     )
 
 
