@@ -3,7 +3,7 @@
 # These tools enforce proactive vulnerability management and compliance
 
 # === Dependency Vulnerability Scanning ===
-safety==3.2.11        # Scan Python dependencies for known CVEs
+safety==3.8.0         # Scan Python dependencies for known CVEs (3.8.0 accepts filelock>=3.16.1)
 pip-audit==2.8.0      # Audit pip packages against OSV/NVD databases
 bandit==1.8.3         # Security linter — finds common Python security issues
 
@@ -17,4 +17,11 @@ semgrep==1.114.0      # Pattern-based static analysis for security anti-patterns
 
 # === SBOM Generation ===
 # CycloneDX for Software Bill of Materials (compliance requirement)
-cyclonedx-bom==7.0.0  # Generate SBOM from requirements/pip environment
+cyclonedx-bom==7.3.0  # Generate SBOM from requirements/pip environment
+
+# === Transitive dependency overrides (security pins) ===
+# filelock: CVE-2025-68146, CVE-2026-22701 (fix: >=3.20.3) — transitive via semgrep
+# safety>=3.8.0 requires filelock>=3.16.1 so this pin is compatible
+filelock==3.20.3
+# lxml: PYSEC-2026-87 (fix: >=6.1.0) — resolved automatically by cyclonedx-bom>=7.3.0
+# (cyclonedx-python-lib>=10 requires lxml>=4,<7 which selects 6.1.1+; no explicit pin needed)
