@@ -215,7 +215,7 @@ class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
         context = self._zt.extract_context(headers)
         decision = self._zt.evaluate(context, path)
 
-        if getattr(decision, "blocked", False):
+        if decision.access_policy.value == "deny":
             reason = getattr(decision, "block_reason", "Zero Trust policy violation")
             logger.warning("ZeroTrust blocked request: path=%s reason=%s", path, reason)
             return _JSONResponse({"error": "Access denied", "reason": reason}, status_code=403)
