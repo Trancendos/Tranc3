@@ -9,6 +9,7 @@ Zero-cost: FastAPI + SQLite, asyncio background loop for visibility restore.
 """
 
 from __future__ import annotations
+import os
 
 import asyncio
 import json

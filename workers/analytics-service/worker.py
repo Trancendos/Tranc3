@@ -9,6 +9,7 @@ Zero-cost: FastAPI + SQLite (FTS5 for event search), no external deps.
 """
 
 from __future__ import annotations
+import os
 
 import json
 import logging

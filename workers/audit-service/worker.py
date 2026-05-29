@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite (PRAGMA synchronous=FULL), no external deps.
 """
 
 from __future__ import annotations
+import os
 
 import hashlib
 import json

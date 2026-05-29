@@ -10,6 +10,7 @@ Zero-cost: All data stored in SQLite, no external metrics services required.
 """
 
 from __future__ import annotations
+import os
 
 import json
 import logging

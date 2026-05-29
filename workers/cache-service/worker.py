@@ -9,6 +9,7 @@ Zero-cost: In-memory dict (fast) + SQLite (persistent on restart), no Redis need
 """
 
 from __future__ import annotations
+import os
 
 import asyncio
 import json
