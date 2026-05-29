@@ -306,7 +306,9 @@ class TestInfinityBridgeWorker:
     def test_connect_user(self):
         """POST /users/connect creates a user context."""
         c = _client(_bridge_mod)
-        r = c.post("/users/connect", params={"user_id": "test-user-001", "location": "infinity_portal"})
+        r = c.post(
+            "/users/connect", params={"user_id": "test-user-001", "location": "infinity_portal"}
+        )
         assert r.status_code == 200
         data = r.json()
         assert data["user_id"] == "test-user-001"
