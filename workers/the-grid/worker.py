@@ -476,7 +476,6 @@ app.add_middleware(
 )
 
 
-
 _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 

@@ -156,8 +156,6 @@ app.add_middleware(
 )
 
 
-
-
 _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 
@@ -171,6 +169,8 @@ async def require_internal_auth(
 
 
 _router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
+
 @app.get("/health")
 async def health():
     with get_conn() as conn:
