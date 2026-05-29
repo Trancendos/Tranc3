@@ -17,13 +17,13 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
-from ..core.definitions import SentinelChannel, AiComplex
+from ..core.definitions import AiComplex, SentinelChannel
 from ..core.frontier_agent import FrontierAgent, FrontierAgentConfig
-from ..services.bot_services import BotServiceWorker, BotServiceConfig
+from ..services.bot_services import BotServiceConfig, BotServiceWorker
 
 
 class OrchestratorState(str, Enum):
@@ -71,15 +71,15 @@ class LogicalOrchestrator:
     sentinel broadcast capabilities.
     """
 
-    def __init__(self, config: Optional[OrchestratorConfig] = None):
+    def __init__(self, config: OrchestratorConfig | None = None):
         self.config = config or OrchestratorConfig()
         self.state = OrchestratorState.INITIALIZING
         self.metrics = OrchestratorMetrics()
         self._start_time = time.time()
-        self._ai_complexes: Dict[str, AiComplex] = {}
-        self._agents: Dict[str, FrontierAgent] = {}
-        self._bots: Dict[str, BotServiceWorker] = {}
-        self._sentinel_channels: Dict[SentinelChannel, List[str]] = {
+        self._ai_complexes: dict[str, AiComplex] = {}
+        self._agents: dict[str, FrontierAgent] = {}
+        self._bots: dict[str, BotServiceWorker] = {}
+        self._sentinel_channels: dict[SentinelChannel, list[str]] = {
             ch: [] for ch in SentinelChannel
         }
         self._ray_initialized = False
@@ -108,9 +108,7 @@ class LogicalOrchestrator:
         self._subscribe(ai.id, SentinelChannel.PLATFORM)
         return ai
 
-    def create_agent(
-        self, name: str, config: Optional[FrontierAgentConfig] = None
-    ) -> FrontierAgent:
+    def create_agent(self, name: str, config: FrontierAgentConfig | None = None) -> FrontierAgent:
         """Create a new Agent (Tier 4)."""
         agent_config = config or FrontierAgentConfig(name=name)
         agent = FrontierAgent(agent_config)
@@ -134,8 +132,8 @@ class LogicalOrchestrator:
         return bot
 
     def dispatch_task(
-        self, entity_id: str, task_type: str, payload: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, entity_id: str, task_type: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Dispatch a task to an entity."""
         payload = payload or {}
         self.metrics.total_tasks_dispatched += 1
@@ -154,7 +152,7 @@ class LogicalOrchestrator:
         else:
             return {"status": "error", "message": f"Entity {entity_id} not found"}
 
-    def dispatch_batch(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def dispatch_batch(self, tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Dispatch a batch of tasks."""
         results = []
         for task in tasks:
@@ -166,7 +164,7 @@ class LogicalOrchestrator:
             results.append(result)
         return results
 
-    def run_evolution_round(self, agent_id: str, generations: int = 5) -> Dict[str, Any]:
+    def run_evolution_round(self, agent_id: str, generations: int = 5) -> dict[str, Any]:
         """Run an evolution round for a specific agent."""
         if agent_id not in self._agents:
             return {"status": "error", "message": f"Agent {agent_id} not found"}
@@ -180,7 +178,7 @@ class LogicalOrchestrator:
         self.metrics.total_evolution_rounds += 1
         return {"status": "completed", "best_fitness": stats.best_fitness}
 
-    def optimize_all_agents(self, max_steps: int = 50) -> Dict[str, Any]:
+    def optimize_all_agents(self, max_steps: int = 50) -> dict[str, Any]:
         """Optimize all agents in the system."""
         results = {}
         for agent_id, agent in self._agents.items():
@@ -206,14 +204,14 @@ class LogicalOrchestrator:
             self._sentinel_channels[channel].append(entity_id)
 
     def broadcast(
-        self, channel: SentinelChannel, message: Any, source_id: Optional[str] = None
+        self, channel: SentinelChannel, message: Any, source_id: str | None = None
     ) -> int:
         """Broadcast a message on a sentinel channel."""
         recipients = self._sentinel_channels.get(channel, [])
         self.metrics.sentinel_messages_sent += len(recipients)
         return len(recipients)
 
-    def health_check(self) -> Dict[str, Any]:
+    def health_check(self) -> dict[str, Any]:
         """Perform a health check."""
         self.metrics.uptime_seconds = time.time() - self._start_time
         return {
@@ -231,7 +229,7 @@ class LogicalOrchestrator:
             "ray_initialized": self._ray_initialized,
         }
 
-    def get_agent_summaries(self) -> Dict[str, Dict[str, Any]]:
+    def get_agent_summaries(self) -> dict[str, dict[str, Any]]:
         """Get summaries of all agents."""
         return {aid: agent.summary() for aid, agent in self._agents.items()}
 

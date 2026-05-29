@@ -4,10 +4,10 @@ Tests for AeonMind Bot Services.
 
 from aeonmind.services.bot_services import (
     BotCapability,
-    BotStatus,
     BotServiceConfig,
-    BotServiceWorker,
     BotServiceRegistry,
+    BotServiceWorker,
+    BotStatus,
 )
 
 
