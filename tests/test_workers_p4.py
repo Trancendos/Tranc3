@@ -59,7 +59,10 @@ def client(request):
         _module_cache[module_name] = mod
 
     mod = _module_cache[module_name]
-    c = TestClient(mod.app)
+    # Pass X-Internal-Secret for workers that enforce it
+    secret = getattr(mod, "_INTERNAL_SECRET", "")
+    headers = {"X-Internal-Secret": secret} if secret else {}
+    c = TestClient(mod.app, headers=headers)
     yield c
 
 

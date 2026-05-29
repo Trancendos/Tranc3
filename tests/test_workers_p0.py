@@ -158,7 +158,9 @@ class TestInfinityWSHTTP:
 
     @pytest.fixture
     def client(self):
-        return TestClient(ws_mod.app)
+        secret = getattr(ws_mod, "_INTERNAL_SECRET", "")
+        headers = {"X-Internal-Secret": secret} if secret else {}
+        return TestClient(ws_mod.app, headers=headers)
 
     def test_health_endpoint(self, client):
         response = client.get("/health")
