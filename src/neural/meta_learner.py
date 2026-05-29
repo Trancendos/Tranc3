@@ -350,13 +350,9 @@ class MetaLearner:
             # Exploration: occasionally pick a random top-5 prototype
             import random
 
-            if (
-                random.random() < self._exploration_rate and len(scores) > 1
-            ):  # nosec B311 — non-cryptographic random usage
+            if random.random() < self._exploration_rate and len(scores) > 1:  # nosec B311 — non-cryptographic random usage
                 top_n = min(5, len(scores))
-                choice_idx = random.randint(
-                    0, top_n - 1
-                )  # nosec B311 — non-cryptographic exploration sampling
+                choice_idx = random.randint(0, top_n - 1)  # nosec B311 — non-cryptographic exploration sampling
                 best_pid, best_score = scores[choice_idx]
             else:
                 best_pid, best_score = scores[0]
@@ -418,13 +414,9 @@ class MetaLearner:
 
         # Signature similarity (weight: 0.15)
         if input_signature and proto.input_signature:
-            score += 0.15 * _signature_similarity(
-                input_signature, proto.input_signature
-            )
+            score += 0.15 * _signature_similarity(input_signature, proto.input_signature)
         if output_signature and proto.output_signature:
-            score += 0.05 * _signature_similarity(
-                output_signature, proto.output_signature
-            )
+            score += 0.05 * _signature_similarity(output_signature, proto.output_signature)
 
         # Embedding similarity (weight: 0.15)
         if embedding and proto.embedding:

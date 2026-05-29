@@ -55,9 +55,9 @@ class NRCQueryEmbedding:
         if not self.relation_fingerprint:
             # Extract relation names from DSL for quick fingerprinting
             relations = sorted({w for w in self.nrc_dsl.split() if w.isidentifier()})
-            self.relation_fingerprint = hashlib.sha3_256(
-                ":".join(relations).encode()
-            ).hexdigest()[:12]
+            self.relation_fingerprint = hashlib.sha3_256(":".join(relations).encode()).hexdigest()[
+                :12
+            ]
 
 
 @dataclass
@@ -257,9 +257,7 @@ class ChromaDBPlanStore:
             formatted = []
             if results and results["ids"] and results["ids"][0]:
                 for i, id_ in enumerate(results["ids"][0]):
-                    distance = (
-                        results["distances"][0][i] if results["distances"] else 0.0
-                    )
+                    distance = results["distances"][0][i] if results["distances"] else 0.0
                     meta = results["metadatas"][0][i] if results["metadatas"] else {}
                     similarity = 1.0 - distance
                     formatted.append((id_, similarity, meta))
@@ -288,9 +286,7 @@ class LanceDBPlanStore:
     large-scale plan similarity search.
     """
 
-    def __init__(
-        self, table_name: str = "trancex_nrc_plans", uri: Optional[str] = None
-    ):
+    def __init__(self, table_name: str = "trancex_nrc_plans", uri: Optional[str] = None):
         self.table_name = table_name
         self.uri = uri or "/tmp/trancex_lancedb"
         self._db = None
@@ -341,9 +337,7 @@ class LanceDBPlanStore:
                 formatted = []
                 for _, row in results.iterrows():
                     sim = 1.0 - float(row.get("_distance", 1.0))
-                    meta = {
-                        k: v for k, v in row.items() if k not in ("vector", "_distance")
-                    }
+                    meta = {k: v for k, v in row.items() if k not in ("vector", "_distance")}
                     formatted.append((str(row.get("id", "")), sim, meta))
                 return formatted
             except Exception as e:
@@ -482,9 +476,7 @@ class VectorPlanCache:
             self._miss_count += 1
 
         # Filter by similarity threshold
-        return [
-            r for r in search_results if r.similarity_score >= self.similarity_threshold
-        ]
+        return [r for r in search_results if r.similarity_score >= self.similarity_threshold]
 
     def get_plan(self, plan_id: str) -> Optional[CachedPlan]:
         """Get a cached plan by ID."""
@@ -504,9 +496,7 @@ class VectorPlanCache:
         """Get cache statistics."""
         status_counts = {}
         for plan in self._plans.values():
-            status_counts[plan.status.value] = (
-                status_counts.get(plan.status.value, 0) + 1
-            )
+            status_counts[plan.status.value] = status_counts.get(plan.status.value, 0) + 1
 
         total = self._hit_count + self._miss_count
         hit_rate = self._hit_count / total if total > 0 else 0.0
