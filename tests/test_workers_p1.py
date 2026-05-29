@@ -150,7 +150,10 @@ class TestUsersServiceHTTPEndpoints:
         test_db = users_mod.UsersDatabase(db_path=db_path)
 
         with patch.object(users_mod, "db", test_db):
-            client = TestClient(users_mod.app)
+            client = TestClient(
+                users_mod.app,
+                headers={"X-Internal-Secret": users_mod._INTERNAL_SECRET},
+            )
             yield client
 
         test_db._conn.close()
@@ -733,7 +736,10 @@ class TestNotificationsHTTPEndpoints:
         test_db = notifications_mod.NotificationsDatabase(db_path=db_path)
 
         with patch.object(notifications_mod, "db", test_db):
-            client = TestClient(notifications_mod.app)
+            client = TestClient(
+                notifications_mod.app,
+                headers={"X-Internal-Secret": notifications_mod._INTERNAL_SECRET},
+            )
             yield client
 
     def test_health_endpoint(self, notifications_client):

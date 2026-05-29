@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import os
 import re
 import sqlite3
 import time
@@ -454,7 +455,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
