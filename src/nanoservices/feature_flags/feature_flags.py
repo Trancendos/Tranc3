@@ -317,8 +317,8 @@ class FeatureFlagService:
         for listener in self._change_listeners:
             try:
                 listener(key, old_state, new_state)
-            except Exception:  # noqa: S110
-                pass  # graceful degradation
+            except Exception:
+                pass
         return True
 
     def add_rule(self, flag_key: str, rule: FlagRule) -> bool:

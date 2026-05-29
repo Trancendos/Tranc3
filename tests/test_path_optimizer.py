@@ -9,18 +9,19 @@ across light bridges.
 import asyncio  # noqa: I001
 
 from Dimensional.infinity.bridge.path_optimizer import (
-    FallbackRouter,
-    OptimizationStrategy,
-    OptimizedRoute,
-    PathHealth,
-    PathHealthMonitor,
     PathMetrics,
-    PathOptimizationEngine,
     PathOptimizerConfig,
-    PathScore,
+    OptimizationStrategy,
     PathScorer,
+    PathScore,
+    PathHealthMonitor,
+    PathHealth,
+    FallbackRouter,
+    PathOptimizationEngine,
+    OptimizedRoute,
     get_path_optimizer,
 )
+
 
 # ── PathMetrics Tests ────────────────────────────────────────────────────────
 

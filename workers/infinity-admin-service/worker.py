@@ -37,13 +37,14 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 # Phase 22.4: Dimensional Services
-from Dimensional.dimensionals import (
+from shared_core.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
@@ -71,6 +72,7 @@ from Dimensional.infinity.sentinel_station import (
     get_sentinel_station,
 )
 
+
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
@@ -89,6 +91,21 @@ except Exception:  # pragma: no cover
     def get_entity_by_pid(pid: str):  # type: ignore[misc]
         return None
 
+
+# Phase 25: Platform Entity Registry (entity name management)
+try:
+    from src.entities.platform import (
+        PLATFORM_ENTITIES,
+        get_entity_by_pid,
+    )
+
+    _PLATFORM_ENTITIES_AVAILABLE = True
+except Exception:  # pragma: no cover
+    _PLATFORM_ENTITIES_AVAILABLE = False
+    PLATFORM_ENTITIES = {}
+
+    def get_entity_by_pid(pid: str):  # type: ignore[misc]
+        return None
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -487,7 +504,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -909,42 +926,25 @@ async def audit_log(
     offset: int = Query(0, ge=0),
 ):
     """Get the admin audit log."""
-    if action_type and actor_id:
-        rows = db.execute(
-            "SELECT * FROM admin_actions WHERE action_type = ? AND actor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-            (action_type, actor_id, limit, offset),
-        ).fetchall()
-        total = db.execute(
-            "SELECT COUNT(*) as cnt FROM admin_actions WHERE action_type = ? AND actor_id = ?",
-            (action_type, actor_id),
-        ).fetchone()["cnt"]
-    elif action_type:
-        rows = db.execute(
-            "SELECT * FROM admin_actions WHERE action_type = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-            (action_type, limit, offset),
-        ).fetchall()
-        total = db.execute(
-            "SELECT COUNT(*) as cnt FROM admin_actions WHERE action_type = ?",
-            (action_type,),
-        ).fetchone()["cnt"]
-    elif actor_id:
-        rows = db.execute(
-            "SELECT * FROM admin_actions WHERE actor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-            (actor_id, limit, offset),
-        ).fetchall()
-        total = db.execute(
-            "SELECT COUNT(*) as cnt FROM admin_actions WHERE actor_id = ?",
-            (actor_id,),
-        ).fetchone()["cnt"]
-    else:
-        rows = db.execute(
-            "SELECT * FROM admin_actions ORDER BY created_at DESC LIMIT ? OFFSET ?",
-            (limit, offset),
-        ).fetchall()
-        total = db.execute(
-            "SELECT COUNT(*) as cnt FROM admin_actions",
-            (),
-        ).fetchone()["cnt"]
+    conditions = []
+    params: list[Any] = []
+
+    if action_type:
+        conditions.append("action_type = ?")
+        params.append(action_type)
+    if actor_id:
+        conditions.append("actor_id = ?")
+        params.append(actor_id)
+
+    where = " WHERE " + " AND ".join(conditions) if conditions else ""
+    query = f"SELECT * FROM admin_actions{where} ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    rows = db.execute(
+        query,
+        params + [limit, offset],
+    ).fetchall()
+
+    count_query = f"SELECT COUNT(*) as cnt FROM admin_actions{where}"
+    total = db.execute(count_query, params).fetchone()["cnt"]
 
     return {"actions": [dict(r) for r in rows], "total": total}
 
@@ -956,26 +956,22 @@ async def compliance_events(
     limit: int = Query(100, ge=1, le=1000),
 ):
     """Get compliance and security events."""
-    if severity and pillar:
-        rows = db.execute(
-            "SELECT * FROM compliance_events WHERE severity = ? AND pillar = ? ORDER BY created_at DESC LIMIT ?",
-            (severity, pillar, limit),
-        ).fetchall()
-    elif severity:
-        rows = db.execute(
-            "SELECT * FROM compliance_events WHERE severity = ? ORDER BY created_at DESC LIMIT ?",
-            (severity, limit),
-        ).fetchall()
-    elif pillar:
-        rows = db.execute(
-            "SELECT * FROM compliance_events WHERE pillar = ? ORDER BY created_at DESC LIMIT ?",
-            (pillar, limit),
-        ).fetchall()
-    else:
-        rows = db.execute(
-            "SELECT * FROM compliance_events ORDER BY created_at DESC LIMIT ?",
-            (limit,),
-        ).fetchall()
+    conditions = []
+    params: list[Any] = []
+
+    if severity:
+        conditions.append("severity = ?")
+        params.append(severity)
+    if pillar:
+        conditions.append("pillar = ?")
+        params.append(pillar)
+
+    where = " WHERE " + " AND ".join(conditions) if conditions else ""
+    query = f"SELECT * FROM compliance_events{where} ORDER BY created_at DESC LIMIT ?"
+    rows = db.execute(
+        query,
+        params + [limit],
+    ).fetchall()
 
     return {"events": [dict(r) for r in rows], "total": len(rows)}
 
@@ -988,8 +984,8 @@ async def compliance_events(
 @_router.get("/admin/sentinel")
 async def sentinel_status():
     """Get Sentinel Station status and channel information."""
-    from Dimensional.infinity.nomenclature import SENTINEL_CHANNELS
     from Dimensional.infinity.sentinel_config import sentinel_config
+    from Dimensional.infinity.nomenclature import SENTINEL_CHANNELS
 
     return {
         "running": sentinel.is_running,
@@ -1596,47 +1592,25 @@ async def reset_entity_overrides(
     user = getattr(request.state, "user", {})
     actor = user.get("sub", "unknown")
 
-    _slot_val = "" if slot in ("null", "") else slot if slot is not None else None
-    if entity_type and slot is not None:
-        count_row = db.execute(
-            "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ? AND entity_type = ? AND slot = ?",
-            (pid, entity_type, _slot_val),
-        ).fetchone()
-        count = count_row["cnt"]
-        db.execute(
-            "DELETE FROM entity_overrides WHERE location_pid = ? AND entity_type = ? AND slot = ?",
-            (pid, entity_type, _slot_val),
-        )
-    elif entity_type:
-        count_row = db.execute(
-            "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ? AND entity_type = ?",
-            (pid, entity_type),
-        ).fetchone()
-        count = count_row["cnt"]
-        db.execute(
-            "DELETE FROM entity_overrides WHERE location_pid = ? AND entity_type = ?",
-            (pid, entity_type),
-        )
-    elif slot is not None:
-        count_row = db.execute(
-            "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ? AND slot = ?",
-            (pid, _slot_val),
-        ).fetchone()
-        count = count_row["cnt"]
-        db.execute(
-            "DELETE FROM entity_overrides WHERE location_pid = ? AND slot = ?",
-            (pid, _slot_val),
-        )
-    else:
-        count_row = db.execute(
-            "SELECT COUNT(*) as cnt FROM entity_overrides WHERE location_pid = ?",
-            (pid,),
-        ).fetchone()
-        count = count_row["cnt"]
-        db.execute(
-            "DELETE FROM entity_overrides WHERE location_pid = ?",
-            (pid,),
-        )
+    conditions = ["location_pid = ?"]
+    params: list[Any] = [pid]
+    if entity_type:
+        conditions.append("entity_type = ?")
+        params.append(entity_type)
+    if slot is not None:
+        conditions.append("slot = ?")
+        params.append("" if slot in ("null", "") else slot)
+    where = " AND ".join(conditions)
+
+    count_query = f"SELECT COUNT(*) as cnt FROM entity_overrides WHERE {where}"
+    count_row = db.execute(
+        count_query,
+        tuple(params),
+    ).fetchone()
+    count = count_row["cnt"]
+
+    delete_query = f"DELETE FROM entity_overrides WHERE {where}"
+    db.execute(delete_query, tuple(params))
     db.commit()
 
     _log_admin_action(
@@ -1674,16 +1648,17 @@ async def reset_entity_overrides(
 @_router.get("/admin/entities/{pid}/overrides/{entity_type}")
 async def get_entity_overrides_by_type(pid: str, entity_type: str, slot: str | None = None):
     """Get overrides for a specific entity type (and optional slot) within an entity."""
+    conditions = ["location_pid = ?", "entity_type = ?"]
+    params: list[Any] = [pid, entity_type]
+
     if slot is not None:
-        rows = db.execute(
-            "SELECT * FROM entity_overrides WHERE location_pid = ? AND entity_type = ? AND slot = ? ORDER BY slot",
-            (pid, entity_type, slot),
-        ).fetchall()
-    else:
-        rows = db.execute(
-            "SELECT * FROM entity_overrides WHERE location_pid = ? AND entity_type = ? ORDER BY slot",
-            (pid, entity_type),
-        ).fetchall()
+        conditions.append("slot = ?")
+        params.append(slot)
+
+    rows = db.execute(
+        f"SELECT * FROM entity_overrides WHERE {' AND '.join(conditions)} ORDER BY slot",
+        params,
+    ).fetchall()
 
     return {"pid": pid, "entity_type": entity_type, "overrides": [dict(r) for r in rows]}
 

@@ -207,12 +207,7 @@ async def _lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Tranc3 Topology Service", version="0.1.0", lifespan=_lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")

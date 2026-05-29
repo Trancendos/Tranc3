@@ -358,7 +358,7 @@ class VaultAuditLogger:
             record["chain_hash"] = chain_hash
             self._prev_hash = chain_hash
 
-            with open(self._current_file, "a") as f:  # type: ignore[arg-type]
+            with open(self._current_file, "a") as f:
                 f.write(json.dumps(record) + "\n")
 
             logger.debug(
@@ -374,7 +374,7 @@ class VaultAuditLogger:
         if date:
             target = self._log_dir / f"vault-audit-{date}.jsonl"
         else:
-            target = self._current_file  # type: ignore[assignment]
+            target = self._current_file
 
         if not target or not target.exists():
             return True  # No records = valid chain
@@ -559,7 +559,7 @@ class SoftHSM2Provider(HSMProvider):
             import pkcs11  # type: ignore
 
             self._pkcs11 = pkcs11.lib(self._library_path)
-            tokens = self._pkcs11.get_tokens(token_label=self._token)  # type: ignore[attr-defined]
+            tokens = self._pkcs11.get_tokens(token_label=self._token)
 
             try:
                 self._token_obj = next(tokens)
@@ -571,9 +571,9 @@ class SoftHSM2Provider(HSMProvider):
                 ) from None
 
             if self._slot is not None:
-                self._session = self._token_obj.open(self._slot, pin=self._pin.reveal().decode())  # type: ignore[attr-defined]
+                self._session = self._token_obj.open(self._slot, pin=self._pin.reveal().decode())
             else:
-                self._session = self._token_obj.open(pin=self._pin.reveal().decode())  # type: ignore[attr-defined]
+                self._session = self._token_obj.open(pin=self._pin.reveal().decode())
 
             self._initialized = True
             self._audit.log(
@@ -643,14 +643,14 @@ class SoftHSM2Provider(HSMProvider):
 
         try:
             if key_type == HSMKeyType.AES:
-                key = self._session.generate_key(  # type: ignore[attr-defined]
+                key = self._session.generate_key(
                     pkcs11_key_type,
                     key_size=key_size,
                     label=key_label,
                     store=persistent,
                 )
             elif key_type == HSMKeyType.RSA:
-                pub, priv = self._session.generate_keypair(  # type: ignore[attr-defined]
+                pub, priv = self._session.generate_keypair(
                     pkcs11_key_type,
                     key_size=key_size,
                     label=key_label,
@@ -658,7 +658,7 @@ class SoftHSM2Provider(HSMProvider):
                 )
                 key = priv
             else:
-                key = self._session.generate_key(  # type: ignore[attr-defined]
+                key = self._session.generate_key(
                     pkcs11_key_type,
                     key_size=key_size,
                     label=key_label,
@@ -698,8 +698,8 @@ class SoftHSM2Provider(HSMProvider):
 
         import pkcs11  # type: ignore
 
-        key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)  # type: ignore[attr-defined]
-        iv = self._session.generate_random(16)  # type: ignore[attr-defined]
+        key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)
+        iv = self._session.generate_random(16)
         ciphertext = key.encrypt(plaintext, mechanism_param=iv)
 
         self._audit.log(
@@ -722,7 +722,7 @@ class SoftHSM2Provider(HSMProvider):
 
         import pkcs11  # type: ignore
 
-        key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)  # type: ignore[attr-defined]
+        key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)
         iv = ciphertext[:16]
         actual_ciphertext = ciphertext[16:]
         plaintext = key.decrypt(actual_ciphertext, mechanism_param=iv)
@@ -744,7 +744,7 @@ class SoftHSM2Provider(HSMProvider):
         if not self._initialized:
             raise RuntimeError("HSM not initialized.")
 
-        key = self._session.get_key(label=key_handle)  # type: ignore[attr-defined]
+        key = self._session.get_key(label=key_handle)
         signature = key.sign(data)
 
         self._audit.log(
@@ -763,7 +763,7 @@ class SoftHSM2Provider(HSMProvider):
         if not self._initialized:
             raise RuntimeError("HSM not initialized.")
 
-        key = self._session.get_key(label=key_handle)  # type: ignore[attr-defined]
+        key = self._session.get_key(label=key_handle)
         try:
             result = key.verify(data, signature)
             success = True
@@ -788,7 +788,7 @@ class SoftHSM2Provider(HSMProvider):
             raise RuntimeError("HSM not initialized.")
 
         try:
-            key = self._session.get_key(label=key_handle)  # type: ignore[attr-defined]
+            key = self._session.get_key(label=key_handle)
             key.destroy()
             self._audit.log(
                 VaultAuditEvent(
@@ -822,7 +822,7 @@ class SoftHSM2Provider(HSMProvider):
         try:
             import pkcs11  # type: ignore
 
-            for obj in self._session.get_objects(  # type: ignore[attr-defined]
+            for obj in self._session.get_objects(
                 {
                     pkcs11.Attribute.CLASS: pkcs11.ObjectClass.SECRET_KEY,
                 }
@@ -938,7 +938,7 @@ class YubiHSM2Provider(HSMProvider):
             import pkcs11  # type: ignore
 
             self._pkcs11 = pkcs11.lib(self._library_path)
-            tokens = self._pkcs11.get_tokens()  # type: ignore[attr-defined]
+            tokens = self._pkcs11.get_tokens()
 
             try:
                 self._token_obj = next(tokens)
@@ -948,7 +948,7 @@ class YubiHSM2Provider(HSMProvider):
                     f"at {self._connector_url} and the device is connected."
                 ) from None
 
-            self._session = self._token_obj.open(  # type: ignore[attr-defined]
+            self._session = self._token_obj.open(
                 pin=f"{self._auth_key_id}:{self._auth_password.reveal().decode()}"
             )
             self._initialized = True
@@ -1010,7 +1010,7 @@ class YubiHSM2Provider(HSMProvider):
 
         try:
             if key_type == HSMKeyType.RSA:
-                self._session.generate_keypair(  # type: ignore[attr-defined]
+                self._session.generate_keypair(
                     pkcs11_key_type,
                     key_size=key_size,
                     label=key_label,
@@ -1018,7 +1018,7 @@ class YubiHSM2Provider(HSMProvider):
                 )
                 handle = key_label
             else:
-                self._session.generate_key(  # type: ignore[attr-defined]
+                self._session.generate_key(
                     pkcs11_key_type,
                     key_size=key_size,
                     label=key_label,
@@ -1056,8 +1056,8 @@ class YubiHSM2Provider(HSMProvider):
         if not self._initialized:
             raise RuntimeError("HSM not initialized.")
 
-        key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)  # type: ignore[attr-defined]
-        iv = self._session.generate_random(16)  # type: ignore[attr-defined]
+        key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)
+        iv = self._session.generate_random(16)
         ciphertext = key.encrypt(plaintext, mechanism_param=iv)
 
         self._audit.log(
@@ -1076,7 +1076,7 @@ class YubiHSM2Provider(HSMProvider):
         if not self._initialized:
             raise RuntimeError("HSM not initialized.")
 
-        key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)  # type: ignore[attr-defined]
+        key = self._session.get_key(label=key_handle, object_class=pkcs11.ObjectClass.SECRET_KEY)
         iv = ciphertext[:16]
         actual_ciphertext = ciphertext[16:]
         plaintext = key.decrypt(actual_ciphertext, mechanism_param=iv)
@@ -1097,7 +1097,7 @@ class YubiHSM2Provider(HSMProvider):
         if not self._initialized:
             raise RuntimeError("HSM not initialized.")
 
-        key = self._session.get_key(label=key_handle)  # type: ignore[attr-defined]
+        key = self._session.get_key(label=key_handle)
         return key.sign(data)
 
     def verify(self, key_handle: str, data: bytes, signature: bytes) -> bool:
@@ -1105,7 +1105,7 @@ class YubiHSM2Provider(HSMProvider):
         if not self._initialized:
             raise RuntimeError("HSM not initialized.")
 
-        key = self._session.get_key(label=key_handle)  # type: ignore[attr-defined]
+        key = self._session.get_key(label=key_handle)
         try:
             return key.verify(data, signature)
         except Exception:
@@ -1117,7 +1117,7 @@ class YubiHSM2Provider(HSMProvider):
             raise RuntimeError("HSM not initialized.")
 
         try:
-            key = self._session.get_key(label=key_handle)  # type: ignore[attr-defined]
+            key = self._session.get_key(label=key_handle)
             key.destroy()
             return True
         except Exception:
@@ -1132,7 +1132,7 @@ class YubiHSM2Provider(HSMProvider):
         try:
             import pkcs11  # type: ignore
 
-            for obj in self._session.get_objects(  # type: ignore[attr-defined]
+            for obj in self._session.get_objects(
                 {
                     pkcs11.Attribute.CLASS: pkcs11.ObjectClass.SECRET_KEY,
                 }
@@ -1238,8 +1238,8 @@ class VaultSecretLoader:
         self._cache: Dict[str, SecureBytes] = {}
         self._cache_lock = threading.Lock()
 
-    @asynccontextmanager  # type: ignore[arg-type]
-    async def secret(self, key: str) -> Generator[SecureBytes, None, None]:  # type: ignore[misc]
+    @asynccontextmanager
+    async def secret(self, key: str) -> Generator[SecureBytes, None, None]:
         """Load a secret as SecureBytes with automatic zeroization.
 
         The secret is automatically zeroized when the context manager exits,
@@ -1256,8 +1256,8 @@ class VaultSecretLoader:
                     self._cache[key].zeroize()
                     del self._cache[key]
 
-    @asynccontextmanager  # type: ignore[arg-type]
-    async def secrets(self, keys: List[str]) -> Generator[Dict[str, SecureBytes], None, None]:  # type: ignore[misc]
+    @asynccontextmanager
+    async def secrets(self, keys: List[str]) -> Generator[Dict[str, SecureBytes], None, None]:
         """Load multiple secrets as SecureBytes with automatic zeroization."""
         loaded: Dict[str, SecureBytes] = {}
         try:
@@ -1316,7 +1316,7 @@ class VaultSecretLoader:
 
         # Source 3: Infinity Void vault
         if self._infinity_void_url and self._infinity_void_secret:
-            value = self._read_infinity_void(key)  # type: ignore[assignment]
+            value = self._read_infinity_void(key)
             if value is not None:
                 self._audit.log(
                     VaultAuditEvent(
@@ -1332,7 +1332,7 @@ class VaultSecretLoader:
 
         # Source 4: HSM-encrypted file
         if self._hsm and self._hsm.is_available():
-            value = self._read_hsm_encrypted(key)  # type: ignore[assignment]
+            value = self._read_hsm_encrypted(key)
             if value is not None:
                 self._audit.log(
                     VaultAuditEvent(
@@ -1362,7 +1362,7 @@ class VaultSecretLoader:
     def _read_dotenv(self, key: str) -> Optional[str]:
         """Read a value from a .env file."""
         try:
-            with open(self._dotenv_path, "r") as f:  # type: ignore[arg-type]
+            with open(self._dotenv_path, "r") as f:
                 for line in f:
                     line = line.strip()
                     if line.startswith("#") or "=" not in line:
@@ -1458,7 +1458,7 @@ class VaultSecretLoader:
 
             actual_ciphertext = base64.b64decode(lines[1])
 
-            plaintext = self._hsm.decrypt(key_handle, actual_ciphertext)  # type: ignore[union-attr]
+            plaintext = self._hsm.decrypt(key_handle, actual_ciphertext)
             return plaintext
         except Exception as e:
             logger.warning("Error reading HSM-encrypted secret '%s': %s", key, e)
@@ -1510,7 +1510,7 @@ class VaultSecretLoader:
             try:
                 import httpx
 
-                auth_secret = self._infinity_void_secret.reveal().decode()  # type: ignore[union-attr]
+                auth_secret = self._infinity_void_secret.reveal().decode()
 
                 response = httpx.put(
                     f"{self._infinity_void_url}/api/v1/secrets/{key}",
@@ -1633,7 +1633,7 @@ def create_vault_security(
             audit_logger=audit_logger,
         )
     elif hsm_type == "yubihsm2":
-        hsm = YubiHSM2Provider(  # type: ignore[assignment]
+        hsm = YubiHSM2Provider(
             connector_url=hsm_config.get("connector_url", "http://localhost:12345"),
             auth_key_id=hsm_config.get("auth_key_id", 1),
             auth_key_password=hsm_config.get("auth_key_password", b"password"),

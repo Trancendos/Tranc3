@@ -318,7 +318,7 @@ class DimensionalServiceBus:
         if self._running:
             return
 
-        self._stats["started_at"] = datetime.now(timezone.utc).isoformat()  # type: ignore[assignment]
+        self._stats["started_at"] = datetime.now(timezone.utc).isoformat()
 
         # Subscribe to Sentinel Station for cross-gateway messages
         if self._sentinel.is_running or not self._sentinel.is_running:
@@ -441,11 +441,11 @@ class DimensionalServiceBus:
         )
 
         await self._dispatch(message)
-        self._stats["requests_sent"] += 1  # type: ignore[operator]
+        self._stats["requests_sent"] += 1
 
         try:
             reply = await asyncio.wait_for(future, timeout=timeout)
-            self._stats["responses_received"] += 1  # type: ignore[operator]
+            self._stats["responses_received"] += 1
             return reply
         except asyncio.TimeoutError:
             self._pending_requests.pop(correlation_id, None)
@@ -612,11 +612,11 @@ class DimensionalServiceBus:
         5. Enforces tier-aware delivery
         """
         if message.is_expired():
-            self._stats["messages_expired"] += 1  # type: ignore[operator]
+            self._stats["messages_expired"] += 1
             logger.debug("Dropped expired bus message: %s", message.id)
             return
 
-        self._stats["messages_sent"] += 1  # type: ignore[operator]
+        self._stats["messages_sent"] += 1
         delivered = False
 
         # 1. Deliver to specific target handlers
@@ -682,15 +682,15 @@ class DimensionalServiceBus:
                     if message.source
                     else "dimensional_bus",
                 )
-                self._stats["messages_delivered_sentinel"] += 1  # type: ignore[operator]
+                self._stats["messages_delivered_sentinel"] += 1
                 delivered = True
             except Exception as e:
                 logger.warning("Sentinel Station publish failed: %s", str(e)[:200])
 
         if delivered:
-            self._stats["messages_delivered_local"] += 1  # type: ignore[operator]
+            self._stats["messages_delivered_local"] += 1
         else:
-            self._stats["messages_dropped_no_handler"] += 1  # type: ignore[operator]
+            self._stats["messages_dropped_no_handler"] += 1
 
     # ── Sentinel Station Listener ─────────────────────────────────────────
 
@@ -706,7 +706,7 @@ class DimensionalServiceBus:
         while self._running:
             try:
                 event = await asyncio.wait_for(self._sentinel_queue.get(), timeout=1.0)
-                self._stats["messages_received"] += 1  # type: ignore[operator]
+                self._stats["messages_received"] += 1
 
                 # Parse the event as a BusMessage
                 message = BusMessage.from_sentinel_event(event)
@@ -735,7 +735,7 @@ class DimensionalServiceBus:
         echo loops.
         """
         if message.is_expired():
-            self._stats["messages_expired"] += 1  # type: ignore[operator]
+            self._stats["messages_expired"] += 1
             return
 
         delivered = False
@@ -782,9 +782,9 @@ class DimensionalServiceBus:
                 delivered = True
 
         if delivered:
-            self._stats["messages_delivered_local"] += 1  # type: ignore[operator]
+            self._stats["messages_delivered_local"] += 1
         else:
-            self._stats["messages_dropped_no_handler"] += 1  # type: ignore[operator]
+            self._stats["messages_dropped_no_handler"] += 1
 
     # ── Health & Statistics ───────────────────────────────────────────────
 

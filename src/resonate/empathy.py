@@ -95,7 +95,7 @@ class Resonate:
                 outcome="escalated",
                 metadata={"context_preview": context[:100]},
             )
-        except Exception:  # noqa: S110
+        except Exception:
             pass  # nosec B110 — observation failure must not block escalation
         logger.warning(
             "resonate: human escalation triggered for user=%s", sanitize_for_log(user_id)

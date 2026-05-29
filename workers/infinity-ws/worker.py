@@ -16,10 +16,10 @@ Zero-cost: FastAPI WebSocket + asyncio. No CF Durable Objects.
 """
 
 from __future__ import annotations
+import os
 
 import json
 import logging
-import os
 import time
 import uuid
 from collections import defaultdict
@@ -285,7 +285,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -474,7 +474,7 @@ class PipelineManager:
     def __init__(self, flow_monitor: FlowMonitor):
         self.flow_monitor = flow_monitor
         self._pipelines: Dict[str, DataPipeline] = {}
-        self._chunks: Dict[str, DataChunk] = defaultdict(lambda: [])  # type: ignore[arg-type,return-value]
+        self._chunks: Dict[str, DataChunk] = defaultdict(lambda: [])
         self._lock = asyncio.Lock()
         logger.info("PipelineManager initialized")
 
@@ -1120,7 +1120,7 @@ def create_hive_app() -> FastAPI:
         await _ws_manager.connect(ws)
         try:
             while True:
-                _ = await ws.receive_text()
+                await ws.receive_text()
                 # Echo back for keepalive
                 await ws.send_text(json.dumps({"type": "pong", "hive_id": get_hive().node_id}))
         except WebSocketDisconnect:

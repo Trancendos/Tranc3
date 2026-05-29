@@ -18,7 +18,6 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -181,23 +180,22 @@ class EscalationResult:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class IBridge(ABC):
+class IBridge:
     """Abstract base class for bridges."""
 
     @property
-    @abstractmethod
-    def domain(self) -> BridgeDomain: ...
+    def domain(self) -> BridgeDomain:
+        raise NotImplementedError
 
-    @abstractmethod
-    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket: ...
+    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket:
+        raise NotImplementedError
 
-    @abstractmethod
-    def health_check(self) -> BridgeHealthReport: ...
+    def health_check(self) -> BridgeHealthReport:
+        raise NotImplementedError
 
-    @abstractmethod
     def scan_and_cleanup(self) -> List[str]:
         """Proactive scan and cleanup. Returns list of actions taken."""
-        ...
+        raise NotImplementedError
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -413,7 +411,7 @@ class NexusBridge(IBridge):
     def scan_and_cleanup(self) -> List[str]:
         """Clean up stale channels and discovered agents."""
         actions = []
-        # _now = time.time()  (assigned but unused — kept as reference)
+        # _now = time.time()  # noqa: assigned but unused
         # Clean channels with no recent activity
         stale_channels = [ch for ch, msgs in self._channels.items() if len(msgs) == 0]
         for ch in stale_channels:
@@ -601,32 +599,6 @@ class SentinelStation:
 
         return bridge.process_packet(packet)
 
-    def _handle_health_packet(self, packet: "BridgeTrafficPacket") -> "BridgeTrafficPacket":
-        """Handle INTERNAL_HEALTH traffic — aggregate health from all bridges and return."""
-        health_summary: dict[str, Any] = {}
-        for domain, bridge in self._bridges.items():
-            try:
-                report = bridge.health_check()
-                health_summary[domain.value] = report.status
-            except Exception:  # noqa: S110 — graceful degradation
-                pass  # graceful degradation
-        packet.payload["health"] = health_summary
-        packet.metadata["handled_by"] = "sentinel"
-        return packet
-
-    def _handle_cross_bridge(self, packet: "BridgeTrafficPacket") -> "BridgeTrafficPacket":
-        """Handle CROSS_BRIDGE traffic — route to the target bridge specified in payload."""
-        target_domain_str = packet.payload.get("target_domain", "")
-        try:
-            target_domain = BridgeDomain(target_domain_str)
-            bridge = self._bridges.get(target_domain)
-            if bridge:
-                return bridge.process_packet(packet)
-        except (ValueError, KeyError):
-            pass
-        packet.metadata["cross_bridge_error"] = f"Unknown target domain: {target_domain_str}"
-        return packet
-
     def classify_traffic(self, traffic_class: TrafficClass) -> BridgeDomain:
         """Map a traffic class to a bridge domain."""
         return TRAFFIC_TO_BRIDGE.get(traffic_class, BridgeDomain.INFINITY)
@@ -662,7 +634,7 @@ class SentinelStation:
         #     requires_escalation=False,
         # )
 
-        # _result_packet = to_bridge.process_packet(packet)  (assigned but unused — kept as reference)
+        # _result_packet = to_bridge.process_packet(packet)  # noqa: assigned but unused
 
         result = EscalationResult(
             success=True,

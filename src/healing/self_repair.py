@@ -172,7 +172,7 @@ class SelfRepairEngine:
                     try:
                         obj.cache_clear()
                         cleared += 1
-                    except Exception:  # noqa: S110
+                    except Exception:
                         pass  # nosec B110 — graceful degradation; error logged upstream
 
             logger.info(

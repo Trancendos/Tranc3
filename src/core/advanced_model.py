@@ -309,7 +309,7 @@ class AdvancedTransformerModel(nn.Module):
         """Autoregressive generation with sampling"""
 
         generated = input_ids.clone()
-        past_tokens = set()  # type: ignore[var-annotated]
+        past_tokens = set()
 
         with torch.no_grad():
             for _ in range(max_new_tokens):

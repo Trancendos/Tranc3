@@ -42,6 +42,7 @@ from Dimensional.hive.hive_core import (
     get_hive,
 )
 
+
 # ---------------------------------------------------------------------------
 # FlowMonitor Tests
 # ---------------------------------------------------------------------------
@@ -176,8 +177,8 @@ class TestSwarmCoordinator:
     @pytest.mark.asyncio
     async def test_list_swarms_by_status(self):
         """List swarms can filter by status."""
-        _swarm = await self.coordinator.create_swarm(name="forming", purpose="test")
-        # _swarm is FORMING, not ACTIVE
+        await self.coordinator.create_swarm(name="forming", purpose="test")
+        # swarm is FORMING, not ACTIVE
         forming = await self.coordinator.list_swarms(status=SwarmStatus.FORMING)
         active = await self.coordinator.list_swarms(status=SwarmStatus.ACTIVE)
         assert len(forming) == 1
@@ -603,7 +604,7 @@ class TestHiveApp:
     @pytest.mark.asyncio
     async def test_hive_root_endpoint(self):
         """HIVE root endpoint returns system info."""
-        from httpx import ASGITransport, AsyncClient
+        from httpx import AsyncClient, ASGITransport
 
         app = create_hive_app()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -617,7 +618,7 @@ class TestHiveApp:
     @pytest.mark.asyncio
     async def test_hive_status_endpoint(self):
         """HIVE status endpoint returns comprehensive status."""
-        from httpx import ASGITransport, AsyncClient
+        from httpx import AsyncClient, ASGITransport
 
         app = create_hive_app()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -629,7 +630,7 @@ class TestHiveApp:
     @pytest.mark.asyncio
     async def test_hive_health_endpoint(self):
         """HIVE health endpoint returns health summary."""
-        from httpx import ASGITransport, AsyncClient
+        from httpx import AsyncClient, ASGITransport
 
         app = create_hive_app()
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

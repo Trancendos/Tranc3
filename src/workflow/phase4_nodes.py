@@ -176,9 +176,9 @@ class NeuralMeshNode:
                 payload = inputs.get(payload_key, inputs) if payload_key else inputs
                 ttl = int(cfg.get("ttl", 5))
                 if source_id not in mesh._nodes:
-                    node = MeshNode(id=source_id, service_name="workflow", host="internal", port=0)  # type: ignore[call-arg]
+                    node = MeshNode(id=source_id, service_name="workflow", host="internal", port=0)
                     await mesh.register_node(node)
-                signal = Signal(  # type: ignore[call-arg]
+                signal = Signal(
                     source_id=source_id,
                     signal_type=signal_type,
                     payload=dict(payload) if isinstance(payload, dict) else {"data": payload},
@@ -451,7 +451,7 @@ class AttentionRouteNode:
             # Resolve query from config or input
             query_key = cfg.get("query_input_key")
             query = str(inputs.get(query_key, "")) if query_key else cfg.get("query", "")
-            req = RoutingRequest(  # type: ignore[call-arg]
+            req = RoutingRequest(
                 query=query,
                 required_capabilities=list(cfg.get("required_capabilities", [])),
                 preferred_tags=list(cfg.get("preferred_tags", [])),
@@ -460,7 +460,7 @@ class AttentionRouteNode:
             )
             decision = await router.route(req)
             if decision is None:
-                output = {"routed": False, "primary_service": None, "candidates": []}  # type: ignore[var-annotated]
+                output = {"routed": False, "primary_service": None, "candidates": []}
             else:
                 output = {
                     "routed": True,
@@ -807,10 +807,10 @@ class ForesightNode:
                         IntentPredictor,  # noqa: F401  # intentional top-level import
                     )
 
-                    intent_predictor = IntentPredictor()
+                    predictor = IntentPredictor()
                     msg_key = cfg.get("message_key", "message")
                     message = str(inputs.get(msg_key, ""))
-                    intents = intent_predictor.classify(message)
+                    intents = predictor.classify(message)
                     primary = intents[0][0] if intents else "unknown"
                     output["intent"] = {
                         "primary": primary,

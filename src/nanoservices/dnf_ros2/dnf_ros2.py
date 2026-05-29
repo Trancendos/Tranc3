@@ -788,6 +788,6 @@ class DNFROS2Extension:
             "ros2_bridge": self.ros2_bridge.get_bridge_stats(),
             "flow_statuses": {
                 status: sum(1 for f in self._flows.values() if f.status == status)
-                for status in {f.status for f in self._flows.values()}
+                for status in set(f.status for f in self._flows.values())
             },
         }

@@ -84,16 +84,6 @@ class VectorStore:
             logger.error("VectorStore query failed: %s", sanitize_for_log(e))
             return []
 
-    def store(self, vector_id: str, embedding: List[float], metadata: Dict) -> bool:
-        """Alias for upsert — convenience method used by nanoservices."""
-        return self.upsert(vector_id, embedding, metadata)
-
-    def search(
-        self, embedding: List[float], top_k: int = 5, filter: Optional[Dict] = None
-    ) -> List[Dict]:
-        """Alias for query — convenience method used by nanoservices."""
-        return self.query(embedding, top_k, filter)
-
     def delete(self, vector_ids: List[str]) -> bool:
         """GDPR right-to-erasure — Gap G19 action."""
         try:
@@ -140,7 +130,7 @@ class InMemoryVectorStore:
                 np.dot(query_vec, v) / (np.linalg.norm(query_vec) * np.linalg.norm(v) + 1e-8)
             )
             scores.append({"id": vid, "score": score, "metadata": meta})
-        scores.sort(key=lambda x: float(x["score"]), reverse=True)  # type: ignore[arg-type]
+        scores.sort(key=lambda x: x["score"], reverse=True)
         return scores[:top_k]
 
     def delete(self, vector_ids: List[str]):

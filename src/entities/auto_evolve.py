@@ -87,22 +87,12 @@ class AutoEvolve:
             if best:
                 import json
 
-                _best_json = json.dumps(best)
-                _ts = time.time()
-                _db_path = self._db_path
-
-                def _save() -> None:
-                    conn = sqlite3.connect(_db_path)
-                    try:
-                        conn.execute(
-                            "INSERT OR REPLACE INTO evolution_results VALUES (?,?,?)",
-                            (eid, _ts, _best_json),
-                        )
-                        conn.commit()
-                    finally:
-                        conn.close()
-
-                await asyncio.to_thread(_save)
+                with sqlite3.connect(self._db_path) as conn:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO evolution_results VALUES (?,?,?)",
+                        (eid, time.time(), json.dumps(best)),
+                    )
+                    conn.commit()
                 logger.info("AutoEvolve: %s evolved — best=%s", eid, best)
         except Exception as exc:
             logger.warning("AutoEvolve: evolution failed for %s: %s", eid, exc)
@@ -129,7 +119,6 @@ class AutoEvolve:
     async def start(self) -> None:
         if self._running:
             return
-        self._running = True
         self._task = asyncio.create_task(self.run(), name="auto_evolve")
 
     async def stop(self) -> None:
@@ -139,7 +128,7 @@ class AutoEvolve:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass  # expected: task was cancelled
+                pass
 
     def status(self) -> dict[str, Any]:
         now = time.monotonic()

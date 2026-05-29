@@ -234,7 +234,7 @@ class WasmEdgeDroneExecutor:
 
         if self.wasm_manager:
             try:
-                from ..wasm_edge import EdgeTier, NRCQueryWasm
+                from ..wasm_edge import NRCQueryWasm, EdgeTier
 
                 query = NRCQueryWasm(
                     query_id=f"drone-{drone.drone_id}",
@@ -426,7 +426,7 @@ class SwarmCoordinator:
 
     def get_swarm_status(self) -> Dict[str, Any]:
         """Get overall swarm status."""
-        states = {}  # type: ignore[var-annotated]
+        states = {}
         for d in self.drones.values():
             states[d.state.value] = states.get(d.state.value, 0) + 1
 

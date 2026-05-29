@@ -10,7 +10,6 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 from __future__ import annotations
 
 import logging
-import os
 import sqlite3
 import threading
 import uuid
@@ -19,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 # ---------------------------------------------------------------------------
@@ -143,25 +142,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 STARTED_AT = datetime.now(timezone.utc)
 
 
@@ -175,13 +160,18 @@ async def health():
     }
 
 
-@_router.get("/")
+# TODO: Add specific CRUD endpoints for orders-service
+# The database class above provides create(), get(), list(), update(), delete() methods
+# Implement domain-specific endpoints based on business requirements
+
+
+@app.get("/")
 async def list_all(limit: int = 50, offset: int = 0):
     """List all orders."""
     return {"data": db.list(limit=limit, offset=offset)}
 
 
-@_router.post("/")
+@app.post("/")
 async def create(data: Dict[str, Any]):
     """Create a new orders entry."""
     item_id = data.get("order_id", str(uuid.uuid4()))
@@ -190,7 +180,7 @@ async def create(data: Dict[str, Any]):
     return {"ok": True, **created}
 
 
-@_router.get("/{order_id}")
+@app.get("/{order_id}")
 async def get_by_id(order_id: str):
     """Get a orders entry by ID."""
     item = db.get("order_id", order_id)
@@ -199,7 +189,7 @@ async def get_by_id(order_id: str):
     return item
 
 
-@_router.patch("/{order_id}")
+@app.patch("/{order_id}")
 async def update_by_id(order_id: str, data: Dict[str, Any]):
     """Update a orders entry."""
     if not db.update("order_id", order_id, data):
@@ -207,97 +197,12 @@ async def update_by_id(order_id: str, data: Dict[str, Any]):
     return {"ok": True}
 
 
-@_router.delete("/{order_id}")
+@app.delete("/{order_id}")
 async def delete_by_id(order_id: str):
     """Delete a orders entry (soft delete)."""
     if not db.delete("order_id", order_id):
         raise HTTPException(404, f"Not found: {order_id}")
     return {"ok": True}
-
-
-# ---------------------------------------------------------------------------
-# Domain-specific endpoints
-# ---------------------------------------------------------------------------
-
-
-@_router.get("/by-user/{user_id}")
-async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
-    """List all orders placed by a specific user."""
-    return {"data": db.list(limit=limit, offset=offset, user_id=user_id)}
-
-
-@_router.get("/by-status/{status}")
-async def get_by_status(status: str, limit: int = 50, offset: int = 0):
-    """List orders by status (pending, confirmed, shipped, delivered, cancelled)."""
-    valid = {"pending", "confirmed", "shipped", "delivered", "cancelled"}
-    if status not in valid:
-        raise HTTPException(400, f"Invalid status. Must be one of: {sorted(valid)}")
-    return {"data": db.list(limit=limit, offset=offset, status=status)}
-
-
-@_router.post("/{order_id}/confirm")
-async def confirm_order(order_id: str):
-    """Confirm a pending order."""
-    item = db.get("order_id", order_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {order_id}")
-    if item.get("status") != "pending":
-        raise HTTPException(409, f"Order status is '{item.get('status')}', not pending")
-    db.update("order_id", order_id, {"status": "confirmed"})
-    return {"ok": True, "order_id": order_id, "status": "confirmed"}
-
-
-@_router.post("/{order_id}/ship")
-async def ship_order(order_id: str):
-    """Mark an order as shipped."""
-    item = db.get("order_id", order_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {order_id}")
-    if item.get("status") != "confirmed":
-        raise HTTPException(
-            409, f"Order must be confirmed before shipping, got '{item.get('status')}'"
-        )
-    db.update("order_id", order_id, {"status": "shipped"})
-    return {"ok": True, "order_id": order_id, "status": "shipped"}
-
-
-@_router.post("/{order_id}/deliver")
-async def deliver_order(order_id: str):
-    """Mark an order as delivered."""
-    item = db.get("order_id", order_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {order_id}")
-    if item.get("status") != "shipped":
-        raise HTTPException(
-            409, f"Order must be shipped before delivery, got '{item.get('status')}'"
-        )
-    db.update("order_id", order_id, {"status": "delivered"})
-    return {"ok": True, "order_id": order_id, "status": "delivered"}
-
-
-@_router.post("/{order_id}/cancel")
-async def cancel_order(order_id: str):
-    """Cancel an order (only pending or confirmed orders can be cancelled)."""
-    item = db.get("order_id", order_id)
-    if not item:
-        raise HTTPException(404, f"Not found: {order_id}")
-    if item.get("status") not in ("pending", "confirmed"):
-        raise HTTPException(409, f"Cannot cancel order with status '{item.get('status')}'")
-    db.update("order_id", order_id, {"status": "cancelled"})
-    return {"ok": True, "order_id": order_id, "status": "cancelled"}
-
-
-@_router.get("/stats/summary")
-async def order_stats():
-    """Order counts and total revenue by status."""
-    conn = db._get_conn()
-    rows = conn.execute(
-        "SELECT status, COUNT(*) as count, SUM(total) as revenue FROM orders GROUP BY status"
-    ).fetchall()
-    return {"stats": [dict(r) for r in rows]}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

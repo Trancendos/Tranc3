@@ -16,7 +16,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -79,7 +79,6 @@ class PersonalityMatrix:
     def __init__(self, profiles_dir: str = "src/personality/profiles"):
         self.profiles_dir = Path(profiles_dir)
         self._registry: Dict[str, PersonalityProfile] = {}
-        self.emotion_detector: Optional[Any] = None
         self._load_all()
 
     def _load_all(self):
@@ -109,25 +108,3 @@ class PersonalityMatrix:
     def register(self, profile: PersonalityProfile):
         self._registry[profile.name] = profile
         profile.to_file(str(self.profiles_dir / f"{profile.name}.json"))
-
-    def get_personality_vector(
-        self,
-        personality_name: str,
-        emotion_scores: Dict[str, float],
-        language: str = "en",
-    ) -> List[float]:
-        """Return a numeric personality embedding vector for downstream use."""
-        try:
-            profile = self._registry.get(personality_name)
-        except Exception:
-            profile = None
-        base: List[float] = [
-            getattr(profile, "temperature", 0.8) if profile else 0.8,
-            getattr(profile, "top_p", 0.9) if profile else 0.9,
-            getattr(profile, "repetition_penalty", 1.1) if profile else 1.1,
-        ]
-        # Append top-3 emotion scores as additional dimensions
-        top_emotions = sorted(emotion_scores.items(), key=lambda x: x[1], reverse=True)[:3]
-        for _, score in top_emotions:
-            base.append(float(score))
-        return base

@@ -98,7 +98,7 @@ class OllamaProvider(AIProvider):
             else:
                 text = data.get("response", "")
 
-            return AIResponse(  # type: ignore[call-arg]
+            return AIResponse(
                 text=text,
                 model=data.get("model", model),
                 provider=self.name,

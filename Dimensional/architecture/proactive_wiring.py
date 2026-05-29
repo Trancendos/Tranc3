@@ -1122,11 +1122,11 @@ class ProactiveSystemBootstrap:
                     event_type="proactive.alert",
                     source="ProactiveSystemBootstrap",
                     data={
-                        "alert_type": getattr(plan, "action", "unknown").value  # type: ignore[union-attr]
+                        "alert_type": getattr(plan, "action", "unknown").value
                         if hasattr(getattr(plan, "action", None), "value")
                         else str(getattr(plan, "action", "unknown")),
                         "target": getattr(plan, "target", "unknown"),
-                        "priority": getattr(plan, "priority", "unknown").value  # type: ignore[union-attr]
+                        "priority": getattr(plan, "priority", "unknown").value
                         if hasattr(getattr(plan, "priority", None), "value")
                         else str(getattr(plan, "priority", "medium")),
                         "description": getattr(plan, "description", ""),
@@ -1255,7 +1255,7 @@ class ProactiveSystemBootstrap:
                 pass
 
         # Get health profile if available
-        health_profile = {}  # type: ignore[var-annotated]
+        health_profile = {}
         if self._orchestrator and hasattr(self._orchestrator, "get_health_profile"):
             try:
                 hp = self._orchestrator.get_health_profile()
@@ -1264,7 +1264,7 @@ class ProactiveSystemBootstrap:
                 pass
 
         # Get zero-cost status if available
-        zero_cost_status = {}  # type: ignore[var-annotated]
+        zero_cost_status = {}
         if self._orchestrator and hasattr(self._orchestrator, "get_zero_cost_status"):
             try:
                 zc = self._orchestrator.get_zero_cost_status()

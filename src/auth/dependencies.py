@@ -3,7 +3,6 @@
 # The MCP server imports from src.auth.dependencies for packaging consistency.
 import os
 import sys
-from typing import Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
@@ -15,7 +14,7 @@ except ImportError:
 
     _bearer = HTTPBearer(auto_error=False)
 
-    async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = None):  # type: ignore[misc]
+    async def get_current_user(credentials: HTTPAuthorizationCredentials = None):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Auth module not available",

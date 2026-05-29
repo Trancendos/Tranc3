@@ -4,14 +4,14 @@ Runtime code evolution with genetic programming principles.
 """
 
 from .self_modifying_code import (
-    CodeAnalyzer,
+    MutationType,
+    MutationStatus,
+    SafetyLevel,
     CodeMutation,
     CodeSnapshot,
     FitnessFunction,
+    CodeAnalyzer,
     MutationEngine,
-    MutationStatus,
-    MutationType,
-    SafetyLevel,
     SelfModifyingCodeEngine,
 )
 

@@ -505,10 +505,16 @@ class NSGAIIPlanOptimizer:
             obj_range = obj_max - obj_min if obj_max != obj_min else 1.0
 
             for i in range(1, len(sorted_front) - 1):
-                _fit_next = sorted_front[i + 1].fitness
-                val_next = _fit_next.get(obj_name, 0) if _fit_next is not None else 0
-                _fit_prev = sorted_front[i - 1].fitness
-                val_prev = _fit_prev.get(obj_name, 0) if _fit_prev is not None else 0
+                val_next = (
+                    sorted_front[i + 1].fitness.get(obj_name, 0)
+                    if sorted_front[i + 1].fitness
+                    else 0
+                )
+                val_prev = (
+                    sorted_front[i - 1].fitness.get(obj_name, 0)
+                    if sorted_front[i - 1].fitness
+                    else 0
+                )
                 sorted_front[i].crowding_distance += (val_next - val_prev) / obj_range
 
     def _dominates(self, p: NRCPlanChromosome, q: NRCPlanChromosome) -> bool:
@@ -576,7 +582,7 @@ class NSGAIIPlanOptimizer:
             for front in fronts:
                 self.crowding_distance(front)
 
-            new_population = []  # type: ignore[var-annotated]
+            new_population = []
             for front in fronts:
                 if len(new_population) + len(front) <= self.population_size:
                     new_population.extend(front)

@@ -352,7 +352,7 @@ class TierAccessBridge:
         rbac_result = None
         if self.rbac and subject_role:
             try:
-                rbac_result = self.rbac.check_permission(subject_role, resource, action)  # type: ignore[arg-type,call-arg]
+                rbac_result = self.rbac.check_permission(subject_role, resource, action)
             except Exception:
                 rbac_result = None  # RBAC not authoritative if misconfigured
 
@@ -363,7 +363,7 @@ class TierAccessBridge:
                 abac_result = self.abac.evaluate(
                     subject_attributes or {},
                     resource_attributes or {},
-                    action,  # type: ignore[arg-type]
+                    action,
                     environment or {},
                 )
             except Exception:
@@ -664,7 +664,7 @@ class EventRouter:
     def __init__(self, causal_engine: CausalOrderingEngine):
         self.causal_engine = causal_engine
         self._subscriptions: Dict[str, Set[str]] = defaultdict(set)  # channel → set of service_ids
-        self._event_handlers: Dict[str, List[callable]] = defaultdict(list)  # type: ignore[valid-type]
+        self._event_handlers: Dict[str, List[callable]] = defaultdict(list)
         self._lock = asyncio.Lock()
 
     async def subscribe(self, channel: str, service_id: str) -> None:
@@ -677,7 +677,7 @@ class EventRouter:
         async with self._lock:
             self._subscriptions[channel].discard(service_id)
 
-    async def register_handler(self, channel: str, handler: callable) -> None:  # type: ignore[valid-type]
+    async def register_handler(self, channel: str, handler: callable) -> None:
         """Register an async handler for events on a channel."""
         async with self._lock:
             self._event_handlers[channel].append(handler)
@@ -698,9 +698,9 @@ class EventRouter:
         for handler in handlers:
             try:
                 if asyncio.iscoroutinefunction(handler):
-                    await handler(event)  # type: ignore[misc]
+                    await handler(event)
                 else:
-                    handler(event)  # type: ignore[misc]
+                    handler(event)
             except Exception as e:
                 logger.error(f"Event handler error on channel {event.channel}: {e}")
 

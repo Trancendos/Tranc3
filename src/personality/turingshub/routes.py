@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from fastapi import APIRouter, Body, Path
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse
 
 from Dimensional.error_handlers import safe_error_detail
 
@@ -47,7 +47,7 @@ async def turings_hub_status() -> Dict[str, Any]:
 
 
 @router.get("/personalities")
-async def list_personalities() -> Response:
+async def list_personalities() -> list:
     spawner = _spawner()
     try:
         profiles = (
@@ -55,22 +55,22 @@ async def list_personalities() -> Response:
             if hasattr(spawner, "list_profiles")
             else list(spawner._profiles.keys())
         )
-        return [{"id": pid, "profile": spawner._profiles.get(pid, {})} for pid in profiles]  # type: ignore[return-value]
+        return [{"id": pid, "profile": spawner._profiles.get(pid, {})} for pid in profiles]
     except Exception as exc:
         return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
 
 
 @router.get("/personalities/{personality_id}")
-async def get_personality(personality_id: str = Path(...)) -> Response:
+async def get_personality(personality_id: str = Path(...)) -> Dict[str, Any]:
     spawner = _spawner()
     profile = spawner._profiles.get(personality_id)
     if not profile:
         return JSONResponse({"error": "Personality not found"}, status_code=404)
-    return {"id": personality_id, "profile": profile}  # type: ignore[return-value]
+    return {"id": personality_id, "profile": profile}
 
 
 @router.post("/spawn")
-async def spawn_personality(body: Dict[str, Any] = Body(...)) -> Response:
+async def spawn_personality(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     """
     Spawn a new repo scaffold for a personality instance.
 

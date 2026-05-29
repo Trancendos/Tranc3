@@ -131,4 +131,4 @@ class SafeHTTPException(HTTPException):
     ):
         detail = safe_error_detail(exc, status_code)
         super().__init__(status_code=status_code, detail=detail, headers=headers)
-        super().__init__(self.detail)  # type: ignore[arg-type]
+        super().__init__(self.detail)

@@ -6,7 +6,7 @@ import math
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -63,13 +63,8 @@ class IntentPredictor:
         total = sum(scores.values()) or 1.0
         return {k: round(v / total, 4) for k, v in scores.items()}
 
-    def classify(self, text: str) -> List[Tuple[str, float]]:
-        """Return sorted (intent, score) pairs, highest score first."""
-        scores = self.predict(text)
-        return sorted(scores.items(), key=lambda x: x[1], reverse=True)
-
     def dominant_intent(self, scores: Dict[str, float]) -> str:
-        return max(scores, key=scores.get)  # type: ignore[arg-type]
+        return max(scores, key=scores.get)
 
 
 class ChurnPredictor:

@@ -82,7 +82,7 @@ except ImportError:
     AdaptiveScanner = None  # type: ignore[assignment,misc]
 
 try:
-    from Dimensional.security_automation.predictor import ThreatPredictor  # type: ignore[attr-defined]
+    from Dimensional.security_automation.predictor import ThreatPredictor
 
     _PREDICTOR_AVAILABLE = True
 except ImportError:
@@ -163,7 +163,7 @@ class ProactiveDefenseLayer:
                 sanitize_for_log(service_name),
             )
         else:
-            self.engine = None  # type: ignore[assignment]
+            self.engine = None
             logger.warning(
                 "ProactiveDefenseLayer: DefenseEngine not available for %s",
                 sanitize_for_log(service_name),
@@ -172,7 +172,7 @@ class ProactiveDefenseLayer:
         if _ADAPTIVE_SCANNER:
             self.scanner = AdaptiveScanner()
         else:
-            self.scanner = None  # type: ignore[assignment]
+            self.scanner = None
 
         # Threat predictor (ML-based)
         if _PREDICTOR_AVAILABLE:
@@ -228,8 +228,8 @@ class ProactiveDefenseLayer:
         # ── DefenseEngine firewall evaluation ─────────────────────────────
         if self.engine:
             try:
-                eval_result = self.engine.evaluate_request(  # type: ignore[call-arg]
-                    {  # type: ignore[arg-type]
+                eval_result = self.engine.evaluate_request(
+                    {
                         "source": source_ip,
                         "destination": self.service_name,
                         "path": path,
@@ -308,7 +308,7 @@ class ProactiveDefenseLayer:
                     self.engine.create_incident(
                         title=f"Threat from {source_ip}",
                         description=f"Path: {path}, Level: {threat_level}",
-                        severity=threat_level,  # type: ignore[arg-type]
+                        severity=threat_level,
                         source=source_ip,
                         affected_services=[self.service_name],
                     )

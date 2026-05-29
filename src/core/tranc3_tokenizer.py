@@ -92,7 +92,7 @@ class Tranc3Tokenizer:
 
         special_list = list(SPECIAL_TOKENS.keys())
 
-        tokenizer = Tokenizer(BPE(unk_token="<unk>"))  # nosec B106  # noqa: S106 — <unk> is a tokenizer sentinel, not a password
+        tokenizer = Tokenizer(BPE(unk_token="<unk>"))  # nosec B106 — false positive: <unk> is a tokenizer token, not a password
 
         tokenizer.pre_tokenizer = ByteLevel(add_prefix_space=False)
 
@@ -149,8 +149,8 @@ class Tranc3Tokenizer:
             # Count pairs
             pair_freq: Dict[Tuple[str, str], int] = {}
             for word in corpus:
-                for a, b in zip(word, word[1:], strict=False):  # type: ignore[assignment,index,arg-type]
-                    pair_freq[(a, b)] = pair_freq.get((a, b), 0) + 1  # type: ignore[assignment,index,arg-type]
+                for a, b in zip(word, word[1:], strict=False):
+                    pair_freq[(a, b)] = pair_freq.get((a, b), 0) + 1
 
             if not pair_freq:
                 break

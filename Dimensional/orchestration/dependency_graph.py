@@ -327,13 +327,13 @@ class SmartDependencyGraph:
             if d != root and self._nodes.get(d, DependencyNode(name=d)).health == "healthy"
         ]
         if len(healthy_alternatives) >= 2 and base.value > ImpactLevel.LOW.value:
-            base = ImpactLevel(max(base.value - 1, ImpactLevel.LOW.value))  # type: ignore[operator]
+            base = ImpactLevel(max(base.value - 1, ImpactLevel.LOW.value))
 
         return base
 
     def _generate_mitigations(self, node_name: str, impacted: Dict[str, ImpactLevel]) -> List[str]:
         """Generate mitigation suggestions based on impact analysis."""
-        suggestions = []  # type: ignore[var-annotated]
+        suggestions = []
         node = self._nodes.get(node_name)
 
         if not node:
