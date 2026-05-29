@@ -284,21 +284,21 @@ class ScalaBridge:
 
     async def compile_query(self, request: CompilationRequest) -> CompilationResult:
         """Compile an NRC query through the Scala bridge."""
-        cache_key = hashlib.sha3_256(
-            f"{request.query.dsl}:{request.target.value}".encode()  # type: ignore[union-attr]
-        ).hexdigest()
-
-        if cache_key in self._compilation_cache:
-            return self._compilation_cache[cache_key]
-
-        start = time.monotonic()
-
         if not request.query:
             return CompilationResult(
                 request=request,
                 success=False,
                 errors=["No query provided"],
             )
+
+        cache_key = hashlib.sha3_256(
+            f"{request.query.dsl}:{request.target.value}".encode()
+        ).hexdigest()
+
+        if cache_key in self._compilation_cache:
+            return self._compilation_cache[cache_key]
+
+        start = time.monotonic()
 
         try:
             # Try real Scala compiler if available

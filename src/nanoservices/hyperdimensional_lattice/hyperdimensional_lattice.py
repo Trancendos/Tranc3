@@ -496,11 +496,18 @@ class ConceptLattice:
         b = self.nodes.get(b_id)
         c = self.nodes.get(c_id)
 
-        if not all([a, b, c]) or not all([a.hypervector, b.hypervector, c.hypervector]):  # type: ignore[union-attr]
+        if (
+            a is None
+            or b is None
+            or c is None
+            or a.hypervector is None
+            or b.hypervector is None
+            or c.hypervector is None
+        ):
             raise ValueError("All concepts must exist with hypervectors")
 
         d_data = [
-            c.hypervector.data[i] + (b.hypervector.data[i] - a.hypervector.data[i])  # type: ignore[union-attr]
+            c.hypervector.data[i] + (b.hypervector.data[i] - a.hypervector.data[i])
             for i in range(self.dimension)
         ]
 
@@ -511,7 +518,7 @@ class ConceptLattice:
             data=d_data,
             dimension=self.dimension,
             vector_type=self.vector_ops.vector_type,
-            label=f"analogy({a.concept}:{b.concept}::{c.concept}:?)",  # type: ignore[union-attr]
+            label=f"analogy({a.concept}:{b.concept}::{c.concept}:?)",
         )
 
         d_concept = ConceptNode(
@@ -519,8 +526,8 @@ class ConceptLattice:
             hypervector=d_vector,
             role=ConceptRole.ABSTRACT,
             parent_ids=[a_id, b_id, c_id],
-            generation=max(a.generation, b.generation, c.generation) + 1,  # type: ignore[union-attr]
-            metadata={"analogy": f"{a.concept}:{b.concept}::{c.concept}:?"},  # type: ignore[union-attr]
+            generation=max(a.generation, b.generation, c.generation) + 1,
+            metadata={"analogy": f"{a.concept}:{b.concept}::{c.concept}:?"},
         )
         self.nodes[d_concept.id] = d_concept
         self._concept_vectors[d_concept.concept] = d_vector

@@ -56,7 +56,8 @@ class SelfEvolvingInference:
         fitness = (quality_score + user_satisfaction) / 2
 
         # Evolve architecture
-        self.evolution_engine.evolve(num_generations=1)  # type: ignore[union-attr]
+        if self.evolution_engine is not None:
+            self.evolution_engine.evolve(num_generations=1)
 
         # Create adapted model layer
         adapted_layer = nn.Linear(input_data.size(-1), input_data.size(-1))

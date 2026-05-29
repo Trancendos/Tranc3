@@ -1056,11 +1056,10 @@ async def chat(
         # Emotion detection
         detected_emotion = chat_req.user_emotion or "neutral"
         emotion_scores = {"neutral": 1.0}
-        if personality_matrix and getattr(personality_matrix, "emotion_detector", None):
-            emotion_scores = personality_matrix.emotion_detector.detect_emotion(chat_req.message)  # type: ignore[union-attr]
-            detected_emotion = personality_matrix.emotion_detector.get_dominant_emotion(  # type: ignore[union-attr]
-                emotion_scores
-            )
+        _ed = getattr(personality_matrix, "emotion_detector", None) if personality_matrix else None
+        if _ed is not None:
+            emotion_scores = _ed.detect_emotion(chat_req.message)
+            detected_emotion = _ed.get_dominant_emotion(emotion_scores)
 
         # Compress conversation history if long
         history = compressor.compress(chat_req.conversation_history or [])
@@ -1264,10 +1263,11 @@ async def personalities():
     ),
 )
 async def analyze_emotion(text: str, current_user: dict = Depends(get_current_user)):
-    if not personality_matrix or not getattr(personality_matrix, "emotion_detector", None):
+    _ed = getattr(personality_matrix, "emotion_detector", None) if personality_matrix else None
+    if _ed is None:
         raise HTTPException(status_code=503, detail="Emotion analysis unavailable")
-    scores = personality_matrix.emotion_detector.detect_emotion(text)  # type: ignore[union-attr]
-    dominant = personality_matrix.emotion_detector.get_dominant_emotion(scores)  # type: ignore[union-attr]
+    scores = _ed.detect_emotion(text)
+    dominant = _ed.get_dominant_emotion(scores)
     return {"dominant_emotion": dominant, "emotion_scores": scores, "text": text}
 
 

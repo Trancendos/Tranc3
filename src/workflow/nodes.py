@@ -263,16 +263,13 @@ class CodeExecNode(BaseNode):
         local_ns["context"] = context
         local_ns["result"] = None
 
+        _b: Any = __builtins__
+        if isinstance(_b, dict):
+            _safe_builtins: Dict[str, Any] = {k: v for k, v in _b.items() if k in self._SAFE_BUILTINS}
+        else:
+            _safe_builtins = {k: getattr(_b, k) for k in self._SAFE_BUILTINS if hasattr(_b, k)}
         safe_globals: Dict[str, Any] = {
-            "__builtins__": {
-                k: v
-                for k, v in __builtins__.items()  # type: ignore[union-attr]
-                if k in self._SAFE_BUILTINS
-            }
-            if isinstance(__builtins__, dict)
-            else {
-                k: getattr(__builtins__, k) for k in self._SAFE_BUILTINS if hasattr(__builtins__, k)
-            },
+            "__builtins__": _safe_builtins,
             "math": __import__("math"),
             "json": __import__("json"),
             "re": __import__("re"),

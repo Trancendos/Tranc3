@@ -313,8 +313,10 @@ class LoRATrainer:
     @torch.no_grad()
     def _eval_pass(self) -> float:
         self.model.eval()
+        if self.val_loader is None:
+            return 0.0
         total_loss, n = 0.0, 0
-        for batch in self.val_loader:  # type: ignore[union-attr]
+        for batch in self.val_loader:
             input_ids, targets = self._unpack_batch(batch)
             _, loss = self.model(input_ids, targets)
             total_loss += loss.item()
