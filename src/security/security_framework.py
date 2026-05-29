@@ -59,6 +59,7 @@ else:
             "Set both env vars in production for RS256 asymmetric signing."
         )
 
+
 class _BcryptContext:
     """Minimal bcrypt wrapper replacing passlib.CryptContext — avoids crypt DeprecationWarning."""
 
