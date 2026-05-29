@@ -303,8 +303,8 @@ services:
       dockerfile: Dockerfile
     container_name: infinity-void-worker
     environment:
-      - MASTER_KEY_SEED=${MASTER_KEY_SEED:-change-me-in-production}
-      - INTERNAL_SECRET=${INTERNAL_SECRET:-internal-dev-secret}
+      - MASTER_KEY_SEED=${MASTER_KEY_SEED}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
       - ENVIRONMENT=production
     ports:
       - "8002:8002"
@@ -326,7 +326,7 @@ services:
       dockerfile: Dockerfile
     container_name: trancendos-api-gateway-worker
     environment:
-      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-not-for-prod}
+      - JWT_SECRET=${JWT_SECRET}
       - TRANC3_AI_SERVICE_URL=http://tranc3-ai:8001
       - ENVIRONMENT=production
     ports:
@@ -350,7 +350,7 @@ services:
       dockerfile: Dockerfile
     container_name: infinity-ws-worker
     environment:
-      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-not-for-prod}
+      - JWT_SECRET=${JWT_SECRET}
       - ENVIRONMENT=production
     ports:
       - "8004:8004"
@@ -370,8 +370,8 @@ services:
       dockerfile: Dockerfile
     container_name: infinity-auth-worker
     environment:
-      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-not-for-prod}
-      - MASTER_KEY_SEED=${MASTER_KEY_SEED:-change-me-in-production}
+      - JWT_SECRET=${JWT_SECRET}
+      - MASTER_KEY_SEED=${MASTER_KEY_SEED}
       - ENVIRONMENT=production
     ports:
       - "8005:8005"
