@@ -6,6 +6,7 @@ Runs in bootstrap mode: no CUDA, no real model weights, no torch dependency at
 the class level — only checked inside each test that needs it. EvalSuite is fully
 functional without heavy ML dependencies.
 """
+
 from __future__ import annotations
 
 import asyncio

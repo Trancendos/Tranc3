@@ -11,6 +11,7 @@ passlib 1.7.4 + bcrypt 5.0.0 have an incompatibility in the test environment
 patch pwd_context with lightweight fakes so the role/tier logic can be tested
 independently of the cryptographic backend.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch

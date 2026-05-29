@@ -146,6 +146,7 @@ def crush_hash(pg_id: int, osd_id: int, retry: int) -> int:
 
     Returns a deterministic 32-bit non-negative integer.
     """
+
     # rjenkins1: hash a sequence of bytes using Jenkins one-at-a-time
     def _rjenkins1(*vals: int) -> int:
         h = 0
@@ -272,7 +273,9 @@ class CrushMapBuilder:
         existing = self._crush_map.find_bucket(name)
         if existing:
             return existing
-        bucket = CrushBucket(id=-(len(self._crush_map.buckets) + 2), name=name, type="host", weight=0.0)
+        bucket = CrushBucket(
+            id=-(len(self._crush_map.buckets) + 2), name=name, type="host", weight=0.0
+        )
         self._crush_map.buckets.append(bucket)
         return bucket
 

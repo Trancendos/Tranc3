@@ -840,13 +840,29 @@ async def jwks():
             from cryptography.hazmat.primitives.serialization import (
                 load_pem_public_key,  # noqa: PLC0415
             )
+
             pub = load_pem_public_key(public_key_pem.encode())
             if isinstance(pub, RSAPublicKey):
-                pub_numbers = pub.public_key().public_numbers() if hasattr(pub, "public_key") else pub.public_numbers()
+                pub_numbers = (
+                    pub.public_key().public_numbers()
+                    if hasattr(pub, "public_key")
+                    else pub.public_numbers()
+                )
+
                 def _b64url(n: int, length: int) -> str:
                     return base64.urlsafe_b64encode(n.to_bytes(length, "big")).rstrip(b"=").decode()
-                return {"keys": [{"kty": "RSA", "use": "sig", "alg": "RS256",
-                                  "n": _b64url(pub_numbers.n, 256), "e": _b64url(pub_numbers.e, 3)}]}
+
+                return {
+                    "keys": [
+                        {
+                            "kty": "RSA",
+                            "use": "sig",
+                            "alg": "RS256",
+                            "n": _b64url(pub_numbers.n, 256),
+                            "e": _b64url(pub_numbers.e, 3),
+                        }
+                    ]
+                }
         except Exception:
             pass
     return {"keys": []}
@@ -874,14 +890,25 @@ async def authorize(
         """INSERT OR REPLACE INTO auth_codes
             (code, client_id, redirect_uri, scope, code_challenge, code_challenge_method, expires_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (auth_code, client_id, redirect_uri, scope, code_challenge,
-            code_challenge_method, int(time.time()) + 600),
+        (
+            auth_code,
+            client_id,
+            redirect_uri,
+            scope,
+            code_challenge,
+            code_challenge_method,
+            int(time.time()) + 600,
+        ),
     )
     db.commit()
     import urllib.parse  # noqa: PLC0415
+
     params = {"code": auth_code, "state": state}
-    return {"redirect_to": f"{redirect_uri}?{urllib.parse.urlencode(params)}",
-            "code": auth_code, "state": state}
+    return {
+        "redirect_to": f"{redirect_uri}?{urllib.parse.urlencode(params)}",
+        "code": auth_code,
+        "state": state,
+    }
 
 
 class TokenRequest(BaseModel):
@@ -916,6 +943,7 @@ async def token_endpoint(req: TokenRequest):
     if row["code_challenge"]:
         import base64
         import hashlib  # noqa: PLC0415, E401
+
         if not req.code_verifier:
             raise HTTPException(status_code=400, detail="code_verifier required")
         digest = hashlib.sha256(req.code_verifier.encode()).digest()
@@ -946,14 +974,24 @@ async def _refresh_via_token(refresh_token: str) -> dict:
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     from jose import jwt as _jwt  # noqa: PLC0415
-    claims = {"sub": user["user_id"], "username": user["username"],
-               "role": user["role"], "iss": AUTH_ISSUER,
-               "iat": int(time.time()), "exp": int(time.time()) + JWT_EXPIRY_MINUTES * 60}
-    return {"access_token": _jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM),
-            "token_type": "Bearer", "expires_in": JWT_EXPIRY_MINUTES * 60}
+
+    claims = {
+        "sub": user["user_id"],
+        "username": user["username"],
+        "role": user["role"],
+        "iss": AUTH_ISSUER,
+        "iat": int(time.time()),
+        "exp": int(time.time()) + JWT_EXPIRY_MINUTES * 60,
+    }
+    return {
+        "access_token": _jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM),
+        "token_type": "Bearer",
+        "expires_in": JWT_EXPIRY_MINUTES * 60,
+    }
 
 
 # ── auth_codes table init ────────────────────────────────────────────────────
+
 
 def _ensure_auth_codes_table() -> None:
     db.execute("""

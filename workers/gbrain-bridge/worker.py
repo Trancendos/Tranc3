@@ -50,7 +50,7 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 PAGERANK_DAMPING = 0.85
 PAGERANK_ITERATIONS = 50
 PAGERANK_TOLERANCE = 1e-6
-TEMPORAL_DECAY_HOURS = 720          # 30 days half-life
+TEMPORAL_DECAY_HOURS = 720  # 30 days half-life
 MAX_HOP_DEPTH = 4
 CONSOLIDATION_SIMILARITY_THRESHOLD = 0.85
 
@@ -166,7 +166,11 @@ class PageRankEngine:
             for src, links in out_links.items():
                 total_weight = sum(w for _, w in links)
                 for tgt, w in links:
-                    contrib = PAGERANK_DAMPING * scores[src] * (w / total_weight if total_weight > 0 else 1.0 / len(links))
+                    contrib = (
+                        PAGERANK_DAMPING
+                        * scores[src]
+                        * (w / total_weight if total_weight > 0 else 1.0 / len(links))
+                    )
                     new_scores[tgt] = new_scores.get(tgt, 0.0) + contrib
 
             # Check convergence
@@ -234,19 +238,19 @@ def multi_hop_search(
     while frontier:
         node_id, depth, path = frontier.popleft()
         if depth > 0:
-            row = db.execute(
-                "SELECT * FROM nodes WHERE node_id = ?", (node_id,)
-            ).fetchone()
+            row = db.execute("SELECT * FROM nodes WHERE node_id = ?", (node_id,)).fetchone()
             if row:
-                results.append({
-                    "node_id": node_id,
-                    "title": row["title"],
-                    "content": row["content"][:500],
-                    "importance": row["importance"],
-                    "hops": depth,
-                    "path": path,
-                    "tags": json.loads(row["tags"] or "[]"),
-                })
+                results.append(
+                    {
+                        "node_id": node_id,
+                        "title": row["title"],
+                        "content": row["content"][:500],
+                        "importance": row["importance"],
+                        "hops": depth,
+                        "path": path,
+                        "tags": json.loads(row["tags"] or "[]"),
+                    }
+                )
 
         if depth < max_hops:
             query = "SELECT target_id, relation, weight FROM edges WHERE source_id = ?"
@@ -353,7 +357,9 @@ def consolidate_knowledge(db: sqlite3.Connection) -> Dict[str, int]:
                 # Merge row_b content into row_a, delete row_b
                 merged_content = row_a["content"]
                 if row_b["content"] and row_b["content"] not in merged_content:
-                    merged_content += f"\n\n[Consolidated from: {row_b['title']}]\n{row_b['content']}"
+                    merged_content += (
+                        f"\n\n[Consolidated from: {row_b['title']}]\n{row_b['content']}"
+                    )
                 db.execute(
                     "UPDATE nodes SET content = ?, updated_at = ? WHERE node_id = ?",
                     (merged_content[:10000], time.time(), row_a["node_id"]),
@@ -487,9 +493,15 @@ async def create_node(body: NodeCreate) -> Response:  # type: ignore[return-valu
             "(node_id, title, content, source, importance, created_at, updated_at, tags, metadata) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
-                node_id, body.title, body.content, body.source, body.importance,
-                now, now,
-                json.dumps(body.tags), json.dumps(body.metadata),
+                node_id,
+                body.title,
+                body.content,
+                body.source,
+                body.importance,
+                now,
+                now,
+                json.dumps(body.tags),
+                json.dumps(body.metadata),
             ),
         )
         db.commit()
@@ -545,13 +557,14 @@ async def search(body: SearchRequest) -> Response:  # type: ignore[return-value]
     if body.max_hops > 0 and direct:
         seed_ids = [r["node_id"] for r in direct[:5]]
         expanded = multi_hop_search(
-            seed_ids, db,
+            seed_ids,
+            db,
             max_hops=body.max_hops,
             relation_filter=body.relation_filter,
         )
 
     # Log access to retrieved nodes
-    for r in direct[:body.max_results]:
+    for r in direct[: body.max_results]:
         db.execute(
             "INSERT INTO access_log VALUES (?, ?, ?, ?, ?)",
             (str(uuid.uuid4()), r["node_id"], time.time(), body.query[:200], r["relevance_score"]),
@@ -565,7 +578,7 @@ async def search(body: SearchRequest) -> Response:  # type: ignore[return-value]
     return {  # type: ignore[return-value]
         "query": body.query,
         "direct_results": direct,
-        "expanded_results": expanded[:body.max_results],
+        "expanded_results": expanded[: body.max_results],
         "total": len(direct) + len(expanded),
     }
 
@@ -622,4 +635,5 @@ async def graph_stats() -> Response:  # type: ignore[return-value]
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("worker:app", host="0.0.0.0", port=WORKER_PORT, reload=False)

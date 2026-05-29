@@ -112,6 +112,7 @@ class AbuseDetector:
         # Collapse "i g n o r e" → "ignore" when every char is single-letter
         # Only collapse runs where each token is ≤3 chars separated by spaces
         import re as _re  # local import avoids shadowing module-level re
+
         compressed = _re.sub(r"\b([a-zA-Z])\s(?=[a-zA-Z]\b)", r"\1", text)
         return compressed
 

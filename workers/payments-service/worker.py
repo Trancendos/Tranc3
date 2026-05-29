@@ -205,6 +205,7 @@ async def delete_by_id(payment_id: str):
 # Domain-specific endpoints
 # ---------------------------------------------------------------------------
 
+
 @app.get("/by-order/{order_id}")
 async def get_by_order(order_id: str):
     """List all payments for a given order."""

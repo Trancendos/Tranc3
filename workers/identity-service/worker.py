@@ -206,6 +206,7 @@ async def delete_by_id(identity_id: str):
 # Domain-specific endpoints
 # ---------------------------------------------------------------------------
 
+
 @app.get("/by-user/{user_id}")
 async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
     """List all identities for a given user across all providers."""

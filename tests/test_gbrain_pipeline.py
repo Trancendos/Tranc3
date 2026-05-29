@@ -9,6 +9,7 @@ Covers:
   - GBrainIngestionPipeline: all 6 stages, deduplication, error handling
   - get_pipeline: module-level singleton
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -742,9 +743,7 @@ class TestPipelineIngest:
 
         interaction = AgentInteraction(
             prompt="Quantum neural networks are transformative.",
-            response=(
-                "Quantum neural networks combine quantum physics with neural computing."
-            ),
+            response=("Quantum neural networks combine quantum physics with neural computing."),
         )
 
         with patch("src.gbrain.pipeline.GBrainClient") as MockClient:

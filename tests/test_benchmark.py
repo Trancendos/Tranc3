@@ -20,6 +20,7 @@ from src.benchmark.performance_suite import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def tmp_suite(tmp_path: Path) -> BenchmarkSuite:
     return BenchmarkSuite(results_dir=tmp_path / "benchmarks")
@@ -28,6 +29,7 @@ def tmp_suite(tmp_path: Path) -> BenchmarkSuite:
 # ---------------------------------------------------------------------------
 # Unit tests — async target
 # ---------------------------------------------------------------------------
+
 
 class TestBenchmarkSuiteAsync:
     """Test suite with an async target."""
@@ -90,6 +92,7 @@ class TestBenchmarkSuiteAsync:
     async def test_latency_stats_computed(self, tmp_suite: BenchmarkSuite) -> None:
         async def variable_latency() -> None:
             import random
+
             await asyncio.sleep(random.uniform(0.001, 0.005))
 
         config = BenchmarkConfig(
@@ -130,7 +133,7 @@ class TestBenchmarkSuiteAsync:
             total_requests=5,
             warmup_requests=0,
             track_memory=False,
-            baseline_rps=10000.0,   # impossibly high baseline → regression
+            baseline_rps=10000.0,  # impossibly high baseline → regression
         )
         result = await tmp_suite.run(config, slow_target)
         assert result.rps_regression is True
@@ -146,7 +149,7 @@ class TestBenchmarkSuiteAsync:
             total_requests=20,
             warmup_requests=0,
             track_memory=False,
-            baseline_rps=0.001,     # trivially low baseline → no regression
+            baseline_rps=0.001,  # trivially low baseline → no regression
         )
         result = await tmp_suite.run(config, instant)
         assert result.rps_regression is False
@@ -172,6 +175,7 @@ class TestBenchmarkSuiteAsync:
 # Unit tests — sync target
 # ---------------------------------------------------------------------------
 
+
 class TestBenchmarkSuiteSync:
     @pytest.mark.asyncio
     async def test_sync_target_runs(self, tmp_suite: BenchmarkSuite) -> None:
@@ -193,6 +197,7 @@ class TestBenchmarkSuiteSync:
 # Unit tests — compare()
 # ---------------------------------------------------------------------------
 
+
 class TestBenchmarkCompare:
     @pytest.mark.asyncio
     async def test_compare_returns_deltas(self, tmp_suite: BenchmarkSuite) -> None:
@@ -202,8 +207,12 @@ class TestBenchmarkCompare:
         async def slow() -> None:
             await asyncio.sleep(0.01)
 
-        cfg_a = BenchmarkConfig("fast", concurrency=5, total_requests=20, warmup_requests=0, track_memory=False)
-        cfg_b = BenchmarkConfig("slow", concurrency=5, total_requests=20, warmup_requests=0, track_memory=False)
+        cfg_a = BenchmarkConfig(
+            "fast", concurrency=5, total_requests=20, warmup_requests=0, track_memory=False
+        )
+        cfg_b = BenchmarkConfig(
+            "slow", concurrency=5, total_requests=20, warmup_requests=0, track_memory=False
+        )
 
         r_a = await tmp_suite.run(cfg_a, fast)
         r_b = await tmp_suite.run(cfg_b, slow)
@@ -218,7 +227,9 @@ class TestBenchmarkCompare:
         async def same() -> None:
             pass
 
-        cfg = BenchmarkConfig("same", concurrency=3, total_requests=10, warmup_requests=0, track_memory=False)
+        cfg = BenchmarkConfig(
+            "same", concurrency=3, total_requests=10, warmup_requests=0, track_memory=False
+        )
         r1 = await tmp_suite.run(cfg, same)
         r2 = await tmp_suite.run(cfg, same)
         cmp = tmp_suite.compare(r1, r2)
@@ -228,6 +239,7 @@ class TestBenchmarkCompare:
 # ---------------------------------------------------------------------------
 # Unit tests — LatencyStats
 # ---------------------------------------------------------------------------
+
 
 class TestLatencyStats:
     def test_compute_latency_stats(self) -> None:
@@ -253,6 +265,7 @@ class TestLatencyStats:
 # BenchmarkResult helpers
 # ---------------------------------------------------------------------------
 
+
 class TestBenchmarkResult:
     def test_success_rate_zero_total(self) -> None:
         config = BenchmarkConfig("test")
@@ -262,6 +275,7 @@ class TestBenchmarkResult:
 
     def test_to_dict_serializable(self) -> None:
         import json
+
         config = BenchmarkConfig("to-dict")
         result = BenchmarkResult(run_id="abc", name="to-dict", config=config)
         result.total_requests = 10

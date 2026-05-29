@@ -27,12 +27,25 @@ from .base import BaseAdapter
 
 logger = logging.getLogger(__name__)
 
-_AEONMIND_CAPABILITIES = frozenset({
-    "translate", "summarize", "classify", "extract",
-    "validate", "transform", "monitor", "notify",
-    "log", "cache", "route", "filter", "enrich",
-    "embed", "generic",
-})
+_AEONMIND_CAPABILITIES = frozenset(
+    {
+        "translate",
+        "summarize",
+        "classify",
+        "extract",
+        "validate",
+        "transform",
+        "monitor",
+        "notify",
+        "log",
+        "cache",
+        "route",
+        "filter",
+        "enrich",
+        "embed",
+        "generic",
+    }
+)
 
 
 class AeonMindAdapter(BaseAdapter):
@@ -51,13 +64,17 @@ class AeonMindAdapter(BaseAdapter):
         try:
             import sys  # noqa: PLC0415
             from pathlib import Path  # noqa: PLC0415
-            aeon_path = str(Path(__file__).resolve().parent.parent.parent.parent / "aeonmind" / "python")
+
+            aeon_path = str(
+                Path(__file__).resolve().parent.parent.parent.parent / "aeonmind" / "python"
+            )
             if aeon_path not in sys.path:
                 sys.path.insert(0, aeon_path)
             from aeonmind.services.bot_services import (  # noqa: PLC0415
                 BotCapability,
                 BotServiceWorker,
             )
+
             self._worker_cls = BotServiceWorker
             self._capability_cls = BotCapability
         except ImportError as exc:
@@ -80,8 +97,7 @@ class AeonMindAdapter(BaseAdapter):
         cap_name = action.lower().replace("-", "_")
         if cap_name not in _AEONMIND_CAPABILITIES:
             raise ValueError(
-                f"Unknown AeonMind capability '{cap_name}'. "
-                f"Valid: {sorted(_AEONMIND_CAPABILITIES)}"
+                f"Unknown AeonMind capability '{cap_name}'. Valid: {sorted(_AEONMIND_CAPABILITIES)}"
             )
 
         try:

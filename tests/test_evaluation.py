@@ -25,6 +25,7 @@ from src.evaluation.model_eval import (
 # BLEU score
 # ---------------------------------------------------------------------------
 
+
 class TestBleuScore:
     def test_perfect_match(self) -> None:
         score = bleu_score("the cat sat on the mat", ["the cat sat on the mat"])
@@ -64,6 +65,7 @@ class TestBleuScore:
 # ROUGE-L score
 # ---------------------------------------------------------------------------
 
+
 class TestRougeLScore:
     def test_perfect_match(self) -> None:
         r = rouge_l_score("the cat sat on the mat", "the cat sat on the mat")
@@ -98,6 +100,7 @@ class TestRougeLScore:
 # Exact match
 # ---------------------------------------------------------------------------
 
+
 class TestExactMatch:
     def test_exact(self) -> None:
         assert exact_match("Hello World", "Hello World") is True
@@ -121,6 +124,7 @@ class TestExactMatch:
 # ---------------------------------------------------------------------------
 # Token F1
 # ---------------------------------------------------------------------------
+
 
 class TestTokenF1:
     def test_perfect_match(self) -> None:
@@ -149,6 +153,7 @@ class TestTokenF1:
 # ---------------------------------------------------------------------------
 # Hallucination score
 # ---------------------------------------------------------------------------
+
 
 class TestHallucinationScore:
     def test_grounded_response(self) -> None:
@@ -180,6 +185,7 @@ class TestHallucinationScore:
 # ---------------------------------------------------------------------------
 # EvalConfig and EvalResult
 # ---------------------------------------------------------------------------
+
 
 class TestEvalConfig:
     def test_defaults(self) -> None:
@@ -217,6 +223,7 @@ class TestEvalResult:
 # ---------------------------------------------------------------------------
 # EvalSuite — async
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def tmp_eval_suite(tmp_path: Path) -> EvalSuite:
@@ -256,9 +263,7 @@ class TestEvalSuiteBasic:
         assert result.metrics["exact_match"] == pytest.approx(1.0, abs=0.01)
 
     @pytest.mark.asyncio
-    async def test_result_saved_to_disk(
-        self, tmp_eval_suite: EvalSuite, tmp_path: Path
-    ) -> None:
+    async def test_result_saved_to_disk(self, tmp_eval_suite: EvalSuite, tmp_path: Path) -> None:
         async def gen(prompt: str) -> str:
             return "output"
 
@@ -282,9 +287,7 @@ class TestEvalSuiteBasic:
 
 class TestEvalSuiteFromFile:
     @pytest.mark.asyncio
-    async def test_evaluate_from_file(
-        self, tmp_eval_suite: EvalSuite, tmp_path: Path
-    ) -> None:
+    async def test_evaluate_from_file(self, tmp_eval_suite: EvalSuite, tmp_path: Path) -> None:
         jsonl_path = tmp_path / "samples.jsonl"
         lines = [
             json.dumps({"prompt": "p1", "reference": "r1"}),
@@ -296,9 +299,7 @@ class TestEvalSuiteFromFile:
             return "r1" if prompt == "p1" else "r2"
 
         config = EvalConfig(name="from-file")
-        result = await tmp_eval_suite.evaluate_from_file(
-            config, gen, str(jsonl_path)
-        )
+        result = await tmp_eval_suite.evaluate_from_file(config, gen, str(jsonl_path))
         assert result.num_samples == 2
         assert result.metrics["exact_match"] == pytest.approx(1.0, abs=0.01)
 
@@ -320,16 +321,12 @@ class TestEvalSuiteLoraComparison:
         assert lora_result.metrics["exact_match"] > base_result.metrics["exact_match"]
 
     @pytest.mark.asyncio
-    async def test_compare_returns_two_results(
-        self, tmp_eval_suite: EvalSuite
-    ) -> None:
+    async def test_compare_returns_two_results(self, tmp_eval_suite: EvalSuite) -> None:
         async def gen(prompt: str) -> str:
             return "x"
 
         samples = [{"prompt": "p", "reference": "x"}]
         config = EvalConfig(name="pair-test")
-        pair = await tmp_eval_suite.evaluate_lora_checkpoint(
-            config, gen, gen, samples
-        )
+        pair = await tmp_eval_suite.evaluate_lora_checkpoint(config, gen, gen, samples)
         assert len(pair) == 2
         assert all(isinstance(r, EvalResult) for r in pair)

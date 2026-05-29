@@ -364,9 +364,7 @@ def _summarise(report: BenchmarkReport) -> Dict[str, Any]:
     """Build a human-readable summary from a BenchmarkReport."""
     successful = [r for r in report.benchmark_results if not r.error]
     failed = [r for r in report.benchmark_results if r.error]
-    avg_latency = (
-        sum(r.latency_ms for r in successful) / len(successful) if successful else 0.0
-    )
+    avg_latency = sum(r.latency_ms for r in successful) / len(successful) if successful else 0.0
     avg_tokens = (
         sum(r.tokens_generated for r in successful) / len(successful) if successful else 0.0
     )
@@ -446,9 +444,7 @@ def _cli() -> None:
     eval_metrics: Optional[EvalMetrics] = None
     try:
         val_ds = TranscDataset(split="val")  # type: ignore[call-arg]
-        val_loader = torch.utils.data.DataLoader(
-            val_ds, batch_size=cfg.batch_size, shuffle=False
-        )
+        val_loader = torch.utils.data.DataLoader(val_ds, batch_size=cfg.batch_size, shuffle=False)
         evaluator = ModelEvaluator(model, val_loader, device, max_batches=args.max_batches)
         eval_metrics = evaluator.run()
         print(

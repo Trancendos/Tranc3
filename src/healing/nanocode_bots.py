@@ -630,7 +630,9 @@ class NanoCodeBotDispatcher:
             self._history = self._history[-5_000:]
         return result
 
-    async def dispatch_from_metrics(self, metrics: Dict, config: Optional[Dict] = None) -> BotResult:
+    async def dispatch_from_metrics(
+        self, metrics: Dict, config: Optional[Dict] = None
+    ) -> BotResult:
         """Infer failure modes from *metrics* and dispatch the first matched bot."""
         service_id = str(metrics.get("service_id", "auto"))
         context: Dict = {"endpoint": metrics.get("endpoint", "")}

@@ -356,7 +356,10 @@ def register_knowledge_tools(registry: Any) -> int:
             input_schema={
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Natural-language or keyword query."},
+                    "query": {
+                        "type": "string",
+                        "description": "Natural-language or keyword query.",
+                    },
                     "top_k": {
                         "type": "integer",
                         "description": "Number of results to return (default 10).",
@@ -385,7 +388,10 @@ def register_knowledge_tools(registry: Any) -> int:
             input_schema={
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Natural-language or keyword query."},
+                    "query": {
+                        "type": "string",
+                        "description": "Natural-language or keyword query.",
+                    },
                     "top_k": {
                         "type": "integer",
                         "description": "Seed results before expansion (default 5).",

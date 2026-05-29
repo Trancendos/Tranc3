@@ -7,6 +7,7 @@ grant/revoke), and the require_permission FastAPI dependency factory.
 
 No external dependencies required — pure Python, no CUDA, no torch.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock

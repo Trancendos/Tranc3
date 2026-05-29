@@ -21,10 +21,17 @@ from .base import BaseAdapter
 
 logger = logging.getLogger(__name__)
 
-_INFERENCE_BOTS = frozenset({
-    "generate", "embed", "emotion", "tokenize",
-    "consciousness", "personality", "predict",
-})
+_INFERENCE_BOTS = frozenset(
+    {
+        "generate",
+        "embed",
+        "emotion",
+        "tokenize",
+        "consciousness",
+        "personality",
+        "predict",
+    }
+)
 
 
 class SrcWorkersAdapter(BaseAdapter):
@@ -41,6 +48,7 @@ class SrcWorkersAdapter(BaseAdapter):
             return self._registry
         try:
             from src.workers.bot_registry import BotRegistry  # noqa: PLC0415
+
             self._registry = BotRegistry
         except ImportError as exc:
             logger.debug("src.workers.bot_registry not importable: %s", exc)

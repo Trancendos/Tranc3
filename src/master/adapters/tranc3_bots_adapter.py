@@ -23,11 +23,22 @@ logger = logging.getLogger(__name__)
 
 _BOTS_PATH = str(Path(__file__).resolve().parent.parent.parent.parent / "tranc3-bots")
 
-_CORE_BOTS = frozenset({
-    "generate", "embed", "emotion", "tokenize", "consciousness",
-    "personality", "predict", "code", "memory", "monitor",
-    "search", "summarise",
-})
+_CORE_BOTS = frozenset(
+    {
+        "generate",
+        "embed",
+        "emotion",
+        "tokenize",
+        "consciousness",
+        "personality",
+        "predict",
+        "code",
+        "memory",
+        "monitor",
+        "search",
+        "summarise",
+    }
+)
 
 
 class Tranc3BotsAdapter(BaseAdapter):
@@ -46,6 +57,7 @@ class Tranc3BotsAdapter(BaseAdapter):
             sys.path.insert(0, _BOTS_PATH)
         try:
             from bots.registry import BotRegistry  # noqa: PLC0415
+
             self._registry = BotRegistry
         except ImportError as exc:
             logger.debug("tranc3-bots not importable: %s", exc)

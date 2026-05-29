@@ -202,6 +202,7 @@ async def delete_by_id(file_id: str):
 # Domain-specific endpoints
 # ---------------------------------------------------------------------------
 
+
 @app.get("/by-user/{user_id}")
 async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
     """List all files uploaded by a specific user."""
@@ -255,7 +256,9 @@ async def unpublish_file(file_id: str):
 async def storage_stats():
     """Total storage used per user and overall."""
     conn = db._get_conn()
-    total = conn.execute("SELECT SUM(size_bytes) as total_bytes, COUNT(*) as file_count FROM files").fetchone()
+    total = conn.execute(
+        "SELECT SUM(size_bytes) as total_bytes, COUNT(*) as file_count FROM files"
+    ).fetchone()
     by_user = conn.execute(
         "SELECT user_id, SUM(size_bytes) as bytes, COUNT(*) as files FROM files GROUP BY user_id ORDER BY bytes DESC LIMIT 20"
     ).fetchall()

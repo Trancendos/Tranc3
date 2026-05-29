@@ -205,6 +205,7 @@ async def delete_by_id(product_id: str):
 # Domain-specific endpoints
 # ---------------------------------------------------------------------------
 
+
 @app.get("/active")
 async def list_active(limit: int = 50, offset: int = 0):
     """List all active products."""

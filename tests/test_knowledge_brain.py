@@ -11,6 +11,7 @@ Tests cover:
 
 All tests are zero-dependency — no FAISS, no torch required for the core paths.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -23,10 +24,12 @@ import pytest
 class TestBM25Index:
     def _make_index(self):
         from src.knowledge.knowledge_brain import BM25Index
+
         return BM25Index()
 
     def _page(self, pid, content):
         from src.knowledge.knowledge_brain import KBPage
+
         return KBPage(id=pid, title=pid, content=content)
 
     def test_empty_index_returns_nothing(self):
@@ -78,30 +81,35 @@ class TestBM25Index:
 class TestRRF:
     def test_single_list(self):
         from src.knowledge.knowledge_brain import _rrf
+
         result = _rrf([["a", "b", "c"]])
         ids = [r[0] for r in result]
         assert ids == ["a", "b", "c"]
 
     def test_two_identical_lists(self):
         from src.knowledge.knowledge_brain import _rrf
+
         result = _rrf([["a", "b", "c"], ["a", "b", "c"]])
         ids = [r[0] for r in result]
         assert ids == ["a", "b", "c"]
 
     def test_disjoint_lists(self):
         from src.knowledge.knowledge_brain import _rrf
+
         result = _rrf([["a", "b"], ["c", "d"]])
         ids = {r[0] for r in result}
         assert ids == {"a", "b", "c", "d"}
 
     def test_overlap_boosts_score(self):
         from src.knowledge.knowledge_brain import _rrf
+
         # "common" appears at rank 1 in both lists — should score highest
         result = _rrf([["common", "only_list1"], ["common", "only_list2"]])
         assert result[0][0] == "common"
 
     def test_empty_lists(self):
         from src.knowledge.knowledge_brain import _rrf
+
         assert _rrf([]) == []
         assert _rrf([[]]) == []
 
@@ -114,6 +122,7 @@ class TestRRF:
 class TestKBPageDataclass:
     def test_default_source(self):
         from src.knowledge.knowledge_brain import KBPage
+
         p = KBPage(id="x", title="T", content="C")
         assert p.source == "manual"
         assert p.tags == []
@@ -121,6 +130,7 @@ class TestKBPageDataclass:
 
     def test_word_tokens(self):
         from src.knowledge.knowledge_brain import KBPage
+
         p = KBPage(id="x", title="T", content="Hello World foo 123 hi")
         tokens = p.word_tokens()
         assert "hello" in tokens
@@ -132,6 +142,7 @@ class TestKBPageDataclass:
 
     def test_custom_id(self):
         from src.knowledge.knowledge_brain import KBPage
+
         p = KBPage(id="my-custom-id", title="T", content="c")
         assert p.id == "my-custom-id"
 
@@ -139,6 +150,7 @@ class TestKBPageDataclass:
 class TestKBLinkDataclass:
     def test_defaults(self):
         from src.knowledge.knowledge_brain import KBLink
+
         link = KBLink(source_id="a", target_id="b")
         assert link.relation == "mentions"
         assert link.weight == 1.0
@@ -153,6 +165,7 @@ class TestKBLinkDataclass:
 def brain(tmp_path):
     """Provide a KnowledgeBrain backed by a temp SQLite file."""
     from src.knowledge.knowledge_brain import KnowledgeBrain
+
     db = str(tmp_path / "test_kb.db")
     # Disable vector search so tests don't require FAISS
     kb = KnowledgeBrain(db_path=db, markdown_dir=str(tmp_path / "md"))
@@ -163,6 +176,7 @@ class TestKnowledgeBrainCRUD:
     @pytest.mark.asyncio
     async def test_put_and_get_page(self, brain):
         from src.knowledge.knowledge_brain import KBPage
+
         page = KBPage(id="p1", title="Hello Brain", content="This is a test page.")
         stored_id = await brain.put_page(page)
         assert stored_id == "p1"
@@ -180,6 +194,7 @@ class TestKnowledgeBrainCRUD:
     @pytest.mark.asyncio
     async def test_delete_page(self, brain):
         from src.knowledge.knowledge_brain import KBPage
+
         await brain.put_page(KBPage(id="del1", title="To Delete", content="bye"))
         deleted = await brain.delete_page("del1")
         assert deleted is True
@@ -198,6 +213,7 @@ class TestKnowledgeBrainCRUD:
     @pytest.mark.asyncio
     async def test_list_pages_with_source_filter(self, brain):
         from src.knowledge.knowledge_brain import KBPage
+
         await brain.put_page(KBPage(id="a1", title="A", content="manual", source="manual"))
         await brain.put_page(KBPage(id="a2", title="B", content="agent", source="agent"))
 
@@ -211,8 +227,21 @@ class TestKnowledgeBrainSearch:
     @pytest.mark.asyncio
     async def test_search_returns_results(self, brain):
         from src.knowledge.knowledge_brain import KBPage
-        await brain.put_page(KBPage(id="s1", title="Python Programming", content="Python is a great programming language for beginners."))
-        await brain.put_page(KBPage(id="s2", title="JavaScript", content="JavaScript runs in browsers and is used for web development."))
+
+        await brain.put_page(
+            KBPage(
+                id="s1",
+                title="Python Programming",
+                content="Python is a great programming language for beginners.",
+            )
+        )
+        await brain.put_page(
+            KBPage(
+                id="s2",
+                title="JavaScript",
+                content="JavaScript runs in browsers and is used for web development.",
+            )
+        )
 
         results = await brain.search("python programming", top_k=5, use_vector=False)
         assert len(results) >= 1
@@ -227,7 +256,14 @@ class TestKnowledgeBrainSearch:
     @pytest.mark.asyncio
     async def test_search_result_has_score_and_excerpt(self, brain):
         from src.knowledge.knowledge_brain import KBPage
-        await brain.put_page(KBPage(id="e1", title="Excerpt Test", content="The quick brown fox jumps over the lazy dog."))
+
+        await brain.put_page(
+            KBPage(
+                id="e1",
+                title="Excerpt Test",
+                content="The quick brown fox jumps over the lazy dog.",
+            )
+        )
         results = await brain.search("fox", top_k=3, use_vector=False)
         if results:
             r = results[0]
@@ -276,6 +312,7 @@ class TestKnowledgeBrainStats:
     @pytest.mark.asyncio
     async def test_stats_reflect_puts(self, brain):
         from src.knowledge.knowledge_brain import KBPage
+
         initial = brain.stats()["page_count"]
         await brain.put_page(KBPage(id="stat1", title="Stats Page", content="testing stats"))
         after = brain.stats()["page_count"]
@@ -292,10 +329,17 @@ class TestWikilinkParsing:
     async def test_wikilinks_create_edges(self, brain):
         """Putting a page with [[Target]] wikilink should create a KBLink."""
         from src.knowledge.knowledge_brain import KBPage
+
         # Create target page first
-        await brain.put_page(KBPage(id="target-page", title="Target Page", content="I am the target."))
+        await brain.put_page(
+            KBPage(id="target-page", title="Target Page", content="I am the target.")
+        )
         # Create source with wikilink
-        await brain.put_page(KBPage(id="source-page", title="Source Page", content="See [[Target Page]] for details."))
+        await brain.put_page(
+            KBPage(
+                id="source-page", title="Source Page", content="See [[Target Page]] for details."
+            )
+        )
         # Check a link was created (via graph_search or store inspection)
         stats = brain.stats()
         assert stats["link_count"] >= 0  # links may or may not resolve depending on impl
@@ -304,8 +348,13 @@ class TestWikilinkParsing:
     async def test_wikilinks_with_alias(self, brain):
         """[[Target|alias]] should still wire to target."""
         from src.knowledge.knowledge_brain import KBPage
-        await brain.put_page(KBPage(id="aliased", title="Aliased Target", content="I am the aliased target."))
-        await brain.put_page(KBPage(id="src-alias", title="Source", content="Click [[Aliased Target|here]] to read."))
+
+        await brain.put_page(
+            KBPage(id="aliased", title="Aliased Target", content="I am the aliased target.")
+        )
+        await brain.put_page(
+            KBPage(id="src-alias", title="Source", content="Click [[Aliased Target|here]] to read.")
+        )
         # Should not raise
         p = await brain.get_page("src-alias")
         assert p is not None

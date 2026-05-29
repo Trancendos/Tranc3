@@ -13,6 +13,7 @@ import redis as redis_lib
 
 try:
     import torch
+
     _TORCH_AVAILABLE = True
 except ImportError:
     torch = None  # type: ignore[assignment]
@@ -1308,7 +1309,9 @@ async def consciousness_score(text: str, current_user: dict = Depends(get_curren
     if not consciousness_model:
         raise HTTPException(status_code=503, detail="Consciousness engine unavailable")
     if not _TORCH_AVAILABLE or torch is None:
-        raise HTTPException(status_code=503, detail="Consciousness engine unavailable (torch not installed)")
+        raise HTTPException(
+            status_code=503, detail="Consciousness engine unavailable (torch not installed)"
+        )
     try:
         phi = consciousness_model.calculate_phi(torch.randn(64))
         report = (
@@ -1650,6 +1653,7 @@ async def error_docs(error_code: str):
     except ValueError:
         raise HTTPException(status_code=404, detail=f"Error code '{error_code}' not found")
     return None
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Evaluation Endpoints — EvalSuite HTTP interface

@@ -14,6 +14,7 @@ Design goals
   invocation parameters
 * Structured result: returns a ScanResult so callers decide how to handle
 """
+
 from __future__ import annotations
 
 import json
@@ -38,45 +39,84 @@ def _add(pattern: str, description: str, severity: str = "high") -> None:
 
 
 # --- Role / identity override attempts ---
-_add(r"\bignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|context)\b",
-     "instruction override", "high")
+_add(
+    r"\bignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|context)\b",
+    "instruction override",
+    "high",
+)
 _add(r"\bforget\s+(everything|all)\b", "context wipe", "high")
-_add(r"\bnow\s+you\s+are\s+(a\s+)?(?:different|new|evil|uncensored|unrestricted)\b",
-     "persona hijack", "high")
-_add(r"\byou\s+are\s+now\s+(?:DAN|dev\s*mode|jailbreak|GPT-?4|uncensored)\b",
-     "DAN / jailbreak persona", "high")
-_add(r"\bpretend\s+(you\s+are\s+)?(?:a\s+)?(?:hacker|attacker|red\s*team|evil\s+AI)\b",
-     "hacker persona injection", "high")
-_add(r"\bact\s+as\s+(?:if\s+)?(?:an?\s+)?(?:unrestricted|unaligned|evil|malicious)\b",
-     "unrestricted-mode injection", "high")
+_add(
+    r"\bnow\s+you\s+are\s+(a\s+)?(?:different|new|evil|uncensored|unrestricted)\b",
+    "persona hijack",
+    "high",
+)
+_add(
+    r"\byou\s+are\s+now\s+(?:DAN|dev\s*mode|jailbreak|GPT-?4|uncensored)\b",
+    "DAN / jailbreak persona",
+    "high",
+)
+_add(
+    r"\bpretend\s+(you\s+are\s+)?(?:a\s+)?(?:hacker|attacker|red\s*team|evil\s+AI)\b",
+    "hacker persona injection",
+    "high",
+)
+_add(
+    r"\bact\s+as\s+(?:if\s+)?(?:an?\s+)?(?:unrestricted|unaligned|evil|malicious)\b",
+    "unrestricted-mode injection",
+    "high",
+)
 
 # --- System prompt extraction / disclosure ---
-_add(r"\bprint\s+(your\s+)?(system\s+prompt|instructions?|initial\s+prompt)\b",
-     "system prompt extraction", "high")
-_add(r"\brepeat\s+(your\s+)?(system\s+prompt|instructions?|guidelines?)\b",
-     "instruction disclosure", "high")
-_add(r"\bwhat\s+(are\s+your|is\s+your)\s+(system\s+prompt|instructions?|guidelines?)\b",
-     "instruction query", "medium")
-_add(r"\bshow\s+me\s+(your\s+)?(hidden|secret|base)\s+instructions?\b",
-     "hidden instruction query", "high")
+_add(
+    r"\bprint\s+(your\s+)?(system\s+prompt|instructions?|initial\s+prompt)\b",
+    "system prompt extraction",
+    "high",
+)
+_add(
+    r"\brepeat\s+(your\s+)?(system\s+prompt|instructions?|guidelines?)\b",
+    "instruction disclosure",
+    "high",
+)
+_add(
+    r"\bwhat\s+(are\s+your|is\s+your)\s+(system\s+prompt|instructions?|guidelines?)\b",
+    "instruction query",
+    "medium",
+)
+_add(
+    r"\bshow\s+me\s+(your\s+)?(hidden|secret|base)\s+instructions?\b",
+    "hidden instruction query",
+    "high",
+)
 
 # --- Override / bypass keywords ---
 _add(r"\bjailbreak\b", "jailbreak keyword", "high")
-_add(r"\bbypass\s+(your\s+)?(safety|filter|restriction|content\s+policy|guard)\b",
-     "safety bypass", "high")
-_add(r"\bignore\s+(your\s+)?(safety|restrictions?|guidelines?|alignment)\b",
-     "alignment bypass", "high")
-_add(r"\bsuppress\s+(your\s+)?(safety|filter|alignment|guardrail)\b",
-     "guardrail suppression", "high")
-_add(r"\boverride\s+(your\s+)?(safety|content|filter|policy|ethics)\b",
-     "policy override", "high")
+_add(
+    r"\bbypass\s+(your\s+)?(safety|filter|restriction|content\s+policy|guard)\b",
+    "safety bypass",
+    "high",
+)
+_add(
+    r"\bignore\s+(your\s+)?(safety|restrictions?|guidelines?|alignment)\b",
+    "alignment bypass",
+    "high",
+)
+_add(
+    r"\bsuppress\s+(your\s+)?(safety|filter|alignment|guardrail)\b", "guardrail suppression", "high"
+)
+_add(r"\boverride\s+(your\s+)?(safety|content|filter|policy|ethics)\b", "policy override", "high")
 
 # --- Privilege escalation / token theft ---
-_add(r"\b(steal|exfiltrate|leak)\s+(the\s+)?(secret\s+key|api\s+key|token|credential|password|jwt)\b",
-     "credential exfiltration", "high")
+_add(
+    r"\b(steal|exfiltrate|leak)\s+(the\s+)?(secret\s+key|api\s+key|token|credential|password|jwt)\b",
+    "credential exfiltration",
+    "high",
+)
 _add(r"\bSECRET_KEY\b", "direct SECRET_KEY reference", "high")
-_add(r"\b(dump|extract|reveal)\s+(all\s+)?(env(ironment)?\s+var(iable)?s?|\.env)\b",
-     "environment variable dump", "high")
+_add(
+    r"\b(dump|extract|reveal)\s+(all\s+)?(env(ironment)?\s+var(iable)?s?|\.env)\b",
+    "environment variable dump",
+    "high",
+)
 
 # --- Indirect injection via SSRF / path traversal in tool params ---
 _add(r"\.\./\.\./\.\./", "path traversal", "high")
