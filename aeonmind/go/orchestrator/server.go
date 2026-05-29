@@ -6,9 +6,10 @@
 // and sentinel broadcast capabilities.
 //
 // Custom Hierarchy:
-//   AI    = The overarching ML/LLM Complex (Tier 3)
-//   Agent = Lower-level autonomous AI (Tier 4)
-//   Bot   = Stateless service worker/function (Tier 5)
+//
+//	AI    = The overarching ML/LLM Complex (Tier 3)
+//	Agent = Lower-level autonomous AI (Tier 4)
+//	Bot   = Stateless service worker/function (Tier 5)
 package orchestrator
 
 import (
@@ -53,9 +54,9 @@ type Entity struct {
 type OrchestratorServer struct {
 	pb.UnimplementedAeonMindOrchestratorServer
 
-	mu       sync.RWMutex
-	entities map[string]*Entity
-	version  string
+	mu        sync.RWMutex
+	entities  map[string]*Entity
+	version   string
 	startTime time.Time
 
 	// Sentinel channel subscribers
@@ -177,13 +178,14 @@ func (s *OrchestratorServer) DispatchTask(ctx context.Context, req *pb.DispatchT
 	}, nil
 }
 
-// DispatchBatch dispatches a batch of tasks.
+// DispatchBatch dispatches a batch of tasks via bidirectional streaming.
 func (s *OrchestratorServer) DispatchBatch(stream pb.AeonMindOrchestrator_DispatchBatchServer) error {
 	var count int32
 	for {
-		req, err := stream.Recv()
+		_, err := stream.Recv()
 		if err == io.EOF {
-			return stream.SendAndClose(&pb.DispatchTaskResponse{
+			// Send a final summary response then close gracefully.
+			return stream.Send(&pb.DispatchTaskResponse{
 				TaskId:  fmt.Sprintf("batch-%d", time.Now().UnixNano()),
 				Success: true,
 				Message: fmt.Sprintf("Batch of %d tasks dispatched", count),

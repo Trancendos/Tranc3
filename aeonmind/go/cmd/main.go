@@ -16,8 +16,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	pb "github.com/Trancendos/Tranc3/aeonmind/go/proto"
 	"github.com/Trancendos/Tranc3/aeonmind/go/orchestrator"
+	pb "github.com/Trancendos/Tranc3/aeonmind/go/proto"
 )
 
 func main() {
@@ -32,8 +32,8 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer(
-		grpc.MaxRecvMsgSize(64 * 1024 * 1024),
-		grpc.MaxSendMsgSize(64 * 1024 * 1024),
+		grpc.MaxRecvMsgSize(64*1024*1024),
+		grpc.MaxSendMsgSize(64*1024*1024),
 	)
 
 	orchestratorServer := orchestrator.NewOrchestratorServer()
