@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
 
 import redis as redis_lib
+
 try:
     import torch
     _TORCH_AVAILABLE = True
@@ -70,6 +71,8 @@ from src.errors.error_catalog import (  # noqa: F401  # intentional top-level im
     ErrorCode,
     format_error_response,
 )
+from src.gbrain.pipeline import AgentInteraction as _GBrainInteraction  # noqa: F401
+from src.gbrain.pipeline import get_pipeline as _get_gbrain_pipeline  # noqa: F401
 from src.monetisation.billing import TIERS  # noqa: F401  # intentional top-level import
 from src.monetisation.billing import (
     enforcer as tier_enforcer,  # noqa: F401  # intentional top-level import
@@ -103,8 +106,6 @@ from src.validation.loop_validator import (  # noqa: F401  # intentional top-lev
     loop_validator,
     self_healer,
 )
-from src.gbrain.pipeline import AgentInteraction as _GBrainInteraction  # noqa: F401
-from src.gbrain.pipeline import get_pipeline as _get_gbrain_pipeline  # noqa: F401
 
 # Optional imports — guarded to prevent startup crash if dependencies are missing
 # These modules depend on heavy/optional libs (qiskit, torch, etc.)
@@ -1691,9 +1692,17 @@ async def eval_score(
     """Score a hypothesis against a reference string."""
     from src.evaluation.model_eval import (
         bleu_score as _bleu,
+    )
+    from src.evaluation.model_eval import (
         exact_match as _em,
+    )
+    from src.evaluation.model_eval import (
         hallucination_score as _hall,
+    )
+    from src.evaluation.model_eval import (
         rouge_l_score as _rouge,
+    )
+    from src.evaluation.model_eval import (
         token_f1 as _tf1,
     )
 

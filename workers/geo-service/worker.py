@@ -15,10 +15,10 @@ Zero-cost: FastAPI + SQLite cache + free public APIs, no paid deps.
 
 from __future__ import annotations
 
-import os
 import asyncio
 import logging
 import math
+import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager

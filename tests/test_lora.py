@@ -17,7 +17,7 @@ Covers:
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -215,7 +215,7 @@ class TestApplyLora:
 
     def test_idempotent_double_apply(self):
         """Applying LoRA twice should not double-wrap."""
-        from src.training.lora import LoRAConfig, LoRALinear, apply_lora
+        from src.training.lora import LoRAConfig, apply_lora
         model = self._model()
         cfg = LoRAConfig(rank=4, target_modules=["q_proj"])
         apply_lora(model, cfg, verbose=False)
@@ -432,7 +432,7 @@ class TestLoRATrainer:
             total_steps=1,
             checkpoint_dir=str(tmp_path / "ckpts"),
         )
-        trainer = LoRATrainer(model, loader, cfg, device=torch.device("cpu"))
+        LoRATrainer(model, loader, cfg, device=torch.device("cpu"))
         trainable, total = lora_trainable_params(model)
         assert trainable < total
         assert trainable > 0
@@ -467,6 +467,7 @@ class TestEvaluateCheckpoint:
     def test_returns_tuple_of_two(self, tmp_path):
         """evaluate_checkpoint should return a (base_result, lora_result) tuple."""
         import asyncio
+
         from src.training.lora import evaluate_checkpoint
 
         model = self._stub_model()
@@ -485,6 +486,7 @@ class TestEvaluateCheckpoint:
     def test_base_result_has_scores(self, tmp_path):
         """base_result should expose bleu and rouge_l attributes."""
         import asyncio
+
         from src.training.lora import evaluate_checkpoint
 
         model = self._stub_model()
@@ -502,6 +504,7 @@ class TestEvaluateCheckpoint:
     def test_lora_result_has_scores(self, tmp_path):
         """lora_result should expose the same score shape as base_result."""
         import asyncio
+
         from src.training.lora import evaluate_checkpoint
 
         model = self._stub_model()
@@ -519,6 +522,7 @@ class TestEvaluateCheckpoint:
     def test_empty_samples_does_not_raise(self, tmp_path):
         """evaluate_checkpoint with empty sample list should not raise."""
         import asyncio
+
         from src.training.lora import evaluate_checkpoint
 
         model = self._stub_model()
@@ -536,6 +540,7 @@ class TestEvaluateCheckpoint:
     def test_missing_checkpoint_gracefully_handled(self, tmp_path):
         """Missing .pt file should not crash — lora_gen falls back gracefully."""
         import asyncio
+
         from src.training.lora import evaluate_checkpoint
 
         model = self._stub_model()
@@ -555,6 +560,7 @@ class TestEvaluateCheckpoint:
     def test_results_dir_created(self, tmp_path):
         """evaluate_checkpoint should create results_dir if it doesn't exist."""
         import asyncio
+
         from src.training.lora import evaluate_checkpoint
 
         results_dir = tmp_path / "deep" / "nested" / "results"
@@ -573,8 +579,8 @@ class TestEvaluateCheckpoint:
 
     def test_default_eval_name(self, tmp_path):
         """evaluate_checkpoint uses 'lora-eval' as default eval_name."""
-        import asyncio
         import inspect
+
         from src.training.lora import evaluate_checkpoint
 
         sig = inspect.signature(evaluate_checkpoint)
@@ -582,8 +588,8 @@ class TestEvaluateCheckpoint:
 
     def test_default_results_dir(self, tmp_path):
         """evaluate_checkpoint uses 'data/eval_results' as default results_dir."""
-        import asyncio
         import inspect
+
         from src.training.lora import evaluate_checkpoint
 
         sig = inspect.signature(evaluate_checkpoint)

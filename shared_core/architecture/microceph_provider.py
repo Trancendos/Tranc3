@@ -182,7 +182,7 @@ def straw2_choose(
     best_osd = -1
     best_draw = -1.0
 
-    for osd_id, weight in zip(osd_ids, weights):
+    for osd_id, weight in zip(osd_ids, weights, strict=False):
         if weight <= 0.0:
             continue
         h = crush_hash(pg_id, osd_id, retry)

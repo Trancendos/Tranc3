@@ -32,7 +32,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import lru_cache
 from typing import Dict, FrozenSet, Optional, Set
 
 logger = logging.getLogger(__name__)
@@ -120,7 +119,7 @@ _ROLE_PERMISSIONS: Dict[str, FrozenSet[str]] = {
         Permission.ADMIN_AUDIT,
         Permission.PLATFORM_METRICS,
     }),
-    "superadmin": frozenset({p for p in Permission}),
+    "superadmin": frozenset(set(Permission)),
 }
 
 # Ordered role hierarchy (index = power level)

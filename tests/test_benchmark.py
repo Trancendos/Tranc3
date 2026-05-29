@@ -6,7 +6,6 @@ Validates the BenchmarkSuite against sync and async targets.
 from __future__ import annotations
 
 import asyncio
-import time
 from pathlib import Path
 
 import pytest
@@ -16,7 +15,6 @@ from src.benchmark.performance_suite import (
     BenchmarkResult,
     BenchmarkSuite,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

@@ -200,7 +200,7 @@ def extract(prompt: str, response: str) -> ExtractionResult:
     concept_list: List[ExtractedConcept] = []
 
     # Add entities first (higher priority)
-    for entity_text, is_ent in entity_pairs:
+    for entity_text, _is_ent in entity_pairs:
         key = entity_text.lower()
         if key in seen or key in _STOPWORDS or len(key) < _MIN_CONCEPT_LEN:
             continue

@@ -15,7 +15,7 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, ClassVar, Dict, List
+from typing import ClassVar, Dict, List, Optional
 
 import httpx
 

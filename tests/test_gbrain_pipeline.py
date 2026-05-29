@@ -11,14 +11,11 @@ Covers:
 """
 from __future__ import annotations
 
-import asyncio
 import hashlib
-import json
 from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Extractor tests

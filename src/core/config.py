@@ -2,7 +2,7 @@
 # Pydantic-settings based configuration with hot-reload support
 # Replaces the scattered os.getenv() calls across the codebase
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional
 
 from pydantic import ConfigDict, Field, field_validator

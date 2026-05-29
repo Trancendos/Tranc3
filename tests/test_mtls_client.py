@@ -7,11 +7,9 @@ The mTLS module degrades gracefully when certs are absent.
 from __future__ import annotations
 
 import os
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # mtls_status
@@ -38,9 +36,10 @@ class TestMtlsStatus:
         assert isinstance(status["ca_cert_present"], bool)
 
     def test_status_verify_default_true(self):
-        from src.security.mtls_client import mtls_status
         with patch.dict(os.environ, {"MTLS_VERIFY": "true"}):
-            import importlib, src.security.mtls_client as m
+            import importlib
+
+            import src.security.mtls_client as m
             importlib.reload(m)
             status = m.mtls_status()
             assert status["verify_enabled"] is True
@@ -59,7 +58,9 @@ class TestBuildSslKwargs:
 
     def test_verify_false_when_disabled(self, monkeypatch):
         monkeypatch.setenv("MTLS_VERIFY", "false")
-        import importlib, src.security.mtls_client as m
+        import importlib
+
+        import src.security.mtls_client as m
         importlib.reload(m)
         kwargs = m._build_ssl_kwargs()
         assert kwargs.get("verify") is False
@@ -81,7 +82,9 @@ class TestGetMtlsClient:
     def test_returns_none_when_httpx_missing(self):
         import sys
         with patch.dict(sys.modules, {"httpx": None}):
-            import importlib, src.security.mtls_client as m
+            import importlib
+
+            import src.security.mtls_client as m
             importlib.reload(m)
             result = m.get_mtls_client()
             assert result is None
@@ -100,7 +103,9 @@ class TestGetMtlsClient:
     def test_async_returns_none_when_httpx_missing(self):
         import sys
         with patch.dict(sys.modules, {"httpx": None}):
-            import importlib, src.security.mtls_client as m
+            import importlib
+
+            import src.security.mtls_client as m
             importlib.reload(m)
             result = m.get_async_mtls_client()
             assert result is None
@@ -125,7 +130,9 @@ class TestInternalHelpers:
     def test_internal_get_raises_without_httpx(self):
         import sys
         with patch.dict(sys.modules, {"httpx": None}):
-            import importlib, src.security.mtls_client as m
+            import importlib
+
+            import src.security.mtls_client as m
             importlib.reload(m)
             with pytest.raises(RuntimeError, match="httpx is required"):
                 m.internal_get("https://dummy.internal:8443/health")
@@ -134,7 +141,9 @@ class TestInternalHelpers:
     def test_internal_post_raises_without_httpx(self):
         import sys
         with patch.dict(sys.modules, {"httpx": None}):
-            import importlib, src.security.mtls_client as m
+            import importlib
+
+            import src.security.mtls_client as m
             importlib.reload(m)
             with pytest.raises(RuntimeError, match="httpx is required"):
                 m.internal_post("https://dummy.internal:8443/data", json={})

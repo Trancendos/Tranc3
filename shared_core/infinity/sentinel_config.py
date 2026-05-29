@@ -23,7 +23,6 @@ from typing import Optional
 
 from shared_core.infinity.nomenclature import SentinelChannel
 
-
 # ── Redis Connection Configuration ──────────────────────────────────────────
 
 

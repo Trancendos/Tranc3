@@ -6,6 +6,7 @@ auto-evolve scheduler. All zero-cost, no external deps.
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
 
@@ -26,13 +27,13 @@ async def _poll_until(condition, *, timeout: float = 2.0, interval: float = 0.01
 class TestEnergyConstants:
     def test_import(self):
         from src.bridge.energy_constants import (
-            BridgeType,
             BRIDGE_DEFAULT_ENERGY,
             CRYSTAL_BASE_COST,
             DIALITHIUM_PRIORITY,
-            EnergyClass,
             LIGHT_AMBIENT_TICK_HZ,
             LIGHTNING_BURST_LIMIT_MS,
+            BridgeType,
+            EnergyClass,
             cost_for,
             priority_for,
         )
@@ -67,14 +68,14 @@ class TestEnergyConstants:
         assert priority_for(EnergyClass.CRYSTAL) < priority_for(EnergyClass.LIGHT)
 
     def test_bridge_default_energy(self):
-        from src.bridge.energy_constants import BridgeType, EnergyClass, BRIDGE_DEFAULT_ENERGY
+        from src.bridge.energy_constants import BRIDGE_DEFAULT_ENERGY, BridgeType, EnergyClass
 
         assert BRIDGE_DEFAULT_ENERGY[BridgeType.CRYSTAL] == EnergyClass.DIALITHIUM
         assert BRIDGE_DEFAULT_ENERGY[BridgeType.TRANSWARP] == EnergyClass.LIGHTNING
         assert BRIDGE_DEFAULT_ENERGY[BridgeType.CELL] == EnergyClass.LIGHT
 
     def test_all_energy_classes_covered(self):
-        from src.bridge.energy_constants import EnergyClass, ENERGY_COST_FACTOR, ENERGY_PRIORITY
+        from src.bridge.energy_constants import ENERGY_COST_FACTOR, ENERGY_PRIORITY, EnergyClass
 
         for ec in EnergyClass:
             assert ec in ENERGY_COST_FACTOR, f"{ec} missing from ENERGY_COST_FACTOR"
@@ -125,7 +126,7 @@ class TestTranc3Base:
         assert any("health" in s.lower() for s in snap.strengths)
 
     def test_hub_powerup(self):
-        from src.entities.templates.tranc3_base import Tranc3, HubPowerUp
+        from src.entities.templates.tranc3_base import HubPowerUp, Tranc3
 
         class TestLeadAI(Tranc3):
             async def process(self, payload):
@@ -173,7 +174,7 @@ class TestInfinityAgentBase:
 
     @pytest.mark.asyncio
     async def test_enqueue_and_process(self):
-        from src.entities.templates.infinity_agent_base import InfinityAgent, AgentTask
+        from src.entities.templates.infinity_agent_base import AgentTask, InfinityAgent
 
         class TestAgent(InfinityAgent):
             pass
@@ -237,8 +238,8 @@ class TestInfinityBotBase:
 
 class TestProactiveHealthMonitor:
     def test_register_and_check(self, tmp_path):
-        from src.observability.proactive_health import ProactiveHealthMonitor
         from src.entities.templates.tranc3_base import Tranc3
+        from src.observability.proactive_health import ProactiveHealthMonitor
 
         class TestAI(Tranc3):
             async def process(self, p):
@@ -253,8 +254,8 @@ class TestProactiveHealthMonitor:
         assert all(a.severity != "critical" for a in alerts)
 
     def test_critical_alert_on_low_health(self, tmp_path):
-        from src.observability.proactive_health import ProactiveHealthMonitor
         from src.entities.templates.tranc3_base import Tranc3
+        from src.observability.proactive_health import ProactiveHealthMonitor
 
         class SickAI(Tranc3):
             async def process(self, p):

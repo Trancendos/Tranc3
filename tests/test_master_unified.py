@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -369,7 +368,6 @@ class TestExtendedTaskSchema:
 
     def test_total_valid_bot_count(self):
         """Ensure we have at least 35 valid bot types across all 3 systems."""
-        from src.master.task_schema import TaskStep
 
         # Extract valid set from validator by triggering the code path
         from src.master.task_schema import TaskDefinition
@@ -509,7 +507,6 @@ class TestYAMLRoundTrip:
 
     def test_mixed_bot_types_in_single_task(self, tmp_path: Path):
         from src.master.task_loader import TaskLoader
-        from src.master.task_schema import TaskDefinition
 
         task = {
             "name": "multi-bot-task",

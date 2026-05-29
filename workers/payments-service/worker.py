@@ -9,8 +9,8 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import sqlite3
 import threading
 import uuid

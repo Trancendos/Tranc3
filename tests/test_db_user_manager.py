@@ -19,7 +19,6 @@ import pytest
 
 from src.auth.db_user_manager import _tier_to_roles
 
-
 # ---------------------------------------------------------------------------
 # Helpers — fake CryptContext that avoids bcrypt entirely
 # ---------------------------------------------------------------------------

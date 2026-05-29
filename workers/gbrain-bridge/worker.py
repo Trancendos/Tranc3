@@ -21,8 +21,6 @@ Architecture: FastAPI + SQLite + in-process neural operations.
 
 from __future__ import annotations
 
-import asyncio
-import hashlib
 import json
 import logging
 import math
@@ -32,9 +30,8 @@ import time
 import uuid
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -162,10 +159,10 @@ class PageRankEngine:
                 out_links[src].append((tgt, row["weight"]))
 
         # Initialise scores uniformly
-        scores = {i: 1.0 / n for i in range(n)}
+        scores = dict.fromkeys(range(n), 1.0 / n)
 
         for _ in range(PAGERANK_ITERATIONS):
-            new_scores: Dict[int, float] = {i: (1 - PAGERANK_DAMPING) / n for i in range(n)}
+            new_scores: Dict[int, float] = dict.fromkeys(range(n), (1 - PAGERANK_DAMPING) / n)
             for src, links in out_links.items():
                 total_weight = sum(w for _, w in links)
                 for tgt, w in links:

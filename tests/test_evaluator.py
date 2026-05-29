@@ -7,14 +7,10 @@ gated by importorskip so the suite stays fast (< 2s) and zero-cost.
 from __future__ import annotations
 
 import json
-import math
-import time
 from pathlib import Path
-from typing import Any, List
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers — pure-Python metric functions don't need torch
@@ -94,7 +90,7 @@ class TestBenchmarkResult:
 
 class TestSummarise:
     def _make_report(self, results, eval_metrics=None):
-        from src.training.evaluator import BenchmarkReport, BenchmarkResult
+        from src.training.evaluator import BenchmarkReport
         report = BenchmarkReport(
             model_path="test.pt",
             benchmark_results=results,
@@ -125,7 +121,6 @@ class TestSummarise:
 
     def test_includes_eval_metrics_when_present(self):
         from src.training.evaluator import EvalMetrics, _summarise
-        from src.training.evaluator import BenchmarkResult
         metrics = EvalMetrics(perplexity=8.5, token_accuracy=0.9, distinct_1=0.7, distinct_2=0.6)
         report = self._make_report([], eval_metrics=metrics)
         summary = _summarise(report)
@@ -160,7 +155,7 @@ class TestModelEvaluatorMocked:
 
         with patch("src.training.evaluator.torch", None, create=True):
             # Simulate ImportError for torch in evaluator
-            import importlib, sys
+            import sys
             original = sys.modules.get("torch")
             sys.modules["torch"] = None  # type: ignore[assignment]
             try:

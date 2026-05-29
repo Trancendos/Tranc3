@@ -11,10 +11,7 @@ Covers:
 """
 from __future__ import annotations
 
-import pytest
-
 from src.mcp.payload_scanner import ScanFinding, ScanResult, _extract_strings, scan_rpc_payload
-
 
 # ---------------------------------------------------------------------------
 # _extract_strings helper

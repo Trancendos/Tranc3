@@ -5,9 +5,7 @@ Validates BLEU, ROUGE-L, EM, Token-F1, hallucination detection, and EvalSuite.
 
 from __future__ import annotations
 
-import asyncio
 import json
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -22,7 +20,6 @@ from src.evaluation.model_eval import (
     rouge_l_score,
     token_f1,
 )
-
 
 # ---------------------------------------------------------------------------
 # BLEU score
