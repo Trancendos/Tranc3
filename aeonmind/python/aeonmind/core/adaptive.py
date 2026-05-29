@@ -125,7 +125,7 @@ class AdaptiveMetaLearner:
             q = gamma * q
 
         # Second loop: traverse from oldest to most recent
-        for entry, alpha in zip(self._lbfgs_history, reversed(alphas)):
+        for entry, alpha in zip(self._lbfgs_history, reversed(alphas), strict=False):
             beta = entry.rho * np.dot(entry.y, q)
             q = q + entry.s * (alpha - beta)
 
