@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 # ---------------------------------------------------------------------------
@@ -145,6 +145,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 STARTED_AT = datetime.now(timezone.utc)
 
 
@@ -158,13 +173,13 @@ async def health():
     }
 
 
-@app.get("/")
+@_router.get("/")
 async def list_all(limit: int = 50, offset: int = 0):
     """List all files."""
     return {"data": db.list(limit=limit, offset=offset)}
 
 
-@app.post("/")
+@_router.post("/")
 async def create(data: Dict[str, Any]):
     """Create a new files entry."""
     item_id = data.get("file_id", str(uuid.uuid4()))
@@ -173,7 +188,7 @@ async def create(data: Dict[str, Any]):
     return {"ok": True, **created}
 
 
-@app.get("/{file_id}")
+@_router.get("/{file_id}")
 async def get_by_id(file_id: str):
     """Get a files entry by ID."""
     item = db.get("file_id", file_id)
@@ -182,7 +197,7 @@ async def get_by_id(file_id: str):
     return item
 
 
-@app.patch("/{file_id}")
+@_router.patch("/{file_id}")
 async def update_by_id(file_id: str, data: Dict[str, Any]):
     """Update a files entry."""
     if not db.update("file_id", file_id, data):
@@ -190,7 +205,7 @@ async def update_by_id(file_id: str, data: Dict[str, Any]):
     return {"ok": True}
 
 
-@app.delete("/{file_id}")
+@_router.delete("/{file_id}")
 async def delete_by_id(file_id: str):
     """Delete a files entry (soft delete)."""
     if not db.delete("file_id", file_id):
@@ -203,19 +218,19 @@ async def delete_by_id(file_id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/by-user/{user_id}")
+@_router.get("/by-user/{user_id}")
 async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
     """List all files uploaded by a specific user."""
     return {"data": db.list(limit=limit, offset=offset, user_id=user_id)}
 
 
-@app.get("/public")
+@_router.get("/public")
 async def list_public(limit: int = 50, offset: int = 0):
     """List all publicly accessible files."""
     return {"data": db.list(limit=limit, offset=offset, is_public=1)}
 
 
-@app.get("/by-content-type/{content_type:path}")
+@_router.get("/by-content-type/{content_type:path}")
 async def get_by_content_type(content_type: str, limit: int = 50, offset: int = 0):
     """List files by MIME content type (e.g. image/png, application/pdf)."""
     conn = db._get_conn()
@@ -226,7 +241,7 @@ async def get_by_content_type(content_type: str, limit: int = 50, offset: int = 
     return {"data": [dict(r) for r in rows]}
 
 
-@app.get("/by-ipfs/{ipfs_cid}")
+@_router.get("/by-ipfs/{ipfs_cid}")
 async def get_by_ipfs_cid(ipfs_cid: str):
     """Lookup a file by its IPFS content identifier."""
     conn = db._get_conn()
@@ -236,7 +251,7 @@ async def get_by_ipfs_cid(ipfs_cid: str):
     return dict(row)
 
 
-@app.post("/{file_id}/publish")
+@_router.post("/{file_id}/publish")
 async def publish_file(file_id: str):
     """Make a file publicly accessible."""
     if not db.update("file_id", file_id, {"is_public": 1}):
@@ -244,7 +259,7 @@ async def publish_file(file_id: str):
     return {"ok": True, "file_id": file_id, "is_public": True}
 
 
-@app.post("/{file_id}/unpublish")
+@_router.post("/{file_id}/unpublish")
 async def unpublish_file(file_id: str):
     """Restrict a file to owner-only access."""
     if not db.update("file_id", file_id, {"is_public": 0}):
@@ -252,7 +267,7 @@ async def unpublish_file(file_id: str):
     return {"ok": True, "file_id": file_id, "is_public": False}
 
 
-@app.get("/stats/storage")
+@_router.get("/stats/storage")
 async def storage_stats():
     """Total storage used per user and overall."""
     conn = db._get_conn()
@@ -269,7 +284,7 @@ async def storage_stats():
     }
 
 
-@app.get("/search")
+@_router.get("/search")
 async def search_files(
     filename: Optional[str] = None,
     user_id: Optional[str] = None,
@@ -294,6 +309,9 @@ async def search_files(
     params.extend([limit, offset])
     rows = conn.execute(query, params).fetchall()
     return {"data": [dict(r) for r in rows], "count": len(rows)}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":
