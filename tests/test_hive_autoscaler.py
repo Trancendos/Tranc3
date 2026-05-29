@@ -5,7 +5,7 @@ Comprehensive tests for the auto-scaling engine including throughput metrics,
 scaling policies, cooldown management, and threshold triggers.
 """
 
-import asyncio
+import asyncio  # noqa: I001
 
 from Dimensional.hive.autoscaler import (
     AutoScalerEngine,

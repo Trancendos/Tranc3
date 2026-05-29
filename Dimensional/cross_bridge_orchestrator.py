@@ -11,7 +11,7 @@ Architecture:
     - CrossBridgeOrchestrator: Top-level orchestrator for cross-bridge workflows
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import asyncio
 import uuid
