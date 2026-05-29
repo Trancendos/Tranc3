@@ -59,7 +59,13 @@ logger = logging.getLogger("tranc3.workers.infinity-auth")
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 
-JWT_SECRET = os.environ.get("JWT_SECRET", secrets.token_hex(32))
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. Infinity (auth service) cannot start without it. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_MINUTES = int(os.environ.get("JWT_EXPIRY_MINUTES", "60"))
 REFRESH_EXPIRY_DAYS = int(os.environ.get("REFRESH_EXPIRY_DAYS", "30"))

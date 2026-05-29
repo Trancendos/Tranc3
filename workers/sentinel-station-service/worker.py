@@ -83,7 +83,13 @@ except ImportError:
 
 PORT = int(os.environ.get("SENTINEL_PORT", "8041"))
 DB_PATH = os.environ.get("SENTINEL_DB_PATH", "data/sentinel_station.db")
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. This service cannot validate tokens without it. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 
 logger = logging.getLogger("sentinel-station-service")
 

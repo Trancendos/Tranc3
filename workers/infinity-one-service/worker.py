@@ -71,7 +71,13 @@ from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 PORT = int(os.environ.get("INFINITY_ONE_PORT", "8043"))
 DB_PATH = os.environ.get("INFINITY_ONE_DB_PATH", "data/infinity_one.db")
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. This service cannot validate tokens without it. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 
 logger = logging.getLogger("infinity-one-service")
 
