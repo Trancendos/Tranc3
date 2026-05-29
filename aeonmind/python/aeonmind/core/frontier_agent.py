@@ -11,20 +11,20 @@ Together they form a Tier 4 autonomous agent capable of
 perception, decision-making, learning, and evolution.
 """
 
-from __future__ import annotations  # noqa: I001
+from __future__ import annotations
 
 import json
 import time
-from dataclasses import dataclass, field  # noqa: F401
-from typing import Any, Dict, List, Optional  # noqa: UP035
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
-from .definitions import Tier, AgentEntity, SentinelChannel
-from .adaptive import AdaptiveMetaLearner, AdaptiveConfig
+from .adaptive import AdaptiveConfig, AdaptiveMetaLearner
+from .definitions import AgentEntity, SentinelChannel, Tier
+from .fluidic_liquidic import LiquidReservoir, ReservoirConfig
 from .genetic_dna import DNAEvolutionEngine, GeneticConfig
-from .fluidic_liquidic import LiquidReservoir, ReservoirConfig, FluidicState  # noqa: F401
-from .quantum import QuantumDecisionCircuit, QuantumCircuitConfig
+from .quantum import QuantumCircuitConfig, QuantumDecisionCircuit
 
 
 @dataclass
@@ -35,10 +35,10 @@ class FrontierAgentConfig:
     state_dim: int = 10
     action_dim: int = 4
     # Subsystem configs
-    reservoir_config: Optional[ReservoirConfig] = None  # noqa: UP045
-    quantum_config: Optional[QuantumCircuitConfig] = None  # noqa: UP045
-    adaptive_config: Optional[AdaptiveConfig] = None  # noqa: UP045
-    genetic_config: Optional[GeneticConfig] = None  # noqa: UP045
+    reservoir_config: ReservoirConfig | None = None
+    quantum_config: QuantumCircuitConfig | None = None
+    adaptive_config: AdaptiveConfig | None = None
+    genetic_config: GeneticConfig | None = None
 
 
 @dataclass
@@ -48,8 +48,8 @@ class DecisionRecord:
     timestamp: float
     action: int
     confidence: float
-    state_features: List[float]  # noqa: UP006
-    outcome: Optional[bool] = None  # noqa: UP045
+    state_features: list[float]
+    outcome: bool | None = None
 
 
 class FrontierAgent:
@@ -60,7 +60,7 @@ class FrontierAgent:
     capable of perception, decision-making, and self-improvement.
     """
 
-    def __init__(self, config: Optional[FrontierAgentConfig] = None):  # noqa: UP045
+    def __init__(self, config: FrontierAgentConfig | None = None):
         self.config = config or FrontierAgentConfig()
         self.id = f"agent-{int(time.time() * 1000) % 1000000:06d}"
 
@@ -89,13 +89,13 @@ class FrontierAgent:
         self.evolution = DNAEvolutionEngine(genetic_config)
 
         # State tracking
-        self._decision_history: List[DecisionRecord] = []  # noqa: UP006
+        self._decision_history: list[DecisionRecord] = []
         self._total_decisions = 0
         self._successful_decisions = 0
         self._intelligence_score = 0.5
-        self._last_action: Optional[int] = None  # noqa: UP045
+        self._last_action: int | None = None
 
-    def process(self, input_data: np.ndarray) -> Dict[str, Any]:  # noqa: UP006
+    def process(self, input_data: np.ndarray) -> dict[str, Any]:
         """Process input through the full agent pipeline.
 
         Pipeline: Reservoir → Quantum → Fluidic State → Evolution/Optimization
@@ -175,7 +175,7 @@ class FrontierAgent:
                 "reservoir_computing",
                 "evolution",
                 "adaptive_learning",
-            ],  # noqa: E501
+            ],
             confidence=self._intelligence_score,
             status="active" if self._total_decisions > 0 else "idle",
         )
@@ -184,14 +184,14 @@ class FrontierAgent:
 
     @classmethod
     def from_entity(
-        cls, entity: AgentEntity, config: Optional[FrontierAgentConfig] = None
-    ) -> FrontierAgent:  # noqa: UP045, E501
+        cls, entity: AgentEntity, config: FrontierAgentConfig | None = None
+    ) -> FrontierAgent:
         """Create a FrontierAgent from an AgentEntity."""
         agent = cls(config or FrontierAgentConfig(name=entity.name))
         agent.id = entity.id
         return agent
 
-    def summary(self) -> Dict[str, Any]:  # noqa: UP006
+    def summary(self) -> dict[str, Any]:
         """Get a summary of the agent's current state."""
         fluidic = self.reservoir.fluidic_state()
         return {

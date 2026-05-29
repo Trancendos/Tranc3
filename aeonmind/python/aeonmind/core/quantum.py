@@ -11,9 +11,8 @@ and adaptive depth control. Supports dual-path execution:
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field  # noqa: F401
+from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Tuple  # noqa: UP035
 
 import numpy as np
 
@@ -37,7 +36,7 @@ class QuantumCircuitConfig:
     max_depth: int = 10
     entangling_gate: str = "CNOT"
     entangling_strategy: EntanglingStrategy = EntanglingStrategy.LINEAR
-    parameter_range: Tuple[float, float] = (-math.pi, math.pi)  # noqa: UP006
+    parameter_range: tuple[float, float] = (-math.pi, math.pi)
 
 
 @dataclass
@@ -59,7 +58,7 @@ class CircuitSummary:
     rotations_per_layer: int
     total_parameters: int
     entangling_strategy: str
-    current_cost: Optional[float] = None  # noqa: UP045
+    current_cost: float | None = None
     optimization_steps: int = 0
 
 
@@ -71,7 +70,7 @@ class QuantumDecisionCircuit:
     rule for gradient computation and supports adaptive depth control.
     """
 
-    def __init__(self, config: Optional[QuantumCircuitConfig] = None):  # noqa: UP045
+    def __init__(self, config: QuantumCircuitConfig | None = None):
         self.config = config or QuantumCircuitConfig()
         self._n_params = (
             self.config.n_qubits * self.config.rotations_per_layer * self.config.n_layers
@@ -79,11 +78,11 @@ class QuantumDecisionCircuit:
         # Initialize parameters uniformly
         low, high = self.config.parameter_range
         self._parameters = np.random.uniform(low * 0.1, high * 0.1, self._n_params)
-        self._state: Optional[np.ndarray] = None  # noqa: UP045
-        self._probabilities: Optional[np.ndarray] = None  # noqa: UP045
-        self._cost_history: List[float] = []  # noqa: UP006
+        self._state: np.ndarray | None = None
+        self._probabilities: np.ndarray | None = None
+        self._cost_history: list[float] = []
         self._optimization_steps = 0
-        self._current_cost: Optional[float] = None  # noqa: UP045
+        self._current_cost: float | None = None
 
     @property
     def parameters(self) -> np.ndarray:
@@ -120,7 +119,7 @@ class QuantumDecisionCircuit:
         @qml.qnode(dev)
         def circuit(params_flat):
             idx = 0
-            for _layer in range(n_layers):
+            for layer in range(n_layers):
                 for qubit in range(n_qubits):
                     for r in range(rotations_per_layer):
                         if idx >= len(params_flat):
@@ -155,7 +154,7 @@ class QuantumDecisionCircuit:
 
         # Apply parameterized layers
         idx = 0
-        for _layer in range(self.config.n_layers):
+        for layer in range(self.config.n_layers):
             for qubit in range(n):
                 for r in range(self.config.rotations_per_layer):
                     if idx >= len(self._parameters):
@@ -233,7 +232,7 @@ class QuantumDecisionCircuit:
     def _apply_entangling_numpy(self, state: np.ndarray, n: int) -> np.ndarray:
         """Apply entangling CNOT gates based on strategy."""
         new_state = state.copy()
-        dim = 2**n  # noqa: F841
+        2**n
 
         if self.config.entangling_strategy == EntanglingStrategy.LINEAR:
             pairs = [(i, i + 1) for i in range(n - 1)]
@@ -278,11 +277,7 @@ class QuantumDecisionCircuit:
         probs = self.execute(use_pennylane=use_pennylane)
         return float(np.max(probs))
 
-    def compute_cost(
-        self,
-        target: Optional[np.ndarray] = None,  # noqa: UP045
-        cost_type: str = "entropy",
-    ) -> float:
+    def compute_cost(self, target: np.ndarray | None = None, cost_type: str = "entropy") -> float:
         """Compute the cost function value.
 
         Args:
@@ -347,7 +342,7 @@ class QuantumDecisionCircuit:
         Uses the parameter shift rule for gradients with adaptive
         learning rate and gradient clipping.
         """
-        for _step in range(n_steps):
+        for step in range(n_steps):
             # Execute circuit
             self.execute(use_pennylane=False)
 

@@ -49,7 +49,7 @@ class TestLiquidReservoir:
     def test_adapt_spectral_radius(self):
         reservoir = LiquidReservoir(
             ReservoirConfig(input_size=5, reservoir_size=50, spectral_radius=0.5)
-        )  # noqa: E501
+        )
         reservoir.adapt_spectral_radius(0.9)
         # Spectral radius should be updated
         assert abs(reservoir.config.spectral_radius - 0.9) < 0.1

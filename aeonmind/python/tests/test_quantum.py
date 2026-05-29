@@ -2,8 +2,6 @@
 Tests for AeonMind Quantum Decision Circuit.
 """
 
-import numpy as np  # noqa: F401
-
 from aeonmind.core.quantum import QuantumCircuitConfig, QuantumDecisionCircuit
 
 

@@ -6,17 +6,15 @@ PyO3/maturin, it will be used for performance-critical operations.
 Otherwise, the pure Python implementations are used.
 """
 
-from __future__ import annotations  # noqa: I001
-
-from typing import Any, Optional  # noqa: F401
+from __future__ import annotations
 
 import numpy as np
 
-from .definitions import Tier, TIER_NAMES
-from .adaptive import AdaptiveMetaLearner, AdaptiveConfig
-from .genetic_dna import DNAEvolutionEngine, GeneticConfig
+from .adaptive import AdaptiveConfig, AdaptiveMetaLearner
+from .definitions import TIER_NAMES, Tier
 from .fluidic_liquidic import LiquidReservoir, ReservoirConfig
-from .quantum import QuantumDecisionCircuit, QuantumCircuitConfig
+from .genetic_dna import DNAEvolutionEngine, GeneticConfig
+from .quantum import QuantumCircuitConfig, QuantumDecisionCircuit
 
 
 def has_rust_bindings() -> bool:
@@ -29,7 +27,7 @@ def has_rust_bindings() -> bool:
         return False
 
 
-def rust_version() -> Optional[str]:  # noqa: UP045
+def rust_version() -> str | None:
     """Get the Rust extension module version, if available."""
     try:
         import _aeonmind_rust
@@ -51,7 +49,7 @@ def tier_hierarchy() -> str:
 class RustLiquidReservoir:
     """Wrapper for the Rust LiquidReservoir with Python fallback."""
 
-    def __init__(self, config: Optional[ReservoirConfig] = None):  # noqa: UP045
+    def __init__(self, config: ReservoirConfig | None = None):
         self.config = config or ReservoirConfig()
         self._rust_impl = None
 
@@ -92,7 +90,7 @@ class RustLiquidReservoir:
 class RustEvolutionEngine:
     """Wrapper for the Rust EvolutionEngine with Python fallback."""
 
-    def __init__(self, config: Optional[GeneticConfig] = None):  # noqa: UP045
+    def __init__(self, config: GeneticConfig | None = None):
         self.config = config or GeneticConfig()
         self._rust_impl = None
 
@@ -126,7 +124,7 @@ class RustEvolutionEngine:
 class RustQuantumCircuit:
     """Wrapper for the Rust QuantumCircuit with Python fallback."""
 
-    def __init__(self, config: Optional[QuantumCircuitConfig] = None):  # noqa: UP045
+    def __init__(self, config: QuantumCircuitConfig | None = None):
         self.config = config or QuantumCircuitConfig()
         self._rust_impl = None
 
@@ -158,7 +156,7 @@ class RustQuantumCircuit:
 class RustAdaptiveLearner:
     """Wrapper for the Rust AdaptiveLearner with Python fallback."""
 
-    def __init__(self, n_params: int = 32, config: Optional[AdaptiveConfig] = None):  # noqa: UP045
+    def __init__(self, n_params: int = 32, config: AdaptiveConfig | None = None):
         self.config = config or AdaptiveConfig()
         self._rust_impl = None
 
@@ -179,7 +177,7 @@ class RustAdaptiveLearner:
     def step(self, gradient: np.ndarray) -> np.ndarray:
         if self._rust_impl is not None:
             return np.array(self._rust_impl.step(gradient.tolist()))
-        result = self._python_impl.step(gradient)  # noqa: F841
+        self._python_impl.step(gradient)
         return self._python_impl.parameters
 
     def parameters(self) -> np.ndarray:

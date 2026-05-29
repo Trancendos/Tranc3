@@ -82,7 +82,7 @@ class TestDNAEvolutionEngine:
         def sphere_fitness(dna):
             return -float(np.sum(dna**2))
 
-        final_stats = engine.evolve(sphere_fitness, generations=5)  # noqa: F841
+        engine.evolve(sphere_fitness, generations=5)
         assert engine.generation == 5
 
     def test_population_diversity(self):
@@ -103,7 +103,7 @@ class TestDNAEvolutionEngine:
 
     def test_inject_random(self):
         engine = DNAEvolutionEngine(GeneticConfig(population_size=20, dna_length=8))
-        initial_size = len(engine.population)  # noqa: F841
+        len(engine.population)
         engine.inject_random(5)
         # Should not exceed population_size
         assert len(engine.population) <= engine.config.population_size
