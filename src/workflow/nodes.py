@@ -265,7 +265,9 @@ class CodeExecNode(BaseNode):
 
         _b: Any = __builtins__
         if isinstance(_b, dict):
-            _safe_builtins: Dict[str, Any] = {k: v for k, v in _b.items() if k in self._SAFE_BUILTINS}
+            _safe_builtins: Dict[str, Any] = {
+                k: v for k, v in _b.items() if k in self._SAFE_BUILTINS
+            }
         else:
             _safe_builtins = {k: getattr(_b, k) for k in self._SAFE_BUILTINS if hasattr(_b, k)}
         safe_globals: Dict[str, Any] = {
