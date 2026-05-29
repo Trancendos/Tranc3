@@ -1,9 +1,9 @@
-from typing import Optional
 # src/auth/dependencies.py
 # Shim: re-export get_current_user from root-level auth.py
 # The MCP server imports from src.auth.dependencies for packaging consistency.
 import os
 import sys
+from typing import Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 

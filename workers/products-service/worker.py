@@ -9,8 +9,8 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import sqlite3
 import threading
 import uuid
@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 # ---------------------------------------------------------------------------
@@ -148,6 +148,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 STARTED_AT = datetime.now(timezone.utc)
 
 
@@ -161,13 +175,13 @@ async def health():
     }
 
 
-@app.get("/")
+@_router.get("/")
 async def list_all(limit: int = 50, offset: int = 0):
     """List all products."""
     return {"data": db.list(limit=limit, offset=offset)}
 
 
-@app.post("/")
+@_router.post("/")
 async def create(data: Dict[str, Any]):
     """Create a new products entry."""
     item_id = data.get("product_id", str(uuid.uuid4()))
@@ -176,7 +190,7 @@ async def create(data: Dict[str, Any]):
     return {"ok": True, **created}
 
 
-@app.get("/{product_id}")
+@_router.get("/{product_id}")
 async def get_by_id(product_id: str):
     """Get a products entry by ID."""
     item = db.get("product_id", product_id)
@@ -185,7 +199,7 @@ async def get_by_id(product_id: str):
     return item
 
 
-@app.patch("/{product_id}")
+@_router.patch("/{product_id}")
 async def update_by_id(product_id: str, data: Dict[str, Any]):
     """Update a products entry."""
     if not db.update("product_id", product_id, data):
@@ -193,7 +207,7 @@ async def update_by_id(product_id: str, data: Dict[str, Any]):
     return {"ok": True}
 
 
-@app.delete("/{product_id}")
+@_router.delete("/{product_id}")
 async def delete_by_id(product_id: str):
     """Delete a products entry (soft delete)."""
     if not db.delete("product_id", product_id):
@@ -205,19 +219,20 @@ async def delete_by_id(product_id: str):
 # Domain-specific endpoints
 # ---------------------------------------------------------------------------
 
-@app.get("/active")
+
+@_router.get("/active")
 async def list_active(limit: int = 50, offset: int = 0):
     """List all active products."""
     return {"data": db.list(limit=limit, offset=offset, is_active=1)}
 
 
-@app.get("/by-category/{category}")
+@_router.get("/by-category/{category}")
 async def get_by_category(category: str, limit: int = 50, offset: int = 0):
     """List products in a specific category."""
     return {"data": db.list(limit=limit, offset=offset, category=category)}
 
 
-@app.get("/search")
+@_router.get("/search")
 async def search_products(
     name: Optional[str] = None,
     category: Optional[str] = None,
@@ -252,7 +267,7 @@ async def search_products(
     return {"data": [dict(r) for r in rows], "count": len(rows)}
 
 
-@app.post("/{product_id}/activate")
+@_router.post("/{product_id}/activate")
 async def activate_product(product_id: str):
     """Make a product available for purchase."""
     if not db.update("product_id", product_id, {"is_active": 1}):
@@ -260,7 +275,7 @@ async def activate_product(product_id: str):
     return {"ok": True, "product_id": product_id, "is_active": True}
 
 
-@app.post("/{product_id}/deactivate")
+@_router.post("/{product_id}/deactivate")
 async def deactivate_product(product_id: str):
     """Remove a product from sale without deleting it."""
     if not db.update("product_id", product_id, {"is_active": 0}):
@@ -268,7 +283,7 @@ async def deactivate_product(product_id: str):
     return {"ok": True, "product_id": product_id, "is_active": False}
 
 
-@app.patch("/{product_id}/price")
+@_router.patch("/{product_id}/price")
 async def update_price(product_id: str, price: float):
     """Update the price of a product."""
     if price < 0:
@@ -278,7 +293,7 @@ async def update_price(product_id: str, price: float):
     return {"ok": True, "product_id": product_id, "price": price}
 
 
-@app.get("/categories")
+@_router.get("/categories")
 async def list_categories():
     """List all distinct product categories."""
     conn = db._get_conn()
@@ -286,6 +301,9 @@ async def list_categories():
         "SELECT category, COUNT(*) as count FROM products WHERE is_active=1 GROUP BY category ORDER BY count DESC"
     ).fetchall()
     return {"categories": [dict(r) for r in rows]}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

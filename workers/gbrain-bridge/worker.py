@@ -21,22 +21,20 @@ Architecture: FastAPI + SQLite + in-process neural operations.
 
 from __future__ import annotations
 
-import asyncio
-import hashlib
 import json
 import logging
 import math
+import os
 import re
 import sqlite3
 import time
 import uuid
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
@@ -53,7 +51,7 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 PAGERANK_DAMPING = 0.85
 PAGERANK_ITERATIONS = 50
 PAGERANK_TOLERANCE = 1e-6
-TEMPORAL_DECAY_HOURS = 720          # 30 days half-life
+TEMPORAL_DECAY_HOURS = 720  # 30 days half-life
 MAX_HOP_DEPTH = 4
 CONSOLIDATION_SIMILARITY_THRESHOLD = 0.85
 
@@ -162,14 +160,18 @@ class PageRankEngine:
                 out_links[src].append((tgt, row["weight"]))
 
         # Initialise scores uniformly
-        scores = {i: 1.0 / n for i in range(n)}
+        scores = dict.fromkeys(range(n), 1.0 / n)
 
         for _ in range(PAGERANK_ITERATIONS):
-            new_scores: Dict[int, float] = {i: (1 - PAGERANK_DAMPING) / n for i in range(n)}
+            new_scores: Dict[int, float] = dict.fromkeys(range(n), (1 - PAGERANK_DAMPING) / n)
             for src, links in out_links.items():
                 total_weight = sum(w for _, w in links)
                 for tgt, w in links:
-                    contrib = PAGERANK_DAMPING * scores[src] * (w / total_weight if total_weight > 0 else 1.0 / len(links))
+                    contrib = (
+                        PAGERANK_DAMPING
+                        * scores[src]
+                        * (w / total_weight if total_weight > 0 else 1.0 / len(links))
+                    )
                     new_scores[tgt] = new_scores.get(tgt, 0.0) + contrib
 
             # Check convergence
@@ -237,19 +239,19 @@ def multi_hop_search(
     while frontier:
         node_id, depth, path = frontier.popleft()
         if depth > 0:
-            row = db.execute(
-                "SELECT * FROM nodes WHERE node_id = ?", (node_id,)
-            ).fetchone()
+            row = db.execute("SELECT * FROM nodes WHERE node_id = ?", (node_id,)).fetchone()
             if row:
-                results.append({
-                    "node_id": node_id,
-                    "title": row["title"],
-                    "content": row["content"][:500],
-                    "importance": row["importance"],
-                    "hops": depth,
-                    "path": path,
-                    "tags": json.loads(row["tags"] or "[]"),
-                })
+                results.append(
+                    {
+                        "node_id": node_id,
+                        "title": row["title"],
+                        "content": row["content"][:500],
+                        "importance": row["importance"],
+                        "hops": depth,
+                        "path": path,
+                        "tags": json.loads(row["tags"] or "[]"),
+                    }
+                )
 
         if depth < max_hops:
             query = "SELECT target_id, relation, weight FROM edges WHERE source_id = ?"
@@ -356,7 +358,9 @@ def consolidate_knowledge(db: sqlite3.Connection) -> Dict[str, int]:
                 # Merge row_b content into row_a, delete row_b
                 merged_content = row_a["content"]
                 if row_b["content"] and row_b["content"] not in merged_content:
-                    merged_content += f"\n\n[Consolidated from: {row_b['title']}]\n{row_b['content']}"
+                    merged_content += (
+                        f"\n\n[Consolidated from: {row_b['title']}]\n{row_b['content']}"
+                    )
                 db.execute(
                     "UPDATE nodes SET content = ?, updated_at = ? WHERE node_id = ?",
                     (merged_content[:10000], time.time(), row_a["node_id"]),
@@ -451,12 +455,25 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -476,10 +493,10 @@ async def health() -> Response:  # type: ignore[return-value]
             "edges": edge_count,
         }
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
-@app.post("/nodes", status_code=201)
+@_router.post("/nodes", status_code=201)
 async def create_node(body: NodeCreate) -> Response:  # type: ignore[return-value]
     node_id = str(uuid.uuid4())
     now = time.time()
@@ -490,18 +507,24 @@ async def create_node(body: NodeCreate) -> Response:  # type: ignore[return-valu
             "(node_id, title, content, source, importance, created_at, updated_at, tags, metadata) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
-                node_id, body.title, body.content, body.source, body.importance,
-                now, now,
-                json.dumps(body.tags), json.dumps(body.metadata),
+                node_id,
+                body.title,
+                body.content,
+                body.source,
+                body.importance,
+                now,
+                now,
+                json.dumps(body.tags),
+                json.dumps(body.metadata),
             ),
         )
         db.commit()
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"node_id": node_id, "title": body.title, "created_at": now}  # type: ignore[return-value]
 
 
-@app.get("/nodes/{node_id}")
+@_router.get("/nodes/{node_id}")
 async def get_node(node_id: str) -> Response:  # type: ignore[return-value]
     db = _db.conn()
     row = db.execute("SELECT * FROM nodes WHERE node_id = ?", (node_id,)).fetchone()
@@ -520,7 +543,7 @@ async def get_node(node_id: str) -> Response:  # type: ignore[return-value]
     return dict(row)  # type: ignore[return-value]
 
 
-@app.post("/edges", status_code=201)
+@_router.post("/edges", status_code=201)
 async def create_edge(body: EdgeCreate) -> Response:  # type: ignore[return-value]
     db = _db.conn()
     edge_id = str(uuid.uuid4())
@@ -532,11 +555,11 @@ async def create_edge(body: EdgeCreate) -> Response:  # type: ignore[return-valu
         )
         db.commit()
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"edge_id": edge_id, "source_id": body.source_id, "target_id": body.target_id}  # type: ignore[return-value]
 
 
-@app.post("/search")
+@_router.post("/search")
 async def search(body: SearchRequest) -> Response:  # type: ignore[return-value]
     db = _db.conn()
 
@@ -548,13 +571,14 @@ async def search(body: SearchRequest) -> Response:  # type: ignore[return-value]
     if body.max_hops > 0 and direct:
         seed_ids = [r["node_id"] for r in direct[:5]]
         expanded = multi_hop_search(
-            seed_ids, db,
+            seed_ids,
+            db,
             max_hops=body.max_hops,
             relation_filter=body.relation_filter,
         )
 
     # Log access to retrieved nodes
-    for r in direct[:body.max_results]:
+    for r in direct[: body.max_results]:
         db.execute(
             "INSERT INTO access_log VALUES (?, ?, ?, ?, ?)",
             (str(uuid.uuid4()), r["node_id"], time.time(), body.query[:200], r["relevance_score"]),
@@ -568,26 +592,26 @@ async def search(body: SearchRequest) -> Response:  # type: ignore[return-value]
     return {  # type: ignore[return-value]
         "query": body.query,
         "direct_results": direct,
-        "expanded_results": expanded[:body.max_results],
+        "expanded_results": expanded[: body.max_results],
         "total": len(direct) + len(expanded),
     }
 
 
-@app.post("/pagerank/recompute")
+@_router.post("/pagerank/recompute")
 async def recompute_pagerank() -> Response:  # type: ignore[return-value]
     db = _db.conn()
     scores = _pagerank_engine.compute(db)
     return {"status": "recomputed", "node_count": len(scores)}  # type: ignore[return-value]
 
 
-@app.post("/consolidate")
+@_router.post("/consolidate")
 async def consolidate() -> Response:  # type: ignore[return-value]
     db = _db.conn()
     stats = consolidate_knowledge(db)
     return {"status": "consolidated", **stats}  # type: ignore[return-value]
 
 
-@app.get("/nodes/{node_id}/neighbourhood")
+@_router.get("/nodes/{node_id}/neighbourhood")
 async def get_neighbourhood(
     node_id: str,
     max_hops: int = Query(default=2, ge=1, le=4),
@@ -601,7 +625,7 @@ async def get_neighbourhood(
     return {"node_id": node_id, "neighbourhood": results, "total": len(results)}  # type: ignore[return-value]
 
 
-@app.get("/graph/stats")
+@_router.get("/graph/stats")
 async def graph_stats() -> Response:  # type: ignore[return-value]
     db = _db.conn()
     node_count = db.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
@@ -623,6 +647,10 @@ async def graph_stats() -> Response:  # type: ignore[return-value]
 # Entry point
 # ---------------------------------------------------------------------------
 
+app.include_router(_router)
+
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("worker:app", host="0.0.0.0", port=WORKER_PORT, reload=False)

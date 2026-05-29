@@ -15,10 +15,10 @@ Zero-cost: FastAPI + SQLite cache + free public APIs, no paid deps.
 
 from __future__ import annotations
 
-import os
 import asyncio
 import logging
 import math
+import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
-from fastapi import FastAPI
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -246,7 +246,27 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","), allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 
 @app.get("/health")
@@ -269,7 +289,7 @@ async def health():
     }
 
 
-@app.get("/lookup/{ip}")
+@_router.get("/lookup/{ip}")
 async def lookup(ip: str):
     if ip in ("localhost", "127.0.0.1", "::1"):
         return {
@@ -287,13 +307,13 @@ async def lookup(ip: str):
     return {"ip": ip, **result}
 
 
-@app.post("/lookup/batch")
+@_router.post("/lookup/batch")
 async def lookup_batch(req: BatchIpIn):
     results = await asyncio.gather(*[lookup_ip(ip) for ip in req.ips[:100]])
     return {"results": [{"ip": ip, **r} for ip, r in zip(req.ips, results, strict=False)]}
 
 
-@app.post("/distance")
+@_router.post("/distance")
 async def distance(req: DistanceIn):
     km = _haversine(req.lat1, req.lon1, req.lat2, req.lon2)
     return {
@@ -304,7 +324,7 @@ async def distance(req: DistanceIn):
     }
 
 
-@app.get("/cache")
+@_router.get("/cache")
 async def cache_stats():
     now = time.time()
     with get_conn() as conn:
@@ -323,12 +343,15 @@ async def cache_stats():
     }
 
 
-@app.delete("/cache/{ip}")
+@_router.delete("/cache/{ip}")
 async def evict(ip: str):
     with get_conn() as conn:
         conn.execute("DELETE FROM ip_cache WHERE ip = ?", (ip,))
         conn.commit()
     return {"evicted": ip}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

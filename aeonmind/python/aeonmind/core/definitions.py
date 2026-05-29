@@ -15,13 +15,14 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 # ── Tier System ──────────────────────────────────────────────────────────────
 
+
 class Tier(IntEnum):
     """Platform entity tier hierarchy."""
+
     HUMAN = 0
     ORCHESTRATOR = 1
     PRIME = 2
@@ -32,8 +33,10 @@ class Tier(IntEnum):
 
 # ── Sentinel Channels ───────────────────────────────────────────────────────
 
+
 class SentinelChannel(str, Enum):
     """Inter-entity communication channels for the sentinel broadcast system."""
+
     PLATFORM = "platform"
     AGENTS = "agents"
     MODELS = "models"
@@ -49,6 +52,7 @@ class SentinelChannel(str, Enum):
 
 # ── Entity Types ─────────────────────────────────────────────────────────────
 
+
 @dataclass
 class BotService:
     """Tier 5 — Stateless service worker / function.
@@ -57,14 +61,15 @@ class BotService:
     They perform single-purpose, stateless operations and cannot
     act autonomously — they are invoked by Agents or AI complexes.
     """
+
     id: str = field(default_factory=lambda: f"bot-{uuid.uuid4().hex[:8]}")
     name: str = "unnamed-bot"
     capability: str = "generic"
     stateless: bool = True
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     status: str = "idle"
 
-    def execute(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Execute a stateless bot function."""
         self.status = "running"
         result = {
@@ -85,18 +90,19 @@ class AgentEntity:
     internal state, and coordinate with other agents. They report
     to AI complexes (Tier 3) and can invoke bots (Tier 5).
     """
+
     id: str = field(default_factory=lambda: f"agent-{uuid.uuid4().hex[:8]}")
     name: str = "unnamed-agent"
     tier: Tier = Tier.AGENT
-    capabilities: List[str] = field(default_factory=list)
-    state: Dict[str, Any] = field(default_factory=dict)
-    dna: Optional[List[float]] = None
+    capabilities: list[str] = field(default_factory=list)
+    state: dict[str, Any] = field(default_factory=dict)
+    dna: list[float] | None = None
     confidence: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     status: str = "idle"
-    subscriptions: List[SentinelChannel] = field(default_factory=list)
+    subscriptions: list[SentinelChannel] = field(default_factory=list)
 
-    def can_act_autonomously(self, confidence: Optional[float] = None) -> bool:
+    def can_act_autonomously(self, confidence: float | None = None) -> bool:
         """Check if the agent can act autonomously based on confidence threshold."""
         threshold = confidence if confidence is not None else self.confidence
         return threshold >= 0.5
@@ -121,16 +127,17 @@ class AiComplex:
     the high-level ML/LLM inference capabilities. AI Complexes
     are managed by Orchestrators (Tier 1).
     """
+
     id: str = field(default_factory=lambda: f"ai-{uuid.uuid4().hex[:8]}")
     name: str = "unnamed-ai-complex"
     tier: Tier = Tier.AI
-    agents: Dict[str, AgentEntity] = field(default_factory=dict)
-    bots: Dict[str, BotService] = field(default_factory=dict)
-    models: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    agents: dict[str, AgentEntity] = field(default_factory=dict)
+    bots: dict[str, BotService] = field(default_factory=dict)
+    models: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
     status: str = "active"
 
-    def add_agent(self, agent_id: str, agent: Optional[AgentEntity] = None) -> AgentEntity:
+    def add_agent(self, agent_id: str, agent: AgentEntity | None = None) -> AgentEntity:
         """Add an agent to this AI complex. Returns the agent."""
         if agent is None:
             agent = AgentEntity(id=agent_id, name=agent_id)
@@ -139,11 +146,11 @@ class AiComplex:
         self.agents[agent_id] = agent
         return agent
 
-    def remove_agent(self, agent_id: str) -> Optional[AgentEntity]:
+    def remove_agent(self, agent_id: str) -> AgentEntity | None:
         """Remove an agent from this AI complex."""
         return self.agents.pop(agent_id, None)
 
-    def add_bot(self, bot_id: str, bot: Optional[BotService] = None) -> BotService:
+    def add_bot(self, bot_id: str, bot: BotService | None = None) -> BotService:
         """Add a bot to this AI complex. Returns the bot."""
         if bot is None:
             bot = BotService(id=bot_id, name=bot_id)
@@ -152,30 +159,30 @@ class AiComplex:
         self.bots[bot_id] = bot
         return bot
 
-    def remove_bot(self, bot_id: str) -> Optional[BotService]:
+    def remove_bot(self, bot_id: str) -> BotService | None:
         """Remove a bot from this AI complex."""
         return self.bots.pop(bot_id, None)
 
-    def get_agent(self, agent_id: str) -> Optional[AgentEntity]:
+    def get_agent(self, agent_id: str) -> AgentEntity | None:
         """Get an agent by ID."""
         return self.agents.get(agent_id)
 
-    def get_bot(self, bot_id: str) -> Optional[BotService]:
+    def get_bot(self, bot_id: str) -> BotService | None:
         """Get a bot by ID."""
         return self.bots.get(bot_id)
 
-    def list_agents(self) -> List[str]:
+    def list_agents(self) -> list[str]:
         """List all agent IDs."""
         return list(self.agents.keys())
 
-    def list_bots(self) -> List[str]:
+    def list_bots(self) -> list[str]:
         """List all bot IDs."""
         return list(self.bots.keys())
 
 
 # ── Tier Display ─────────────────────────────────────────────────────────────
 
-TIER_NAMES: Dict[Tier, str] = {
+TIER_NAMES: dict[Tier, str] = {
     Tier.HUMAN: "Human Oversight",
     Tier.ORCHESTRATOR: "Logical Orchestrator",
     Tier.PRIME: "Prime Coordinator",
@@ -184,7 +191,7 @@ TIER_NAMES: Dict[Tier, str] = {
     Tier.BOT: "Stateless Bot Service",
 }
 
-TIER_DESCRIPTIONS: Dict[Tier, str] = {
+TIER_DESCRIPTIONS: dict[Tier, str] = {
     Tier.HUMAN: "Human governance and oversight — the ultimate authority tier.",
     Tier.ORCHESTRATOR: "Logical orchestrator managing AI complexes and resource allocation.",
     Tier.PRIME: "Prime coordinator for cross-agent and cross-AI complex operations.",

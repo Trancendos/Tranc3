@@ -12,9 +12,9 @@ Zero-cost: Pure in-process Python, SQLite storage, no external workflow engines.
 
 from __future__ import annotations
 
-import os
 import json
 import logging
+import os
 import sqlite3
 import threading
 import uuid
@@ -25,7 +25,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -475,6 +475,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 STARTED_AT = datetime.now(timezone.utc)
 
 
@@ -493,20 +507,20 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@app.post("/workflows")
+@_router.post("/workflows")
 async def create_workflow(wf: WorkflowDefinition):
     """Create a new workflow definition."""
     saved = db.save_definition(wf)
     return {"ok": True, "workflow_id": saved.workflow_id}
 
 
-@app.get("/workflows")
+@_router.get("/workflows")
 async def list_workflows(limit: int = 50, offset: int = 0):
     """List all workflow definitions."""
     return {"workflows": db.list_definitions(limit=limit, offset=offset)}
 
 
-@app.get("/workflows/{workflow_id}")
+@_router.get("/workflows/{workflow_id}")
 async def get_workflow(workflow_id: str):
     """Get a specific workflow definition."""
     wf = db.get_definition(workflow_id)
@@ -515,7 +529,7 @@ async def get_workflow(workflow_id: str):
     return wf
 
 
-@app.delete("/workflows/{workflow_id}")
+@_router.delete("/workflows/{workflow_id}")
 async def delete_workflow(workflow_id: str):
     """Delete a workflow definition."""
     if not db.delete_definition(workflow_id):
@@ -528,7 +542,7 @@ async def delete_workflow(workflow_id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.post("/workflows/{workflow_id}/execute")
+@_router.post("/workflows/{workflow_id}/execute")
 async def execute_workflow(workflow_id: str, input_data: Dict[str, Any] = None):
     """Execute a workflow with the given input data."""
     if input_data is None:
@@ -546,7 +560,7 @@ async def execute_workflow(workflow_id: str, input_data: Dict[str, Any] = None):
         raise HTTPException(500, f"Execution failed: {e}") from None
 
 
-@app.get("/executions")
+@_router.get("/executions")
 async def list_executions(
     workflow_id: Optional[str] = None,
     status: Optional[str] = None,
@@ -561,13 +575,16 @@ async def list_executions(
     }
 
 
-@app.get("/executions/{execution_id}")
+@_router.get("/executions/{execution_id}")
 async def get_execution(execution_id: str):
     """Get a specific workflow execution."""
     execution = db.get_execution(execution_id)
     if not execution:
         raise HTTPException(404, f"Execution not found: {execution_id}")
     return execution
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

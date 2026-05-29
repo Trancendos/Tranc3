@@ -67,8 +67,7 @@ class TaskLoader:
             logger.info("TaskLoader: watching %s for changes.", self._dir)
         except ImportError:
             logger.warning(
-                "watchdog not installed — hot-reload disabled. "
-                "Run: pip install watchdog==4.0.0"
+                "watchdog not installed — hot-reload disabled. Run: pip install watchdog==4.0.0"
             )
 
     def stop(self) -> None:

@@ -14,6 +14,7 @@ Pipeline stages:
 
 Zero-cost: pure Python extraction, httpx for GBrain calls.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -135,9 +136,7 @@ class GBrainIngestionPipeline:
             )
         return result
 
-    async def ingest_batch(
-        self, interactions: List[AgentInteraction]
-    ) -> List[IngestionResult]:
+    async def ingest_batch(self, interactions: List[AgentInteraction]) -> List[IngestionResult]:
         """Ingest a batch of interactions concurrently."""
         return list(await asyncio.gather(*[self.ingest(i) for i in interactions]))
 
@@ -160,9 +159,7 @@ class GBrainIngestionPipeline:
             return result  # nothing to ingest
 
         # Stage 2: Filter by salience
-        worthy_concepts = [
-            c for c in extraction.concepts if c.score >= self._min_node_salience
-        ]
+        worthy_concepts = [c for c in extraction.concepts if c.score >= self._min_node_salience]
         if not worthy_concepts:
             return result
 

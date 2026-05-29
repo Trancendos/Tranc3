@@ -131,7 +131,9 @@ class SwarmCoordinator:
         self.swarm_nodes = [
             node
             for node, health in zip(new_nodes, health_results, strict=False)
-            if not isinstance(health, Exception) and health.get("status") == "healthy"  # type: ignore[union-attr]
+            if not isinstance(health, Exception)
+            and isinstance(health, dict)
+            and health.get("status") == "healthy"
         ]
 
     async def _check_node_health(self, node_url: str) -> Dict[str, Any]:

@@ -8,7 +8,7 @@ import logging
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from typing import Optional, Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
 from Dimensional.sanitize import sanitize_for_log
 

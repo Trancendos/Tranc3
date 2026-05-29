@@ -9,8 +9,8 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import sqlite3
 import threading
 import uuid
@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 # ---------------------------------------------------------------------------
@@ -148,6 +148,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 STARTED_AT = datetime.now(timezone.utc)
 
 
@@ -161,13 +175,13 @@ async def health():
     }
 
 
-@app.get("/")
+@_router.get("/")
 async def list_all(limit: int = 50, offset: int = 0):
     """List all payments."""
     return {"data": db.list(limit=limit, offset=offset)}
 
 
-@app.post("/")
+@_router.post("/")
 async def create(data: Dict[str, Any]):
     """Create a new payments entry."""
     item_id = data.get("payment_id", str(uuid.uuid4()))
@@ -176,7 +190,7 @@ async def create(data: Dict[str, Any]):
     return {"ok": True, **created}
 
 
-@app.get("/{payment_id}")
+@_router.get("/{payment_id}")
 async def get_by_id(payment_id: str):
     """Get a payments entry by ID."""
     item = db.get("payment_id", payment_id)
@@ -185,7 +199,7 @@ async def get_by_id(payment_id: str):
     return item
 
 
-@app.patch("/{payment_id}")
+@_router.patch("/{payment_id}")
 async def update_by_id(payment_id: str, data: Dict[str, Any]):
     """Update a payments entry."""
     if not db.update("payment_id", payment_id, data):
@@ -193,7 +207,7 @@ async def update_by_id(payment_id: str, data: Dict[str, Any]):
     return {"ok": True}
 
 
-@app.delete("/{payment_id}")
+@_router.delete("/{payment_id}")
 async def delete_by_id(payment_id: str):
     """Delete a payments entry (soft delete)."""
     if not db.delete("payment_id", payment_id):
@@ -205,19 +219,20 @@ async def delete_by_id(payment_id: str):
 # Domain-specific endpoints
 # ---------------------------------------------------------------------------
 
-@app.get("/by-order/{order_id}")
+
+@_router.get("/by-order/{order_id}")
 async def get_by_order(order_id: str):
     """List all payments for a given order."""
     return {"data": db.list(limit=100, offset=0, order_id=order_id)}
 
 
-@app.get("/by-user/{user_id}")
+@_router.get("/by-user/{user_id}")
 async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
     """List all payments made by a user."""
     return {"data": db.list(limit=limit, offset=offset, user_id=user_id)}
 
 
-@app.get("/by-status/{status}")
+@_router.get("/by-status/{status}")
 async def get_by_status(status: str, limit: int = 50, offset: int = 0):
     """List payments by status (pending, completed, failed, cancelled, refunded)."""
     valid = {"pending", "completed", "failed", "cancelled", "refunded"}
@@ -226,7 +241,7 @@ async def get_by_status(status: str, limit: int = 50, offset: int = 0):
     return {"data": db.list(limit=limit, offset=offset, status=status)}
 
 
-@app.post("/{payment_id}/capture")
+@_router.post("/{payment_id}/capture")
 async def capture_payment(payment_id: str):
     """Capture a pending payment (mark as completed)."""
     item = db.get("payment_id", payment_id)
@@ -238,7 +253,7 @@ async def capture_payment(payment_id: str):
     return {"ok": True, "payment_id": payment_id, "status": "completed"}
 
 
-@app.post("/{payment_id}/refund")
+@_router.post("/{payment_id}/refund")
 async def refund_payment(payment_id: str):
     """Refund a completed payment."""
     item = db.get("payment_id", payment_id)
@@ -250,7 +265,7 @@ async def refund_payment(payment_id: str):
     return {"ok": True, "payment_id": payment_id, "status": "refunded"}
 
 
-@app.post("/{payment_id}/cancel")
+@_router.post("/{payment_id}/cancel")
 async def cancel_payment(payment_id: str):
     """Cancel a pending payment."""
     item = db.get("payment_id", payment_id)
@@ -262,7 +277,7 @@ async def cancel_payment(payment_id: str):
     return {"ok": True, "payment_id": payment_id, "status": "cancelled"}
 
 
-@app.get("/stats/summary")
+@_router.get("/stats/summary")
 async def payment_stats():
     """Aggregate payment statistics by status and total amounts."""
     conn = db._get_conn()
@@ -270,6 +285,9 @@ async def payment_stats():
         "SELECT status, COUNT(*) as count, SUM(amount) as total FROM payments GROUP BY status"
     ).fetchall()
     return {"stats": [dict(r) for r in rows]}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

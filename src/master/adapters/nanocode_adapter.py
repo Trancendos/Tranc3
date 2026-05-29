@@ -29,17 +29,19 @@ from .base import BaseAdapter
 
 logger = logging.getLogger(__name__)
 
-_NANOCODE_MODES = frozenset({
-    "compliance_metadata_missing",
-    "stale_embedding",
-    "free_tier_approaching",
-    "rate_limit_hit",
-    "service_unreachable",
-    "config_drift",
-    "memory_leak",
-    "high_error_rate",
-    "dependency_failed",
-})
+_NANOCODE_MODES = frozenset(
+    {
+        "compliance_metadata_missing",
+        "stale_embedding",
+        "free_tier_approaching",
+        "rate_limit_hit",
+        "service_unreachable",
+        "config_drift",
+        "memory_leak",
+        "high_error_rate",
+        "dependency_failed",
+    }
+)
 
 
 class NanocodeAdapter(BaseAdapter):
@@ -60,6 +62,7 @@ class NanocodeAdapter(BaseAdapter):
                 FailureMode,
                 NanoCodeBotDispatcher,
             )
+
             self._dispatcher = NanoCodeBotDispatcher()
             self._failure_mode_cls = FailureMode
         except ImportError as exc:
@@ -82,8 +85,7 @@ class NanocodeAdapter(BaseAdapter):
         mode_name = action.lower().replace("-", "_")
         if mode_name not in _NANOCODE_MODES:
             raise ValueError(
-                f"Unknown nanocode failure mode '{mode_name}'. "
-                f"Valid: {sorted(_NANOCODE_MODES)}"
+                f"Unknown nanocode failure mode '{mode_name}'. Valid: {sorted(_NANOCODE_MODES)}"
             )
 
         try:

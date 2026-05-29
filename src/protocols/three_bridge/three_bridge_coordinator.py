@@ -186,16 +186,13 @@ class IBridge(ABC):
 
     @property
     @abstractmethod
-    def domain(self) -> BridgeDomain:
-        ...
+    def domain(self) -> BridgeDomain: ...
 
     @abstractmethod
-    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket:
-        ...
+    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket: ...
 
     @abstractmethod
-    def health_check(self) -> BridgeHealthReport:
-        ...
+    def health_check(self) -> BridgeHealthReport: ...
 
     @abstractmethod
     def scan_and_cleanup(self) -> List[str]:

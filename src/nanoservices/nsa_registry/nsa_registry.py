@@ -325,9 +325,9 @@ class NSARegistry:
         # Sort by: lowest error rate, then lowest latency, then lowest request count
         healthy.sort(
             key=lambda s: (
-                s.health.error_rate,  # type: ignore[union-attr]
-                s.health.latency_ms,  # type: ignore[union-attr]
-                s.health.request_count,  # type: ignore[union-attr]
+                s.health.error_rate if s.health is not None else 0.0,
+                s.health.latency_ms if s.health is not None else 0.0,
+                s.health.request_count if s.health is not None else 0,
             )
         )
         return healthy[0]

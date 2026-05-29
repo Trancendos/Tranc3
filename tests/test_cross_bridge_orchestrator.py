@@ -5,21 +5,20 @@ Comprehensive tests for cross-bridge orchestration including
 workflow execution, step execution, compensation, and saga rollback.
 """
 
-import asyncio
+import asyncio  # noqa: I001
 
 from Dimensional.cross_bridge_orchestrator import (
-    BridgeTarget,
-    StepStatus,
-    WorkflowStatus,
-    OrchestrationStep,
-    OrchestrationWorkflow,
     BridgeDispatcher,
-    StepExecutor,
+    BridgeTarget,
     CompensationManager,
     CrossBridgeOrchestrator,
+    OrchestrationStep,
+    OrchestrationWorkflow,
+    StepExecutor,
+    StepStatus,
+    WorkflowStatus,
     get_orchestrator,
 )
-
 
 # ──────────────────────────────────────────────
 # OrchestrationStep Tests

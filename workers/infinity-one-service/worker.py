@@ -41,6 +41,13 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
+# Phase 22.4: Dimensional Services
+from Dimensional.dimensionals import (
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
+)
+
 # Phase 22: Infinity Ecosystem security
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
 from Dimensional.infinity.nomenclature import (
@@ -55,13 +62,6 @@ from Dimensional.infinity.sentinel_station import (
     get_sentinel_station,
 )
 
-# Phase 22.4: Dimensional Services
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
-
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
@@ -71,7 +71,13 @@ from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 PORT = int(os.environ.get("INFINITY_ONE_PORT", "8043"))
 DB_PATH = os.environ.get("INFINITY_ONE_DB_PATH", "data/infinity_one.db")
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. This service cannot validate tokens without it. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 
 logger = logging.getLogger("infinity-one-service")
 
@@ -500,8 +506,10 @@ async def create_identity(request: Request, identity: IdentityCreate):
 
     # Determine tier and infinity_role from role
     from Dimensional.infinity.nomenclature import (
-        get_tier_for_role as _gtr,
         get_infinity_role_for_role as _girr,
+    )
+    from Dimensional.infinity.nomenclature import (
+        get_tier_for_role as _gtr,
     )
 
     tier = _gtr(identity.role)
@@ -669,8 +677,10 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
         params.append(update.role)
         # Update tier and infinity_role based on new role
         from Dimensional.infinity.nomenclature import (
-            get_tier_for_role as _gtr,
             get_infinity_role_for_role as _girr,
+        )
+        from Dimensional.infinity.nomenclature import (
+            get_tier_for_role as _gtr,
         )
 
         tier = _gtr(update.role)

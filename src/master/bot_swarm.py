@@ -153,9 +153,7 @@ class BotSwarm:
     async def _worker_loop(self, slot: WorkerSlot) -> None:
         while self._running or not slot.queue.empty():
             try:
-                action, params, future = await asyncio.wait_for(
-                    slot.queue.get(), timeout=5.0
-                )
+                action, params, future = await asyncio.wait_for(slot.queue.get(), timeout=5.0)
             except asyncio.TimeoutError:
                 continue
             except asyncio.CancelledError:
@@ -198,6 +196,7 @@ class BotSwarm:
         """Dispatch through unified AdapterRegistry (priority-routed fallback chain)."""
         try:
             from src.master.adapters.registry import get_adapter  # noqa: PLC0415
+
             adapter = get_adapter(bot_type)
             dispatch_params = dict(params)
             dispatch_params["_bot_type"] = bot_type

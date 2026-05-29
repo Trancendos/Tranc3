@@ -70,6 +70,7 @@ def _resolve_ca() -> Optional[str]:
 # Sync client (httpx.Client)
 # ---------------------------------------------------------------------------
 
+
 def get_mtls_client(**kwargs: Any):
     """
     Build a synchronous httpx.Client configured for internal mTLS.
@@ -116,6 +117,7 @@ def get_async_mtls_client(**kwargs: Any):
 # Convenience helpers (sync)
 # ---------------------------------------------------------------------------
 
+
 def internal_get(url: str, **kwargs: Any) -> Any:
     """Perform a GET request to an internal service using mTLS."""
     client = get_mtls_client()
@@ -134,9 +136,69 @@ def internal_post(url: str, **kwargs: Any) -> Any:
         return client.post(url, **kwargs)
 
 
+def internal_put(url: str, **kwargs: Any) -> Any:
+    """Perform a PUT request to an internal service using mTLS."""
+    client = get_mtls_client()
+    if client is None:
+        raise RuntimeError("httpx is required for mTLS inter-service calls")
+    with client:
+        return client.put(url, **kwargs)
+
+
+def internal_delete(url: str, **kwargs: Any) -> Any:
+    """Perform a DELETE request to an internal service using mTLS."""
+    client = get_mtls_client()
+    if client is None:
+        raise RuntimeError("httpx is required for mTLS inter-service calls")
+    with client:
+        return client.delete(url, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Convenience helpers (async)
+# ---------------------------------------------------------------------------
+
+
+async def internal_get_async(url: str, **kwargs: Any) -> Any:
+    """Async GET request to an internal service using mTLS."""
+    client = get_async_mtls_client()
+    if client is None:
+        raise RuntimeError("httpx is required for mTLS inter-service calls")
+    async with client:
+        return await client.get(url, **kwargs)
+
+
+async def internal_post_async(url: str, **kwargs: Any) -> Any:
+    """Async POST request to an internal service using mTLS."""
+    client = get_async_mtls_client()
+    if client is None:
+        raise RuntimeError("httpx is required for mTLS inter-service calls")
+    async with client:
+        return await client.post(url, **kwargs)
+
+
+async def internal_put_async(url: str, **kwargs: Any) -> Any:
+    """Async PUT request to an internal service using mTLS."""
+    client = get_async_mtls_client()
+    if client is None:
+        raise RuntimeError("httpx is required for mTLS inter-service calls")
+    async with client:
+        return await client.put(url, **kwargs)
+
+
+async def internal_delete_async(url: str, **kwargs: Any) -> Any:
+    """Async DELETE request to an internal service using mTLS."""
+    client = get_async_mtls_client()
+    if client is None:
+        raise RuntimeError("httpx is required for mTLS inter-service calls")
+    async with client:
+        return await client.delete(url, **kwargs)
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _build_ssl_kwargs() -> Dict[str, Any]:
     """Build SSL keyword arguments for httpx client construction."""
@@ -169,6 +231,7 @@ def _build_ssl_kwargs() -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Diagnostics
 # ---------------------------------------------------------------------------
+
 
 def mtls_status() -> Dict[str, Any]:
     """Return a status dict for health-check / observability use."""

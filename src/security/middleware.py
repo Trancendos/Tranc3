@@ -115,10 +115,18 @@ class RBACMiddleware(BaseHTTPMiddleware):
     dependency still works independently — this middleware is additive.
     """
 
-    _PUBLIC_PREFIXES = frozenset({
-        "/health", "/ready", "/docs", "/openapi", "/redoc",
-        "/auth/register", "/auth/token", "/mcp/health",
-    })
+    _PUBLIC_PREFIXES = frozenset(
+        {
+            "/health",
+            "/ready",
+            "/docs",
+            "/openapi",
+            "/redoc",
+            "/auth/register",
+            "/auth/token",
+            "/mcp/health",
+        }
+    )
 
     async def dispatch(self, request: Request, call_next) -> Response:
         path = request.url.path
@@ -207,7 +215,7 @@ class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
         context = self._zt.extract_context(headers)
         decision = self._zt.evaluate(context, path)
 
-        if getattr(decision, "blocked", False):
+        if decision.access_policy.value == "deny":
             reason = getattr(decision, "block_reason", "Zero Trust policy violation")
             logger.warning("ZeroTrust blocked request: path=%s reason=%s", path, reason)
             return _JSONResponse({"error": "Access denied", "reason": reason}, status_code=403)

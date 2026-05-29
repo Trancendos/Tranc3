@@ -189,9 +189,12 @@ class PredictiveScalingEngine:
         if not smoother.is_ready:
             return None
 
+        if policy is None:
+            return None
+
         # Cooldown check
         last_time = self._last_scaling_time.get(key, 0.0)
-        if time.time() - last_time < policy.cooldown_seconds:  # type: ignore[union-attr]
+        if time.time() - last_time < policy.cooldown_seconds:
             return None
 
         # Forecast future load
@@ -205,17 +208,17 @@ class PredictiveScalingEngine:
         forecast = base_forecast * seasonal_factor
 
         # Normalize to 0-1 utilization
-        utilization = min(1.0, max(0.0, forecast / policy.max_value))  # type: ignore[union-attr]
+        utilization = min(1.0, max(0.0, forecast / policy.max_value))
 
         direction = ScalingDirection.HOLD
         reason = ScalingReason.LOAD_FORECAST
 
-        if utilization > policy.scale_up_threshold:  # type: ignore[union-attr]
+        if utilization > policy.scale_up_threshold:
             direction = ScalingDirection.SCALE_UP
-            target = min(policy.max_value, obs.value * 1.5)  # type: ignore[union-attr]
-        elif utilization < policy.scale_down_threshold:  # type: ignore[union-attr]
+            target = min(policy.max_value, obs.value * 1.5)
+        elif utilization < policy.scale_down_threshold:
             direction = ScalingDirection.SCALE_DOWN
-            target = max(policy.min_value, obs.value * 0.7)  # type: ignore[union-attr]
+            target = max(policy.min_value, obs.value * 0.7)
             reason = ScalingReason.COST_OPTIMIZATION
         else:
             return None

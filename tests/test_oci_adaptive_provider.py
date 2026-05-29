@@ -15,7 +15,7 @@ Tests cover:
 No live OCI connection is required — all network I/O is mocked.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 from unittest.mock import AsyncMock, MagicMock
 
@@ -35,7 +35,6 @@ from shared_core.architecture.oci_adaptive_provider import (
     SystemMode,
     _aws_sig4_sign,
 )
-
 
 # ===========================================================================
 # Constants

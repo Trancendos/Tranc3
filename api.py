@@ -10,8 +10,10 @@ from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
 
 import redis as redis_lib
+
 try:
     import torch
+
     _TORCH_AVAILABLE = True
 except ImportError:
     torch = None  # type: ignore[assignment]
@@ -23,6 +25,7 @@ from fastapi import (
     Depends,
     FastAPI,
     HTTPException,
+    Query,
     Request,
     WebSocket,
     WebSocketDisconnect,
@@ -36,12 +39,33 @@ from Dimensional.sanitize import sanitize_for_log
 
 load_dotenv()
 
-# ── Fail fast on missing SECRET_KEY ──────────────────────────────────────────
+# ── Fail fast on missing critical secrets ────────────────────────────────────
 _SECRET_KEY = os.getenv("SECRET_KEY")
 if not _SECRET_KEY:
     raise RuntimeError(
         "SECRET_KEY is not set. "
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+
+_JWT_SECRET = os.getenv("JWT_SECRET")
+if not _JWT_SECRET:
+    raise RuntimeError(
+        "JWT_SECRET is not set. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+
+_DATABASE_URL = os.getenv("DATABASE_URL")
+if not _DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL is not set. "
+        "Set to your PostgreSQL connection string (e.g. postgresql://user:pass@host/db)."
+    )
+
+_REDIS_URL = os.getenv("REDIS_URL")
+if not _REDIS_URL:
+    raise RuntimeError(
+        "REDIS_URL is not set. "
+        "Set to your Redis connection string (e.g. redis://localhost:6379 or rediss://...)."
     )
 
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────
@@ -70,6 +94,8 @@ from src.errors.error_catalog import (  # noqa: F401  # intentional top-level im
     ErrorCode,
     format_error_response,
 )
+from src.gbrain.pipeline import AgentInteraction as _GBrainInteraction  # noqa: F401
+from src.gbrain.pipeline import get_pipeline as _get_gbrain_pipeline  # noqa: F401
 from src.monetisation.billing import TIERS  # noqa: F401  # intentional top-level import
 from src.monetisation.billing import (
     enforcer as tier_enforcer,  # noqa: F401  # intentional top-level import
@@ -103,8 +129,6 @@ from src.validation.loop_validator import (  # noqa: F401  # intentional top-lev
     loop_validator,
     self_healer,
 )
-from src.gbrain.pipeline import AgentInteraction as _GBrainInteraction  # noqa: F401
-from src.gbrain.pipeline import get_pipeline as _get_gbrain_pipeline  # noqa: F401
 
 # Optional imports — guarded to prevent startup crash if dependencies are missing
 # These modules depend on heavy/optional libs (qiskit, torch, etc.)
@@ -216,7 +240,7 @@ consciousness_model = None
 neuromorphic = None
 evolution_engine = None
 db_manager = None
-db_user_manager = None
+db_user_manager: "DBUserManager" = DBUserManager(None)  # in-memory fallback; replaced in lifespan
 _start_time = time.time()
 _feedback_count = 0  # codeql[py/unused-global]
 EVOLUTION_TRIGGER = 100  # codeql[py/unused-global]
@@ -644,6 +668,18 @@ try:
 except ImportError:
     logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
+# ── Enhanced Capabilities (code gen, skills, planning, self-healing) ─────────
+# Migrated from legacy api_enhanced.py into the canonical entry point.
+from src.routers.enhanced_capabilities import router as _enhanced_router  # noqa: F401
+
+app.include_router(_enhanced_router)
+
+# ── Ecosystem (hub states, citadel, defense, AI gateway, heartbeat) ──────────
+# Migrated from legacy api_ecosystem.py into the canonical entry point.
+from src.routers.ecosystem import router as _ecosystem_router  # noqa: F401
+
+app.include_router(_ecosystem_router)
+
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")
 if os.path.isdir(_FRONTEND_DIST):
@@ -797,7 +833,7 @@ class ErrorDocResponse(BaseModel):
     status_code=201,
 )
 async def register(req: RegisterRequest):
-    return db_user_manager.create_user(req.username, req.password)  # type: ignore[union-attr]
+    return db_user_manager.create_user(req.username, req.password)
 
 
 @app.post(
@@ -812,7 +848,7 @@ async def register(req: RegisterRequest):
     ),
 )
 async def login(req: TokenRequest):
-    user = db_user_manager.authenticate_user(req.username, req.password)  # type: ignore[union-attr]
+    user = db_user_manager.authenticate_user(req.username, req.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = token_manager.create_access_token({"sub": user["username"]})
@@ -1041,11 +1077,10 @@ async def chat(
         # Emotion detection
         detected_emotion = chat_req.user_emotion or "neutral"
         emotion_scores = {"neutral": 1.0}
-        if personality_matrix and getattr(personality_matrix, "emotion_detector", None):
-            emotion_scores = personality_matrix.emotion_detector.detect_emotion(chat_req.message)  # type: ignore[union-attr]
-            detected_emotion = personality_matrix.emotion_detector.get_dominant_emotion(  # type: ignore[union-attr]
-                emotion_scores
-            )
+        _ed = getattr(personality_matrix, "emotion_detector", None) if personality_matrix else None
+        if _ed is not None:
+            emotion_scores = _ed.detect_emotion(chat_req.message)
+            detected_emotion = _ed.get_dominant_emotion(emotion_scores)
 
         # Compress conversation history if long
         history = compressor.compress(chat_req.conversation_history or [])
@@ -1249,10 +1284,11 @@ async def personalities():
     ),
 )
 async def analyze_emotion(text: str, current_user: dict = Depends(get_current_user)):
-    if not personality_matrix or not getattr(personality_matrix, "emotion_detector", None):
+    _ed = getattr(personality_matrix, "emotion_detector", None) if personality_matrix else None
+    if _ed is None:
         raise HTTPException(status_code=503, detail="Emotion analysis unavailable")
-    scores = personality_matrix.emotion_detector.detect_emotion(text)  # type: ignore[union-attr]
-    dominant = personality_matrix.emotion_detector.get_dominant_emotion(scores)  # type: ignore[union-attr]
+    scores = _ed.detect_emotion(text)
+    dominant = _ed.get_dominant_emotion(scores)
     return {"dominant_emotion": dominant, "emotion_scores": scores, "text": text}
 
 
@@ -1269,7 +1305,7 @@ async def analyze_emotion(text: str, current_user: dict = Depends(get_current_us
 )
 async def feedback(
     request_id: str,
-    rating: int = Field(..., ge=1, le=5),
+    rating: int = Query(..., ge=1, le=5),
     current_user: dict = Depends(get_current_user),
 ):
     global _feedback_count
@@ -1307,7 +1343,9 @@ async def consciousness_score(text: str, current_user: dict = Depends(get_curren
     if not consciousness_model:
         raise HTTPException(status_code=503, detail="Consciousness engine unavailable")
     if not _TORCH_AVAILABLE or torch is None:
-        raise HTTPException(status_code=503, detail="Consciousness engine unavailable (torch not installed)")
+        raise HTTPException(
+            status_code=503, detail="Consciousness engine unavailable (torch not installed)"
+        )
     try:
         phi = consciousness_model.calculate_phi(torch.randn(64))
         report = (
@@ -1650,6 +1688,7 @@ async def error_docs(error_code: str):
         raise HTTPException(status_code=404, detail=f"Error code '{error_code}' not found")
     return None
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Evaluation Endpoints — EvalSuite HTTP interface
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1691,9 +1730,17 @@ async def eval_score(
     """Score a hypothesis against a reference string."""
     from src.evaluation.model_eval import (
         bleu_score as _bleu,
+    )
+    from src.evaluation.model_eval import (
         exact_match as _em,
+    )
+    from src.evaluation.model_eval import (
         hallucination_score as _hall,
+    )
+    from src.evaluation.model_eval import (
         rouge_l_score as _rouge,
+    )
+    from src.evaluation.model_eval import (
         token_f1 as _tf1,
     )
 

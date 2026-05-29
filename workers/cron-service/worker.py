@@ -11,10 +11,10 @@ Zero-cost: FastAPI + SQLite + asyncio, no external deps.
 
 from __future__ import annotations
 
-import os
 import asyncio
 import json
 import logging
+import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -225,7 +225,27 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","), allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 
 @app.get("/health")
@@ -250,7 +270,7 @@ async def health():
     }
 
 
-@app.get("/jobs")
+@_router.get("/jobs")
 async def list_jobs(enabled: Optional[bool] = None):
     with get_conn() as conn:
         if enabled is not None:
@@ -262,7 +282,7 @@ async def list_jobs(enabled: Optional[bool] = None):
     return {"jobs": [dict(r) for r in rows]}
 
 
-@app.post("/jobs", status_code=201)
+@_router.post("/jobs", status_code=201)
 async def create_job(req: JobCreate):
     import uuid
 
@@ -289,7 +309,7 @@ async def create_job(req: JobCreate):
     return {"id": job_id, "name": req.name, "schedule": req.schedule}
 
 
-@app.get("/jobs/{job_id}")
+@_router.get("/jobs/{job_id}")
 async def get_job(job_id: str):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
@@ -298,7 +318,7 @@ async def get_job(job_id: str):
     return dict(row)
 
 
-@app.patch("/jobs/{job_id}")
+@_router.patch("/jobs/{job_id}")
 async def update_job(job_id: str, req: JobUpdate):
     with get_conn() as conn:
         if not conn.execute("SELECT id FROM jobs WHERE id = ?", (job_id,)).fetchone():
@@ -317,7 +337,7 @@ async def update_job(job_id: str, req: JobUpdate):
     return {"updated": job_id}
 
 
-@app.delete("/jobs/{job_id}")
+@_router.delete("/jobs/{job_id}")
 async def delete_job(job_id: str):
     with get_conn() as conn:
         if not conn.execute("SELECT id FROM jobs WHERE id = ?", (job_id,)).fetchone():
@@ -328,7 +348,7 @@ async def delete_job(job_id: str):
     return {"deleted": job_id}
 
 
-@app.post("/jobs/{job_id}/trigger")
+@_router.post("/jobs/{job_id}/trigger")
 async def trigger_job(job_id: str):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
@@ -338,7 +358,7 @@ async def trigger_job(job_id: str):
     return {"triggered": job_id, "message": "Job queued for immediate execution"}
 
 
-@app.get("/jobs/{job_id}/runs")
+@_router.get("/jobs/{job_id}/runs")
 async def job_runs(job_id: str, limit: int = Query(20, le=200)):
     with get_conn() as conn:
         if not conn.execute("SELECT id FROM jobs WHERE id = ?", (job_id,)).fetchone():
@@ -348,6 +368,9 @@ async def job_runs(job_id: str, limit: int = Query(20, le=200)):
             (job_id, limit),
         ).fetchall()
     return {"job_id": job_id, "runs": [dict(r) for r in rows]}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

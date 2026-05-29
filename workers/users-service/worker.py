@@ -21,16 +21,16 @@ Features:
 
 from __future__ import annotations
 
-import os
 import json
 import logging
+import os
 import sqlite3
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
@@ -154,6 +154,22 @@ class UsersDatabase:
 
 
 # ---------------------------------------------------------------------------
+# Internal auth
+# ---------------------------------------------------------------------------
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return  # unconfigured in test/dev — allow through
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+# ---------------------------------------------------------------------------
 # FastAPI app
 # ---------------------------------------------------------------------------
 
@@ -202,6 +218,9 @@ def _row_to_response(row: sqlite3.Row) -> UserResponse:
 # Endpoints
 # ---------------------------------------------------------------------------
 
+# All non-health routes require internal authentication
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
 
 @app.get("/health")
 async def health():
@@ -215,7 +234,7 @@ async def health():
     }
 
 
-@app.post("/users", response_model=UserResponse, status_code=201)
+@_router.post("/users", response_model=UserResponse, status_code=201)
 async def create_user(user: UserCreate):
     user_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -259,7 +278,7 @@ async def create_user(user: UserCreate):
     )
 
 
-@app.get("/users/{user_id}", response_model=UserResponse)
+@_router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user(user_id: str):
     row = db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
     if not row:
@@ -267,7 +286,7 @@ async def get_user(user_id: str):
     return _row_to_response(row)
 
 
-@app.get("/users", response_model=UserListResponse)
+@_router.get("/users", response_model=UserListResponse)
 async def list_users(
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=20, ge=1, le=100),
@@ -296,7 +315,7 @@ async def list_users(
     )
 
 
-@app.get("/users/search/query", response_model=UserListResponse)
+@_router.get("/users/search/query", response_model=UserListResponse)
 async def search_users(
     q: str = Query(min_length=1),
     page: int = Query(default=1, ge=1),
@@ -321,7 +340,7 @@ async def search_users(
     )
 
 
-@app.patch("/users/{user_id}", response_model=UserResponse)
+@_router.patch("/users/{user_id}", response_model=UserResponse)
 async def update_user(user_id: str, update: UserUpdate):
     existing = db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
     if not existing:
@@ -357,7 +376,7 @@ async def update_user(user_id: str, update: UserUpdate):
     return _row_to_response(row)
 
 
-@app.delete("/users/{user_id}")
+@_router.delete("/users/{user_id}")
 async def delete_user(user_id: str):
     result = db.execute(
         "UPDATE users SET is_active = 0, updated_at = ? WHERE user_id = ?",
@@ -369,7 +388,7 @@ async def delete_user(user_id: str):
     return {"message": "User deactivated"}
 
 
-@app.post("/users/{user_id}/lock")
+@_router.post("/users/{user_id}/lock")
 async def lock_user(user_id: str):
     """Lock a user account (prevents login)."""
     result = db.execute(
@@ -382,7 +401,7 @@ async def lock_user(user_id: str):
     return {"message": "User account locked", "user_id": user_id}
 
 
-@app.post("/users/{user_id}/unlock")
+@_router.post("/users/{user_id}/unlock")
 async def unlock_user(user_id: str):
     """Unlock a user account."""
     result = db.execute(
@@ -395,7 +414,7 @@ async def unlock_user(user_id: str):
     return {"message": "User account unlocked", "user_id": user_id}
 
 
-@app.post("/users/{user_id}/login")
+@_router.post("/users/{user_id}/login")
 async def record_login(user_id: str):
     """Record a successful login timestamp."""
     now = datetime.now(timezone.utc).isoformat()
@@ -414,7 +433,7 @@ async def record_login(user_id: str):
     return {"message": "Login recorded", "last_login": now}
 
 
-@app.patch("/users/{user_id}/role", response_model=UserResponse)
+@_router.patch("/users/{user_id}/role", response_model=UserResponse)
 async def update_role(user_id: str, body: RoleUpdateRequest):
     """Update user role (admin operation)."""
     existing = db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
@@ -430,7 +449,7 @@ async def update_role(user_id: str, body: RoleUpdateRequest):
     return _row_to_response(row)
 
 
-@app.post("/users/password-reset/request", response_model=PasswordResetResponse)
+@_router.post("/users/password-reset/request", response_model=PasswordResetResponse)
 async def request_password_reset(body: PasswordResetRequest):
     """Stub: generate a password-reset token (not emailed; use notifications-service)."""
     row = db.execute(
@@ -455,7 +474,7 @@ async def request_password_reset(body: PasswordResetRequest):
     )
 
 
-@app.post("/admin/users/bulk-deactivate")
+@_router.post("/admin/users/bulk-deactivate")
 async def bulk_deactivate(body: BulkDeactivateRequest):
     """Deactivate multiple users at once (admin operation)."""
     now = datetime.now(timezone.utc).isoformat()
@@ -478,13 +497,16 @@ async def bulk_deactivate(body: BulkDeactivateRequest):
     }
 
 
-@app.get("/admin/users/roles/summary")
+@_router.get("/admin/users/roles/summary")
 async def roles_summary():
     """Summary count by role."""
     rows = db.execute(
         "SELECT role, COUNT(*) as count FROM users WHERE is_active = 1 GROUP BY role"
     ).fetchall()
     return {"roles": {row["role"]: row["count"] for row in rows}}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

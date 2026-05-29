@@ -11,6 +11,7 @@ Techniques:
   - Co-occurrence window edges (concepts that appear near each other are related)
   - Sentence boundary detection for context chunking
 """
+
 from __future__ import annotations
 
 import re
@@ -23,18 +24,104 @@ from typing import Dict, FrozenSet, List, Tuple
 # Common English stopwords (inline, zero-dependency)
 # ---------------------------------------------------------------------------
 
-_STOPWORDS: FrozenSet[str] = frozenset({
-    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
-    "of", "with", "by", "from", "up", "about", "into", "through", "during",
-    "is", "are", "was", "were", "be", "been", "being", "have", "has", "had",
-    "do", "does", "did", "will", "would", "could", "should", "may", "might",
-    "shall", "can", "that", "this", "these", "those", "it", "its", "i", "you",
-    "he", "she", "we", "they", "what", "which", "who", "when", "where", "how",
-    "if", "then", "so", "not", "no", "as", "also", "more", "very", "just",
-    "there", "here", "their", "our", "your", "my", "any", "all", "both",
-    "each", "than", "too", "only", "other", "such", "same", "over", "after",
-    "before", "between", "under", "while", "because", "however", "therefore",
-})
+_STOPWORDS: FrozenSet[str] = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "up",
+        "about",
+        "into",
+        "through",
+        "during",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "shall",
+        "can",
+        "that",
+        "this",
+        "these",
+        "those",
+        "it",
+        "its",
+        "i",
+        "you",
+        "he",
+        "she",
+        "we",
+        "they",
+        "what",
+        "which",
+        "who",
+        "when",
+        "where",
+        "how",
+        "if",
+        "then",
+        "so",
+        "not",
+        "no",
+        "as",
+        "also",
+        "more",
+        "very",
+        "just",
+        "there",
+        "here",
+        "their",
+        "our",
+        "your",
+        "my",
+        "any",
+        "all",
+        "both",
+        "each",
+        "than",
+        "too",
+        "only",
+        "other",
+        "such",
+        "same",
+        "over",
+        "after",
+        "before",
+        "between",
+        "under",
+        "while",
+        "because",
+        "however",
+        "therefore",
+    }
+)
 
 # Minimum character length for a term to be considered a concept
 _MIN_CONCEPT_LEN = 3
@@ -150,9 +237,7 @@ def _term_salience(tokens: List[str]) -> Dict[str, float]:
     return {t: v / max_sal for t, v in salience.items()} if max_sal > 0 else salience
 
 
-def _co_occurrence_edges(
-    tokens: List[str], window: int = _CO_OCCUR_WINDOW
-) -> List[ExtractedEdge]:
+def _co_occurrence_edges(tokens: List[str], window: int = _CO_OCCUR_WINDOW) -> List[ExtractedEdge]:
     """Build edges from co-occurrence within a sliding window."""
     meaningful = [t for t in tokens if t not in _STOPWORDS and len(t) >= _MIN_CONCEPT_LEN]
     edges: Dict[Tuple[str, str], float] = {}
@@ -162,9 +247,7 @@ def _co_occurrence_edges(
             edges[pair] = edges.get(pair, 0.0) + 1.0
     max_w = max(edges.values(), default=1.0)
     return [
-        ExtractedEdge(
-            source=src, target=tgt, relation="co_occurs_with", weight=round(w / max_w, 4)
-        )
+        ExtractedEdge(source=src, target=tgt, relation="co_occurs_with", weight=round(w / max_w, 4))
         for (src, tgt), w in edges.items()
         if w >= 2  # require at least 2 co-occurrences
     ]
@@ -200,18 +283,18 @@ def extract(prompt: str, response: str) -> ExtractionResult:
     concept_list: List[ExtractedConcept] = []
 
     # Add entities first (higher priority)
-    for entity_text, is_ent in entity_pairs:
+    for entity_text, _is_ent in entity_pairs:
         key = entity_text.lower()
         if key in seen or key in _STOPWORDS or len(key) < _MIN_CONCEPT_LEN:
             continue
         seen.add(key)
         score = salience_map.get(key, 0.5)
         # Find which sentences contain this entity
-        containing = [
-            i for i, s in enumerate(sentences) if entity_text.lower() in s.lower()
-        ]
+        containing = [i for i, s in enumerate(sentences) if entity_text.lower() in s.lower()]
         concept_list.append(
-            ExtractedConcept(text=entity_text, score=max(score, 0.6), is_entity=True, sentences=containing)
+            ExtractedConcept(
+                text=entity_text, score=max(score, 0.6), is_entity=True, sentences=containing
+            )
         )
 
     # Add high-salience regular terms
@@ -237,9 +320,11 @@ def extract(prompt: str, response: str) -> ExtractionResult:
     # Extractive summary: first sentence with the highest concept density
     best_sent = sentences[0] if sentences else combined[:200]
     if len(sentences) > 1:
+
         def _density(s: str) -> int:
             sl = s.lower()
             return sum(1 for c in concept_list if c.text.lower() in sl)
+
         best_sent = max(sentences, key=_density)
 
     # Tags: top-5 entity names
@@ -247,7 +332,7 @@ def extract(prompt: str, response: str) -> ExtractionResult:
 
     return ExtractionResult(
         concepts=concept_list[:20],  # cap at 20 concepts per interaction
-        edges=edges[:30],            # cap at 30 edges
+        edges=edges[:30],  # cap at 30 edges
         summary=best_sent[:500],
         tags=tags,
     )

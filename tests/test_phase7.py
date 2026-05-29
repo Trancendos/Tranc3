@@ -45,7 +45,7 @@ def phase7_test(name: str):
 
 @phase7_test("NSA Registry: register and discover services")
 async def test_nsa_registry_basic():
-    from nanoservices.nsa_registry import NSARegistry, ServiceTier, Capability
+    from nanoservices.nsa_registry import Capability, NSARegistry, ServiceTier
 
     registry = NSARegistry()
     await registry.start()
@@ -82,7 +82,7 @@ async def test_nsa_registry_basic():
 
 @phase7_test("NSA Registry: health monitoring and heartbeat")
 async def test_nsa_registry_health():
-    from nanoservices.nsa_registry import NSARegistry, ServiceTier, Capability, ServiceStatus
+    from nanoservices.nsa_registry import Capability, NSARegistry, ServiceStatus, ServiceTier
 
     registry = NSARegistry(heartbeat_timeout_s=0.5, health_check_interval_s=0.2)
     await registry.start()
@@ -110,11 +110,11 @@ async def test_nsa_registry_health():
 @phase7_test("NSA Registry: get_healthiest service")
 async def test_nsa_registry_healthiest():
     from nanoservices.nsa_registry import (
-        NSARegistry,
-        ServiceTier,
         Capability,
         HealthReport,
+        NSARegistry,
         ServiceStatus,
+        ServiceTier,
     )
 
     registry = NSARegistry()
@@ -194,7 +194,7 @@ async def test_shi_gateway_fallback():
 
 @phase7_test("IGI GitOps: Forgejo configuration")
 async def test_igi_forgejo_config():
-    from nanoservices.igi_gitops import IGIGitOps, ForgejoConfig
+    from nanoservices.igi_gitops import ForgejoConfig, IGIGitOps
 
     forgejo = ForgejoConfig(
         url="https://forgejo.local",
@@ -344,7 +344,7 @@ async def test_fmd_distillation_loss():
 
 @phase7_test("FMD Quantization Pipeline: model size estimation")
 async def test_fmd_quantization():
-    from nanoservices.fmd_distiller import StudentConfig, QuantizationPipeline, QuantizationLevel
+    from nanoservices.fmd_distiller import QuantizationLevel, QuantizationPipeline, StudentConfig
 
     student = StudentConfig(hidden_size=4096, num_layers=32, vocab_size=32000)
 
@@ -359,10 +359,10 @@ async def test_fmd_quantization():
 @phase7_test("FMD Distiller: create and run job")
 async def test_fmd_distiller_job():
     from nanoservices.fmd_distiller import (
-        FMDistiller,
-        TeacherConfig,
-        StudentConfig,
         DistillationHyperparams,
+        FMDistiller,
+        StudentConfig,
+        TeacherConfig,
     )
 
     distiller = FMDistiller()
@@ -386,12 +386,12 @@ async def test_fmd_distiller_job():
 
 @phase7_test("DaaS Stream: create stream and publish")
 async def test_daas_stream_basic():
-    from nanoservices.daas_stream import (
+    from nanoservices.daas_stream import (  # noqa: I001
         DaaSService,
-        StreamConfig,
-        StreamRecord,
         DataClassification,
         Jurisdiction,
+        StreamConfig,
+        StreamRecord,
     )
 
     daas = DaaSService()
@@ -458,10 +458,10 @@ async def test_daas_rego_bundle():
 @phase7_test("DaaS Lineage: track data origin")
 async def test_daas_lineage():
     from nanoservices.daas_stream import (
-        DataLineageTracker,
-        LineageEntry,
         DataClassification,
+        DataLineageTracker,
         Jurisdiction,
+        LineageEntry,
     )
 
     tracker = DataLineageTracker()
@@ -490,8 +490,8 @@ async def test_daas_lineage():
 @phase7_test("Genetic Optimizer: basic optimization")
 async def test_genetic_optimizer_basic():
     from nanoservices.genetic_optimizer import (
-        GeneticOptimizer,
         GeneSpec,
+        GeneticOptimizer,
         Objective,
         ObjectiveType,
     )
@@ -550,9 +550,9 @@ async def test_quantum_qubo():
 @phase7_test("Quantum Solver: solve QUBO")
 async def test_quantum_solve():
     from nanoservices.quantum_solver import (
+        QuantumAlgorithm,
         QuantumSolver,
         QUBOProblem,
-        QuantumAlgorithm,
         SolverStatus,
     )
 

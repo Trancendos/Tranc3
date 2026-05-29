@@ -27,7 +27,6 @@ Zero-cost: FastAPI + SQLite + python-jose. No CF Workers or KV.
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
 import hashlib
 import hmac
 import json
@@ -37,6 +36,7 @@ import secrets
 import sqlite3
 import time
 import uuid
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -391,6 +391,12 @@ app.add_middleware(
 db = AuthDatabase()
 rate_limiter = RateLimiter()
 security = HTTPBearer()
+
+
+@contextmanager
+def _get_db():
+    yield db
+
 
 # Phase 22.6: Smart adaptive worker kit for auth service
 worker_kit = InfinityWorkerKit(
@@ -834,16 +840,35 @@ async def jwks():
     public_key_pem = os.environ.get("JWT_PUBLIC_KEY", "")
     if public_key_pem:
         try:
-            from cryptography.hazmat.primitives.serialization import load_pem_public_key  # noqa: PLC0415
-            from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey  # noqa: PLC0415
             import base64  # noqa: PLC0415
+
+            from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey  # noqa: PLC0415
+            from cryptography.hazmat.primitives.serialization import (
+                load_pem_public_key,  # noqa: PLC0415
+            )
+
             pub = load_pem_public_key(public_key_pem.encode())
             if isinstance(pub, RSAPublicKey):
-                pub_numbers = pub.public_key().public_numbers() if hasattr(pub, "public_key") else pub.public_numbers()
+                pub_numbers = (
+                    pub.public_key().public_numbers()
+                    if hasattr(pub, "public_key")
+                    else pub.public_numbers()
+                )
+
                 def _b64url(n: int, length: int) -> str:
                     return base64.urlsafe_b64encode(n.to_bytes(length, "big")).rstrip(b"=").decode()
-                return {"keys": [{"kty": "RSA", "use": "sig", "alg": "RS256",
-                                  "n": _b64url(pub_numbers.n, 256), "e": _b64url(pub_numbers.e, 3)}]}
+
+                return {
+                    "keys": [
+                        {
+                            "kty": "RSA",
+                            "use": "sig",
+                            "alg": "RS256",
+                            "n": _b64url(pub_numbers.n, 256),
+                            "e": _b64url(pub_numbers.e, 3),
+                        }
+                    ]
+                }
         except Exception:
             pass
     return {"keys": []}
@@ -867,19 +892,29 @@ async def authorize(
     # Generate an authorization code (short-lived, single-use)
     auth_code = secrets.token_urlsafe(32)
     # Store code in DB for later exchange
-    with _get_db() as db:
-        db.execute(
-            """INSERT OR REPLACE INTO auth_codes
-               (code, client_id, redirect_uri, scope, code_challenge, code_challenge_method, expires_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (auth_code, client_id, redirect_uri, scope, code_challenge,
-             code_challenge_method, int(time.time()) + 600),
-        )
-        db.commit()
+    db.execute(
+        """INSERT OR REPLACE INTO auth_codes
+            (code, client_id, redirect_uri, scope, code_challenge, code_challenge_method, expires_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (
+            auth_code,
+            client_id,
+            redirect_uri,
+            scope,
+            code_challenge,
+            code_challenge_method,
+            int(time.time()) + 600,
+        ),
+    )
+    db.commit()
     import urllib.parse  # noqa: PLC0415
+
     params = {"code": auth_code, "state": state}
-    return {"redirect_to": f"{redirect_uri}?{urllib.parse.urlencode(params)}",
-            "code": auth_code, "state": state}
+    return {
+        "redirect_to": f"{redirect_uri}?{urllib.parse.urlencode(params)}",
+        "code": auth_code,
+        "state": state,
+    }
 
 
 class TokenRequest(BaseModel):
@@ -903,27 +938,28 @@ async def token_endpoint(req: TokenRequest):
     if req.grant_type != "authorization_code":
         raise HTTPException(status_code=400, detail=f"Unsupported grant_type: {req.grant_type}")
 
-    with _get_db() as db:
-        row = db.execute(
-            "SELECT * FROM auth_codes WHERE code = ? AND expires_at > ?",
-            (req.code, int(time.time())),
-        ).fetchone()
-        if not row:
-            raise HTTPException(status_code=400, detail="Invalid or expired authorization code")
+    row = db.execute(
+        "SELECT * FROM auth_codes WHERE code = ? AND expires_at > ?",
+        (req.code, int(time.time())),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=400, detail="Invalid or expired authorization code")
 
-        # PKCE verification
-        if row["code_challenge"]:
-            import hashlib, base64  # noqa: PLC0415, E401
-            if not req.code_verifier:
-                raise HTTPException(status_code=400, detail="code_verifier required")
-            digest = hashlib.sha256(req.code_verifier.encode()).digest()
-            computed = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
-            if computed != row["code_challenge"]:
-                raise HTTPException(status_code=400, detail="PKCE verification failed")
+    # PKCE verification
+    if row["code_challenge"]:
+        import base64
+        import hashlib  # noqa: PLC0415, E401
 
-        # Invalidate code immediately (single-use)
-        db.execute("DELETE FROM auth_codes WHERE code = ?", (req.code,))
-        db.commit()
+        if not req.code_verifier:
+            raise HTTPException(status_code=400, detail="code_verifier required")
+        digest = hashlib.sha256(req.code_verifier.encode()).digest()
+        computed = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+        if computed != row["code_challenge"]:
+            raise HTTPException(status_code=400, detail="PKCE verification failed")
+
+    # Invalidate code immediately (single-use)
+    db.execute("DELETE FROM auth_codes WHERE code = ?", (req.code,))
+    db.commit()
 
     return {
         "access_token": secrets.token_urlsafe(32),
@@ -934,40 +970,48 @@ async def token_endpoint(req: TokenRequest):
 
 
 async def _refresh_via_token(refresh_token: str) -> dict:
-    with _get_db() as db:
-        row = db.execute(
-            "SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > ?",
-            (refresh_token, int(time.time())),
-        ).fetchone()
-        if not row:
-            raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
-        user = db.execute("SELECT * FROM users WHERE user_id = ?", (row["user_id"],)).fetchone()
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
+    row = db.execute(
+        "SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > ?",
+        (refresh_token, int(time.time())),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    user = db.execute("SELECT * FROM users WHERE user_id = ?", (row["user_id"],)).fetchone()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
     from jose import jwt as _jwt  # noqa: PLC0415
-    claims = {"sub": user["user_id"], "username": user["username"],
-               "role": user["role"], "iss": AUTH_ISSUER,
-               "iat": int(time.time()), "exp": int(time.time()) + JWT_EXPIRY_MINUTES * 60}
-    return {"access_token": _jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM),
-            "token_type": "Bearer", "expires_in": JWT_EXPIRY_MINUTES * 60}
+
+    claims = {
+        "sub": user["user_id"],
+        "username": user["username"],
+        "role": user["role"],
+        "iss": AUTH_ISSUER,
+        "iat": int(time.time()),
+        "exp": int(time.time()) + JWT_EXPIRY_MINUTES * 60,
+    }
+    return {
+        "access_token": _jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM),
+        "token_type": "Bearer",
+        "expires_in": JWT_EXPIRY_MINUTES * 60,
+    }
 
 
 # ── auth_codes table init ────────────────────────────────────────────────────
 
+
 def _ensure_auth_codes_table() -> None:
-    with _get_db() as db:
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS auth_codes (
-                code TEXT PRIMARY KEY,
-                client_id TEXT NOT NULL DEFAULT '',
-                redirect_uri TEXT NOT NULL DEFAULT '',
-                scope TEXT NOT NULL DEFAULT 'openid',
-                code_challenge TEXT NOT NULL DEFAULT '',
-                code_challenge_method TEXT NOT NULL DEFAULT 'S256',
-                expires_at INTEGER NOT NULL
-            )
-        """)
-        db.commit()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS auth_codes (
+            code TEXT PRIMARY KEY,
+            client_id TEXT NOT NULL DEFAULT '',
+            redirect_uri TEXT NOT NULL DEFAULT '',
+            scope TEXT NOT NULL DEFAULT 'openid',
+            code_challenge TEXT NOT NULL DEFAULT '',
+            code_challenge_method TEXT NOT NULL DEFAULT 'S256',
+            expires_at INTEGER NOT NULL
+        )
+    """)
+    db.commit()
 
 
 # Call once at module load so the table is ready

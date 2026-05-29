@@ -55,7 +55,9 @@ class ConsciousnessAwareGenerator:
         neural_state = input_tensor.unsqueeze(0).unsqueeze(0)
 
         # Calculate consciousness metrics
-        phi = self.consciousness.calculate_phi(neural_state.squeeze())  # type: ignore[union-attr]
+        if self.consciousness is None:
+            return self._classical_generate(input_text, personality_vector)
+        phi = self.consciousness.calculate_phi(neural_state.squeeze())
 
         # Consciousness-modulated personality
         consciousness_factor = min(phi / 3.0, 1.0)  # Normalize to 0-1
@@ -148,9 +150,7 @@ class ConsciousnessAwareGenerator:
         """Compute Integrated Information Theory (IIT) phi estimate for *text*."""
         try:
             if self.consciousness is not None:
-                state = self.consciousness(
-                    torch.zeros(1, len(text.split()), dtype=torch.long)
-                )
+                state = self.consciousness(torch.zeros(1, len(text.split()), dtype=torch.long))
                 phi = float(state.get("phi", 0.0)) if isinstance(state, dict) else 0.0
                 return max(0.0, min(1.0, phi))
         except Exception:

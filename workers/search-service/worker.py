@@ -11,9 +11,9 @@ Zero-cost: FastAPI + SQLite FTS5 (built-in), no external deps.
 
 from __future__ import annotations
 
-import os
 import json
 import logging
+import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -149,7 +149,27 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","), allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 
 @app.get("/health")
@@ -177,14 +197,14 @@ async def health():
 # --- Indices ---
 
 
-@app.get("/indices")
+@_router.get("/indices")
 async def list_indices():
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM indices ORDER BY name").fetchall()
     return {"indices": [dict(r) for r in rows]}
 
 
-@app.post("/indices", status_code=201)
+@_router.post("/indices", status_code=201)
 async def create_index(req: IndexCreate):
     with get_conn() as conn:
         if conn.execute("SELECT name FROM indices WHERE name = ?", (req.name,)).fetchone():
@@ -197,7 +217,7 @@ async def create_index(req: IndexCreate):
     return {"name": req.name, "description": req.description}
 
 
-@app.delete("/indices/{name}")
+@_router.delete("/indices/{name}")
 async def delete_index(name: str):
     if name == "default":
         raise HTTPException(status_code=400, detail="Cannot delete the default index")
@@ -214,7 +234,7 @@ async def delete_index(name: str):
 # --- Documents ---
 
 
-@app.put("/indices/{index}/documents/{doc_id}", status_code=200)
+@_router.put("/indices/{index}/documents/{doc_id}", status_code=200)
 async def index_document(index: str, doc_id: str, doc: DocumentIn):
     _ensure_index(index)
     now = time.time()
@@ -245,7 +265,7 @@ async def index_document(index: str, doc_id: str, doc: DocumentIn):
     return {"indexed": doc_id, "index": index}
 
 
-@app.post("/indices/{index}/documents/batch", status_code=201)
+@_router.post("/indices/{index}/documents/batch", status_code=201)
 async def batch_index(index: str, req: BatchIndexIn):
     _ensure_index(index)
     now = time.time()
@@ -279,7 +299,7 @@ async def batch_index(index: str, req: BatchIndexIn):
     return {"indexed": len(req.documents), "index": index}
 
 
-@app.delete("/indices/{index}/documents/{doc_id}")
+@_router.delete("/indices/{index}/documents/{doc_id}")
 async def delete_document(index: str, doc_id: str):
     _ensure_index(index)
     with get_conn() as conn:
@@ -298,7 +318,7 @@ async def delete_document(index: str, doc_id: str):
 # --- Search ---
 
 
-@app.get("/search")
+@_router.get("/search")
 async def search(
     q: str,
     index: str = "default",
@@ -339,9 +359,12 @@ async def search(
     return {"query": q, "index": index, "results": results, "count": len(results)}
 
 
-@app.post("/search")
+@_router.post("/search")
 async def search_post(req: SearchIn):
     return await search(req.query, req.index, req.limit, req.offset, req.highlight)
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

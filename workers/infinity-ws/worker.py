@@ -17,22 +17,41 @@ Zero-cost: FastAPI WebSocket + asyncio. No CF Durable Objects.
 
 from __future__ import annotations
 
-import os
 import json
 import logging
+import os
 import time
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
+import jwt as pyjwt
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.workers.infinity-ws")
+
+# ── Fail-fast on missing critical secrets ──────────────────────
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. The Nexus cannot authenticate WebSocket connections. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 
 # ── Models ───────────────────────────────────────────────────
 
@@ -77,6 +96,10 @@ class ConnectionManager:
     for efficient broadcasting.
     """
 
+    # Per-connection message rate limit: 60 messages per 60-second window
+    _MSG_RATE_LIMIT = 60
+    _MSG_RATE_WINDOW = 60.0
+
     def __init__(self, max_connections: int = 1000, max_channels: int = 100) -> None:
         self.max_connections = max_connections
         self.max_channels = max_channels
@@ -86,6 +109,8 @@ class ConnectionManager:
         self._subscriptions: dict[WebSocket, set[str]] = defaultdict(set)
         # websocket -> connection metadata
         self._connections: dict[WebSocket, dict[str, Any]] = {}
+        # websocket -> (message_count, window_start) for rate limiting
+        self._msg_rate: dict[WebSocket, tuple[int, float]] = {}
         self._messages_sent = 0
         self._started_at = time.monotonic()
 
@@ -125,6 +150,17 @@ class ConnectionManager:
         )  # codeql[py/cleartext-logging]
         return True
 
+    def is_message_rate_limited(self, ws: WebSocket) -> bool:
+        """Return True if this connection has exceeded the message rate limit."""
+        now = time.monotonic()
+        count, window_start = self._msg_rate.get(ws, (0, now))
+        if now - window_start >= self._MSG_RATE_WINDOW:
+            self._msg_rate[ws] = (1, now)
+            return False
+        count += 1
+        self._msg_rate[ws] = (count, window_start)
+        return count > self._MSG_RATE_LIMIT
+
     def disconnect(self, ws: WebSocket) -> None:
         """Remove a WebSocket connection and clean up subscriptions."""
         # Unsubscribe from all channels
@@ -134,6 +170,7 @@ class ConnectionManager:
                 del self._channels[channel]
 
         self._subscriptions.pop(ws, None)
+        self._msg_rate.pop(ws, None)
         conn_info = self._connections.pop(ws, None)
         if conn_info:
             logger.info(
@@ -223,31 +260,15 @@ class ConnectionManager:
 # ── JWT Verification (lightweight) ──────────────────────────
 
 
-def verify_token(token: str, secret: str = "change-me-in-production") -> dict[str, Any] | None:
-    """
-    Verify a JWT token and return its payload.
-    In production, use the full JWT auth module from src/auth/.
-    """
+def verify_token(token: str, secret: str = "") -> dict[str, Any] | None:
+    """Verify a JWT token signature and return its payload, or None on failure."""
+    key = secret or JWT_SECRET
     try:
-        import base64
-
-        parts = token.split(".")
-        if len(parts) != 3:
-            return None
-
-        # Decode payload (without full verification for now)
-        # Production: use python-jose or PyJWT
-        payload_b64 = parts[1]
-        # Add padding
-        padding = 4 - len(payload_b64) % 4
-        if padding != 4:
-            payload_b64 += "=" * padding
-
-        payload_bytes = base64.urlsafe_b64decode(payload_b64)
-        payload = json.loads(payload_bytes)
-
-        return payload
-    except Exception as e:
+        return pyjwt.decode(token, key, algorithms=["HS256"])
+    except pyjwt.ExpiredSignatureError:
+        logger.warning("token_verification_failed: token expired")
+        return None
+    except pyjwt.InvalidTokenError as e:
         logger.warning(
             "token_verification_failed: %s", sanitize_for_log(e)
         )  # codeql[py/cleartext-logging]
@@ -272,6 +293,20 @@ app.add_middleware(
 
 manager = ConnectionManager()
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
 
 @app.get("/health")
 async def health():
@@ -291,13 +326,13 @@ async def health():
     }
 
 
-@app.get("/stats")
+@_router.get("/stats")
 async def stats():
     """Get connection statistics."""
     return manager.stats.model_dump()
 
 
-@app.get("/channels")
+@_router.get("/channels")
 async def list_channels():
     """List all active channels."""
     return {"channels": [c.model_dump() for c in manager.get_channels()]}
@@ -334,6 +369,20 @@ async def websocket_endpoint(
         while True:
             # Receive message
             raw = await ws.receive_text()
+
+            # Per-connection message rate limit
+            if manager.is_message_rate_limited(ws):
+                await ws.send_json(
+                    WSMessage(
+                        type="error",
+                        data={"error": "Rate limit exceeded. Max 60 messages per 60 seconds."},
+                        sender="system",
+                        message_id=str(uuid.uuid4()),
+                        timestamp=datetime.now(timezone.utc).isoformat(),
+                    ).model_dump()
+                )
+                continue
+
             try:
                 msg_data = json.loads(raw)
                 message = WSMessage(**msg_data)
@@ -419,6 +468,9 @@ async def websocket_endpoint(
     except Exception as e:
         logger.error("ws_error: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
         manager.disconnect(ws)
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

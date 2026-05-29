@@ -50,7 +50,7 @@ Usage:
     # → {"location": "infinity-admin", "url": "http://localhost:8044", "tier": 0}
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import asyncio
 import logging

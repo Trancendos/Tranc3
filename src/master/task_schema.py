@@ -60,7 +60,9 @@ class TaskStep(BaseModel):
     params: Dict[str, Any] = Field(default_factory=dict)
     retry: RetryPolicy = Field(default_factory=RetryPolicy)  # type: ignore[arg-type]
     timeout_seconds: float = Field(30.0, ge=1)
-    depends_on: List[str] = Field(default_factory=list, description="Step names that must complete first")
+    depends_on: List[str] = Field(
+        default_factory=list, description="Step names that must complete first"
+    )
     name: Optional[str] = None
 
     @field_validator("bot")
@@ -68,22 +70,48 @@ class TaskStep(BaseModel):
     def validate_bot_type(cls, v: str) -> str:
         # Core 12 tranc3-bots types
         _core = {
-            "generate", "embed", "emotion", "tokenize", "consciousness",
-            "personality", "predict", "code", "memory", "monitor",
-            "search", "summarise",
+            "generate",
+            "embed",
+            "emotion",
+            "tokenize",
+            "consciousness",
+            "personality",
+            "predict",
+            "code",
+            "memory",
+            "monitor",
+            "search",
+            "summarise",
         }
         # AeonMind Tier-5 capabilities (15 types)
         _aeonmind = {
-            "aeonmind", "translate", "classify", "extract", "validate",
-            "transform", "notify", "log", "cache", "route", "filter",
-            "enrich", "summarize", "generic",
+            "aeonmind",
+            "translate",
+            "classify",
+            "extract",
+            "validate",
+            "transform",
+            "notify",
+            "log",
+            "cache",
+            "route",
+            "filter",
+            "enrich",
+            "summarize",
+            "generic",
         }
         # NanoCodeBot autonomous repair modes (9 FailureModes + root type)
         _nanocode = {
             "nanocode",
-            "compliance_metadata_missing", "stale_embedding",
-            "free_tier_approaching", "rate_limit_hit", "service_unreachable",
-            "config_drift", "memory_leak", "high_error_rate", "dependency_failed",
+            "compliance_metadata_missing",
+            "stale_embedding",
+            "free_tier_approaching",
+            "rate_limit_hit",
+            "service_unreachable",
+            "config_drift",
+            "memory_leak",
+            "high_error_rate",
+            "dependency_failed",
         }
         valid_bots = _core | _aeonmind | _nanocode
         if v not in valid_bots:
@@ -109,4 +137,5 @@ class TaskDefinition(BaseModel):
     @classmethod
     def slugify_name(cls, v: str) -> str:
         import re
+
         return re.sub(r"[^a-z0-9_-]", "-", v.lower()).strip("-")

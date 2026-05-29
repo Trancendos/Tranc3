@@ -52,19 +52,28 @@ logger = logging.getLogger(__name__)
 # LoRA training configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class LoRATrainingConfig:
     """Configuration for LoRA fine-tuning.
 
     Extends LoRAConfig with training-specific hyper-parameters.
     """
+
     # LoRA adapter settings
     rank: int = 8
     alpha: float = 16.0
     dropout: float = 0.05
-    target_modules: List[str] = field(default_factory=lambda: [
-        "q_proj", "k_proj", "v_proj", "out_proj", "qkv_proj", "down_proj",
-    ])
+    target_modules: List[str] = field(
+        default_factory=lambda: [
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "out_proj",
+            "qkv_proj",
+            "down_proj",
+        ]
+    )
     quantize_4bit: bool = False
     use_dora: bool = False
 
@@ -79,11 +88,11 @@ class LoRATrainingConfig:
     # LR schedule
     warmup_steps: int = 100
     total_steps: int = 1000
-    lr_schedule: str = "cosine"        # "cosine" | "linear" | "constant"
+    lr_schedule: str = "cosine"  # "cosine" | "linear" | "constant"
 
     # Training loop
     grad_accum_steps: int = 4
-    mixed_precision: bool = True       # fp16/bf16 on CUDA, disabled on CPU
+    mixed_precision: bool = True  # fp16/bf16 on CUDA, disabled on CPU
     log_every: int = 10
     eval_every: int = 100
     save_every: int = 200
@@ -92,15 +101,16 @@ class LoRATrainingConfig:
     checkpoint_dir: str = "checkpoints/lora"
     run_name: str = "lora_run"
     base_model_path: Optional[str] = None  # load base weights before applying LoRA
-    resume_adapter: Optional[str] = None   # resume from a previous adapter checkpoint
+    resume_adapter: Optional[str] = None  # resume from a previous adapter checkpoint
 
     # Post-training
-    merge_on_finish: bool = False       # merge adapters into base weights on completion
+    merge_on_finish: bool = False  # merge adapters into base weights on completion
 
 
 # ---------------------------------------------------------------------------
 # LR schedule helpers
 # ---------------------------------------------------------------------------
+
 
 def _cosine_lr(step: int, warmup: int, total: int, base_lr: float) -> float:
     if step < warmup:
@@ -128,6 +138,7 @@ def _get_lr(step: int, cfg: LoRATrainingConfig) -> float:
 # LoRA Trainer
 # ---------------------------------------------------------------------------
 
+
 class LoRATrainer:
     """
     Fine-tunes a Tranc3 model using Low-Rank Adaptation.
@@ -141,7 +152,7 @@ class LoRATrainer:
     def __init__(
         self,
         model: nn.Module,
-        train_loader: Any,                      # DataLoader or iterable of batches
+        train_loader: Any,  # DataLoader or iterable of batches
         cfg: LoRATrainingConfig,
         val_loader: Optional[Any] = None,
         device: Optional[torch.device] = None,
@@ -175,7 +186,10 @@ class LoRATrainer:
         trainable, total = lora_trainable_params(self.model)
         logger.info(
             "LoRATrainer ready: %d LoRA layers, %s trainable / %s total params (%.2f%%)",
-            n_layers, f"{trainable:,}", f"{total:,}", 100 * trainable / max(total, 1),
+            n_layers,
+            f"{trainable:,}",
+            f"{total:,}",
+            100 * trainable / max(total, 1),
         )
 
         # Optionally resume adapter
@@ -192,10 +206,7 @@ class LoRATrainer:
         )
 
         # Mixed precision
-        self.use_amp = (
-            cfg.mixed_precision
-            and self.device.type == "cuda"
-        )
+        self.use_amp = cfg.mixed_precision and self.device.type == "cuda"
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
 
         Path(cfg.checkpoint_dir).mkdir(parents=True, exist_ok=True)
@@ -238,7 +249,11 @@ class LoRATrainer:
                 self._metrics.append(record)
                 logger.info(
                     "[LoRA step %d/%d] loss=%.4f ppl=%.2f lr=%.2e",
-                    self.step + 1, total_steps, avg_loss, ppl, lr,
+                    self.step + 1,
+                    total_steps,
+                    avg_loss,
+                    ppl,
+                    lr,
                 )
                 acc_loss = 0.0
 
@@ -250,15 +265,16 @@ class LoRATrainer:
             # Checkpoint
             if (self.step + 1) % self.cfg.save_every == 0:
                 self.save_adapter(
-                    str(Path(self.cfg.checkpoint_dir) / f"{self.cfg.run_name}_step{self.step+1}.pt")
+                    str(
+                        Path(self.cfg.checkpoint_dir)
+                        / f"{self.cfg.run_name}_step{self.step + 1}.pt"
+                    )
                 )
 
             self.step += 1
 
         # Final checkpoint
-        self.save_adapter(
-            str(Path(self.cfg.checkpoint_dir) / f"{self.cfg.run_name}_final.pt")
-        )
+        self.save_adapter(str(Path(self.cfg.checkpoint_dir) / f"{self.cfg.run_name}_final.pt"))
 
         if self.cfg.merge_on_finish:
             merged = merge_lora(self.model)
@@ -297,8 +313,10 @@ class LoRATrainer:
     @torch.no_grad()
     def _eval_pass(self) -> float:
         self.model.eval()
+        if self.val_loader is None:
+            return 0.0
         total_loss, n = 0.0, 0
-        for batch in self.val_loader:  # type: ignore[union-attr]
+        for batch in self.val_loader:
             input_ids, targets = self._unpack_batch(batch)
             _, loss = self.model(input_ids, targets)
             total_loss += loss.item()
@@ -336,9 +354,7 @@ class LoRATrainer:
         self.model.load_state_dict(state, strict=False)
         logger.info("Base model loaded from %s", path)
 
-    def _unpack_batch(
-        self, batch: Any
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _unpack_batch(self, batch: Any) -> Tuple[torch.Tensor, torch.Tensor]:
         """Unpack a batch dict or tuple into (input_ids, targets)."""
         if isinstance(batch, dict):
             input_ids = batch["input_ids"].to(self.device)

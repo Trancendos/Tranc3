@@ -298,9 +298,12 @@ export default function ChatView() {
             <input value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
               placeholder="Type a message..."
+              aria-label="Message input"
               className={`flex-1 rounded-xl px-4 py-3 text-sm border focus:outline-none focus:border-blue-500 ${inputBg}`}
               disabled={loading} />
             <button onClick={send} disabled={loading || !input.trim()}
+              aria-label="Send message"
+              title="Send message (Enter)"
               className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl px-4 py-3 transition-colors">
               <Send className="w-4 h-4" />
             </button>

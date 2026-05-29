@@ -76,7 +76,7 @@ def bleu_score(
         hyp_ngrams = Counter(_ngrams(hyp_tokens, n))
         if not hyp_ngrams:
             if smooth:
-                precisions.append(1.0 / (2 ** n))
+                precisions.append(1.0 / (2**n))
             else:
                 return 0.0
             continue
@@ -92,7 +92,7 @@ def bleu_score(
         p = clipped / total if total > 0 else 0.0
 
         if smooth and p == 0.0:
-            p = 1.0 / (2 ** n)
+            p = 1.0 / (2**n)
         precisions.append(p)
 
     if not smooth and any(p == 0 for p in precisions):
@@ -134,10 +134,12 @@ def rouge_l_score(hypothesis: str, reference: str) -> Dict[str, float]:
 def exact_match(hypothesis: str, reference: str, normalize: bool = True) -> bool:
     """Exact match after optional normalization (lowercase, strip punctuation, collapse spaces)."""
     if normalize:
+
         def _norm(s: str) -> str:
             # Remove punctuation, lowercase, collapse whitespace
             s = re.sub(r"[^\w\s]", "", s.lower())
             return re.sub(r"\s+", " ", s).strip()
+
         return _norm(hypothesis) == _norm(reference)
     return hypothesis == reference
 
@@ -214,7 +216,7 @@ class EvalConfig:
     """Configuration for an evaluation run."""
 
     name: str
-    task: str = "generation"            # "generation" | "qa" | "classification"
+    task: str = "generation"  # "generation" | "qa" | "classification"
     max_new_tokens: int = 256
     temperature: float = 0.0
     compute_bleu: bool = True
@@ -224,8 +226,8 @@ class EvalConfig:
     compute_hallucination: bool = True
     bleu_max_n: int = 4
     hallucination_threshold: float = 0.5
-    semantic_similarity: bool = False   # requires sentence-transformers
-    model_name: Optional[str] = None    # tag for the model under evaluation
+    semantic_similarity: bool = False  # requires sentence-transformers
+    model_name: Optional[str] = None  # tag for the model under evaluation
 
 
 @dataclass
@@ -427,7 +429,9 @@ class EvalSuite:
             result.metrics["exact_match"] = sum(1 for s in sample_results if s.exact_match) / n
             result.metrics["token_f1"] = sum(s.token_f1 for s in sample_results) / n
             result.metrics["hallucination"] = sum(s.hallucination_score for s in sample_results) / n
-            result.metrics["semantic_similarity"] = sum(s.semantic_similarity for s in sample_results) / n
+            result.metrics["semantic_similarity"] = (
+                sum(s.semantic_similarity for s in sample_results) / n
+            )
             result.metrics["avg_latency_ms"] = sum(s.latency_ms for s in sample_results) / n
 
         self._save_result(result)
@@ -513,7 +517,7 @@ class EvalSuite:
     @staticmethod
     def _cosine_similarity(vec_a: Sequence[float], vec_b: Sequence[float]) -> float:
         """Cosine similarity between two float vectors."""
-        dot = sum(a * b for a, b in zip(vec_a, vec_b))
+        dot = sum(a * b for a, b in zip(vec_a, vec_b, strict=False))
         norm_a = math.sqrt(sum(a * a for a in vec_a))
         norm_b = math.sqrt(sum(b * b for b in vec_b))
         if norm_a == 0 or norm_b == 0:

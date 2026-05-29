@@ -18,6 +18,7 @@ import sys
 
 async def _cmd_list(tasks_dir: str) -> None:
     from .task_loader import TaskLoader
+
     loader = TaskLoader(tasks_dir)
     tasks = loader.load_all()
     if not tasks:
@@ -31,6 +32,7 @@ async def _cmd_list(tasks_dir: str) -> None:
 
 async def _cmd_run(task_name: str, tasks_dir: str) -> None:
     from .master_worker import MasterWorker
+
     worker = MasterWorker(tasks_dir=tasks_dir)
     await worker.start()
     try:
@@ -59,17 +61,22 @@ async def _cmd_run(task_name: str, tasks_dir: str) -> None:
 
 async def _cmd_status(tasks_dir: str) -> None:
     from .master_worker import MasterWorker
+
     worker = MasterWorker(tasks_dir=tasks_dir)
     await worker.start()
     try:
         print("Tasks:")
         for name, info in sorted(worker.list_tasks().items()):
-            print(f"  {name:30s}  {info['schedule']:10s}  {info['steps']} step(s)  {info['description']}")
+            print(
+                f"  {name:30s}  {info['schedule']:10s}  {info['steps']} step(s)  {info['description']}"
+            )
         print("\nSwarm:")
         status = worker.swarm_status()
         if status:
             for bot_type, s in sorted(status.items()):
-                print(f"  {bot_type:20s}  healthy={s['healthy']}  queue={s['queue_depth']}  ok={s['completed']}  fail={s['failed']}")
+                print(
+                    f"  {bot_type:20s}  healthy={s['healthy']}  queue={s['queue_depth']}  ok={s['completed']}  fail={s['failed']}"
+                )
         else:
             print("  (no workers active)")
     finally:

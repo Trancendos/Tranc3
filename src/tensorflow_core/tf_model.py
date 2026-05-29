@@ -183,6 +183,8 @@ class TFSequenceClassifier:
         """
         if self.model is None:
             self.build_model()
+        if self.model is None or self._optimizer is None:
+            return {"loss": float("nan"), "accuracy": 0.0}
 
         try:
             tf = _get_tf()
@@ -193,9 +195,9 @@ class TFSequenceClassifier:
                 logits = self.model(x, training=True)  # type: ignore[misc]
                 loss = self._loss_fn(y, logits)  # type: ignore[misc]
 
-            grads = tape.gradient(loss, self.model.trainable_variables)  # type: ignore[union-attr]
-            self._optimizer.apply_gradients(  # type: ignore[union-attr]
-                zip(grads, self.model.trainable_variables, strict=False)  # type: ignore[union-attr]
+            grads = tape.gradient(loss, self.model.trainable_variables)
+            self._optimizer.apply_gradients(
+                zip(grads, self.model.trainable_variables, strict=False)
             )
 
             # Compute batch accuracy
@@ -325,6 +327,8 @@ class TFReinforcementAgent:
         """
         if self.q_network is None:
             self.build_q_network()
+        if self.q_network is None or self.target_network is None or self._optimizer is None:
+            return {"loss": float("nan"), "mean_q": 0.0}
 
         try:
             tf = _get_tf()
@@ -350,21 +354,21 @@ class TFReinforcementAgent:
                 predicted_q = tf.gather_nd(q_vals, indices)  # (B,)
                 loss = self._loss_fn(targets, predicted_q)  # type: ignore[misc]
 
-            grads = tape.gradient(loss, self.q_network.trainable_variables)  # type: ignore[union-attr]
-            self._optimizer.apply_gradients(  # type: ignore[union-attr]
-                zip(grads, self.q_network.trainable_variables, strict=False)  # type: ignore[union-attr]
+            grads = tape.gradient(loss, self.q_network.trainable_variables)
+            self._optimizer.apply_gradients(
+                zip(grads, self.q_network.trainable_variables, strict=False)
             )
 
             # Soft-update target network: θ_target = τ·θ + (1-τ)·θ_target
             self._step_count += 1
             if self._step_count % 10 == 0:
-                online_weights = self.q_network.get_weights()  # type: ignore[union-attr]
-                target_weights = self.target_network.get_weights()  # type: ignore[union-attr]
+                online_weights = self.q_network.get_weights()
+                target_weights = self.target_network.get_weights()
                 new_weights = [
                     self._TAU * ow + (1 - self._TAU) * tw
                     for ow, tw in zip(online_weights, target_weights, strict=False)
                 ]
-                self.target_network.set_weights(new_weights)  # type: ignore[union-attr]
+                self.target_network.set_weights(new_weights)
 
             mean_q = float(tf.reduce_mean(q_vals).numpy())
             return {"loss": float(loss.numpy()), "mean_q": mean_q}

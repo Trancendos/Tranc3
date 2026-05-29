@@ -26,7 +26,7 @@ import hmac
 import json
 import os
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
@@ -37,9 +37,9 @@ from urllib.parse import urlparse
 # ---------------------------------------------------------------------------
 
 OCI_FREE_TIER_LIMITS: Dict[str, int] = {
-    "object_storage_bytes": 20 * 1024**3,      # 20 GiB
+    "object_storage_bytes": 20 * 1024**3,  # 20 GiB
     "api_requests_monthly": 50_000,
-    "egress_bytes_monthly": 10 * 1024**4,       # 10 TiB
+    "egress_bytes_monthly": 10 * 1024**4,  # 10 TiB
     "vault_secrets": 20,
     "hsm_key_versions": 20,
 }
@@ -267,8 +267,7 @@ def _aws_sig4_sign(
     # Sort header names for canonical form
     signed_headers_list = sorted(k.lower() for k in all_headers)
     canonical_headers = "".join(
-        f"{k}:{all_headers[k].strip()}\n"
-        for k in sorted(all_headers.keys(), key=str.lower)
+        f"{k}:{all_headers[k].strip()}\n" for k in sorted(all_headers.keys(), key=str.lower)
     )
     signed_headers = ";".join(signed_headers_list)
 

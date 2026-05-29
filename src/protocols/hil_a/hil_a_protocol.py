@@ -20,7 +20,7 @@ Key principles:
   - All decisions are recorded in the audit trail
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import asyncio
 import logging
@@ -203,21 +203,17 @@ class HILATierHandler(ABC):
 
     @property
     @abstractmethod
-    def tier(self) -> int:
-        ...
+    def tier(self) -> int: ...
 
     @property
     @abstractmethod
-    def entity_id(self) -> str:
-        ...
+    def entity_id(self) -> str: ...
 
     @abstractmethod
-    async def can_decide(self, action: HILAAction) -> bool:
-        ...
+    async def can_decide(self, action: HILAAction) -> bool: ...
 
     @abstractmethod
-    async def decide(self, action: HILAAction) -> HILADecision:
-        ...
+    async def decide(self, action: HILAAction) -> HILADecision: ...
 
 
 # ─────────────────────────────────────────────────────────────────────────────

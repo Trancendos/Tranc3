@@ -12,9 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-import tempfile
 from pathlib import Path
-from typing import Generator
 
 import pytest
 import yaml
@@ -145,9 +143,18 @@ class TestTaskSchema:
         from src.master.task_schema import TaskDefinition
 
         valid_bots = [
-            "generate", "embed", "emotion", "tokenize", "consciousness",
-            "personality", "predict", "code", "memory", "monitor",
-            "search", "summarise",
+            "generate",
+            "embed",
+            "emotion",
+            "tokenize",
+            "consciousness",
+            "personality",
+            "predict",
+            "code",
+            "memory",
+            "monitor",
+            "search",
+            "summarise",
         ]
         for bot in valid_bots:
             data = dict(MINIMAL_TASK)

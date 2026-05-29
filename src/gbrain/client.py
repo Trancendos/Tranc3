@@ -8,6 +8,7 @@ value so callers are never interrupted by GBrain unavailability.
 
 Zero-cost: uses httpx (already a project dependency) — no paid services.
 """
+
 from __future__ import annotations
 
 import logging

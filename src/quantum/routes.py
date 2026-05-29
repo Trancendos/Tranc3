@@ -9,7 +9,7 @@ import logging
 from typing import Any, Dict
 
 from fastapi import APIRouter, Body
-from fastapi.responses import Response, JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from Dimensional.error_handlers import safe_error_detail
 

@@ -79,8 +79,15 @@ class AdapterRegistry:
 
         # Health-based fallback for inference types
         if adapter is self._tranc3 and not adapter.is_available():
-            if bot_type in {"generate", "embed", "emotion", "tokenize",
-                            "consciousness", "personality", "predict"}:
+            if bot_type in {
+                "generate",
+                "embed",
+                "emotion",
+                "tokenize",
+                "consciousness",
+                "personality",
+                "predict",
+            }:
                 if self._src.is_available():
                     logger.info("Tranc3BotsAdapter unavailable — falling back to SrcWorkersAdapter")
                     return self._src

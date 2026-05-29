@@ -79,8 +79,7 @@ class BaseNode(ABC):
         self.logger = logging.getLogger(f"{__name__}.{config.type}.{config.id}")
 
     @abstractmethod
-    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:
-        ...
+    async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult: ...
 
     async def _with_timeout(self, coro, timeout: float):
         """Wrap a coroutine with asyncio.timeout (Python 3.11+) or wait_for."""
@@ -264,16 +263,15 @@ class CodeExecNode(BaseNode):
         local_ns["context"] = context
         local_ns["result"] = None
 
-        safe_globals: Dict[str, Any] = {
-            "__builtins__": {
-                k: v
-                for k, v in __builtins__.items()  # type: ignore[union-attr]
-                if k in self._SAFE_BUILTINS
+        _b: Any = __builtins__
+        if isinstance(_b, dict):
+            _safe_builtins: Dict[str, Any] = {
+                k: v for k, v in _b.items() if k in self._SAFE_BUILTINS
             }
-            if isinstance(__builtins__, dict)
-            else {
-                k: getattr(__builtins__, k) for k in self._SAFE_BUILTINS if hasattr(__builtins__, k)
-            },
+        else:
+            _safe_builtins = {k: getattr(_b, k) for k in self._SAFE_BUILTINS if hasattr(_b, k)}
+        safe_globals: Dict[str, Any] = {
+            "__builtins__": _safe_builtins,
             "math": __import__("math"),
             "json": __import__("json"),
             "re": __import__("re"),

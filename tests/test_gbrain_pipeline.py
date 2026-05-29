@@ -9,16 +9,14 @@ Covers:
   - GBrainIngestionPipeline: all 6 stages, deduplication, error handling
   - get_pipeline: module-level singleton
 """
+
 from __future__ import annotations
 
-import asyncio
 import hashlib
-import json
 from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Extractor tests
@@ -745,9 +743,7 @@ class TestPipelineIngest:
 
         interaction = AgentInteraction(
             prompt="Quantum neural networks are transformative.",
-            response=(
-                "Quantum neural networks combine quantum physics with neural computing."
-            ),
+            response=("Quantum neural networks combine quantum physics with neural computing."),
         )
 
         with patch("src.gbrain.pipeline.GBrainClient") as MockClient:
