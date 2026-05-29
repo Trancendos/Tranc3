@@ -8,26 +8,28 @@ Otherwise, the pure Python implementations are used.
 
 from __future__ import annotations
 
+from typing import Optional
+
 import numpy as np
 
-from .adaptive import AdaptiveConfig, AdaptiveMetaLearner
-from .definitions import TIER_NAMES, Tier
-from .fluidic_liquidic import LiquidReservoir, ReservoirConfig
+from .definitions import Tier, TIER_NAMES
+from .adaptive import AdaptiveMetaLearner, AdaptiveConfig
 from .genetic_dna import DNAEvolutionEngine, GeneticConfig
-from .quantum import QuantumCircuitConfig, QuantumDecisionCircuit
+from .fluidic_liquidic import LiquidReservoir, ReservoirConfig
+from .quantum import QuantumDecisionCircuit, QuantumCircuitConfig
 
 
 def has_rust_bindings() -> bool:
     """Check if the Rust extension module is available."""
     try:
-        import _aeonmind_rust  # noqa: F401
+        import _aeonmind_rust as _  # noqa: F401
 
         return True
     except ImportError:
         return False
 
 
-def rust_version() -> str | None:
+def rust_version() -> Optional[str]:
     """Get the Rust extension module version, if available."""
     try:
         import _aeonmind_rust
@@ -49,7 +51,7 @@ def tier_hierarchy() -> str:
 class RustLiquidReservoir:
     """Wrapper for the Rust LiquidReservoir with Python fallback."""
 
-    def __init__(self, config: ReservoirConfig | None = None):
+    def __init__(self, config: Optional[ReservoirConfig] = None):
         self.config = config or ReservoirConfig()
         self._rust_impl = None
 
@@ -90,7 +92,7 @@ class RustLiquidReservoir:
 class RustEvolutionEngine:
     """Wrapper for the Rust EvolutionEngine with Python fallback."""
 
-    def __init__(self, config: GeneticConfig | None = None):
+    def __init__(self, config: Optional[GeneticConfig] = None):
         self.config = config or GeneticConfig()
         self._rust_impl = None
 
@@ -124,7 +126,7 @@ class RustEvolutionEngine:
 class RustQuantumCircuit:
     """Wrapper for the Rust QuantumCircuit with Python fallback."""
 
-    def __init__(self, config: QuantumCircuitConfig | None = None):
+    def __init__(self, config: Optional[QuantumCircuitConfig] = None):
         self.config = config or QuantumCircuitConfig()
         self._rust_impl = None
 
@@ -156,7 +158,7 @@ class RustQuantumCircuit:
 class RustAdaptiveLearner:
     """Wrapper for the Rust AdaptiveLearner with Python fallback."""
 
-    def __init__(self, n_params: int = 32, config: AdaptiveConfig | None = None):
+    def __init__(self, n_params: int = 32, config: Optional[AdaptiveConfig] = None):
         self.config = config or AdaptiveConfig()
         self._rust_impl = None
 

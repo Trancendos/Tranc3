@@ -10,6 +10,7 @@ temporal representation for downstream decision systems.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Optional
 
 import numpy as np
 
@@ -25,7 +26,7 @@ class ReservoirConfig:
     input_scaling: float = 1.0
     connectivity: float = 0.1
     washout: int = 50
-    seed: int | None = None
+    seed: Optional[int] = None
 
 
 @dataclass
@@ -106,7 +107,7 @@ class LiquidReservoir:
     for adaptive behavior.
     """
 
-    def __init__(self, config: ReservoirConfig | None = None):
+    def __init__(self, config: Optional[ReservoirConfig] = None):
         self.config = config or ReservoirConfig()
         self.rng = np.random.RandomState(self.config.seed)
 
@@ -119,7 +120,7 @@ class LiquidReservoir:
         self._W_reservoir = self._init_reservoir_weights()
         self._state = np.zeros(self.config.reservoir_size)
         self.fluidic = FluidicState(velocity=np.zeros(min(self.config.reservoir_size, 8)))
-        self._trained_readout: np.ndarray | None = None
+        self._trained_readout: Optional[np.ndarray] = None
 
     def _init_reservoir_weights(self) -> np.ndarray:
         """Initialize reservoir weight matrix with target spectral radius."""

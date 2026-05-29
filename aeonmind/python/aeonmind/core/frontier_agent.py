@@ -16,15 +16,15 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from .adaptive import AdaptiveConfig, AdaptiveMetaLearner
-from .definitions import AgentEntity, SentinelChannel, Tier
-from .fluidic_liquidic import LiquidReservoir, ReservoirConfig
+from .definitions import Tier, AgentEntity, SentinelChannel
+from .adaptive import AdaptiveMetaLearner, AdaptiveConfig
 from .genetic_dna import DNAEvolutionEngine, GeneticConfig
-from .quantum import QuantumCircuitConfig, QuantumDecisionCircuit
+from .fluidic_liquidic import LiquidReservoir, ReservoirConfig
+from .quantum import QuantumDecisionCircuit, QuantumCircuitConfig
 
 
 @dataclass
@@ -35,10 +35,10 @@ class FrontierAgentConfig:
     state_dim: int = 10
     action_dim: int = 4
     # Subsystem configs
-    reservoir_config: ReservoirConfig | None = None
-    quantum_config: QuantumCircuitConfig | None = None
-    adaptive_config: AdaptiveConfig | None = None
-    genetic_config: GeneticConfig | None = None
+    reservoir_config: Optional[ReservoirConfig] = None
+    quantum_config: Optional[QuantumCircuitConfig] = None
+    adaptive_config: Optional[AdaptiveConfig] = None
+    genetic_config: Optional[GeneticConfig] = None
 
 
 @dataclass
@@ -48,8 +48,8 @@ class DecisionRecord:
     timestamp: float
     action: int
     confidence: float
-    state_features: list[float]
-    outcome: bool | None = None
+    state_features: List[float]
+    outcome: Optional[bool] = None
 
 
 class FrontierAgent:
@@ -60,7 +60,7 @@ class FrontierAgent:
     capable of perception, decision-making, and self-improvement.
     """
 
-    def __init__(self, config: FrontierAgentConfig | None = None):
+    def __init__(self, config: Optional[FrontierAgentConfig] = None):
         self.config = config or FrontierAgentConfig()
         self.id = f"agent-{int(time.time() * 1000) % 1000000:06d}"
 
@@ -89,13 +89,13 @@ class FrontierAgent:
         self.evolution = DNAEvolutionEngine(genetic_config)
 
         # State tracking
-        self._decision_history: list[DecisionRecord] = []
+        self._decision_history: List[DecisionRecord] = []
         self._total_decisions = 0
         self._successful_decisions = 0
         self._intelligence_score = 0.5
-        self._last_action: int | None = None
+        self._last_action: Optional[int] = None
 
-    def process(self, input_data: np.ndarray) -> dict[str, Any]:
+    def process(self, input_data: np.ndarray) -> Dict[str, Any]:
         """Process input through the full agent pipeline.
 
         Pipeline: Reservoir → Quantum → Fluidic State → Evolution/Optimization
@@ -184,14 +184,14 @@ class FrontierAgent:
 
     @classmethod
     def from_entity(
-        cls, entity: AgentEntity, config: FrontierAgentConfig | None = None
-    ) -> FrontierAgent:
+        cls, entity: AgentEntity, config: Optional[FrontierAgentConfig] = None
+    ) -> "FrontierAgent":
         """Create a FrontierAgent from an AgentEntity."""
         agent = cls(config or FrontierAgentConfig(name=entity.name))
         agent.id = entity.id
         return agent
 
-    def summary(self) -> dict[str, Any]:
+    def summary(self) -> Dict[str, Any]:
         """Get a summary of the agent's current state."""
         fluidic = self.reservoir.fluidic_state()
         return {

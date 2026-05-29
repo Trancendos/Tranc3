@@ -8,8 +8,8 @@ clipping, and adaptive learning rate scheduling.
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Callable, List, Optional
 
 import numpy as np
 
@@ -63,8 +63,8 @@ class AdaptiveSummary:
     best_loss: float
     best_iteration: int
     converged: bool
-    learning_rate_history: list[float] = field(default_factory=list)
-    loss_history: list[float] = field(default_factory=list)
+    learning_rate_history: List[float] = field(default_factory=list)
+    loss_history: List[float] = field(default_factory=list)
 
 
 class AdaptiveMetaLearner:
@@ -75,27 +75,27 @@ class AdaptiveMetaLearner:
     scheduling for efficient optimization.
     """
 
-    def __init__(self, n_params: int, config: AdaptiveConfig | None = None):
+    def __init__(self, n_params: int, config: Optional[AdaptiveConfig] = None):
         self.n_params = n_params
         self.config = config or AdaptiveConfig()
         self.parameters = np.random.randn(n_params) * 0.01
         self._velocity = np.zeros(n_params)
         self._moment_estimates_m = np.zeros(n_params)
         self._moment_estimates_v = np.zeros(n_params)
-        self._lbfgs_history: list[LbfgsEntry] = []
-        self._prev_gradient: np.ndarray | None = None
+        self._lbfgs_history: List[LbfgsEntry] = []
+        self._prev_gradient: Optional[np.ndarray] = None
         self._step_count = 0
         self._best_loss = float("inf")
-        self._best_params: np.ndarray | None = None
+        self._best_params: Optional[np.ndarray] = None
         self._best_iteration = 0
-        self._initial_loss: float | None = None
-        self._loss_history: list[float] = []
-        self._lr_history: list[float] = []
+        self._initial_loss: Optional[float] = None
+        self._loss_history: List[float] = []
+        self._lr_history: List[float] = []
 
     @classmethod
     def with_parameters(
-        cls, parameters: np.ndarray, config: AdaptiveConfig | None = None
-    ) -> AdaptiveMetaLearner:
+        cls, parameters: np.ndarray, config: Optional[AdaptiveConfig] = None
+    ) -> "AdaptiveMetaLearner":
         """Create a learner initialized with specific parameters."""
         learner = cls(len(parameters), config)
         learner.parameters = parameters.copy()
@@ -124,7 +124,7 @@ class AdaptiveMetaLearner:
             q = gamma * q
 
         # Second loop: traverse from oldest to most recent
-        for entry, alpha in zip(self._lbfgs_history, reversed(alphas)):
+        for entry, alpha in zip(self._lbfgs_history, reversed(alphas), strict=False):
             beta = entry.rho * np.dot(entry.y, q)
             q = q + entry.s * (alpha - beta)
 
@@ -196,7 +196,7 @@ class AdaptiveMetaLearner:
         self,
         loss_fn: Callable[[np.ndarray], float],
         grad_fn: Callable[[np.ndarray], np.ndarray],
-        callback: Callable[[int, float, float], None] | None = None,
+        callback: Optional[Callable[[int, float, float], None]] = None,
     ) -> AdaptiveSummary:
         """Run full optimization loop."""
         self._initial_loss = loss_fn(self.parameters)
