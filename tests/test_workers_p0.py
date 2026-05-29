@@ -834,6 +834,8 @@ class TestInfinityAuthHTTPEndpoints:
 
     def test_login_with_mfa_valid_code(self, auth_client):
         """Login with MFA code (6-digit) should succeed."""
+        import pyotp
+
         reg = auth_client.post(
             "/auth/register",
             json={
@@ -844,17 +846,23 @@ class TestInfinityAuthHTTPEndpoints:
         )
         token = reg.json()["access_token"]
 
-        # Setup and enable MFA
-        auth_client.post("/auth/mfa/setup", headers={"Authorization": f"Bearer {token}"})
+        # Setup MFA — capture the TOTP secret so we can generate a valid code
+        setup_resp = auth_client.post(
+            "/auth/mfa/setup", headers={"Authorization": f"Bearer {token}"}
+        )
+        totp_secret = setup_resp.json()["secret"]
         auth_client.post("/auth/mfa/enable", headers={"Authorization": f"Bearer {token}"})
 
-        # Login with TOTP code
+        # Generate the current valid TOTP code from the secret
+        valid_code = pyotp.TOTP(totp_secret).now()
+
+        # Login with the real TOTP code
         response = auth_client.post(
             "/auth/login",
             json={
                 "username": "mfacode",
                 "password": "mfacodepassword",
-                "totp_code": "123456",
+                "totp_code": valid_code,
             },
         )
         assert response.status_code == 200
