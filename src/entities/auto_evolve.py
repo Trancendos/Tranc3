@@ -82,12 +82,11 @@ class AutoEvolve:
         if not hasattr(entity, "evolve"):
             return
         try:
-            best = await entity.evolve(
-                generations=self._generations, pop_size=self._pop_size
-            )
+            best = await entity.evolve(generations=self._generations, pop_size=self._pop_size)
             self._last_evolved[eid] = time.monotonic()
             if best:
                 import json
+
                 with sqlite3.connect(self._db_path) as conn:
                     conn.execute(
                         "INSERT OR REPLACE INTO evolution_results VALUES (?,?,?)",
@@ -100,7 +99,9 @@ class AutoEvolve:
 
     async def run(self) -> None:
         self._running = True
-        logger.info("AutoEvolve started (%d entities, interval=%.0fs)", len(self._entities), self._interval)
+        logger.info(
+            "AutoEvolve started (%d entities, interval=%.0fs)", len(self._entities), self._interval
+        )
         while self._running:
             now = time.monotonic()
             tasks = []
@@ -134,8 +135,5 @@ class AutoEvolve:
         return {
             "registered": len(self._entities),
             "interval_seconds": self._interval,
-            "last_evolved": {
-                eid: round(now - t, 1)
-                for eid, t in self._last_evolved.items()
-            },
+            "last_evolved": {eid: round(now - t, 1) for eid, t in self._last_evolved.items()},
         }

@@ -15,20 +15,20 @@ Custom Hierarchy:
 from __future__ import annotations
 
 import time
-import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from ..core.definitions import Tier, SentinelChannel, AiComplex, AgentEntity, BotService
+from ..core.definitions import SentinelChannel, AiComplex
 from ..core.frontier_agent import FrontierAgent, FrontierAgentConfig
 from ..services.bot_services import BotServiceWorker, BotServiceConfig
 
 
 class OrchestratorState(str, Enum):
     """State of the orchestrator."""
+
     INITIALIZING = "initializing"
     RUNNING = "running"
     PAUSED = "paused"
@@ -39,6 +39,7 @@ class OrchestratorState(str, Enum):
 @dataclass
 class OrchestratorConfig:
     """Configuration for the Logical Orchestrator."""
+
     max_ai_complexes: int = 10
     max_agents_per_complex: int = 50
     max_bots_per_complex: int = 100
@@ -51,6 +52,7 @@ class OrchestratorConfig:
 @dataclass
 class OrchestratorMetrics:
     """Runtime metrics for the orchestrator."""
+
     total_entities: int = 0
     total_agents: int = 0
     total_bots: int = 0
@@ -89,6 +91,7 @@ class LogicalOrchestrator:
         if self.config.use_ray:
             try:
                 import ray
+
                 if not ray.is_initialized():
                     ray.init(ignore_reinit_error=True)
                 self._ray_initialized = True
@@ -105,7 +108,9 @@ class LogicalOrchestrator:
         self._subscribe(ai.id, SentinelChannel.PLATFORM)
         return ai
 
-    def create_agent(self, name: str, config: Optional[FrontierAgentConfig] = None) -> FrontierAgent:
+    def create_agent(
+        self, name: str, config: Optional[FrontierAgentConfig] = None
+    ) -> FrontierAgent:
         """Create a new Agent (Tier 4)."""
         agent_config = config or FrontierAgentConfig(name=name)
         agent = FrontierAgent(agent_config)
@@ -117,6 +122,7 @@ class LogicalOrchestrator:
     def create_bot(self, name: str, capability: str = "generic") -> BotServiceWorker:
         """Create a new Bot Service Worker (Tier 5)."""
         from ..services.bot_services import BotCapability
+
         try:
             cap = BotCapability(capability)
         except ValueError:
@@ -127,8 +133,9 @@ class LogicalOrchestrator:
         self._update_metrics()
         return bot
 
-    def dispatch_task(self, entity_id: str, task_type: str,
-                      payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def dispatch_task(
+        self, entity_id: str, task_type: str, payload: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """Dispatch a task to an entity."""
         payload = payload or {}
         self.metrics.total_tasks_dispatched += 1
@@ -167,7 +174,7 @@ class LogicalOrchestrator:
         agent = self._agents[agent_id]
 
         def fitness_fn(dna):
-            return -float(np.sum(dna ** 2))
+            return -float(np.sum(dna**2))
 
         stats = agent.evolution.evolve(fitness_fn, generations=generations)
         self.metrics.total_evolution_rounds += 1
@@ -177,8 +184,9 @@ class LogicalOrchestrator:
         """Optimize all agents in the system."""
         results = {}
         for agent_id, agent in self._agents.items():
+
             def loss_fn(params):
-                return float(np.sum(params ** 2))
+                return float(np.sum(params**2))
 
             def grad_fn(params):
                 return 2.0 * params
@@ -197,8 +205,9 @@ class LogicalOrchestrator:
         if entity_id not in self._sentinel_channels[channel]:
             self._sentinel_channels[channel].append(entity_id)
 
-    def broadcast(self, channel: SentinelChannel, message: Any,
-                  source_id: Optional[str] = None) -> int:
+    def broadcast(
+        self, channel: SentinelChannel, message: Any, source_id: Optional[str] = None
+    ) -> int:
         """Broadcast a message on a sentinel channel."""
         recipients = self._sentinel_channels.get(channel, [])
         self.metrics.sentinel_messages_sent += len(recipients)
@@ -230,6 +239,4 @@ class LogicalOrchestrator:
         """Update orchestrator metrics."""
         self.metrics.total_agents = len(self._agents)
         self.metrics.total_bots = len(self._bots)
-        self.metrics.total_entities = (
-            len(self._ai_complexes) + len(self._agents) + len(self._bots)
-        )
+        self.metrics.total_entities = len(self._ai_complexes) + len(self._agents) + len(self._bots)

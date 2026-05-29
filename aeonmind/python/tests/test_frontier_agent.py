@@ -2,7 +2,6 @@
 Tests for AeonMind Frontier Agent.
 """
 
-import pytest
 import numpy as np
 
 from aeonmind.core.frontier_agent import FrontierAgent, FrontierAgentConfig

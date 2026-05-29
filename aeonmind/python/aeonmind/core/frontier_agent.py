@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -23,13 +23,14 @@ import numpy as np
 from .definitions import Tier, AgentEntity, SentinelChannel
 from .adaptive import AdaptiveMetaLearner, AdaptiveConfig
 from .genetic_dna import DNAEvolutionEngine, GeneticConfig
-from .fluidic_liquidic import LiquidReservoir, ReservoirConfig, FluidicState
+from .fluidic_liquidic import LiquidReservoir, ReservoirConfig
 from .quantum import QuantumDecisionCircuit, QuantumCircuitConfig
 
 
 @dataclass
 class FrontierAgentConfig:
     """Configuration for the Frontier Agent."""
+
     name: str = "frontier-agent"
     state_dim: int = 10
     action_dim: int = 4
@@ -43,6 +44,7 @@ class FrontierAgentConfig:
 @dataclass
 class DecisionRecord:
     """Record of a decision made by the agent."""
+
     timestamp: float
     action: int
     confidence: float
@@ -102,20 +104,24 @@ class FrontierAgent:
         reservoir_state = self.reservoir.step(input_data)
 
         # Step 2: Quantum decision
-        self.quantum._parameters = reservoir_state[:len(self.quantum._parameters)] \
-            if len(reservoir_state) >= len(self.quantum._parameters) \
+        self.quantum._parameters = (
+            reservoir_state[: len(self.quantum._parameters)]
+            if len(reservoir_state) >= len(self.quantum._parameters)
             else np.pad(reservoir_state, (0, len(self.quantum._parameters) - len(reservoir_state)))
+        )
         probabilities = self.quantum.execute(use_pennylane=False)
-        action = int(np.argmax(probabilities[:self.config.action_dim]))
+        action = int(np.argmax(probabilities[: self.config.action_dim]))
 
         # Step 3: Fluidic state update
         fluidic = self.reservoir.fluidic_state()
-        confidence = float(np.max(probabilities[:self.config.action_dim]))
+        confidence = float(np.max(probabilities[: self.config.action_dim]))
 
         # Step 4: Adaptive learning step (use reservoir output as gradient signal)
-        gradient = -reservoir_state[:self.learner.n_params] \
-            if len(reservoir_state) >= self.learner.n_params \
+        gradient = (
+            -reservoir_state[: self.learner.n_params]
+            if len(reservoir_state) >= self.learner.n_params
             else np.pad(-reservoir_state, (0, self.learner.n_params - len(reservoir_state)))
+        )
         self.learner.step(gradient)
 
         # Record decision
@@ -132,7 +138,7 @@ class FrontierAgent:
         return {
             "action": action,
             "confidence": confidence,
-            "probabilities": probabilities[:self.config.action_dim].tolist(),
+            "probabilities": probabilities[: self.config.action_dim].tolist(),
             "fluidic_energy": fluidic.energy,
             "fluidic_coherence": fluidic.coherence,
             "intelligence": self._intelligence_score,
@@ -164,7 +170,12 @@ class FrontierAgent:
             id=self.id,
             name=self.config.name,
             tier=Tier.AGENT,
-            capabilities=["quantum_decision", "reservoir_computing", "evolution", "adaptive_learning"],
+            capabilities=[
+                "quantum_decision",
+                "reservoir_computing",
+                "evolution",
+                "adaptive_learning",
+            ],
             confidence=self._intelligence_score,
             status="active" if self._total_decisions > 0 else "idle",
         )
@@ -172,7 +183,9 @@ class FrontierAgent:
         return entity
 
     @classmethod
-    def from_entity(cls, entity: AgentEntity, config: Optional[FrontierAgentConfig] = None) -> "FrontierAgent":
+    def from_entity(
+        cls, entity: AgentEntity, config: Optional[FrontierAgentConfig] = None
+    ) -> "FrontierAgent":
         """Create a FrontierAgent from an AgentEntity."""
         agent = cls(config or FrontierAgentConfig(name=entity.name))
         agent.id = entity.id

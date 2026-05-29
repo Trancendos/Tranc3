@@ -35,9 +35,8 @@ _project_root = Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from Dimensional.hive.hive_core import (
+from Dimensional.hive.hive_core import (  # noqa: E402
     DataPriority,
-    Hive,
     create_hive_app,
     get_hive,
 )
@@ -153,7 +152,9 @@ async def _worker_startup():
                     priority=pipe_cfg["priority"],
                 )
                 await hive.start_pipeline(pipeline.pipeline_id)
-                logger.info(f"Created and started pipeline: {pipe_cfg['name']} ({pipeline.pipeline_id})")
+                logger.info(
+                    f"Created and started pipeline: {pipe_cfg['name']} ({pipeline.pipeline_id})"
+                )
         except Exception as e:
             logger.warning(f"Failed to create pipeline {pipe_cfg['name']}: {e}")
 
@@ -193,4 +194,5 @@ async def _worker_startup():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

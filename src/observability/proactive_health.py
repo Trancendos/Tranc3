@@ -185,8 +185,7 @@ class ProactiveHealthMonitor:
             return False
         # Declining trend if each step drops by threshold
         return all(
-            window[i] - window[i + 1] >= self._DEGRADATION_THRESHOLD
-            for i in range(len(window) - 1)
+            window[i] - window[i + 1] >= self._DEGRADATION_THRESHOLD for i in range(len(window) - 1)
         )
 
     def _raise_alert(
@@ -266,9 +265,7 @@ class ProactiveHealthMonitor:
             try:
                 alerts = self.check_all()
                 if alerts:
-                    logger.info(
-                        "ProactiveHealthMonitor: %d new alerts this cycle", len(alerts)
-                    )
+                    logger.info("ProactiveHealthMonitor: %d new alerts this cycle", len(alerts))
             except asyncio.CancelledError:
                 break
             except Exception as exc:

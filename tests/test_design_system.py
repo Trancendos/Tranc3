@@ -6,7 +6,6 @@ auto-evolve scheduler. All zero-cost, no external deps.
 from __future__ import annotations
 
 import asyncio
-import time
 import pytest
 
 
@@ -18,16 +17,12 @@ import pytest
 class TestEnergyConstants:
     def test_import(self):
         from src.bridge.energy_constants import (
-            EnergyClass,
-            BridgeType,
-            cost_for,
-            priority_for,
-            BRIDGE_DEFAULT_ENERGY,
             DIALITHIUM_PRIORITY,
             CRYSTAL_BASE_COST,
             LIGHTNING_BURST_LIMIT_MS,
             LIGHT_AMBIENT_TICK_HZ,
         )
+
         assert DIALITHIUM_PRIORITY == 1
         assert CRYSTAL_BASE_COST == 0.6
         assert LIGHTNING_BURST_LIMIT_MS == 50.0

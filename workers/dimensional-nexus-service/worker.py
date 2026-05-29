@@ -51,7 +51,7 @@ _project_root = Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-from Dimensional.nexus.nexus_core import (
+from Dimensional.nexus.nexus_core import (  # noqa: E402
     Nexus,
     create_nexus_app,
     get_nexus,
@@ -199,4 +199,5 @@ async def _worker_startup():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

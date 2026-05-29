@@ -48,16 +48,14 @@ Usage:
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from Dimensional.infinity.bridge.bridge_core import (
-    BridgeEvent,
     InfinityBridge,
     InfinitySentinelBridge,
     get_infinity_bridge,
@@ -128,9 +126,7 @@ class CrossBridgeEvent:
     sentinel_channel: str = ""
     event_type: str = ""
     payload: Dict[str, Any] = field(default_factory=dict)
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -236,6 +232,7 @@ class ThreeBridgeCoordinator:
         if self._sentinel_station is None:
             try:
                 from Dimensional.infinity.sentinel_station import get_sentinel_station
+
                 self._sentinel_station = get_sentinel_station()
             except Exception as e:
                 logger.warning(f"Could not get Sentinel Station: {e}")
@@ -267,7 +264,9 @@ class ThreeBridgeCoordinator:
                     await station.start()
                     logger.info("Sentinel Station started for Three-Bridge coordination")
                 except Exception as e:
-                    logger.warning(f"Sentinel Station start failed, bridges run in standalone mode: {e}")
+                    logger.warning(
+                        f"Sentinel Station start failed, bridges run in standalone mode: {e}"
+                    )
 
             # Step 2: Create and attach InfinityBridge sentinel
             self._infinity_sentinel = get_infinity_sentinel_bridge(self._infinity_bridge)
@@ -425,9 +424,7 @@ class ThreeBridgeCoordinator:
         """Track a cross-bridge event for monitoring and debugging."""
         self._cross_bridge_events.append(event)
         if len(self._cross_bridge_events) > self._max_tracked_events:
-            self._cross_bridge_events = self._cross_bridge_events[
-                -self._max_tracked_events:
-            ]
+            self._cross_bridge_events = self._cross_bridge_events[-self._max_tracked_events :]
 
     # ── Cross-Bridge Event Publication ────────────────────────────────────
 
@@ -618,7 +615,11 @@ class ThreeBridgeCoordinator:
                 "state": self._state.value,
                 "started_at": self._started_at,
                 "uptime_seconds": (
-                    round(time.time() - time.mktime(datetime.fromisoformat(self._started_at).timetuple()), 1)
+                    round(
+                        time.time()
+                        - time.mktime(datetime.fromisoformat(self._started_at).timetuple()),
+                        1,
+                    )
                     if self._started_at
                     else 0
                 ),
@@ -674,9 +675,7 @@ class ThreeBridgeCoordinator:
                 "hive": 8060,
                 "infinity_bridge": 8070,
             },
-            "transfer_systems": {
-                ts.value: ts.name for ts in TransferSystem
-            },
+            "transfer_systems": {ts.value: ts.name for ts in TransferSystem},
         }
 
     async def health_check(self) -> Dict[str, Any]:
