@@ -219,7 +219,7 @@ consciousness_model = None
 neuromorphic = None
 evolution_engine = None
 db_manager = None
-db_user_manager = None
+db_user_manager: "DBUserManager" = DBUserManager(None)  # in-memory fallback; replaced in lifespan
 _start_time = time.time()
 _feedback_count = 0  # codeql[py/unused-global]
 EVOLUTION_TRIGGER = 100  # codeql[py/unused-global]
@@ -812,7 +812,7 @@ class ErrorDocResponse(BaseModel):
     status_code=201,
 )
 async def register(req: RegisterRequest):
-    return db_user_manager.create_user(req.username, req.password)  # type: ignore[union-attr]
+    return db_user_manager.create_user(req.username, req.password)
 
 
 @app.post(
@@ -827,7 +827,7 @@ async def register(req: RegisterRequest):
     ),
 )
 async def login(req: TokenRequest):
-    user = db_user_manager.authenticate_user(req.username, req.password)  # type: ignore[union-attr]
+    user = db_user_manager.authenticate_user(req.username, req.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = token_manager.create_access_token({"sub": user["username"]})

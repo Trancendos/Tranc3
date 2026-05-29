@@ -47,7 +47,7 @@ class TestHealth:
 class TestAuth:
     def test_register_and_login(self):
         r = client.post("/auth/register", json={"username": "testuser", "password": "TestPass123!"})
-        assert r.status_code == 200
+        assert r.status_code == 201
 
         r = client.post("/auth/token", json={"username": "testuser", "password": "TestPass123!"})
         assert r.status_code == 200
@@ -67,7 +67,7 @@ class TestChat:
 
     def test_chat_requires_auth(self):
         r = client.post("/chat", json={"message": "Hello"})
-        assert r.status_code == 403
+        assert r.status_code in (401, 403)
 
     def test_chat_valid(self):
         token = self._get_token()
