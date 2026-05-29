@@ -50,6 +50,10 @@ class SkillSearchRequest(BaseModel):
     category: Optional[str] = None
 
 
+class DetectBundleRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=2048)
+
+
 class PlanRequest(BaseModel):
     goal: str = Field(..., min_length=1, max_length=2048)
     state: Dict[str, Any] = Field(default_factory=dict)
@@ -162,12 +166,12 @@ async def skill_stats():
 
 
 @router.post("/skills/detect-bundle", tags=["skills"])
-async def detect_bundle(prompt: str):
+async def detect_bundle(req: DetectBundleRequest):
     """Detect the best skill bundle for a natural-language prompt (public)."""
     try:
         from src.skills.enhanced_registry import registry
 
-        bundle = await registry.detect_and_load_bundle(prompt)
+        bundle = await registry.detect_and_load_bundle(req.prompt)
         if bundle:
             return {"bundle": bundle.id, "name": bundle.name, "skills": bundle.skills}
         return {"bundle": None}

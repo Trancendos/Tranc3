@@ -25,6 +25,7 @@ from fastapi import (
     Depends,
     FastAPI,
     HTTPException,
+    Query,
     Request,
     WebSocket,
     WebSocketDisconnect,
@@ -1283,7 +1284,7 @@ async def analyze_emotion(text: str, current_user: dict = Depends(get_current_us
 )
 async def feedback(
     request_id: str,
-    rating: int = Field(..., ge=1, le=5),
+    rating: int = Query(..., ge=1, le=5),
     current_user: dict = Depends(get_current_user),
 ):
     global _feedback_count

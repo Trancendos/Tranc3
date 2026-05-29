@@ -27,6 +27,7 @@ os.environ.setdefault("ALLOWED_ORIGINS", "*")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-canonical-routes-00001")
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret-canonical-routes-32ch")
 os.environ.setdefault("TRANC3_API_KEY", "test-key-canonical")
+os.environ.setdefault("ZERO_TRUST_ENABLED", "false")
 
 
 # ── Shared mock helpers ───────────────────────────────────────────────────────
@@ -71,20 +72,30 @@ def _bundle() -> MagicMock:
 @pytest.fixture(scope="module")
 def client():
     """TestClient for canonical api.py with all heavy subsystems mocked."""
+    # Cryptex is a module-level singleton; its BLOCK mitigations persist across
+    # requests and pollute the test session (e.g. path-traversal inputs block
+    # the test client's IP for all subsequent tests).  Replace it with a no-op.
+    _mock_cx = MagicMock()
+    _mock_cx.analyse_request.return_value = []
+    _mock_cx.is_blocked.return_value = False
+
     with (
         patch("src.core.startup_validator.validate_startup"),
-        patch("auth.get_current_user", return_value=_mock_user()),
         patch("redis.from_url", return_value=MagicMock(ping=lambda: True)),
+        patch("src.cryptex.threat_detector.get_cryptex", return_value=_mock_cx),
     ):
         from fastapi.testclient import TestClient
 
         import api as _api_mod
-
-        _api_mod.app.dependency_overrides[_api_mod.app.dependency_overrides.__class__] = {}
-
         from api import app
+        from auth import get_current_user
+
+        # Override FastAPI dependency so all auth-protected routes get a mock user.
+        app.dependency_overrides[get_current_user] = lambda: _mock_user()
 
         yield TestClient(app, raise_server_exceptions=False)
+
+        app.dependency_overrides.clear()
 
 
 # ── Helper: authenticated POST / GET with mock user override ─────────────────
@@ -333,13 +344,18 @@ class TestEcosystemEndpoints:
         assert r.status_code in (200, 503)
 
     def test_post_mode_returns_json(self, client):
-        r = client.post("/api/ecosystem/mode", json={"mode": "performance"})
+        r = client.post("/api/ecosystem/mode", json={"mode": "HYBRID"})
         assert r.status_code in (200, 503)
 
     def test_defense_incidents_post(self, client):
         r = client.post(
             "/api/ecosystem/defense/incidents",
-            json={"incident_type": "intrusion", "severity": "high", "source_ip": "10.0.0.1"},
+            json={
+                "title": "Test intrusion",
+                "description": "Suspicious activity detected",
+                "severity": "high",
+                "source": "10.0.0.1",
+            },
         )
         assert r.status_code in (200, 503)
 
@@ -354,7 +370,11 @@ class TestEcosystemEndpoints:
     def test_heartbeat_post(self, client):
         r = client.post(
             "/api/ecosystem/heartbeat",
-            json={"service_id": "tranc3-backend", "status": "healthy"},
+            json={
+                "service_id": "tranc3-backend",
+                "service_name": "TRANC3 Backend",
+                "status": "healthy",
+            },
         )
         assert r.status_code in (200, 503)
 
