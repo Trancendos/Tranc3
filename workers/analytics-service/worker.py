@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -142,6 +142,21 @@ app.add_middleware(
 )
 
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
+
 @app.get("/health")
 async def health():
     with get_conn() as conn:
@@ -165,7 +180,7 @@ async def health():
     }
 
 
-@app.post("/events", status_code=201)
+@_router.post("/events", status_code=201)
 async def ingest_event(ev: EventIn):
     ts = ev.timestamp or time.time()
     date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
@@ -178,7 +193,7 @@ async def ingest_event(ev: EventIn):
         return {"id": cur.lastrowid, "event_type": ev.event_type, "timestamp": ts}
 
 
-@app.post("/events/batch", status_code=201)
+@_router.post("/events/batch", status_code=201)
 async def ingest_batch(batch: BatchEventsIn):
     rows = []
     for ev in batch.events:
@@ -196,7 +211,7 @@ async def ingest_batch(batch: BatchEventsIn):
     return {"inserted": len(rows)}
 
 
-@app.get("/events")
+@_router.get("/events")
 async def query_events(
     event_type: Optional[str] = None,
     user_id: Optional[str] = None,
@@ -233,7 +248,7 @@ async def query_events(
     }
 
 
-@app.get("/events/types")
+@_router.get("/events/types")
 async def event_types():
     with get_conn() as conn:
         rows = conn.execute(
@@ -242,7 +257,7 @@ async def event_types():
     return {"types": [dict(r) for r in rows]}
 
 
-@app.post("/events/funnel")
+@_router.post("/events/funnel")
 async def funnel(req: FunnelIn):
     with get_conn() as conn:
         counts = []
@@ -260,7 +275,7 @@ async def funnel(req: FunnelIn):
     return {"funnel": counts}
 
 
-@app.post("/metrics", status_code=201)
+@_router.post("/metrics", status_code=201)
 async def record_metric(m: MetricIn):
     ts = m.timestamp or time.time()
     date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
@@ -273,7 +288,7 @@ async def record_metric(m: MetricIn):
     return {"id": cur.lastrowid, "name": m.name, "value": m.value, "timestamp": ts}
 
 
-@app.get("/metrics/{name}")
+@_router.get("/metrics/{name}")
 async def get_metric(
     name: str,
     agg: str = Query("avg", pattern="^(avg|sum|min|max|count)$"),
@@ -297,7 +312,7 @@ async def get_metric(
     return {"name": name, "aggregation": agg, "result": row["result"], "samples": row["samples"]}
 
 
-@app.get("/metrics/{name}/timeseries")
+@_router.get("/metrics/{name}/timeseries")
 async def metric_timeseries(
     name: str,
     bucket: str = Query("day", pattern="^(hour|day)$"),
@@ -324,7 +339,7 @@ async def metric_timeseries(
     return {"name": name, "bucket": bucket, "series": [dict(r) for r in rows]}
 
 
-@app.get("/summary")
+@_router.get("/summary")
 async def summary():
     with get_conn() as conn:
         event_count = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
@@ -341,6 +356,9 @@ async def summary():
         "top_event_types": [dict(r) for r in top_events],
         "top_metrics_by_avg": [dict(r) for r in top_metrics],
     }
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

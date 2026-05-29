@@ -27,7 +27,16 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
@@ -206,6 +215,19 @@ app.add_middleware(
 )
 
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
@@ -221,7 +243,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@app.get("/mode")
+@_router.get("/mode")
 async def get_current_mode():
     conn = _get_db()
     mode = _get_current_mode(conn)
@@ -229,7 +251,7 @@ async def get_current_mode():
     return {"mode": mode}
 
 
-@app.put("/mode")
+@_router.put("/mode")
 async def switch_mode(body: ModeSwitchRequest):
     try:
         target = TopologyMode(body.mode)
@@ -245,7 +267,7 @@ async def switch_mode(body: ModeSwitchRequest):
     return {"mode": target.value, "reason": body.reason}
 
 
-@app.get("/mode/history")
+@_router.get("/mode/history")
 async def get_mode_history(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
@@ -260,7 +282,7 @@ async def get_mode_history(limit: int = Query(50, ge=1, le=200), offset: int = Q
 # ---------------------------------------------------------------------------
 
 
-@app.post("/nodes", status_code=201)
+@_router.post("/nodes", status_code=201)
 async def register_node(body: NodeRegister):
     conn = _get_db()
     now = _now()
@@ -292,7 +314,7 @@ async def register_node(body: NodeRegister):
     }
 
 
-@app.get("/nodes")
+@_router.get("/nodes")
 async def list_nodes(
     status: Optional[str] = None, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)
 ):
@@ -309,7 +331,7 @@ async def list_nodes(
     return [dict(r) for r in rows]
 
 
-@app.put("/nodes/{node_id}/health")
+@_router.put("/nodes/{node_id}/health")
 async def update_node_health(node_id: str, body: NodeHealthUpdate):
     conn = _get_db()
     now = _now()
@@ -324,7 +346,7 @@ async def update_node_health(node_id: str, body: NodeHealthUpdate):
     return {"id": node_id, "status": body.status, "latency_ms": body.latency_ms}
 
 
-@app.delete("/nodes/{node_id}", status_code=204)
+@_router.delete("/nodes/{node_id}", status_code=204)
 async def deregister_node(node_id: str):
     conn = _get_db()
     cur = conn.execute("DELETE FROM node_health WHERE id=?", (node_id,))
@@ -339,7 +361,7 @@ async def deregister_node(node_id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.post("/migrations", status_code=201)
+@_router.post("/migrations", status_code=201)
 async def create_migration(body: MigrationCreate):
     conn = _get_db()
     now = _now()
@@ -359,7 +381,7 @@ async def create_migration(body: MigrationCreate):
     }
 
 
-@app.get("/migrations")
+@_router.get("/migrations")
 async def list_migrations(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
@@ -369,7 +391,7 @@ async def list_migrations(limit: int = Query(50, ge=1, le=200), offset: int = Qu
     return [dict(r) for r in rows]
 
 
-@app.put("/migrations/{migration_id}/progress")
+@_router.put("/migrations/{migration_id}/progress")
 async def update_migration_progress(migration_id: str, body: MigrationProgressUpdate):
     conn = _get_db()
     now = _now()
@@ -390,7 +412,7 @@ async def update_migration_progress(migration_id: str, body: MigrationProgressUp
 # ---------------------------------------------------------------------------
 
 
-@app.post("/failover")
+@_router.post("/failover")
 async def trigger_failover(reason: str = "Automatic failover"):
     conn = _get_db()
     current = _get_current_mode(conn)
@@ -414,7 +436,7 @@ async def trigger_failover(reason: str = "Automatic failover"):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/stats")
+@_router.get("/stats")
 async def get_stats():
     conn = _get_db()
     mode = _get_current_mode(conn)
@@ -473,7 +495,7 @@ async def _broadcast_event(event_type: str, data: dict) -> None:
         _connected_ws.remove(ws)
 
 
-@app.get("/events")
+@_router.get("/events")
 async def _sse_events():
     async def _generator():
         while True:
@@ -484,7 +506,7 @@ async def _sse_events():
     return EventSourceResponse(_generator())
 
 
-@app.get("/dashboard/summary")
+@_router.get("/dashboard/summary")
 async def _dashboard_summary():
     """Aggregated summary optimized for dashboard consumption."""
     stats = await _get_stats_async()
@@ -516,6 +538,9 @@ async def _get_stats_async() -> dict:
 def _get_stats() -> dict:
     """Return basic service stats for real-time endpoints (sync fallback)."""
     return {"service": SERVICE_NAME, "port": PORT}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

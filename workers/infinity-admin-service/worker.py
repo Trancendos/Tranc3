@@ -38,7 +38,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -96,7 +96,13 @@ except Exception:  # pragma: no cover
 
 PORT = int(os.environ.get("INFINITY_ADMIN_PORT", "8044"))
 DB_PATH = os.environ.get("INFINITY_ADMIN_DB_PATH", "data/infinity_admin.db")
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. This service cannot validate tokens without it. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 
 logger = logging.getLogger("infinity-admin-service")
 
@@ -487,6 +493,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 # OWASP Hardening
 app.add_middleware(OWASPHardeningMiddleware)
 
@@ -575,7 +595,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@app.get("/admin/config")
+@_router.get("/admin/config")
 async def list_config(category: str | None = None):
     """List system configuration values, optionally filtered by category."""
     if category:
@@ -589,7 +609,7 @@ async def list_config(category: str | None = None):
     return {"config": [dict(r) for r in rows], "total": len(rows)}
 
 
-@app.get("/admin/config/{key}")
+@_router.get("/admin/config/{key}")
 async def get_config(key: str):
     """Get a specific configuration value."""
     row = db.execute(
@@ -603,7 +623,7 @@ async def get_config(key: str):
     return dict(row)
 
 
-@app.put("/admin/config/{key}")
+@_router.put("/admin/config/{key}")
 async def update_config(key: str, config: ConfigUpdate, request: Request):
     """Update a system configuration value."""
     user = getattr(request.state, "user", {})
@@ -639,14 +659,14 @@ async def update_config(key: str, config: ConfigUpdate, request: Request):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/admin/features")
+@_router.get("/admin/features")
 async def list_features():
     """List all feature flags."""
     rows = db.execute("SELECT * FROM feature_flags ORDER BY key").fetchall()
     return {"features": [dict(r) for r in rows], "total": len(rows)}
 
 
-@app.put("/admin/features/{key}")
+@_router.put("/admin/features/{key}")
 async def update_feature(key: str, flag: FeatureFlagUpdate, request: Request):
     """Update a feature flag."""
     user = getattr(request.state, "user", {})
@@ -697,7 +717,7 @@ async def update_feature(key: str, flag: FeatureFlagUpdate, request: Request):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/admin/primes")
+@_router.get("/admin/primes")
 async def list_primes():
     """List all Prime entities and their governance status."""
     primes_data = []
@@ -718,7 +738,7 @@ async def list_primes():
     return {"primes": primes_data, "total": len(primes_data)}
 
 
-@app.get("/admin/pillars")
+@_router.get("/admin/pillars")
 async def list_pillars():
     """List all Pillars with their associated Primes and accent colors."""
     pillars_data = []
@@ -740,7 +760,7 @@ async def list_pillars():
     return {"pillars": pillars_data, "total": len(pillars_data)}
 
 
-@app.get("/admin/tiers")
+@_router.get("/admin/tiers")
 async def list_tiers():
     """List the complete tier system with descriptions."""
 
@@ -765,7 +785,7 @@ async def list_tiers():
 # ---------------------------------------------------------------------------
 
 
-@app.get("/admin/dimensionals")
+@_router.get("/admin/dimensionals")
 async def list_dimensionals():
     """List all dimensional services with their status and health."""
     services = dimensional_registry.list_all()
@@ -793,7 +813,7 @@ async def list_dimensionals():
     }
 
 
-@app.get("/admin/underverse")
+@_router.get("/admin/underverse")
 async def list_underverse():
     """List all Underverse modules with capabilities index."""
     modules = underverse_registry.list_all()
@@ -828,7 +848,7 @@ async def list_underverse():
 # ---------------------------------------------------------------------------
 
 
-@app.get("/admin/transfer")
+@_router.get("/admin/transfer")
 async def transfer_systems_status():
     """Get the status of all three transfer systems."""
     systems = []
@@ -859,7 +879,7 @@ async def transfer_systems_status():
 # ---------------------------------------------------------------------------
 
 
-@app.get("/admin/locations")
+@_router.get("/admin/locations")
 async def list_locations():
     """List all Infinity Locations with their configuration."""
     locations = []
@@ -881,7 +901,7 @@ async def list_locations():
 # ---------------------------------------------------------------------------
 
 
-@app.get("/admin/audit")
+@_router.get("/admin/audit")
 async def audit_log(
     action_type: str | None = None,
     actor_id: str | None = None,
@@ -929,7 +949,7 @@ async def audit_log(
     return {"actions": [dict(r) for r in rows], "total": total}
 
 
-@app.get("/admin/compliance")
+@_router.get("/admin/compliance")
 async def compliance_events(
     severity: str | None = None,
     pillar: str | None = None,
@@ -965,7 +985,7 @@ async def compliance_events(
 # ---------------------------------------------------------------------------
 
 
-@app.get("/admin/sentinel")
+@_router.get("/admin/sentinel")
 async def sentinel_status():
     """Get Sentinel Station status and channel information."""
     from Dimensional.infinity.nomenclature import SENTINEL_CHANNELS
@@ -994,7 +1014,7 @@ async def sentinel_status():
 # ---------------------------------------------------------------------------
 
 
-@app.get("/admin/overview")
+@_router.get("/admin/overview")
 async def ecosystem_overview():
     """Get a comprehensive overview of the entire Infinity Ecosystem.
 
@@ -1156,7 +1176,7 @@ def _upsert_override(
     db.commit()
 
 
-@app.get("/admin/entities")
+@_router.get("/admin/entities")
 async def list_entities(pillar: str | None = None):
     """List all 43 platform entities with current names (DB overrides applied).
 
@@ -1217,7 +1237,7 @@ async def list_entities(pillar: str | None = None):
     }
 
 
-@app.get("/admin/entities/{pid}")
+@_router.get("/admin/entities/{pid}")
 async def get_entity(pid: str):
     """Get full detail for a platform entity with all overrides applied."""
     detail = _resolve_entity_detail(pid)
@@ -1232,7 +1252,7 @@ async def get_entity(pid: str):
     return detail.model_dump()
 
 
-@app.patch("/admin/entities/{pid}/name")
+@_router.patch("/admin/entities/{pid}/name")
 async def rename_location(pid: str, body: EntityNameUpdate, request: Request):
     """Rename a Location (App). Does not require a code deploy.
 
@@ -1284,7 +1304,7 @@ async def rename_location(pid: str, body: EntityNameUpdate, request: Request):
     }
 
 
-@app.patch("/admin/entities/{pid}/lead-ai")
+@_router.patch("/admin/entities/{pid}/lead-ai")
 async def rename_lead_ai(pid: str, body: EntityNameUpdate, request: Request):
     """Rename the Tier 3 Lead AI for a platform entity.
 
@@ -1337,7 +1357,7 @@ async def rename_lead_ai(pid: str, body: EntityNameUpdate, request: Request):
     }
 
 
-@app.patch("/admin/entities/{pid}/primes/{prime_idx}")
+@_router.patch("/admin/entities/{pid}/primes/{prime_idx}")
 async def rename_prime(pid: str, prime_idx: int, body: EntityNameUpdate, request: Request):
     """Rename or reassign a Tier 2 Prime at a given index (0-based).
 
@@ -1406,7 +1426,7 @@ async def rename_prime(pid: str, prime_idx: int, body: EntityNameUpdate, request
     }
 
 
-@app.patch("/admin/entities/{pid}/agents/{role}")
+@_router.patch("/admin/entities/{pid}/agents/{role}")
 async def rename_agent(pid: str, role: str, body: EntityNameUpdate, request: Request):
     """Rename a Tier 4 Agent. role must be 'alpha' or 'beta'.
 
@@ -1474,7 +1494,7 @@ async def rename_agent(pid: str, role: str, body: EntityNameUpdate, request: Req
     }
 
 
-@app.patch("/admin/entities/{pid}/bots/{slot}")
+@_router.patch("/admin/entities/{pid}/bots/{slot}")
 async def rename_bot(pid: str, slot: str, body: EntityNameUpdate, request: Request):
     """Rename a Tier 5 Bot. slot must be '01', '02', '03', or '04'.
 
@@ -1543,7 +1563,7 @@ async def rename_bot(pid: str, slot: str, body: EntityNameUpdate, request: Reque
     }
 
 
-@app.get("/admin/entities/{pid}/overrides")
+@_router.get("/admin/entities/{pid}/overrides")
 async def list_entity_overrides(pid: str):
     """List all active name overrides for a given entity PID."""
     if _PLATFORM_ENTITIES_AVAILABLE and get_entity_by_pid(pid) is None:
@@ -1557,7 +1577,7 @@ async def list_entity_overrides(pid: str):
     return {"pid": pid, "overrides": [dict(r) for r in rows], "total": len(rows)}
 
 
-@app.delete("/admin/entities/{pid}/overrides")
+@_router.delete("/admin/entities/{pid}/overrides")
 async def reset_entity_overrides(
     pid: str,
     request: Request,
@@ -1651,7 +1671,7 @@ async def reset_entity_overrides(
     }
 
 
-@app.get("/admin/entities/{pid}/overrides/{entity_type}")
+@_router.get("/admin/entities/{pid}/overrides/{entity_type}")
 async def get_entity_overrides_by_type(pid: str, entity_type: str, slot: str | None = None):
     """Get overrides for a specific entity type (and optional slot) within an entity."""
     if slot is not None:
@@ -1673,7 +1693,7 @@ async def get_entity_overrides_by_type(pid: str, entity_type: str, slot: str | N
 # ---------------------------------------------------------------------------
 
 
-@app.get("/stats")
+@_router.get("/stats")
 async def stats():
     """Get Infinity-Admin service statistics."""
     system_config_count = db.execute("SELECT COUNT(*) as cnt FROM system_config").fetchone()["cnt"]
@@ -1700,6 +1720,9 @@ async def stats():
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
+app.include_router(_router)
+
 
 if __name__ == "__main__":
     import uvicorn

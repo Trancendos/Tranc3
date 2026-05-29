@@ -79,10 +79,13 @@ def _worker(tmp_path, monkeypatch):
     yield mod
 
 
-def _client(app):
+def _client(app, secret=""):
     import httpx
 
-    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+    headers = {"X-Internal-Secret": secret} if secret else {}
+    return httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test", headers=headers
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +96,7 @@ def _client(app):
 class TestHealthEndpoint:
     def test_health_returns_200(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return await c.get("/health")
 
         resp = _run(_go())
@@ -101,7 +104,7 @@ class TestHealthEndpoint:
 
     def test_health_has_status_healthy(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return (await c.get("/health")).json()
 
         data = _run(_go())
@@ -109,7 +112,7 @@ class TestHealthEndpoint:
 
     def test_health_reports_node_count(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return (await c.get("/health")).json()
 
         data = _run(_go())
@@ -125,7 +128,7 @@ class TestHealthEndpoint:
 class TestNodeCRUD:
     def test_create_node_returns_201(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return await c.post(
                     "/nodes",
                     json={"title": "Test Node", "content": "hello", "source": "test"},
@@ -136,7 +139,7 @@ class TestNodeCRUD:
 
     def test_create_node_returns_node_id(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post(
                     "/nodes",
                     json={"title": "Node X", "content": "content", "source": "src"},
@@ -149,7 +152,7 @@ class TestNodeCRUD:
 
     def test_get_node_after_create(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 create = await c.post(
                     "/nodes",
                     json={"title": "Retrievable", "content": "body", "source": "s"},
@@ -163,7 +166,7 @@ class TestNodeCRUD:
 
     def test_get_nonexistent_node_returns_404(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return await c.get("/nodes/00000000-0000-0000-0000-000000000000")
 
         resp = _run(_go())
@@ -171,7 +174,7 @@ class TestNodeCRUD:
 
     def test_create_multiple_nodes_increments_count(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 for i in range(3):
                     await c.post(
                         "/nodes",
@@ -184,7 +187,7 @@ class TestNodeCRUD:
 
     def test_create_node_with_tags(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post(
                     "/nodes",
                     json={
@@ -201,7 +204,7 @@ class TestNodeCRUD:
 
     def test_create_node_with_metadata(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post(
                     "/nodes",
                     json={
@@ -225,7 +228,7 @@ class TestNodeCRUD:
 class TestEdgeCreation:
     def _make_node(self, worker_mod, title="N"):
         async def _go():
-            async with _client(worker_mod.app) as c:
+            async with _client(worker_mod.app, getattr(worker_mod, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post("/nodes", json={"title": title, "content": "c", "source": "s"})
                 return r.json()["node_id"]
 
@@ -236,7 +239,7 @@ class TestEdgeCreation:
         tgt = self._make_node(_worker, "Target")
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return await c.post(
                     "/edges",
                     json={"source_id": src, "target_id": tgt, "relation": "related_to"},
@@ -250,7 +253,7 @@ class TestEdgeCreation:
         tgt = self._make_node(_worker, "B")
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post(
                     "/edges",
                     json={"source_id": src, "target_id": tgt},
@@ -265,7 +268,7 @@ class TestEdgeCreation:
         tgt = self._make_node(_worker, "Tgt2")
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 await c.post(
                     "/edges",
                     json={"source_id": src, "target_id": tgt},
@@ -284,7 +287,7 @@ class TestEdgeCreation:
 class TestGraphStats:
     def test_stats_empty_graph(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return (await c.get("/graph/stats")).json()
 
         data = _run(_go())
@@ -293,7 +296,7 @@ class TestGraphStats:
 
     def test_stats_after_insertion(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r1 = await c.post("/nodes", json={"title": "X", "content": "x", "source": "s"})
                 r2 = await c.post("/nodes", json={"title": "Y", "content": "y", "source": "s"})
                 await c.post(
@@ -308,7 +311,7 @@ class TestGraphStats:
 
     def test_stats_has_avg_importance(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return (await c.get("/graph/stats")).json()
 
         data = _run(_go())
@@ -316,7 +319,7 @@ class TestGraphStats:
 
     def test_stats_avg_degree_empty(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return (await c.get("/graph/stats")).json()
 
         data = _run(_go())
@@ -331,7 +334,7 @@ class TestGraphStats:
 class TestSearch:
     def test_search_empty_graph_returns_200(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return await c.post("/search", json={"query": "quantum consciousness"})
 
         resp = _run(_go())
@@ -341,7 +344,7 @@ class TestSearch:
         query = "test search query"
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return (await c.post("/search", json={"query": query})).json()
 
         data = _run(_go())
@@ -349,7 +352,7 @@ class TestSearch:
 
     def test_search_has_direct_and_expanded_results(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return (await c.post("/search", json={"query": "test"})).json()
 
         data = _run(_go())
@@ -359,7 +362,7 @@ class TestSearch:
 
     def test_search_after_node_insertion(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 await c.post(
                     "/nodes",
                     json={
@@ -383,7 +386,7 @@ class TestSearch:
 class TestPageRankRecompute:
     def test_recompute_on_empty_graph(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return await c.post("/pagerank/recompute")
 
         resp = _run(_go())
@@ -392,7 +395,7 @@ class TestPageRankRecompute:
 
     def test_recompute_returns_node_count(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 await c.post("/nodes", json={"title": "A", "content": "a", "source": "s"})
                 return (await c.post("/pagerank/recompute")).json()
 
@@ -401,7 +404,7 @@ class TestPageRankRecompute:
 
     def test_recompute_with_graph_structure(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r1 = await c.post("/nodes", json={"title": "Hub", "content": "c", "source": "s"})
                 r2 = await c.post("/nodes", json={"title": "Leaf", "content": "c", "source": "s"})
                 nid1 = r1.json()["node_id"]
@@ -422,7 +425,7 @@ class TestPageRankRecompute:
 class TestNeighbourhood:
     def test_neighbourhood_nonexistent_node_404(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return await c.get("/nodes/00000000-0000-0000-0000-000000000000/neighbourhood")
 
         resp = _run(_go())
@@ -430,7 +433,7 @@ class TestNeighbourhood:
 
     def test_neighbourhood_isolated_node_empty(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post(
                     "/nodes", json={"title": "Isolated", "content": "alone", "source": "s"}
                 )
@@ -443,7 +446,7 @@ class TestNeighbourhood:
 
     def test_neighbourhood_with_connected_node(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r1 = await c.post("/nodes", json={"title": "Hub", "content": "c", "source": "s"})
                 r2 = await c.post("/nodes", json={"title": "Spoke", "content": "c", "source": "s"})
                 hub_id = r1.json()["node_id"]
@@ -459,7 +462,7 @@ class TestNeighbourhood:
 
     def test_neighbourhood_respects_max_hops_param(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post("/nodes", json={"title": "Root", "content": "c", "source": "s"})
                 nid = r.json()["node_id"]
                 # max_hops=1 should work without error
@@ -480,7 +483,7 @@ class TestNodeImportance:
 
     def test_create_node_default_importance(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post(
                     "/nodes",
                     json={"title": "Default Imp", "content": "x", "source": "s"},
@@ -494,7 +497,7 @@ class TestNodeImportance:
 
     def test_create_node_custom_importance(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post(
                     "/nodes",
                     json={
@@ -512,7 +515,7 @@ class TestNodeImportance:
 
     def test_create_node_low_importance(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post(
                     "/nodes",
                     json={
@@ -530,7 +533,7 @@ class TestNodeImportance:
 
     def test_importance_boundary_zero(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post(
                     "/nodes",
                     json={"title": "Zero Imp", "content": "x", "source": "s", "importance": 0.0},
@@ -543,7 +546,7 @@ class TestNodeImportance:
 
     def test_importance_boundary_one(self, _worker):
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post(
                     "/nodes",
                     json={"title": "Max Imp", "content": "x", "source": "s", "importance": 1.0},
@@ -558,7 +561,7 @@ class TestNodeImportance:
         """Values outside [0, 1] must be rejected by pydantic validation."""
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post(
                     "/nodes",
                     json={"title": "Bad Imp", "content": "x", "source": "s", "importance": 1.5},
@@ -572,7 +575,7 @@ class TestNodeImportance:
         """graph/stats avg_importance should reflect the stored importance values."""
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 await c.post(
                     "/nodes",
                     json={"title": "A", "content": "x", "source": "s", "importance": 0.2},
@@ -600,7 +603,7 @@ class TestSearchContract:
         """Search must accept max_results (not top_k)."""
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return await c.post(
                     "/search",
                     json={"query": "knowledge graph", "max_results": 5},
@@ -613,7 +616,7 @@ class TestSearchContract:
         """Inserting many nodes then capping via max_results should not exceed the cap."""
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 for i in range(15):
                     await c.post(
                         "/nodes",
@@ -636,7 +639,7 @@ class TestSearchContract:
         """use_graph_expansion=False must be accepted without error."""
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return await c.post(
                     "/search",
                     json={"query": "test", "use_graph_expansion": False},
@@ -649,7 +652,7 @@ class TestSearchContract:
         """With use_graph_expansion=False, expanded_results must be empty."""
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r1 = await c.post(
                     "/nodes",
                     json={"title": "Hub Node", "content": "hub knowledge", "source": "s"},
@@ -680,7 +683,7 @@ class TestSearchContract:
         """With use_graph_expansion=True (default), expanded_results may be non-empty."""
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r1 = await c.post(
                     "/nodes",
                     json={
@@ -716,7 +719,7 @@ class TestSearchContract:
         """Omitting required query field must return 422 Unprocessable Entity."""
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return await c.post("/search", json={"max_results": 5})
 
         resp = _run(_go())
@@ -726,7 +729,7 @@ class TestSearchContract:
         """Omitting max_results should default to 10 (no 422 error)."""
 
         async def _go():
-            async with _client(_worker.app) as c:
+            async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 return await c.post("/search", json={"query": "anything"})
 
         resp = _run(_go())

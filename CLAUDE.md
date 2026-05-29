@@ -195,7 +195,29 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | payments-service | 8013 | P2 | `workers/payments-service/` | trancendos-payments-service |
 | files-service | 8014 | P2 | `workers/files-service/` | infinity-files-api |
 | identity-service | 8015 | P2 | `workers/identity-service/` | infinity-os-identity |
-| 14 P3 stubs | 8016–8029 | P3 | `workers/*/` | Various CF Workers |
+| analytics-service | 8016 | P3 | `workers/analytics-service/` | Analytics / metrics store |
+| audit-service | 8017 | P3 | `workers/audit-service/` | The Observatory audit trail |
+| cache-service | 8018 | P3 | `workers/cache-service/` | Distributed cache layer |
+| cdn-service | 8019 | P3 | `workers/cdn-service/` | Static asset delivery |
+| config-service | 8020 | P3 | `workers/config-service/` | Central configuration |
+| cron-service | 8021 | P3 | `workers/cron-service/` | ChronosSphere task scheduler |
+| email-service | 8022 | P3 | `workers/email-service/` | Arcadia email hub |
+| geo-service | 8023 | P3 | `workers/geo-service/` | Geographic routing |
+| search-service | 8024 | P3 | `workers/search-service/` | Full-text + semantic search |
+| sms-service | 8025 | P3 | `workers/sms-service/` | SMS gateway |
+| storage-service | 8026 | P3 | `workers/storage-service/` | IPFS + local blob storage |
+| queue-service | 8027 | P3 | `workers/queue-service/` | The HIVE task queue |
+| rate-limit-service | 8028 | P3 | `workers/rate-limit-service/` | Token-bucket rate limiter |
+| health-aggregator | 8029 | P3 | `workers/health-aggregator/` | Platform-wide health roll-up |
+| gbrain-bridge | 8030 | P3 | `workers/gbrain-bridge/` | GBrain AI bridge |
+| topology-service | 8031 | P3 | `workers/topology-service/` | Service topology graph |
+| ledger-service | 8032 | P3 | `workers/ledger-service/` | Royal Bank ledger |
+| model-router-service | 8033 | P3 | `workers/model-router-service/` | AI model routing |
+| workflow-engine-service | 8034 | P3 | `workers/workflow-engine-service/` | The Digital Grid engine |
+| skills-benchmark-service | 8035 | P3 | `workers/skills-benchmark-service/` | Turing's Hub benchmarks |
+| langchain-integration-service | 8036 | P3 | `workers/langchain-integration-service/` | LangChain integration |
+| deepagents-orchestrator-service | 8037 | P3 | `workers/deepagents-orchestrator-service/` | Deep agent orchestration |
+| vault-service | 8038 | P3 | `workers/vault-service/` | The Void self-hosted vault |
 
 ### Production Infrastructure Stack
 
@@ -369,7 +391,7 @@ All Trancendos services are **subdirectories** of `trancendos.com`, not subdomai
 - **Grafana** — Dashboards (auto-provisioned with Prometheus + Loki datasources)
 - **Loki + Promtail** — Log aggregation from Docker containers
 - **IPFS** — Distributed content-addressed storage
-- **29 workers** — P0/P1/P2/P3 FastAPI + uvicorn + SQLite workers (ports 8004–8029)
+- **38 workers** — P0/P1/P2/P3 FastAPI + uvicorn + SQLite workers (ports 8004–8038)
 
 Fly.io apps (region `lhr`) — legacy, evaluating for migration:
 - `tranc3-backend` — 256MB RAM, 1GB encrypted volume at `/app/models`

@@ -2,14 +2,12 @@
 Tests for AeonMind Bot Services.
 """
 
-import pytest
-
 from aeonmind.services.bot_services import (
     BotCapability,
-    BotStatus,
     BotServiceConfig,
-    BotServiceWorker,
     BotServiceRegistry,
+    BotServiceWorker,
+    BotStatus,
 )
 
 

@@ -137,25 +137,20 @@ class TestVerifyToken:
         assert result is None
 
     def test_valid_jwt_structure(self):
-        import base64
+        import os
 
-        header = (
-            base64.urlsafe_b64encode(json.dumps({"alg": "HS256"}).encode()).decode().rstrip("=")
-        )
-        payload = (
-            base64.urlsafe_b64encode(json.dumps({"sub": "user123"}).encode()).decode().rstrip("=")
-        )
-        signature = "fakesig"
-        token = f"{header}.{payload}.{signature}"
+        import jwt as pyjwt
 
-        result = ws_mod.verify_token(token)
+        secret = os.environ.get("JWT_SECRET", "test-jwt-secret-for-unit-tests-00001")
+        token = pyjwt.encode({"sub": "user123"}, secret, algorithm="HS256")
+
+        result = ws_mod.verify_token(token, secret=secret)
         assert result is not None
         assert result.get("sub") == "user123"
 
     def test_malformed_base64(self):
         result = ws_mod.verify_token("a.b.c")
-        # May return None or partial payload depending on base64 decoding
-        assert isinstance(result, (dict, type(None)))
+        assert result is None
 
 
 class TestInfinityWSHTTP:
@@ -163,7 +158,9 @@ class TestInfinityWSHTTP:
 
     @pytest.fixture
     def client(self):
-        return TestClient(ws_mod.app)
+        secret = getattr(ws_mod, "_INTERNAL_SECRET", "")
+        headers = {"X-Internal-Secret": secret} if secret else {}
+        return TestClient(ws_mod.app, headers=headers)
 
     def test_health_endpoint(self, client):
         response = client.get("/health")
@@ -834,6 +831,8 @@ class TestInfinityAuthHTTPEndpoints:
 
     def test_login_with_mfa_valid_code(self, auth_client):
         """Login with MFA code (6-digit) should succeed."""
+        import pyotp
+
         reg = auth_client.post(
             "/auth/register",
             json={
@@ -844,17 +843,23 @@ class TestInfinityAuthHTTPEndpoints:
         )
         token = reg.json()["access_token"]
 
-        # Setup and enable MFA
-        auth_client.post("/auth/mfa/setup", headers={"Authorization": f"Bearer {token}"})
+        # Setup MFA — capture the TOTP secret so we can generate a valid code
+        setup_resp = auth_client.post(
+            "/auth/mfa/setup", headers={"Authorization": f"Bearer {token}"}
+        )
+        totp_secret = setup_resp.json()["secret"]
         auth_client.post("/auth/mfa/enable", headers={"Authorization": f"Bearer {token}"})
 
-        # Login with TOTP code
+        # Generate the current valid TOTP code from the secret
+        valid_code = pyotp.TOTP(totp_secret).now()
+
+        # Login with the real TOTP code
         response = auth_client.post(
             "/auth/login",
             json={
                 "username": "mfacode",
                 "password": "mfacodepassword",
-                "totp_code": "123456",
+                "totp_code": valid_code,
             },
         )
         assert response.status_code == 200

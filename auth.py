@@ -5,10 +5,10 @@ import datetime
 import os
 from typing import Optional
 
+import bcrypt
 import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from passlib.context import CryptContext
 
 # SECRET_KEY — defaults to a stable key if not set; set in production for security
 SECRET_KEY = os.environ.get(
@@ -18,7 +18,21 @@ SECRET_KEY = os.environ.get(
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+class _BcryptContext:
+    """Minimal bcrypt wrapper replacing passlib.CryptContext — avoids crypt DeprecationWarning."""
+
+    def hash(self, password: str) -> str:
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+    def verify(self, plain: str, hashed: str) -> bool:
+        try:
+            return bcrypt.checkpw(plain.encode(), hashed.encode())
+        except Exception:
+            return False
+
+
+pwd_context = _BcryptContext()
 security = HTTPBearer()
 
 

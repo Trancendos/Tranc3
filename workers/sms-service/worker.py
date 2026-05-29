@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -189,6 +189,21 @@ app.add_middleware(
 )
 
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
+
 @app.get("/health")
 async def health():
     with get_conn() as conn:
@@ -215,7 +230,7 @@ async def health():
     }
 
 
-@app.post("/send", status_code=202)
+@_router.post("/send", status_code=202)
 async def send_sms(req: SendIn):
     provider = req.provider or SMS_PROVIDER
     now = time.time()
@@ -228,7 +243,7 @@ async def send_sms(req: SendIn):
     return {"id": cur.lastrowid, "status": "queued", "to": req.to, "provider": provider}
 
 
-@app.post("/send/batch", status_code=202)
+@_router.post("/send/batch", status_code=202)
 async def send_batch(req: BatchSendIn):
     now = time.time()
     rows = [(m.to, m.message, m.provider or SMS_PROVIDER, now) for m in req.messages]
@@ -241,7 +256,7 @@ async def send_batch(req: BatchSendIn):
     return {"queued": len(rows)}
 
 
-@app.get("/outbox")
+@_router.get("/outbox")
 async def list_outbox(
     status: Optional[str] = None,
     limit: int = Query(50, le=500),
@@ -261,7 +276,7 @@ async def list_outbox(
     return {"total": total, "messages": [dict(r) for r in rows]}
 
 
-@app.post("/outbox/{sms_id}/retry")
+@_router.post("/outbox/{sms_id}/retry")
 async def retry_sms(sms_id: int):
     with get_conn() as conn:
         if not conn.execute("SELECT id FROM outbox WHERE id = ?", (sms_id,)).fetchone():
@@ -273,7 +288,7 @@ async def retry_sms(sms_id: int):
     return {"retrying": sms_id}
 
 
-@app.get("/stats")
+@_router.get("/stats")
 async def stats():
     with get_conn() as conn:
         by_status = conn.execute(
@@ -286,6 +301,9 @@ async def stats():
         "by_status": [dict(r) for r in by_status],
         "by_provider": [dict(r) for r in by_provider],
     }
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

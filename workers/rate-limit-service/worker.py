@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -167,6 +167,21 @@ app.add_middleware(
 )
 
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
+
 @app.get("/health")
 async def health():
     with _lock:
@@ -187,7 +202,7 @@ async def health():
     }
 
 
-@app.post("/check")
+@_router.post("/check")
 async def check(req: CheckIn):
     result = _check_and_consume(req.key, req.policy, req.tokens)
     if not result["allowed"]:
@@ -199,7 +214,7 @@ async def check(req: CheckIn):
     return result
 
 
-@app.post("/peek")
+@_router.post("/peek")
 async def peek(req: CheckIn):
     """Check without consuming tokens."""
     policy = _get_policy(req.policy) or _get_policy("default")
@@ -221,21 +236,21 @@ async def peek(req: CheckIn):
     }
 
 
-@app.delete("/buckets/{key}")
+@_router.delete("/buckets/{key}")
 async def reset_bucket(key: str):
     with _lock:
         removed = _buckets.pop(key, None) is not None
     return {"key": key, "reset": removed}
 
 
-@app.get("/policies")
+@_router.get("/policies")
 async def list_policies():
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM policies ORDER BY name").fetchall()
     return {"policies": [dict(r) for r in rows]}
 
 
-@app.post("/policies", status_code=201)
+@_router.post("/policies", status_code=201)
 async def create_policy(req: PolicyCreate):
     with get_conn() as conn:
         if conn.execute("SELECT name FROM policies WHERE name = ?", (req.name,)).fetchone():
@@ -248,7 +263,7 @@ async def create_policy(req: PolicyCreate):
     return {"name": req.name, "capacity": req.capacity, "refill_rate": req.refill_rate}
 
 
-@app.patch("/policies/{name}")
+@_router.patch("/policies/{name}")
 async def update_policy(name: str, req: PolicyUpdate):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM policies WHERE name = ?", (name,)).fetchone()
@@ -269,7 +284,7 @@ async def update_policy(name: str, req: PolicyUpdate):
     return {"updated": name, "evicted_buckets": len(evict)}
 
 
-@app.delete("/policies/{name}")
+@_router.delete("/policies/{name}")
 async def delete_policy(name: str):
     if name == "default":
         raise HTTPException(status_code=400, detail="Cannot delete the default policy")
@@ -281,11 +296,14 @@ async def delete_policy(name: str):
     return {"deleted": name}
 
 
-@app.get("/stats")
+@_router.get("/stats")
 async def stats():
     with _lock:
         snapshot = {k: {"tokens": v["tokens"], "policy": v["policy"]} for k, v in _buckets.items()}
     return {"active_buckets": len(snapshot), "buckets": snapshot}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -181,6 +181,21 @@ app.add_middleware(
 )
 
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
+
 @app.get("/health")
 async def health():
     now = time.time()
@@ -194,7 +209,7 @@ async def health():
     }
 
 
-@app.get("/cache/{key}", response_model=GetResponse)
+@_router.get("/cache/{key}", response_model=GetResponse)
 async def get_key(key: str):
     now = time.time()
     if key not in _store:
@@ -208,7 +223,7 @@ async def get_key(key: str):
     return GetResponse(key=key, value=value, ttl_remaining=ttl_remaining)
 
 
-@app.put("/cache/{key}", response_model=SetResponse)
+@_router.put("/cache/{key}", response_model=SetResponse)
 async def set_key(key: str, req: SetRequest):
     expires_at = (time.time() + req.ttl) if req.ttl else None
     _store[key] = (req.value, expires_at)
@@ -219,7 +234,7 @@ async def set_key(key: str, req: SetRequest):
     return SetResponse(key=key, ttl=req.ttl, expires_at=exp_str)
 
 
-@app.delete("/cache/{key}")
+@_router.delete("/cache/{key}")
 async def delete_key(key: str):
     if key not in _store:
         raise HTTPException(status_code=404, detail="Key not found")
@@ -228,7 +243,7 @@ async def delete_key(key: str):
     return {"deleted": key}
 
 
-@app.get("/cache/{key}/exists")
+@_router.get("/cache/{key}/exists")
 async def key_exists(key: str):
     now = time.time()
     exists = key in _store
@@ -240,7 +255,7 @@ async def key_exists(key: str):
     return {"key": key, "exists": exists}
 
 
-@app.post("/cache/mset")
+@_router.post("/cache/mset")
 async def mset(req: MultiSetRequest):
     results = []
     for k, v in req.entries.items():
@@ -251,7 +266,7 @@ async def mset(req: MultiSetRequest):
     return {"set": results, "count": len(results)}
 
 
-@app.post("/cache/mget")
+@_router.post("/cache/mget")
 async def mget(keys: List[str]):
     now = time.time()
     result = {}
@@ -263,7 +278,7 @@ async def mget(keys: List[str]):
     return result
 
 
-@app.get("/cache", response_model=KeysResponse)
+@_router.get("/cache", response_model=KeysResponse)
 async def list_keys(pattern: Optional[str] = Query(None, description="Glob-style prefix filter")):
     now = time.time()
     keys = [k for k, (_, exp) in _store.items() if exp is None or exp > now]
@@ -272,7 +287,7 @@ async def list_keys(pattern: Optional[str] = Query(None, description="Glob-style
     return KeysResponse(keys=keys, count=len(keys))
 
 
-@app.delete("/cache")
+@_router.delete("/cache")
 async def flush():
     count = len(_store)
     _store.clear()
@@ -280,7 +295,7 @@ async def flush():
     return {"flushed": count}
 
 
-@app.get("/stats")
+@_router.get("/stats")
 async def stats():
     now = time.time()
     active = [(k, exp) for k, (_, exp) in _store.items() if exp is None or exp > now]
@@ -291,6 +306,9 @@ async def stats():
         "with_expiry": sum(1 for _, exp in active if exp is not None),
         "expiring_in_60s": len(expired_soon),
     }
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

@@ -295,7 +295,6 @@ class TestKnowledgeBrainAgentMemory:
 
         # Recall for agent-A with agent-B query — should not return agent-B memory
         memories_a = await brain.recall(agent_id="agent-A", query="agent A secret", top_k=10)
-        [m.page.id for m in memories_a]
         # All returned memories should be tagged with agent-A
         for mem in memories_a:
             assert f"agent:{mem.page.id}" not in ["agent-B"] or "agent-A" in mem.page.tags

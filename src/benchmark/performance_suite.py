@@ -370,8 +370,8 @@ async def benchmark_health_endpoint(
     """Benchmark the /health endpoint of the Tranc3 backend."""
     try:
         import httpx
-    except ImportError as e:
-        raise RuntimeError("httpx is required for HTTP benchmarks: pip install httpx") from e
+    except ImportError:
+        raise RuntimeError("httpx is required for HTTP benchmarks: pip install httpx") from None
 
     suite = BenchmarkSuite()
     client = httpx.AsyncClient(base_url=base_url, timeout=30.0)
@@ -398,8 +398,8 @@ async def benchmark_inference_endpoint(
     """Benchmark the /chat inference endpoint."""
     try:
         import httpx
-    except ImportError as e:
-        raise RuntimeError("httpx is required for HTTP benchmarks: pip install httpx") from e
+    except ImportError:
+        raise RuntimeError("httpx is required for HTTP benchmarks: pip install httpx") from None
 
     suite = BenchmarkSuite()
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}

@@ -8,11 +8,11 @@ import secrets
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
+import bcrypt
 import redis
 from fastapi import HTTPException
 from fastapi.security import HTTPBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from Dimensional.sanitize import sanitize_for_log
 
@@ -59,7 +59,21 @@ else:
             "Set both env vars in production for RS256 asymmetric signing."
         )
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+class _BcryptContext:
+    """Minimal bcrypt wrapper replacing passlib.CryptContext — avoids crypt DeprecationWarning."""
+
+    def hash(self, password: str) -> str:
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+    def verify(self, plain: str, hashed: str) -> bool:
+        try:
+            return bcrypt.checkpw(plain.encode(), hashed.encode())
+        except Exception:
+            return False
+
+
+pwd_context = _BcryptContext()
 bearer_scheme = HTTPBearer()
 
 

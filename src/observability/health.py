@@ -33,20 +33,47 @@ class SystemHealth(str, Enum):
 # Service Registry
 # ---------------------------------------------------------------------------
 
-# All known services with their default health check URLs
+# All known services with their default health check URLs.
+# Ports match the canonical map in CLAUDE.md / docker-compose.production.yml.
 SERVICE_REGISTRY = {
-    # P0 — Critical Path
-    "tranc3-ai": {"url": "http://localhost:8001/health", "priority": "P0", "named": "The Spark"},
-    "infinity-void": {"url": "http://localhost:8002/health", "priority": "P0", "named": "The Void"},
+    # ── Main App ────────────────────────────────────────────────────────────
+    "tranc3-backend": {
+        "url": "http://localhost:8000/health",
+        "priority": "P0",
+        "named": "Tranc3 Backend",
+    },
+    "nanoservices": {
+        "url": "http://localhost:8001/health",
+        "priority": "P0",
+        "named": "Nanoservices",
+    },
+    # ── P0 — Critical Path ──────────────────────────────────────────────────
+    "infinity-void": {
+        "url": "http://localhost:8002/health",
+        "priority": "P0",
+        "named": "The Void",
+    },
     "api-gateway": {
         "url": "http://localhost:8003/health",
         "priority": "P0",
-        "named": "The Citadel",
+        "named": "The Citadel (API Gateway)",
     },
-    "infinity-ws": {"url": "http://localhost:8004/health", "priority": "P0", "named": "The Nexus"},
-    "infinity-auth": {"url": "http://localhost:8005/health", "priority": "P0", "named": "Infinity"},
-    # P1 — Core Services
-    "users-service": {"url": "http://localhost:8006/health", "priority": "P1", "named": "Users"},
+    "infinity-ws": {
+        "url": "http://localhost:8004/health",
+        "priority": "P0",
+        "named": "The Nexus",
+    },
+    "infinity-auth": {
+        "url": "http://localhost:8005/health",
+        "priority": "P0",
+        "named": "Infinity",
+    },
+    # ── P1 — Core Services ──────────────────────────────────────────────────
+    "users-service": {
+        "url": "http://localhost:8006/health",
+        "priority": "P1",
+        "named": "Users Service",
+    },
     "monitoring": {
         "url": "http://localhost:8007/health",
         "priority": "P1",
@@ -55,10 +82,14 @@ SERVICE_REGISTRY = {
     "notifications": {
         "url": "http://localhost:8008/health",
         "priority": "P1",
-        "named": "Notifications",
+        "named": "Notifications Service",
     },
-    "infinity-ai": {"url": "http://localhost:8009/health", "priority": "P1", "named": "AI Gateway"},
-    # P2 — Domain Services
+    "infinity-ai": {
+        "url": "http://localhost:8009/health",
+        "priority": "P1",
+        "named": "Luminous (AI Gateway)",
+    },
+    # ── P2 — Domain Services ────────────────────────────────────────────────
     "the-grid": {
         "url": "http://localhost:8010/health",
         "priority": "P2",
@@ -67,25 +98,145 @@ SERVICE_REGISTRY = {
     "products-service": {
         "url": "http://localhost:8011/health",
         "priority": "P2",
-        "named": "Products",
+        "named": "Products Service",
     },
-    "orders-service": {"url": "http://localhost:8012/health", "priority": "P2", "named": "Orders"},
+    "orders-service": {
+        "url": "http://localhost:8012/health",
+        "priority": "P2",
+        "named": "Arcadian Exchange (Orders)",
+    },
     "payments-service": {
         "url": "http://localhost:8013/health",
         "priority": "P2",
-        "named": "Payments",
+        "named": "Royal Bank of Arcadia (Payments)",
     },
-    "files-service": {"url": "http://localhost:8014/health", "priority": "P2", "named": "Files"},
+    "files-service": {
+        "url": "http://localhost:8014/health",
+        "priority": "P2",
+        "named": "DocUtari (Files)",
+    },
     "identity-service": {
         "url": "http://localhost:8015/health",
         "priority": "P2",
-        "named": "Identity",
+        "named": "Infinity Identity",
     },
-    # P3 — Knowledge & Intelligence Layer
+    # ── P3 — Extended Services (8016–8029) ──────────────────────────────────
+    "analytics-service": {
+        "url": "http://localhost:8016/health",
+        "priority": "P3",
+        "named": "Analytics Service",
+    },
+    "search-service": {
+        "url": "http://localhost:8017/health",
+        "priority": "P3",
+        "named": "Search Service",
+    },
+    "email-service": {
+        "url": "http://localhost:8018/health",
+        "priority": "P3",
+        "named": "Email Service",
+    },
+    "sms-service": {
+        "url": "http://localhost:8019/health",
+        "priority": "P3",
+        "named": "SMS Service",
+    },
+    "storage-service": {
+        "url": "http://localhost:8020/health",
+        "priority": "P3",
+        "named": "Storage Service",
+    },
+    "cron-service": {
+        "url": "http://localhost:8021/health",
+        "priority": "P3",
+        "named": "ChronosSphere (Cron)",
+    },
+    "queue-service": {
+        "url": "http://localhost:8022/health",
+        "priority": "P3",
+        "named": "Queue Service",
+    },
+    "cache-service": {
+        "url": "http://localhost:8023/health",
+        "priority": "P3",
+        "named": "Cache Service",
+    },
+    "config-service": {
+        "url": "http://localhost:8024/health",
+        "priority": "P3",
+        "named": "Config Service",
+    },
+    "audit-service": {
+        "url": "http://localhost:8025/health",
+        "priority": "P3",
+        "named": "Audit Service",
+    },
+    "rate-limit-service": {
+        "url": "http://localhost:8026/health",
+        "priority": "P3",
+        "named": "Rate Limit Service",
+    },
+    "geo-service": {
+        "url": "http://localhost:8027/health",
+        "priority": "P3",
+        "named": "Geo Service",
+    },
+    "cdn-service": {
+        "url": "http://localhost:8028/health",
+        "priority": "P3",
+        "named": "CDN Service",
+    },
+    # ── P3 — Intelligence / AI Layer (8030–8038) ────────────────────────────
     "gbrain-bridge": {
         "url": "http://localhost:8030/health",
         "priority": "P3",
-        "named": "The Library (GBrain)",
+        "named": "The Library (GBrain Bridge)",
+    },
+    "topology-service": {
+        "url": "http://localhost:8031/health",
+        "priority": "P3",
+        "named": "Topology Service",
+    },
+    "ledger-service": {
+        "url": "http://localhost:8032/health",
+        "priority": "P3",
+        "named": "Ledger Service",
+    },
+    "model-router-service": {
+        "url": "http://localhost:8033/health",
+        "priority": "P3",
+        "named": "Model Router",
+    },
+    "workflow-engine-service": {
+        "url": "http://localhost:8034/health",
+        "priority": "P3",
+        "named": "Workflow Engine",
+    },
+    "skills-benchmark-service": {
+        "url": "http://localhost:8035/health",
+        "priority": "P3",
+        "named": "Skills Benchmark",
+    },
+    "langchain-integration-service": {
+        "url": "http://localhost:8036/health",
+        "priority": "P3",
+        "named": "LangChain Integration",
+    },
+    "deepagents-orchestrator-service": {
+        "url": "http://localhost:8037/health",
+        "priority": "P3",
+        "named": "DeepAgents Orchestrator",
+    },
+    "vault-service": {
+        "url": "http://localhost:8038/health",
+        "priority": "P3",
+        "named": "Vault Service (Secret Management)",
+    },
+    # ── Bots ────────────────────────────────────────────────────────────────
+    "tranc3-bots": {
+        "url": "http://localhost:8080/health",
+        "priority": "P1",
+        "named": "Tranc3 Bots",
     },
 }
 

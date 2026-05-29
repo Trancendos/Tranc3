@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import copy
 import random
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -19,6 +19,7 @@ import numpy as np
 @dataclass
 class GeneticConfig:
     """Configuration for the DNA Evolution Engine."""
+
     population_size: int = 50
     dna_length: int = 32
     mutation_rate: float = 0.1
@@ -29,25 +30,27 @@ class GeneticConfig:
     max_generations: int = 100
     diversity_threshold: float = 0.1
     adaptive_mutation: bool = True
-    dna_range: Tuple[float, float] = (-1.0, 1.0)
+    dna_range: tuple[float, float] = (-1.0, 1.0)
 
 
 @dataclass
 class Individual:
     """An individual in the evolutionary population."""
+
     dna: np.ndarray
     fitness: float = float("-inf")
     age: int = 0
-    metadata: Dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
     @property
-    def dna_list(self) -> List[float]:
+    def dna_list(self) -> list[float]:
         return self.dna.tolist()
 
 
 @dataclass
 class GenerationStats:
     """Statistics for a single generation."""
+
     generation: int
     best_fitness: float
     worst_fitness: float
@@ -64,12 +67,12 @@ class DNAEvolutionEngine:
     population diversity through injection and elitism.
     """
 
-    def __init__(self, config: Optional[GeneticConfig] = None):
+    def __init__(self, config: GeneticConfig | None = None):
         self.config = config or GeneticConfig()
-        self.population: List[Individual] = []
+        self.population: list[Individual] = []
         self.generation = 0
-        self._best_ever: Optional[Individual] = None
-        self._stats_history: List[GenerationStats] = []
+        self._best_ever: Individual | None = None
+        self._stats_history: list[GenerationStats] = []
         self._initialize_population()
 
     def _initialize_population(self) -> None:
@@ -94,7 +97,7 @@ class DNAEvolutionEngine:
         )
         return max(candidates, key=lambda ind: ind.fitness)
 
-    def crossover(self, parent1: Individual, parent2: Individual) -> Tuple[Individual, Individual]:
+    def crossover(self, parent1: Individual, parent2: Individual) -> tuple[Individual, Individual]:
         """Perform blended crossover between two parents."""
         if random.random() > self.config.crossover_rate:
             return copy.deepcopy(parent1), copy.deepcopy(parent2)
@@ -138,7 +141,9 @@ class DNAEvolutionEngine:
         self.population.sort(key=lambda ind: ind.fitness, reverse=True)
 
         # Elitism: keep top individuals
-        new_population = [copy.deepcopy(self.population[:self.config.elitism_count]) for _ in range(1)][0]
+        new_population = [
+            copy.deepcopy(self.population[: self.config.elitism_count]) for _ in range(1)
+        ][0]
 
         # Generate offspring
         while len(new_population) < self.config.population_size:
@@ -168,8 +173,8 @@ class DNAEvolutionEngine:
     def evolve(
         self,
         fitness_fn: Callable[[np.ndarray], float],
-        generations: Optional[int] = None,
-        callback: Optional[Callable[[int, GenerationStats], None]] = None,
+        generations: int | None = None,
+        callback: Callable[[int, GenerationStats], None] | None = None,
     ) -> GenerationStats:
         """Run evolution for multiple generations."""
         n_gens = generations or self.config.max_generations
@@ -218,13 +223,13 @@ class DNAEvolutionEngine:
                 distances.append(dist)
         return float(np.mean(distances)) if distances else 0.0
 
-    def best_individual(self) -> Optional[Individual]:
+    def best_individual(self) -> Individual | None:
         """Get the best individual in the current population."""
         if not self.population:
             return None
         return max(self.population, key=lambda ind: ind.fitness)
 
-    def best_ever(self) -> Optional[Individual]:
+    def best_ever(self) -> Individual | None:
         """Get the best individual ever seen."""
         return self._best_ever
 

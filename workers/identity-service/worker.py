@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 # ---------------------------------------------------------------------------
@@ -149,6 +149,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 STARTED_AT = datetime.now(timezone.utc)
 
 
@@ -162,13 +176,13 @@ async def health():
     }
 
 
-@app.get("/")
+@_router.get("/")
 async def list_all(limit: int = 50, offset: int = 0):
     """List all identities."""
     return {"data": db.list(limit=limit, offset=offset)}
 
 
-@app.post("/")
+@_router.post("/")
 async def create(data: Dict[str, Any]):
     """Create a new identities entry."""
     item_id = data.get("identity_id", str(uuid.uuid4()))
@@ -177,7 +191,7 @@ async def create(data: Dict[str, Any]):
     return {"ok": True, **created}
 
 
-@app.get("/{identity_id}")
+@_router.get("/{identity_id}")
 async def get_by_id(identity_id: str):
     """Get a identities entry by ID."""
     item = db.get("identity_id", identity_id)
@@ -186,7 +200,7 @@ async def get_by_id(identity_id: str):
     return item
 
 
-@app.patch("/{identity_id}")
+@_router.patch("/{identity_id}")
 async def update_by_id(identity_id: str, data: Dict[str, Any]):
     """Update a identities entry."""
     if not db.update("identity_id", identity_id, data):
@@ -194,7 +208,7 @@ async def update_by_id(identity_id: str, data: Dict[str, Any]):
     return {"ok": True}
 
 
-@app.delete("/{identity_id}")
+@_router.delete("/{identity_id}")
 async def delete_by_id(identity_id: str):
     """Delete a identities entry (soft delete)."""
     if not db.delete("identity_id", identity_id):
@@ -207,19 +221,19 @@ async def delete_by_id(identity_id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/by-user/{user_id}")
+@_router.get("/by-user/{user_id}")
 async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
     """List all identities for a given user across all providers."""
     return {"data": db.list(limit=limit, offset=offset, user_id=user_id)}
 
 
-@app.get("/by-provider/{provider}")
+@_router.get("/by-provider/{provider}")
 async def get_by_provider(provider: str, limit: int = 50, offset: int = 0):
     """List all identities registered via a specific OAuth provider."""
     return {"data": db.list(limit=limit, offset=offset, provider=provider)}
 
 
-@app.get("/by-provider/{provider}/{provider_id}")
+@_router.get("/by-provider/{provider}/{provider_id}")
 async def get_by_provider_id(provider: str, provider_id: str):
     """Lookup a specific identity by provider + provider_id (e.g. google + sub)."""
     conn = db._get_conn()
@@ -232,7 +246,7 @@ async def get_by_provider_id(provider: str, provider_id: str):
     return dict(row)
 
 
-@app.post("/{identity_id}/verify")
+@_router.post("/{identity_id}/verify")
 async def verify_identity(identity_id: str):
     """Mark an identity as verified."""
     if not db.update("identity_id", identity_id, {"verified": 1}):
@@ -240,7 +254,7 @@ async def verify_identity(identity_id: str):
     return {"ok": True, "verified": True}
 
 
-@app.post("/{identity_id}/unverify")
+@_router.post("/{identity_id}/unverify")
 async def unverify_identity(identity_id: str):
     """Remove verification from an identity."""
     if not db.update("identity_id", identity_id, {"verified": 0}):
@@ -248,7 +262,7 @@ async def unverify_identity(identity_id: str):
     return {"ok": True, "verified": False}
 
 
-@app.get("/search")
+@_router.get("/search")
 async def search_identities(
     email: Optional[str] = None,
     display_name: Optional[str] = None,
@@ -273,6 +287,9 @@ async def search_identities(
     params.extend([limit, offset])
     rows = conn.execute(query, params).fetchall()
     return {"data": [dict(r) for r in rows], "count": len(rows)}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

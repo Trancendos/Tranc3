@@ -2,10 +2,9 @@
 Tests for AeonMind Adaptive Meta-Learner.
 """
 
-import pytest
 import numpy as np
 
-from aeonmind.core.adaptive import AdaptiveMetaLearner, AdaptiveConfig
+from aeonmind.core.adaptive import AdaptiveConfig, AdaptiveMetaLearner
 
 
 class TestAdaptiveMetaLearner:
@@ -39,14 +38,17 @@ class TestAdaptiveMetaLearner:
     def test_optimize_quadratic(self):
         """Test optimization on a simple quadratic function."""
         n = 4
-        learner = AdaptiveMetaLearner(n, AdaptiveConfig(
-            learning_rate=0.1,
-            max_iterations=200,
-            tolerance=1e-6,
-        ))
+        learner = AdaptiveMetaLearner(
+            n,
+            AdaptiveConfig(
+                learning_rate=0.1,
+                max_iterations=200,
+                tolerance=1e-6,
+            ),
+        )
 
         def loss_fn(params):
-            return float(np.sum(params ** 2))
+            return float(np.sum(params**2))
 
         def grad_fn(params):
             return 2.0 * params

@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import os
 import re
 import sqlite3
 import time
@@ -33,7 +34,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
@@ -454,12 +455,25 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -482,7 +496,7 @@ async def health() -> Response:  # type: ignore[return-value]
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
-@app.post("/nodes", status_code=201)
+@_router.post("/nodes", status_code=201)
 async def create_node(body: NodeCreate) -> Response:  # type: ignore[return-value]
     node_id = str(uuid.uuid4())
     now = time.time()
@@ -510,7 +524,7 @@ async def create_node(body: NodeCreate) -> Response:  # type: ignore[return-valu
     return {"node_id": node_id, "title": body.title, "created_at": now}  # type: ignore[return-value]
 
 
-@app.get("/nodes/{node_id}")
+@_router.get("/nodes/{node_id}")
 async def get_node(node_id: str) -> Response:  # type: ignore[return-value]
     db = _db.conn()
     row = db.execute("SELECT * FROM nodes WHERE node_id = ?", (node_id,)).fetchone()
@@ -529,7 +543,7 @@ async def get_node(node_id: str) -> Response:  # type: ignore[return-value]
     return dict(row)  # type: ignore[return-value]
 
 
-@app.post("/edges", status_code=201)
+@_router.post("/edges", status_code=201)
 async def create_edge(body: EdgeCreate) -> Response:  # type: ignore[return-value]
     db = _db.conn()
     edge_id = str(uuid.uuid4())
@@ -545,7 +559,7 @@ async def create_edge(body: EdgeCreate) -> Response:  # type: ignore[return-valu
     return {"edge_id": edge_id, "source_id": body.source_id, "target_id": body.target_id}  # type: ignore[return-value]
 
 
-@app.post("/search")
+@_router.post("/search")
 async def search(body: SearchRequest) -> Response:  # type: ignore[return-value]
     db = _db.conn()
 
@@ -583,21 +597,21 @@ async def search(body: SearchRequest) -> Response:  # type: ignore[return-value]
     }
 
 
-@app.post("/pagerank/recompute")
+@_router.post("/pagerank/recompute")
 async def recompute_pagerank() -> Response:  # type: ignore[return-value]
     db = _db.conn()
     scores = _pagerank_engine.compute(db)
     return {"status": "recomputed", "node_count": len(scores)}  # type: ignore[return-value]
 
 
-@app.post("/consolidate")
+@_router.post("/consolidate")
 async def consolidate() -> Response:  # type: ignore[return-value]
     db = _db.conn()
     stats = consolidate_knowledge(db)
     return {"status": "consolidated", **stats}  # type: ignore[return-value]
 
 
-@app.get("/nodes/{node_id}/neighbourhood")
+@_router.get("/nodes/{node_id}/neighbourhood")
 async def get_neighbourhood(
     node_id: str,
     max_hops: int = Query(default=2, ge=1, le=4),
@@ -611,7 +625,7 @@ async def get_neighbourhood(
     return {"node_id": node_id, "neighbourhood": results, "total": len(results)}  # type: ignore[return-value]
 
 
-@app.get("/graph/stats")
+@_router.get("/graph/stats")
 async def graph_stats() -> Response:  # type: ignore[return-value]
     db = _db.conn()
     node_count = db.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
@@ -632,6 +646,9 @@ async def graph_stats() -> Response:  # type: ignore[return-value]
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
+app.include_router(_router)
+
 
 if __name__ == "__main__":
     import uvicorn

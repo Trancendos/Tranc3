@@ -26,7 +26,16 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
@@ -160,6 +169,19 @@ app.add_middleware(
 )
 
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
@@ -175,7 +197,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@app.post("/entries", response_model=LedgerEntryResponse, status_code=201)
+@_router.post("/entries", response_model=LedgerEntryResponse, status_code=201)
 async def append_entry(body: LedgerEntryCreate):
     conn = _get_db()
     now = _now()
@@ -215,7 +237,7 @@ async def append_entry(body: LedgerEntryCreate):
     )
 
 
-@app.get("/entries", response_model=List[LedgerEntryResponse])
+@_router.get("/entries", response_model=List[LedgerEntryResponse])
 async def query_entries(
     actor: Optional[str] = None,
     action: Optional[str] = None,
@@ -256,7 +278,7 @@ async def query_entries(
     ]
 
 
-@app.get("/entries/{entry_id}", response_model=LedgerEntryResponse)
+@_router.get("/entries/{entry_id}", response_model=LedgerEntryResponse)
 async def get_entry(entry_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM ledger_entries WHERE id=?", (entry_id,)).fetchone()
@@ -282,7 +304,7 @@ async def get_entry(entry_id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/verify")
+@_router.get("/verify")
 async def verify_chain():
     conn = _get_db()
     rows = conn.execute(
@@ -323,7 +345,7 @@ async def verify_chain():
     return result
 
 
-@app.get("/sentinel/history")
+@_router.get("/sentinel/history")
 async def sentinel_history(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
@@ -338,7 +360,7 @@ async def sentinel_history(limit: int = Query(50, ge=1, le=200), offset: int = Q
 # ---------------------------------------------------------------------------
 
 
-@app.get("/stats")
+@_router.get("/stats")
 async def get_stats():
     conn = _get_db()
     total = conn.execute("SELECT COUNT(*) as c FROM ledger_entries").fetchone()["c"]
@@ -410,7 +432,7 @@ async def _broadcast_event(event_type: str, data: dict) -> None:
         _connected_ws.remove(ws)
 
 
-@app.get("/events")
+@_router.get("/events")
 async def _sse_events():
     async def _generator():
         while True:
@@ -421,7 +443,7 @@ async def _sse_events():
     return EventSourceResponse(_generator())
 
 
-@app.get("/dashboard/summary")
+@_router.get("/dashboard/summary")
 async def _dashboard_summary():
     """Aggregated summary optimized for dashboard consumption."""
     stats = await _get_stats_async()
@@ -453,6 +475,9 @@ async def _get_stats_async() -> dict:
 def _get_stats() -> dict:
     """Return basic service stats for real-time endpoints (sync fallback)."""
     return {"service": SERVICE_NAME, "port": PORT}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":
