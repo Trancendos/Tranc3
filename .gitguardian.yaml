@@ -21,3 +21,9 @@ secret:
       match: "private_key_pem=os.environ"
     - name: OCI adaptive provider — MinIO admin default (dev-only, not production)
       match: "minioadmin"
+    - name: UAT seed script — demo passwords for disposable test fixtures only (not production)
+      match: "uat-demo-admin-2024!"
+    - name: UAT seed script — demo user password fixture
+      match: "uat-demo-user-2024!"
+    - name: UAT seed script — demo operator password fixture
+      match: "uat-demo-operator-2024!"

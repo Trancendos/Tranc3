@@ -30,22 +30,26 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # ── Demo fixtures ─────────────────────────────────────────────────────────────
+_UAT_ADMIN_PW = "uat-demo-admin-2024!"  # pragma: allowlist secret  # noqa: S105 — UAT fixture only
+_UAT_USER_PW = "uat-demo-user-2024!"  # pragma: allowlist secret  # noqa: S105 — UAT fixture only
+_UAT_OP_PW = "uat-demo-operator-2024!"  # pragma: allowlist secret  # noqa: S105 — UAT fixture only
+
 DEMO_USERS = [
     {
         "email": "demo-admin@uat.trancendos.internal",
-        "password": "uat-demo-admin-2024!",
+        "password": _UAT_ADMIN_PW,
         "username": "demo_admin",
         "role": "admin",
     },
     {
         "email": "demo-user@uat.trancendos.internal",
-        "password": "uat-demo-user-2024!",
+        "password": _UAT_USER_PW,
         "username": "demo_user",
         "role": "user",
     },
     {
         "email": "demo-operator@uat.trancendos.internal",
-        "password": "uat-demo-operator-2024!",
+        "password": _UAT_OP_PW,
         "username": "demo_operator",
         "role": "operator",
     },
