@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.example
+!.env.development.example
+!.env.uat.example
+!.env.production.example
 
 # Local sandbox CA cert (never commit)
 sandbox-ca.crt
