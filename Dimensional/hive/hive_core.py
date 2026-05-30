@@ -830,7 +830,7 @@ class Hive:
                     "bridge_type": "hive",
                 },
             },
-            "data_types": list(set(s.data_type for s in self._sources.values())),
+            "data_types": list({s.data_type for s in self._sources.values()}),
             "pillar_distribution": dict(
                 defaultdict(
                     int,

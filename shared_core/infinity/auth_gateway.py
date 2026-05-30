@@ -116,7 +116,7 @@ def _validate_jwt_token(
     The payload includes tier, role, and pillar claims for RBAC/ABAC.
     """
     try:
-        from jose import jwt, JWTError  # noqa: F401
+        from jose import JWTError, jwt  # noqa: F401
 
         payload = jwt.decode(token, secret, algorithms=[algorithm])
 

@@ -16,11 +16,11 @@ from .ecosystem_bridge import (
     BridgeConfig,
     BridgeEndpoint,
     BridgeTransport,
+    EcosystemBridge,
+    EcosystemEntity,
+    EcosystemRegistry,
     JsonRpcRequest,
     JsonRpcResponse,
-    EcosystemBridge,
-    EcosystemRegistry,
-    EcosystemEntity,
 )
 
 __all__ = [

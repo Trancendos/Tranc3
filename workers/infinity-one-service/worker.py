@@ -41,6 +41,13 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
+# Phase 22.4: Dimensional Services
+from shared_core.dimensionals import (
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
+)
+
 # Phase 22: Infinity Ecosystem security
 from shared_core.infinity.auth_gateway import AuthGatewayMiddleware
 from shared_core.infinity.nomenclature import (
@@ -53,13 +60,6 @@ from shared_core.infinity.rbac import RBACEngine
 from shared_core.infinity.sentinel_station import (
     SentinelEvent,
     get_sentinel_station,
-)
-
-# Phase 22.4: Dimensional Services
-from shared_core.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
 )
 
 # Phase 22.6: Smart Adaptive Intelligence
@@ -506,8 +506,10 @@ async def create_identity(request: Request, identity: IdentityCreate):
 
     # Determine tier and infinity_role from role
     from shared_core.infinity.nomenclature import (
-        get_tier_for_role as _gtr,
         get_infinity_role_for_role as _girr,
+    )
+    from shared_core.infinity.nomenclature import (
+        get_tier_for_role as _gtr,
     )
 
     tier = _gtr(identity.role)
@@ -675,8 +677,10 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
         params.append(update.role)
         # Update tier and infinity_role based on new role
         from shared_core.infinity.nomenclature import (
-            get_tier_for_role as _gtr,
             get_infinity_role_for_role as _girr,
+        )
+        from shared_core.infinity.nomenclature import (
+            get_tier_for_role as _gtr,
         )
 
         tier = _gtr(update.role)

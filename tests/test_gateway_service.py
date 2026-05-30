@@ -22,7 +22,6 @@ import tempfile
 import pytest
 from fastapi.testclient import TestClient
 
-
 # ---------------------------------------------------------------------------
 # Test API Key — configured via API_KEYS env var before importing the worker
 # Format: "key:name:tier:role" — this gives full admin access for testing

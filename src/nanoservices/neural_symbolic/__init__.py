@@ -4,20 +4,20 @@ Hybrid neuro-symbolic reasoning with forward/backward chaining.
 """
 
 from .neural_symbolic import (
-    LogicType,
-    InferenceDirection,
-    ReasoningStatus,
-    Symbol,
-    Predicate,
-    Rule,
+    BackwardChainer,
     Fact,
+    ForwardChainer,
+    InferenceDirection,
+    KnowledgeBase,
+    LogicType,
+    NeuralPredicateEvaluator,
+    NeuralSymbolicReasoner,
+    Predicate,
     ProofStep,
     ReasoningResult,
-    KnowledgeBase,
-    NeuralPredicateEvaluator,
-    ForwardChainer,
-    BackwardChainer,
-    NeuralSymbolicReasoner,
+    ReasoningStatus,
+    Rule,
+    Symbol,
 )
 
 __all__ = [

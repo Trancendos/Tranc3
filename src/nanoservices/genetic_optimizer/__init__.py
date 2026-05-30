@@ -4,13 +4,13 @@ Genetic Optimizer — DEAP-based Adaptive Optimization Package
 """
 
 from .genetic_optimizer import (
-    OptimizationStatus,
-    ObjectiveType,
-    Objective,
     GeneSpec,
-    Individual,
-    OptimizationResult,
     GeneticOptimizer,
+    Individual,
+    Objective,
+    ObjectiveType,
+    OptimizationResult,
+    OptimizationStatus,
 )
 
 __all__ = [

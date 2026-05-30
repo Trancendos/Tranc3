@@ -55,9 +55,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+from Dimensional.infinity.abac import ABACEngine
 from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.infinity.rbac import RBACEngine
-from Dimensional.infinity.abac import ABACEngine
 
 logger = logging.getLogger("nexus")
 
@@ -1264,7 +1264,7 @@ def create_nexus_app() -> FastAPI:
     @app.get("/pillars/tiers", tags=["pillars"])
     async def pillar_tiers():
         """Get pillar entities grouped by tier."""
-        from Dimensional.pillars.entities import get_pillar_registry, EntityTier
+        from Dimensional.pillars.entities import EntityTier, get_pillar_registry
 
         registry = get_pillar_registry()
         result = {}

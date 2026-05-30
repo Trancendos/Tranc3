@@ -1,16 +1,16 @@
 """Unified Reality Kernel — Phase 11"""
 
 from .unified_reality_kernel import (
-    RealityLayer,
-    SyncMode,
-    KernelState,
     ConsistencyLevel,
-    EntityType,
-    RealityEntity,
     CrossRealityMapping,
-    RealityEvent,
-    StateSynchronizer,
+    EntityType,
     EventPropagator,
+    KernelState,
+    RealityEntity,
+    RealityEvent,
+    RealityLayer,
+    StateSynchronizer,
+    SyncMode,
     UnifiedRealityKernelService,
 )
 

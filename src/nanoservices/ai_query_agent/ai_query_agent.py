@@ -453,7 +453,7 @@ class AIQueryAgent:
 
         if not results:
             issues.append("empty_result")
-        if len(results) != len(set(str(r) for r in results)):
+        if len(results) != len({str(r) for r in results}):
             issues.append("duplicates_found")
 
         is_valid = len(issues) == 0
