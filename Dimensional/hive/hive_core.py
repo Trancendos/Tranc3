@@ -53,9 +53,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from src.errors.error_catalog import ErrorCode, format_error_response
 
 from Dimensional.infinity.nomenclature import (
     SentinelChannel,
@@ -971,7 +973,19 @@ def create_hive_app() -> FastAPI:
     ):
         """Register a data source with the HIVE."""
         hive = get_hive()
-        meta = json.loads(metadata) if metadata else {}
+        try:
+            meta = json.loads(metadata) if metadata else {}
+        except json.JSONDecodeError:
+            logger.warning(
+                "register_source rejected malformed metadata",
+                extra={"error_code": ErrorCode.SYS_INVALID_INPUT, "name": name},
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=format_error_response(
+                    ErrorCode.SYS_INVALID_INPUT, "metadata must be valid JSON"
+                ),
+            )
         source = await hive.register_source(
             name=name, data_type=data_type, pillar=pillar, metadata=meta
         )
@@ -989,7 +1003,19 @@ def create_hive_app() -> FastAPI:
     async def register_sink(name: str, data_type: str, pillar: str, metadata: Optional[str] = None):
         """Register a data sink with the HIVE."""
         hive = get_hive()
-        meta = json.loads(metadata) if metadata else {}
+        try:
+            meta = json.loads(metadata) if metadata else {}
+        except json.JSONDecodeError:
+            logger.warning(
+                "register_sink rejected malformed metadata",
+                extra={"error_code": ErrorCode.SYS_INVALID_INPUT, "name": name},
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=format_error_response(
+                    ErrorCode.SYS_INVALID_INPUT, "metadata must be valid JSON"
+                ),
+            )
         sink = await hive.register_sink(
             name=name, data_type=data_type, pillar=pillar, metadata=meta
         )

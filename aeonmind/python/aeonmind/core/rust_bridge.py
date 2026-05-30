@@ -30,7 +30,7 @@ def has_rust_bindings() -> bool:
 def rust_version() -> str | None:
     """Get the Rust extension module version, if available."""
     try:
-        import _aeonmind_rust
+        import _aeonmind_rust  # noqa: F401
 
         return getattr(_aeonmind_rust, "__version__", None)
     except ImportError:
@@ -55,13 +55,13 @@ class RustLiquidReservoir:
 
         if has_rust_bindings():
             try:
-                import _aeonmind_rust
+                import _aeonmind_rust  # noqa: F401
 
                 self._rust_impl = _aeonmind_rust.RustLiquidReservoir(
                     input_size=self.config.input_size,
                     reservoir_size=self.config.reservoir_size,
                     spectral_radius=self.config.spectral_radius,
-                    leaking_rate=self.config.leaking_rate,
+                    leak_rate=self.config.leaking_rate,
                 )
             except Exception:
                 self._rust_impl = None
@@ -96,7 +96,7 @@ class RustEvolutionEngine:
 
         if has_rust_bindings():
             try:
-                import _aeonmind_rust
+                import _aeonmind_rust  # noqa: F401
 
                 self._rust_impl = _aeonmind_rust.RustEvolutionEngine(
                     population_size=self.config.population_size,
@@ -130,7 +130,7 @@ class RustQuantumCircuit:
 
         if has_rust_bindings():
             try:
-                import _aeonmind_rust
+                import _aeonmind_rust  # noqa: F401
 
                 self._rust_impl = _aeonmind_rust.RustQuantumCircuit(
                     n_qubits=self.config.n_qubits,
@@ -162,7 +162,7 @@ class RustAdaptiveLearner:
 
         if has_rust_bindings():
             try:
-                import _aeonmind_rust
+                import _aeonmind_rust  # noqa: F401
 
                 self._rust_impl = _aeonmind_rust.RustAdaptiveLearner(
                     n_params=n_params,
@@ -176,7 +176,8 @@ class RustAdaptiveLearner:
 
     def step(self, gradient: np.ndarray) -> np.ndarray:
         if self._rust_impl is not None:
-            return np.array(self._rust_impl.step(gradient.tolist()))
+            self._rust_impl.step(gradient.tolist())
+            return np.array(self._rust_impl.parameters())
         self._python_impl.step(gradient)
         return self._python_impl.parameters
 

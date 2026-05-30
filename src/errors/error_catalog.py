@@ -84,6 +84,7 @@ class ErrorCode(str, Enum):
     # System
     SYS_REDIS_UNAVAILABLE = "TRANC3-SYS-001"
     SYS_STARTUP_FAILED = "TRANC3-SYS-002"
+    SYS_INVALID_INPUT = "TRANC3-SYS-003"
     SYS_UNKNOWN = "TRANC3-SYS-999"
 
 
@@ -482,6 +483,15 @@ CATALOG: Dict[ErrorCode, ErrorDefinition] = {
         guidance="Check application logs for the failing component. Run the startup validator: 'python -c \"from src.core.startup_validator import validate_startup; validate_startup()\"'.",
         docs_url="/docs/errors/TRANC3-SYS-002",
         severity="critical",
+    ),
+    ErrorCode.SYS_INVALID_INPUT: ErrorDefinition(
+        code=ErrorCode.SYS_INVALID_INPUT,
+        http_status=400,
+        title="Invalid Input",
+        message="The request contained invalid or malformed input.",
+        guidance="Check the request body and query parameters. Ensure JSON fields are valid and all required fields are present.",
+        docs_url="/docs/errors/TRANC3-SYS-003",
+        severity="warning",
     ),
     ErrorCode.SYS_UNKNOWN: ErrorDefinition(
         code=ErrorCode.SYS_UNKNOWN,

@@ -9,8 +9,6 @@
 # Local sandbox CA cert (never commit)
 sandbox-ca.crt
 
-# Generated protobuf Go files (CI regenerates via protoc at build time)
-aeonmind/go/proto/*.pb.go
 
 # Python
 __pycache__/

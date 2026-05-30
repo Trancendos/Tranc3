@@ -119,7 +119,7 @@ class QuantumDecisionCircuit:
         @qml.qnode(dev)
         def circuit(params_flat):
             idx = 0
-            for layer in range(n_layers):
+            for _layer in range(n_layers):
                 for qubit in range(n_qubits):
                     for r in range(rotations_per_layer):
                         if idx >= len(params_flat):
@@ -154,7 +154,7 @@ class QuantumDecisionCircuit:
 
         # Apply parameterized layers
         idx = 0
-        for layer in range(self.config.n_layers):
+        for _layer in range(self.config.n_layers):
             for qubit in range(n):
                 for r in range(self.config.rotations_per_layer):
                     if idx >= len(self._parameters):
@@ -180,38 +180,36 @@ class QuantumDecisionCircuit:
 
     def _apply_rx(self, state: np.ndarray, qubit: int, n: int, angle: float) -> np.ndarray:
         """Apply Rx gate to the given qubit."""
+        dim = 2**n
         cos_a = math.cos(angle / 2)
         sin_a = math.sin(angle / 2)
-        dim = 2**n
-        new_state = np.zeros_like(state)
-        for i in range(dim):
-            bit = (i >> (n - 1 - qubit)) & 1
-            j = i ^ (1 << (n - 1 - qubit))  # flip the qubit
-            if bit == 0:
-                new_state[i] += cos_a * state[i]
-                new_state[j] += -1j * sin_a * state[j]
-            # bit == 1 is handled by the flip
-        return new_state
-
-    def _apply_ry(self, state: np.ndarray, qubit: int, n: int, angle: float) -> np.ndarray:
-        """Apply Ry gate to the given qubit."""
-        cos_a = math.cos(angle / 2)
-        sin_a = math.sin(angle / 2)
-        dim = 2**n
         new_state = np.zeros_like(state)
         for i in range(dim):
             bit = (i >> (n - 1 - qubit)) & 1
             j = i ^ (1 << (n - 1 - qubit))
             if bit == 0:
-                new_state[i] += cos_a * state[i]
-                new_state[j] += sin_a * state[j]
-            # bit == 1 handled by the flip
+                new_state[i] = cos_a * state[i] - 1j * sin_a * state[j]
+                new_state[j] = -1j * sin_a * state[i] + cos_a * state[j]
+        return new_state
+
+    def _apply_ry(self, state: np.ndarray, qubit: int, n: int, angle: float) -> np.ndarray:
+        """Apply Ry gate to the given qubit."""
+        dim = 2**n
+        cos_a = math.cos(angle / 2)
+        sin_a = math.sin(angle / 2)
+        new_state = np.zeros_like(state)
+        for i in range(dim):
+            bit = (i >> (n - 1 - qubit)) & 1
+            j = i ^ (1 << (n - 1 - qubit))
+            if bit == 0:
+                new_state[i] = cos_a * state[i] - sin_a * state[j]
+                new_state[j] = sin_a * state[i] + cos_a * state[j]
         return new_state
 
     def _apply_rz(self, state: np.ndarray, qubit: int, n: int, angle: float) -> np.ndarray:
         """Apply Rz gate to the given qubit."""
-        new_state = state.copy()
         dim = 2**n
+        new_state = state.copy()
         for i in range(dim):
             bit = (i >> (n - 1 - qubit)) & 1
             if bit == 1:
@@ -232,7 +230,6 @@ class QuantumDecisionCircuit:
     def _apply_entangling_numpy(self, state: np.ndarray, n: int) -> np.ndarray:
         """Apply entangling CNOT gates based on strategy."""
         new_state = state.copy()
-        2**n
 
         if self.config.entangling_strategy == EntanglingStrategy.LINEAR:
             pairs = [(i, i + 1) for i in range(n - 1)]
@@ -252,8 +249,8 @@ class QuantumDecisionCircuit:
 
     def _apply_cnot_numpy(self, state: np.ndarray, control: int, target: int, n: int) -> np.ndarray:
         """Apply CNOT gate using state-vector manipulation."""
-        new_state = state.copy()
         dim = 2**n
+        new_state = state.copy()
         for i in range(dim):
             control_bit = (i >> (n - 1 - control)) & 1
             if control_bit == 1:
@@ -342,7 +339,7 @@ class QuantumDecisionCircuit:
         Uses the parameter shift rule for gradients with adaptive
         learning rate and gradient clipping.
         """
-        for step in range(n_steps):
+        for _step in range(n_steps):
             # Execute circuit
             self.execute(use_pennylane=False)
 

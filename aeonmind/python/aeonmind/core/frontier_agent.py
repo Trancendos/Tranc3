@@ -104,10 +104,11 @@ class FrontierAgent:
         reservoir_state = self.reservoir.step(input_data)
 
         # Step 2: Quantum decision
-        self.quantum._parameters = (
-            reservoir_state[: len(self.quantum._parameters)]
-            if len(reservoir_state) >= len(self.quantum._parameters)
-            else np.pad(reservoir_state, (0, len(self.quantum._parameters) - len(reservoir_state)))
+        n_params = len(self.quantum.parameters)
+        self.quantum.parameters = (
+            reservoir_state[:n_params]
+            if len(reservoir_state) >= n_params
+            else np.pad(reservoir_state, (0, n_params - len(reservoir_state)))
         )
         probabilities = self.quantum.execute(use_pennylane=False)
         action = int(np.argmax(probabilities[: self.config.action_dim]))
