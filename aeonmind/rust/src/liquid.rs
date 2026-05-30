@@ -11,7 +11,7 @@ Implements a Liquid Reservoir with:
 Part of the Tranc3 Infinity Ecosystem.
 */
 
-use ndarray::{Array1, Array2, Ix2};
+use ndarray::{Array1, Array2};
 use ndarray_rand::RandomExt;
 use rand::distributions::Uniform;
 use rand::Rng;
@@ -107,12 +107,11 @@ impl LiquidReservoir {
         let current_spectral_radius = config.spectral_radius;
 
         // Random input weights
-        let input_weights = Array2::random((n, m), Uniform::new(-1.0, 1.0))
-            .mapv(|v| v * config.input_scaling);
+        let input_weights =
+            Array2::random((n, m), Uniform::new(-1.0, 1.0)).mapv(|v| v * config.input_scaling);
 
         // Bias
-        let bias = Array1::random(n, Uniform::new(-1.0, 1.0))
-            .mapv(|v| v * config.bias_scaling);
+        let bias = Array1::random(n, Uniform::new(-1.0, 1.0)).mapv(|v| v * config.bias_scaling);
 
         Self {
             config,
@@ -128,9 +127,8 @@ impl LiquidReservoir {
     /// Process one time step through the reservoir.
     pub fn step(&mut self, input: &[f64]) -> Array1<f64> {
         let input_arr = Array1::from_vec(input.to_vec());
-        let pre_activation = self.weights.dot(&self.state)
-            + self.input_weights.dot(&input_arr)
-            + &self.bias;
+        let pre_activation =
+            self.weights.dot(&self.state) + self.input_weights.dot(&input_arr) + &self.bias;
 
         let new_state = (1.0 - self.config.leak_rate) * &self.state
             + self.config.leak_rate * pre_activation.mapv(tanh_activation);
@@ -200,7 +198,7 @@ impl LiquidReservoir {
         let regularized = sts + ridge_param * identity;
 
         // Simple inverse via Gauss-Jordan (for small matrices)
-        let inv = simple_inverse(&regularized).unwrap_or(identity);
+        let inv = simple_inverse(&regularized).unwrap_or_else(|| Array2::<f64>::eye(n_reservoir));
         let readout = inv.dot(&s_matrix.t().dot(&t_matrix));
 
         readout
@@ -214,6 +212,10 @@ impl LiquidReservoir {
             self.weights.mapv_inplace(|v| v * scale);
             self.current_spectral_radius = target;
         }
+    }
+
+    pub fn spectral_radius(&self) -> f64 {
+        self.current_spectral_radius
     }
 
     /// Get the current fluidic state.
@@ -271,14 +273,16 @@ fn compute_approximate_entropy(state: &Array1<f64>) -> f64 {
     if state.is_empty() {
         return 0.0;
     }
-    let n = state.len() as f64;
+    let _n = state.len() as f64;
     let sum_sq: f64 = state.mapv(|v| v * v).sum();
     if sum_sq == 0.0 {
         return 0.0;
     }
     // Approximate entropy via normalized energy distribution
     let probs = state.mapv(|v| (v * v) / sum_sq);
-    probs.mapv(|p| if p > 0.0 { -p * p.ln() } else { 0.0 }).sum()
+    probs
+        .mapv(|p| if p > 0.0 { -p * p.ln() } else { 0.0 })
+        .sum()
 }
 
 fn simple_inverse(matrix: &Array2<f64>) -> Option<Array2<f64>> {
