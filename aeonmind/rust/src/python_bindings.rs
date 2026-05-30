@@ -188,9 +188,8 @@ impl PyAdaptiveLearner {
         }
     }
 
-    fn step(&mut self, gradient: Vec<f64>) -> Vec<f64> {
+    fn step(&mut self, gradient: Vec<f64>) {
         self.inner.step(&gradient);
-        self.inner.parameters_array().to_vec()
     }
 
     fn parameters(&self) -> Vec<f64> {

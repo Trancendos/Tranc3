@@ -11,7 +11,7 @@ name = "aeonmind_core"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
+pyo3 = { version = "0.24", features = ["extension-module"], optional = true }
 ndarray = "0.16"
 ndarray-rand = "0.15"
 rand = "0.8"

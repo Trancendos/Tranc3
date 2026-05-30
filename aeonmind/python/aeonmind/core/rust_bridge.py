@@ -61,7 +61,7 @@ class RustLiquidReservoir:
                     input_size=self.config.input_size,
                     reservoir_size=self.config.reservoir_size,
                     spectral_radius=self.config.spectral_radius,
-                    leaking_rate=self.config.leaking_rate,
+                    leak_rate=self.config.leaking_rate,
                 )
             except Exception:
                 self._rust_impl = None
@@ -176,7 +176,8 @@ class RustAdaptiveLearner:
 
     def step(self, gradient: np.ndarray) -> np.ndarray:
         if self._rust_impl is not None:
-            return np.array(self._rust_impl.step(gradient.tolist()))
+            self._rust_impl.step(gradient.tolist())
+            return np.array(self._rust_impl.parameters())
         self._python_impl.step(gradient)
         return self._python_impl.parameters
 
