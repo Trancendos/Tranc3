@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
@@ -156,6 +156,19 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 POLICY_HEADERS = {
     "immutable": CACHE_IMMUTABLE,
     "long": CACHE_LONG,
@@ -188,7 +201,7 @@ async def health():
     }
 
 
-@app.get("/assets")
+@_router.get("/assets")
 async def list_assets(
     prefix: Optional[str] = None,
     limit: int = 100,
@@ -208,7 +221,7 @@ async def list_assets(
     return {"assets": [dict(r) for r in rows]}
 
 
-@app.get("/assets/stats")
+@_router.get("/assets/stats")
 async def asset_stats():
     with get_conn() as conn:
         by_policy = conn.execute(
@@ -220,7 +233,7 @@ async def asset_stats():
     return {"by_policy": [dict(r) for r in by_policy], "top_assets": [dict(r) for r in top]}
 
 
-@app.get("/static/{path:path}")
+@_router.get("/static/{path:path}")
 async def serve_asset(
     path: str,
     request: Request,
@@ -284,7 +297,7 @@ async def serve_asset(
     )
 
 
-@app.post("/register")
+@_router.post("/register")
 async def register_asset(req: AssetRegister):
     full_path = ASSETS_ROOT / req.path.lstrip("/")
     if not full_path.exists():
@@ -299,7 +312,7 @@ async def register_asset(req: AssetRegister):
     return {"registered": req.path, **meta}
 
 
-@app.get("/serve-log/{path:path}")
+@_router.get("/serve-log/{path:path}")
 async def serve_log(path: str, limit: int = 50):
     asset_path = f"/{path}"
     with get_conn() as conn:
@@ -308,6 +321,9 @@ async def serve_log(path: str, limit: int = 50):
             (asset_path, limit),
         ).fetchall()
     return {"path": asset_path, "log": [dict(r) for r in rows]}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

@@ -97,7 +97,7 @@ class TestDigitalGridSmoke:
         async def _run():
             await bus.publish("smoke.event", {"ping": True})
 
-        asyncio.get_event_loop().run_until_complete(_run())
+        asyncio.run(_run())
         _log.info("grid.smoke event_bus received=%d", len(received))
         assert received
         assert received[0]["data"]["ping"] is True

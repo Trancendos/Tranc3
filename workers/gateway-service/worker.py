@@ -71,7 +71,13 @@ from Dimensional.dimensionals import (
 DB_PATH = os.environ.get("GATEWAY_DB_PATH", "data/gateway.db")
 PORT = int(os.environ.get("GATEWAY_PORT", "8040"))
 CACHE_TTL = int(os.environ.get("GATEWAY_CACHE_TTL", "5"))
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. This service cannot validate tokens without it. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 
 UPSTREAM_WORKERS = {
     "vault": {"port": 8030, "health": "/health", "stats": "/stats"},

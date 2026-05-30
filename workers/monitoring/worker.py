@@ -10,6 +10,7 @@ Zero-cost: All data stored in SQLite, no external metrics services required.
 """
 
 from __future__ import annotations
+import os
 
 import json
 import logging
@@ -23,7 +24,16 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -519,6 +529,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 STARTED_AT = datetime.now(timezone.utc)
 
 
@@ -546,7 +570,7 @@ async def health():
     }
 
 
-@app.get("/stats")
+@_router.get("/stats")
 async def stats():
     """Overview statistics for the monitoring system."""
     services = db.get_latest_health()
@@ -578,13 +602,13 @@ async def submit_health_report(report: HealthReport):
     return {"ok": True, "service": report.service_name, "status": report.status.value}
 
 
-@app.get("/health/services")
+@_router.get("/health/services")
 async def list_service_health():
     """Get latest health status for all services."""
     return {"services": db.get_latest_health()}
 
 
-@app.get("/health/services/{service_name}")
+@_router.get("/health/services/{service_name}")
 async def get_service_health(service_name: str, hours: int = Query(24, ge=1, le=168)):
     """Get health history for a specific service."""
     history = db.get_health_history(service_name, hours=hours)
@@ -598,7 +622,7 @@ async def get_service_health(service_name: str, hours: int = Query(24, ge=1, le=
 # ---------------------------------------------------------------------------
 
 
-@app.post("/metrics")
+@_router.post("/metrics")
 async def submit_metric(metric: MetricPayload):
     """Submit a single metric data point."""
     db.store_metric(metric)
@@ -607,7 +631,7 @@ async def submit_metric(metric: MetricPayload):
     return {"ok": True, "name": metric.name, "value": metric.value}
 
 
-@app.post("/metrics/batch")
+@_router.post("/metrics/batch")
 async def submit_metrics_batch(metrics: List[MetricPayload]):
     """Submit multiple metric data points at once."""
     db.store_metrics_batch(metrics)
@@ -617,13 +641,13 @@ async def submit_metrics_batch(metrics: List[MetricPayload]):
     return {"ok": True, "count": len(metrics)}
 
 
-@app.get("/metrics/names")
+@_router.get("/metrics/names")
 async def list_metric_names():
     """List all distinct metric names."""
     return {"names": db.get_metric_names()}
 
 
-@app.get("/metrics/query")
+@_router.get("/metrics/query")
 async def query_metrics(
     name: str = Query(..., description="Metric name"),
     hours: int = Query(1, ge=1, le=168),
@@ -640,7 +664,7 @@ async def query_metrics(
 # ---------------------------------------------------------------------------
 
 
-@app.post("/alerts/rules")
+@_router.post("/alerts/rules")
 async def create_alert_rule(rule: AlertRule):
     """Create a new alert rule."""
     created = db.create_alert_rule(rule)
@@ -648,13 +672,13 @@ async def create_alert_rule(rule: AlertRule):
     return {"ok": True, "rule": created}
 
 
-@app.get("/alerts/rules")
+@_router.get("/alerts/rules")
 async def list_alert_rules(enabled_only: bool = False):
     """List all alert rules."""
     return {"rules": db.get_alert_rules(enabled_only=enabled_only)}
 
 
-@app.delete("/alerts/rules/{rule_id}")
+@_router.delete("/alerts/rules/{rule_id}")
 async def delete_alert_rule(rule_id: str):
     """Delete an alert rule."""
     if not db.delete_alert_rule(rule_id):
@@ -667,7 +691,7 @@ async def delete_alert_rule(rule_id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/alerts")
+@_router.get("/alerts")
 async def list_alerts(
     state: Optional[AlertState] = None,
     hours: int = Query(168, ge=1, le=720),
@@ -676,7 +700,7 @@ async def list_alerts(
     return {"alerts": db.get_alerts(state=state, hours=hours)}
 
 
-@app.post("/alerts/{alert_id}/resolve")
+@_router.post("/alerts/{alert_id}/resolve")
 async def resolve_alert(alert_id: str):
     """Manually resolve an alert."""
     if not db.resolve_alert(alert_id):
@@ -727,7 +751,7 @@ KNOWN_SERVICES = [
 ]
 
 
-@app.post("/monitoring/collect")
+@_router.post("/monitoring/collect")
 async def collect_health():
     """Trigger health collection from all known services. Called by scheduler or manually."""
     import urllib.error
@@ -765,6 +789,9 @@ async def collect_health():
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
+app.include_router(_router)
+
 
 if __name__ == "__main__":
     import uvicorn

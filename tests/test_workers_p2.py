@@ -178,7 +178,9 @@ class TestGridHTTPEndpoints:
         test_engine = grid_mod.WorkflowEngine(test_db)
 
         with patch.object(grid_mod, "db", test_db), patch.object(grid_mod, "engine", test_engine):
-            client = TestClient(grid_mod.app)
+            secret = getattr(grid_mod, "_INTERNAL_SECRET", "")
+            headers = {"X-Internal-Secret": secret} if secret else {}
+            client = TestClient(grid_mod.app, headers=headers)
             yield client
 
     def test_health_endpoint(self, grid_client):
@@ -329,7 +331,9 @@ class TestGenericCRUDWorker:
         db_path = tmp_path / "test_products.db"
         test_db = products_mod.ProductsDatabase(db_path=db_path)
         with patch.object(products_mod, "db", test_db):
-            client = TestClient(products_mod.app)
+            secret = getattr(products_mod, "_INTERNAL_SECRET", "")
+            headers = {"X-Internal-Secret": secret} if secret else {}
+            client = TestClient(products_mod.app, headers=headers)
             yield client
 
     @pytest.fixture
@@ -337,7 +341,9 @@ class TestGenericCRUDWorker:
         db_path = tmp_path / "test_orders.db"
         test_db = orders_mod.OrdersDatabase(db_path=db_path)
         with patch.object(orders_mod, "db", test_db):
-            client = TestClient(orders_mod.app)
+            secret = getattr(orders_mod, "_INTERNAL_SECRET", "")
+            headers = {"X-Internal-Secret": secret} if secret else {}
+            client = TestClient(orders_mod.app, headers=headers)
             yield client
 
     @pytest.fixture
@@ -345,7 +351,9 @@ class TestGenericCRUDWorker:
         db_path = tmp_path / "test_payments.db"
         test_db = payments_mod.PaymentsDatabase(db_path=db_path)
         with patch.object(payments_mod, "db", test_db):
-            client = TestClient(payments_mod.app)
+            secret = getattr(payments_mod, "_INTERNAL_SECRET", "")
+            headers = {"X-Internal-Secret": secret} if secret else {}
+            client = TestClient(payments_mod.app, headers=headers)
             yield client
 
     @pytest.fixture
@@ -353,7 +361,9 @@ class TestGenericCRUDWorker:
         db_path = tmp_path / "test_files.db"
         test_db = files_mod.FilesDatabase(db_path=db_path)
         with patch.object(files_mod, "db", test_db):
-            client = TestClient(files_mod.app)
+            secret = getattr(files_mod, "_INTERNAL_SECRET", "")
+            headers = {"X-Internal-Secret": secret} if secret else {}
+            client = TestClient(files_mod.app, headers=headers)
             yield client
 
     @pytest.fixture
@@ -361,7 +371,9 @@ class TestGenericCRUDWorker:
         db_path = tmp_path / "test_identity.db"
         test_db = identity_mod.IdentitiesDatabase(db_path=db_path)
         with patch.object(identity_mod, "db", test_db):
-            client = TestClient(identity_mod.app)
+            secret = getattr(identity_mod, "_INTERNAL_SECRET", "")
+            headers = {"X-Internal-Secret": secret} if secret else {}
+            client = TestClient(identity_mod.app, headers=headers)
             yield client
 
     # Products Service Tests

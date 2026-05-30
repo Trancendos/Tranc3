@@ -49,7 +49,7 @@ OWASP Alignment:
     A10 (SSRF): All Sentinel channel names are validated against SentinelChannel enum
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import asyncio
 import logging

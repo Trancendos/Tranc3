@@ -642,6 +642,7 @@ class TestOWASPHardening:
     def test_csrf_cookie_set(self, client):
         """CSRF token cookie should be set on responses."""
         res = client.get("/health")
+        # CSRF token is set via cookie
         # The CSRF cookie may or may not be set depending on config
         # Just verify the response is successful
         assert res.status_code == 200

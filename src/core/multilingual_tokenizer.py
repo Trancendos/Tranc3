@@ -1,14 +1,37 @@
 # src/core/multilingual_tokenizer.py
 # TRANC3 Full Multilingual Engine
+from __future__ import annotations
 
 import logging
 from typing import Dict, List
 
-import langdetect
-import torch
-from transformers import AutoTokenizer
-
 from Dimensional.sanitize import sanitize_for_log
+
+try:
+    import langdetect as langdetect
+
+    _LANGDETECT_AVAILABLE = True
+except ImportError:
+    langdetect = None  # type: ignore[assignment]
+    _LANGDETECT_AVAILABLE = False
+
+try:
+    import torch
+
+    _TORCH_AVAILABLE = True
+except ImportError:
+    import types as _types
+
+    torch = _types.SimpleNamespace()  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+
+try:
+    from transformers import AutoTokenizer
+
+    _TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    AutoTokenizer = None  # type: ignore[assignment]
+    _TRANSFORMERS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 

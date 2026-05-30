@@ -386,7 +386,7 @@ async def test_fmd_distiller_job():
 
 @phase7_test("DaaS Stream: create stream and publish")
 async def test_daas_stream_basic():
-    from nanoservices.daas_stream import (
+    from nanoservices.daas_stream import (  # noqa: I001
         DaaSService,
         StreamConfig,
         StreamRecord,

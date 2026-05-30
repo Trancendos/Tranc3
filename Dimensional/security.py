@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 # Lazy imports for heavy crypto dependencies
 _jose = None
-_passlib = None
 
 
 def _get_jose():  # type: ignore[return]
@@ -26,14 +25,24 @@ def _get_jose():  # type: ignore[return]
     return _jose
 
 
-def _get_passlib():  # type: ignore[return]
-    """Lazily import and cache passlib's CryptContext."""
-    global _passlib
-    if _passlib is None:
-        from passlib.context import CryptContext
+class _BcryptContext:
+    """Minimal bcrypt wrapper replacing passlib.CryptContext — avoids crypt DeprecationWarning."""
 
-        _passlib = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    return _passlib
+    def hash(self, password: str) -> str:
+        import bcrypt
+
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+    def verify(self, plain: str, hashed: str) -> bool:
+        import bcrypt
+
+        try:
+            return bcrypt.checkpw(plain.encode(), hashed.encode())
+        except Exception:
+            return False
+
+
+_bcrypt_ctx = _BcryptContext()
 
 
 # ── JWT ──────────────────────────────────────────────────────────────────────
@@ -89,14 +98,12 @@ def verify_jwt(
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt"""
-    ctx = _get_passlib()
-    return ctx.hash(password)
+    return _bcrypt_ctx.hash(password)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     """Verify a password against a hash"""
-    ctx = _get_passlib()
-    return ctx.verify(plain, hashed)
+    return _bcrypt_ctx.verify(plain, hashed)
 
 
 # ── Input sanitization ──────────────────────────────────────────────────────

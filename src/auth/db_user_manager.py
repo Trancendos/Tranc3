@@ -7,14 +7,43 @@ import logging
 import uuid
 from typing import Optional
 
+import bcrypt
 from fastapi import HTTPException
-from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+class _BcryptContext:
+    """Minimal bcrypt wrapper replacing passlib.CryptContext — avoids crypt DeprecationWarning."""
+
+    def hash(self, password: str) -> str:
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+    def verify(self, plain: str, hashed: str) -> bool:
+        try:
+            return bcrypt.checkpw(plain.encode(), hashed.encode())
+        except Exception:
+            return False
+
+
+pwd_context = _BcryptContext()
+
+# Map billing tiers to default RBAC roles
+_TIER_ROLE_MAP = {
+    "free": "user",
+    "pro": "operator",
+    "business": "operator",
+    "enterprise": "admin",
+    "admin": "admin",
+}
+
+
+def _tier_to_roles(tier: str) -> list:
+    """Return RBAC role list for a billing tier."""
+    return [_TIER_ROLE_MAP.get(tier, "user")]
 
 
 class DBUserManager:
@@ -84,6 +113,7 @@ class DBUserManager:
             "tier": "free",
             "is_active": True,
             "created_at": datetime.datetime.utcnow(),
+            "roles": _tier_to_roles("free"),
         }
         return {"user_id": user_id, "username": username, "tier": "free"}
 
@@ -101,7 +131,7 @@ class DBUserManager:
                 if not user.is_active:
                     return None
                 # Update last login
-                user.last_login = datetime.datetime.utcnow()
+                user.last_login = datetime.datetime.utcnow()  # type: ignore[assignment]
                 session.commit()
                 return {
                     "id": str(user.id),
@@ -135,13 +165,17 @@ class DBUserManager:
                         "username": user.username,
                         "tier": user.tier,
                         "is_active": user.is_active,
+                        "roles": _tier_to_roles(user.tier),
                     }
             except Exception as e:
                 logger.error("DB get_user failed: %s", sanitize_for_log(e))
             finally:
                 session.close()
 
-        return self._fallback.get(username)
+        user = self._fallback.get(username)
+        if user and "roles" not in user:
+            user = {**user, "roles": _tier_to_roles(user.get("tier", "free"))}
+        return user
 
     def update_tier(self, username: str, new_tier: str) -> bool:
         session = self._get_session()
@@ -151,13 +185,19 @@ class DBUserManager:
 
                 user = session.query(User).filter(User.username == username).first()
                 if user:
-                    user.tier = new_tier
+                    user.tier = new_tier  # type: ignore[assignment]
                     session.commit()
                     return True
             except Exception as e:
                 logger.error("DB update_tier failed: %s", sanitize_for_log(e))
             finally:
                 session.close()
+
+        # Sync in-memory fallback record if present
+        if username in self._fallback:
+            self._fallback[username]["tier"] = new_tier
+            self._fallback[username]["roles"] = _tier_to_roles(new_tier)
+            return True
         return False
 
     @staticmethod

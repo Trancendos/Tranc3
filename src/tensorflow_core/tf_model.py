@@ -183,6 +183,8 @@ class TFSequenceClassifier:
         """
         if self.model is None:
             self.build_model()
+        if self.model is None or self._optimizer is None:
+            return {"loss": float("nan"), "accuracy": 0.0}
 
         try:
             tf = _get_tf()
@@ -325,6 +327,8 @@ class TFReinforcementAgent:
         """
         if self.q_network is None:
             self.build_q_network()
+        if self.q_network is None or self.target_network is None or self._optimizer is None:
+            return {"loss": float("nan"), "mean_q": 0.0}
 
         try:
             tf = _get_tf()

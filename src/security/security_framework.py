@@ -8,11 +8,11 @@ import secrets
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
+import bcrypt
 import redis
 from fastapi import HTTPException
 from fastapi.security import HTTPBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from Dimensional.sanitize import sanitize_for_log
 
@@ -23,17 +23,57 @@ logger = logging.getLogger(__name__)
 # ============================================================
 _JWT_SECRET = os.getenv("JWT_SECRET")
 if not _JWT_SECRET:
+    _JWT_SECRET = secrets.token_hex(32)
     logger.warning(
-        "JWT_SECRET not set — using default. "
-        "Set JWT_SECRET in production for proper token security."
+        "JWT_SECRET not set — generated a random ephemeral key. "
+        "Tokens will be invalidated on restart. "
+        "Set JWT_SECRET in production for persistent token validity."
     )
-    _JWT_SECRET = "tranc3-dev-jwt-secret-change-in-production-6f7g8h9i0j"
 SECRET_KEY = _JWT_SECRET
-ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 REFRESH_TOKEN_EXPIRE_DAYS = 30
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# RS256 asymmetric signing (preferred for multi-service deployments).
+# Env vars may contain literal \n — normalise to real newlines.
+_PRIVATE_KEY_PEM = (os.getenv("JWT_PRIVATE_KEY") or "").replace("\\n", "\n").strip()
+_PUBLIC_KEY_PEM = (os.getenv("JWT_PUBLIC_KEY") or "").replace("\\n", "\n").strip()
+
+if _PRIVATE_KEY_PEM and _PUBLIC_KEY_PEM:
+    ALGORITHM = "RS256"
+    _SIGN_KEY: str = _PRIVATE_KEY_PEM
+    _VERIFY_KEY: str = _PUBLIC_KEY_PEM
+    logger.info("JWT configured with RS256 asymmetric signing")
+else:
+    # HS256 symmetric fallback — acceptable for single-service / dev environments.
+    ALGORITHM = "HS256"
+    _SIGN_KEY = SECRET_KEY
+    _VERIFY_KEY = SECRET_KEY
+    if _PRIVATE_KEY_PEM or _PUBLIC_KEY_PEM:
+        logger.warning(
+            "Only one of JWT_PRIVATE_KEY / JWT_PUBLIC_KEY is set — "
+            "both are required for RS256. Falling back to HS256."
+        )
+    else:
+        logger.warning(
+            "JWT_PRIVATE_KEY / JWT_PUBLIC_KEY not set — using HS256. "
+            "Set both env vars in production for RS256 asymmetric signing."
+        )
+
+
+class _BcryptContext:
+    """Minimal bcrypt wrapper replacing passlib.CryptContext — avoids crypt DeprecationWarning."""
+
+    def hash(self, password: str) -> str:
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+    def verify(self, plain: str, hashed: str) -> bool:
+        try:
+            return bcrypt.checkpw(plain.encode(), hashed.encode())
+        except Exception:
+            return False
+
+
+pwd_context = _BcryptContext()
 bearer_scheme = HTTPBearer()
 
 
@@ -72,19 +112,19 @@ class JWTManager:
             expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         )
         to_encode.update({"exp": expire, "type": "access", "iat": datetime.utcnow()})
-        return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        return jwt.encode(to_encode, _SIGN_KEY, algorithm=ALGORITHM)
 
     @staticmethod
     def create_refresh_token(data: dict) -> str:
         to_encode = data.copy()
         expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
         to_encode.update({"exp": expire, "type": "refresh", "iat": datetime.utcnow()})
-        return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        return jwt.encode(to_encode, _SIGN_KEY, algorithm=ALGORITHM)
 
     @staticmethod
     def decode_token(token: str) -> dict:
         try:
-            return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            return jwt.decode(token, _VERIFY_KEY, algorithms=[ALGORITHM])
         except JWTError as e:
             raise HTTPException(status_code=401, detail=f"Invalid token: {e}") from None
 
@@ -199,7 +239,7 @@ class AuditLogger:
     def __init__(self, redis_client: redis.Redis):
         self.redis = redis_client
 
-    def log_event(self, event_type: str, user_id: str, details: Dict, ip: str = None):
+    def log_event(self, event_type: str, user_id: str, details: Dict, ip: Optional[str] = None):
         import json
 
         event = {

@@ -1,6 +1,12 @@
-fastapi>=0.110.0
-uvicorn[standard]>=0.29.0
-httpx>=0.27.0
-redis>=5.0.0
-pydantic>=2.0.0
-psutil>=5.9.0
+# tranc3-bots dependencies
+# All versions EXACT-PINNED for security and reproducibility
+# Do NOT use >= or ~= — exact pins prevent supply-chain drift
+# Fixes PYSEC-2026-161, CVE-2025-54121, CVE-2025-62727 (starlette Host-header
+# injection, multipart DoS, Range-header O(n²) DoS — requires starlette>=0.49.1)
+fastapi==0.136.3
+starlette==1.1.0
+uvicorn[standard]==0.34.3
+httpx==0.28.1
+redis==5.2.1
+pydantic==2.11.5
+psutil==6.1.1

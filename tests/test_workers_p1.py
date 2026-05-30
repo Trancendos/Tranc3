@@ -150,7 +150,10 @@ class TestUsersServiceHTTPEndpoints:
         test_db = users_mod.UsersDatabase(db_path=db_path)
 
         with patch.object(users_mod, "db", test_db):
-            client = TestClient(users_mod.app)
+            client = TestClient(
+                users_mod.app,
+                headers={"X-Internal-Secret": users_mod._INTERNAL_SECRET},
+            )
             yield client
 
         test_db._conn.close()
@@ -418,7 +421,10 @@ class TestMonitoringHTTPEndpoints:
         test_db = monitoring_mod.MonitoringDatabase(db_path=db_path)
 
         with patch.object(monitoring_mod, "db", test_db):
-            client = TestClient(monitoring_mod.app)
+            client = TestClient(
+                monitoring_mod.app,
+                headers={"X-Internal-Secret": monitoring_mod._INTERNAL_SECRET},
+            )
             yield client
 
     def test_health_endpoint(self, monitoring_client):
@@ -733,7 +739,10 @@ class TestNotificationsHTTPEndpoints:
         test_db = notifications_mod.NotificationsDatabase(db_path=db_path)
 
         with patch.object(notifications_mod, "db", test_db):
-            client = TestClient(notifications_mod.app)
+            client = TestClient(
+                notifications_mod.app,
+                headers={"X-Internal-Secret": notifications_mod._INTERNAL_SECRET},
+            )
             yield client
 
     def test_health_endpoint(self, notifications_client):
@@ -1043,7 +1052,10 @@ class TestAIHTTPEndpoints:
         test_db = ai_mod.AIDatabase(db_path=db_path)
 
         with patch.object(ai_mod, "db", test_db):
-            client = TestClient(ai_mod.app)
+            client = TestClient(
+                ai_mod.app,
+                headers={"X-Internal-Secret": ai_mod._INTERNAL_SECRET},
+            )
             yield client
 
     def test_health_endpoint(self, ai_client):

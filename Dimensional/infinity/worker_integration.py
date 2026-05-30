@@ -53,7 +53,8 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 try:
-    from Dimensional.infinity.adaptive_intelligence import (
+    from Dimensional.infinity.adaptive_intelligence import (  # noqa: F401
+        InfinityHealthOrchestrator,
         create_orchestrator,
         SUBSYSTEM_AVAILABILITY,
     )

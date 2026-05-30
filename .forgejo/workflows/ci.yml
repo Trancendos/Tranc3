@@ -37,6 +37,9 @@ jobs:
         run: python -m pytest tests/test_smoke.py -v --tb=short -q
         env:
           SECRET_KEY: ci-test-secret-not-for-prod
+          JWT_SECRET: ci-test-jwt-secret-not-for-prod
+          DATABASE_URL: sqlite:///./test.db
+          REDIS_URL: redis://localhost:6379/0
           ENVIRONMENT: test
 
       - name: MCP / Spark import check
@@ -49,6 +52,9 @@ jobs:
           "
         env:
           SECRET_KEY: ci-test-secret-not-for-prod
+          JWT_SECRET: ci-test-jwt-secret-not-for-prod
+          DATABASE_URL: sqlite:///./test.db
+          REDIS_URL: redis://localhost:6379/0
 
       - name: Router import check
         run: |
@@ -76,6 +82,9 @@ jobs:
           "
         env:
           SECRET_KEY: ci-test-secret-not-for-prod
+          JWT_SECRET: ci-test-jwt-secret-not-for-prod
+          DATABASE_URL: sqlite:///./test.db
+          REDIS_URL: redis://localhost:6379/0
 
   # ─────────────────────────────────────────────────────────────────────────
   # Full suite — all test categories
@@ -107,9 +116,10 @@ jobs:
             --junitxml=logs/junit.xml
         env:
           SECRET_KEY: ci-test-secret-not-for-prod
+          JWT_SECRET: ci-test-jwt-secret-not-for-prod
+          DATABASE_URL: sqlite:///./test.db
+          REDIS_URL: redis://localhost:6379/0
           ENVIRONMENT: test
-          REDIS_URL: ""
-          DATABASE_URL: ""
 
       - name: Upload test results
         if: always()

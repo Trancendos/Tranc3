@@ -5,7 +5,7 @@ consensus, formation control, and task allocation algorithms.
 Integrates with the aerial_drone_adapter for ROS2 bridge support.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import math
 import random

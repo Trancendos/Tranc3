@@ -26,7 +26,7 @@ from email.utils import formataddr
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -234,6 +234,36 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
+
 @app.get("/health")
 async def health():
     with get_conn() as conn:
@@ -260,7 +290,7 @@ async def health():
     }
 
 
-@app.post("/send", status_code=202)
+@_router.post("/send", status_code=202)
 async def send_email(req: SendIn):
     now = time.time()
     with get_conn() as conn:
@@ -280,7 +310,7 @@ async def send_email(req: SendIn):
     return {"id": cur.lastrowid, "status": "queued", "to": req.to}
 
 
-@app.post("/send/batch", status_code=202)
+@_router.post("/send/batch", status_code=202)
 async def send_batch(req: BatchSendIn):
     now = time.time()
     rows = [
@@ -296,7 +326,7 @@ async def send_batch(req: BatchSendIn):
     return {"queued": len(rows)}
 
 
-@app.get("/outbox")
+@_router.get("/outbox")
 async def list_outbox(
     status: Optional[str] = None,
     limit: int = Query(50, le=500),
@@ -316,7 +346,7 @@ async def list_outbox(
     return {"total": total, "emails": [dict(r) for r in rows]}
 
 
-@app.post("/outbox/{email_id}/retry")
+@_router.post("/outbox/{email_id}/retry")
 async def retry_email(email_id: int):
     with get_conn() as conn:
         row = conn.execute("SELECT id, status FROM outbox WHERE id = ?", (email_id,)).fetchone()
@@ -332,7 +362,7 @@ async def retry_email(email_id: int):
 # --- Templates ---
 
 
-@app.post("/templates", status_code=201)
+@_router.post("/templates", status_code=201)
 async def create_template(req: TemplateCreate):
     with get_conn() as conn:
         if conn.execute("SELECT id FROM templates WHERE id = ?", (req.id,)).fetchone():
@@ -345,7 +375,7 @@ async def create_template(req: TemplateCreate):
     return {"id": req.id, "name": req.name}
 
 
-@app.get("/templates")
+@_router.get("/templates")
 async def list_templates():
     with get_conn() as conn:
         rows = conn.execute(
@@ -354,7 +384,7 @@ async def list_templates():
     return {"templates": [dict(r) for r in rows]}
 
 
-@app.post("/templates/{template_id}/send", status_code=202)
+@_router.post("/templates/{template_id}/send", status_code=202)
 async def send_template(template_id: str, req: TemplateRender):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM templates WHERE id = ?", (template_id,)).fetchone()
@@ -379,6 +409,9 @@ async def send_template(template_id: str, req: TemplateRender):
         )
         conn.commit()
     return {"id": cur.lastrowid, "status": "queued", "to": req.to, "template": template_id}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":
