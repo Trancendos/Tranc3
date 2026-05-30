@@ -497,8 +497,8 @@ impl QuantumDecisionCircuit {
         self.optimization_history.clone()
     }
 
-    /// Adaptively enable/disable layers.
-    pub fn adapt_layer_depth(&mut self, _current_cost: f64) {
+    /// Adaptively enable/disable layers based on recent cost variance and magnitude.
+    pub fn adapt_layer_depth(&mut self, current_cost: f64) {
         if self.optimization_history.len() < 5 {
             return;
         }
@@ -513,7 +513,10 @@ impl QuantumDecisionCircuit {
         let mean = recent.iter().sum::<f64>() / recent.len() as f64;
         let variance = recent.iter().map(|c| (c - mean).powi(2)).sum::<f64>() / recent.len() as f64;
 
-        if variance > 0.01 && self.layer_active.iter().filter(|&&a| a).count() > 1 {
+        // Scale instability threshold by cost magnitude so high-cost problems
+        // tolerate proportionally larger variance before pruning layers.
+        let instability_threshold = 0.01 * (1.0 + current_cost.abs());
+        if variance > instability_threshold && self.layer_active.iter().filter(|&&a| a).count() > 1 {
             // Unstable — deactivate last active layer
             for i in (0..self.n_layers).rev() {
                 if self.layer_active[i] {
