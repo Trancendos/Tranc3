@@ -54,7 +54,7 @@ class NRCQueryEmbedding:
             self.schema_hash = hashlib.sha3_256(self.nrc_dsl.encode()).hexdigest()[:16]
         if not self.relation_fingerprint:
             # Extract relation names from DSL for quick fingerprinting
-            relations = sorted(set(w for w in self.nrc_dsl.split() if w.isidentifier()))
+            relations = sorted({w for w in self.nrc_dsl.split() if w.isidentifier()})
             self.relation_fingerprint = hashlib.sha3_256(":".join(relations).encode()).hexdigest()[
                 :12
             ]

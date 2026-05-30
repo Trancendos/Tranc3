@@ -21,6 +21,7 @@ from Dimensional.hive.hive_core import (
     DataChunk,
     DataPipeline,
     DataPriority,
+    FlowMonitor,
     Hive,
     HiveDataSink,
     HiveDataSource,
@@ -33,7 +34,6 @@ from Dimensional.hive.hive_core import (
     SwarmCoordinator,
     SwarmNode,
     SwarmStatus,
-    FlowMonitor,
     create_hive_app,
     get_hive,
 )

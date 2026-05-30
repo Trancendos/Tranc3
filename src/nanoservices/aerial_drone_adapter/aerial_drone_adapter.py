@@ -234,7 +234,7 @@ class WasmEdgeDroneExecutor:
 
         if self.wasm_manager:
             try:
-                from ..wasm_edge import NRCQueryWasm, EdgeTier
+                from ..wasm_edge import EdgeTier, NRCQueryWasm
 
                 query = NRCQueryWasm(
                     query_id=f"drone-{drone.drone_id}",

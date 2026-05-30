@@ -14,9 +14,15 @@ Tests verify:
 """
 
 import asyncio
+
+from Dimensional.hive.hive_core import Hive
+from Dimensional.infinity.bridge.bridge_core import (
+    InfinityBridge,
+)
+from Dimensional.nexus.nexus_core import Nexus
+
 # Note: Direct _sentinel_station assignment used instead of patch.object
 # because sentinel_station is a property without a setter
-
 from Dimensional.three_bridge_coordinator import (
     BridgeIdentity,
     CoordinatorState,
@@ -24,11 +30,6 @@ from Dimensional.three_bridge_coordinator import (
     ThreeBridgeCoordinator,
     get_coordinator,
 )
-from Dimensional.infinity.bridge.bridge_core import (
-    InfinityBridge,
-)
-from Dimensional.nexus.nexus_core import Nexus
-from Dimensional.hive.hive_core import Hive
 
 
 def run_async(coro):

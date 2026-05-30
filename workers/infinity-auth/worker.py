@@ -27,7 +27,6 @@ Zero-cost: FastAPI + SQLite + python-jose. No CF Workers or KV.
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
 import hashlib
 import hmac
 import json
@@ -37,6 +36,7 @@ import secrets
 import sqlite3
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -46,13 +46,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
 
-from shared_core.sanitize import sanitize_for_log
-
 # Phase 22.5: Infinity Ecosystem nomenclature
 from shared_core.infinity.nomenclature import InfinityRole, Tier
 
 # Phase 22.6: Smart Adaptive Intelligence
 from shared_core.infinity.worker_integration import InfinityWorkerKit
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.workers.infinity-auth")
 

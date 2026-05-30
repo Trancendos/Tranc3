@@ -1,8 +1,8 @@
 """Vector Plan Cache — TranceX Phase 8."""
 
 from .vector_plan_cache import (
-    CachedPlan,
     CacheBackend,
+    CachedPlan,
     CacheSearchResult,
     ChromaDBPlanStore,
     InMemoryVectorStore,
