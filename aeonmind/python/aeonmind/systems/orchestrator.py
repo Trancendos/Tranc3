@@ -108,9 +108,7 @@ class LogicalOrchestrator:
         self._subscribe(ai.id, SentinelChannel.PLATFORM)
         return ai
 
-    def create_agent(
-        self, name: str, config: FrontierAgentConfig | None = None
-    ) -> FrontierAgent:
+    def create_agent(self, name: str, config: FrontierAgentConfig | None = None) -> FrontierAgent:
         """Create a new Agent (Tier 4)."""
         agent_config = config or FrontierAgentConfig(name=name)
         agent = FrontierAgent(agent_config)

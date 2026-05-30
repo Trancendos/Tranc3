@@ -274,9 +274,7 @@ class QuantumDecisionCircuit:
         probs = self.execute(use_pennylane=use_pennylane)
         return float(np.max(probs))
 
-    def compute_cost(
-        self, target: np.ndarray | None = None, cost_type: str = "entropy"
-    ) -> float:
+    def compute_cost(self, target: np.ndarray | None = None, cost_type: str = "entropy") -> float:
         """Compute the cost function value.
 
         Args:

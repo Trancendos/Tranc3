@@ -982,7 +982,9 @@ def create_hive_app() -> FastAPI:
             )
             raise HTTPException(
                 status_code=400,
-                detail=format_error_response(ErrorCode.SYS_INVALID_INPUT, "metadata must be valid JSON"),
+                detail=format_error_response(
+                    ErrorCode.SYS_INVALID_INPUT, "metadata must be valid JSON"
+                ),
             )
         source = await hive.register_source(
             name=name, data_type=data_type, pillar=pillar, metadata=meta
@@ -1010,7 +1012,9 @@ def create_hive_app() -> FastAPI:
             )
             raise HTTPException(
                 status_code=400,
-                detail=format_error_response(ErrorCode.SYS_INVALID_INPUT, "metadata must be valid JSON"),
+                detail=format_error_response(
+                    ErrorCode.SYS_INVALID_INPUT, "metadata must be valid JSON"
+                ),
             )
         sink = await hive.register_sink(
             name=name, data_type=data_type, pillar=pillar, metadata=meta

@@ -516,7 +516,8 @@ impl QuantumDecisionCircuit {
         // Scale instability threshold by cost magnitude so high-cost problems
         // tolerate proportionally larger variance before pruning layers.
         let instability_threshold = 0.01 * (1.0 + current_cost.abs());
-        if variance > instability_threshold && self.layer_active.iter().filter(|&&a| a).count() > 1 {
+        if variance > instability_threshold && self.layer_active.iter().filter(|&&a| a).count() > 1
+        {
             // Unstable — deactivate last active layer
             for i in (0..self.n_layers).rev() {
                 if self.layer_active[i] {
