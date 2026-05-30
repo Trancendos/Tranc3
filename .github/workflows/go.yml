@@ -25,17 +25,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.24'
-      - name: Install protoc
-        run: |
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
-      - name: Generate protobuf Go code
-        run: |
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-          mkdir -p proto
-          protoc --go_out=proto --go_opt=paths=source_relative \
-            --go-grpc_out=proto --go-grpc_opt=paths=source_relative \
-            -I../proto ../proto/aeonmind.proto
+          cache-dependency-path: aeonmind/go/go.sum
       - name: Go fmt
         run: test -z "$(gofmt -l .)"
       - name: Go vet
@@ -57,23 +47,13 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.24'
-      - name: Install protoc
-        run: |
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
-      - name: Generate protobuf Go code
-        run: |
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-          mkdir -p proto
-          protoc --go_out=proto --go_opt=paths=source_relative \
-            --go-grpc_out=proto --go-grpc_opt=paths=source_relative \
-            -I../proto ../proto/aeonmind.proto
+          cache-dependency-path: aeonmind/go/go.sum
       - name: Download dependencies
         run: go mod download
       - name: Build orchestrator
-        run: go build -v ./orchestrator/...
+        run: go build -v -o /dev/null ./orchestrator/...
       - name: Build cmd
-        run: go build -v ./cmd/...
+        run: go build -v -o /dev/null ./cmd/...
 
   test:
     name: Test
@@ -87,16 +67,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.24'
-      - name: Install protoc
-        run: |
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
-      - name: Generate protobuf Go code
-        run: |
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-          mkdir -p proto
-          protoc --go_out=proto --go_opt=paths=source_relative \
-            --go-grpc_out=proto --go-grpc_opt=paths=source_relative \
-            -I../proto ../proto/aeonmind.proto
+          cache-dependency-path: aeonmind/go/go.sum
       - name: Run tests
         run: go test -v -race ./...
