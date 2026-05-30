@@ -149,13 +149,21 @@ def _cosine_similarity(a: List[float], b: List[float]) -> float:
         dot = float(np.dot(va, vb))
         norm_a = float(np.linalg.norm(va))
         norm_b = float(np.linalg.norm(vb))
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        return dot / (norm_a * norm_b)
     else:
-        dot = sum(x * y for x, y in zip(a, b, strict=False))
-        norm_a = math.sqrt(sum(x * x for x in a))
-        norm_b = math.sqrt(sum(x * x for x in b))
-    if norm_a == 0 or norm_b == 0:
-        return 0.0
-    return dot / (norm_a * norm_b)
+        # Performance optimization: Single pass loop avoids generator overhead
+        dot = 0.0
+        norm_a_sq = 0.0
+        norm_b_sq = 0.0
+        for x, y in zip(a, b, strict=False):
+            dot += x * y
+            norm_a_sq += x * x
+            norm_b_sq += y * y
+        if norm_a_sq == 0 or norm_b_sq == 0:
+            return 0.0
+        return dot / math.sqrt(norm_a_sq * norm_b_sq)
 
 
 def _signature_similarity(
@@ -446,7 +454,7 @@ class MetaLearner:
 
     def stats(self) -> Dict[str, Any]:
         """Return statistics about the meta-learner."""
-        domains = defaultdict(int)  # type: ignore[var-annotated]
+        domains = defaultdict(int)
         for p in self._prototypes.values():
             domains[p.domain] += 1
         return {

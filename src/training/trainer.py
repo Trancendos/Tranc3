@@ -110,7 +110,7 @@ class Trainer:
     # ------------------------------------------------------------------
 
     @torch.no_grad()
-    def evaluate(self) -> tuple:
+    def evaluate(self) -> float:
         self.model.eval()
         total_loss = 0.0
         n_batches = 0

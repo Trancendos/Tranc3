@@ -271,7 +271,7 @@ class ChainOfThoughtReasoner:
             "Synthesise sub-results into a unified answer.",
         ]
 
-    async def reason(self, problem: str, examples: Optional[List[Dict]] = None) -> Dict:
+    async def reason(self, problem: str, examples: List[Dict] = None) -> Dict:
         """Perform chain-of-thought reasoning on a problem.
 
         Args:
@@ -378,7 +378,7 @@ class ChainOfThoughtReasoner:
         avg_len = np.mean([len(s.split()) for s in steps])
         length_factor = min(1.0, avg_len / 15.0)
         # Combine with slight random perturbation representing epistemic uncertainty
-        confidence = 0.5 * coverage + 0.4 * length_factor + 0.1 * np.random.uniform(0.8, 1.0)  # type: ignore[operator]
+        confidence = 0.5 * coverage + 0.4 * length_factor + 0.1 * np.random.uniform(0.8, 1.0)
         return float(np.clip(confidence, 0.0, 1.0))
 
 
@@ -402,7 +402,7 @@ class StrategicPlanner:
         self,
         goal: str,
         state: Dict,
-        constraints: Optional[List[str]] = None,
+        constraints: List[str] = None,
     ) -> Dict:
         """Produce a structured plan for achieving ``goal`` given current state.
 
@@ -578,6 +578,3 @@ class StrategicPlanner:
 
 # Module-level singleton — ready to use without instantiation
 planner = StrategicPlanner(PlanningConfig())
-
-# Alias for import compatibility
-PlanningEngine = StrategicPlanner

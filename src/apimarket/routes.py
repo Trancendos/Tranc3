@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Path, Query
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse
 
 from src.apimarket.marketplace import AuthType, ConnectorStatus, get_marketplace
 
@@ -22,29 +22,29 @@ async def apimarket_status() -> Dict[str, Any]:
 async def list_connectors(
     tag: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
-) -> Response:
+) -> list:
     ss = None
     if status:
         try:
             ss = ConnectorStatus(status)
         except ValueError:
             return JSONResponse({"error": "Unknown status"}, status_code=400)
-    return [c.to_dict() for c in get_marketplace().list_connectors(tag=tag, status=ss)]  # type: ignore[return-value]
+    return [c.to_dict() for c in get_marketplace().list_connectors(tag=tag, status=ss)]
 
 
 @router.get("/connectors/{connector_id}")
-async def get_connector(connector_id: str = Path(...)) -> Response:
+async def get_connector(connector_id: str = Path(...)) -> Dict[str, Any]:
     connector = get_marketplace().get_connector(connector_id)
     if not connector:
         # Try by slug
         connector = get_marketplace().find_by_slug(connector_id)
     if not connector:
         return JSONResponse({"error": "Connector not found"}, status_code=404)
-    return {**connector.to_dict(), "endpoints": [e.to_dict() for e in connector.endpoints]}  # type: ignore[return-value]
+    return {**connector.to_dict(), "endpoints": [e.to_dict() for e in connector.endpoints]}
 
 
 @router.post("/connectors")
-async def register_connector(body: Dict[str, Any] = Body(...)) -> Response:
+async def register_connector(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     name = body.get("name")
     slug = body.get("slug")
     base_url = body.get("base_url")
@@ -57,22 +57,22 @@ async def register_connector(body: Dict[str, Any] = Body(...)) -> Response:
         valid = [a.value for a in AuthType]
         return JSONResponse({"error": f"Unknown auth_type. Valid: {valid}"}, status_code=400)
     connector = get_marketplace().register(
-        name=name,  # type: ignore[arg-type]
-        slug=slug,  # type: ignore[arg-type]
-        base_url=base_url,  # type: ignore[arg-type]
+        name=name,
+        slug=slug,
+        base_url=base_url,
         auth_type=auth_type,
         description=body.get("description", ""),
         tags=body.get("tags"),
         rate_limit_per_min=body.get("rate_limit_per_min", 60),
     )
-    return connector.to_dict()  # type: ignore[return-value]
+    return connector.to_dict()
 
 
 @router.post("/connectors/{connector_id}/endpoints")
 async def add_endpoint(
     connector_id: str = Path(...),
     body: Dict[str, Any] = Body(...),
-) -> Response:
+) -> Dict[str, Any]:
     method = body.get("method", "GET")
     path = body.get("path")
     if not path:
@@ -82,4 +82,4 @@ async def add_endpoint(
     )
     if ep is None:
         return JSONResponse({"error": "Connector not found"}, status_code=404)
-    return ep.to_dict()  # type: ignore[return-value]
+    return ep.to_dict()

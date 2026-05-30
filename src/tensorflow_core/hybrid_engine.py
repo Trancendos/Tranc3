@@ -77,29 +77,29 @@ class ModelEnsemble:
         torch_out, tf_out = await asyncio.gather(torch_task, tf_task, return_exceptions=True)
 
         w_torch, w_tf = self._weights
-        torch_ok = isinstance(torch_out, np.ndarray)  # type: ignore[has-type]
-        tf_ok = isinstance(tf_out, np.ndarray)  # type: ignore[has-type]
+        torch_ok = isinstance(torch_out, np.ndarray)
+        tf_ok = isinstance(tf_out, np.ndarray)
 
         if not torch_ok:
-            if isinstance(torch_out, Exception):  # type: ignore[has-type]
-                logger.warning("Torch model failed: %s", torch_out)  # type: ignore[has-type]
+            if isinstance(torch_out, Exception):
+                logger.warning("Torch model failed: %s", torch_out)
             torch_out = None
 
         if not tf_ok:
-            if isinstance(tf_out, Exception):  # type: ignore[has-type]
-                logger.warning("TF model failed: %s", tf_out)  # type: ignore[has-type]
+            if isinstance(tf_out, Exception):
+                logger.warning("TF model failed: %s", tf_out)
             tf_out = None
 
         # Normalise weights based on availability
         if torch_ok and tf_ok:
             effective_w_torch, effective_w_tf = w_torch, w_tf
-            ensemble = w_torch * torch_out + w_tf * tf_out  # type: ignore[operator]
+            ensemble = w_torch * torch_out + w_tf * tf_out
         elif torch_ok:
             effective_w_torch, effective_w_tf = 1.0, 0.0
-            ensemble = torch_out  # type: ignore[assignment]
+            ensemble = torch_out
         elif tf_ok:
             effective_w_torch, effective_w_tf = 0.0, 1.0
-            ensemble = tf_out  # type: ignore[assignment]
+            ensemble = tf_out
         else:
             logger.error("Both models failed — returning zero prediction")
             # Attempt to infer shape from inputs
@@ -108,7 +108,7 @@ class ModelEnsemble:
                 out_shape = (arr.shape[0], 1)
             else:
                 out_shape = (1, 1)
-            ensemble = np.zeros(out_shape, dtype=np.float32)  # type: ignore[assignment]
+            ensemble = np.zeros(out_shape, dtype=np.float32)
             effective_w_torch, effective_w_tf = 0.0, 0.0
 
         return {
@@ -419,7 +419,7 @@ class HybridInferenceEngine:
                 logger.error("batch_infer task %d failed: %s", i, res)
                 output.append({"output": None, "error": str(res), "task": tasks[i].get("task")})
             else:
-                output.append(res)  # type: ignore[arg-type]
+                output.append(res)
 
         return output
 

@@ -20,16 +20,15 @@ Key principles:
   - All decisions are recorded in the audit trail
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import asyncio
 import logging
 import time
 import uuid
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Callable, Awaitable, Dict, List, Optional
 
 logger = logging.getLogger("tranc3.hil_a")
 
@@ -198,22 +197,22 @@ class HILAConfig:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class HILATierHandler(ABC):
+class HILATierHandler:
     """Abstract handler that can approve/reject actions at a specific tier."""
 
     @property
-    @abstractmethod
-    def tier(self) -> int: ...
+    def tier(self) -> int:
+        raise NotImplementedError
 
     @property
-    @abstractmethod
-    def entity_id(self) -> str: ...
+    def entity_id(self) -> str:
+        raise NotImplementedError
 
-    @abstractmethod
-    async def can_decide(self, action: HILAAction) -> bool: ...
+    async def can_decide(self, action: HILAAction) -> bool:
+        raise NotImplementedError
 
-    @abstractmethod
-    async def decide(self, action: HILAAction) -> HILADecision: ...
+    async def decide(self, action: HILAAction) -> HILADecision:
+        raise NotImplementedError
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -783,12 +782,12 @@ class HILAChain:
         for listener in self._listeners.get(action_id, []):
             try:
                 listener(action, event)
-            except Exception:  # noqa: S110
-                pass  # graceful degradation
+            except Exception:
+                pass
 
         # Global listeners
         for listener in self._global_listeners:
             try:
                 listener(action, event)
-            except Exception:  # noqa: S110
-                pass  # graceful degradation
+            except Exception:
+                pass

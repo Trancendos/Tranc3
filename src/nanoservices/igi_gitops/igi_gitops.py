@@ -356,8 +356,8 @@ class DriftDetector:
                                 await handler(drift)
                             else:
                                 handler(drift)
-                        except Exception:  # noqa: S110
-                            pass  # graceful degradation
+                        except Exception:
+                            pass
 
                     # Auto-heal if enabled
                     if self._auto_heal and drift.severity in (

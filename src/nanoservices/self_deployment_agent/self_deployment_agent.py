@@ -162,9 +162,9 @@ class KustomizeBuilder:
             "namespace": namespace,
         }
         if patches:
-            kustomization["patches"] = patches  # type: ignore[assignment]
+            kustomization["patches"] = patches
         if images:
-            kustomization["images"] = images  # type: ignore[assignment]
+            kustomization["images"] = images
         return kustomization
 
     def build_overlay(self, overlay_name: str) -> Optional[str]:
@@ -360,7 +360,7 @@ class DriftDetector:
     def detect_drift(self, service_name: str) -> DriftReport:
         status = self.flux_client.get_kustomization_status(service_name)
         if status is None:
-            return DriftReport(  # type: ignore[call-arg]
+            return DriftReport(
                 service_name=service_name,
                 has_drift=False,
                 severity="unknown",
@@ -535,7 +535,7 @@ class SelfDeploymentAgent:
             action=DeploymentAction.ROLLBACK,
             service_name=cfg.service_name,
             state=self.state,
-            commit_sha=rollback_sha,  # type: ignore[arg-type]
+            commit_sha=rollback_sha,
             message=f"Rollback {'successful' if rollback_healthy else 'failed'}",
             details={"original_sha": current_sha, "rollback_sha": rollback_sha, "reason": reason},
             duration_seconds=time.time() - start_time,
@@ -623,7 +623,7 @@ class SelfDeploymentAgent:
             action=DeploymentAction.DRAFT_RELEASE,
             service_name=config.service_name,
             state=DeploymentState.PLANNING,
-            commit_sha=commit_sha,  # type: ignore[arg-type]
+            commit_sha=commit_sha,
             message=f"Release PR #{pr_id} created on branch {branch_name}",
             details={"pr_id": pr_id, "branch": branch_name},
         )

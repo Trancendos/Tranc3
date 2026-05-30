@@ -1,6 +1,6 @@
 """Predictive Drift Service — TranceX Phase 8."""
 
-from .predictive_drift import (
+from .predictive_drift import (  # noqa: I001
     DriftAnalysisReport,
     DriftCategory,
     DriftPrediction,
@@ -8,8 +8,8 @@ from .predictive_drift import (
     DriftSignal,
     LLMDriftPredictor,
     LogAnalyzer,
-    PredictionConfidence,
     PredictiveDriftService,
+    PredictionConfidence,
 )
 
 __all__ = [

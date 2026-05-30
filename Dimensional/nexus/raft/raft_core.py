@@ -543,7 +543,7 @@ class NexusCluster:
                         term=leader.current_term,
                         leader_id=leader.node_id,
                         prev_log_index=entry.index - 1,
-                        prev_log_term=leader.log.get(entry.index - 1).term  # type: ignore[union-attr]
+                        prev_log_term=leader.log.get(entry.index - 1).term
                         if entry.index > 1
                         else 0,
                         entries=[entry],

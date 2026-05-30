@@ -3,8 +3,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 COPY requirements-worker.txt .
-RUN pip install --no-cache-dir --upgrade "pip>=25.3" "setuptools>=78.1.1" "wheel>=0.46.2" \
-    && pip install --no-cache-dir -r requirements-worker.txt
+RUN pip install --no-cache-dir -r requirements-worker.txt
 
 COPY . .
 

@@ -63,7 +63,6 @@ class EventMessage:
     timestamp: datetime = field(default_factory=datetime.utcnow)
     correlation_id: Optional[str] = None
     causation_id: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize event message to a JSON-friendly dictionary."""
@@ -74,7 +73,6 @@ class EventMessage:
             "timestamp": self.timestamp.isoformat(),
             "correlation_id": self.correlation_id,
             "causation_id": self.causation_id,
-            "metadata": self.metadata,
         }
 
 

@@ -23,7 +23,6 @@ import asyncio
 import logging
 import time
 import uuid
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -77,7 +76,7 @@ class BotRun:
 # ---------------------------------------------------------------------------
 
 
-class InfinityBot(ABC):
+class InfinityBot:
     """
     Tier 5 Bot — atomic service worker for a Trancendos location.
 
@@ -138,10 +137,9 @@ class InfinityBot(ABC):
     # Core task — override this
     # ------------------------------------------------------------------
 
-    @abstractmethod
     async def run_task(self) -> dict[str, Any]:
         """The bot's single micro-task. Override with specific logic."""
-        ...
+        raise NotImplementedError(f"{self.dna} must implement run_task()")
 
     # ------------------------------------------------------------------
     # Adaptive interval
@@ -254,7 +252,7 @@ class InfinityBot(ABC):
     # Override points
     # ------------------------------------------------------------------
 
-    async def on_metrics(self, run: BotRun) -> None:  # noqa: B027 — optional hook, not abstract
+    async def on_metrics(self, run: BotRun) -> None:
         """Called after each run. Override to emit metrics upstream."""
 
     # ------------------------------------------------------------------
@@ -274,7 +272,7 @@ class InfinityBot(ABC):
         recent = [r for r in self._runs[-n:] if r.success and r.duration_ms() is not None]
         if not recent:
             return 0.0
-        return sum(r.duration_ms() for r in recent) / len(recent)  # type: ignore[arg-type,misc]
+        return sum(r.duration_ms() for r in recent) / len(recent)  # type: ignore[arg-type]
 
     # ------------------------------------------------------------------
     # Status

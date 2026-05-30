@@ -116,8 +116,8 @@ class UsageRecord:
     requests_this_hour: int = 0
     requests_today: int = 0
     tokens_this_month: int = 0
-    hour_window_start: Optional[datetime] = None
-    day_window_start: Optional[datetime] = None
+    hour_window_start: datetime = None
+    day_window_start: datetime = None
 
     def __post_init__(self):
         now = datetime.utcnow()
@@ -143,10 +143,10 @@ class TierEnforcer:
 
     def _reset_windows_if_needed(self, record: UsageRecord):
         now = datetime.utcnow()
-        if now - record.hour_window_start >= timedelta(hours=1):  # type: ignore[operator]
+        if now - record.hour_window_start >= timedelta(hours=1):
             record.requests_this_hour = 0
             record.hour_window_start = now.replace(minute=0, second=0, microsecond=0)
-        if now - record.day_window_start >= timedelta(days=1):  # type: ignore[operator]
+        if now - record.day_window_start >= timedelta(days=1):
             record.requests_today = 0
             record.day_window_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 

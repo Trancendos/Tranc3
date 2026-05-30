@@ -163,7 +163,7 @@ class Cryptex:
         self,
         path: str,
         body: str = "",
-        headers: Optional[Dict[str, str]] = None,
+        headers: Dict[str, str] = None,
         actor: Optional[str] = None,
         ip: Optional[str] = None,
     ) -> List[ThreatSignal]:
@@ -253,7 +253,7 @@ class Cryptex:
                 outcome="detected",
                 metadata=signal.to_dict(),
             )
-        except Exception:  # noqa: S110
+        except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
         if signal.severity in (ThreatSeverity.HIGH, ThreatSeverity.CRITICAL):
@@ -265,7 +265,7 @@ class Cryptex:
                     {"signal": signal.to_dict()},
                     sender="cryptex",
                 )
-            except Exception:  # noqa: S110
+            except Exception:
                 pass  # nosec B110 — graceful degradation; error logged upstream
 
     def _register_default_rules(self) -> None:

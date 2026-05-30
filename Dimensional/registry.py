@@ -90,7 +90,7 @@ class ServiceRegistry:
         if service:
             old_health = service.health
             service.health = health
-            service.last_seen = time.time()  # type: ignore[assignment]
+            service.last_seen = time.time()
             if old_health != health:
                 logger.info(
                     "Service %s: %s → %s", sanitize_for_log(name), old_health.value, health.value

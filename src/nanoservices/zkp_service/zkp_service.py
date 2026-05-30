@@ -101,7 +101,7 @@ class SchnorrProver:
     def _mod_pow(base: int, exp: int, mod: int) -> int:
         return pow(base, exp, mod)
 
-    def generate_keypair(self, p: Optional[int] = None, g: int = 2) -> Tuple[int, int, int, int]:
+    def generate_keypair(self, p: int = None, g: int = 2) -> Tuple[int, int, int, int]:
         p = p or (2**127 - 1)
         x = random.randint(2, p - 2)
         y = self._mod_pow(g, x, p)

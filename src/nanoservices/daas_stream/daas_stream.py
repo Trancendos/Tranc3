@@ -255,8 +255,8 @@ class OPAPolicyEngine:
                     reason = "Custom rule denied access"
                     self._log_decision(context, effect, reason, "custom")
                     return effect, reason
-            except Exception:  # noqa: S110
-                pass  # graceful degradation
+            except Exception:
+                pass
 
         # Default: deny if no policy matches
         reason = "No matching policy found — default deny"

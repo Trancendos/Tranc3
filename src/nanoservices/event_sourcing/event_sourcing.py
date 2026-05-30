@@ -4,14 +4,14 @@ Immutable event log with projections for auditability and
 event-driven architecture. Zero-cost in-memory implementation.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import hashlib
 import json
 import logging
 import time
 import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, TypeVar
 
@@ -219,7 +219,7 @@ class AggregateRoot:
         # Subclasses override to apply event to state
 
     def _raise_event(
-        self, event_type: EventType, data: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None
+        self, event_type: EventType, data: Dict[str, Any], metadata: Dict[str, Any] = None
     ) -> None:
         self._version += 1
         event = Event(

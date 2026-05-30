@@ -11,7 +11,7 @@ Architecture:
     - CrossBridgeOrchestrator: Top-level orchestrator for cross-bridge workflows
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import asyncio
 import uuid
@@ -222,7 +222,7 @@ class CompensationManager:
             try:
                 result = await self._dispatcher.dispatch(
                     step.bridge,
-                    step.compensation_action,  # type: ignore[arg-type]
+                    step.compensation_action,
                     step.compensation_payload,
                 )
                 step.status = StepStatus.COMPENSATED
@@ -296,7 +296,7 @@ class CrossBridgeOrchestrator:
                 workflow.steps[i].error = str(result)
                 failed = True
             else:
-                workflow.steps[i] = result  # type: ignore[assignment]
+                workflow.steps[i] = result
                 if workflow.steps[i].status == StepStatus.FAILED:
                     failed = True
 

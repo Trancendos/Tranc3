@@ -5,13 +5,13 @@ Zero-cost local inference using Ollama, vLLM, or llama.cpp.
 Eliminates API costs and third-party uptime reliance.
 """
 
-from .shi_gateway import (
+from .shi_gateway import (  # noqa: I001
     InferenceBackend,
-    InferenceMetrics,
+    ModelStatus,
+    ModelInfo,
     InferenceRequest,
     InferenceResponse,
-    ModelInfo,
-    ModelStatus,
+    InferenceMetrics,
     OllamaBackend,
     SHIGateway,
 )

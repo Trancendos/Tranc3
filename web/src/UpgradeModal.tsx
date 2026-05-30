@@ -19,7 +19,7 @@ export default function UpgradeModal({ onClose, onUpgrade }: Props) {
                         <h2 className="text-xl font-bold text-white">Rate limit reached</h2>
                         <p className="text-gray-400 text-sm mt-1">Upgrade to continue chatting</p>
                     </div>
-                    <button onClick={onClose} aria-label="Close modal" title="Close" className="text-gray-500 hover:text-white text-xl">✕</button>
+                    <button aria-label="Close" onClick={onClose} className="text-gray-500 hover:text-white text-xl">✕</button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">

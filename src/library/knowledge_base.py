@@ -147,8 +147,8 @@ class Library:
 
     def stats(self) -> Dict[str, Any]:
         total = len(self._articles)
-        by_status = {}  # type: ignore[var-annotated]
-        by_source = {}  # type: ignore[var-annotated]
+        by_status = {}
+        by_source = {}
         for art in self._articles.values():
             by_status[art.status.value] = by_status.get(art.status.value, 0) + 1
             by_source[art.source] = by_source.get(art.source, 0) + 1
@@ -173,7 +173,7 @@ class Library:
                 service="library",
                 metadata={"title": art.title, "tags": art.tags},
             )
-        except Exception:  # noqa: S110
+        except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
 
     def _seed_platform_articles(self) -> None:
@@ -240,9 +240,9 @@ class Library:
         ]
         for a in seed_articles:
             art = Article(
-                title=a["title"],  # type: ignore[arg-type]
-                body=a["body"],  # type: ignore[arg-type]
-                tags=a["tags"],  # type: ignore[arg-type]
+                title=a["title"],
+                body=a["body"],
+                tags=a["tags"],
                 author="system",
                 source="internal",
                 status=ArticleStatus.PUBLISHED,

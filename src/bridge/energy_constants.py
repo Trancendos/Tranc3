@@ -10,9 +10,10 @@ Transwarp   — warp-drive class topology; high-throughput async corridors.
 Cell        — cellular-automata unit; micro-state propagation.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 from enum import Enum
+
 
 # ---------------------------------------------------------------------------
 # Crystal / energy classification

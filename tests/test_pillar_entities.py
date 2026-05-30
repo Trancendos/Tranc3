@@ -6,16 +6,17 @@ tier system, and pillar registry.
 """
 
 from Dimensional.pillars.entities import (
-    LOCATION_CONFIGS,
-    LOCATIONS,
     EntityTier,
     EntityType,
-    PillarEntity,
     PillarLocation,
+    PillarEntity,
     PillarLocationConfig,
     PillarRegistry,
     get_pillar_registry,
+    LOCATION_CONFIGS,
+    LOCATIONS,
 )
+
 
 # ──────────────────────────────────────────────
 # EntityTier Tests

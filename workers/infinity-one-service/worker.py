@@ -41,13 +41,6 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
-# Phase 22.4: Dimensional Services
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
-
 # Phase 22: Infinity Ecosystem security
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
 from Dimensional.infinity.nomenclature import (
@@ -60,6 +53,13 @@ from Dimensional.infinity.rbac import RBACEngine
 from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     get_sentinel_station,
+)
+
+# Phase 22.4: Dimensional Services
+from Dimensional.dimensionals import (
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
 )
 
 # Phase 22.6: Smart Adaptive Intelligence
@@ -374,7 +374,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -506,10 +506,8 @@ async def create_identity(request: Request, identity: IdentityCreate):
 
     # Determine tier and infinity_role from role
     from Dimensional.infinity.nomenclature import (
-        get_infinity_role_for_role as _girr,
-    )
-    from Dimensional.infinity.nomenclature import (
         get_tier_for_role as _gtr,
+        get_infinity_role_for_role as _girr,
     )
 
     tier = _gtr(identity.role)
@@ -677,10 +675,8 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
         params.append(update.role)
         # Update tier and infinity_role based on new role
         from Dimensional.infinity.nomenclature import (
-            get_infinity_role_for_role as _girr,
-        )
-        from Dimensional.infinity.nomenclature import (
             get_tier_for_role as _gtr,
+            get_infinity_role_for_role as _girr,
         )
 
         tier = _gtr(update.role)

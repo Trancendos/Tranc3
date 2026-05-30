@@ -14,15 +14,9 @@ Tests verify:
 """
 
 import asyncio
-
-from Dimensional.hive.hive_core import Hive
-from Dimensional.infinity.bridge.bridge_core import (
-    InfinityBridge,
-)
-from Dimensional.nexus.nexus_core import Nexus
-
 # Note: Direct _sentinel_station assignment used instead of patch.object
 # because sentinel_station is a property without a setter
+
 from Dimensional.three_bridge_coordinator import (
     BridgeIdentity,
     CoordinatorState,
@@ -30,6 +24,11 @@ from Dimensional.three_bridge_coordinator import (
     ThreeBridgeCoordinator,
     get_coordinator,
 )
+from Dimensional.infinity.bridge.bridge_core import (
+    InfinityBridge,
+)
+from Dimensional.nexus.nexus_core import Nexus
+from Dimensional.hive.hive_core import Hive
 
 
 def run_async(coro):
@@ -264,7 +263,7 @@ class TestCrossBridgeEvents:
         coordinator._max_tracked_events = 5
         for i in range(10):
             coordinator._track_cross_bridge_event(CrossBridgeEvent(event_type=f"event-{i}"))
-        _recent = coordinator.get_recent_cross_bridge_events()
+        coordinator.get_recent_cross_bridge_events()
         # Should only keep the last 5
         total = len(coordinator._cross_bridge_events)
         assert total <= 5

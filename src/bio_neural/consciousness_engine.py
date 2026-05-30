@@ -328,4 +328,4 @@ class EmotionDetector(nn.Module):
 
     def get_dominant_emotion(self, emotion_scores: Dict[str, float]) -> str:
         """Get dominant emotion"""
-        return max(emotion_scores, key=emotion_scores.get)  # type: ignore[arg-type]
+        return max(emotion_scores, key=emotion_scores.get)

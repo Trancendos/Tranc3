@@ -1,10 +1,10 @@
 from .config_drift import (
+    DriftSeverity,
+    ConfigSource,
+    ConfigEntry,
+    ConfigSnapshot,
+    DriftReport,
+    ConfigSchema,
     ConfigDriftDetector,
     ConfigDriftDetectorService,
-    ConfigEntry,
-    ConfigSchema,
-    ConfigSnapshot,
-    ConfigSource,
-    DriftReport,
-    DriftSeverity,
 )

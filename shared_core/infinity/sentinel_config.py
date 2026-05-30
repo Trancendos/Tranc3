@@ -15,13 +15,14 @@ Features:
     - Circuit breaker configuration for Redis connections
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import os
 from dataclasses import dataclass, field
 from typing import Optional
 
 from shared_core.infinity.nomenclature import SentinelChannel
+
 
 # ── Redis Connection Configuration ──────────────────────────────────────────
 

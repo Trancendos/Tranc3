@@ -69,7 +69,6 @@ class ConsistencyLevel(Enum):
     CAUSAL = "causal"
     SESSION = "session"
     WEAK = "weak"
-    LAST_WRITER_WINS = "last_writer_wins"
 
 
 class EntityType(Enum):

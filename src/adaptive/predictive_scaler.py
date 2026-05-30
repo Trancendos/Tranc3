@@ -232,8 +232,8 @@ class LoadForecaster:
                 self._initialized = True
         else:
             prev_level = self._level
-            self._level = self._alpha * value + (1 - self._alpha) * (self._level + self._trend)  # type: ignore[operator]
-            self._trend = self._beta * (self._level - prev_level) + (1 - self._beta) * self._trend  # type: ignore[operator]
+            self._level = self._alpha * value + (1 - self._alpha) * (self._level + self._trend)
+            self._trend = self._beta * (self._level - prev_level) + (1 - self._beta) * self._trend
 
     def forecast(self, horizon_seconds: float = _DEFAULT_FORECAST_HORIZON) -> LoadForecast:
         """
@@ -271,7 +271,7 @@ class LoadForecaster:
         steps = horizon_seconds / avg_interval
 
         # Holt's forecast: level + trend * steps
-        predicted = self._level + self._trend * steps  # type: ignore[operator]
+        predicted = self._level + self._trend * steps
         predicted = max(0.0, min(1.0, predicted))
 
         # Confidence based on sample count and forecast distance
@@ -560,7 +560,7 @@ class PredictiveAutoscaler:
 
     def apply_decision(self, decision: ScalingDecision) -> bool:
         """Apply a scaling decision to update resource units."""
-        config = self._resources.get(decision.target_units and "")  # type: ignore[arg-type]
+        config = self._resources.get(decision.target_units and "")
         # Find by matching the decision to a resource
         for name, config in self._resources.items():
             if config.current_units == decision.current_units:

@@ -433,6 +433,6 @@ class TemporalReasoningEngine:
             "engine_id": self._id,
             "total_facts": len(self.facts),
             "total_events": len(self.events),
-            "predicates": list({f.predicate for f in self.facts.values()}),
-            "event_names": list({e.name for e in self.events.values()}),
+            "predicates": list(set(f.predicate for f in self.facts.values())),
+            "event_names": list(set(e.name for e in self.events.values())),
         }

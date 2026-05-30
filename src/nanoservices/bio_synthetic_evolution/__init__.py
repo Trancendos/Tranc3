@@ -1,19 +1,19 @@
 """Bio-Synthetic Evolution nanoservice."""
 
 from .bio_synthetic_evolution import (
+    Nucleotide,
     AminoAcid,
-    BioSyntheticEvolutionService,
-    CircuitType,
-    Gene,
     GeneFunction,
+    CircuitType,
+    MutationType,
+    SelectionPressure,
+    OrganismState,
+    Gene,
     GeneticCircuit,
     MetabolicNetwork,
-    MutationType,
-    Nucleotide,
-    OrganismState,
-    Population,
-    SelectionPressure,
     SyntheticOrganism,
+    Population,
+    BioSyntheticEvolutionService,
 )
 
 __all__ = [

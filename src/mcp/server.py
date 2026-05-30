@@ -22,9 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: F401  # intentional top-level import
 from src.auth.dependencies import get_current_user  # codeql[py/cyclic-import]
-from src.auth.rbac import require_permission
 
-from .payload_scanner import scan_rpc_payload
 from .tools import registry
 
 logger = logging.getLogger(__name__)
@@ -305,9 +303,7 @@ router = APIRouter(prefix="/mcp", tags=["mcp"])
 
 @router.post("/rpc")
 async def rpc_endpoint(
-    request: Request,
-    current_user: dict = Depends(get_current_user),
-    _perm: None = require_permission("mcp:call"),
+    request: Request, current_user: dict = Depends(get_current_user)
 ) -> JSONResponse:
     """
     JSON-RPC 2.0 entry-point.  Accepts a single request object or a batch array.
@@ -348,20 +344,6 @@ async def rpc_endpoint(
     if not method or not isinstance(method, str):
         return JSONResponse(
             content=_err(req_id, ERR_INVALID_REQUEST, "method must be a non-empty string"),
-            status_code=200,
-        )
-
-    # --- Prompt-injection scan (Cryptex / The Ice Box defence layer) ---
-    scan = scan_rpc_payload(body)
-    if not scan.ok and scan.high_severity:
-        logger.warning(
-            "mcp.rpc blocked injection attempt method=%s user=%s summary=%s",
-            sanitize_for_log(method),
-            sanitize_for_log(str(current_user.get("username", "?"))),
-            sanitize_for_log(scan.summary()),
-        )
-        return JSONResponse(
-            content=_err(req_id, ERR_INVALID_REQUEST, "Request rejected: policy violation"),
             status_code=200,
         )
 

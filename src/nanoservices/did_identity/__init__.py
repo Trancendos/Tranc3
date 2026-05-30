@@ -4,16 +4,16 @@ Decentralized identity and verifiable credentials (W3C DID Core).
 """
 
 from .did_identity import (
-    CredentialIssuer,
+    DIDMethod,
     CredentialStatus,
     DIDDocument,
-    DIDIdentityService,
-    DIDKeyMethod,
-    DIDMethod,
-    DIDTranc3Method,
-    DIDWebMethod,
     VerifiableCredential,
     VerifiablePresentation,
+    DIDKeyMethod,
+    DIDWebMethod,
+    DIDTranc3Method,
+    CredentialIssuer,
+    DIDIdentityService,
 )
 
 __all__ = [

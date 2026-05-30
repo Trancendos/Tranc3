@@ -115,7 +115,7 @@ class Tranquility:
                 from src.imind.protocol import get_imind
 
                 get_imind().assess(f"User reported mood: {mood_level.name}", actor=user_id)
-            except Exception:  # noqa: S110
+            except Exception:
                 pass  # nosec B110 — graceful degradation; error logged upstream
 
         self._emit(user_id, "tranquility.mood_logged", {"mood": mood_level.value})
@@ -165,7 +165,7 @@ class Tranquility:
                 service="tranquility",
                 metadata=metadata or {},
             )
-        except Exception:  # noqa: S110
+        except Exception:
             pass  # nosec B110 - graceful degradation for observation
 
 

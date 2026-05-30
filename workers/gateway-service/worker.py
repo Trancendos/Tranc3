@@ -43,13 +43,6 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-# Phase 22.4: Dimensional Services integration
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
-
 # Phase 22: Infinity Ecosystem security integration
 from Dimensional.infinity.abac import ABACEngine, get_default_policies
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware, WebSocketAuthManager
@@ -62,6 +55,13 @@ from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     SharedSSEGenerator,
     get_sentinel_station,
+)
+
+# Phase 22.4: Dimensional Services integration
+from Dimensional.dimensionals import (
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
 )
 
 # ---------------------------------------------------------------------------

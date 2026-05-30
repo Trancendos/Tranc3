@@ -281,7 +281,7 @@ def nrc_shred_{kernel_id}(N, D, depth):
             binary_path=f"/tmp/trancex/kernels/{spec.spec_id}.so",
         )
 
-        self._kernel_cache[spec.spec_id] = kernel
+        self._kernel_cache[spec.kernel_id] = kernel  # type: ignore[assignment]
         return kernel
 
 

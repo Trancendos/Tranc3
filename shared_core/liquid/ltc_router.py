@@ -168,7 +168,7 @@ class LiquidRouter:
             raw_weights[name] = cell.step(sig, dt)
 
         weights = self._softmax(raw_weights)
-        target = max(weights, key=weights.get)  # type: ignore[arg-type]
+        target = max(weights, key=weights.get)
         return LiquidRoutingResult(
             target=target,
             weight=weights[target],
@@ -189,7 +189,7 @@ class LiquidRouter:
         # out shape is (batch_size, seq_len, output_size); extract first step of first batch
         raw = {name: float(v) for name, v in zip(self._cells, out[0][0].tolist(), strict=False)}
         weights = self._softmax(raw)
-        target = max(weights, key=weights.get)  # type: ignore[arg-type]
+        target = max(weights, key=weights.get)
         return LiquidRoutingResult(
             target=target,
             weight=weights[target],

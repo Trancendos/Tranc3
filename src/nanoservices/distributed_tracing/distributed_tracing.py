@@ -97,7 +97,7 @@ class Trace:
         self.spans.append(span)
         if span.context.parent_span_id is None:
             self.root_span = span
-        services = {s.service_name for s in self.spans if s.service_name}
+        services = set(s.service_name for s in self.spans if s.service_name)
         self.service_count = len(services)
 
     @property
