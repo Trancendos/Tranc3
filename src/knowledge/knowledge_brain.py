@@ -13,6 +13,7 @@ vector similarity search (falls back to BM25-only if unavailable).
 
 from __future__ import annotations
 
+import asyncio
 import math
 import re
 import sqlite3
@@ -21,7 +22,6 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
-
 
 # ── Dataclasses ──────────────────────────────────────────────────────────────
 
@@ -248,6 +248,8 @@ class KnowledgeBrain:
         )
         self._conn.commit()
         self._bm25.add(page)
+        # Remove stale wikilinks before re-inserting
+        self._conn.execute("DELETE FROM links WHERE source_id = ?", (page.id,))
         for link in _parse_wikilinks(page.id, page.content):
             self._conn.execute(
                 """INSERT OR IGNORE INTO links(source_id, target_id, alias, relation, weight)
@@ -272,6 +274,10 @@ class KnowledgeBrain:
         self._conn.commit()
         if cursor.rowcount > 0:
             self._bm25.remove(page_id)
+            self._conn.execute(
+                "DELETE FROM links WHERE source_id = ? OR target_id = ?", (page_id, page_id)
+            )
+            self._conn.commit()
             return True
         return False
 
@@ -369,38 +375,30 @@ class KnowledgeBrain:
     # ── Legacy sync aliases ───────────────────────────────────────────────────
 
     def put(self, page: KBPage) -> None:
-        import asyncio, inspect
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            import concurrent.futures
             fut = asyncio.run_coroutine_threadsafe(self.put_page(page), loop)
             fut.result(timeout=10)
         else:
             loop.run_until_complete(self.put_page(page))
 
     def get(self, page_id: str) -> Optional[KBPage]:
-        import asyncio
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            import concurrent.futures
             fut = asyncio.run_coroutine_threadsafe(self.get_page(page_id), loop)
             return fut.result(timeout=10)
         return loop.run_until_complete(self.get_page(page_id))
 
     def delete(self, page_id: str) -> bool:
-        import asyncio
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            import concurrent.futures
             fut = asyncio.run_coroutine_threadsafe(self.delete_page(page_id), loop)
             return fut.result(timeout=10)
         return loop.run_until_complete(self.delete_page(page_id))
 
     def list(self, source: Optional[str] = None) -> list[KBPage]:
-        import asyncio
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            import concurrent.futures
             fut = asyncio.run_coroutine_threadsafe(self.list_pages(source=source), loop)
             return fut.result(timeout=10)
         return loop.run_until_complete(self.list_pages(source=source))
@@ -419,7 +417,7 @@ def _parse_wikilinks(source_id: str, content: str) -> list[KBLink]:
         else:
             target, alias = raw, ""
         target = target.strip().lower().replace(" ", "-")
-        if target != source_id:
+        if target and target != source_id:
             links.append(KBLink(source_id=source_id, target_id=target, alias=alias.strip()))
     return links
 

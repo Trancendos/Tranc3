@@ -149,8 +149,8 @@ class RBACMiddleware(BaseHTTPMiddleware):
                         mgr = getattr(_api, "db_user_manager", None)
                         if mgr:
                             user = mgr.get_user(username)
-                    except Exception:
-                        pass
+                    except Exception as _exc:
+                        logger.debug("db_user_manager lookup failed: %s", _exc)
                     if user is None:
                         from auth import user_manager as _um
 
@@ -197,7 +197,7 @@ class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
                     )
                 )
                 logger.info("ZeroTrustASGIMiddleware active (MFA routes: %s)", mfa_routes)
-            except ImportError:
+            except Exception:
                 self._enabled = False
                 logger.warning("ZeroTrustMiddleware unavailable — skipping zero-trust enforcement")
 

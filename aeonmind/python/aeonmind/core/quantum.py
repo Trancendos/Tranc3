@@ -232,7 +232,6 @@ class QuantumDecisionCircuit:
     def _apply_entangling_numpy(self, state: np.ndarray, n: int) -> np.ndarray:
         """Apply entangling CNOT gates based on strategy."""
         new_state = state.copy()
-        2**n
 
         if self.config.entangling_strategy == EntanglingStrategy.LINEAR:
             pairs = [(i, i + 1) for i in range(n - 1)]

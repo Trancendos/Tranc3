@@ -105,13 +105,11 @@ def login_user(client: httpx.Client, user: dict[str, Any]) -> str | None:
     """Log in a demo user and return the access token."""
     try:
         r = client.post(
-            f"{BASE_URL}/auth/token",
-            data={
-                "username": user["email"],
+            f"{BASE_URL}/auth/login",
+            json={
+                "username": user["username"],
                 "password": user["password"],
-                "grant_type": "password",
             },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
             timeout=TIMEOUT,
         )
         if r.status_code == 200:

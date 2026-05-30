@@ -31,8 +31,6 @@ _PERMISSION_ROLES: dict[str, set[str]] = {
     "user:write": {"admin", "operator", "user"},
 }
 
-_ROLE_HIERARCHY: list[str] = ["admin", "operator", "user"]
-
 
 def _has_permission(user: dict, permission: str) -> bool:
     user_role = (user.get("role") or user.get("tier") or "user").lower()

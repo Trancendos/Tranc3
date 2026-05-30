@@ -183,6 +183,7 @@ class BenchmarkSuite:
             )
 
         # Memory baseline
+        mem_before = 0.0
         if config.track_memory:
             tracemalloc.start()
             gc.collect()
