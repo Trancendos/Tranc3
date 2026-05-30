@@ -18,7 +18,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class BotCapability(Enum):
@@ -59,10 +59,10 @@ class BotExecutionResult:
     capability: str
     status: BotStatus
     success: bool
-    output: Optional[Any] = None
-    error: Optional[str] = None
+    output: Any | None = None
+    error: str | None = None
     execution_time: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -74,7 +74,7 @@ class BotServiceConfig:
     stateless: bool = True
     timeout: float = 30.0
     max_retries: int = 3
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class BotServiceWorker:
@@ -84,7 +84,7 @@ class BotServiceWorker:
     autonomously — must be invoked by Agents or AI Complexes.
     """
 
-    def __init__(self, config: Optional[BotServiceConfig] = None):
+    def __init__(self, config: BotServiceConfig | None = None):
         self.config = config or BotServiceConfig()
         self.id = f"bot-{uuid.uuid4().hex[:8]}"
         self.status = BotStatus.IDLE
@@ -100,7 +100,7 @@ class BotServiceWorker:
     def capability(self) -> BotCapability:
         return self.config.capability
 
-    def execute(self, payload: Dict[str, Any]) -> BotExecutionResult:
+    def execute(self, payload: dict[str, Any]) -> BotExecutionResult:
         """Execute the bot's service function.
 
         Args:
@@ -144,7 +144,7 @@ class BotServiceWorker:
                 execution_time=execution_time,
             )
 
-    def _process(self, payload: Dict[str, Any]) -> Any:
+    def _process(self, payload: dict[str, Any]) -> Any:
         """Process the payload based on capability.
 
         Override this method in specialized bot implementations.
@@ -183,7 +183,7 @@ class BotServiceWorker:
             return 0.0
         return self._total_execution_time / self._execution_count
 
-    def summary(self) -> Dict[str, Any]:
+    def summary(self) -> dict[str, Any]:
         """Get a summary of this bot's state."""
         return {
             "id": self.id,
@@ -202,7 +202,7 @@ class BotServiceRegistry:
     """Centralized registry for managing bot service workers."""
 
     def __init__(self):
-        self._bots: Dict[str, BotServiceWorker] = {}
+        self._bots: dict[str, BotServiceWorker] = {}
 
     def register(self, bot_id: str, bot: BotServiceWorker) -> None:
         """Register a bot service worker."""
@@ -212,22 +212,22 @@ class BotServiceRegistry:
         """Unregister a bot service worker."""
         self._bots.pop(bot_id, None)
 
-    def get(self, bot_id: str) -> Optional[BotServiceWorker]:
+    def get(self, bot_id: str) -> BotServiceWorker | None:
         """Get a bot by ID."""
         return self._bots.get(bot_id)
 
-    def list_all(self) -> List[str]:
+    def list_all(self) -> list[str]:
         """List all registered bot IDs."""
         return list(self._bots.keys())
 
-    def list_by_capability(self, capability: BotCapability) -> List[BotServiceWorker]:
+    def list_by_capability(self, capability: BotCapability) -> list[BotServiceWorker]:
         """List all bots with a specific capability."""
         return [bot for bot in self._bots.values() if bot.capability == capability]
 
     def __len__(self) -> int:
         return len(self._bots)
 
-    def execute(self, bot_id: str, payload: Dict[str, Any]) -> BotExecutionResult:
+    def execute(self, bot_id: str, payload: dict[str, Any]) -> BotExecutionResult:
         """Execute a specific bot by ID."""
         bot = self._bots.get(bot_id)
         if bot is None:
