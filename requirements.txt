@@ -1,5 +1,5 @@
 # TRANC3 — Python Dependencies
-# Updated: 2025-07 — CVE Remediation & Security Hardening
+# Updated: 2026-05 — CVE Remediation & Security Hardening
 # All versions EXACT-PINNED for security and reproducibility
 # Do NOT use >= or ~= — exact pins prevent supply-chain drift
 
@@ -45,16 +45,35 @@ python-multipart==0.0.29
 python-dotenv==1.2.2
 
 # === Web Framework ===
-# Fixes: CVE-2024-33663 (algorithm confusion), CVE-2024-29370 (JWE DoS) via python-jose==3.4.0
-fastapi==0.115.12
+# Fixes: CVE-2024-33663 (algorithm confusion), CVE-2024-29370 (JWE DoS) via python-jose>=3.4.0
+# python-jose 3.5.0: upgrades pyasn1 constraint to >=0.5.0 (was <0.5.0 in 3.4.0), enabling pyasn1 fix
+# fastapi 0.136.3: pulls starlette 1.1.0 — fixes PYSEC-2026-161, CVE-2025-54121, CVE-2025-62727
+fastapi==0.136.3
+# starlette explicit pin: fixes PYSEC-2026-161, CVE-2025-54121 (DoS), CVE-2025-62727 (path traversal)
+# transitive via fastapi — pinned explicitly to prevent downgrade
+starlette==1.1.0
 httpx==0.28.1
-pydantic==2.11.5
-pydantic-settings==2.9.1
-sse-starlette==2.3.6
-uvicorn==0.34.3
+pydantic==2.13.4
+pydantic-settings==2.14.1
+sse-starlette==3.4.4
+uvicorn==0.48.0
 structlog==25.3.0
-python-jose[cryptography]==3.4.0
+python-jose[cryptography]==3.5.0
 email-validator==2.2.0
+# pyasn1: fixes CVE-2026-30922 (integer overflow / DoS in BER/DER parser)
+# transitive dep (via python-jose/rsa) — pinned explicitly to prevent downgrade
+# requires python-jose>=3.5.0 (3.4.0 constrained pyasn1<0.5.0)
+pyasn1==0.6.3
+# PyJWT: fixes PYSEC-2026-120 (algorithm confusion in multi-key verification),
+#        PYSEC-2025-183 (header injection via unvalidated kid/typ claims)
+# Transitive via multiple auth paths — pinned explicitly to prevent downgrade.
+PyJWT==2.13.0
+# idna: fixes CVE-2026-45409 (quadratic complexity ReDoS on crafted labels)
+# Transitive via anyio, httpx, email-validator, requests — explicit pin required.
+idna==3.16
+# urllib3: fixes PYSEC-2026-141 (header injection), PYSEC-2026-142 (proxy auth bypass)
+# Transitive via requests, httpx — pinned explicitly to prevent downgrade.
+urllib3==2.7.0
 
 # === Testing ===
 # Fixes: CVE-2025-71176 (tempfile race condition)
@@ -78,21 +97,35 @@ pyswarms==1.3.0
 
 # === Observability (activates src/observability/metrics.py declarations) ===
 prometheus-client==0.21.0
-opentelemetry-api==1.27.0
-opentelemetry-sdk==1.27.0
-opentelemetry-exporter-otlp-proto-grpc==1.27.0
-opentelemetry-instrumentation-fastapi==0.48b0
+opentelemetry-api==1.42.1
+opentelemetry-sdk==1.42.1
+opentelemetry-exporter-otlp-proto-grpc==1.42.1
+opentelemetry-instrumentation-fastapi==0.63b1
 
 # === Caching ===
 # cachetools: LRU/TTL/LFU caches — used by AdaptiveTTLCache (src/knowledge/adaptive_cache.py)
 cachetools==5.5.0
-# diskcache: Persistent disk-backed cache — drop-in Redis alternative for single-host
-diskcache==5.6.3
+# diskcache removed — CVE-2025-69872 (pickle deserialization RCE, no upstream fix).
+# Package had zero usages in the codebase; Redis + cachetools cover all caching needs.
 
 # === Messaging ===
 # nats-py: NATS JetStream client — high-throughput inter-worker messaging alternative to Redis
 #   15MB binary, 1M+ msg/s, replaces SQLite queue for high-volume paths
 nats-py==2.7.2
+
+# === Redis Client ===
+# redis: Used by api.py, src/core/redis_store.py, src/core/feature_flags.py,
+#   src/security/security_framework.py, src/mcp/tools.py for caching, session
+#   management, pub/sub, and feature flag evaluation. Also used by tranc3-bots.
+redis==7.4.0
+
+# === Master Worker / BotSwarm / Task Orchestration ===
+# pyyaml: YAML task definition parsing — powers src/master/task_loader.py
+pyyaml==6.0.2
+# apscheduler: Cron/interval/date scheduling — drives src/master/master_worker.py
+apscheduler==3.10.4
+# watchdog: Filesystem events — hot-reload YAML task files without restart
+watchdog==4.0.0
 
 # === Security Scanning (dev-only) ===
 # Run: pip install -r requirements-security.txt

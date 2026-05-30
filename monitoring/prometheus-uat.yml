@@ -1,0 +1,104 @@
+# monitoring/prometheus-uat.yml
+# Prometheus configuration for UAT environment
+# Mirrors prometheus.yml but targets tranc3-uat-* containers on UAT ports
+
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  external_labels:
+    cluster: 'tranc3-uat'
+    environment: 'uat'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+          category: 'infrastructure'
+
+  # ── P0 Workers ───────────────────────────────────────────────────────────
+  - job_name: 'api'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['api:8000']
+        labels:
+          service: 'tranc3-api'
+          priority: 'P0'
+
+  - job_name: 'infinity-ws'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['infinity-ws:8004']
+        labels:
+          service: 'infinity-ws'
+          priority: 'P0'
+          named: 'The Nexus'
+
+  - job_name: 'infinity-auth'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['infinity-auth:8005']
+        labels:
+          service: 'infinity-auth'
+          priority: 'P0'
+          named: 'Infinity'
+
+  # ── P1 Workers ───────────────────────────────────────────────────────────
+  - job_name: 'infinity-ai'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['infinity-ai:8009']
+        labels:
+          service: 'infinity-ai'
+          priority: 'P1'
+
+  - job_name: 'users-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['users-service:8006']
+        labels:
+          service: 'users-service'
+          priority: 'P1'
+
+  - job_name: 'monitoring'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['monitoring:8007']
+        labels:
+          service: 'monitoring'
+          priority: 'P1'
+
+  # ── P2 Workers ───────────────────────────────────────────────────────────
+  - job_name: 'the-grid'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['the-grid:8010']
+        labels:
+          service: 'the-grid'
+          priority: 'P2'
+          named: 'The Digital Grid'
+
+  - job_name: 'products-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['products-service:8011']
+        labels:
+          service: 'products-service'
+          priority: 'P2'
+
+  - job_name: 'orders-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['orders-service:8012']
+        labels:
+          service: 'orders-service'
+          priority: 'P2'
+
+  - job_name: 'payments-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['payments-service:8013']
+        labels:
+          service: 'payments-service'
+          priority: 'P2'
