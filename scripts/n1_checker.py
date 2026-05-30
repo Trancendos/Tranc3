@@ -41,11 +41,11 @@ CACHE: dict[str, tuple[str, ...]] = {}
 
 class Status(str, Enum):
     COMPLIANT = "COMPLIANT"
-    WARNING = "WARNING"     # N-2 minor
-    CRITICAL = "CRITICAL"   # N-1 major
-    BLOCKER = "BLOCKER"     # N-2+ major
-    UNPINNED = "UNPINNED"   # no exact pin
-    UNKNOWN = "UNKNOWN"     # PyPI lookup failed
+    WARNING = "WARNING"  # N-2 minor
+    CRITICAL = "CRITICAL"  # N-1 major
+    BLOCKER = "BLOCKER"  # N-2+ major
+    UNPINNED = "UNPINNED"  # no exact pin
+    UNKNOWN = "UNKNOWN"  # PyPI lookup failed
 
 
 @dataclass
@@ -184,32 +184,44 @@ def check_file(req_file: Path, rate_limit_pause: float = 0.15) -> list[Finding]:
         time.sleep(rate_limit_pause)  # polite rate limiting
 
         if pinned is None:
-            findings.append(Finding(
-                package=pkg, pinned="(unpinned)", latest="unknown",
-                status=Status.UNPINNED,
-                message="No exact version pin — N-1 cannot be verified. Pin to exact version.",
-                requirement_file=str(req_file),
-            ))
+            findings.append(
+                Finding(
+                    package=pkg,
+                    pinned="(unpinned)",
+                    latest="unknown",
+                    status=Status.UNPINNED,
+                    message="No exact version pin — N-1 cannot be verified. Pin to exact version.",
+                    requirement_file=str(req_file),
+                )
+            )
             continue
 
         versions = _get_latest_versions(pkg)
         if not versions:
-            findings.append(Finding(
-                package=pkg, pinned=pinned, latest="unknown",
-                status=Status.UNKNOWN,
-                message="PyPI lookup failed — verify manually.",
-                requirement_file=str(req_file),
-            ))
+            findings.append(
+                Finding(
+                    package=pkg,
+                    pinned=pinned,
+                    latest="unknown",
+                    status=Status.UNKNOWN,
+                    message="PyPI lookup failed — verify manually.",
+                    requirement_file=str(req_file),
+                )
+            )
             continue
 
         latest = _latest_stable(versions)
         if latest is None:
-            findings.append(Finding(
-                package=pkg, pinned=pinned, latest="unknown",
-                status=Status.UNKNOWN,
-                message="No stable release found on PyPI.",
-                requirement_file=str(req_file),
-            ))
+            findings.append(
+                Finding(
+                    package=pkg,
+                    pinned=pinned,
+                    latest="unknown",
+                    status=Status.UNKNOWN,
+                    message="No stable release found on PyPI.",
+                    requirement_file=str(req_file),
+                )
+            )
             continue
 
         status = _check_n1(pinned, latest)
@@ -227,11 +239,16 @@ def check_file(req_file: Path, rate_limit_pause: float = 0.15) -> list[Finding]:
         else:  # BLOCKER
             msg = f"🔴 {pinned} (latest {latest}) — {major_diff} major versions behind (N-1 BLOCKER: must upgrade before merge)"
 
-        findings.append(Finding(
-            package=pkg, pinned=pinned, latest=latest,
-            status=status, message=msg,
-            requirement_file=str(req_file),
-        ))
+        findings.append(
+            Finding(
+                package=pkg,
+                pinned=pinned,
+                latest=latest,
+                status=status,
+                message=msg,
+                requirement_file=str(req_file),
+            )
+        )
 
     return findings
 
@@ -249,7 +266,9 @@ def main() -> int:
     target_files: list[Path] = []
 
     if args.all:
-        target_files = sorted(root.glob("requirements*.txt")) + sorted(root.glob("*/requirements*.txt"))
+        target_files = sorted(root.glob("requirements*.txt")) + sorted(
+            root.glob("*/requirements*.txt")
+        )
     elif args.files:
         target_files = [Path(f) for f in args.files]
     else:
@@ -266,6 +285,7 @@ def main() -> int:
         return 2
 
     import datetime
+
     report = Report(
         scanned_at=datetime.datetime.utcnow().isoformat() + "Z",
         files=[str(f) for f in target_files],
@@ -300,10 +320,10 @@ def main() -> int:
         }
         print(json.dumps(output, indent=2))
     else:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("N-1 DEPENDENCY COMPLIANCE REPORT")
         print(f"Scanned: {report.scanned_at}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         for status_group, label in [
             (report.blockers, "🔴 BLOCKERS"),
@@ -317,9 +337,9 @@ def main() -> int:
                 for f in status_group:
                     print(f"  [{f.requirement_file}] {f.message}")
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"SUMMARY: {report.summary()}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
     violations = len(report.blockers) + len(report.criticals)
     if args.exit_code and violations > 0:

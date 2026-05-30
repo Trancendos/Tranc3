@@ -57,9 +57,7 @@ class GBrainPipeline:
                     response  TEXT    NOT NULL
                 )
             """)
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_ts ON interactions(ts)"
-            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_ts ON interactions(ts)")
             conn.commit()
             conn.close()
             self._ready = True
@@ -71,9 +69,7 @@ class GBrainPipeline:
             return
         try:
             # Offload blocking IO to thread pool
-            await asyncio.get_event_loop().run_in_executor(
-                None, self._write_sync, interaction
-            )
+            await asyncio.get_event_loop().run_in_executor(None, self._write_sync, interaction)
         except Exception as exc:
             log.warning("GBrainPipeline.ingest: %s", exc)
 

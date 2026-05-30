@@ -114,8 +114,7 @@ class BM25Index:
             for tok in set(tokens):
                 df[tok] = df.get(tok, 0) + 1
         self._idf = {
-            tok: math.log((N - freq + 0.5) / (freq + 0.5) + 1.0)
-            for tok, freq in df.items()
+            tok: math.log((N - freq + 0.5) / (freq + 0.5) + 1.0) for tok, freq in df.items()
         }
         self._dirty = False
 
@@ -136,8 +135,10 @@ class BM25Index:
                     continue
                 idf = self._idf[qt]
                 f = tf.get(qt, 0)
-                norm = f * (self.K1 + 1) / (
-                    f + self.K1 * (1 - self.B + self.B * dl / max(self._avgdl, 1))
+                norm = (
+                    f
+                    * (self.K1 + 1)
+                    / (f + self.K1 * (1 - self.B + self.B * dl / max(self._avgdl, 1)))
                 )
                 score += idf * norm
             if score > 0:
@@ -221,11 +222,16 @@ class KnowledgeBrain:
 
     def _row_to_page(self, row: sqlite3.Row) -> KBPage:
         import json
+
         return KBPage(
-            id=row["id"], title=row["title"], content=row["content"],
-            source=row["source"], metadata=json.loads(row["metadata"] or "{}"),
+            id=row["id"],
+            title=row["title"],
+            content=row["content"],
+            source=row["source"],
+            metadata=json.loads(row["metadata"] or "{}"),
             tags=json.loads(row["tags"] or "[]"),
-            created_at=row["created_at"], updated_at=row["updated_at"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
         )
 
     # ── Async CRUD ────────────────────────────────────────────────────────────
@@ -233,6 +239,7 @@ class KnowledgeBrain:
     async def put_page(self, page: KBPage) -> str:
         """Insert or update a page; returns the page id."""
         import json
+
         now = time.time()
         self._conn.execute(
             """INSERT INTO pages(id, title, content, source, metadata, tags, created_at, updated_at)
@@ -242,8 +249,14 @@ class KnowledgeBrain:
                  source=excluded.source, metadata=excluded.metadata,
                  tags=excluded.tags, updated_at=excluded.updated_at""",
             (
-                page.id, page.title, page.content, page.source,
-                json.dumps(page.metadata), json.dumps(page.tags), now, now,
+                page.id,
+                page.title,
+                page.content,
+                page.source,
+                json.dumps(page.metadata),
+                json.dumps(page.tags),
+                now,
+                now,
             ),
         )
         self._conn.commit()
@@ -261,9 +274,7 @@ class KnowledgeBrain:
 
     async def get_page(self, page_id: str) -> Optional[KBPage]:
         """Retrieve a page by id; returns None if not found."""
-        row = self._conn.execute(
-            "SELECT * FROM pages WHERE id = ?", (page_id,)
-        ).fetchone()
+        row = self._conn.execute("SELECT * FROM pages WHERE id = ?", (page_id,)).fetchone()
         if row is None:
             return None
         return self._row_to_page(row)
@@ -288,9 +299,7 @@ class KnowledgeBrain:
                 "SELECT * FROM pages WHERE source = ? ORDER BY updated_at DESC", (source,)
             ).fetchall()
         else:
-            rows = self._conn.execute(
-                "SELECT * FROM pages ORDER BY updated_at DESC"
-            ).fetchall()
+            rows = self._conn.execute("SELECT * FROM pages ORDER BY updated_at DESC").fetchall()
         return [self._row_to_page(r) for r in rows]
 
     # ── Async Search ──────────────────────────────────────────────────────────
@@ -430,5 +439,9 @@ def _make_excerpt(content: str, query: str, window: int = 120) -> str:
         if pos != -1:
             start = max(0, pos - window // 2)
             end = min(len(content), pos + window // 2)
-            return ("…" if start > 0 else "") + content[start:end] + ("…" if end < len(content) else "")
+            return (
+                ("…" if start > 0 else "")
+                + content[start:end]
+                + ("…" if end < len(content) else "")
+            )
     return content[:window] + ("…" if len(content) > window else "")
