@@ -251,7 +251,7 @@ def multi_hop_search(
                     {
                         "node_id": node_id,
                         "title": row["title"],
-                        "content": row["content"][:500],
+                        "content": (row["content"] or "")[:500],
                         "importance": row["importance"],
                         "hops": depth,
                         "path": path,
@@ -316,7 +316,7 @@ def associative_bridge(
         {
             "node_id": r["node_id"],
             "title": r["title"],
-            "content": r["content"][:500],
+            "content": (r["content"] or "")[:500],
             "importance": r["importance"],
             "relevance_score": round(s, 4),
         }
