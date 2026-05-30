@@ -73,17 +73,23 @@ export default function LoginPage({ onLogin }: Props) {
                     <div>
                         <label htmlFor="username" className="block text-sm text-gray-400 mb-1">Username</label>
                         <input id="username" value={username} onChange={e => setUsername(e.target.value)}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                            autoComplete="username"
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-transparent"
                             placeholder="your_username" required />
                     </div>
                     <div>
                         <label htmlFor="password" className="block text-sm text-gray-400 mb-1">Password</label>
                         <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent"
+                            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-transparent"
                             placeholder="••••••••" required />
                     </div>
-                    {error && <p className="text-red-400 text-sm">{error}</p>}
-                    <button type="submit" disabled={loading} aria-busy={loading} aria-live="polite"
+                    {error && <p className="text-red-400 text-sm" role="alert">{error}</p>}
+                    {/* Screen-reader-only live region; separate from the button so disabled state doesn't suppress announcements */}
+                    <div aria-live="polite" aria-atomic="true" className="sr-only">
+                        {loading ? (mode === 'login' ? 'Signing In…' : 'Creating Account…') : ''}
+                    </div>
+                    <button type="submit" disabled={loading} aria-busy={loading}
                         className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent flex justify-center items-center">
                         {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />}
                         {loading ? (mode === 'login' ? 'Signing In...' : 'Creating Account...') : (mode === 'login' ? 'Sign In' : 'Create Account')}
