@@ -54,9 +54,9 @@ logger = logging.getLogger(__name__)
 
 try:
     from shared_core.infinity.adaptive_intelligence import (
+        SUBSYSTEM_AVAILABILITY,
         InfinityHealthOrchestrator,  # noqa: F401
         create_orchestrator,
-        SUBSYSTEM_AVAILABILITY,
     )
 
     _ORCHESTRATOR_AVAILABLE = True
@@ -382,7 +382,7 @@ def _make_sentinel_fn(sentinel: Any) -> Callable:
 
     async def _publish(channel: str, event_type: str, payload: dict) -> None:
         try:
-            from shared_core.infinity.sentinel_station import SentinelEvent, SentinelChannel
+            from shared_core.infinity.sentinel_station import SentinelChannel, SentinelEvent
 
             ch = SentinelChannel(channel) if isinstance(channel, str) else channel
             await sentinel.publish(

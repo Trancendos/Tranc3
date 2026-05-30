@@ -485,7 +485,7 @@ class NeuromorphicNetwork:
         spikes: List[SpikeEvent] = []
 
         # Collect input currents for each neuron
-        input_currents: Dict[str, float] = {nid: 0.0 for nid in self.neurons}
+        input_currents: Dict[str, float] = dict.fromkeys(self.neurons, 0.0)
 
         # Process incoming spikes from connections (with delay)
         for conn in self.connections:

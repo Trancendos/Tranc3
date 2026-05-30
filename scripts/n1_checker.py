@@ -35,7 +35,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
-
 PYPI_URL = "https://pypi.org/pypi/{package}/json"
 CACHE: dict[str, tuple[str, ...]] = {}
 
@@ -138,15 +137,15 @@ def _latest_stable(versions: tuple[str, ...]) -> str | None:
 def _check_n1(pinned_str: str, latest_str: str) -> Status:
     """Classify how far behind pinned is from latest."""
     p = _parse_version(pinned_str)
-    l = _parse_version(latest_str)
-    if p >= l:
+    latest = _parse_version(latest_str)
+    if p >= latest:
         return Status.COMPLIANT
-    major_diff = l[0] - p[0]
+    major_diff = latest[0] - p[0]
     if major_diff >= 2:
         return Status.BLOCKER
     if major_diff == 1:
         return Status.CRITICAL
-    minor_diff = l[1] - p[1]
+    minor_diff = latest[1] - p[1]
     if minor_diff >= 2:
         return Status.WARNING
     return Status.COMPLIANT

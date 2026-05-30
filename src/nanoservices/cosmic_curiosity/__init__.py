@@ -1,19 +1,19 @@
 """Cosmic Curiosity nanoservice."""
 
 from .cosmic_curiosity import (
-    KnowledgeDomain,
-    CuriosityType,
-    QuestionDepth,
-    HypothesisStatus,
-    SurpriseLevel,
-    KnowledgeFragment,
-    CosmicQuestion,
-    Hypothesis,
-    CuriosityState,
-    QuestionGenerator,
-    HypothesisFormer,
-    KnowledgeSynthesizer,
     CosmicCuriosityService,
+    CosmicQuestion,
+    CuriosityState,
+    CuriosityType,
+    Hypothesis,
+    HypothesisFormer,
+    HypothesisStatus,
+    KnowledgeDomain,
+    KnowledgeFragment,
+    KnowledgeSynthesizer,
+    QuestionDepth,
+    QuestionGenerator,
+    SurpriseLevel,
 )
 
 __all__ = [

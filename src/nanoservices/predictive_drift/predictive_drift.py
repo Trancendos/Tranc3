@@ -353,7 +353,7 @@ Respond in JSON format as a list of predictions."""
                 auto_heal = False
 
             # Affected resources
-            resources = list(set(s.resource_name for s in cat_signals if s.resource_name))
+            resources = list({s.resource_name for s in cat_signals if s.resource_name})
 
             # Remediation suggestion
             remediation_map = {
