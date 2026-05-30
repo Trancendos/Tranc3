@@ -22,9 +22,8 @@ Channel Mapping:
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.nexus.nexus_core import Nexus, NexusEvent, get_nexus
@@ -94,6 +93,7 @@ class NexusSentinelBridge:
         else:
             try:
                 from Dimensional.infinity.sentinel_station import get_sentinel_station
+
                 self._sentinel_station = get_sentinel_station()
             except Exception as e:
                 logger.warning(f"Could not get Sentinel Station: {e}")
@@ -144,8 +144,9 @@ class NexusSentinelBridge:
             self._stats["errors"] += 1
             logger.debug(f"Failed to forward Nexus→Sentinel: {e}")
 
-    async def on_sentinel_event(self, channel: str, payload: Dict[str, Any],
-                                 event_type: str = "", source: str = ""):
+    async def on_sentinel_event(
+        self, channel: str, payload: Dict[str, Any], event_type: str = "", source: str = ""
+    ):
         """Handle a Sentinel Station event and forward it into the Nexus.
 
         This method should be called by the Sentinel Station's handler
@@ -156,9 +157,7 @@ class NexusSentinelBridge:
 
         try:
             # Map to Nexus SentinelChannel
-            nexus_channel = SENTINEL_TO_NEXUS_MAP.get(
-                channel.lower(), SentinelChannel.EVENTS
-            )
+            nexus_channel = SENTINEL_TO_NEXUS_MAP.get(channel.lower(), SentinelChannel.EVENTS)
 
             # Determine tier from source
             source_tier = 5  # Default to BOT tier

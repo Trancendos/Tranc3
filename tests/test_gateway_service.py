@@ -43,12 +43,14 @@ def client():
 
     os.environ["GATEWAY_DB_PATH"] = tmp_path
     os.environ["GATEWAY_PORT"] = "8040"
-    os.environ["API_KEYS"] = ",".join([
-        TEST_API_KEY,
-        TEST_API_KEY_USER,
-        TEST_API_KEY_AGENT,
-        TEST_API_KEY_BOT,
-    ])
+    os.environ["API_KEYS"] = ",".join(
+        [
+            TEST_API_KEY,
+            TEST_API_KEY_USER,
+            TEST_API_KEY_AGENT,
+            TEST_API_KEY_BOT,
+        ]
+    )
 
     import importlib
 
@@ -640,8 +642,6 @@ class TestOWASPHardening:
     def test_csrf_cookie_set(self, client):
         """CSRF token cookie should be set on responses."""
         res = client.get("/health")
-        # CSRF token is set via cookie
-        cookies = res.headers.get("set-cookie", "")
         # The CSRF cookie may or may not be set depending on config
         # Just verify the response is successful
         assert res.status_code == 200

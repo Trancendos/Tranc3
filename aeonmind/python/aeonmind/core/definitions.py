@@ -20,8 +20,10 @@ from typing import Any, Dict, List, Optional
 
 # ── Tier System ──────────────────────────────────────────────────────────────
 
+
 class Tier(IntEnum):
     """Platform entity tier hierarchy."""
+
     HUMAN = 0
     ORCHESTRATOR = 1
     PRIME = 2
@@ -32,8 +34,10 @@ class Tier(IntEnum):
 
 # ── Sentinel Channels ───────────────────────────────────────────────────────
 
+
 class SentinelChannel(str, Enum):
     """Inter-entity communication channels for the sentinel broadcast system."""
+
     PLATFORM = "platform"
     AGENTS = "agents"
     MODELS = "models"
@@ -49,6 +53,7 @@ class SentinelChannel(str, Enum):
 
 # ── Entity Types ─────────────────────────────────────────────────────────────
 
+
 @dataclass
 class BotService:
     """Tier 5 — Stateless service worker / function.
@@ -57,6 +62,7 @@ class BotService:
     They perform single-purpose, stateless operations and cannot
     act autonomously — they are invoked by Agents or AI complexes.
     """
+
     id: str = field(default_factory=lambda: f"bot-{uuid.uuid4().hex[:8]}")
     name: str = "unnamed-bot"
     capability: str = "generic"
@@ -85,6 +91,7 @@ class AgentEntity:
     internal state, and coordinate with other agents. They report
     to AI complexes (Tier 3) and can invoke bots (Tier 5).
     """
+
     id: str = field(default_factory=lambda: f"agent-{uuid.uuid4().hex[:8]}")
     name: str = "unnamed-agent"
     tier: Tier = Tier.AGENT
@@ -121,6 +128,7 @@ class AiComplex:
     the high-level ML/LLM inference capabilities. AI Complexes
     are managed by Orchestrators (Tier 1).
     """
+
     id: str = field(default_factory=lambda: f"ai-{uuid.uuid4().hex[:8]}")
     name: str = "unnamed-ai-complex"
     tier: Tier = Tier.AI

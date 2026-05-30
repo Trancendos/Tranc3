@@ -2,9 +2,6 @@
 Tests for AeonMind Quantum Decision Circuit.
 """
 
-import pytest
-import numpy as np
-
 from aeonmind.core.quantum import QuantumDecisionCircuit, QuantumCircuitConfig
 
 
@@ -35,20 +32,20 @@ class TestQuantumDecisionCircuit:
         config = QuantumCircuitConfig(n_qubits=3, n_layers=1, rotations_per_layer=2)
         circuit = QuantumDecisionCircuit(config)
         probabilities = circuit.execute(use_pennylane=False)
-        assert len(probabilities) == 2 ** 3
+        assert len(probabilities) == 2**3
         assert abs(sum(probabilities) - 1.0) < 1e-6
 
     def test_decide(self):
         config = QuantumCircuitConfig(n_qubits=3, n_layers=2)
         circuit = QuantumDecisionCircuit(config)
         decision = circuit.decide(use_pennylane=False)
-        assert 0 <= decision < 2 ** 3
+        assert 0 <= decision < 2**3
 
     def test_decide_probabilistic(self):
         config = QuantumCircuitConfig(n_qubits=3, n_layers=2)
         circuit = QuantumDecisionCircuit(config)
         decision = circuit.decide_probabilistic(use_pennylane=False)
-        assert 0 <= decision < 2 ** 3
+        assert 0 <= decision < 2**3
 
     def test_compute_cost(self):
         config = QuantumCircuitConfig(n_qubits=3, n_layers=1)
