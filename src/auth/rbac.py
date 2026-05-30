@@ -14,11 +14,6 @@ from __future__ import annotations
 
 from fastapi import Depends, HTTPException, status
 
-try:
-    from auth import get_current_user
-except ImportError:
-    from src.auth.dependencies import get_current_user  # type: ignore[no-redef]
-
 # Permission → minimum role mapping
 _PERMISSION_ROLES: dict[str, set[str]] = {
     "admin:audit": {"admin"},
@@ -45,6 +40,11 @@ def require_permission(permission: str):
     Returns a Depends-compatible callable that raises 403 if the current
     user does not hold the required permission.
     """
+    # Deferred import breaks the circular dependency between rbac ↔ auth.dependencies.
+    try:
+        from auth import get_current_user  # type: ignore[import]
+    except ImportError:
+        from src.auth.dependencies import get_current_user  # type: ignore[no-redef]
 
     async def _guard(current_user: dict = Depends(get_current_user)) -> None:
         if not _has_permission(current_user, permission):

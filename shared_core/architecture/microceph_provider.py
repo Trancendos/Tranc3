@@ -1,5 +1,4 @@
 # Re-export from canonical location — Dimensional.architecture is the source of truth.
-from Dimensional.architecture.microceph_provider import *  # noqa: F401, F403
 from Dimensional.architecture.microceph_provider import (  # noqa: F401
     CephHealthMonitor,
     CephHealthStatus,
