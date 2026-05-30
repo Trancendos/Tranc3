@@ -261,6 +261,9 @@ impl EvolutionEngine {
         }
 
         let n = dna1.len().min(dna2.len());
+        if n <= 1 {
+            return (dna1.to_vec(), dna2.to_vec());
+        }
         let crossover_point = rng.gen_range(1..n);
 
         let mut child1 = Vec::with_capacity(n);

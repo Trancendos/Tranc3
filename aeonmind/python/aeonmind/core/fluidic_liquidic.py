@@ -215,6 +215,10 @@ class LiquidReservoir:
         """
         # Collect reservoir states (skip washout)
         states = self.process_sequence(inputs)
+        if len(states) <= self.config.washout:
+            raise ValueError(
+                f"Input sequence length ({len(states)}) must be greater than washout ({self.config.washout})"
+            )
         states = states[self.config.washout :]
         targets_trimmed = targets[self.config.washout :]
 

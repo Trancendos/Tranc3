@@ -187,11 +187,10 @@ class QuantumDecisionCircuit:
         new_state = np.zeros_like(state)
         for i in range(dim):
             bit = (i >> (n - 1 - qubit)) & 1
-            j = i ^ (1 << (n - 1 - qubit))  # flip the qubit
+            j = i ^ (1 << (n - 1 - qubit))
             if bit == 0:
-                new_state[i] += cos_a * state[i]
-                new_state[j] += -1j * sin_a * state[j]
-            # bit == 1 is handled by the flip
+                new_state[i] = cos_a * state[i] - 1j * sin_a * state[j]
+                new_state[j] = -1j * sin_a * state[i] + cos_a * state[j]
         return new_state
 
     def _apply_ry(self, state: np.ndarray, qubit: int, n: int, angle: float) -> np.ndarray:
@@ -204,9 +203,8 @@ class QuantumDecisionCircuit:
             bit = (i >> (n - 1 - qubit)) & 1
             j = i ^ (1 << (n - 1 - qubit))
             if bit == 0:
-                new_state[i] += cos_a * state[i]
-                new_state[j] += sin_a * state[j]
-            # bit == 1 handled by the flip
+                new_state[i] = cos_a * state[i] - sin_a * state[j]
+                new_state[j] = sin_a * state[i] + cos_a * state[j]
         return new_state
 
     def _apply_rz(self, state: np.ndarray, qubit: int, n: int, angle: float) -> np.ndarray:

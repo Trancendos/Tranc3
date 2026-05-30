@@ -154,7 +154,7 @@ class BotServiceWorker:
         if capability == BotCapability.TRANSLATE:
             return {"translated": payload.get("text", ""), "lang": payload.get("target_lang", "en")}
         elif capability == BotCapability.SUMMARIZE:
-            text = payload.get("text", "")
+            text = payload.get("text") or ""
             return {"summary": text[:100] + "..." if len(text) > 100 else text}
         elif capability == BotCapability.MONITOR:
             return {"status": "healthy", "timestamp": time.time()}

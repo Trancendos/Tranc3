@@ -134,7 +134,12 @@ impl AdaptiveMetaLearner {
         // Initial Hessian approximation (scaled identity)
         let gamma = if m > 0 {
             let last = &self.history[m - 1];
-            dot(&last.s, &last.y) / dot(&last.y, &last.y)
+            let y_norm_sq = dot(&last.y, &last.y);
+            if y_norm_sq > 1e-10 {
+                dot(&last.s, &last.y) / y_norm_sq
+            } else {
+                1.0
+            }
         } else {
             1.0
         };

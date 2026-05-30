@@ -141,9 +141,7 @@ class DNAEvolutionEngine:
         self.population.sort(key=lambda ind: ind.fitness, reverse=True)
 
         # Elitism: keep top individuals
-        new_population = [
-            copy.deepcopy(self.population[: self.config.elitism_count]) for _ in range(1)
-        ][0]
+        new_population = copy.deepcopy(self.population[: self.config.elitism_count])
 
         # Generate offspring
         while len(new_population) < self.config.population_size:

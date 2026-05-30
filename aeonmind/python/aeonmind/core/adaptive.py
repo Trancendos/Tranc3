@@ -202,6 +202,7 @@ class AdaptiveMetaLearner:
         self._initial_loss = loss_fn(self.parameters)
         self._best_loss = self._initial_loss
 
+        step_result = None
         for i in range(self.config.max_iterations):
             loss = loss_fn(self.parameters)
             gradient = grad_fn(self.parameters)
@@ -226,12 +227,12 @@ class AdaptiveMetaLearner:
         return AdaptiveSummary(
             total_steps=self._step_count,
             final_loss=self._loss_history[-1] if self._loss_history else 0.0,
-            final_gradient_norm=step_result.gradient_norm if "step_result" in dir() else 0.0,
+            final_gradient_norm=step_result.gradient_norm if step_result is not None else 0.0,
             initial_loss=self._initial_loss or 0.0,
             best_loss=self._best_loss,
             best_iteration=self._best_iteration,
             converged=step_result.gradient_norm < self.config.tolerance
-            if "step_result" in dir()
+            if step_result is not None
             else False,
             learning_rate_history=self._lr_history.copy(),
             loss_history=self._loss_history.copy(),

@@ -80,6 +80,9 @@ func NewOrchestratorServer() *OrchestratorServer {
 
 // CreateEntity creates a new platform entity.
 func (s *OrchestratorServer) CreateEntity(ctx context.Context, req *pb.CreateEntityRequest) (*pb.CreateEntityResponse, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
