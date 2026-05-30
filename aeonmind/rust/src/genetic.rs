@@ -16,7 +16,6 @@ Part of the Tranc3 Infinity Ecosystem.
 
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 // ─── Configuration ──────────────────────────────────────────
 
@@ -94,7 +93,8 @@ impl Individual {
     }
 
     pub fn dna_distance(&self, other: &Individual) -> f64 {
-        self.dna.iter()
+        self.dna
+            .iter()
             .zip(other.dna.iter())
             .map(|(a, b)| (a - b).powi(2))
             .sum::<f64>()
@@ -105,11 +105,20 @@ impl Individual {
         if population.is_empty() {
             return 0.0;
         }
-        let distances: Vec<f64> = population.iter()
+        let distances: Vec<f64> = population
+            .iter()
             .filter(|ind| ind.id != self.id)
             .map(|ind| self.dna_distance(ind))
             .collect();
-        if distances.is_empty() { 0.0 } else { distances.iter().sum::<f64>() / distances.len() as f64 }
+        if distances.is_empty() {
+            0.0
+        } else {
+            distances.iter().sum::<f64>() / distances.len() as f64
+        }
+    }
+
+    pub fn dna(&self) -> &[f64] {
+        &self.dna
     }
 }
 
@@ -138,7 +147,7 @@ pub struct EvolutionEngine {
 
 impl EvolutionEngine {
     pub fn new(config: GeneticConfig) -> Self {
-        let next_id = 0;
+        let _next_id = 0;
         let population: Vec<Individual> = (0..config.population_size)
             .map(|i| Individual::random(i, config.dna_length))
             .collect();
@@ -177,7 +186,11 @@ impl EvolutionEngine {
         F: Fn(&[f64]) -> f64,
     {
         // Sort by fitness (descending)
-        self.population.sort_by(|a, b| b.fitness.partial_cmp(&a.fitness).unwrap_or(std::cmp::Ordering::Equal));
+        self.population.sort_by(|a, b| {
+            b.fitness
+                .partial_cmp(&a.fitness)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         let mut new_population = Vec::new();
 
@@ -194,19 +207,21 @@ impl EvolutionEngine {
             let parent1 = self.tournament_select();
             let parent2 = self.tournament_select();
 
+            let p1_id = parent1.id;
+            let p2_id = parent2.id;
             let (child1_dna, child2_dna) = self.crossover(&parent1.dna, &parent2.dna);
 
             for dna in [child1_dna, child2_dna] {
                 if new_population.len() < self.config.population_size {
-                    let mut mutated_dna = self.mutate(&dna);
+                    let mutated_dna = self.mutate(&dna);
                     let mut child = Individual {
                         id: self.next_id,
-                        dna: mutated_dna.clone(),
+                        dna: mutated_dna,
                         fitness: f64::NEG_INFINITY,
                         generation: self.generation + 1,
                         age: 0,
                         is_elite: false,
-                        parent_ids: vec![parent1.id, parent2.id],
+                        parent_ids: vec![p1_id, p2_id],
                         mutation_count: 0,
                     };
                     child.fitness = fitness_fn(&child.dna);
@@ -285,23 +300,27 @@ impl EvolutionEngine {
     /// Gaussian mutation.
     pub fn mutate(&self, dna: &[f64]) -> Vec<f64> {
         let mut rng = rand::thread_rng();
-        dna.iter().map(|&gene| {
-            if rng.gen::<f64>() < self.config.mutation_rate {
-                let mutation: f64 = rng.gen_range(-1.0..1.0) * self.mutation_strength;
-                gene + mutation
-            } else {
-                gene
-            }
-        }).collect()
+        dna.iter()
+            .map(|&gene| {
+                if rng.gen::<f64>() < self.config.mutation_rate {
+                    let mutation: f64 = rng.gen_range(-1.0..1.0) * self.mutation_strength;
+                    gene + mutation
+                } else {
+                    gene
+                }
+            })
+            .collect()
     }
 
     /// Adapt mutation strength.
     pub fn adapt_mutation(&mut self) {
         let stats = self.compute_stats();
         if stats.diversity < 0.1 {
-            self.mutation_strength = (self.mutation_strength * 1.1).min(self.config.max_mutation_strength);
+            self.mutation_strength =
+                (self.mutation_strength * 1.1).min(self.config.max_mutation_strength);
         } else if stats.diversity > 0.5 {
-            self.mutation_strength = (self.mutation_strength * 0.9).max(self.config.min_mutation_strength);
+            self.mutation_strength =
+                (self.mutation_strength * 0.9).max(self.config.min_mutation_strength);
         }
     }
 
@@ -310,7 +329,11 @@ impl EvolutionEngine {
         let fitnesses: Vec<f64> = self.population.iter().map(|i| i.fitness).collect();
         let best = fitnesses.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         let worst = fitnesses.iter().cloned().fold(f64::INFINITY, f64::min);
-        let mean = if fitnesses.is_empty() { 0.0 } else { fitnesses.iter().sum::<f64>() / fitnesses.len() as f64 };
+        let mean = if fitnesses.is_empty() {
+            0.0
+        } else {
+            fitnesses.iter().sum::<f64>() / fitnesses.len() as f64
+        };
         let diversity = self.population_diversity();
 
         GenerationStats {
@@ -337,12 +360,20 @@ impl EvolutionEngine {
                 count += 1;
             }
         }
-        if count == 0 { 0.0 } else { total_dist / count as f64 }
+        if count == 0 {
+            0.0
+        } else {
+            total_dist / count as f64
+        }
     }
 
     /// Get the best individual in the current population.
     pub fn best_individual(&self) -> Option<&Individual> {
-        self.population.iter().max_by(|a, b| a.fitness.partial_cmp(&b.fitness).unwrap_or(std::cmp::Ordering::Equal))
+        self.population.iter().max_by(|a, b| {
+            a.fitness
+                .partial_cmp(&b.fitness)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
     }
 
     /// Get the best individual ever seen.
@@ -353,14 +384,50 @@ impl EvolutionEngine {
     /// Inject a random individual to increase diversity.
     pub fn inject_random(&mut self) {
         if !self.population.is_empty() {
-            let worst_idx = self.population.iter().enumerate()
-                .min_by(|(_, a), (_, b)| a.fitness.partial_cmp(&b.fitness).unwrap_or(std::cmp::Ordering::Equal))
+            let worst_idx = self
+                .population
+                .iter()
+                .enumerate()
+                .min_by(|(_, a), (_, b)| {
+                    a.fitness
+                        .partial_cmp(&b.fitness)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
                 .map(|(i, _)| i);
             if let Some(idx) = worst_idx {
                 self.population[idx] = Individual::random(self.next_id, self.config.dna_length);
                 self.next_id += 1;
             }
         }
+    }
+
+    pub fn population(&self) -> &[Individual] {
+        &self.population
+    }
+
+    pub fn set_fitness(&mut self, idx: usize, fitness: f64) {
+        if let Some(ind) = self.population.get_mut(idx) {
+            ind.fitness = fitness;
+            if self.best_ever.as_ref().is_none_or(|b| fitness > b.fitness) {
+                self.best_ever = Some(ind.clone());
+            }
+        }
+    }
+
+    pub fn generation(&self) -> usize {
+        self.generation
+    }
+
+    pub fn best_dna(&self) -> &[f64] {
+        self.best_individual()
+            .map(|ind| ind.dna.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Advance one generation using current fitness values. New children receive NEG_INFINITY
+    /// fitness and should be evaluated externally before the next advance.
+    pub fn advance_generation(&mut self) {
+        self.evolve_generation(|_| f64::NEG_INFINITY);
     }
 }
 
@@ -384,8 +451,26 @@ mod tests {
 
     #[test]
     fn test_dna_distance() {
-        let a = Individual { id: 0, dna: vec![0.0, 0.0], fitness: 0.0, generation: 0, age: 0, is_elite: false, parent_ids: vec![], mutation_count: 0 };
-        let b = Individual { id: 1, dna: vec![3.0, 4.0], fitness: 0.0, generation: 0, age: 0, is_elite: false, parent_ids: vec![], mutation_count: 0 };
+        let a = Individual {
+            id: 0,
+            dna: vec![0.0, 0.0],
+            fitness: 0.0,
+            generation: 0,
+            age: 0,
+            is_elite: false,
+            parent_ids: vec![],
+            mutation_count: 0,
+        };
+        let b = Individual {
+            id: 1,
+            dna: vec![3.0, 4.0],
+            fitness: 0.0,
+            generation: 0,
+            age: 0,
+            is_elite: false,
+            parent_ids: vec![],
+            mutation_count: 0,
+        };
         let dist = a.dna_distance(&b);
         assert!((dist - 5.0).abs() < 1e-6);
     }
@@ -399,7 +484,11 @@ mod tests {
 
     #[test]
     fn test_evaluate() {
-        let config = GeneticConfig { population_size: 10, dna_length: 10, ..Default::default() };
+        let config = GeneticConfig {
+            population_size: 10,
+            dna_length: 10,
+            ..Default::default()
+        };
         let mut engine = EvolutionEngine::new(config);
         let fitnesses = engine.evaluate(|dna| -dna.iter().map(|x| x * x).sum::<f64>());
         assert_eq!(fitnesses.len(), 10);
@@ -407,7 +496,11 @@ mod tests {
 
     #[test]
     fn test_tournament_select() {
-        let config = GeneticConfig { population_size: 10, dna_length: 5, ..Default::default() };
+        let config = GeneticConfig {
+            population_size: 10,
+            dna_length: 5,
+            ..Default::default()
+        };
         let mut engine = EvolutionEngine::new(config);
         engine.evaluate(|dna| dna.iter().sum());
         let selected = engine.tournament_select();
@@ -427,7 +520,10 @@ mod tests {
 
     #[test]
     fn test_mutate() {
-        let config = GeneticConfig { mutation_rate: 1.0, ..Default::default() };
+        let config = GeneticConfig {
+            mutation_rate: 1.0,
+            ..Default::default()
+        };
         let engine = EvolutionEngine::new(config);
         let dna = vec![0.0; 64];
         let mutated = engine.mutate(&dna);
@@ -436,7 +532,11 @@ mod tests {
 
     #[test]
     fn test_sphere_optimization() {
-        let config = GeneticConfig { population_size: 30, dna_length: 5, ..Default::default() };
+        let config = GeneticConfig {
+            population_size: 30,
+            dna_length: 5,
+            ..Default::default()
+        };
         let mut engine = EvolutionEngine::new(config);
         let stats = engine.evolve(|dna| -dna.iter().map(|x| x * x).sum::<f64>(), 50);
         assert!(!stats.is_empty());
@@ -445,7 +545,11 @@ mod tests {
 
     #[test]
     fn test_population_diversity() {
-        let config = GeneticConfig { population_size: 10, dna_length: 10, ..Default::default() };
+        let config = GeneticConfig {
+            population_size: 10,
+            dna_length: 10,
+            ..Default::default()
+        };
         let engine = EvolutionEngine::new(config);
         let diversity = engine.population_diversity();
         assert!(diversity >= 0.0);

@@ -46,9 +46,9 @@ impl Default for AdaptiveConfig {
 
 #[derive(Debug, Clone)]
 struct LbfgsEntry {
-    s: Vec<f64>,  // Parameter difference
-    y: Vec<f64>,  // Gradient difference
-    rho: f64,     // 1 / (y^T s)
+    s: Vec<f64>, // Parameter difference
+    y: Vec<f64>, // Gradient difference
+    rho: f64,    // 1 / (y^T s)
 }
 
 // ─── Adaptive Step ──────────────────────────────────────────
@@ -110,14 +110,16 @@ impl AdaptiveMetaLearner {
 
     pub fn with_parameters(config: AdaptiveConfig, parameters: Vec<f64>) -> Self {
         let n = parameters.len();
-        let mut learner = Self::new(AdaptiveConfig { n_parameters: n, ..config });
+        let mut learner = Self::new(AdaptiveConfig {
+            n_parameters: n,
+            ..config
+        });
         learner.parameters = parameters;
         learner
     }
 
     /// Compute L-BFGS search direction using two-loop recursion.
     pub fn lbfgs_direction(&self, gradient: &[f64]) -> Vec<f64> {
-        let n = gradient.len();
         let mut q = gradient.to_vec();
 
         // First loop (backwards through history)
@@ -126,8 +128,8 @@ impl AdaptiveMetaLearner {
 
         for i in (0..m).rev() {
             alphas[i] = self.history[i].rho * dot(&self.history[i].s, &q);
-            for j in 0..n {
-                q[j] -= alphas[i] * self.history[i].y[j];
+            for (qj, yj) in q.iter_mut().zip(self.history[i].y.iter()) {
+                *qj -= alphas[i] * yj;
             }
         }
 
@@ -147,10 +149,10 @@ impl AdaptiveMetaLearner {
         let mut r: Vec<f64> = q.iter().map(|&v| gamma * v).collect();
 
         // Second loop (forwards through history)
-        for i in 0..m {
-            let beta = self.history[i].rho * dot(&self.history[i].y, &r);
-            for j in 0..n {
-                r[j] += self.history[i].s[j] * (alphas[i] - beta);
+        for (alpha_i, hist_item) in alphas.iter().zip(self.history.iter()) {
+            let beta = hist_item.rho * dot(&hist_item.y, &r);
+            for (rj, sj) in r.iter_mut().zip(hist_item.s.iter()) {
+                *rj += sj * (alpha_i - beta);
             }
         }
 
@@ -159,12 +161,14 @@ impl AdaptiveMetaLearner {
 
     /// Perform one optimization step.
     pub fn step(&mut self, gradient: &[f64]) -> AdaptiveStep {
-        let n = self.parameters.len();
         let grad_norm = norm(gradient);
 
         // Gradient clipping
         let clipped: Vec<f64> = if grad_norm > self.config.gradient_clip {
-            gradient.iter().map(|&g| g * self.config.gradient_clip / grad_norm).collect()
+            gradient
+                .iter()
+                .map(|&g| g * self.config.gradient_clip / grad_norm)
+                .collect()
         } else {
             gradient.to_vec()
         };
@@ -174,34 +178,45 @@ impl AdaptiveMetaLearner {
 
         // Momentum update
         let lr = self.config.learning_rate;
-        for i in 0..n {
-            self.velocity[i] = self.config.momentum * self.velocity[i] - lr * direction[i];
+        for (vel, dir) in self.velocity.iter_mut().zip(direction.iter()) {
+            *vel = self.config.momentum * *vel - lr * dir;
         }
 
         // Parameter update with weight decay
-        for i in 0..n {
-            self.parameters[i] += self.velocity[i] - self.config.weight_decay * self.parameters[i];
+        let (lo, hi) = self.config.bounds;
+        for (param, vel) in self.parameters.iter_mut().zip(self.velocity.iter()) {
+            *param += vel - self.config.weight_decay * *param;
             // Apply bounds
-            self.parameters[i] = self.parameters[i].max(self.config.bounds.0).min(self.config.bounds.1);
+            *param = param.max(lo).min(hi);
         }
 
         // Update L-BFGS history
         if let Some(ref prev_grad) = self.prev_gradient {
-            let s: Vec<f64> = self.parameters.iter().zip(gradient.iter())
-                .map(|(&p, &g)| -lr * g) // Approximate s
+            let s: Vec<f64> = self
+                .parameters
+                .iter()
+                .zip(gradient.iter())
+                .map(|(_, &g)| -lr * g) // Approximate s
                 .collect();
-            let y: Vec<f64> = clipped.iter().zip(prev_grad.iter())
+            let y: Vec<f64> = clipped
+                .iter()
+                .zip(prev_grad.iter())
                 .map(|(&g, &pg)| g - pg)
                 .collect();
             let ys = dot(&y, &s);
             if ys > 1e-10 {
-                self.history.push(LbfgsEntry { s, y, rho: 1.0 / ys });
+                self.history.push(LbfgsEntry {
+                    s,
+                    y,
+                    rho: 1.0 / ys,
+                });
                 if self.history.len() > self.config.history_size {
                     self.history.remove(0);
                 }
             }
         }
 
+        let clipped_norm = norm(&clipped);
         self.prev_gradient = Some(clipped);
         self.iteration += 1;
 
@@ -215,7 +230,7 @@ impl AdaptiveMetaLearner {
         let step = AdaptiveStep {
             iteration: self.iteration,
             cost: self.current_cost.unwrap_or(0.0),
-            gradient_norm: grad_norm,
+            gradient_norm: clipped_norm,
             learning_rate: self.config.learning_rate,
             step_size,
         };
@@ -224,9 +239,15 @@ impl AdaptiveMetaLearner {
     }
 
     /// Run full optimization loop.
-    pub fn optimize<F>(&mut self, cost_fn: F, gradient_fn: F, n_iterations: usize) -> Vec<AdaptiveStep>
+    pub fn optimize<F, G>(
+        &mut self,
+        cost_fn: F,
+        gradient_fn: G,
+        n_iterations: usize,
+    ) -> Vec<AdaptiveStep>
     where
         F: Fn(&[f64]) -> f64 + Copy,
+        G: Fn(&[f64]) -> Vec<f64> + Copy,
     {
         let mut steps = Vec::new();
         for _ in 0..n_iterations {
@@ -294,7 +315,10 @@ mod tests {
 
     #[test]
     fn test_step() {
-        let config = AdaptiveConfig { n_parameters: 5, ..Default::default() };
+        let config = AdaptiveConfig {
+            n_parameters: 5,
+            ..Default::default()
+        };
         let mut learner = AdaptiveMetaLearner::new(config);
         let gradient = vec![0.1; 5];
         let step = learner.step(&gradient);
@@ -303,7 +327,10 @@ mod tests {
 
     #[test]
     fn test_lbfgs_direction() {
-        let config = AdaptiveConfig { n_parameters: 5, ..Default::default() };
+        let config = AdaptiveConfig {
+            n_parameters: 5,
+            ..Default::default()
+        };
         let learner = AdaptiveMetaLearner::new(config);
         let gradient = vec![0.5; 5];
         let direction = learner.lbfgs_direction(&gradient);
@@ -312,7 +339,11 @@ mod tests {
 
     #[test]
     fn test_gradient_clipping() {
-        let config = AdaptiveConfig { n_parameters: 3, gradient_clip: 1.0, ..Default::default() };
+        let config = AdaptiveConfig {
+            n_parameters: 3,
+            gradient_clip: 1.0,
+            ..Default::default()
+        };
         let mut learner = AdaptiveMetaLearner::new(config);
         let gradient = vec![100.0; 3];
         let step = learner.step(&gradient);
@@ -321,7 +352,11 @@ mod tests {
 
     #[test]
     fn test_momentum() {
-        let config = AdaptiveConfig { n_parameters: 3, momentum: 0.9, ..Default::default() };
+        let config = AdaptiveConfig {
+            n_parameters: 3,
+            momentum: 0.9,
+            ..Default::default()
+        };
         let mut learner = AdaptiveMetaLearner::new(config);
         let grad1 = vec![1.0; 3];
         learner.step(&grad1);

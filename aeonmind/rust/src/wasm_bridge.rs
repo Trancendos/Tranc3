@@ -12,8 +12,8 @@ WASM-deployed agents:
 Part of the Tranc3 Infinity Ecosystem.
 */
 
+use crate::{SentinelChannel, Tier};
 use serde::{Deserialize, Serialize};
-use crate::{Tier, SentinelChannel};
 
 // ─── Scoring Weights ────────────────────────────────────────
 
@@ -40,14 +40,20 @@ impl Default for ScoringWeights {
 
 impl ScoringWeights {
     pub fn validate(&self) -> bool {
-        let sum = self.decision_quality + self.adaptation_speed + self.state_coherence
-            + self.resource_efficiency + self.communication;
+        let sum = self.decision_quality
+            + self.adaptation_speed
+            + self.state_coherence
+            + self.resource_efficiency
+            + self.communication;
         (sum - 1.0).abs() < 1e-6
     }
 
     pub fn normalize(&mut self) {
-        let sum = self.decision_quality + self.adaptation_speed + self.state_coherence
-            + self.resource_efficiency + self.communication;
+        let sum = self.decision_quality
+            + self.adaptation_speed
+            + self.state_coherence
+            + self.resource_efficiency
+            + self.communication;
         if sum > 0.0 {
             self.decision_quality /= sum;
             self.adaptation_speed /= sum;
@@ -89,6 +95,7 @@ impl FluidicAgentState {
     }
 
     /// Update the fluidic state with new input.
+    #[allow(clippy::needless_range_loop)]
     pub fn update(&mut self, input: &[f64], leak_rate: f64) {
         let n = self.state.len().min(input.len());
         let mut new_acceleration = Vec::with_capacity(n);
@@ -111,7 +118,8 @@ impl FluidicAgentState {
         let sum_sq: f64 = self.state.iter().map(|v| v * v).sum();
         if sum_sq > 0.0 {
             let probs: Vec<f64> = self.state.iter().map(|v| (v * v) / sum_sq).collect();
-            self.entropy = probs.iter()
+            self.entropy = probs
+                .iter()
                 .filter(|&&p| p > 1e-10)
                 .map(|&p| -p * p.ln())
                 .sum();
@@ -119,7 +127,11 @@ impl FluidicAgentState {
 
         // Update coherence (1 - normalized entropy)
         let max_entropy = (self.state.len() as f64).ln();
-        self.coherence = if max_entropy > 0.0 { 1.0 - self.entropy / max_entropy } else { 1.0 };
+        self.coherence = if max_entropy > 0.0 {
+            1.0 - self.entropy / max_entropy
+        } else {
+            1.0
+        };
     }
 
     /// Compress the state by removing near-zero entries.
@@ -285,7 +297,8 @@ impl WasmAgent {
         self.compute_used += 1;
 
         if self.config.enable_compression {
-            self.fluidic_state.compress(self.config.compression_threshold);
+            self.fluidic_state
+                .compress(self.config.compression_threshold);
         }
 
         self.fluidic_state.state.clone()
@@ -300,7 +313,11 @@ impl WasmAgent {
         self.compute_used += 1;
 
         // Decision based on state energy distribution
-        let max_idx = self.fluidic_state.state.iter().enumerate()
+        let max_idx = self
+            .fluidic_state
+            .state
+            .iter()
+            .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .map(|(i, _)| i);
 
@@ -369,10 +386,10 @@ impl WasmAgent {
 
 // ─── WASM Exports (conditional) ─────────────────────────────
 
-#[cfg(feature = "wasm")]
+#[cfg(all(feature = "wasm", target_arch = "wasm32"))]
 mod wasm_exports {
-    use wasm_bindgen::prelude::*;
     use super::*;
+    use wasm_bindgen::prelude::*;
 
     #[wasm_bindgen]
     pub fn create_wasm_agent(dimensions: usize) -> *mut WasmAgent {
@@ -467,7 +484,10 @@ mod tests {
 
     #[test]
     fn test_wasm_agent_process() {
-        let config = WasmAgentConfig { state_dimensions: 5, ..Default::default() };
+        let config = WasmAgentConfig {
+            state_dimensions: 5,
+            ..Default::default()
+        };
         let mut agent = WasmAgent::new(config);
         let output = agent.process(&[1.0, 0.5, 0.0, -0.5, -1.0]);
         assert!(!output.is_empty());
@@ -475,7 +495,10 @@ mod tests {
 
     #[test]
     fn test_wasm_agent_decide() {
-        let config = WasmAgentConfig { state_dimensions: 5, ..Default::default() };
+        let config = WasmAgentConfig {
+            state_dimensions: 5,
+            ..Default::default()
+        };
         let mut agent = WasmAgent::new(config);
         agent.process(&[1.0, 0.5, 0.0, -0.5, -1.0]);
         let decision = agent.decide();
