@@ -10,6 +10,7 @@ Install extension: CREATE EXTENSION IF NOT EXISTS vector;
 Free on: Supabase (pgvector enabled by default), Neon, PlanetScale,
          or any self-hosted PostgreSQL.
 """
+
 from __future__ import annotations
 
 import logging
@@ -46,6 +47,7 @@ def _conn():
         return None
     try:
         import psycopg2
+
         conn = psycopg2.connect(_DATABASE_URL)
         conn.autocommit = True
         return conn
@@ -116,6 +118,7 @@ def search(
     params: list[Any] = [str(query_vector), top_k]
     if filter_payload:
         import json
+
         where_clause = "WHERE payload @> %s::jsonb"
         params.insert(1, json.dumps(filter_payload))
 
