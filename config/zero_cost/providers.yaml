@@ -1,0 +1,113 @@
+# Trancendos zero-cost provider registry (machine-readable)
+# Canonical narrative: docs/ZERO_COST_VENDOR_MATRIX.md
+# Verdict: approved | conditional | avoid — conditional needs caps/monitoring
+
+version: "2026-05-31"
+model: zero_cost_first
+
+approved_self_hosted:
+  - id: ollama
+    category: ai_inference
+    cost: "MIT — local only"
+  - id: forgejo
+    category: cicd
+    cost: "Forgejo OSS — The Workshop"
+  - id: traefik
+    category: ingress
+    cost: "OSS"
+  - id: prometheus
+    category: observability
+    cost: "OSS"
+  - id: grafana
+    category: observability
+    cost: "OSS"
+  - id: loki
+    category: observability
+    cost: "OSS"
+  - id: vault-ce
+    category: secrets
+    cost: "BSL — self-hosted Vault on Citadel"
+  - id: trivy
+    category: security
+    cost: "Apache 2.0"
+  - id: grype
+    category: security
+    cost: "Apache 2.0"
+  - id: osv-scanner
+    category: security
+    cost: "Apache 2.0"
+  - id: semgrep
+    category: security
+    cost: "OSS CLI in CI"
+  - id: gitleaks
+    category: security
+    cost: "MIT"
+  - id: blender
+    category: creative_3d
+    cost: "GPL — TateKing/TranceFlow pipeline"
+  - id: penpot
+    category: design
+    cost: "MPL — Fabulousa"
+  - id: ipfs
+    category: storage
+    cost: "self-hosted node"
+  - id: qdrant
+    category: vector_db
+    cost: "Apache 2.0 self-hosted"
+  - id: sqlite
+    category: database
+    cost: "public domain"
+  - id: ansible-core
+    category: automation
+    cost: "GPL — Citadel health probes"
+
+conditional_cloud:
+  - id: aws-always-free
+    category: cloud
+    limits: "Lambda 1M/mo, DynamoDB 25GB, SNS/SQS 1M — card required"
+    risk: credits_expire
+  - id: gcp-always-free
+    category: cloud
+    limits: "e2-micro US, Cloud Run 2M req — billing account required"
+    risk: credits_expire
+  - id: oracle-always-free
+    category: cloud
+    limits: "4 OCPU ARM + 200GB — card, capacity often scarce"
+    risk: idle_reclaim
+  - id: cloudflare-free
+    category: edge
+    limits: "100K workers req/day — legacy path being retired"
+    risk: quota_caps
+  - id: openrouter-free
+    category: ai_inference
+    limits: "~50 req/day :free models"
+    risk: daily_cap
+  - id: huggingface-inference
+    category: ai_inference
+    limits: "~$0.10/mo inference credits on free account"
+    risk: monthly_cap
+  - id: supabase-free
+    category: database
+    limits: "500MB — pauses after 7d idle"
+    risk: idle_pause
+  - id: github-public
+    category: forge
+    limits: "unlimited Actions on public repos"
+    risk: private_repo_limits
+
+avoid_paid_default:
+  - id: fly-io-new-accounts
+    reason: "No permanent free tier since 2024"
+  - id: adobe-creative-cloud-pro
+    reason: "Desktop apps paid; only Express/Firefly crumbs free"
+  - id: creative-fabrica-premium-3d
+    reason: "Trial then subscription"
+  - id: snyk-private-heavy
+    reason: "200 tests/mo on private repos"
+
+language_ecosystems:
+  python: { registry: pypi, cost: free, tool: pip-audit }
+  node: { registry: npm, cost: free_public, tool: npm-audit }
+  rust: { registry: crates.io, cost: free, tool: cargo-audit }
+  jvm: { registry: maven-central, cost: free_public, tool: owasp-dependency-check }
+  go: { registry: proxy.golang.org, cost: free, tool: govulncheck }

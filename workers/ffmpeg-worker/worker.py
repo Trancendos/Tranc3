@@ -326,8 +326,10 @@ async def health() -> dict:
     available = _ffmpeg_available()
     return {
         "service": "ffmpeg-worker",
+        "port": 8052,
         "available": available,
         "ffmpeg_version": _ffmpeg_version(),
+        "entity": health_entity_block(8052, "ffmpeg-worker"),
     }
 
 

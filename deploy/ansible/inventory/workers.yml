@@ -1,25 +1,35 @@
 # Trancendos worker inventory — Ansible Core (zero-cost)
-# Usage: ansible-playbook -i deploy/ansible/inventory/workers.yml deploy/ansible/playbooks/health-probe.yml
+# Usage: make ansible-health
+#        ansible-playbook -i deploy/ansible/inventory/workers.yml deploy/ansible/playbooks/health-probe.yml
 
 all:
   children:
     citadel:
       hosts:
-        localhost:
+        citadel_host:
           ansible_connection: local
-    p0_workers:
-      hosts:
-        localhost:
+          ansible_host: 127.0.0.1
       vars:
+        tranc3_base_url: "http://127.0.0.1"
         tranc3_workers:
           - { name: tranc3-backend, port: 8000 }
+          - { name: tranc3-ai, port: 8001 }
+          - { name: api-gateway, port: 8003 }
           - { name: infinity-ws, port: 8004 }
           - { name: infinity-auth, port: 8005 }
-    p1_workers:
-      hosts:
-        localhost:
-      vars:
-        tranc3_workers:
+          - { name: users-service, port: 8006 }
           - { name: monitoring, port: 8007 }
+          - { name: notifications, port: 8008 }
           - { name: infinity-ai, port: 8009 }
+          - { name: the-grid, port: 8010 }
+          - { name: products-service, port: 8011 }
+          - { name: orders-service, port: 8012 }
+          - { name: payments-service, port: 8013 }
+          - { name: files-service, port: 8014 }
+          - { name: identity-service, port: 8015 }
+          - { name: gbrain-bridge, port: 8030 }
+          - { name: vault-service, port: 8038 }
           - { name: infinity-admin, port: 8044 }
+          - { name: swarm-coordinator, port: 8053 }
+          - { name: hive-service, port: 8060 }
+          - { name: infinity-bridge, port: 8070 }

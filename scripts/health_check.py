@@ -67,6 +67,12 @@ SERVICES = [
     ("blender-worker",    8050, "/health",  "P3"),
     ("triposr-worker",    8051, "/health",  "P3"),
     ("ffmpeg-worker",     8052, "/health",  "P3"),
+    ("swarm-coordinator", 8053, "/health",  "P1"),
+    ("gbrain-bridge",     8030, "/health",  "P2"),
+    ("vault-service",     8038, "/health",  "P2"),
+    ("infinity-admin",    8044, "/health",  "P1"),
+    ("hive-service",      8060, "/health",  "P2"),
+    ("infinity-bridge",   8070, "/health",  "P1"),
 ]
 
 

@@ -1356,7 +1356,9 @@ WORKER_ENTITY_MAP: Dict[int, str] = {
 # Additional worker ports that serve supporting roles within a location
 # (e.g. multiple workers implement one location's infrastructure layer)
 _SUPPORTING_WORKER_MAP: Dict[int, str] = {
+    8001: "Luminous",  # tranc3-ai edge proxy
     8002: "The Void",  # infinity-void worker
+    8003: "API Marketplace",  # api-gateway worker
     8006: "Infinity",  # users-service — Infinity user management layer
     8008: "Arcadia",  # notifications — Arcadia comms layer
     8011: "Arcadian Exchange",  # products-service — Exchange product catalogue

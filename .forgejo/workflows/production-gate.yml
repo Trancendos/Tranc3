@@ -32,6 +32,8 @@ jobs:
             tests/test_compatibility.py \
             tests/test_entity_effective.py \
             tests/test_health_metadata.py \
+            tests/test_orchestrator_effective.py \
+            tests/test_zero_cost_registry.py \
             -q --tb=short
         env:
           SECRET_KEY: ci-test-secret-not-for-prod
@@ -57,3 +59,6 @@ jobs:
           assert e['pid'] == 'PID-NXS', e
           print('health_entity_block OK:', e['lead_ai'])
           "
+
+      - name: Zero-cost registry audit
+        run: python scripts/zero_cost_audit.py

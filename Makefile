@@ -144,6 +144,12 @@ entity-audit:
 ansible-health:
 	@ansible-playbook -i deploy/ansible/inventory/workers.yml deploy/ansible/playbooks/health-probe.yml
 
+deploy-citadel:
+	@bash deploy/citadel/deploy-production.sh
+
+zero-cost-audit:
+	@python3 scripts/zero_cost_audit.py
+
 # ── Infrastructure (OpenTofu) ─────────────────────────────────────────────────
 infra-plan:
 	@cd infrastructure/opentofu && tofu init -upgrade && tofu plan

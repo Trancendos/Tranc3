@@ -33,6 +33,10 @@ import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.entities.health_metadata import health_entity_block
+
+TRANC3_AI_PORT = 8001
+
 # ── Constants ──────────────────────────────────────────────────
 
 TRANC3_MODELS: dict[str, dict[str, Any]] = {
@@ -298,6 +302,7 @@ async def health():
     return {
         "status": "ok",
         "service": "tranc3-ai-worker",
+        "port": TRANC3_AI_PORT,
         "version": "2.0.0",
         "backend": mode,
         "backend_url": BACKEND_URL or None,
@@ -311,6 +316,7 @@ async def health():
             else "Self-owned inference active."
         ),
         "timestamp": int(__import__("time").time()),
+        "entity": health_entity_block(TRANC3_AI_PORT, "tranc3-ai-worker"),
     }
 
 

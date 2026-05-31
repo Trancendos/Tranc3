@@ -43,6 +43,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from Dimensional.sanitize import sanitize_for_log
+from src.entities.health_metadata import health_entity_block
+
+API_GATEWAY_PORT = 8003
 
 # ── Configuration ───────────────────────────────────────────────
 
@@ -224,9 +227,11 @@ async def health():
     return {
         "status": "healthy",
         "service": "api-gateway-worker",
+        "port": API_GATEWAY_PORT,
         "timestamp": int(time.time()),
         "circuitBreakers": {k: v.get_state() for k, v in circuit_breakers.items()},
         "hosting": "self-hosted (replaces Cloudflare Worker)",
+        "entity": health_entity_block(API_GATEWAY_PORT, "api-gateway-worker"),
     }
 
 
