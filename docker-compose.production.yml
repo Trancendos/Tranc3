@@ -899,6 +899,69 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8051/health')"]
       <<: *healthcheck-default
 
+  # ── FFmpeg Worker — TateKing Video Processing (Port 8052) ──────────────
+  # Zero-cost self-hosted video transcoding, thumbnail extraction, compression.
+  # Provides non-blocking job queue via asyncio subprocesses.
+  ffmpeg-worker:
+    build:
+      context: ./workers/ffmpeg-worker
+    container_name: trancendos-ffmpeg-worker
+    ports:
+      - "8052:8052"
+    volumes:
+      - ffmpeg-workdir:/app/workdir
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8052/health"]
+      <<: *healthcheck-default
+
+  # ── Langfuse — AI Observability (Port 3002) ──────────────────────────
+  # MIT-licensed self-hosted LLM observability: traces, generations, evals.
+  # Unlimited spans self-hosted; integrates with The Observatory.
+  # SDK env vars: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST=http://langfuse:3000
+  langfuse:
+    image: langfuse/langfuse:latest
+    container_name: trancendos-langfuse
+    ports:
+      - "3002:3000"
+    environment:
+      DATABASE_URL: "postgresql://langfuse:langfuse@langfuse-db:5432/langfuse"
+      NEXTAUTH_URL: "http://localhost:3002"
+      NEXTAUTH_SECRET: "${LANGFUSE_SECRET:-changeme-langfuse-secret}"
+      SALT: "${LANGFUSE_SALT:-changeme-langfuse-salt}"
+      TELEMETRY_ENABLED: "false"
+    depends_on:
+      - langfuse-db
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/public/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  langfuse-db:
+    image: postgres:16-alpine
+    container_name: trancendos-langfuse-db
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse-db-data:/var/lib/postgresql/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   # ── Infinity Admin — Entity & Config Management (Port 8044) ──────────────
   infinity-admin:
     <<: *worker-common
@@ -979,6 +1042,10 @@ volumes:
   triposr-models:
     driver: local
   triposr-outputs:
+    driver: local
+  ffmpeg-workdir:
+    driver: local
+  langfuse-db-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════
