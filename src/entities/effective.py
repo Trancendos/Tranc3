@@ -143,8 +143,6 @@ def resolve_entity(
 
     lead_canonical = entity.lead_ai
     lead_ai = ov.get("lead_ai", lead_canonical)
-    lead_tier_ov = ov.get("tier_lead_ai")
-    lead_tier = int(lead_tier_ov) if lead_tier_ov and str(lead_tier_ov).isdigit() else 3
 
     return EffectiveEntity(
         pid=pid,
@@ -171,7 +169,9 @@ def resolve_entity(
     )
 
 
-def list_all_effective(overrides_by_pid: dict[str, dict[str, str]] | None = None) -> list[EffectiveEntity]:
+def list_all_effective(
+    overrides_by_pid: dict[str, dict[str, str]] | None = None,
+) -> list[EffectiveEntity]:
     """List all 43 entities with per-PID override maps."""
     overrides_by_pid = overrides_by_pid or {}
     results: list[EffectiveEntity] = []
