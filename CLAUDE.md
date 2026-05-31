@@ -68,7 +68,7 @@ Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `sr
 | **Turing's Hub** | Samantha Turing | AI creation centre — personality template creator | 🔧 Partial | `src/personality/` |
 | **Arcadia** | Lilli SC | Front-end post-login, forum & email hub | 🔧 Partial | `web/` |
 | **The Nexus** | The Nexus | AI communications and transfer hub | 🔧 Self-hosted | `workers/infinity-ws/` (Port 8004) |
-| **The Town Hall** | Tristuran | Governance hub — PRINCE2, ITIL, legal, compliance, policies | 🔧 Planned | `src/townhall/` (to create) |
+| **The Town Hall** | Tristuran | Governance hub — PRINCE2, ITIL, Agile/Kanban, ITSM, rooms, templates | 🔧 Partial | `src/townhall/`, `config/townhall/`, `docs/THE_TOWN_HALL.md` |
 | **The Library** | Zimik | Knowledge base & wiki | 🔧 Planned | Outline (self-hosted) |
 | **The Academy** | Shimshi | Learning management — education & skill training | 🔧 Planned | Custom LMS |
 | **DocUtari** | To be Defined | Document management hub | 🔧 Planned | Paperless-ngx |

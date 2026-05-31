@@ -137,6 +137,15 @@ FREE_MODELS: Dict[str, List[FreeModelInfo]] = {
     ],
     "openrouter": [
         FreeModelInfo(
+            name="openrouter/free",
+            provider="openrouter",
+            tier=ProviderTier.FREE_TIER,
+            context_window=128000,
+            capabilities=["chat", "code", "reasoning", "tools"],
+            rate_limit="20 req/min (free tier)",
+            notes="OpenRouter Free Models Router — auto-picks capable :free model",
+        ),
+        FreeModelInfo(
             name="deepseek/deepseek-r1:free",
             provider="openrouter",
             tier=ProviderTier.FREE_TIER,
@@ -343,7 +352,7 @@ ROUTING_CHAINS: Dict[str, ZeroCostRoutingChain] = {
             "gemini": "gemini-2.0-flash",
             "cerebras": "llama3.3-70b",
             "sambanova": "Meta-Llama-3.3-70B-Instruct",
-            "openrouter": "deepseek/deepseek-r1:free",
+            "openrouter": "openrouter/free",
             "huggingface": "meta-llama/Llama-3.2-3B-Instruct",
             "offline": "tranc3-offline",
         },
