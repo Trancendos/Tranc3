@@ -81,6 +81,9 @@ func NewOrchestratorServer() *OrchestratorServer {
 
 // CreateEntity creates a new platform entity.
 func (s *OrchestratorServer) CreateEntity(ctx context.Context, req *pb.CreateEntityRequest) (*pb.CreateEntityResponse, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -179,17 +182,15 @@ func (s *OrchestratorServer) DispatchTask(ctx context.Context, req *pb.DispatchT
 }
 
 // DispatchBatch dispatches a batch of tasks via bidirectional streaming.
+// Each received DispatchTaskRequest is acknowledged with a DispatchTaskResponse.
+// The server returns nil when the client closes its send side (io.EOF).
 func (s *OrchestratorServer) DispatchBatch(stream pb.AeonMindOrchestrator_DispatchBatchServer) error {
 	var count int32
 	for {
-		_, err := stream.Recv()
+		req, err := stream.Recv()
 		if err == io.EOF {
-			// Send a final summary response then close gracefully.
-			return stream.Send(&pb.DispatchTaskResponse{
-				TaskId:  fmt.Sprintf("batch-%d", time.Now().UnixNano()),
-				Success: true,
-				Message: fmt.Sprintf("Batch of %d tasks dispatched", count),
-			})
+			// Client finished sending; close server side cleanly.
+			return nil
 		}
 		if err != nil {
 			return err
@@ -198,10 +199,15 @@ func (s *OrchestratorServer) DispatchBatch(stream pb.AeonMindOrchestrator_Dispat
 		s.totalTasksDispatched.Add(1)
 		count++
 
+		taskID := fmt.Sprintf("batch-task-%d-%d", time.Now().UnixNano(), count)
+		if req.EntityId != "" {
+			taskID = fmt.Sprintf("%s-task-%d", req.EntityId, count)
+		}
+
 		if err := stream.Send(&pb.DispatchTaskResponse{
-			TaskId:  fmt.Sprintf("batch-task-%d", count),
+			TaskId:  taskID,
 			Success: true,
-			Message: fmt.Sprintf("Task %d dispatched", count),
+			Message: fmt.Sprintf("Task %d dispatched (type=%s)", count, req.TaskType),
 		}); err != nil {
 			return err
 		}

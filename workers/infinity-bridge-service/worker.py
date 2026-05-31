@@ -18,9 +18,8 @@ import logging
 import os
 
 import uvicorn
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 from Dimensional.infinity.bridge.bridge_core import (
     InfinityBridge,
@@ -32,7 +31,6 @@ logger = logging.getLogger(__name__)
 
 WORKER_NAME = "infinity-bridge"
 WORKER_PORT = int(os.environ.get("INFINITY_BRIDGE_PORT", "8070"))
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 # Global bridge instance
 _bridge: InfinityBridge | None = None
@@ -75,16 +73,6 @@ def create_bridge_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    _secret = _INTERNAL_SECRET
-
-    @app.middleware("http")
-    async def _internal_auth(request: Request, call_next):
-        if _secret and request.url.path not in ("/health", "/"):
-            token = request.headers.get("x-internal-secret", "")
-            if token != _secret:
-                return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
-        return await call_next(request)
 
     @app.get("/")
     async def root():
@@ -229,10 +217,6 @@ def create_bridge_app() -> FastAPI:
     return app
 
 
-# Module-level app — used by tests and the __main__ entry point
-app = create_bridge_app()
-
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     bridge = get_bridge()
@@ -250,4 +234,5 @@ if __name__ == "__main__":
             bridge.open_bridge(source, target)
 
     logger.info(f"InfinityBridge worker starting on port {WORKER_PORT}")
+    app = create_bridge_app()
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

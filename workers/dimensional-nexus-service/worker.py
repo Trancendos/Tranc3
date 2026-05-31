@@ -43,9 +43,6 @@ import os
 import sys
 from pathlib import Path
 
-from fastapi import Request
-from fastapi.responses import JSONResponse
-
 # Ensure the project root is on sys.path so Dimensional package is importable
 _project_root = Path(__file__).resolve().parent.parent.parent
 if str(_project_root) not in sys.path:
@@ -62,7 +59,6 @@ DimensionalNexus = Nexus
 
 WORKER_PORT = int(os.environ.get("NEXUS_PORT", "8050"))
 WORKER_NAME = "nexus"
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,21 +68,6 @@ logger = logging.getLogger(WORKER_NAME)
 
 # The app is created by the nexus_core module
 app = create_nexus_app()
-
-
-@app.middleware("http")
-async def _internal_auth(request: Request, call_next):
-    if _INTERNAL_SECRET and request.url.path != "/health":
-        token = request.headers.get("x-internal-secret", "")
-        if token != _INTERNAL_SECRET:
-            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
-    return await call_next(request)
-
-
-@app.get("/health")
-async def health():
-    """Standard health check — required by CI worker-validation and Docker healthcheck."""
-    return {"status": "ok", "service": WORKER_NAME, "port": WORKER_PORT}
 
 
 @app.on_event("startup")

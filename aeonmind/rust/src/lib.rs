@@ -1,4 +1,4 @@
-"""
+/*
 AeonMind Core — Rust Crate Entry Point.
 
 Modules:
@@ -22,6 +22,7 @@ Tier System:
     - 5: BOT
 */
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub mod adaptive;
@@ -63,7 +64,7 @@ pub enum AeonMindError {
 
 // ─── Tier System ────────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Tier {
     Human = 0,
     Orchestrator = 1,
@@ -96,7 +97,7 @@ impl Tier {
 
 // ─── SentinelChannel ────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SentinelChannel {
     Platform,
     Agents,
@@ -109,6 +110,24 @@ pub enum SentinelChannel {
     Pillars,
     Infrastructure,
     Events,
+}
+
+impl SentinelChannel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SentinelChannel::Platform => "Platform",
+            SentinelChannel::Agents => "Agents",
+            SentinelChannel::Models => "Models",
+            SentinelChannel::Workflows => "Workflows",
+            SentinelChannel::Security => "Security",
+            SentinelChannel::Hive => "Hive",
+            SentinelChannel::Nexus => "Nexus",
+            SentinelChannel::Bridge => "Bridge",
+            SentinelChannel::Pillars => "Pillars",
+            SentinelChannel::Infrastructure => "Infrastructure",
+            SentinelChannel::Events => "Events",
+        }
+    }
 }
 
 // ─── Entity Types ───────────────────────────────────────────
