@@ -20,17 +20,18 @@ done
 # Core P0+P1 — minimum live product
 CORE_SERVICES=(
   traefik valkey vault ollama
-  tranc3-backend tranc3-ai infinity-void api-gateway
+  tranc3-backend tranc3-ai infinity-void
   infinity-ws infinity-auth
-  users-service monitoring notifications infinity-ai
+  users-service products-service orders-service payments-service
+  api-gateway
+  monitoring notifications infinity-ai
   infinity-admin swarm-coordinator
   prometheus grafana
 )
 
 FULL_EXTRA=(
-  the-grid products-service orders-service payments-service
-  files-service identity-service health-aggregator
-  vault-service infinity-bridge hive-service
+  the-grid files-service identity-service health-aggregator
+  vault-service gbrain-bridge
 )
 
 echo "==> Generate production environment (if missing)"

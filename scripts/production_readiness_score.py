@@ -53,6 +53,7 @@ def _pytest_gate_passed() -> bool:
         "tests/test_production_readiness_stack.py",
         "tests/test_penetration.py",
         "tests/test_zero_cost_registry.py",
+        "tests/test_p0_health_syntax.py",
         "-q",
         "--tb=no",
     ]
@@ -105,11 +106,25 @@ def build_dimensions() -> list[Dimension]:
         )
     )
     worker_pct = min(round(100 * implemented / max(total_workers, 1), 1), 85.0)
+    stub_count = total_workers - implemented
 
     tests_ok = _pytest_gate_passed()
     compose_pct, compose_blockers, compose_actions = _compose_checks()
 
     env_prod = (ROOT / ".env.production").exists()
+    # Honest live ops: scripts alone ≠ deployed stack (see forensic assessment).
+    if env_prod:
+        ops_pct = 35.0
+        ops_status = "amber"
+        ops_blockers = ["deploy-live success not verified in CI"]
+    elif live_scripts:
+        ops_pct = 12.0
+        ops_status = "red"
+        ops_blockers = [".env.production missing — run make generate-prod-env"]
+    else:
+        ops_pct = 5.0
+        ops_status = "red"
+        ops_blockers = ["Missing deploy_live.sh / generate_production_env.sh"]
 
     return [
         Dimension(
@@ -137,7 +152,7 @@ def build_dimensions() -> list[Dimension]:
             weight=0.15,
             percent=worker_pct,
             status="green" if worker_pct >= 70 else "amber",
-            blockers=[f"{total_workers - implemented} stub workers remain"] if worker_pct < 90 else [],
+            blockers=[f"{stub_count} worker.py files marked stub/TODO"] if stub_count > 0 else [],
             next_actions=["Replace P3 stubs per business priority"],
         ),
         Dimension(
@@ -195,9 +210,9 @@ def build_dimensions() -> list[Dimension]:
         Dimension(
             name="Ops executed on Citadel (live)",
             weight=0.05,
-            percent=70.0 if live_scripts else (15.0 if not env_prod else 45.0),
-            status="green" if live_scripts and env_prod else ("amber" if live_scripts else "red"),
-            blockers=[] if live_scripts else [".env.production not on host — run make generate-prod-env"],
+            percent=ops_pct,
+            status=ops_status,
+            blockers=ops_blockers,
             next_actions=["make deploy-live", "vault operator init/unseal"] if live_scripts else ["make deploy-citadel on production host"],
         ),
     ]
@@ -211,8 +226,24 @@ def main() -> int:
     LOGS.mkdir(parents=True, exist_ok=True)
     dimensions = build_dimensions()
     overall = overall_percent(dimensions)
+    p0_code = round(
+        sum(
+            d.percent * d.weight
+            for d in dimensions
+            if d.name != "Ops executed on Citadel (live)"
+        )
+        / max(0.01, 1.0 - 0.05),
+        1,
+    )
+    live_dim = next(d for d in dimensions if "Ops executed" in d.name)
+    # B score = live verification dimension (not blended with repo artifacts).
+    honest_p0_live = live_dim.percent
     payload = {
         "overall_percent": overall,
+        "honest_p0_code_percent": p0_code,
+        "honest_p0_live_percent": honest_p0_live,
+        "honest_full_platform_percent": 52.0,
+        "note": "See docs/PRODUCTION_FORENSIC_ASSESSMENT.md — overall_percent is repo-weighted; live requires deploy-live on Citadel.",
         "target_for_p0_go_live": 85.0,
         "target_for_full_platform": 95.0,
         "dimensions": [asdict(d) for d in dimensions],
@@ -224,9 +255,13 @@ def main() -> int:
     lines = [
         "# Production readiness scorecard",
         "",
-        f"**Overall weighted score: {overall}%**",
+        f"**Repo-weighted score: {overall}%** (compose + scripts; optimistic)",
+        f"**Honest P0 code: {p0_code}%** | **Honest P0 live: {honest_p0_live}%** (until deploy-live succeeds)",
+        f"**Honest full platform: ~52%**",
         "",
-        f"- P0 go-live target: **85%** (auth + API + gateway + Citadel deploy)",
+        f"Forensic detail: `docs/PRODUCTION_FORENSIC_ASSESSMENT.md`",
+        "",
+        f"- P0 go-live target: **85%**",
         f"- Full 43-entity platform: **95%**",
         "",
         "| Dimension | Weight | % | Status |",

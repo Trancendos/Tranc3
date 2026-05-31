@@ -957,12 +957,15 @@ async def health():
     degraded = any(str(v).startswith(("degraded", "unavailable")) for v in components.values())
     overall = "degraded" if degraded else "healthy"
 
+    from src.entities.health_metadata import health_entity_block
+
     return {
         "status": overall,
         "version": "2.0.0",
         "timestamp": datetime.datetime.utcnow().isoformat(),
         "uptime_seconds": round(time.time() - _start_time, 1),
         "components": components,
+        "entity": health_entity_block(8000, "tranc3-backend"),
     }
 
 
