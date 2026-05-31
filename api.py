@@ -84,6 +84,7 @@ from src.core.feature_flags import (  # noqa: F401  # intentional top-level impo
 from src.core.multilingual_tokenizer import (
     MultilingualTokenizer,  # noqa: F401  # intentional top-level import
 )
+from src.core.startup_validator import validate_startup
 from src.database.schema import (  # noqa: F401  # intentional top-level import
     Conversation,
     DatabaseManager,
@@ -256,7 +257,9 @@ async def lifespan(app: FastAPI):
     global db_manager, db_user_manager, _health_monitor, _auto_evolve
 
     logger.info("TRANC3 starting up...")
+    validate_startup()
     cfg = Config()
+    is_production = os.getenv("ENVIRONMENT", "development").lower() == "production"
 
     # Database
     try:
@@ -264,6 +267,8 @@ async def lifespan(app: FastAPI):
         db_user_manager = DBUserManager(db_manager.get_session)
         logger.info("Database connected")
     except Exception as e:
+        if is_production:
+            raise RuntimeError("Database connection failed during production startup.") from e
         logger.warning(
             "Database unavailable: %s — in-memory fallback", sanitize_for_log(e)
         )  # codeql[py/cleartext-logging]
@@ -275,6 +280,8 @@ async def lifespan(app: FastAPI):
         redis_client.ping()
         logger.info("Redis connected")
     except Exception as e:
+        if is_production:
+            raise RuntimeError("Redis connection failed during production startup.") from e
         logger.warning("Redis unavailable: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
         redis_client = None
 

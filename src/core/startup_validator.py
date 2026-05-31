@@ -12,6 +12,15 @@ _ENV = os.getenv("ENVIRONMENT", "development")
 _IS_PROD = _ENV == "production"
 
 
+def _current_env() -> str:
+    """Read ENVIRONMENT dynamically so tests and reloads see current config."""
+    return os.getenv("ENVIRONMENT", _ENV).lower()
+
+
+def _is_production() -> bool:
+    return _IS_PROD or _current_env() == "production"
+
+
 def validate_startup() -> None:
     """
     Run all startup checks. Call once from the FastAPI lifespan before
@@ -24,13 +33,13 @@ def validate_startup() -> None:
     _check_cors_origins()
     _check_api_key()
     _warn_optional()
-    logger.info("Startup validation passed (environment=%s)", _ENV)
+    logger.info("Startup validation passed (environment=%s)", _current_env())
 
 
 def _check_secret_key() -> None:
     secret = os.getenv("SECRET_KEY", "")
     if not secret:
-        if _IS_PROD:
+        if _is_production():
             raise RuntimeError(
                 "SECRET_KEY is not set. Set a strong random secret before deploying to production."
             )
@@ -43,7 +52,7 @@ def _check_secret_key() -> None:
         )
     elif len(secret) < 32:
         msg = "SECRET_KEY is too short (< 32 chars). Use secrets.token_hex(32)."
-        if _IS_PROD:
+        if _is_production():
             raise RuntimeError(msg)
         logger.warning(msg)
 
@@ -51,7 +60,7 @@ def _check_secret_key() -> None:
 def _check_jwt_secret() -> None:
     secret = os.getenv("JWT_SECRET", "")
     if not secret:
-        if _IS_PROD:
+        if _is_production():
             raise RuntimeError(
                 "JWT_SECRET is not set. Set a strong random secret before deploying to production."
             )
@@ -65,21 +74,21 @@ def _check_jwt_secret() -> None:
         )
     elif len(secret) < 32:
         msg = "JWT_SECRET is too short (< 32 chars). Use secrets.token_hex(32)."
-        if _IS_PROD:
+        if _is_production():
             raise RuntimeError(msg)
         logger.warning(msg)
 
 
 def _check_database_url() -> None:
     if not os.getenv("DATABASE_URL"):
-        if _IS_PROD:
+        if _is_production():
             raise RuntimeError("DATABASE_URL is required in production.")
         logger.warning("DATABASE_URL not set — database features will be unavailable.")
 
 
 def _check_redis_url() -> None:
     if not os.getenv("REDIS_URL"):
-        if _IS_PROD:
+        if _is_production():
             raise RuntimeError(
                 "REDIS_URL is required in production (used for rate limiting and caching)."
             )
@@ -91,7 +100,8 @@ def _check_redis_url() -> None:
 
 def _check_cors_origins() -> None:
     origins = os.getenv("CORS_ORIGINS", os.getenv("ALLOWED_ORIGINS", ""))
-    if _IS_PROD and (not origins or origins == "*"):
+    parsed = [origin.strip() for origin in origins.split(",") if origin.strip()]
+    if _is_production() and (not parsed or "*" in parsed):
         raise RuntimeError(
             "CORS_ORIGINS must be set to specific domain(s) in production. "
             "Wildcard '*' is not acceptable."
@@ -100,7 +110,7 @@ def _check_cors_origins() -> None:
 
 def _check_api_key() -> None:
     require_auth = os.getenv("REQUIRE_AUTH", "false").lower() == "true"
-    if _IS_PROD and require_auth and not os.getenv("TRANC3_API_KEY"):
+    if _is_production() and require_auth and not os.getenv("TRANC3_API_KEY"):
         raise RuntimeError("TRANC3_API_KEY must be set in production when REQUIRE_AUTH=true.")
     if require_auth and not os.getenv("TRANC3_API_KEY") and not os.getenv("JWT_SECRET"):
         logger.warning(

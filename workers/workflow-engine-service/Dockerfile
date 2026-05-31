@@ -11,8 +11,8 @@ RUN mkdir -p /app/data \
 # Security: drop to non-root user
 USER worker
 
-EXPOSE 8009
+EXPOSE 8034
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8009/health', timeout=5).read()" || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8034/health', timeout=5).read()" || exit 1
 
-CMD ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8009"]
+CMD ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8034"]
