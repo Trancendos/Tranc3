@@ -1,0 +1,619 @@
+{
+  "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
+  "version": 3,
+  "name": "Trancendos API Gateway",
+  "timeout": "30s",
+  "cache_ttl": "300s",
+  "output_encoding": "json",
+  "extra_config": {
+    "security/cors": {
+      "allow_origins": ["*"],
+      "allow_methods": ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      "allow_headers": [
+        "Origin",
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Internal-Secret",
+        "X-Request-ID"
+      ],
+      "expose_headers": ["Content-Length", "Content-Type"],
+      "max_age": "12h"
+    },
+    "telemetry/metrics": {
+      "collection_time": "60s",
+      "proxy_disabled": false,
+      "router_disabled": false,
+      "backend_disabled": false,
+      "endpoint_disabled": false,
+      "listen_address": ":8090"
+    },
+    "telemetry/logging": {
+      "level": "INFO",
+      "prefix": "[KRAKEND]",
+      "syslog": false,
+      "stdout": true
+    },
+    "router": {
+      "return_error_msg": false
+    }
+  },
+  "endpoints": [
+
+    {
+      "endpoint": "/api/v1/auth/{path}",
+      "method": "GET",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/auth/{path}",
+          "host": ["http://infinity-auth:8005"],
+          "encoding": "no-op",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/auth/{path}",
+      "method": "POST",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/auth/{path}",
+          "host": ["http://infinity-auth:8005"],
+          "encoding": "no-op",
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/auth/{path}",
+      "method": "PUT",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/auth/{path}",
+          "host": ["http://infinity-auth:8005"],
+          "encoding": "no-op",
+          "method": "PUT"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/auth/{path}",
+      "method": "DELETE",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/auth/{path}",
+          "host": ["http://infinity-auth:8005"],
+          "encoding": "no-op",
+          "method": "DELETE"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/users/{path}",
+      "method": "GET",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "jwk_local_path": "",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/users/{path}",
+          "host": ["http://users-service:8006"],
+          "encoding": "no-op",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/users/{path}",
+      "method": "POST",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/users/{path}",
+          "host": ["http://users-service:8006"],
+          "encoding": "no-op",
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/users/{path}",
+      "method": "PUT",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/users/{path}",
+          "host": ["http://users-service:8006"],
+          "encoding": "no-op",
+          "method": "PUT"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/users/{path}",
+      "method": "DELETE",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/users/{path}",
+          "host": ["http://users-service:8006"],
+          "encoding": "no-op",
+          "method": "DELETE"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/products/{path}",
+      "method": "GET",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/products/{path}",
+          "host": ["http://products-service:8011"],
+          "encoding": "no-op",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/products/{path}",
+      "method": "POST",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/products/{path}",
+          "host": ["http://products-service:8011"],
+          "encoding": "no-op",
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/products/{path}",
+      "method": "PUT",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/products/{path}",
+          "host": ["http://products-service:8011"],
+          "encoding": "no-op",
+          "method": "PUT"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/products/{path}",
+      "method": "DELETE",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/products/{path}",
+          "host": ["http://products-service:8011"],
+          "encoding": "no-op",
+          "method": "DELETE"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/orders/{path}",
+      "method": "GET",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/orders/{path}",
+          "host": ["http://orders-service:8012"],
+          "encoding": "no-op",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/orders/{path}",
+      "method": "POST",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/orders/{path}",
+          "host": ["http://orders-service:8012"],
+          "encoding": "no-op",
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/orders/{path}",
+      "method": "PUT",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/orders/{path}",
+          "host": ["http://orders-service:8012"],
+          "encoding": "no-op",
+          "method": "PUT"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/orders/{path}",
+      "method": "DELETE",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/orders/{path}",
+          "host": ["http://orders-service:8012"],
+          "encoding": "no-op",
+          "method": "DELETE"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/payments/{path}",
+      "method": "GET",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/payments/{path}",
+          "host": ["http://payments-service:8013"],
+          "encoding": "no-op",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/payments/{path}",
+      "method": "POST",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/payments/{path}",
+          "host": ["http://payments-service:8013"],
+          "encoding": "no-op",
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/payments/{path}",
+      "method": "PUT",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/payments/{path}",
+          "host": ["http://payments-service:8013"],
+          "encoding": "no-op",
+          "method": "PUT"
+        }
+      ]
+    },
+
+    {
+      "endpoint": "/api/v1/files/{path}",
+      "method": "GET",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/files/{path}",
+          "host": ["http://files-service:8014"],
+          "encoding": "no-op",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/files/{path}",
+      "method": "POST",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/files/{path}",
+          "host": ["http://files-service:8014"],
+          "encoding": "no-op",
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/files/{path}",
+      "method": "DELETE",
+      "timeout": "30s",
+      "output_encoding": "no-op",
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "secret_url": "env:///JWT_SECRET",
+          "disable_jwk_security": true
+        },
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "strategy": "ip",
+          "client_max_rate": 100,
+          "every": "60s"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/files/{path}",
+          "host": ["http://files-service:8014"],
+          "encoding": "no-op",
+          "method": "DELETE"
+        }
+      ]
+    }
+  ]
+}

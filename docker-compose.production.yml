@@ -828,6 +828,48 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8038/health"]
       <<: *healthcheck-default
 
+  # ── OpenBao — Secrets Management (MPL 2.0, Vault-compatible) ───────────
+  # Replaces: HashiCorp Vault (BSL), Cloudflare environment variables / CF Secrets
+  # API-compatible with hvac Python client used by vault-service/openbao_client.py
+  openbao:
+    image: openbao/openbao:latest
+    container_name: trancendos-openbao
+    environment:
+      BAO_DEV_ROOT_TOKEN_ID: "${OPENBAO_ROOT_TOKEN:-dev-root-token}"
+      BAO_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    ports:
+      - "8200:8200"
+    volumes:
+      - openbao-data:/openbao/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8200/v1/sys/health"]
+      <<: *healthcheck-default
+
+  # ── KrakenD — API Gateway (Apache 2.0, replaces CF trancendos-api-gateway) ──
+  # Stateless, no DB; routes /api/v1/* to backend workers with JWT + rate limiting.
+  # Metrics endpoint on :8090; main API on :8080.
+  # Note: Traefik dashboard also binds :8080 — adjust traefik port in production
+  # (e.g. move Traefik dashboard to :8888) to avoid collision.
+  krakend:
+    image: devopsfaith/krakend:latest
+    container_name: trancendos-krakend
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "8080:8080"
+      - "8090:8090"
+    volumes:
+      - ./config/krakend/krakend.json:/etc/krakend/krakend.json:ro
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/__health"]
+      <<: *healthcheck-default
+
   # ── Infinity Admin — Entity & Config Management (Port 8044) ──────────────
   infinity-admin:
     <<: *worker-common
@@ -900,6 +942,8 @@ volumes:
   valkey-data:
     driver: local
   zot-data:
+    driver: local
+  openbao-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════
