@@ -3,7 +3,7 @@
 
 **Date**: 2025-05-24  
 **Investigator**: Phase 23 Automated Forensic Engine  
-**Scope**: Full platform — shared_core, workers, tests, infrastructure, UI/UX  
+**Scope**: Full platform — Dimensional, workers, tests, infrastructure, UI/UX  
 
 ---
 
@@ -27,7 +27,7 @@ The forensic investigation began with 263 failing tests (out of ~2,341 total). T
 | TypeScript/TSX LOC | 3,273 |
 | Python files | 448 |
 | Worker services | 42 |
-| shared_core modules | 51 |
+| Dimensional modules | 51 |
 | Test files | 66 |
 | Test count (passing) | 2,341 |
 
@@ -42,7 +42,7 @@ The forensic investigation began with 263 failing tests (out of ~2,341 total). T
 **CI/CD**: Forgejo Actions, GitHub Actions, CodeQL, Trivy, Bandit, Semgrep  
 **Security**: OWASP hardening, RBAC, ABAC, zero-trust, vault, audit ledger  
 
-### 2.3 Shared Core Module Map
+### 2.3 Dimensional Module Map
 
 **infinity/** — Core intelligence and security layer:
 - `adaptive_intelligence.py` — Unified smart adaptive intelligence (HealthScore pipeline, AnomalyDetector, SelfRepairEngine, ForesightEngine)
@@ -155,7 +155,7 @@ The forensic investigation began with 263 failing tests (out of ~2,341 total). T
 - DefenseEngine incidents → Sentinel Station bridge
 - DimensionalServiceRegistry → DimensionalServiceBus discovery bridge
 
-**W9 — No Formal API Contract Testing**: While there are 2,341 tests, most test individual module functionality rather than API contracts between services. The HealthSummary dataclass bug (W3) would have been caught by contract tests verifying that worker code correctly handles the return types of shared_core functions.
+**W9 — No Formal API Contract Testing**: While there are 2,341 tests, most test individual module functionality rather than API contracts between services. The HealthSummary dataclass bug (W3) would have been caught by contract tests verifying that worker code correctly handles the return types of Dimensional functions.
 
 ### 3.3 Opportunities
 
@@ -165,7 +165,7 @@ The forensic investigation began with 263 failing tests (out of ~2,341 total). T
 
 **O3 — UX/UI Modernization**: The dashboard is ripe for transformation into a modern, adaptive interface with dark/light modes, CSS custom properties, component cards, template layouts, drag-and-drop no-code customization, and ARIA accessibility. The existing pillar accent colors in nomenclature.py already provide a design token foundation.
 
-**O4 — API Contract Testing**: Implementing formal contract tests (Pact-style or schema-based) between shared_core and workers would prevent the HealthSummary-type API breakages. Pydantic V2 models make this straightforward — generate JSON schemas and validate all cross-module boundaries.
+**O4 — API Contract Testing**: Implementing formal contract tests (Pact-style or schema-based) between Dimensional and workers would prevent the HealthSummary-type API breakages. Pydantic V2 models make this straightforward — generate JSON schemas and validate all cross-module boundaries.
 
 **O5 — Optional Import Hardening**: The `aiohttp` collection error (W4) could be resolved by extending the existing `optional_import.py` pattern to `oci_adaptive_provider.py` and `microceph_provider.py`. This would make the platform resilient to missing optional dependencies.
 
@@ -202,9 +202,9 @@ The forensic investigation began with 263 failing tests (out of ~2,341 total). T
 ### 4.2 Files Modified
 
 **Source Code Fixes** (3 files):
-1. `shared_core/infinity/adaptive_intelligence.py` — Added `_try_async_schedule()`, replaced 3 `asyncio.get_event_loop()` calls
-2. `shared_core/infinity/fluidic_gateway.py` — Wrapped `asyncio.get_event_loop()` in try/except with `asyncio.get_running_loop()`
-3. `shared_core/dimensionals/service_bus.py` — Changed `asyncio.get_event_loop().create_future()` → `asyncio.get_running_loop().create_future()`
+1. `Dimensional/infinity/adaptive_intelligence.py` — Added `_try_async_schedule()`, replaced 3 `asyncio.get_event_loop()` calls
+2. `Dimensional/infinity/fluidic_gateway.py` — Wrapped `asyncio.get_event_loop()` in try/except with `asyncio.get_running_loop()`
+3. `Dimensional/dimensionals/service_bus.py` — Changed `asyncio.get_event_loop().create_future()` → `asyncio.get_running_loop().create_future()`
 
 **Worker Fixes** (6 files):
 4. `workers/infinity-auth/worker.py` — `HealthSummary.to_dict()` fix
@@ -257,13 +257,13 @@ The forensic investigation began with 263 failing tests (out of ~2,341 total). T
 |-------|--------|--------|
 | `HealthSummary` returned as dataclass, consumed as dict | 6 workers | ✅ Fixed |
 | `health_tier` vs `tier` key mismatch in `to_dict()` output | infinity-auth worker | ✅ Fixed |
-| `get_event_loop()` vs `get_running_loop()` pattern | 3 shared_core modules | ✅ Fixed |
+| `get_event_loop()` vs `get_running_loop()` pattern | 3 Dimensional modules | ✅ Fixed |
 | `aiohttp` top-level import in optional module | oci_adaptive_provider | ⚠️ Needs optional import |
 | `HealthSummary.to_dict()` return type not documented | adaptive_intelligence.py | ⚠️ Needs type annotation |
 
 ### 6.2 API Surface Assessment
 
-The shared_core modules expose a clean API surface:
+The Dimensional modules expose a clean API surface:
 - `InfinityHealthOrchestrator` — well-documented with comprehensive docstring
 - `DimensionalServiceBus` — async start/stop lifecycle, stats dict
 - `SentinelStation` — pub/sub with channel enum
@@ -312,7 +312,7 @@ All 42 workers have `worker.py` files. The HealthSummary fix was applied to 6 In
 ### P2 — Next Phase
 
 7. **Dashboard UX/UI modernization** — Dark/light mode, component cards, templates, ARIA, CSS custom properties
-8. **API contract testing** — Pact-style or schema-based contract tests between shared_core and workers
+8. **API contract testing** — Pact-style or schema-based contract tests between Dimensional and workers
 9. **Dashboard component architecture** — Break monolithic app.js into modular components
 
 ### P3 — Future

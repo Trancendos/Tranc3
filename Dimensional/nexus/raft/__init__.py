@@ -10,7 +10,7 @@ Provides:
     - NexusClusterNode: Cluster member representation
 """
 
-from Dimensional.nexus.raft.raft_core import (
+from Dimensional.nexus.raft.raft_core import (  # noqa: I001
     NexusCluster,
     NexusClusterNode,
     RaftConfig,

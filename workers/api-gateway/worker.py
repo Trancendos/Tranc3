@@ -42,11 +42,18 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 
 # ── Configuration ───────────────────────────────────────────────
 
-JWT_SECRET = os.getenv("JWT_SECRET", "dev-jwt-secret-not-for-prod")
+_jwt_secret_raw = os.getenv("JWT_SECRET")
+if not _jwt_secret_raw or _jwt_secret_raw == "dev-jwt-secret-not-for-prod":
+    raise RuntimeError(
+        "JWT_SECRET is not set (or still the default). "
+        "The API Gateway cannot start without a strong unique JWT secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 USERS_SERVICE_URL = os.getenv("USERS_SERVICE_URL", "")
 PRODUCTS_SERVICE_URL = os.getenv("PRODUCTS_SERVICE_URL", "")
 ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "")

@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Body, Header, Path, Query, Request
 from fastapi.responses import JSONResponse
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 from src.citadel.devops_hub import DeployStatus, DeployTarget, ServiceHealthStatus, get_citadel
 
 logger = logging.getLogger(__name__)

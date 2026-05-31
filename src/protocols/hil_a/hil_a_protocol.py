@@ -20,7 +20,7 @@ Key principles:
   - All decisions are recorded in the audit trail
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import asyncio
 import logging

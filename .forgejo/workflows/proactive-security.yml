@@ -57,7 +57,7 @@ jobs:
       - name: Run proactive security scanner (quality gate)
         run: |
           mkdir -p logs
-          python -m shared_core.security_automation gate \
+          python -m Dimensional.security_automation gate \
             --max-critical 0 \
             --max-high 0 \
             --max-medium 20 \
@@ -65,33 +65,33 @@ jobs:
             --max-total 150 \
             --save \
             --telemetry-dir .security_telemetry \
-            src/ shared_core/ workers/
+            src/ Dimensional/ workers/
 
       - name: Generate security report
         if: always()
         run: |
-          python -m shared_core.security_automation report \
+          python -m Dimensional.security_automation report \
             --format markdown \
             --output logs/proactive-security-report.md \
             --save \
             --telemetry-dir .security_telemetry \
-            src/ shared_core/ workers/ || true
+            src/ Dimensional/ workers/ || true
 
       - name: Generate JSON scan results
         if: always()
         run: |
-          python -m shared_core.security_automation scan \
+          python -m Dimensional.security_automation scan \
             --format json \
             --output logs/proactive-scan-results.json \
-            src/ shared_core/ workers/ || true
+            src/ Dimensional/ workers/ || true
 
       - name: Auto-fix dry-run report
         if: always()
         run: |
           echo "=== Auto-fix Dry Run ===" > logs/autofix-dryrun.txt
-          python -m shared_core.security_automation fix \
+          python -m Dimensional.security_automation fix \
             --dry-run \
-            src/ shared_core/ workers/ >> logs/autofix-dryrun.txt 2>&1 || true
+            src/ Dimensional/ workers/ >> logs/autofix-dryrun.txt 2>&1 || true
 
       - name: Upload scan results
         uses: actions/upload-artifact@v4
@@ -137,7 +137,7 @@ jobs:
         if: always()
         run: |
           python -c "
-          from shared_core.security_automation.telemetry import SecurityTelemetry
+          from Dimensional.security_automation.telemetry import SecurityTelemetry
           telemetry = SecurityTelemetry(storage_dir='.security_telemetry')
           trends = telemetry.trend(limit=10)
           if trends:
@@ -167,7 +167,7 @@ jobs:
         if: always()
         run: |
           python -c "
-          from shared_core.security_automation.telemetry import SecurityTelemetry
+          from Dimensional.security_automation.telemetry import SecurityTelemetry
           telemetry = SecurityTelemetry(storage_dir='.security_telemetry')
           removed = telemetry.cleanup(keep=30)
           if removed:

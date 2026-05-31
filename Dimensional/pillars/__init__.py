@@ -22,7 +22,7 @@ The 9 Platform Locations:
     9. Observatory (Analytics)
 """
 
-from Dimensional.pillars.entities import (
+from Dimensional.pillars.entities import (  # noqa: I001
     LOCATION_CONFIGS,
     LOCATIONS,
     EntityTier,

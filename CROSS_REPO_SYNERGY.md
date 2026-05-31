@@ -13,7 +13,7 @@ Analysis of 16 Trancendos repositories reveals that **infinity-adminOS** is a cr
 | Repository | Language | Packages | Status | Value |
 |---|---|---|---|---|
 | **infinity-adminOS** | TypeScript | 29 packages | Production-ready | **CRITICAL** — service mesh, event bus, AI gateway, void service, IAM, quantum-safe crypto |
-| **shared-core** | TypeScript + Python | Middleware + compliance | Partial | Auth middleware, resilience patterns, compliance scanner |
+| **Dimensional** | TypeScript + Python | Middleware + compliance | Partial | Auth middleware, resilience patterns, compliance scanner |
 
 ### Tier 2: Scaffold with Domain Logic (Medium Value)
 

@@ -17,7 +17,7 @@ The Dimensional package provides core/shared services that all three bridges
 can use, but Dimensional is a separate concept from any of the bridges.
 """
 
-from Dimensional.hive.hive_core import (
+from Dimensional.hive.hive_core import (  # noqa: I001
     DataChunk,
     DataPipeline,
     DataPriority,

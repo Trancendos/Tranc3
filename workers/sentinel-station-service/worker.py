@@ -53,21 +53,28 @@ from shared_core.dimensionals import (
 )
 
 # Phase 22: Infinity Ecosystem security integration
-from shared_core.infinity.auth_gateway import AuthGatewayMiddleware
-from shared_core.infinity.nomenclature import SentinelChannel
-from shared_core.infinity.owasp_hardening import OWASPHardeningMiddleware
-from shared_core.infinity.rbac import RBACEngine
+from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensional.infinity.nomenclature import SentinelChannel
+from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensional.infinity.rbac import RBACEngine
 
 # Sentinel Station core
-from shared_core.infinity.sentinel_config import sentinel_config
-from shared_core.infinity.sentinel_station import (
+from Dimensional.infinity.sentinel_config import sentinel_config
+from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     SharedSSEGenerator,
     get_sentinel_station,
 )
 
+# Phase 22.4: Dimensional Services integration
+from Dimensional.dimensionals import (
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
+)
+
 # Phase 22.6: Smart Adaptive Intelligence + ReactiveState
-from shared_core.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 # Optional: ReactiveState for live Sentinel topology
 try:
@@ -83,7 +90,13 @@ except ImportError:
 
 PORT = int(os.environ.get("SENTINEL_PORT", "8041"))
 DB_PATH = os.environ.get("SENTINEL_DB_PATH", "data/sentinel_station.db")
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. This service cannot validate tokens without it. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 
 logger = logging.getLogger("sentinel-station-service")
 
@@ -116,15 +129,18 @@ worker_kit = InfinityWorkerKit(
 # ReactiveState for live Sentinel topology observable by other services
 if _REACTIVE_AVAILABLE:
     sentinel_topology_state = StateStore()
-    sentinel_topology_state.create(
-        "topology",
-        {
-            "channels": {},
-            "subscribers": 0,
-            "events_published": 0,
-            "redis_connected": False,
-        },
-    )
+    # Set initial state
+    try:
+        sentinel_topology_state.set(
+            {
+                "channels": {},
+                "subscribers": 0,
+                "events_published": 0,
+                "redis_connected": False,
+            }
+        )
+    except Exception:
+        sentinel_topology_state = None
 else:
     sentinel_topology_state = None
 
@@ -258,9 +274,8 @@ async def _lifespan(app: FastAPI):
 
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    if hasattr(summary, "to_dict"):
-                        summary = summary.to_dict()
-                    worker_kit.health.update_health(summary.get("health_score", 1.0))
+                    summary_dict = summary.to_dict()
+                    worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
                     # Broadcast sentinel health to the platform channel
                     await sentinel.publish(
@@ -268,7 +283,7 @@ async def _lifespan(app: FastAPI):
                             channel=SentinelChannel.PLATFORM,
                             event_type="sentinel_health_report",
                             source="sentinel_station",
-                            payload=summary,
+                            payload=summary_dict,
                         )
                     )
             except asyncio.CancelledError:
@@ -302,7 +317,7 @@ async def _lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Tranc3 Sentinel Station Service",
-    version="0.7.0",
+    version="0.8.0",
     lifespan=_lifespan,
 )
 
@@ -358,16 +373,11 @@ class SubscriptionCreate(BaseModel):
 async def health():
     """Health check endpoint."""
     sentinel_health = await sentinel.health_check()
-    health_summary_obj = worker_kit.health.get_health_summary()
-    health_summary = (
-        health_summary_obj.to_dict()
-        if hasattr(health_summary_obj, "to_dict")
-        else health_summary_obj
-    )
+    health_summary = worker_kit.health.get_health_summary()
     return {
         "status": "ok",
         "service": "sentinel-station-service",
-        "version": "0.7.0",
+        "version": "0.8.0",
         "sentinel": sentinel_health,
         "dimensional_bus": {
             "running": dimensional_bus.is_running,
@@ -385,7 +395,7 @@ async def stats():
     """Service statistics endpoint."""
     return {
         "service": "sentinel-station-service",
-        "version": "0.7.0",
+        "version": "0.8.0",
         "sentinel": sentinel.get_stats(),
         "dimensional_bus": dimensional_bus.get_stats(),
         "dimensional_registry": dimensional_registry.get_stats(),

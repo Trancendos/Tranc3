@@ -22,7 +22,7 @@ import logging
 import time
 from collections import OrderedDict
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 from src.ai_gateway.providers.base import AIProvider
 from src.ai_gateway.types import (
     DEFAULT_TENANT_CONFIG,

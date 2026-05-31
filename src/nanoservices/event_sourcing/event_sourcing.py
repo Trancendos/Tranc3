@@ -4,7 +4,7 @@ Immutable event log with projections for auditability and
 event-driven architecture. Zero-cost in-memory implementation.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import hashlib
 import json

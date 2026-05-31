@@ -1,5 +1,12 @@
 # api_enhanced.py — TRANC3 Enhanced FastAPI application
 # Exposes: MCP RPC, Workflow, DeepMind Planning, Health, Skills, Code Gen
+#
+# DEPRECATED — do not extend this file.
+# All unique routes (code/*, skills/*, plan, reason, healing/*) have been
+# migrated to src/routers/enhanced_capabilities.py and are now included in
+# the canonical entry point api.py. This file is kept only to avoid breaking
+# tests/test_enhanced_api.py until those tests are migrated. New development
+# must go directly to api.py and its router tree.
 
 import asyncio
 import json
@@ -15,7 +22,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
-from shared_core.error_handlers import safe_error_detail
+from Dimensional.error_handlers import safe_error_detail
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("tranc3.api")

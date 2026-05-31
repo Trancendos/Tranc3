@@ -419,7 +419,7 @@ class ConceptLattice:
         source = self.nodes[source_id]
         target = self.nodes[target_id]
 
-        binding = self.vector_ops.bind(source.hypervector, target.hypervector)
+        binding = self.vector_ops.bind(source.hypervector, target.hypervector)  # type: ignore[arg-type]
 
         relation = ConceptRelation(
             source_id=source_id,
@@ -465,7 +465,7 @@ class ConceptLattice:
         if not vectors:
             raise ValueError("No valid concept vectors found for composition")
 
-        bundled = self.vector_ops.bundle(vectors)
+        bundled = self.vector_ops.bundle(vectors)  # type: ignore[arg-type]
         label = (
             new_concept
             or f"composite_{'_'.join(self.nodes[cid].concept[:4] for cid in concept_ids[:3])}"
@@ -496,7 +496,14 @@ class ConceptLattice:
         b = self.nodes.get(b_id)
         c = self.nodes.get(c_id)
 
-        if not all([a, b, c]) or not all([a.hypervector, b.hypervector, c.hypervector]):
+        if (
+            a is None
+            or b is None
+            or c is None
+            or a.hypervector is None
+            or b.hypervector is None
+            or c.hypervector is None
+        ):
             raise ValueError("All concepts must exist with hypervectors")
 
         d_data = [

@@ -189,6 +189,9 @@ class PredictiveScalingEngine:
         if not smoother.is_ready:
             return None
 
+        if policy is None:
+            return None
+
         # Cooldown check
         last_time = self._last_scaling_time.get(key, 0.0)
         if time.time() - last_time < policy.cooldown_seconds:

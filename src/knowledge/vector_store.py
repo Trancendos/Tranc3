@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from shared_core.path_validation import validate_path
+from Dimensional.path_validation import validate_path
 
 logger = logging.getLogger(__name__)
 

@@ -1,0 +1,154 @@
+# docker-compose.development.yml
+# Tranc3 — Development Stack
+#
+# Lightweight local stack for developer workstations.
+# Zero paid dependencies. Hot-reload enabled.
+# Runs: docker compose -f docker-compose.development.yml up -d
+#
+# What's included (minimal — start fast):
+#   - tranc3-api   : FastAPI backend with hot-reload (port 8000)
+#   - redis        : Local Redis cache (port 6379)
+#   - infinity-ws  : WebSocket hub (port 8004)
+#   - infinity-auth: Auth worker (port 8005)
+#   - infinity-ai  : AI gateway worker (port 8009)
+#   - mailhog      : Local SMTP trap — catch all outbound email (port 8025/1025)
+#
+# Database: SQLite by default (DATABASE_URL=sqlite:///./dev.db)
+# Observability: stdout logs only (no Prometheus/Grafana overhead)
+
+version: "3.9"
+
+x-dev-common: &dev-common
+  restart: unless-stopped
+  networks:
+    - tranc3-dev
+  env_file:
+    - .env.development
+
+x-worker-dev: &worker-dev
+  <<: *dev-common
+  build:
+    context: .
+    dockerfile: docker/Dockerfile.worker
+  volumes:
+    - ./:/app
+  environment:
+    PYTHONUNBUFFERED: "1"
+    LOG_LEVEL: DEBUG
+
+services:
+
+  # ── FastAPI Backend — hot-reload ─────────────────────────────────────────
+  api:
+    <<: *dev-common
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: tranc3-dev-api
+    command: ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-level", "debug"]
+    volumes:
+      - ./:/app                   # bind-mount for hot-reload
+      - ./models:/app/models
+      - ./cache:/app/cache
+      - ./data:/app/data
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DATABASE_URL: sqlite:////app/dev.db
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+      DEBUG: "true"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: tranc3-dev-redis
+    <<: *dev-common
+    env_file: []     # Redis needs no env_file
+    command: ["redis-server", "--appendonly", "no", "--loglevel", "notice"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ── WebSocket Hub (The Nexus) ─────────────────────────────────────────────
+  infinity-ws:
+    <<: *worker-dev
+    container_name: tranc3-dev-ws
+    working_dir: /app/workers/infinity-ws
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8004", "--reload"]
+    ports:
+      - "8004:8004"
+    environment:
+      PORT: "8004"
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+
+  # ── Auth Worker (Infinity) ────────────────────────────────────────────────
+  infinity-auth:
+    <<: *worker-dev
+    container_name: tranc3-dev-auth
+    working_dir: /app/workers/infinity-auth
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8005", "--reload"]
+    ports:
+      - "8005:8005"
+    environment:
+      PORT: "8005"
+      DATABASE_URL: sqlite:////app/auth-dev.db
+    depends_on:
+      - redis
+
+  # ── AI Gateway Worker ─────────────────────────────────────────────────────
+  infinity-ai:
+    <<: *worker-dev
+    container_name: tranc3-dev-ai
+    working_dir: /app/workers/infinity-ai
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8009", "--reload"]
+    ports:
+      - "8009:8009"
+    environment:
+      PORT: "8009"
+      DATABASE_URL: sqlite:////app/ai-dev.db
+
+  # ── MailHog — local SMTP trap (catch all outbound email) ─────────────────
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: tranc3-dev-mailhog
+    networks:
+      - tranc3-dev
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI → http://localhost:8025
+
+  # ── adminer — lightweight database browser ───────────────────────────────
+  # Uncomment if using PostgreSQL locally:
+  # adminer:
+  #   image: adminer:4.8.1
+  #   container_name: tranc3-dev-adminer
+  #   networks:
+  #     - tranc3-dev
+  #   ports:
+  #     - "8080:8080"
+
+networks:
+  tranc3-dev:
+    name: tranc3-dev
+    driver: bridge
+
+volumes:
+  redis_dev_data:
+    name: tranc3_redis_dev

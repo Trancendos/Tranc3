@@ -294,6 +294,8 @@ class AIQueryAgent:
         """Perform reasoning to determine next action (ReAct: Thought)."""
         step = ReasoningStep()
         task = session.task
+        if task is None:
+            return step
 
         if session.state == AgentState.UNDERSTANDING:
             step.thought = f"Need to translate NL query to NRC: '{task.natural_language[:50]}...'"
@@ -361,14 +363,16 @@ class AIQueryAgent:
             try:
                 result = await self._translate_via_shi(nl)
                 if result.get("success"):
-                    session.task.nrc_query = result["nrc_query"]
+                    if session.task is not None:
+                        session.task.nrc_query = result["nrc_query"]
                     return result
             except Exception as e:
                 logger.warning("SHI translation failed, using heuristics: %s", e)
 
         # Heuristic fallback
         nrc_query = self._heuristic_translate(nl)
-        session.task.nrc_query = nrc_query
+        if session.task is not None:
+            session.task.nrc_query = nrc_query
         return {"success": True, "nrc_query": nrc_query, "method": "heuristic"}
 
     async def _translate_via_shi(self, nl: str) -> Dict[str, Any]:
@@ -420,8 +424,8 @@ class AIQueryAgent:
                 cached = await self._query_cache_for(nrc_query)
                 if cached:
                     return {"success": True, "plan": cached, "source": "cache"}
-            except Exception:
-                pass
+            except Exception:  # noqa: S110
+                pass  # graceful degradation
 
         # Try genetic optimizer
         if self.genetic_optimizer:
@@ -443,7 +447,8 @@ class AIQueryAgent:
         # Simulated execution
         await asyncio.sleep(0.01)
         results = [{"id": i, "value": i * 10} for i in range(5)]
-        session.task.results = results
+        if session.task is not None:
+            session.task.results = results
         return {"success": True, "rows": len(results), "data": results}
 
     async def _action_validate(self, action: AgentAction, session: AgentSession) -> Dict[str, Any]:
@@ -487,7 +492,8 @@ class AIQueryAgent:
         nrc_query = action.input_data.get("nrc_query", "")
         # Add optimization hints
         refined = nrc_query + " /* refined */"
-        session.task.nrc_query = refined
+        if session.task is not None:
+            session.task.nrc_query = refined
         return {"success": True, "refined_query": refined}
 
     async def _action_explain(self, action: AgentAction, session: AgentSession) -> Dict[str, Any]:

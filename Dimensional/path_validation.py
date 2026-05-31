@@ -21,16 +21,8 @@ logger = logging.getLogger(__name__)
 _TRAVERSAL_PATTERN = re.compile(r"(?:\.\.)|(?:\x00)")
 
 
-try:
-    from shared_core.path_validation import (
-        PathTraversalError,
-    )  # re-export for unified exception identity
-except ModuleNotFoundError as _exc:
-    if _exc.name != "shared_core.path_validation":
-        raise
-
-    class PathTraversalError(ValueError):  # type: ignore[no-redef]
-        """Raised when a path escapes its allowed base directory."""
+class PathTraversalError(ValueError):
+    """Raised when a path escapes its allowed base directory."""
 
 
 def validate_path(

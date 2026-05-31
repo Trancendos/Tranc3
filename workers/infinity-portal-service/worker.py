@@ -57,15 +57,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
 # Phase 22.4: Dimensional Services
-from shared_core.dimensionals import (
+from Dimensional.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
 )
 
 # Phase 22: Infinity Ecosystem security
-from shared_core.infinity.auth_gateway import AuthGatewayMiddleware
-from shared_core.infinity.nomenclature import (
+from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensional.infinity.nomenclature import (
     GATE_ROUTING,
     INFINITY_LOCATIONS,
     InfinityLocation,
@@ -74,17 +74,17 @@ from shared_core.infinity.nomenclature import (
     Tier,
     TransferSystem,
 )
-from shared_core.infinity.owasp_hardening import OWASPHardeningMiddleware
-from shared_core.infinity.rbac import RBACEngine
+from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensional.infinity.rbac import RBACEngine
 
 # Phase 22.3: Sentinel Station event bus
-from shared_core.infinity.sentinel_station import (
+from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     get_sentinel_station,
 )
 
 # Phase 22.6: Smart Adaptive Intelligence
-from shared_core.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -92,7 +92,13 @@ from shared_core.infinity.worker_integration import InfinityWorkerKit
 
 PORT = int(os.environ.get("INFINITY_PORTAL_PORT", "8042"))
 DB_PATH = os.environ.get("INFINITY_PORTAL_DB_PATH", "data/infinity_portal.db")
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. This service cannot validate tokens without it. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 
 # Upstream service ports
 AUTH_SERVICE_PORT = int(os.environ.get("AUTH_SERVICE_PORT", "8005"))
@@ -414,12 +420,12 @@ async def call_auth_service(method: str, path: str, json_data: dict | None = Non
         raise HTTPException(
             status_code=503,
             detail="Infinity Auth service unavailable. Please try again later.",
-        ) from exc
-    except httpx.TimeoutException as exc:
+        ) from None
+    except httpx.TimeoutException:
         raise HTTPException(
             status_code=504,
             detail="Infinity Auth service timeout. Please try again later.",
-        ) from exc
+        ) from None
 
 
 # ---------------------------------------------------------------------------
@@ -485,11 +491,8 @@ async def _lifespan(app: FastAPI):
                 # Health reporter daemon
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    if hasattr(summary, "to_dict"):
-                        summary = summary.to_dict()
-                    score = (summary.to_dict() if hasattr(summary, "to_dict") else summary).get(
-                        "health_score", 1.0
-                    )
+                    summary_dict = summary.to_dict()
+                    score = summary_dict.get("health_score", 1.0)
                     worker_kit.health.update_health(score)
                     worker_kit.health.record_fire("health_reporter")
 
@@ -499,7 +502,7 @@ async def _lifespan(app: FastAPI):
                             channel=SentinelChannel.PLATFORM,
                             event_type="health_report",
                             source="infinity_portal",
-                            payload=summary,
+                            payload=summary_dict,
                         )
                     )
 
@@ -556,7 +559,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -702,12 +705,7 @@ def _log_gate_routing(
 @app.get("/health")
 async def health():
     """Health check for the Infinity Portal service."""
-    health_summary_obj = worker_kit.health.get_health_summary()
-    health_summary = (
-        health_summary_obj.to_dict()
-        if hasattr(health_summary_obj, "to_dict")
-        else health_summary_obj
-    )
+    health_summary = worker_kit.health.get_health_summary()
     return {
         "status": "healthy",
         "service": "infinity-portal",
@@ -716,8 +714,8 @@ async def health():
         "dimensional_bus": dimensional_bus.is_running,
         "sentinel": sentinel.is_running,
         # Phase 22.6: Smart health info
-        "health_score": health_summary.get("health_score", 1.0),
-        "health_tier": health_summary.get("tier", "EXCELLENT"),
+        "health_score": health_summary.to_dict().get("health_score", 1.0),
+        "health_tier": health_summary.to_dict().get("health_tier", "EXCELLENT"),
         "smart_adaptive": True,
     }
 
@@ -1113,7 +1111,7 @@ async def gate_info():
 @app.get("/portal/transfer-systems")
 async def transfer_systems():
     """Get information about the three transfer systems."""
-    from shared_core.infinity.nomenclature import TRANSFER_SYSTEMS
+    from Dimensional.infinity.nomenclature import TRANSFER_SYSTEMS
 
     systems = []
     for ts, info in TRANSFER_SYSTEMS.items():

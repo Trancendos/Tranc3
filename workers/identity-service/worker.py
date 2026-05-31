@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 from __future__ import annotations
 
 import logging
+import os
 import sqlite3
 import threading
 import uuid
@@ -18,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 # ---------------------------------------------------------------------------
@@ -143,11 +144,25 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 STARTED_AT = datetime.now(timezone.utc)
 
 
@@ -161,18 +176,13 @@ async def health():
     }
 
 
-# TODO: Add specific CRUD endpoints for identity-service
-# The database class above provides create(), get(), list(), update(), delete() methods
-# Implement domain-specific endpoints based on business requirements
-
-
-@app.get("/")
+@_router.get("/")
 async def list_all(limit: int = 50, offset: int = 0):
     """List all identities."""
     return {"data": db.list(limit=limit, offset=offset)}
 
 
-@app.post("/")
+@_router.post("/")
 async def create(data: Dict[str, Any]):
     """Create a new identities entry."""
     item_id = data.get("identity_id", str(uuid.uuid4()))
@@ -181,7 +191,7 @@ async def create(data: Dict[str, Any]):
     return {"ok": True, **created}
 
 
-@app.get("/{identity_id}")
+@_router.get("/{identity_id}")
 async def get_by_id(identity_id: str):
     """Get a identities entry by ID."""
     item = db.get("identity_id", identity_id)
@@ -190,7 +200,7 @@ async def get_by_id(identity_id: str):
     return item
 
 
-@app.patch("/{identity_id}")
+@_router.patch("/{identity_id}")
 async def update_by_id(identity_id: str, data: Dict[str, Any]):
     """Update a identities entry."""
     if not db.update("identity_id", identity_id, data):
@@ -198,12 +208,88 @@ async def update_by_id(identity_id: str, data: Dict[str, Any]):
     return {"ok": True}
 
 
-@app.delete("/{identity_id}")
+@_router.delete("/{identity_id}")
 async def delete_by_id(identity_id: str):
     """Delete a identities entry (soft delete)."""
     if not db.delete("identity_id", identity_id):
         raise HTTPException(404, f"Not found: {identity_id}")
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Domain-specific endpoints
+# ---------------------------------------------------------------------------
+
+
+@_router.get("/by-user/{user_id}")
+async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
+    """List all identities for a given user across all providers."""
+    return {"data": db.list(limit=limit, offset=offset, user_id=user_id)}
+
+
+@_router.get("/by-provider/{provider}")
+async def get_by_provider(provider: str, limit: int = 50, offset: int = 0):
+    """List all identities registered via a specific OAuth provider."""
+    return {"data": db.list(limit=limit, offset=offset, provider=provider)}
+
+
+@_router.get("/by-provider/{provider}/{provider_id}")
+async def get_by_provider_id(provider: str, provider_id: str):
+    """Lookup a specific identity by provider + provider_id (e.g. google + sub)."""
+    conn = db._get_conn()
+    row = conn.execute(
+        "SELECT * FROM identities WHERE provider=? AND provider_id=?",
+        (provider, provider_id),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, f"Not found: {provider}/{provider_id}")
+    return dict(row)
+
+
+@_router.post("/{identity_id}/verify")
+async def verify_identity(identity_id: str):
+    """Mark an identity as verified."""
+    if not db.update("identity_id", identity_id, {"verified": 1}):
+        raise HTTPException(404, f"Not found: {identity_id}")
+    return {"ok": True, "verified": True}
+
+
+@_router.post("/{identity_id}/unverify")
+async def unverify_identity(identity_id: str):
+    """Remove verification from an identity."""
+    if not db.update("identity_id", identity_id, {"verified": 0}):
+        raise HTTPException(404, f"Not found: {identity_id}")
+    return {"ok": True, "verified": False}
+
+
+@_router.get("/search")
+async def search_identities(
+    email: Optional[str] = None,
+    display_name: Optional[str] = None,
+    verified: Optional[int] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Search identities by email, display_name, or verified status."""
+    conn = db._get_conn()
+    query = "SELECT * FROM identities WHERE 1=1"
+    params: list = []
+    if email:
+        query += " AND email LIKE ?"
+        params.append(f"%{email}%")
+    if display_name:
+        query += " AND display_name LIKE ?"
+        params.append(f"%{display_name}%")
+    if verified is not None:
+        query += " AND verified=?"
+        params.append(verified)
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+    rows = conn.execute(query, params).fetchall()
+    return {"data": [dict(r) for r in rows], "count": len(rows)}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

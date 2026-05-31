@@ -1,0 +1,323 @@
+# docker-compose.uat.yml
+# Tranc3 — UAT (User Acceptance Testing) Stack
+#
+# Production-mirror stack for pre-production validation.
+# Same worker set as production, isolated network + volumes.
+# No hot-reload. No debug mode.
+# Runs: docker compose -f docker-compose.uat.yml up -d
+#
+# Key differences from docker-compose.production.yml:
+#   - env_file: .env.uat (not .env.production)
+#   - Container prefix: tranc3-uat-*
+#   - Volumes prefixed: tranc3_uat_*
+#   - Network: tranc3-uat (isolated from prod)
+#   - Stripe test-mode keys enforced via env
+#   - Simplified Vault (file-backend, auto-unsealed for CI)
+#   - seed-data service for demo fixture loading
+#   - No TLS termination (UAT sits behind internal Traefik + test cert)
+#
+# Services:
+#   P0: tranc3-uat-api, redis, infinity-ws, infinity-auth
+#   P1: infinity-ai, users-service, monitoring
+#   P2: the-grid, products-service, orders-service, payments-service
+#   Infra: vault, prometheus, grafana, mailhog
+
+version: "3.9"
+
+# ── Shared config ────────────────────────────────────────────────────────────
+x-uat-common: &uat-common
+  restart: unless-stopped
+  networks:
+    - tranc3-uat
+  env_file:
+    - .env.uat
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-worker-uat: &worker-uat
+  <<: *uat-common
+  build:
+    context: .
+    dockerfile: docker/Dockerfile.worker
+  labels:
+    - "tranc3.stack=uat"
+    - "tranc3.env=uat"
+
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 15s
+
+services:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # INFRASTRUCTURE — UAT
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: tranc3-uat-redis
+    <<: *uat-common
+    env_file: []
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-uat-redis-password}"]
+    volumes:
+      - uat_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-uat-redis-password}", "ping"]
+      <<: *healthcheck
+
+  # ── Vault (simplified — file backend, auto-unsealed for CI/UAT) ──────────
+  vault:
+    image: hashicorp/vault:1.18
+    container_name: tranc3-uat-vault
+    <<: *uat-common
+    env_file: []
+    cap_add:
+      - IPC_LOCK
+    command: ["vault", "server", "-dev", "-dev-root-token-id=uat-vault-token"]
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: uat-vault-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    ports:
+      - "18200:8200"
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://localhost:8200"]
+      <<: *healthcheck
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # P0 — CORE SERVICES
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  # ── FastAPI Backend ───────────────────────────────────────────────────────
+  api:
+    <<: *uat-common
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: tranc3-uat-api
+    volumes:
+      - uat_models:/app/models
+      - uat_cache:/app/cache
+      - uat_data:/app/data
+    ports:
+      - "18000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: uat
+      REDIS_URL: redis://:${REDIS_PASSWORD:-uat-redis-password}@redis:6379/0
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: uat-vault-token
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=3)"]
+      <<: *healthcheck
+    labels:
+      - "tranc3.stack=uat"
+      - "tranc3.service=api"
+
+  # ── WebSocket Hub (The Nexus) ─────────────────────────────────────────────
+  infinity-ws:
+    <<: *worker-uat
+    container_name: tranc3-uat-ws
+    working_dir: /app/workers/infinity-ws
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8004"]
+    ports:
+      - "18004:8004"
+    environment:
+      PORT: "8004"
+      REDIS_URL: redis://:${REDIS_PASSWORD:-uat-redis-password}@redis:6379/0
+    depends_on:
+      - redis
+
+  # ── Auth Worker (Infinity) ────────────────────────────────────────────────
+  infinity-auth:
+    <<: *worker-uat
+    container_name: tranc3-uat-auth
+    working_dir: /app/workers/infinity-auth
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8005"]
+    ports:
+      - "18005:8005"
+    environment:
+      PORT: "8005"
+    depends_on:
+      - redis
+      - vault
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # P1 — CORE PLATFORM SERVICES
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  # ── AI Gateway ────────────────────────────────────────────────────────────
+  infinity-ai:
+    <<: *worker-uat
+    container_name: tranc3-uat-ai
+    working_dir: /app/workers/infinity-ai
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8009"]
+    ports:
+      - "18009:8009"
+    environment:
+      PORT: "8009"
+
+  # ── Users Service ─────────────────────────────────────────────────────────
+  users-service:
+    <<: *worker-uat
+    container_name: tranc3-uat-users
+    working_dir: /app/workers/users-service
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8006"]
+    ports:
+      - "18006:8006"
+    environment:
+      PORT: "8006"
+    depends_on:
+      - redis
+
+  # ── Monitoring ────────────────────────────────────────────────────────────
+  monitoring:
+    <<: *worker-uat
+    container_name: tranc3-uat-monitoring
+    working_dir: /app/workers/monitoring
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8007"]
+    ports:
+      - "18007:8007"
+    environment:
+      PORT: "8007"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # P2 — COMMERCE SERVICES
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  the-grid:
+    <<: *worker-uat
+    container_name: tranc3-uat-grid
+    working_dir: /app/workers/the-grid
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8010"]
+    ports:
+      - "18010:8010"
+    environment:
+      PORT: "8010"
+
+  products-service:
+    <<: *worker-uat
+    container_name: tranc3-uat-products
+    working_dir: /app/workers/products-service
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8011"]
+    ports:
+      - "18011:8011"
+    environment:
+      PORT: "8011"
+
+  orders-service:
+    <<: *worker-uat
+    container_name: tranc3-uat-orders
+    working_dir: /app/workers/orders-service
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8012"]
+    ports:
+      - "18012:8012"
+    environment:
+      PORT: "8012"
+
+  payments-service:
+    <<: *worker-uat
+    container_name: tranc3-uat-payments
+    working_dir: /app/workers/payments-service
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8013"]
+    ports:
+      - "18013:8013"
+    environment:
+      PORT: "8013"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # OBSERVABILITY — UAT
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  # ── Prometheus ────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: tranc3-uat-prometheus
+    <<: *uat-common
+    env_file: []
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    volumes:
+      - ./monitoring/prometheus-uat.yml:/etc/prometheus/prometheus.yml:ro
+      - uat_prometheus_data:/prometheus
+    ports:
+      - "19090:9090"
+
+  # ── Grafana ───────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: tranc3-uat-grafana
+    <<: *uat-common
+    env_file: []
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: uat-grafana-admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - uat_grafana_data:/var/lib/grafana
+    ports:
+      - "13000:3000"
+    depends_on:
+      - prometheus
+
+  # ── MailHog — email testing ───────────────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: tranc3-uat-mailhog
+    networks:
+      - tranc3-uat
+    ports:
+      - "11025:1025"   # SMTP
+      - "18025:8025"   # Web UI
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # UAT SEED — Load demo fixtures for acceptance testing
+  # Runs once then exits.
+  # ═══════════════════════════════════════════════════════════════════════════
+  seed-data:
+    <<: *uat-common
+    image: python:3.11-slim
+    container_name: tranc3-uat-seed
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: >
+      bash -c "
+        pip install --quiet httpx || true;
+        python scripts/seed_uat_data.py || echo 'Seed script not found — skipping'
+      "
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: "no"
+
+networks:
+  tranc3-uat:
+    name: tranc3-uat
+    driver: bridge
+
+volumes:
+  uat_redis_data:
+    name: tranc3_uat_redis
+  uat_prometheus_data:
+    name: tranc3_uat_prometheus
+  uat_grafana_data:
+    name: tranc3_uat_grafana
+  uat_models:
+    name: tranc3_uat_models
+  uat_cache:
+    name: tranc3_uat_cache
+  uat_data:
+    name: tranc3_uat_data

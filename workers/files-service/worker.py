@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 from __future__ import annotations
 
 import logging
+import os
 import sqlite3
 import threading
 import uuid
@@ -18,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 # ---------------------------------------------------------------------------
@@ -139,11 +140,25 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 STARTED_AT = datetime.now(timezone.utc)
 
 
@@ -157,18 +172,13 @@ async def health():
     }
 
 
-# TODO: Add specific CRUD endpoints for files-service
-# The database class above provides create(), get(), list(), update(), delete() methods
-# Implement domain-specific endpoints based on business requirements
-
-
-@app.get("/")
+@_router.get("/")
 async def list_all(limit: int = 50, offset: int = 0):
     """List all files."""
     return {"data": db.list(limit=limit, offset=offset)}
 
 
-@app.post("/")
+@_router.post("/")
 async def create(data: Dict[str, Any]):
     """Create a new files entry."""
     item_id = data.get("file_id", str(uuid.uuid4()))
@@ -177,7 +187,7 @@ async def create(data: Dict[str, Any]):
     return {"ok": True, **created}
 
 
-@app.get("/{file_id}")
+@_router.get("/{file_id}")
 async def get_by_id(file_id: str):
     """Get a files entry by ID."""
     item = db.get("file_id", file_id)
@@ -186,7 +196,7 @@ async def get_by_id(file_id: str):
     return item
 
 
-@app.patch("/{file_id}")
+@_router.patch("/{file_id}")
 async def update_by_id(file_id: str, data: Dict[str, Any]):
     """Update a files entry."""
     if not db.update("file_id", file_id, data):
@@ -194,12 +204,113 @@ async def update_by_id(file_id: str, data: Dict[str, Any]):
     return {"ok": True}
 
 
-@app.delete("/{file_id}")
+@_router.delete("/{file_id}")
 async def delete_by_id(file_id: str):
     """Delete a files entry (soft delete)."""
     if not db.delete("file_id", file_id):
         raise HTTPException(404, f"Not found: {file_id}")
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Domain-specific endpoints
+# ---------------------------------------------------------------------------
+
+
+@_router.get("/by-user/{user_id}")
+async def get_by_user(user_id: str, limit: int = 50, offset: int = 0):
+    """List all files uploaded by a specific user."""
+    return {"data": db.list(limit=limit, offset=offset, user_id=user_id)}
+
+
+@_router.get("/public")
+async def list_public(limit: int = 50, offset: int = 0):
+    """List all publicly accessible files."""
+    return {"data": db.list(limit=limit, offset=offset, is_public=1)}
+
+
+@_router.get("/by-content-type/{content_type:path}")
+async def get_by_content_type(content_type: str, limit: int = 50, offset: int = 0):
+    """List files by MIME content type (e.g. image/png, application/pdf)."""
+    conn = db._get_conn()
+    rows = conn.execute(
+        "SELECT * FROM files WHERE content_type=? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        (content_type, limit, offset),
+    ).fetchall()
+    return {"data": [dict(r) for r in rows]}
+
+
+@_router.get("/by-ipfs/{ipfs_cid}")
+async def get_by_ipfs_cid(ipfs_cid: str):
+    """Lookup a file by its IPFS content identifier."""
+    conn = db._get_conn()
+    row = conn.execute("SELECT * FROM files WHERE ipfs_cid=?", (ipfs_cid,)).fetchone()
+    if not row:
+        raise HTTPException(404, f"No file with IPFS CID: {ipfs_cid}")
+    return dict(row)
+
+
+@_router.post("/{file_id}/publish")
+async def publish_file(file_id: str):
+    """Make a file publicly accessible."""
+    if not db.update("file_id", file_id, {"is_public": 1}):
+        raise HTTPException(404, f"Not found: {file_id}")
+    return {"ok": True, "file_id": file_id, "is_public": True}
+
+
+@_router.post("/{file_id}/unpublish")
+async def unpublish_file(file_id: str):
+    """Restrict a file to owner-only access."""
+    if not db.update("file_id", file_id, {"is_public": 0}):
+        raise HTTPException(404, f"Not found: {file_id}")
+    return {"ok": True, "file_id": file_id, "is_public": False}
+
+
+@_router.get("/stats/storage")
+async def storage_stats():
+    """Total storage used per user and overall."""
+    conn = db._get_conn()
+    total = conn.execute(
+        "SELECT SUM(size_bytes) as total_bytes, COUNT(*) as file_count FROM files"
+    ).fetchone()
+    by_user = conn.execute(
+        "SELECT user_id, SUM(size_bytes) as bytes, COUNT(*) as files FROM files GROUP BY user_id ORDER BY bytes DESC LIMIT 20"
+    ).fetchall()
+    return {
+        "total_bytes": total["total_bytes"] or 0,
+        "file_count": total["file_count"] or 0,
+        "by_user": [dict(r) for r in by_user],
+    }
+
+
+@_router.get("/search")
+async def search_files(
+    filename: Optional[str] = None,
+    user_id: Optional[str] = None,
+    ipfs_cid: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Search files by filename prefix, user, or IPFS CID."""
+    conn = db._get_conn()
+    query = "SELECT * FROM files WHERE 1=1"
+    params: list = []
+    if filename:
+        query += " AND filename LIKE ?"
+        params.append(f"%{filename}%")
+    if user_id:
+        query += " AND user_id=?"
+        params.append(user_id)
+    if ipfs_cid:
+        query += " AND ipfs_cid=?"
+        params.append(ipfs_cid)
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+    rows = conn.execute(query, params).fetchall()
+    return {"data": [dict(r) for r in rows], "count": len(rows)}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

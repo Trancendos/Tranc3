@@ -46,8 +46,23 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # ── Configuration ───────────────────────────────────────────────
 
-MASTER_KEY_SEED = os.getenv("MASTER_KEY_SEED", "change-me-in-production")
-INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "internal-dev-secret")
+_master_key_raw = os.getenv("MASTER_KEY_SEED")
+if not _master_key_raw or _master_key_raw == "change-me-in-production":
+    raise RuntimeError(
+        "MASTER_KEY_SEED is not set (or still the default). "
+        "The Void vault cannot start without a strong unique key. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+MASTER_KEY_SEED: str = _master_key_raw
+
+_internal_secret_raw = os.getenv("INTERNAL_SECRET")
+if not _internal_secret_raw or _internal_secret_raw == "internal-dev-secret":
+    raise RuntimeError(
+        "INTERNAL_SECRET is not set (or still the default). "
+        "The Void vault cannot start without a strong unique internal secret. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+INTERNAL_SECRET: str = _internal_secret_raw
 INFINITY_ONE_URL = os.getenv("INFINITY_ONE_URL", "")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 DATA_DIR = Path(os.getenv("VOID_DATA_DIR", "/tmp/void-data"))

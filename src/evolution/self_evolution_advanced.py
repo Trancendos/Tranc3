@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional  # noqa: E402
 import torch  # noqa: E402
 import torch.nn as nn  # noqa: E402
 
-from shared_core.sanitize import sanitize_for_log  # noqa: E402
+from Dimensional.sanitize import sanitize_for_log  # noqa: E402
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
 from src.evolution.self_improving_core import SelfEvolvingArchitecture  # noqa: E402
 
@@ -23,10 +23,9 @@ class SelfEvolvingInference:
         self.config = config
         self.feature_manager = feature_manager
 
+        self.evolution_engine: Optional[SelfEvolvingArchitecture] = None
         if feature_manager.is_enabled(FeatureFlag.SELF_EVOLUTION):
             self.evolution_engine = SelfEvolvingArchitecture(config)
-        else:
-            self.evolution_engine = None
 
     def adapt_model(
         self,
@@ -57,7 +56,8 @@ class SelfEvolvingInference:
         fitness = (quality_score + user_satisfaction) / 2
 
         # Evolve architecture
-        self.evolution_engine.evolve(num_generations=1)
+        if self.evolution_engine is not None:
+            self.evolution_engine.evolve(num_generations=1)
 
         # Create adapted model layer
         adapted_layer = nn.Linear(input_data.size(-1), input_data.size(-1))

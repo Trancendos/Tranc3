@@ -1,6 +1,12 @@
 # api_ecosystem.py — Trancendos Ecosystem API
-# Exposes shared_core backend modules to the Dashboard frontend.
+# Exposes Dimensional backend modules to the Dashboard frontend.
 # Runs standalone or mounted as a sub-app on the main api.py.
+#
+# DEPRECATED — do not extend this file.
+# All /api/ecosystem/* routes have been migrated to src/routers/ecosystem.py
+# and are now included in the canonical entry point api.py. This file is kept
+# only to avoid breaking any external tooling that imports the standalone app
+# directly. New development must go to api.py and its router tree.
 #
 # Enhanced with:
 #   - Adaptive rate limiting (IAM-tier aware)
@@ -34,7 +40,7 @@ async def lifespan(app: FastAPI):
     logger.info("Tranc3 Ecosystem API starting up...")
 
     # Start hybrid storage auto-sync if in HYBRID mode
-    from shared_core.architecture.storage_factory import SystemMode, _get_system_mode
+    from Dimensional.architecture.storage_factory import SystemMode, _get_system_mode
 
     mode = _get_system_mode()
     if mode == SystemMode.HYBRID:
@@ -97,12 +103,12 @@ app.add_middleware(
 )
 
 # Telemetry — request tracing + metrics collection
-from shared_core.middleware.telemetry import TelemetryMiddleware
+from Dimensional.middleware.telemetry import TelemetryMiddleware
 
 app.add_middleware(TelemetryMiddleware)
 
 # Rate Limiting — IAM-tier adaptive
-from shared_core.middleware.rate_limiter import RateLimitConfig, RateLimitMiddleware
+from Dimensional.middleware.rate_limiter import RateLimitConfig, RateLimitMiddleware
 
 rate_config = RateLimitConfig(
     window_seconds=int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60")),
@@ -111,27 +117,27 @@ rate_config = RateLimitConfig(
 app.add_middleware(RateLimitMiddleware, config=rate_config)
 
 # Auth — JWT + API Key enforcement
-from shared_core.middleware.auth import AuthMiddleware
+from Dimensional.middleware.auth import AuthMiddleware
 
 app.add_middleware(AuthMiddleware)
 
-# ─── Shared Core Imports ─────────────────────────────────────────────────────
+# ─── Dimensional Imports ─────────────────────────────────────────────────────
 
-from shared_core.architecture.audit_ledger import AuditLedger
-from shared_core.architecture.storage_factory import StorageFactory
-from shared_core.middleware.telemetry import TelemetryCollector
-from shared_core.orchestration.config_drift import ConfigDriftDetector
-from shared_core.orchestration.dependency_graph import SmartDependencyGraph
-from shared_core.orchestration.enhanced_registry import EnhancedServiceRegistry
-from shared_core.orchestration.health_monitor import AdaptiveHealthMonitor
-from shared_core.orchestration.heartbeat_aggregator import (
+from Dimensional.architecture.audit_ledger import AuditLedger
+from Dimensional.architecture.storage_factory import StorageFactory
+from Dimensional.middleware.telemetry import TelemetryCollector
+from Dimensional.orchestration.config_drift import ConfigDriftDetector
+from Dimensional.orchestration.dependency_graph import SmartDependencyGraph
+from Dimensional.orchestration.enhanced_registry import EnhancedServiceRegistry
+from Dimensional.orchestration.health_monitor import AdaptiveHealthMonitor
+from Dimensional.orchestration.heartbeat_aggregator import (
     Heartbeat,
     HeartbeatAggregator,
     HeartbeatMetrics,
     ServiceStatus,
 )
-from shared_core.security_automation.adaptive_scanner import AdaptiveScanner
-from shared_core.security_automation.defense_engine import DefenseEngine, ThreatLevel
+from Dimensional.security_automation.adaptive_scanner import AdaptiveScanner
+from Dimensional.security_automation.defense_engine import DefenseEngine, ThreatLevel
 
 # ─── Singleton Instances ─────────────────────────────────────────────────────
 
@@ -646,7 +652,7 @@ async def create_security_incident(req: IncidentCreateRequest):
 @app.get("/api/ecosystem/defense/incidents")
 async def get_security_incidents(status: Optional[str] = None):
     """Get security incidents, optionally filtered by status."""
-    from shared_core.security_automation.defense_engine import IncidentStatus
+    from Dimensional.security_automation.defense_engine import IncidentStatus
 
     status_enum = IncidentStatus(status) if status else None
     return {"incidents": _defense_engine.get_incidents(status_enum)}
