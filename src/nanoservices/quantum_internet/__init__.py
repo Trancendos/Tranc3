@@ -1,20 +1,20 @@
 """Quantum Internet Simulation — Phase 10.5"""
 
 from .quantum_internet import (
-    QKProtocol,
-    QubitBasis,
-    EntanglementState,
-    QuantumNodeType,
-    ChannelType,
-    Qubit,
-    QuantumNode,
-    QuantumChannel,
-    QKSession,
     BB84Protocol,
+    ChannelType,
     E91Protocol,
-    QuantumRepeater,
-    QuantumNetwork,
+    EntanglementState,
+    QKProtocol,
+    QKSession,
+    QuantumChannel,
     QuantumInternetService,
+    QuantumNetwork,
+    QuantumNode,
+    QuantumNodeType,
+    QuantumRepeater,
+    Qubit,
+    QubitBasis,
 )
 
 __all__ = [
