@@ -65,29 +65,28 @@ from Dimensional.infinity.sentinel_station import (
     get_sentinel_station,
 )
 
-# Phase 22.4: Dimensional Services
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
-
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
-# Phase 25: Platform Entity Registry (entity name management)
+# Phase 22.4: Dimensional Services
 try:
-    from src.entities.platform import (
-        PLATFORM_ENTITIES,
-        get_entity_by_pid,
+    from Dimensional.dimensionals import (
+        get_dimensional_bus,
+        get_dimensional_registry,
+        get_underverse_registry,
     )
 
-    _PLATFORM_ENTITIES_AVAILABLE = True
-except Exception:  # pragma: no cover
-    _PLATFORM_ENTITIES_AVAILABLE = False
-    PLATFORM_ENTITIES = {}
+    _DIMENSIONAL_AVAILABLE = True
+except ImportError:
+    _DIMENSIONAL_AVAILABLE = False
 
-    def get_entity_by_pid(pid: str):  # type: ignore[misc]
+    def get_dimensional_bus():  # type: ignore[misc]
+        return None
+
+    def get_dimensional_registry():  # type: ignore[misc]
+        return None
+
+    def get_underverse_registry():  # type: ignore[misc]
         return None
 
 
@@ -402,9 +401,15 @@ app = FastAPI(
 )
 
 # CORS
+_cors_origins = [
+    o.strip()
+    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -868,8 +873,8 @@ async def compliance_events(
 @app.get("/admin/sentinel")
 async def sentinel_status():
     """Get Sentinel Station status and channel information."""
-    from Dimensional.infinity.sentinel_config import sentinel_config
     from Dimensional.infinity.nomenclature import SENTINEL_CHANNELS
+    from Dimensional.infinity.sentinel_config import sentinel_config
 
     return {
         "running": sentinel.is_running,

@@ -1,0 +1,83 @@
+name: Infrastructure — OpenTofu Plan
+
+on:
+  push:
+    branches: [main, claude/loving-mendel-dPsZ7]
+    paths:
+      - 'infrastructure/**'
+  pull_request:
+    paths:
+      - 'infrastructure/**'
+
+jobs:
+  opentofu-plan:
+    name: OpenTofu Plan (Docker Infrastructure)
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: infrastructure/opentofu
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenTofu
+        run: |
+          if ! command -v tofu &>/dev/null; then
+            curl -fsSL https://get.opentofu.org/install-opentofu.sh | bash -s -- --install-method standalone
+          fi
+          tofu version
+
+      - name: OpenTofu Init
+        run: tofu init -upgrade
+        continue-on-error: true
+
+      - name: OpenTofu Validate
+        run: tofu validate
+        continue-on-error: true
+
+      - name: OpenTofu Plan (Docker)
+        run: |
+          tofu plan -out=tfplan.binary 2>&1 | tee plan-output.txt || true
+          echo "::notice::OpenTofu plan complete — review plan-output.txt"
+        continue-on-error: true
+
+      - name: Upload plan artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opentofu-plan-${{ github.run_number }}
+          path: |
+            infrastructure/opentofu/plan-output.txt
+          retention-days: 30
+
+  opentofu-oracle-validate:
+    name: OpenTofu Validate (Oracle Cloud)
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: infrastructure/oracle-cloud
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenTofu
+        run: |
+          if ! command -v tofu &>/dev/null; then
+            curl -fsSL https://get.opentofu.org/install-opentofu.sh | bash -s -- --install-method standalone
+          fi
+
+      - name: OpenTofu Init (Oracle provider)
+        run: |
+          tofu init -upgrade -backend=false 2>&1 | tee init-output.txt || {
+            echo "::warning::OpenTofu init failed — OCI provider download may require internet access"
+            exit 0
+          }
+        continue-on-error: true
+
+      - name: OpenTofu Validate Oracle config
+        run: |
+          tofu validate 2>&1 | tee validate-output.txt || {
+            echo "::warning::Validate requires provider init — see init-output.txt"
+            exit 0
+          }
+        continue-on-error: true

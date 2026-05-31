@@ -35,7 +35,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
-
 PYPI_URL = "https://pypi.org/pypi/{package}/json"
 CACHE: dict[str, tuple[str, ...]] = {}
 

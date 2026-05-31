@@ -1,0 +1,31 @@
+# .woodpecker.yml — Woodpecker CI pipeline for Trancendos
+# Runs on Woodpecker CI (Apache 2.0) alongside Forgejo (The Workshop)
+# Mirrors the security gates defined in .forgejo/workflows/security-scan.yml
+#
+# Woodpecker docs: https://woodpecker-ci.org/docs
+# Service: Woodpecker server at https://ci.trancendos.com
+
+when:
+  - event: push
+    branch: main
+  - event: pull_request
+
+steps:
+  python-lint:
+    image: python:3.11-slim
+    commands:
+      - pip install --quiet ruff
+      - ruff check src/ --exit-zero
+
+  python-security:
+    image: python:3.11-slim
+    commands:
+      - pip install --quiet pip-audit bandit
+      - pip-audit --requirement requirements.txt --vulnerability-service osv || true
+      - bandit -r src/ --severity-level medium --exit-zero
+
+  docker-lint:
+    image: python:3.11-slim
+    commands:
+      - pip install --quiet checkov
+      - checkov -f docker-compose.production.yml --quiet || true

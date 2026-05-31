@@ -163,7 +163,13 @@ class PageRankEngine:
         scores = dict.fromkeys(range(n), 1.0 / n)
 
         for _ in range(PAGERANK_ITERATIONS):
-            new_scores: Dict[int, float] = dict.fromkeys(range(n), (1 - PAGERANK_DAMPING) / n)
+            # Distribute dangling-node mass evenly across all nodes
+            dangling_sum = sum(scores[i] for i in range(n) if i not in out_links)
+            dangling_contrib = PAGERANK_DAMPING * dangling_sum / n if n else 0.0
+
+            new_scores: Dict[int, float] = dict.fromkeys(
+                range(n), (1 - PAGERANK_DAMPING) / n + dangling_contrib
+            )
             for src, links in out_links.items():
                 total_weight = sum(w for _, w in links)
                 for tgt, w in links:
@@ -245,7 +251,7 @@ def multi_hop_search(
                     {
                         "node_id": node_id,
                         "title": row["title"],
-                        "content": row["content"][:500],
+                        "content": (row["content"] or "")[:500],
                         "importance": row["importance"],
                         "hops": depth,
                         "path": path,
@@ -297,7 +303,7 @@ def associative_bridge(
     rows = db.execute("SELECT node_id, title, content, importance FROM nodes").fetchall()
     scored = []
     for row in rows:
-        doc_tokens = set(_tokenize(row["title"] + " " + row["content"]))
+        doc_tokens = set(_tokenize(row["title"] + " " + (row["content"] or "")))
         overlap = len(q_tokens & doc_tokens)
         if overlap == 0:
             continue
@@ -310,7 +316,7 @@ def associative_bridge(
         {
             "node_id": r["node_id"],
             "title": r["title"],
-            "content": r["content"][:500],
+            "content": (r["content"] or "")[:500],
             "importance": r["importance"],
             "relevance_score": round(s, 4),
         }
@@ -342,21 +348,21 @@ def consolidate_knowledge(db: sqlite3.Connection) -> Dict[str, int]:
     for i, row_a in enumerate(rows):
         if row_a["node_id"] in to_delete:
             continue
-        toks_a = set(_tokenize(row_a["title"] + " " + row_a["content"]))
+        toks_a = set(_tokenize(row_a["title"] + " " + (row_a["content"] or "")))
         if not toks_a:
             continue
 
         for row_b in rows[i + 1 :]:
             if row_b["node_id"] in to_delete:
                 continue
-            toks_b = set(_tokenize(row_b["title"] + " " + row_b["content"]))
+            toks_b = set(_tokenize(row_b["title"] + " " + (row_b["content"] or "")))
             if not toks_b:
                 continue
 
             jaccard = len(toks_a & toks_b) / len(toks_a | toks_b)
             if jaccard >= CONSOLIDATION_SIMILARITY_THRESHOLD:
                 # Merge row_b content into row_a, delete row_b
-                merged_content = row_a["content"]
+                merged_content = row_a["content"] or ""
                 if row_b["content"] and row_b["content"] not in merged_content:
                     merged_content += (
                         f"\n\n[Consolidated from: {row_b['title']}]\n{row_b['content']}"

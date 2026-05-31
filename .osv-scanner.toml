@@ -1,0 +1,52 @@
+# OSV-Scanner configuration for the Trancendos/Tranc3 platform
+# https://google.github.io/osv-scanner/configuration/
+#
+# False-positive suppression for known-acceptable vulnerabilities.
+# Each ignore entry must document the reason and review date.
+# Review all suppressions quarterly.
+#
+# Ecosystem values: PyPI, Go, crates.io, npm, Maven, NuGet, etc.
+
+[[IgnoredVulns]]
+id = "PYSEC-2025-210"
+reason = "torch profiler not used in Tranc3; local-attack-vector only. Reviewed 2026-05."
+
+[[IgnoredVulns]]
+id = "PYSEC-2025-194"
+reason = "TorchScript JIT not used in Tranc3. Reviewed 2026-05."
+
+[[IgnoredVulns]]
+id = "PYSEC-2025-196"
+reason = "Flatbuffer loading not used in Tranc3. Reviewed 2026-05."
+
+[[IgnoredVulns]]
+id = "PYSEC-2025-195"
+reason = "Local-only deployment; mitigated by input sanitization. Reviewed 2026-05."
+
+[[IgnoredVulns]]
+id = "PYSEC-2025-193"
+reason = "Local-only deployment; mitigated by input sanitization. Reviewed 2026-05."
+
+[[IgnoredVulns]]
+id = "PYSEC-2025-192"
+reason = "Local-only deployment; mitigated by input sanitization. Reviewed 2026-05."
+
+[[IgnoredVulns]]
+id = "PYSEC-2026-139"
+reason = "Mitigated by weights_only=True on all torch.load() calls. Reviewed 2026-05."
+
+[[IgnoredVulns]]
+id = "PYSEC-2025-191"
+reason = "Disputed advisory; mkldnn backend not used in Tranc3. Reviewed 2026-05."
+
+[[IgnoredVulns]]
+id = "PYSEC-2025-197"
+reason = "Local-only; no direct CUDA allocator interaction in Tranc3. Reviewed 2026-05."
+
+[[IgnoredVulns]]
+id = "PYSEC-2025-189"
+reason = "Remote-capable but high attack complexity; profiler not used. Reviewed 2026-05."
+
+[[IgnoredVulns]]
+id = "PYSEC-2025-190"
+reason = "Local-only; quantized sigmoid not used in Tranc3. Reviewed 2026-05."

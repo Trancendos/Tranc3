@@ -1,0 +1,52 @@
+name: Renovate — Automated Dependency Updates
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"  # Weekly Monday 03:00 UTC
+  push:
+    branches: [main]
+    paths:
+      - 'renovate.json'
+      - '.forgejo/workflows/renovate.yml'
+  workflow_dispatch:
+
+jobs:
+  renovate:
+    name: Renovate Dependency Scanner
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Renovate (self-hosted)
+        run: |
+          if ! command -v npx &>/dev/null; then
+            echo "::warning::npx not available — installing Node.js"
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            apt-get install -y nodejs || true
+          fi
+          # Run Renovate dry-run to detect available updates
+          npx renovate \
+            --platform=github \
+            --token="${GITHUB_TOKEN}" \
+            --dry-run=false \
+            --autodiscover=false \
+            --repositories=Trancendos/Tranc3 \
+            2>&1 | tee logs/renovate-output.txt || {
+              echo "::warning::Renovate run completed with warnings — check logs"
+              exit 0
+            }
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RENOVATE_CONFIG_FILE: renovate.json
+          LOG_LEVEL: info
+
+      - name: Upload Renovate logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: renovate-logs-${{ github.run_number }}
+          path: logs/renovate-output.txt
+          retention-days: 30

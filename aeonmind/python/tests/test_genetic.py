@@ -103,7 +103,9 @@ class TestDNAEvolutionEngine:
 
     def test_inject_random(self):
         engine = DNAEvolutionEngine(GeneticConfig(population_size=20, dna_length=8))
+        initial_size = len(engine.population)
         engine.inject_random(5)
+        assert len(engine.population) >= initial_size
         # Should not exceed population_size
         assert len(engine.population) <= engine.config.population_size
 

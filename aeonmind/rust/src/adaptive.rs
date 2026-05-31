@@ -198,7 +198,7 @@ impl AdaptiveMetaLearner {
             let s: Vec<f64> = self
                 .parameters
                 .iter()
-                .zip(prev_params.iter())
+.zip(prev_params.iter())
                 .map(|(p_new, p_old)| p_new - p_old)
                 .collect();
             let y: Vec<f64> = clipped
@@ -219,6 +219,7 @@ impl AdaptiveMetaLearner {
             }
         }
 
+        let clipped_norm = norm(&clipped);
         self.prev_gradient = Some(clipped);
         self.iteration += 1;
 
@@ -232,7 +233,7 @@ impl AdaptiveMetaLearner {
         let step = AdaptiveStep {
             iteration: self.iteration,
             cost: self.current_cost.unwrap_or(0.0),
-            gradient_norm: grad_norm, // use original pre-clip norm for convergence monitoring
+            gradient_norm: grad_norm,
             learning_rate: self.config.learning_rate,
             step_size,
         };

@@ -42,7 +42,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
 # Phase 22.4: Dimensional Services
-from shared_core.dimensionals import (
+from Dimensional.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
@@ -60,13 +60,6 @@ from Dimensional.infinity.rbac import RBACEngine
 from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     get_sentinel_station,
-)
-
-# Phase 22.4: Dimensional Services
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
 )
 
 # Phase 22.6: Smart Adaptive Intelligence
@@ -374,9 +367,15 @@ app = FastAPI(
 )
 
 # CORS
+_cors_origins = [
+    o.strip()
+    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -508,8 +507,10 @@ async def create_identity(request: Request, identity: IdentityCreate):
 
     # Determine tier and infinity_role from role
     from Dimensional.infinity.nomenclature import (
-        get_tier_for_role as _gtr,
         get_infinity_role_for_role as _girr,
+    )
+    from Dimensional.infinity.nomenclature import (
+        get_tier_for_role as _gtr,
     )
 
     tier = _gtr(identity.role)
@@ -677,8 +678,10 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
         params.append(update.role)
         # Update tier and infinity_role based on new role
         from Dimensional.infinity.nomenclature import (
-            get_tier_for_role as _gtr,
             get_infinity_role_for_role as _girr,
+        )
+        from Dimensional.infinity.nomenclature import (
+            get_tier_for_role as _gtr,
         )
 
         tier = _gtr(update.role)

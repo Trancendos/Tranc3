@@ -1,0 +1,105 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":separatePatchReleases",
+    "group:monorepos",
+    "group:popular-preset-monorepos",
+    "workarounds:all"
+  ],
+  "labels": ["dependencies", "automated"],
+  "reviewers": ["Trancendos"],
+  "assignees": ["Trancendos"],
+  "baseBranches": ["main"],
+  "prCreation": "immediate",
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 10,
+  "platformAutomerge": false,
+  "automerge": false,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security", "urgent"],
+    "automerge": true,
+    "automergeType": "pr"
+  },
+  "osvVulnerabilityAlerts": true,
+  "packageRules": [
+    {
+      "matchManagers": ["pip_requirements", "poetry", "pep621"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "Python patch updates",
+      "automerge": true
+    },
+    {
+      "matchManagers": ["pip_requirements", "poetry", "pep621"],
+      "matchUpdateTypes": ["minor"],
+      "groupName": "Python minor updates",
+      "automerge": false
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Docker base image updates",
+      "automerge": true
+    },
+    {
+      "matchManagers": ["docker-compose"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Docker Compose service updates",
+      "automerge": false
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "Node.js patch updates",
+      "automerge": true
+    },
+    {
+      "matchPackagePatterns": ["^fastapi$", "^uvicorn$", "^pydantic$"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false,
+      "description": "Block major FastAPI/Uvicorn/Pydantic upgrades — require manual review"
+    },
+    {
+      "matchPackagePatterns": ["^torch$", "^transformers$", "^sentence-transformers$"],
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false,
+      "description": "Block ML library upgrades — require manual compatibility testing"
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["^postgres$", "^clickhouse$"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false,
+      "description": "Block database major version upgrades — require migration planning"
+    },
+    {
+      "matchManagers": ["terraform", "opentofu"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "OpenTofu provider updates",
+      "automerge": false
+    }
+  ],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/.venv/**",
+    "**/venv/**",
+    "**/__pycache__/**",
+    "**/dist/**",
+    "**/build/**"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["(\\.forgejo\\/workflows\\/.*\\.yml$|\\.woodpecker\\.yml$)"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>.+?)\\n.*?(?<currentValue>[\\d.]+)"
+      ],
+      "description": "Parse inline Renovate annotations in CI workflows"
+    }
+  ],
+  "schedule": ["after 2am and before 6am on monday"],
+  "timezone": "Europe/London"
+}

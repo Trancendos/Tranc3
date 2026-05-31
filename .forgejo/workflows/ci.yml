@@ -22,12 +22,21 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: Install uv (fast Python package manager)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          export PATH="$HOME/.local/bin:$PATH"
+          uv --version
+
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv pip install --system -r requirements.txt
 
       - name: Lint (ruff)
         run: |
-          pip install ruff --quiet
+          export PATH="$HOME/.local/bin:$PATH"
+          uv pip install --system ruff --quiet
           ruff check src/ api.py --select E,F,W --ignore E501 || true
 
       - name: Create logs dir
@@ -102,8 +111,16 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: Install uv (fast Python package manager)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          export PATH="$HOME/.local/bin:$PATH"
+          uv --version
+
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv pip install --system -r requirements.txt
 
       - name: Create logs dir
         run: mkdir -p logs
@@ -153,8 +170,16 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: Install uv (fast Python package manager)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          export PATH="$HOME/.local/bin:$PATH"
+          uv --version
+
       - name: Install base worker deps
-        run: pip install fastapi>=0.110.0 uvicorn>=0.29.0 pydantic>=2.0.0 httpx>=0.27.0 python-multipart>=0.0.9
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv pip install --system fastapi>=0.110.0 uvicorn>=0.29.0 pydantic>=2.0.0 httpx>=0.27.0 python-multipart>=0.0.9
 
       - name: Validate all worker modules parse cleanly
         run: |

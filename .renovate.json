@@ -1,0 +1,123 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Renovate bot config for Trancendos/Tranc3 — zero-cost dependency automation",
+  "extends": [
+    "config:base",
+    "group:allNonMajor",
+    ":separateMajorReleases",
+    ":combinePatchMinorReleases",
+    ":ignoreUnstable",
+    ":prImmediately",
+    ":semanticCommits",
+    "security:openssf-scorecard"
+  ],
+  "labels": ["dependencies"],
+  "assignees": [],
+  "reviewers": [],
+  "timezone": "UTC",
+  "schedule": ["every weekend"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "branchPrefix": "deps/renovate-",
+  "commitMessagePrefix": "deps:",
+  "semanticCommitType": "deps",
+  "semanticCommitScope": "{{depType}}",
+  "vulnerabilityAlerts": {
+    "labels": ["dependencies", "security"],
+    "automerge": false
+  },
+  "packageRules": [
+    {
+      "description": "Auto-merge patch updates (all ecosystems)",
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "labels": ["dependencies"]
+    },
+    {
+      "description": "Group all security updates together",
+      "matchCategories": ["security"],
+      "groupName": "security updates",
+      "labels": ["dependencies", "security"],
+      "automerge": false,
+      "prPriority": 10
+    },
+    {
+      "description": "Group Python minor/patch updates",
+      "matchManagers": ["pip_requirements", "pip-compile", "pipenv", "poetry", "pyenv"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "python dependencies (non-major)",
+      "labels": ["dependencies"]
+    },
+    {
+      "description": "Group Go minor/patch updates",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "go dependencies (non-major)",
+      "labels": ["dependencies"]
+    },
+    {
+      "description": "Group Rust minor/patch updates",
+      "matchManagers": ["cargo"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "rust dependencies (non-major)",
+      "labels": ["dependencies"]
+    },
+    {
+      "description": "Group npm minor/patch updates",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm dependencies (non-major)",
+      "labels": ["dependencies"]
+    },
+    {
+      "description": "Major updates require manual review — no auto-merge",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies"],
+      "prPriority": -1,
+      "schedule": ["on the first day of the month"]
+    },
+    {
+      "description": "Pin GitHub Actions digests for supply-chain security",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true,
+      "labels": ["dependencies"]
+    },
+    {
+      "description": "Ignore internal/private packages",
+      "matchPackagePatterns": ["^trancendos-", "^tranc3-"],
+      "enabled": false
+    }
+  ],
+  "pip_requirements": {
+    "fileMatch": [
+      "requirements*.txt",
+      "workers/*/requirements*.txt",
+      "tranc3-bots/requirements*.txt"
+    ]
+  },
+  "gomod": {
+    "fileMatch": ["aeonmind/go/go.mod"]
+  },
+  "cargo": {
+    "fileMatch": ["aeonmind/rust/Cargo.toml", "**/Cargo.toml"]
+  },
+  "npm": {
+    "fileMatch": [
+      "cloudflare/tranc3-ai/package.json",
+      "cloudflare/infinity-void/package.json",
+      "cloudflare/trancendos-api-gateway/package.json",
+      "tranc3-bots/package.json"
+    ]
+  },
+  "ignoreDeps": [],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/__pycache__/**",
+    "**/target/**",
+    "**/.venv/**",
+    "**/dist/**"
+  ]
+}

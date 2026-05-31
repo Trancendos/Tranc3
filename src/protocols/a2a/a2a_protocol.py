@@ -23,6 +23,7 @@ import json
 import logging
 import time
 import uuid
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Awaitable, Callable, Dict, List, Optional
@@ -291,14 +292,16 @@ class A2ARouteRule:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class A2ATransport:
+class A2ATransport(ABC):
     """Abstract base class for A2A transports."""
 
+    @abstractmethod
     async def send(self, message: A2AMessage, endpoint: str) -> A2AResponse:
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]:
-        raise NotImplementedError
+        ...
 
     async def start(self) -> None:
         pass

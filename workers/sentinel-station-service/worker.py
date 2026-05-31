@@ -46,7 +46,7 @@ from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 # Phase 22.4: Dimensional Services integration
-from shared_core.dimensionals import (
+from Dimensional.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
@@ -64,13 +64,6 @@ from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     SharedSSEGenerator,
     get_sentinel_station,
-)
-
-# Phase 22.4: Dimensional Services integration
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
 )
 
 # Phase 22.6: Smart Adaptive Intelligence + ReactiveState
@@ -329,9 +322,15 @@ app.add_middleware(
     jwt_secret=JWT_SECRET,
 )
 
+_cors_origins = [
+    o.strip()
+    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.environ.get("CORS_ORIGINS", "*")],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

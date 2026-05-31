@@ -1,0 +1,36 @@
+# config/falco/falco.yaml
+# Falco runtime security rules configuration (Apache 2.0)
+# Monitors container behavior for anomalous activity
+
+rules_file:
+  - /etc/falco/falco_rules.yaml
+  - /etc/falco/falco_rules.local.yaml
+  - /etc/falco/rules.d
+
+# Output channels
+stdout_output:
+  enabled: true
+
+file_output:
+  enabled: true
+  keep_alive: false
+  filename: /var/log/falco/falco.log
+
+json_output: true
+json_include_output_property: true
+
+# Log level
+log_stderr: true
+log_syslog: false
+log_level: info
+
+# gRPC output for integration with Prometheus/Grafana
+grpc:
+  enabled: false
+
+# Metrics
+metrics:
+  enabled: true
+  interval: 1h
+  output_rule: true
+  resource_utilization_enabled: true

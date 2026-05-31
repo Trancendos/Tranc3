@@ -18,6 +18,7 @@ Usage:
 """
 
 from src.event_bus.bus import EventBus
+from src.event_bus.nats_transport import NATSTransport, make_nats_transport
 from src.event_bus.types import (
     DeliveryResult,
     DeliveryStatus,
@@ -32,6 +33,8 @@ from src.event_bus.types import (
 
 __all__ = [
     "EventBus",
+    "NATSTransport",
+    "make_nats_transport",
     "DeliveryResult",
     "DeliveryStatus",
     "EventCallback",

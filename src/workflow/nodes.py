@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Type
@@ -70,15 +71,16 @@ class NodeResult:
 # ---------------------------------------------------------------------------
 
 
-class BaseNode:
+class BaseNode(ABC):
     """Abstract base for all workflow nodes."""
 
     def __init__(self, config: NodeConfig) -> None:
         self.config = config
         self.logger = logging.getLogger(f"{__name__}.{config.type}.{config.id}")
 
+    @abstractmethod
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:  # noqa: E501
-        raise NotImplementedError(f"{self.__class__.__name__} must implement execute()")
+        ...
 
     async def _with_timeout(self, coro, timeout: float):
         """Wrap a coroutine with asyncio.timeout (Python 3.11+) or wait_for."""
