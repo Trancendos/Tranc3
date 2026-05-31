@@ -119,7 +119,7 @@ class QuantumDecisionCircuit:
         @qml.qnode(dev)
         def circuit(params_flat):
             idx = 0
-            for layer in range(n_layers):
+            for _layer in range(n_layers):
                 for qubit in range(n_qubits):
                     for r in range(rotations_per_layer):
                         if idx >= len(params_flat):
@@ -154,7 +154,7 @@ class QuantumDecisionCircuit:
 
         # Apply parameterized layers
         idx = 0
-        for layer in range(self.config.n_layers):
+        for _layer in range(self.config.n_layers):
             for qubit in range(n):
                 for r in range(self.config.rotations_per_layer):
                     if idx >= len(self._parameters):
@@ -342,7 +342,7 @@ class QuantumDecisionCircuit:
         Uses the parameter shift rule for gradients with adaptive
         learning rate and gradient clipping.
         """
-        for step in range(n_steps):
+        for _step in range(n_steps):
             # Execute circuit
             self.execute(use_pennylane=False)
 
