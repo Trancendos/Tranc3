@@ -464,6 +464,29 @@ jobs:
             logs/grype-console.txt
           retention-days: 90
 
+      - name: Upload SBOM to Dependency-Track
+        run: |
+          DT_URL="${DTRACK_URL:-http://localhost:8083}"
+          DT_KEY="${DTRACK_API_KEY:-}"
+          if [ -n "$DT_KEY" ] && [ -f logs/sbom-cyclonedx.json ]; then
+            PROJECT_VERSION="$(git describe --tags --always 2>/dev/null || echo 'dev')"
+            curl -sf -X POST "$DT_URL/api/v1/bom" \
+              -H "X-Api-Key: $DT_KEY" \
+              -H "Content-Type: multipart/form-data" \
+              -F "autoCreate=true" \
+              -F "projectName=tranc3" \
+              -F "projectVersion=$PROJECT_VERSION" \
+              -F "bom=@logs/sbom-cyclonedx.json" \
+              && echo "SBOM uploaded to Dependency-Track ($PROJECT_VERSION)" \
+              || echo "::warning::Dependency-Track upload failed — check DTRACK_URL and DTRACK_API_KEY"
+          else
+            echo "Dependency-Track upload skipped (DTRACK_API_KEY not set or SBOM missing)"
+          fi
+        continue-on-error: true
+        env:
+          DTRACK_URL: ${{ vars.DTRACK_URL }}
+          DTRACK_API_KEY: ${{ secrets.DTRACK_API_KEY }}
+
   # ──────────────────────────────────────────────────────────────
   # Security Dashboard — aggregated results summary
   # Replaces GitHub Actions security-dashboard.yml
