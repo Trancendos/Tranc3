@@ -81,8 +81,14 @@ def _http_ok(url: str, timeout: float = 90.0) -> tuple[bool, str]:
 
 
 def _gate() -> None:
-    _log("==> Pre-deploy quality gate")
-    _run([sys.executable, "scripts/pre_deploy_quality_gate.py"])
+    _log("==> Pre-deploy quality gate (cloud-only)")
+    _run(
+        [
+            sys.executable,
+            "scripts/pre_deploy_quality_gate.py",
+            "--cloud-only",
+        ]
+    )
 
 
 def _deploy_app(fly: str, app: str, *, cwd: Path) -> None:

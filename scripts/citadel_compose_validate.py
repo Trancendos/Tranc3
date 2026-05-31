@@ -23,7 +23,10 @@ def _core_services_from_deploy() -> list[str]:
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        services.extend(part for part in line.split() if part)
+        for part in line.split():
+            part = part.strip("\r")
+            if part:
+                services.append(part)
     return services
 
 

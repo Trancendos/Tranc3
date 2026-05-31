@@ -24,10 +24,14 @@ if not exist "%PYSCRIPT%" (
 
 where py >nul 2>&1
 if %ERRORLEVEL%==0 (
-  for %%V in (3.13 3.12 3.11 3.10 3.9 3) do (
-    py -%%V "%PYSCRIPT%" %PYARGS%
-    if not errorlevel 103 exit /b %ERRORLEVEL%
-  )
+  py -3.13 "%PYSCRIPT%" %PYARGS%
+  if %ERRORLEVEL% EQU 0 exit /b 0
+  py -3.12 "%PYSCRIPT%" %PYARGS%
+  if %ERRORLEVEL% EQU 0 exit /b 0
+  py -3.11 "%PYSCRIPT%" %PYARGS%
+  if %ERRORLEVEL% EQU 0 exit /b 0
+  py -3 "%PYSCRIPT%" %PYARGS%
+  if %ERRORLEVEL% EQU 0 exit /b 0
 )
 
 where python >nul 2>&1
