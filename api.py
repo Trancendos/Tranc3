@@ -386,7 +386,9 @@ async def lifespan(app: FastAPI):
 
     # pgvector — bootstrap embeddings table (no-ops gracefully if unavailable)
     try:
-        from src.database.pgvector import bootstrap as _pgvector_bootstrap  # codeql[py/cyclic-import]
+        from src.database.pgvector import (
+            bootstrap as _pgvector_bootstrap,  # codeql[py/cyclic-import]
+        )
 
         if _pgvector_bootstrap():
             logger.info("pgvector embeddings table ready")
