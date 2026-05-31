@@ -1766,9 +1766,7 @@ async def assign_entity_tier(pid: str, body: EntityTierUpdate, request: Request)
 @_router.get("/admin/orchestrators")
 async def list_orchestrators():
     """Tier 1 Orchestrators — Cornelius MacIntyre, The Queen, tAImra (canonical)."""
-    orchestrators = [
-        p for p in PRIMES.values() if p.tier == Tier.ORCHESTRATOR
-    ]
+    orchestrators = [p for p in PRIMES.values() if p.tier == Tier.ORCHESTRATOR]
     return {
         "tier": 1,
         "tier_name": Tier.ORCHESTRATOR.display_name,

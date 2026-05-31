@@ -7,6 +7,7 @@ Falls back gracefully to no-op if Qdrant is unavailable or not installed.
 Free tier: unlimited vectors on self-hosted Qdrant.
 Docker: qdrant/qdrant:latest on port 6333.
 """
+
 from __future__ import annotations
 
 import logging
