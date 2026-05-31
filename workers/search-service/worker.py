@@ -10,10 +10,10 @@ Zero-cost: FastAPI + SQLite FTS5 (built-in), no external deps.
 """
 
 from __future__ import annotations
-import os
 
 import json
 import logging
+import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager

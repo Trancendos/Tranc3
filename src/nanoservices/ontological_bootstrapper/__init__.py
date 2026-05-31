@@ -1,19 +1,19 @@
 """Ontological Bootstrapper nanoservice."""
 
 from .ontological_bootstrapper import (
-    OntologicalStatus,
     BootstrapPhase,
-    ExistenceMode,
-    RelationType,
-    ParadoxType,
-    OntologicalEntity,
-    OntologicalRelation,
-    FixedPoint,
     BootstrapResult,
-    SelfReferenceEngine,
+    ExistenceMode,
+    FixedPoint,
     FixedPointFinder,
     OntologicalBootstrapper,
     OntologicalBootstrapperService,
+    OntologicalEntity,
+    OntologicalRelation,
+    OntologicalStatus,
+    ParadoxType,
+    RelationType,
+    SelfReferenceEngine,
 )
 
 __all__ = [

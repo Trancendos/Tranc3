@@ -43,13 +43,6 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, R
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-# Phase 22.4: Dimensional Services
-from shared_core.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
-
 # Phase 22: Infinity Ecosystem security
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
 from Dimensional.infinity.nomenclature import (
@@ -72,9 +65,15 @@ from Dimensional.infinity.sentinel_station import (
     get_sentinel_station,
 )
 
-
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
+
+# Phase 22.4: Dimensional Services
+from shared_core.dimensionals import (
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
+)
 
 # Phase 25: Platform Entity Registry (entity name management)
 try:
@@ -984,8 +983,8 @@ async def compliance_events(
 @_router.get("/admin/sentinel")
 async def sentinel_status():
     """Get Sentinel Station status and channel information."""
-    from Dimensional.infinity.sentinel_config import sentinel_config
     from Dimensional.infinity.nomenclature import SENTINEL_CHANNELS
+    from Dimensional.infinity.sentinel_config import sentinel_config
 
     return {
         "running": sentinel.is_running,

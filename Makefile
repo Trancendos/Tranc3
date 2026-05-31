@@ -1,7 +1,7 @@
 # TRANC3 Makefile
 # Usage: make bootstrap | make dev | make test | make deploy | make doctor
 
-.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend
+.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend health health-json infra-plan
 
 # ── Bootstrap (single-command platform setup) ─────────────────────────────────
 bootstrap:
@@ -127,6 +127,28 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -name "*.pyc" -delete 2>/dev/null || true
 	rm -rf .pytest_cache htmlcov .coverage coverage.xml
+
+# ── Platform Health Check ─────────────────────────────────────────────────────
+health:
+	@python3 scripts/health_check.py
+
+health-json:
+	@python3 scripts/health_check.py --json
+
+# ── Infrastructure (OpenTofu) ─────────────────────────────────────────────────
+infra-plan:
+	@cd infrastructure/opentofu && tofu init -upgrade && tofu plan
+
+infra-apply:
+	@cd infrastructure/opentofu && tofu apply
+
+infra-oracle-plan:
+	@cd infrastructure/oracle-cloud && tofu init -upgrade && tofu plan
+
+# ── SBOM ──────────────────────────────────────────────────────────────────────
+sbom:
+	@mkdir -p logs
+	@syft . -o cyclonedx-json=logs/sbom-cyclonedx.json && echo "SBOM written to logs/sbom-cyclonedx.json"
 
 # ── Model ─────────────────────────────────────────────────────────────────────
 download-model:

@@ -127,6 +127,16 @@ apscheduler==3.10.4
 # watchdog: Filesystem events — hot-reload YAML task files without restart
 watchdog==4.0.0
 
+# === Database ORM ===
+# sqlalchemy: Used by src/database/ models, Alembic migrations, api.py session management
+sqlalchemy==2.0.50
+# alembic: Database migration tool — apply schema changes with 'make migrate'
+alembic==1.18.4
+
+# === Password Hashing ===
+# bcrypt: Used by auth.py for password hashing and verification
+bcrypt==5.0.0
+
 # === Security Scanning (dev-only) ===
 # Run: pip install -r requirements-security.txt
 # See: requirements-security.txt for scanning toolchain

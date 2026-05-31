@@ -1,0 +1,21 @@
+# Re-export shim — Dimensional.architecture is the source of truth.
+from Dimensional.architecture.oci_adaptive_provider import (  # noqa: F401
+    OCI_FREE_TIER_LIMITS,
+    AdaptiveInstanceDatum,
+    AdaptiveProviderConfig,
+    CircuitBreaker,
+    CircuitState,
+    MinioConfig,
+    OciAdaptiveProvider,
+    OciConfig,
+    OciKeepaliveWorker,
+    OciQuotaTracker,
+    PersistentInfrastructureDatum,
+    R2Config,
+    StorageTier,
+    SystemMode,
+    _aws_sig4_sign,
+    _oci_sign_headers,
+    get_provider,
+    shutdown_provider,
+)

@@ -1,7 +1,8 @@
 # Tranc3 — Automated Dependency Audit
 # Runs weekly and on pull requests to detect vulnerable/outdated dependencies
-# Zero-cost: uses only free/open-source audit tools (pip-audit, safety, npm audit)
+# Zero-cost: uses only free/open-source audit tools (pip-audit, osv-scanner, npm audit)
 # No GitHub Actions — pure Forgejo CI
+# NOTE: Safety removed — no longer free for commercial use. Replaced by osv-scanner.
 
 name: Dependency Audit
 
@@ -32,20 +33,28 @@ jobs:
 
       - name: Install audit tools
         run: |
-          pip install --quiet pip-audit safety pip-outdated
+          pip install --quiet pip-audit pip-outdated
 
-      - name: Audit production dependencies
+      - name: Install OSV-Scanner
+        run: |
+          curl -sSfL \
+            "https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64" \
+            -o /usr/local/bin/osv-scanner
+          chmod +x /usr/local/bin/osv-scanner
+          osv-scanner --version
+
+      - name: Audit production dependencies (pip-audit)
         run: |
           echo "::group::pip-audit — Known vulnerability scan"
           pip-audit --desc --format=json --output=pip-audit-report.json || true
           pip-audit --desc || true
           echo "::endgroup::"
 
-      - name: Safety vulnerability check
+      - name: OSV-Scanner (multi-ecosystem SCA — replaces Safety)
         run: |
-          echo "::group::Safety — Vulnerability database check"
-          safety check --json --output safety-report.json || true
-          safety check --output text || true
+          echo "::group::OSV-Scanner — Multi-ecosystem vulnerability scan"
+          osv-scanner --recursive --format json --output osv-report.json . || true
+          osv-scanner --recursive . 2>&1 | tee osv-summary.txt || true
           echo "::endgroup::"
 
       - name: Check for outdated packages
@@ -62,7 +71,8 @@ jobs:
           name: python-audit-reports
           path: |
             pip-audit-report.json
-            safety-report.json
+            osv-report.json
+            osv-summary.txt
             pip-outdated.json
           retention-days: 30
 
@@ -136,7 +146,7 @@ jobs:
           echo "Scanned: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> worker-audit-report.md
           echo "" >> worker-audit-report.md
 
-          pip install --quiet pip-audit safety
+          pip install --quiet pip-audit
 
           FOUND_VULNS=0
           for reqfile in $(find workers/ -name 'requirements.txt' -o -name 'requirements.prod.txt'); do
@@ -150,16 +160,6 @@ jobs:
             # pip-audit
             echo "### pip-audit" >> worker-audit-report.md
             if pip-audit -r "$reqfile" --desc 2>&1 | tee -a worker-audit-report.md; then
-              echo "✅ No known vulnerabilities" >> worker-audit-report.md
-            else
-              echo "⚠️ Vulnerabilities found — see above" >> worker-audit-report.md
-              FOUND_VULNS=1
-            fi
-            echo "" >> worker-audit-report.md
-
-            # safety
-            echo "### Safety" >> worker-audit-report.md
-            if safety check -r "$reqfile" 2>&1 | tee -a worker-audit-report.md; then
               echo "✅ No known vulnerabilities" >> worker-audit-report.md
             else
               echo "⚠️ Vulnerabilities found — see above" >> worker-audit-report.md
@@ -249,4 +249,5 @@ jobs:
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "_Zero-cost audit powered by pip-audit, Safety, npm audit_" >> $GITHUB_STEP_SUMMARY
+          echo "_Zero-cost audit powered by pip-audit, osv-scanner, npm audit_" >> $GITHUB_STEP_SUMMARY
+          echo "_NOTE: Safety removed — no longer free for commercial use._" >> $GITHUB_STEP_SUMMARY

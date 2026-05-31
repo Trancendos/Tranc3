@@ -53,6 +53,14 @@ export default function ChatView() {
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [dark, setDark] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const emptyPrompts = [
+    "Explain quantum computing simply",
+    "Write a haiku about space",
+    "How do neural networks work?",
+    "Tell me a joke about coding"
+  ]
 
   // Fetch personalities from API on mount — Gap G20 action
   useEffect(() => {
@@ -244,10 +252,18 @@ export default function ChatView() {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {messages.length === 0 && (
-            <div className="text-center text-gray-500 mt-16">
+            <div className="text-center text-gray-500 mt-16 max-w-2xl mx-auto">
               <Zap className="w-12 h-12 mx-auto mb-4 opacity-30" />
               <p className="text-lg font-medium">Start a conversation</p>
-              <p className="text-sm mt-1">Ask anything in any language</p>
+              <p className="text-sm mt-1 mb-8">Ask anything in any language</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+                {emptyPrompts.map((prompt, i) => (
+                  <button key={i} onClick={() => { setInput(prompt); setTimeout(() => inputRef.current?.focus(), 10); }}
+                    className={`text-left p-3 rounded-xl border transition-all text-sm hover:border-blue-500/50 hover:bg-blue-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${dark ? 'bg-gray-800/50 border-gray-700/50 text-gray-300' : 'bg-white border-gray-200 text-gray-600'}`}>
+                    {prompt}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -295,14 +311,14 @@ export default function ChatView() {
 
         <div className={`px-6 py-4 border-t ${header}`}>
           <div className="flex gap-3">
-            <input value={input} onChange={e => setInput(e.target.value)}
+            <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
               placeholder="Type a message..."
               aria-label="Message input"
-              className={`flex-1 rounded-xl px-4 py-3 text-sm border focus:outline-none focus:border-blue-500 ${inputBg}`}
+              className={`flex-1 rounded-xl px-4 py-3 text-sm border focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 ${inputBg}`}
               disabled={loading} />
             <button aria-label="Send message" onClick={send} disabled={loading || !input.trim()}
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl px-4 py-3 transition-colors">
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
               <Send className="w-4 h-4" />
             </button>
           </div>
