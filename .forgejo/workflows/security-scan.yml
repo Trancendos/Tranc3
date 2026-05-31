@@ -4,7 +4,7 @@
 #
 # Replaces ALL former GitHub Actions security workflows:
 #   - codeql.yml          → replaced by bandit + semgrep (no CodeQL server needed)
-#   - security-scan.yml   → merged here (pip-audit, safety, bandit, npm audit, semgrep)
+#   - security-scan.yml   → merged here (pip-audit, bandit, npm audit, semgrep)
 #   - security-dashboard.yml → merged here (aggregated reporting)
 #   - security-gate.yml   → merged here (gate logic for medium+/high findings)
 #   - ossf-scorecard.yml  → removed (GitHub-specific, not applicable to Forgejo)
@@ -12,14 +12,20 @@
 # Runs: on every push, PRs to main, and weekly Sunday 02:00 UTC.
 #
 # Checks:
-#   1. pip-audit  — Python CVE scanning (OSV + PyPI)
-#   2. bandit     — Python SAST (OWASP Top 10) — medium+ severity GATE
-#   3. safety     — Python vulnerability scanning
-#   4. ruff       — lint gate (no new violations)
-#   5. semgrep    — semantic pattern matching (free, open-source, replaces CodeQL)
-#   6. gitleaks   — detect hardcoded secrets
-#   7. npm audit  — Node.js CVE scanning (Cloudflare Workers)
-#   8. cyclonedx  — SBOM generation
+#   1. pip-audit    — Python CVE scanning (OSV + PyPI)
+#   2. bandit       — Python SAST (OWASP Top 10) — medium+ severity GATE
+#   3. ruff         — lint gate (no new violations)
+#   4. semgrep      — semantic pattern matching (free LGPL-2.1, replaces CodeQL)
+#                     configs: auto + p/fastapi
+#   5. gitleaks     — detect hardcoded secrets (MIT)
+#   6. trufflehog   — additional secret scanning (AGPL-3.0)
+#   7. osv-scanner  — multi-ecosystem SCA (Google, Apache 2.0)
+#   8. checkov      — Docker Compose + IaC misconfiguration (Apache 2.0)
+#   9. syft+grype   — SBOM generation (CycloneDX) + vulnerability matching (Apache 2.0)
+#  10. npm audit    — Node.js CVE scanning (Cloudflare Workers)
+#  11. trivy        — Container & IaC scan (binary download, not action)
+# NOTE: Safety removed — no longer free for commercial use.
+# NOTE: Trivy installed via binary curl, NOT via GitHub/third-party action (supply-chain risk).
 
 name: Security Scan
 
@@ -45,7 +51,7 @@ jobs:
       - name: Install Python security tools
         run: |
           python3 -m pip install --quiet --upgrade \
-            pip-audit bandit safety ruff cyclonedx-bom
+            pip-audit bandit ruff cyclonedx-bom
 
       - name: pip-audit (CVE scan)
         run: |
@@ -68,13 +74,6 @@ jobs:
             --severity-level medium \
             --confidence-level medium \
             --exit-zero
-        continue-on-error: true
-
-      - name: Safety (vulnerability scan)
-        run: |
-          safety scan -r requirements.txt \
-            --json --output logs/safety-results.json || true
-          safety scan -r requirements.txt || true
         continue-on-error: true
 
       - name: ruff lint gate
@@ -148,10 +147,10 @@ jobs:
         continue-on-error: true
 
   # ──────────────────────────────────────────────────────────────
-  # Semgrep SAST — replaces CodeQL (no external server needed)
+  # Semgrep OSS SAST — replaces CodeQL (LGPL-2.1, no external server)
   # ──────────────────────────────────────────────────────────────
   semgrep:
-    name: Semgrep SAST (CodeQL replacement)
+    name: Semgrep OSS SAST (CodeQL replacement)
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -159,10 +158,12 @@ jobs:
       - name: Install semgrep
         run: python3 -m pip install semgrep --quiet
 
-      - name: Run semgrep (Python security + OWASP + JWT + SQL injection)
+      - name: Run semgrep (Python security + OWASP + FastAPI + JWT + SQL injection)
         run: |
           mkdir -p logs
           semgrep \
+            --config "auto" \
+            --config "p/fastapi" \
             --config "p/python" \
             --config "p/owasp-top-ten" \
             --config "p/sql-injection" \
@@ -172,6 +173,8 @@ jobs:
             src/ || true
           # Hard gate: no ERROR severity findings
           semgrep \
+            --config "auto" \
+            --config "p/fastapi" \
             --config "p/python" \
             --config "p/owasp-top-ten" \
             --severity ERROR \
@@ -187,10 +190,9 @@ jobs:
           path: logs/semgrep-results.json
           retention-days: 30
 
-  # ──────────────────────────────────────────────────────────────
-
   # ──────────────────────────────────────────────────────────────────────
   # Trivy — Container & IaC misconfiguration scanning
+  # Binary installed via curl — NOT via GitHub/third-party action
   # ──────────────────────────────────────────────────────────────────────
   trivy:
     name: Trivy — misconfig + vulnerability scan
@@ -235,10 +237,11 @@ jobs:
           path: logs/trivy-*.json
           retention-days: 30
 
-  # Secret Detection (gitleaks)
+  # ──────────────────────────────────────────────────────────────
+  # Secret Detection — gitleaks (MIT) + TruffleHog v3 (AGPL-3.0)
   # ──────────────────────────────────────────────────────────────
   secret-detection:
-    name: Secret Detection (gitleaks)
+    name: Secret Detection (gitleaks + TruffleHog)
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -257,13 +260,209 @@ jobs:
               exit 0
             }
 
-      - name: Upload gitleaks report
+      - name: Install TruffleHog v3
+        run: |
+          if ! which trufflehog 2>/dev/null; then
+            curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
+              | sh -s -- -b /usr/local/bin
+          fi
+          trufflehog --version
+
+      - name: Run TruffleHog (filesystem scan)
+        run: |
+          mkdir -p logs
+          trufflehog filesystem . \
+            --json \
+            --no-update \
+            --exclude-paths .trufflehog-ignore \
+            > logs/trufflehog-results.json 2>&1 || true
+          FINDINGS=$(grep -c '"SourceMetadata"' logs/trufflehog-results.json 2>/dev/null || echo 0)
+          if [ "$FINDINGS" -gt "0" ]; then
+            echo "::warning::TruffleHog detected $FINDINGS potential secret(s) — review logs/trufflehog-results.json"
+          else
+            echo "TruffleHog: no secrets detected"
+          fi
+        continue-on-error: true
+
+      - name: Upload secret detection reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: gitleaks-${{ github.run_number }}
-          path: logs/gitleaks-results.json
+          name: secret-detection-${{ github.run_number }}
+          path: |
+            logs/gitleaks-results.json
+            logs/trufflehog-results.json
           retention-days: 30
+
+  # ──────────────────────────────────────────────────────────────
+  # OSV-Scanner — multi-ecosystem SCA (Google, Apache 2.0)
+  # Scans Python, Go, Rust, npm in one pass using OSV database
+  # ──────────────────────────────────────────────────────────────
+  osv-scanner:
+    name: OSV-Scanner (multi-ecosystem SCA)
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OSV-Scanner
+        run: |
+          if ! which osv-scanner 2>/dev/null; then
+            curl -sSfL \
+              "https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64" \
+              -o /usr/local/bin/osv-scanner
+            chmod +x /usr/local/bin/osv-scanner
+          fi
+          osv-scanner --version
+
+      - name: Run OSV-Scanner (recursive, all ecosystems)
+        run: |
+          mkdir -p logs
+          # Scan all manifests recursively: requirements.txt, go.mod, Cargo.toml, package.json
+          osv-scanner \
+            --recursive \
+            --format json \
+            --output logs/osv-scanner-results.json \
+            . || {
+              echo "::warning::OSV-Scanner found vulnerabilities — review logs/osv-scanner-results.json"
+              exit 0
+            }
+          echo "OSV-Scanner: no vulnerabilities found"
+        continue-on-error: true
+
+      - name: OSV-Scanner human-readable summary
+        run: |
+          osv-scanner --recursive . 2>&1 | tee logs/osv-scanner-summary.txt || true
+        continue-on-error: true
+
+      - name: Upload OSV-Scanner results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: osv-scanner-${{ github.run_number }}
+          path: |
+            logs/osv-scanner-results.json
+            logs/osv-scanner-summary.txt
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────────────────
+  # Checkov — IaC & Docker Compose misconfiguration (Apache 2.0)
+  # ──────────────────────────────────────────────────────────────
+  checkov:
+    name: Checkov (IaC + Docker Compose)
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Checkov
+        run: python3 -m pip install checkov --quiet
+
+      - name: Run Checkov (Dockerfile + docker-compose)
+        run: |
+          mkdir -p logs
+          checkov \
+            --directory . \
+            --framework dockerfile,docker-compose \
+            --output json \
+            --output-file-path logs/ \
+            --soft-fail \
+            2>&1 | tee logs/checkov-console.txt || true
+          # Rename checkov output files to consistent names
+          mv logs/results_json.json logs/checkov-results.json 2>/dev/null || true
+        continue-on-error: true
+
+      - name: Checkov summary annotation
+        run: |
+          if [ -f logs/checkov-results.json ]; then
+            python3 - <<'PYEOF'
+          import json
+          try:
+              d = json.load(open("logs/checkov-results.json"))
+              results = d.get("results", {})
+              failed = results.get("failed_checks", [])
+              passed = results.get("passed_checks", [])
+              if failed:
+                  print(f"::warning::Checkov: {len(failed)} failed check(s), {len(passed)} passed. Review logs/checkov-results.json")
+              else:
+                  print(f"Checkov: all {len(passed)} checks passed")
+          except Exception as e:
+              print(f"Checkov parse error: {e}")
+          PYEOF
+          fi
+        continue-on-error: true
+
+      - name: Upload Checkov results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: checkov-${{ github.run_number }}
+          path: |
+            logs/checkov-results.json
+            logs/checkov-console.txt
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────────────────
+  # SBOM — syft (CycloneDX) + grype vulnerability matching
+  # syft: Apache 2.0 (Anchore)
+  # grype: Apache 2.0 (Anchore)
+  # ──────────────────────────────────────────────────────────────
+  sbom-generation:
+    name: SBOM Generation (syft CycloneDX + grype)
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install syft
+        run: |
+          if ! which syft 2>/dev/null; then
+            curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+              | sh -s -- -b /usr/local/bin
+          fi
+          syft version
+
+      - name: Install grype
+        run: |
+          if ! which grype 2>/dev/null; then
+            curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
+              | sh -s -- -b /usr/local/bin
+          fi
+          grype version
+
+      - name: Generate SBOM with syft (CycloneDX JSON)
+        run: |
+          mkdir -p logs
+          syft dir:. \
+            --output cyclonedx-json=logs/sbom-cyclonedx.json \
+            --output spdx-json=logs/sbom-spdx.json \
+            --catalogers python-index-cataloger,go-module-file-cataloger,rust-cargo-lock-cataloger,javascript-package-cataloger \
+            2>&1 | tee logs/syft-output.txt || true
+          echo "SBOM generated: $(wc -c < logs/sbom-cyclonedx.json 2>/dev/null || echo 0) bytes (CycloneDX)"
+        continue-on-error: true
+
+      - name: Run grype against SBOM (vulnerability matching)
+        run: |
+          if [ -f logs/sbom-cyclonedx.json ]; then
+            grype sbom:logs/sbom-cyclonedx.json \
+              --output json \
+              --file logs/grype-results.json \
+              --fail-on high \
+              2>&1 | tee logs/grype-console.txt || {
+                echo "::warning::Grype found HIGH/CRITICAL vulnerabilities — review logs/grype-results.json"
+                exit 0
+              }
+          fi
+        continue-on-error: true
+
+      - name: Upload SBOM and grype reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sbom-${{ github.run_number }}
+          path: |
+            logs/sbom-cyclonedx.json
+            logs/sbom-spdx.json
+            logs/grype-results.json
+            logs/grype-console.txt
+          retention-days: 90
 
   # ──────────────────────────────────────────────────────────────
   # Security Dashboard — aggregated results summary
@@ -272,7 +471,15 @@ jobs:
   security-dashboard:
     name: Security Dashboard Summary
     runs-on: self-hosted
-    needs: [python-security, node-security, semgrep, trivy, secret-detection]
+    needs:
+      - python-security
+      - node-security
+      - semgrep
+      - trivy
+      - secret-detection
+      - osv-scanner
+      - checkov
+      - sbom-generation
     if: always()
     steps:
       - uses: actions/checkout@v4
@@ -285,15 +492,19 @@ jobs:
           echo "Branch: ${{ github.ref_name }}" | tee -a logs/security-dashboard.txt
           echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a logs/security-dashboard.txt
           echo "" | tee -a logs/security-dashboard.txt
-          echo "| Scanner | Status |" | tee -a logs/security-dashboard.txt
-          echo "|---------|--------|" | tee -a logs/security-dashboard.txt
-          echo "| Python Security | ${{ needs.python-security.result }} |" | tee -a logs/security-dashboard.txt
-          echo "| Node Security | ${{ needs.node-security.result }} |" | tee -a logs/security-dashboard.txt
-          echo "| Trivy | ${{ needs.trivy.result }} |
-| Semgrep (CodeQL replacement) | ${{ needs.semgrep.result }} |" | tee -a logs/security-dashboard.txt
-          echo "| Secret Detection | ${{ needs.secret-detection.result }} |" | tee -a logs/security-dashboard.txt
+          echo "| Scanner | Status | Notes |" | tee -a logs/security-dashboard.txt
+          echo "|---------|--------|-------|" | tee -a logs/security-dashboard.txt
+          echo "| Python Security (pip-audit + bandit + ruff) | ${{ needs.python-security.result }} | |" | tee -a logs/security-dashboard.txt
+          echo "| Node Security (npm audit) | ${{ needs.node-security.result }} | |" | tee -a logs/security-dashboard.txt
+          echo "| Trivy (container + IaC) | ${{ needs.trivy.result }} | binary curl install |" | tee -a logs/security-dashboard.txt
+          echo "| Semgrep OSS SAST (auto + fastapi + owasp) | ${{ needs.semgrep.result }} | LGPL-2.1 |" | tee -a logs/security-dashboard.txt
+          echo "| Secret Detection (gitleaks + TruffleHog) | ${{ needs.secret-detection.result }} | MIT + AGPL-3.0 |" | tee -a logs/security-dashboard.txt
+          echo "| OSV-Scanner (multi-ecosystem SCA) | ${{ needs.osv-scanner.result }} | Google Apache-2.0 |" | tee -a logs/security-dashboard.txt
+          echo "| Checkov (IaC + Docker Compose) | ${{ needs.checkov.result }} | Apache-2.0 |" | tee -a logs/security-dashboard.txt
+          echo "| SBOM (syft CycloneDX + grype) | ${{ needs.sbom-generation.result }} | Apache-2.0 |" | tee -a logs/security-dashboard.txt
           echo "" | tee -a logs/security-dashboard.txt
           echo "See individual job logs for detailed findings." | tee -a logs/security-dashboard.txt
+          echo "NOTE: Safety removed — no longer free for commercial use." | tee -a logs/security-dashboard.txt
 
       - name: Upload dashboard
         uses: actions/upload-artifact@v4
@@ -309,7 +520,15 @@ jobs:
   notify-citadel:
     name: Notify The Citadel
     runs-on: self-hosted
-    needs: [python-security, node-security, semgrep, trivy, secret-detection]
+    needs:
+      - python-security
+      - node-security
+      - semgrep
+      - trivy
+      - secret-detection
+      - osv-scanner
+      - checkov
+      - sbom-generation
     if: failure()
     steps:
       - name: Post security alert to The Citadel
