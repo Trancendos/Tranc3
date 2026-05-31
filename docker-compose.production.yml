@@ -410,8 +410,9 @@ services:
   tranc3-ai:
     <<: *worker-platform
     build:
-      context: ./workers/tranc3-ai
-      dockerfile: Dockerfile
+
+      context: .
+      dockerfile: workers/tranc3-ai/Dockerfile
     container_name: tranc3-ai-worker
     environment:
       - TRANC3_BACKEND_URL=http://tranc3-backend:8000
@@ -435,8 +436,9 @@ services:
   infinity-void:
     <<: *worker-platform
     build:
-      context: ./workers/infinity-void
-      dockerfile: Dockerfile
+
+      context: .
+      dockerfile: workers/infinity-void/Dockerfile
     container_name: infinity-void-worker
     environment:
       - MASTER_KEY_SEED=${MASTER_KEY_SEED}
@@ -458,8 +460,9 @@ services:
   api-gateway:
     <<: *worker-platform
     build:
-      context: ./workers/api-gateway
-      dockerfile: Dockerfile
+
+      context: .
+      dockerfile: workers/api-gateway/Dockerfile
     container_name: trancendos-api-gateway-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -493,8 +496,9 @@ services:
   infinity-ws:
     <<: *worker-platform
     build:
-      context: ./workers/infinity-ws
-      dockerfile: Dockerfile
+
+      context: .
+      dockerfile: workers/infinity-ws/Dockerfile
     container_name: infinity-ws-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -513,8 +517,9 @@ services:
   infinity-auth:
     <<: *worker-platform
     build:
-      context: ./workers/infinity-auth
-      dockerfile: Dockerfile
+
+      context: .
+      dockerfile: workers/infinity-auth/Dockerfile
     container_name: infinity-auth-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -540,8 +545,9 @@ services:
   users-service:
     <<: *worker-platform
     build:
-      context: ./workers/users-service
-      dockerfile: Dockerfile
+
+      context: .
+      dockerfile: workers/users-service/Dockerfile
     container_name: users-service-worker
     ports:
       - "8006:8006"
@@ -555,8 +561,9 @@ services:
   monitoring:
     <<: *worker-platform
     build:
-      context: ./workers/monitoring
-      dockerfile: Dockerfile
+
+      context: .
+      dockerfile: workers/monitoring/Dockerfile
     container_name: monitoring-worker
     ports:
       - "8007:8007"
@@ -570,8 +577,9 @@ services:
   notifications:
     <<: *worker-platform
     build:
-      context: ./workers/notifications
-      dockerfile: Dockerfile
+
+      context: .
+      dockerfile: workers/notifications/Dockerfile
     container_name: notifications-worker
     ports:
       - "8008:8008"
@@ -585,8 +593,9 @@ services:
   infinity-ai:
     <<: *worker-platform
     build:
-      context: ./workers/infinity-ai
-      dockerfile: Dockerfile
+
+      context: .
+      dockerfile: workers/infinity-ai/Dockerfile
     container_name: infinity-ai-worker
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
@@ -624,8 +633,9 @@ services:
   products-service:
     <<: *worker-platform
     build:
-      context: ./workers/products-service
-      dockerfile: Dockerfile
+
+      context: .
+      dockerfile: workers/products-service/Dockerfile
     container_name: products-service-worker
     ports:
       - "8011:8011"
@@ -639,8 +649,9 @@ services:
   orders-service:
     <<: *worker-platform
     build:
-      context: ./workers/orders-service
-      dockerfile: Dockerfile
+
+      context: .
+      dockerfile: workers/orders-service/Dockerfile
     container_name: orders-service-worker
     ports:
       - "8012:8012"
@@ -654,8 +665,9 @@ services:
   payments-service:
     <<: *worker-platform
     build:
-      context: ./workers/payments-service
-      dockerfile: Dockerfile
+
+      context: .
+      dockerfile: workers/payments-service/Dockerfile
     container_name: payments-service-worker
     ports:
       - "8013:8013"

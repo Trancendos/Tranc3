@@ -231,6 +231,10 @@ app = FastAPI(
     description="API Gateway — replaces Cloudflare Worker. Zero external dependencies.",
 )
 
+from src.observability.prometheus_mount import mount_prometheus_endpoint
+
+mount_prometheus_endpoint(app, "api-gateway")
+
 _cors_origins = [
     o.strip()
     for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")

@@ -17,7 +17,7 @@ This is the **canonical procedure** to go from git clone to a running platform w
 What it does:
 
 1. `scripts/generate_production_env.sh` → `.env.production` (real secrets, SQLite, Valkey)
-2. `scripts/citadel_preflight.py`
+2. `scripts/citadel_compose_validate.py` + `scripts/citadel_preflight.py`
 3. `docker compose -f docker-compose.production.yml up` (core P0+P1 + observability)
 4. `scripts/wait_for_healthy.py`
 5. Health audit + production scorecard

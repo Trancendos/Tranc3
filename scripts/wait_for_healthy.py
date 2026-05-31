@@ -21,6 +21,9 @@ DEFAULT_SERVICES = [
     ("monitoring", 8007),
     ("notifications", 8008),
     ("infinity-ai", 8009),
+    ("products-service", 8011),
+    ("orders-service", 8012),
+    ("payments-service", 8013),
     ("infinity-admin", 8044),
     ("swarm-coordinator", 8053),
 ]

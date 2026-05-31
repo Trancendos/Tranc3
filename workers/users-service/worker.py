@@ -176,6 +176,11 @@ async def require_internal_auth(
 # ---------------------------------------------------------------------------
 
 app = FastAPI(title="Trancendos Users Service", version="2.0.0")
+
+from src.observability.prometheus_mount import mount_prometheus_endpoint
+
+mount_prometheus_endpoint(app, "users-service")
+
 _cors_origins = [
     o.strip()
     for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")

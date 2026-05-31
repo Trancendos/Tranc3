@@ -133,7 +133,11 @@ wait-healthy:
 	@python3 scripts/wait_for_healthy.py
 
 citadel-preflight:
+	@python3 scripts/citadel_compose_validate.py
 	@python3 scripts/citadel_preflight.py
+
+citadel-compose-validate:
+	@python3 scripts/citadel_compose_validate.py
 
 branch-audit:
 	@python3 scripts/branch_benefit_audit.py

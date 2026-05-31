@@ -284,6 +284,10 @@ app = FastAPI(
     version="1.0.0",
 )
 
+from src.observability.prometheus_mount import mount_prometheus_endpoint
+
+mount_prometheus_endpoint(app, "infinity-ws")
+
 _cors_origins = [
     o.strip()
     for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")

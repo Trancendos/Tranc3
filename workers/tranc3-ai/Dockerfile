@@ -1,24 +1,19 @@
 FROM python:3.11-slim
-
-LABEL maintainer="Trancendos"
-LABEL description="Tranc3 AI Worker — self-hosted replacement for Cloudflare Worker"
-
-# Security: non-root user
-RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/* \
+  && groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
 WORKDIR /app
-
-COPY --chown=worker:worker requirements-worker.txt .
+COPY --chown=worker:worker workers/tranc3-ai/requirements-worker.txt .
 RUN pip install --no-cache-dir -r requirements-worker.txt
+COPY --chown=worker:worker workers/tranc3-ai/worker.py .
+COPY --chown=worker:worker src/entities/ ./src/entities/
+COPY --chown=worker:worker src/observability/prometheus_mount.py ./src/observability/prometheus_mount.py
 
-COPY --chown=worker:worker worker.py .
-
-# Security: drop to non-root user
+RUN mkdir -p src/observability Dimensional 2>/dev/null; touch src/__init__.py src/entities/__init__.py src/observability/__init__.py; [ -f Dimensional/sanitize.py ] && touch Dimensional/__init__.py || true
 USER worker
-
 EXPOSE 8001
-
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD curl -f http://localhost:8001/health || exit 1
 
-CMD ["python", "worker.py"]
+CMD ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8001"]

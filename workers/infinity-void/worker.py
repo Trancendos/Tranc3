@@ -254,6 +254,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+from src.observability.prometheus_mount import mount_prometheus_endpoint
+
+mount_prometheus_endpoint(app, "infinity-void")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,

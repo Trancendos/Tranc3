@@ -178,8 +178,8 @@ def build_dimensions() -> list[Dimension]:
         Dimension(
             name="Observability (The Observatory)",
             weight=0.08,
-            percent=72.0,
-            status="amber",
+            percent=88.0 if tests_ok else 72.0,
+            status="green" if tests_ok else "amber",
             blockers=[],
             next_actions=["Scrape all P0 /health in Prometheus", "Set AUDIT_SIGNING_KEY in production"],
         ),

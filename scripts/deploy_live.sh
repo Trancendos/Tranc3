@@ -42,6 +42,7 @@ else
 fi
 
 echo "==> Preflight"
+python3 scripts/citadel_compose_validate.py
 python3 scripts/citadel_preflight.py || {
   echo "WARN: preflight reported issues — continuing for local Citadel bootstrap"
 }

@@ -142,6 +142,10 @@ app = FastAPI(
     version="1.0.0",
 )
 
+from src.observability.prometheus_mount import mount_prometheus_endpoint
+
+mount_prometheus_endpoint(app, "products-service")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),

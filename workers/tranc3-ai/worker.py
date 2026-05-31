@@ -107,6 +107,10 @@ app = FastAPI(
     description="Self-hosted AI inference — replaces Cloudflare Worker. Zero external dependencies.",
 )
 
+from src.observability.prometheus_mount import mount_prometheus_endpoint
+
+mount_prometheus_endpoint(app, "tranc3-ai")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS

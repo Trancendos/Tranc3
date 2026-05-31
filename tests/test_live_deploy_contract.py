@@ -14,10 +14,25 @@ def test_live_deploy_scripts_exist():
         "scripts/deploy_live.sh",
         "scripts/generate_production_env.sh",
         "scripts/wait_for_healthy.py",
+        "scripts/citadel_compose_validate.py",
         "deploy/LIVE_DEPLOY.md",
         "deploy/vault/init-citadel.sh",
+        "deploy/traefik/DNS_CUTOVER.md",
     ):
         assert (ROOT / path).is_file(), path
+
+
+def test_p0_worker_dockerfiles_use_repo_root_context():
+    compose = yaml.safe_load((ROOT / "docker-compose.production.yml").read_text())
+    for svc in (
+        "infinity-ws",
+        "infinity-auth",
+        "api-gateway",
+        "users-service",
+    ):
+        build = compose["services"][svc]["build"]
+        assert build["context"] == ".", svc
+        assert build["dockerfile"].startswith("workers/"), svc
 
 
 def test_compose_has_ollama_valkey_and_backend():
