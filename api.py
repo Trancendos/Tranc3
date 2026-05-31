@@ -395,6 +395,21 @@ async def lifespan(app: FastAPI):
     except Exception as _po_exc:
         logger.warning("Proactive orchestrator unavailable: %s", sanitize_for_log(_po_exc))
 
+    try:
+        from src.adaptive.cloud_rotation_loop import start_cloud_auto_rotation
+        from src.platform.infrastructure_mode import infrastructure_status
+
+        await start_cloud_auto_rotation()
+        _infra = infrastructure_status()
+        logger.info(
+            "Platform infrastructure mode=%s rotation_chain=%s cloud_auto_rotate=%s",
+            _infra["mode"],
+            _infra["rotation_chain"],
+            _infra["cloud_auto_rotate"],
+        )
+    except Exception as _cr_exc:
+        logger.warning("Cloud auto-rotation unavailable: %s", sanitize_for_log(_cr_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield
@@ -416,6 +431,12 @@ async def lifespan(app: FastAPI):
             await _health_monitor.stop()
         except Exception as _stop_exc:
             logger.warning("ProactiveHealthMonitor stop error: %s", sanitize_for_log(_stop_exc))
+    try:
+        from src.adaptive.cloud_rotation_loop import stop_cloud_auto_rotation
+
+        await stop_cloud_auto_rotation()
+    except Exception:
+        pass
     if redis_client:
         redis_client.close()
 

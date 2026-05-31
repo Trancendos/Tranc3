@@ -15,6 +15,37 @@ class ChainSwitchRequest(BaseModel):
     )
 
 
+@router.get("/mode")
+async def infrastructure_mode_status():
+    from src.platform.infrastructure_mode import infrastructure_status
+
+    return infrastructure_status()
+
+
+class ModeSwitchRequest(BaseModel):
+    mode: str = Field(..., description="CLOUD_ONLY | HYBRID | LOCAL_ONLY")
+
+
+@router.post("/mode")
+async def set_infrastructure_mode(body: ModeSwitchRequest):
+    import os
+
+    from src.platform.infrastructure_mode import PlatformInfraMode, infrastructure_status
+
+    key = body.mode.strip().upper()
+    if key not in {m.value for m in PlatformInfraMode}:
+        raise HTTPException(400, "mode must be CLOUD_ONLY, HYBRID, or LOCAL_ONLY")
+    os.environ["PLATFORM_INFRA_MODE"] = key
+    # Reset rotator so next request picks up chain for new mode
+    import src.adaptive.provider_rotator as pr
+
+    pr._rotator = None
+    return {
+        "message": "Mode updated for this process (set PLATFORM_INFRA_MODE in .env to persist)",
+        "status": infrastructure_status(),
+    }
+
+
 @router.get("/status")
 async def adaptive_status():
     from src.adaptive.proactive_orchestrator import get_proactive_orchestrator

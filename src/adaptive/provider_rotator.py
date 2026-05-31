@@ -74,11 +74,19 @@ class AdaptiveProviderRotator:
     """Round-robin + cooldown rotation across zero-cost provider chains."""
 
     def __init__(self) -> None:
+        from src.platform.infrastructure_mode import default_rotation_chain, get_infrastructure_mode
+
         self._cooldown = float(os.environ.get("ADAPTIVE_COOLDOWN_SECONDS", "300"))
-        chain = os.environ.get("ADAPTIVE_ROTATION_CHAIN", "zero_cost_cloud")
+        chain = default_rotation_chain()
         if chain not in ROUTING_CHAINS or chain not in _ZERO_COST_CHAINS:
             chain = "zero_cost_cloud"
         self._state = self._build_state(chain)
+        logger.info(
+            "Adaptive rotator mode=%s chain=%s providers=%s",
+            get_infrastructure_mode().value,
+            chain,
+            self._state.providers,
+        )
 
     def _build_state(self, chain_name: str) -> RotationState:
         chain = ROUTING_CHAINS[chain_name]
@@ -152,11 +160,14 @@ class AdaptiveProviderRotator:
         return True
 
     def status(self) -> dict[str, Any]:
+        from src.platform.infrastructure_mode import infrastructure_status
+
         self.refresh_availability()
         return {
             "enabled": os.environ.get("ADAPTIVE_ROTATION_ENABLED", "true").lower()
             in ("1", "true", "yes"),
             "cooldown_seconds": self._cooldown,
+            "infrastructure": infrastructure_status(),
             "state": self._state.to_dict(),
             "discovered": discover_available_providers(),
         }

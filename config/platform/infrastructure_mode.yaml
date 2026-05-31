@@ -1,0 +1,20 @@
+# Platform infrastructure mode — default until Citadel server is ready
+default_mode: CLOUD_ONLY
+
+# Periodic auto-rotation across free cloud AI providers (Groq, Gemini, etc.)
+cloud_auto_rotate: true
+cloud_auto_rotate_interval_seconds: 180
+
+rotation_chains:
+  CLOUD_ONLY: zero_cost_cloud
+  HYBRID: zero_cost_full
+  LOCAL_ONLY: zero_cost_full
+
+modes:
+  CLOUD_ONLY: >
+    Cloudflare Workers + free-tier cloud AI rotation. No local server or Docker required.
+    Use until you switch PLATFORM_INFRA_MODE when Citadel is ready.
+  HYBRID: >
+    Cloud edge + optional local stack (migration). Set CITADEL_LOCAL_STACK=true to run compose.
+  LOCAL_ONLY: >
+    Self-hosted Citadel (Docker). Run scripts/citadel_deploy_all.py without --cloud-only.
