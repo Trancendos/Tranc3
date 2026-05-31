@@ -870,6 +870,37 @@ services:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/__health"]
       <<: *healthcheck-default
 
+  # ── Blender Worker — Headless 3D Rendering for TranceFlow (Port 8050) ───
+  blender-worker:
+    <<: *worker-common
+    build:
+      context: ./workers/blender-worker
+      dockerfile: Dockerfile
+    container_name: trancendos-blender-worker
+    ports:
+      - "8050:8050"
+    volumes:
+      - blender-renders:/app/renders
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8050/health')"]
+      <<: *healthcheck-default
+
+  # ── TripoSR Worker — Image-to-3D for Sashas Photo Studio (Port 8051) ──
+  triposr-worker:
+    <<: *worker-common
+    build:
+      context: ./workers/triposr-worker
+      dockerfile: Dockerfile
+    container_name: trancendos-triposr-worker
+    ports:
+      - "8051:8051"
+    volumes:
+      - triposr-models:/app/models
+      - triposr-outputs:/app/outputs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8051/health')"]
+      <<: *healthcheck-default
+
   # ── Infinity Admin — Entity & Config Management (Port 8044) ──────────────
   infinity-admin:
     <<: *worker-common
@@ -944,6 +975,12 @@ volumes:
   zot-data:
     driver: local
   openbao-data:
+    driver: local
+  blender-renders:
+    driver: local
+  triposr-models:
+    driver: local
+  triposr-outputs:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════
