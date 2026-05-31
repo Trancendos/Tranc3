@@ -70,9 +70,12 @@ if not _REDIS_URL:
 
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────
 # Core imports (required — no guard)
+from src.auth.rbac import require_permission  # noqa: F401  # RBAC guards for protected routes
+from src.gbrain.pipeline import AgentInteraction as _GBrainInteraction  # noqa: F401
+from src.gbrain.pipeline import get_pipeline as _get_gbrain_pipeline  # noqa: F401
+
 from auth import get_current_user, token_manager  # codeql[py/cyclic-import]
 from src.auth.db_user_manager import DBUserManager  # noqa: F401  # intentional top-level import
-from src.auth.rbac import require_permission  # noqa: F401  # RBAC guards for protected routes
 from src.core.advanced_model import (
     AdvancedTransformerModel,  # noqa: F401  # intentional top-level import
 )
@@ -95,8 +98,6 @@ from src.errors.error_catalog import (  # noqa: F401  # intentional top-level im
     ErrorCode,
     format_error_response,
 )
-from src.gbrain.pipeline import AgentInteraction as _GBrainInteraction  # noqa: F401
-from src.gbrain.pipeline import get_pipeline as _get_gbrain_pipeline  # noqa: F401
 from src.monetisation.billing import TIERS  # noqa: F401  # intentional top-level import
 from src.monetisation.billing import (
     enforcer as tier_enforcer,  # noqa: F401  # intentional top-level import

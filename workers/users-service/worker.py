@@ -20,10 +20,10 @@ Features:
 """
 
 from __future__ import annotations
-import os
 
 import json
 import logging
+import os
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -36,7 +36,12 @@ from pydantic import BaseModel, EmailStr, Field
 
 logger = logging.getLogger("tranc3.workers.users-service")
 
-DATABASE_PATH = "/data/users.db"
+_DEFAULT_DATABASE_PATH = (
+    "/data/users.db"
+    if os.environ.get("ENVIRONMENT", "development").lower() == "production"
+    else "data/users.db"
+)
+DATABASE_PATH = os.environ.get("USERS_DATABASE_PATH", _DEFAULT_DATABASE_PATH)
 
 # ---------------------------------------------------------------------------
 # Pydantic models

@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 WORKER_SERVICES = {
     "gbrain-bridge",
     "topology-service",
@@ -19,9 +18,7 @@ def test_worker_dockerfiles_do_not_depend_on_curl_for_healthchecks():
     assert dockerfiles
 
     offenders = [
-        str(path)
-        for path in dockerfiles
-        if "CMD curl -f http://localhost:" in path.read_text()
+        str(path) for path in dockerfiles if "CMD curl -f http://localhost:" in path.read_text()
     ]
     assert offenders == []
 

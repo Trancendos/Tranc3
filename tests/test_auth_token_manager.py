@@ -31,7 +31,7 @@ def test_token_manager_rejects_tokens_signed_with_secret_key(monkeypatch):
         {
             "sub": "alice",
             "type": "access",
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=5),
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=5),
         },
         legacy_secret,
         algorithm=auth.ALGORITHM,

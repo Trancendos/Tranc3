@@ -96,10 +96,11 @@ class TokenManager:
         expires_delta: Optional[datetime.timedelta] = None,
     ) -> str:
         payload = data.copy()
-        expire = datetime.datetime.utcnow() + (
+        issued_at = datetime.datetime.now(datetime.timezone.utc)
+        expire = issued_at + (
             expires_delta or datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         )
-        payload.update({"exp": expire, "iat": datetime.datetime.utcnow(), "type": "access"})
+        payload.update({"exp": expire, "iat": issued_at, "type": "access"})
         return jwt.encode(payload, _get_jwt_secret(), algorithm=ALGORITHM)
 
     @staticmethod
