@@ -396,15 +396,18 @@ app = FastAPI(
     lifespan=_lifespan,
 )
 
-_cors_origins = [
+_cors_origins_raw = [
     o.strip()
     for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
     if o.strip()
 ]
+# Wildcard origin is incompatible with allow_credentials=True (Starlette raises ValueError)
+_cors_allow_credentials = "*" not in _cors_origins_raw
+_cors_origins = _cors_origins_raw if _cors_allow_credentials else ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
-    allow_credentials=True,
+    allow_credentials=_cors_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )

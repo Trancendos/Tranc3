@@ -69,25 +69,24 @@ from Dimensional.infinity.sentinel_station import (
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 # Phase 22.4: Dimensional Services
-from shared_core.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
-
-# Phase 25: Platform Entity Registry (entity name management)
 try:
-    from src.entities.platform import (
-        PLATFORM_ENTITIES,
-        get_entity_by_pid,
+    from Dimensional.dimensionals import (
+        get_dimensional_bus,
+        get_dimensional_registry,
+        get_underverse_registry,
     )
 
-    _PLATFORM_ENTITIES_AVAILABLE = True
-except Exception:  # pragma: no cover
-    _PLATFORM_ENTITIES_AVAILABLE = False
-    PLATFORM_ENTITIES = {}
+    _DIMENSIONAL_AVAILABLE = True
+except ImportError:
+    _DIMENSIONAL_AVAILABLE = False
 
-    def get_entity_by_pid(pid: str):  # type: ignore[misc]
+    def get_dimensional_bus():  # type: ignore[misc]
+        return None
+
+    def get_dimensional_registry():  # type: ignore[misc]
+        return None
+
+    def get_underverse_registry():  # type: ignore[misc]
         return None
 
 
