@@ -8,7 +8,31 @@ This is the **canonical procedure** to go from git clone to a running platform w
 - Python 3.11+
 - Ports 80, 443, 3000, 6379, 8000–8013, 8044, 8053, 8200, 9091 free
 
-## One command
+## One command (all platforms)
+
+**Recommended — single script (gate + env + deploy + monitor):**
+
+```bash
+# Linux / macOS / Git Bash
+./scripts/citadel_deploy_all.sh
+
+# Windows CMD (from repo folder)
+scripts\citadel_deploy_all.bat
+
+# Any OS with Python
+python scripts/citadel_deploy_all.py
+```
+
+Options:
+
+```bash
+python scripts/citadel_deploy_all.py --gate-only      # checks only, no Docker
+python scripts/citadel_deploy_all.py --install-deps     # pip install tools first
+python scripts/citadel_deploy_all.py --full             # P2 workers too
+python scripts/citadel_deploy_all.py --force-env          # regenerate secrets
+```
+
+**Legacy bash-only deploy:**
 
 ```bash
 ./scripts/deploy_live.sh

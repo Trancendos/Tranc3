@@ -18,6 +18,13 @@ Run the **single gate** used before Citadel:
 make pre-deploy-gate
 ```
 
+**All-in-one (gate + deploy on Windows/Linux):**
+
+```bash
+python scripts/citadel_deploy_all.py
+# Windows CMD:  scripts\citadel_deploy_all.bat
+```
+
 This fails only on:
 
 1. Production gate pytest subset
