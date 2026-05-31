@@ -13,6 +13,7 @@ Zero-cost: FastAPI + SQLite + httpx, no mandatory paid deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import logging
@@ -229,14 +230,7 @@ async def health():
         "pending": pending,
         "sent": sent,
         "failed": failed,
-        "entity": {
-            "location": "The Nexus",
-            "pillar": "Architectural",
-            "lead_ai": "The Nexus",
-            "primes": ["Cornelius MacIntyre"],
-            "primary_function": "AI Communication Gateway & Transfer Hub",
-            "layer": "supporting",
-        },
+        "entity": health_entity_block(8019, WORKER_NAME),
     }
 
 

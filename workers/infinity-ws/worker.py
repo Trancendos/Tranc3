@@ -16,6 +16,7 @@ Zero-cost: FastAPI WebSocket + asyncio. No CF Durable Objects.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -322,13 +323,7 @@ async def health():
         "service": "infinity-ws",
         "connections": manager.total_connections,
         "channels": manager.total_channels,
-        "entity": {
-            "location": "The Nexus",
-            "pillar": "Architectural",
-            "lead_ai": "The Nexus",
-            "primes": ["Cornelius MacIntyre"],
-            "primary_function": "AI Communication Gateway & Transfer Hub",
-        },
+        "entity": health_entity_block(8004, "infinity-ws"),
     }
 
 

@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite + asyncio, no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -270,13 +271,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "total_jobs": total,
         "active_jobs": active,
-        "entity": {
-            "location": "ChronosSphere / ArcStream",
-            "pillar": "DevOps",
-            "lead_ai": "Chronos",
-            "primes": ["Trancendos"],
-            "primary_function": "Task, Time & Scheduling Management",
-        },
+        "entity": health_entity_block(8021, WORKER_NAME),
     }
 
 

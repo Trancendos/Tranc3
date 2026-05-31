@@ -9,6 +9,7 @@ Zero-cost: FastAPI + SQLite, asyncio background loop for visibility restore.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -226,13 +227,7 @@ async def health():
         "pending": pending,
         "processing": processing,
         "dead_letters": dlq,
-        "entity": {
-            "location": "The HIVE",
-            "pillar": "Architectural",
-            "lead_ai": "The Queen",
-            "primes": ["Cornelius MacIntyre"],
-            "primary_function": "Data Transport Hub",
-        },
+        "entity": health_entity_block(8022, WORKER_NAME),
     }
 
 
