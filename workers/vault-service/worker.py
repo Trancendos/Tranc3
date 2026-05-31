@@ -13,7 +13,7 @@ Features:
     - Leak detection (scans environment for known secret patterns)
     - Secret rotation with versioning
 
-Port: 8030
+Port: 8038
 Zero-cost: FastAPI + SQLite + mmap, no external vault required.
 """
 
@@ -29,7 +29,16 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
@@ -39,7 +48,7 @@ from sse_starlette.sse import EventSourceResponse
 # ---------------------------------------------------------------------------
 
 SERVICE_NAME = "vault-service"
-PORT = 8030
+PORT = 8038
 
 # ---------------------------------------------------------------------------
 
@@ -47,7 +56,8 @@ DB_PATH = os.environ.get("VAULT_DB_PATH", "data/vault.db")
 STORAGE_ROOT = os.environ.get("VAULT_STORAGE_ROOT", "data/vault_secrets")
 AUDIT_LOG_PATH = os.environ.get("VAULT_AUDIT_LOG", "data/vault_audit.jsonl")
 DEFAULT_TTL = int(os.environ.get("VAULT_DEFAULT_TTL", "3600"))
-XOR_KEY = os.environ.get("VAULT_XOR_KEY", "Tranc3Vault2024!ZeroCostCrypto")
+# Master key seed for AES-256-GCM derivation — must be set via env var in production
+VAULT_MASTER_KEY = os.environ.get("VAULT_MASTER_KEY", "")
 
 logger = logging.getLogger("vault-service")
 
@@ -111,21 +121,86 @@ def _init_db() -> None:
 
 
 # ---------------------------------------------------------------------------
-# XOR Encryption (zero-cost, no external deps; swap with Dimensional AES in prod)
+# AES-256-GCM Encryption (cryptographically secure, zero external cost)
+# Uses the same pattern as workers/infinity-void/worker.py (The Void).
 # ---------------------------------------------------------------------------
 
 
-def _xor_encrypt(plaintext: str) -> str:
-    """XOR-encrypt with rotating key. Returns hex-encoded ciphertext."""
-    key_bytes = XOR_KEY.encode()
-    plain_bytes = plaintext.encode()
-    encrypted = bytes(b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(plain_bytes))
-    return encrypted.hex()
+def _get_master_key() -> str:
+    """Return the master key seed, generating a runtime-only fallback if unset."""
+    key = VAULT_MASTER_KEY
+    if not key:
+        # Warn loudly — this fallback is only acceptable in development.
+        # In production, VAULT_MASTER_KEY must be set via environment.
+        logger.warning(
+            "vault-service: VAULT_MASTER_KEY not set — using ephemeral key. "
+            "Secrets will NOT survive restarts. Set VAULT_MASTER_KEY in production."
+        )
+        # Use a stable-per-process key so secrets survive within a single run
+        import threading
+
+        with threading.Lock():
+            if not hasattr(_get_master_key, "_ephemeral"):
+                _get_master_key._ephemeral = os.urandom(32).hex()
+        return _get_master_key._ephemeral
+    return key
 
 
-def _xor_decrypt(ciphertext_hex: str) -> str:
-    """XOR-decrypt hex-encoded ciphertext back to plaintext."""
-    key_bytes = XOR_KEY.encode()
+def _derive_key(seed: str, salt: bytes) -> bytes:
+    """PBKDF2-SHA256 key derivation — 100k iterations, 256-bit output."""
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100_000,
+    )
+    return kdf.derive(seed.encode())
+
+
+def _encrypt_secret(plaintext: str) -> str:
+    """
+    AES-256-GCM encrypt plaintext.
+    Returns a hex string: salt(32) + iv(12) + tag(16) + ciphertext.
+    """
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    salt = os.urandom(32)
+    iv = os.urandom(12)
+    key = _derive_key(_get_master_key(), salt)
+    aesgcm = AESGCM(key)
+    # AESGCM.encrypt returns ciphertext + 16-byte tag concatenated
+    ct_with_tag = aesgcm.encrypt(iv, plaintext.encode(), None)
+    return (salt + iv + ct_with_tag).hex()
+
+
+def _decrypt_secret(ciphertext_hex: str) -> str:
+    """
+    AES-256-GCM decrypt.
+    Expects hex string: salt(32) + iv(12) + tag(16) + ciphertext.
+    """
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    raw = bytes.fromhex(ciphertext_hex)
+    if len(raw) < 60:  # 32 + 12 + 16 minimum
+        raise ValueError("vault-service: ciphertext too short — corrupted or legacy XOR data")
+    salt = raw[:32]
+    iv = raw[32:44]
+    ct_with_tag = raw[44:]
+    key = _derive_key(_get_master_key(), salt)
+    aesgcm = AESGCM(key)
+    return aesgcm.decrypt(iv, ct_with_tag, None).decode()
+
+
+# Backwards-compat shim: attempt XOR-decrypt of legacy secrets stored before this fix.
+# Remove this shim once all secrets have been re-encrypted (rotate via PUT /secrets/{id}).
+def _legacy_xor_decrypt(
+    ciphertext_hex: str, xor_key: str = "Tranc3Vault2024!ZeroCostCrypto"
+) -> str:
+    """Decrypt a secret encrypted by the old (insecure) XOR cipher."""
+    key_bytes = xor_key.encode()
     cipher_bytes = bytes.fromhex(ciphertext_hex)
     decrypted = bytes(b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(cipher_bytes))
     return decrypted.decode(errors="replace")
@@ -222,13 +297,27 @@ async def _lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Tranc3 Vault Service",
-    version="0.1.0",
+    title="Tranc3 Vault Service (AES-256-GCM)",
+    description="Secure secret storage — XOR cipher replaced with AES-256-GCM + PBKDF2.",
+    version="1.0.0",
     lifespan=_lifespan,
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
@@ -244,12 +333,12 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@app.post("/secrets", response_model=SecretResponse, status_code=201)
+@_router.post("/secrets", response_model=SecretResponse, status_code=201)
 async def create_secret(body: SecretCreate):
     conn = _get_db()
     now = _now()
     sid = _new_id()
-    encrypted = _xor_encrypt(body.value)
+    encrypted = _encrypt_secret(body.value)
     try:
         conn.execute(
             "INSERT INTO secrets (id, key, encrypted_value, tags, ttl, created_at, updated_at) VALUES (?,?,?,?,?,?,?)",
@@ -276,7 +365,7 @@ async def create_secret(body: SecretCreate):
     )
 
 
-@app.get("/secrets", response_model=List[SecretResponse])
+@_router.get("/secrets", response_model=List[SecretResponse])
 async def list_secrets(
     active_only: bool = True, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)
 ):
@@ -305,7 +394,7 @@ async def list_secrets(
     ]
 
 
-@app.get("/secrets/{secret_id}", response_model=SecretResponse)
+@_router.get("/secrets/{secret_id}", response_model=SecretResponse)
 async def get_secret(secret_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM secrets WHERE id=?", (secret_id,)).fetchone()
@@ -328,7 +417,7 @@ async def get_secret(secret_id: str):
     )
 
 
-@app.put("/secrets/{secret_id}", response_model=SecretResponse)
+@_router.put("/secrets/{secret_id}", response_model=SecretResponse)
 async def update_secret(secret_id: str, body: SecretUpdate):
     conn = _get_db()
     row = conn.execute("SELECT * FROM secrets WHERE id=?", (secret_id,)).fetchone()
@@ -339,7 +428,7 @@ async def update_secret(secret_id: str, body: SecretUpdate):
     now = _now()
     updates = {"updated_at": now, "version": row["version"] + 1}
     if body.value is not None:
-        updates["encrypted_value"] = _xor_encrypt(body.value)
+        updates["encrypted_value"] = _encrypt_secret(body.value)
     if body.tags is not None:
         updates["tags"] = json.dumps(body.tags)
     if body.ttl is not None:
@@ -367,7 +456,7 @@ async def update_secret(secret_id: str, body: SecretUpdate):
     )
 
 
-@app.put("/secrets/{secret_id}/revoke")
+@_router.put("/secrets/{secret_id}/revoke")
 async def revoke_secret(secret_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM secrets WHERE id=?", (secret_id,)).fetchone()
@@ -382,7 +471,7 @@ async def revoke_secret(secret_id: str):
     return {"id": secret_id, "is_active": 0, "updated_at": now}
 
 
-@app.put("/secrets/{secret_id}/zeroize")
+@_router.put("/secrets/{secret_id}/zeroize")
 async def zeroize_secret(secret_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM secrets WHERE id=?", (secret_id,)).fetchone()
@@ -392,7 +481,7 @@ async def zeroize_secret(secret_id: str):
     now = _now()
     conn.execute(
         "UPDATE secrets SET encrypted_value=?, is_active=0, updated_at=? WHERE id=?",
-        (_xor_encrypt("0000"), now, secret_id),
+        (_encrypt_secret("0000"), now, secret_id),
     )
     _append_audit(conn, secret_id, "secret.zeroize")
     conn.commit()
@@ -405,7 +494,7 @@ async def zeroize_secret(secret_id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/audit")
+@_router.get("/audit")
 async def get_audit_log(
     secret_id: Optional[str] = None,
     action: Optional[str] = None,
@@ -428,7 +517,7 @@ async def get_audit_log(
     return [dict(r) for r in rows]
 
 
-@app.get("/audit/verify")
+@_router.get("/audit/verify")
 async def verify_audit_chain():
     conn = _get_db()
     rows = conn.execute(
@@ -450,7 +539,7 @@ async def verify_audit_chain():
 # ---------------------------------------------------------------------------
 
 
-@app.get("/scan/leaks")
+@_router.get("/scan/leaks")
 async def scan_for_leaks():
     conn = _get_db()
     patterns = ["SECRET", "PASSWORD", "API_KEY", "TOKEN", "PRIVATE_KEY"]
@@ -479,7 +568,7 @@ async def scan_for_leaks():
 # ---------------------------------------------------------------------------
 
 
-@app.get("/stats")
+@_router.get("/stats")
 async def get_stats():
     conn = _get_db()
     total = conn.execute("SELECT COUNT(*) as c FROM secrets").fetchone()["c"]
@@ -545,7 +634,7 @@ async def _broadcast_event(event_type: str, data: dict) -> None:
         _connected_ws.remove(ws)
 
 
-@app.get("/events")
+@_router.get("/events")
 async def _sse_events():
     async def _generator():
         while True:
@@ -556,7 +645,7 @@ async def _sse_events():
     return EventSourceResponse(_generator())
 
 
-@app.get("/dashboard/summary")
+@_router.get("/dashboard/summary")
 async def _dashboard_summary():
     """Aggregated summary optimized for dashboard consumption."""
     stats = await _get_stats_async()
@@ -588,6 +677,9 @@ async def _get_stats_async() -> dict:
 def _get_stats() -> dict:
     """Return basic service stats for real-time endpoints (sync fallback)."""
     return {"service": SERVICE_NAME, "port": PORT}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":
