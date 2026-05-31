@@ -131,8 +131,13 @@ def _generate_env(force: bool, *, local_stack: bool) -> None:
     mode = _infra_mode()
     use_local_db = local_stack or mode == "LOCAL_ONLY"
     _section(f"Generate .env.production (mode={mode}, local_db={use_local_db})")
-    gen_hex = lambda: secrets.token_hex(32)
-    gen_url = lambda: secrets.token_urlsafe(32)
+
+    def gen_hex() -> str:
+        return secrets.token_hex(32)
+
+    def gen_url() -> str:
+        return secrets.token_urlsafe(32)
+
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     if use_local_db:
         database_url = "sqlite:////app/data/tranc3_platform.db"
