@@ -1,0 +1,30 @@
+name: Branch Integration Audit
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  branch-audit:
+    name: Remote branch benefit audit
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all remotes
+        run: git fetch origin --prune
+
+      - name: Run branch benefit audit
+        run: python3 scripts/branch_benefit_audit.py --base main
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: branch-benefit-audit
+          path: |
+            logs/branch_benefit_audit_latest.md
+            logs/branch_benefit_audit_*.json

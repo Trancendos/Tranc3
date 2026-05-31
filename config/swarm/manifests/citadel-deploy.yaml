@@ -1,0 +1,20 @@
+# Proactive Citadel deploy validation (zero-cost — local scripts only)
+name: citadel-deploy-preflight
+description: Preflight checks before production compose up on The Citadel
+interval_seconds: 0
+run_once: true
+steps:
+  - name: zero_cost_audit
+    command: python3 scripts/zero_cost_audit.py
+  - name: citadel_preflight
+    command: python3 scripts/citadel_preflight.py
+  - name: branch_benefit_audit
+    command: python3 scripts/branch_benefit_audit.py
+  - name: production_stack_tests
+    command: python3 -m pytest tests/test_production_readiness_stack.py tests/test_api_startup_readiness.py -q --tb=short
+    env:
+      SECRET_KEY: swarm-preflight-secret-key-32chars-min
+      JWT_SECRET: swarm-preflight-jwt-secret-32chars-min
+      DATABASE_URL: sqlite:///./data/swarm_preflight.db
+      REDIS_URL: redis://localhost:6379/0
+      ENVIRONMENT: test

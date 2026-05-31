@@ -14,16 +14,14 @@ if [[ ! -f .env.production ]]; then
   exit 1
 fi
 
-# Required production keys (fail fast)
-for key in SECRET_KEY JWT_SECRET; do
-  if ! grep -q "^${key}=" .env.production 2>/dev/null; then
-    echo "ERROR: ${key} must be set in .env.production" >&2
-    exit 1
-  fi
-  if grep -q "^${key}=LOAD_FROM_VAULT" .env.production 2>/dev/null; then
-    echo "WARN: ${key} still points at Vault placeholder — resolve before serving traffic" >&2
-  fi
-done
+echo "==> Citadel preflight (compose, Vault HCL, env keys)"
+python3 scripts/citadel_preflight.py
+
+echo "==> Zero-cost provider audit"
+python3 scripts/zero_cost_audit.py
+
+echo "==> Branch benefit audit (logs/branch_benefit_audit_latest.md)"
+python3 scripts/branch_benefit_audit.py || true
 
 echo "==> Pull latest main"
 git fetch origin main
@@ -39,7 +37,14 @@ echo "==> Wait for P0 health"
 sleep 15
 python3 scripts/health_check.py || true
 
-echo "==> Run proactive swarm manifest (optional)"
+echo "==> Run proactive swarm manifests (optional)"
 python3 scripts/swarm_runner.py --manifest config/swarm/manifests/platform-health.yaml || true
+python3 scripts/swarm_runner.py --manifest config/swarm/manifests/citadel-deploy.yaml || true
 
-echo "Done. Dashboard: infinity-admin :8044 | Swarm coordinator :8053"
+echo "==> Vault (file storage) — init/unseal if first deploy"
+if docker compose -f docker-compose.production.yml ps vault 2>/dev/null | grep -q Up; then
+  docker compose -f docker-compose.production.yml exec -T vault vault status 2>/dev/null || \
+    echo "WARN: Vault may need: vault operator init && vault operator unseal (see HashiCorp docs)"
+fi
+
+echo "Done. Backend :8000 | Dashboard /dashboard | Admin OS | Swarm :8053 | infinity-admin :8044"

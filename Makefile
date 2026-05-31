@@ -147,6 +147,18 @@ ansible-health:
 deploy-citadel:
 	@bash deploy/citadel/deploy-production.sh
 
+citadel-preflight:
+	@python3 scripts/citadel_preflight.py
+
+branch-audit:
+	@python3 scripts/branch_benefit_audit.py
+
+pr-hygiene:
+	@python3 scripts/pr_hygiene.py
+
+pr-hygiene-apply:
+	@python3 scripts/pr_hygiene.py --apply
+
 zero-cost-audit:
 	@python3 scripts/zero_cost_audit.py
 

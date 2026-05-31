@@ -106,17 +106,18 @@ services:
     image: hashicorp/vault:1.15
     container_name: tranc3-vault
     <<: *common
-    command: server -dev
+    command: server -config=/vault/config/vault.hcl
+    cap_add:
+      - IPC_LOCK
     environment:
-      - VAULT_DEV_ROOT_TOKEN_ID=tranc3-root-token
-      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+      - VAULT_ADDR=http://127.0.0.1:8200
     ports:
       - "8200:8200"
     volumes:
       - vault-data:/vault/data
-      - vault-config:/vault/config
+      - ./deploy/vault/vault.hcl:/vault/config/vault.hcl:ro
     healthcheck:
-      test: ["CMD", "vault", "status"]
+      test: ["CMD-SHELL", "vault status >/dev/null 2>&1 || [ $$? -eq 2 ]"]
       <<: *healthcheck-default
 
   # ── Prometheus — Metrics Collection ──────────────────────────────────
@@ -344,6 +345,42 @@ services:
   # P0 WORKERS — Critical Path
   # ═══════════════════════════════════════════════════════════════════════
 
+  # ── Tranc3 Backend — Core FastAPI App (Port 8000) ────────────────────
+  tranc3-backend:
+    <<: *worker-platform
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tranc3-backend
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - OLLAMA_URL=${OLLAMA_URL:-http://ollama:11434}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - HF_API_KEY=${HF_API_KEY:-}
+      - ENTITY_OVERRIDES_DB=/app/data/infinity_admin.db
+      - PROACTIVE_ORCHESTRATOR_ENABLED=${PROACTIVE_ORCHESTRATOR_ENABLED:-true}
+      - ADAPTIVE_ROTATION_ENABLED=${ADAPTIVE_ROTATION_ENABLED:-true}
+    ports:
+      - "8000:8000"
+    volumes:
+      - admin-data:/app/data
+      - backend-models:/app/models
+      - backend-cache:/app/cache
+      - backend-logs:/app/logs
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tranc3-backend.rule=PathPrefix(`/api/backend`) || PathPrefix(`/mcp`) || PathPrefix(`/adaptive`) || PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.tranc3-backend.entrypoints=web"
+      - "traefik.http.services.tranc3-backend.loadbalancer.server.port=8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      <<: *healthcheck-default
+
   # ── Tranc3 AI — The Spark (Port 8001) ────────────────────────────────
   tranc3-ai:
     <<: *worker-platform
@@ -352,9 +389,9 @@ services:
       dockerfile: Dockerfile
     container_name: tranc3-ai-worker
     environment:
-      - TRANC3_BACKEND_URL=${TRANC3_BACKEND_URL:-}
-      - TRANC3_NANO_URL=${TRANC3_NANO_URL:-}
-      - TRANC3_AUTH_URL=${TRANC3_AUTH_URL:-}
+      - TRANC3_BACKEND_URL=http://tranc3-backend:8000
+      - TRANC3_NANO_URL=http://tranc3-backend:8001
+      - TRANC3_AUTH_URL=${INFINITY_AUTH_URL:-http://infinity-auth:8005}
       - ENVIRONMENT=production
     ports:
       - "8001:8001"
@@ -366,6 +403,8 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       <<: *healthcheck-default
+    depends_on:
+      - tranc3-backend
 
   # ── The Void — Secrets Vault (Port 8002) ────────────────────────────
   infinity-void:
@@ -399,12 +438,23 @@ services:
     container_name: trancendos-api-gateway-worker
     environment:
       - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - AUTH_SERVICE_URL=http://infinity-auth:8005
+      - USERS_SERVICE_URL=http://users-service:8006
+      - PRODUCTS_SERVICE_URL=http://products-service:8011
+      - ORDERS_SERVICE_URL=http://orders-service:8012
+      - PAYMENTS_SERVICE_URL=http://payments-service:8013
       - TRANC3_AI_SERVICE_URL=http://tranc3-ai:8001
       - ENVIRONMENT=production
     ports:
       - "8003:8003"
     depends_on:
       - tranc3-ai
+      - infinity-auth
+      - users-service
+      - products-service
+      - orders-service
+      - payments-service
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api-gateway.rule=PathPrefix(`/api/`)"
@@ -1424,7 +1474,11 @@ volumes:
     driver: local
   vault-data:
     driver: local
-  vault-config:
+  backend-models:
+    driver: local
+  backend-cache:
+    driver: local
+  backend-logs:
     driver: local
   prometheus-data:
     driver: local

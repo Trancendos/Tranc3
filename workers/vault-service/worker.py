@@ -59,6 +59,10 @@ AUDIT_LOG_PATH = os.environ.get("VAULT_AUDIT_LOG", "data/vault_audit.jsonl")
 DEFAULT_TTL = int(os.environ.get("VAULT_DEFAULT_TTL", "3600"))
 # Master key seed for AES-256-GCM derivation — must be set via env var in production
 VAULT_MASTER_KEY = os.environ.get("VAULT_MASTER_KEY", "")
+_ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()
+
+if _ENVIRONMENT == "production" and not VAULT_MASTER_KEY:
+    raise RuntimeError("vault-service requires VAULT_MASTER_KEY in production")
 
 logger = logging.getLogger("vault-service")
 

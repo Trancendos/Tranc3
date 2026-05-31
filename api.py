@@ -31,42 +31,17 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from Dimensional.error_handlers import safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
 
 load_dotenv()
+from src.core.startup_validator import validate_startup
 
-# ── Fail fast on missing critical secrets ────────────────────────────────────
-_SECRET_KEY = os.getenv("SECRET_KEY")
-if not _SECRET_KEY:
-    raise RuntimeError(
-        "SECRET_KEY is not set. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
-    )
-
-_JWT_SECRET = os.getenv("JWT_SECRET")
-if not _JWT_SECRET:
-    raise RuntimeError(
-        "JWT_SECRET is not set. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
-    )
-
-_DATABASE_URL = os.getenv("DATABASE_URL")
-if not _DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL is not set. "
-        "Set to your PostgreSQL connection string (e.g. postgresql://user:pass@host/db)."
-    )
-
-_REDIS_URL = os.getenv("REDIS_URL")
-if not _REDIS_URL:
-    raise RuntimeError(
-        "REDIS_URL is not set. "
-        "Set to your Redis connection string (e.g. redis://localhost:6379 or rediss://...)."
-    )
+# Shared startup rules for api.py and api_enhanced.py (dev generates ephemeral secrets).
+validate_startup()
 
 # ── Internal imports ──────────────────────────────────────────────────────────────────────────
 # Core imports (required — no guard)
@@ -246,6 +221,7 @@ _feedback_count = 0  # codeql[py/unused-global]
 EVOLUTION_TRIGGER = 100  # codeql[py/unused-global]
 _health_monitor = None
 _auto_evolve = None
+_bootstrap_complete = False
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -253,9 +229,10 @@ _auto_evolve = None
 async def lifespan(app: FastAPI):
     global model, tokenizer, personality_matrix, redis_client, feature_flags
     global quantum_core, consciousness_model, neuromorphic, evolution_engine
-    global db_manager, db_user_manager, _health_monitor, _auto_evolve
+    global db_manager, db_user_manager, _health_monitor, _auto_evolve, _bootstrap_complete
 
     logger.info("TRANC3 starting up...")
+    _bootstrap_complete = False
     cfg = Config()
 
     # Database
@@ -417,9 +394,11 @@ async def lifespan(app: FastAPI):
         logger.warning("Proactive orchestrator unavailable: %s", sanitize_for_log(_po_exc))
 
     logger.info("TRANC3 API ready ✓")
+    _bootstrap_complete = True
     yield
 
     logger.info("TRANC3 shutting down")
+    _bootstrap_complete = False
     if _knowledge_brain is not None:
         try:
             await _knowledge_brain.stop_dream_cycle()
@@ -1001,6 +980,14 @@ async def health():
 async def ready():
     # Readiness: API itself is up and core bootstrap complete
     # Does NOT require model weights — bootstrap mode is production-valid
+    if not _bootstrap_complete:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "ready": False,
+                "timestamp": datetime.datetime.utcnow().isoformat(),
+            },
+        )
     return {"ready": True, "timestamp": datetime.datetime.utcnow().isoformat()}
 
 

@@ -1,0 +1,48 @@
+name: Citadel Preflight
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  citadel-preflight:
+    name: Citadel deploy preflight
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -q
+
+      - name: Zero-cost audit
+        run: python3 scripts/zero_cost_audit.py
+
+      - name: Citadel preflight (compose + vault.hcl)
+        run: python3 scripts/citadel_preflight.py
+        env:
+          SECRET_KEY: ci-preflight-secret-key-32-characters
+          JWT_SECRET: ci-preflight-jwt-secret-32-characters
+          DATABASE_URL: sqlite:///./data/ci_preflight.db
+          REDIS_URL: redis://localhost:6379/0
+
+      - name: Production stack contract tests
+        run: |
+          python -m pytest \
+            tests/test_production_readiness_stack.py \
+            tests/test_api_startup_readiness.py \
+            -q --tb=short
+        env:
+          SECRET_KEY: ci-preflight-secret-key-32-characters
+          JWT_SECRET: ci-preflight-jwt-secret-32-characters
+          DATABASE_URL: sqlite:///./data/ci_preflight.db
+          REDIS_URL: redis://localhost:6379/0
+          ENVIRONMENT: test

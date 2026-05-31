@@ -35,6 +35,8 @@ jobs:
             tests/test_orchestrator_effective.py \
             tests/test_zero_cost_registry.py \
             tests/test_adaptive_rotator.py \
+            tests/test_api_startup_readiness.py \
+            tests/test_production_readiness_stack.py \
             -q --tb=short
         env:
           SECRET_KEY: ci-test-secret-not-for-prod
