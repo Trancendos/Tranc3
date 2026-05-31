@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, List, Optional, Type
 
 import httpx
 
-from shared_core.error_handlers import safe_error_detail
+from Dimensional.error_handlers import safe_error_detail
 
 logger = logging.getLogger(__name__)
 
@@ -262,16 +262,15 @@ class CodeExecNode(BaseNode):
         local_ns["context"] = context
         local_ns["result"] = None
 
-        safe_globals: Dict[str, Any] = {
-            "__builtins__": {
-                k: v
-                for k, v in __builtins__.items()  # type: ignore[union-attr]
-                if k in self._SAFE_BUILTINS
+        _b: Any = __builtins__
+        if isinstance(_b, dict):
+            _safe_builtins: Dict[str, Any] = {
+                k: v for k, v in _b.items() if k in self._SAFE_BUILTINS
             }
-            if isinstance(__builtins__, dict)
-            else {
-                k: getattr(__builtins__, k) for k in self._SAFE_BUILTINS if hasattr(__builtins__, k)
-            },
+        else:
+            _safe_builtins = {k: getattr(_b, k) for k in self._SAFE_BUILTINS if hasattr(_b, k)}
+        safe_globals: Dict[str, Any] = {
+            "__builtins__": _safe_builtins,
             "math": __import__("math"),
             "json": __import__("json"),
             "re": __import__("re"),

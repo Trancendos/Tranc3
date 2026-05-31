@@ -12,7 +12,7 @@ The bridge uses a shared message format so that both sides can
 understand each other without translation layers.
 """
 
-from .ecosystem_bridge import (
+from .ecosystem_bridge import (  # noqa: I001
     BridgeConfig,
     BridgeEndpoint,
     BridgeTransport,
@@ -21,6 +21,19 @@ from .ecosystem_bridge import (
     EcosystemBridge,
     EcosystemRegistry,
     EcosystemEntity,
+)
+
+from .energy_constants import (
+    BridgeType,
+    EnergyClass,
+    cost_for,
+    priority_for,
+    BRIDGE_DEFAULT_ENERGY,
+    DIALITHIUM_PRIORITY,
+    CRYSTAL_BASE_COST,
+    LIGHTNING_BURST_LIMIT_MS,
+    LIGHT_AMBIENT_TICK_HZ,
+    TRILITHIUM_STABILITY_FACTOR,
 )
 
 __all__ = [
@@ -32,4 +45,15 @@ __all__ = [
     "EcosystemBridge",
     "EcosystemRegistry",
     "EcosystemEntity",
+    # Energy constants
+    "BridgeType",
+    "EnergyClass",
+    "cost_for",
+    "priority_for",
+    "BRIDGE_DEFAULT_ENERGY",
+    "DIALITHIUM_PRIORITY",
+    "CRYSTAL_BASE_COST",
+    "LIGHTNING_BURST_LIMIT_MS",
+    "LIGHT_AMBIENT_TICK_HZ",
+    "TRILITHIUM_STABILITY_FACTOR",
 ]

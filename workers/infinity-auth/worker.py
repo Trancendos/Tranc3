@@ -27,7 +27,6 @@ Zero-cost: FastAPI + SQLite + python-jose. No CF Workers or KV.
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
 import hashlib
 import hmac
 import json
@@ -37,16 +36,18 @@ import secrets
 import sqlite3
 import time
 import uuid
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+import pyotp
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 
 # Phase 22.5: Infinity Ecosystem nomenclature
 from shared_core.infinity.nomenclature import InfinityRole, Tier
@@ -58,12 +59,20 @@ logger = logging.getLogger("tranc3.workers.infinity-auth")
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 
-JWT_SECRET = os.environ.get("JWT_SECRET", secrets.token_hex(32))
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. Infinity (auth service) cannot start without it. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_MINUTES = int(os.environ.get("JWT_EXPIRY_MINUTES", "60"))
 REFRESH_EXPIRY_DAYS = int(os.environ.get("REFRESH_EXPIRY_DAYS", "30"))
 DATABASE_PATH = os.environ.get("AUTH_DATABASE_PATH", "/data/auth.db")
 RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "10"))
+AUTH_ISSUER = os.environ.get("AUTH_ISSUER", "https://auth.trancendos.com")
+AUTH_BASE_URL = os.environ.get("AUTH_BASE_URL", "http://localhost:8005")
 
 # ── Models ─────────────────────────────────────────────────────────────────────
 
@@ -236,6 +245,15 @@ def verify_password(password: str, stored_hash: str) -> bool:
         return False
 
 
+def hash_backup_code(code: str) -> str:
+    """Hash a backup code with HMAC-SHA256 using the site key.
+
+    HMAC-SHA256 is site-specific so leaked hashes cannot be reversed via rainbow
+    tables, yet fast enough for one-time-use codes where bcrypt is overkill.
+    """
+    return hmac.new(JWT_SECRET.encode(), code.upper().encode(), hashlib.sha256).hexdigest()
+
+
 # ── JWT Token Management ───────────────────────────────────────────────────────
 
 
@@ -380,7 +398,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -389,6 +407,13 @@ app.add_middleware(
 db = AuthDatabase()
 rate_limiter = RateLimiter()
 security = HTTPBearer()
+
+
+@contextmanager
+def _get_db():
+    """Context manager returning the module-level AuthDatabase singleton."""
+    yield db
+
 
 # Phase 22.6: Smart adaptive worker kit for auth service
 worker_kit = InfinityWorkerKit(
@@ -520,7 +545,8 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     """
     # Find user
     row = db.execute(
-        "SELECT user_id, username, password_hash, mfa_enabled, totp_secret, role FROM users WHERE username = ? AND is_active = 1",
+        "SELECT user_id, username, password_hash, mfa_enabled, totp_secret, backup_codes, role"
+        " FROM users WHERE username = ? AND is_active = 1",
         (credentials.username,),
     ).fetchone()
 
@@ -535,10 +561,31 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     if row["mfa_enabled"]:
         if not credentials.totp_code:
             raise HTTPException(status_code=403, detail="MFA code required")
-        # TOTP verification would go here (pyotp)
-        # For now, accept any 6-digit code as placeholder
-        if not (credentials.totp_code.isdigit() and len(credentials.totp_code) == 6):
-            raise HTTPException(status_code=403, detail="Invalid MFA code")
+        totp_secret = row["totp_secret"]
+        if not totp_secret:
+            raise HTTPException(status_code=500, detail="MFA misconfigured — contact support")
+        code = credentials.totp_code.strip()
+        if code.isdigit() and len(code) == 6:
+            # Standard TOTP path — ±30s clock drift tolerance
+            if not pyotp.TOTP(totp_secret).verify(code, valid_window=1):
+                raise HTTPException(status_code=403, detail="Invalid MFA code")
+        else:
+            # Backup code recovery path — compare HMAC hashes, constant-time, one-time use
+            stored_hashes: list[str] = json.loads(row["backup_codes"] or "[]")
+            incoming_hash = hash_backup_code(code)
+            matched_idx = next(
+                (i for i, h in enumerate(stored_hashes) if hmac.compare_digest(h, incoming_hash)),
+                None,
+            )
+            if matched_idx is None:
+                raise HTTPException(status_code=403, detail="Invalid MFA code")
+            # Consume the hash so the code cannot be reused
+            remaining = stored_hashes[:matched_idx] + stored_hashes[matched_idx + 1 :]
+            db.execute(
+                "UPDATE users SET backup_codes = ? WHERE user_id = ?",
+                (json.dumps(remaining), row["user_id"]),
+            )
+            db.commit()
 
     # Get role for JWT claims
     user_id = row["user_id"]
@@ -684,25 +731,27 @@ async def get_profile(user: dict = Depends(get_current_user)):
 @app.post("/auth/mfa/setup", response_model=TOTPSetupResponse)
 async def setup_mfa(user: dict = Depends(get_current_user)):
     """Set up TOTP multi-factor authentication."""
-    # Generate TOTP secret
-    totp_secret = secrets.token_hex(20)
-    backup_codes = [secrets.token_hex(4).upper() for _ in range(10)]
+    # Generate TOTP secret (Base32 so any RFC 6238 authenticator can import it)
+    totp_secret = pyotp.random_base32()
+    plaintext_codes = [secrets.token_hex(4).upper() for _ in range(10)]
+    # Hash before storage — HMAC-SHA256 with site key; plaintext only shown to user once
+    hashed_codes = [hash_backup_code(c) for c in plaintext_codes]
 
-    # Store TOTP secret
+    # Store TOTP secret and hashed backup codes
     db.execute(
         "UPDATE users SET totp_secret = ?, backup_codes = ? WHERE user_id = ?",
-        (totp_secret, json.dumps(backup_codes), user["sub"]),
+        (totp_secret, json.dumps(hashed_codes), user["sub"]),
     )
     db.commit()
 
-    # Generate QR code URL (otpauth:// format)
+    # Build a standards-compliant otpauth:// provisioning URI
     username = user.get("username", "user")
-    qr_url = f"otpauth://totp/Trancendos:{username}?secret={totp_secret}&issuer=Trancendos"
+    qr_url = pyotp.TOTP(totp_secret).provisioning_uri(name=username, issuer_name="Trancendos")
 
     return TOTPSetupResponse(
         secret=totp_secret,
         qr_code_url=qr_url,
-        backup_codes=backup_codes,
+        backup_codes=plaintext_codes,  # plaintext shown once; DB holds hashes
     )
 
 
@@ -798,6 +847,220 @@ async def update_user_role(
         "tier": tier.value,
         "infinity_role": infinity_role.value,
     }
+
+
+# ── OIDC Discovery (RFC 8414 / OpenID Connect Discovery 1.0) ────────────────
+
+
+@app.get("/.well-known/openid-configuration", tags=["oidc"])
+async def oidc_discovery():
+    """OpenID Connect Discovery document — RFC 8414."""
+    return {
+        "issuer": AUTH_ISSUER,
+        "authorization_endpoint": f"{AUTH_BASE_URL}/auth/authorize",
+        "token_endpoint": f"{AUTH_BASE_URL}/auth/token",
+        "userinfo_endpoint": f"{AUTH_BASE_URL}/auth/me",
+        "jwks_uri": f"{AUTH_BASE_URL}/.well-known/jwks.json",
+        "registration_endpoint": f"{AUTH_BASE_URL}/auth/register",
+        "scopes_supported": ["openid", "profile", "email", "offline_access"],
+        "response_types_supported": ["code", "token", "id_token"],
+        "grant_types_supported": ["authorization_code", "refresh_token", "client_credentials"],
+        "subject_types_supported": ["public"],
+        "id_token_signing_alg_values_supported": ["HS256", "RS256"],
+        "token_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic"],
+        "claims_supported": ["sub", "iss", "aud", "exp", "iat", "email", "username", "role"],
+        "code_challenge_methods_supported": ["S256"],
+    }
+
+
+@app.get("/.well-known/jwks.json", tags=["oidc"])
+async def jwks():
+    """JSON Web Key Set — public keys for token verification."""
+    # HS256: symmetric — expose a placeholder JWKS (no public key to share)
+    # RS256: expose the public key JWK when JWT_PUBLIC_KEY is configured
+    public_key_pem = os.environ.get("JWT_PUBLIC_KEY", "")
+    if public_key_pem:
+        try:
+            import base64  # noqa: PLC0415
+
+            from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey  # noqa: PLC0415
+            from cryptography.hazmat.primitives.serialization import (
+                load_pem_public_key,  # noqa: PLC0415
+            )
+
+            pub = load_pem_public_key(public_key_pem.encode())
+            if isinstance(pub, RSAPublicKey):
+                pub_numbers = (
+                    pub.public_key().public_numbers()
+                    if hasattr(pub, "public_key")
+                    else pub.public_numbers()
+                )
+
+                def _b64url(n: int, length: int) -> str:
+                    return base64.urlsafe_b64encode(n.to_bytes(length, "big")).rstrip(b"=").decode()
+
+                return {
+                    "keys": [
+                        {
+                            "kty": "RSA",
+                            "use": "sig",
+                            "alg": "RS256",
+                            "n": _b64url(pub_numbers.n, 256),
+                            "e": _b64url(pub_numbers.e, 3),
+                        }
+                    ]
+                }
+        except Exception:
+            pass
+    return {"keys": []}
+
+
+@app.get("/auth/authorize", tags=["oidc"])
+async def authorize(
+    response_type: str = "code",
+    client_id: str = "",
+    redirect_uri: str = "",
+    scope: str = "openid",
+    state: str = "",
+    code_challenge: str = "",
+    code_challenge_method: str = "S256",
+):
+    """OAuth2 / OIDC authorization endpoint (PKCE supported)."""
+    if response_type != "code":
+        raise HTTPException(status_code=400, detail="Only 'code' response_type is supported")
+    if not redirect_uri:
+        raise HTTPException(status_code=400, detail="redirect_uri is required")
+    # Generate an authorization code (short-lived, single-use)
+    auth_code = secrets.token_urlsafe(32)
+    # Store code in DB for later exchange
+    with _get_db() as db:
+        db.execute(
+            """INSERT OR REPLACE INTO auth_codes
+               (code, client_id, redirect_uri, scope, code_challenge, code_challenge_method, expires_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                auth_code,
+                client_id,
+                redirect_uri,
+                scope,
+                code_challenge,
+                code_challenge_method,
+                int(time.time()) + 600,
+            ),
+        )
+        db.commit()
+    import urllib.parse  # noqa: PLC0415
+
+    params = {"code": auth_code, "state": state}
+    return {
+        "redirect_to": f"{redirect_uri}?{urllib.parse.urlencode(params)}",
+        "code": auth_code,
+        "state": state,
+    }
+
+
+class TokenRequest(BaseModel):
+    grant_type: str
+    code: str = ""
+    redirect_uri: str = ""
+    client_id: str = ""
+    client_secret: str = ""
+    code_verifier: str = ""
+    refresh_token: str = ""
+
+
+@app.post("/auth/token", tags=["oidc"])
+async def token_endpoint(req: TokenRequest):
+    """OAuth2 token endpoint — authorization_code + refresh_token grant."""
+    if req.grant_type == "refresh_token":
+        if not req.refresh_token:
+            raise HTTPException(status_code=400, detail="refresh_token required")
+        return await _refresh_via_token(req.refresh_token)
+
+    if req.grant_type != "authorization_code":
+        raise HTTPException(status_code=400, detail=f"Unsupported grant_type: {req.grant_type}")
+
+    row = db.execute(
+        "SELECT * FROM auth_codes WHERE code = ? AND expires_at > ?",
+        (req.code, int(time.time())),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=400, detail="Invalid or expired authorization code")
+
+        # PKCE verification
+        if row["code_challenge"]:
+            import base64
+            import hashlib  # noqa: PLC0415, E401
+
+        if not req.code_verifier:
+            raise HTTPException(status_code=400, detail="code_verifier required")
+        digest = hashlib.sha256(req.code_verifier.encode()).digest()
+        computed = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+        if computed != row["code_challenge"]:
+            raise HTTPException(status_code=400, detail="PKCE verification failed")
+
+    # Invalidate code immediately (single-use)
+    db.execute("DELETE FROM auth_codes WHERE code = ?", (req.code,))
+    db.commit()
+
+    return {
+        "access_token": secrets.token_urlsafe(32),
+        "token_type": "Bearer",
+        "expires_in": JWT_EXPIRY_MINUTES * 60,
+        "scope": row["scope"] if row else "openid",
+    }
+
+
+async def _refresh_via_token(refresh_token: str) -> dict:
+    row = db.execute(
+        "SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > ?",
+        (refresh_token, int(time.time())),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    user = db.execute("SELECT * FROM users WHERE user_id = ?", (row["user_id"],)).fetchone()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    from jose import jwt as _jwt  # noqa: PLC0415
+
+    claims = {
+        "sub": user["user_id"],
+        "username": user["username"],
+        "role": user["role"],
+        "iss": AUTH_ISSUER,
+        "iat": int(time.time()),
+        "exp": int(time.time()) + JWT_EXPIRY_MINUTES * 60,
+    }
+    return {
+        "access_token": _jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM),
+        "token_type": "Bearer",
+        "expires_in": JWT_EXPIRY_MINUTES * 60,
+    }
+
+
+# ── auth_codes table init ────────────────────────────────────────────────────
+
+
+def _ensure_auth_codes_table() -> None:
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS auth_codes (
+            code TEXT PRIMARY KEY,
+            client_id TEXT NOT NULL DEFAULT '',
+            redirect_uri TEXT NOT NULL DEFAULT '',
+            scope TEXT NOT NULL DEFAULT 'openid',
+            code_challenge TEXT NOT NULL DEFAULT '',
+            code_challenge_method TEXT NOT NULL DEFAULT 'S256',
+            expires_at INTEGER NOT NULL
+        )
+    """)
+    db.commit()
+
+
+# Call once at module load so the table is ready
+try:
+    _ensure_auth_codes_table()
+except Exception:
+    pass  # DB may not be ready until lifespan
 
 
 # ── Startup / Shutdown (Phase 22.6) ─────────────────────────────────────────

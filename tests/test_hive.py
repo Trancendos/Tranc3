@@ -177,7 +177,7 @@ class TestSwarmCoordinator:
     @pytest.mark.asyncio
     async def test_list_swarms_by_status(self):
         """List swarms can filter by status."""
-        _swarm = await self.coordinator.create_swarm(name="forming", purpose="test")
+        await self.coordinator.create_swarm(name="forming", purpose="test")
         # swarm is FORMING, not ACTIVE
         forming = await self.coordinator.list_swarms(status=SwarmStatus.FORMING)
         active = await self.coordinator.list_swarms(status=SwarmStatus.ACTIVE)

@@ -14,7 +14,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
-from shared_core.sanitize import sanitize_for_log
+from Dimensional.sanitize import sanitize_for_log
 
 from .builder import WorkflowDefinition
 from .nodes import NodeConfig, NodeResult, create_node

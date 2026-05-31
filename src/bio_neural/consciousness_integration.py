@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional  # noqa: E402
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
-from shared_core.sanitize import sanitize_for_log  # noqa: E402
+from Dimensional.sanitize import sanitize_for_log  # noqa: E402
 from src.bio_neural.consciousness_engine import ConsciousnessModel  # noqa: E402
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
 
@@ -23,10 +23,9 @@ class ConsciousnessAwareGenerator:
         self.config = config
         self.feature_manager = feature_manager
 
+        self.consciousness: Optional[ConsciousnessModel] = None
         if feature_manager.is_enabled(FeatureFlag.CONSCIOUSNESS_ENGINE):
             self.consciousness = ConsciousnessModel(config)
-        else:
-            self.consciousness = None
 
     def generate_with_consciousness(
         self,
@@ -56,6 +55,8 @@ class ConsciousnessAwareGenerator:
         neural_state = input_tensor.unsqueeze(0).unsqueeze(0)
 
         # Calculate consciousness metrics
+        if self.consciousness is None:
+            return self._classical_generate(input_text, personality_vector)
         phi = self.consciousness.calculate_phi(neural_state.squeeze())
 
         # Consciousness-modulated personality

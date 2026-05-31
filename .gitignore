@@ -2,9 +2,15 @@
 .env
 .env.*
 !.env.example
+!.env.development.example
+!.env.uat.example
+!.env.production.example
 
 # Local sandbox CA cert (never commit)
 sandbox-ca.crt
+
+# Generated protobuf Go files (CI regenerates via protoc at build time)
+aeonmind/go/proto/*.pb.go
 
 # Python
 __pycache__/
@@ -67,15 +73,16 @@ Thumbs.db
 .adstar/
 .automate/
 
-# SQLite dev DB (extensions and extensionless test artifacts)
+# SQLite dev DB
 *.db
 *.db-shm
 *.db-wal
-bridge-test
-bridge-pause-test
-*-test
-*-pause-test
 spawned/
 node_modules/
-deploy/terraform/.terraform/
-src/nanoservices/rust/tranc3-nanoservice/Cargo.lock
+.terraform/
+aeonmind/python/.venv/
+aeonmind/python/*.egg-info/
+
+# Nexus test artifacts
+bridge-*
+nexus-*

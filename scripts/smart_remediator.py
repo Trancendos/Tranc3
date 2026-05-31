@@ -18,7 +18,7 @@ import re
 import sys
 from typing import NamedTuple
 
-from shared_core.path_validation import validate_path
+from Dimensional.path_validation import validate_path
 
 # ── Violation data from scanner output ──────────────────────────────────────
 
@@ -228,7 +228,7 @@ def fix_cwe022_file(filepath: str, target_lines: set[int]) -> int:
             # Check if validate_path is already imported
             if "validate_path" not in source:
                 # Add import at top
-                _add_import(lines, "from shared_core.path_validation import validate_path")
+                _add_import(lines, "from Dimensional.path_validation import validate_path")
                 source = "\n".join(lines)
             # Add guard line before this one
             fixes.append((idx, f"{indent}validate_path({path_var})  # CWE-022 guard\n{line}"))
@@ -244,7 +244,7 @@ def fix_cwe022_file(filepath: str, target_lines: set[int]) -> int:
             if path_obj:
                 path_var = path_obj.group(1)
                 if "validate_path" not in source:
-                    _add_import(lines, "from shared_core.path_validation import validate_path")
+                    _add_import(lines, "from Dimensional.path_validation import validate_path")
                     source = "\n".join(lines)
                 fixes.append((idx, f"{indent}validate_path({path_var})  # CWE-022 guard\n{line}"))
                 applied += 1
@@ -257,7 +257,7 @@ def fix_cwe022_file(filepath: str, target_lines: set[int]) -> int:
             indent = len(line) - len(line.lstrip())
             indent_str = " " * indent
             if "validate_path" not in source:
-                _add_import(lines, "from shared_core.path_validation import validate_path")
+                _add_import(lines, "from Dimensional.path_validation import validate_path")
                 source = "\n".join(lines)
             fixes.append((idx, f"{indent_str}validate_path({path_var})  # CWE-022 guard\n{line}"))
             applied += 1
@@ -386,7 +386,7 @@ def fix_cwe209_file(filepath: str, target_lines: set[int]) -> int:
             applied += 1
 
     if applied and needs_import:
-        _add_import(lines, "from shared_core.error_handlers import safe_error_detail")
+        _add_import(lines, "from Dimensional.error_handlers import safe_error_detail")
 
     if applied:
         validate_path(filepath)
@@ -405,7 +405,7 @@ def main():
 
     print("🔍 Running security scan to identify violations...")
     result = subprocess.run(
-        [sys.executable, "-m", "shared_core.security_automation", "scan", "--format", "text", "."],
+        [sys.executable, "-m", "Dimensional.security_automation", "scan", "--format", "text", "."],
         capture_output=True,
         text=True,
         cwd="/workspace/Tranc3-git",
@@ -456,7 +456,7 @@ def main():
     # Verify by re-scanning
     print("\n🔍 Re-scanning to verify...")
     result = subprocess.run(
-        [sys.executable, "-m", "shared_core.security_automation", "scan", "--format", "text", "."],
+        [sys.executable, "-m", "Dimensional.security_automation", "scan", "--format", "text", "."],
         capture_output=True,
         text=True,
         cwd="/workspace/Tranc3-git",

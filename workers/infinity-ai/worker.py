@@ -12,6 +12,7 @@ Zero-cost: Ollama local inference, free-tier OpenRouter, HuggingFace free infere
 """
 
 from __future__ import annotations
+import os
 
 import hashlib
 import json
@@ -27,7 +28,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -644,6 +645,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 STARTED_AT = datetime.now(timezone.utc)
 
 
@@ -665,7 +680,7 @@ async def health():
     }
 
 
-@app.get("/v1/models")
+@_router.get("/v1/models")
 async def list_models():
     """OpenAI-compatible models list endpoint."""
     models = [
@@ -692,14 +707,14 @@ async def list_models():
 # ---------------------------------------------------------------------------
 
 
-@app.post("/v1/chat/completions")
+@_router.post("/v1/chat/completions")
 async def chat_completions(request: ChatCompletionRequest):
     """OpenAI-compatible chat completions endpoint with provider failover."""
     return await router.route(request)
 
 
 # Also support /chat/completions without v1 prefix
-@app.post("/chat/completions")
+@_router.post("/chat/completions")
 async def chat_completions_no_v1(request: ChatCompletionRequest):
     """Chat completions without /v1 prefix."""
     return await router.route(request)
@@ -710,7 +725,7 @@ async def chat_completions_no_v1(request: ChatCompletionRequest):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/usage/{tenant_id}")
+@_router.get("/usage/{tenant_id}")
 async def get_usage(tenant_id: str):
     """Get token budget and usage for a tenant."""
     budget = db.get_budget(tenant_id)
@@ -723,7 +738,7 @@ async def get_usage(tenant_id: str):
     }
 
 
-@app.get("/usage/{tenant_id}/stats")
+@_router.get("/usage/{tenant_id}/stats")
 async def get_usage_stats(tenant_id: str, hours: int = Query(24, ge=1, le=168)):
     """Get detailed usage statistics for a tenant."""
     return db.get_usage_stats(tenant_id=tenant_id, hours=hours)
@@ -734,7 +749,7 @@ async def get_usage_stats(tenant_id: str, hours: int = Query(24, ge=1, le=168)):
 # ---------------------------------------------------------------------------
 
 
-@app.post("/admin/budget")
+@_router.post("/admin/budget")
 async def set_budget(tenant_id: str, daily_limit: int = 100_000):
     """Set the daily token budget for a tenant."""
     budget = db.get_budget(tenant_id)
@@ -743,7 +758,7 @@ async def set_budget(tenant_id: str, daily_limit: int = 100_000):
     return {"ok": True, "tenant_id": tenant_id, "daily_limit": daily_limit}
 
 
-@app.post("/admin/cache/clear")
+@_router.post("/admin/cache/clear")
 async def clear_cache():
     """Clear the response cache."""
     router.cache.clear()
@@ -753,6 +768,9 @@ async def clear_cache():
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
+app.include_router(_router)
+
 
 if __name__ == "__main__":
     import uvicorn

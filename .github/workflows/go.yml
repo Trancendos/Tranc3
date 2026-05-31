@@ -1,0 +1,102 @@
+name: Go CI
+
+on:
+  push:
+    paths:
+      - 'aeonmind/go/**'
+      - 'aeonmind/proto/**'
+    branches: [ main, 'phase-*' ]
+  pull_request:
+    paths:
+      - 'aeonmind/go/**'
+      - 'aeonmind/proto/**'
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: aeonmind/go
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - name: Install protoc
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Generate protobuf Go code
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          mkdir -p proto
+          protoc --go_out=proto --go_opt=paths=source_relative \
+            --go-grpc_out=proto --go-grpc_opt=paths=source_relative \
+            -I../proto ../proto/aeonmind.proto
+      - name: Go fmt
+        run: test -z "$(gofmt -l .)"
+      - name: Go vet
+        run: go vet ./...
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          working-directory: aeonmind/go
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: aeonmind/go
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - name: Install protoc
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Generate protobuf Go code
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          mkdir -p proto
+          protoc --go_out=proto --go_opt=paths=source_relative \
+            --go-grpc_out=proto --go-grpc_opt=paths=source_relative \
+            -I../proto ../proto/aeonmind.proto
+      - name: Download dependencies
+        run: go mod download
+      - name: Build orchestrator
+        run: go build -v ./orchestrator/...
+      - name: Build cmd
+        run: go build -v ./cmd/...
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: aeonmind/go
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - name: Install protoc
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Generate protobuf Go code
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          mkdir -p proto
+          protoc --go_out=proto --go_opt=paths=source_relative \
+            --go-grpc_out=proto --go-grpc_opt=paths=source_relative \
+            -I../proto ../proto/aeonmind.proto
+      - name: Run tests
+        run: go test -v -race ./...

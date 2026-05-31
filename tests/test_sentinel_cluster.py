@@ -5,7 +5,7 @@ Comprehensive tests for Redis Cluster HA with node management,
 failover, partition handling, and cluster lifecycle.
 """
 
-import asyncio
+import asyncio  # noqa: I001
 
 from Dimensional.infinity.sentinel_cluster import (
     NodeRole,

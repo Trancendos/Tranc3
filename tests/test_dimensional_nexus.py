@@ -629,7 +629,7 @@ class TestEventRouter:
             source_tier=3,
             event_type="test_event",
         )
-        _subscribers = await self.router.publish(event)
+        await self.router.publish(event)
         assert len(good_received) == 1
 
     @pytest.mark.asyncio

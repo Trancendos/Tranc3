@@ -1,9 +1,10 @@
 """Phase 20 — P4 Worker test suite.
 
-Covers all 8 ecosystem-matrix workers (ports 8030–8037):
-  vault-service, topology-service, ledger-service, model-router-service,
-  workflow-engine-service, skills-benchmark-service, langchain-integration-service,
-  deepagents-orchestrator-service
+Covers all 9 intelligence-layer workers (ports 8030–8038):
+  gbrain-bridge (8030), topology-service (8031), ledger-service (8032),
+  model-router-service (8033), workflow-engine-service (8034),
+  skills-benchmark-service (8035), langchain-integration-service (8036),
+  deepagents-orchestrator-service (8037), vault-service (8038)
 """
 
 import os
@@ -58,12 +59,15 @@ def client(request):
         _module_cache[module_name] = mod
 
     mod = _module_cache[module_name]
-    c = TestClient(mod.app)
+    # Pass X-Internal-Secret for workers that enforce it
+    secret = getattr(mod, "_INTERNAL_SECRET", "")
+    headers = {"X-Internal-Secret": secret} if secret else {}
+    c = TestClient(mod.app, headers=headers)
     yield c
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 1. vault-service (8030)
+# 1. vault-service (8038)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 

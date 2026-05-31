@@ -42,28 +42,28 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
 # Phase 22: Infinity Ecosystem security
-from shared_core.infinity.auth_gateway import AuthGatewayMiddleware
-from shared_core.infinity.nomenclature import (
+from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
+from Dimensional.infinity.nomenclature import (
     SentinelChannel,
 )
-from shared_core.infinity.owasp_hardening import OWASPHardeningMiddleware
-from shared_core.infinity.rbac import RBACEngine
+from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensional.infinity.rbac import RBACEngine
 
 # Phase 22.3: Sentinel Station
-from shared_core.infinity.sentinel_station import (
+from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     get_sentinel_station,
 )
 
 # Phase 22.4: Dimensional Services
-from shared_core.dimensionals import (
+from Dimensional.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
 )
 
 # Phase 22.6: Smart Adaptive Intelligence
-from shared_core.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -71,7 +71,13 @@ from shared_core.infinity.worker_integration import InfinityWorkerKit
 
 PORT = int(os.environ.get("INFINITY_ONE_PORT", "8043"))
 DB_PATH = os.environ.get("INFINITY_ONE_DB_PATH", "data/infinity_one.db")
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. This service cannot validate tokens without it. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 
 logger = logging.getLogger("infinity-one-service")
 
@@ -317,16 +323,15 @@ async def _lifespan(app: FastAPI):
                 await asyncio.sleep(15)
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    if hasattr(summary, "to_dict"):
-                        summary = summary.to_dict()
-                    worker_kit.health.update_health(summary.get("health_score", 1.0))
+                    summary_dict = summary.to_dict()
+                    worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
                     await sentinel.publish(
                         SentinelEvent(
                             channel=SentinelChannel.PLATFORM,
                             event_type="health_report",
                             source="infinity_one",
-                            payload=summary,
+                            payload=summary_dict,
                         )
                     )
             except asyncio.CancelledError:
@@ -469,12 +474,7 @@ def _identity_from_row(row: sqlite3.Row) -> dict:
 @app.get("/health")
 async def health():
     """Health check for the Infinity-One service."""
-    health_summary_obj = worker_kit.health.get_health_summary()
-    health_summary = (
-        health_summary_obj.to_dict()
-        if hasattr(health_summary_obj, "to_dict")
-        else health_summary_obj
-    )
+    health_summary = worker_kit.health.get_health_summary()
     return {
         "status": "healthy",
         "service": "infinity-one",
@@ -482,8 +482,8 @@ async def health():
         "purpose": "Single Identity Management — one login, multi-app access",
         "dimensional_bus": dimensional_bus.is_running,
         "sentinel": sentinel.is_running,
-        "health_score": health_summary.get("health_score", 1.0),
-        "health_tier": health_summary.get("tier", "EXCELLENT"),
+        "health_score": health_summary.to_dict().get("health_score", 1.0),
+        "health_tier": health_summary.to_dict().get("health_tier", "EXCELLENT"),
         "smart_adaptive": True,
     }
 
@@ -505,7 +505,7 @@ async def create_identity(request: Request, identity: IdentityCreate):
         raise HTTPException(status_code=409, detail="Identity already exists")
 
     # Determine tier and infinity_role from role
-    from shared_core.infinity.nomenclature import (
+    from Dimensional.infinity.nomenclature import (
         get_tier_for_role as _gtr,
         get_infinity_role_for_role as _girr,
     )
@@ -674,7 +674,7 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
         updates.append("role = ?")
         params.append(update.role)
         # Update tier and infinity_role based on new role
-        from shared_core.infinity.nomenclature import (
+        from Dimensional.infinity.nomenclature import (
             get_tier_for_role as _gtr,
             get_infinity_role_for_role as _girr,
         )

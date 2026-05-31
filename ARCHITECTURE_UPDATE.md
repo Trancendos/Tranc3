@@ -13,7 +13,7 @@ This document captures the architectural changes made during the comprehensive f
 
 ## 1. New Architecture Components
 
-### 1.1 Middleware Stack (`shared_core/middleware/`)
+### 1.1 Middleware Stack (`Dimensional/middleware/`)
 
 A complete middleware stack was ported from the-citadel TypeScript implementation to Python/FastAPI, providing defense-grade request processing.
 
@@ -61,7 +61,7 @@ A complete middleware stack was ported from the-citadel TypeScript implementatio
   - Sets `request.state.user` for rate limiter tier awareness
   - In-memory user store fallback when database unavailable
 
-### 1.2 Defense Engine (`shared_core/security_automation/defense_engine.py`)
+### 1.2 Defense Engine (`Dimensional/security_automation/defense_engine.py`)
 
 - **Purpose**: Firewall rule evaluation, security incident management, and threat assessment
 - **Source**: Ported from `the-citadel/src/defense/defense-engine.ts`
@@ -84,7 +84,7 @@ A complete middleware stack was ported from the-citadel TypeScript implementatio
   - `GET /api/ecosystem/defense/incidents` — List incidents
   - `GET /api/ecosystem/defense/stats` — Defense statistics
 
-### 1.3 Heartbeat Aggregator (`shared_core/orchestration/heartbeat_aggregator.py`)
+### 1.3 Heartbeat Aggregator (`Dimensional/orchestration/heartbeat_aggregator.py`)
 
 - **Purpose**: Real-time service health monitoring with predictive alerting
 - **Source**: Ported from `the-hive/src/heartbeat/heartbeat-aggregator.ts`
@@ -111,7 +111,7 @@ A complete middleware stack was ported from the-citadel TypeScript implementatio
   - `POST /api/ecosystem/heartbeat/alerts/{alert_id}/resolve` — Resolve alert
   - `GET /api/ecosystem/heartbeat/stats` — Aggregate statistics
 
-### 1.4 OCI Object Storage Provider (`shared_core/architecture/oci_storage.py`)
+### 1.4 OCI Object Storage Provider (`Dimensional/architecture/oci_storage.py`)
 
 - **Purpose**: Oracle Cloud Infrastructure Object Storage integration
 - **Source**: New implementation
@@ -193,7 +193,7 @@ The ecosystem API was substantially rewritten from version 1.0.0 to 2.0.0:
 - `IncidentCreateRequest`: New for creating security incidents
 - `HeartbeatRequest`: New for submitting service heartbeats
 
-### 2.2 Storage Factory (`shared_core/architecture/storage_factory.py`)
+### 2.2 Storage Factory (`Dimensional/architecture/storage_factory.py`)
 
 **Added**:
 - `import asyncio` at module level
@@ -210,7 +210,7 @@ The ecosystem API was substantially rewritten from version 1.0.0 to 2.0.0:
 - `sync_to_cloud()` now tracks sync statistics
 - `get_provider()` enhanced with cloud provider auto-detection
 
-### 2.3 Enhanced Registry (`shared_core/orchestration/enhanced_registry.py`)
+### 2.3 Enhanced Registry (`Dimensional/orchestration/enhanced_registry.py`)
 
 **Fixed**:
 - Asymmetric event log trim: `self._event_log[-500:]` → `self._event_log[-1000:]`
@@ -310,13 +310,13 @@ The ecosystem API was substantially rewritten from version 1.0.0 to 2.0.0:
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `shared_core/middleware/__init__.py` | 6 | Package init |
-| `shared_core/middleware/auth.py` | ~150 | JWT + API Key authentication middleware |
-| `shared_core/middleware/telemetry.py` | ~200 | Request telemetry + trace propagation |
-| `shared_core/middleware/rate_limiter.py` | ~180 | Adaptive IAM-tier rate limiting |
-| `shared_core/security_automation/defense_engine.py` | ~300 | Firewall + incident management |
-| `shared_core/architecture/oci_storage.py` | ~200 | Oracle Cloud Infrastructure storage |
-| `shared_core/orchestration/heartbeat_aggregator.py` | ~500 | Service health monitoring + alerting |
+| `Dimensional/middleware/__init__.py` | 6 | Package init |
+| `Dimensional/middleware/auth.py` | ~150 | JWT + API Key authentication middleware |
+| `Dimensional/middleware/telemetry.py` | ~200 | Request telemetry + trace propagation |
+| `Dimensional/middleware/rate_limiter.py` | ~180 | Adaptive IAM-tier rate limiting |
+| `Dimensional/security_automation/defense_engine.py` | ~300 | Firewall + incident management |
+| `Dimensional/architecture/oci_storage.py` | ~200 | Oracle Cloud Infrastructure storage |
+| `Dimensional/orchestration/heartbeat_aggregator.py` | ~500 | Service health monitoring + alerting |
 | `src/ai_gateway/zero_cost_config.py` | ~300 | Zero-cost AI provider configuration |
 | `src/ai_gateway/providers/groq.py` | ~200 | Groq LPU inference provider |
 | `src/ai_gateway/providers/deepseek.py` | ~180 | DeepSeek reasoning provider |

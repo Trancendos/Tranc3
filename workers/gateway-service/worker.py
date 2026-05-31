@@ -44,21 +44,21 @@ from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 # Phase 22: Infinity Ecosystem security integration
-from shared_core.infinity.abac import ABACEngine, get_default_policies
-from shared_core.infinity.auth_gateway import AuthGatewayMiddleware, WebSocketAuthManager
-from shared_core.infinity.nomenclature import InfinityRole, Pillar, SentinelChannel, Tier
-from shared_core.infinity.owasp_hardening import OWASPHardeningMiddleware
-from shared_core.infinity.rbac import RBACEngine
+from Dimensional.infinity.abac import ABACEngine, get_default_policies
+from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware, WebSocketAuthManager
+from Dimensional.infinity.nomenclature import InfinityRole, Pillar, SentinelChannel, Tier
+from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
+from Dimensional.infinity.rbac import RBACEngine
 
 # Phase 22.3: Sentinel Station event bus integration
-from shared_core.infinity.sentinel_station import (
+from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
     SharedSSEGenerator,
     get_sentinel_station,
 )
 
 # Phase 22.4: Dimensional Services integration
-from shared_core.dimensionals import (
+from Dimensional.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
     get_underverse_registry,
@@ -71,7 +71,13 @@ from shared_core.dimensionals import (
 DB_PATH = os.environ.get("GATEWAY_DB_PATH", "data/gateway.db")
 PORT = int(os.environ.get("GATEWAY_PORT", "8040"))
 CACHE_TTL = int(os.environ.get("GATEWAY_CACHE_TTL", "5"))
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+_jwt_secret_raw = os.environ.get("JWT_SECRET")
+if not _jwt_secret_raw:
+    raise RuntimeError(
+        "JWT_SECRET is not set. This service cannot validate tokens without it. "
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+    )
+JWT_SECRET: str = _jwt_secret_raw
 
 UPSTREAM_WORKERS = {
     "vault": {"port": 8030, "health": "/health", "stats": "/stats"},
@@ -118,7 +124,7 @@ underverse_registry = get_underverse_registry()
 # Phase 22.6: Smart Adaptive Intelligence for Gateway
 # ---------------------------------------------------------------------------
 
-from shared_core.infinity.worker_integration import InfinityWorkerKit  # noqa: E402
+from Dimensional.infinity.worker_integration import InfinityWorkerKit  # noqa: E402
 
 worker_kit = InfinityWorkerKit(
     "gateway-service",
@@ -250,7 +256,7 @@ async def _lifespan(app: FastAPI):
 
                 # Gateway reporter
                 if worker_kit.health.should_fire("gateway_reporter"):
-                    summary = worker_kit.health.get_health_summary()
+                    summary = worker_kit.health.get_health_summary().to_dict()
                     worker_kit.health.record_fire("gateway_reporter")
                     await sentinel.publish(
                         SentinelEvent(
@@ -904,7 +910,7 @@ async def set_threat_level(body: dict, request: Request):
     if user.get("role") != InfinityRole.ADMIN:
         raise HTTPException(403, "Only admins can change threat level")
 
-    from shared_core.infinity.abac import ThreatLevel
+    from Dimensional.infinity.abac import ThreatLevel
 
     level_str = body.get("threat_level", body.get("level", "")).lower()
     try:
@@ -1007,7 +1013,7 @@ async def sentinel_status(request: Request):
 async def sentinel_channels(request: Request):
     """List available Sentinel Station channels and their configuration."""
     _check_rbac(request, "/api/security", "GET")
-    from shared_core.infinity.sentinel_config import sentinel_config
+    from Dimensional.infinity.sentinel_config import sentinel_config
 
     channels = {}
     for name, cfg in sentinel_config.channels.items():

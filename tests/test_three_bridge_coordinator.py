@@ -263,7 +263,7 @@ class TestCrossBridgeEvents:
         coordinator._max_tracked_events = 5
         for i in range(10):
             coordinator._track_cross_bridge_event(CrossBridgeEvent(event_type=f"event-{i}"))
-        _recent = coordinator.get_recent_cross_bridge_events()
+        coordinator.get_recent_cross_bridge_events()
         # Should only keep the last 5
         total = len(coordinator._cross_bridge_events)
         assert total <= 5

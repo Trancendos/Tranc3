@@ -24,13 +24,13 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from shared_core.error_handlers import safe_error_detail
-from shared_core.sanitize import sanitize_for_log
-from shared_core.url_validation import SSRFError, validate_webhook_url
+from Dimensional.error_handlers import safe_error_detail
+from Dimensional.sanitize import sanitize_for_log
+from Dimensional.url_validation import SSRFError, validate_webhook_url
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -393,7 +393,7 @@ class NotificationDispatcher:
 
         The URL is validated against SSRF protections before any network
         request is made.  Only HTTPS URLs to public, non-reserved hosts
-        are permitted.  See shared_core.url_validation for details.
+        are permitted.  See Dimensional.url_validation for details.
         """
         import urllib.request
         from urllib.parse import urlparse
@@ -463,6 +463,24 @@ app.add_middleware(
 
 STARTED_AT = datetime.now(timezone.utc)
 
+# ---------------------------------------------------------------------------
+# Internal auth
+# ---------------------------------------------------------------------------
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return  # unconfigured in test/dev — allow through
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
 
 # ---------------------------------------------------------------------------
 # Health
@@ -492,7 +510,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@app.post("/notifications/send")
+@_router.post("/notifications/send")
 async def send_notification(req: NotificationRequest):
     """Send a notification through the specified channel."""
     # Check user preferences
@@ -596,7 +614,7 @@ async def send_notification(req: NotificationRequest):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/notifications")
+@_router.get("/notifications")
 async def list_notifications(
     user_id: Optional[str] = None,
     status: Optional[str] = None,
@@ -611,7 +629,7 @@ async def list_notifications(
     }
 
 
-@app.get("/notifications/{notification_id}")
+@_router.get("/notifications/{notification_id}")
 async def get_notification(notification_id: str):
     """Get a specific notification by ID."""
     notif = db.get_notification(notification_id)
@@ -625,20 +643,20 @@ async def get_notification(notification_id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.post("/templates")
+@_router.post("/templates")
 async def create_template(template: NotificationTemplate):
     """Create a notification template."""
     created = db.create_template(template)
     return {"ok": True, "template_id": created.template_id}
 
 
-@app.get("/templates")
+@_router.get("/templates")
 async def list_templates(channel: Optional[str] = None):
     """List notification templates."""
     return {"templates": db.list_templates(channel=channel)}
 
 
-@app.get("/templates/{template_id}")
+@_router.get("/templates/{template_id}")
 async def get_template(template_id: str):
     """Get a specific template."""
     template = db.get_template(template_id)
@@ -647,7 +665,7 @@ async def get_template(template_id: str):
     return template
 
 
-@app.delete("/templates/{template_id}")
+@_router.delete("/templates/{template_id}")
 async def delete_template(template_id: str):
     """Delete a notification template."""
     if not db.delete_template(template_id):
@@ -660,7 +678,7 @@ async def delete_template(template_id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/preferences/{user_id}")
+@_router.get("/preferences/{user_id}")
 async def get_preferences(user_id: str):
     """Get notification preferences for a user."""
     prefs = db.get_preferences(user_id)
@@ -670,12 +688,15 @@ async def get_preferences(user_id: str):
     return prefs
 
 
-@app.put("/preferences/{user_id}")
+@_router.put("/preferences/{user_id}")
 async def set_preferences(user_id: str, prefs: UserPreferences):
     """Set notification preferences for a user."""
     prefs.user_id = user_id
     db.set_preferences(prefs)
     return {"ok": True, "user_id": user_id}
+
+
+app.include_router(_router)
 
 
 # ---------------------------------------------------------------------------

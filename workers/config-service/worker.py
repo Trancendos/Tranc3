@@ -9,6 +9,7 @@ Zero-cost: FastAPI + SQLite, no external deps.
 """
 
 from __future__ import annotations
+import os
 
 import json
 import logging
@@ -19,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -150,6 +151,36 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
+
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+
+
+async def require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if x_internal_secret != _INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+
+
+_router = APIRouter(dependencies=[Depends(require_internal_auth)])
+
+
 @app.get("/health")
 async def health():
     with get_conn() as conn:
@@ -175,14 +206,14 @@ async def health():
 # --- Namespaces ---
 
 
-@app.get("/namespaces")
+@_router.get("/namespaces")
 async def list_namespaces():
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM namespaces ORDER BY name").fetchall()
     return {"namespaces": [dict(r) for r in rows]}
 
 
-@app.post("/namespaces", status_code=201)
+@_router.post("/namespaces", status_code=201)
 async def create_namespace(req: NamespaceCreate):
     with get_conn() as conn:
         if conn.execute("SELECT name FROM namespaces WHERE name = ?", (req.name,)).fetchone():
@@ -195,7 +226,7 @@ async def create_namespace(req: NamespaceCreate):
     return {"name": req.name, "description": req.description}
 
 
-@app.delete("/namespaces/{namespace}")
+@_router.delete("/namespaces/{namespace}")
 async def delete_namespace(namespace: str):
     if namespace == "default":
         raise HTTPException(status_code=400, detail="Cannot delete default namespace")
@@ -217,7 +248,7 @@ def _ensure_ns(namespace: str) -> None:
             raise HTTPException(status_code=404, detail=f"Namespace '{namespace}' not found")
 
 
-@app.get("/config/{namespace}")
+@_router.get("/config/{namespace}")
 async def list_keys(namespace: str, prefix: Optional[str] = None):
     _ensure_ns(namespace)
     with get_conn() as conn:
@@ -239,7 +270,7 @@ async def list_keys(namespace: str, prefix: Optional[str] = None):
     return {"namespace": namespace, "keys": result, "count": len(result)}
 
 
-@app.get("/config/{namespace}/{key}")
+@_router.get("/config/{namespace}/{key}")
 async def get_key(namespace: str, key: str):
     _ensure_ns(namespace)
     with get_conn() as conn:
@@ -253,7 +284,7 @@ async def get_key(namespace: str, key: str):
     return d
 
 
-@app.put("/config/{namespace}/{key}", status_code=200)
+@_router.put("/config/{namespace}/{key}", status_code=200)
 async def set_key(namespace: str, key: str, req: ConfigSet):
     _ensure_ns(namespace)
     now = time.time()
@@ -282,7 +313,7 @@ async def set_key(namespace: str, key: str, req: ConfigSet):
     return {"namespace": namespace, "key": key, "version": version, "updated_at": now}
 
 
-@app.delete("/config/{namespace}/{key}")
+@_router.delete("/config/{namespace}/{key}")
 async def delete_key(namespace: str, key: str):
     _ensure_ns(namespace)
     with get_conn() as conn:
@@ -295,7 +326,7 @@ async def delete_key(namespace: str, key: str):
     return {"deleted": key, "namespace": namespace}
 
 
-@app.post("/config/{namespace}/bulk", status_code=200)
+@_router.post("/config/{namespace}/bulk", status_code=200)
 async def bulk_set(namespace: str, req: BulkSetIn):
     _ensure_ns(namespace)
     now = time.time()
@@ -335,7 +366,7 @@ async def bulk_set(namespace: str, req: BulkSetIn):
     return {"namespace": namespace, "updated": updated}
 
 
-@app.get("/config/{namespace}/{key}/history")
+@_router.get("/config/{namespace}/{key}/history")
 async def key_history(namespace: str, key: str, limit: int = Query(20, le=100)):
     _ensure_ns(namespace)
     with get_conn() as conn:
@@ -344,6 +375,9 @@ async def key_history(namespace: str, key: str, limit: int = Query(20, le=100)):
             (namespace, key, limit),
         ).fetchall()
     return {"namespace": namespace, "key": key, "history": [dict(r) for r in rows]}
+
+
+app.include_router(_router)
 
 
 if __name__ == "__main__":

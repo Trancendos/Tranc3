@@ -11,7 +11,7 @@ Architecture:
     - SentinelClusterManager: Top-level manager for cluster lifecycle
 """
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import uuid
 import logging

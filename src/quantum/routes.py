@@ -11,7 +11,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
 
-from shared_core.error_handlers import safe_error_detail
+from Dimensional.error_handlers import safe_error_detail
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/thinktank", tags=["think-tank"])

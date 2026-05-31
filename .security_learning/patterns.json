@@ -34,5 +34,752 @@
     "false_positive_count": 0,
     "last_seen": "2026-05-22T16:37:39.327848+00:00",
     "notes": ""
+  },
+  "PY-008:.": {
+    "rule_id": "PY-008",
+    "directory": ".",
+    "file_glob": "./*.py",
+    "observation_count": 945,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653658+00:00",
+    "notes": ""
+  },
+  "CWE-209:.": {
+    "rule_id": "CWE-209",
+    "directory": ".",
+    "file_glob": "./*.py",
+    "observation_count": 180,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653607+00:00",
+    "notes": ""
+  },
+  "PY-008:src": {
+    "rule_id": "PY-008",
+    "directory": "src",
+    "file_glob": "src/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653674+00:00",
+    "notes": ""
+  },
+  "PY-008:src/master/adapters": {
+    "rule_id": "PY-008",
+    "directory": "src/master/adapters",
+    "file_glob": "src/master/adapters/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653698+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/gateway": {
+    "rule_id": "CWE-117",
+    "directory": "src/gateway",
+    "file_glob": "src/gateway/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653710+00:00",
+    "notes": ""
+  },
+  "PY-008:src/gateway": {
+    "rule_id": "PY-008",
+    "directory": "src/gateway",
+    "file_glob": "src/gateway/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653720+00:00",
+    "notes": ""
+  },
+  "CWE-022:src/evaluation": {
+    "rule_id": "CWE-022",
+    "directory": "src/evaluation",
+    "file_glob": "src/evaluation/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653730+00:00",
+    "notes": ""
+  },
+  "CWE-022:src/training": {
+    "rule_id": "CWE-022",
+    "directory": "src/training",
+    "file_glob": "src/training/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653741+00:00",
+    "notes": ""
+  },
+  "PY-008:src/training": {
+    "rule_id": "PY-008",
+    "directory": "src/training",
+    "file_glob": "src/training/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653750+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/research": {
+    "rule_id": "CWE-117",
+    "directory": "src/research",
+    "file_glob": "src/research/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653760+00:00",
+    "notes": ""
+  },
+  "CWE-209:src/routers": {
+    "rule_id": "CWE-209",
+    "directory": "src/routers",
+    "file_glob": "src/routers/*.py",
+    "observation_count": 180,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653796+00:00",
+    "notes": ""
+  },
+  "PY-008:src/routers": {
+    "rule_id": "PY-008",
+    "directory": "src/routers",
+    "file_glob": "src/routers/*.py",
+    "observation_count": 630,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653924+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/healing": {
+    "rule_id": "CWE-117",
+    "directory": "src/healing",
+    "file_glob": "src/healing/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653939+00:00",
+    "notes": ""
+  },
+  "PY-008:src/intelligence": {
+    "rule_id": "PY-008",
+    "directory": "src/intelligence",
+    "file_glob": "src/intelligence/*.py",
+    "observation_count": 225,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.653987+00:00",
+    "notes": ""
+  },
+  "CWE-022:src/fluidic": {
+    "rule_id": "CWE-022",
+    "directory": "src/fluidic",
+    "file_glob": "src/fluidic/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654005+00:00",
+    "notes": ""
+  },
+  "CWE-022:src/benchmark": {
+    "rule_id": "CWE-022",
+    "directory": "src/benchmark",
+    "file_glob": "src/benchmark/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654015+00:00",
+    "notes": ""
+  },
+  "PY-008:src/benchmark": {
+    "rule_id": "PY-008",
+    "directory": "src/benchmark",
+    "file_glob": "src/benchmark/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654034+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/evolution": {
+    "rule_id": "CWE-117",
+    "directory": "src/evolution",
+    "file_glob": "src/evolution/*.py",
+    "observation_count": 135,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654062+00:00",
+    "notes": ""
+  },
+  "PY-008:src/inference": {
+    "rule_id": "PY-008",
+    "directory": "src/inference",
+    "file_glob": "src/inference/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654081+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/nanoservices/query_intent_llm": {
+    "rule_id": "CWE-117",
+    "directory": "src/nanoservices/query_intent_llm",
+    "file_glob": "src/nanoservices/query_intent_llm/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654101+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/nanoservices/wasm_edge": {
+    "rule_id": "CWE-117",
+    "directory": "src/nanoservices/wasm_edge",
+    "file_glob": "src/nanoservices/wasm_edge/*.py",
+    "observation_count": 180,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654139+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/nanoservices/genetic_optimizer": {
+    "rule_id": "CWE-117",
+    "directory": "src/nanoservices/genetic_optimizer",
+    "file_glob": "src/nanoservices/genetic_optimizer/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654160+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/nanoservices/adaptive_loop": {
+    "rule_id": "CWE-117",
+    "directory": "src/nanoservices/adaptive_loop",
+    "file_glob": "src/nanoservices/adaptive_loop/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654170+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/nanoservices/vector_plan_cache": {
+    "rule_id": "CWE-117",
+    "directory": "src/nanoservices/vector_plan_cache",
+    "file_glob": "src/nanoservices/vector_plan_cache/*.py",
+    "observation_count": 315,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654238+00:00",
+    "notes": ""
+  },
+  "CWE-327:src/nanoservices/vector_plan_cache": {
+    "rule_id": "CWE-327",
+    "directory": "src/nanoservices/vector_plan_cache",
+    "file_glob": "src/nanoservices/vector_plan_cache/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654247+00:00",
+    "notes": ""
+  },
+  "CWE-327:src/nanoservices/feature_flags": {
+    "rule_id": "CWE-327",
+    "directory": "src/nanoservices/feature_flags",
+    "file_glob": "src/nanoservices/feature_flags/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654258+00:00",
+    "notes": ""
+  },
+  "PY-008:src/nanoservices/circuit_breaker": {
+    "rule_id": "PY-008",
+    "directory": "src/nanoservices/circuit_breaker",
+    "file_glob": "src/nanoservices/circuit_breaker/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654268+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/nanoservices/predictive_drift": {
+    "rule_id": "CWE-117",
+    "directory": "src/nanoservices/predictive_drift",
+    "file_glob": "src/nanoservices/predictive_drift/*.py",
+    "observation_count": 180,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654306+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/nanoservices/auto_healing": {
+    "rule_id": "CWE-117",
+    "directory": "src/nanoservices/auto_healing",
+    "file_glob": "src/nanoservices/auto_healing/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654316+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/nanoservices/gpu_kernel_service": {
+    "rule_id": "CWE-117",
+    "directory": "src/nanoservices/gpu_kernel_service",
+    "file_glob": "src/nanoservices/gpu_kernel_service/*.py",
+    "observation_count": 180,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654396+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/nanoservices/aerial_drone_adapter": {
+    "rule_id": "CWE-117",
+    "directory": "src/nanoservices/aerial_drone_adapter",
+    "file_glob": "src/nanoservices/aerial_drone_adapter/*.py",
+    "observation_count": 270,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654462+00:00",
+    "notes": ""
+  },
+  "PY-008:src/nanoservices/nsa_client": {
+    "rule_id": "PY-008",
+    "directory": "src/nanoservices/nsa_client",
+    "file_glob": "src/nanoservices/nsa_client/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654474+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/validation": {
+    "rule_id": "CWE-117",
+    "directory": "src/validation",
+    "file_glob": "src/validation/*.py",
+    "observation_count": 225,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654523+00:00",
+    "notes": ""
+  },
+  "PY-008:src/validation": {
+    "rule_id": "PY-008",
+    "directory": "src/validation",
+    "file_glob": "src/validation/*.py",
+    "observation_count": 135,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654550+00:00",
+    "notes": ""
+  },
+  "CWE-022:src/personality": {
+    "rule_id": "CWE-022",
+    "directory": "src/personality",
+    "file_glob": "src/personality/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654570+00:00",
+    "notes": ""
+  },
+  "PY-008:src/personality": {
+    "rule_id": "PY-008",
+    "directory": "src/personality",
+    "file_glob": "src/personality/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654579+00:00",
+    "notes": ""
+  },
+  "PY-008:src/tensorflow_core": {
+    "rule_id": "PY-008",
+    "directory": "src/tensorflow_core",
+    "file_glob": "src/tensorflow_core/*.py",
+    "observation_count": 180,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.654617+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/protocols/three_bridge": {
+    "rule_id": "CWE-117",
+    "directory": "src/protocols/three_bridge",
+    "file_glob": "src/protocols/three_bridge/*.py",
+    "observation_count": 990,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655039+00:00",
+    "notes": ""
+  },
+  "PY-008:src/protocols/three_bridge": {
+    "rule_id": "PY-008",
+    "directory": "src/protocols/three_bridge",
+    "file_glob": "src/protocols/three_bridge/*.py",
+    "observation_count": 135,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655071+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/protocols/a2a": {
+    "rule_id": "CWE-117",
+    "directory": "src/protocols/a2a",
+    "file_glob": "src/protocols/a2a/*.py",
+    "observation_count": 135,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655108+00:00",
+    "notes": ""
+  },
+  "PY-008:src/protocols/a2a": {
+    "rule_id": "PY-008",
+    "directory": "src/protocols/a2a",
+    "file_glob": "src/protocols/a2a/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655117+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/protocols/hil_a": {
+    "rule_id": "CWE-117",
+    "directory": "src/protocols/hil_a",
+    "file_glob": "src/protocols/hil_a/*.py",
+    "observation_count": 900,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655307+00:00",
+    "notes": ""
+  },
+  "PY-008:src/cloud": {
+    "rule_id": "PY-008",
+    "directory": "src/cloud",
+    "file_glob": "src/cloud/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655329+00:00",
+    "notes": ""
+  },
+  "PY-008:src/workers": {
+    "rule_id": "PY-008",
+    "directory": "src/workers",
+    "file_glob": "src/workers/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655340+00:00",
+    "notes": ""
+  },
+  "PY-008:src/resilience": {
+    "rule_id": "PY-008",
+    "directory": "src/resilience",
+    "file_glob": "src/resilience/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655350+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/bridge": {
+    "rule_id": "CWE-117",
+    "directory": "src/bridge",
+    "file_glob": "src/bridge/*.py",
+    "observation_count": 405,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655437+00:00",
+    "notes": ""
+  },
+  "PY-008:src/bridge": {
+    "rule_id": "PY-008",
+    "directory": "src/bridge",
+    "file_glob": "src/bridge/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655446+00:00",
+    "notes": ""
+  },
+  "PY-008:src/core": {
+    "rule_id": "PY-008",
+    "directory": "src/core",
+    "file_glob": "src/core/*.py",
+    "observation_count": 135,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655536+00:00",
+    "notes": ""
+  },
+  "CWE-022:src/core": {
+    "rule_id": "CWE-022",
+    "directory": "src/core",
+    "file_glob": "src/core/*.py",
+    "observation_count": 135,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655525+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/core": {
+    "rule_id": "CWE-117",
+    "directory": "src/core",
+    "file_glob": "src/core/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655509+00:00",
+    "notes": ""
+  },
+  "PY-008:src/security": {
+    "rule_id": "PY-008",
+    "directory": "src/security",
+    "file_glob": "src/security/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655549+00:00",
+    "notes": ""
+  },
+  "CWE-117:src/security": {
+    "rule_id": "CWE-117",
+    "directory": "src/security",
+    "file_glob": "src/security/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655568+00:00",
+    "notes": ""
+  },
+  "PY-008:src/ai_gateway": {
+    "rule_id": "PY-008",
+    "directory": "src/ai_gateway",
+    "file_glob": "src/ai_gateway/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655588+00:00",
+    "notes": ""
+  },
+  "PY-008:src/ai_gateway/providers": {
+    "rule_id": "PY-008",
+    "directory": "src/ai_gateway/providers",
+    "file_glob": "src/ai_gateway/providers/*.py",
+    "observation_count": 225,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655810+00:00",
+    "notes": ""
+  },
+  "PY-008:aeonmind/python/tests": {
+    "rule_id": "PY-008",
+    "directory": "aeonmind/python/tests",
+    "file_glob": "aeonmind/python/tests/*.py",
+    "observation_count": 315,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655916+00:00",
+    "notes": ""
+  },
+  "PY-008:shared_core/dimensionals": {
+    "rule_id": "PY-008",
+    "directory": "shared_core/dimensionals",
+    "file_glob": "shared_core/dimensionals/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655930+00:00",
+    "notes": ""
+  },
+  "PY-008:shared_core/infinity": {
+    "rule_id": "PY-008",
+    "directory": "shared_core/infinity",
+    "file_glob": "shared_core/infinity/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655952+00:00",
+    "notes": ""
+  },
+  "PY-008:tranc3-bots/server": {
+    "rule_id": "PY-008",
+    "directory": "tranc3-bots/server",
+    "file_glob": "tranc3-bots/server/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655972+00:00",
+    "notes": ""
+  },
+  "PY-008:tranc3-bots/bots": {
+    "rule_id": "PY-008",
+    "directory": "tranc3-bots/bots",
+    "file_glob": "tranc3-bots/bots/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.655984+00:00",
+    "notes": ""
+  },
+  "PY-008:tranc3-bots/client": {
+    "rule_id": "PY-008",
+    "directory": "tranc3-bots/client",
+    "file_glob": "tranc3-bots/client/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.656006+00:00",
+    "notes": ""
+  },
+  "CWE-022:scripts": {
+    "rule_id": "CWE-022",
+    "directory": "scripts",
+    "file_glob": "scripts/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.656028+00:00",
+    "notes": ""
+  },
+  "PY-008:tests": {
+    "rule_id": "PY-008",
+    "directory": "tests",
+    "file_glob": "tests/*.py",
+    "observation_count": 3645,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.656977+00:00",
+    "notes": ""
+  },
+  "CWE-022:tests": {
+    "rule_id": "CWE-022",
+    "directory": "tests",
+    "file_glob": "tests/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.656752+00:00",
+    "notes": ""
+  },
+  "PY-008:workers/gateway-service": {
+    "rule_id": "PY-008",
+    "directory": "workers/gateway-service",
+    "file_glob": "workers/gateway-service/*.py",
+    "observation_count": 315,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657047+00:00",
+    "notes": ""
+  },
+  "CWE-117:workers/dimensional-nexus-service": {
+    "rule_id": "CWE-117",
+    "directory": "workers/dimensional-nexus-service",
+    "file_glob": "workers/dimensional-nexus-service/*.py",
+    "observation_count": 360,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657126+00:00",
+    "notes": ""
+  },
+  "PY-008:workers/sentinel-station-service": {
+    "rule_id": "PY-008",
+    "directory": "workers/sentinel-station-service",
+    "file_glob": "workers/sentinel-station-service/*.py",
+    "observation_count": 135,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657155+00:00",
+    "notes": ""
+  },
+  "PY-008:workers/the-grid": {
+    "rule_id": "PY-008",
+    "directory": "workers/the-grid",
+    "file_glob": "workers/the-grid/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657165+00:00",
+    "notes": ""
+  },
+  "CWE-117:workers/infinity-bridge-service": {
+    "rule_id": "CWE-117",
+    "directory": "workers/infinity-bridge-service",
+    "file_glob": "workers/infinity-bridge-service/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657176+00:00",
+    "notes": ""
+  },
+  "PY-008:workers/infinity-portal-service": {
+    "rule_id": "PY-008",
+    "directory": "workers/infinity-portal-service",
+    "file_glob": "workers/infinity-portal-service/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657185+00:00",
+    "notes": ""
+  },
+  "CWE-327:workers/cdn-service": {
+    "rule_id": "CWE-327",
+    "directory": "workers/cdn-service",
+    "file_glob": "workers/cdn-service/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657195+00:00",
+    "notes": ""
+  },
+  "CWE-327:workers/storage-service": {
+    "rule_id": "CWE-327",
+    "directory": "workers/storage-service",
+    "file_glob": "workers/storage-service/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657205+00:00",
+    "notes": ""
+  },
+  "CWE-117:workers/hive-service": {
+    "rule_id": "CWE-117",
+    "directory": "workers/hive-service",
+    "file_glob": "workers/hive-service/*.py",
+    "observation_count": 540,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657317+00:00",
+    "notes": ""
+  },
+  "CWE-209:workers/gbrain-bridge": {
+    "rule_id": "CWE-209",
+    "directory": "workers/gbrain-bridge",
+    "file_glob": "workers/gbrain-bridge/*.py",
+    "observation_count": 135,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657346+00:00",
+    "notes": ""
+  },
+  "PY-008:workers/gbrain-bridge": {
+    "rule_id": "PY-008",
+    "directory": "workers/gbrain-bridge",
+    "file_glob": "workers/gbrain-bridge/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657355+00:00",
+    "notes": ""
+  },
+  "CWE-117:Dimensional": {
+    "rule_id": "CWE-117",
+    "directory": "Dimensional",
+    "file_glob": "Dimensional/*.py",
+    "observation_count": 720,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657502+00:00",
+    "notes": ""
+  },
+  "PY-008:Dimensional/dimensionals": {
+    "rule_id": "PY-008",
+    "directory": "Dimensional/dimensionals",
+    "file_glob": "Dimensional/dimensionals/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657513+00:00",
+    "notes": ""
+  },
+  "CWE-117:Dimensional/hive": {
+    "rule_id": "CWE-117",
+    "directory": "Dimensional/hive",
+    "file_glob": "Dimensional/hive/*.py",
+    "observation_count": 1080,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657849+00:00",
+    "notes": ""
+  },
+  "PY-008:Dimensional/infinity": {
+    "rule_id": "PY-008",
+    "directory": "Dimensional/infinity",
+    "file_glob": "Dimensional/infinity/*.py",
+    "observation_count": 90,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657870+00:00",
+    "notes": ""
+  },
+  "CWE-117:Dimensional/infinity": {
+    "rule_id": "CWE-117",
+    "directory": "Dimensional/infinity",
+    "file_glob": "Dimensional/infinity/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657880+00:00",
+    "notes": ""
+  },
+  "CWE-117:Dimensional/infinity/bridge": {
+    "rule_id": "CWE-117",
+    "directory": "Dimensional/infinity/bridge",
+    "file_glob": "Dimensional/infinity/bridge/*.py",
+    "observation_count": 225,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.657940+00:00",
+    "notes": ""
+  },
+  "CWE-117:Dimensional/nexus": {
+    "rule_id": "CWE-117",
+    "directory": "Dimensional/nexus",
+    "file_glob": "Dimensional/nexus/*.py",
+    "observation_count": 495,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.658048+00:00",
+    "notes": ""
+  },
+  "PY-008:Dimensional/nexus": {
+    "rule_id": "PY-008",
+    "directory": "Dimensional/nexus",
+    "file_glob": "Dimensional/nexus/*.py",
+    "observation_count": 45,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.658012+00:00",
+    "notes": ""
+  },
+  "PY-008:Dimensional/architecture": {
+    "rule_id": "PY-008",
+    "directory": "Dimensional/architecture",
+    "file_glob": "Dimensional/architecture/*.py",
+    "observation_count": 855,
+    "false_positive_count": 0,
+    "last_seen": "2026-05-29T10:57:42.662156+00:00",
+    "notes": ""
   }
 }

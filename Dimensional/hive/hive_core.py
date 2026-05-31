@@ -53,7 +53,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -526,7 +526,6 @@ class PipelineManager:
         chunk.hops.append(f"hive-{uuid.uuid4().hex[:6]}")
 
         # Simulate delivery for each sink
-        _delivered = True
         for _sink_id in chunk.sink_id.split(","):
             # In production, this would route through the actual data transport
             pass
@@ -1113,78 +1112,6 @@ def create_hive_app() -> FastAPI:
         hive = get_hive()
         return await hive.flow_monitor.get_summary()
 
-    # --- Phase 28: Auto-Scaling Endpoints ---
-
-    @app.get("/autoscaler/status", tags=["autoscaler"])
-    async def autoscaler_status():
-        """Get the HIVE Auto-Scaler engine status."""
-        from Dimensional.hive.autoscaler import get_auto_scaler
-
-        scaler = get_auto_scaler()
-        return await scaler.get_status()
-
-    @app.post("/autoscaler/swarms/{swarm_id}/register", tags=["autoscaler"])
-    async def autoscaler_register_swarm(swarm_id: str, request: Request):
-        """Register a swarm with the auto-scaler."""
-        from Dimensional.hive.autoscaler import get_auto_scaler
-
-        body = await request.json()
-        scaler = get_auto_scaler()
-        await scaler.register_swarm(swarm_id, initial_nodes=body.get("initial_nodes", 1))
-        return {"action": "register_swarm", "swarm_id": swarm_id, "status": "registered"}
-
-    @app.delete("/autoscaler/swarms/{swarm_id}", tags=["autoscaler"])
-    async def autoscaler_unregister_swarm(swarm_id: str):
-        """Unregister a swarm from the auto-scaler."""
-        from Dimensional.hive.autoscaler import get_auto_scaler
-
-        scaler = get_auto_scaler()
-        await scaler.unregister_swarm(swarm_id)
-        return {"action": "unregister_swarm", "swarm_id": swarm_id, "status": "unregistered"}
-
-    @app.post("/autoscaler/swarms/{swarm_id}/evaluate", tags=["autoscaler"])
-    async def autoscaler_evaluate(swarm_id: str):
-        """Trigger a scaling evaluation for a specific swarm."""
-        from Dimensional.hive.autoscaler import get_auto_scaler
-
-        scaler = get_auto_scaler()
-        action = await scaler.evaluate(swarm_id)
-        if action:
-            return {
-                "action": "evaluate",
-                "swarm_id": swarm_id,
-                "scaling_action": action.model_dump(),
-            }
-        return {"action": "evaluate", "swarm_id": swarm_id, "scaling_action": None}
-
-    @app.post("/autoscaler/pause", tags=["autoscaler"])
-    async def autoscaler_pause():
-        """Pause the auto-scaler engine."""
-        from Dimensional.hive.autoscaler import get_auto_scaler
-
-        scaler = get_auto_scaler()
-        await scaler.pause()
-        return {"action": "pause", "status": "paused"}
-
-    @app.post("/autoscaler/resume", tags=["autoscaler"])
-    async def autoscaler_resume():
-        """Resume the auto-scaler engine."""
-        from Dimensional.hive.autoscaler import get_auto_scaler
-
-        scaler = get_auto_scaler()
-        await scaler.resume()
-        return {"action": "resume", "status": "active"}
-
-    # --- Phase 28: Cross-Bridge Orchestration Endpoints ---
-
-    @app.get("/orchestrator/status", tags=["orchestrator"])
-    async def orchestrator_status():
-        """Get cross-bridge orchestrator status."""
-        from Dimensional.cross_bridge_orchestrator import get_orchestrator
-
-        orch = get_orchestrator()
-        return orch.get_status()
-
     # -- WebSocket endpoint --
 
     @app.websocket("/ws")
@@ -1193,7 +1120,7 @@ def create_hive_app() -> FastAPI:
         await _ws_manager.connect(ws)
         try:
             while True:
-                _data = await ws.receive_text()
+                await ws.receive_text()
                 # Echo back for keepalive
                 await ws.send_text(json.dumps({"type": "pong", "hive_id": get_hive().node_id}))
         except WebSocketDisconnect:
