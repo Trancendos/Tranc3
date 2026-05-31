@@ -22,11 +22,24 @@ See also: [PLATFORM_INFRASTRUCTURE_MODE.md](./PLATFORM_INFRASTRUCTURE_MODE.md).
 ## Merged commits (consolidation wave)
 
 ```
+db2ba96+ fix(lint): cherry-pick PR #84/#88 ruff + format (3f68e45, 4715c17) — CI clean
 d2bffcd feat(platform): align ecosystem SYSTEM_MODE with PLATFORM_INFRA_MODE
 b24456d fix(shared_core): re-export MicroCeph constants from shim
 a8484cb fix(platform): restore CLOUD_ONLY default and cloud auto-rotation
 42986ff feat(deploy): single citadel_deploy_all script for Windows/Linux
 ```
+
+### PR tip commits applied to `main` (May 2026 follow-up)
+
+| Source | Applied |
+|--------|---------|
+| #84 `3f68e45` | Worker unused imports, B027 hooks on entity templates |
+| #84 `4f2b136` / `b24456d` | MicroCeph shim re-exports (already on main) |
+| #88 `4715c17` | Ruff format on gateway/entities/protocols; health_check alignment; A2A `ABC` transport |
+| #84 `821af4c` | Skipped (conflicted with `lead_tier` on `effective.py` — kept main behaviour) |
+| #84 `707e99f` | Skipped (auto-generated `.security_learning/` scanner noise only) |
+| #86 full merge | **Not applied** (would revert production stack; `aeonmind/` already on main) |
+| #89 palette UX | Already on main (`d84c0a7`, `ChatView` empty prompts) |
 
 Earlier `main` already included production readiness, adaptive rotation (70110bf), phase16 merge (9adf306), and related work — do not re-merge old PR branches on top of this.
 

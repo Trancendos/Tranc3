@@ -277,7 +277,7 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "blender_available": blender_path is not None,
-        "blender_path": blender_path
+        "blender_path": blender_path,
     }
 
 

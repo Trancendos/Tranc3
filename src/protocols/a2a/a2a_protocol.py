@@ -18,6 +18,7 @@ Key components:
 
 from __future__ import annotations  # noqa: I001
 
+from abc import ABC, abstractmethod
 import asyncio
 import json
 import logging
@@ -291,7 +292,7 @@ class A2ARouteRule:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class A2ATransport:
+class A2ATransport(ABC):
     """Abstract base class for A2A transports."""
 
     @abstractmethod
