@@ -21,6 +21,11 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+pytest.importorskip(
+    "shared_core.architecture.oci_adaptive_provider",
+    reason="OCI Adaptive provider lives in phase-16 storage branch; skipped on main.",
+)
+
 from shared_core.architecture.oci_adaptive_provider import (
     OCI_FREE_TIER_LIMITS,
     AdaptiveInstanceDatum,
@@ -35,7 +40,6 @@ from shared_core.architecture.oci_adaptive_provider import (
     SystemMode,
     _aws_sig4_sign,
 )
-
 
 # ===========================================================================
 # Constants

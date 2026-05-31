@@ -34,6 +34,7 @@ import logging
 import os
 import secrets
 import sqlite3
+import tempfile
 import time
 import uuid
 from contextlib import asynccontextmanager, contextmanager
@@ -69,7 +70,28 @@ JWT_SECRET: str = _jwt_secret_raw
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_MINUTES = int(os.environ.get("JWT_EXPIRY_MINUTES", "60"))
 REFRESH_EXPIRY_DAYS = int(os.environ.get("REFRESH_EXPIRY_DAYS", "30"))
-DATABASE_PATH = os.environ.get("AUTH_DATABASE_PATH", "/data/auth.db")
+
+
+def _default_auth_database_path() -> str:
+    """Resolve auth.db path with safe fallback for non-production environments.
+
+    Production deployments mount a writable /data volume. In CI, tests, and
+    local development /data is often missing or read-only — fall back to
+    ``$AUTH_DATABASE_PATH``, then ``$TRANC3_DATA_DIR``, then the system temp
+    directory so module import never crashes at start-up.
+    """
+    explicit = os.environ.get("AUTH_DATABASE_PATH")
+    if explicit:
+        return explicit
+    default_dir = "/data"
+    if os.path.isdir(default_dir) and os.access(default_dir, os.W_OK):
+        return os.path.join(default_dir, "auth.db")
+    fallback_dir = os.environ.get("TRANC3_DATA_DIR") or tempfile.gettempdir()
+    os.makedirs(fallback_dir, exist_ok=True)
+    return os.path.join(fallback_dir, "tranc3-auth.db")
+
+
+DATABASE_PATH = _default_auth_database_path()
 RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "10"))
 AUTH_ISSUER = os.environ.get("AUTH_ISSUER", "https://auth.trancendos.com")
 AUTH_BASE_URL = os.environ.get("AUTH_BASE_URL", "http://localhost:8005")

@@ -44,6 +44,21 @@ python-multipart==0.0.29
 # Fixes: CVE-2026-28684 (path traversal in dotenv loading)
 python-dotenv==1.2.2
 
+# === Password Hashing ===
+# bcrypt: Used by src/auth/db_user_manager.py for password hashing — replaces passlib.
+# Pinned to bcrypt 4.x line which avoids the legacy ``crypt`` deprecation warnings in 3.13.
+bcrypt==4.2.1
+
+# === MFA / TOTP ===
+# pyotp: TOTP/HOTP one-time passwords — powers MFA in workers/infinity-auth.
+pyotp==2.9.0
+
+# === Database / ORM ===
+# sqlalchemy: ORM — powers src/database/schema.py and src/auth/db_user_manager.py
+# alembic: schema migrations
+sqlalchemy==2.0.36
+alembic==1.14.0
+
 # === Web Framework ===
 # Fixes: CVE-2024-33663 (algorithm confusion), CVE-2024-29370 (JWE DoS) via python-jose>=3.4.0
 # python-jose 3.5.0: upgrades pyasn1 constraint to >=0.5.0 (was <0.5.0 in 3.4.0), enabling pyasn1 fix

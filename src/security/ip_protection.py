@@ -76,7 +76,9 @@ class AbuseDetector:
     SCRAPING_THRESHOLD = 100  # requests per minute
     BLOCK_DURATION = 3600  # 1 hour block
     INJECTION_PATTERNS = [
-        r"ignore\s+previous\s+instructions",
+        # Allow optional filler words between "ignore" and "previous instructions"
+        # (e.g. "IGNORE ALL PREVIOUS INSTRUCTIONS").
+        r"ignore\s+(?:\w+\s+){0,4}previous\s+instructions",
         r"system\s*:\s*you\s+are",
         r"<\|im_start\|>",
         r"<\|system\|>",
@@ -132,16 +134,36 @@ class AbuseDetector:
 
         return {"allowed": True, "recent_requests": recent}
 
+    @staticmethod
+    def _normalize_for_detection(message: str) -> str:
+        """Collapse character-spacing obfuscation (``i g n o r e`` → ``ignore``).
+
+        Detects runs of single-character tokens separated by a single space and
+        joins them, treating multi-space gaps as word boundaries. Defeats the
+        common evasion of putting whitespace between every letter of a
+        sensitive keyword.
+        """
+        import re as _re
+
+        def _collapse(match: "_re.Match[str]") -> str:
+            return match.group(0).replace(" ", "")
+
+        # Runs of single-letter tokens separated by exactly one space (>=4 letters).
+        # Multi-space gaps act as word boundaries so words stay separated after
+        # collapse: "i g n o r e  p r e v i o u s" → "ignore previous".
+        return _re.sub(r"(?:\b[A-Za-z] ){3,}[A-Za-z]\b", _collapse, message)
+
     def check_message(self, message: str, user_id: str) -> Dict:
         """Scan message for prompt injection and model extraction attempts."""
         violations = []
+        scan_targets = (message, self._normalize_for_detection(message))
 
         for pattern in self._compiled_injection:
-            if pattern.search(message):
+            if any(pattern.search(target) for target in scan_targets):
                 violations.append({"type": "prompt_injection", "pattern": pattern.pattern[:40]})
 
         for pattern in self._compiled_extraction:
-            if pattern.search(message):
+            if any(pattern.search(target) for target in scan_targets):
                 violations.append({"type": "model_extraction", "pattern": pattern.pattern[:40]})
 
         if violations:

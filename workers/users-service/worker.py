@@ -25,6 +25,7 @@ import json
 import logging
 import os
 import sqlite3
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,7 +37,27 @@ from pydantic import BaseModel, EmailStr, Field
 
 logger = logging.getLogger("tranc3.workers.users-service")
 
-DATABASE_PATH = "/data/users.db"
+
+def _default_database_path() -> str:
+    """Resolve users.db path with safe fallback for non-production environments.
+
+    Production deployments mount a writable /data volume. In CI, tests, and
+    local development /data is often missing or read-only — fall back to
+    ``$USERS_DATABASE_PATH``, then ``$TRANC3_DATA_DIR``, then the system temp
+    directory so module import never crashes at start-up.
+    """
+    explicit = os.environ.get("USERS_DATABASE_PATH")
+    if explicit:
+        return explicit
+    default_dir = "/data"
+    if os.path.isdir(default_dir) and os.access(default_dir, os.W_OK):
+        return os.path.join(default_dir, "users.db")
+    fallback_dir = os.environ.get("TRANC3_DATA_DIR") or tempfile.gettempdir()
+    os.makedirs(fallback_dir, exist_ok=True)
+    return os.path.join(fallback_dir, "tranc3-users.db")
+
+
+DATABASE_PATH = _default_database_path()
 
 # ---------------------------------------------------------------------------
 # Pydantic models
