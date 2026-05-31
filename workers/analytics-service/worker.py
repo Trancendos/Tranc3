@@ -9,6 +9,7 @@ Zero-cost: FastAPI + SQLite (FTS5 for event search), no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -179,14 +180,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "event_count": event_count,
         "metric_count": metric_count,
-        "entity": {
-            "location": "The Observatory",
-            "pillar": "Knowledge",
-            "lead_ai": "Norman Hawkins",
-            "primes": ["Cornelius MacIntyre"],
-            "primary_function": "Audit Log & Monitoring Platform",
-            "layer": "supporting",
-        },
+        "entity": health_entity_block(8016, WORKER_NAME),
     }
 
 

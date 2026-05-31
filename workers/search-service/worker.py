@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite FTS5 (built-in), no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -194,13 +195,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "indices": index_count,
         "documents": doc_count,
-        "entity": {
-            "location": "The Library",
-            "pillar": "Knowledge",
-            "lead_ai": "Zimik",
-            "primes": ["Norman Hawkins"],
-            "primary_function": "Knowledge Base & Wiki",
-        },
+        "entity": health_entity_block(8017, "search-service"),
     }
 
 

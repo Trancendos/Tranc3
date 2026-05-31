@@ -68,15 +68,19 @@ def _override_key(entity_type: str, slot: str) -> str:
     return entity_type if not slot else f"{entity_type}_{slot}"
 
 
+def _row_get(row: Any, key: str) -> str:
+    return str(row[key])
+
+
 def build_overrides_map(rows: list[Any]) -> dict[str, str]:
     """Build override dict from SQLite rows or admin API records."""
     out: dict[str, str] = {}
     for r in rows:
-        et = r["entity_type"] if isinstance(r, dict) else r[0]
-        slot = r["slot"] if isinstance(r, dict) else r[1]
+        et = _row_get(r, "entity_type")
+        slot = _row_get(r, "slot")
         if not slot:
             slot = ""
-        val = r["override_name"] if isinstance(r, dict) else r[2]
+        val = _row_get(r, "override_name")
         out[_override_key(et, slot)] = val
         if et == "tier":
             out[f"tier_{slot}"] = val

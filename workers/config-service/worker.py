@@ -9,6 +9,7 @@ Zero-cost: FastAPI + SQLite, no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -193,13 +194,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "namespaces": ns_count,
         "config_keys": cfg_count,
-        "entity": {
-            "location": "The Void",
-            "pillar": "Security",
-            "lead_ai": "Prometheus",
-            "primes": ["The Guardian (Marcus Magnolia)"],
-            "primary_function": "Secrets Vault & Password Store",
-        },
+        "entity": health_entity_block(8020, WORKER_NAME),
     }
 
 

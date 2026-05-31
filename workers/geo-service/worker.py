@@ -14,6 +14,7 @@ Zero-cost: FastAPI + SQLite cache + free public APIs, no paid deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import logging
@@ -289,13 +290,7 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "cached_ips": cached,
-        "entity": {
-            "location": "The Dutchy",
-            "pillar": "DevOps",
-            "lead_ai": "Predictive lore",
-            "primes": ["Trancendos"],
-            "primary_function": "Intelligence & Market Analysis",
-        },
+        "entity": health_entity_block(8023, WORKER_NAME),
     }
 
 

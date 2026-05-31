@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite (PRAGMA synchronous=FULL), no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import hashlib
 import json
@@ -173,14 +174,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "total_entries": count,
         "chain_tip": last["chain_hash"] if last else GENESIS_HASH,
-        "entity": {
-            "location": "The Observatory",
-            "pillar": "Knowledge",
-            "lead_ai": "Norman Hawkins",
-            "primes": ["Cornelius MacIntyre"],
-            "primary_function": "Audit Log & Monitoring Platform",
-            "layer": "supporting",
-        },
+        "entity": health_entity_block(8025, WORKER_NAME),
     }
 
 
