@@ -32,9 +32,73 @@ BOTS_APP = os.environ.get("FLY_BOTS_APP", "trancendos-bots")
 BACKEND_HEALTH = f"https://{BACKEND_APP}.fly.dev/health"
 BOTS_HEALTH = f"https://{BOTS_APP}.fly.dev/health"
 
+_PLACEHOLDER_TOKENS = frozenset({"your_fly_token", "your_token", ""})
+
 
 def _log(msg: str) -> None:
     print(msg, flush=True)
+
+
+def _valid_fly_token(token: str) -> bool:
+    t = token.strip()
+    return len(t) >= 20 and t not in _PLACEHOLDER_TOKENS
+
+
+def _bootstrap_fly_credentials() -> bool:
+    """
+    Resolve FLY_API_TOKEN without logging the value.
+
+    Order: existing env → .env.production / .env → ~/.fly/config.yml → flyctl auth token
+    """
+    if _valid_fly_token(os.environ.get("FLY_API_TOKEN", "")):
+        return True
+
+    try:
+        from dotenv import load_dotenv
+
+        for name in (".env.production", ".env"):
+            path = ROOT / name
+            if path.is_file():
+                load_dotenv(path, override=False)
+                if _valid_fly_token(os.environ.get("FLY_API_TOKEN", "")):
+                    _log(f"==> FLY_API_TOKEN loaded from {name}")
+                    return True
+    except ImportError:
+        pass
+
+    cfg = Path.home() / ".fly" / "config.yml"
+    if cfg.is_file():
+        try:
+            import yaml
+
+            data = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
+            tok = str(data.get("access_token", "")).strip()
+            if _valid_fly_token(tok):
+                os.environ["FLY_API_TOKEN"] = tok
+                _log("==> FLY_API_TOKEN loaded from flyctl login (~/.fly/config.yml)")
+                return True
+        except Exception:
+            pass
+
+    fly = shutil.which("flyctl") or shutil.which("fly")
+    if fly:
+        try:
+            proc = subprocess.run(
+                [fly, "auth", "token"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=ROOT,
+            )
+            tok = (proc.stdout or "").strip()
+            if proc.returncode == 0 and _valid_fly_token(tok):
+                os.environ["FLY_API_TOKEN"] = tok
+                _log("==> FLY_API_TOKEN loaded from flyctl auth token")
+                return True
+        except Exception:
+            pass
+
+    return False
 
 
 def _run(cmd: list[str], *, check: bool = True, cwd: Path | None = None) -> int:
@@ -198,20 +262,18 @@ def main() -> int:
         _log("Gate-only complete (PASS).")
         return 0
 
-    token = os.environ.get("FLY_API_TOKEN", "").strip()
-    if not token or token in ("your_fly_token", "your_token") or len(token) < 20:
+    if not _bootstrap_fly_credentials():
         _log("")
-        _log("ERROR: FLY_API_TOKEN is missing or too short — cannot deploy.")
+        _log("ERROR: No Fly credentials found — cannot deploy.")
         _log("")
-        _log("On your machine (with Fly org access):")
-        _log('  set "FLY_API_TOKEN=paste_full_token_here"   # Windows CMD (quotes required)')
-        _log("  export FLY_API_TOKEN=your_token               # bash")
-        _log("  python scripts/deploy_cloud.py")
+        _log("Set once (pick one; never paste tokens in chat):")
+        _log(f"  1. Add FLY_API_TOKEN=... to {ROOT / '.env.production'}  (gitignored)")
+        _log("  2. flyctl auth login   (stores token in ~/.fly/config.yml)")
+        _log('  3. set "FLY_API_TOKEN=..." then run this script (Windows CMD, use quotes)')
+        _log("  4. Forgejo org secret FLY_API_TOKEN + workflow Deploy to Fly.io on main")
         _log("")
-        _log("Or trigger Forgejo workflow: Deploy to Fly.io (The Workshop)")
-        _log("  Needs org secrets: FLY_API_TOKEN, SECRET_KEY, DATABASE_URL, REDIS_URL, ...")
-        _log("")
-        _log("Set Fly secrets once (example):")
+        _log(f"Deploy target apps: backend={BACKEND_APP} bots={BOTS_APP}")
+        _log("Set Fly app secrets once (example):")
         _log(f"  fly secrets set SECRET_KEY=... JWT_SECRET=... DATABASE_URL=... REDIS_URL=... --app {BACKEND_APP}")
         return 1
 
