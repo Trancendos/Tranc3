@@ -186,6 +186,66 @@ services:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
       <<: *healthcheck-default
 
+  # ── VictoriaMetrics — Prometheus-Compatible TSDB ─────────────────────
+  # Apache 2.0. Drop-in Prometheus replacement with 10× less RAM and disk.
+  # Scrapes same targets as Prometheus; Grafana talks to both.
+  # Query API: http://victoriametrics:8428  (Prometheus-compatible PromQL)
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: tranc3-victoriametrics
+    <<: *common
+    command:
+      - "--storageDataPath=/storage"
+      - "--retentionPeriod=30d"
+      - "--httpListenAddr=:8428"
+      - "--promscrape.config=/etc/prometheus/prometheus.yml"
+    ports:
+      - "8428:8428"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - victoriametrics-data:/storage
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8428/health"]
+      <<: *healthcheck-default
+
+  # ── Valkey — BSD-3 Redis-Compatible Key-Value Store ───────────────────
+  # Drop-in Redis replacement (same redis-py client, same port 6379).
+  # BSD-3 licence; community fork of Redis 7.2 under Linux Foundation.
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: tranc3-valkey
+    <<: *common
+    command: ["valkey-server", "--appendonly", "yes", "--save", "60", "1"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Zot — OCI Container Registry ─────────────────────────────────────
+  # Apache 2.0. Prevents Docker Hub rate-limiting for the platform.
+  # All workers can pull images from http://zot:5000 inside the network.
+  zot:
+    image: ghcr.io/project-zot/zot-linux-amd64:latest
+    container_name: tranc3-zot
+    <<: *common
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./config/zot/config.json:/etc/zot/config.json:ro
+      - zot-data:/var/lib/registry
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/v2/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # ── IPFS — Distributed Storage ───────────────────────────────────────
   # Replaces: Cloudflare R2, CF IPFS Gateway
   ipfs:
@@ -260,6 +320,7 @@ services:
     ports:
       - "3200:3200"   # HTTP query API
       - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
     networks:
       - tranc3-net
     labels:
@@ -833,6 +894,12 @@ volumes:
   nats-data:
     driver: local
   tempo-data:
+    driver: local
+  victoriametrics-data:
+    driver: local
+  valkey-data:
+    driver: local
+  zot-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

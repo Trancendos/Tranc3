@@ -25,6 +25,50 @@ scrape_configs:
           service: 'prometheus'
           category: 'infrastructure'
 
+  # ── VictoriaMetrics Self-Monitoring ───────────────────────────────────
+  - job_name: 'victoriametrics'
+    static_configs:
+      - targets: ['victoriametrics:8428']
+        labels:
+          service: 'victoriametrics'
+          category: 'infrastructure'
+
+  # ── Grafana Tempo Metrics ─────────────────────────────────────────────
+  - job_name: 'tempo'
+    static_configs:
+      - targets: ['tempo:3200']
+        labels:
+          service: 'tempo'
+          category: 'infrastructure'
+
+  # ── Valkey Metrics (via built-in INFO endpoint) ───────────────────────
+  # Note: Use redis_exporter sidecar for full Prometheus metrics if needed.
+  # Valkey exposes basic metrics at INFO; this entry reserves the job name.
+  - job_name: 'valkey'
+    static_configs:
+      - targets: ['valkey:6379']
+        labels:
+          service: 'valkey'
+          category: 'infrastructure'
+
+  # ── NATS JetStream Metrics ────────────────────────────────────────────
+  - job_name: 'nats'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['nats:8222']
+        labels:
+          service: 'nats'
+          category: 'infrastructure'
+
+  # ── Zot Registry Metrics ──────────────────────────────────────────────
+  - job_name: 'zot'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['zot:5000']
+        labels:
+          service: 'zot'
+          category: 'infrastructure'
+
   # ── P0 Workers ───────────────────────────────────────────────────────
   - job_name: 'tranc3-ai'
     metrics_path: '/metrics'
