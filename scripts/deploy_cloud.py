@@ -126,7 +126,25 @@ def _gate() -> None:
 
 def _deploy_app(fly: str, app: str, *, cwd: Path) -> None:
     _log(f"==> Deploy {app}")
-    _run([fly, "deploy", "--remote-only", "--app", app], cwd=cwd)
+    proc = subprocess.run(
+        [fly, "deploy", "--remote-only", "--app", app],
+        cwd=cwd or ROOT,
+        env={**os.environ, "FLY_API_TOKEN": os.environ.get("FLY_API_TOKEN", "")},
+    )
+    if proc.returncode != 0:
+        stderr = (proc.stderr or b"").decode("utf-8", errors="replace").lower()
+        if "app not found" in stderr or proc.returncode == 1:
+            _log("")
+            _log(f"ERROR: Fly app '{app}' does not exist yet.")
+            _log("  Create it once, then redeploy:")
+            _log(f"    {fly} apps create {app}")
+            _log(f"    {fly} deploy --remote-only --app {app}")
+            if app == BOTS_APP:
+                _log("  Then set secrets, e.g.:")
+                _log(
+                    f"    {fly} secrets set REDIS_URL=... TRANC3_ENGINE_URL=https://{BACKEND_APP}.fly.dev --app {app}"
+                )
+        raise SystemExit(proc.returncode)
 
 
 def main() -> int:

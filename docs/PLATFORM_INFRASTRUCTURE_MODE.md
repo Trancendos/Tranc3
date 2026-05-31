@@ -79,3 +79,5 @@ PLATFORM_INFRA_MODE=LOCAL_ONLY python scripts/citadel_deploy_all.py --local
 3. Follow `deploy/traefik/DNS_CUTOVER.md` when cutting DNS to Citadel.
 
 Until then, stay on **CLOUD_ONLY** — cloud auto-rotation and proactive systems are designed for that path.
+
+For what rotates today vs OCI/Azure/GCP hosting plans, see [ADAPTIVE_PLATFORM_ROTATION.md](./ADAPTIVE_PLATFORM_ROTATION.md).
