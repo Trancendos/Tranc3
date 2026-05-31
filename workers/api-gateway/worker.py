@@ -16,7 +16,7 @@ Features:
 Routes:
   GET  /health                → health check
   GET  /                      → API info
-  /api/auth/*                 → USERS_SERVICE_URL (public)
+  /api/auth/*                 → AUTH_SERVICE_URL (public)
   /api/categories/*           → PRODUCTS_SERVICE_URL (public)
   GET /api/products/*         → PRODUCTS_SERVICE_URL (public)
   /api/users/*                → USERS_SERVICE_URL (auth required)
@@ -54,11 +54,33 @@ if not _jwt_secret_raw or _jwt_secret_raw == "dev-jwt-secret-not-for-prod":
         'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
     )
 JWT_SECRET: str = _jwt_secret_raw
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "")
 USERS_SERVICE_URL = os.getenv("USERS_SERVICE_URL", "")
 PRODUCTS_SERVICE_URL = os.getenv("PRODUCTS_SERVICE_URL", "")
 ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "")
 PAYMENTS_SERVICE_URL = os.getenv("PAYMENTS_SERVICE_URL", "")
 TRANC3_AI_SERVICE_URL = os.getenv("TRANC3_AI_SERVICE_URL", "http://localhost:8001")
+
+_REQUIRED_PRODUCTION_UPSTREAMS = {
+    "AUTH_SERVICE_URL": AUTH_SERVICE_URL,
+    "USERS_SERVICE_URL": USERS_SERVICE_URL,
+    "PRODUCTS_SERVICE_URL": PRODUCTS_SERVICE_URL,
+    "ORDERS_SERVICE_URL": ORDERS_SERVICE_URL,
+    "PAYMENTS_SERVICE_URL": PAYMENTS_SERVICE_URL,
+    "TRANC3_AI_SERVICE_URL": TRANC3_AI_SERVICE_URL,
+}
+
+if ENVIRONMENT == "production":
+    missing_upstreams = [
+        name for name, value in _REQUIRED_PRODUCTION_UPSTREAMS.items() if not value.strip()
+    ]
+    if missing_upstreams:
+        raise RuntimeError(
+            "API Gateway production startup requires upstream service URLs: "
+            + ", ".join(missing_upstreams)
+        )
 
 # ── Logger ──────────────────────────────────────────────────────
 
@@ -122,6 +144,7 @@ class CircuitBreaker:
 
 
 circuit_breakers = {
+    "auth": CircuitBreaker("auth"),
     "users": CircuitBreaker("users"),
     "products": CircuitBreaker("products"),
     "orders": CircuitBreaker("orders"),
@@ -173,9 +196,14 @@ async def proxy_request(
 ) -> httpx.Response:
     """Proxy request to upstream service."""
     url = f"{target_base}{target_path}{request.url.query and '?' + str(request.url.query) or ''}"
-    headers = dict(request.headers)
-    headers.pop("host", None)
+    headers = {
+        key: value
+        for key, value in request.headers.items()
+        if key.lower() not in {"host", "x-internal-secret"}
+    }
     headers["X-Request-ID"] = request_id
+    if INTERNAL_SECRET:
+        headers["X-Internal-Secret"] = INTERNAL_SECRET
 
     body = None
     if request.method not in ("GET", "HEAD"):
@@ -260,16 +288,16 @@ async def gateway(request: Request, path: str):
 
     # Public routes (no auth)
     if path.startswith("api/auth"):
-        target_service = USERS_SERVICE_URL
-        target_path = "/" + path.replace("api/auth", "", 1).lstrip("/")
-        breaker = circuit_breakers["users"]
+        target_service = AUTH_SERVICE_URL
+        target_path = "/" + path.replace("api/auth", "auth", 1).lstrip("/")
+        breaker = circuit_breakers["auth"]
     elif path.startswith("api/categories"):
         target_service = PRODUCTS_SERVICE_URL
         target_path = "/" + path.replace("api/categories", "/categories", 1).lstrip("/")
         breaker = circuit_breakers["products"]
     elif path.startswith("api/products") and request.method == "GET":
         target_service = PRODUCTS_SERVICE_URL
-        target_path = "/" + path.replace("api/products", "/products", 1).lstrip("/")
+        target_path = "/" + path.replace("api/products", "", 1).lstrip("/")
         breaker = circuit_breakers["products"]
 
     # Auth-protected routes
@@ -289,19 +317,19 @@ async def gateway(request: Request, path: str):
             breaker = circuit_breakers["ai"]
         elif path.startswith("api/users"):
             target_service = USERS_SERVICE_URL
-            target_path = "/" + path.replace("api/users", "", 1).lstrip("/")
+            target_path = "/" + path.replace("api/users", "users", 1).lstrip("/")
             breaker = circuit_breakers["users"]
         elif path.startswith("api/orders"):
             target_service = ORDERS_SERVICE_URL
-            target_path = "/" + path.replace("api/orders", "/orders", 1).lstrip("/")
+            target_path = "/" + path.replace("api/orders", "", 1).lstrip("/")
             breaker = circuit_breakers["orders"]
         elif path.startswith("api/payments"):
             target_service = PAYMENTS_SERVICE_URL
-            target_path = "/" + path.replace("api/payments", "/payments", 1).lstrip("/")
+            target_path = "/" + path.replace("api/payments", "", 1).lstrip("/")
             breaker = circuit_breakers["payments"]
         elif path.startswith("api/products"):
             target_service = PRODUCTS_SERVICE_URL
-            target_path = "/" + path.replace("api/products", "/products", 1).lstrip("/")
+            target_path = "/" + path.replace("api/products", "", 1).lstrip("/")
             breaker = circuit_breakers["products"]
 
     if target_service and target_path is not None and breaker:

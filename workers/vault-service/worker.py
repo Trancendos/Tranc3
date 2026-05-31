@@ -58,6 +58,10 @@ AUDIT_LOG_PATH = os.environ.get("VAULT_AUDIT_LOG", "data/vault_audit.jsonl")
 DEFAULT_TTL = int(os.environ.get("VAULT_DEFAULT_TTL", "3600"))
 # Master key seed for AES-256-GCM derivation — must be set via env var in production
 VAULT_MASTER_KEY = os.environ.get("VAULT_MASTER_KEY", "")
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()
+
+if ENVIRONMENT == "production" and not VAULT_MASTER_KEY:
+    raise RuntimeError("vault-service requires VAULT_MASTER_KEY in production")
 
 logger = logging.getLogger("vault-service")
 
@@ -192,18 +196,6 @@ def _decrypt_secret(ciphertext_hex: str) -> str:
     key = _derive_key(_get_master_key(), salt)
     aesgcm = AESGCM(key)
     return aesgcm.decrypt(iv, ct_with_tag, None).decode()
-
-
-# Backwards-compat shim: attempt XOR-decrypt of legacy secrets stored before this fix.
-# Remove this shim once all secrets have been re-encrypted (rotate via PUT /secrets/{id}).
-def _legacy_xor_decrypt(
-    ciphertext_hex: str, xor_key: str = "Tranc3Vault2024!ZeroCostCrypto"
-) -> str:
-    """Decrypt a secret encrypted by the old (insecure) XOR cipher."""
-    key_bytes = xor_key.encode()
-    cipher_bytes = bytes.fromhex(ciphertext_hex)
-    decrypted = bytes(b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(cipher_bytes))
-    return decrypted.decode(errors="replace")
 
 
 # ---------------------------------------------------------------------------
