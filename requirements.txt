@@ -113,6 +113,14 @@ cachetools==5.5.0
 #   15MB binary, 1M+ msg/s, replaces SQLite queue for high-volume paths
 nats-py==2.7.2
 
+# === Database / ORM ===
+# SQLAlchemy: ORM models in src/database/schema.py + src/auth/db_user_manager.py.
+#   Imported transitively by api.py (via DBUserManager) — required for the API to
+#   start, not optional.
+# alembic: schema migrations in migrations/ (`make migrate` → alembic upgrade head).
+sqlalchemy==2.0.50
+alembic==1.18.4
+
 # === Redis Client ===
 # redis: Used by api.py, src/core/redis_store.py, src/core/feature_flags.py,
 #   src/security/security_framework.py, src/mcp/tools.py for caching, session
