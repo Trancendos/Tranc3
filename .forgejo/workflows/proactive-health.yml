@@ -1,0 +1,35 @@
+name: Proactive Health
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  platform-health:
+    name: Platform health sweep
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install probe dependencies
+        run: pip install httpx -q
+
+      - name: Run swarm manifest (health + N-1)
+        run: python scripts/swarm_runner.py --manifest config/swarm/manifests/platform-health.yaml
+        env:
+          TRANC3_BASE_URL: ${{ vars.TRANC3_BASE_URL || 'http://localhost' }}
+        continue-on-error: true
+
+      - name: Upload health report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: proactive-health-${{ github.run_number }}
+          path: logs/proactive-health.json
+          retention-days: 14

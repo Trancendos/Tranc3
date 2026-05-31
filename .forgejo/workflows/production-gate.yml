@@ -1,0 +1,59 @@
+name: Production Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  production-gate:
+    name: Production merge gate
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -q
+
+      - name: Merge gate tests
+        run: |
+          python -m pytest \
+            tests/test_smoke.py \
+            tests/test_knowledge_brain.py \
+            tests/test_gbrain_worker.py \
+            tests/test_canonical_routes.py \
+            tests/test_compatibility.py \
+            tests/test_entity_effective.py \
+            tests/test_health_metadata.py \
+            -q --tb=short
+        env:
+          SECRET_KEY: ci-test-secret-not-for-prod
+          JWT_SECRET: ci-test-jwt-secret-not-for-prod
+          DATABASE_URL: sqlite:///./test.db
+          REDIS_URL: redis://localhost:6379/0
+          ENVIRONMENT: test
+
+      - name: API import gate
+        run: python -c "import api; print('api OK')"
+        env:
+          SECRET_KEY: ci-test-secret-not-for-prod
+          JWT_SECRET: ci-test-jwt-secret-not-for-prod
+          DATABASE_URL: sqlite:///./test.db
+          REDIS_URL: redis://localhost:6379/0
+
+      - name: Entity registry import gate
+        run: |
+          python -c "
+          from src.entities.health_metadata import health_entity_block
+          e = health_entity_block(8004, 'infinity-ws')
+          assert e['lead_ai'], e
+          assert e['pid'] == 'PID-NXS', e
+          print('health_entity_block OK:', e['lead_ai'])
+          "

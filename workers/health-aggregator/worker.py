@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite + httpx polling, no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -250,13 +251,7 @@ async def health():
         "monitored_services": len(_latest),
         "healthy": healthy,
         "degraded_or_down": len(_latest) - healthy,
-        "entity": {
-            "location": "DevOcity",
-            "pillar": "DevOps",
-            "lead_ai": "Kitty",
-            "primes": ["Trancendos"],
-            "primary_function": "Development Operations",
-        },
+        "entity": health_entity_block(8029, WORKER_NAME),
     }
 
 

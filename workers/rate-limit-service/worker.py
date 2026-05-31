@@ -9,6 +9,7 @@ Zero-cost: In-memory token buckets (fast), SQLite for policy persistence.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import logging
 import os
@@ -202,13 +203,7 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "active_buckets": active_buckets,
-        "entity": {
-            "location": "Cryptex",
-            "pillar": "Security",
-            "lead_ai": "Renik",
-            "primes": ["The Guardian (Marcus Magnolia)"],
-            "primary_function": "Cyber Defense (Threat Intel, DDoS, CVE)",
-        },
+        "entity": health_entity_block(8026, WORKER_NAME),
     }
 
 

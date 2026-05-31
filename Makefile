@@ -1,7 +1,7 @@
 # TRANC3 Makefile
 # Usage: make bootstrap | make dev | make test | make deploy | make doctor
 
-.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend health health-json infra-plan
+.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend health health-json infra-plan swarm-run entity-audit ansible-health
 
 # ── Bootstrap (single-command platform setup) ─────────────────────────────────
 bootstrap:
@@ -134,6 +134,15 @@ health:
 
 health-json:
 	@python3 scripts/health_check.py --json
+
+swarm-run:
+	@python3 scripts/swarm_runner.py --manifest config/swarm/manifests/platform-health.yaml
+
+entity-audit:
+	@python3 scripts/entity_registry_audit.py
+
+ansible-health:
+	@ansible-playbook -i deploy/ansible/inventory/workers.yml deploy/ansible/playbooks/health-probe.yml
 
 # ── Infrastructure (OpenTofu) ─────────────────────────────────────────────────
 infra-plan:
