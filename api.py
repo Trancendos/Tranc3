@@ -408,6 +408,14 @@ async def lifespan(app: FastAPI):
     except Exception as _kb_exc:
         logger.warning("Knowledge Brain unavailable: %s", sanitize_for_log(_kb_exc))
 
+    try:
+        from src.adaptive.proactive_orchestrator import get_proactive_orchestrator
+
+        await get_proactive_orchestrator().start_background()
+        logger.info("Proactive zero-cost orchestrator started")
+    except Exception as _po_exc:
+        logger.warning("Proactive orchestrator unavailable: %s", sanitize_for_log(_po_exc))
+
     logger.info("TRANC3 API ready ✓")
     yield
 
@@ -690,6 +698,17 @@ app.include_router(_enhanced_router)
 from src.routers.ecosystem import router as _ecosystem_router  # noqa: F401
 
 app.include_router(_ecosystem_router)
+
+from src.routers.adaptive import router as _adaptive_router  # noqa: F401
+
+app.include_router(_adaptive_router)
+
+# ── Dashboard & Infinity Admin OS (static, zero-cost) ─────────────────────────
+_DASHBOARD_DIR = os.path.join(os.path.dirname(__file__), "dashboard")
+if os.path.isdir(_DASHBOARD_DIR):
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/dashboard", StaticFiles(directory=_DASHBOARD_DIR, html=True), name="dashboard")
 
 # ── Frontend static files (served from web/dist/ after `npm run build`) ───────
 _FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "web", "dist")

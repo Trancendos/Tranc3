@@ -1,0 +1,22 @@
+manifest_version: "1"
+orchestrator: cornelius-macintyre
+description: Adaptive zero-cost rotation and proactive health
+
+tasks:
+  - id: health-probe
+    bot: health-probe-bot
+    script: scripts/health_check.py
+    args: ["--json"]
+    priority: P0
+
+  - id: zero-cost-audit
+    bot: registry-audit-bot
+    script: scripts/zero_cost_audit.py
+    args: []
+    priority: P1
+
+  - id: entity-registry-audit
+    bot: entity-audit-bot
+    script: scripts/entity_registry_audit.py
+    args: []
+    priority: P2

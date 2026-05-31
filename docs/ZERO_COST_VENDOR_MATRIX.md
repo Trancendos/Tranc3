@@ -172,6 +172,8 @@ The Citadel (Docker Compose)
 | Entity overrides | `ENTITY_OVERRIDES_DB`, `x-worker-platform` in compose |
 | Health + entity metadata | `src/entities/health_metadata.py`, all `/health` |
 | Proactive automation | `scripts/swarm_runner.py`, `workers/swarm-coordinator-service/` |
+| Adaptive AI rotation | `src/adaptive/`, `GET /adaptive/status`, infinity-ai worker |
+| Infinity Admin OS UI | `/dashboard/infinity-admin-os.html` (taskbar + Start menu) |
 | Ansible probe | `deploy/ansible/playbooks/health-probe.yml` |
 | Zero-cost registry | `config/zero_cost/providers.yaml`, `src/zero_cost/` |
 | Security CI | `.forgejo/workflows/security-scan.yml`, `proactive-health.yml` |

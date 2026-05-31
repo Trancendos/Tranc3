@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Infinity Admin OS — Trancendos administrative shell">
+  <title>Infinity Admin OS — Trancendos</title>
+  <link rel="stylesheet" href="admin-os.css">
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI+Variable:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <a href="#admin-desktop" class="skip-link">Skip to desktop</a>
+
+  <div id="admin-desktop" class="admin-desktop" role="application" aria-label="Infinity Admin OS">
+    <!-- Title bar (Windows 11–inspired) -->
+    <header class="title-bar" role="banner">
+      <div class="title-bar-brand" aria-hidden="true">
+        <span class="title-infinity">∞</span>
+        <span class="title-text">Infinity Admin OS</span>
+      </div>
+      <div class="title-bar-meta" id="title-clock" aria-live="polite" aria-atomic="true"></div>
+      <div class="title-bar-actions">
+        <button type="button" class="win-btn" id="btn-minimize" aria-label="Minimize window" disabled>─</button>
+        <button type="button" class="win-btn" id="btn-maximize" aria-label="Maximize window" disabled>□</button>
+        <button type="button" class="win-btn win-btn-close" id="btn-close" aria-label="Return to dashboard" onclick="location.href='index.html'">✕</button>
+      </div>
+    </header>
+
+    <!-- Workspace -->
+    <main class="workspace" id="workspace" role="main" aria-label="Application workspace">
+      <section class="start-menu-panel" id="start-menu" role="dialog" aria-modal="true" aria-labelledby="start-menu-title" hidden>
+        <h2 id="start-menu-title" class="visually-hidden">Start menu</h2>
+        <div class="start-menu-header">
+          <span class="start-user" aria-label="Signed in as Administrator">Administrator</span>
+          <input type="search" class="start-search" placeholder="Search locations and tools…" aria-label="Search Infinity Admin OS" id="start-search">
+        </div>
+        <nav class="start-pinned" aria-label="Pinned applications">
+          <button type="button" class="start-tile" data-app="entities" aria-label="Entity Name Registry">
+            <span class="tile-icon" aria-hidden="true">◇</span>
+            <span class="tile-label">Entities</span>
+          </button>
+          <button type="button" class="start-tile" data-app="orchestrators" aria-label="Tier 1 Orchestrators">
+            <span class="tile-icon" aria-hidden="true">◉</span>
+            <span class="tile-label">Orchestrators</span>
+          </button>
+          <button type="button" class="start-tile" data-app="health" aria-label="Platform health">
+            <span class="tile-icon" aria-hidden="true">♥</span>
+            <span class="tile-label">Health</span>
+          </button>
+          <button type="button" class="start-tile" data-app="adaptive" aria-label="Adaptive AI rotation">
+            <span class="tile-icon" aria-hidden="true">↻</span>
+            <span class="tile-label">Adaptive AI</span>
+          </button>
+          <button type="button" class="start-tile" data-app="swarm" aria-label="Swarm coordinator">
+            <span class="tile-icon" aria-hidden="true">⬡</span>
+            <span class="tile-label">Swarm</span>
+          </button>
+          <button type="button" class="start-tile" data-app="dashboard" aria-label="Full ecosystem dashboard">
+            <span class="tile-icon" aria-hidden="true">▣</span>
+            <span class="tile-label">Dashboard</span>
+          </button>
+        </nav>
+        <footer class="start-footer">
+          <button type="button" class="start-power" id="btn-power" aria-label="Shut down Admin OS">⏻ Power</button>
+        </footer>
+      </section>
+
+      <div class="window-stack" id="window-stack" aria-live="polite">
+        <article class="app-window" id="win-welcome" role="region" aria-labelledby="win-welcome-title">
+          <div class="window-chrome">
+            <h1 id="win-welcome-title" class="window-title">Welcome</h1>
+            <button type="button" class="window-close" data-close="win-welcome" aria-label="Close welcome window">✕</button>
+          </div>
+          <div class="window-body">
+            <p>Infinity Admin OS — zero-cost administrative shell for The Citadel.</p>
+            <ul>
+              <li>Open the <strong>Start menu</strong> (∞) to launch tools.</li>
+              <li>Entity renames propagate to all worker <code>/health</code> endpoints.</li>
+              <li>Adaptive rotation uses only approved free AI providers.</li>
+            </ul>
+            <p><a href="index.html">Return to full Infinity Ecosystem dashboard</a></p>
+          </div>
+        </article>
+      </div>
+    </main>
+
+    <!-- Adaptive taskbar -->
+    <footer class="taskbar" role="navigation" aria-label="Taskbar">
+      <button type="button" class="taskbar-start" id="taskbar-start" aria-expanded="false" aria-controls="start-menu" aria-label="Open Start menu">
+        <span class="taskbar-infinity" aria-hidden="true">∞</span>
+      </button>
+      <div class="taskbar-apps" id="taskbar-apps" role="list" aria-label="Running applications"></div>
+      <div class="taskbar-tray" role="group" aria-label="System tray">
+        <button type="button" class="tray-item" id="tray-health" aria-label="Platform health status" title="Health">●</button>
+        <button type="button" class="tray-item" id="tray-rotation" aria-label="Active AI provider" title="AI provider">AI</button>
+        <span class="tray-clock" id="tray-clock" aria-live="off"></span>
+      </div>
+    </footer>
+  </div>
+
+  <div id="live-region" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script src="admin-os.js"></script>
+</body>
+</html>

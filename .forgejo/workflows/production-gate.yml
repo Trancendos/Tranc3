@@ -34,6 +34,7 @@ jobs:
             tests/test_health_metadata.py \
             tests/test_orchestrator_effective.py \
             tests/test_zero_cost_registry.py \
+            tests/test_adaptive_rotator.py \
             -q --tb=short
         env:
           SECRET_KEY: ci-test-secret-not-for-prod

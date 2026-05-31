@@ -9,6 +9,18 @@ approved_self_hosted:
   - id: ollama
     category: ai_inference
     cost: "MIT — local only"
+  - id: groq
+    category: ai_inference
+    cost: "free tier when GROQ_API_KEY set — 14.4k req/day cap"
+  - id: gemini
+    category: ai_inference
+    cost: "free tier when GOOGLE_GEMINI_API_KEY set"
+  - id: cerebras
+    category: ai_inference
+    cost: "free tier when CEREBRAS_API_KEY set"
+  - id: sambanova
+    category: ai_inference
+    cost: "free tier when SAMBANOVA_API_KEY set"
   - id: forgejo
     category: cicd
     cost: "Forgejo OSS — The Workshop"

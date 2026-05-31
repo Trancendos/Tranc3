@@ -486,12 +486,58 @@ class AIGatewayRouter:
         self.huggingface = HuggingFaceClient()
         self.offline = OfflineClient()
         # Provider priority: Ollama first (free+local), then free-tier cloud, then offline
-        self.providers = [
+        self._provider_map = {
+            ProviderName.ollama: self.ollama,
+            ProviderName.openrouter: self.openrouter,
+            ProviderName.huggingface: self.huggingface,
+            ProviderName.offline: self.offline,
+        }
+        self.providers = self._default_provider_order()
+
+    def _default_provider_order(self) -> list:
+        return [
             (ProviderName.ollama, self.ollama),
             (ProviderName.openrouter, self.openrouter),
             (ProviderName.huggingface, self.huggingface),
             (ProviderName.offline, self.offline),
         ]
+
+    def _adaptive_provider_order(self) -> list:
+        """Reorder cloud providers via zero-cost rotator (Ollama always first)."""
+        if os.environ.get("ADAPTIVE_ROTATION_ENABLED", "true").lower() not in (
+            "1",
+            "true",
+            "yes",
+        ):
+            return self._default_provider_order()
+        try:
+            from src.adaptive.provider_rotator import get_provider_rotator
+
+            rotator = get_provider_rotator()
+            name_map = {
+                "ollama": ProviderName.ollama,
+                "openrouter": ProviderName.openrouter,
+                "huggingface": ProviderName.huggingface,
+                "offline": ProviderName.offline,
+            }
+            keys: list[str] = ["ollama"]
+            active = rotator.active_provider()
+            if active and active not in keys and active in name_map:
+                keys.append(active)
+            for p in rotator._state.providers:
+                if p not in keys and p in name_map:
+                    keys.append(p)
+            if "offline" not in keys:
+                keys.append("offline")
+            ordered = []
+            for k in keys:
+                enum_name = name_map.get(k)
+                if enum_name and enum_name in self._provider_map:
+                    ordered.append((enum_name, self._provider_map[enum_name]))
+            return ordered or self._default_provider_order()
+        except Exception as exc:
+            logger.warning("Adaptive order fallback: %s", exc)
+            return self._default_provider_order()
 
     def _make_cache_key(
         self,
@@ -528,9 +574,10 @@ class AIGatewayRouter:
             cached.provider = "cache"
             return cached
 
-        # Try providers in priority order
+        # Try providers in priority order (adaptive rotation when enabled)
+        providers = self._adaptive_provider_order()
         last_error = None
-        for provider_name, provider in self.providers:
+        for provider_name, provider in providers:
             try:
                 result = await provider.complete(
                     request.model,
@@ -590,11 +637,27 @@ class AIGatewayRouter:
                 # Cache successful responses
                 self.cache.put(cache_key, response)
 
+                try:
+                    from src.adaptive.provider_rotator import get_provider_rotator
+
+                    get_provider_rotator().record_success(provider_name.value)
+                except Exception:
+                    pass
+
                 return response
 
             except Exception as e:
                 last_error = str(e)
                 logger.warning("Provider %s failed: %s", provider_name.value, e)
+                try:
+                    from src.adaptive.provider_rotator import get_provider_rotator
+
+                    rate_limited = "429" in str(e) or "rate" in str(e).lower()
+                    get_provider_rotator().record_failure(
+                        provider_name.value, rate_limited=rate_limited
+                    )
+                except Exception:
+                    pass
                 continue
 
         # All providers failed — use offline as last resort
