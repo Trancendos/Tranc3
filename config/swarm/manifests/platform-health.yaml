@@ -1,0 +1,25 @@
+# Trancendos swarm manifest — proactive platform health (zero-cost)
+manifest_version: "1"
+orchestrator: cornelius-macintyre
+description: Scheduled health sweep and dependency compliance
+
+tasks:
+  - id: probe-p0-workers
+    bot: health-probe-bot
+    script: scripts/health_check.py
+    args: ["--json"]
+    priority: P0
+    on_failure: sentinel:platform
+
+  - id: n1-dependency-audit
+    bot: n1-checker-bot
+    script: scripts/n1_checker.py
+    args: ["--report", "logs/n1-report.json"]
+    priority: P1
+    schedule: "0 3 * * *"
+
+  - id: entity-registry-sanity
+    bot: registry-audit-bot
+    script: scripts/entity_registry_audit.py
+    args: []
+    priority: P2

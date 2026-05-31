@@ -10,6 +10,7 @@ Zero-cost: All data stored in SQLite, no external metrics services required.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -560,13 +561,7 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": uptime,
         "version": "1.0.0",
-        "entity": {
-            "location": "The Observatory",
-            "pillar": "Knowledge",
-            "lead_ai": "Norman Hawkins",
-            "primes": ["Cornelius MacIntyre"],
-            "primary_function": "Audit Log & Monitoring Platform",
-        },
+        "entity": health_entity_block(8007, "monitoring"),
     }
 
 

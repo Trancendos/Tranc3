@@ -25,6 +25,7 @@ Zero-cost: FastAPI + SQLite + python-jose. No CF Workers or KV.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import hashlib
@@ -467,13 +468,7 @@ async def health():
         "status": "healthy",
         "service": "infinity-auth",
         "version": "2.0.0",
-        "entity": {
-            "location": "Infinity",
-            "pillar": "Security",
-            "lead_ai": "The Guardian (Anchor: Orb of Orisis)",
-            "primes": ["Cornelius MacIntyre"],
-            "primary_function": "Centralized Auth & OAuth 2.0",
-        },
+        "entity": health_entity_block(8005, "infinity-auth"),
         # Phase 22.6: Smart health
         "health_score": health_summary.get("health_score", 1.0),
         "health_tier": health_summary.get("tier", "EXCELLENT"),

@@ -1,0 +1,45 @@
+---
+# Proactive health probe — Ansible Core (free)
+# Run: ansible-playbook -i deploy/ansible/inventory/workers.yml deploy/ansible/playbooks/health-probe.yml
+
+- name: Trancendos worker health probe
+  hosts: citadel
+  gather_facts: false
+
+  tasks:
+    - name: Ensure logs directory
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../../logs"
+        state: directory
+        mode: "0755"
+
+    - name: Run platform health check script
+      ansible.builtin.command:
+        cmd: python3 scripts/health_check.py --json
+        chdir: "{{ playbook_dir }}/../../.."
+      register: health_out
+      changed_when: false
+      failed_when: health_out.rc > 1
+
+    - name: Save health JSON
+      ansible.builtin.copy:
+        content: "{{ health_out.stdout }}"
+        dest: "{{ playbook_dir }}/../../../logs/ansible-health.json"
+        mode: "0644"
+
+    - name: Probe each worker HTTP health
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ item.port }}/health"
+        method: GET
+        status_code: 200
+        timeout: 5
+      loop: "{{ tranc3_workers | default([]) }}"
+      register: worker_health
+      failed_when: false
+      when: tranc3_workers is defined
+
+    - name: Report worker probe summary
+      ansible.builtin.debug:
+        msg: "{{ item.item.name }} : {{ item.status }}"
+      loop: "{{ worker_health.results | default([]) }}"
+      when: worker_health is defined

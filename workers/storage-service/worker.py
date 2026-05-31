@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite + local filesystem, no cloud storage needed.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import hashlib
 import logging
@@ -185,14 +186,7 @@ async def health():
         "buckets": bucket_count,
         "objects": obj_count,
         "total_bytes": total_size,
-        "entity": {
-            "location": "DocUtari",
-            "pillar": "Knowledge",
-            "lead_ai": "To be Defined",
-            "primes": ["Norman Hawkins"],
-            "primary_function": "Document Management Hub",
-            "layer": "supporting",
-        },
+        "entity": health_entity_block(8020, WORKER_NAME),
     }
 
 

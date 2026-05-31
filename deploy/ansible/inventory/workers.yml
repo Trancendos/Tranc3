@@ -1,0 +1,25 @@
+# Trancendos worker inventory — Ansible Core (zero-cost)
+# Usage: ansible-playbook -i deploy/ansible/inventory/workers.yml deploy/ansible/playbooks/health-probe.yml
+
+all:
+  children:
+    citadel:
+      hosts:
+        localhost:
+          ansible_connection: local
+    p0_workers:
+      hosts:
+        localhost:
+      vars:
+        tranc3_workers:
+          - { name: tranc3-backend, port: 8000 }
+          - { name: infinity-ws, port: 8004 }
+          - { name: infinity-auth, port: 8005 }
+    p1_workers:
+      hosts:
+        localhost:
+      vars:
+        tranc3_workers:
+          - { name: monitoring, port: 8007 }
+          - { name: infinity-ai, port: 8009 }
+          - { name: infinity-admin, port: 8044 }

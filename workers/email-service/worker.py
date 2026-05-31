@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite + smtplib (stdlib), no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import email.mime.multipart
@@ -279,14 +280,7 @@ async def health():
         "pending": pending,
         "sent": sent,
         "failed": failed,
-        "entity": {
-            "location": "Arcadia",
-            "pillar": "Commercial / Financial",
-            "lead_ai": "Lilli SC",
-            "primes": ["Dorris Fontaine"],
-            "primary_function": "Post-Login User Frontend, Forum & Email Hub",
-            "layer": "supporting",
-        },
+        "entity": health_entity_block(8018, WORKER_NAME),
     }
 
 

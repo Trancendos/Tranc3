@@ -1186,6 +1186,12 @@ def _upsert_override(
         ),
     )
     db.commit()
+    try:
+        from src.entities.override_store import invalidate_override_cache
+
+        invalidate_override_cache()
+    except ImportError:
+        pass
 
 
 @_router.get("/admin/entities")

@@ -51,6 +51,21 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           ENVIRONMENT: test
 
+      - name: Production gate (fast)
+        run: |
+          python -m pytest \
+            tests/test_knowledge_brain.py \
+            tests/test_entity_effective.py \
+            tests/test_health_metadata.py \
+            tests/test_canonical_routes.py \
+            -q --tb=line
+        env:
+          SECRET_KEY: ci-test-secret-not-for-prod
+          JWT_SECRET: ci-test-jwt-secret-not-for-prod
+          DATABASE_URL: sqlite:///./test.db
+          REDIS_URL: redis://localhost:6379/0
+          ENVIRONMENT: test
+
       - name: MCP / Spark import check
         run: |
           python -c "

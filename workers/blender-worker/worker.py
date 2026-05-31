@@ -10,6 +10,7 @@ Gracefully degrades to 503 when Blender is not installed.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -280,12 +281,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "blender_available": blender_path is not None,
         "blender_path": blender_path,
-        "entity": {
-            "platform_service": "TranceFlow",
-            "lead_ai": "Junior Cesar",
-            "role": "3D modeling & games creation studio",
-            "status": "Planned",
-        },
+        "entity": health_entity_block(8050, WORKER_NAME),
     }
 
 

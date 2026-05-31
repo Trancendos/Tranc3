@@ -11,6 +11,7 @@ Model is loaded lazily on the first /reconstruct request.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import base64
 import io
@@ -182,12 +183,7 @@ async def health():
         "available": tsr_ok,
         "model": "TripoSR",
         "model_loaded": model_loaded,
-        "entity": {
-            "platform_service": "Sashas Photo Studio",
-            "lead_ai": "Madam Krystal",
-            "role": "Photo & image generation center",
-            "status": "Planned",
-        },
+        "entity": health_entity_block(8051, WORKER_NAME),
     }
 
 
