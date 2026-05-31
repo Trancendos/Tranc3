@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 
 from src.admin_os import backups
 
@@ -30,7 +29,9 @@ async def start_admin_os_auto_backup() -> None:
             try:
                 if backups.backup_config().get("auto_backup_enabled"):
                     result = backups.run_backup(trigger="auto")
-                    logger.info("Admin OS auto-backup %s (%s bytes)", result["id"], result["size_bytes"])
+                    logger.info(
+                        "Admin OS auto-backup %s (%s bytes)", result["id"], result["size_bytes"]
+                    )
             except Exception as exc:
                 logger.warning("Admin OS auto-backup failed: %s", exc)
 

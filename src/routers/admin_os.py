@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Body, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 from src.admin_os import backups, domain_model, events, files_manager, system_viewer
 from src.admin_os.db import upsert_override
-from src.entities.platform import get_entity_by_pid
 from src.entities.override_store import invalidate_override_cache
-from src.observability.observatory import observe, EventCategory, EventSeverity
+from src.entities.platform import get_entity_by_pid
+from src.observability.observatory import EventCategory, EventSeverity, observe
 
 router = APIRouter(prefix="/admin-os", tags=["admin-os"])
 

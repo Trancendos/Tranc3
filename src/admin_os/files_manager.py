@@ -7,9 +7,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-_ROOT = Path(
-    os.environ.get("ADMIN_OS_WORKSPACE_ROOT", "data/admin_os_workspace")
-).resolve()
+_ROOT = Path(os.environ.get("ADMIN_OS_WORKSPACE_ROOT", "data/admin_os_workspace")).resolve()
 
 
 def workspace_root() -> Path:
