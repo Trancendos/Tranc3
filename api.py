@@ -410,6 +410,14 @@ async def lifespan(app: FastAPI):
     except Exception as _cr_exc:
         logger.warning("Cloud auto-rotation unavailable: %s", sanitize_for_log(_cr_exc))
 
+    try:
+        from src.adaptive.layer_rotation_loop import start_layer_auto_rotation
+
+        await start_layer_auto_rotation()
+        logger.info("Platform layer auto-rotation started")
+    except Exception as _lr_exc:
+        logger.warning("Layer auto-rotation unavailable: %s", sanitize_for_log(_lr_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield
@@ -435,6 +443,12 @@ async def lifespan(app: FastAPI):
         from src.adaptive.cloud_rotation_loop import stop_cloud_auto_rotation
 
         await stop_cloud_auto_rotation()
+    except Exception:
+        pass
+    try:
+        from src.adaptive.layer_rotation_loop import stop_layer_auto_rotation
+
+        await stop_layer_auto_rotation()
     except Exception:
         pass
     if redis_client:

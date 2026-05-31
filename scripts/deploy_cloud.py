@@ -130,10 +130,12 @@ def _deploy_app(fly: str, app: str, *, cwd: Path) -> None:
         [fly, "deploy", "--remote-only", "--app", app],
         cwd=cwd or ROOT,
         env={**os.environ, "FLY_API_TOKEN": os.environ.get("FLY_API_TOKEN", "")},
+        capture_output=True,
+        text=True,
     )
     if proc.returncode != 0:
-        stderr = (proc.stderr or b"").decode("utf-8", errors="replace").lower()
-        if "app not found" in stderr or proc.returncode == 1:
+        combined = f"{proc.stdout or ''}\n{proc.stderr or ''}".lower()
+        if "app not found" in combined:
             _log("")
             _log(f"ERROR: Fly app '{app}' does not exist yet.")
             _log("  Create it once, then redeploy:")
@@ -144,7 +146,35 @@ def _deploy_app(fly: str, app: str, *, cwd: Path) -> None:
                 _log(
                     f"    {fly} secrets set REDIS_URL=... TRANC3_ENGINE_URL=https://{BACKEND_APP}.fly.dev --app {app}"
                 )
+        else:
+            if proc.stdout:
+                _log(proc.stdout[-2000:])
+            if proc.stderr:
+                _log(proc.stderr[-2000:])
         raise SystemExit(proc.returncode)
+
+
+def _apply_deploy_target(target: str) -> None:
+    """Set upstream hints for platform layer rotator (Phase 3 hosting)."""
+    t = target.strip().lower()
+    if t == "fly":
+        os.environ.setdefault(
+            "PLATFORM_API_UPSTREAMS",
+            f"fly_tranc3_backend=https://{BACKEND_APP}.fly.dev",
+        )
+        _log(f"Deploy target=fly (upstream https://{BACKEND_APP}.fly.dev)")
+    elif t == "oci":
+        oci = os.environ.get("OCI_API_UPSTREAM", "").strip()
+        if not oci:
+            _log(
+                "WARN: --target=oci but OCI_API_UPSTREAM unset — set after OCI VM provision "
+                "(see infrastructure/oracle-cloud/)"
+            )
+        else:
+            os.environ.setdefault("PLATFORM_API_UPSTREAMS", f"oci_always_free={oci}")
+        _log("Deploy target=oci (hosting layer prefers OCI when healthy)")
+    else:
+        _log(f"WARN: unknown --target={target}; use fly or oci")
 
 
 def main() -> int:
@@ -152,8 +182,15 @@ def main() -> int:
     parser.add_argument("--gate-only", action="store_true")
     parser.add_argument("--backend-only", action="store_true")
     parser.add_argument("--skip-health", action="store_true")
+    parser.add_argument(
+        "--target",
+        choices=("fly", "oci"),
+        default="fly",
+        help="Hosting layer hint after deploy (fly=default, oci=optional overflow VM)",
+    )
     args = parser.parse_args()
 
+    _apply_deploy_target(args.target)
     _log(f"Tranc3 cloud deploy — mode CLOUD_ONLY — root: {ROOT}")
     _gate()
 
@@ -210,6 +247,7 @@ def main() -> int:
     _log("Cloud deploy finished.")
     _log(f"  API:  {BACKEND_HEALTH}")
     _log(f"  Bots: {BOTS_HEALTH}")
+    _log(f"  Adaptive layers: {BACKEND_HEALTH.replace('/health', '')}/adaptive/layers")
     return 0 if ok else 1
 
 

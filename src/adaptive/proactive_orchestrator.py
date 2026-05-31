@@ -30,6 +30,7 @@ class ProactiveRun:
     audit_rc: int | None = None
     swarm_rc: int | None = None
     rotation: dict[str, Any] = field(default_factory=dict)
+    layers: dict[str, Any] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
 
 
@@ -52,6 +53,13 @@ class ProactiveOrchestrator:
             run.rotation = get_provider_rotator().status()
         except Exception as exc:
             run.errors.append(f"rotation: {exc}")
+
+        try:
+            from src.platform.layer_rotator import get_layer_rotator
+
+            run.layers = get_layer_rotator().status()
+        except Exception as exc:
+            run.errors.append(f"layers: {exc}")
 
         run.health_rc = await asyncio.to_thread(self._run_script, "scripts/health_check.py")
         run.audit_rc = await asyncio.to_thread(self._run_script, "scripts/zero_cost_audit.py")
@@ -88,6 +96,7 @@ class ProactiveOrchestrator:
             "audit_rc": run.audit_rc,
             "swarm_rc": run.swarm_rc,
             "rotation": run.rotation,
+            "layers": run.layers,
             "errors": run.errors,
         }
         with log_path.open("a") as fh:

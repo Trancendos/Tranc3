@@ -15,9 +15,10 @@ This document answers: *Is multi-cloud adaptive rotation still set up?* and *Wha
 | **AI inference** | AI Gateway + `AdaptiveProviderRotator` | **Yes** — `zero_cost_cloud` chain, auto-rotate ~180s |
 | **Front end (Arcadia)** | Planned / partial in `web/` | No cross-host failover |
 | **Hosting / edge** | Fly + legacy CF Workers (decommissioning) | No automatic host switch |
-| **Database** | Supabase/Postgres via `DATABASE_URL` secret | No failover rotator |
-| **Knowledge / RAG** | FAISS in-process + optional Pinecone | No provider rotation |
-| **File store** | Local volume + IPFS path in Citadel design | No multi-cloud blob rotation |
+| **Database** | Supabase/Postgres via `DATABASE_URL` secret | **Yes** — `PlatformLayerRotator` + `PLATFORM_DB_URLS` |
+| **Knowledge / RAG** | FAISS in-process + optional Pinecone | **Yes** — knowledge backend chain |
+| **File store** | Local volume + IPFS path in Citadel design | **Yes** — blob backend chain |
+| **Hosting / front** | Fly (+ optional OCI/CF) | **Partial** — health probes + `--target=fly\|oci` |
 | **Secrets** | Fly secrets / future Vault on Citadel | Manual |
 | **CI/CD** | Forgejo (The Workshop) | Not in rotator |
 
@@ -26,6 +27,7 @@ Verify on production:
 ```text
 GET https://tranc3-backend.fly.dev/adaptive/mode
 GET https://tranc3-backend.fly.dev/adaptive/status
+GET https://tranc3-backend.fly.dev/adaptive/layers
 ```
 
 ---
@@ -139,31 +141,34 @@ flowchart TB
 - [x] `/adaptive/*` API  
 - [x] Proactive orchestrator + zero-cost audit  
 
-### Phase 2 — Data plane rotation
+### Phase 2 — Data plane rotation (implemented)
 
 | Layer | Candidates | Mechanism |
 |-------|------------|-----------|
-| **DB** | Supabase → SQLite read replica → Citadel Postgres | Connection pool with health probe; read-only fallback |
-| **Knowledge** | FAISS local → Qdrant self-hosted → HF embeddings rotate | Same pattern as AI rotator for embed providers |
-| **File store** | Fly volume → IPFS → R2/CF (legacy) | Content-addressed primary; optional mirror |
+| **DB** | Supabase → SQLite read replica → Citadel Postgres | `PLATFORM_DB_URLS`; SQL `SELECT 1` probe |
+| **Knowledge** | FAISS local → HF → Pinecone → Qdrant | `PLATFORM_KNOWLEDGE_BACKENDS`; env/path probes |
+| **File store** | Fly volume → local FS → IPFS → R2 | `PLATFORM_BLOB_BACKENDS` |
 
-Deliverables: `src/platform/layer_rotator.py`, env `PLATFORM_DB_URLS`, `PLATFORM_BLOB_BACKENDS`.
+Deliverables: `src/platform/layer_rotator.py`, `config/platform/layer_rotation.yaml`, env vars above.
 
-### Phase 3 — Hosting / edge rotation
+### Phase 3 — Hosting / edge rotation (partial)
 
 | Layer | Candidates | Mechanism |
 |-------|------------|-----------|
-| **API host** | Fly `tranc3-backend` ↔ OCI Always Free ↔ CF Worker | Health-checked upstream list in Traefik or external DNS failover |
-| **Front end** | Vercel/CF Pages ↔ static on Citadel | CDN origin rotation |
-| **Workers** | Self-hosted Python workers (ports 8004–8038) ↔ CF legacy | Already mapped in `CF_WORKER_MIGRATION_ROADMAP.md` |
+| **API host** | Fly `tranc3-backend` ↔ OCI Always Free ↔ CF Worker | `PLATFORM_API_UPSTREAMS`; `/health` probe |
+| **Front end** | Arcadia static ↔ Citadel ↔ CF Pages | `PLATFORM_FRONTEND_ORIGINS` |
+| **Workers** | Self-hosted Python workers (ports 8004–8038) ↔ CF legacy | See `CF_WORKER_MIGRATION_ROADMAP.md` |
 
-Deliverables: extend `scripts/deploy_cloud.py` with optional `--target=oci|fly`, Terraform/OpenTofu apply hooks.
+Deliverables: `scripts/deploy_cloud.py --target=fly|oci` sets hosting upstream hints. Full DNS/Terraform cutover still manual.
 
-### Phase 4 — Unified control plane
+### Phase 4 — Unified control plane (implemented)
 
-- Dashboard tile in Infinity Admin OS: layer health + active provider per tier  
-- Alerts via The Observatory when a layer fails over  
-- Policy file: `config/platform/layer_rotation.yaml` (mirrors `infrastructure_mode.yaml`)
+- [x] `GET /adaptive/layers`, `POST /adaptive/layers/rotate`, `GET /adaptive/layers/{layer}/active`
+- [x] Layer status in `GET /adaptive/status` and proactive orchestrator logs
+- [x] Background loop: `src/adaptive/layer_rotation_loop.py` (started from `api.py` lifespan)
+- [x] Policy: `config/platform/layer_rotation.yaml`
+- [ ] Dashboard tile in Infinity Admin OS (future)
+- [ ] Observatory alerts on failover (future)
 
 ---
 

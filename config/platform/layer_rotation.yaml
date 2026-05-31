@@ -1,0 +1,62 @@
+# Platform layer rotation policy (Phase 2–4)
+# Mirrors infrastructure_mode.yaml — mode-aware defaults with env overrides.
+
+enabled: true
+auto_rotate_interval_seconds: 300
+cooldown_seconds: 300
+
+# Per-layer candidate lists (order = preference). Env vars override when set.
+layers:
+  database:
+    description: Primary datastore failover (Supabase → Citadel Postgres → SQLite)
+    env_urls: PLATFORM_DB_URLS
+    candidates:
+      - name: primary
+        source: env:DATABASE_URL
+      - name: sqlite_fallback
+        source: env:SQLITE_FALLBACK_URL
+        optional: true
+
+  knowledge:
+    description: Vector / RAG backends and embed providers
+    env_chain: PLATFORM_KNOWLEDGE_BACKENDS
+    candidates:
+      - faiss_local
+      - hf_embeddings
+      - pinecone
+      - qdrant_self_hosted
+
+  blob:
+    description: Object and file storage backends
+    env_chain: PLATFORM_BLOB_BACKENDS
+    candidates:
+      - fly_volume
+      - local_fs
+      - ipfs
+      - legacy_r2
+
+  hosting:
+    description: API / edge hosting upstreams
+    env_chain: PLATFORM_API_UPSTREAMS
+    candidates:
+      - fly_tranc3_backend
+      - oci_always_free
+      - cloudflare_edge
+
+  frontend:
+    description: Arcadia and static front-end origins
+    env_chain: PLATFORM_FRONTEND_ORIGINS
+    candidates:
+      - arcadia_static
+      - citadel_static
+      - cf_pages
+
+mode_policies:
+  CLOUD_ONLY:
+    hosting_active: fly_tranc3_backend
+    skip_local_only: true
+  HYBRID:
+    hosting_active: fly_tranc3_backend
+  LOCAL_ONLY:
+    hosting_active: citadel_traefik
+    knowledge_prefer: faiss_local
