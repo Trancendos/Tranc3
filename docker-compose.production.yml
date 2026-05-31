@@ -1185,6 +1185,205 @@ services:
     networks:
       - tranc3-net
 
+  # ─────────────────────────────────────────────────────────────────────────
+  # Cal.com — ChronosSphere / ArcStream (self-hosted scheduling, MIT)
+  # UI: http://localhost:3010  Env-set: http://scheduling.trancendos.com
+  # ─────────────────────────────────────────────────────────────────────────
+  calcom-db:
+    image: postgres:15-alpine
+    container_name: trancendos-calcom-db
+    environment:
+      POSTGRES_USER: calcom
+      POSTGRES_PASSWORD: "${CALCOM_DB_PASSWORD:-calcom-dev-password}"
+      POSTGRES_DB: calcom
+    volumes:
+      - calcom-db-data:/var/lib/postgresql/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U calcom -d calcom"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  calcom:
+    image: calcom/cal.com:latest
+    container_name: trancendos-calcom
+    ports:
+      - "3010:3000"
+    environment:
+      DATABASE_URL: "postgresql://calcom:${CALCOM_DB_PASSWORD:-calcom-dev-password}@calcom-db:5432/calcom"
+      NEXTAUTH_SECRET: "${CALCOM_NEXTAUTH_SECRET:-changeme-calcom-secret}"
+      CALENDSO_ENCRYPTION_KEY: "${CALCOM_ENCRYPTION_KEY:-changeme-calcom-encryption-key}"
+      NEXT_PUBLIC_WEBAPP_URL: "${CALCOM_URL:-http://localhost:3010}"
+      EMAIL_FROM: "${CALCOM_EMAIL_FROM:-noreply@trancendos.com}"
+      NEXT_PUBLIC_LICENSE_CONSENT: "agree"
+    depends_on:
+      calcom-db:
+        condition: service_healthy
+    volumes:
+      - calcom-data:/app/.next
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.calcom.rule: "Host(`scheduling.trancendos.com`)"
+      traefik.http.routers.calcom.entrypoints: "websecure"
+      traefik.http.routers.calcom.tls.certresolver: "letsencrypt"
+      traefik.http.services.calcom.loadbalancer.server.port: "3000"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Outline — The Library / Zimik (self-hosted wiki, BSL)
+  # UI: http://localhost:3011  Env-set: http://wiki.trancendos.com
+  # ─────────────────────────────────────────────────────────────────────────
+  outline-db:
+    image: postgres:15-alpine
+    container_name: trancendos-outline-db
+    environment:
+      POSTGRES_USER: outline
+      POSTGRES_PASSWORD: "${OUTLINE_DB_PASSWORD:-outline-dev-password}"
+      POSTGRES_DB: outline
+    volumes:
+      - outline-db-data:/var/lib/postgresql/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outline -d outline"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  outline-redis:
+    image: valkey/valkey:8-alpine
+    container_name: trancendos-outline-redis
+    command: ["valkey-server", "--appendonly", "yes"]
+    volumes:
+      - outline-redis-data:/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+
+  outline:
+    image: outlinewiki/outline:latest
+    container_name: trancendos-outline
+    ports:
+      - "3011:3000"
+    environment:
+      DATABASE_URL: "postgres://outline:${OUTLINE_DB_PASSWORD:-outline-dev-password}@outline-db:5432/outline"
+      REDIS_URL: "redis://outline-redis:6379"
+      SECRET_KEY: "${OUTLINE_SECRET_KEY:-changeme-outline-secret-key-must-be-32char}"
+      UTILS_SECRET: "${OUTLINE_UTILS_SECRET:-changeme-outline-utils-secret}"
+      URL: "${OUTLINE_URL:-http://localhost:3011}"
+      PORT: "3000"
+      FILE_STORAGE: "local"
+      FILE_STORAGE_LOCAL_ROOT_DIR: "/var/lib/outline/data"
+      PGSSLMODE: "disable"
+    depends_on:
+      outline-db:
+        condition: service_healthy
+      outline-redis:
+        condition: service_started
+    volumes:
+      - outline-data:/var/lib/outline/data
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.outline.rule: "Host(`wiki.trancendos.com`)"
+      traefik.http.routers.outline.entrypoints: "websecure"
+      traefik.http.routers.outline.tls.certresolver: "letsencrypt"
+      traefik.http.services.outline.loadbalancer.server.port: "3000"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # SigNoz — The Observatory enhanced (OpenTelemetry-native APM, Apache 2.0)
+  # UI: http://localhost:3301  Backend: ClickHouse + query-service
+  # ─────────────────────────────────────────────────────────────────────────
+  signoz-clickhouse:
+    image: clickhouse/clickhouse-server:24.1.2-alpine
+    container_name: trancendos-signoz-clickhouse
+    environment:
+      CLICKHOUSE_DB: signoz_traces
+      CLICKHOUSE_USER: signoz
+      CLICKHOUSE_PASSWORD: "${SIGNOZ_CLICKHOUSE_PASSWORD:-signoz-dev-password}"
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - signoz-clickhouse-data:/var/lib/clickhouse
+      - signoz-clickhouse-logs:/var/log/clickhouse-server
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  signoz-query-service:
+    image: signoz/query-service:latest
+    container_name: trancendos-signoz-query
+    command: ["-config=/root/config/prometheus.yml"]
+    environment:
+      ClickHouseUrl: "tcp://signoz:${SIGNOZ_CLICKHOUSE_PASSWORD:-signoz-dev-password}@signoz-clickhouse:9000/signoz_traces"
+      STORAGE: clickhouse
+      GODEBUG: netdns=go
+      TELEMETRY_ENABLED: "false"
+      DEPLOYMENT_TYPE: "docker-standalone"
+    volumes:
+      - signoz-query-data:/root/data
+      - ./monitoring/prometheus.yml:/root/config/prometheus.yml:ro
+    depends_on:
+      signoz-clickhouse:
+        condition: service_healthy
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+
+  signoz-frontend:
+    image: signoz/frontend:latest
+    container_name: trancendos-signoz-frontend
+    ports:
+      - "3301:3301"
+    environment:
+      FRONTEND_API_ENDPOINT: "http://signoz-query-service:8080"
+    depends_on:
+      - signoz-query-service
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.signoz.rule: "Host(`apm.trancendos.com`)"
+      traefik.http.routers.signoz.entrypoints: "websecure"
+      traefik.http.routers.signoz.tls.certresolver: "letsencrypt"
+      traefik.http.services.signoz.loadbalancer.server.port: "3301"
+
+  # SigNoz OpenTelemetry Collector (receives OTLP from all workers)
+  signoz-otel-collector:
+    image: signoz/signoz-otel-collector:latest
+    container_name: trancendos-signoz-otel
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    environment:
+      OTEL_RESOURCE_ATTRIBUTES: "host.name=trancendos-production,os.type=linux"
+      LOW_CARDINAL_EXCEPTION_GROUPING: "false"
+    volumes:
+      - ./config/signoz/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    depends_on:
+      - signoz-clickhouse
+    networks:
+      - tranc3-net
+    restart: unless-stopped
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1264,6 +1463,22 @@ volumes:
   penpot-db-data:
     driver: local
   dtrack-data:
+    driver: local
+  calcom-db-data:
+    driver: local
+  calcom-data:
+    driver: local
+  outline-db-data:
+    driver: local
+  outline-redis-data:
+    driver: local
+  outline-data:
+    driver: local
+  signoz-clickhouse-data:
+    driver: local
+  signoz-clickhouse-logs:
+    driver: local
+  signoz-query-data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

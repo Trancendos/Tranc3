@@ -244,6 +244,34 @@ scrape_configs:
           service: 'falco'
           category: 'security'
 
+  # ── SigNoz OpenTelemetry Collector Metrics ───────────────────────────────
+  - job_name: 'signoz-otel-collector'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['signoz-otel-collector:8888']
+        labels:
+          service: 'signoz-otel-collector'
+          category: 'observability'
+
+  # ── SigNoz Query Service Metrics ──────────────────────────────────────────
+  - job_name: 'signoz-query-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['signoz-query-service:8080']
+        labels:
+          service: 'signoz-query-service'
+          category: 'observability'
+
+  # ── Cal.com Scheduling Metrics ────────────────────────────────────────────
+  - job_name: 'calcom'
+    metrics_path: '/api/health'
+    static_configs:
+      - targets: ['calcom:3000']
+        labels:
+          service: 'calcom'
+          category: 'scheduling'
+          named: 'ChronosSphere'
+
   # ── Infrastructure Health Probes ─────────────────────────────────────
   - job_name: 'blackbox-http'
     metrics_path: /probe
@@ -266,3 +294,6 @@ scrape_configs:
           - http://ffmpeg-worker:8052/health
           - http://qdrant:6333/healthz
           - http://langfuse:3000/api/public/health
+          - http://calcom:3000/api/health
+          - http://outline:3000/api/health.json
+          - http://signoz-frontend:3301

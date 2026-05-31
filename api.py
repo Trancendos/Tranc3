@@ -384,6 +384,17 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning("AutoEvolve failed to start: %s", sanitize_for_log(e))
 
+    # pgvector — bootstrap embeddings table (no-ops gracefully if unavailable)
+    try:
+        from src.database.pgvector import bootstrap as _pgvector_bootstrap  # codeql[py/cyclic-import]
+
+        if _pgvector_bootstrap():
+            logger.info("pgvector embeddings table ready")
+        else:
+            logger.debug("pgvector unavailable — vector ops will use fallback")
+    except Exception as _pgv_exc:
+        logger.debug("pgvector bootstrap skipped: %s", sanitize_for_log(_pgv_exc))
+
     # Knowledge Brain (The Library) — start dream-cycle consolidation
     _knowledge_brain = None
     try:
