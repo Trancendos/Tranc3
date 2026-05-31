@@ -30,6 +30,10 @@ htmlcov/
 .coverage
 coverage.xml
 
+# Rust build artifacts
+target/
+aeonmind/rust/target/
+
 # Virtual environments
 venv/
 .venv/
