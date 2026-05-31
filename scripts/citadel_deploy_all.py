@@ -233,9 +233,13 @@ STRIPE_WEBHOOK_SECRET=
     _log(f"  Wrote {out}")
 
 
-def _pre_deploy_gate() -> None:
+def _pre_deploy_gate(*, mode: str | None = None) -> None:
     _section("Pre-deploy quality gate")
-    _run([_python(), "scripts/pre_deploy_quality_gate.py"])
+    infra = (mode or _infra_mode()).upper()
+    gate_cmd = [_python(), "scripts/pre_deploy_quality_gate.py"]
+    if infra == "CLOUD_ONLY":
+        gate_cmd.append("--cloud-only")
+    _run(gate_cmd)
 
 
 def _preflight() -> None:
@@ -363,7 +367,7 @@ def main() -> int:
     if args.install_deps:
         _install_deps()
 
-    _pre_deploy_gate()
+    _pre_deploy_gate(mode=mode)
 
     if args.gate_only or args.cloud_only:
         _log("")
