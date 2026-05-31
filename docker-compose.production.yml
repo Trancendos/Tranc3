@@ -1120,6 +1120,8 @@ volumes:
     driver: local
   langfuse-db-data:
     driver: local
+  woodpecker-data:
+    driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Networks

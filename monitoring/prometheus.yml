@@ -172,6 +172,78 @@ scrape_configs:
         labels:
           priority: 'P2'
 
+  # ── Creative Workers ─────────────────────────────────────────────────
+  - job_name: 'creative-workers'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'blender-worker:8050'
+          - 'triposr-worker:8051'
+          - 'ffmpeg-worker:8052'
+        labels:
+          category: 'creative'
+          named: 'Imaginarium'
+
+  # ── KrakenD API Gateway Metrics ───────────────────────────────────────
+  - job_name: 'krakend'
+    metrics_path: '/__stats'
+    static_configs:
+      - targets: ['krakend:8090']
+        labels:
+          service: 'krakend'
+          category: 'gateway'
+
+  # ── Qdrant Vector Store Metrics ───────────────────────────────────────
+  - job_name: 'qdrant'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['qdrant:6333']
+        labels:
+          service: 'qdrant'
+          category: 'vector-db'
+          named: 'Vector Store'
+
+  # ── OpenBao / Vault Metrics ───────────────────────────────────────────
+  - job_name: 'openbao'
+    metrics_path: '/v1/sys/metrics'
+    params:
+      format: ['prometheus']
+    bearer_token_file: /etc/prometheus/vault-token
+    static_configs:
+      - targets: ['openbao:8200']
+        labels:
+          service: 'openbao'
+          category: 'secrets'
+          named: 'The Void'
+    # Note: create /etc/prometheus/vault-token with a Vault token that has
+    # sys/metrics capability. If not configured, this job will fail silently.
+
+  # ── Woodpecker CI Metrics ─────────────────────────────────────────────
+  - job_name: 'woodpecker'
+    static_configs:
+      - targets: ['woodpecker-server:9001']
+        labels:
+          service: 'woodpecker'
+          category: 'ci'
+
+  # ── Dependency-Track SBOM Monitoring ─────────────────────────────────
+  - job_name: 'dependency-track'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['dependency-track-apiserver:8080']
+        labels:
+          service: 'dependency-track'
+          category: 'sbom'
+
+  # ── Falco Runtime Security ────────────────────────────────────────────
+  - job_name: 'falco'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['falco:8765']
+        labels:
+          service: 'falco'
+          category: 'security'
+
   # ── Infrastructure Health Probes ─────────────────────────────────────
   - job_name: 'blackbox-http'
     metrics_path: /probe
@@ -189,3 +261,8 @@ scrape_configs:
           - http://notifications:8008/health
           - http://infinity-ai:8009/health
           - http://the-grid:8010/health
+          - http://blender-worker:8050/health
+          - http://triposr-worker:8051/health
+          - http://ffmpeg-worker:8052/health
+          - http://qdrant:6333/healthz
+          - http://langfuse:3000/api/public/health
