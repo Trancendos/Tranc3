@@ -39,8 +39,8 @@ jobs:
             tests/test_production_readiness_stack.py \
             -q --tb=short
         env:
-          SECRET_KEY: ci-test-secret-not-for-prod
-          JWT_SECRET: ci-test-jwt-secret-not-for-prod
+          SECRET_KEY: ci-production-gate-secret-key-32chars-minimum
+          JWT_SECRET: ci-production-gate-jwt-secret-32chars-minimum
           DATABASE_URL: sqlite:///./test.db
           REDIS_URL: redis://localhost:6379/0
           ENVIRONMENT: test
@@ -48,10 +48,28 @@ jobs:
       - name: API import gate
         run: python -c "import api; print('api OK')"
         env:
-          SECRET_KEY: ci-test-secret-not-for-prod
-          JWT_SECRET: ci-test-jwt-secret-not-for-prod
+          SECRET_KEY: ci-production-gate-secret-key-32chars-minimum
+          JWT_SECRET: ci-production-gate-jwt-secret-32chars-minimum
           DATABASE_URL: sqlite:///./test.db
           REDIS_URL: redis://localhost:6379/0
+          ENVIRONMENT: test
+
+      - name: Citadel preflight (compose contracts)
+        run: python3 scripts/citadel_preflight.py
+        env:
+          SECRET_KEY: ci-production-gate-secret-key-32chars-minimum
+          JWT_SECRET: ci-production-gate-jwt-secret-32chars-minimum
+          DATABASE_URL: sqlite:///./test.db
+          REDIS_URL: redis://localhost:6379/0
+          ENVIRONMENT: test
+
+      - name: Production readiness scorecard
+        run: python3 scripts/production_readiness_score.py
+
+      - name: Dependency audit (pip-audit if installed)
+        run: |
+          pip install pip-audit -q 2>/dev/null || true
+          python3 scripts/dependency_audit.py || true
 
       - name: Entity registry import gate
         run: |

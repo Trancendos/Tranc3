@@ -1,7 +1,7 @@
 # TRANC3 Makefile
 # Usage: make bootstrap | make dev | make test | make deploy | make doctor
 
-.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend health health-json infra-plan swarm-run entity-audit ansible-health
+.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend health health-json infra-plan swarm-run entity-audit ansible-health production-score dependency-audit
 
 # ── Bootstrap (single-command platform setup) ─────────────────────────────────
 bootstrap:
@@ -42,31 +42,7 @@ doctor:
 
 # ── Monitor (live worker health dashboard in terminal) ────────────────────────
 monitor:
-	@echo "Monitoring P0/P1 workers..."
-	@python3 -c "
-import asyncio, httpx, time
-
-WORKERS = [
-    ('infinity-ws',   'http://localhost:8004/health'),
-    ('infinity-auth', 'http://localhost:8005/health'),
-    ('users-svc',     'http://localhost:8006/health'),
-    ('monitoring',    'http://localhost:8007/health'),
-    ('notifications', 'http://localhost:8008/health'),
-    ('infinity-ai',   'http://localhost:8009/health'),
-]
-
-async def check():
-    async with httpx.AsyncClient(timeout=2.0) as c:
-        for name, url in WORKERS:
-            try:
-                r = await c.get(url)
-                status = 'UP  ' if r.status_code == 200 else f'ERR {r.status_code}'
-            except Exception as e:
-                status = f'DOWN ({type(e).__name__})'
-            print(f'  {status}  {name} ({url})')
-
-asyncio.run(check())
-"
+	@python3 scripts/monitor_p0_workers.py
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 setup:
@@ -161,6 +137,12 @@ pr-hygiene-apply:
 
 zero-cost-audit:
 	@python3 scripts/zero_cost_audit.py
+
+production-score:
+	@python3 scripts/production_readiness_score.py
+
+dependency-audit:
+	@python3 scripts/dependency_audit.py
 
 # ── Infrastructure (OpenTofu) ─────────────────────────────────────────────────
 infra-plan:
