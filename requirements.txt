@@ -119,6 +119,19 @@ nats-py==2.7.2
 #   management, pub/sub, and feature flag evaluation. Also used by tranc3-bots.
 redis==7.4.0
 
+# === Database / ORM / Migrations ===
+# SQLAlchemy: hard top-level dependency of src/database/schema.py and
+#   src/auth/db_user_manager.py (imported at api.py load time). The app cannot
+#   start without it.
+SQLAlchemy==2.0.50
+# alembic: schema migrations run by docker-entrypoint.sh (`alembic upgrade head`)
+#   on container start. Required in the production image.
+alembic==1.18.4
+# psycopg2-binary: PostgreSQL driver for the documented production DATABASE_URL
+#   (Supabase postgresql://...). Not needed for the SQLite dev/test path, but
+#   required to connect to the production database.
+psycopg2-binary==2.9.12
+
 # === Master Worker / BotSwarm / Task Orchestration ===
 # pyyaml: YAML task definition parsing — powers src/master/task_loader.py
 pyyaml==6.0.2

@@ -36,7 +36,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 logger = logging.getLogger("tranc3.workers.users-service")
 
-DATABASE_PATH = "/data/users.db"
+DATABASE_PATH = os.environ.get("USERS_DATABASE_PATH", "/data/users.db")
 
 # ---------------------------------------------------------------------------
 # Pydantic models
