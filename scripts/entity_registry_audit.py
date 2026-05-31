@@ -48,7 +48,11 @@ def main() -> int:
             }
         )
 
-    report = {"issues": issues, "total_entities": len(PLATFORM_ENTITIES), "issue_count": len(issues)}
+    report = {
+        "issues": issues,
+        "total_entities": len(PLATFORM_ENTITIES),
+        "issue_count": len(issues),
+    }
     print(json.dumps(report, indent=2))
     return 1 if any(i["severity"] == "error" for i in issues) else 0
 
