@@ -296,18 +296,18 @@ class A2ATransport(ABC):
     """Abstract base class for A2A transports."""
 
     @abstractmethod
-    async def send(self, message: A2AMessage, endpoint: str) -> A2AResponse:
-        ...
+    async def send(self, message: A2AMessage, endpoint: str) -> A2AResponse: ...
 
     @abstractmethod
-    async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]:
-        ...
+    async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]: ...
 
-    async def start(self) -> None:
-        pass
+    async def start(self) -> None:  # noqa: B027 - optional lifecycle hook
+        """Optional startup hook; in-process transports may not need any setup."""
+        return None
 
-    async def stop(self) -> None:
-        pass
+    async def stop(self) -> None:  # noqa: B027 - optional lifecycle hook
+        """Optional shutdown hook; in-process transports may not need any teardown."""
+        return None
 
 
 class InMemoryA2ATransport(A2ATransport):

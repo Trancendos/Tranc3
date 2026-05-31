@@ -349,8 +349,9 @@ class Tranc3(ABC):
     # Override points
     # ------------------------------------------------------------------
 
-    async def on_cycle(self) -> None:
+    async def on_cycle(self) -> None:  # noqa: B027 - optional override hook
         """Called on every heartbeat cycle. Override for periodic work."""
+        return None
 
     @abstractmethod
     async def process(self, payload: dict[str, Any]) -> dict[str, Any]:
