@@ -34,7 +34,23 @@ PROACTIVE_ORCHESTRATOR_ENABLED=true
 - `GET /adaptive/status` — rotator + proactive orchestrator
 - `POST /adaptive/mode` — switch mode for this process (persist in `.env`)
 
-## Deploy script behaviour
+## Deploy (CLOUD_ONLY — Fly.io)
+
+From repo root, with `FLY_API_TOKEN` and Fly app secrets configured:
+
+```bash
+export FLY_API_TOKEN=...
+python scripts/deploy_cloud.py
+```
+
+```cmd
+set FLY_API_TOKEN=your_token
+scripts\deploy_cloud.bat
+```
+
+Apps: `tranc3-backend` (repo root), `trancendos-bots` (`tranc3-bots/`). Does **not** start Citadel Docker.
+
+## Deploy script behaviour (local Citadel later)
 
 From repo root:
 

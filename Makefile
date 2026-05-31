@@ -166,6 +166,12 @@ citadel-deploy-all:
 citadel-deploy-all-gate:
 	@python3 scripts/citadel_deploy_all.py --gate-only
 
+deploy-cloud:
+	@python3 scripts/deploy_cloud.py
+
+deploy-cloud-gate:
+	@python3 scripts/deploy_cloud.py --gate-only
+
 pre-deploy-fix:
 	@python3 -m ruff check src/ api.py workers/infinity-auth workers/infinity-ws workers/api-gateway workers/tranc3-ai workers/infinity-void workers/users-service workers/products-service workers/orders-service workers/payments-service workers/notifications workers/infinity-ai workers/monitoring --fix || true
 
