@@ -113,7 +113,7 @@ class SimpleTextEncoder:
 
         for token in ngrams:
             # Feature hashing
-            h = int(hashlib.md5(token.encode()).hexdigest(), 16)
+            h = int(hashlib.md5(token.encode(), usedforsecurity=False).hexdigest(), 16)
             idx = h % self.EMBEDDING_DIM
             sign = 1.0 if (h >> 8) % 2 == 0 else -1.0
             embedding[idx] += sign

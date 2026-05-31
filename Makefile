@@ -157,6 +157,12 @@ production-score:
 dependency-audit:
 	@python3 scripts/dependency_audit.py
 
+pre-deploy-gate:
+	@python3 scripts/pre_deploy_quality_gate.py
+
+pre-deploy-fix:
+	@python3 -m ruff check src/ api.py workers/infinity-auth workers/infinity-ws workers/api-gateway workers/tranc3-ai workers/infinity-void workers/users-service workers/products-service workers/orders-service workers/payments-service workers/notifications workers/infinity-ai workers/monitoring --fix || true
+
 # ── Infrastructure (OpenTofu) ─────────────────────────────────────────────────
 infra-plan:
 	@cd infrastructure/opentofu && tofu init -upgrade && tofu plan

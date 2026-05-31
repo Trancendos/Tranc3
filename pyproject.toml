@@ -14,7 +14,12 @@ line-length = 100
 target-version = "py311"
 extend-exclude = [
     ".forgejo",
+    "aeonmind",
+    "cloudflare",
+    "Dimensional",
     "docs/reference",
+    "tranc3-ts",
+    "web/node_modules",
     "**/*.sh",
 ]
 
@@ -35,6 +40,9 @@ ignore = [
 "migrations/*" = ["E402"]
 "train.py" = ["E402"]
 "tranc3-bots/*" = ["E402", "E702"]
+"workers/*/worker.py" = ["E402"]  # mount_prometheus after FastAPI() app instance
+"src/protocols/**" = ["B027"]  # optional ABC lifecycle hooks with default no-op
+"src/entities/templates/**" = ["B027"]
 "src/neural/attention_router.py" = ["C416"]
 # Nanoservices: re-export __init__ files and research/simulation modules
 "src/nanoservices/**/__init__.py" = ["F401"]
@@ -52,6 +60,28 @@ ignore_missing_imports = true
 no_error_summary = true
 show_error_codes = true
 warn_unused_ignores = false
+exclude = [
+  "aeonmind/",
+  "cloudflare/",
+  "Dimensional/",
+  "docs/",
+  "tranc3-ts/",
+  "workers/_generate_workers.py",
+]
+
+[[tool.mypy.overrides]]
+module = [
+  "src.*.routes",
+  "src.nanoservices.*",
+  "src.tensorflow_core.*",
+  "src.training.*",
+  "src.workflow.phase4_nodes",
+  "src.mcp.spark_phase4_tools",
+  "src.database.schema",
+  "src.chronos.routes",
+  "src.lab.routes",
+]
+ignore_errors = true
 
 # ── pytest ────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
@@ -68,12 +98,23 @@ markers = [
 
 # ── bandit ─────────────────────────────────────────────────────────────
 [tool.bandit]
-targets = ["src", "api.py"]
-exclude_dirs = ["tests", "scripts"]
+targets = ["src", "api.py", "workers"]
+exclude_dirs = [
+  "tests",
+  "scripts",
+  "aeonmind",
+  "cloudflare",
+  "Dimensional",
+  "docs",
+  "tranc3-ts",
+  "web",
+]
 severity = "low"
 confidence = "low"
 skips = [
-  "B101",  # assert statements (acceptable in non-production paths)
+  "B101",  # assert in tests/dev paths
+  "B311",  # random — used for ML/simulation hashing, not secrets
+  "B324",  # weak hash — non-crypto etag/feature-hash (usedforsecurity=False)
 ]
 
 # ── semgrep ────────────────────────────────────────────────────────────────

@@ -16,7 +16,6 @@ Zero-cost: FastAPI WebSocket + asyncio. No CF Durable Objects.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -42,6 +41,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from Dimensional.sanitize import sanitize_for_log
+from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger("tranc3.workers.infinity-ws")
 

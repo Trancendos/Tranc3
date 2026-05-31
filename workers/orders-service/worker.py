@@ -8,7 +8,6 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import logging
 import os
@@ -22,6 +21,8 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration

@@ -17,8 +17,8 @@ class ChainSwitchRequest(BaseModel):
 
 @router.get("/status")
 async def adaptive_status():
-    from src.adaptive.provider_rotator import get_provider_rotator
     from src.adaptive.proactive_orchestrator import get_proactive_orchestrator
+    from src.adaptive.provider_rotator import get_provider_rotator
 
     rotator = get_provider_rotator()
     proactive = get_proactive_orchestrator()

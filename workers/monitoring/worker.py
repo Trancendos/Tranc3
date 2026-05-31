@@ -10,7 +10,6 @@ Zero-cost: All data stored in SQLite, no external metrics services required.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -39,6 +38,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from Dimensional.error_handlers import safe_error_detail
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration

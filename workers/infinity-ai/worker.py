@@ -12,7 +12,6 @@ Zero-cost: Ollama local inference, free-tier OpenRouter, HuggingFace free infere
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import hashlib
 import json
@@ -32,6 +31,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration

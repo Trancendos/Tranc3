@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import os
 import re
 import sqlite3
 import time
@@ -412,6 +413,10 @@ class KnowledgeBrain:
             return fut.result(timeout=10)
         return loop.run_until_complete(self.list_pages(source=source))
 
+    async def start_dream_cycle(self, interval_seconds: float = 3600.0) -> None:
+        """Background consolidation hook (no-op until full dream-cycle scheduler lands)."""
+        del interval_seconds
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -429,6 +434,18 @@ def _parse_wikilinks(source_id: str, content: str) -> list[KBLink]:
         if target and target != source_id:
             links.append(KBLink(source_id=source_id, target_id=target, alias=alias.strip()))
     return links
+
+
+_brain_singleton: Optional[KnowledgeBrain] = None
+
+
+def get_brain(db_path: Optional[str] = None) -> KnowledgeBrain:
+    """Return process-wide KnowledgeBrain instance (The Library)."""
+    global _brain_singleton
+    if _brain_singleton is None:
+        path = db_path or os.environ.get("KNOWLEDGE_BRAIN_DB", "data/knowledge.db")
+        _brain_singleton = KnowledgeBrain(path)
+    return _brain_singleton
 
 
 def _make_excerpt(content: str, query: str, window: int = 120) -> str:

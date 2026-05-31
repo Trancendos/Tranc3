@@ -10,7 +10,6 @@ Zero-cost: In-process dispatch, SQLite storage, no external SaaS.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -32,6 +31,7 @@ from pydantic import BaseModel, Field
 from Dimensional.error_handlers import safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
 from Dimensional.url_validation import SSRFError, validate_webhook_url
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration

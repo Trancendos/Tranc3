@@ -108,3 +108,43 @@ class PersonalityMatrix:
     def register(self, profile: PersonalityProfile):
         self._registry[profile.name] = profile
         profile.to_file(str(self.profiles_dir / f"{profile.name}.json"))
+
+
+class EnhancedPersonalityMatrix(PersonalityMatrix):
+    """API-compatible matrix used by api.py (config dict + emotion vector helpers)."""
+
+    def __init__(self, config: Any = None):
+        if isinstance(config, dict):
+            profiles_dir = str(config.get("profiles_dir", "src/personality/profiles"))
+        elif isinstance(config, str):
+            profiles_dir = config
+        else:
+            profiles_dir = "src/personality/profiles"
+        super().__init__(profiles_dir)
+        self.personalities = self._registry
+        self.emotion_detector = None
+
+    def get_personality_vector(
+        self,
+        personality_name: str,
+        user_emotion: Optional[Dict[str, Any]] = None,
+        language: str = "en",
+        user_id: Optional[str] = None,
+    ) -> list[float]:
+        """Return a simple modulation vector for inference (temperature / style axes)."""
+        del user_id, language  # reserved for future adaptation
+        profile = self.get(personality_name)
+        vector = [
+            float(profile.temperature),
+            float(profile.top_p),
+            float(profile.repetition_penalty),
+            float(profile.max_new_tokens) / 1024.0,
+        ]
+        if user_emotion and isinstance(user_emotion, dict):
+            try:
+                dominant = max(user_emotion, key=lambda k: float(user_emotion.get(k, 0)))
+                boost = float(user_emotion.get(dominant, 0.0))
+                vector[0] = min(1.0, vector[0] + boost * 0.1)
+            except (TypeError, ValueError):
+                pass
+        return vector

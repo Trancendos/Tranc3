@@ -25,7 +25,6 @@ Zero-cost: FastAPI + SQLite + python-jose. No CF Workers or KV.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import hashlib
@@ -54,6 +53,7 @@ from shared_core.infinity.nomenclature import InfinityRole, Tier
 # Phase 22.6: Smart Adaptive Intelligence
 from shared_core.infinity.worker_integration import InfinityWorkerKit
 from shared_core.sanitize import sanitize_for_log
+from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger("tranc3.workers.infinity-auth")
 

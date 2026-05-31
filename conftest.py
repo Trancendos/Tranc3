@@ -171,7 +171,7 @@ def sample_error_payloads():
         "command_injection": ["; ls -la", "| cat /etc/passwd", "`id`", "$(whoami)"],
         "null_bytes": [null + "admin", "test" + null + "injection", null * 3],
         "oversized": ["A" * 100_001, "B" * 1_000_000],
-        "unicode_tricks": ["​", "�", "‮" + "txt.exe", "admin​"],
+        "unicode_tricks": ["\u200b", "\ufffd", "\u202e" + "txt.exe", "admin\u200b"],
         "json_injection": ['{"__proto__": {"admin": true}}', '{"constructor": {"prototype": {}}}'],
         "empty": ["", "   ", "\t\n"],
     }

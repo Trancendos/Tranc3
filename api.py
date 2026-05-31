@@ -152,7 +152,7 @@ except ImportError as _e:
 
 try:
     from src.personality.matrix import (
-        PersonalityMatrix as EnhancedPersonalityMatrix,  # noqa: F401  # intentional top-level import
+        EnhancedPersonalityMatrix,  # noqa: F401  # intentional top-level import
     )
 except ImportError as _e:
     EnhancedPersonalityMatrix = None  # type: ignore[assignment,misc]
@@ -363,7 +363,9 @@ async def lifespan(app: FastAPI):
 
     # pgvector — bootstrap embeddings table (no-ops gracefully if unavailable)
     try:
-        from src.database.pgvector import bootstrap as _pgvector_bootstrap  # codeql[py/cyclic-import]
+        from src.database.pgvector import (
+            bootstrap as _pgvector_bootstrap,  # codeql[py/cyclic-import]
+        )
 
         if _pgvector_bootstrap():
             logger.info("pgvector embeddings table ready")

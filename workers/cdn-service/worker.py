@@ -86,7 +86,7 @@ def init_db() -> None:
 
 
 def _file_etag(path: Path) -> str:
-    h = hashlib.sha1()
+    h = hashlib.sha1(usedforsecurity=False)
     h.update(str(path.stat().st_mtime).encode())
     h.update(str(path.stat().st_size).encode())
     return f'"{h.hexdigest()}"'

@@ -145,6 +145,8 @@ def resolve_entity(
     lead_ai = ov.get("lead_ai", lead_canonical)
     lead_tier_ov = ov.get("tier_lead_ai")
     lead_tier = int(lead_tier_ov) if lead_tier_ov and str(lead_tier_ov).isdigit() else 3
+    ov_out = dict(ov)
+    ov_out.setdefault("tier_lead_ai", str(lead_tier))
 
     return EffectiveEntity(
         pid=pid,
@@ -167,7 +169,7 @@ def resolve_entity(
         },
         worker_port=getattr(entity, "worker_port", None),
         worker_path=getattr(entity, "worker_path", None),
-        overrides_applied=ov,
+        overrides_applied=ov_out,
     )
 
 
