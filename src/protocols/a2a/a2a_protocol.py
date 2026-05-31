@@ -23,7 +23,6 @@ import json
 import logging
 import time
 import uuid
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Awaitable, Callable, Dict, List, Optional
@@ -292,22 +291,22 @@ class A2ARouteRule:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class A2ATransport(ABC):
+class A2ATransport:
     """Abstract base class for A2A transports."""
 
-    @abstractmethod
     async def send(self, message: A2AMessage, endpoint: str) -> A2AResponse:
-        ...
+        raise NotImplementedError
 
-    @abstractmethod
     async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]:
-        ...
+        raise NotImplementedError
 
-    async def start(self) -> None:
-        pass
+    async def start(self) -> None:  # noqa: B027 - optional lifecycle hook
+        """Optional startup hook; in-process transports may not need any setup."""
+        return None
 
-    async def stop(self) -> None:
-        pass
+    async def stop(self) -> None:  # noqa: B027 - optional lifecycle hook
+        """Optional shutdown hook; in-process transports may not need any teardown."""
+        return None
 
 
 class InMemoryA2ATransport(A2ATransport):
