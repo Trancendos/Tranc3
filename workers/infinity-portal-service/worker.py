@@ -416,7 +416,7 @@ async def call_auth_service(method: str, path: str, json_data: dict | None = Non
                 raise HTTPException(status_code=response.status_code, detail=error_detail)
 
             return response.json()
-    except httpx.ConnectError:
+    except httpx.ConnectError as exc:
         raise HTTPException(
             status_code=503,
             detail="Infinity Auth service unavailable. Please try again later.",
