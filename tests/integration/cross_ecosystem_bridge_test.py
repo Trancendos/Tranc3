@@ -16,19 +16,20 @@ Tests:
 """
 
 import json
+
 from src.bridge import (
-    EcosystemBridge,
-    EcosystemRegistry,
-    EcosystemEntity,
     BridgeEndpoint,
     BridgeTransport,
+    EcosystemBridge,
+    EcosystemEntity,
+    EcosystemRegistry,
     JsonRpcRequest,
 )
+from src.entities import OllamaConfig, Prime, Sovereign
 from src.protocols.a2a import A2AMessage, A2AMessageType, A2APriority
+from src.protocols.hil_a import HILAActionCategory, HILAChain
 from src.protocols.three_bridge import SentinelStation
 from src.protocols.three_bridge.three_bridge_coordinator import TrafficClass
-from src.protocols.hil_a import HILAChain, HILAActionCategory
-from src.entities import Prime, Sovereign, OllamaConfig
 
 
 def test_cross_ecosystem_bridge():

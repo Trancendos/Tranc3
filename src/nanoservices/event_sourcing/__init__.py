@@ -1,10 +1,10 @@
 from .event_sourcing import (
-    EventType,
-    Event,
-    Snapshot,
-    Projection,
-    EventStore,
-    ProjectionEngine,
     AggregateRoot,
+    Event,
     EventSourcingCQRSService,
+    EventStore,
+    EventType,
+    Projection,
+    ProjectionEngine,
+    Snapshot,
 )

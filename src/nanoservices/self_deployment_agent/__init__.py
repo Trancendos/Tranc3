@@ -6,10 +6,10 @@ auto-healing deployments.
 """
 
 from .self_deployment_agent import (
-    DeploymentState,
     DeploymentAction,
     DeploymentConfig,
     DeploymentResult,
+    DeploymentState,
     DriftReport,
     SelfDeploymentAgent,
 )
