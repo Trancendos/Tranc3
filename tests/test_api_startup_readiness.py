@@ -1,9 +1,10 @@
 import ast
 from pathlib import Path
 
+from tests._repo_io import read_repo_text
 
 API_PATH = Path(__file__).resolve().parents[1] / "api.py"
-API_TREE = ast.parse(API_PATH.read_text())
+API_TREE = ast.parse(read_repo_text(API_PATH))
 
 
 def _module_call_index(name: str) -> int:

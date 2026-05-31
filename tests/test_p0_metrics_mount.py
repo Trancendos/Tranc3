@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests._repo_io import read_repo_text
+
 ROOT = Path(__file__).resolve().parents[1]
 
 P0_WORKERS = [
@@ -32,7 +34,7 @@ METRICS_MARKERS = (
 def test_p0_workers_declare_metrics_endpoint():
     missing = []
     for rel in P0_WORKERS:
-        text = (ROOT / rel).read_text()
+        text = read_repo_text(ROOT / rel)
         if not any(m in text for m in METRICS_MARKERS):
             missing.append(rel)
     assert not missing, f"P0 workers missing /metrics wiring: {missing}"

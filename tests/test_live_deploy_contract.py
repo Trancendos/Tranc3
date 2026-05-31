@@ -6,6 +6,8 @@ from pathlib import Path
 
 import yaml
 
+from tests._repo_io import read_repo_text
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -23,7 +25,7 @@ def test_live_deploy_scripts_exist():
 
 
 def test_p0_worker_dockerfiles_use_repo_root_context():
-    compose = yaml.safe_load((ROOT / "docker-compose.production.yml").read_text())
+    compose = yaml.safe_load(read_repo_text(ROOT / "docker-compose.production.yml"))
     for svc in (
         "infinity-ws",
         "infinity-auth",
@@ -36,7 +38,7 @@ def test_p0_worker_dockerfiles_use_repo_root_context():
 
 
 def test_compose_has_ollama_valkey_and_backend():
-    compose = yaml.safe_load((ROOT / "docker-compose.production.yml").read_text())
+    compose = yaml.safe_load(read_repo_text(ROOT / "docker-compose.production.yml"))
     services = compose["services"]
     assert "ollama" in services
     assert "valkey" in services
@@ -47,13 +49,13 @@ def test_compose_has_ollama_valkey_and_backend():
 
 
 def test_prometheus_scrapes_backend():
-    prom = (ROOT / "monitoring" / "prometheus.yml").read_text()
+    prom = read_repo_text(ROOT / "monitoring" / "prometheus.yml")
     assert "tranc3-backend" in prom
     assert "tranc3-core.yml" in prom
 
 
 def test_generate_production_env_template_keys():
-    script = (ROOT / "scripts" / "generate_production_env.sh").read_text()
+    script = read_repo_text(ROOT / "scripts" / "generate_production_env.sh")
     for key in (
         "SECRET_KEY=",
         "JWT_SECRET=",

@@ -5,6 +5,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from tests._repo_io import read_repo_text
+
 ROOT = Path(__file__).resolve().parents[1]
 
 P0_WORKERS = [
@@ -19,20 +21,20 @@ P0_WORKERS = [
 def test_p0_worker_files_parse():
     for rel, _port in P0_WORKERS:
         path = ROOT / rel
-        ast.parse(path.read_text(), filename=str(path))
+        ast.parse(read_repo_text(path), filename=str(path))
 
 
 def test_infinity_auth_health_includes_entity_in_source():
-    text = (ROOT / "workers/infinity-auth/worker.py").read_text()
+    text = read_repo_text(ROOT / "workers/infinity-auth/worker.py")
     assert "health_entity_block(8005" in text
     assert '"version": "2.0.0",' in text
 
 
 def test_infinity_ws_health_includes_entity_in_source():
-    text = (ROOT / "workers/infinity-ws/worker.py").read_text()
+    text = read_repo_text(ROOT / "workers/infinity-ws/worker.py")
     assert "health_entity_block(8004" in text
 
 
 def test_api_health_includes_entity_in_source():
-    text = (ROOT / "api.py").read_text()
+    text = read_repo_text(ROOT / "api.py")
     assert "health_entity_block(8000" in text

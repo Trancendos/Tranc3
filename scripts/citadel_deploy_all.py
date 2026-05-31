@@ -65,7 +65,7 @@ FULL_EXTRA = [
     "gbrain-bridge",
 ]
 
-PIP_TOOLS = ["ruff", "bandit", "pip-audit", "pytest"]
+PIP_TOOLS = ["ruff", "bandit", "pip-audit", "pytest", "pytest-asyncio"]
 
 
 def _log(msg: str) -> None:

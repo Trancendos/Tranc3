@@ -7,11 +7,13 @@ from uuid import uuid4
 import pytest
 import yaml
 
+from tests._repo_io import read_repo_text
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
 def _load_compose() -> dict:
-    return yaml.safe_load((ROOT / "docker-compose.production.yml").read_text())
+    return yaml.safe_load(read_repo_text(ROOT / "docker-compose.production.yml"))
 
 
 def _environment(service: dict) -> dict[str, str]:

@@ -67,10 +67,15 @@ def main() -> int:
 
     failures: list[str] = []
 
-    for mod, label in (("pytest", "pytest"), ("ruff", "ruff")):
+    gate_tools = "pytest pytest-asyncio ruff bandit pip-audit"
+    for mod, label in (
+        ("pytest", "pytest"),
+        ("pytest_asyncio", "pytest-asyncio"),
+        ("ruff", "ruff"),
+    ):
         if not _module_ok(mod):
             failures.append(
-                f"Missing {label} — run: {sys.executable} -m pip install {label} pytest ruff bandit pip-audit"
+                f"Missing {label} — run: {sys.executable} -m pip install {gate_tools}"
             )
 
     if failures:
@@ -88,6 +93,8 @@ def main() -> int:
         "DATABASE_URL": "sqlite:///./test.db",
         "REDIS_URL": "redis://localhost:6379/0",
         "ENVIRONMENT": "test",
+        # Windows: docker-compose.production.yml uses UTF-8 (em-dash); avoid cp1252 decode errors
+        "PYTHONUTF8": "1",
     }
     tests = _run(
         [

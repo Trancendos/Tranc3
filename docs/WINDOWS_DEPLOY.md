@@ -18,7 +18,7 @@ cd Tranc3
 
 ```cmd
 cd %USERPROFILE%\Documents\Tranc3
-py -3.12 -m pip install -r requirements.txt ruff bandit pytest pip-audit
+py -3.12 -m pip install -r requirements.txt ruff bandit pytest pytest-asyncio pip-audit
 ```
 
 4. **Fly.io CLI** (for deploy):
@@ -58,6 +58,12 @@ scripts\deploy_cloud.bat
 ```
 
 `--cloud-only` skips Docker Compose validation (Citadel). That is intentional for Fly/cloud deploy.
+
+If you see `Unknown pytest.mark.asyncio`, install the async plugin:
+
+```cmd
+py -3.12 -m pip install pytest-asyncio
+```
 
 If the gate fails on **pytest**, read the `--- pytest (last lines) ---` section in the output, then run:
 
