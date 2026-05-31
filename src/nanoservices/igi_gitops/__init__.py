@@ -5,15 +5,15 @@ Uses Forgejo (NOT GitHub) as the Git source of truth.
 """
 
 from .igi_gitops import (
-    GitOpsStatus,
-    DriftSeverity,
-    ResourceType,
-    ForgejoConfig,
-    FluxSyncStatus,
-    DriftEvent,
-    KustomizeOverlay,
     DriftDetector,
+    DriftEvent,
+    DriftSeverity,
+    FluxSyncStatus,
+    ForgejoConfig,
+    GitOpsStatus,
     IGIGitOps,
+    KustomizeOverlay,
+    ResourceType,
 )
 
 __all__ = [

@@ -21,6 +21,7 @@ import pytest
 # Ensure the project root is on sys.path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.nexus.nexus_core import (
     CausalOrderingEngine,
     DimensionalNexus,
@@ -35,8 +36,6 @@ from Dimensional.nexus.nexus_core import (
     TierAccessBridge,
     get_nexus,
 )
-from Dimensional.infinity.nomenclature import SentinelChannel
-
 
 # ---------------------------------------------------------------------------
 # Causal Ordering Engine Tests
@@ -910,7 +909,7 @@ class TestNexusWSManager:
     @pytest.mark.asyncio
     async def test_ws_manager_broadcast(self):
         """WSManager broadcasts events to all connections."""
-        from Dimensional.nexus.nexus_core import NexusWSManager, NexusEvent
+        from Dimensional.nexus.nexus_core import NexusEvent, NexusWSManager
 
         manager = NexusWSManager()
 
@@ -940,7 +939,7 @@ class TestNexusWSManager:
     @pytest.mark.asyncio
     async def test_ws_manager_broadcast_removes_dead(self):
         """WSManager removes connections that fail on broadcast."""
-        from Dimensional.nexus.nexus_core import NexusWSManager, NexusEvent
+        from Dimensional.nexus.nexus_core import NexusEvent, NexusWSManager
 
         manager = NexusWSManager()
 
@@ -976,7 +975,8 @@ class TestDashboardEndpoint:
     @pytest.mark.asyncio
     async def test_dashboard_endpoint_exists(self):
         """Dashboard endpoint returns HTML when file exists."""
-        from httpx import AsyncClient, ASGITransport
+        from httpx import ASGITransport, AsyncClient
+
         from Dimensional.nexus.nexus_core import create_nexus_app
 
         app = create_nexus_app()
@@ -993,7 +993,8 @@ class TestDashboardEndpoint:
     @pytest.mark.asyncio
     async def test_root_includes_dashboard_endpoint(self):
         """Root endpoint lists the dashboard in available endpoints."""
-        from httpx import AsyncClient, ASGITransport
+        from httpx import ASGITransport, AsyncClient
+
         from Dimensional.nexus.nexus_core import create_nexus_app
 
         app = create_nexus_app()
@@ -1070,8 +1071,8 @@ class TestNexusSentinelBridge:
     @pytest.mark.asyncio
     async def test_bridge_on_sentinel_event(self):
         """Bridge forwards Sentinel events into the Nexus."""
-        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
         from Dimensional.nexus.nexus_core import DimensionalNexus
+        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
 
         nexus = DimensionalNexus("bridge-test")
         bridge = NexusSentinelBridge(nexus)
@@ -1087,8 +1088,8 @@ class TestNexusSentinelBridge:
     @pytest.mark.asyncio
     async def test_bridge_on_sentinel_event_paused(self):
         """Bridge does not forward when Nexus forwarding is paused."""
-        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
         from Dimensional.nexus.nexus_core import DimensionalNexus
+        from Dimensional.nexus.sentinel_bridge import NexusSentinelBridge
 
         nexus = DimensionalNexus("bridge-pause-test")
         bridge = NexusSentinelBridge(nexus)
@@ -1104,10 +1105,9 @@ class TestNexusSentinelBridge:
 
     def test_bridge_singleton(self):
         """get_bridge returns a singleton instance."""
-        from Dimensional.nexus.sentinel_bridge import get_bridge
-
         # Reset singleton for test isolation
         import Dimensional.nexus.sentinel_bridge as _sb
+        from Dimensional.nexus.sentinel_bridge import get_bridge
 
         _sb._bridge_instance = None
         b1 = get_bridge()

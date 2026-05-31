@@ -293,8 +293,8 @@ class ModelCheckerSimulator:
 
 def tempfile_file(content: str, suffix: str = ".lean") -> Any:
     """Context manager for temporary files."""
-    import tempfile
     import os
+    import tempfile
 
     class TempFileRef:
         def __init__(self, path: str):
@@ -437,5 +437,5 @@ class FormalVerificationService:
             ),
             "total_obligations": len(self.obligations),
             "total_results": len(self.results),
-            "property_types": list(set(p.property_type.value for p in self.properties.values())),
+            "property_types": list({p.property_type.value for p in self.properties.values()}),
         }
