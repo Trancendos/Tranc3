@@ -76,7 +76,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"   # Traefik dashboard
+      - "8888:8080"   # Traefik dashboard (moved from 8080 to avoid KrakenD conflict)
       - "9090:9090"   # Metrics
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -850,16 +850,14 @@ services:
 
   # ── KrakenD — API Gateway (Apache 2.0, replaces CF trancendos-api-gateway) ──
   # Stateless, no DB; routes /api/v1/* to backend workers with JWT + rate limiting.
-  # Metrics endpoint on :8090; main API on :8080.
-  # Note: Traefik dashboard also binds :8080 — adjust traefik port in production
-  # (e.g. move Traefik dashboard to :8888) to avoid collision.
+  # KrakenD API gateway — main API on :8080 (internal), :8099 (host), metrics on :8090
   krakend:
     image: devopsfaith/krakend:latest
     container_name: trancendos-krakend
     environment:
       - JWT_SECRET=${JWT_SECRET}
     ports:
-      - "8080:8080"
+      - "8099:8080"
       - "8090:8090"
     volumes:
       - ./config/krakend/krakend.json:/etc/krakend/krakend.json:ro
