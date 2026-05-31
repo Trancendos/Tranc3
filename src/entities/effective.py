@@ -173,7 +173,9 @@ def resolve_entity(
     )
 
 
-def list_all_effective(overrides_by_pid: dict[str, dict[str, str]] | None = None) -> list[EffectiveEntity]:
+def list_all_effective(
+    overrides_by_pid: dict[str, dict[str, str]] | None = None,
+) -> list[EffectiveEntity]:
     """List all 43 entities with per-PID override maps."""
     overrides_by_pid = overrides_by_pid or {}
     results: list[EffectiveEntity] = []

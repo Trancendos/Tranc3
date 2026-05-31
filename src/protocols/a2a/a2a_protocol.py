@@ -294,11 +294,11 @@ class A2ARouteRule:
 class A2ATransport:
     """Abstract base class for A2A transports."""
 
-    async def send(self, message: A2AMessage, endpoint: str) -> A2AResponse:
-        raise NotImplementedError
+    @abstractmethod
+    async def send(self, message: A2AMessage, endpoint: str) -> A2AResponse: ...
 
-    async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]:
-        raise NotImplementedError
+    @abstractmethod
+    async def broadcast(self, message: A2AMessage, endpoints: List[str]) -> List[A2AResponse]: ...
 
     async def start(self) -> None:  # noqa: B027 - optional lifecycle hook
         """Optional startup hook; in-process transports may not need any setup."""

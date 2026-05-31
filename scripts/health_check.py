@@ -10,6 +10,7 @@ Exit codes:
   1 — one or more P0 services unhealthy
   2 — degraded (P1/P2 issues only, P0 OK)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -22,6 +23,7 @@ from typing import Optional
 
 try:
     import httpx
+
     _HAS_HTTPX = True
 except ImportError:
     _HAS_HTTPX = False
@@ -36,43 +38,43 @@ BASE = os.environ.get("TRANC3_BASE_URL", "http://localhost")
 # Service registry: (name, port, health_path, priority)
 SERVICES = [
     # P0 — critical
-    ("tranc3-backend",    8000, "/health",  "P0"),
-    ("tranc3-ai",         8001, "/health",  "P0"),
-    ("api-gateway",       8003, "/health",  "P0"),
-    ("infinity-ws",       8004, "/health",  "P0"),
-    ("infinity-auth",     8005, "/health",  "P0"),
+    ("tranc3-backend", 8000, "/health", "P0"),
+    ("tranc3-ai", 8001, "/health", "P0"),
+    ("api-gateway", 8003, "/health", "P0"),
+    ("infinity-ws", 8004, "/health", "P0"),
+    ("infinity-auth", 8005, "/health", "P0"),
     # P1 — important
-    ("users-service",     8006, "/health",  "P1"),
-    ("monitoring",        8007, "/health",  "P1"),
-    ("notifications",     8008, "/health",  "P1"),
-    ("infinity-ai",       8009, "/health",  "P1"),
+    ("users-service", 8006, "/health", "P1"),
+    ("monitoring", 8007, "/health", "P1"),
+    ("notifications", 8008, "/health", "P1"),
+    ("infinity-ai", 8009, "/health", "P1"),
     # P2 — standard
-    ("the-grid",          8010, "/health",  "P2"),
-    ("products-service",  8011, "/health",  "P2"),
-    ("orders-service",    8012, "/health",  "P2"),
-    ("payments-service",  8013, "/health",  "P2"),
-    ("files-service",     8014, "/health",  "P2"),
-    ("identity-service",  8015, "/health",  "P2"),
+    ("the-grid", 8010, "/health", "P2"),
+    ("products-service", 8011, "/health", "P2"),
+    ("orders-service", 8012, "/health", "P2"),
+    ("payments-service", 8013, "/health", "P2"),
+    ("files-service", 8014, "/health", "P2"),
+    ("identity-service", 8015, "/health", "P2"),
     # Infrastructure
-    ("qdrant",            6333, "/healthz", "INF"),
-    ("nats",              8222, "/healthz", "INF"),
+    ("qdrant", 6333, "/healthz", "INF"),
+    ("nats", 8222, "/healthz", "INF"),
     ("woodpecker-server", 8100, "/healthz", "INF"),
     # Observability
-    ("prometheus",        9090, "/-/healthy", "OBS"),
-    ("grafana",           3000, "/api/health", "OBS"),
-    ("victoriametrics",   8428, "/health", "OBS"),
-    ("langfuse",          3002, "/api/public/health", "OBS"),
-    ("signoz-frontend",   3301, "/", "OBS"),
-    # Creative
-    ("blender-worker",    8050, "/health",  "P3"),
-    ("triposr-worker",    8051, "/health",  "P3"),
-    ("ffmpeg-worker",     8052, "/health",  "P3"),
-    ("swarm-coordinator", 8053, "/health",  "P1"),
-    ("gbrain-bridge",     8030, "/health",  "P2"),
-    ("vault-service",     8038, "/health",  "P2"),
-    ("infinity-admin",    8044, "/health",  "P1"),
-    ("hive-service",      8060, "/health",  "P2"),
-    ("infinity-bridge",   8070, "/health",  "P1"),
+    ("prometheus", 9090, "/-/healthy", "OBS"),
+    ("grafana", 3000, "/api/health", "OBS"),
+    ("victoriametrics", 8428, "/health", "OBS"),
+    ("langfuse", 3002, "/api/public/health", "OBS"),
+    ("signoz-frontend", 3301, "/", "OBS"),
+    # Creative + platform workers
+    ("blender-worker", 8050, "/health", "P3"),
+    ("triposr-worker", 8051, "/health", "P3"),
+    ("ffmpeg-worker", 8052, "/health", "P3"),
+    ("swarm-coordinator", 8053, "/health", "P1"),
+    ("gbrain-bridge", 8030, "/health", "P2"),
+    ("vault-service", 8038, "/health", "P2"),
+    ("infinity-admin", 8044, "/health", "P1"),
+    ("hive-service", 8060, "/health", "P2"),
+    ("infinity-bridge", 8070, "/health", "P1"),
 ]
 
 
@@ -134,9 +136,16 @@ async def check_service(name: str, port: int, path: str, priority: str) -> Servi
         ok, code, ms, err, detail = await asyncio.get_event_loop().run_in_executor(
             None, probe_urllib, url
         )
-    return ServiceResult(name=name, port=port, priority=priority,
-                         ok=ok, status_code=code, latency_ms=ms,
-                         error=err, detail=detail)
+    return ServiceResult(
+        name=name,
+        port=port,
+        priority=priority,
+        ok=ok,
+        status_code=code,
+        latency_ms=ms,
+        error=err,
+        detail=detail,
+    )
 
 
 async def run_all() -> list[ServiceResult]:
@@ -145,12 +154,12 @@ async def run_all() -> list[ServiceResult]:
 
 
 _COLORS = {
-    "GREEN":  "\033[92m",
-    "RED":    "\033[91m",
+    "GREEN": "\033[92m",
+    "RED": "\033[91m",
     "YELLOW": "\033[93m",
-    "RESET":  "\033[0m",
-    "BOLD":   "\033[1m",
-    "DIM":    "\033[2m",
+    "RESET": "\033[0m",
+    "BOLD": "\033[1m",
+    "DIM": "\033[2m",
 }
 
 
@@ -199,8 +208,10 @@ def print_report(results: list[ServiceResult]) -> int:
 
     healthy = sum(1 for r in results if r.ok)
     total = len(results)
-    print(f"  {_c('BOLD', 'Summary:')} {_c('GREEN', str(healthy))} healthy, "
-          f"{_c('RED', str(total - healthy))} unhealthy of {total} services\n")
+    print(
+        f"  {_c('BOLD', 'Summary:')} {_c('GREEN', str(healthy))} healthy, "
+        f"{_c('RED', str(total - healthy))} unhealthy of {total} services\n"
+    )
 
     if p0_fail > 0:
         print(f"  {_c('RED', f'CRITICAL: {p0_fail} P0 service(s) down')}\n")
@@ -218,8 +229,11 @@ def main() -> int:
     if "--json" in sys.argv:
         output = [
             {
-                "name": r.name, "port": r.port, "priority": r.priority,
-                "ok": r.ok, "status_code": r.status_code,
+                "name": r.name,
+                "port": r.port,
+                "priority": r.priority,
+                "ok": r.ok,
+                "status_code": r.status_code,
                 "latency_ms": round(r.latency_ms, 1),
                 "error": r.error,
             }
