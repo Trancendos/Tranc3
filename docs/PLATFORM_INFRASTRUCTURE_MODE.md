@@ -2,6 +2,8 @@
 
 You control where compute and storage run with **one setting**. Default is **CLOUD_ONLY** until your Citadel server is ready.
 
+For merge history, superseded PRs (#84–#89), and branch cleanup commands, see [BRANCH_CONSOLIDATION.md](./BRANCH_CONSOLIDATION.md).
+
 | Mode | When to use | Citadel Docker | AI rotation |
 |------|-------------|----------------|-------------|
 | **CLOUD_ONLY** | Now — CF Workers, Fly, Supabase, Upstash | Not required | `zero_cost_cloud` + auto-rotate |
