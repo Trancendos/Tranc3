@@ -85,14 +85,12 @@ def _openbao_available() -> bool:
 
 def _sqlite_store(key: str, value: str) -> Dict[str, Any]:
     from worker import (  # noqa: PLC0415
-        SecretCreate,
         _encrypt_secret,
         _get_db,
         _new_id,
         _now,
         _append_audit,
     )
-    import json as _json
     import sqlite3
 
     conn = _get_db()
