@@ -388,10 +388,10 @@ async def test_fmd_distiller_job():
 async def test_daas_stream_basic():
     from nanoservices.daas_stream import (  # noqa: I001
         DaaSService,
-        StreamConfig,
-        StreamRecord,
         DataClassification,
         Jurisdiction,
+        StreamConfig,
+        StreamRecord,
     )
 
     daas = DaaSService()

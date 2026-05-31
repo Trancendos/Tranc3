@@ -16,11 +16,11 @@ from .ecosystem_bridge import (  # noqa: I001
     BridgeConfig,
     BridgeEndpoint,
     BridgeTransport,
+    EcosystemBridge,
+    EcosystemEntity,
+    EcosystemRegistry,
     JsonRpcRequest,
     JsonRpcResponse,
-    EcosystemBridge,
-    EcosystemRegistry,
-    EcosystemEntity,
 )
 
 from .energy_constants import (
