@@ -272,6 +272,7 @@ async def health():
         sent = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='sent'").fetchone()[0]
         failed = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='failed'").fetchone()[0]
     return {
+        "entity": health_entity_block(8018, "email-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -279,8 +280,7 @@ async def health():
         "smtp_configured": bool(SMTP_HOST),
         "pending": pending,
         "sent": sent,
-        "failed": failed,
-        "entity": health_entity_block(8018, WORKER_NAME),
+        "failed": failed
     }
 
 

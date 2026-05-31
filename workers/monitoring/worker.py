@@ -556,12 +556,12 @@ STARTED_AT = datetime.now(timezone.utc)
 async def health():
     uptime = (datetime.now(timezone.utc) - STARTED_AT).total_seconds()
     return {
+        "entity": health_entity_block(8007, "the-observatory"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": uptime,
-        "version": "1.0.0",
-        "entity": health_entity_block(8007, "monitoring"),
+        "version": "1.0.0"
     }
 
 

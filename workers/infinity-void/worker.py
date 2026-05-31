@@ -285,6 +285,9 @@ async def health():
         "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'"
     ).fetchone()
     conn.close()
+    from src.entities.health_metadata import health_entity_block
+
+    void_port = int(os.getenv("PORT", "8002"))
     return {
         "status": "healthy",
         "service": "the-void-worker",
@@ -295,6 +298,7 @@ async def health():
         "hosting": "self-hosted (replaces Cloudflare Worker)",
         "environment": ENVIRONMENT,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "entity": health_entity_block(void_port, "the-void-worker"),
     }
 
 

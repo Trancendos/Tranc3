@@ -285,12 +285,12 @@ async def health():
     with get_conn() as conn:
         cached = conn.execute("SELECT COUNT(*) FROM ip_cache").fetchone()[0]
     return {
+        "entity": health_entity_block(8027, "geo-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "cached_ips": cached,
-        "entity": health_entity_block(8023, WORKER_NAME),
+        "cached_ips": cached
     }
 
 

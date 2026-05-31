@@ -244,14 +244,14 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 async def health():
     healthy = sum(1 for v in _latest.values() if v["status"] == "healthy")
     return {
+        "entity": health_entity_block(8029, "health-aggregator"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "monitored_services": len(_latest),
         "healthy": healthy,
-        "degraded_or_down": len(_latest) - healthy,
-        "entity": health_entity_block(8029, WORKER_NAME),
+        "degraded_or_down": len(_latest) - healthy
     }
 
 

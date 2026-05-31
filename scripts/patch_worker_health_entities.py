@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-shot: replace hardcoded health entity dicts with health_entity_block()."""
+"""Inject health_entity_block() into worker /health responses (replace or add)."""
 
 from __future__ import annotations
 
@@ -8,73 +8,114 @@ from pathlib import Path
 
 IMPORT_LINE = "from src.entities.health_metadata import health_entity_block\n"
 
-WORKERS = [
-    ("workers/infinity-ws/worker.py", 8004, '"infinity-ws"'),
-    ("workers/infinity-auth/worker.py", 8005, '"infinity-auth"'),
-    ("workers/monitoring/worker.py", 8007, '"monitoring"'),
-    ("workers/search-service/worker.py", 8017, '"search-service"'),
-    ("workers/queue-service/worker.py", 8022, "WORKER_NAME"),
-    ("workers/rate-limit-service/worker.py", 8026, "WORKER_NAME"),
-    ("workers/geo-service/worker.py", 8023, "WORKER_NAME"),
-    ("workers/health-aggregator/worker.py", 8029, "WORKER_NAME"),
-    ("workers/blender-worker/worker.py", 8050, "WORKER_NAME"),
-    ("workers/triposr-worker/worker.py", 8051, "WORKER_NAME"),
-    ("workers/audit-service/worker.py", 8025, "WORKER_NAME"),
-    ("workers/analytics-service/worker.py", 8016, "WORKER_NAME"),
-    ("workers/config-service/worker.py", 8020, "WORKER_NAME"),
-    ("workers/cron-service/worker.py", 8021, "WORKER_NAME"),
-    ("workers/sms-service/worker.py", 8019, "WORKER_NAME"),
-    ("workers/notifications/worker.py", 8008, "WORKER_NAME"),
-    ("workers/storage-service/worker.py", 8020, "WORKER_NAME"),
-    ("workers/email-service/worker.py", 8018, "WORKER_NAME"),
-    ("workers/cdn-service/worker.py", 8028, "WORKER_NAME"),
-]
+NAME_RE = re.compile(r'^(?:WORKER_NAME|SERVICE_NAME)\s*=\s*["\']([^"\']+)["\']', re.MULTILINE)
 
-ENTITY_RE = re.compile(
-    r'"entity":\s*\{[^}]*(?:\{[^}]*\}[^}]*)*\}',
-    re.DOTALL,
+_PORT_PATTERNS = (
+    re.compile(r"WORKER_PORT\s*=\s*int\(os\.environ\.get\([^,]+,\s*['\"](\d+)"),
+    re.compile(r"WORKER_PORT\s*=\s*(\d+)"),
+    re.compile(r"PORT\s*=\s*int\(os\.environ\.get\([^,]+,\s*['\"](\d+)"),
+    re.compile(r"PORT\s*=\s*(\d+)"),
+    re.compile(r'port\s*=\s*(\d+).*uvicorn\.run', re.DOTALL),
 )
 
 
-def patch_file(path: Path, port: int, service_expr: str) -> bool:
+def _port_from_text(text: str) -> int | None:
+    for pat in _PORT_PATTERNS:
+        m = pat.search(text)
+        if m:
+            return int(m.group(1))
+    return None
+
+
+def _port_and_service(text: str) -> tuple[int | None, str]:
+    port = _port_from_text(text)
+    name_m = NAME_RE.search(text)
+    if name_m:
+        service = f'"{name_m.group(1)}"'
+    elif "WORKER_NAME" in text:
+        service = "WORKER_NAME"
+    elif "SERVICE_NAME" in text:
+        service = "SERVICE_NAME"
+    else:
+        service = '"unknown"'
+    return port, service
+
+
+def _add_import(text: str) -> str:
+    if IMPORT_LINE.strip() in text:
+        return text
+    if "from __future__ import" in text:
+        return re.sub(
+            r"(from __future__ import[^\n]+\n)",
+            r"\1" + IMPORT_LINE,
+            text,
+            count=1,
+        )
+    return IMPORT_LINE + text
+
+
+def _inject_into_health_return(text: str, port: int, service: str) -> str:
+    """Add entity key to the first dict returned by @app.get('/health')."""
+    if '"entity":' in text and "health_entity_block" in text:
+        return text
+
+    health_fn = re.search(
+        r'@app\.get\(["\']/health["\']\)\s*\nasync def health[^{]*\{',
+        text,
+    )
+    if not health_fn:
+        return text
+
+    start = health_fn.end()
+    # Find first `return {` after health function
+    ret = re.search(r"\breturn\s*\{", text[start:])
+    if not ret:
+        return text
+
+    ret_start = start + ret.start()
+    brace = text.find("{", ret_start)
+    if brace < 0:
+        return text
+
+    # Insert after opening brace of return dict
+    insert = f'\n        "entity": health_entity_block({port}, {service}),'
+    # Avoid double insert
+    snippet = text[brace : brace + 400]
+    if "health_entity_block" in snippet:
+        return text
+
+    return text[: brace + 1] + insert + text[brace + 1 :]
+
+
+def patch_file(path: Path) -> bool:
     text = path.read_text()
-    if "health_entity_block" in text:
+    if "@app.get(\"/health\")" not in text and "@app.get('/health')" not in text:
         return False
-    new_block = f'"entity": health_entity_block({port}, {service_expr})'
-    new_text, n = ENTITY_RE.subn(new_block, text, count=1)
-    if n == 0:
-        print(f"  skip (no entity block): {path}")
+
+    port, service = _port_and_service(text)
+    if port is None:
+        print(f"  skip (no PORT): {path}")
         return False
-    if IMPORT_LINE.strip() not in new_text:
-        # After last __future__ import or after module docstring
-        if "from __future__ import" in new_text:
-            new_text = re.sub(
-                r"(from __future__ import[^\n]+\n)",
-                r"\1" + IMPORT_LINE,
-                new_text,
-                count=1,
-            )
-        else:
-            lines = new_text.split("\n", 1)
-            insert_at = 0
-            if lines[0].startswith('"""') or lines[0].startswith("'''"):
-                for i, line in enumerate(lines):
-                    if i > 0 and ('"""' in line or "'''" in line):
-                        insert_at = i + 1
-                        break
-            new_text = "\n".join(lines[:insert_at]) + "\n" + IMPORT_LINE + "\n".join(
-                lines[insert_at:]
-            )
-    path.write_text(new_text)
+
+    original = text
+    text = _inject_into_health_return(text, port, service)
+
+    if text == original:
+        print(f"  skip (no change): {path}")
+        return False
+
+    text = _add_import(text)
+    path.write_text(text)
     print(f"  patched: {path}")
     return True
 
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
+    workers = sorted((root / "workers").glob("*/worker.py"))
     count = 0
-    for rel, port, svc in WORKERS:
-        if patch_file(root / rel, port, svc):
+    for path in workers:
+        if patch_file(path):
             count += 1
     print(f"Done. {count} files updated.")
 

@@ -21,6 +21,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from src.entities.health_metadata import health_entity_block
+
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------

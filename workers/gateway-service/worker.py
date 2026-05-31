@@ -23,6 +23,7 @@ Zero-cost: FastAPI + httpx + SQLite cache, no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -564,6 +565,7 @@ class WorkflowCreate(BaseModel):
 @app.get("/health")
 async def health():
     return {
+        "entity": health_entity_block(8040, "unknown"),
         "status": "ok",
         "service": "gateway-service",
         "version": "0.8.0",

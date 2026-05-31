@@ -105,6 +105,8 @@ except Exception:  # pragma: no cover
     def get_entity_by_pid(pid: str):  # type: ignore[misc]
         return None
 
+from src.entities.health_metadata import health_entity_block
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -612,6 +614,7 @@ async def health():
     return {
         "status": "healthy",
         "service": "infinity-admin",
+        "entity": health_entity_block(8044, "infinity-admin"),
         "location": "Infinity-Admin",
         "purpose": "Administrative Management OS for the Trancendos Universe",
         "dimensional_bus": dimensional_bus.is_running,
@@ -1769,26 +1772,81 @@ async def assign_entity_tier(pid: str, body: EntityTierUpdate, request: Request)
     }
 
 
+class OrchestratorRename(BaseModel):
+    new_name: str = Field(..., min_length=1, max_length=200)
+    reason: str | None = None
+
+
 @_router.get("/admin/orchestrators")
 async def list_orchestrators():
-    """Tier 1 Orchestrators — Cornelius MacIntyre, The Queen, tAImra (canonical)."""
-    orchestrators = [
-        p for p in PRIMES.values() if p.tier == Tier.ORCHESTRATOR
-    ]
+    """Tier 1 Orchestrators — effective names from admin DB overrides."""
+    from src.entities.orchestrator_effective import get_orchestrator_display_name
+
+    orchestrators = [p for p in PRIMES.values() if p.tier == Tier.ORCHESTRATOR]
     return {
         "tier": 1,
         "tier_name": Tier.ORCHESTRATOR.display_name,
         "orchestrators": [
             {
                 "id": p.id,
-                "name": p.name,
+                "name": get_orchestrator_display_name(p.id, p.name),
+                "canonical_name": p.name,
                 "pillar": p.pillar.value if p.pillar else None,
                 "description": p.description,
             }
             for p in orchestrators
         ],
         "total": len(orchestrators),
-        "note": "Global orchestrator names are edited in nomenclature.py; per-location primes use PATCH .../primes/{idx}",
+        "note": "Rename via PATCH /admin/orchestrators/{id}; per-location primes use PATCH .../primes/{idx}",
+    }
+
+
+@_router.patch("/admin/orchestrators/{orchestrator_id}")
+async def rename_orchestrator(
+    orchestrator_id: str,
+    body: OrchestratorRename,
+    request: Request,
+):
+    """Persist Tier-1 orchestrator display name (no nomenclature.py deploy)."""
+    from src.entities.orchestrator_effective import ORCHESTRATOR_PID
+
+    prime = PRIMES.get(orchestrator_id)
+    if prime is None or prime.tier != Tier.ORCHESTRATOR:
+        raise HTTPException(status_code=404, detail="Orchestrator not found")
+
+    actor = request.headers.get("X-Admin-Actor", "admin")
+    _upsert_override(
+        ORCHESTRATOR_PID,
+        "orchestrator",
+        orchestrator_id,
+        prime.name,
+        body.new_name,
+        actor,
+    )
+    db.execute(
+        """INSERT INTO admin_actions (id, actor_id, action_type, target, details, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (
+            uuid.uuid4().hex[:16],
+            actor,
+            "orchestrator_renamed",
+            orchestrator_id,
+            json.dumps(
+                {
+                    "canonical": prime.name,
+                    "new_name": body.new_name,
+                    "reason": body.reason,
+                }
+            ),
+            datetime.now(timezone.utc).isoformat(),
+        ),
+    )
+    db.commit()
+    return {
+        "ok": True,
+        "id": orchestrator_id,
+        "canonical_name": prime.name,
+        "name": body.new_name,
     }
 
 

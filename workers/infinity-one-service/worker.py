@@ -25,6 +25,7 @@ Zero-cost: FastAPI + SQLite. No external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -482,6 +483,7 @@ async def health():
     """Health check for the Infinity-One service."""
     health_summary = worker_kit.health.get_health_summary()
     return {
+        "entity": health_entity_block(8043, "unknown"),
         "status": "healthy",
         "service": "infinity-one",
         "location": "Infinity-One",

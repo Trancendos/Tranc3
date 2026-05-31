@@ -34,6 +34,8 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
+from src.entities.health_metadata import health_entity_block
+
 logger = logging.getLogger("tranc3.workers.users-service")
 
 DATABASE_PATH = "/data/users.db"
@@ -235,8 +237,10 @@ async def health():
     return {
         "status": "healthy",
         "service": "users-service",
+        "port": 8006,
         "user_count": count,
         "active_count": active,
+        "entity": health_entity_block(8006, "users-service"),
     }
 
 

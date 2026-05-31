@@ -176,14 +176,14 @@ async def health():
     tsr_ok = _check_tsr_available()
     model_loaded = _MODEL is not None
     return {
+        "entity": health_entity_block(8051, "triposr-worker"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "available": tsr_ok,
         "model": "TripoSR",
-        "model_loaded": model_loaded,
-        "entity": health_entity_block(8051, WORKER_NAME),
+        "model_loaded": model_loaded
     }
 
 

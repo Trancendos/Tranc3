@@ -29,6 +29,7 @@ Zero-cost: FastAPI + SQLite, Redis optional (graceful fallback).
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -374,6 +375,7 @@ async def health():
     sentinel_health = await sentinel.health_check()
     health_summary = worker_kit.health.get_health_summary()
     return {
+        "entity": health_entity_block(8041, "unknown"),
         "status": "ok",
         "service": "sentinel-station-service",
         "version": "0.8.0",

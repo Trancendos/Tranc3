@@ -220,14 +220,14 @@ async def health():
         ).fetchone()[0]
         dlq = conn.execute("SELECT COUNT(*) FROM dead_letters").fetchone()[0]
     return {
+        "entity": health_entity_block(8022, "queue-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "pending": pending,
         "processing": processing,
-        "dead_letters": dlq,
-        "entity": health_entity_block(8022, WORKER_NAME),
+        "dead_letters": dlq
     }
 
 

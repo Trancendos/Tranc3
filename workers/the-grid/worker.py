@@ -11,6 +11,7 @@ Zero-cost: Pure in-process Python, SQLite storage, no external workflow engines.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -495,6 +496,7 @@ STARTED_AT = datetime.now(timezone.utc)
 @app.get("/health")
 async def health():
     return {
+        "entity": health_entity_block(8010, "the-grid-api"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,

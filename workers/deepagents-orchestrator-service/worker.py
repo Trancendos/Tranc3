@@ -239,6 +239,8 @@ def health():
     task_count = db.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
     skill_count = db.execute("SELECT COUNT(*) FROM skills").fetchone()[0]
     db.close()
+    from src.entities.health_metadata import health_entity_block
+
     return {
         "status": "healthy",
         "service": SERVICE_NAME,
@@ -246,6 +248,7 @@ def health():
         "agents": agent_count,
         "tasks": task_count,
         "skills": skill_count,
+        "entity": health_entity_block(PORT, SERVICE_NAME),
     }
 
 

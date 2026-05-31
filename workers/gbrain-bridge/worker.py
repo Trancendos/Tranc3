@@ -39,6 +39,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from src.entities.health_metadata import health_entity_block
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -497,6 +499,7 @@ async def health() -> Response:  # type: ignore[return-value]
             "port": WORKER_PORT,
             "nodes": node_count,
             "edges": edge_count,
+            "entity": health_entity_block(WORKER_PORT, WORKER_NAME),
         }
     except Exception as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -527,7 +530,11 @@ async def create_node(body: NodeCreate) -> Response:  # type: ignore[return-valu
         db.commit()
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"node_id": node_id, "title": body.title, "created_at": now}  # type: ignore[return-value]
+    return {  # type: ignore[return-value]
+        "node_id": node_id,
+        "title": body.title,
+        "created_at": now,
+    }
 
 
 @_router.get("/nodes/{node_id}")

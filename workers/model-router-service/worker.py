@@ -15,6 +15,7 @@ Zero-cost: FastAPI + SQLite, routes to free-tier LLMs only.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -252,7 +253,12 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "model-router-service", "port": 8033}
+    return {
+        "status": "ok",
+        "service": "model-router-service",
+        "port": 8033,
+        "entity": health_entity_block(8033, "model-router-service"),
+    }
 
 
 # ---------------------------------------------------------------------------

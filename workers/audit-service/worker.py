@@ -168,13 +168,13 @@ async def health():
             "SELECT chain_hash, timestamp FROM audit_log ORDER BY id DESC LIMIT 1"
         ).fetchone()
     return {
+        "entity": health_entity_block(8025, "audit-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "total_entries": count,
-        "chain_tip": last["chain_hash"] if last else GENESIS_HASH,
-        "entity": health_entity_block(8025, WORKER_NAME),
+        "chain_tip": last["chain_hash"] if last else GENESIS_HASH
     }
 
 

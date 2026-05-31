@@ -179,14 +179,14 @@ async def health():
         obj_count = conn.execute("SELECT COUNT(*) FROM objects").fetchone()[0]
         total_size = conn.execute("SELECT COALESCE(SUM(size), 0) FROM objects").fetchone()[0]
     return {
+        "entity": health_entity_block(8020, "storage-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "buckets": bucket_count,
         "objects": obj_count,
-        "total_bytes": total_size,
-        "entity": health_entity_block(8020, WORKER_NAME),
+        "total_bytes": total_size
     }
 
 

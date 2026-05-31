@@ -16,6 +16,7 @@ Zero-cost: FastAPI + SQLite, no external orchestration required.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -262,7 +263,12 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "workflow-engine-service", "port": 8034}
+    return {
+        "status": "ok",
+        "service": "workflow-engine-service",
+        "port": 8034,
+        "entity": health_entity_block(8034, "workflow-engine-service"),
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -185,14 +185,14 @@ async def health():
         total_size = conn.execute("SELECT COALESCE(SUM(size), 0) FROM assets").fetchone()[0]
         serve_count = conn.execute("SELECT COALESCE(SUM(serve_count), 0) FROM assets").fetchone()[0]
     return {
+        "entity": health_entity_block(8028, "cdn-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "registered_assets": asset_count,
         "total_bytes": total_size,
-        "total_serves": serve_count,
-        "entity": health_entity_block(8028, WORKER_NAME),
+        "total_serves": serve_count
     }
 
 

@@ -174,13 +174,13 @@ async def health():
         event_count = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         metric_count = conn.execute("SELECT COUNT(*) FROM metrics").fetchone()[0]
     return {
+        "entity": health_entity_block(8016, "analytics-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "event_count": event_count,
-        "metric_count": metric_count,
-        "entity": health_entity_block(8016, WORKER_NAME),
+        "metric_count": metric_count
     }
 
 

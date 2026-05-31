@@ -18,6 +18,7 @@ Zero-cost: FastAPI + SQLite + mmap, no external vault required.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import hashlib
@@ -325,7 +326,12 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "vault-service", "port": 8030}
+    return {
+        "status": "ok",
+        "service": "vault-service",
+        "port": 8038,
+        "entity": health_entity_block(8038, "vault-service"),
+    }
 
 
 # ---------------------------------------------------------------------------

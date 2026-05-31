@@ -9,6 +9,7 @@ Zero-cost: In-memory dict (fast) + SQLite (persistent on restart), no Redis need
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -211,6 +212,7 @@ async def health():
     now = time.time()
     active = sum(1 for _, (_, exp) in _store.items() if exp is None or exp > now)
     return {
+        "entity": health_entity_block(8023, "cache-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,

@@ -8,6 +8,7 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import logging
 import os
@@ -168,6 +169,7 @@ STARTED_AT = datetime.now(timezone.utc)
 @app.get("/health")
 async def health():
     return {
+        "entity": health_entity_block(8012, "orders-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,

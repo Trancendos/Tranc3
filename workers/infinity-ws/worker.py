@@ -322,8 +322,7 @@ async def health():
         "status": "healthy",
         "service": "infinity-ws",
         "connections": manager.total_connections,
-        "channels": manager.total_channels,
-        "entity": health_entity_block(8004, "infinity-ws"),
+        "channels": manager.total_channels
     }
 
 

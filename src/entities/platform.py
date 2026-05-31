@@ -1356,16 +1356,44 @@ WORKER_ENTITY_MAP: Dict[int, str] = {
 # Additional worker ports that serve supporting roles within a location
 # (e.g. multiple workers implement one location's infrastructure layer)
 _SUPPORTING_WORKER_MAP: Dict[int, str] = {
+    8002: "The Void",  # infinity-void worker
     8006: "Infinity",  # users-service — Infinity user management layer
     8008: "Arcadia",  # notifications — Arcadia comms layer
     8011: "Arcadian Exchange",  # products-service — Exchange product catalogue
+    8012: "Arcadian Exchange",  # orders-service
+    8013: "Royal Bank of Arcadia",  # payments-service
+    8014: "DocUtari",  # files-service
+    8015: "Infinity",  # identity-service
     8016: "The Observatory",  # analytics-service — Observatory analytics layer
+    8017: "The Library",  # search-service
     8018: "Arcadia",  # email-service — Arcadia mail layer
     8019: "The Nexus",  # sms-service — Nexus comms layer
     8020: "DocUtari",  # storage-service — DocUtari file storage
+    8021: "ChronosSphere / ArcStream",  # cron-service
+    8022: "The HIVE",  # queue-service
     8023: "The HIVE",  # cache-service — HIVE caching layer
+    8024: "DevOcity",  # config-service
     8025: "The Observatory",  # audit-service — Observatory audit layer
+    8026: "The Citadel",  # rate-limit-service
+    8027: "The Citadel",  # geo-service
     8028: "The Studio",  # cdn-service — Studio content delivery
+    8030: "Luminous",  # gbrain-bridge — knowledge brain layer
+    8031: "The Citadel",  # topology-service
+    8032: "Royal Bank of Arcadia",  # ledger-service
+    8033: "Luminous",  # model-router-service
+    8034: "The Digital Grid",  # workflow-engine-service
+    8035: "Turing's Hub",  # skills-benchmark-service
+    8036: "Luminous",  # langchain-integration-service
+    8037: "The Nexus",  # deepagents-orchestrator-service
+    8038: "The Void",  # vault-service
+    8040: "API Marketplace",  # gateway-service
+    8041: "The Observatory",  # sentinel-station-service
+    8042: "Arcadia",  # infinity-portal-service
+    8043: "Infinity",  # infinity-one-service
+    8044: "DevOcity",  # infinity-admin-service
+    8053: "The Citadel",  # swarm-coordinator-service
+    8060: "The HIVE",  # hive-service
+    8070: "The Nexus",  # infinity-bridge-service
 }
 
 WORKER_ENTITY_MAP.update(_SUPPORTING_WORKER_MAP)

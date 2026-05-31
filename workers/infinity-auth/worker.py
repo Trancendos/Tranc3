@@ -467,8 +467,7 @@ async def health():
     return {
         "status": "healthy",
         "service": "infinity-auth",
-        "version": "2.0.0",
-        "entity": health_entity_block(8005, "infinity-auth"),
+        "version": "2.0.0"
         # Phase 22.6: Smart health
         "health_score": health_summary.get("health_score", 1.0),
         "health_tier": health_summary.get("tier", "EXCELLENT"),

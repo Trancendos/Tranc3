@@ -265,13 +265,13 @@ async def health():
         total = conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
         active = conn.execute("SELECT COUNT(*) FROM jobs WHERE enabled=1").fetchone()[0]
     return {
+        "entity": health_entity_block(8021, "cron-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "total_jobs": total,
-        "active_jobs": active,
-        "entity": health_entity_block(8021, WORKER_NAME),
+        "active_jobs": active
     }
 
 

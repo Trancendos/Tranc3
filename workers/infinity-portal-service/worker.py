@@ -39,6 +39,7 @@ Zero-cost: FastAPI + SQLite + httpx. Delegates to infinity-auth for core auth.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -712,6 +713,7 @@ async def health():
     """Health check for the Infinity Portal service."""
     health_summary = worker_kit.health.get_health_summary()
     return {
+        "entity": health_entity_block(8042, "unknown"),
         "status": "healthy",
         "service": "infinity-portal",
         "location": "Infinity Portal",

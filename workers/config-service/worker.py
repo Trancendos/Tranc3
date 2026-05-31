@@ -188,13 +188,13 @@ async def health():
         ns_count = conn.execute("SELECT COUNT(*) FROM namespaces").fetchone()[0]
         cfg_count = conn.execute("SELECT COUNT(*) FROM configs").fetchone()[0]
     return {
+        "entity": health_entity_block(8024, "config-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "namespaces": ns_count,
-        "config_keys": cfg_count,
-        "entity": health_entity_block(8020, WORKER_NAME),
+        "config_keys": cfg_count
     }
 
 

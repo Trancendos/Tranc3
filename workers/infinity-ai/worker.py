@@ -12,6 +12,7 @@ Zero-cost: Ollama local inference, free-tier OpenRouter, HuggingFace free infere
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import hashlib
 import json
@@ -671,6 +672,7 @@ STARTED_AT = datetime.now(timezone.utc)
 async def health():
     ollama_ok = await router.ollama.health_check()
     return {
+        "entity": health_entity_block(8009, "infinity-ai"),
         "status": "healthy" if ollama_ok else "degraded",
         "service": WORKER_NAME,
         "port": WORKER_PORT,

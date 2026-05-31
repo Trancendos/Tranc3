@@ -15,6 +15,7 @@ Zero-cost: FastAPI + SQLite, no external services required.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -230,7 +231,12 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "topology-service", "port": 8031}
+    return {
+        "status": "ok",
+        "service": "topology-service",
+        "port": 8031,
+        "entity": health_entity_block(8031, "topology-service"),
+    }
 
 
 # ---------------------------------------------------------------------------

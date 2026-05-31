@@ -222,6 +222,7 @@ async def health():
         sent = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='sent'").fetchone()[0]
         failed = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='failed'").fetchone()[0]
     return {
+        "entity": health_entity_block(8019, "sms-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -229,8 +230,7 @@ async def health():
         "provider": SMS_PROVIDER,
         "pending": pending,
         "sent": sent,
-        "failed": failed,
-        "entity": health_entity_block(8019, WORKER_NAME),
+        "failed": failed
     }
 
 

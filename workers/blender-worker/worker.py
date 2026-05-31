@@ -275,13 +275,13 @@ app.add_middleware(
 async def health():
     blender_path = blender_available()
     return {
+        "entity": health_entity_block(8050, "blender-worker"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "blender_available": blender_path is not None,
-        "blender_path": blender_path,
-        "entity": health_entity_block(8050, WORKER_NAME),
+        "blender_path": blender_path
     }
 
 

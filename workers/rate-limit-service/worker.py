@@ -198,12 +198,12 @@ async def health():
     with _lock:
         active_buckets = len(_buckets)
     return {
+        "entity": health_entity_block(8026, "rate-limit-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "active_buckets": active_buckets,
-        "entity": health_entity_block(8026, WORKER_NAME),
+        "active_buckets": active_buckets
     }
 
 

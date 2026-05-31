@@ -491,11 +491,11 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 @app.get("/health")
 async def health():
     return {
+        "entity": health_entity_block(8008, "notifications-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
-        "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "entity": health_entity_block(8008, WORKER_NAME),
+        "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds()
     }
 
 

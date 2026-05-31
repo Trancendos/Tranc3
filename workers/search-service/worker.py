@@ -189,13 +189,13 @@ async def health():
         index_count = conn.execute("SELECT COUNT(*) FROM indices").fetchone()[0]
         doc_count = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
     return {
+        "entity": health_entity_block(8017, "search-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "indices": index_count,
-        "documents": doc_count,
-        "entity": health_entity_block(8017, "search-service"),
+        "documents": doc_count
     }
 
 
