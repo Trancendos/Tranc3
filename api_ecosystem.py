@@ -266,8 +266,16 @@ _last_hub_update: float = 0.0
 
 
 def _get_system_mode() -> str:
-    """Determine current SYSTEM_MODE from environment."""
-    return os.getenv("SYSTEM_MODE", "CLOUD_ONLY").upper()
+    """Determine current SYSTEM_MODE (legacy API: TRUE_NAS | HYBRID | CLOUD_ONLY)."""
+    try:
+        from src.platform.infrastructure_mode import PlatformInfraMode, get_infrastructure_mode
+
+        mode = get_infrastructure_mode()
+        if mode == PlatformInfraMode.LOCAL_ONLY:
+            return "TRUE_NAS"
+        return mode.value
+    except Exception:
+        return os.getenv("SYSTEM_MODE", "CLOUD_ONLY").upper()
 
 
 def _refresh_hub_states() -> Dict[str, Dict[str, Any]]:
