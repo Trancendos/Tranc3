@@ -47,7 +47,10 @@ def test_production_compose_includes_main_backend_service():
     assert "SECRET_KEY=${SECRET_KEY}" in backend["environment"]
     assert "JWT_SECRET=${JWT_SECRET}" in backend["environment"]
     assert "DATABASE_URL=${DATABASE_URL}" in backend["environment"]
-    assert "REDIS_URL=${REDIS_URL}" in backend["environment"]
+    env_list = backend["environment"]
+    assert any("REDIS_URL=" in item and "valkey" in item for item in env_list) or any(
+        item == "REDIS_URL=${REDIS_URL}" for item in env_list
+    )
 
 
 def test_production_compose_wires_api_gateway_upstreams():

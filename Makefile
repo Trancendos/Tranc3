@@ -123,6 +123,15 @@ ansible-health:
 deploy-citadel:
 	@bash deploy/citadel/deploy-production.sh
 
+deploy-live:
+	@bash scripts/deploy_live.sh
+
+generate-prod-env:
+	@bash scripts/generate_production_env.sh
+
+wait-healthy:
+	@python3 scripts/wait_for_healthy.py
+
 citadel-preflight:
 	@python3 scripts/citadel_preflight.py
 

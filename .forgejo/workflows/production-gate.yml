@@ -37,6 +37,7 @@ jobs:
             tests/test_adaptive_rotator.py \
             tests/test_api_startup_readiness.py \
             tests/test_production_readiness_stack.py \
+            tests/test_live_deploy_contract.py \
             -q --tb=short
         env:
           SECRET_KEY: ci-production-gate-secret-key-32chars-minimum

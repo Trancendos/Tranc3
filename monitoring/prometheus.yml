@@ -8,6 +8,9 @@ global:
     cluster: 'tranc3-production'
     environment: 'production'
 
+rule_files:
+  - /etc/prometheus/alerts/tranc3-core.yml
+
 scrape_configs:
   # ── Traefik Metrics ──────────────────────────────────────────────────
   - job_name: 'traefik'
@@ -70,6 +73,24 @@ scrape_configs:
           category: 'infrastructure'
 
   # ── P0 Workers ───────────────────────────────────────────────────────
+  - job_name: 'tranc3-backend'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['tranc3-backend:8000']
+        labels:
+          service: 'tranc3-backend'
+          priority: 'P0'
+          named: 'Luminous'
+    # Readiness probe (separate from metrics)
+  - job_name: 'tranc3-backend-health'
+    metrics_path: '/health'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['tranc3-backend:8000']
+        labels:
+          service: 'tranc3-backend'
+          probe: 'health'
+
   - job_name: 'tranc3-ai'
     metrics_path: '/metrics'
     static_configs:

@@ -103,6 +103,13 @@ HIVE_TOKEN=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
 ok "Secrets generated (hex-256 entropy)"
 
 # ── 3. Create .env ────────────────────────────────────────────────────────────
+if [ "$ENV_MODE" = "production" ]; then
+  info "Generating .env.production for Citadel..."
+  "$REPO_ROOT/scripts/generate_production_env.sh" --force
+  ok ".env.production ready — run: make deploy-live"
+  exit 0
+fi
+
 ENV_FILE="$REPO_ROOT/.env"
 
 if [ -f "$ENV_FILE" ]; then

@@ -130,6 +130,7 @@ services:
       - "9091:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts:/etc/prometheus/alerts:ro
       - prometheus-data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -237,6 +238,24 @@ services:
       interval: 15s
       timeout: 5s
       retries: 3
+
+  # ── Ollama — local zero-cost LLM (Tier 1 inference) ───────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: tranc3-ollama
+    <<: *common
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    labels:
+      - "traefik.enable=false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   # ── Zot — OCI Container Registry ─────────────────────────────────────
   # Apache 2.0. Prevents Docker Hub rate-limiting for the platform.
@@ -356,10 +375,11 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
+      - REDIS_URL=${REDIS_URL:-redis://valkey:6379/0}
       - ENVIRONMENT=production
       - CORS_ORIGINS=${CORS_ORIGINS}
       - OLLAMA_URL=${OLLAMA_URL:-http://ollama:11434}
+      - AUDIT_SIGNING_KEY=${AUDIT_SIGNING_KEY:-}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - HF_API_KEY=${HF_API_KEY:-}
       - ENTITY_OVERRIDES_DB=/app/data/infinity_admin.db
@@ -378,8 +398,13 @@ services:
       - "traefik.http.routers.tranc3-backend.entrypoints=web"
       - "traefik.http.services.tranc3-backend.loadbalancer.server.port=8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/ready"]
       <<: *healthcheck-default
+    depends_on:
+      valkey:
+        condition: service_healthy
+      ollama:
+        condition: service_started
 
   # ── Tranc3 AI — The Spark (Port 8001) ────────────────────────────────
   tranc3-ai:
@@ -1479,6 +1504,8 @@ volumes:
   backend-cache:
     driver: local
   backend-logs:
+    driver: local
+  ollama-data:
     driver: local
   prometheus-data:
     driver: local

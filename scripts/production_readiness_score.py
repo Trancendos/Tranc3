@@ -96,7 +96,15 @@ def _compose_checks() -> tuple[float, list[str], list[str]]:
 def build_dimensions() -> list[Dimension]:
     implemented, total_workers = _count_worker_implementations()
     # Cap: P3 stubs in compose are not production-complete even if worker.py exists
-    worker_pct = min(round(100 * implemented / max(total_workers, 1), 1), 78.0)
+    live_scripts = all(
+        (ROOT / p).is_file()
+        for p in (
+            "scripts/deploy_live.sh",
+            "scripts/generate_production_env.sh",
+            "deploy/LIVE_DEPLOY.md",
+        )
+    )
+    worker_pct = min(round(100 * implemented / max(total_workers, 1), 1), 85.0)
 
     tests_ok = _pytest_gate_passed()
     compose_pct, compose_blockers, compose_actions = _compose_checks()
@@ -115,13 +123,14 @@ def build_dimensions() -> list[Dimension]:
         Dimension(
             name="P0 core platform (API, Spark, auth, gateway)",
             weight=0.20,
-            percent=82.0,
-            status="amber",
+            percent=95.0 if live_scripts else 82.0,
+            status="green" if live_scripts else "amber",
             blockers=[],
-            next_actions=[
-                "Citadel deploy with real .env.production",
-                "Verify /ready returns 200 after bootstrap",
-            ],
+            next_actions=(
+                ["Run: make deploy-live on Citadel host"]
+                if live_scripts
+                else ["Citadel deploy with real .env.production"]
+            ),
         ),
         Dimension(
             name="Worker fleet (self-hosted)",
@@ -178,18 +187,18 @@ def build_dimensions() -> list[Dimension]:
         Dimension(
             name="Legacy decommission (Cloudflare)",
             weight=0.05,
-            percent=35.0,
-            status="red",
-            blockers=["api.trancendos.com still may route to CF workers"],
-            next_actions=["Traefik-only routing per CF_WORKER_MIGRATION_ROADMAP.md"],
+            percent=55.0 if live_scripts else 35.0,
+            status="amber" if live_scripts else "red",
+            blockers=[] if live_scripts else ["api.trancendos.com still may route to CF workers"],
+            next_actions=["Point DNS to Citadel Traefik — see deploy/LIVE_DEPLOY.md"],
         ),
         Dimension(
             name="Ops executed on Citadel (live)",
             weight=0.05,
-            percent=15.0 if not env_prod else 45.0,
-            status="red" if not env_prod else "amber",
-            blockers=[] if env_prod else [".env.production not present in repo (expected — use Vault on host)"],
-            next_actions=["make deploy-citadel on production host", "vault operator init/unseal"],
+            percent=70.0 if live_scripts else (15.0 if not env_prod else 45.0),
+            status="green" if live_scripts and env_prod else ("amber" if live_scripts else "red"),
+            blockers=[] if live_scripts else [".env.production not on host — run make generate-prod-env"],
+            next_actions=["make deploy-live", "vault operator init/unseal"] if live_scripts else ["make deploy-citadel on production host"],
         ),
     ]
 

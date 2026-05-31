@@ -6,11 +6,13 @@
 
 | Milestone | Target % | Typical meaning |
 |-----------|----------|-----------------|
-| **Overall (weighted)** | Run scorecard | Blended across code, infra, security, ops |
-| **P0 go-live** | **85%** | Citadel running: backend, auth, gateway, void, AI, observability |
+| **Overall (weighted)** | `make production-score` | Blended across code, infra, security, ops |
+| **Repo / automation ready** | **~95%** | One-command `make deploy-live` + generated secrets |
+| **P0 go-live (process)** | **85%** | Same as overall until `deploy-live` succeeds on a host |
+| **Live on Citadel** | **100%** | After `make deploy-live` + DNS + optional Vault init |
 | **Full platform (43 entities)** | **95%** | All locations, P3 workers, CF retired, UAT signed off |
 
-The repo is **code-ready for P0**; the largest gap is **live Citadel execution** (secrets, Vault unseal, DNS to Traefik).
+**Fast path to live:** see `deploy/LIVE_DEPLOY.md` and run `make deploy-live`.
 
 ---
 

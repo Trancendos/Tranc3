@@ -1,0 +1,27 @@
+groups:
+  - name: tranc3-core
+    rules:
+      - alert: Tranc3BackendDown
+        expr: up{job="tranc3-backend-health"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Tranc3 backend health probe down"
+          description: "tranc3-backend:8000/health unreachable for 2 minutes."
+
+      - alert: ApiGatewayDown
+        expr: up{job="api-gateway"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API Gateway down"
+
+      - alert: InfinityAuthDown
+        expr: up{job="infinity-auth"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Infinity auth worker down"
