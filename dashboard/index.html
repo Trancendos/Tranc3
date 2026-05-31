@@ -527,7 +527,28 @@
     <!-- INFINITY SERVICE DETAIL VIEWS -->
     <div class="view" id="view-infinity-portal" role="region" aria-label="Portal details"><div class="view-header"><h2>⬟ Portal <span class="port-badge">:8042</span></h2><p>Central login · Infinity Gate routing</p></div><div class="panel"><div class="panel-header"><span class="panel-icon" aria-hidden="true">⬟</span><h3>Portal Stats</h3></div><div class="panel-body" id="portal-detail-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
     <div class="view" id="view-infinity-one" role="region" aria-label="Infinity One details"><div class="view-header"><h2>◉ Infinity One <span class="port-badge">:8043</span></h2><p>Single identity — multi-app access</p></div><div class="panel"><div class="panel-header"><span class="panel-icon" aria-hidden="true">◉</span><h3>Identity Stats</h3></div><div class="panel-body" id="one-detail-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
-    <div class="view" id="view-infinity-admin" role="region" aria-label="Admin details"><div class="view-header"><h2>◇ Admin <span class="port-badge">:8044</span></h2><p>Administrative management service</p></div><div class="panel"><div class="panel-header"><span class="panel-icon" aria-hidden="true">◇</span><h3>Admin Stats</h3></div><div class="panel-body" id="admin-detail-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
+    <div class="view" id="view-infinity-admin" role="region" aria-label="Admin details">
+      <div class="view-header">
+        <h2>◇ Infinity-Admin <span class="port-badge">:8044</span></h2>
+        <p>Edit location names, Lead AIs, Primes, Agents, Bots, and tier labels</p>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-icon" aria-hidden="true">◇</span><h3>Admin Stats</h3></div>
+        <div class="panel-body" id="admin-detail-body"><div class="loading-state" role="status">Loading…</div></div>
+      </div>
+      <div class="panel" style="margin-top:1rem">
+        <div class="panel-header">
+          <span class="panel-icon" aria-hidden="true">⬡</span>
+          <h3>Entity Name Registry</h3>
+          <button type="button" class="block-action-btn" id="entity-registry-refresh" onclick="loadEntityRegistry()" title="Refresh entities">↻</button>
+        </div>
+        <div class="panel-body" id="entity-registry-body">
+          <p class="entity-meta">Load entities from Infinity-Admin to rename Locations, AIs (T3), Primes (T2), Agents (T4), and Bots (T5).</p>
+          <div id="entity-registry-list" class="entity-registry-list" role="list"></div>
+          <div id="entity-editor-panel" class="entity-editor-panel hidden" role="form" aria-label="Edit entity names"></div>
+        </div>
+      </div>
+    </div>
     <div class="view" id="view-gateway" role="region" aria-label="Gateway details"><div class="view-header"><h2>⟁ Gateway <span class="port-badge">:8040</span></h2><p>Unified aggregation + smart adaptive</p></div><div class="panel"><div class="panel-header"><span class="panel-icon" aria-hidden="true">⟁</span><h3>Gateway Stats</h3></div><div class="panel-body" id="gateway-detail-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
     <div class="view" id="view-sentinel" role="region" aria-label="Sentinel Station details"><div class="view-header"><h2>⬢ Sentinel Station <span class="port-badge">:8041</span></h2><p>Redis Pub/Sub · reactive topology</p></div><div class="panel"><div class="panel-header"><span class="panel-icon" aria-hidden="true">⬢</span><h3>Sentinel Stats</h3></div><div class="panel-body" id="sentinel-detail-body"><div class="loading-state" role="status">Loading…</div></div></div></div>
 

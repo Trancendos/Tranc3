@@ -1607,3 +1607,79 @@ a:focus-visible {
   body { background: white !important; color: black !important; }
   .kpi-card, .infinity-card, .panel, .widget, .block { break-inside: avoid; }
 }
+
+/* ── Entity Registry (Infinity-Admin) ───────────────────────── */
+.entity-registry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 280px;
+  overflow-y: auto;
+  margin-top: 0.75rem;
+}
+.entity-registry-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+.entity-registry-row:hover {
+  border-color: var(--accent-blue);
+}
+.entity-registry-pid {
+  font-family: var(--font-mono, monospace);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+.entity-registry-ai {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.entity-editor-panel {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+}
+.entity-editor-panel.hidden {
+  display: none;
+}
+.entity-editor-form label {
+  display: block;
+  margin-bottom: 0.65rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.entity-editor-form input {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.45rem 0.6rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+.entity-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.primary-btn {
+  background: var(--accent-blue);
+  color: #fff;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+}

@@ -281,6 +281,18 @@ class EntityNameUpdate(BaseModel):
     )
 
 
+class EntityTierUpdate(BaseModel):
+    """Reassign display tier for an entity slot (admin UI correction).
+
+    entity_ref examples: lead_ai, prime_0, agent_alpha, agent_beta, bot_01
+    tier: 0=Human, 1=Orchestrator, 2=Prime, 3=AI, 4=Agent, 5=Bot
+    """
+
+    entity_ref: str = Field(..., min_length=1, max_length=40)
+    tier: int = Field(..., ge=0, le=5)
+    reason: str | None = Field(default=None, max_length=500)
+
+
 class EntityOverrideRecord(BaseModel):
     """A single persisted name override."""
 
@@ -1665,6 +1677,113 @@ async def get_entity_overrides_by_type(pid: str, entity_type: str, slot: str | N
     ).fetchall()
 
     return {"pid": pid, "entity_type": entity_type, "overrides": [dict(r) for r in rows]}
+
+
+_VALID_TIER_REFS = frozenset(
+    {
+        "lead_ai",
+        "agent_alpha",
+        "agent_beta",
+        "bot_01",
+        "bot_02",
+        "bot_03",
+        "bot_04",
+    }
+)
+
+
+@_router.patch("/admin/entities/{pid}/tier")
+async def assign_entity_tier(pid: str, body: EntityTierUpdate, request: Request):
+    """Assign display tier for an entity slot (correct mislabeled UI tiers).
+
+    Stores entity_type='tier', slot=entity_ref, override_name=str(tier).
+    Does not move code-level class hierarchy — display/governance correction only.
+    """
+    user = getattr(request.state, "user", {})
+    actor = user.get("sub", "unknown")
+
+    if body.entity_ref.startswith("prime_"):
+        pass
+    elif body.entity_ref not in _VALID_TIER_REFS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"entity_ref must be one of {_VALID_TIER_REFS} or prime_N (e.g. prime_0)",
+        )
+
+    entity = get_entity_by_pid(pid)
+    if entity is None:
+        if not _PLATFORM_ENTITIES_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="Platform entity registry not accessible from this worker",
+            )
+        raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
+
+    original = f"tier_default_{body.entity_ref}"
+    _upsert_override(
+        pid,
+        "tier",
+        body.entity_ref,
+        original,
+        str(body.tier),
+        actor,
+    )
+
+    _log_admin_action(
+        action_type="entity_tier_assigned",
+        actor_id=actor,
+        actor_username=user.get("username"),
+        target_type="entity_tier",
+        target_id=f"{pid}:{body.entity_ref}",
+        details={
+            "entity_ref": body.entity_ref,
+            "tier": body.tier,
+            "reason": body.reason,
+        },
+    )
+
+    await sentinel.publish(
+        SentinelEvent(
+            channel=SentinelChannel.PLATFORM,
+            event_type="entity_tier_assigned",
+            source="infinity_admin",
+            payload={
+                "pid": pid,
+                "entity_ref": body.entity_ref,
+                "tier": body.tier,
+            },
+        )
+    )
+
+    return {
+        "message": "Tier assignment saved",
+        "pid": pid,
+        "entity_ref": body.entity_ref,
+        "tier": body.tier,
+    }
+
+
+@_router.get("/admin/orchestrators")
+async def list_orchestrators():
+    """Tier 1 Orchestrators — Cornelius MacIntyre, The Queen, tAImra (canonical)."""
+    orchestrators = [
+        p for p in PRIMES.values() if p.tier == Tier.ORCHESTRATOR
+    ]
+    return {
+        "tier": 1,
+        "tier_name": Tier.ORCHESTRATOR.display_name,
+        "orchestrators": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "pillar": p.pillar.value if p.pillar else None,
+                "description": p.description,
+            }
+            for p in orchestrators
+        ],
+        "total": len(orchestrators),
+        "note": "Global orchestrator names are edited in nomenclature.py; per-location primes use PATCH .../primes/{idx}",
+    }
 
 
 # ---------------------------------------------------------------------------

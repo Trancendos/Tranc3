@@ -32,7 +32,9 @@ src/entities/templates/
 
 ### Slot / role rules
 
-- T1: exactly three slots — 1 (Cornelius McIntyre), 2 (The Queen), 3 (tAImra). Slot 3 is opt-in.
+- T1: exactly three slots — 1 (Cornelius MacIntyre), 2 (The Queen), 3 (tAImra). Slot 3 is opt-in.
+- **Admin-editable display names**: Runtime overrides via Infinity-Admin (`:8044`) `/admin/entities` — see dashboard Entity Name Registry. Code keys in `platform.py` unchanged; overrides in SQLite `entity_overrides`.
+- **Infinity routing & matrix**: `docs/INFINITY_ECOSYSTEM_MATRIX.md`
 - T4: role must be `"alpha"` or `"beta"` — enforced at construction.
 - T5: slot must be `"01"` | `"02"` | `"03"` | `"04"` — enforced at construction.
 
