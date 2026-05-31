@@ -977,6 +977,79 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8044/health"]
       <<: *healthcheck-default
 
+  # Falco — Runtime security monitoring (Apache 2.0, eBPF-based)
+  falco:
+    image: falcosecurity/falco-no-driver:latest
+    container_name: trancendos-falco
+    restart: unless-stopped
+    privileged: true
+    pid: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /etc:/host/etc:ro
+      - ./config/falco:/etc/falco:ro
+    environment:
+      HOST_ROOT: /host
+      FALCO_HOSTNAME: trancendos-falco
+    networks:
+      - tranc3-net
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # CI/CD LAYER — Woodpecker CI (alongside Forgejo / The Workshop)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  # ── Woodpecker Server — CI orchestrator (Port 8100) ──────────────────
+  # Apache 2.0 licensed self-hosted CI. Integrates with Forgejo (The Workshop).
+  # Dashboard: https://ci.trancendos.com  (Traefik routes Host ci.trancendos.com)
+  # Required env: WOODPECKER_FORGEJO_CLIENT, WOODPECKER_FORGEJO_SECRET,
+  #               WOODPECKER_SECRET, WOODPECKER_AGENT_TOKEN
+  woodpecker-server:
+    image: woodpeckerci/woodpecker-server:latest
+    container_name: trancendos-woodpecker-server
+    restart: unless-stopped
+    ports:
+      - "8100:8000"
+    environment:
+      WOODPECKER_OPEN: "true"
+      WOODPECKER_FORGEJO: "true"
+      WOODPECKER_FORGEJO_URL: "${FORGEJO_URL:-http://forgejo:3000}"
+      WOODPECKER_FORGEJO_CLIENT: "${WOODPECKER_FORGEJO_CLIENT}"
+      WOODPECKER_FORGEJO_SECRET: "${WOODPECKER_FORGEJO_SECRET}"
+      WOODPECKER_SECRET: "${WOODPECKER_SECRET:-changeme-woodpecker-secret}"
+      WOODPECKER_DATABASE_DATASOURCE: "/var/lib/woodpecker/woodpecker.db"
+      WOODPECKER_DATABASE_DRIVER: "sqlite3"
+    volumes:
+      - woodpecker-data:/var/lib/woodpecker
+    networks:
+      - tranc3-net
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.woodpecker.rule: "Host(`ci.trancendos.com`)"
+      traefik.http.routers.woodpecker.entrypoints: "websecure"
+      traefik.http.routers.woodpecker.tls.certresolver: "letsencrypt"
+
+  # ── Woodpecker Agent — CI runner ─────────────────────────────────────
+  # Executes pipeline steps inside Docker containers (zero-cost, local).
+  woodpecker-agent:
+    image: woodpeckerci/woodpecker-agent:latest
+    container_name: trancendos-woodpecker-agent
+    restart: unless-stopped
+    depends_on:
+      - woodpecker-server
+    environment:
+      WOODPECKER_SERVER: "woodpecker-server:9000"
+      WOODPECKER_TOKEN: "${WOODPECKER_AGENT_TOKEN:-changeme-agent-token}"
+      WOODPECKER_MAX_WORKFLOWS: "4"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - tranc3-net
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════

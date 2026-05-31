@@ -1,0 +1,42 @@
+# config/falco/falco_rules.local.yaml
+# Trancendos-specific Falco rules — custom security monitoring
+
+- rule: Trancendos Sensitive File Access
+  desc: Detect access to sensitive files in Trancendos workers
+  condition: >
+    open_read and
+    (fd.name startswith /app/secrets or
+     fd.name contains .env or
+     fd.name contains /etc/shadow)
+    and not proc.name in (python3, uvicorn)
+  output: >
+    Sensitive file accessed (user=%user.name command=%proc.cmdline
+    file=%fd.name container=%container.name)
+  priority: WARNING
+  tags: [filesystem, trancendos]
+
+- rule: Trancendos Unexpected Network Connection
+  desc: Worker connecting to unexpected external host
+  condition: >
+    outbound and
+    not fd.sip.name in (localhost, 127.0.0.1) and
+    container.name startswith "trancendos-" and
+    not proc.name in (python3, uvicorn, curl)
+  output: >
+    Unexpected outbound connection from worker
+    (container=%container.name dest=%fd.sip:%fd.sport command=%proc.cmdline)
+  priority: NOTICE
+  tags: [network, trancendos]
+
+- rule: Trancendos Shell Spawned in Container
+  desc: Shell spawned inside a Trancendos worker container
+  condition: >
+    spawned_process and
+    shell_procs and
+    container.name startswith "trancendos-" and
+    not proc.pname in (python3, uvicorn)
+  output: >
+    Shell spawned in Trancendos container
+    (container=%container.name shell=%proc.name parent=%proc.pname)
+  priority: WARNING
+  tags: [shell, trancendos]
