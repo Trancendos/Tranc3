@@ -1273,7 +1273,6 @@ def create_nexus_app() -> FastAPI:
             result[tier.name] = [e.model_dump() for e in entities]
         return result
 
-
     # --- WebSocket Endpoint ---
 
     @app.websocket("/ws/events")

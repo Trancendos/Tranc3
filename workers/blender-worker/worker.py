@@ -12,13 +12,11 @@ Gracefully degrades to 503 when Blender is not installed.
 from __future__ import annotations
 from src.entities.health_metadata import health_entity_block
 
-import json
 import logging
 import os
 import shutil
 import subprocess
 import tempfile
-import textwrap
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -132,9 +130,7 @@ def _run_blender(script: str, timeout: int) -> dict[str, Any]:
             "returncode": -1,
         }
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".py", delete=False, dir="/tmp"
-    ) as tmp:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, dir="/tmp") as tmp:
         tmp.write(script)
         tmp_path = tmp.name
 

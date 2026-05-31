@@ -62,8 +62,8 @@ def patch_file(path: Path, port: int, service_expr: str) -> bool:
                     if i > 0 and ('"""' in line or "'''" in line):
                         insert_at = i + 1
                         break
-            new_text = "\n".join(lines[:insert_at]) + "\n" + IMPORT_LINE + "\n".join(
-                lines[insert_at:]
+            new_text = (
+                "\n".join(lines[:insert_at]) + "\n" + IMPORT_LINE + "\n".join(lines[insert_at:])
             )
     path.write_text(new_text)
     print(f"  patched: {path}")
