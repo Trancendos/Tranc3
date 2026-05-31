@@ -1,7 +1,7 @@
 # TRANC3 Makefile
 # Usage: make bootstrap | make dev | make test | make deploy | make doctor
 
-.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend
+.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend pr-audit
 
 # ── Bootstrap (single-command platform setup) ─────────────────────────────────
 bootstrap:
@@ -43,30 +43,18 @@ doctor:
 # ── Monitor (live worker health dashboard in terminal) ────────────────────────
 monitor:
 	@echo "Monitoring P0/P1 workers..."
-	@python3 -c "
-import asyncio, httpx, time
-
-WORKERS = [
-    ('infinity-ws',   'http://localhost:8004/health'),
-    ('infinity-auth', 'http://localhost:8005/health'),
-    ('users-svc',     'http://localhost:8006/health'),
-    ('monitoring',    'http://localhost:8007/health'),
-    ('notifications', 'http://localhost:8008/health'),
-    ('infinity-ai',   'http://localhost:8009/health'),
-]
-
-async def check():
-    async with httpx.AsyncClient(timeout=2.0) as c:
-        for name, url in WORKERS:
-            try:
-                r = await c.get(url)
-                status = 'UP  ' if r.status_code == 200 else f'ERR {r.status_code}'
-            except Exception as e:
-                status = f'DOWN ({type(e).__name__})'
-            print(f'  {status}  {name} ({url})')
-
-asyncio.run(check())
-"
+	@for entry in \
+		"infinity-ws http://localhost:8004/health" \
+		"infinity-auth http://localhost:8005/health" \
+		"users-svc http://localhost:8006/health" \
+		"monitoring http://localhost:8007/health" \
+		"notifications http://localhost:8008/health" \
+		"infinity-ai http://localhost:8009/health"; do \
+		name=$${entry%% *}; url=$${entry#* }; \
+		code=$$(curl -s -o /dev/null -w "%{http_code}" "$$url" || echo 000); \
+		if [ "$$code" = "200" ]; then status="UP"; else status="ERR $$code"; fi; \
+		echo "  $$status  $$name ($$url)"; \
+	done
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 setup:
@@ -140,6 +128,9 @@ download-model:
 # ── Security ──────────────────────────────────────────────────────────────────
 security-scan:
 	bash scripts/security_scan.sh
+
+pr-audit:
+	python3 scripts/pr_readiness_audit.py --state open --limit 100 --fail-on-unstable
 
 security-install:
 	pip install pip-audit==2.9.0 bandit==1.8.3 safety==3.5.1 semgrep==1.100.0 pre-commit==3.7.1 --quiet
