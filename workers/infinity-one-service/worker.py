@@ -41,6 +41,13 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
+# Phase 22.4: Dimensional Services
+from shared_core.dimensionals import (
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
+)
+
 # Phase 22: Infinity Ecosystem security
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
 from Dimensional.infinity.nomenclature import (
