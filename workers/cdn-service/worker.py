@@ -10,6 +10,7 @@ Zero-cost: FastAPI + local filesystem, no external CDN cost.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import hashlib
 import logging
@@ -191,13 +192,7 @@ async def health():
         "registered_assets": asset_count,
         "total_bytes": total_size,
         "total_serves": serve_count,
-        "entity": {
-            "location": "The Studio",
-            "pillar": "Creativity",
-            "lead_ai": "Voxx",
-            "primes": ["Cornelius MacIntyre"],
-            "primary_function": "Central Hub of the Creativity Center",
-        },
+        "entity": health_entity_block(8028, WORKER_NAME),
     }
 
 

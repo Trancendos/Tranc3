@@ -10,6 +10,7 @@ Zero-cost: In-process dispatch, SQLite storage, no external SaaS.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -494,14 +495,7 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "entity": {
-            "location": "Arcadia",
-            "pillar": "Commercial / Financial",
-            "lead_ai": "Lilli SC",
-            "primes": ["Dorris Fontaine"],
-            "primary_function": "Post-Login User Frontend, Forum & Email Hub",
-            "layer": "supporting",
-        },
+        "entity": health_entity_block(8008, WORKER_NAME),
     }
 
 
