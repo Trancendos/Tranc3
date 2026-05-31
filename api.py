@@ -73,6 +73,7 @@ if not _REDIS_URL:
 from auth import get_current_user, token_manager  # codeql[py/cyclic-import]
 from src.auth.db_user_manager import DBUserManager  # noqa: F401  # intentional top-level import
 from src.auth.rbac import require_permission  # noqa: F401  # RBAC guards for protected routes
+from src.core.startup_validator import validate_startup
 from src.core.advanced_model import (
     AdvancedTransformerModel,  # noqa: F401  # intentional top-level import
 )
@@ -256,6 +257,7 @@ async def lifespan(app: FastAPI):
     global db_manager, db_user_manager, _health_monitor, _auto_evolve
 
     logger.info("TRANC3 starting up...")
+    validate_startup()
     cfg = Config()
 
     # Database
