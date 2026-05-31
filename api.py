@@ -418,6 +418,14 @@ async def lifespan(app: FastAPI):
     except Exception as _lr_exc:
         logger.warning("Layer auto-rotation unavailable: %s", sanitize_for_log(_lr_exc))
 
+    try:
+        from src.admin_os.backup_loop import start_admin_os_auto_backup
+
+        await start_admin_os_auto_backup()
+        logger.info("Infinity Admin OS auto-backup scheduler started")
+    except Exception as _ab_exc:
+        logger.warning("Admin OS auto-backup unavailable: %s", sanitize_for_log(_ab_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield
@@ -449,6 +457,12 @@ async def lifespan(app: FastAPI):
         from src.adaptive.layer_rotation_loop import stop_layer_auto_rotation
 
         await stop_layer_auto_rotation()
+    except Exception:
+        pass
+    try:
+        from src.admin_os.backup_loop import stop_admin_os_auto_backup
+
+        await stop_admin_os_auto_backup()
     except Exception:
         pass
     if redis_client:
@@ -718,6 +732,10 @@ app.include_router(_ecosystem_router)
 from src.routers.adaptive import router as _adaptive_router  # noqa: F401
 
 app.include_router(_adaptive_router)
+
+from src.routers.admin_os import router as _admin_os_router  # noqa: F401
+
+app.include_router(_admin_os_router)
 
 # ── Dashboard & Infinity Admin OS (static, zero-cost) ─────────────────────────
 _DASHBOARD_DIR = os.path.join(os.path.dirname(__file__), "dashboard")

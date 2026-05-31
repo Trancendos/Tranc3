@@ -35,8 +35,28 @@
           <input type="search" class="start-search" placeholder="Search locations and tools…" aria-label="Search Infinity Admin OS" id="start-search">
         </div>
         <nav class="start-pinned" aria-label="Pinned applications">
-          <button type="button" class="start-tile" data-app="entities" aria-label="Entity Name Registry">
+          <button type="button" class="start-tile" data-app="domain-model" aria-label="Domain model viewer and editor">
             <span class="tile-icon" aria-hidden="true">◇</span>
+            <span class="tile-label">Domain Model</span>
+          </button>
+          <button type="button" class="start-tile" data-app="files" aria-label="Files and folders">
+            <span class="tile-icon" aria-hidden="true">📁</span>
+            <span class="tile-label">Files</span>
+          </button>
+          <button type="button" class="start-tile" data-app="backups" aria-label="Backups">
+            <span class="tile-icon" aria-hidden="true">💾</span>
+            <span class="tile-label">Backups</span>
+          </button>
+          <button type="button" class="start-tile" data-app="system" aria-label="System viewer">
+            <span class="tile-icon" aria-hidden="true">⚙</span>
+            <span class="tile-label">System</span>
+          </button>
+          <button type="button" class="start-tile" data-app="events" aria-label="Event viewer — The Observatory">
+            <span class="tile-icon" aria-hidden="true">◎</span>
+            <span class="tile-label">Events</span>
+          </button>
+          <button type="button" class="start-tile" data-app="entities" aria-label="Entity list (legacy)">
+            <span class="tile-icon" aria-hidden="true">▤</span>
             <span class="tile-label">Entities</span>
           </button>
           <button type="button" class="start-tile" data-app="orchestrators" aria-label="Tier 1 Orchestrators">
@@ -75,6 +95,9 @@
             <p>Infinity Admin OS — zero-cost administrative shell for The Citadel.</p>
             <ul>
               <li>Open the <strong>Start menu</strong> (∞) to launch tools.</li>
+              <li><strong>Domain Model</strong> — view/edit 43 platform entities (persists to SQLite).</li>
+              <li><strong>Files</strong> — sandbox workspace with read/write/delete.</li>
+              <li><strong>Events</strong> — live feed from The Observatory.</li>
               <li>Entity renames propagate to all worker <code>/health</code> endpoints.</li>
               <li>Adaptive rotation uses only approved free AI providers.</li>
             </ul>
