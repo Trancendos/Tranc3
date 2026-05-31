@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -45,19 +46,51 @@ def _run(cmd: list[str], *, check: bool = True, cwd: Path | None = None) -> int:
     return r.returncode
 
 
+def _fly_candidate_paths() -> list[Path]:
+    home = Path.home()
+    names = ("flyctl.exe", "flyctl", "fly.exe", "fly")
+    out: list[Path] = []
+    for name in names:
+        out.append(home / ".fly" / "bin" / name)
+    local = os.environ.get("LOCALAPPDATA")
+    if local:
+        for name in names:
+            out.append(Path(local) / "flyctl" / name)
+    return out
+
+
 def _fly() -> str:
     fly = shutil.which("flyctl") or shutil.which("fly")
     if fly:
         return fly
-    home = Path.home() / ".fly" / "bin" / "flyctl"
-    if home.is_file():
-        return str(home)
+    for path in _fly_candidate_paths():
+        if path.is_file():
+            return str(path)
     _log("Installing flyctl...")
-    _run(["bash", "-c", "curl -L https://fly.io/install.sh | sh"], check=False)
-    if home.is_file():
-        return str(home)
+    if platform.system() == "Windows":
+        _run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "iwr https://fly.io/install.ps1 -useb | iex",
+            ],
+            check=False,
+        )
+    else:
+        _run(["bash", "-c", "curl -L https://fly.io/install.sh | sh"], check=False)
+    fly = shutil.which("flyctl") or shutil.which("fly")
+    if fly:
+        return fly
+    for path in _fly_candidate_paths():
+        if path.is_file():
+            return str(path)
     raise SystemExit(
-        "flyctl not found. Install: https://fly.io/docs/hands-on/install-flyctl/"
+        "flyctl not found. Windows: powershell -Command \"iwr https://fly.io/install.ps1 -useb | iex\" "
+        "then open a new CMD window, or add %USERPROFILE%\\.fly\\bin to PATH. "
+        "See https://fly.io/docs/hands-on/install-flyctl/"
     )
 
 
@@ -111,13 +144,13 @@ def main() -> int:
         return 0
 
     token = os.environ.get("FLY_API_TOKEN", "").strip()
-    if not token:
+    if not token or token in ("your_fly_token", "your_token") or len(token) < 20:
         _log("")
-        _log("ERROR: FLY_API_TOKEN is not set — cannot deploy from this environment.")
+        _log("ERROR: FLY_API_TOKEN is missing or too short — cannot deploy.")
         _log("")
         _log("On your machine (with Fly org access):")
-        _log("  set FLY_API_TOKEN=your_token          # Windows CMD")
-        _log("  export FLY_API_TOKEN=your_token       # bash")
+        _log('  set "FLY_API_TOKEN=paste_full_token_here"   # Windows CMD (quotes required)')
+        _log("  export FLY_API_TOKEN=your_token               # bash")
         _log("  python scripts/deploy_cloud.py")
         _log("")
         _log("Or trigger Forgejo workflow: Deploy to Fly.io (The Workshop)")

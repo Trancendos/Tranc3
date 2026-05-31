@@ -21,18 +21,33 @@ cd %USERPROFILE%\Documents\Tranc3
 py -3.12 -m pip install -r requirements.txt ruff bandit pytest pytest-asyncio pip-audit
 ```
 
-4. **Fly.io CLI** (for deploy):
+4. **Fly.io CLI** (for deploy — install in **CMD or PowerShell**, not only WSL/Git Bash):
 
 ```cmd
-powershell -Command "iwr https://fly.io/install.ps1 -useb | iex"
-fly auth login
+powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr https://fly.io/install.ps1 -useb | iex"
 ```
 
-Set a real API token (not a placeholder):
+Close and reopen CMD, then verify:
 
 ```cmd
-set FLY_API_TOKEN=<paste_from_fly.io_dashboard>
+"%USERPROFILE%\.fly\bin\flyctl.exe" version
 ```
+
+If `fly` is not recognized, use the full path above or add `%USERPROFILE%\.fly\bin` to your user PATH.
+
+Optional login (deploy can use token only):
+
+```cmd
+"%USERPROFILE%\.fly\bin\flyctl.exe" auth login
+```
+
+Set the API token with **quotes** (Fly tokens contain spaces and commas):
+
+```cmd
+set "FLY_API_TOKEN=paste_full_token_from_fly.io_dashboard"
+```
+
+Do not use `set FLY_API_TOKEN=FlyV1 ...` without quotes — CMD only keeps the first word.
 
 ## Run the quality gate (CLOUD_ONLY)
 
@@ -83,7 +98,8 @@ After the gate passes:
 
 ```cmd
 cd %USERPROFILE%\Documents\Tranc3
-set FLY_API_TOKEN=<your_real_token>
+set PYTHONUTF8=1
+set "FLY_API_TOKEN=paste_full_token_here"
 py -3.12 scripts\deploy_cloud.py
 ```
 
@@ -108,7 +124,9 @@ fly secrets set SECRET_KEY=... JWT_SECRET=... DATABASE_URL=... REDIS_URL=... --a
 | `Python 3.11 not found` | Use `py -3.12` or pull latest `main` and use `scripts\run_python.bat` |
 | `citadel_compose_validate failed` | Run gate with `--cloud-only` or use `deploy_cloud.bat` |
 | `pytest` / `ruff` not found | Run the `pip install` line in setup step 3 |
-| Deploy blocked with placeholder token | `set FLY_API_TOKEN=` must be a real Fly token |
+| Deploy blocked with placeholder token | `set "FLY_API_TOKEN=..."` with full token in quotes |
+| `flyctl not found` after bash install | Use PowerShell install (step 4); WSL installs to Linux home, not Windows |
+| `set FLY_API_TOKEN=FlyV1 fm2_...` breaks token | Use `set "FLY_API_TOKEN=entire token"` with quotes |
 
 ## Infrastructure modes
 
