@@ -3,6 +3,10 @@
 
 .PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend
 
+# Allow environments without a `python` symlink.
+PYTHON ?= python3
+PIP ?= $(PYTHON) -m pip
+
 # ── Bootstrap (single-command platform setup) ─────────────────────────────────
 bootstrap:
 	@echo "Running Tranc3 platform bootstrap..."
@@ -20,11 +24,11 @@ bootstrap-start:
 doctor:
 	@echo "Tranc3 Platform Doctor"
 	@echo "========================"
-	@python3 -c "import sys; sys.path.insert(0,'.');  \
+	@$(PYTHON) -c "import sys; sys.path.insert(0,'.');  \
 		pkgs = ['fastapi','pydantic','httpx','structlog','uvicorn'];  \
 		[print(f'  OK  {p}') if __import__(p) else None for p in pkgs]"
 	@echo "--- Advanced systems ---"
-	@python3 -c "import sys; sys.path.insert(0,'.');  \
+	@$(PYTHON) -c "import sys; sys.path.insert(0,'.');  \
 		opts = [('ncps','Liquid NNs'),('deap','Genetic GA'),('pygad','Simple GA'),  \
 			('pyswarms','PSO'),('prometheus_client','Prometheus'),  \
 			('opentelemetry.api','OTel API'),('cachetools','Cachetools'),  \
@@ -43,35 +47,12 @@ doctor:
 # ── Monitor (live worker health dashboard in terminal) ────────────────────────
 monitor:
 	@echo "Monitoring P0/P1 workers..."
-	@python3 -c "
-import asyncio, httpx, time
-
-WORKERS = [
-    ('infinity-ws',   'http://localhost:8004/health'),
-    ('infinity-auth', 'http://localhost:8005/health'),
-    ('users-svc',     'http://localhost:8006/health'),
-    ('monitoring',    'http://localhost:8007/health'),
-    ('notifications', 'http://localhost:8008/health'),
-    ('infinity-ai',   'http://localhost:8009/health'),
-]
-
-async def check():
-    async with httpx.AsyncClient(timeout=2.0) as c:
-        for name, url in WORKERS:
-            try:
-                r = await c.get(url)
-                status = 'UP  ' if r.status_code == 200 else f'ERR {r.status_code}'
-            except Exception as e:
-                status = f'DOWN ({type(e).__name__})'
-            print(f'  {status}  {name} ({url})')
-
-asyncio.run(check())
-"
+	@$(PYTHON) scripts/monitor_workers.py
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 setup:
 	@echo "Setting up TRANC3..."
-	pip install -r requirements.txt
+	$(PIP) install -r requirements.txt
 	cp -n .env.example .env || true
 	$(MAKE) migrate
 	cd web && npm install
@@ -108,8 +89,8 @@ test-load:
 
 # ── Linting ───────────────────────────────────────────────────────────────────
 lint:
-	ruff check src/ api.py auth.py
-	mypy src/ api.py --ignore-missing-imports
+	$(PYTHON) -m ruff check src/ api.py auth.py
+	$(PYTHON) -m mypy src/ api.py --ignore-missing-imports
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
 frontend:
@@ -131,7 +112,7 @@ clean:
 # ── Model ─────────────────────────────────────────────────────────────────────
 download-model:
 	@echo "Downloading phi-3-mini base model..."
-	python -c "from transformers import AutoModelForCausalLM, AutoTokenizer; \
+	$(PYTHON) -c "from transformers import AutoModelForCausalLM, AutoTokenizer; \
 		m = AutoModelForCausalLM.from_pretrained('microsoft/phi-3-mini-4k-instruct'); \
 		t = AutoTokenizer.from_pretrained('microsoft/phi-3-mini-4k-instruct'); \
 		m.save_pretrained('./models/phi3-base'); t.save_pretrained('./models/phi3-base'); \
@@ -142,7 +123,7 @@ security-scan:
 	bash scripts/security_scan.sh
 
 security-install:
-	pip install pip-audit==2.9.0 bandit==1.8.3 safety==3.5.1 semgrep==1.100.0 pre-commit==3.7.1 --quiet
+	$(PIP) install pip-audit==2.9.0 bandit==1.8.3 safety==3.5.1 semgrep==1.100.0 pre-commit==3.7.1 --quiet
 
 pre-commit-install:
 	pre-commit install
