@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite (PRAGMA synchronous=FULL), no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import hashlib
 import json
@@ -25,8 +26,6 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8025
 WORKER_NAME = "audit-service"
@@ -175,7 +174,7 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "total_entries": count,
-        "chain_tip": last["chain_hash"] if last else GENESIS_HASH,
+        "chain_tip": last["chain_hash"] if last else GENESIS_HASH
     }
 
 

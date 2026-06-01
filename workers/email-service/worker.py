@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite + smtplib (stdlib), no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import email.mime.multipart
@@ -29,8 +30,6 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8018
 WORKER_NAME = "email-service"
@@ -281,7 +280,7 @@ async def health():
         "smtp_configured": bool(SMTP_HOST),
         "pending": pending,
         "sent": sent,
-        "failed": failed,
+        "failed": failed
     }
 
 

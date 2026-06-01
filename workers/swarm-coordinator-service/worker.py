@@ -158,7 +158,7 @@ async def health():
         "port": WORKER_PORT,
         "manifest_dir": str(MANIFEST_DIR),
         "poll_interval_seconds": POLL_SECONDS,
-        "last_run": _last_run,
+        "last_run": _last_run
     }
 
 

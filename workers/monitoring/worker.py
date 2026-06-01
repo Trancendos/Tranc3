@@ -565,7 +565,7 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": uptime,
-        "version": "1.0.0",
+        "version": "1.0.0"
     }
 
 

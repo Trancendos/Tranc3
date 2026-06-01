@@ -9,6 +9,7 @@ Zero-cost: FastAPI + SQLite, asyncio background loop for visibility restore.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -25,8 +26,6 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8022
 WORKER_NAME = "queue-service"
@@ -228,7 +227,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "pending": pending,
         "processing": processing,
-        "dead_letters": dlq,
+        "dead_letters": dlq
     }
 
 

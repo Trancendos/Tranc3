@@ -14,6 +14,7 @@ Zero-cost: FastAPI + SQLite, no external services required.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import hashlib
@@ -39,8 +40,6 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
-
-from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration

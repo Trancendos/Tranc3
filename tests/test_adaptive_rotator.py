@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 import pytest
 
 from src.adaptive.provider_rotator import AdaptiveProviderRotator

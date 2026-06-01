@@ -9,6 +9,7 @@ Zero-cost: FastAPI + SQLite, no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -23,8 +24,6 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8024
 WORKER_NAME = "config-service"
@@ -195,7 +194,7 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "namespaces": ns_count,
-        "config_keys": cfg_count,
+        "config_keys": cfg_count
     }
 
 

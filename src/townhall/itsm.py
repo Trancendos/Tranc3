@@ -109,9 +109,7 @@ class ItsmService:
     def list_incidents(self, *, open_only: bool = False) -> list[ItsmIncident]:
         items = list(self._incidents.values())
         if open_only:
-            items = [
-                i for i in items if i.status not in (IncidentStatus.RESOLVED, IncidentStatus.CLOSED)
-            ]
+            items = [i for i in items if i.status not in (IncidentStatus.RESOLVED, IncidentStatus.CLOSED)]
         return sorted(items, key=lambda i: i.created_at, reverse=True)
 
     def create_change(self, title: str, change_type: str = "normal") -> ChangeRecord:

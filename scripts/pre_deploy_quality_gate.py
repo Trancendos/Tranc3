@@ -74,7 +74,9 @@ def main() -> int:
         ("ruff", "ruff"),
     ):
         if not _module_ok(mod):
-            failures.append(f"Missing {label} — run: {sys.executable} -m pip install {gate_tools}")
+            failures.append(
+                f"Missing {label} — run: {sys.executable} -m pip install {gate_tools}"
+            )
 
     if failures:
         print("Pre-deploy quality gate")
@@ -221,9 +223,7 @@ def main() -> int:
             print(f)
         print()
         print("Tip: CLOUD_ONLY deploy — scripts/deploy_cloud.py --skip-gate is not recommended.")
-        print(
-            f"Re-run with details: {sys.executable} scripts/pre_deploy_quality_gate.py --cloud-only -v"
-        )
+        print(f"Re-run with details: {sys.executable} scripts/pre_deploy_quality_gate.py --cloud-only -v")
         return 1
 
     mode = "CLOUD_ONLY" if cloud_only else "full"

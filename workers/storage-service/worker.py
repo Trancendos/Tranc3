@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite + local filesystem, no cloud storage needed.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import hashlib
 import logging
@@ -28,8 +29,6 @@ from fastapi import APIRouter, Depends, FastAPI, File, Header, HTTPException, Qu
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8020
 WORKER_NAME = "storage-service"
@@ -187,7 +186,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "buckets": bucket_count,
         "objects": obj_count,
-        "total_bytes": total_size,
+        "total_bytes": total_size
     }
 
 

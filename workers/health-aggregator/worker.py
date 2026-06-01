@@ -10,6 +10,7 @@ Zero-cost: FastAPI + SQLite + httpx polling, no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -26,8 +27,6 @@ import httpx
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8029
 WORKER_NAME = "health-aggregator"
@@ -252,7 +251,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "monitored_services": len(_latest),
         "healthy": healthy,
-        "degraded_or_down": len(_latest) - healthy,
+        "degraded_or_down": len(_latest) - healthy
     }
 
 

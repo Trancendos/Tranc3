@@ -9,6 +9,7 @@ Zero-cost: In-memory dict (fast) + SQLite (persistent on restart), no Redis need
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -24,8 +25,6 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8023
 WORKER_NAME = "cache-service"

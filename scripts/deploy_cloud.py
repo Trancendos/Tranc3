@@ -152,7 +152,7 @@ def _fly() -> str:
         if path.is_file():
             return str(path)
     raise SystemExit(
-        'flyctl not found. Windows: powershell -Command "iwr https://fly.io/install.ps1 -useb | iex" '
+        "flyctl not found. Windows: powershell -Command \"iwr https://fly.io/install.ps1 -useb | iex\" "
         "then open a new CMD window, or add %USERPROFILE%\\.fly\\bin to PATH. "
         "See https://fly.io/docs/hands-on/install-flyctl/"
     )
@@ -274,9 +274,7 @@ def main() -> int:
         _log("")
         _log(f"Deploy target apps: backend={BACKEND_APP} bots={BOTS_APP}")
         _log("Set Fly app secrets once (example):")
-        _log(
-            f"  fly secrets set SECRET_KEY=... JWT_SECRET=... DATABASE_URL=... REDIS_URL=... --app {BACKEND_APP}"
-        )
+        _log(f"  fly secrets set SECRET_KEY=... JWT_SECRET=... DATABASE_URL=... REDIS_URL=... --app {BACKEND_APP}")
         return 1
 
     fly = _fly()

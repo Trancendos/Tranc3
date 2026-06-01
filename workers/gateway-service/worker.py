@@ -23,6 +23,7 @@ Zero-cost: FastAPI + httpx + SQLite cache, no external deps.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -63,7 +64,6 @@ from Dimensional.infinity.sentinel_station import (
     SharedSSEGenerator,
     get_sentinel_station,
 )
-from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration

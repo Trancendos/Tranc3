@@ -151,7 +151,9 @@ class PlatformLayerRotator:
         if env_key:
             raw = os.environ.get(env_key, "").strip()
             if raw:
-                if layer == PlatformLayer.DATABASE.value and ("://" in raw or "=" in raw):
+                if layer == PlatformLayer.DATABASE.value and (
+                    "://" in raw or "=" in raw
+                ):
                     return [name for name, _ in _parse_named_list(raw)]
                 return [b.strip() for b in raw.split(",") if b.strip()]
 

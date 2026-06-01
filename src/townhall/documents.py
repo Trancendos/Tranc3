@@ -25,89 +25,23 @@ class DocumentTemplate:
 
 # Catalog — maps framework ids to on-disk templates
 TEMPLATE_CATALOG: list[DocumentTemplate] = [
-    DocumentTemplate(
-        "policy", "Policy Document", "policy-documentation", "policy-documentation", "policy.md"
-    ),
-    DocumentTemplate(
-        "procedure",
-        "Procedure / SOP",
-        "procedural-documentation",
-        "procedural-documentation",
-        "procedure.md",
-    ),
-    DocumentTemplate(
-        "add", "Architectural Design Document", "architecture", "add", "architectural_design.md"
-    ),
-    DocumentTemplate(
-        "ddd", "Detailed Design Document", "architecture", "ddd", "detailed_design.md"
-    ),
+    DocumentTemplate("policy", "Policy Document", "policy-documentation", "policy-documentation", "policy.md"),
+    DocumentTemplate("procedure", "Procedure / SOP", "procedural-documentation", "procedural-documentation", "procedure.md"),
+    DocumentTemplate("add", "Architectural Design Document", "architecture", "add", "architectural_design.md"),
+    DocumentTemplate("ddd", "Detailed Design Document", "architecture", "ddd", "detailed_design.md"),
     DocumentTemplate("blueprint", "Blueprint", "architecture", "blueprint", "blueprint.md"),
-    DocumentTemplate(
-        "security",
-        "Security Framework Assessment",
-        "security",
-        "security-framework",
-        "security_framework.md",
-    ),
-    DocumentTemplate(
-        "legal",
-        "Legal Compliance Checklist",
-        "legal_ip_finance",
-        "legal-compliance",
-        "legal_compliance.md",
-    ),
-    DocumentTemplate(
-        "financial",
-        "Financial Oversight Review",
-        "legal_ip_finance",
-        "financial-oversight",
-        "financial_oversight.md",
-    ),
-    DocumentTemplate(
-        "ip",
-        "Intellectual Property Register Entry",
-        "legal_ip_finance",
-        "intellectual-property",
-        "intellectual_property.md",
-    ),
-    DocumentTemplate(
-        "cookbook", "Operational Cookbook", "documentation", "cookbooks", "cookbook.md"
-    ),
-    DocumentTemplate(
-        "foundation",
-        "Foundation Framework Charter",
-        "architecture",
-        "foundation-framework",
-        "foundation_framework.md",
-    ),
-    DocumentTemplate(
-        "universe",
-        "Trancendos Universe Framework",
-        "architecture",
-        "universe-framework",
-        "universe_framework.md",
-    ),
-    DocumentTemplate(
-        "app-framework", "App per App Framework", "architecture", "app-per-app", "app_per_app.md"
-    ),
-    DocumentTemplate(
-        "design-system",
-        "Design System Template",
-        "architecture",
-        "design-system",
-        "design_system.md",
-    ),
-    DocumentTemplate(
-        "kanban-charter", "Kanban Board Charter", "agile", "kanban", "kanban_charter.md"
-    ),
+    DocumentTemplate("security", "Security Framework Assessment", "security", "security-framework", "security_framework.md"),
+    DocumentTemplate("legal", "Legal Compliance Checklist", "legal_ip_finance", "legal-compliance", "legal_compliance.md"),
+    DocumentTemplate("financial", "Financial Oversight Review", "legal_ip_finance", "financial-oversight", "financial_oversight.md"),
+    DocumentTemplate("ip", "Intellectual Property Register Entry", "legal_ip_finance", "intellectual-property", "intellectual_property.md"),
+    DocumentTemplate("cookbook", "Operational Cookbook", "documentation", "cookbooks", "cookbook.md"),
+    DocumentTemplate("foundation", "Foundation Framework Charter", "architecture", "foundation-framework", "foundation_framework.md"),
+    DocumentTemplate("universe", "Trancendos Universe Framework", "architecture", "universe-framework", "universe_framework.md"),
+    DocumentTemplate("app-framework", "App per App Framework", "architecture", "app-per-app", "app_per_app.md"),
+    DocumentTemplate("design-system", "Design System Template", "architecture", "design-system", "design_system.md"),
+    DocumentTemplate("kanban-charter", "Kanban Board Charter", "agile", "kanban", "kanban_charter.md"),
     DocumentTemplate("itil-incident", "ITIL Incident Record", "itsm", "itil4", "itil_incident.md"),
-    DocumentTemplate(
-        "prince2-stage",
-        "PRINCE2 Stage Gate",
-        "project_management",
-        "prince2-7",
-        "prince2_stage_gate.md",
-    ),
+    DocumentTemplate("prince2-stage", "PRINCE2 Stage Gate", "project_management", "prince2-7", "prince2_stage_gate.md"),
 ]
 
 

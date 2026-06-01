@@ -33,11 +33,7 @@ def load_registry(path: Path | None = None) -> dict[str, Any]:
 
 def approved_ids() -> set[str]:
     reg = load_registry()
-    return {
-        str(x["id"])
-        for x in reg.get("approved_self_hosted", [])
-        if isinstance(x, dict) and x.get("id")
-    }
+    return {str(x["id"]) for x in reg.get("approved_self_hosted", []) if isinstance(x, dict) and x.get("id")}
 
 
 def is_approved(provider_id: str) -> bool:

@@ -37,10 +37,7 @@ def test_api_import_invokes_shared_startup_validator():
 def test_lifespan_tracks_bootstrap_completion_state():
     module_sets_default = any(
         isinstance(node, ast.Assign)
-        and any(
-            isinstance(target, ast.Name) and target.id == "_bootstrap_complete"
-            for target in node.targets
-        )
+        and any(isinstance(target, ast.Name) and target.id == "_bootstrap_complete" for target in node.targets)
         and isinstance(node.value, ast.Constant)
         and node.value.value is False
         for node in API_TREE.body
@@ -90,8 +87,6 @@ def test_ready_returns_503_until_bootstrap_is_complete():
     ready_values = [
         value.value
         for key, value in zip(success_return.value.keys, success_return.value.values)
-        if isinstance(key, ast.Constant)
-        and key.value == "ready"
-        and isinstance(value, ast.Constant)
+        if isinstance(key, ast.Constant) and key.value == "ready" and isinstance(value, ast.Constant)
     ]
     assert ready_values == [True]

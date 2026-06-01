@@ -39,6 +39,7 @@ Zero-cost: FastAPI + SQLite + httpx. Delegates to infinity-auth for core auth.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -85,7 +86,6 @@ from Dimensional.infinity.sentinel_station import (
 
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
-from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration

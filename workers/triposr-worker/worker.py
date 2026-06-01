@@ -11,6 +11,7 @@ Model is loaded lazily on the first /reconstruct request.
 """
 
 from __future__ import annotations
+from src.entities.health_metadata import health_entity_block
 
 import base64
 import io
@@ -27,8 +28,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8051
 WORKER_NAME = "triposr-worker"
@@ -184,7 +183,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "available": tsr_ok,
         "model": "TripoSR",
-        "model_loaded": model_loaded,
+        "model_loaded": model_loaded
     }
 
 

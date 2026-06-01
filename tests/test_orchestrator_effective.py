@@ -58,7 +58,10 @@ def test_orchestrator_override_roundtrip(orch_db: Path) -> None:
     override_store.invalidate_override_cache()
 
     assert load_orchestrator_overrides(force=True)["cornelius"] == "Cornelius McIntyre"
-    assert get_orchestrator_display_name("cornelius", "Cornelius MacIntyre") == "Cornelius McIntyre"
+    assert (
+        get_orchestrator_display_name("cornelius", "Cornelius MacIntyre")
+        == "Cornelius McIntyre"
+    )
     assert get_orchestrator_display_name("missing", "Canonical") == "Canonical"
 
 

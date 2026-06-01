@@ -116,7 +116,9 @@ def _infra_mode() -> str:
 
         return get_infrastructure_mode().value
     except Exception:
-        raw = os.environ.get("PLATFORM_INFRA_MODE") or os.environ.get("SYSTEM_MODE", "CLOUD_ONLY")
+        raw = os.environ.get("PLATFORM_INFRA_MODE") or os.environ.get(
+            "SYSTEM_MODE", "CLOUD_ONLY"
+        )
         return str(raw).strip().upper() or "CLOUD_ONLY"
 
 
@@ -143,7 +145,9 @@ def _generate_env(force: bool, *, local_stack: bool) -> None:
         rotation_chain = "zero_cost_full"
         mode_line = f"PLATFORM_INFRA_MODE={mode}\n"
     else:
-        database_url = "postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres"
+        database_url = (
+            "postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres"
+        )
         redis_url = "rediss://:[password]@[endpoint].upstash.io:6379"
         rotation_chain = "zero_cost_cloud"
         mode_line = "PLATFORM_INFRA_MODE=CLOUD_ONLY\n"
@@ -369,26 +373,16 @@ def main() -> int:
         _log("")
         _log("Gate-only mode complete (PASS).")
         if mode == "CLOUD_ONLY" or args.cloud_only:
-            _log(
-                "  CLOUD_ONLY: cloud auto-rotation runs via API/Fly/CF — no Citadel Docker required."
-            )
-            _log(
-                "  When ready for local: PLATFORM_INFRA_MODE=LOCAL_ONLY scripts/citadel_deploy_all.py --local"
-            )
+            _log("  CLOUD_ONLY: cloud auto-rotation runs via API/Fly/CF — no Citadel Docker required.")
+            _log("  When ready for local: PLATFORM_INFRA_MODE=LOCAL_ONLY scripts/citadel_deploy_all.py --local")
         return 0
 
-    local_deploy = (
-        args.local
-        or args.skip_docker is False
-        and mode
-        in (
-            "LOCAL_ONLY",
-            "HYBRID",
-        )
-        and (
-            mode == "LOCAL_ONLY"
-            or os.environ.get("CITADEL_LOCAL_STACK", "").lower() in ("1", "true", "yes")
-        )
+    local_deploy = args.local or args.skip_docker is False and mode in (
+        "LOCAL_ONLY",
+        "HYBRID",
+    ) and (
+        mode == "LOCAL_ONLY"
+        or os.environ.get("CITADEL_LOCAL_STACK", "").lower() in ("1", "true", "yes")
     )
     if mode == "CLOUD_ONLY" and not args.local:
         local_deploy = False
@@ -396,9 +390,7 @@ def main() -> int:
     _generate_env(force=args.force_env, local_stack=local_deploy)
     if not local_deploy:
         _log("")
-        _log(
-            f"CLOUD_ONLY ({mode}): skipping Citadel Docker — use --local when your server is ready."
-        )
+        _log(f"CLOUD_ONLY ({mode}): skipping Citadel Docker — use --local when your server is ready.")
         _log("  Adaptive: GET /adaptive/mode and GET /adaptive/status on your running API.")
         return 0
 
