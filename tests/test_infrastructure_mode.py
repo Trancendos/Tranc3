@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 import pytest
 
 
@@ -28,11 +27,11 @@ def test_default_is_cloud_only(monkeypatch):
 def test_local_only_chain(monkeypatch):
     monkeypatch.setenv("PLATFORM_INFRA_MODE", "LOCAL_ONLY")
     from src.platform.infrastructure_mode import (
+        PlatformInfraMode,
         default_rotation_chain,
         get_infrastructure_mode,
         should_run_citadel_docker,
     )
-    from src.platform.infrastructure_mode import PlatformInfraMode
 
     assert get_infrastructure_mode() == PlatformInfraMode.LOCAL_ONLY
     assert default_rotation_chain() == "zero_cost_full"

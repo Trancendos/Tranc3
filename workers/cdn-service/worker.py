@@ -10,7 +10,6 @@ Zero-cost: FastAPI + local filesystem, no external CDN cost.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import hashlib
 import logging
@@ -27,6 +26,8 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8028
 WORKER_NAME = "cdn-service"
@@ -192,7 +193,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "registered_assets": asset_count,
         "total_bytes": total_size,
-        "total_serves": serve_count
+        "total_serves": serve_count,
     }
 
 

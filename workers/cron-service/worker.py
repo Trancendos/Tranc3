@@ -10,7 +10,6 @@ Zero-cost: FastAPI + SQLite + asyncio, no external deps.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
@@ -27,6 +26,8 @@ import httpx
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8021
 WORKER_NAME = "cron-service"
@@ -271,7 +272,7 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "total_jobs": total,
-        "active_jobs": active
+        "active_jobs": active,
     }
 
 

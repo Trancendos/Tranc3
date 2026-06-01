@@ -10,7 +10,6 @@ Gracefully degrades to 503 when Blender is not installed.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import logging
 import os
@@ -26,6 +25,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8050
 WORKER_NAME = "blender-worker"

@@ -105,6 +105,7 @@ except Exception:  # pragma: no cover
     def get_entity_by_pid(pid: str):  # type: ignore[misc]
         return None
 
+
 from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------

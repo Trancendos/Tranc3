@@ -14,7 +14,6 @@ Zero-cost: FastAPI + SQLite cache + free public APIs, no paid deps.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import logging
@@ -31,6 +30,8 @@ import httpx
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8027
 WORKER_NAME = "geo-service"
@@ -290,7 +291,7 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "cached_ips": cached
+        "cached_ips": cached,
     }
 
 
