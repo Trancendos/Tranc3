@@ -416,7 +416,7 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
               <span className="text-xs text-gray-500">{pillarDef?.name} Pillar · Tier {displayHub.tier}</span>
             </div>
           </div>
-          <button onClick={onClose} aria-label="Close hub details" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors">
             ✕
           </button>
         </div>
@@ -552,9 +552,8 @@ function Sidebar({
             <div className="text-[10px] text-gray-600">Ecosystem Command</div>
           </div>
         )}
-        <button onClick={() => setCollapsed(!collapsed)}
-                aria-label="Toggle sidebar"
-                className="p-1 rounded hover:bg-gray-800 text-gray-600 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
+        <button aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed(!collapsed)}
+                className="p-1 rounded hover:bg-gray-800 text-gray-600 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
           <ChevronRight size={14} className={`transition-transform ${collapsed ? '' : 'rotate-180'}`} />
         </button>
       </div>
@@ -744,8 +743,7 @@ function TopBar({
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <button onClick={onRefresh}
-                  aria-label="Refresh dashboard"
+          <button aria-label="Refresh Dashboard" onClick={onRefresh}
                   className={`p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 ${refreshing ? 'animate-spin' : ''}`}>
             <RefreshCw size={16} />
           </button>
