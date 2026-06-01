@@ -416,7 +416,7 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
               <span className="text-xs text-gray-500">{pillarDef?.name} Pillar · Tier {displayHub.tier}</span>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors">
+          <button onClick={onClose} aria-label="Close hub details" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
             ✕
           </button>
         </div>
@@ -553,7 +553,8 @@ function Sidebar({
           </div>
         )}
         <button onClick={() => setCollapsed(!collapsed)}
-                className="p-1 rounded hover:bg-gray-800 text-gray-600 hover:text-white transition-colors">
+                aria-label="Toggle sidebar"
+                className="p-1 rounded hover:bg-gray-800 text-gray-600 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
           <ChevronRight size={14} className={`transition-transform ${collapsed ? '' : 'rotate-180'}`} />
         </button>
       </div>
@@ -744,10 +745,11 @@ function TopBar({
         {/* Actions */}
         <div className="flex items-center gap-2">
           <button onClick={onRefresh}
-                  className={`p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors ${refreshing ? 'animate-spin' : ''}`}>
+                  aria-label="Refresh dashboard"
+                  className={`p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 ${refreshing ? 'animate-spin' : ''}`}>
             <RefreshCw size={16} />
           </button>
-          <button className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors relative">
+          <button aria-label="Notifications" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
             <Bell size={16} />
             {totalAlerts > 0 && (
               <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center">
@@ -755,7 +757,7 @@ function TopBar({
               </div>
             )}
           </button>
-          <button className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors">
+          <button aria-label="Settings" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
             <Settings size={16} />
           </button>
         </div>
