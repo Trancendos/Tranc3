@@ -499,7 +499,7 @@ async def health():
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
-        "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds()
+        "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
     }
 
 

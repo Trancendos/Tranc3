@@ -15,7 +15,7 @@ _PORT_PATTERNS = (
     re.compile(r"WORKER_PORT\s*=\s*(\d+)"),
     re.compile(r"PORT\s*=\s*int\(os\.environ\.get\([^,]+,\s*['\"](\d+)"),
     re.compile(r"PORT\s*=\s*(\d+)"),
-    re.compile(r'port\s*=\s*(\d+).*uvicorn\.run', re.DOTALL),
+    re.compile(r"port\s*=\s*(\d+).*uvicorn\.run", re.DOTALL),
 )
 
 
@@ -89,7 +89,7 @@ def _inject_into_health_return(text: str, port: int, service: str) -> str:
 
 def patch_file(path: Path) -> bool:
     text = path.read_text()
-    if "@app.get(\"/health\")" not in text and "@app.get('/health')" not in text:
+    if '@app.get("/health")' not in text and "@app.get('/health')" not in text:
         return False
 
     port, service = _port_and_service(text)

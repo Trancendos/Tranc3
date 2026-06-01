@@ -133,7 +133,9 @@ def build_dimensions() -> list[Dimension]:
             percent=92.0 if tests_ok else 40.0,
             status="green" if tests_ok else "red",
             blockers=[] if tests_ok else ["Production gate pytest failed"],
-            next_actions=["Run full make test nightly on Workshop"] if tests_ok else ["Fix failing gate tests"],
+            next_actions=["Run full make test nightly on Workshop"]
+            if tests_ok
+            else ["Fix failing gate tests"],
         ),
         Dimension(
             name="P0 core platform (API, Spark, auth, gateway)",
@@ -181,7 +183,10 @@ def build_dimensions() -> list[Dimension]:
             percent=88.0 if tests_ok else 72.0,
             status="green" if tests_ok else "amber",
             blockers=[],
-            next_actions=["Scrape all P0 /health in Prometheus", "Set AUDIT_SIGNING_KEY in production"],
+            next_actions=[
+                "Scrape all P0 /health in Prometheus",
+                "Set AUDIT_SIGNING_KEY in production",
+            ],
         ),
         Dimension(
             name="UX / Infinity Admin OS",
@@ -213,7 +218,9 @@ def build_dimensions() -> list[Dimension]:
             percent=ops_pct,
             status=ops_status,
             blockers=ops_blockers,
-            next_actions=["make deploy-live", "vault operator init/unseal"] if live_scripts else ["make deploy-citadel on production host"],
+            next_actions=["make deploy-live", "vault operator init/unseal"]
+            if live_scripts
+            else ["make deploy-citadel on production host"],
         ),
     ]
 
@@ -227,11 +234,7 @@ def main() -> int:
     dimensions = build_dimensions()
     overall = overall_percent(dimensions)
     p0_code = round(
-        sum(
-            d.percent * d.weight
-            for d in dimensions
-            if d.name != "Ops executed on Citadel (live)"
-        )
+        sum(d.percent * d.weight for d in dimensions if d.name != "Ops executed on Citadel (live)")
         / max(0.01, 1.0 - 0.05),
         1,
     )
@@ -268,7 +271,7 @@ def main() -> int:
         "|-----------|--------|---|--------|",
     ]
     for d in dimensions:
-        lines.append(f"| {d.name} | {int(d.weight*100)}% | {d.percent}% | {d.status} |")
+        lines.append(f"| {d.name} | {int(d.weight * 100)}% | {d.percent}% | {d.status} |")
     lines.append("")
     lines.append("## Top blockers")
     for d in dimensions:
