@@ -16,6 +16,7 @@ def _route_exists(app: Any, path: str) -> bool:
 
 _worker_up_gauge = None
 
+
 def _ensure_worker_info_metric(service_name: str) -> None:
     global _worker_up_gauge
     if service_name in _REGISTERED:
