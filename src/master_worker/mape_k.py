@@ -65,15 +65,19 @@ class KnowledgeStore:
         }
 
     def get(self, key: str, default: Any = None) -> Any:
+        """Return the stored fact for *key*, or *default* if absent."""
         return self._facts.get(key, default)
 
     def set(self, key: str, value: Any) -> None:
+        """Store *value* under *key* in the fact base."""
         self._facts[key] = value
 
     def policy(self, key: str, default: Any = None) -> Any:
+        """Return the policy value for *key*, or *default* if not configured."""
         return self._policies.get(key, default)
 
     def record_event(self, event_type: str, data: Dict[str, Any]) -> None:
+        """Append a timestamped event to the history ring buffer (capped at 10k entries)."""
         self._history.append(
             {
                 "id": uuid.uuid4().hex[:8],
@@ -86,6 +90,7 @@ class KnowledgeStore:
             self._history = self._history[-5_000:]
 
     def recent_events(self, event_type: Optional[str] = None, n: int = 50) -> List[Dict[str, Any]]:
+        """Return the last *n* events, optionally filtered by *event_type*."""
         events = (
             self._history
             if not event_type
@@ -101,6 +106,8 @@ class KnowledgeStore:
 
 @dataclass
 class WorkerMetrics:
+    """Health probe result for a single worker collected during Monitor phase."""
+
     worker_name: str
     is_healthy: bool
     status_code: Optional[int]
@@ -129,6 +136,8 @@ class SystemSnapshot:
 
 
 class ActionType(str, Enum):
+    """Possible adaptation actions the MAPE-K Execute phase can perform."""
+
     ROTATE_PLATFORM = "rotate_platform"
     RESTART_WORKER = "restart_worker"
     SCALE_UP = "scale_up"
@@ -140,6 +149,8 @@ class ActionType(str, Enum):
 
 @dataclass
 class AdaptationAction:
+    """A concrete action produced by the Plan phase and consumed by Execute."""
+
     action_type: ActionType
     target: str  # worker name or platform name
     reason: str
@@ -155,6 +166,8 @@ class AdaptationAction:
 
 @dataclass
 class MapeKConfig:
+    """Runtime configuration for the MAPE-K control loop."""
+
     monitor_interval_s: float = 30.0
     worker_health_timeout_s: float = 5.0
     base_worker_url: str = "http://localhost"
@@ -163,6 +176,8 @@ class MapeKConfig:
 
 
 class ControlLoopState(str, Enum):
+    """Current phase of the MAPE-K autonomic control loop."""
+
     IDLE = "idle"
     MONITORING = "monitoring"
     ANALYSING = "analysing"
@@ -234,6 +249,7 @@ class MapeKLoop:
         config: Optional[MapeKConfig] = None,
         registry: Optional[PlatformRegistry] = None,
     ) -> None:
+        """Initialise the loop with optional config and platform registry overrides."""
         self._config = config or MapeKConfig(
             worker_ports=dict(self.DEFAULT_WORKER_PORTS),
         )
@@ -255,6 +271,7 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     async def start(self) -> None:
+        """Start the MAPE-K loop and the zero-cost enforcer as background tasks."""
         if self._running:
             return
         self._running = True
@@ -268,6 +285,7 @@ class MapeKLoop:
         )
 
     async def stop(self) -> None:
+        """Gracefully cancel the control loop and stop the zero-cost enforcer."""
         self._running = False
         await self._enforcer.stop()
         if self._task and not self._task.done():
@@ -279,6 +297,7 @@ class MapeKLoop:
         logger.info("MapeKLoop stopped after %d cycles", self._cycle_count)
 
     def on_action(self, cb: Callable[[AdaptationAction], Awaitable[None]]) -> None:
+        """Register an async callback invoked after each adaptation action is executed."""
         self._action_callbacks.append(cb)
 
     # ------------------------------------------------------------------
@@ -286,6 +305,7 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     async def _loop(self) -> None:
+        """Run the Monitor→Analyse→Plan→Execute cycle on a fixed interval until stopped."""
         while self._running:
             cycle_start = time.monotonic()
             try:
@@ -337,6 +357,7 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     async def _monitor(self) -> SystemSnapshot:
+        """Probe all registered workers concurrently and return a SystemSnapshot."""
         snapshot = SystemSnapshot(
             total_workers=len(self._config.worker_ports),
             platform_snapshot=self._registry.snapshot(),
@@ -360,6 +381,7 @@ class MapeKLoop:
         return snapshot
 
     async def _probe_worker(self, client: httpx.AsyncClient, name: str, port: int) -> WorkerMetrics:
+        """GET /health on the worker at *port* and return a WorkerMetrics record."""
         url = f"{self._config.base_worker_url}:{port}/health"
         t0 = time.monotonic()
         try:
@@ -456,6 +478,7 @@ class MapeKLoop:
         analysis: Dict[str, Any],
         snapshot: SystemSnapshot,
     ) -> List[AdaptationAction]:
+        """Convert Analyse-phase issues into a priority-sorted list of AdaptationActions."""
         actions: List[AdaptationAction] = []
 
         for issue in analysis.get("issues", []):
@@ -512,6 +535,7 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     async def _execute(self, actions: List[AdaptationAction]) -> None:
+        """Apply each planned action in priority order, logging success and failure."""
         for action in actions:
             try:
                 await self._apply_action(action)
@@ -546,6 +570,7 @@ class MapeKLoop:
                 )
 
     async def _apply_action(self, action: AdaptationAction) -> None:
+        """Dispatch a single AdaptationAction to the appropriate subsystem."""
         if action.action_type == ActionType.ROTATE_PLATFORM:
             fallback = await self._enforcer.rotate_platform(action.target)
             logger.info("Executed ROTATE_PLATFORM: %s → %s", action.target, fallback)
@@ -576,6 +601,7 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     async def _on_platform_rotation(self, old: str, new: str) -> None:
+        """Callback from ZeroCostEnforcer; persists rotation events to KnowledgeStore."""
         self._knowledge.record_event(
             "platform_rotation",
             {
@@ -591,6 +617,7 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     def status(self) -> Dict[str, Any]:
+        """Return a serialisable status dict for the /master/status health endpoint."""
         snap = self._last_snapshot
         return {
             "state": self._state.value,
