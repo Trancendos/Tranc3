@@ -227,7 +227,7 @@ class ZeroCostEnforcer:
         ]:
             if os.environ.get(env_var):
                 violations.append(
-                    f"{env_var} set — {service_name} incurs costs; use free alternatives"
+                    f"{env_var} set — {service_name} incurs costs; use free alternatives",
                 )
 
         result = CostAssertion(

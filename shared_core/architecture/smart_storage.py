@@ -227,7 +227,7 @@ class ZFSStorageProvider(SmartStorageProvider):
         mount_resolved = self._mount_root.resolve()
         if not str(resolved).startswith(str(mount_resolved)):
             raise ValueError(
-                f"Path traversal blocked: {path} escapes mount root {self._mount_root}"
+                f"Path traversal blocked: {path} escapes mount root {self._mount_root}",
             )
         resolved.parent.mkdir(parents=True, exist_ok=True)
         return resolved
@@ -524,7 +524,10 @@ class MinIOStorageProvider(SmartStorageProvider):
         if client is None:
             return []
         objects = await asyncio.to_thread(
-            client.list_objects, self._bucket, prefix=prefix, recursive=True
+            client.list_objects,
+            self._bucket,
+            prefix=prefix,
+            recursive=True,
         )
         return [obj.object_name for obj in objects]
 
@@ -601,8 +604,8 @@ class MinIOStorageProvider(SmartStorageProvider):
                         status="Enabled",
                         filter=Filter(prefix=prefix),
                         expiration=Expiration(days=expiry_days),
-                    )
-                ]
+                    ),
+                ],
             )
             await asyncio.to_thread(client.set_bucket_lifecycle, self._bucket, config)
             logger.info(
@@ -719,7 +722,9 @@ class CephStorageProvider(SmartStorageProvider):
         if client is None:
             return []
         response = await asyncio.to_thread(
-            client.list_objects_v2, Bucket=self._bucket, Prefix=prefix
+            client.list_objects_v2,
+            Bucket=self._bucket,
+            Prefix=prefix,
         )
         return [obj["Key"] for obj in response.get("Contents", [])]
 
@@ -899,7 +904,7 @@ class CloudflareR2Provider(SmartStorageProvider):
                 )
             except ImportError:
                 raise RuntimeError(
-                    "boto3 is required for R2 storage. Install: pip install boto3"
+                    "boto3 is required for R2 storage. Install: pip install boto3",
                 ) from None
         return self._client
 
@@ -1053,7 +1058,7 @@ class GCPStorageProvider(SmartStorageProvider):
             except ImportError:
                 raise RuntimeError(
                     "google-cloud-storage is required for GCP storage. "
-                    "Install: pip install google-cloud-storage"
+                    "Install: pip install google-cloud-storage",
                 ) from None
         return self._client
 
@@ -1211,7 +1216,7 @@ class AzureCosmosProvider(SmartStorageProvider):
             except ImportError:
                 raise RuntimeError(
                     "azure-cosmos is required for Azure Cosmos DB storage. "
-                    "Install: pip install azure-cosmos"
+                    "Install: pip install azure-cosmos",
                 ) from None
         return self._client
 
@@ -1272,7 +1277,7 @@ class AzureCosmosProvider(SmartStorageProvider):
             container.query_items(
                 query=query,
                 enable_cross_partition_query=True,
-            )
+            ),
         )
         return sorted(r["id"] for r in results)
 
@@ -1283,7 +1288,7 @@ class AzureCosmosProvider(SmartStorageProvider):
             container.query_items(
                 query=query,
                 enable_cross_partition_query=True,
-            )
+            ),
         )
         return results[0] > 0 if results else False
 
@@ -1298,7 +1303,7 @@ class AzureCosmosProvider(SmartStorageProvider):
                 container.query_items(
                     query=query,
                     enable_cross_partition_query=True,
-                )
+                ),
             )
             total_bytes = results[0] if results and results[0] else 0
 
@@ -1411,7 +1416,7 @@ class AWSDynamoProvider(SmartStorageProvider):
                 self._client = boto3.client("dynamodb", **kwargs)
             except ImportError:
                 raise RuntimeError(
-                    "boto3 is required for AWS DynamoDB storage. Install: pip install boto3"
+                    "boto3 is required for AWS DynamoDB storage. Install: pip install boto3",
                 ) from None
         return self._client
 
@@ -1796,7 +1801,10 @@ class SmartStorageOrchestrator:
             logger.error("Cold data migration error: %s", e)
 
         logger.info(
-            "Migrated %d objects from %s to %s", migrated, source_tier.name, target_tier.name
+            "Migrated %d objects from %s to %s",
+            migrated,
+            source_tier.name,
+            target_tier.name,
         )
         return migrated
 
@@ -1999,10 +2007,12 @@ def create_smart_storage(
                 endpoint=azure_endpoint,
                 key=azure_key,
                 database_name=kwargs.get(
-                    "azure_cosmos_database", os.getenv("AZURE_COSMOS_DATABASE", "tranc3")
+                    "azure_cosmos_database",
+                    os.getenv("AZURE_COSMOS_DATABASE", "tranc3"),
                 ),
                 container_name=kwargs.get(
-                    "azure_cosmos_container", os.getenv("AZURE_COSMOS_CONTAINER", "storage")
+                    "azure_cosmos_container",
+                    os.getenv("AZURE_COSMOS_CONTAINER", "storage"),
                 ),
             )
         except Exception as e:
@@ -2015,7 +2025,8 @@ def create_smart_storage(
         try:
             aws_provider = AWSDynamoProvider(
                 table_name=kwargs.get(
-                    "aws_dynamo_table", os.getenv("AWS_DYNAMO_TABLE", "tranc3-storage")
+                    "aws_dynamo_table",
+                    os.getenv("AWS_DYNAMO_TABLE", "tranc3-storage"),
                 ),
                 region=kwargs.get("aws_region", os.getenv("AWS_REGION", "us-east-1")),
                 aws_access_key_id=aws_access_key,
@@ -2029,7 +2040,7 @@ def create_smart_storage(
         logger.warning(
             "CLOUD_ONLY mode but no cloud providers configured! "
             "Set R2_ACCOUNT_ID, OCI_COMPARTMENT_ID, GCP_PROJECT_ID, "
-            "AZURE_COSMOS_ENDPOINT, or AWS_ACCESS_KEY_ID environment variables."
+            "AZURE_COSMOS_ENDPOINT, or AWS_ACCESS_KEY_ID environment variables.",
         )
 
     return SmartStorageOrchestrator(

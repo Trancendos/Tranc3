@@ -132,7 +132,7 @@ class ComplexityRiskDetector:
                         "PY-008",
                         f"High complexity function '{node.name}' (complexity={complexity}) — mixed return risk",
                         min(0.1 + (complexity - 10) * 0.02, 0.5),
-                    )
+                    ),
                 )
 
             # Check for bare except
@@ -143,7 +143,7 @@ class ComplexityRiskDetector:
                             "PY-001",
                             f"Bare except in '{node.name}'",
                             0.3,
-                        )
+                        ),
                     )
 
             # Check for mixed returns
@@ -162,7 +162,7 @@ class ComplexityRiskDetector:
                         "PY-008",
                         f"Mixed return in '{node.name}' — has return value but implicit None",
                         0.5,
-                    )
+                    ),
                 )
 
         return signals
@@ -346,7 +346,7 @@ class ViolationPredictor:
                         predicted_categories=["historical"],
                         signals=[f"Historical violation count: {count}"],
                         confidence=0.7,
-                    )
+                    ),
                 )
 
         return predictions

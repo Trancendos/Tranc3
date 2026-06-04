@@ -81,6 +81,8 @@ import sqlite3
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
+from src.entities.health_metadata import health_entity_block
+
 WORKER_PORT = 8016
 WORKER_NAME = "analytics-service"
 
@@ -446,14 +448,8 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "backend": "duckdb+sqlite" if _DUCKDB_AVAILABLE else "sqlite",
-        "duckdb_available": _DUCKDB_AVAILABLE,
-        "live_events": event_count,
-        "live_metrics": metric_count,
-        "archive_batches": archive_count,
-        "parquet_files": len(parquet_files),
-        "parquet_bytes": parquet_total_bytes,
-        "polars_available": _POLARS_AVAILABLE,
+        "event_count": event_count,
+        "metric_count": metric_count,
     }
 
 

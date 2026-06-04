@@ -1702,7 +1702,7 @@ _VALID_TIER_REFS = frozenset(
         "bot_02",
         "bot_03",
         "bot_04",
-    }
+    },
 )
 
 
@@ -1766,7 +1766,7 @@ async def assign_entity_tier(pid: str, body: EntityTierUpdate, request: Request)
                 "entity_ref": body.entity_ref,
                 "tier": body.tier,
             },
-        )
+        ),
     )
 
     return {
@@ -1844,7 +1844,7 @@ async def rename_orchestrator(
                     "canonical": prime.name,
                     "new_name": body.new_name,
                     "reason": body.reason,
-                }
+                },
             ),
             datetime.now(timezone.utc).isoformat(),
         ),

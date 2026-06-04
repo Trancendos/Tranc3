@@ -418,7 +418,7 @@ class OsvIngestor:
                 payload = json.dumps(
                     {
                         "package": {"ecosystem": ecosystem},
-                    }
+                    },
                 ).encode("utf-8")
                 req = _ur.Request(
                     self.OSV_QUERY_URL,
@@ -487,7 +487,7 @@ class OsvIngestor:
                             tags=[ecosystem.lower()],
                             published=vuln.get("published", ""),
                             raw=vuln,
-                        )
+                        ),
                     )
 
             except Exception as exc:

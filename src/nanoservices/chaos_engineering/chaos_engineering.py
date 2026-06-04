@@ -70,7 +70,8 @@ class ChaosExperiment:
     name: str = ""
     fault: FaultSpec = field(
         default_factory=lambda: FaultSpec(
-            fault_type=FaultType.LATENCY_INJECTION, target_service=""
+            fault_type=FaultType.LATENCY_INJECTION,
+            target_service="",
         ),
     )
     hypotheses: List[SteadyStateHypothesis] = field(default_factory=list)

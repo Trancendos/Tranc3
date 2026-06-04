@@ -465,7 +465,7 @@ def discover_available_providers() -> Dict[str, bool]:
     # Ollama — check if OLLAMA_HOST is set or default localhost is reachable
     ollama_host = os.getenv("OLLAMA_URL", os.getenv("OLLAMA_HOST", "http://localhost:11434"))
     available["ollama"] = bool(
-        os.getenv("OLLAMA_URL") or os.getenv("OLLAMA_HOST")
+        os.getenv("OLLAMA_URL") or os.getenv("OLLAMA_HOST"),
     ) or _check_ollama_available(ollama_host)
 
     # Groq — 14,400 req/day free, requires GROQ_API_KEY

@@ -31,10 +31,6 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from Dimensional.error_handlers import safe_error_detail
-from Dimensional.sanitize import sanitize_for_log
-from Dimensional.url_validation import SSRFError, validate_ip_address
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8027

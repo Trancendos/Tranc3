@@ -142,7 +142,7 @@ def audit(base: str = DEFAULT_BASE) -> list[BranchReport]:
                 deletions=dels,
                 verdict=verdict,
                 notes=notes,
-            )
+            ),
         )
     reports.sort(key=lambda r: (r.verdict != "cherry-pick", -r.ahead))
     return reports
@@ -179,7 +179,7 @@ def _write_outputs(reports: list[BranchReport], merged: list[BranchReport], base
     for r in reports:
         lines.append(
             f"| `{r.name}` | {r.ahead} | {r.behind} | {r.files_changed} | "
-            f"+{r.insertions}/−{r.deletions} | **{r.verdict}** | {r.notes} |"
+            f"+{r.insertions}/−{r.deletions} | **{r.verdict}** | {r.notes} |",
         )
     if merged:
         lines.extend(

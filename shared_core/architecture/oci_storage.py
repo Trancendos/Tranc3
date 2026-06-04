@@ -57,7 +57,7 @@ class OCIObjectStorageProvider(StorageProvider):
             import oci
         except ImportError:
             raise RuntimeError(
-                "oci package is required for OCI Object Storage. Install it with: pip install oci"
+                "oci package is required for OCI Object Storage. Install it with: pip install oci",
             ) from None
 
         # Load OCI config
@@ -71,13 +71,14 @@ class OCIObjectStorageProvider(StorageProvider):
                 signer = oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
                 self._config = {"region": os.getenv("OCI_REGION", "us-ashburn-1")}
                 self._client = oci.object_storage.ObjectStorageClient(
-                    config=self._config, signer=signer
+                    config=self._config,
+                    signer=signer,
                 )
             except Exception:
                 raise RuntimeError(
                     "OCI authentication failed. Either provide a config file at "
                     f"{config_file} or run on an OCI compute instance with "
-                    "instance principals enabled."
+                    "instance principals enabled.",
                 ) from None
             return self._client
 
@@ -121,7 +122,10 @@ class OCIObjectStorageProvider(StorageProvider):
             content_length=len(data),
         )
         logger.debug(
-            "Wrote %d bytes to OCI://%s/%s", len(data), self._bucket_name, sanitize_for_log(path)
+            "Wrote %d bytes to OCI://%s/%s",
+            len(data),
+            self._bucket_name,
+            sanitize_for_log(path),
         )
 
     async def delete(self, path: str) -> None:

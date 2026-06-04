@@ -387,7 +387,8 @@ class RedisConnectionManager:
         messages = []
         try:
             msg = await asyncio.wait_for(
-                self._pubsub.get_message(ignore_subscribe_messages=True), timeout=timeout
+                self._pubsub.get_message(ignore_subscribe_messages=True),
+                timeout=timeout,
             )
             while msg:
                 messages.append(msg)
@@ -566,7 +567,8 @@ class SentinelStation:
                 event.compressed = True
 
             receivers = await self._redis_mgr.publish(
-                f"{self._config.redis_channel_prefix}{channel}", message
+                f"{self._config.redis_channel_prefix}{channel}",
+                message,
             )
 
             if receivers >= 0:

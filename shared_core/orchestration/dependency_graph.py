@@ -349,14 +349,14 @@ class SmartDependencyGraph:
         if critical_deps:
             suggestions.append(
                 f"CRITICAL: {', '.join(critical_deps)} will be directly affected. "
-                f"Activate circuit breakers and notify on-call."
+                f"Activate circuit breakers and notify on-call.",
             )
 
         high_deps = [name for name, level in impacted.items() if level == ImpactLevel.HIGH]
         if high_deps:
             suggestions.append(
                 f"HIGH: {', '.join(high_deps)} will experience degraded service. "
-                f"Pre-warm caches and enable graceful degradation."
+                f"Pre-warm caches and enable graceful degradation.",
             )
 
         # Check for cascading risk
@@ -366,7 +366,7 @@ class SmartDependencyGraph:
         if len(depth_2_plus) > 5:
             suggestions.append(
                 f"CASCADE RISK: {len(depth_2_plus)} services at medium+ impact. "
-                f"Consider isolating {node_name} to prevent cascade."
+                f"Consider isolating {node_name} to prevent cascade.",
             )
 
         if not suggestions:
@@ -564,7 +564,11 @@ class SmartDependencyGraph:
         self._callbacks.append(callback)
 
     def _notify_impact(
-        self, node_name: str, old_health: str, new_health: str, impact: ImpactAnalysis
+        self,
+        node_name: str,
+        old_health: str,
+        new_health: str,
+        impact: ImpactAnalysis,
     ) -> None:
         """Notify callbacks of an impact event."""
         for cb in self._callbacks:

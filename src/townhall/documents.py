@@ -26,7 +26,11 @@ class DocumentTemplate:
 # Catalog — maps framework ids to on-disk templates
 TEMPLATE_CATALOG: list[DocumentTemplate] = [
     DocumentTemplate(
-        "policy", "Policy Document", "policy-documentation", "policy-documentation", "policy.md"
+        "policy",
+        "Policy Document",
+        "policy-documentation",
+        "policy-documentation",
+        "policy.md",
     ),
     DocumentTemplate(
         "procedure",
@@ -36,10 +40,18 @@ TEMPLATE_CATALOG: list[DocumentTemplate] = [
         "procedure.md",
     ),
     DocumentTemplate(
-        "add", "Architectural Design Document", "architecture", "add", "architectural_design.md"
+        "add",
+        "Architectural Design Document",
+        "architecture",
+        "add",
+        "architectural_design.md",
     ),
     DocumentTemplate(
-        "ddd", "Detailed Design Document", "architecture", "ddd", "detailed_design.md"
+        "ddd",
+        "Detailed Design Document",
+        "architecture",
+        "ddd",
+        "detailed_design.md",
     ),
     DocumentTemplate("blueprint", "Blueprint", "architecture", "blueprint", "blueprint.md"),
     DocumentTemplate(
@@ -71,7 +83,11 @@ TEMPLATE_CATALOG: list[DocumentTemplate] = [
         "intellectual_property.md",
     ),
     DocumentTemplate(
-        "cookbook", "Operational Cookbook", "documentation", "cookbooks", "cookbook.md"
+        "cookbook",
+        "Operational Cookbook",
+        "documentation",
+        "cookbooks",
+        "cookbook.md",
     ),
     DocumentTemplate(
         "foundation",
@@ -88,7 +104,11 @@ TEMPLATE_CATALOG: list[DocumentTemplate] = [
         "universe_framework.md",
     ),
     DocumentTemplate(
-        "app-framework", "App per App Framework", "architecture", "app-per-app", "app_per_app.md"
+        "app-framework",
+        "App per App Framework",
+        "architecture",
+        "app-per-app",
+        "app_per_app.md",
     ),
     DocumentTemplate(
         "design-system",
@@ -98,7 +118,11 @@ TEMPLATE_CATALOG: list[DocumentTemplate] = [
         "design_system.md",
     ),
     DocumentTemplate(
-        "kanban-charter", "Kanban Board Charter", "agile", "kanban", "kanban_charter.md"
+        "kanban-charter",
+        "Kanban Board Charter",
+        "agile",
+        "kanban",
+        "kanban_charter.md",
     ),
     DocumentTemplate("itil-incident", "ITIL Incident Record", "itsm", "itil4", "itil_incident.md"),
     DocumentTemplate(
@@ -123,7 +147,7 @@ def list_templates(*, category: str | None = None) -> list[dict[str, Any]]:
                 "category": t.category,
                 "framework_id": t.framework_id,
                 "available": t.path().is_file(),
-            }
+            },
         )
     return out
 

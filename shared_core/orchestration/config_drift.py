@@ -330,7 +330,7 @@ class ConfigDriftDetector:
                         current_value=str(c_hash)[:16] if c_hash else "<missing>",
                         severity=severity,
                         description=desc,
-                    )
+                    ),
                 )
 
         return drifts
@@ -360,7 +360,7 @@ class ConfigDriftDetector:
                         current_value=c_val or "<unset>",
                         severity=severity,
                         description=desc,
-                    )
+                    ),
                 )
 
         return drifts
@@ -390,7 +390,7 @@ class ConfigDriftDetector:
                         current_value=c_val or "<unset>",
                         severity=severity,
                         description=desc,
-                    )
+                    ),
                 )
 
         return drifts
@@ -438,10 +438,12 @@ class ConfigDriftDetector:
     def _describe_file_drift(key: str, baseline: Dict, current: Dict) -> str:
         """Generate a human-readable description of a file drift."""
         b_status = baseline.get(
-            "status", baseline.get("hash", "")[:8] if baseline.get("hash") else "absent"
+            "status",
+            baseline.get("hash", "")[:8] if baseline.get("hash") else "absent",
         )
         c_status = current.get(
-            "status", current.get("hash", "")[:8] if current.get("hash") else "absent"
+            "status",
+            current.get("hash", "")[:8] if current.get("hash") else "absent",
         )
 
         if b_status == "missing" and c_status != "missing":

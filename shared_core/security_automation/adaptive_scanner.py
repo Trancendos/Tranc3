@@ -495,19 +495,8 @@ class AdaptiveScanner:
             {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "violation_count": len(violations),
-                "per_rule_counts": per_rule,
-                "per_entity_counts": per_entity,
-                "new_since_last": len(
-                    [
-                        av
-                        for av in violations
-                        if self._pattern_key(av.base) not in self._prev_pattern_keys
-                    ]
-                ),
-                "suppressed_count": len(
-                    [av for av in violations if av.confidence_level == Confidence.SUPPRESSED]
-                ),
-            }
+                "pattern_keys": [self._pattern_key(v.base) for v in violations],
+            },
         )
         if len(self._history) > 100:
             self._history = self._history[-100:]
@@ -607,5 +596,6 @@ class AdaptiveScanner:
         path = Path(self._learning_dir) / _HISTORY_FILE
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
-            json.dumps(self._history, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+            json.dumps(self._history, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
         )

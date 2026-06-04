@@ -39,7 +39,9 @@ def genome_to_config(genome: str) -> Dict[str, Any]:
 
 
 def mutate_genome(
-    genome: str, mutation_rate: float = 0.01, rng: random.Random | None = None
+    genome: str,
+    mutation_rate: float = 0.01,
+    rng: random.Random | None = None,
 ) -> str:
     """Apply random point mutations (SNP-style) to a genome string."""
     r = rng or random
@@ -47,7 +49,9 @@ def mutate_genome(
 
 
 def crossover_genomes(
-    parent_a: str, parent_b: str, rng: random.Random | None = None
+    parent_a: str,
+    parent_b: str,
+    rng: random.Random | None = None,
 ) -> Tuple[str, str]:
     """Single-point crossover — produces two offspring genomes."""
     r = rng or random
@@ -104,7 +108,9 @@ class GenomeConfig:
         return GenomeConfig(new_config)
 
     def crossover(
-        self, other: "GenomeConfig", rng: random.Random | None = None
+        self,
+        other: "GenomeConfig",
+        rng: random.Random | None = None,
     ) -> Tuple["GenomeConfig", "GenomeConfig"]:
         child_a_genome, child_b_genome = crossover_genomes(self._genome, other._genome, rng=rng)
         results = []

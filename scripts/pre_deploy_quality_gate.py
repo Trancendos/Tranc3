@@ -189,7 +189,7 @@ def main() -> int:
         for r in high[:10]:
             failures.append(
                 f"  - {r.get('test_id')} {r.get('filename')}:{r.get('line_number')} "
-                f"{r.get('issue_text', '')[:60]}"
+                f"{r.get('issue_text', '')[:60]}",
             )
 
     audit = _run(
@@ -222,7 +222,7 @@ def main() -> int:
         print()
         print("Tip: CLOUD_ONLY deploy — scripts/deploy_cloud.py --skip-gate is not recommended.")
         print(
-            f"Re-run with details: {sys.executable} scripts/pre_deploy_quality_gate.py --cloud-only -v"
+            f"Re-run with details: {sys.executable} scripts/pre_deploy_quality_gate.py --cloud-only -v",
         )
         return 1
 

@@ -492,7 +492,7 @@ class SecurityTelemetry:
                 msg = v.get("message", "")
                 suggestion = v.get("suggestion", "")
                 lines.append(
-                    f"### {i + 1}. [{cat}] {sev.value.upper() if hasattr(sev, 'value') else str(sev).upper()} — `{fpath}:{line}`"
+                    f"### {i + 1}. [{cat}] {sev.value.upper() if hasattr(sev, 'value') else str(sev).upper()} — `{fpath}:{line}`",
                 )
                 lines.append("")
                 if msg:

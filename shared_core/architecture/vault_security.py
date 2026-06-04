@@ -396,7 +396,7 @@ class VaultAuditLogger:
                     # Recompute
                     record_json = json.dumps(record, sort_keys=True)
                     expected = hashlib.sha256(
-                        f"{prev_hash}:{record_json}".encode("utf-8")
+                        f"{prev_hash}:{record_json}".encode("utf-8"),
                     ).hexdigest()
 
                     if stored_hash != expected:
@@ -571,7 +571,7 @@ class SoftHSM2Provider(HSMProvider):
                 raise RuntimeError(
                     f"SoftHSM2 token '{self._token}' not found. "
                     f"Initialize it with: softhsm2-util --init-token --slot 0 "
-                    f"--label '{self._token}' --pin <pin> --so-pin <sopin>"
+                    f"--label '{self._token}' --pin <pin> --so-pin <sopin>",
                 ) from None
 
             if self._slot is not None:
@@ -588,7 +588,7 @@ class SoftHSM2Provider(HSMProvider):
                     resource=f"token:{self._token}",
                     success=True,
                     details={"library": self._library_path},
-                )
+                ),
             )
             logger.info("SoftHSM2 initialized: token=%s", self._token)
 
@@ -604,7 +604,7 @@ class SoftHSM2Provider(HSMProvider):
                     resource=f"token:{self._token}",
                     success=False,
                     details={"error": str(e)},
-                )
+                ),
             )
             raise
 
@@ -678,7 +678,7 @@ class SoftHSM2Provider(HSMProvider):
                     resource=f"key:{handle}",
                     success=True,
                     details={"key_type": key_type.value, "key_size": key_size},
-                )
+                ),
             )
             return handle
 
@@ -691,7 +691,7 @@ class SoftHSM2Provider(HSMProvider):
                     resource=f"key:{key_label}",
                     success=False,
                     details={"error": str(e)},
-                )
+                ),
             )
             raise
 
@@ -714,7 +714,7 @@ class SoftHSM2Provider(HSMProvider):
                 resource=f"key:{key_handle}",
                 success=True,
                 details={"plaintext_size": len(plaintext)},
-            )
+            ),
         )
         # Prepend IV to ciphertext
         return iv + ciphertext
@@ -739,7 +739,7 @@ class SoftHSM2Provider(HSMProvider):
                 resource=f"key:{key_handle}",
                 success=True,
                 details={"ciphertext_size": len(ciphertext)},
-            )
+            ),
         )
         return plaintext
 
@@ -758,7 +758,7 @@ class SoftHSM2Provider(HSMProvider):
                 actor="softhsm2-provider",
                 resource=f"key:{key_handle}",
                 success=True,
-            )
+            ),
         )
         return signature
 
@@ -782,7 +782,7 @@ class SoftHSM2Provider(HSMProvider):
                 actor="softhsm2-provider",
                 resource=f"key:{key_handle}",
                 success=success,
-            )
+            ),
         )
         return result
 
@@ -801,7 +801,7 @@ class SoftHSM2Provider(HSMProvider):
                     actor="softhsm2-provider",
                     resource=f"key:{key_handle}",
                     success=True,
-                )
+                ),
             )
             return True
         except Exception as e:
@@ -813,7 +813,7 @@ class SoftHSM2Provider(HSMProvider):
                     resource=f"key:{key_handle}",
                     success=False,
                     details={"error": str(e)},
-                )
+                ),
             )
             return False
 
@@ -829,13 +829,13 @@ class SoftHSM2Provider(HSMProvider):
             for obj in self._session.get_objects(
                 {
                     pkcs11.Attribute.CLASS: pkcs11.ObjectClass.SECRET_KEY,
-                }
+                },
             ):
                 keys.append(
                     {
                         "label": obj.label,
                         "type": "secret_key",
-                    }
+                    },
                 )
         except Exception as _exc:
             logger.debug(
@@ -864,7 +864,7 @@ class SoftHSM2Provider(HSMProvider):
                 actor="softhsm2-provider",
                 resource=f"token:{self._token}",
                 success=True,
-            )
+            ),
         )
         logger.info("SoftHSM2 session closed and credentials zeroized")
 
@@ -953,11 +953,11 @@ class YubiHSM2Provider(HSMProvider):
             except StopIteration:
                 raise RuntimeError(
                     "YubiHSM 2 token not found. Ensure the YubiHSM connector is running "
-                    f"at {self._connector_url} and the device is connected."
+                    f"at {self._connector_url} and the device is connected.",
                 ) from None
 
             self._session = self._token_obj.open(
-                pin=f"{self._auth_key_id}:{self._auth_password.reveal().decode()}"
+                pin=f"{self._auth_key_id}:{self._auth_password.reveal().decode()}",
             )
             self._initialized = True
 
@@ -969,7 +969,7 @@ class YubiHSM2Provider(HSMProvider):
                     resource=f"auth_key:{self._auth_key_id}",
                     success=True,
                     details={"connector_url": self._connector_url},
-                )
+                ),
             )
             logger.info("YubiHSM 2 initialized: connector=%s", self._connector_url)
 
@@ -985,7 +985,7 @@ class YubiHSM2Provider(HSMProvider):
                     resource=f"auth_key:{self._auth_key_id}",
                     success=False,
                     details={"error": str(e)},
-                )
+                ),
             )
             raise
 
@@ -1042,7 +1042,7 @@ class YubiHSM2Provider(HSMProvider):
                     resource=f"key:{handle}",
                     success=True,
                     details={"key_type": key_type.value, "key_size": key_size},
-                )
+                ),
             )
             return handle
 
@@ -1055,7 +1055,7 @@ class YubiHSM2Provider(HSMProvider):
                     resource=f"key:{key_label}",
                     success=False,
                     details={"error": str(e)},
-                )
+                ),
             )
             raise
 
@@ -1075,7 +1075,7 @@ class YubiHSM2Provider(HSMProvider):
                 actor="yubihsm2-provider",
                 resource=f"key:{key_handle}",
                 success=True,
-            )
+            ),
         )
         return iv + ciphertext
 
@@ -1096,7 +1096,7 @@ class YubiHSM2Provider(HSMProvider):
                 actor="yubihsm2-provider",
                 resource=f"key:{key_handle}",
                 success=True,
-            )
+            ),
         )
         return plaintext
 
@@ -1143,7 +1143,7 @@ class YubiHSM2Provider(HSMProvider):
             for obj in self._session.get_objects(
                 {
                     pkcs11.Attribute.CLASS: pkcs11.ObjectClass.SECRET_KEY,
-                }
+                },
             ):
                 keys.append({"label": obj.label, "type": "secret_key"})
         except Exception as _exc:
@@ -1173,7 +1173,7 @@ class YubiHSM2Provider(HSMProvider):
                 actor="yubihsm2-provider",
                 resource=f"auth_key:{self._auth_key_id}",
                 success=True,
-            )
+            ),
         )
         logger.info("YubiHSM 2 session closed and credentials zeroized")
 
@@ -1306,7 +1306,7 @@ class VaultSecretLoader:
                     resource=key,
                     success=True,
                     details={"source": SecretSource.ENVIRONMENT.value},
-                )
+                ),
             )
             return SecureBytes(value.encode("utf-8"), lock_memory=self._lock_memory)
 
@@ -1322,7 +1322,7 @@ class VaultSecretLoader:
                         resource=key,
                         success=True,
                         details={"source": SecretSource.DOTENV.value},
-                    )
+                    ),
                 )
                 return SecureBytes(value.encode("utf-8"), lock_memory=self._lock_memory)
 
@@ -1338,7 +1338,7 @@ class VaultSecretLoader:
                         resource=key,
                         success=True,
                         details={"source": SecretSource.INFINITY_VOID.value},
-                    )
+                    ),
                 )
                 return SecureBytes(value, lock_memory=self._lock_memory)
 
@@ -1354,7 +1354,7 @@ class VaultSecretLoader:
                         resource=key,
                         success=True,
                         details={"source": SecretSource.HSM.value},
-                    )
+                    ),
                 )
                 return SecureBytes(value, lock_memory=self._lock_memory)
 
@@ -1367,7 +1367,7 @@ class VaultSecretLoader:
                 resource=key,
                 success=False,
                 details={"reason": "secret_not_found"},
-            )
+            ),
         )
         raise KeyError(f"Secret '{key}' not found in any source")
 
@@ -1445,7 +1445,7 @@ class VaultSecretLoader:
 
         if not re.match(r"^[a-zA-Z0-9._-]+$", key):
             raise ValueError(
-                f"Invalid secret key: {key!r} — only alphanumeric, hyphens, underscores, and dots allowed"
+                f"Invalid secret key: {key!r} — only alphanumeric, hyphens, underscores, and dots allowed",
             )
         return key
 
@@ -1515,7 +1515,7 @@ class VaultSecretLoader:
                     resource=key,
                     success=True,
                     details={"source": source.value, "key_handle": key_handle},
-                )
+                ),
             )
 
         elif source == SecretSource.INFINITY_VOID and self._infinity_void_url:
@@ -1545,7 +1545,7 @@ class VaultSecretLoader:
                         resource=key,
                         success=True,
                         details={"source": source.value},
-                    )
+                    ),
                 )
             except Exception as e:
                 self._audit.log(
@@ -1556,7 +1556,7 @@ class VaultSecretLoader:
                         resource=key,
                         success=False,
                         details={"error": str(e), "source": source.value},
-                    )
+                    ),
                 )
                 raise
         else:
@@ -1586,7 +1586,7 @@ class VaultSecretLoader:
                 actor="vault-secret-loader",
                 resource=key,
                 success=True,
-            )
+            ),
         )
         logger.info("Secret rotated: %s", key)
 
@@ -1610,7 +1610,7 @@ class VaultSecretLoader:
                 actor="vault-secret-loader",
                 resource="all",
                 success=True,
-            )
+            ),
         )
         logger.info("VaultSecretLoader closed — all secrets zeroized")
 

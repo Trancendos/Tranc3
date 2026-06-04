@@ -828,7 +828,7 @@ class ZeroCostModulator:
                 "success": success,
                 "bytes_migrated": bytes_migrated,
                 "timestamp": self._last_migration_time,
-            }
+            },
         )
 
         # Keep history manageable
@@ -1525,7 +1525,7 @@ class ProactiveOrchestrator:
                                 f"predicted={prediction.predicted_score:.2f})"
                             ),
                             metadata={"prediction": prediction.to_dict()},
-                        )
+                        ),
                     )
                 elif self._mode in (OrchestratorMode.AUTONOMOUS, OrchestratorMode.EMERGENCY):
                     await self._create_degradation_action(prediction)
@@ -1553,7 +1553,7 @@ class ProactiveOrchestrator:
                             target="defense",
                             description=f"Security threat level: {threat_level.value} — hardening defenses",
                             metadata={"threat_level": threat_level.value},
-                        )
+                        ),
                     )
             except Exception as e:
                 logger.error("Security threat assessment error: %s", sanitize_for_log(str(e)))
@@ -1572,7 +1572,7 @@ class ProactiveOrchestrator:
                                 target=name,
                                 description=f"Circuit breaker '{name}' is OPEN — quarantining to prevent cascade",
                                 metadata={"circuit_stats": stats},
-                            )
+                            ),
                         )
             except Exception as e:
                 logger.error("Circuit breaker assessment error: %s", sanitize_for_log(str(e)))
@@ -1588,7 +1588,7 @@ class ProactiveOrchestrator:
                         target="routing",
                         description="Routing health degraded — rebalancing fluidic weights",
                         metadata={"routing_health": routing_health.current_score},
-                    )
+                    ),
                 )
 
     async def _create_degradation_action(self, prediction: HealthPrediction) -> None:
@@ -1644,7 +1644,7 @@ class ProactiveOrchestrator:
                         f"healing recommended (mode={self._mode.value})"
                     ),
                     metadata={"prediction": prediction.to_dict()},
-                )
+                ),
             )
 
     async def _create_migration_action(self, tier_name: str, critical: bool) -> None:
@@ -1677,7 +1677,7 @@ class ProactiveOrchestrator:
                         f"Storage tier '{tier_name}' approaching free-tier limit "
                         f"with no migration alternative available"
                     ),
-                )
+                ),
             )
             return
 
@@ -1713,7 +1713,7 @@ class ProactiveOrchestrator:
                 description=f"Migrate data from '{tier_name}' to '{destination}' (zero-cost compliance)",
                 executor=migrate,
                 metadata={"destination": destination, "critical": critical},
-            )
+            ),
         )
 
     # ------------------------------------------------------------------

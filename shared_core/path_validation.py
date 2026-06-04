@@ -158,30 +158,26 @@ def validate_path(
         FileNotFoundError: If *must_exist* is True and path is missing.
         ValueError: If *path* contains obviously malicious components.
     """
-    return Path(
-        _validated_path_str(
-            path,
-            base_dir,
-            must_exist=must_exist,
-            allow_create=allow_create,
+    if isinstance(path, Path):
+        raw = str(path)
+    else:
+        raw = path
+
+    # Reject null bytes and ".." sequences in the raw input before resolution
+    if _TRAVERSAL_PATTERN.search(raw):
+        raise PathTraversalError(
+            f"Path contains disallowed components (null byte or '..'): {raw!r}",
         )
     )
 
 
-def validate_existing_file(
-    path: Union[str, Path],
-    base_dir: Union[str, Path],
-) -> Path:
-    """Validate that *path* resolves to an existing regular file under *base_dir*."""
-    return Path(
-        _validated_path_str(
-            path,
-            base_dir,
-            must_exist=True,
-            allow_create=False,
-            must_be_file=True,
-        )
-    )
+    # Ensure the resolved path starts with the base directory
+    try:
+        resolved.relative_to(base)
+    except ValueError:
+        raise PathTraversalError(
+            f"Path escapes base directory: {resolved} is not under {base}",
+        ) from None
 
 
 def existing_file_path_str(
@@ -339,7 +335,7 @@ def safe_join(
         resolved.relative_to(base)
     except ValueError:
         raise PathTraversalError(
-            f"Joined path escapes base directory: {resolved} is not under {base}"
+            f"Joined path escapes base directory: {resolved} is not under {base}",
         ) from None
 
     return resolved

@@ -11,7 +11,7 @@ def test_rotator_status_structure(monkeypatch: pytest.MonkeyPatch) -> None:
     status = rotator.status()
     assert "state" in status
     assert "zero_cost" in status["state"]["chain_name"] or status["state"]["chain_name"].startswith(
-        "zero_cost"
+        "zero_cost",
     )
 
 

@@ -30,7 +30,9 @@ async def start_admin_os_auto_backup() -> None:
                 if backups.backup_config().get("auto_backup_enabled"):
                     result = backups.run_backup(trigger="auto")
                     logger.info(
-                        "Admin OS auto-backup %s (%s bytes)", result["id"], result["size_bytes"]
+                        "Admin OS auto-backup %s (%s bytes)",
+                        result["id"],
+                        result["size_bytes"],
                     )
             except Exception as exc:
                 logger.warning("Admin OS auto-backup failed: %s", exc)

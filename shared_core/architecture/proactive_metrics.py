@@ -389,7 +389,7 @@ class ProactiveMetricsCollector:
                 if hasattr(self._orchestrator, "get_predictions"):
                     predictions = self._orchestrator.get_predictions()
                     vitals.predictions_degrading = len(
-                        [p for p in predictions if getattr(p, "trend", "") == "degrading"]
+                        [p for p in predictions if getattr(p, "trend", "") == "degrading"],
                     )
 
                 # Zero-cost
@@ -658,7 +658,7 @@ class ProactiveMetricsCollector:
             lines.append(f"# TYPE {prefix}health_trend gauge")
             lines.append(
                 f'{prefix}health_trend{{trend="{vitals.health_trend.value}"}} '
-                f"{trend_scores.get(vitals.health_trend, 0.5):.2f}"
+                f"{trend_scores.get(vitals.health_trend, 0.5):.2f}",
             )
 
             # Subsystem health scores
@@ -671,7 +671,7 @@ class ProactiveMetricsCollector:
             mode_scores = {"observe": 0, "assist": 1, "autonomous": 2, "emergency": 3}
             lines.append(
                 f'{prefix}orchestrator_mode{{mode="{vitals.orchestrator_mode}"}} '
-                f"{mode_scores.get(vitals.orchestrator_mode, 0)}"
+                f"{mode_scores.get(vitals.orchestrator_mode, 0)}",
             )
 
             # Pulse mode
@@ -679,13 +679,13 @@ class ProactiveMetricsCollector:
             pulse_scores = {"steady": 0, "accelerated": 1, "emergency": 2, "recovery": 3}
             lines.append(
                 f'{prefix}pulse_mode{{mode="{vitals.pulse_mode}"}} '
-                f"{pulse_scores.get(vitals.pulse_mode, 0)}"
+                f"{pulse_scores.get(vitals.pulse_mode, 0)}",
             )
 
             # Zero-cost compliance
             lines.append(f"# TYPE {prefix}zero_cost_compliant gauge")
             lines.append(
-                f"{prefix}zero_cost_compliant {1.0 if vitals.zero_cost_compliant else 0.0}"
+                f"{prefix}zero_cost_compliant {1.0 if vitals.zero_cost_compliant else 0.0}",
             )
 
             # Action counts
@@ -724,7 +724,7 @@ class ProactiveMetricsCollector:
             threat_scores = {"low": 0, "medium": 1, "high": 2, "critical": 3}
             lines.append(
                 f'{prefix}threat_level{{level="{vitals.threat_level}"}} '
-                f"{threat_scores.get(vitals.threat_level, 0)}"
+                f"{threat_scores.get(vitals.threat_level, 0)}",
             )
 
             # Predictions degrading
@@ -740,7 +740,7 @@ class ProactiveMetricsCollector:
             scaling_scores = {"up": 1, "maintain": 0, "down": -1}
             lines.append(
                 f'{prefix}scaling_direction{{direction="{vitals.scaling_direction}"}} '
-                f"{scaling_scores.get(vitals.scaling_direction, 0)}"
+                f"{scaling_scores.get(vitals.scaling_direction, 0)}",
             )
 
             # Subsystem-specific metrics
@@ -748,11 +748,11 @@ class ProactiveMetricsCollector:
                 lines.append(f"# TYPE {prefix}subsystem_events_total counter")
                 lines.append(
                     f'{prefix}subsystem_events_total{{subsystem="{name}"}} '
-                    f"{sub_metrics.events_processed}"
+                    f"{sub_metrics.events_processed}",
                 )
                 lines.append(f"# TYPE {prefix}subsystem_errors_total counter")
                 lines.append(
-                    f'{prefix}subsystem_errors_total{{subsystem="{name}"}} {sub_metrics.errors}'
+                    f'{prefix}subsystem_errors_total{{subsystem="{name}"}} {sub_metrics.errors}',
                 )
 
             # Action stats

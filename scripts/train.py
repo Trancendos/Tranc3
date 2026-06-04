@@ -40,7 +40,9 @@ if __name__ == "__main__":
     parser.add_argument("--size", default="medium", choices=list(MODEL_SIZES.keys()))
     parser.add_argument("--resume", default=None, help="Path to checkpoint to resume from")
     parser.add_argument(
-        "--profile", default="tranc3-base", help="Personality profile to use during training"
+        "--profile",
+        default="tranc3-base",
+        help="Personality profile to use during training",
     )
     parser.add_argument("--max_steps", type=int, default=50_000)
     parser.add_argument("--batch_size", type=int, default=16)

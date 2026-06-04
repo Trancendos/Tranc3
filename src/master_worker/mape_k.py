@@ -80,7 +80,7 @@ class KnowledgeStore:
                 "type": event_type,
                 "data": data,
                 "ts": time.time(),
-            }
+            },
         )
         if len(self._history) > 10_000:
             self._history = self._history[-5_000:]
@@ -403,7 +403,7 @@ class MapeKLoop:
                     "severity": "critical" if unhealthy_rate > 0.2 else "warning",
                     "affected": snapshot.unhealthy_workers,
                     "unhealthy_rate": round(unhealthy_rate, 3),
-                }
+                },
             )
 
         # Platform quota issues
@@ -416,7 +416,7 @@ class MapeKLoop:
                         "severity": "critical",
                         "platform": report.platform_name,
                         "utilisation_pct": report.utilisation_pct,
-                    }
+                    },
                 )
             elif report.status == QuotaStatus.WARNING:
                 issues.append(
@@ -425,7 +425,7 @@ class MapeKLoop:
                         "severity": "warning",
                         "platform": report.platform_name,
                         "utilisation_pct": report.utilisation_pct,
-                    }
+                    },
                 )
 
         # Zero-cost assertion
@@ -437,7 +437,7 @@ class MapeKLoop:
                         "type": "cost_violation",
                         "severity": "critical",
                         "violation": violation,
-                    }
+                    },
                 )
 
         return {
@@ -469,7 +469,7 @@ class MapeKLoop:
                             target=worker,
                             reason=f"Worker {worker!r} is unhealthy — probe failed",
                             priority=2 if issue["severity"] == "critical" else 4,
-                        )
+                        ),
                     )
 
             elif issue_type in ("quota_critical", "quota_exhausted"):
@@ -479,7 +479,7 @@ class MapeKLoop:
                         target=issue["platform"],
                         reason=f"Quota at {issue['utilisation_pct']:.1f}% — rotating to fallback",
                         priority=1,
-                    )
+                    ),
                 )
 
             elif issue_type == "quota_warning":
@@ -490,7 +490,7 @@ class MapeKLoop:
                         reason=f"Quota at {issue['utilisation_pct']:.1f}% — approaching limit",
                         priority=3,
                         params={"utilisation_pct": issue["utilisation_pct"]},
-                    )
+                    ),
                 )
 
             elif issue_type == "cost_violation":
@@ -500,7 +500,7 @@ class MapeKLoop:
                         target="zero_cost_enforcer",
                         reason=issue["violation"],
                         priority=1,
-                    )
+                    ),
                 )
 
         # Sort by priority (1=most urgent)

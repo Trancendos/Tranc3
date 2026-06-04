@@ -307,7 +307,7 @@ class DefenseEngine:
                     actor="system",
                     action="created",
                     details="Incident created",
-                )
+                ),
             ],
         )
         self._incidents[incident.id] = incident
@@ -347,7 +347,7 @@ class DefenseEngine:
                     actor=actor,
                     action="updated",
                     details=note,
-                )
+                ),
             )
 
         incident.updated_at = time.time()

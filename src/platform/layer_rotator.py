@@ -124,7 +124,7 @@ class PlatformLayerRotator:
             os.environ.get(
                 "LAYER_ROTATION_COOLDOWN_SECONDS",
                 self._cfg.get("cooldown_seconds", 300),
-            )
+            ),
         )
         self._states: dict[str, LayerRotationState] = {}
         self._rebuild_all()

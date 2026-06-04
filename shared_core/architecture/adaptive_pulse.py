@@ -118,7 +118,8 @@ class PulseConfig:
             "fire_count": self.fire_count,
             "adaptive_enabled": self.adaptive_enabled,
             "compression_ratio": round(
-                self.baseline_interval / max(self.current_interval, 0.001), 2
+                self.baseline_interval / max(self.current_interval, 0.001),
+                2,
             ),
         }
 

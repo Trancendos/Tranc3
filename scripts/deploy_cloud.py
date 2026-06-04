@@ -154,7 +154,7 @@ def _fly() -> str:
     raise SystemExit(
         'flyctl not found. Windows: powershell -Command "iwr https://fly.io/install.ps1 -useb | iex" '
         "then open a new CMD window, or add %USERPROFILE%\\.fly\\bin to PATH. "
-        "See https://fly.io/docs/hands-on/install-flyctl/"
+        "See https://fly.io/docs/hands-on/install-flyctl/",
     )
 
 
@@ -184,7 +184,7 @@ def _gate() -> None:
             sys.executable,
             "scripts/pre_deploy_quality_gate.py",
             "--cloud-only",
-        ]
+        ],
     )
 
 
@@ -208,7 +208,7 @@ def _deploy_app(fly: str, app: str, *, cwd: Path) -> None:
             if app == BOTS_APP:
                 _log("  Then set secrets, e.g.:")
                 _log(
-                    f"    {fly} secrets set REDIS_URL=... TRANC3_ENGINE_URL=https://{BACKEND_APP}.fly.dev --app {app}"
+                    f"    {fly} secrets set REDIS_URL=... TRANC3_ENGINE_URL=https://{BACKEND_APP}.fly.dev --app {app}",
                 )
         else:
             if proc.stdout:
@@ -232,7 +232,7 @@ def _apply_deploy_target(target: str) -> None:
         if not oci:
             _log(
                 "WARN: --target=oci but OCI_API_UPSTREAM unset — set after OCI VM provision "
-                "(see infrastructure/oracle-cloud/)"
+                "(see infrastructure/oracle-cloud/)",
             )
         else:
             os.environ.setdefault("PLATFORM_API_UPSTREAMS", f"oci_always_free={oci}")
@@ -275,7 +275,7 @@ def main() -> int:
         _log(f"Deploy target apps: backend={BACKEND_APP} bots={BOTS_APP}")
         _log("Set Fly app secrets once (example):")
         _log(
-            f"  fly secrets set SECRET_KEY=... JWT_SECRET=... DATABASE_URL=... REDIS_URL=... --app {BACKEND_APP}"
+            f"  fly secrets set SECRET_KEY=... JWT_SECRET=... DATABASE_URL=... REDIS_URL=... --app {BACKEND_APP}",
         )
         return 1
 

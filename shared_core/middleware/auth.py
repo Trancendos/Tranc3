@@ -141,7 +141,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if not os.getenv("SECRET_KEY"):
             logger.warning(
                 "SECRET_KEY not set — JWT authentication will not work. "
-                "Set the SECRET_KEY environment variable for production use."
+                "Set the SECRET_KEY environment variable for production use.",
             )
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:

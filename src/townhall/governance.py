@@ -261,7 +261,7 @@ class TownHall:
                     status=status,
                     score=0.9 if status == PolicyStatus.ACTIVE else 0.5,
                     articles=entry.domain,
-                )
+                ),
             )
 
 

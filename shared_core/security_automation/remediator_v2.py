@@ -156,7 +156,8 @@ class ASTSafeTransformer:
         if isinstance(last, (ast.If, ast.For, ast.While, ast.Try, ast.With)):
             # Recurse for nested blocks
             end = ASTSafeTransformer.find_function_end(
-                "", type("FakeFunc", (), {"body": [last], "lineno": last.lineno})()
+                "",
+                type("FakeFunc", (), {"body": [last], "lineno": last.lineno})(),
             )
         return end
 
@@ -603,7 +604,7 @@ class AutoRemediatorV2:
                         violations_addressed=[],
                         success=False,
                         error="Could not read file",
-                    )
+                    ),
                 )
                 continue
 
@@ -624,7 +625,7 @@ class AutoRemediatorV2:
                         violations_addressed=all_fixed_ids,
                         success=True,
                         diff=diff,
-                    )
+                    ),
                 )
 
         return results

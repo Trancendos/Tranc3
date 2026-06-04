@@ -213,7 +213,8 @@ class GatewayRouteCell:
             "error_rate": round(self.error_count / max(self.request_count, 1), 4),
             "healthy": self.is_healthy,
             "avg_response_ms": round(
-                sum(self.response_times[-20:]) / max(len(self.response_times[-20:]), 1), 2
+                sum(self.response_times[-20:]) / max(len(self.response_times[-20:]), 1),
+                2,
             )
             if self.response_times
             else 0.0,
@@ -342,7 +343,8 @@ class InfinityFluidicGateway:
 
         # Determine target location
         target_location = preferred_location or self._ROLE_LOCATION_MAP.get(
-            role.lower().strip(), "gateway"
+            role.lower().strip(),
+            "gateway",
         )
 
         # Get location info
@@ -389,7 +391,7 @@ class InfinityFluidicGateway:
                 )
                 await self.causal_bus.publish(event)
                 result.causal_id = event.metadata.get("vector_clock") and str(
-                    self.causal_bus.clock_state
+                    self.causal_bus.clock_state,
                 )
             except Exception as e:
                 logger.debug("CausalEventBus publish error: %s", sanitize_for_log(str(e)))
@@ -430,8 +432,8 @@ class InfinityFluidicGateway:
                         location_key: {
                             "healthy": is_healthy,
                             "weight": round(cell.effective_weight if cell else 0.0, 4),
-                        }
-                    }
+                        },
+                    },
                 ),
             )
 

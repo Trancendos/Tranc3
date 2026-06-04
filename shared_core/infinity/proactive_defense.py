@@ -234,7 +234,7 @@ class ProactiveDefenseLayer:
                         "destination": self.service_name,
                         "path": path,
                         "method": request_context.get("method", "GET"),
-                    }
+                    },
                 )
                 action = (
                     eval_result.get("action", "allow") if isinstance(eval_result, dict) else "allow"

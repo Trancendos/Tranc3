@@ -25,7 +25,7 @@ def _worker_catalog() -> list[dict[str, Any]]:
                     "location": entity.location,
                     "pid": getattr(entity, "pid", None),
                     "path": getattr(entity, "worker_path", None),
-                }
+                },
             )
     rows.sort(key=lambda r: r["port"] or 0)
     rows.append({"port": 8000, "location": "tranc3-backend", "pid": "API", "path": "/"})
@@ -35,7 +35,7 @@ def _worker_catalog() -> list[dict[str, Any]]:
             "location": "Infinity-Admin",
             "pid": "ADM",
             "path": "workers/infinity-admin-service/",
-        }
+        },
     )
     return rows
 
@@ -53,7 +53,8 @@ def system_snapshot() -> dict[str, Any]:
             "PLATFORM_INFRA_MODE": os.environ.get("PLATFORM_INFRA_MODE", ""),
             "ENVIRONMENT": os.environ.get("ENVIRONMENT", "development"),
             "ADMIN_OS_WORKSPACE_ROOT": os.environ.get(
-                "ADMIN_OS_WORKSPACE_ROOT", "data/admin_os_workspace"
+                "ADMIN_OS_WORKSPACE_ROOT",
+                "data/admin_os_workspace",
             ),
         },
     }
