@@ -41,14 +41,27 @@ logger = logging.getLogger(__name__)
 
 BLOCKED_SERVICES: Dict[str, str] = {
     # Endpoint fragment → reason
+    # Cloud GPU / training
     r"azure.*(nc6|nc12|nc24|gpu)": "Azure GPU training (£765+/run) — BLOCKED",
+    r"amazonaws\.com/(sagemaker|ec2|lambda|bedrock)": "AWS paid compute — use Oracle ARM64 free tier",
+    r"cloud\.google\.com/(vertex|ml-engine|tpu)": "GCP paid ML — use free tier alternatives",
+    # Storage overages
     "r2.cloudflarestorage.com": "Cloudflare R2 overages — use self-hosted IPFS/Backblaze",
+    # Paid AI subscriptions
     "bugzy.ai": "Bugzy AI subscription (€250-1,500/month) — BLOCKED",
+    # CI/CD costs
     "api.github.com/actions": "GitHub Actions — use Forgejo CI at trancendos.com/the-workshop",
+    # Edge compute costs
     "workers.cloudflare.com/deploy": "CF Workers deploy — use self-hosted Python workers",
-    "openai.com/v1": "OpenAI paid API — use Ollama/Groq/Gemini free tiers instead",
-    "anthropic.com/v1/messages": "Anthropic direct billing — route via Ollama/OpenRouter free",
-    "cohere.com/v1": "Cohere paid API — use free alternatives",
+    # Paid AI APIs
+    r"openai\.com/v1": "OpenAI paid API — use Ollama/Groq/Gemini free tiers instead",
+    r"api\.openai\.com": "OpenAI paid API — use Ollama/Groq/Gemini free tiers instead",
+    r"anthropic\.com/v1/messages": "Anthropic direct billing — route via Ollama/OpenRouter free",
+    r"api\.anthropic\.com": "Anthropic direct billing — route via Ollama/OpenRouter free",
+    r"cohere\.com/v1": "Cohere paid API — use free alternatives",
+    r"api\.stripe\.com": "Stripe payments — only allowed via Royal Bank of Arcadia worker",
+    # Paid deepseek direct (use via OpenRouter :free instead)
+    r"api\.deepseek\.com": "DeepSeek direct API (paid) — use deepseek/deepseek-r1:free via OpenRouter",
 }
 
 

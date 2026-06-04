@@ -168,6 +168,24 @@ class PlatformRegistry:
                 endpoint_env="HF_API_TOKEN",
                 notes="Serverless Inference free tier",
             ),
+            Platform(
+                name="cerebras",
+                category=PlatformCategory.AI_LLM,
+                priority=6,
+                health=PlatformHealth.UNKNOWN,
+                quota=QuotaLimits(tokens_per_minute=60_000, tokens_per_day=1_000_000),
+                endpoint_env="CEREBRAS_API_KEY",
+                notes="Cerebras free tier — 60k TPM / 1M TPD (llama3.1-8b, llama3.3-70b)",
+            ),
+            Platform(
+                name="sambanova",
+                category=PlatformCategory.AI_LLM,
+                priority=7,
+                health=PlatformHealth.UNKNOWN,
+                quota=QuotaLimits(requests_per_minute=30),
+                endpoint_env="SAMBANOVA_API_KEY",
+                notes="SambaNova Cloud free tier — Meta Llama, Qwen models",
+            ),
             # ---- Hosting ----
             Platform(
                 name="fly_io",
@@ -242,6 +260,15 @@ class PlatformRegistry:
                 endpoint_env="REDIS_URL",
                 notes="Upstash free tier — 500k commands/month",
             ),
+            Platform(
+                name="keydb_local",
+                category=PlatformCategory.CACHE,
+                priority=2,
+                health=PlatformHealth.UNKNOWN,
+                quota=QuotaLimits(),  # self-hosted, unlimited
+                endpoint_env="KEYDB_URL",
+                notes="Self-hosted KeyDB (Redis-compatible) — zero cost fallback",
+            ),
             # ---- CI/CD ----
             Platform(
                 name="forgejo",
@@ -252,6 +279,15 @@ class PlatformRegistry:
                 endpoint_env="FORGEJO_URL",
                 notes="Self-hosted Forgejo at trancendos.com/the-workshop — primary CI",
             ),
+            Platform(
+                name="gitea",
+                category=PlatformCategory.CI_CD,
+                priority=2,
+                health=PlatformHealth.UNKNOWN,
+                quota=QuotaLimits(),  # self-hosted, unlimited
+                endpoint_env="GITEA_URL",
+                notes="Self-hosted Gitea — fallback CI if Forgejo unavailable",
+            ),
             # ---- Monitoring ----
             Platform(
                 name="signoz",
@@ -261,6 +297,14 @@ class PlatformRegistry:
                 quota=QuotaLimits(),  # self-hosted
                 endpoint_env="SIGNOZ_URL",
                 notes="Self-hosted SigNoz OpenTelemetry APM",
+            ),
+            Platform(
+                name="prometheus_local",
+                category=PlatformCategory.MONITORING,
+                priority=2,
+                health=PlatformHealth.UNKNOWN,
+                quota=QuotaLimits(),  # self-hosted, unlimited
+                notes="Self-hosted Prometheus + Grafana — zero cost fallback monitoring",
             ),
         ]
         for p in entries:
