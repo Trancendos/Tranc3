@@ -21,11 +21,10 @@ docker-compose snippet that can be deployed to any free-tier host.
 
 from __future__ import annotations
 
-import os
 import textwrap
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 
 class BlueprintType(str, Enum):
@@ -213,7 +212,7 @@ class BlueprintEngine:
         path = route.get("path", "/")
         method = route.get("method", "GET").lower()
         description = route.get("description", "")
-        func_name = path.strip("/").replace("/", "_").replace("-", "_") or "index"
+        func_name = path.strip("/").replace("/", "_").replace("-", "_").replace("{", "").replace("}", "") or "index"
         return textwrap.dedent(f"""\
             @app.{method}("{path}", summary="{description}")
             async def {func_name}(request: Request) -> Dict[str, Any]:
@@ -342,7 +341,7 @@ class BlueprintEngine:
 
     def _render_compose(self, spec: BlueprintSpec) -> str:
         env_lines = "\n".join(
-            f"      - {var}=${{{{ {var} }}}}"
+            f"      - {var}=${{{var}}}"
             for var in spec.env_vars
         )
         return textwrap.dedent(f"""\

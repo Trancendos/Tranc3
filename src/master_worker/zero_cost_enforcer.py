@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Awaitable
 
-from .platform_registry import Platform, PlatformCategory, PlatformHealth, PlatformRegistry
+from .platform_registry import PlatformHealth, PlatformRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +130,7 @@ class ZeroCostEnforcer:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
+                pass  # Expected when we cancel the task
         logger.info("ZeroCostEnforcer stopped")
 
     # ------------------------------------------------------------------
@@ -248,12 +248,12 @@ class ZeroCostEnforcer:
 
         if fallback_name:
             logger.info(
-                "Platform rotation: %s → %s (category=%s)",
+                "Platform rotation: %r → %r (category=%s)",
                 exhausted_name, fallback_name, platform.category.value,
             )
         else:
             logger.error(
-                "Platform rotation: %s exhausted, NO fallback available for %s",
+                "Platform rotation: %r exhausted, NO fallback available for %s",
                 exhausted_name, platform.category.value,
             )
 
@@ -294,7 +294,7 @@ class ZeroCostEnforcer:
 
                 # Daily zero-cost assertion
                 import datetime
-                current_hour = datetime.datetime.utcnow().hour
+                current_hour = datetime.datetime.now(datetime.timezone.utc).hour
                 if current_hour == 0 and _daily_check_hour != 0:
                     self.assert_zero_cost()
                     _daily_check_hour = 0
@@ -302,7 +302,7 @@ class ZeroCostEnforcer:
                     _daily_check_hour = current_hour
 
             except asyncio.CancelledError:
-                break
+                break  # Expected when we cancel the task
             except Exception as exc:
                 logger.error("ZeroCostEnforcer loop error: %s", exc)
 

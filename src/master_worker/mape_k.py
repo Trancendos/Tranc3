@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -38,7 +37,7 @@ from typing import Any, Callable, Dict, List, Optional, Awaitable
 
 import httpx
 
-from .platform_registry import PlatformCategory, PlatformHealth, PlatformRegistry
+from .platform_registry import PlatformRegistry
 from .zero_cost_enforcer import ZeroCostEnforcer, QuotaStatus
 
 logger = logging.getLogger(__name__)
@@ -271,7 +270,7 @@ class MapeKLoop:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass
+                pass  # Expected when we cancel the task
         logger.info("MapeKLoop stopped after %d cycles", self._cycle_count)
 
     def on_action(self, cb: Callable[[AdaptationAction], Awaitable[None]]) -> None:
@@ -496,6 +495,11 @@ class MapeKLoop:
                     "reason": action.reason,
                     "priority": action.priority,
                 })
+                for cb in self._action_callbacks:
+                    try:
+                        await cb(action)
+                    except Exception as exc:
+                        logger.warning("Action callback failed: %s", exc)
             except Exception as exc:
                 logger.error(
                     "Failed to execute action %s on %s: %s",
@@ -506,12 +510,6 @@ class MapeKLoop:
                     "target": action.target,
                     "error": str(exc),
                 })
-
-            for cb in self._action_callbacks:
-                try:
-                    await cb(action)
-                except Exception as exc:
-                    logger.warning("Action callback failed: %s", exc)
 
     async def _apply_action(self, action: AdaptationAction) -> None:
         if action.action_type == ActionType.ROTATE_PLATFORM:
