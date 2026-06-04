@@ -72,6 +72,34 @@ class TestPlatformRegistry:
         r.record_tokens("groq", tokens=250_000)
         assert groq.utilisation_pct() > 0.0
 
+    def test_utilisation_pct_all_dimensions(self):
+        """utilisation_pct() accounts for all 7 configured quota dimensions."""
+        from src.master_worker.platform_registry import (
+            Platform,
+            PlatformCategory,
+            PlatformUsage,
+            QuotaLimits,
+        )
+
+        p = Platform(
+            name="test_multi_quota",
+            category=PlatformCategory.HOSTING,
+            priority=99,
+            quota=QuotaLimits(
+                requests_per_minute=100,
+                storage_gb=1.0,
+                compute_hours_month=10.0,
+            ),
+            usage=PlatformUsage(
+                requests_this_minute=50,
+                storage_gb_used=0.5,
+                compute_hours_used=5.0,
+            ),
+        )
+        pct = p.utilisation_pct()
+        # All three ratios equal 0.5; max should be exactly 0.5
+        assert abs(pct - 0.5) < 1e-9
+
     def test_snapshot_returns_all_platforms(self):
         r = PlatformRegistry()
         snap = r.snapshot()
