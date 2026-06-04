@@ -123,7 +123,7 @@ def _seed_default_models() -> None:
             250,
             7,
         ),
-        ("gpt-4o-mini", "openai", "gpt-4o-mini", 1, ["chat", "completion", "vision"], 0.0, 180, 6),
+        # gpt-4o-mini removed — OpenAI is a paid API (~$0.00015/1k tokens); zero-cost violation
         ("llama3.1:8b", "ollama", "llama3.1:8b", 1, ["chat", "completion"], 0.0, 200, 5),
         (
             "qwen2.5-coder:7b",
