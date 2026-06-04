@@ -13,14 +13,12 @@ from __future__ import annotations
 import asyncio
 import os
 import pytest
+from typing import List
 
 from src.master_worker.platform_registry import (
-    Platform,
     PlatformCategory,
     PlatformHealth,
     PlatformRegistry,
-    QuotaLimits,
-    PlatformUsage,
 )
 from src.master_worker.zero_cost_enforcer import ZeroCostEnforcer, QuotaStatus
 from src.master_worker.adaptive_blueprints import (
@@ -282,7 +280,6 @@ class TestMapeKLoop:
     def _make_snapshot(
         self, healthy: int = 5, unhealthy: List[str] | None = None
     ) -> SystemSnapshot:
-        from typing import List  # local import fine for test helper
         unhealthy = unhealthy or []
         metrics = [
             WorkerMetrics(

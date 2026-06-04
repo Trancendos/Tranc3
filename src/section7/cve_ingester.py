@@ -457,7 +457,19 @@ class OsvIngestor:
                                 else:
                                     severity = "LOW"
                             except (ValueError, TypeError):
-                                pass
+                                # OSV severity.score is a CVSS vector string
+                                # (e.g. "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H")
+                                # Estimate severity from count of :H (High) components
+                                if score_str.startswith("CVSS:"):
+                                    high_count = score_str.count(":H")
+                                    if high_count >= 3:
+                                        cvss_score, severity = 9.5, "CRITICAL"
+                                    elif high_count >= 2:
+                                        cvss_score, severity = 7.5, "HIGH"
+                                    elif high_count >= 1:
+                                        cvss_score, severity = 5.0, "MEDIUM"
+                                    else:
+                                        cvss_score, severity = 2.5, "LOW"
 
                     summary = vuln.get("summary", "")
                     details = vuln.get("details", "")
