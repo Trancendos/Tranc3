@@ -35,7 +35,7 @@ async def entity_rotation_status(entity_id: str):
     try:
         eid = EntityID(entity_id)
     except ValueError:
-        raise HTTPException(status_code=404, detail=f"Unknown entity: {entity_id}")
+        raise HTTPException(status_code=404, detail=f"Unknown entity: {entity_id}") from None
     rotator = get_entity_rotator()
     pool = rotator.get_pool(eid)
     if not pool:
@@ -49,7 +49,7 @@ async def trigger_failover(entity_id: str):
     try:
         eid = EntityID(entity_id)
     except ValueError:
-        raise HTTPException(status_code=404, detail=f"Unknown entity: {entity_id}")
+        raise HTTPException(status_code=404, detail=f"Unknown entity: {entity_id}") from None
     rotator = get_entity_rotator()
     pool = rotator.get_pool(eid)
     if not pool:

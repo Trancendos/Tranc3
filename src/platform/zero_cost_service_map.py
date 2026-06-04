@@ -15,7 +15,7 @@ All 43 entities map ONLY to ✅ FREE foundations.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 
 @dataclass
