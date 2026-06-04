@@ -17,6 +17,7 @@ Zero-cost platforms tracked:
 from __future__ import annotations
 
 import logging
+import os
 import time
 from dataclasses import dataclass, field
 from enum import Enum
@@ -26,8 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 class PlatformCategory(str, Enum):
-    """Functional category of a zero-cost platform."""
-
     HOSTING = "hosting"
     AI_LLM = "ai_llm"
     DATABASE = "database"
@@ -39,11 +38,9 @@ class PlatformCategory(str, Enum):
 
 
 class PlatformHealth(str, Enum):
-    """Operational health state of a platform."""
-
     HEALTHY = "healthy"
     DEGRADED = "degraded"
-    EXHAUSTED = "exhausted"  # quota used up
+    EXHAUSTED = "exhausted"   # quota used up
     OFFLINE = "offline"
     UNKNOWN = "unknown"
 
@@ -51,7 +48,6 @@ class PlatformHealth(str, Enum):
 @dataclass
 class QuotaLimits:
     """Free-tier quota limits for a platform."""
-
     requests_per_month: Optional[int] = None
     requests_per_minute: Optional[int] = None
     bandwidth_gb_month: Optional[float] = None
@@ -64,8 +60,7 @@ class QuotaLimits:
 
 @dataclass
 class PlatformUsage:
-    """Rolling usage counters for a platform, compared against QuotaLimits."""
-
+    """Current usage snapshot for a platform."""
     requests_this_month: int = 0
     requests_this_minute: int = 0
     bandwidth_gb_used: float = 0.0
@@ -74,55 +69,34 @@ class PlatformUsage:
     tokens_used_today: int = 0
     tokens_used_this_minute: int = 0
     last_updated: float = field(default_factory=time.monotonic)
-    # Timestamp marking the start of the current per-minute window; used to
-    # detect when the 60-second window has expired so counters can be reset.
-    minute_window_start: float = field(default_factory=time.monotonic)
     custom: Dict[str, Any] = field(default_factory=dict)
-
-    def reset_minute_window_if_stale(self, now: float) -> None:
-        """Reset per-minute counters if 60 seconds have elapsed since the window started."""
-        if now - self.minute_window_start >= 60.0:
-            self.requests_this_minute = 0
-            self.tokens_used_this_minute = 0
-            self.minute_window_start = now
 
 
 @dataclass
 class Platform:
     """A zero-cost vendor/platform entry."""
-
     name: str
     category: PlatformCategory
-    priority: int  # lower = preferred
+    priority: int                          # lower = preferred
     health: PlatformHealth = PlatformHealth.UNKNOWN
     quota: QuotaLimits = field(default_factory=QuotaLimits)
     usage: PlatformUsage = field(default_factory=PlatformUsage)
-    endpoint_env: Optional[str] = None  # env var holding the URL
+    endpoint_env: Optional[str] = None    # env var holding the URL
     enabled: bool = True
     notes: str = ""
 
     def utilisation_pct(self) -> float:
         """Estimate quota utilisation 0.0–1.0."""
-        self.usage.reset_minute_window_if_stale(time.monotonic())
         ratios: List[float] = []
-        if self.quota.requests_per_month:
+        if self.quota.requests_per_month and self.usage.requests_this_month:
             ratios.append(self.usage.requests_this_month / self.quota.requests_per_month)
-        if self.quota.requests_per_minute:
-            ratios.append(self.usage.requests_this_minute / self.quota.requests_per_minute)
-        if self.quota.tokens_per_day:
+        if self.quota.tokens_per_day and self.usage.tokens_used_today:
             ratios.append(self.usage.tokens_used_today / self.quota.tokens_per_day)
-        if self.quota.tokens_per_minute:
-            ratios.append(self.usage.tokens_used_this_minute / self.quota.tokens_per_minute)
-        if self.quota.bandwidth_gb_month:
+        if self.quota.bandwidth_gb_month and self.usage.bandwidth_gb_used:
             ratios.append(self.usage.bandwidth_gb_used / self.quota.bandwidth_gb_month)
-        if self.quota.storage_gb:
-            ratios.append(self.usage.storage_gb_used / self.quota.storage_gb)
-        if self.quota.compute_hours_month:
-            ratios.append(self.usage.compute_hours_used / self.quota.compute_hours_month)
         return max(ratios) if ratios else 0.0
 
     def is_available(self) -> bool:
-        """Return True if the platform is enabled, healthy, and below 90% utilisation."""
         return (
             self.enabled
             and self.health not in (PlatformHealth.EXHAUSTED, PlatformHealth.OFFLINE)
@@ -141,12 +115,10 @@ class PlatformRegistry:
     """
 
     def __init__(self) -> None:
-        """Initialise the registry and populate it with default free-tier platforms."""
         self._platforms: Dict[str, Platform] = {}
         self._build_default_registry()
 
     def _build_default_registry(self) -> None:
-        """Populate _platforms with the canonical set of free-tier vendor entries."""
         entries: List[Platform] = [
             # ---- AI / LLM ----
             Platform(
@@ -154,7 +126,7 @@ class PlatformRegistry:
                 category=PlatformCategory.AI_LLM,
                 priority=1,
                 health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(),  # unlimited — runs locally
+                quota=QuotaLimits(),          # unlimited — runs locally
                 endpoint_env="OLLAMA_URL",
                 notes="Local — zero cost, zero latency, zero quota",
             ),
@@ -194,24 +166,6 @@ class PlatformRegistry:
                 endpoint_env="HF_API_TOKEN",
                 notes="Serverless Inference free tier",
             ),
-            Platform(
-                name="cerebras",
-                category=PlatformCategory.AI_LLM,
-                priority=6,
-                health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(tokens_per_minute=60_000, tokens_per_day=1_000_000),
-                endpoint_env="CEREBRAS_API_KEY",
-                notes="Cerebras free tier — 60k TPM / 1M TPD (llama3.1-8b, llama3.3-70b)",
-            ),
-            Platform(
-                name="sambanova",
-                category=PlatformCategory.AI_LLM,
-                priority=7,
-                health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(requests_per_minute=30),
-                endpoint_env="SAMBANOVA_API_KEY",
-                notes="SambaNova Cloud free tier — Meta Llama, Qwen models",
-            ),
             # ---- Hosting ----
             Platform(
                 name="fly_io",
@@ -245,7 +199,7 @@ class PlatformRegistry:
                 category=PlatformCategory.HOSTING,
                 priority=4,
                 health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(),  # truly always-free
+                quota=QuotaLimits(),   # truly always-free
                 endpoint_env="OCI_CLI_KEY_FILE",
                 notes="Oracle Always Free — 4 OCPU / 24 GB ARM64, unlimited",
             ),
@@ -286,33 +240,15 @@ class PlatformRegistry:
                 endpoint_env="REDIS_URL",
                 notes="Upstash free tier — 500k commands/month",
             ),
-            Platform(
-                name="keydb_local",
-                category=PlatformCategory.CACHE,
-                priority=2,
-                health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(),  # self-hosted, unlimited
-                endpoint_env="KEYDB_URL",
-                notes="Self-hosted KeyDB (Redis-compatible) — zero cost fallback",
-            ),
             # ---- CI/CD ----
             Platform(
                 name="forgejo",
                 category=PlatformCategory.CI_CD,
                 priority=1,
                 health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(),  # self-hosted, unlimited
+                quota=QuotaLimits(),   # self-hosted, unlimited
                 endpoint_env="FORGEJO_URL",
                 notes="Self-hosted Forgejo at trancendos.com/the-workshop — primary CI",
-            ),
-            Platform(
-                name="gitea",
-                category=PlatformCategory.CI_CD,
-                priority=2,
-                health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(),  # self-hosted, unlimited
-                endpoint_env="GITEA_URL",
-                notes="Self-hosted Gitea — fallback CI if Forgejo unavailable",
             ),
             # ---- Monitoring ----
             Platform(
@@ -320,17 +256,9 @@ class PlatformRegistry:
                 category=PlatformCategory.MONITORING,
                 priority=1,
                 health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(),  # self-hosted
+                quota=QuotaLimits(),   # self-hosted
                 endpoint_env="SIGNOZ_URL",
                 notes="Self-hosted SigNoz OpenTelemetry APM",
-            ),
-            Platform(
-                name="prometheus_local",
-                category=PlatformCategory.MONITORING,
-                priority=2,
-                health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(),  # self-hosted, unlimited
-                notes="Self-hosted Prometheus + Grafana — zero cost fallback monitoring",
             ),
         ]
         for p in entries:
@@ -341,25 +269,21 @@ class PlatformRegistry:
     # ------------------------------------------------------------------
 
     def get(self, name: str) -> Optional[Platform]:
-        """Return the Platform with *name*, or None if not registered."""
         return self._platforms.get(name)
 
     def all_for(self, category: PlatformCategory) -> List[Platform]:
-        """Return all platforms in *category*, sorted by ascending priority."""
         return sorted(
             [p for p in self._platforms.values() if p.category == category],
             key=lambda p: p.priority,
         )
 
     def best_for(self, category: PlatformCategory) -> Optional[Platform]:
-        """Return the highest-priority available platform in *category*, or None."""
         for p in self.all_for(category):
             if p.is_available():
                 return p
         return None
 
     def snapshot(self) -> Dict[str, Any]:
-        """Return a serialisable snapshot of all platform states and utilisation."""
         return {
             name: {
                 "category": p.category.value,
@@ -376,41 +300,32 @@ class PlatformRegistry:
     # ------------------------------------------------------------------
 
     def mark_exhausted(self, name: str) -> None:
-        """Mark *name* as quota-exhausted; the enforcer will rotate away from it."""
         p = self._platforms.get(name)
         if p:
             p.health = PlatformHealth.EXHAUSTED
             logger.warning("Platform %s marked EXHAUSTED — will rotate to fallback", name)
 
     def mark_healthy(self, name: str) -> None:
-        """Reset *name* to HEALTHY after it has recovered from exhaustion or downtime."""
         p = self._platforms.get(name)
         if p:
             p.health = PlatformHealth.HEALTHY
 
     def mark_offline(self, name: str) -> None:
-        """Mark *name* as unreachable (network-level failure, not quota)."""
         p = self._platforms.get(name)
         if p:
             p.health = PlatformHealth.OFFLINE
             logger.warning("Platform %s marked OFFLINE", name)
 
     def record_requests(self, name: str, count: int = 1) -> None:
-        """Increment monthly and per-minute request counters for *name* by *count*."""
         p = self._platforms.get(name)
         if p:
-            now = time.monotonic()
-            p.usage.reset_minute_window_if_stale(now)
             p.usage.requests_this_month += count
             p.usage.requests_this_minute += count
-            p.usage.last_updated = now
+            p.usage.last_updated = time.monotonic()
 
     def record_tokens(self, name: str, tokens: int) -> None:
-        """Increment daily and per-minute token counters for *name* by *tokens*."""
         p = self._platforms.get(name)
         if p:
-            now = time.monotonic()
-            p.usage.reset_minute_window_if_stale(now)
             p.usage.tokens_used_today += tokens
             p.usage.tokens_used_this_minute += tokens
-            p.usage.last_updated = now
+            p.usage.last_updated = time.monotonic()

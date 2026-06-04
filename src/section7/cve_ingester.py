@@ -415,11 +415,9 @@ class OsvIngestor:
             try:
                 # Correct OSV payload structure — POST body must be JSON with
                 # a "package" key containing "ecosystem"; NOT a raw string.
-                payload = json.dumps(
-                    {
-                        "package": {"ecosystem": ecosystem},
-                    }
-                ).encode("utf-8")
+                payload = json.dumps({
+                    "package": {"ecosystem": ecosystem}
+                }).encode("utf-8")
                 req = _ur.Request(
                     self.OSV_QUERY_URL,
                     data=payload,
@@ -459,42 +457,27 @@ class OsvIngestor:
                                 else:
                                     severity = "LOW"
                             except (ValueError, TypeError):
-                                # OSV severity.score is a CVSS vector string
-                                # (e.g. "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H")
-                                # Estimate severity from count of :H (High) components
-                                if score_str.startswith("CVSS:"):
-                                    high_count = score_str.count(":H")
-                                    if high_count >= 3:
-                                        cvss_score, severity = 9.5, "CRITICAL"
-                                    elif high_count >= 2:
-                                        cvss_score, severity = 7.5, "HIGH"
-                                    elif high_count >= 1:
-                                        cvss_score, severity = 5.0, "MEDIUM"
-                                    else:
-                                        cvss_score, severity = 2.5, "LOW"
+                                pass
 
                     summary = vuln.get("summary", "")
                     details = vuln.get("details", "")
                     description = summary or details[:300] or f"OSV vulnerability {vuln_id}"
 
-                    records.append(
-                        CveRecord(
-                            cve_id=cve_id,
-                            description=description,
-                            severity=severity,
-                            cvss_score=cvss_score,
-                            source="osv",
-                            tags=[ecosystem.lower()],
-                            published=vuln.get("published", ""),
-                            raw=vuln,
-                        )
-                    )
+                    records.append(CveRecord(
+                        cve_id=cve_id,
+                        description=description,
+                        severity=severity,
+                        cvss_score=cvss_score,
+                        source="osv",
+                        tags=[ecosystem.lower()],
+                        published=vuln.get("published", ""),
+                        raw=vuln,
+                    ))
 
             except Exception as exc:
                 logger.debug(
                     "section7.cve_ingester: OSV fetch failed for ecosystem %s: %s",
-                    ecosystem,
-                    exc,
+                    ecosystem, exc,
                 )
 
         return records

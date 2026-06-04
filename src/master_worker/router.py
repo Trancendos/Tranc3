@@ -15,14 +15,15 @@ Routes:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
 from .adaptive_blueprints import BlueprintEngine, BlueprintSpec, BlueprintType
-from .mape_k import MapeKLoop
+from .mape_k import MapeKConfig, MapeKLoop
 from .platform_registry import PlatformCategory, PlatformRegistry
 from .zero_cost_enforcer import ZeroCostEnforcer
 
@@ -31,29 +32,30 @@ router = APIRouter(prefix="/master", tags=["Master Worker"])
 
 # Shared singleton instances (initialised on first access)
 _registry: Optional[PlatformRegistry] = None
+_enforcer: Optional[ZeroCostEnforcer] = None
 _loop: Optional[MapeKLoop] = None
 _blueprint_engine = BlueprintEngine()
 
 
 def get_registry() -> PlatformRegistry:
-    """Return the module-level PlatformRegistry singleton, creating it on first call."""
     global _registry
     if _registry is None:
         _registry = PlatformRegistry()
     return _registry
 
 
+def get_enforcer() -> ZeroCostEnforcer:
+    global _enforcer
+    if _enforcer is None:
+        _enforcer = ZeroCostEnforcer(get_registry())
+    return _enforcer
+
+
 def get_loop() -> MapeKLoop:
-    """Return the module-level MapeKLoop singleton, creating it on first call."""
     global _loop
     if _loop is None:
         _loop = MapeKLoop(registry=get_registry())
     return _loop
-
-
-def get_enforcer() -> ZeroCostEnforcer:
-    """Return the enforcer running inside the active MapeKLoop singleton."""
-    return get_loop()._enforcer
 
 
 # ---------------------------------------------------------------------------
@@ -62,8 +64,6 @@ def get_enforcer() -> ZeroCostEnforcer:
 
 
 class BlueprintRequest(BaseModel):
-    """Request body for POST /master/blueprints/generate."""
-
     name: str
     blueprint_type: BlueprintType = BlueprintType.FASTAPI_WORKER
     port: int = 8000
@@ -174,13 +174,13 @@ async def generate_blueprint(req: BlueprintRequest) -> Dict[str, Any]:
 
 
 @router.post("/loop/start")
-async def start_loop() -> Dict[str, Any]:
-    """Start the MAPE-K control loop."""
+async def start_loop(background_tasks: BackgroundTasks) -> Dict[str, Any]:
+    """Start the MAPE-K control loop as a background task."""
     loop = get_loop()
     if loop._running:
         return {"status": "already_running", "cycle_count": loop._cycle_count}
-    await loop.start()
-    return {"status": "started", "message": "MAPE-K loop started"}
+    background_tasks.add_task(loop.start)
+    return {"status": "started", "message": "MAPE-K loop starting in background"}
 
 
 @router.post("/loop/stop")

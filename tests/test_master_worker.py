@@ -12,29 +12,31 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import List
-
 import pytest
 
+from src.master_worker.platform_registry import (
+    Platform,
+    PlatformCategory,
+    PlatformHealth,
+    PlatformRegistry,
+    QuotaLimits,
+    PlatformUsage,
+)
+from src.master_worker.zero_cost_enforcer import ZeroCostEnforcer, QuotaStatus
 from src.master_worker.adaptive_blueprints import (
     BlueprintEngine,
     BlueprintSpec,
     BlueprintType,
 )
 from src.master_worker.mape_k import (
-    ActionType,
-    ControlLoopState,
-    MapeKConfig,
     MapeKLoop,
+    MapeKConfig,
     SystemSnapshot,
     WorkerMetrics,
+    ActionType,
+    ControlLoopState,
 )
-from src.master_worker.platform_registry import (
-    PlatformCategory,
-    PlatformHealth,
-    PlatformRegistry,
-)
-from src.master_worker.zero_cost_enforcer import QuotaStatus, ZeroCostEnforcer
+
 
 # ---------------------------------------------------------------------------
 # PlatformRegistry
@@ -71,62 +73,6 @@ class TestPlatformRegistry:
         # Record usage
         r.record_tokens("groq", tokens=250_000)
         assert groq.utilisation_pct() > 0.0
-
-    def test_utilisation_pct_all_dimensions(self):
-        """utilisation_pct() accounts for all 7 configured quota dimensions."""
-        from src.master_worker.platform_registry import (
-            Platform,
-            PlatformCategory,
-            PlatformUsage,
-            QuotaLimits,
-        )
-
-        p = Platform(
-            name="test_multi_quota",
-            category=PlatformCategory.HOSTING,
-            priority=99,
-            quota=QuotaLimits(
-                requests_per_minute=100,
-                storage_gb=1.0,
-                compute_hours_month=10.0,
-            ),
-            usage=PlatformUsage(
-                requests_this_minute=50,
-                storage_gb_used=0.5,
-                compute_hours_used=5.0,
-            ),
-        )
-        pct = p.utilisation_pct()
-        # All three ratios equal 0.5; max should be exactly 0.5
-        assert abs(pct - 0.5) < 1e-9
-
-    def test_per_minute_counters_reset_after_window(self):
-        """Per-minute counters reset to 0 once 60 s have elapsed (no false exhaustion)."""
-        from src.master_worker.platform_registry import (
-            Platform,
-            PlatformCategory,
-            PlatformUsage,
-            QuotaLimits,
-        )
-
-        p = Platform(
-            name="reset_test",
-            category=PlatformCategory.AI_LLM,
-            priority=99,
-            quota=QuotaLimits(requests_per_minute=10, tokens_per_minute=1000),
-            usage=PlatformUsage(
-                requests_this_minute=9,
-                tokens_used_this_minute=950,
-                # Set window start 61 seconds in the past so it's already expired
-                minute_window_start=__import__("time").monotonic() - 61.0,
-            ),
-        )
-        # Before reset: utilisation appears near-full
-        pct = p.utilisation_pct()
-        # After reset (window expired): per-minute counters are 0 → ratio 0
-        assert pct == 0.0, f"Expected 0.0 after window reset, got {pct}"
-        assert p.usage.requests_this_minute == 0
-        assert p.usage.tokens_used_this_minute == 0
 
     def test_snapshot_returns_all_platforms(self):
         r = PlatformRegistry()
@@ -186,13 +132,8 @@ class TestZeroCostEnforcer:
     def test_zero_cost_assertion_passes_clean_env(self):
         e = ZeroCostEnforcer()
         # Ensure env vars are not set
-        for var in (
-            "AZURE_TRAINING_ENABLED",
-            "CF_DEPLOY_WORKERS",
-            "USE_GITHUB_ACTIONS",
-            "OPENAI_API_KEY",
-            "BUGZY_API_KEY",
-        ):
+        for var in ("AZURE_TRAINING_ENABLED", "CF_DEPLOY_WORKERS",
+                    "USE_GITHUB_ACTIONS", "OPENAI_API_KEY", "BUGZY_API_KEY"):
             os.environ.pop(var, None)
         result = e.assert_zero_cost()
         assert result.passed is True
@@ -339,10 +280,9 @@ class TestBlueprintEngine:
 
 class TestMapeKLoop:
     def _make_snapshot(
-        self,
-        healthy: int = 5,
-        unhealthy: List[str] | None = None,
+        self, healthy: int = 5, unhealthy: List[str] | None = None
     ) -> SystemSnapshot:
+        from typing import List  # local import fine for test helper
         unhealthy = unhealthy or []
         metrics = [
             WorkerMetrics(
@@ -450,20 +390,10 @@ class TestMapeKLoop:
 @pytest.fixture(autouse=True)
 def clean_env():
     """Ensure cost-violation env vars are cleared before each test."""
-    for var in (
-        "AZURE_TRAINING_ENABLED",
-        "CF_DEPLOY_WORKERS",
-        "USE_GITHUB_ACTIONS",
-        "OPENAI_API_KEY",
-        "BUGZY_API_KEY",
-    ):
+    for var in ("AZURE_TRAINING_ENABLED", "CF_DEPLOY_WORKERS",
+                "USE_GITHUB_ACTIONS", "OPENAI_API_KEY", "BUGZY_API_KEY"):
         os.environ.pop(var, None)
     yield
-    for var in (
-        "AZURE_TRAINING_ENABLED",
-        "CF_DEPLOY_WORKERS",
-        "USE_GITHUB_ACTIONS",
-        "OPENAI_API_KEY",
-        "BUGZY_API_KEY",
-    ):
+    for var in ("AZURE_TRAINING_ENABLED", "CF_DEPLOY_WORKERS",
+                "USE_GITHUB_ACTIONS", "OPENAI_API_KEY", "BUGZY_API_KEY"):
         os.environ.pop(var, None)

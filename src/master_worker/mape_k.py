@@ -29,16 +29,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Awaitable
 
 import httpx
 
-from .platform_registry import PlatformRegistry
-from .zero_cost_enforcer import QuotaStatus, ZeroCostEnforcer
+from .platform_registry import PlatformCategory, PlatformHealth, PlatformRegistry
+from .zero_cost_enforcer import ZeroCostEnforcer, QuotaStatus
 
 logger = logging.getLogger(__name__)
 
@@ -52,51 +53,41 @@ class KnowledgeStore:
     """Persistent knowledge base for the MAPE-K loop."""
 
     def __init__(self) -> None:
-        """Initialise the fact base, history ring buffer, and default platform policies."""
         self._facts: Dict[str, Any] = {}
         self._history: List[Dict[str, Any]] = []
         self._policies: Dict[str, Any] = {
-            "max_error_rate": 0.05,  # 5% error rate triggers action
-            "min_health_score": 0.6,  # below 0.6 → mark degraded
-            "quota_warning_pct": 0.85,  # rotate at 85%
-            "quota_critical_pct": 0.95,  # emergency rotate at 95%
-            "zero_cost_enforced": True,  # must be True always
-            "ci_provider": "forgejo",  # ONLY forgejo — never github_actions
-            "edge_provider": "self_hosted",  # ONLY self-hosted — never cloudflare_workers
+            "max_error_rate": 0.05,       # 5% error rate triggers action
+            "min_health_score": 0.6,       # below 0.6 → mark degraded
+            "quota_warning_pct": 0.85,     # rotate at 85%
+            "quota_critical_pct": 0.95,    # emergency rotate at 95%
+            "zero_cost_enforced": True,    # must be True always
+            "ci_provider": "forgejo",      # ONLY forgejo — never github_actions
+            "edge_provider": "self_hosted",# ONLY self-hosted — never cloudflare_workers
         }
 
     def get(self, key: str, default: Any = None) -> Any:
-        """Return the stored fact for *key*, or *default* if absent."""
         return self._facts.get(key, default)
 
     def set(self, key: str, value: Any) -> None:
-        """Store *value* under *key* in the fact base."""
         self._facts[key] = value
 
     def policy(self, key: str, default: Any = None) -> Any:
-        """Return the policy value for *key*, or *default* if not configured."""
         return self._policies.get(key, default)
 
     def record_event(self, event_type: str, data: Dict[str, Any]) -> None:
-        """Append a timestamped event to the history ring buffer (capped at 10k entries)."""
-        self._history.append(
-            {
-                "id": uuid.uuid4().hex[:8],
-                "type": event_type,
-                "data": data,
-                "ts": time.time(),
-            }
-        )
+        self._history.append({
+            "id": uuid.uuid4().hex[:8],
+            "type": event_type,
+            "data": data,
+            "ts": time.time(),
+        })
         if len(self._history) > 10_000:
             self._history = self._history[-5_000:]
 
     def recent_events(self, event_type: Optional[str] = None, n: int = 50) -> List[Dict[str, Any]]:
-        """Return the last *n* events, optionally filtered by *event_type*."""
-        events = (
-            self._history
-            if not event_type
-            else [e for e in self._history if e["type"] == event_type]
-        )
+        events = self._history if not event_type else [
+            e for e in self._history if e["type"] == event_type
+        ]
         return events[-n:]
 
 
@@ -107,8 +98,6 @@ class KnowledgeStore:
 
 @dataclass
 class WorkerMetrics:
-    """Health probe result for a single worker collected during Monitor phase."""
-
     worker_name: str
     is_healthy: bool
     status_code: Optional[int]
@@ -122,7 +111,6 @@ class WorkerMetrics:
 @dataclass
 class SystemSnapshot:
     """Full platform snapshot collected during Monitor phase."""
-
     worker_metrics: List[WorkerMetrics] = field(default_factory=list)
     platform_snapshot: Dict[str, Any] = field(default_factory=dict)
     unhealthy_workers: List[str] = field(default_factory=list)
@@ -137,8 +125,6 @@ class SystemSnapshot:
 
 
 class ActionType(str, Enum):
-    """Possible adaptation actions the MAPE-K Execute phase can perform."""
-
     ROTATE_PLATFORM = "rotate_platform"
     RESTART_WORKER = "restart_worker"
     SCALE_UP = "scale_up"
@@ -150,12 +136,10 @@ class ActionType(str, Enum):
 
 @dataclass
 class AdaptationAction:
-    """A concrete action produced by the Plan phase and consumed by Execute."""
-
     action_type: ActionType
-    target: str  # worker name or platform name
+    target: str                        # worker name or platform name
     reason: str
-    priority: int = 5  # 1=critical, 5=low
+    priority: int = 5                  # 1=critical, 5=low
     params: Dict[str, Any] = field(default_factory=dict)
     created_at: float = field(default_factory=time.monotonic)
 
@@ -167,8 +151,6 @@ class AdaptationAction:
 
 @dataclass
 class MapeKConfig:
-    """Runtime configuration for the MAPE-K control loop."""
-
     monitor_interval_s: float = 30.0
     worker_health_timeout_s: float = 5.0
     base_worker_url: str = "http://localhost"
@@ -177,8 +159,6 @@ class MapeKConfig:
 
 
 class ControlLoopState(str, Enum):
-    """Current phase of the MAPE-K autonomic control loop."""
-
     IDLE = "idle"
     MONITORING = "monitoring"
     ANALYSING = "analysing"
@@ -250,9 +230,8 @@ class MapeKLoop:
         config: Optional[MapeKConfig] = None,
         registry: Optional[PlatformRegistry] = None,
     ) -> None:
-        """Initialise the loop with optional config and platform registry overrides."""
         self._config = config or MapeKConfig(
-            worker_ports=dict(self.DEFAULT_WORKER_PORTS),
+            worker_ports=dict(self.DEFAULT_WORKER_PORTS)
         )
         if not self._config.worker_ports:
             self._config.worker_ports = dict(self.DEFAULT_WORKER_PORTS)
@@ -272,7 +251,6 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     async def start(self) -> None:
-        """Start the MAPE-K loop and the zero-cost enforcer as background tasks."""
         if self._running:
             return
         self._running = True
@@ -286,7 +264,6 @@ class MapeKLoop:
         )
 
     async def stop(self) -> None:
-        """Gracefully cancel the control loop and stop the zero-cost enforcer."""
         self._running = False
         await self._enforcer.stop()
         if self._task and not self._task.done():
@@ -294,11 +271,10 @@ class MapeKLoop:
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass  # Expected when we cancel the task
+                pass
         logger.info("MapeKLoop stopped after %d cycles", self._cycle_count)
 
     def on_action(self, cb: Callable[[AdaptationAction], Awaitable[None]]) -> None:
-        """Register an async callback invoked after each adaptation action is executed."""
         self._action_callbacks.append(cb)
 
     # ------------------------------------------------------------------
@@ -306,7 +282,6 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     async def _loop(self) -> None:
-        """Run the Monitor→Analyse→Plan→Execute cycle on a fixed interval until stopped."""
         while self._running:
             cycle_start = time.monotonic()
             try:
@@ -332,15 +307,12 @@ class MapeKLoop:
                     await self._execute(actions)
 
                 self._state = ControlLoopState.IDLE
-                self._knowledge.record_event(
-                    "cycle_complete",
-                    {
-                        "cycle": self._cycle_count,
-                        "healthy": snapshot.healthy_workers,
-                        "total": snapshot.total_workers,
-                        "actions": len(actions),
-                    },
-                )
+                self._knowledge.record_event("cycle_complete", {
+                    "cycle": self._cycle_count,
+                    "healthy": snapshot.healthy_workers,
+                    "total": snapshot.total_workers,
+                    "actions": len(actions),
+                })
 
             except asyncio.CancelledError:
                 break
@@ -358,7 +330,6 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     async def _monitor(self) -> SystemSnapshot:
-        """Probe all registered workers concurrently and return a SystemSnapshot."""
         snapshot = SystemSnapshot(
             total_workers=len(self._config.worker_ports),
             platform_snapshot=self._registry.snapshot(),
@@ -382,7 +353,6 @@ class MapeKLoop:
         return snapshot
 
     async def _probe_worker(self, client: httpx.AsyncClient, name: str, port: int) -> WorkerMetrics:
-        """GET /health on the worker at *port* and return a WorkerMetrics record."""
         url = f"{self._config.base_worker_url}:{port}/health"
         t0 = time.monotonic()
         try:
@@ -420,48 +390,40 @@ class MapeKLoop:
         # Worker health issues
         if snapshot.unhealthy_workers:
             unhealthy_rate = len(snapshot.unhealthy_workers) / max(snapshot.total_workers, 1)
-            issues.append(
-                {
-                    "type": "worker_health",
-                    "severity": "critical" if unhealthy_rate > 0.2 else "warning",
-                    "affected": snapshot.unhealthy_workers,
-                    "unhealthy_rate": round(unhealthy_rate, 3),
-                }
-            )
+            issues.append({
+                "type": "worker_health",
+                "severity": "critical" if unhealthy_rate > 0.2 else "warning",
+                "affected": snapshot.unhealthy_workers,
+                "unhealthy_rate": round(unhealthy_rate, 3),
+            })
 
         # Platform quota issues
         quota_reports = self._enforcer.check_all()
         for report in quota_reports:
             if report.status in (QuotaStatus.CRITICAL, QuotaStatus.EXHAUSTED):
-                issues.append(
-                    {
-                        "type": "quota_critical",
-                        "severity": "critical",
-                        "platform": report.platform_name,
-                        "utilisation_pct": report.utilisation_pct,
-                    }
-                )
+                issues.append({
+                    "type": "quota_critical",
+                    "severity": "critical",
+                    "platform": report.platform_name,
+                    "utilisation_pct": report.utilisation_pct,
+                })
             elif report.status == QuotaStatus.WARNING:
-                issues.append(
-                    {
-                        "type": "quota_warning",
-                        "severity": "warning",
-                        "platform": report.platform_name,
-                        "utilisation_pct": report.utilisation_pct,
-                    }
-                )
+                issues.append({
+                    "type": "quota_warning",
+                    "severity": "warning",
+                    "platform": report.platform_name,
+                    "utilisation_pct": report.utilisation_pct,
+                })
 
         # Zero-cost assertion
         assertion = self._enforcer.assert_zero_cost()
         if not assertion.passed:
             for violation in assertion.violations:
-                issues.append(
-                    {
-                        "type": "cost_violation",
-                        "severity": "critical",
-                        "violation": violation,
-                    }
-                )
+                issues.append({
+                    "type": "cost_violation",
+                    "severity": "critical",
+                    "violation": violation,
+                })
 
         return {
             "issues": issues,
@@ -475,11 +437,8 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     def _plan(
-        self,
-        analysis: Dict[str, Any],
-        snapshot: SystemSnapshot,
+        self, analysis: Dict[str, Any], snapshot: SystemSnapshot
     ) -> List[AdaptationAction]:
-        """Convert Analyse-phase issues into a priority-sorted list of AdaptationActions."""
         actions: List[AdaptationAction] = []
 
         for issue in analysis.get("issues", []):
@@ -487,45 +446,37 @@ class MapeKLoop:
 
             if issue_type == "worker_health":
                 for worker in issue.get("affected", []):
-                    actions.append(
-                        AdaptationAction(
-                            action_type=ActionType.ALERT,
-                            target=worker,
-                            reason=f"Worker {worker!r} is unhealthy — probe failed",
-                            priority=2 if issue["severity"] == "critical" else 4,
-                        )
-                    )
+                    actions.append(AdaptationAction(
+                        action_type=ActionType.ALERT,
+                        target=worker,
+                        reason=f"Worker {worker!r} is unhealthy — probe failed",
+                        priority=2 if issue["severity"] == "critical" else 4,
+                    ))
 
             elif issue_type in ("quota_critical", "quota_exhausted"):
-                actions.append(
-                    AdaptationAction(
-                        action_type=ActionType.ROTATE_PLATFORM,
-                        target=issue["platform"],
-                        reason=f"Quota at {issue['utilisation_pct']:.1f}% — rotating to fallback",
-                        priority=1,
-                    )
-                )
+                actions.append(AdaptationAction(
+                    action_type=ActionType.ROTATE_PLATFORM,
+                    target=issue["platform"],
+                    reason=f"Quota at {issue['utilisation_pct']:.1f}% — rotating to fallback",
+                    priority=1,
+                ))
 
             elif issue_type == "quota_warning":
-                actions.append(
-                    AdaptationAction(
-                        action_type=ActionType.ALERT,
-                        target=issue["platform"],
-                        reason=f"Quota at {issue['utilisation_pct']:.1f}% — approaching limit",
-                        priority=3,
-                        params={"utilisation_pct": issue["utilisation_pct"]},
-                    )
-                )
+                actions.append(AdaptationAction(
+                    action_type=ActionType.ALERT,
+                    target=issue["platform"],
+                    reason=f"Quota at {issue['utilisation_pct']:.1f}% — approaching limit",
+                    priority=3,
+                    params={"utilisation_pct": issue["utilisation_pct"]},
+                ))
 
             elif issue_type == "cost_violation":
-                actions.append(
-                    AdaptationAction(
-                        action_type=ActionType.LOG_COST_VIOLATION,
-                        target="zero_cost_enforcer",
-                        reason=issue["violation"],
-                        priority=1,
-                    )
-                )
+                actions.append(AdaptationAction(
+                    action_type=ActionType.LOG_COST_VIOLATION,
+                    target="zero_cost_enforcer",
+                    reason=issue["violation"],
+                    priority=1,
+                ))
 
         # Sort by priority (1=most urgent)
         actions.sort(key=lambda a: a.priority)
@@ -536,42 +487,33 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     async def _execute(self, actions: List[AdaptationAction]) -> None:
-        """Apply each planned action in priority order, logging success and failure."""
         for action in actions:
             try:
                 await self._apply_action(action)
-                self._knowledge.record_event(
-                    "action_executed",
-                    {
-                        "type": action.action_type.value,
-                        "target": action.target,
-                        "reason": action.reason,
-                        "priority": action.priority,
-                    },
-                )
-                for cb in self._action_callbacks:
-                    try:
-                        await cb(action)
-                    except Exception as exc:
-                        logger.warning("Action callback failed: %s", exc)
+                self._knowledge.record_event("action_executed", {
+                    "type": action.action_type.value,
+                    "target": action.target,
+                    "reason": action.reason,
+                    "priority": action.priority,
+                })
             except Exception as exc:
                 logger.error(
                     "Failed to execute action %s on %s: %s",
-                    action.action_type.value,
-                    action.target,
-                    exc,
+                    action.action_type.value, action.target, exc,
                 )
-                self._knowledge.record_event(
-                    "action_failed",
-                    {
-                        "type": action.action_type.value,
-                        "target": action.target,
-                        "error": str(exc),
-                    },
-                )
+                self._knowledge.record_event("action_failed", {
+                    "type": action.action_type.value,
+                    "target": action.target,
+                    "error": str(exc),
+                })
+
+            for cb in self._action_callbacks:
+                try:
+                    await cb(action)
+                except Exception as exc:
+                    logger.warning("Action callback failed: %s", exc)
 
     async def _apply_action(self, action: AdaptationAction) -> None:
-        """Dispatch a single AdaptationAction to the appropriate subsystem."""
         if action.action_type == ActionType.ROTATE_PLATFORM:
             fallback = await self._enforcer.rotate_platform(action.target)
             logger.info("Executed ROTATE_PLATFORM: %s → %s", action.target, fallback)
@@ -579,16 +521,13 @@ class MapeKLoop:
         elif action.action_type == ActionType.ALERT:
             logger.warning(
                 "[MAPE-K ALERT] target=%s priority=%d reason=%s",
-                action.target,
-                action.priority,
-                action.reason,
+                action.target, action.priority, action.reason,
             )
 
         elif action.action_type == ActionType.LOG_COST_VIOLATION:
             logger.error(
                 "[ZERO-COST VIOLATION] %s — %s",
-                action.target,
-                action.reason,
+                action.target, action.reason,
             )
 
         elif action.action_type == ActionType.NOOP:
@@ -602,15 +541,9 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     async def _on_platform_rotation(self, old: str, new: str) -> None:
-        """Callback from ZeroCostEnforcer; persists rotation events to KnowledgeStore."""
-        self._knowledge.record_event(
-            "platform_rotation",
-            {
-                "from": old,
-                "to": new,
-                "ts": time.time(),
-            },
-        )
+        self._knowledge.record_event("platform_rotation", {
+            "from": old, "to": new, "ts": time.time()
+        })
         logger.info("Knowledge: recorded platform rotation %s → %s", old, new)
 
     # ------------------------------------------------------------------
@@ -618,7 +551,6 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     def status(self) -> Dict[str, Any]:
-        """Return a serialisable status dict for the /master/status health endpoint."""
         snap = self._last_snapshot
         return {
             "state": self._state.value,

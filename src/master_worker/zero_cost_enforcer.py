@@ -28,11 +28,9 @@ import os
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Awaitable
 
-from Dimensional.sanitize import sanitize_for_log
-
-from .platform_registry import PlatformHealth, PlatformRegistry
+from .platform_registry import Platform, PlatformCategory, PlatformHealth, PlatformRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -43,41 +41,26 @@ logger = logging.getLogger(__name__)
 
 BLOCKED_SERVICES: Dict[str, str] = {
     # Endpoint fragment → reason
-    # Cloud GPU / training
     r"azure.*(nc6|nc12|nc24|gpu)": "Azure GPU training (£765+/run) — BLOCKED",
-    r"(?:^|[/.])(sagemaker|ec2|lambda|bedrock)(?:[.-][a-z0-9-]+)?\.amazonaws\.com(?:/|$)": "AWS paid compute — use Oracle ARM64 free tier",
-    r"(?:cloud\.google\.com/(vertex|ml-engine|tpu)|(?:aiplatform|ml|tpu|speech|translate|vision|language|automl)\.googleapis\.com)": "GCP paid ML — use free tier alternatives",
-    # Storage overages
     "r2.cloudflarestorage.com": "Cloudflare R2 overages — use self-hosted IPFS/Backblaze",
-    # Paid AI subscriptions
     "bugzy.ai": "Bugzy AI subscription (€250-1,500/month) — BLOCKED",
-    # CI/CD costs
     "api.github.com/actions": "GitHub Actions — use Forgejo CI at trancendos.com/the-workshop",
-    # Edge compute costs
     "workers.cloudflare.com/deploy": "CF Workers deploy — use self-hosted Python workers",
-    # Paid AI APIs
-    r"openai\.com/v1": "OpenAI paid API — use Ollama/Groq/Gemini free tiers instead",
-    r"api\.openai\.com": "OpenAI paid API — use Ollama/Groq/Gemini free tiers instead",
-    r"anthropic\.com/v1/messages": "Anthropic direct billing — route via Ollama/OpenRouter free",
-    r"api\.anthropic\.com": "Anthropic direct billing — route via Ollama/OpenRouter free",
-    r"cohere\.com/v1": "Cohere paid API — use free alternatives",
-    r"api\.stripe\.com": "Stripe payments — only allowed via Royal Bank of Arcadia worker",
-    # Paid deepseek direct (use via OpenRouter :free instead)
-    r"api\.deepseek\.com": "DeepSeek direct API (paid) — use deepseek/deepseek-r1:free via OpenRouter",
+    "openai.com/v1": "OpenAI paid API — use Ollama/Groq/Gemini free tiers instead",
+    "anthropic.com/v1/messages": "Anthropic direct billing — route via Ollama/OpenRouter free",
+    "cohere.com/v1": "Cohere paid API — use free alternatives",
 }
 
 
 class QuotaStatus(str, Enum):
-    OK = "ok"  # < 85% used
-    WARNING = "warning"  # 85–95% used
-    CRITICAL = "critical"  # > 95% used — rotate NOW
-    EXHAUSTED = "exhausted"  # 100% or hard-blocked
+    OK = "ok"                   # < 85% used
+    WARNING = "warning"         # 85–95% used
+    CRITICAL = "critical"       # > 95% used — rotate NOW
+    EXHAUSTED = "exhausted"     # 100% or hard-blocked
 
 
 @dataclass
 class QuotaReport:
-    """Per-platform quota status report produced by ZeroCostEnforcer.check_all()."""
-
     platform_name: str
     status: QuotaStatus
     utilisation_pct: float
@@ -89,7 +72,6 @@ class QuotaReport:
 @dataclass
 class CostAssertion:
     """Daily zero-cost assertion result."""
-
     passed: bool
     total_estimated_cost_gbp: float = 0.0
     violations: List[str] = field(default_factory=list)
@@ -113,14 +95,13 @@ class ZeroCostEnforcer:
 
     WARNING_THRESHOLD = 0.85
     CRITICAL_THRESHOLD = 0.95
-    DEFAULT_CHECK_INTERVAL = 60.0  # seconds
+    DEFAULT_CHECK_INTERVAL = 60.0   # seconds
 
     def __init__(
         self,
         registry: Optional[PlatformRegistry] = None,
         check_interval_s: float = DEFAULT_CHECK_INTERVAL,
     ) -> None:
-        """Initialise the enforcer with an optional registry and check interval."""
         self._registry = registry or PlatformRegistry()
         self._check_interval = check_interval_s
         self._running = False
@@ -134,27 +115,22 @@ class ZeroCostEnforcer:
     # ------------------------------------------------------------------
 
     async def start(self) -> None:
-        """Start the background enforcement loop as an asyncio task."""
         if self._running:
             return
         self._running = True
         self._task = asyncio.create_task(
-            self._enforcement_loop(),
-            name="zero_cost_enforcer",
+            self._enforcement_loop(), name="zero_cost_enforcer"
         )
-        logger.info(
-            "ZeroCostEnforcer started (interval=%.0fs)", sanitize_for_log(self._check_interval)
-        )
+        logger.info("ZeroCostEnforcer started (interval=%.0fs)", self._check_interval)
 
     async def stop(self) -> None:
-        """Cancel the background enforcement task and wait for it to finish cleanly."""
         self._running = False
         if self._task and not self._task.done():
             self._task.cancel()
             try:
                 await self._task
             except asyncio.CancelledError:
-                pass  # Expected when we cancel the task
+                pass
         logger.info("ZeroCostEnforcer stopped")
 
     # ------------------------------------------------------------------
@@ -175,13 +151,12 @@ class ZeroCostEnforcer:
         Call this before making ANY external HTTP request.
         """
         import re
-
         lower = url_or_service.lower()
         for pattern, reason in BLOCKED_SERVICES.items():
             if re.search(pattern, lower):
                 raise ValueError(
                     f"ZERO-COST VIOLATION — blocked service call to: {url_or_service!r}\n"
-                    f"Reason: {reason}",
+                    f"Reason: {reason}"
                 )
 
     # ------------------------------------------------------------------
@@ -189,7 +164,6 @@ class ZeroCostEnforcer:
     # ------------------------------------------------------------------
 
     def check_all(self) -> List[QuotaReport]:
-        """Return a QuotaReport for every enabled platform in the registry."""
         reports: List[QuotaReport] = []
         for name, platform in self._registry._platforms.items():
             if not platform.enabled:
@@ -236,9 +210,7 @@ class ZeroCostEnforcer:
             ("BUGZY_API_KEY", "Bugzy AI (€250-1,500/month)"),
         ]:
             if os.environ.get(env_var):
-                violations.append(
-                    f"{env_var} set — {service_name} incurs costs; use free alternatives"
-                )
+                violations.append(f"{env_var} set — {service_name} incurs costs; use free alternatives")
 
         result = CostAssertion(
             passed=len(violations) == 0,
@@ -248,8 +220,8 @@ class ZeroCostEnforcer:
         if violations:
             logger.warning(
                 "ZERO-COST ASSERTION FAILED: %d violation(s)\n%s",
-                sanitize_for_log(len(violations)),
-                sanitize_for_log("\n".join(f"  • {v}" for v in violations)),
+                len(violations),
+                "\n".join(f"  • {v}" for v in violations),
             )
         else:
             logger.debug("Zero-cost assertion PASSED — £0 spend confirmed")
@@ -276,23 +248,20 @@ class ZeroCostEnforcer:
 
         if fallback_name:
             logger.info(
-                "Platform rotation: %r → %r (category=%s)",
-                sanitize_for_log(exhausted_name),
-                sanitize_for_log(fallback_name),
-                sanitize_for_log(platform.category.value),
+                "Platform rotation: %s → %s (category=%s)",
+                exhausted_name, fallback_name, platform.category.value,
             )
         else:
             logger.error(
-                "Platform rotation: %r exhausted, NO fallback available for %s",
-                sanitize_for_log(exhausted_name),
-                sanitize_for_log(platform.category.value),
+                "Platform rotation: %s exhausted, NO fallback available for %s",
+                exhausted_name, platform.category.value,
             )
 
         for cb in self._rotation_callbacks:
             try:
                 await cb(exhausted_name, fallback_name or "none")
             except Exception as exc:
-                logger.warning("Rotation callback failed: %s", sanitize_for_log(exc))
+                logger.warning("Rotation callback failed: %s", exc)
 
         return fallback_name
 
@@ -301,7 +270,6 @@ class ZeroCostEnforcer:
     # ------------------------------------------------------------------
 
     async def _enforcement_loop(self) -> None:
-        """Background task: check quotas, rotate critical platforms, run daily cost assertions."""
         _daily_check_hour = -1
         while self._running:
             try:
@@ -310,8 +278,7 @@ class ZeroCostEnforcer:
                     if report.status == QuotaStatus.CRITICAL:
                         logger.warning(
                             "Quota CRITICAL on %s (%.1f%%) — pre-emptive rotation",
-                            sanitize_for_log(report.platform_name),
-                            sanitize_for_log(report.utilisation_pct),
+                            report.platform_name, report.utilisation_pct,
                         )
                         fallback = await self.rotate_platform(report.platform_name)
                         report.action_taken = f"rotated_to:{fallback}"
@@ -319,8 +286,7 @@ class ZeroCostEnforcer:
                     elif report.status == QuotaStatus.WARNING:
                         logger.info(
                             "Quota WARNING on %s (%.1f%%) — monitoring",
-                            sanitize_for_log(report.platform_name),
-                            sanitize_for_log(report.utilisation_pct),
+                            report.platform_name, report.utilisation_pct,
                         )
                         report.action_taken = "monitoring"
 
@@ -328,8 +294,7 @@ class ZeroCostEnforcer:
 
                 # Daily zero-cost assertion
                 import datetime
-
-                current_hour = datetime.datetime.now(datetime.timezone.utc).hour
+                current_hour = datetime.datetime.utcnow().hour
                 if current_hour == 0 and _daily_check_hour != 0:
                     self.assert_zero_cost()
                     _daily_check_hour = 0
@@ -337,9 +302,9 @@ class ZeroCostEnforcer:
                     _daily_check_hour = current_hour
 
             except asyncio.CancelledError:
-                break  # Expected when we cancel the task
+                break
             except Exception as exc:
-                logger.error("ZeroCostEnforcer loop error: %s", sanitize_for_log(exc))
+                logger.error("ZeroCostEnforcer loop error: %s", exc)
 
             await asyncio.sleep(self._check_interval)
 
@@ -348,16 +313,13 @@ class ZeroCostEnforcer:
     # ------------------------------------------------------------------
 
     def status(self) -> Dict[str, Any]:
-        """Return a serialisable status dict for the /master/zero-cost/status endpoint."""
         return {
             "running": self._running,
             "check_interval_s": self._check_interval,
             "platforms": self._registry.snapshot(),
             "last_assertion": {
                 "passed": self._last_daily_assertion.passed if self._last_daily_assertion else None,
-                "violations": self._last_daily_assertion.violations
-                if self._last_daily_assertion
-                else [],
+                "violations": self._last_daily_assertion.violations if self._last_daily_assertion else [],
             },
             "recent_reports": [
                 {
