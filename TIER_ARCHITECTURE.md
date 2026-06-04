@@ -38,7 +38,7 @@ Tier 5  ─  Infinity-Worker   tranc3-bots/ + workers/  Bots, Workers, Scrapers
 | CommPrime | Commercial | Royal Bank, Arcadian Exchange, ChronosSphere |
 | CreatePrime | Creativity | The Studio, Sashas Photo Studio, TranceFlow, TateKing, Fabulousa, Imaginarium, Warp Radio, VRAR3D |
 | DevPrime | Development | The Workshop, The Lab, Think Tank, The Artifactory, API Marketplace, DevOcity |
-| KnowPrime | Knowledge | The Library, The Academy, DocUtari, The Basement, Turing's Hub, The Dutchy |
+| KnowPrime | Knowledge | The Library, The Academy, DocUtari, The Basement, Turing's Hub, Section 7 |
 | SecPrime | Security | Cryptex, The Void, The Lighthouse, The Ice Box, The Warp Tunnel |
 | WellPrime | Wellbeing | Tranquility, I-Mind, Resonate, tAimra |
 | GovPrime | Governance | The Town Hall, Arcadia |
@@ -55,7 +55,7 @@ All AI/ML modules stay in `src/` — these form the Tranc3 base AI layer:
 | Tranc3 Engine | `src/core/tranc3_inference.py` | Core transformer inference |
 | ML Pipeline | `src/core/ml_pipeline.py` | Training + inference pipeline |
 | Bio Neural | `src/bio_neural/` | Consciousness engine (Luminous) |
-| Personality | `src/personality/` | Personality matrix (Turing's Hub) |
+| Personality | `src/personality/` | Personality matrix + 3D entity genesis (Turing's Hub) |
 | Inference | `src/inference/` | LLM router, model loader |
 | Neural | `src/neural/` | Attention router, collective memory |
 | Quantum | `src/quantum/` | Quantum neural core (Think Tank) |
@@ -146,9 +146,9 @@ Current in-place locations (not yet moved — canonically owned here):
 | Resonate | `src/resonate/` | Entity: Resonate |
 | tAimra | `src/taimra/` | Entity: tAimra |
 | VRAR3D | `src/vrar3d/` | Entity: VRAR3D |
-| The Dutchy | `src/research/` | Entity: The Dutchy |
+| Section 7 | `src/research/` | Entity: Section 7 (AI: The Dutchy) |
 | Luminous | `src/bio_neural/` (AI core) + entity folder | Entity: Luminous |
-| Turing's Hub | `src/personality/` | Entity: Turing's Hub |
+| Turing's Hub | `src/personality/` | Entity: Turing's Hub — 3D AI Model Builder pod: unifies all platform services to birth a fully embodied, living AI entity |
 
 ---
 

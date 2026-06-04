@@ -252,7 +252,7 @@ async def scan_worker_ports(report: ScanReport) -> None:
         8027: "queue-service (The HIVE)",
         8029: "health-aggregator",
         8034: "workflow-engine (The Digital Grid)",
-        8035: "skills-benchmark (Turing's Hub)",
+        8035: "turings-hub (3D AI Model Builder)",
         8038: "vault-service (The Void)",
     }
     loop = asyncio.get_event_loop()

@@ -215,7 +215,7 @@ SERVICE_REGISTRY = {
     "skills-benchmark-service": {
         "url": "http://localhost:8035/health",
         "priority": "P3",
-        "named": "Skills Benchmark",
+        "named": "Turing's Hub (3D AI Model Builder)",
     },
     "langchain-integration-service": {
         "url": "http://localhost:8036/health",

@@ -358,7 +358,7 @@ ENTITY_MANIFEST: Dict[str, EntityManifestEntry] = {
         lead_ai="Samantha Turing",
         pillar=Pillar.KNOWLEDGE,
         src_path="src/personality/",
-        foundation_keys=["ollama"],
+        foundation_keys=["ollama", "three_js", "aframe"],
         status="partial",
         port=8035,
     ),

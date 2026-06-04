@@ -65,7 +65,7 @@ Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `sr
 | **Arcadian Exchange** | The Porter Family | Financial exchange — procurement & resource trading | ✅ Deployed | CF: `arcadia-exchange` |
 | **The Observatory** | Norman Hawkins | Audit log — every action, change, activity on Trancendos | ✅ Self-hosted | `src/observability/`, `workers/monitoring/` |
 | **Luminous** | Cornelius MacIntyre | Core platform brain — AI intelligence & orchestration engine | 🔧 Partial | `src/bio_neural/`, `src/core/` |
-| **Turing's Hub** | Samantha Turing | AI creation centre — personality template creator | 🔧 Partial | `src/personality/` |
+| **Turing's Hub** | Samantha Turing | 3D AI Model Builder — the pod/capsule that unifies all platform services to build a complete, living, functioning AI entity (walks, talks, operates independently). Assembles personality + 3D body + voice + memory into one fully embodied being (e.g. Imfy, The Dr., George Porter) | 🔧 Partial | `src/personality/` |
 | **Arcadia** | Lilli SC | Front-end post-login, forum & email hub | 🔧 Partial | `web/` |
 | **The Nexus** | The Nexus | AI communications and transfer hub | 🔧 Self-hosted | `workers/infinity-ws/` (Port 8004) |
 | **The Town Hall** | Tristuran | Governance hub — PRINCE2, ITIL, Agile/Kanban, ITSM, rooms, templates | 🔧 Partial | `src/townhall/`, `config/townhall/`, `docs/THE_TOWN_HALL.md` |
@@ -214,7 +214,7 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | ledger-service | 8032 | P3 | `workers/ledger-service/` | Royal Bank ledger |
 | model-router-service | 8033 | P3 | `workers/model-router-service/` | AI model routing |
 | workflow-engine-service | 8034 | P3 | `workers/workflow-engine-service/` | The Digital Grid engine |
-| skills-benchmark-service | 8035 | P3 | `workers/skills-benchmark-service/` | Turing's Hub benchmarks |
+| skills-benchmark-service | 8035 | P3 | `workers/skills-benchmark-service/` | Turing's Hub — 3D AI Model Builder (pod/capsule: assembles all platform threads into a living, embodied AI entity) |
 | langchain-integration-service | 8036 | P3 | `workers/langchain-integration-service/` | LangChain integration |
 | deepagents-orchestrator-service | 8037 | P3 | `workers/deepagents-orchestrator-service/` | Deep agent orchestration |
 | vault-service | 8038 | P3 | `workers/vault-service/` | The Void self-hosted vault |
