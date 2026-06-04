@@ -43,8 +43,8 @@ BLOCKED_SERVICES: Dict[str, str] = {
     # Endpoint fragment → reason
     # Cloud GPU / training
     r"azure.*(nc6|nc12|nc24|gpu)": "Azure GPU training (£765+/run) — BLOCKED",
-    r"amazonaws\.com/(sagemaker|ec2|lambda|bedrock)": "AWS paid compute — use Oracle ARM64 free tier",
-    r"cloud\.google\.com/(vertex|ml-engine|tpu)": "GCP paid ML — use free tier alternatives",
+    r"(?:^|[/.])(sagemaker|ec2|lambda|bedrock)(?:[.-][a-z0-9-]+)?\.amazonaws\.com(?:/|$)": "AWS paid compute — use Oracle ARM64 free tier",
+    r"(?:cloud\.google\.com/(vertex|ml-engine|tpu)|(?:aiplatform|ml|tpu|speech|translate|vision|language|automl)\.googleapis\.com)": "GCP paid ML — use free tier alternatives",
     # Storage overages
     "r2.cloudflarestorage.com": "Cloudflare R2 overages — use self-hosted IPFS/Backblaze",
     # Paid AI subscriptions
