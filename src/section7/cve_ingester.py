@@ -349,6 +349,139 @@ class OpenCveCompatIngestor:
             return []
 
 
+class OsvIngestor:
+    """
+    Ingests vulnerability data from Google's Open Source Vulnerabilities (OSV) API.
+
+    OSV is 100% free, no API key required.
+    API docs: https://google.github.io/osv.dev/api/
+
+    Fix for blueprint issue: the OSV POST /v1/query payload was previously
+    passed as a raw string instead of properly structured JSON, causing
+    parse failures. The correct payload structure is:
+        {"package": {"name": "<pkg>", "ecosystem": "<eco>"}}
+    or for querying affected CVEs:
+        {"query": {"package": {"ecosystem": "OSS-Fuzz"}}}
+    """
+
+    OSV_API_URL = "https://api.osv.dev/v1/vulns/{vuln_id}"
+    OSV_QUERY_URL = "https://api.osv.dev/v1/query"
+    OSV_BATCH_URL = "https://api.osv.dev/v1/querybatch"
+
+    # High-value ecosystems to query for recent vulnerabilities
+    ECOSYSTEMS = ["PyPI", "npm", "Go", "Maven", "NuGet", "Rust"]
+
+    def __init__(self, max_items: int = 30) -> None:
+        self._max_items = max_items
+
+    def fetch(self) -> List[Any]:
+        from src.section7.intelligence_agent import IntelligenceItem, SourceType
+
+        records = self._fetch_records()
+        items = []
+        for rec in records[: self._max_items]:
+            try:
+                from src.section7.intelligence_agent import IntelligenceItem, SourceType
+
+                item = IntelligenceItem(
+                    item_id=f"osv-{rec.cve_id}",
+                    source=SourceType.THREAT_FEED,
+                    title=f"[OSV] {rec.cve_id}",
+                    raw_content=rec.description,
+                    url=f"https://osv.dev/vulnerability/{rec.cve_id}",
+                    tags=["cve", "osv"] + rec.tags,
+                    metadata={
+                        "cve_id": rec.cve_id,
+                        "severity": rec.severity,
+                        "cvss_score": rec.cvss_score,
+                        "source": "osv",
+                        "published": rec.published,
+                    },
+                )
+                items.append(item)
+            except Exception as exc:
+                logger.debug("section7.cve_ingester: OSV item build error: %s", exc)
+
+        logger.info("section7.cve_ingester: OSV fetched %d items", len(items))
+        return items
+
+    def _fetch_records(self) -> List[CveRecord]:
+        import json
+        import urllib.request as _ur
+
+        records: List[CveRecord] = []
+        for ecosystem in self.ECOSYSTEMS:
+            try:
+                # Correct OSV payload structure — POST body must be JSON with
+                # a "package" key containing "ecosystem"; NOT a raw string.
+                payload = json.dumps({
+                    "package": {"ecosystem": ecosystem}
+                }).encode("utf-8")
+                req = _ur.Request(
+                    self.OSV_QUERY_URL,
+                    data=payload,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    },
+                    method="POST",
+                )
+                with _ur.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+
+                for vuln in data.get("vulns", []):
+                    vuln_id = vuln.get("id", "UNKNOWN")
+                    # Map OSV id to CVE id if available
+                    cve_id = vuln_id
+                    aliases = vuln.get("aliases", [])
+                    for alias in aliases:
+                        if alias.startswith("CVE-"):
+                            cve_id = alias
+                            break
+
+                    # Extract severity from CVSS if present
+                    severity = "UNKNOWN"
+                    cvss_score = 0.0
+                    for sev in vuln.get("severity", []):
+                        if sev.get("type") == "CVSS_V3":
+                            score_str = sev.get("score", "")
+                            try:
+                                cvss_score = float(score_str)
+                                if cvss_score >= 9.0:
+                                    severity = "CRITICAL"
+                                elif cvss_score >= 7.0:
+                                    severity = "HIGH"
+                                elif cvss_score >= 4.0:
+                                    severity = "MEDIUM"
+                                else:
+                                    severity = "LOW"
+                            except (ValueError, TypeError):
+                                pass
+
+                    summary = vuln.get("summary", "")
+                    details = vuln.get("details", "")
+                    description = summary or details[:300] or f"OSV vulnerability {vuln_id}"
+
+                    records.append(CveRecord(
+                        cve_id=cve_id,
+                        description=description,
+                        severity=severity,
+                        cvss_score=cvss_score,
+                        source="osv",
+                        tags=[ecosystem.lower()],
+                        published=vuln.get("published", ""),
+                        raw=vuln,
+                    ))
+
+            except Exception as exc:
+                logger.debug(
+                    "section7.cve_ingester: OSV fetch failed for ecosystem %s: %s",
+                    ecosystem, exc,
+                )
+
+        return records
+
+
 def get_default_ingestors(
     opencve_base_url: str = "https://www.opencve.io",
     opencve_api_key: Optional[str] = None,
@@ -358,10 +491,12 @@ def get_default_ingestors(
 
     All sources are zero-cost and require no paid API keys.
     opencve.io has a free self-hosted tier and a free cloud tier.
+    OSV (Google Open Source Vulnerabilities) — no auth required.
     """
     return [
         NvdFeedIngestor(max_items=50),
         CisaKevIngestor(max_items=25),
+        OsvIngestor(max_items=30),
         OpenCveCompatIngestor(
             base_url=opencve_base_url,
             api_key=opencve_api_key,
