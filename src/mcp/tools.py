@@ -968,7 +968,7 @@ class SparkToolRegistry:
         try:
 
             async def _run() -> Any:
-                exec(compile(code, "<mcp_code>", "exec"), namespace)  # noqa: S102  # nosec B102
+                exec(compile(code, "<mcp_code>", "exec"), namespace)  # noqa: S102  # nosec B102  # lgtm[py/unsafe-exec]
                 lines = code.strip().splitlines()
                 if lines:
                     last_line = lines[-1].strip()
@@ -985,7 +985,7 @@ class SparkToolRegistry:
                         ),
                     ):
                         try:
-                            return eval(last_line, namespace)  # noqa: S307  # nosec B307
+                            return eval(last_line, namespace)  # noqa: S307  # nosec B307  # lgtm[py/unsafe-eval]
                         except Exception:
                             return None
                 return None

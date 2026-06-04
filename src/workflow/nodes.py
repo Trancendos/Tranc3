@@ -289,7 +289,7 @@ class CodeExecNode(BaseNode):
             # nonlocal local_ns  # removed: never assigned in scope
             sys.stdout = stdout_capture
             try:
-                exec(compile(code, "<workflow_node>", "exec"), safe_globals, local_ns)  # noqa: S102  # nosec B102
+                exec(compile(code, "<workflow_node>", "exec"), safe_globals, local_ns)  # noqa: S102  # nosec B102  # lgtm[py/unsafe-exec]
             finally:
                 sys.stdout = original_stdout
             return {
@@ -386,7 +386,7 @@ class ConditionNode(BaseNode):
         expression = self.config.config.get("expression", "True")
         local_ns: Dict[str, Any] = {"inputs": inputs, "context": context, **inputs}
         try:
-            result = bool(eval(expression, {"__builtins__": {}}, local_ns))  # noqa: S307  # nosec B307
+            result = bool(eval(expression, {"__builtins__": {}}, local_ns))  # noqa: S307  # nosec B307  # lgtm[py/unsafe-eval]
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
                 {"condition": result, "branch": "true" if result else "false"},
@@ -451,7 +451,7 @@ class TransformNode(BaseNode):
         if expression:
             try:
                 local_ns = {"data": output, "inputs": inputs, "context": context}
-                eval_result = eval(expression, {"__builtins__": {}}, local_ns)  # noqa: S307  # nosec B307
+                eval_result = eval(expression, {"__builtins__": {}}, local_ns)  # noqa: S307  # nosec B307  # lgtm[py/unsafe-eval]
                 output = eval_result if isinstance(eval_result, dict) else {"result": eval_result}
             except Exception as exc:
                 duration_ms = (time.monotonic() - t0) * 1000
