@@ -89,8 +89,8 @@ class EntityID(str, Enum):
     IMIND = "imind"
     RESONATE = "resonate"
     TAIMRA = "taimra"
-    # AI / Orchestration
-    THE_DUTCHY = "the-dutchy"
+    # Intelligence & Analysis
+    SECTION_7 = "section-7"
 
 
 # ---------------------------------------------------------------------------
@@ -100,11 +100,11 @@ class EntityID(str, Enum):
 # ---------------------------------------------------------------------------
 
 ENTITY_LEAD_AI: Dict[EntityID, str] = {
-    EntityID.THE_SPARK: "Norman Hawkins",
+    EntityID.THE_SPARK: "Imfy",
     EntityID.THE_DIGITAL_GRID: "Tyler Towncroft",
     EntityID.THE_VOID: "Prometheus",
     EntityID.THE_WORKSHOP: "Larry Lowhammer",
-    EntityID.INFINITY: "The Guardian (Anchor: Orb of Orisis)",
+    EntityID.INFINITY: "The Guardian (Marcus Magnolia) & The Orb of Orisis",
     EntityID.THE_LIGHTHOUSE: "Rocking Ricki",
     EntityID.THE_HIVE: "The Queen",
     EntityID.THE_NEXUS: "The Nexus",
@@ -112,22 +112,22 @@ ENTITY_LEAD_AI: Dict[EntityID, str] = {
     EntityID.LUMINOUS: "Cornelius MacIntyre",
     EntityID.THE_OBSERVATORY: "Norman Hawkins",
     EntityID.ROYAL_BANK_OF_ARCADIA: "Dorris Fontaine",
-    EntityID.ARCADIAN_EXCHANGE: "The Porter Family",
+    EntityID.ARCADIAN_EXCHANGE: "Clarence Porter, Ann Porter, George Porter, Edward Porter, James Porter",
     EntityID.SASHAS_PHOTO_STUDIO: "Madam Krystal",
     EntityID.TRANCEFLOW: "Junior Cesar",
-    EntityID.TATEKING: "Benji Tate & Sam King",
+    EntityID.TATEKING: "Benji Tate & Sam King",  # Two separate AIs: Benji Tate, Sam King
     EntityID.FABULOUSA: "Baron Von Hilton",
     EntityID.IMAGINARIUM: "Voxx",
     EntityID.THE_STUDIO: "Voxx",
     EntityID.WARP_RADIO: "Rocking Ricki",
     EntityID.VRAR3D: "Entari",
-    EntityID.THE_LAB: "The Dr. & Slime",
+    EntityID.THE_LAB: "The Dr. (Nikolai O'denhime) & Slime",
     EntityID.THINK_TANK: "Trancendos",
     EntityID.DEVOCITY: "Kitty",
     EntityID.THE_LIBRARY: "Zimik",
     EntityID.THE_ACADEMY: "Shimshi",
-    EntityID.DOCUTARI: "To be Defined",
-    EntityID.THE_BASEMENT: "Gary Glowman (Glow-Worm)",
+    EntityID.DOCUTARI: "Fiddsy",
+    EntityID.THE_BASEMENT: "Gary Glowman",
     EntityID.TURINGS_HUB: "Samantha Turing",
     EntityID.CRYPTEX: "Renik",
     EntityID.THE_ICE_BOX: "Neonach",
@@ -141,7 +141,7 @@ ENTITY_LEAD_AI: Dict[EntityID, str] = {
     EntityID.IMIND: "Elouise",
     EntityID.RESONATE: "Magdalena",
     EntityID.TAIMRA: "tAImra",
-    EntityID.THE_DUTCHY: "Predictive lore",
+    EntityID.SECTION_7: "The Dutchy",
 }
 
 
@@ -447,7 +447,7 @@ class EntityRotator:
             ("http://localhost:8000/taimra", "primary"),
         ])
         # Intelligence
-        self._add_pool(EntityID.THE_DUTCHY, [
+        self._add_pool(EntityID.SECTION_7, [
             ("http://localhost:8000/research", "primary"),
         ])
 

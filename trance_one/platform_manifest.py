@@ -39,12 +39,13 @@ class TierLevel(int, Enum):
 class EntityManifestEntry:
     entity_id: str
     display_name: str
-    lead_ai: str               # Tier 3 AI that powers this entity
+    lead_ai: str               # primary Tier 3 AI that powers this entity
     pillar: Pillar
     src_path: str              # canonical code path within the repo
     foundation_keys: List[str] = field(default_factory=list)
     status: str = "planned"    # "live" | "partial" | "planned" | "migrating"
     port: Optional[int] = None
+    lead_ais: List[str] = field(default_factory=list)  # all AIs when entity has multiple
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +57,7 @@ ENTITY_MANIFEST: Dict[str, EntityManifestEntry] = {
     "the-spark": EntityManifestEntry(
         entity_id="the-spark",
         display_name="The Spark",
-        lead_ai="Norman Hawkins",
+        lead_ai="Imfy",
         pillar=Pillar.ARCHITECTURAL,
         src_path="src/mcp/",
         foundation_keys=["nats"],
@@ -94,12 +95,13 @@ ENTITY_MANIFEST: Dict[str, EntityManifestEntry] = {
     "infinity": EntityManifestEntry(
         entity_id="infinity",
         display_name="Infinity",
-        lead_ai="The Guardian (Anchor: Orb of Orisis)",
+        lead_ai="The Guardian (Marcus Magnolia)",
         pillar=Pillar.ARCHITECTURAL,
         src_path="workers/infinity-auth/",
         foundation_keys=[],
         status="live",
         port=8005,
+        lead_ais=["The Guardian (Marcus Magnolia)", "The Orb of Orisis"],
     ),
     "the-lighthouse": EntityManifestEntry(
         entity_id="the-lighthouse",
@@ -173,12 +175,13 @@ ENTITY_MANIFEST: Dict[str, EntityManifestEntry] = {
     "arcadian-exchange": EntityManifestEntry(
         entity_id="arcadian-exchange",
         display_name="Arcadian Exchange",
-        lead_ai="The Porter Family",
+        lead_ai="Clarence Porter",
         pillar=Pillar.COMMERCIAL_FINANCIAL,
         src_path="cloudflare/arcadia-exchange/",
         foundation_keys=[],
         status="live",
         port=8012,
+        lead_ais=["Clarence Porter", "Ann Porter", "George Porter", "Edward Porter", "James Porter"],
     ),
     "chronossphere": EntityManifestEntry(
         entity_id="chronossphere",
@@ -221,11 +224,12 @@ ENTITY_MANIFEST: Dict[str, EntityManifestEntry] = {
     "tateking": EntityManifestEntry(
         entity_id="tateking",
         display_name="TateKing",
-        lead_ai="Benji Tate & Sam King",
+        lead_ai="Benji Tate",
         pillar=Pillar.CREATIVITY,
         src_path="src/entities/locations/tateking/",
         foundation_keys=["ffmpeg"],
         status="planned",
+        lead_ais=["Benji Tate", "Sam King"],
     ),
     "fabulousa": EntityManifestEntry(
         entity_id="fabulousa",
@@ -276,11 +280,12 @@ ENTITY_MANIFEST: Dict[str, EntityManifestEntry] = {
     "the-lab": EntityManifestEntry(
         entity_id="the-lab",
         display_name="The Lab",
-        lead_ai="The Dr. & Slime",
+        lead_ai="The Dr. (Nikolai O'denhime)",
         pillar=Pillar.DEVELOPMENT_CODE,
         src_path="src/lab/",
         foundation_keys=[],
         status="planned",
+        lead_ais=["The Dr. (Nikolai O'denhime)", "Slime"],
     ),
     "think-tank": EntityManifestEntry(
         entity_id="think-tank",
@@ -331,7 +336,7 @@ ENTITY_MANIFEST: Dict[str, EntityManifestEntry] = {
     "docutari": EntityManifestEntry(
         entity_id="docutari",
         display_name="DocUtari",
-        lead_ai="To be Defined",
+        lead_ai="Fiddsy",
         pillar=Pillar.KNOWLEDGE,
         src_path="src/entities/locations/docutari/",
         foundation_keys=["paperless_ngx"],
@@ -341,7 +346,7 @@ ENTITY_MANIFEST: Dict[str, EntityManifestEntry] = {
     "the-basement": EntityManifestEntry(
         entity_id="the-basement",
         display_name="The Basement",
-        lead_ai="Gary Glowman (Glow-Worm)",
+        lead_ai="Gary Glowman",
         pillar=Pillar.KNOWLEDGE,
         src_path="src/basement/",
         foundation_keys=[],
@@ -441,10 +446,10 @@ ENTITY_MANIFEST: Dict[str, EntityManifestEntry] = {
         foundation_keys=["ollama", "qdrant"],
         status="planned",
     ),
-    "the-dutchy": EntityManifestEntry(
-        entity_id="the-dutchy",
-        display_name="The Dutchy",
-        lead_ai="Predictive lore",
+    "section-7": EntityManifestEntry(
+        entity_id="section-7",
+        display_name="Section 7",
+        lead_ai="The Dutchy",
         pillar=Pillar.KNOWLEDGE,
         src_path="src/research/",
         foundation_keys=["qdrant"],

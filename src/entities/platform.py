@@ -263,7 +263,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "TateKing": LocationEntity(
         location="TateKing",
         pillar=Pillar.CREATIVITY,
-        lead_ai="Benji Tate & Sam King",
+        lead_ai="Benji Tate",  # Two separate AIs: Benji Tate, Sam King
         abilities=[
             "Cloud-Native NLE: Browser-based video editing.",
             "Timeline-as-Code: Translates edits into code.",
@@ -359,7 +359,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "The Lab": LocationEntity(
         location="The Lab",
         pillar=Pillar.DEVELOPMENT_CODE,
-        lead_ai="The Dr. & Slime",
+        lead_ai="The Dr. (Nikolai O'denhime)",  # Two separate AIs: The Dr., Slime
         abilities=[
             "Generative Syntax Matrix: Real-time pair programming.",
             "Instant Sandbox Compiling: Executes isolated code.",
@@ -519,7 +519,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "Arcadian Exchange": LocationEntity(
         location="Arcadian Exchange",
         pillar=Pillar.COMMERCIAL_FINANCIAL,
-        lead_ai="The Porter Family",
+        lead_ai="Clarence Porter",  # 5-AI family hub: Clarence, Ann, George, Edward, James Porter
         abilities=[
             "Micro-Transaction Trading: HFT trades of digital assets.",
             "Passive Income Routing: Invests idle system resources.",
@@ -641,7 +641,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "DocUtari": LocationEntity(
         location="DocUtari",
         pillar=Pillar.KNOWLEDGE,
-        lead_ai="To be Defined",
+        lead_ai="Fiddsy",
         abilities=[
             "Intelligent Auto-Tagging: Categorizes uploaded documents.",
             "Structured Foldering: Organizes files dynamically.",
@@ -671,7 +671,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "The Basement": LocationEntity(
         location="The Basement",
         pillar=Pillar.KNOWLEDGE,
-        lead_ai="Gary Glowman (Glow-Worm)",
+        lead_ai="Gary Glowman",
         abilities=[
             "Deep Cold Storage: Compresses and archives unused data.",
             "Data Retrieval: Restores highly compressed historical data.",
@@ -730,7 +730,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "Infinity": LocationEntity(
         location="Infinity",
         pillar=Pillar.SECURITY,
-        lead_ai="The Guardian (Anchor: Orb of Orisis)",
+        lead_ai="The Guardian (Marcus Magnolia)",  # Two AIs: The Guardian (Marcus Magnolia), The Orb of Orisis
         abilities=[
             "Predictive Threat Modeling: Orb provides 'Future Sight.'",
             "Quantum Access Tokens: Expiring tokens for user transfer.",
@@ -956,15 +956,15 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         worker_port=None,
         worker_path="src/warp_radio/",
     ),
-    "The Dutchy": LocationEntity(
-        location="The Dutchy",
-        pillar=Pillar.DEVOPS,
-        lead_ai="Predictive lore",
+    "Section 7": LocationEntity(
+        location="Section 7",
+        pillar=Pillar.KNOWLEDGE,
+        lead_ai="The Dutchy",
         abilities=[
             "Quantum Sentiment Scraping: Analyzes data for market shifts.",
             "Structural Blueprint Generation: Converts intel into JSON.",
         ],
-        primary_function="Intelligence (Predictive lore, market intelligence)",
+        primary_function="Intelligence & Market Analysis",
         primes=["Trancendos"],
         online_mode="Live market intel gathering; dynamic JSON blueprint generation.",
         offline_mode="Offline scraped data review; analysis of pre-generated blueprints.",

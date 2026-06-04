@@ -322,7 +322,7 @@ ENTITY_FOUNDATION_MAP: Dict[str, List[str]] = {
     "imind":                ["ollama"],
     "resonate":             ["ollama"],
     "taimra":               ["ollama", "qdrant"],
-    "the-dutchy":           ["qdrant"],
+    "section-7":            ["qdrant"],
 }
 
 

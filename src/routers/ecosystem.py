@@ -123,7 +123,7 @@ PILLARS = [
         "name": "Commercial & Financial",
         "color": "#F97316",
         "hubs": [
-            "the-dutchy",
+            "section-7",
             "royal-bank-of-arcadia",
             "arcadian-exchange",
             "the-artifactory",
@@ -187,7 +187,7 @@ HUB_COLORS: Dict[str, str] = {
     "turings-hub": "#34D399",
     "chronosphere": "#A78BFA",
     "the-citadel": "#EF4444",
-    "the-dutchy": "#F97316",
+    "section-7": "#F97316",
     "the-studio": "#F59E0B",
     "imaginarium": "#FBBF24",
     "tranquility": "#EC4899",

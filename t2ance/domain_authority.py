@@ -47,7 +47,7 @@ DOMAIN_ENTITY_MAP: Dict[PrimeDomain, List[str]] = {
     ],
     PrimeDomain.KNOWLEDGE: [
         "the-library", "the-academy", "docutari", "the-basement",
-        "turings-hub", "the-dutchy",
+        "turings-hub", "section-7",
     ],
     PrimeDomain.SECURITY: [
         "cryptex", "the-void", "the-lighthouse", "the-ice-box",
