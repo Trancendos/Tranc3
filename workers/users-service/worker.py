@@ -38,7 +38,7 @@ from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger("tranc3.workers.users-service")
 
-DATABASE_PATH = "/data/users.db"
+DATABASE_PATH = os.environ.get("USERS_DATABASE_PATH", "/data/users.db")
 
 # ---------------------------------------------------------------------------
 # Pydantic models

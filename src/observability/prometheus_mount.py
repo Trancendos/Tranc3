@@ -18,7 +18,9 @@ def _ensure_worker_info_metric(service_name: str) -> None:
     if service_name in _REGISTERED:
         return
     try:
-        from prometheus_client import Gauge
+        from prometheus_client import Gauge, REGISTRY
+        if "tranc3_worker_up" in REGISTRY._names_to_collectors:
+            REGISTRY.unregister(REGISTRY._names_to_collectors["tranc3_worker_up"])
 
         Gauge(
             "tranc3_worker_up",
