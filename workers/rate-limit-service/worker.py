@@ -261,8 +261,10 @@ async def update_policy(name: str, req: PolicyUpdate):
         if not row:
             raise HTTPException(status_code=404, detail="Policy not found")
         # Allowlist prevents any non-schema key from reaching the SQL string.
-        _updatable = frozenset({"capacity", "refill_rate", "description"})
-        updates = {k: v for k, v in req.model_dump(exclude_none=True).items() if k in _updatable}
+        _UPDATABLE = frozenset({"capacity", "refill_rate", "description"})
+        updates = {
+            k: v for k, v in req.model_dump(exclude_none=True).items() if k in _UPDATABLE
+        }
         if updates:
             set_clause = ", ".join(f"{k} = ?" for k in updates)  # keys are allowlisted
             conn.execute(
