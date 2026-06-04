@@ -36,6 +36,7 @@ _blueprint_engine = BlueprintEngine()
 
 
 def get_registry() -> PlatformRegistry:
+    """Return the module-level PlatformRegistry singleton, creating it on first call."""
     global _registry
     if _registry is None:
         _registry = PlatformRegistry()
@@ -43,6 +44,7 @@ def get_registry() -> PlatformRegistry:
 
 
 def get_loop() -> MapeKLoop:
+    """Return the module-level MapeKLoop singleton, creating it on first call."""
     global _loop
     if _loop is None:
         _loop = MapeKLoop(registry=get_registry())
@@ -60,6 +62,8 @@ def get_enforcer() -> ZeroCostEnforcer:
 
 
 class BlueprintRequest(BaseModel):
+    """Request body for POST /master/blueprints/generate."""
+
     name: str
     blueprint_type: BlueprintType = BlueprintType.FASTAPI_WORKER
     port: int = 8000

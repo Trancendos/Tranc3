@@ -26,6 +26,8 @@ logger = logging.getLogger(__name__)
 
 
 class PlatformCategory(str, Enum):
+    """Functional category of a zero-cost platform."""
+
     HOSTING = "hosting"
     AI_LLM = "ai_llm"
     DATABASE = "database"
@@ -37,6 +39,8 @@ class PlatformCategory(str, Enum):
 
 
 class PlatformHealth(str, Enum):
+    """Operational health state of a platform."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     EXHAUSTED = "exhausted"  # quota used up
@@ -60,7 +64,7 @@ class QuotaLimits:
 
 @dataclass
 class PlatformUsage:
-    """Current usage snapshot for a platform."""
+    """Rolling usage counters for a platform, compared against QuotaLimits."""
 
     requests_this_month: int = 0
     requests_this_minute: int = 0
@@ -99,6 +103,7 @@ class Platform:
         return max(ratios) if ratios else 0.0
 
     def is_available(self) -> bool:
+        """Return True if the platform is enabled, healthy, and below 90% utilisation."""
         return (
             self.enabled
             and self.health not in (PlatformHealth.EXHAUSTED, PlatformHealth.OFFLINE)
@@ -117,10 +122,12 @@ class PlatformRegistry:
     """
 
     def __init__(self) -> None:
+        """Initialise the registry and populate it with default free-tier platforms."""
         self._platforms: Dict[str, Platform] = {}
         self._build_default_registry()
 
     def _build_default_registry(self) -> None:
+        """Populate _platforms with the canonical set of free-tier vendor entries."""
         entries: List[Platform] = [
             # ---- AI / LLM ----
             Platform(
@@ -315,21 +322,25 @@ class PlatformRegistry:
     # ------------------------------------------------------------------
 
     def get(self, name: str) -> Optional[Platform]:
+        """Return the Platform with *name*, or None if not registered."""
         return self._platforms.get(name)
 
     def all_for(self, category: PlatformCategory) -> List[Platform]:
+        """Return all platforms in *category*, sorted by ascending priority."""
         return sorted(
             [p for p in self._platforms.values() if p.category == category],
             key=lambda p: p.priority,
         )
 
     def best_for(self, category: PlatformCategory) -> Optional[Platform]:
+        """Return the highest-priority available platform in *category*, or None."""
         for p in self.all_for(category):
             if p.is_available():
                 return p
         return None
 
     def snapshot(self) -> Dict[str, Any]:
+        """Return a serialisable snapshot of all platform states and utilisation."""
         return {
             name: {
                 "category": p.category.value,
@@ -346,23 +357,27 @@ class PlatformRegistry:
     # ------------------------------------------------------------------
 
     def mark_exhausted(self, name: str) -> None:
+        """Mark *name* as quota-exhausted; the enforcer will rotate away from it."""
         p = self._platforms.get(name)
         if p:
             p.health = PlatformHealth.EXHAUSTED
             logger.warning("Platform %s marked EXHAUSTED — will rotate to fallback", name)
 
     def mark_healthy(self, name: str) -> None:
+        """Reset *name* to HEALTHY after it has recovered from exhaustion or downtime."""
         p = self._platforms.get(name)
         if p:
             p.health = PlatformHealth.HEALTHY
 
     def mark_offline(self, name: str) -> None:
+        """Mark *name* as unreachable (network-level failure, not quota)."""
         p = self._platforms.get(name)
         if p:
             p.health = PlatformHealth.OFFLINE
             logger.warning("Platform %s marked OFFLINE", name)
 
     def record_requests(self, name: str, count: int = 1) -> None:
+        """Increment monthly and per-minute request counters for *name* by *count*."""
         p = self._platforms.get(name)
         if p:
             p.usage.requests_this_month += count
@@ -370,6 +385,7 @@ class PlatformRegistry:
             p.usage.last_updated = time.monotonic()
 
     def record_tokens(self, name: str, tokens: int) -> None:
+        """Increment daily and per-minute token counters for *name* by *tokens*."""
         p = self._platforms.get(name)
         if p:
             p.usage.tokens_used_today += tokens
