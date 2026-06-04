@@ -74,7 +74,17 @@ class PlatformUsage:
     tokens_used_today: int = 0
     tokens_used_this_minute: int = 0
     last_updated: float = field(default_factory=time.monotonic)
+    # Timestamp marking the start of the current per-minute window; used to
+    # detect when the 60-second window has expired so counters can be reset.
+    minute_window_start: float = field(default_factory=time.monotonic)
     custom: Dict[str, Any] = field(default_factory=dict)
+
+    def reset_minute_window_if_stale(self, now: float) -> None:
+        """Reset per-minute counters if 60 seconds have elapsed since the window started."""
+        if now - self.minute_window_start >= 60.0:
+            self.requests_this_minute = 0
+            self.tokens_used_this_minute = 0
+            self.minute_window_start = now
 
 
 @dataclass
@@ -93,6 +103,7 @@ class Platform:
 
     def utilisation_pct(self) -> float:
         """Estimate quota utilisation 0.0–1.0."""
+        self.usage.reset_minute_window_if_stale(time.monotonic())
         ratios: List[float] = []
         if self.quota.requests_per_month:
             ratios.append(self.usage.requests_this_month / self.quota.requests_per_month)
@@ -388,14 +399,18 @@ class PlatformRegistry:
         """Increment monthly and per-minute request counters for *name* by *count*."""
         p = self._platforms.get(name)
         if p:
+            now = time.monotonic()
+            p.usage.reset_minute_window_if_stale(now)
             p.usage.requests_this_month += count
             p.usage.requests_this_minute += count
-            p.usage.last_updated = time.monotonic()
+            p.usage.last_updated = now
 
     def record_tokens(self, name: str, tokens: int) -> None:
         """Increment daily and per-minute token counters for *name* by *tokens*."""
         p = self._platforms.get(name)
         if p:
+            now = time.monotonic()
+            p.usage.reset_minute_window_if_stale(now)
             p.usage.tokens_used_today += tokens
             p.usage.tokens_used_this_minute += tokens
-            p.usage.last_updated = time.monotonic()
+            p.usage.last_updated = now
