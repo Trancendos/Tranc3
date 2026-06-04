@@ -75,7 +75,11 @@ class TextEncoder(_TorchRequiredMixin, nn.Module if nn is not None else object):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, d_model, padding_idx=0)
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model, nhead, d_model * 4, dropout=0.1, batch_first=True,
+            d_model,
+            nhead,
+            d_model * 4,
+            dropout=0.1,
+            batch_first=True,
         )
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
         self.pool = nn.AdaptiveAvgPool1d(1)

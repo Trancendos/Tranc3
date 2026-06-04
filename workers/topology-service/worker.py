@@ -185,7 +185,10 @@ def _get_current_mode(conn: sqlite3.Connection) -> str:
 
 
 def _set_current_mode(
-    conn: sqlite3.Connection, mode: str, reason: str = "", triggered_by: str = "manual",
+    conn: sqlite3.Connection,
+    mode: str,
+    reason: str = "",
+    triggered_by: str = "manual",
 ) -> None:
     now = _now()
     prev = _get_current_mode(conn)
@@ -260,7 +263,8 @@ async def switch_mode(body: ModeSwitchRequest):
         target = TopologyMode(body.mode)
     except ValueError:
         raise HTTPException(
-            400, f"Invalid mode '{body.mode}'. Must be one of {[m.value for m in TopologyMode]}",
+            400,
+            f"Invalid mode '{body.mode}'. Must be one of {[m.value for m in TopologyMode]}",
         ) from None
 
     conn = _get_db()
@@ -274,7 +278,8 @@ async def switch_mode(body: ModeSwitchRequest):
 async def get_mode_history(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM topology_history ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset),
+        "SELECT * FROM topology_history ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -319,7 +324,9 @@ async def register_node(body: NodeRegister):
 
 @_router.get("/nodes")
 async def list_nodes(
-    status: Optional[str] = None, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
+    status: Optional[str] = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ):
     conn = _get_db()
     q = "SELECT * FROM node_health WHERE 1=1"
@@ -388,7 +395,8 @@ async def create_migration(body: MigrationCreate):
 async def list_migrations(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM migrations ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset),
+        "SELECT * FROM migrations ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]

@@ -215,5 +215,6 @@ class DBUserManager:
             errors.append("one number")
         if errors:
             raise HTTPException(
-                status_code=400, detail=f"Password must contain: {', '.join(errors)}",
+                status_code=400,
+                detail=f"Password must contain: {', '.join(errors)}",
             )

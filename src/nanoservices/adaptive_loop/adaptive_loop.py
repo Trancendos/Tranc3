@@ -469,7 +469,9 @@ class AdaptiveLoopEngine:
         return improvements
 
     def _adapt_policies(
-        self, observations: List[Observation], improvements: Dict[str, float],
+        self,
+        observations: List[Observation],
+        improvements: Dict[str, float],
     ) -> None:
         """Adapt internal policies based on observations and improvements."""
         # Adjust cycle interval based on activity level

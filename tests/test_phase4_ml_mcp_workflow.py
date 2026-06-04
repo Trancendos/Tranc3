@@ -379,10 +379,16 @@ class TestSemanticKnowledgeGraph:
 
         async def _test():
             svc = KnowledgeNode(
-                label="ServiceA", semantic_type="service", tags={"api"}, confidence=0.9,
+                label="ServiceA",
+                semantic_type="service",
+                tags={"api"},
+                confidence=0.9,
             )
             dep = KnowledgeNode(
-                label="Database", semantic_type="storage", tags={"db"}, confidence=0.85,
+                label="Database",
+                semantic_type="storage",
+                tags={"db"},
+                confidence=0.85,
             )
             sid = await kg.add_node(svc)
             did = await kg.add_node(dep)

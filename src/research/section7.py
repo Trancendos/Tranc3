@@ -110,7 +110,8 @@ class Section7:
             findings.append({"source": "cryptex", "data": cx_stats})
             sources.append("cryptex")
             high_signals = cx_stats.get("by_severity", {}).get(
-                ThreatSeverity.HIGH.value, 0,
+                ThreatSeverity.HIGH.value,
+                0,
             ) + cx_stats.get("by_severity", {}).get(ThreatSeverity.CRITICAL.value, 0)
             if high_signals > 0:
                 recommendations.append(
@@ -212,7 +213,9 @@ class Section7:
         return self._reports.get(report_id)
 
     def recent(
-        self, limit: int = 10, report_type: Optional[ReportType] = None,
+        self,
+        limit: int = 10,
+        report_type: Optional[ReportType] = None,
     ) -> List[ResearchReport]:
         reports = list(self._reports.values())
         if report_type:

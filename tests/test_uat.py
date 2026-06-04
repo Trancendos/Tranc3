@@ -145,7 +145,8 @@ class TestObservabilityJourney:
             from src.workflow.executor import event_bus
 
             await event_bus.publish(
-                "workflow.started", {"workflow_id": "uat-wf", "workflow_name": "UAT"},
+                "workflow.started",
+                {"workflow_id": "uat-wf", "workflow_name": "UAT"},
             )
             await asyncio.sleep(0)
 

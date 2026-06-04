@@ -79,7 +79,9 @@ class User(Base):
 
     # Relationships
     conversations = relationship(
-        "Conversation", back_populates="user", cascade="all, delete-orphan",
+        "Conversation",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
     api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
     feedback = relationship("Feedback", back_populates="user")

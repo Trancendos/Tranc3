@@ -67,7 +67,10 @@ class RotaryEmbedding(nn.Module if nn is not None else object):
         return torch.cat([-x2, x1], dim=-1)
 
     def forward(
-        self, q: torch.Tensor, k: torch.Tensor, seq_len: int,
+        self,
+        q: torch.Tensor,
+        k: torch.Tensor,
+        seq_len: int,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         cos = self.cos_cache[:, :, :seq_len, :]
         sin = self.sin_cache[:, :, :seq_len, :]

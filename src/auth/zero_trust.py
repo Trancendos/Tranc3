@@ -59,13 +59,16 @@ class ZeroTrustOptions(BaseModel):
 
     mfa_routes: list[str] = Field(default_factory=list, description="Routes requiring MFA")
     healthy_device_routes: list[str] = Field(
-        default_factory=list, description="Routes requiring healthy device",
+        default_factory=list,
+        description="Routes requiring healthy device",
     )
     allowed_countries: list[str] = Field(
-        default_factory=list, description="ISO 3166-1 alpha-2 allowed countries",
+        default_factory=list,
+        description="ISO 3166-1 alpha-2 allowed countries",
     )
     blocked_countries: list[str] = Field(
-        default_factory=list, description="ISO 3166-1 alpha-2 blocked countries",
+        default_factory=list,
+        description="ISO 3166-1 alpha-2 blocked countries",
     )
     min_risk_score: int = Field(default=0, ge=0, le=100, description="Minimum risk score to allow")
     enforce_on_all_routes: bool = False
@@ -188,7 +191,8 @@ class ZeroTrustMiddleware:
 
         # Check MFA routes
         if path in self.options.mfa_routes or self._path_matches_patterns(
-            path, self.options.mfa_routes,
+            path,
+            self.options.mfa_routes,
         ):
             if not context.mfa_verified:
                 if not (
@@ -200,7 +204,8 @@ class ZeroTrustMiddleware:
 
         # Check healthy device routes
         if path in self.options.healthy_device_routes or self._path_matches_patterns(
-            path, self.options.healthy_device_routes,
+            path,
+            self.options.healthy_device_routes,
         ):
             if context.device_posture != DevicePostureStatus.HEALTHY:
                 context.access_policy = AccessPolicy.DENY

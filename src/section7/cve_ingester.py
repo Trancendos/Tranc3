@@ -120,7 +120,8 @@ class NvdFeedIngestor:
         # Description (prefer English)
         descs = cve_node.get("description", {}).get("description_data", [])
         description = next(
-            (d["value"] for d in descs if d.get("lang") == "en"), "No description available.",
+            (d["value"] for d in descs if d.get("lang") == "en"),
+            "No description available.",
         )
 
         # CVSS v3 preferred, fall back to v2
@@ -414,9 +415,11 @@ class OsvIngestor:
             try:
                 # Correct OSV payload structure — POST body must be JSON with
                 # a "package" key containing "ecosystem"; NOT a raw string.
-                payload = json.dumps({
-                    "package": {"ecosystem": ecosystem},
-                }).encode("utf-8")
+                payload = json.dumps(
+                    {
+                        "package": {"ecosystem": ecosystem},
+                    }
+                ).encode("utf-8")
                 req = _ur.Request(
                     self.OSV_QUERY_URL,
                     data=payload,
@@ -474,21 +477,24 @@ class OsvIngestor:
                     details = vuln.get("details", "")
                     description = summary or details[:300] or f"OSV vulnerability {vuln_id}"
 
-                    records.append(CveRecord(
-                        cve_id=cve_id,
-                        description=description,
-                        severity=severity,
-                        cvss_score=cvss_score,
-                        source="osv",
-                        tags=[ecosystem.lower()],
-                        published=vuln.get("published", ""),
-                        raw=vuln,
-                    ))
+                    records.append(
+                        CveRecord(
+                            cve_id=cve_id,
+                            description=description,
+                            severity=severity,
+                            cvss_score=cvss_score,
+                            source="osv",
+                            tags=[ecosystem.lower()],
+                            published=vuln.get("published", ""),
+                            raw=vuln,
+                        )
+                    )
 
             except Exception as exc:
                 logger.debug(
                     "section7.cve_ingester: OSV fetch failed for ecosystem %s: %s",
-                    ecosystem, exc,
+                    ecosystem,
+                    exc,
                 )
 
         return records

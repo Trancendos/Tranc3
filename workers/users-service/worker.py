@@ -580,7 +580,8 @@ async def _dispatch_reset_email(user_id: str, email: str, token: str) -> None:
 async def request_password_reset(body: PasswordResetRequest, background_tasks: BackgroundTasks):
     """Generate a password-reset token and dispatch a reset email via notifications-service."""
     row = db.execute(
-        "SELECT * FROM users WHERE email = ? AND is_active = 1", (str(body.email),),
+        "SELECT * FROM users WHERE email = ? AND is_active = 1",
+        (str(body.email),),
     ).fetchone()
     if not row:
         # Don't leak user existence — respond identically for unknown emails

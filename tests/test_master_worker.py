@@ -130,8 +130,13 @@ class TestZeroCostEnforcer:
     def test_zero_cost_assertion_passes_clean_env(self):
         e = ZeroCostEnforcer()
         # Ensure env vars are not set
-        for var in ("AZURE_TRAINING_ENABLED", "CF_DEPLOY_WORKERS",
-                    "USE_GITHUB_ACTIONS", "OPENAI_API_KEY", "BUGZY_API_KEY"):
+        for var in (
+            "AZURE_TRAINING_ENABLED",
+            "CF_DEPLOY_WORKERS",
+            "USE_GITHUB_ACTIONS",
+            "OPENAI_API_KEY",
+            "BUGZY_API_KEY",
+        ):
             os.environ.pop(var, None)
         result = e.assert_zero_cost()
         assert result.passed is True
@@ -278,7 +283,9 @@ class TestBlueprintEngine:
 
 class TestMapeKLoop:
     def _make_snapshot(
-        self, healthy: int = 5, unhealthy: List[str] | None = None,
+        self,
+        healthy: int = 5,
+        unhealthy: List[str] | None = None,
     ) -> SystemSnapshot:
         unhealthy = unhealthy or []
         metrics = [
@@ -387,10 +394,20 @@ class TestMapeKLoop:
 @pytest.fixture(autouse=True)
 def clean_env():
     """Ensure cost-violation env vars are cleared before each test."""
-    for var in ("AZURE_TRAINING_ENABLED", "CF_DEPLOY_WORKERS",
-                "USE_GITHUB_ACTIONS", "OPENAI_API_KEY", "BUGZY_API_KEY"):
+    for var in (
+        "AZURE_TRAINING_ENABLED",
+        "CF_DEPLOY_WORKERS",
+        "USE_GITHUB_ACTIONS",
+        "OPENAI_API_KEY",
+        "BUGZY_API_KEY",
+    ):
         os.environ.pop(var, None)
     yield
-    for var in ("AZURE_TRAINING_ENABLED", "CF_DEPLOY_WORKERS",
-                "USE_GITHUB_ACTIONS", "OPENAI_API_KEY", "BUGZY_API_KEY"):
+    for var in (
+        "AZURE_TRAINING_ENABLED",
+        "CF_DEPLOY_WORKERS",
+        "USE_GITHUB_ACTIONS",
+        "OPENAI_API_KEY",
+        "BUGZY_API_KEY",
+    ):
         os.environ.pop(var, None)

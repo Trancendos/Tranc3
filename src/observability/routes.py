@@ -142,6 +142,7 @@ async def observatory_record(request: Request):
         session_id=body.get("session_id"),
     )
     logger.debug(
-        "observatory.record via HTTP: %s", sanitize_for_log(event_type),
+        "observatory.record via HTTP: %s",
+        sanitize_for_log(event_type),
     )  # codeql[py/cleartext-logging]
     return {"id": event.id, "timestamp": event.timestamp}

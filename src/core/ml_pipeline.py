@@ -286,7 +286,8 @@ class MLPipeline:
                     if entry and isinstance(entry.value, str):
                         prior_context = entry.value
                         logger.debug(
-                            "Pipeline: retrieved prior context (session=%s)", request.session_id,
+                            "Pipeline: retrieved prior context (session=%s)",
+                            request.session_id,
                         )
             except Exception as exc:
                 logger.debug("Pipeline stage1 (memory retrieve) error: %s", exc)
@@ -323,7 +324,8 @@ class MLPipeline:
                             m = int(adapted_params["max_tokens"])
                             request.max_tokens = max(64, min(4096, m))
                         logger.debug(
-                            "Pipeline: adapted params (confidence=%.2f)", result.confidence,
+                            "Pipeline: adapted params (confidence=%.2f)",
+                            result.confidence,
                         )
             except Exception as exc:
                 logger.debug("Pipeline stage2 (meta_learn) error: %s", exc)

@@ -39,7 +39,7 @@ class PlatformCategory(str, Enum):
 class PlatformHealth(str, Enum):
     HEALTHY = "healthy"
     DEGRADED = "degraded"
-    EXHAUSTED = "exhausted"   # quota used up
+    EXHAUSTED = "exhausted"  # quota used up
     OFFLINE = "offline"
     UNKNOWN = "unknown"
 
@@ -47,6 +47,7 @@ class PlatformHealth(str, Enum):
 @dataclass
 class QuotaLimits:
     """Free-tier quota limits for a platform."""
+
     requests_per_month: Optional[int] = None
     requests_per_minute: Optional[int] = None
     bandwidth_gb_month: Optional[float] = None
@@ -60,6 +61,7 @@ class QuotaLimits:
 @dataclass
 class PlatformUsage:
     """Current usage snapshot for a platform."""
+
     requests_this_month: int = 0
     requests_this_minute: int = 0
     bandwidth_gb_used: float = 0.0
@@ -74,13 +76,14 @@ class PlatformUsage:
 @dataclass
 class Platform:
     """A zero-cost vendor/platform entry."""
+
     name: str
     category: PlatformCategory
-    priority: int                          # lower = preferred
+    priority: int  # lower = preferred
     health: PlatformHealth = PlatformHealth.UNKNOWN
     quota: QuotaLimits = field(default_factory=QuotaLimits)
     usage: PlatformUsage = field(default_factory=PlatformUsage)
-    endpoint_env: Optional[str] = None    # env var holding the URL
+    endpoint_env: Optional[str] = None  # env var holding the URL
     enabled: bool = True
     notes: str = ""
 
@@ -125,7 +128,7 @@ class PlatformRegistry:
                 category=PlatformCategory.AI_LLM,
                 priority=1,
                 health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(),          # unlimited — runs locally
+                quota=QuotaLimits(),  # unlimited — runs locally
                 endpoint_env="OLLAMA_URL",
                 notes="Local — zero cost, zero latency, zero quota",
             ),
@@ -198,7 +201,7 @@ class PlatformRegistry:
                 category=PlatformCategory.HOSTING,
                 priority=4,
                 health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(),   # truly always-free
+                quota=QuotaLimits(),  # truly always-free
                 endpoint_env="OCI_CLI_KEY_FILE",
                 notes="Oracle Always Free — 4 OCPU / 24 GB ARM64, unlimited",
             ),
@@ -245,7 +248,7 @@ class PlatformRegistry:
                 category=PlatformCategory.CI_CD,
                 priority=1,
                 health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(),   # self-hosted, unlimited
+                quota=QuotaLimits(),  # self-hosted, unlimited
                 endpoint_env="FORGEJO_URL",
                 notes="Self-hosted Forgejo at trancendos.com/the-workshop — primary CI",
             ),
@@ -255,7 +258,7 @@ class PlatformRegistry:
                 category=PlatformCategory.MONITORING,
                 priority=1,
                 health=PlatformHealth.UNKNOWN,
-                quota=QuotaLimits(),   # self-hosted
+                quota=QuotaLimits(),  # self-hosted
                 endpoint_env="SIGNOZ_URL",
                 notes="Self-hosted SigNoz OpenTelemetry APM",
             ),

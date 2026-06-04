@@ -224,7 +224,8 @@ class StateSynchronizer:
             for eid, src_entity in src_state.entities.items():
                 if eid in tgt_state.entities:
                     if src_entity.get("state_version", 0) != tgt_state.entities[eid].get(
-                        "state_version", 0,
+                        "state_version",
+                        0,
                     ):
                         conflicts += 1
                 synced_entities += 1

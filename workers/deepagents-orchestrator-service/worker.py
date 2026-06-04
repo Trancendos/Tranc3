@@ -220,7 +220,10 @@ def _now() -> float:
 
 
 def _log(
-    agent_id: str | None, task_id: str | None, action: str, details: dict | None = None,
+    agent_id: str | None,
+    task_id: str | None,
+    action: str,
+    details: dict | None = None,
 ) -> None:
     db = get_db()
     db.execute(
@@ -286,7 +289,8 @@ def list_agents(status: str | None = None):
     db = get_db()
     if status:
         rows = db.execute(
-            "SELECT * FROM agents WHERE status=? ORDER BY created_at DESC", (status,),
+            "SELECT * FROM agents WHERE status=? ORDER BY created_at DESC",
+            (status,),
         ).fetchall()
     else:
         rows = db.execute("SELECT * FROM agents ORDER BY created_at DESC").fetchall()
@@ -384,7 +388,8 @@ def create_task(body: TaskCreate):
     db = get_db()
     if body.parent_task_id:
         parent = db.execute(
-            "SELECT delegation_depth FROM tasks WHERE id=?", (body.parent_task_id,),
+            "SELECT delegation_depth FROM tasks WHERE id=?",
+            (body.parent_task_id,),
         ).fetchone()
         if parent:
             depth = parent["delegation_depth"] + 1
@@ -570,7 +575,8 @@ def list_delegations(task_id: str | None = None):
     db = get_db()
     if task_id:
         rows = db.execute(
-            "SELECT * FROM delegations WHERE task_id=? ORDER BY created_at DESC", (task_id,),
+            "SELECT * FROM delegations WHERE task_id=? ORDER BY created_at DESC",
+            (task_id,),
         ).fetchall()
     else:
         rows = db.execute("SELECT * FROM delegations ORDER BY created_at DESC").fetchall()
@@ -624,7 +630,8 @@ def list_skills(category: str | None = None):
     db = get_db()
     if category:
         rows = db.execute(
-            "SELECT * FROM skills WHERE category=? ORDER BY name", (category,),
+            "SELECT * FROM skills WHERE category=? ORDER BY name",
+            (category,),
         ).fetchall()
     else:
         rows = db.execute("SELECT * FROM skills ORDER BY name").fetchall()

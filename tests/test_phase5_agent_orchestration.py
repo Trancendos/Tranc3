@@ -623,7 +623,10 @@ class TestMemoryStream:
 
         now = time.time()
         mem = EpisodicMemory(
-            content="Important Python task", importance=0.9, tags={"coding"}, timestamp=now,
+            content="Important Python task",
+            importance=0.9,
+            tags={"coding"},
+            timestamp=now,
         )
         score = mem.combined_score(query="Python", now=now)
         assert score > 0.0

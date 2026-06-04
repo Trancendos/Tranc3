@@ -144,13 +144,16 @@ class HolographicMemoryCrystal:
             "temporal": torch.tensor(real[0, 0, 0, :, 0, 0].flatten(), dtype=torch.float32),
             "frequency": torch.tensor(real[0, 0, 0, 0, :, 0].flatten(), dtype=torch.float32),
             "consciousness": torch.tensor(
-                np.abs(reconstruction[0, 0, 0, 0, 0, :]).flatten(), dtype=torch.float32,
+                np.abs(reconstruction[0, 0, 0, 0, 0, :]).flatten(),
+                dtype=torch.float32,
             ),
             "raw": torch.tensor(real.flatten()[:768], dtype=torch.float32),
         }
 
     def _create_probe_beam(
-        self, partial_cue: torch.Tensor, dimensions_known: List[str],
+        self,
+        partial_cue: torch.Tensor,
+        dimensions_known: List[str],
     ) -> np.ndarray:
         """Create a probe beam from partial cue for associative recall."""
         probe = np.ones(self.dimensions, dtype=np.complex128)
@@ -193,7 +196,10 @@ class HolographicMemoryCrystal:
         return hologram * self.reference_beam
 
     def _find_correlation_peaks(
-        self, correlations: np.ndarray, threshold: float = 0.1, max_peaks: int = 5,
+        self,
+        correlations: np.ndarray,
+        threshold: float = 0.1,
+        max_peaks: int = 5,
     ) -> List[tuple]:
         """Find peak correlation indices in the holographic correlation map."""
         magnitude = np.abs(correlations)

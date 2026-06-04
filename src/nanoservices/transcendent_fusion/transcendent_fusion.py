@@ -361,7 +361,9 @@ class FusionEngine:
                 if i == j:
                     continue
                 attended, quality = self.attention.compute_attention(
-                    embeddings[mod_q], embeddings[mod_k], embeddings[mod_k],
+                    embeddings[mod_q],
+                    embeddings[mod_k],
+                    embeddings[mod_k],
                 )
                 weight = quality
                 for k in range(min(len(fused), len(attended))):

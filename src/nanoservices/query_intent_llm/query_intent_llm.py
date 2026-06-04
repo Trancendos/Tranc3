@@ -177,12 +177,14 @@ class IntentParser:
 
     # Projection patterns
     PROJECTION_PATTERN = re.compile(
-        r"\b(show|select|get|display)\s+([\w\s,]+?)(?:\s+from|\s+where|\s+in|$)", re.IGNORECASE,
+        r"\b(show|select|get|display)\s+([\w\s,]+?)(?:\s+from|\s+where|\s+in|$)",
+        re.IGNORECASE,
     )
 
     # Filter patterns
     FILTER_PATTERN = re.compile(
-        r"\b(where|with|having|filter)\s+([\w\s<>=!]+?)(?:\s+and|\s+or|\s+join|$)", re.IGNORECASE,
+        r"\b(where|with|having|filter)\s+([\w\s<>=!]+?)(?:\s+and|\s+or|\s+join|$)",
+        re.IGNORECASE,
     )
 
     def classify_intent(self, text: str) -> Tuple[IntentCategory, float]:
@@ -453,7 +455,9 @@ class QueryIntentService:
         self._query_history: List[Dict[str, Any]] = []
 
     async def process_natural_language_query(
-        self, natural_language: str, context: Optional[Dict[str, Any]] = None,
+        self,
+        natural_language: str,
+        context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Process a natural language query end-to-end.
 

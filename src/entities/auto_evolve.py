@@ -101,7 +101,9 @@ class AutoEvolve:
     async def run(self) -> None:
         self._running = True
         logger.info(
-            "AutoEvolve started (%d entities, interval=%.0fs)", len(self._entities), self._interval,
+            "AutoEvolve started (%d entities, interval=%.0fs)",
+            len(self._entities),
+            self._interval,
         )
         while self._running:
             now = time.monotonic()

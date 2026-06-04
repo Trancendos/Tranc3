@@ -116,12 +116,18 @@ class VectorStore:
             return False
 
     def query(
-        self, embedding: List[float], top_k: int = 5, filter: Optional[Dict] = None,
+        self,
+        embedding: List[float],
+        top_k: int = 5,
+        filter: Optional[Dict] = None,
     ) -> List[Dict]:
         try:
             if self._backend_name == "pinecone":
                 results = self._backend.query(
-                    vector=embedding, top_k=top_k, include_metadata=True, filter=filter or {},
+                    vector=embedding,
+                    top_k=top_k,
+                    include_metadata=True,
+                    filter=filter or {},
                 )
                 return [
                     {"id": m.id, "score": m.score, "metadata": m.metadata} for m in results.matches

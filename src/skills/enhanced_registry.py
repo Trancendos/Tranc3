@@ -215,7 +215,8 @@ class EnhancedSkillRegistry:
         if self._embedder is not None:
             loop = asyncio.get_event_loop()
             query_vec = await loop.run_in_executor(
-                None, lambda: self._embedder.encode(query).tolist(),
+                None,
+                lambda: self._embedder.encode(query).tolist(),
             )
 
         candidates = [s for s in self.skills.values() if category is None or s.category == category]

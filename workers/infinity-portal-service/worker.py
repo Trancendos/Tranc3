@@ -108,7 +108,8 @@ AUTH_SERVICE_PORT = int(os.environ.get("AUTH_SERVICE_PORT", "8005"))
 AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL", f"http://localhost:{AUTH_SERVICE_PORT}")
 GATEWAY_SERVICE_PORT = int(os.environ.get("GATEWAY_SERVICE_PORT", "8040"))
 GATEWAY_SERVICE_URL = os.environ.get(
-    "GATEWAY_SERVICE_URL", f"http://localhost:{GATEWAY_SERVICE_PORT}",
+    "GATEWAY_SERVICE_URL",
+    f"http://localhost:{GATEWAY_SERVICE_PORT}",
 )
 
 logger = logging.getLogger("infinity-portal-service")
@@ -814,7 +815,8 @@ async def portal_login(request: Request, login: PortalLogin):
     try:
         fluid_route = await worker_kit.gateway.route(role, auth_result["user_id"])
         worker_kit.gateway.record_route_success(
-            fluid_route.target_location, (time.time() - t_start) * 1000,
+            fluid_route.target_location,
+            (time.time() - t_start) * 1000,
         )
     except Exception:
         pass

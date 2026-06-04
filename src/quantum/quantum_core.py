@@ -34,7 +34,10 @@ class NeuromorphicInterface:
         self.synaptic_plasticity = config.get("plasticity", "STDP")
 
     def create_spiking_network(
-        self, input_dim: int, hidden_layers: List[int], output_dim: int,
+        self,
+        input_dim: int,
+        hidden_layers: List[int],
+        output_dim: int,
     ) -> nn.ModuleList:
         class SpikingNeuron(nn.Module):
             def __init__(self, input_size, output_size, tau=10.0):
@@ -75,11 +78,13 @@ class QuantumNeuralCore:
         try:
             self.backend = AerSimulator(method="statevector")
             logger.info(
-                "QuantumNeuralCore initialised: %s qubits", sanitize_for_log(self.num_qubits),
+                "QuantumNeuralCore initialised: %s qubits",
+                sanitize_for_log(self.num_qubits),
             )
         except Exception as e:
             logger.warning(
-                "AerSimulator init failed: %s — falling back to classical", sanitize_for_log(e),
+                "AerSimulator init failed: %s — falling back to classical",
+                sanitize_for_log(e),
             )
             self.backend = None
 
@@ -126,7 +131,8 @@ class QuantumNeuralCore:
 
         except Exception as e:
             logger.warning(
-                "Quantum attention failed: %s — using classical fallback", sanitize_for_log(e),
+                "Quantum attention failed: %s — using classical fallback",
+                sanitize_for_log(e),
             )
             return self._classical_attention_fallback(input_state)
 

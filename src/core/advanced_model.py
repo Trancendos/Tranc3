@@ -28,7 +28,10 @@ except ImportError:  # torch is an optional heavy dependency
             pass
 
     _nn_stub = _types.SimpleNamespace(
-        Module=_FakeModule, Linear=_FakeModule, LayerNorm=_FakeModule, Dropout=_FakeModule,
+        Module=_FakeModule,
+        Linear=_FakeModule,
+        LayerNorm=_FakeModule,
+        Dropout=_FakeModule,
     )
     torch = _types.SimpleNamespace()  # type: ignore[assignment]
     nn = _nn_stub  # type: ignore[assignment]

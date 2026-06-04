@@ -173,7 +173,9 @@ class CKKSScheme:
             for i in range(max_len)
         ]
         return HECiphertext(
-            scheme=HEScheme.CKKS, data=result, noise_level=ct1.noise_level + ct2.noise_level,
+            scheme=HEScheme.CKKS,
+            data=result,
+            noise_level=ct1.noise_level + ct2.noise_level,
         )
 
     def multiply(self, ct1: HECiphertext, ct2: HECiphertext) -> HECiphertext:
@@ -183,7 +185,9 @@ class CKKSScheme:
             for i in range(max_len)
         ]
         return HECiphertext(
-            scheme=HEScheme.CKKS, data=result, noise_level=ct1.noise_level + ct2.noise_level + 0.1,
+            scheme=HEScheme.CKKS,
+            data=result,
+            noise_level=ct1.noise_level + ct2.noise_level + 0.1,
         )
 
 

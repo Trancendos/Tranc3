@@ -199,7 +199,11 @@ class GasService:
     name: str = ""
     properties: FluidProperties = field(
         default_factory=lambda: FluidProperties(
-            viscosity=0.1, density=0.2, compressibility=0.95, volatility=0.8, conductivity=0.9,
+            viscosity=0.1,
+            density=0.2,
+            compressibility=0.95,
+            volatility=0.8,
+            conductivity=0.9,
         ),
     )
     instances: int = 1

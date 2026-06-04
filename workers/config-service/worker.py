@@ -272,7 +272,8 @@ async def get_key(namespace: str, key: str):
     _ensure_ns(namespace)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT * FROM configs WHERE namespace = ? AND key = ?", (namespace, key),
+            "SELECT * FROM configs WHERE namespace = ? AND key = ?",
+            (namespace, key),
         ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Config key not found")
@@ -288,7 +289,8 @@ async def set_key(namespace: str, key: str, req: ConfigSet):
     str_value = json.dumps(req.value) if req.value_type == "json" else str(req.value)
     with get_conn() as conn:
         existing = conn.execute(
-            "SELECT version, value FROM configs WHERE namespace = ? AND key = ?", (namespace, key),
+            "SELECT version, value FROM configs WHERE namespace = ? AND key = ?",
+            (namespace, key),
         ).fetchone()
         if existing:
             version = existing["version"] + 1
@@ -315,7 +317,8 @@ async def delete_key(namespace: str, key: str):
     _ensure_ns(namespace)
     with get_conn() as conn:
         if not conn.execute(
-            "SELECT id FROM configs WHERE namespace = ? AND key = ?", (namespace, key),
+            "SELECT id FROM configs WHERE namespace = ? AND key = ?",
+            (namespace, key),
         ).fetchone():
             raise HTTPException(status_code=404, detail="Config key not found")
         conn.execute("DELETE FROM configs WHERE namespace = ? AND key = ?", (namespace, key))

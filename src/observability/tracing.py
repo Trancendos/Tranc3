@@ -203,7 +203,8 @@ class Tracer:
         if not conn:
             return []
         rows = conn.execute(
-            "SELECT * FROM spans WHERE trace_id=? ORDER BY start_time", (trace_id,),
+            "SELECT * FROM spans WHERE trace_id=? ORDER BY start_time",
+            (trace_id,),
         ).fetchall()
         return [dict(r) for r in rows]
 

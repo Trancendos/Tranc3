@@ -99,7 +99,8 @@ class CircuitBreaker:
         if self.state == CircuitState.HALF_OPEN:
             self.state = CircuitState.OPEN
             logger.warning(
-                "Circuit %s: HALF_OPEN → OPEN (failed during test)", sanitize_for_log(self.name),
+                "Circuit %s: HALF_OPEN → OPEN (failed during test)",
+                sanitize_for_log(self.name),
             )
         elif self._failure_count >= self.config.failure_threshold:
             self.state = CircuitState.OPEN
@@ -200,7 +201,9 @@ class ResilienceManager:
         self._bulkheads: Dict[str, Bulkhead] = {}
 
     def get_breaker(
-        self, name: str, config: Optional[CircuitBreakerConfig] = None,
+        self,
+        name: str,
+        config: Optional[CircuitBreakerConfig] = None,
     ) -> CircuitBreaker:
         """Get or create a circuit breaker"""
         if name not in self._breakers:
