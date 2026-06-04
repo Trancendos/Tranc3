@@ -312,7 +312,8 @@ async def get_metric(
     agg_fn = {"avg": "AVG", "sum": "SUM", "min": "MIN", "max": "MAX", "count": "COUNT"}[agg]
     with get_conn() as conn:
         row = conn.execute(
-            f"SELECT {agg_fn}(value) as result, COUNT(*) as samples FROM metrics {where}", params,
+            f"SELECT {agg_fn}(value) as result, COUNT(*) as samples FROM metrics {where}",
+            params,
         ).fetchone()
     return {"name": name, "aggregation": agg, "result": row["result"], "samples": row["samples"]}
 

@@ -433,7 +433,8 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
     plaintext = decrypt_secret(payload["ciphertext"], row["iv"], row["salt"], MASTER_KEY_SEED)
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     conn.execute(
-        "UPDATE void_secrets SET last_accessed_at = ? WHERE secret_id = ?", (now, secret_id),
+        "UPDATE void_secrets SET last_accessed_at = ? WHERE secret_id = ?",
+        (now, secret_id),
     )
     conn.execute(
         "INSERT INTO void_audit_log (audit_id, secret_id, action, actor_id, actor_type, success, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -493,7 +494,8 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
 
     conn = get_db()
     row = conn.execute(
-        "SELECT owner_id, r2_key FROM void_secrets WHERE secret_id = ?", (secret_id,),
+        "SELECT owner_id, r2_key FROM void_secrets WHERE secret_id = ?",
+        (secret_id,),
     ).fetchone()
     if not row:
         conn.close()
@@ -532,7 +534,8 @@ async def get_audit_log(secret_id: str, authorization: str | None = Header(None)
 
     conn = get_db()
     secret = conn.execute(
-        "SELECT owner_id FROM void_secrets WHERE secret_id = ?", (secret_id,),
+        "SELECT owner_id FROM void_secrets WHERE secret_id = ?",
+        (secret_id,),
     ).fetchone()
     if not secret:
         conn.close()

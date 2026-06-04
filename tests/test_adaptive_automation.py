@@ -692,7 +692,10 @@ class TestCircuitBreaker:
         from Dimensional.orchestration.health_monitor import CircuitBreaker, CircuitState
 
         cb = CircuitBreaker(
-            name="test-cb", failure_threshold=2, cooldown_seconds=0.05, success_threshold=2,
+            name="test-cb",
+            failure_threshold=2,
+            cooldown_seconds=0.05,
+            success_threshold=2,
         )
         cb.record_failure()
         cb.record_failure()
@@ -718,7 +721,10 @@ class TestCircuitBreaker:
         from Dimensional.orchestration.health_monitor import CircuitBreaker
 
         cb = CircuitBreaker(
-            name="test-cb", failure_threshold=2, cooldown_seconds=10.0, max_cooldown=300.0,
+            name="test-cb",
+            failure_threshold=2,
+            cooldown_seconds=10.0,
+            max_cooldown=300.0,
         )
         # First opening
         cb.record_failure()

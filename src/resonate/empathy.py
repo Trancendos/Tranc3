@@ -98,7 +98,8 @@ class Resonate:
         except Exception:
             pass  # nosec B110 — observation failure must not block escalation
         logger.warning(
-            "resonate: human escalation triggered for user=%s", sanitize_for_log(user_id),
+            "resonate: human escalation triggered for user=%s",
+            sanitize_for_log(user_id),
         )  # codeql[py/cleartext-logging]
         return {
             "escalated": True,

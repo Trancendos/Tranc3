@@ -415,7 +415,8 @@ class HILAChain:
         self._start_tier_timer(action_id)
 
         logger.info(
-            f"Action escalated: {action_id} → Tier {next_tier}" + (f" ({reason})" if reason else ""),
+            f"Action escalated: {action_id} → Tier {next_tier}"
+            + (f" ({reason})" if reason else ""),
         )
         self._emit(action_id, "escalated")
         return action

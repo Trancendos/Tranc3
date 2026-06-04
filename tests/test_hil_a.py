@@ -264,27 +264,51 @@ class TestSelfGoverningVotingSystem:
     def test_check_bypass_urgent_quorum(self):
         # Need 3 votes for URGENT
         self.voting.cast_vote(
-            "req-u1", "v1", Tier.PRIME, Vote.BYPASS, target_tier=Tier.ORCHESTRATOR,
+            "req-u1",
+            "v1",
+            Tier.PRIME,
+            Vote.BYPASS,
+            target_tier=Tier.ORCHESTRATOR,
         )
         self.voting.cast_vote(
-            "req-u1", "v2", Tier.PRIME, Vote.BYPASS, target_tier=Tier.ORCHESTRATOR,
+            "req-u1",
+            "v2",
+            Tier.PRIME,
+            Vote.BYPASS,
+            target_tier=Tier.ORCHESTRATOR,
         )
         assert self.voting.check_bypass("req-u1", UrgencyLevel.URGENT) is False  # Only 2
 
         self.voting.cast_vote(
-            "req-u1", "v3", Tier.PRIME, Vote.BYPASS, target_tier=Tier.ORCHESTRATOR,
+            "req-u1",
+            "v3",
+            Tier.PRIME,
+            Vote.BYPASS,
+            target_tier=Tier.ORCHESTRATOR,
         )
         assert self.voting.check_bypass("req-u1", UrgencyLevel.URGENT) is True  # 3 = quorum
 
     def test_check_bypass_critical_not_allowed(self):
         self.voting.cast_vote(
-            "req-c1", "v1", Tier.PRIME, Vote.BYPASS, target_tier=Tier.ORCHESTRATOR,
+            "req-c1",
+            "v1",
+            Tier.PRIME,
+            Vote.BYPASS,
+            target_tier=Tier.ORCHESTRATOR,
         )
         self.voting.cast_vote(
-            "req-c1", "v2", Tier.PRIME, Vote.BYPASS, target_tier=Tier.ORCHESTRATOR,
+            "req-c1",
+            "v2",
+            Tier.PRIME,
+            Vote.BYPASS,
+            target_tier=Tier.ORCHESTRATOR,
         )
         self.voting.cast_vote(
-            "req-c1", "v3", Tier.PRIME, Vote.BYPASS, target_tier=Tier.ORCHESTRATOR,
+            "req-c1",
+            "v3",
+            Tier.PRIME,
+            Vote.BYPASS,
+            target_tier=Tier.ORCHESTRATOR,
         )
         # Even with 3 votes, CRITICAL cannot be bypassed
         assert self.voting.check_bypass("req-c1", UrgencyLevel.CRITICAL) is False
@@ -299,7 +323,11 @@ class TestSelfGoverningVotingSystem:
         self.voting.cast_vote("req-vs", "v1", Tier.PRIME, Vote.APPROVE)
         self.voting.cast_vote("req-vs", "v2", Tier.AI, Vote.REJECT)
         self.voting.cast_vote(
-            "req-vs", "v3", Tier.PRIME, Vote.BYPASS, target_tier=Tier.ORCHESTRATOR,
+            "req-vs",
+            "v3",
+            Tier.PRIME,
+            Vote.BYPASS,
+            target_tier=Tier.ORCHESTRATOR,
         )
         summary = self.voting.get_vote_summary("req-vs")
         assert summary["total_votes"] == 3
@@ -427,7 +455,10 @@ class TestChainProtocol:
         )
         submitted = self.chain.submit(req)
         result = self.chain.reject(
-            submitted.request_id, "the_dr", Tier.PRIME, reason="Not justified",
+            submitted.request_id,
+            "the_dr",
+            Tier.PRIME,
+            reason="Not justified",
         )
         assert result.status == EnhancementStatus.REJECTED
 

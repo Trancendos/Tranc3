@@ -37,10 +37,12 @@ def _import_worker(module_dotted: str, file_path: Path):
 
 
 ws_mod = _import_worker(
-    "infinity_ws_worker", _TRANC3_ROOT / "workers" / "infinity-ws" / "worker.py",
+    "infinity_ws_worker",
+    _TRANC3_ROOT / "workers" / "infinity-ws" / "worker.py",
 )
 auth_mod = _import_worker(
-    "infinity_auth_worker", _TRANC3_ROOT / "workers" / "infinity-auth" / "worker.py",
+    "infinity_auth_worker",
+    _TRANC3_ROOT / "workers" / "infinity-auth" / "worker.py",
 )
 
 
@@ -459,7 +461,8 @@ class TestAuthDatabase:
         auth_db.commit()
 
         row = auth_db.execute(
-            "SELECT * FROM sessions WHERE refresh_token = ?", (refresh_token,),
+            "SELECT * FROM sessions WHERE refresh_token = ?",
+            (refresh_token,),
         ).fetchone()
         assert row is not None
         assert row["user_id"] == user_id
@@ -845,7 +848,8 @@ class TestInfinityAuthHTTPEndpoints:
 
         # Setup MFA — capture the TOTP secret so we can generate a valid code
         setup_resp = auth_client.post(
-            "/auth/mfa/setup", headers={"Authorization": f"Bearer {token}"},
+            "/auth/mfa/setup",
+            headers={"Authorization": f"Bearer {token}"},
         )
         totp_secret = setup_resp.json()["secret"]
         auth_client.post("/auth/mfa/enable", headers={"Authorization": f"Bearer {token}"})

@@ -441,7 +441,9 @@ class Population:
             return random.sample(self.organisms, min(2, len(self.organisms)))
 
     def crossover(
-        self, parent1: SyntheticOrganism, parent2: SyntheticOrganism,
+        self,
+        parent1: SyntheticOrganism,
+        parent2: SyntheticOrganism,
     ) -> SyntheticOrganism:
         """Genetic crossover between two organisms."""
         child_genome = []
@@ -579,10 +581,14 @@ class BioSyntheticEvolutionService:
         metabolism = MetabolicNetwork()
         metabolism.add_reaction("glycolysis", {"glucose": -1.0}, {"pyruvate": 2.0, "ATP": 2.0})
         metabolism.add_reaction(
-            "tca_cycle", {"pyruvate": -1.0}, {"CO2": 3.0, "ATP": 1.0, "NADH": 4.0},
+            "tca_cycle",
+            {"pyruvate": -1.0},
+            {"CO2": 3.0, "ATP": 1.0, "NADH": 4.0},
         )
         metabolism.add_reaction(
-            "oxidative_phosphorylation", {"NADH": -1.0, "O2": -0.5}, {"ATP": 2.5, "H2O": 1.0},
+            "oxidative_phosphorylation",
+            {"NADH": -1.0, "O2": -0.5},
+            {"ATP": 2.5, "H2O": 1.0},
         )
         metabolism.simulate_flux()
 
@@ -612,7 +618,9 @@ class BioSyntheticEvolutionService:
             )
             if org.metabolism is not None:
                 org.metabolism.add_reaction(
-                    "glycolysis", {"glucose": -1.0}, {"pyruvate": 2.0, "ATP": 2.0},
+                    "glycolysis",
+                    {"glucose": -1.0},
+                    {"pyruvate": 2.0, "ATP": 2.0},
                 )
                 org.metabolism.simulate_flux()
             org.evaluate_fitness()
@@ -636,7 +644,10 @@ class BioSyntheticEvolutionService:
         }
 
     def create_organism(
-        self, name: str, gene_count: int = 10, circuit_count: int = 1,
+        self,
+        name: str,
+        gene_count: int = 10,
+        circuit_count: int = 1,
     ) -> Dict[str, Any]:
         """Create a new synthetic organism."""
         genes = [

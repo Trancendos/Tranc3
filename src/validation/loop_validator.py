@@ -47,7 +47,8 @@ class CircuitBreaker:
             if time.time() - self._last_failure > self.recovery_timeout:
                 self._state = CircuitState.HALF_OPEN
                 logger.info(
-                    "Circuit %s: OPEN → HALF_OPEN (testing recovery)", sanitize_for_log(self.name),
+                    "Circuit %s: OPEN → HALF_OPEN (testing recovery)",
+                    sanitize_for_log(self.name),
                 )
         return self._state
 
@@ -95,7 +96,8 @@ class CircuitBreaker:
                 self._failure_count = 0
                 self._success_count = 0
                 logger.info(
-                    "Circuit %s: HALF_OPEN → CLOSED (recovered)", sanitize_for_log(self.name),
+                    "Circuit %s: HALF_OPEN → CLOSED (recovered)",
+                    sanitize_for_log(self.name),
                 )
         else:
             self._failure_count = 0
@@ -109,7 +111,8 @@ class CircuitBreaker:
         if self._failure_count >= self.failure_threshold:
             self._state = CircuitState.OPEN
             logger.error(
-                "Circuit %s: CLOSED → OPEN (too many failures)", sanitize_for_log(self.name),
+                "Circuit %s: CLOSED → OPEN (too many failures)",
+                sanitize_for_log(self.name),
             )
 
     def get_status(self) -> Dict:
@@ -244,7 +247,9 @@ class SelfHealer:
                 {"action": action_name, "time": time.time(), "result": f"failed: {e}"},
             )
             logger.error(
-                "SelfHealer: '%s' failed: %s", sanitize_for_log(action_name), sanitize_for_log(e),
+                "SelfHealer: '%s' failed: %s",
+                sanitize_for_log(action_name),
+                sanitize_for_log(e),
             )
             return {"healed": False, "action": action_name, "error": str(e)}
 
@@ -256,10 +261,14 @@ class SelfHealer:
 CIRCUITS: Dict[str, CircuitBreaker] = {
     "model_inference": CircuitBreaker("model_inference", failure_threshold=5, recovery_timeout=30),
     "quantum_attention": CircuitBreaker(
-        "quantum_attention", failure_threshold=3, recovery_timeout=10,
+        "quantum_attention",
+        failure_threshold=3,
+        recovery_timeout=10,
     ),
     "consciousness_phi": CircuitBreaker(
-        "consciousness_phi", failure_threshold=5, recovery_timeout=15,
+        "consciousness_phi",
+        failure_threshold=5,
+        recovery_timeout=15,
     ),
     "database_write": CircuitBreaker("database_write", failure_threshold=3, recovery_timeout=60),
     "redis_ops": CircuitBreaker("redis_ops", failure_threshold=5, recovery_timeout=30),

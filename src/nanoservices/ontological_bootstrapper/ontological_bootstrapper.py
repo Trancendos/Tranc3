@@ -258,7 +258,9 @@ class SelfReferenceEngine:
         return f"This statement asserts the {entity.status.value} existence of '{entity.name}'"
 
     def detect_paradox(
-        self, entity: OntologicalEntity, relations: List[OntologicalRelation],
+        self,
+        entity: OntologicalEntity,
+        relations: List[OntologicalRelation],
     ) -> ParadoxType:
         """Detect self-referential paradoxes."""
         self_refs = [r for r in relations if r.is_self_referential]
@@ -533,22 +535,34 @@ class OntologicalBootstrapperService:
     def initialize(self) -> Dict[str, Any]:
         """Initialize with base ontology."""
         being = self.bootstrapper.create_entity(
-            "Being", "That which exists", ExistenceMode.NECESSARY,
+            "Being",
+            "That which exists",
+            ExistenceMode.NECESSARY,
         )
         nothing = self.bootstrapper.create_entity(
-            "Nothing", "That which does not exist", ExistenceMode.IMPOSSIBLE,
+            "Nothing",
+            "That which does not exist",
+            ExistenceMode.IMPOSSIBLE,
         )
         becoming = self.bootstrapper.create_entity(
-            "Becoming", "The process of coming into existence", ExistenceMode.POSSIBLE,
+            "Becoming",
+            "The process of coming into existence",
+            ExistenceMode.POSSIBLE,
         )
         self_ref = self.bootstrapper.create_entity(
-            "Self", "That which refers to itself", ExistenceMode.SELF_CAUSED,
+            "Self",
+            "That which refers to itself",
+            ExistenceMode.SELF_CAUSED,
         )
         observer = self.bootstrapper.create_entity(
-            "Observer", "That which perceives Being", ExistenceMode.CONTINGENT,
+            "Observer",
+            "That which perceives Being",
+            ExistenceMode.CONTINGENT,
         )
         truth = self.bootstrapper.create_entity(
-            "Truth", "That which is self-consistent", ExistenceMode.NECESSARY,
+            "Truth",
+            "That which is self-consistent",
+            ExistenceMode.NECESSARY,
         )
 
         self.bootstrapper.relate(being.id, becoming.id, RelationType.EMERGENCE)
@@ -570,7 +584,10 @@ class OntologicalBootstrapperService:
         }
 
     def create_entity(
-        self, name: str, definition: str = "", existence_mode: str = "possible",
+        self,
+        name: str,
+        definition: str = "",
+        existence_mode: str = "possible",
     ) -> Dict[str, Any]:
         """Create a new ontological entity."""
         mode = ExistenceMode(existence_mode)

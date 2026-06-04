@@ -53,10 +53,10 @@ BLOCKED_SERVICES: Dict[str, str] = {
 
 
 class QuotaStatus(str, Enum):
-    OK = "ok"                   # < 85% used
-    WARNING = "warning"         # 85–95% used
-    CRITICAL = "critical"       # > 95% used — rotate NOW
-    EXHAUSTED = "exhausted"     # 100% or hard-blocked
+    OK = "ok"  # < 85% used
+    WARNING = "warning"  # 85–95% used
+    CRITICAL = "critical"  # > 95% used — rotate NOW
+    EXHAUSTED = "exhausted"  # 100% or hard-blocked
 
 
 @dataclass
@@ -72,6 +72,7 @@ class QuotaReport:
 @dataclass
 class CostAssertion:
     """Daily zero-cost assertion result."""
+
     passed: bool
     total_estimated_cost_gbp: float = 0.0
     violations: List[str] = field(default_factory=list)
@@ -95,7 +96,7 @@ class ZeroCostEnforcer:
 
     WARNING_THRESHOLD = 0.85
     CRITICAL_THRESHOLD = 0.95
-    DEFAULT_CHECK_INTERVAL = 60.0   # seconds
+    DEFAULT_CHECK_INTERVAL = 60.0  # seconds
 
     def __init__(
         self,
@@ -119,7 +120,8 @@ class ZeroCostEnforcer:
             return
         self._running = True
         self._task = asyncio.create_task(
-            self._enforcement_loop(), name="zero_cost_enforcer",
+            self._enforcement_loop(),
+            name="zero_cost_enforcer",
         )
         logger.info("ZeroCostEnforcer started (interval=%.0fs)", self._check_interval)
 
@@ -151,6 +153,7 @@ class ZeroCostEnforcer:
         Call this before making ANY external HTTP request.
         """
         import re
+
         lower = url_or_service.lower()
         for pattern, reason in BLOCKED_SERVICES.items():
             if re.search(pattern, lower):
@@ -210,7 +213,9 @@ class ZeroCostEnforcer:
             ("BUGZY_API_KEY", "Bugzy AI (€250-1,500/month)"),
         ]:
             if os.environ.get(env_var):
-                violations.append(f"{env_var} set — {service_name} incurs costs; use free alternatives")
+                violations.append(
+                    f"{env_var} set — {service_name} incurs costs; use free alternatives"
+                )
 
         result = CostAssertion(
             passed=len(violations) == 0,
@@ -249,12 +254,15 @@ class ZeroCostEnforcer:
         if fallback_name:
             logger.info(
                 "Platform rotation: %r → %r (category=%s)",
-                exhausted_name, fallback_name, platform.category.value,
+                exhausted_name,
+                fallback_name,
+                platform.category.value,
             )
         else:
             logger.error(
                 "Platform rotation: %r exhausted, NO fallback available for %s",
-                exhausted_name, platform.category.value,
+                exhausted_name,
+                platform.category.value,
             )
 
         for cb in self._rotation_callbacks:
@@ -278,7 +286,8 @@ class ZeroCostEnforcer:
                     if report.status == QuotaStatus.CRITICAL:
                         logger.warning(
                             "Quota CRITICAL on %s (%.1f%%) — pre-emptive rotation",
-                            report.platform_name, report.utilisation_pct,
+                            report.platform_name,
+                            report.utilisation_pct,
                         )
                         fallback = await self.rotate_platform(report.platform_name)
                         report.action_taken = f"rotated_to:{fallback}"
@@ -286,7 +295,8 @@ class ZeroCostEnforcer:
                     elif report.status == QuotaStatus.WARNING:
                         logger.info(
                             "Quota WARNING on %s (%.1f%%) — monitoring",
-                            report.platform_name, report.utilisation_pct,
+                            report.platform_name,
+                            report.utilisation_pct,
                         )
                         report.action_taken = "monitoring"
 
@@ -294,6 +304,7 @@ class ZeroCostEnforcer:
 
                 # Daily zero-cost assertion
                 import datetime
+
                 current_hour = datetime.datetime.now(datetime.timezone.utc).hour
                 if current_hour == 0 and _daily_check_hour != 0:
                     self.assert_zero_cost()
@@ -319,7 +330,9 @@ class ZeroCostEnforcer:
             "platforms": self._registry.snapshot(),
             "last_assertion": {
                 "passed": self._last_daily_assertion.passed if self._last_daily_assertion else None,
-                "violations": self._last_daily_assertion.violations if self._last_daily_assertion else [],
+                "violations": self._last_daily_assertion.violations
+                if self._last_daily_assertion
+                else [],
             },
             "recent_reports": [
                 {

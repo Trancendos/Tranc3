@@ -532,7 +532,9 @@ class CausalReasoner:
         return self._graph.stats()
 
     def list_rules(
-        self, cause: Optional[str] = None, effect: Optional[str] = None,
+        self,
+        cause: Optional[str] = None,
+        effect: Optional[str] = None,
     ) -> List[CausalRule]:
         """List causal rules, optionally filtered."""
         rules = list(self._graph.rules.values())

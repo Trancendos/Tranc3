@@ -189,7 +189,8 @@ class AIGateway:
 
         if not routes:
             raise AIGatewayError(
-                "NO_ROUTES", "No applicable routes found and no providers registered",
+                "NO_ROUTES",
+                "No applicable routes found and no providers registered",
             )
 
         # 4. Try each route in priority order
@@ -375,7 +376,10 @@ class AIGateway:
         return None
 
     def _cache_response(
-        self, request: AIRequest, config: TenantAIConfig, response: AIResponse,
+        self,
+        request: AIRequest,
+        config: TenantAIConfig,
+        response: AIResponse,
     ) -> None:
         """Cache a response."""
         cache_key = self._make_cache_key(request, config)

@@ -73,7 +73,9 @@ class FitnessEvaluator:
             self._feedback_history.pop(0)
 
     def evaluate(
-        self, individual: Individual, recent_feedback: Optional[List[Dict]] = None,
+        self,
+        individual: Individual,
+        recent_feedback: Optional[List[Dict]] = None,
     ) -> float:
         feedback = recent_feedback or self._feedback_history[-10:]
         if not feedback:

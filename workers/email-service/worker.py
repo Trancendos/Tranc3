@@ -348,7 +348,8 @@ async def retry_email(email_id: int):
         if not row:
             raise HTTPException(status_code=404, detail="Email not found")
         conn.execute(
-            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (email_id,),
+            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?",
+            (email_id,),
         )
         conn.commit()
     return {"retrying": email_id}

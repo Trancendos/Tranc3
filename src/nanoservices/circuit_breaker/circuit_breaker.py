@@ -160,7 +160,10 @@ class CircuitBreaker:
             self._metrics.consecutive_successes = 0
 
         logger.info(
-            "Circuit %s: %s → %s", self._config.service_name, old_state.value, new_state.value,
+            "Circuit %s: %s → %s",
+            self._config.service_name,
+            old_state.value,
+            new_state.value,
         )
         for listener in self._listeners:
             try:

@@ -327,7 +327,10 @@ class HyperdimensionalVectorOps:
         )
 
     def similarity(
-        self, a: Hypervector, b: Hypervector, metric: LatticeTopology = LatticeTopology.COSINE,
+        self,
+        a: Hypervector,
+        b: Hypervector,
+        metric: LatticeTopology = LatticeTopology.COSINE,
     ) -> float:
         """Compute similarity between two hypervectors."""
         if len(a.data) != len(b.data) or len(a.data) == 0:
@@ -437,7 +440,10 @@ class ConceptLattice:
         return relation
 
     def find_similar(
-        self, concept: str, top_k: int = 5, metric: LatticeTopology = LatticeTopology.COSINE,
+        self,
+        concept: str,
+        top_k: int = 5,
+        metric: LatticeTopology = LatticeTopology.COSINE,
     ) -> List[Tuple[str, float]]:
         """Find similar concepts to a given concept."""
         if concept not in self._concept_vectors:
@@ -535,7 +541,9 @@ class ConceptLattice:
         return d_concept
 
     def project(
-        self, target_dim: int = 3, method: ProjectionMethod = ProjectionMethod.RANDOM,
+        self,
+        target_dim: int = 3,
+        method: ProjectionMethod = ProjectionMethod.RANDOM,
     ) -> LatticeProjection:
         """Project the lattice into lower dimensions for visualization."""
         if not self.nodes:

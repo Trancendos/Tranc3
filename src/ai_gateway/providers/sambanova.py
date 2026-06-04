@@ -79,8 +79,7 @@ class SambanovaProvider(AIProvider):
         """Generate a chat completion using SambaNova's OpenAI-compatible API."""
         if not self._is_available():
             raise RuntimeError(
-                "SAMBANOVA_API_KEY is not set. "
-                "Get a free key at https://cloud.sambanova.ai/",
+                "SAMBANOVA_API_KEY is not set. Get a free key at https://cloud.sambanova.ai/",
             )
 
         model = request.model or self._default_model

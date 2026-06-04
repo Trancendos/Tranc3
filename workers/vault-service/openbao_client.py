@@ -121,7 +121,8 @@ def _sqlite_get(key: str) -> Dict[str, Any]:
 
     conn = _get_db()
     row = conn.execute(
-        "SELECT * FROM secrets WHERE key=? AND is_active=1", (key,),
+        "SELECT * FROM secrets WHERE key=? AND is_active=1",
+        (key,),
     ).fetchone()
     if row is None:
         conn.close()
@@ -150,7 +151,8 @@ def _sqlite_delete(key: str) -> Dict[str, Any]:
         return {"ok": False, "backend": "sqlite", "error": "not found"}
     now = _now()
     conn.execute(
-        "UPDATE secrets SET is_active=0, updated_at=? WHERE id=?", (now, row["id"]),
+        "UPDATE secrets SET is_active=0, updated_at=? WHERE id=?",
+        (now, row["id"]),
     )
     _append_audit(conn, row["id"], "secret.delete", details={"via": "openbao_client"})
     conn.commit()

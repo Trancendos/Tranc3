@@ -93,7 +93,9 @@ class Library:
         for tag in art.tags:
             self._tag_index.setdefault(tag, []).append(art.id)
         logger.debug(
-            "library: created article id=%s title=%r", art.id, sanitize_for_log(title),
+            "library: created article id=%s title=%r",
+            art.id,
+            sanitize_for_log(title),
         )  # codeql[py/cleartext-logging]
         self._emit_observatory_event(art, "article.created")
         return art

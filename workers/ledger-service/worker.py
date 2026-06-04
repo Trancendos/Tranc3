@@ -351,7 +351,8 @@ async def verify_chain():
 async def sentinel_history(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM sentinel_checks ORDER BY checked_at DESC LIMIT ? OFFSET ?", (limit, offset),
+        "SELECT * FROM sentinel_checks ORDER BY checked_at DESC LIMIT ? OFFSET ?",
+        (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]

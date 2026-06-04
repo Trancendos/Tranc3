@@ -94,15 +94,13 @@ class OllamaEmbeddingProvider:
 
         except httpx.ConnectError:
             raise RuntimeError(
-                f"Ollama not available at {self.base_url}. "
-                "Start with: ollama serve",
+                f"Ollama not available at {self.base_url}. Start with: ollama serve",
             ) from None
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
             if status == 404:
                 raise RuntimeError(
-                    f"Ollama model '{self.model}' not found. "
-                    f"Pull with: ollama pull {self.model}",
+                    f"Ollama model '{self.model}' not found. Pull with: ollama pull {self.model}",
                 ) from None
             raise RuntimeError(f"Ollama embedding HTTP error: {status}") from None
         except RuntimeError:
@@ -254,7 +252,9 @@ class EmbeddingRouter:
             vector = await self._ollama.embed(text)
             latency_ms = (time.monotonic() - start) * 1000
             logger.debug(
-                "Embedding via ollama in %.1fms, dim=%d", latency_ms, len(vector),
+                "Embedding via ollama in %.1fms, dim=%d",
+                latency_ms,
+                len(vector),
             )
             return vector
         except Exception as e:
@@ -267,7 +267,9 @@ class EmbeddingRouter:
             vector = await self._gemini.embed(text)
             latency_ms = (time.monotonic() - start) * 1000
             logger.debug(
-                "Embedding via gemini in %.1fms, dim=%d", latency_ms, len(vector),
+                "Embedding via gemini in %.1fms, dim=%d",
+                latency_ms,
+                len(vector),
             )
             return vector
         except Exception as e:

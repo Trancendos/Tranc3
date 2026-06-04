@@ -593,7 +593,9 @@ class TestAPIIntegration:
         with patch(
             "redis.from_url",
             return_value=MagicMock(
-                ping=lambda: True, get=lambda k: None, set=lambda *a, **kw: True,
+                ping=lambda: True,
+                get=lambda k: None,
+                set=lambda *a, **kw: True,
             ),
         ):
             from fastapi.testclient import TestClient

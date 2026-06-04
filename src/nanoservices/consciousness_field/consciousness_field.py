@@ -480,7 +480,8 @@ class ConsciousnessFieldSimulator:
             self._self_model["avg_phi"] = sum(phis) / len(phis)
             self._self_model["max_phi"] = max(phis)
             self._self_model["coherence"] = min(
-                1.0, self._self_model["avg_phi"] / max(self._self_model["max_phi"], 0.01),
+                1.0,
+                self._self_model["avg_phi"] / max(self._self_model["max_phi"], 0.01),
             )
 
     def get_field_stats(self) -> Dict[str, Any]:

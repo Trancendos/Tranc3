@@ -236,7 +236,9 @@ class LLMDriftPredictor:
         self._prediction_cache: Dict[str, DriftPrediction] = {}
 
     async def predict_drift(
-        self, signals: List[DriftSignal], time_horizon_hours: float = 24.0,
+        self,
+        signals: List[DriftSignal],
+        time_horizon_hours: float = 24.0,
     ) -> List[DriftPrediction]:
         """Use LLM to predict future drift events from current signals."""
         if not signals:
@@ -257,7 +259,9 @@ class LLMDriftPredictor:
         return self._heuristic_prediction(signals, time_horizon_hours)
 
     def _build_prediction_prompt(
-        self, signals: List[DriftSignal], time_horizon_hours: float,
+        self,
+        signals: List[DriftSignal],
+        time_horizon_hours: float,
     ) -> str:
         """Build a prediction prompt for the LLM."""
         signal_summary = []
@@ -291,7 +295,10 @@ Respond in JSON format as a list of predictions."""
         return ""
 
     def _parse_llm_predictions(
-        self, llm_response: str, signals: List[DriftSignal], time_horizon_hours: float,
+        self,
+        llm_response: str,
+        signals: List[DriftSignal],
+        time_horizon_hours: float,
     ) -> List[DriftPrediction]:
         """Parse LLM response into structured predictions."""
         predictions = []
@@ -318,7 +325,9 @@ Respond in JSON format as a list of predictions."""
         return predictions
 
     def _heuristic_prediction(
-        self, signals: List[DriftSignal], time_horizon_hours: float,
+        self,
+        signals: List[DriftSignal],
+        time_horizon_hours: float,
     ) -> List[DriftPrediction]:
         """Heuristic drift prediction when LLM is unavailable.
 
@@ -433,7 +442,8 @@ class PredictiveDriftService:
 
         # Generate predictions
         predictions = await self.llm_predictor.predict_drift(
-            recent_signals, self.prediction_window_hours,
+            recent_signals,
+            self.prediction_window_hours,
         )
         self._predictions.extend(predictions)
 

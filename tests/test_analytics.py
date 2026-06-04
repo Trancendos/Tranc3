@@ -122,7 +122,12 @@ class TestChurnPredictor:
         self.cp = ChurnPredictor(window_days=7)
 
     def _make_signal(
-        self, user_id="u1", emotion="neutral", rating=4.0, duration=100.0, ts_offset=0,
+        self,
+        user_id="u1",
+        emotion="neutral",
+        rating=4.0,
+        duration=100.0,
+        ts_offset=0,
     ):
         return UserSignal(
             user_id=user_id,

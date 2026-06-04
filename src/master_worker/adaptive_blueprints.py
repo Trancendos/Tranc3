@@ -39,27 +39,29 @@ class BlueprintType(str, Enum):
 @dataclass
 class BlueprintSpec:
     """Specification for generating a worker blueprint."""
-    name: str                              # e.g. "analytics-service"
+
+    name: str  # e.g. "analytics-service"
     blueprint_type: BlueprintType
     port: int = 8000
     description: str = ""
-    env_vars: List[str] = field(default_factory=list)   # required env var names
+    env_vars: List[str] = field(default_factory=list)  # required env var names
     dependencies: List[str] = field(default_factory=list)  # pip packages
-    schedule: Optional[str] = None        # cron expression for SCHEDULED_TASK
+    schedule: Optional[str] = None  # cron expression for SCHEDULED_TASK
     routes: List[Dict[str, str]] = field(default_factory=list)  # [{path, method, description}]
-    health_entity: Optional[str] = None   # Trancendos entity name for health endpoint
-    platform_target: str = "fly_io"       # preferred deployment target
+    health_entity: Optional[str] = None  # Trancendos entity name for health endpoint
+    platform_target: str = "fly_io"  # preferred deployment target
 
 
 @dataclass
 class RenderedBlueprint:
     """Output from BlueprintEngine.render()."""
+
     spec: BlueprintSpec
     worker_py: str
     dockerfile: str
     compose_snippet: str
     requirements_txt: str
-    forgejo_workflow: str                  # .forgejo/workflows/<name>.yml
+    forgejo_workflow: str  # .forgejo/workflows/<name>.yml
 
 
 class BlueprintEngine:
@@ -107,9 +109,7 @@ class BlueprintEngine:
         if spec.health_entity:
             entity_block = f'    "entity": "{spec.health_entity}",'
 
-        extra_routes = "\n".join(
-            self._render_route(r, spec) for r in spec.routes
-        )
+        extra_routes = "\n".join(self._render_route(r, spec) for r in spec.routes)
 
         if spec.blueprint_type == BlueprintType.SCHEDULED_TASK:
             return self._render_scheduled_task(spec)
@@ -212,7 +212,10 @@ class BlueprintEngine:
         path = route.get("path", "/")
         method = route.get("method", "GET").lower()
         description = route.get("description", "")
-        func_name = path.strip("/").replace("/", "_").replace("-", "_").replace("{", "").replace("}", "") or "index"
+        func_name = (
+            path.strip("/").replace("/", "_").replace("-", "_").replace("{", "").replace("}", "")
+            or "index"
+        )
         return textwrap.dedent(f"""\
             @app.{method}("{path}", summary="{description}")
             async def {func_name}(request: Request) -> Dict[str, Any]:
@@ -340,10 +343,7 @@ class BlueprintEngine:
     # ------------------------------------------------------------------
 
     def _render_compose(self, spec: BlueprintSpec) -> str:
-        env_lines = "\n".join(
-            f"      - {var}=${{{var}}}"
-            for var in spec.env_vars
-        )
+        env_lines = "\n".join(f"      - {var}=${{{var}}}" for var in spec.env_vars)
         return textwrap.dedent(f"""\
             # Add to docker-compose.production.yml services section:
               {spec.name}:

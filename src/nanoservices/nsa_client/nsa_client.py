@@ -165,7 +165,9 @@ class ShmRingBuffer:
             try:
                 # Try to create new
                 self._shm = shared_memory.SharedMemory(
-                    name=shm_name, create=True, size=self.total_size,
+                    name=shm_name,
+                    create=True,
+                    size=self.total_size,
                 )
             except FileExistsError:
                 # Attach to existing

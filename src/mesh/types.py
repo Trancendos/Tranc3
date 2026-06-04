@@ -55,10 +55,12 @@ class CircuitBreakerConfig(BaseModel):
     failure_threshold: int = Field(default=5, description="Failures before opening circuit")
     reset_timeout_ms: int = Field(default=30000, description="Time before half-open retry (ms)")
     half_open_request_percentage: float = Field(
-        default=10.0, description="% of requests allowed in half-open",
+        default=10.0,
+        description="% of requests allowed in half-open",
     )
     half_open_success_threshold: int = Field(
-        default=3, description="Successes needed to close circuit",
+        default=3,
+        description="Successes needed to close circuit",
     )
     request_timeout_ms: int = Field(default=10000, description="Per-request timeout (ms)")
 
@@ -70,7 +72,8 @@ class ServiceMeshConfig(BaseModel):
 
     max_retries: int = Field(default=3, description="Max retry attempts per call")
     retry_base_delay_ms: int = Field(
-        default=1000, description="Base delay for exponential backoff (ms)",
+        default=1000,
+        description="Base delay for exponential backoff (ms)",
     )
     retry_max_delay_ms: int = Field(default=30000, description="Max delay between retries (ms)")
     health_check_interval_ms: int = Field(default=30000, description="Health check interval (ms)")

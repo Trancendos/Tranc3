@@ -290,7 +290,10 @@ class MonitoringDatabase:
             )
 
     def query_metrics(
-        self, name: str, hours: int = 1, labels: Optional[Dict[str, str]] = None,
+        self,
+        name: str,
+        hours: int = 1,
+        labels: Optional[Dict[str, str]] = None,
     ) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
@@ -374,7 +377,9 @@ class MonitoringDatabase:
         return alert
 
     def get_alerts(
-        self, state: Optional[AlertState] = None, hours: int = 168,
+        self,
+        state: Optional[AlertState] = None,
+        hours: int = 168,
     ) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
@@ -596,7 +601,8 @@ async def submit_health_report(report: HealthReport):
     """Submit a health report for a service."""
     db.store_health(report)
     await ws_manager.broadcast(
-        "health_update", {"service": report.service_name, "status": report.status.value},
+        "health_update",
+        {"service": report.service_name, "status": report.status.value},
     )
     return {"ok": True, "service": report.service_name, "status": report.status.value}
 

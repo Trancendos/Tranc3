@@ -387,13 +387,17 @@ class MultiAgentOrchestrator:
             self.agents[agent_id].state = AgentState.IDLE
             self.agents[agent_id].task_history.append(task_id)
             self.agents[agent_id].reputation_score = min(
-                2.0, self.agents[agent_id].reputation_score + 0.01,
+                2.0,
+                self.agents[agent_id].reputation_score + 0.01,
             )
 
         return True
 
     def request_consensus(
-        self, proposer_id: str, content: Any, voters: Optional[Set[str]] = None,
+        self,
+        proposer_id: str,
+        content: Any,
+        voters: Optional[Set[str]] = None,
     ) -> ConsensusProposal:
         return self.consensus_engine.propose(proposer_id, content, voters)
 

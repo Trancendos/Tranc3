@@ -215,7 +215,9 @@ class QuantumCircuitLibrary:
 
     @staticmethod
     def vqe_circuit(
-        num_qubits: int, depth: int = 2, entanglement: str = "linear",
+        num_qubits: int,
+        depth: int = 2,
+        entanglement: str = "linear",
     ) -> Dict[str, Any]:
         """Generate VQE ansatz circuit specification (EfficientSU2 style)."""
         return {
@@ -462,7 +464,10 @@ class QuantumSolver:
         }
 
     def _build_circuit(
-        self, algorithm: QuantumAlgorithm, num_qubits: int, depth: int,
+        self,
+        algorithm: QuantumAlgorithm,
+        num_qubits: int,
+        depth: int,
     ) -> Dict[str, Any]:
         """Build a quantum circuit specification for the given algorithm."""
         if algorithm == QuantumAlgorithm.QAOA:
@@ -475,7 +480,10 @@ class QuantumSolver:
             return self._circuit_library.qaoa_circuit(num_qubits, depth)
 
     def _simulate_quantum_solve(
-        self, problem: QUBOProblem, algorithm: QuantumAlgorithm, shots: int,
+        self,
+        problem: QUBOProblem,
+        algorithm: QuantumAlgorithm,
+        shots: int,
     ) -> Dict[str, int]:
         """Simulate quantum solving (would use Qiskit in production)."""
         import random

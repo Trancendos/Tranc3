@@ -195,7 +195,10 @@ auth_service = AuthService(JWT_SECRET)
 
 
 async def proxy_request(
-    request: Request, target_base: str, target_path: str, request_id: str,
+    request: Request,
+    target_base: str,
+    target_path: str,
+    request_id: str,
 ) -> httpx.Response:
     """Proxy request to upstream service."""
     url = f"{target_base}{target_path}{request.url.query and '?' + str(request.url.query) or ''}"
@@ -370,13 +373,17 @@ async def gateway(request: Request, path: str):
         except Exception as e:
             if "Circuit" in str(e):
                 raise HTTPException(
-                    status_code=503, detail="Service temporarily unavailable. Retry in 60s.",
+                    status_code=503,
+                    detail="Service temporarily unavailable. Retry in 60s.",
                 ) from None
             logger.error(
-                "Proxy failed: path=/%s error=%s", sanitize_for_log(path), sanitize_for_log(e),
+                "Proxy failed: path=/%s error=%s",
+                sanitize_for_log(path),
+                sanitize_for_log(e),
             )  # codeql[py/cleartext-logging]
             raise HTTPException(
-                status_code=502, detail="Failed to reach upstream service.",
+                status_code=502,
+                detail="Failed to reach upstream service.",
             ) from None
 
     raise HTTPException(status_code=404, detail=f"{request.method} /{path} not found")

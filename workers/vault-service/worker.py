@@ -203,7 +203,8 @@ def _decrypt_secret(ciphertext_hex: str) -> str:
 # Backwards-compat shim: attempt XOR-decrypt of legacy secrets stored before this fix.
 # Remove this shim once all secrets have been re-encrypted (rotate via PUT /secrets/{id}).
 def _legacy_xor_decrypt(
-    ciphertext_hex: str, xor_key: str = "Tranc3Vault2024!ZeroCostCrypto",
+    ciphertext_hex: str,
+    xor_key: str = "Tranc3Vault2024!ZeroCostCrypto",
 ) -> str:
     """Decrypt a secret encrypted by the old (insecure) XOR cipher."""
     key_bytes = xor_key.encode()
@@ -378,7 +379,9 @@ async def create_secret(body: SecretCreate):
 
 @_router.get("/secrets", response_model=List[SecretResponse])
 async def list_secrets(
-    active_only: bool = True, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
+    active_only: bool = True,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ):
     conn = _get_db()
     q = "SELECT * FROM secrets WHERE 1=1"
@@ -448,7 +451,10 @@ async def update_secret(secret_id: str, body: SecretUpdate):
     set_clause = ", ".join(f"{k}=?" for k in updates)
     conn.execute(f"UPDATE secrets SET {set_clause} WHERE id=?", (*updates.values(), secret_id))
     _append_audit(
-        conn, secret_id, "secret.update", details={"fields_updated": list(updates.keys())},
+        conn,
+        secret_id,
+        "secret.update",
+        details={"fields_updated": list(updates.keys())},
     )
     conn.commit()
 
