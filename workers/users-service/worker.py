@@ -468,7 +468,7 @@ async def update_role(user_id: str, body: RoleUpdateRequest):
 async def request_password_reset(body: PasswordResetRequest):
     """Stub: generate a password-reset token (not emailed; use notifications-service)."""
     row = db.execute(
-        "SELECT * FROM users WHERE email = ? AND is_active = 1", (str(body.email),)
+        "SELECT * FROM users WHERE email = ? AND is_active = 1", (str(body.email),),
     ).fetchone()
     if not row:
         # Don't leak user existence
@@ -516,7 +516,7 @@ async def bulk_deactivate(body: BulkDeactivateRequest):
 async def roles_summary():
     """Summary count by role."""
     rows = db.execute(
-        "SELECT role, COUNT(*) as count FROM users WHERE is_active = 1 GROUP BY role"
+        "SELECT role, COUNT(*) as count FROM users WHERE is_active = 1 GROUP BY role",
     ).fetchall()
     return {"roles": {row["role"]: row["count"] for row in rows}}
 

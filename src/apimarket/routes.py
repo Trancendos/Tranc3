@@ -78,7 +78,7 @@ async def add_endpoint(
     if not path:
         return JSONResponse({"error": "path is required"}, status_code=400)
     ep = get_marketplace().add_endpoint(
-        connector_id, method=method, path=path, description=body.get("description", "")
+        connector_id, method=method, path=path, description=body.get("description", ""),
     )
     if ep is None:
         return JSONResponse({"error": "Connector not found"}, status_code=404)

@@ -137,15 +137,6 @@ FREE_MODELS: Dict[str, List[FreeModelInfo]] = {
     ],
     "openrouter": [
         FreeModelInfo(
-            name="openrouter/free",
-            provider="openrouter",
-            tier=ProviderTier.FREE_TIER,
-            context_window=128000,
-            capabilities=["chat", "code", "reasoning", "tools"],
-            rate_limit="20 req/min (free tier)",
-            notes="OpenRouter Free Models Router — auto-picks capable :free model",
-        ),
-        FreeModelInfo(
             name="deepseek/deepseek-r1:free",
             provider="openrouter",
             tier=ProviderTier.FREE_TIER,
@@ -344,7 +335,7 @@ class ZeroCostRoutingChain:
                     model=model,
                     priority=priority,
                     enabled=True,
-                )
+                ),
             )
         return rules
 
@@ -399,7 +390,7 @@ ROUTING_CHAINS: Dict[str, ZeroCostRoutingChain] = {
             "github-models": "gpt-4o-mini",
             "cerebras": "llama3.3-70b",
             "sambanova": "Meta-Llama-3.3-70B-Instruct",
-            "openrouter": "openrouter/free",
+            "openrouter": "deepseek/deepseek-r1:free",
             "huggingface": "meta-llama/Llama-3.2-3B-Instruct",
             "offline": "tranc3-offline",
         },
@@ -467,9 +458,10 @@ def discover_available_providers() -> Dict[str, bool]:
 
     # Ollama — check if OLLAMA_HOST is set or default localhost is reachable
     ollama_host = os.getenv("OLLAMA_URL", os.getenv("OLLAMA_HOST", "http://localhost:11434"))
-    available["ollama"] = bool(
-        os.getenv("OLLAMA_URL") or os.getenv("OLLAMA_HOST")
-    ) or _check_ollama_available(ollama_host)
+    available["ollama"] = (
+        bool(os.getenv("OLLAMA_URL") or os.getenv("OLLAMA_HOST"))
+        or _check_ollama_available(ollama_host)
+    )
 
     # Groq — 14,400 req/day free, requires GROQ_API_KEY
     available["groq"] = bool(os.getenv("GROQ_API_KEY"))
@@ -487,7 +479,9 @@ def discover_available_providers() -> Dict[str, bool]:
     available["openrouter"] = bool(os.getenv("OPENROUTER_API_KEY"))
 
     # HuggingFace — serverless inference free tier, requires HF_API_TOKEN
-    available["huggingface"] = bool(os.getenv("HUGGINGFACE_API_TOKEN") or os.getenv("HF_API_TOKEN"))
+    available["huggingface"] = bool(
+        os.getenv("HUGGINGFACE_API_TOKEN") or os.getenv("HF_API_TOKEN"),
+    )
 
     # GitHub Models — free tier with any GitHub PAT (no credit card, no special scopes)
     # 50 req/day for GPT-4o, 150 req/day for gpt-4o-mini / Llama 3.1 / DeepSeek-R1

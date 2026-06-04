@@ -39,19 +39,19 @@ def _import_worker(module_dotted: str, file_path: Path):
 
 grid_mod = _import_worker("the_grid_worker", _TRANC3_ROOT / "workers" / "the-grid" / "worker.py")
 products_mod = _import_worker(
-    "products_service_worker", _TRANC3_ROOT / "workers" / "products-service" / "worker.py"
+    "products_service_worker", _TRANC3_ROOT / "workers" / "products-service" / "worker.py",
 )
 orders_mod = _import_worker(
-    "orders_service_worker", _TRANC3_ROOT / "workers" / "orders-service" / "worker.py"
+    "orders_service_worker", _TRANC3_ROOT / "workers" / "orders-service" / "worker.py",
 )
 payments_mod = _import_worker(
-    "payments_service_worker", _TRANC3_ROOT / "workers" / "payments-service" / "worker.py"
+    "payments_service_worker", _TRANC3_ROOT / "workers" / "payments-service" / "worker.py",
 )
 files_mod = _import_worker(
-    "files_service_worker", _TRANC3_ROOT / "workers" / "files-service" / "worker.py"
+    "files_service_worker", _TRANC3_ROOT / "workers" / "files-service" / "worker.py",
 )
 identity_mod = _import_worker(
-    "identity_service_worker", _TRANC3_ROOT / "workers" / "identity-service" / "worker.py"
+    "identity_service_worker", _TRANC3_ROOT / "workers" / "identity-service" / "worker.py",
 )
 
 
@@ -474,7 +474,7 @@ class TestGenericCRUDWorker:
 
     def test_orders_update(self, orders_client):
         create = orders_client.post(
-            "/", json={"user_id": "user-123", "total": 10.0, "status": "pending"}
+            "/", json={"user_id": "user-123", "total": 10.0, "status": "pending"},
         )
         order_id = create.json()["order_id"]
 
@@ -524,7 +524,7 @@ class TestGenericCRUDWorker:
 
     def test_payments_get(self, payments_client):
         create = payments_client.post(
-            "/", json={"order_id": "order-123", "user_id": "user-123", "amount": 50.0}
+            "/", json={"order_id": "order-123", "user_id": "user-123", "amount": 50.0},
         )
         payment_id = create.json()["payment_id"]
 
@@ -551,7 +551,7 @@ class TestGenericCRUDWorker:
 
     def test_payments_delete(self, payments_client):
         create = payments_client.post(
-            "/", json={"order_id": "order-123", "user_id": "user-123", "amount": 5.0}
+            "/", json={"order_id": "order-123", "user_id": "user-123", "amount": 5.0},
         )
         payment_id = create.json()["payment_id"]
 
@@ -583,10 +583,10 @@ class TestGenericCRUDWorker:
 
     def test_files_list(self, files_client):
         files_client.post(
-            "/", json={"filename": "file1.txt", "size_bytes": 100, "path": "/files/file1.txt"}
+            "/", json={"filename": "file1.txt", "size_bytes": 100, "path": "/files/file1.txt"},
         )
         files_client.post(
-            "/", json={"filename": "file2.txt", "size_bytes": 200, "path": "/files/file2.txt"}
+            "/", json={"filename": "file2.txt", "size_bytes": 200, "path": "/files/file2.txt"},
         )
 
         response = files_client.get("/")
@@ -596,7 +596,7 @@ class TestGenericCRUDWorker:
 
     def test_files_get(self, files_client):
         create = files_client.post(
-            "/", json={"filename": "getme.pdf", "size_bytes": 512, "path": "/files/getme.pdf"}
+            "/", json={"filename": "getme.pdf", "size_bytes": 512, "path": "/files/getme.pdf"},
         )
         file_id = create.json()["file_id"]
 
@@ -607,7 +607,7 @@ class TestGenericCRUDWorker:
 
     def test_files_update(self, files_client):
         create = files_client.post(
-            "/", json={"filename": "update.pdf", "size_bytes": 100, "path": "/files/update.pdf"}
+            "/", json={"filename": "update.pdf", "size_bytes": 100, "path": "/files/update.pdf"},
         )
         file_id = create.json()["file_id"]
 
@@ -617,7 +617,7 @@ class TestGenericCRUDWorker:
 
     def test_files_delete(self, files_client):
         create = files_client.post(
-            "/", json={"filename": "delete.pdf", "size_bytes": 50, "path": "/files/delete.pdf"}
+            "/", json={"filename": "delete.pdf", "size_bytes": 50, "path": "/files/delete.pdf"},
         )
         file_id = create.json()["file_id"]
 
@@ -649,10 +649,10 @@ class TestGenericCRUDWorker:
 
     def test_identity_list(self, identity_client):
         identity_client.post(
-            "/", json={"user_id": "user-1", "provider": "local", "provider_id": "local-1"}
+            "/", json={"user_id": "user-1", "provider": "local", "provider_id": "local-1"},
         )
         identity_client.post(
-            "/", json={"user_id": "user-2", "provider": "local", "provider_id": "local-2"}
+            "/", json={"user_id": "user-2", "provider": "local", "provider_id": "local-2"},
         )
 
         response = identity_client.get("/")
@@ -662,7 +662,7 @@ class TestGenericCRUDWorker:
 
     def test_identity_get(self, identity_client):
         create = identity_client.post(
-            "/", json={"user_id": "user-123", "provider": "local", "provider_id": "local-123"}
+            "/", json={"user_id": "user-123", "provider": "local", "provider_id": "local-123"},
         )
         identity_id = create.json()["identity_id"]
 
@@ -689,7 +689,7 @@ class TestGenericCRUDWorker:
 
     def test_identity_delete(self, identity_client):
         create = identity_client.post(
-            "/", json={"user_id": "user-123", "provider": "local", "provider_id": "local-123"}
+            "/", json={"user_id": "user-123", "provider": "local", "provider_id": "local-123"},
         )
         identity_id = create.json()["identity_id"]
 

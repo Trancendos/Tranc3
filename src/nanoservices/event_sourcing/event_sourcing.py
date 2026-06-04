@@ -166,7 +166,7 @@ class ProjectionEngine:
 
         projection.updated_at = time.time()
         logger.info(
-            "Rebuilt projection %s with %d events", projection_name, len(self._store.get_events())
+            "Rebuilt projection %s with %d events", projection_name, len(self._store.get_events()),
         )
         return projection
 
@@ -219,7 +219,7 @@ class AggregateRoot:
         # Subclasses override to apply event to state
 
     def _raise_event(
-        self, event_type: EventType, data: Dict[str, Any], metadata: Dict[str, Any] = None
+        self, event_type: EventType, data: Dict[str, Any], metadata: Dict[str, Any] = None,
     ) -> None:
         self._version += 1
         event = Event(
@@ -305,7 +305,7 @@ class EventSourcingCQRSService:
                     "service": event.aggregate_id,
                     "fault_type": event.data.get("fault_type"),
                     "timestamp": event.timestamp,
-                }
+                },
             )
 
     def _on_scaling_event(self, event: Event) -> None:
@@ -318,5 +318,5 @@ class EventSourcingCQRSService:
                     "service": event.aggregate_id,
                     "direction": event.data.get("direction"),
                     "timestamp": event.timestamp,
-                }
+                },
             )

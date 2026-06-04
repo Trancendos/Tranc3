@@ -47,7 +47,7 @@ def _get_encoder():
                     logger.info("vector_store: encoder loaded model=%s", _EMBED_MODEL)
                 except Exception as exc:
                     logger.warning(
-                        "vector_store: encoder unavailable (%s) — returning zero embeddings", exc
+                        "vector_store: encoder unavailable (%s) — returning zero embeddings", exc,
                     )
                     _encoder = _NullEncoder()
     return _encoder

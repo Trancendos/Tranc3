@@ -54,7 +54,7 @@ class TestWorkflowJourneyViaTheSpark:
                     },
                     "async_mode": False,
                     "timeout_seconds": 30,
-                }
+                },
             )
             _log.info(
                 "uat.journey1 run status=%s elapsed_ms=%s",
@@ -91,7 +91,7 @@ class TestWorkflowJourneyViaTheSpark:
                     "workflow_id": wf.id,
                     "params": {"result": "uat-output"},
                     "async_mode": False,
-                }
+                },
             )
             _log.info("uat.journey1_custom status=%s", run_r.get("status"))
             assert run_r.get("status") == "completed"
@@ -145,7 +145,7 @@ class TestObservabilityJourney:
             from src.workflow.executor import event_bus
 
             await event_bus.publish(
-                "workflow.started", {"workflow_id": "uat-wf", "workflow_name": "UAT"}
+                "workflow.started", {"workflow_id": "uat-wf", "workflow_name": "UAT"},
             )
             await asyncio.sleep(0)
 
@@ -216,7 +216,7 @@ class TestOperatorHealthJourney:
                     "protocolVersion": "2024-11-05",
                     "clientInfo": {"name": "uat-client", "version": "1"},
                 },
-            }
+            },
         )
         info = resp["result"]["serverInfo"]
         caps = resp["result"]["capabilities"]
@@ -269,7 +269,7 @@ class TestErrorHandlingAcceptance:
                 "id": 99,
                 "method": "tools/call",
                 "params": {"name": "does_not_exist", "arguments": {}},
-            }
+            },
         )
         _log.info("uat.error tool_not_found code=%s", resp.get("error", {}).get("code"))
         assert "error" in resp

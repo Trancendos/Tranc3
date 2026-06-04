@@ -126,7 +126,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "planning",
                 "tool-use",
                 "adaptation",
-            }
+            },
         ),
         preferred_tools=frozenset(
             {
@@ -135,7 +135,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "query_vector_store",
                 "run_workflow",
                 "get_system_health",
-            }
+            },
         ),
         creativity=0.5,
         caution=0.5,
@@ -159,7 +159,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "knowledge",
                 "document-processing",
                 "summarization",
-            }
+            },
         ),
         preferred_tools=frozenset(
             {
@@ -170,7 +170,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "knowledge_graph_path",
                 "knowledge_graph_expand",
                 "collective_memory_query",
-            }
+            },
         ),
         creativity=0.4,
         caution=0.6,
@@ -194,7 +194,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "code-review",
                 "implementation",
                 "optimization",
-            }
+            },
         ),
         preferred_tools=frozenset(
             {
@@ -203,7 +203,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "run_workflow",
                 "neural_mesh_emit",
                 "attention_route",
-            }
+            },
         ),
         creativity=0.6,
         caution=0.7,
@@ -227,7 +227,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "prioritization",
                 "workflow-design",
                 "estimation",
-            }
+            },
         ),
         preferred_tools=frozenset(
             {
@@ -236,7 +236,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "grid_list_workflows",
                 "attention_route",
                 "causal_predict",
-            }
+            },
         ),
         creativity=0.3,
         caution=0.6,
@@ -260,7 +260,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "data-processing",
                 "visualization",
                 "insight-generation",
-            }
+            },
         ),
         preferred_tools=frozenset(
             {
@@ -270,7 +270,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "causal_predict",
                 "causal_diagnose",
                 "meta_learn_adapt",
-            }
+            },
         ),
         creativity=0.3,
         caution=0.7,
@@ -294,7 +294,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "monitoring",
                 "workflow-management",
                 "agent-routing",
-            }
+            },
         ),
         preferred_tools=frozenset(
             {
@@ -304,7 +304,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "neural_mesh_emit",
                 "attention_route",
                 "collective_memory_store",
-            }
+            },
         ),
         creativity=0.4,
         caution=0.7,
@@ -328,7 +328,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "validation",
                 "audit",
                 "risk-assessment",
-            }
+            },
         ),
         preferred_tools=frozenset(
             {
@@ -337,7 +337,7 @@ PROFILES: Dict[AgentType, AgentProfile] = {
                 "collective_memory_query",
                 "observatory_observe",
                 "attention_route",
-            }
+            },
         ),
         creativity=0.1,
         caution=0.95,

@@ -50,7 +50,7 @@ class LazyModelLoader:
                 return model
             except Exception as e:
                 logger.error(
-                    "Failed to load model '%s': %s", sanitize_for_log(name), sanitize_for_log(e)
+                    "Failed to load model '%s': %s", sanitize_for_log(name), sanitize_for_log(e),
                 )
                 raise
 
@@ -75,7 +75,7 @@ class LazyModelLoader:
                 self.get(name)
             except Exception as e:
                 logger.error(
-                    "Pre-load failed for %s: %s", sanitize_for_log(name), sanitize_for_log(e)
+                    "Pre-load failed for %s: %s", sanitize_for_log(name), sanitize_for_log(e),
                 )
 
     def status(self) -> Dict[str, Dict[str, Any]]:
@@ -136,7 +136,7 @@ class InferenceRouter:
                 return result
             except Exception as e:
                 logger.warning(
-                    "Provider %s failed: %s", sanitize_for_log(name), sanitize_for_log(e)
+                    "Provider %s failed: %s", sanitize_for_log(name), sanitize_for_log(e),
                 )
                 last_error = e
                 continue

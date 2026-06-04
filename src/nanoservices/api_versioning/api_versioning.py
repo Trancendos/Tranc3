@@ -97,7 +97,7 @@ class VersionRegistry:
     def __init__(self):
         self._versions: Dict[str, List[APIVersion]] = {}  # service -> versions
         self._endpoints: Dict[
-            str, Dict[str, APIEndpoint]
+            str, Dict[str, APIEndpoint],
         ] = {}  # "METHOD path" -> {semver -> endpoint}
 
     def register_version(self, service_name: str, version: APIVersion) -> None:
@@ -113,7 +113,7 @@ class VersionRegistry:
         self._endpoints[key][endpoint.version.semver] = endpoint
 
     def get_endpoint(
-        self, method: str, path: str, version: Optional[APIVersion] = None
+        self, method: str, path: str, version: Optional[APIVersion] = None,
     ) -> Optional[APIEndpoint]:
         key = f"{method} {path}"
         endpoints = self._endpoints.get(key, {})
@@ -162,7 +162,7 @@ class VersionRegistry:
                             deprecation_date=endpoint.version.deprecation_date or time.time(),
                             sunset_date=endpoint.version.sunset_date,
                             replacement=endpoint.replacement_path,
-                        )
+                        ),
                     )
         return notices
 
@@ -229,20 +229,20 @@ class APIVersionNegotiator:
         return result
 
     def _parse_version(
-        self, requested_version: Optional[str], accept_header: Optional[str]
+        self, requested_version: Optional[str], accept_header: Optional[str],
     ) -> Optional[APIVersion]:
         if requested_version:
             match = re.match(r"(\d+)\.(\d+)(?:\.(\d+))?", requested_version)
             if match:
                 return APIVersion(
-                    int(match.group(1)), int(match.group(2)), int(match.group(3) or 0)
+                    int(match.group(1)), int(match.group(2)), int(match.group(3) or 0),
                 )
 
         if accept_header:
             match = re.search(r"v(\d+)\.(\d+)(?:\.(\d+))?", accept_header)
             if match:
                 return APIVersion(
-                    int(match.group(1)), int(match.group(2)), int(match.group(3) or 0)
+                    int(match.group(1)), int(match.group(2)), int(match.group(3) or 0),
                 )
 
         return None

@@ -357,7 +357,7 @@ class MemoryStream:
                 "capacity": self._capacity,
                 "utilization": round(len(self._memories) / self._capacity, 4),
                 "avg_importance": round(
-                    sum(m.importance for m in self._memories.values()) / len(self._memories), 4
+                    sum(m.importance for m in self._memories.values()) / len(self._memories), 4,
                 ),
                 "tag_counts": dict(sorted(tag_counts.items(), key=lambda x: -x[1])[:20]),
                 "oldest_timestamp": min(m.timestamp for m in self._memories.values()),

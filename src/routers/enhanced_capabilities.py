@@ -78,7 +78,7 @@ async def generate_code(
                 description=req.description,
                 context=req.context,
                 constraints=req.constraints,
-            )
+            ),
         )
         return {
             "code": result.code,

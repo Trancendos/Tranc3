@@ -215,7 +215,7 @@ class TestSparkToolValidation:
         reg = SparkToolRegistry()
         for tool in reg._tools.values():
             _log.info(
-                "val.spark_tool %s schema_type=%s", tool.name, type(tool.input_schema).__name__
+                "val.spark_tool %s schema_type=%s", tool.name, type(tool.input_schema).__name__,
             )
             assert isinstance(tool.input_schema, dict), f"{tool.name}.input_schema must be a dict"
 
@@ -355,7 +355,7 @@ class TestWorkflowExecutorStateValidation:
             wf = b.build()
             state = await WorkflowExecutor().execute(wf)
             _log.info(
-                "val.executor fail state=%s error_type=%s", state.status, type(state.error).__name__
+                "val.executor fail state=%s error_type=%s", state.status, type(state.error).__name__,
             )
             assert state.status == "failed"
             assert isinstance(state.error, str)

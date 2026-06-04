@@ -97,7 +97,7 @@ class DynamicsNetwork(nn.Module):
         self.config = config
 
     def forward(
-        self, state: torch.Tensor, action_vec: torch.Tensor
+        self, state: torch.Tensor, action_vec: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Predict next state and reward.
 
@@ -186,7 +186,7 @@ class MuZeroWorldModel(nn.Module):
         return self.representation(obs)
 
     def step(
-        self, state: torch.Tensor, action_idx: int
+        self, state: torch.Tensor, action_idx: int,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """One model step: (state, action) → (next_state, reward, policy_logits, value).
 

@@ -114,7 +114,7 @@ class TestSparkToolNodeFallback:
                 description="Echo tool for testing",
                 input_schema={"type": "object", "properties": {}},
                 handler=echo_handler,
-            )
+            ),
         )
 
         # Patch the module-level singleton
@@ -178,7 +178,7 @@ class TestSparkToolNodeFallback:
                 description="test",
                 input_schema={"type": "object", "properties": {}},
                 handler=spark_fn,
-            )
+            ),
         )
 
         import src.mcp.tools as tools_mod
@@ -308,7 +308,7 @@ class TestSparkRunGridWorkflow:
                     "params": {"value": 42},
                     "async_mode": False,
                     "timeout_seconds": 10,
-                }
+                },
             )
 
             assert "error" not in result or result.get("error") is None, (
@@ -338,7 +338,7 @@ class TestSparkRunGridWorkflow:
                 {
                     "workflow_id": wf.id,
                     "async_mode": True,
-                }
+                },
             )
 
             assert result.get("status") == "started"
@@ -401,7 +401,7 @@ class TestSparkIdentity:
                     "protocolVersion": "2024-11-05",
                     "clientInfo": {"name": "test", "version": "0"},
                 },
-            }
+            },
         )
         info = resp["result"]["serverInfo"]
         assert info["name"] == "the-spark"
@@ -417,7 +417,7 @@ class TestSparkIdentity:
                 "id": 2,
                 "method": "resources/list",
                 "params": {},
-            }
+            },
         )
         uris = [r["uri"] for r in resp["result"]["resources"]]
         assert any(u.startswith("spark://") for u in uris)
@@ -469,7 +469,7 @@ class TestGridBridge:
             from src.workflow.executor import event_bus as grid_bus
 
             await grid_bus.publish(
-                "workflow.completed", {"workflow_id": "test-wf", "elapsed_ms": 1.0}
+                "workflow.completed", {"workflow_id": "test-wf", "elapsed_ms": 1.0},
             )
 
             # The bridge should have forwarded it as "grid.workflow.completed"

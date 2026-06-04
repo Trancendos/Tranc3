@@ -84,7 +84,7 @@ def _client(app, secret=""):
 
     headers = {"X-Internal-Secret": secret} if secret else {}
     return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test", headers=headers
+        transport=httpx.ASGITransport(app=app), base_url="http://test", headers=headers,
     )
 
 
@@ -435,7 +435,7 @@ class TestNeighbourhood:
         async def _go():
             async with _client(_worker.app, getattr(_worker, "_INTERNAL_SECRET", "")) as c:
                 r = await c.post(
-                    "/nodes", json={"title": "Isolated", "content": "alone", "source": "s"}
+                    "/nodes", json={"title": "Isolated", "content": "alone", "source": "s"},
                 )
                 nid = r.json()["node_id"]
                 return (await c.get(f"/nodes/{nid}/neighbourhood")).json()

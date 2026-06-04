@@ -246,7 +246,7 @@ async def index_document(index: str, doc_id: str, doc: DocumentIn):
     now = time.time()
     with get_conn() as conn:
         existing = conn.execute(
-            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
+            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id),
         ).fetchone()
         if existing:
             conn.execute(
@@ -261,7 +261,7 @@ async def index_document(index: str, doc_id: str, doc: DocumentIn):
             )
             conn.execute("UPDATE indices SET doc_count=doc_count+1 WHERE name=?", (index,))
         row = conn.execute(
-            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
+            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id),
         ).fetchone()
         conn.execute(
             "INSERT INTO fts_default(rowid, id, index_name, title, body) VALUES (?,?,?,?,?)",
@@ -279,7 +279,7 @@ async def batch_index(index: str, req: BatchIndexIn):
     with get_conn() as conn:
         for doc in req.documents:
             existing = conn.execute(
-                "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc.id)
+                "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc.id),
             ).fetchone()
             if existing:
                 conn.execute(
@@ -294,7 +294,7 @@ async def batch_index(index: str, req: BatchIndexIn):
                 )
                 inserted += 1
             row = conn.execute(
-                "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc.id)
+                "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc.id),
             ).fetchone()
             conn.execute(
                 "INSERT INTO fts_default(rowid, id, index_name, title, body) VALUES (?,?,?,?,?)",
@@ -310,7 +310,7 @@ async def delete_document(index: str, doc_id: str):
     _ensure_index(index)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
+            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id),
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Document not found")

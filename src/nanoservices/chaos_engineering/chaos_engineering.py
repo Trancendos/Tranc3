@@ -69,7 +69,7 @@ class ChaosExperiment:
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     name: str = ""
     fault: FaultSpec = field(
-        default_factory=lambda: FaultSpec(fault_type=FaultType.LATENCY_INJECTION, target_service="")
+        default_factory=lambda: FaultSpec(fault_type=FaultType.LATENCY_INJECTION, target_service=""),
     )
     hypotheses: List[SteadyStateHypothesis] = field(default_factory=list)
     state: ExperimentState = ExperimentState.PLANNED
@@ -151,7 +151,7 @@ class SteadyStateValidator:
         return all(self._check(h) for h in hypotheses)
 
     def validate_after(
-        self, hypotheses: List[SteadyStateHypothesis]
+        self, hypotheses: List[SteadyStateHypothesis],
     ) -> List[SteadyStateHypothesis]:
         results = []
         for h in hypotheses:
@@ -279,7 +279,7 @@ class ChaosEngineeringService:
                         "time": elapsed,
                         "event": "fault_skipped",
                         "probability": exp.fault.probability,
-                    }
+                    },
                 )
 
             elapsed += check_interval
@@ -293,7 +293,7 @@ class ChaosEngineeringService:
                     "passed": h.passed,
                     "expected": h.expected_value,
                     "actual": h.actual_value,
-                }
+                },
             )
 
         # Auto-rollback
@@ -317,7 +317,7 @@ class ChaosEngineeringService:
         for h in exp.hypotheses:
             if not h.passed:
                 findings.append(
-                    f"FAILED: {h.name} — expected {h.expected_value}, got {h.actual_value}"
+                    f"FAILED: {h.name} — expected {h.expected_value}, got {h.actual_value}",
                 )
             else:
                 findings.append(f"PASSED: {h.name}")

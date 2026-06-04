@@ -288,10 +288,10 @@ async def storage_stats():
     """Total storage used per user and overall."""
     conn = db._get_conn()
     total = conn.execute(
-        "SELECT SUM(size_bytes) as total_bytes, COUNT(*) as file_count FROM files"
+        "SELECT SUM(size_bytes) as total_bytes, COUNT(*) as file_count FROM files",
     ).fetchone()
     by_user = conn.execute(
-        "SELECT user_id, SUM(size_bytes) as bytes, COUNT(*) as files FROM files GROUP BY user_id ORDER BY bytes DESC LIMIT 20"
+        "SELECT user_id, SUM(size_bytes) as bytes, COUNT(*) as files FROM files GROUP BY user_id ORDER BY bytes DESC LIMIT 20",
     ).fetchall()
     return {
         "total_bytes": total["total_bytes"] or 0,

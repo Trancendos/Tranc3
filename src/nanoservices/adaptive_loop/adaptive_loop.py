@@ -187,7 +187,7 @@ class MetricsCollector:
                         threshold=threshold,
                         anomaly=True,
                         labels={"direction": "below" if current < threshold else "above"},
-                    )
+                    ),
                 )
 
         return anomalies
@@ -345,7 +345,7 @@ class AdaptiveLoopEngine:
                         "value": obs.metric_value,
                         "threshold": obs.threshold,
                         "source": obs.source,
-                    }
+                    },
                 )
 
         # Analyze trends
@@ -378,7 +378,7 @@ class AdaptiveLoopEngine:
                         target="query_planner",
                         reason="Query latency exceeds threshold",
                         confidence=0.8,
-                    )
+                    ),
                 )
             elif rec == "cache_update":
                 actions.append(
@@ -387,7 +387,7 @@ class AdaptiveLoopEngine:
                         target="vector_plan_cache",
                         reason="Cache hit rate below threshold",
                         confidence=0.7,
-                    )
+                    ),
                 )
             elif rec == "drift_heal":
                 actions.append(
@@ -396,7 +396,7 @@ class AdaptiveLoopEngine:
                         target="igi_gitops",
                         reason="Drift signals detected",
                         confidence=0.75,
-                    )
+                    ),
                 )
 
         # Check for quantum escalation opportunity
@@ -408,7 +408,7 @@ class AdaptiveLoopEngine:
                     target="quantum_solver",
                     reason="Query latency trend is increasing",
                     confidence=0.6,
-                )
+                ),
             )
 
         return actions
@@ -469,7 +469,7 @@ class AdaptiveLoopEngine:
         return improvements
 
     def _adapt_policies(
-        self, observations: List[Observation], improvements: Dict[str, float]
+        self, observations: List[Observation], improvements: Dict[str, float],
     ) -> None:
         """Adapt internal policies based on observations and improvements."""
         # Adjust cycle interval based on activity level

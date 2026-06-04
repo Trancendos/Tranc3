@@ -192,7 +192,7 @@ class TestDevOcity:
     def test_issue_api_key_custom_scopes(self):
         acct = self.dev.create_account("user-1", "Alice")
         _, api_key = self.dev.issue_api_key(
-            acct.id, "admin-key", scopes=[ApiKeyScope.ADMIN, ApiKeyScope.SPARK]
+            acct.id, "admin-key", scopes=[ApiKeyScope.ADMIN, ApiKeyScope.SPARK],
         )
         assert ApiKeyScope.ADMIN in api_key.scopes
         assert ApiKeyScope.SPARK in api_key.scopes

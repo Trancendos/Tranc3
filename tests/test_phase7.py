@@ -334,7 +334,7 @@ async def test_fmd_distillation_loss():
     targets = [1.0, 2.0, 3.0, 4.0]
 
     total, kl, task = DistillationLoss.combined_loss(
-        student, teacher, targets, alpha=0.5, temperature=4.0
+        student, teacher, targets, alpha=0.5, temperature=4.0,
     )
 
     assert total > 0
@@ -403,7 +403,7 @@ async def test_daas_stream_basic():
             topic="test-events",
             classification=DataClassification.PUBLIC,
             jurisdiction=Jurisdiction.LOCAL_ONLY,
-        )
+        ),
     )
 
     success, reason = await daas.publish(
@@ -430,7 +430,7 @@ async def test_daas_gdpr_policy():
             "source_jurisdiction": "EU",
             "target_jurisdiction": "US",
             "action": "read",
-        }
+        },
     )
     assert effect == PolicyEffect.DENY
 
@@ -439,7 +439,7 @@ async def test_daas_gdpr_policy():
         {
             "data_classification": "public",
             "action": "read",
-        }
+        },
     )
     assert effect == PolicyEffect.ALLOW
 

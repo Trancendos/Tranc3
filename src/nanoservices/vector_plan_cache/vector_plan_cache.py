@@ -154,7 +154,7 @@ class InMemoryVectorStore:
             self._metadata[id_] = meta
 
     def query(
-        self, query_vector: List[float], top_k: int = 10
+        self, query_vector: List[float], top_k: int = 10,
     ) -> List[Tuple[str, float, Dict[str, Any]]]:
         """Query for similar vectors using cosine similarity."""
         results = []
@@ -245,7 +245,7 @@ class ChromaDBPlanStore:
             self._fallback.add(ids, vectors, metadatas)
 
     def query(
-        self, query_vector: List[float], top_k: int = 10
+        self, query_vector: List[float], top_k: int = 10,
     ) -> List[Tuple[str, float, Dict[str, Any]]]:
         """Query for similar vectors."""
         if self._use_chromadb and self._collection:
@@ -328,7 +328,7 @@ class LanceDBPlanStore:
             self._fallback.add(ids, vectors, metadatas)
 
     def query(
-        self, query_vector: List[float], top_k: int = 10
+        self, query_vector: List[float], top_k: int = 10,
     ) -> List[Tuple[str, float, Dict[str, Any]]]:
         """Query for similar vectors."""
         if self._use_lancedb and self._table is not None:
@@ -405,7 +405,7 @@ class VectorPlanCache:
                     "status": plan.status.value,
                     "generation": plan.generation,
                     "backend": plan.backend,
-                }
+                },
             ],
         )
 
@@ -439,7 +439,7 @@ class VectorPlanCache:
                         similarity_score=1.0,
                         distance=0.0,
                         exact_match=True,
-                    )
+                    ),
                 ]
 
         # Vector similarity search
@@ -469,7 +469,7 @@ class VectorPlanCache:
                         similarity_score=similarity,
                         distance=1.0 - similarity,
                         exact_match=exact,
-                    )
+                    ),
                 )
 
         if not search_results:

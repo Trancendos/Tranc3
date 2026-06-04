@@ -106,7 +106,7 @@ class SkillCreate(BaseModel):
     category: str
     description: str = ""
     proficiency_levels: list[str] = Field(
-        default_factory=lambda: ["beginner", "intermediate", "advanced", "expert"]
+        default_factory=lambda: ["beginner", "intermediate", "advanced", "expert"],
     )
 
 
@@ -218,7 +218,7 @@ def _now() -> float:
 
 
 def _log(
-    agent_id: str | None, task_id: str | None, action: str, details: dict | None = None
+    agent_id: str | None, task_id: str | None, action: str, details: dict | None = None,
 ) -> None:
     db = get_db()
     db.execute(
@@ -284,7 +284,7 @@ def list_agents(status: str | None = None):
     db = get_db()
     if status:
         rows = db.execute(
-            "SELECT * FROM agents WHERE status=? ORDER BY created_at DESC", (status,)
+            "SELECT * FROM agents WHERE status=? ORDER BY created_at DESC", (status,),
         ).fetchall()
     else:
         rows = db.execute("SELECT * FROM agents ORDER BY created_at DESC").fetchall()
@@ -302,7 +302,7 @@ def list_agents(status: str | None = None):
                 "metadata": json.loads(r["metadata"]),
                 "created_at": r["created_at"],
                 "updated_at": r["updated_at"],
-            }
+            },
         )
     return {"agents": result, "total": len(result)}
 
@@ -382,7 +382,7 @@ def create_task(body: TaskCreate):
     db = get_db()
     if body.parent_task_id:
         parent = db.execute(
-            "SELECT delegation_depth FROM tasks WHERE id=?", (body.parent_task_id,)
+            "SELECT delegation_depth FROM tasks WHERE id=?", (body.parent_task_id,),
         ).fetchone()
         if parent:
             depth = parent["delegation_depth"] + 1
@@ -439,7 +439,7 @@ def list_tasks(status: str | None = None, priority: int | None = None):
                 "error": r["error"],
                 "created_at": r["created_at"],
                 "updated_at": r["updated_at"],
-            }
+            },
         )
     return {"tasks": result, "total": len(result)}
 
@@ -568,7 +568,7 @@ def list_delegations(task_id: str | None = None):
     db = get_db()
     if task_id:
         rows = db.execute(
-            "SELECT * FROM delegations WHERE task_id=? ORDER BY created_at DESC", (task_id,)
+            "SELECT * FROM delegations WHERE task_id=? ORDER BY created_at DESC", (task_id,),
         ).fetchall()
     else:
         rows = db.execute("SELECT * FROM delegations ORDER BY created_at DESC").fetchall()
@@ -584,7 +584,7 @@ def list_delegations(task_id: str | None = None):
                 "reason": r["reason"],
                 "depth_at_delegation": r["depth_at_delegation"],
                 "created_at": r["created_at"],
-            }
+            },
         )
     return {"delegations": result, "total": len(result)}
 
@@ -622,7 +622,7 @@ def list_skills(category: str | None = None):
     db = get_db()
     if category:
         rows = db.execute(
-            "SELECT * FROM skills WHERE category=? ORDER BY name", (category,)
+            "SELECT * FROM skills WHERE category=? ORDER BY name", (category,),
         ).fetchall()
     else:
         rows = db.execute("SELECT * FROM skills ORDER BY name").fetchall()
@@ -637,7 +637,7 @@ def list_skills(category: str | None = None):
                 "description": r["description"],
                 "proficiency_levels": json.loads(r["proficiency_levels"]),
                 "created_at": r["created_at"],
-            }
+            },
         )
     return {"skills": result, "total": len(result)}
 
@@ -690,7 +690,7 @@ def get_agent_skills(agent_id: str):
                 "category": r["category"],
                 "proficiency": r["proficiency"],
                 "acquired_at": r["acquired_at"],
-            }
+            },
         )
     return {"skills": result, "total": len(result)}
 
@@ -723,7 +723,7 @@ def get_logs(agent_id: str | None = None, task_id: str | None = None, limit: int
                 "action": r["action"],
                 "details": json.loads(r["details"]),
                 "created_at": r["created_at"],
-            }
+            },
         )
     return {"logs": result, "total": len(result)}
 
@@ -739,7 +739,7 @@ def get_stats():
     tasks_total = db.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
     tasks_pending = db.execute("SELECT COUNT(*) FROM tasks WHERE status='pending'").fetchone()[0]
     tasks_running = db.execute(
-        "SELECT COUNT(*) FROM tasks WHERE status='assigned' OR status='running'"
+        "SELECT COUNT(*) FROM tasks WHERE status='assigned' OR status='running'",
     ).fetchone()[0]
     tasks_completed = db.execute("SELECT COUNT(*) FROM tasks WHERE status='completed'").fetchone()[
         0

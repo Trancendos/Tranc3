@@ -97,7 +97,7 @@ _jwt_secret_raw = os.environ.get("JWT_SECRET")
 if not _jwt_secret_raw:
     raise RuntimeError(
         "JWT_SECRET is not set. This service cannot validate tokens without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
     )
 JWT_SECRET: str = _jwt_secret_raw
 
@@ -106,7 +106,7 @@ AUTH_SERVICE_PORT = int(os.environ.get("AUTH_SERVICE_PORT", "8005"))
 AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL", f"http://localhost:{AUTH_SERVICE_PORT}")
 GATEWAY_SERVICE_PORT = int(os.environ.get("GATEWAY_SERVICE_PORT", "8040"))
 GATEWAY_SERVICE_URL = os.environ.get(
-    "GATEWAY_SERVICE_URL", f"http://localhost:{GATEWAY_SERVICE_PORT}"
+    "GATEWAY_SERVICE_URL", f"http://localhost:{GATEWAY_SERVICE_PORT}",
 )
 
 logger = logging.getLogger("infinity-portal-service")
@@ -471,7 +471,7 @@ async def _lifespan(app: FastAPI):
                 "smart_adaptive": True,
                 "subsystems": list(worker_kit.get_kit_stats().get("subsystems", {}).keys()),
             },
-        )
+        ),
     )
 
     logger.info("Infinity Portal ready — the front door to the Infinity Ecosystem ✨")
@@ -484,7 +484,7 @@ async def _lifespan(app: FastAPI):
                 # Session cleaner daemon
                 if worker_kit.health.should_fire("session_cleaner"):
                     active = db.execute(
-                        "SELECT COUNT(*) as cnt FROM portal_sessions WHERE is_active = 1"
+                        "SELECT COUNT(*) as cnt FROM portal_sessions WHERE is_active = 1",
                     ).fetchone()["cnt"]
                     worker_kit.health.record_metric("portal_active_sessions", float(active))
                     worker_kit.health.record_fire("session_cleaner")
@@ -504,7 +504,7 @@ async def _lifespan(app: FastAPI):
                             event_type="health_report",
                             source="infinity_portal",
                             payload=summary_dict,
-                        )
+                        ),
                     )
 
             except asyncio.CancelledError:
@@ -531,7 +531,7 @@ async def _lifespan(app: FastAPI):
             event_type="portal_stopping",
             source="infinity_portal",
             payload={"timestamp": datetime.now(timezone.utc).isoformat()},
-        )
+        ),
     )
 
     # Stop all layers
@@ -731,7 +731,7 @@ async def health():
 async def portal_status():
     """Get the current status and configuration of the Infinity Portal."""
     active_sessions = db.execute(
-        "SELECT COUNT(*) as cnt FROM portal_sessions WHERE is_active = 1"
+        "SELECT COUNT(*) as cnt FROM portal_sessions WHERE is_active = 1",
     ).fetchone()["cnt"]
 
     return PortalStatusResponse(
@@ -780,7 +780,7 @@ async def portal_login(request: Request, login: PortalLogin):
             "path": "/portal/login",
             "method": "POST",
             "user_agent": user_agent,
-        }
+        },
     )
     if not defense_result.allowed:
         raise HTTPException(
@@ -808,7 +808,7 @@ async def portal_login(request: Request, login: PortalLogin):
     try:
         fluid_route = await worker_kit.gateway.route(role, auth_result["user_id"])
         worker_kit.gateway.record_route_success(
-            fluid_route.target_location, (time.time() - t_start) * 1000
+            fluid_route.target_location, (time.time() - t_start) * 1000,
         )
     except Exception:
         pass
@@ -865,7 +865,7 @@ async def portal_login(request: Request, login: PortalLogin):
                 "transfer_system": routing.transfer_system,
                 "latency_ms": latency_ms,
             },
-        )
+        ),
     )
 
     return PortalSessionResponse(
@@ -904,7 +904,7 @@ async def portal_register(request: Request, registration: PortalRegister):
             "path": "/portal/register",
             "method": "POST",
             "user_agent": user_agent,
-        }
+        },
     )
     if not defense_result.allowed:
         raise HTTPException(
@@ -979,7 +979,7 @@ async def portal_register(request: Request, registration: PortalRegister):
                 "routed_to": routing.routed_to,
                 "latency_ms": latency_ms,
             },
-        )
+        ),
     )
 
     return PortalSessionResponse(
@@ -1028,7 +1028,7 @@ async def portal_logout(request: Request):
             event_type="user_logout",
             source="infinity_portal",
             payload={"user_id": user_id, "username": username},
-        )
+        ),
     )
 
     return {"message": "Logged out from Infinity Portal", "redirect": "/portal/login"}
@@ -1087,7 +1087,7 @@ async def list_locations():
                 "name": info.get("name", ""),
                 "purpose": info.get("purpose", ""),
                 "description": info.get("description", ""),
-            }
+            },
         )
     return {"locations": locations, "total": len(locations)}
 
@@ -1104,7 +1104,7 @@ async def gate_info():
                 "destination_id": location.value,
                 "destination_name": info.get("name", ""),
                 "purpose": info.get("purpose", ""),
-            }
+            },
         )
 
     return {
@@ -1128,7 +1128,7 @@ async def transfer_systems():
                 "name": info.get("name", ""),
                 "transfers": info.get("transfers", ""),
                 "description": info.get("description", ""),
-            }
+            },
         )
     return {"transfer_systems": systems, "total": len(systems)}
 
@@ -1201,7 +1201,7 @@ async def routing_history(limit: int = Query(50, ge=1, le=500)):
 async def stats():
     """Get Infinity Portal service statistics including smart adaptive layer stats."""
     active_sessions = db.execute(
-        "SELECT COUNT(*) as cnt FROM portal_sessions WHERE is_active = 1"
+        "SELECT COUNT(*) as cnt FROM portal_sessions WHERE is_active = 1",
     ).fetchone()["cnt"]
 
     total_sessions = db.execute("SELECT COUNT(*) as cnt FROM portal_sessions").fetchone()["cnt"]

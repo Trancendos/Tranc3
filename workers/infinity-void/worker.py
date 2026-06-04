@@ -51,7 +51,7 @@ if not _master_key_raw or _master_key_raw == "change-me-in-production":
     raise RuntimeError(
         "MASTER_KEY_SEED is not set (or still the default). "
         "The Void vault cannot start without a strong unique key. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
     )
 MASTER_KEY_SEED: str = _master_key_raw
 
@@ -60,7 +60,7 @@ if not _internal_secret_raw or _internal_secret_raw == "internal-dev-secret":
     raise RuntimeError(
         "INTERNAL_SECRET is not set (or still the default). "
         "The Void vault cannot start without a strong unique internal secret. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
     )
 INTERNAL_SECRET: str = _internal_secret_raw
 INFINITY_ONE_URL = os.getenv("INFINITY_ONE_URL", "")
@@ -283,10 +283,10 @@ app.add_middleware(
 async def health():
     conn = get_db()
     sealed = conn.execute(
-        "SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'"
+        "SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'",
     ).fetchone()
     count = conn.execute(
-        "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'"
+        "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'",
     ).fetchone()
     conn.close()
     from src.entities.health_metadata import health_entity_block
@@ -313,10 +313,10 @@ async def vault_status(authorization: str | None = Header(None)):
         raise HTTPException(status_code=401, detail="Unauthorized")
     conn = get_db()
     sealed = conn.execute(
-        "SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'"
+        "SELECT state_value FROM void_vault_state WHERE state_key = 'sealed'",
     ).fetchone()
     count = conn.execute(
-        "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'"
+        "SELECT COUNT(*) as count FROM void_secrets WHERE status = 'active'",
     ).fetchone()
     conn.close()
     return {
@@ -433,7 +433,7 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
     plaintext = decrypt_secret(payload["ciphertext"], row["iv"], row["salt"], MASTER_KEY_SEED)
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     conn.execute(
-        "UPDATE void_secrets SET last_accessed_at = ? WHERE secret_id = ?", (now, secret_id)
+        "UPDATE void_secrets SET last_accessed_at = ? WHERE secret_id = ?", (now, secret_id),
     )
     conn.execute(
         "INSERT INTO void_audit_log (audit_id, secret_id, action, actor_id, actor_type, success, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -493,7 +493,7 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
 
     conn = get_db()
     row = conn.execute(
-        "SELECT owner_id, r2_key FROM void_secrets WHERE secret_id = ?", (secret_id,)
+        "SELECT owner_id, r2_key FROM void_secrets WHERE secret_id = ?", (secret_id,),
     ).fetchone()
     if not row:
         conn.close()
@@ -532,7 +532,7 @@ async def get_audit_log(secret_id: str, authorization: str | None = Header(None)
 
     conn = get_db()
     secret = conn.execute(
-        "SELECT owner_id FROM void_secrets WHERE secret_id = ?", (secret_id,)
+        "SELECT owner_id FROM void_secrets WHERE secret_id = ?", (secret_id,),
     ).fetchone()
     if not secret:
         conn.close()

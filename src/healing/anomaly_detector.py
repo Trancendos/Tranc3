@@ -50,7 +50,7 @@ class AnomalyDetector:
         self._handlers.append(handler)
 
     def record(
-        self, metric_name: str, value: float, metadata: Optional[Dict] = None
+        self, metric_name: str, value: float, metadata: Optional[Dict] = None,
     ) -> Optional[Anomaly]:
         import time
 
@@ -104,7 +104,7 @@ class AnomalyDetector:
 
             logger.warning(
                 f"Anomaly detected: {metric_name}={sample.value:.2f} "
-                f"(z={z_score:.2f}, severity={severity})"
+                f"(z={z_score:.2f}, severity={severity})",
             )
 
             for handler in self._handlers:

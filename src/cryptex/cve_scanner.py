@@ -62,7 +62,7 @@ class CveScanner:
         opencve_api_key: Optional[str] = None,
     ) -> None:
         self._opencve_base_url = opencve_base_url or os.environ.get(
-            "OPENCVE_URL", "https://www.opencve.io"
+            "OPENCVE_URL", "https://www.opencve.io",
         )
         self._opencve_api_key = opencve_api_key or os.environ.get("OPENCVE_API_KEY")
 
@@ -190,7 +190,7 @@ class CveScanner:
                         severity=severity,
                         cvss_score=cvss_score,
                         error=str(exc),
-                    )
+                    ),
                 )
 
         high_severity = sum(

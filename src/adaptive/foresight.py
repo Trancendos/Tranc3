@@ -56,7 +56,7 @@ class ConversationTrajectoryPredictor:
         self._history: Dict[str, deque] = {}
 
     def record_turn(
-        self, session_id: str, emotion: str, intent: str, rating: Optional[float] = None
+        self, session_id: str, emotion: str, intent: str, rating: Optional[float] = None,
     ):
         if session_id not in self._history:
             self._history[session_id] = deque(maxlen=20)
@@ -66,7 +66,7 @@ class ConversationTrajectoryPredictor:
                 "intent": intent,
                 "rating": rating,
                 "ts": time.time(),
-            }
+            },
         )
 
     def predict_trajectory(self, session_id: str) -> ProbabilityVector:

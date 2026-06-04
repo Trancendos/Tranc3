@@ -76,7 +76,7 @@ _jwt_secret_raw = os.environ.get("JWT_SECRET")
 if not _jwt_secret_raw:
     raise RuntimeError(
         "JWT_SECRET is not set. This service cannot validate tokens without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
     )
 JWT_SECRET: str = _jwt_secret_raw
 
@@ -175,7 +175,7 @@ def _init_db() -> None:
             reason      TEXT,
             timestamp   TEXT NOT NULL
         );
-        """
+        """,
     )
     conn.close()
 
@@ -265,7 +265,7 @@ async def _lifespan(app: FastAPI):
                             event_type="gateway_health_report",
                             source="gateway",
                             payload=summary,
-                        )
+                        ),
                     )
             except asyncio.CancelledError:
                 break
@@ -1163,7 +1163,7 @@ async def _broadcast_event(
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "data": payload,
             "channel": channel,
-        }
+        },
     )
     disconnected = []
     for ws in ws_auth_manager.connections:
@@ -1254,8 +1254,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     "data": overview,
                     "authenticated": user is not None,
                     "tier": user.get("tier", "human") if user else "human",
-                }
-            )
+                },
+            ),
         )
 
         while True:
@@ -1278,8 +1278,8 @@ async def websocket_endpoint(websocket: WebSocket):
                             {
                                 "type": "subscribed",
                                 "channels": channels,
-                            }
-                        )
+                            },
+                        ),
                     )
                 elif msg_type == "ping":
                     await websocket.send_text(json.dumps({"type": "pong"}))
@@ -1290,14 +1290,14 @@ async def websocket_endpoint(websocket: WebSocket):
                             {
                                 "type": "overview",
                                 "data": overview,
-                            }
-                        )
+                            },
+                        ),
                     )
                 elif msg_type == "heartbeat":
                     # Explicit heartbeat for connection keepalive
                     ws_auth_manager.update_activity(websocket)
                     await websocket.send_text(
-                        json.dumps({"type": "heartbeat_ack", "ts": time.time()})
+                        json.dumps({"type": "heartbeat_ack", "ts": time.time()}),
                     )
             except json.JSONDecodeError:
                 await websocket.send_text(
@@ -1305,8 +1305,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         {
                             "type": "error",
                             "message": "Invalid JSON",
-                        }
-                    )
+                        },
+                    ),
                 )
     except WebSocketDisconnect:
         pass

@@ -33,7 +33,7 @@ class SwarmCoordinator:
             await self.session.close()
 
     async def swarm_reasoning(
-        self, problem: Dict[str, Any], user_id: Optional[str] = None
+        self, problem: Dict[str, Any], user_id: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Distributed reasoning across swarm nodes
@@ -141,7 +141,7 @@ class SwarmCoordinator:
         try:
             assert self.session is not None  # noqa: S101 — session is set by __aenter__
             async with self.session.get(
-                f"{node_url}/health", timeout=aiohttp.ClientTimeout(total=5)
+                f"{node_url}/health", timeout=aiohttp.ClientTimeout(total=5),
             ) as response:
                 return await response.json()
         except Exception:

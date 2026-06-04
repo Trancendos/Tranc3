@@ -122,7 +122,7 @@ class InfinityAgent:
             raise ValueError(f"Agent role must be 'alpha' or 'beta' — got {role!r}")
         self.dna = AgentDNA(sid=sid, location_pid=location_pid, name=name, role=role)
         self._queue: asyncio.PriorityQueue[tuple[int, int, AgentTask]] = asyncio.PriorityQueue(
-            maxsize=self._QUEUE_MAXSIZE
+            maxsize=self._QUEUE_MAXSIZE,
         )
         self._enqueue_counter: int = 0
         self._handlers: dict[str, Callable[[AgentTask], Coroutine[Any, Any, dict]]] = {}
@@ -150,7 +150,7 @@ class InfinityAgent:
         if not inspect.iscoroutinefunction(handler):
             raise TypeError(
                 f"Handler for '{task_type}' must be an async function (coroutinefunction), "
-                f"got {handler!r}"
+                f"got {handler!r}",
             )
         self._handlers[task_type] = handler
         logger.debug("%s registered handler for '%s'", self.dna, task_type)
@@ -160,7 +160,7 @@ class InfinityAgent:
     # ------------------------------------------------------------------
 
     async def enqueue(
-        self, task_type: str, payload: dict[str, Any], priority: int = 5
+        self, task_type: str, payload: dict[str, Any], priority: int = 5,
     ) -> AgentTask:
         """Enqueue a task for processing. Raises QueueFull if backlog is at capacity."""
         task = AgentTask(task_type=task_type, payload=payload, priority=priority)
@@ -169,7 +169,7 @@ class InfinityAgent:
         return task
 
     def enqueue_nowait(
-        self, task_type: str, payload: dict[str, Any], priority: int = 5
+        self, task_type: str, payload: dict[str, Any], priority: int = 5,
     ) -> AgentTask:
         """Enqueue without blocking. Raises QueueFull if at capacity."""
         task = AgentTask(task_type=task_type, payload=payload, priority=priority)

@@ -37,16 +37,16 @@ def _import_worker(module_dotted: str, file_path: Path):
 
 
 users_mod = _import_worker(
-    "users_service_worker", _TRANC3_ROOT / "workers" / "users-service" / "worker.py"
+    "users_service_worker", _TRANC3_ROOT / "workers" / "users-service" / "worker.py",
 )
 monitoring_mod = _import_worker(
-    "monitoring_worker", _TRANC3_ROOT / "workers" / "monitoring" / "worker.py"
+    "monitoring_worker", _TRANC3_ROOT / "workers" / "monitoring" / "worker.py",
 )
 notifications_mod = _import_worker(
-    "notifications_worker", _TRANC3_ROOT / "workers" / "notifications" / "worker.py"
+    "notifications_worker", _TRANC3_ROOT / "workers" / "notifications" / "worker.py",
 )
 ai_mod = _import_worker(
-    "infinity_ai_worker", _TRANC3_ROOT / "workers" / "infinity-ai" / "worker.py"
+    "infinity_ai_worker", _TRANC3_ROOT / "workers" / "infinity-ai" / "worker.py",
 )
 
 

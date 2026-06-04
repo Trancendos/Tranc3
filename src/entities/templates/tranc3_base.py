@@ -204,7 +204,7 @@ class Tranc3:
     # ------------------------------------------------------------------
 
     def record_peer_metrics(
-        self, peer: str, rps: float, latency_ms: float, queue: int = 0, slots: int = 0
+        self, peer: str, rps: float, latency_ms: float, queue: int = 0, slots: int = 0,
     ) -> None:
         """Feed live metrics into the gas/kinetic subsystem."""
         self._last_latency_ms = latency_ms

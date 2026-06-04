@@ -310,7 +310,7 @@ async def get_entry(entry_id: str):
 async def verify_chain():
     conn = _get_db()
     rows = conn.execute(
-        "SELECT id, hash, prev_hash FROM ledger_entries ORDER BY rowid ASC"
+        "SELECT id, hash, prev_hash FROM ledger_entries ORDER BY rowid ASC",
     ).fetchall()
     conn.close()
 
@@ -351,7 +351,7 @@ async def verify_chain():
 async def sentinel_history(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM sentinel_checks ORDER BY checked_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM sentinel_checks ORDER BY checked_at DESC LIMIT ? OFFSET ?", (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -368,7 +368,7 @@ async def get_stats():
     total = conn.execute("SELECT COUNT(*) as c FROM ledger_entries").fetchone()["c"]
     sentinel_count = conn.execute("SELECT COUNT(*) as c FROM sentinel_checks").fetchone()["c"]
     last_check = conn.execute(
-        "SELECT checked_at FROM sentinel_checks ORDER BY checked_at DESC LIMIT 1"
+        "SELECT checked_at FROM sentinel_checks ORDER BY checked_at DESC LIMIT 1",
     ).fetchone()
     conn.close()
 
@@ -377,7 +377,7 @@ async def get_stats():
     if total > 1:
         conn2 = _get_db()
         rows = conn2.execute(
-            "SELECT hash, prev_hash FROM ledger_entries ORDER BY rowid ASC"
+            "SELECT hash, prev_hash FROM ledger_entries ORDER BY rowid ASC",
         ).fetchall()
         conn2.close()
         for i in range(1, len(rows)):

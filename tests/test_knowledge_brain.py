@@ -242,14 +242,14 @@ class TestKnowledgeBrainSearch:
                 id="s1",
                 title="Python Programming",
                 content="Python is a great programming language for beginners.",
-            )
+            ),
         )
         await brain.put_page(
             KBPage(
                 id="s2",
                 title="JavaScript",
                 content="JavaScript runs in browsers and is used for web development.",
-            )
+            ),
         )
 
         results = await brain.search("python programming", top_k=5, use_vector=False)
@@ -271,7 +271,7 @@ class TestKnowledgeBrainSearch:
                 id="e1",
                 title="Excerpt Test",
                 content="The quick brown fox jumps over the lazy dog.",
-            )
+            ),
         )
         results = await brain.search("fox", top_k=3, use_vector=False)
         if results:
@@ -339,13 +339,13 @@ class TestWikilinkParsing:
 
         # Create target page first
         await brain.put_page(
-            KBPage(id="target-page", title="Target Page", content="I am the target.")
+            KBPage(id="target-page", title="Target Page", content="I am the target."),
         )
         # Create source with wikilink
         await brain.put_page(
             KBPage(
-                id="source-page", title="Source Page", content="See [[Target Page]] for details."
-            )
+                id="source-page", title="Source Page", content="See [[Target Page]] for details.",
+            ),
         )
         # Check a link was created (via graph_search or store inspection)
         stats = brain.stats()
@@ -357,10 +357,10 @@ class TestWikilinkParsing:
         from src.knowledge.knowledge_brain import KBPage
 
         await brain.put_page(
-            KBPage(id="aliased", title="Aliased Target", content="I am the aliased target.")
+            KBPage(id="aliased", title="Aliased Target", content="I am the aliased target."),
         )
         await brain.put_page(
-            KBPage(id="src-alias", title="Source", content="Click [[Aliased Target|here]] to read.")
+            KBPage(id="src-alias", title="Source", content="Click [[Aliased Target|here]] to read."),
         )
         # Should not raise
         p = await brain.get_page("src-alias")

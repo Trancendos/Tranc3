@@ -143,7 +143,7 @@ class DIDKeyMethod:
                     "type": "Ed25519VerificationKey2020",
                     "controller": did,
                     "publicKeyMultibase": did[8:],
-                }
+                },
             ],
             authentication=[key_id],
             assertion_methods=[key_id],
@@ -177,7 +177,7 @@ class DIDWebMethod:
                     "type": "JsonWebKey2020",
                     "controller": did,
                     "publicKeyJwk": {"kty": "OKP", "crv": "Ed25519"},
-                }
+                },
             ],
             authentication=[key_id],
             assertion_methods=[key_id],
@@ -186,7 +186,7 @@ class DIDWebMethod:
                     "id": f"{did}#agent",
                     "type": "Tranc3Agent",
                     "serviceEndpoint": f"https://{did[8:].replace(':', '/')}/agent",
-                }
+                },
             ],
         )
 
@@ -218,7 +218,7 @@ class DIDTranc3Method:
                     "type": "NanoserviceVerificationKey2024",
                     "controller": did,
                     "publicKeyHex": hashlib.sha256(did.encode()).hexdigest()[:48],
-                }
+                },
             ],
             authentication=[key_id],
             assertion_methods=[key_id],
@@ -227,7 +227,7 @@ class DIDTranc3Method:
                     "id": f"{did}#nsa-endpoint",
                     "type": "NanoserviceAgent",
                     "serviceEndpoint": f"nanoservice://{namespace}.tranc3.local",
-                }
+                },
             ],
         )
 
@@ -264,7 +264,7 @@ class CredentialIssuer:
                     "issued": vc.issuance_date,
                 },
                 sort_keys=True,
-            ).encode()
+            ).encode(),
         ).hexdigest()
 
         vc.proof = {
@@ -320,7 +320,7 @@ class DIDIdentityService:
         self._id = str(uuid.uuid4())[:8]
 
     def create_did(
-        self, method: DIDMethod = DIDMethod.DID_KEY, **kwargs: Any
+        self, method: DIDMethod = DIDMethod.DID_KEY, **kwargs: Any,
     ) -> Tuple[str, DIDDocument]:
         handler = self.methods.get(method)
         if not handler:
@@ -328,7 +328,7 @@ class DIDIdentityService:
 
         if method == DIDMethod.DID_WEB:
             did, pub, priv = handler.create(
-                kwargs.get("domain", "tranc3.local"), kwargs.get("path")
+                kwargs.get("domain", "tranc3.local"), kwargs.get("path"),
             )
         elif method == DIDMethod.DID_TRANC3:
             did, pub, priv = handler.create(kwargs.get("namespace", "default"))
@@ -378,7 +378,7 @@ class DIDIdentityService:
         return True
 
     def create_presentation(
-        self, holder_did: str, credential_ids: List[str]
+        self, holder_did: str, credential_ids: List[str],
     ) -> VerifiablePresentation:
         creds = [self.credentials[cid] for cid in credential_ids if cid in self.credentials]
         vp = VerifiablePresentation(
@@ -393,7 +393,7 @@ class DIDIdentityService:
                     "created": vp.created,
                 },
                 sort_keys=True,
-            ).encode()
+            ).encode(),
         ).hexdigest()
         vp.proof = {
             "type": "Ed25519Signature2020",

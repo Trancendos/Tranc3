@@ -177,12 +177,12 @@ class IntentParser:
 
     # Projection patterns
     PROJECTION_PATTERN = re.compile(
-        r"\b(show|select|get|display)\s+([\w\s,]+?)(?:\s+from|\s+where|\s+in|$)", re.IGNORECASE
+        r"\b(show|select|get|display)\s+([\w\s,]+?)(?:\s+from|\s+where|\s+in|$)", re.IGNORECASE,
     )
 
     # Filter patterns
     FILTER_PATTERN = re.compile(
-        r"\b(where|with|having|filter)\s+([\w\s<>=!]+?)(?:\s+and|\s+or|\s+join|$)", re.IGNORECASE
+        r"\b(where|with|having|filter)\s+([\w\s<>=!]+?)(?:\s+and|\s+or|\s+join|$)", re.IGNORECASE,
     )
 
     def classify_intent(self, text: str) -> Tuple[IntentCategory, float]:
@@ -407,7 +407,7 @@ Example output:
         suggestions = []
         if not query.relations:
             suggestions.append(
-                "Specify which data relations to query (e.g., 'FROM patients, variants')"
+                "Specify which data relations to query (e.g., 'FROM patients, variants')",
             )
         if len(query.relations) > 1 and not query.joins:
             suggestions.append("Specify join conditions between relations (e.g., 'ON patient_id')")
@@ -453,7 +453,7 @@ class QueryIntentService:
         self._query_history: List[Dict[str, Any]] = []
 
     async def process_natural_language_query(
-        self, natural_language: str, context: Optional[Dict[str, Any]] = None
+        self, natural_language: str, context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Process a natural language query end-to-end.
 

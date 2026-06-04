@@ -20,8 +20,6 @@ from typing import Dict, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from src.entities.health_metadata import health_entity_block
-
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -181,21 +179,16 @@ async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
         # Two-pass GIF: generate palette then render
         palette_path = WORKDIR / f"{uuid.uuid4().hex}_palette.png"
         rc, _, stderr = await _run_ffmpeg(
-            "-i",
-            input_path,
-            "-vf",
-            "fps=10,scale=320:-1:flags=lanczos,palettegen",
+            "-i", input_path,
+            "-vf", "fps=10,scale=320:-1:flags=lanczos,palettegen",
             str(palette_path),
         )
         if rc != 0:
             raise RuntimeError(f"Palette generation failed: {stderr[-500:]}")
         rc, _, stderr = await _run_ffmpeg(
-            "-i",
-            input_path,
-            "-i",
-            str(palette_path),
-            "-lavfi",
-            "fps=10,scale=320:-1:flags=lanczos[x];[x][1:v]paletteuse",
+            "-i", input_path,
+            "-i", str(palette_path),
+            "-lavfi", "fps=10,scale=320:-1:flags=lanczos[x];[x][1:v]paletteuse",
             str(out_path),
         )
         try:
@@ -204,33 +197,22 @@ async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
             pass
     elif output_format == "webm":
         rc, _, stderr = await _run_ffmpeg(
-            "-i",
-            input_path,
-            "-c:v",
-            "libvpx-vp9",
-            "-crf",
-            crf,
-            "-b:v",
-            "0",
-            "-c:a",
-            "libopus",
+            "-i", input_path,
+            "-c:v", "libvpx-vp9",
+            "-crf", crf,
+            "-b:v", "0",
+            "-c:a", "libopus",
             str(out_path),
         )
     else:
         # mp4
         rc, _, stderr = await _run_ffmpeg(
-            "-i",
-            input_path,
-            "-c:v",
-            "libx264",
-            "-crf",
-            crf,
-            "-preset",
-            "medium",
-            "-c:a",
-            "aac",
-            "-movflags",
-            "+faststart",
+            "-i", input_path,
+            "-c:v", "libx264",
+            "-crf", crf,
+            "-preset", "medium",
+            "-c:a", "aac",
+            "-movflags", "+faststart",
             str(out_path),
         )
 
@@ -242,14 +224,10 @@ async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
 async def _thumbnail(input_path: str, timestamp_seconds: float) -> Path:
     out_path = WORKDIR / f"{uuid.uuid4().hex}_thumb.jpg"
     rc, _, stderr = await _run_ffmpeg(
-        "-ss",
-        str(timestamp_seconds),
-        "-i",
-        input_path,
-        "-frames:v",
-        "1",
-        "-q:v",
-        "2",
+        "-ss", str(timestamp_seconds),
+        "-i", input_path,
+        "-frames:v", "1",
+        "-q:v", "2",
         str(out_path),
     )
     if rc != 0:
@@ -263,13 +241,9 @@ async def _compress(input_path: str, target_mb: float) -> Path:
 
     # Probe duration to compute target bitrate
     probe_proc = await asyncio.create_subprocess_exec(
-        "ffprobe",
-        "-v",
-        "error",
-        "-show_entries",
-        "format=duration",
-        "-of",
-        "default=noprint_wrappers=1:nokey=1",
+        "ffprobe", "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1",
         input_path,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
@@ -294,56 +268,35 @@ async def _compress(input_path: str, target_mb: float) -> Path:
     if bitrate_str:
         # Pass 1
         rc, _, _ = await _run_ffmpeg(
-            "-i",
-            input_path,
-            "-c:v",
-            "libx264",
-            "-b:v",
-            bitrate_str,
-            "-pass",
-            "1",
-            "-passlogfile",
-            log_prefix,
-            "-an",
-            "-f",
-            "null",
-            "/dev/null",
+            "-i", input_path,
+            "-c:v", "libx264",
+            "-b:v", bitrate_str,
+            "-pass", "1",
+            "-passlogfile", log_prefix,
+            "-an", "-f", "null", "/dev/null",
         )
         if rc == 0:
             # Pass 2
             rc, _, stderr = await _run_ffmpeg(
-                "-i",
-                input_path,
-                "-c:v",
-                "libx264",
-                "-b:v",
-                bitrate_str,
-                "-pass",
-                "2",
-                "-passlogfile",
-                log_prefix,
-                "-c:a",
-                "aac",
-                "-b:a",
-                "128k",
+                "-i", input_path,
+                "-c:v", "libx264",
+                "-b:v", bitrate_str,
+                "-pass", "2",
+                "-passlogfile", log_prefix,
+                "-c:a", "aac",
+                "-b:a", "128k",
                 str(out_path),
             )
         else:
             stderr = "two-pass encode pass 1 failed"
     else:
         rc, _, stderr = await _run_ffmpeg(
-            "-i",
-            input_path,
-            "-c:v",
-            "libx264",
-            "-crf",
-            "28",
-            "-preset",
-            "medium",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
+            "-i", input_path,
+            "-c:v", "libx264",
+            "-crf", "28",
+            "-preset", "medium",
+            "-c:a", "aac",
+            "-b:a", "128k",
             str(out_path),
         )
 
@@ -370,10 +323,8 @@ async def health() -> dict:
     available = _ffmpeg_available()
     return {
         "service": "ffmpeg-worker",
-        "port": 8052,
         "available": available,
         "ffmpeg_version": _ffmpeg_version(),
-        "entity": health_entity_block(8052, "ffmpeg-worker"),
     }
 
 
@@ -389,7 +340,7 @@ async def transcode(req: TranscodeRequest) -> dict:
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
     asyncio.create_task(
-        _run_job(job_id, _transcode(req.input_path, req.output_format, req.quality))
+        _run_job(job_id, _transcode(req.input_path, req.output_format, req.quality)),
     )
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
@@ -411,7 +362,9 @@ async def thumbnail(req: ThumbnailRequest) -> dict:
 
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
-    asyncio.create_task(_run_job(job_id, _thumbnail(req.input_path, req.timestamp_seconds)))
+    asyncio.create_task(
+        _run_job(job_id, _thumbnail(req.input_path, req.timestamp_seconds)),
+    )
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
 
@@ -423,7 +376,9 @@ async def compress(req: CompressRequest) -> dict:
 
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
-    asyncio.create_task(_run_job(job_id, _compress(req.input_path, req.target_mb)))
+    asyncio.create_task(
+        _run_job(job_id, _compress(req.input_path, req.target_mb)),
+    )
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
 

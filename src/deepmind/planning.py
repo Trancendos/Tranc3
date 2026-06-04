@@ -112,7 +112,7 @@ class BeamSearchPlanner:
         return beam
 
     async def _async_expand(
-        self, node: ThoughtNode, goal: str, context: Dict, depth: int
+        self, node: ThoughtNode, goal: str, context: Dict, depth: int,
     ) -> List[ThoughtNode]:
         """Expand a single thought node into child ThoughtNodes asynchronously."""
         next_thoughts = self._expand_thought(node.thought, context)
@@ -231,7 +231,7 @@ class BeamSearchPlanner:
 
         # Seed selection from thought content for deterministic variety
         seed = int(hashlib.md5(thought.encode(), usedforsecurity=False).hexdigest(), 16) % len(
-            templates
+            templates,
         )
         selected = templates[seed : seed + 4] + templates[: max(0, seed - len(templates) + 4)]
         selected = selected[: self.beam_width]
@@ -311,7 +311,7 @@ class ChainOfThoughtReasoner:
                     "step": step,
                     "cumulative_context": running_context.strip(),
                     "intermediate_confidence": intermediate_confidence,
-                }
+                },
             )
 
         return {
@@ -528,7 +528,7 @@ class StrategicPlanner:
             feedback_parts.append("Plan steps lack logical flow.")
         if feasibility < 0.5:
             feedback_parts.append(
-                f"Plan length ({len(plan)}) deviates significantly from target ({target_len})."
+                f"Plan length ({len(plan)}) deviates significantly from target ({target_len}).",
             )
         if not feedback_parts:
             feedback_parts.append("Plan looks coherent and aligned with the goal.")

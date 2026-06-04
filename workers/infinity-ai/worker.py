@@ -301,7 +301,7 @@ class OllamaClient:
         self._available: Optional[bool] = None
 
     async def complete(
-        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float,
     ) -> Optional[Dict[str, Any]]:
         import urllib.error
         import urllib.request
@@ -355,7 +355,7 @@ class OpenRouterClient:
         self.api_key = api_key
 
     async def complete(
-        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float,
     ) -> Optional[Dict[str, Any]]:
         import urllib.error
         import urllib.request
@@ -407,7 +407,7 @@ class HuggingFaceClient:
         self.api_key = api_key
 
     async def complete(
-        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float,
     ) -> Optional[Dict[str, Any]]:
         import urllib.error
         import urllib.request
@@ -458,7 +458,7 @@ class OfflineClient:
     }
 
     async def complete(
-        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float
+        self, model: str, messages: List[ChatMessage], max_tokens: int, temperature: float,
     ) -> Dict[str, Any]:
         # Simple keyword matching for offline responses
         last_msg = messages[-1].content.lower() if messages else ""
@@ -563,12 +563,12 @@ class AIGatewayRouter:
         )
         if not self.db.check_budget(tenant_id, estimated_tokens):
             raise HTTPException(
-                429, "Token budget exceeded for today. Try again tomorrow or contact admin."
+                429, "Token budget exceeded for today. Try again tomorrow or contact admin.",
             )
 
         # Check cache
         cache_key = self._make_cache_key(
-            request.model, request.messages, request.max_tokens, request.temperature, tenant_id
+            request.model, request.messages, request.max_tokens, request.temperature, tenant_id,
         )
         cached = self.cache.get(cache_key)
         if cached:
@@ -611,7 +611,7 @@ class AIGatewayRouter:
                         ChatCompletionChoice(
                             message=ChatMessage(role="assistant", content=content),
                             finish_reason="stop",
-                        )
+                        ),
                     ],
                     usage=ChatCompletionUsage(
                         prompt_tokens=prompt_tokens,
@@ -663,7 +663,7 @@ class AIGatewayRouter:
 
         # All providers failed — use offline as last resort
         result = await self.offline.complete(
-            request.model, request.messages, request.max_tokens, request.temperature
+            request.model, request.messages, request.max_tokens, request.temperature,
         )
         content = result.get("content", "")
         latency_ms = int((time.time() - start_time) * 1000)
@@ -682,8 +682,8 @@ class AIGatewayRouter:
             model=request.model,
             choices=[
                 ChatCompletionChoice(
-                    message=ChatMessage(role="assistant", content=content), finish_reason="stop"
-                )
+                    message=ChatMessage(role="assistant", content=content), finish_reason="stop",
+                ),
             ],
             usage=ChatCompletionUsage(total_tokens=len(content) // 4),
             provider="offline",

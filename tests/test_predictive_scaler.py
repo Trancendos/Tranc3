@@ -274,7 +274,7 @@ class TestPredictiveAutoscaler:
 
     def test_deregister_resource(self):
         self.scaler.register_resource(
-            name="temp-service", current_units=1, min_units=1, max_units=10
+            name="temp-service", current_units=1, min_units=1, max_units=10,
         )
         self.scaler.deregister_resource("temp-service")
         # After deregister, should not appear in all_status
@@ -345,7 +345,7 @@ class TestPredictiveAutoscaler:
 
     def test_get_forecast(self):
         self.scaler.register_resource(
-            name="forecast-svc", current_units=1, min_units=1, max_units=10
+            name="forecast-svc", current_units=1, min_units=1, max_units=10,
         )
         for i in range(10):
             self.scaler.record_load("forecast-svc", 0.5 + i * 0.01)

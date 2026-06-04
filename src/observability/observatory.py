@@ -165,7 +165,7 @@ class Observatory:
             logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
     def recent(
-        self, limit: int = 100, category: Optional[EventCategory] = None
+        self, limit: int = 100, category: Optional[EventCategory] = None,
     ) -> List[AuditEvent]:
         """Return recent events, newest first. Optionally filter by category."""
         events = list(self._buffer)
@@ -174,7 +174,7 @@ class Observatory:
         return list(reversed(events))[-limit:]
 
     def search(
-        self, actor: Optional[str] = None, event_type: Optional[str] = None, limit: int = 50
+        self, actor: Optional[str] = None, event_type: Optional[str] = None, limit: int = 50,
     ) -> List[AuditEvent]:
         """Search the buffer for events matching the given actor or event_type prefix."""
         results = []

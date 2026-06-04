@@ -170,7 +170,7 @@ class PageRankEngine:
             dangling_contrib = PAGERANK_DAMPING * dangling_sum / n if n else 0.0
 
             new_scores: Dict[int, float] = dict.fromkeys(
-                range(n), (1 - PAGERANK_DAMPING) / n + dangling_contrib
+                range(n), (1 - PAGERANK_DAMPING) / n + dangling_contrib,
             )
             for src, links in out_links.items():
                 total_weight = sum(w for _, w in links)
@@ -258,7 +258,7 @@ def multi_hop_search(
                         "hops": depth,
                         "path": path,
                         "tags": json.loads(row["tags"] or "[]"),
-                    }
+                    },
                 )
 
         if depth < max_hops:
@@ -341,7 +341,7 @@ def consolidate_knowledge(db: sqlite3.Connection) -> Dict[str, int]:
     - Returns stats: {"merged": N, "kept": M}
     """
     rows = db.execute(
-        "SELECT node_id, title, content, importance FROM nodes ORDER BY importance DESC"
+        "SELECT node_id, title, content, importance FROM nodes ORDER BY importance DESC",
     ).fetchall()
 
     to_delete: Set[str] = set()
@@ -644,7 +644,7 @@ async def graph_stats() -> Response:  # type: ignore[return-value]
     node_count = db.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
     edge_count = db.execute("SELECT COUNT(*) FROM edges").fetchone()[0]
     top_nodes = db.execute(
-        "SELECT node_id, title, importance FROM nodes ORDER BY importance DESC LIMIT 10"
+        "SELECT node_id, title, importance FROM nodes ORDER BY importance DESC LIMIT 10",
     ).fetchall()
     avg_importance = db.execute("SELECT AVG(importance) FROM nodes").fetchone()[0] or 0.0
     return {  # type: ignore[return-value]

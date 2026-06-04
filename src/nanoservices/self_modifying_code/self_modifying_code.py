@@ -214,7 +214,7 @@ class MutationEngine:
                                         diff_description=f"Change constant from {original_value} to {new_value}",
                                         original_code=str(original_value),
                                         mutated_code=str(new_value),
-                                    )
+                                    ),
                                 )
                     elif isinstance(original_value, float):
                         for factor in [0.8, 0.9, 1.1, 1.2]:
@@ -226,14 +226,14 @@ class MutationEngine:
                                     diff_description=f"Change constant from {original_value} to {new_value}",
                                     original_code=str(original_value),
                                     mutated_code=str(new_value),
-                                )
+                                ),
                             )
         except SyntaxError:
             pass
         return mutations[:20]
 
     def swap_algorithm(
-        self, function_code: str, alternatives: Optional[Dict[str, str]] = None
+        self, function_code: str, alternatives: Optional[Dict[str, str]] = None,
     ) -> List[CodeMutation]:
         if not alternatives:
             alternatives = {
@@ -250,7 +250,7 @@ class MutationEngine:
                     diff_description=f"Swap with {name}",
                     original_code=function_code[:100],
                     mutated_code=replacement,
-                )
+                ),
             )
         return mutations
 
@@ -280,7 +280,7 @@ class SelfModifyingCodeEngine:
         self._id = str(uuid.uuid4())[:8]
 
     def add_fitness_function(
-        self, name: str, weight: float = 1.0, evaluate: Optional[Callable] = None
+        self, name: str, weight: float = 1.0, evaluate: Optional[Callable] = None,
     ):
         self.fitness_functions.append(FitnessFunction(name=name, weight=weight, evaluate=evaluate))
 
@@ -305,7 +305,7 @@ class SelfModifyingCodeEngine:
         return snapshot
 
     def propose_mutations(
-        self, module: str, code: str, max_mutations: int = 10
+        self, module: str, code: str, max_mutations: int = 10,
     ) -> List[CodeMutation]:
         safety = self.analyzer.check_safety(code)
         param_mutations = self.mutation_engine.tune_parameters(code)
@@ -324,7 +324,7 @@ class SelfModifyingCodeEngine:
                     break
 
         logger.info(
-            "Proposed %d mutations for %s (safety: %s)", len(accepted), module, safety.value
+            "Proposed %d mutations for %s (safety: %s)", len(accepted), module, safety.value,
         )
         return accepted
 
@@ -388,7 +388,7 @@ class SelfModifyingCodeEngine:
         return True
 
     def evolve(
-        self, module: str, code: str, metrics: Dict[str, Any], generations: int = 5
+        self, module: str, code: str, metrics: Dict[str, Any], generations: int = 5,
     ) -> Dict[str, Any]:
         self.create_snapshot(module, code)
         best_mutation = None
@@ -409,7 +409,7 @@ class SelfModifyingCodeEngine:
                     "generation": gen,
                     "mutations_proposed": len(mutations),
                     "best_score": best_score,
-                }
+                },
             )
 
         if best_mutation:

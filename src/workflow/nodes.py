@@ -186,7 +186,7 @@ class LLMNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500),
             )
 
 
@@ -363,7 +363,7 @@ class HTTPNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500),
             )
 
 
@@ -450,12 +450,12 @@ class TransformNode(BaseNode):
             except Exception as exc:
                 duration_ms = (time.monotonic() - t0) * 1000
                 return self._make_result(
-                    None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                    None, duration_ms, success=False, error=safe_error_detail(exc, 500),
                 )
 
         duration_ms = (time.monotonic() - t0) * 1000
         return self._make_result(
-            output, duration_ms, metadata={"mapping_keys": list(mapping.keys())}
+            output, duration_ms, metadata={"mapping_keys": list(mapping.keys())},
         )
 
 
@@ -516,7 +516,7 @@ class VectorSearchNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500),
             )
 
 
@@ -604,7 +604,7 @@ class SparkToolNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500),
             )
 
 
@@ -745,7 +745,7 @@ class SkillCallNode(BaseNode):
         if not skill_name:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error="No 'skill_name' specified"
+                None, duration_ms, success=False, error="No 'skill_name' specified",
             )
 
         fn = _SKILL_REGISTRY.get(skill_name)
@@ -774,7 +774,7 @@ class SkillCallNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500),
             )
 
 
@@ -792,7 +792,7 @@ class MLPredictNode(BaseNode):
         t0 = time.monotonic()
         cfg = self.config.config
         endpoint = cfg.get("endpoint") or os.environ.get(
-            "TRANC3_MODEL_ENDPOINT", self._DEFAULT_ENDPOINT
+            "TRANC3_MODEL_ENDPOINT", self._DEFAULT_ENDPOINT,
         )
         model_name = cfg.get("model_name", "tranc3-base")
         payload = {
@@ -825,7 +825,7 @@ class MLPredictNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500),
             )
 
 
@@ -937,7 +937,7 @@ def create_node(config: NodeConfig) -> BaseNode:
     if node_class is None:
         raise ValueError(
             f"Unknown node type: {config.type!r}. "
-            f"Available types: {[t.value for t in NODE_REGISTRY] + list(_PHASE4_NODE_REGISTRY.keys())}"
+            f"Available types: {[t.value for t in NODE_REGISTRY] + list(_PHASE4_NODE_REGISTRY.keys())}",
         )
     return node_class(config)
 

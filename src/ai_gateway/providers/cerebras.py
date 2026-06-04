@@ -76,14 +76,15 @@ class CerebrasProvider(AIProvider):
         """Generate a chat completion using Cerebras' OpenAI-compatible API."""
         if not self._is_available():
             raise RuntimeError(
-                "CEREBRAS_API_KEY is not set. Get a free key at https://cloud.cerebras.ai/"
+                "CEREBRAS_API_KEY is not set. "
+                "Get a free key at https://cloud.cerebras.ai/",
             )
 
         model = request.model or self._default_model
         start = time.monotonic()
 
         messages: List[dict[str, Any]] = request.messages or [
-            {"role": "user", "content": request.prompt}
+            {"role": "user", "content": request.prompt},
         ]
 
         payload: dict[str, Any] = {

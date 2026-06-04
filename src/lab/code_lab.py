@@ -187,7 +187,7 @@ class TheLab:
             from src.observability.observatory import EventCategory, observe
 
             observe(
-                event_type, category=EventCategory.DATA, service="the-lab", metadata=metadata or {}
+                event_type, category=EventCategory.DATA, service="the-lab", metadata=metadata or {},
             )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream

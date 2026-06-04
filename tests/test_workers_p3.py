@@ -150,7 +150,7 @@ class TestAnalyticsService:
                 "events": [
                     {"event_type": "click", "user_id": "u1"},
                     {"event_type": "scroll", "user_id": "u2"},
-                ]
+                ],
             },
         )
         assert r.status_code == 201
@@ -291,7 +291,7 @@ class TestSearchService:
                 "documents": [
                     {"id": "p1", "title": "Widget A", "body": "A great widget"},
                     {"id": "p2", "title": "Widget B", "body": "Another widget"},
-                ]
+                ],
             },
         )
         assert r.status_code == 201
@@ -360,7 +360,7 @@ class TestEmailService:
                 "emails": [
                     {"to": "a@example.com", "subject": "Email A", "body_text": "Body A"},
                     {"to": "b@example.com", "subject": "Email B", "body_text": "Body B"},
-                ]
+                ],
             },
         )
         assert r.status_code == 202
@@ -464,7 +464,7 @@ class TestSmsService:
                 "messages": [
                     {"to": "+15551111111", "message": "Hello A"},
                     {"to": "+15552222222", "message": "Hello B"},
-                ]
+                ],
             },
         )
         assert r.status_code == 202
@@ -740,7 +740,7 @@ class TestQueueService:
                 "messages": [
                     {"payload": {"level": "INFO", "msg": "App started"}},
                     {"payload": {"level": "WARN", "msg": "High CPU"}},
-                ]
+                ],
             },
         )
         assert r.status_code == 201
@@ -760,7 +760,7 @@ class TestQueueService:
         client.post("/topics", json={"name": "ack-topic"})
         client.post("/topics/ack-topic/publish", json={"payload": {"x": 1}})
         consume = client.get(
-            "/topics/ack-topic/consume", params={"consumer_id": "worker-ack"}
+            "/topics/ack-topic/consume", params={"consumer_id": "worker-ack"},
         ).json()
         msg_id = consume["messages"][0]["id"]
         r = client.post(f"/topics/ack-topic/ack/{msg_id}")
@@ -962,7 +962,7 @@ class TestConfigService:
                     {"key": "k1", "value": "v1"},
                     {"key": "k2", "value": "v2"},
                     {"key": "k3", "value": "v3"},
-                ]
+                ],
             },
         )
         assert r.status_code == 200
@@ -1031,7 +1031,7 @@ class TestAuditService:
                 "entries": [
                     {"actor": "user:bob", "action": "view", "resource": "dashboard"},
                     {"actor": "user:bob", "action": "export", "resource": "report"},
-                ]
+                ],
             },
         )
         assert r.status_code == 201
@@ -1055,7 +1055,7 @@ class TestAuditService:
 
     def test_get_entry_by_id(self, client):
         created = client.post(
-            "/audit", json={"actor": "user:alice", "action": "update", "resource": "profile"}
+            "/audit", json={"actor": "user:alice", "action": "update", "resource": "profile"},
         ).json()
         # ID returned as integer in 'id' field
         entry_id = created["id"]
@@ -1531,7 +1531,7 @@ class TestTheGrid:
                         "action": "transform",
                         "config": {"mapping": {"out": "input.value"}},
                         "depends_on": [],
-                    }
+                    },
                 ],
             },
         )
@@ -1580,7 +1580,7 @@ class TestTheGrid:
                         "action": "transform",
                         "config": {"mapping": {"result": "input.x"}},
                         "depends_on": [],
-                    }
+                    },
                 ],
             },
         ).json()
@@ -1608,7 +1608,7 @@ class TestTheGrid:
                         "action": "transform",
                         "config": {},
                         "depends_on": [],
-                    }
+                    },
                 ],
             },
         ).json()

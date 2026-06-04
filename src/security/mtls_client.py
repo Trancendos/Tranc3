@@ -222,7 +222,7 @@ def _build_ssl_kwargs() -> Dict[str, Any]:
     else:
         logger.debug(
             "No client cert configured (MTLS_CLIENT_CERT / MTLS_CLIENT_KEY) — "
-            "mTLS client auth will not be presented"
+            "mTLS client auth will not be presented",
         )
 
     return kwargs

@@ -321,7 +321,7 @@ class GeneticOptimizer:
         selected = []
         for _ in range(self._population_size):
             candidates = random.sample(
-                self._population, min(tournament_size, len(self._population))
+                self._population, min(tournament_size, len(self._population)),
             )
             best = min(candidates, key=lambda ind: self._weighted_fitness(ind))
             selected.append(best)
@@ -344,12 +344,12 @@ class GeneticOptimizer:
                 offspring.append(Individual(chromosome=child2_chrom, generation=self._generation))
             else:
                 offspring.append(
-                    Individual(chromosome=dict(parents[i].chromosome), generation=self._generation)
+                    Individual(chromosome=dict(parents[i].chromosome), generation=self._generation),
                 )
                 offspring.append(
                     Individual(
-                        chromosome=dict(parents[i + 1].chromosome), generation=self._generation
-                    )
+                        chromosome=dict(parents[i + 1].chromosome), generation=self._generation,
+                    ),
                 )
         return offspring
 
@@ -363,13 +363,13 @@ class GeneticOptimizer:
                         delta = random.gauss(0, (spec.max_value - spec.min_value) * 0.1)
                         new_val = int(individual.chromosome.get(name, 0) + delta)
                         individual.chromosome[name] = max(
-                            int(spec.min_value), min(int(spec.max_value), new_val)
+                            int(spec.min_value), min(int(spec.max_value), new_val),
                         )
                     else:
                         delta = random.gauss(0, (spec.max_value - spec.min_value) * 0.1)
                         new_val = individual.chromosome.get(name, 0.0) + delta
                         individual.chromosome[name] = max(
-                            spec.min_value, min(spec.max_value, new_val)
+                            spec.min_value, min(spec.max_value, new_val),
                         )
         return population
 

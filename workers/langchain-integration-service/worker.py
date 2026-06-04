@@ -363,7 +363,7 @@ async def create_template(body: PromptTemplateCreate):
 async def list_templates(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM prompt_templates ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM prompt_templates ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -435,7 +435,7 @@ async def create_chain(body: ChainCreate):
 async def list_chains(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM chains ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM chains ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -550,7 +550,7 @@ async def create_document(body: DocumentCreate):
 async def list_documents(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM documents ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM documents ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -601,7 +601,7 @@ async def create_tool(body: AgentToolCreate):
 async def list_tools(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM agent_tools ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM agent_tools ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -654,7 +654,7 @@ async def create_graph(body: StateGraphCreate):
 async def list_graphs(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM state_graphs ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM state_graphs ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]

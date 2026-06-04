@@ -140,7 +140,7 @@ class CausalGraph:
         # Check for cycles
         if self._would_create_cycle(rule.cause, rule.effect):
             raise ValueError(
-                f"Adding rule '{rule.cause}' -> '{rule.effect}' would create a causal cycle"
+                f"Adding rule '{rule.cause}' -> '{rule.effect}' would create a causal cycle",
             )
         self._rules[rule.rule_id] = rule
         self._adj_forward[rule.cause].append(rule.rule_id)
@@ -386,7 +386,7 @@ class CausalReasoner:
                             effects[rule.effect] = existing + rule_prob
                         chain.append(
                             f"{event} -> {rule.effect} "
-                            f"(p={abs(rule_prob):.2f}, {rule.strength.value})"
+                            f"(p={abs(rule_prob):.2f}, {rule.strength.value})",
                         )
                         # Only enqueue if this (effect, depth) pair hasn't been
                         # processed yet — prevents infinite loops in the DAG while
@@ -454,7 +454,7 @@ class CausalReasoner:
                         # Combine multiple explanations (noisy-OR)
                         causes[rule.cause] = 1.0 - (1.0 - existing) * (1.0 - cause_prob)
                         chain.append(
-                            f"{rule.cause} -> {event} (p={cause_prob:.2f}, {rule.strength.value})"
+                            f"{rule.cause} -> {event} (p={cause_prob:.2f}, {rule.strength.value})",
                         )
                         queue.append((rule.cause, cause_prob, depth + 1))
 
@@ -532,7 +532,7 @@ class CausalReasoner:
         return self._graph.stats()
 
     def list_rules(
-        self, cause: Optional[str] = None, effect: Optional[str] = None
+        self, cause: Optional[str] = None, effect: Optional[str] = None,
     ) -> List[CausalRule]:
         """List causal rules, optionally filtered."""
         rules = list(self._graph.rules.values())

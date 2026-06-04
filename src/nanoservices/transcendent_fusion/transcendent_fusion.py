@@ -314,7 +314,7 @@ class FusionEngine:
         all_emb = []
         for mod, emb in embeddings.items():
             all_emb.extend(
-                emb[: self.embedding_dim // len(embeddings)] if len(embeddings) > 1 else emb
+                emb[: self.embedding_dim // len(embeddings)] if len(embeddings) > 1 else emb,
             )
 
         # Normalize
@@ -361,7 +361,7 @@ class FusionEngine:
                 if i == j:
                     continue
                 attended, quality = self.attention.compute_attention(
-                    embeddings[mod_q], embeddings[mod_k], embeddings[mod_k]
+                    embeddings[mod_q], embeddings[mod_k], embeddings[mod_k],
                 )
                 weight = quality
                 for k in range(min(len(fused), len(attended))):

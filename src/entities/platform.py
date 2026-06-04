@@ -166,7 +166,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Executive Dashboard; live platform coordination.",
         offline_mode="Limited dashboard; offline workflow drafting.",
         agent_alpha=Agent(
-            "Synapse", "Monitors global activity; triggers alerts for offline nodes."
+            "Synapse", "Monitors global activity; triggers alerts for offline nodes.",
         ),
         agent_beta=Agent("Cortex", "Translates objectives into workflow blueprints."),
         bot_01=Bot("Neuron-1-Bot", "Listens for emergency signals for immediate attention."),
@@ -273,7 +273,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Cloud video production; distributed swarm rendering.",
         offline_mode="Local timeline editing; low-res proxy rendering.",
         agent_alpha=Agent(
-            "The Director", "Coordinates timeline-as-code scripting from video data."
+            "The Director", "Coordinates timeline-as-code scripting from video data.",
         ),
         agent_beta=Agent("The Editor", "Suggests cuts, music shifts, and scene transitions."),
         bot_01=Bot("Cutter-Bot", "Slices video and audio tracks at precise timestamps."),
@@ -317,13 +317,13 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live masterpiece generation; interactive feature mapping.",
         offline_mode="Offline blueprint drafting; localized logic mapping.",
         agent_alpha=Agent(
-            "The Alchemist", "Translates product plans into multi-app design sequences."
+            "The Alchemist", "Translates product plans into multi-app design sequences.",
         ),
         agent_beta=Agent("The Architect", "Bridges visual layouts with structural code bindings."),
         bot_01=Bot("Mixer-Bot", "Groups images, media, and 3D files into unified folders."),
         bot_02=Bot("Blender-Bot", "Resolves layer conflicts when combining 2D, 3D, and UI."),
         bot_03=Bot(
-            "Welder-Bot", "Links user input triggers in the UI directly to backend functions."
+            "Welder-Bot", "Links user input triggers in the UI directly to backend functions.",
         ),
         bot_04=Bot("Polisher-Bot", "Runs final visual sweeps on lighting, styling, and alignment."),
         worker_port=None,
@@ -344,10 +344,10 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live workflow execution; event triggering; automation.",
         offline_mode="Local workflow drafting; offline sequence building.",
         agent_alpha=Agent(
-            "The Flow-Weaver", "Weaves APIs, webhooks, and scripts into execution steps."
+            "The Flow-Weaver", "Weaves APIs, webhooks, and scripts into execution steps.",
         ),
         agent_beta=Agent(
-            "Event-Broker", "Monitors webhooks, sending signals for automated triggers."
+            "Event-Broker", "Monitors webhooks, sending signals for automated triggers.",
         ),
         bot_01=Bot("Trigger-Bot", "Detects events and instantly launches the automation sequence."),
         bot_02=Bot("Action-Bot", "Runs data changes, logs updates, or makes API calls."),
@@ -369,10 +369,10 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live AI coding; sandbox compilation; pair programming.",
         offline_mode="Local IDE environment; offline code drafting/linting.",
         agent_alpha=Agent(
-            "The Hounds", "Searches sandbox code for syntax errors and memory leaks."
+            "The Hounds", "Searches sandbox code for syntax errors and memory leaks.",
         ),
         agent_beta=Agent(
-            "Syntax-Sage", "Reads active scripts, suggesting code optimization patterns."
+            "Syntax-Sage", "Reads active scripts, suggesting code optimization patterns.",
         ),
         bot_01=Bot("Lint-Bot", "Formats and styles code to match company guidelines."),
         bot_02=Bot("Compile-Bot", "Runs rapid, isolated builds to verify code compilation."),
@@ -394,10 +394,10 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Active repo hosting; cloud PR management; live merging.",
         offline_mode="Local Git tree management; offline commits/branching.",
         agent_alpha=Agent(
-            "Branch-Manager", "Tracks active code branches, conflicts, and pull requests."
+            "Branch-Manager", "Tracks active code branches, conflicts, and pull requests.",
         ),
         agent_beta=Agent(
-            "Merge-Master", "Safely merges code branches, guiding users through conflicts."
+            "Merge-Master", "Safely merges code branches, guiding users through conflicts.",
         ),
         bot_01=Bot("Commit-Bot", "Packages file revisions with clear, automated descriptions."),
         bot_02=Bot("Push-Bot", "Uploads locally saved code changes to the central Forgejo system."),
@@ -419,19 +419,19 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live mutation tests; real-time anomaly reporting.",
         offline_mode="Local test execution; offline review of test logs.",
         agent_alpha=Agent(
-            "The March Hare", "Sends rapid mock inputs and payloads to stress-test systems."
+            "The March Hare", "Sends rapid mock inputs and payloads to stress-test systems.",
         ),
         agent_beta=Agent(
-            "The Dormouse", "Sits silently in tests, measuring memory leaks/performance dips."
+            "The Dormouse", "Sits silently in tests, measuring memory leaks/performance dips.",
         ),
         bot_01=Bot(
-            "Teapot-Bot", "Spams server endpoints with massive requests to test load limits."
+            "Teapot-Bot", "Spams server endpoints with massive requests to test load limits.",
         ),
         bot_02=Bot(
-            "Pocket-Watch-Bot", "Tracks API response times during load spikes for latency alerts."
+            "Pocket-Watch-Bot", "Tracks API response times during load spikes for latency alerts.",
         ),
         bot_03=Bot(
-            "Sugar-Cube-Bot", "Generates messy mockup databases to test bad dataset handling."
+            "Sugar-Cube-Bot", "Generates messy mockup databases to test bad dataset handling.",
         ),
         bot_04=Bot("Jam-Tart-Bot", "Shuts down minor random services mid-test to check recovery."),
         worker_port=None,
@@ -450,17 +450,17 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live artifact resolution; central container registry.",
         offline_mode="Local artifact caching; offline dependency installs.",
         agent_alpha=Agent(
-            "The Librarian", "Catalogs compiled code assets, container images, and packages."
+            "The Librarian", "Catalogs compiled code assets, container images, and packages.",
         ),
         agent_beta=Agent(
-            "The Archivist", "Packages ecosystem snapshots into safe, deployable restore files."
+            "The Archivist", "Packages ecosystem snapshots into safe, deployable restore files.",
         ),
         bot_01=Bot(
-            "Packer-Bot", "Compiles software libraries and environments into container images."
+            "Packer-Bot", "Compiles software libraries and environments into container images.",
         ),
         bot_02=Bot("Unpacker-Bot", "Extracts container assets, mounting them in active servers."),
         bot_03=Bot(
-            "Checksum-Bot", "Generates secure hashes to verify downloaded files are unmodified."
+            "Checksum-Bot", "Generates secure hashes to verify downloaded files are unmodified.",
         ),
         bot_04=Bot("Versioner-Bot", "Manages software version tags and deprecation warnings."),
         worker_port=None,
@@ -480,7 +480,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         offline_mode="Local API mocking; offline endpoint integration mapping.",
         agent_alpha=Agent("The Broker", "Standardizes input/output formats for different APIs."),
         agent_beta=Agent(
-            "The Diplomat", "Handles external handshakes, authentications, and secure keys."
+            "The Diplomat", "Handles external handshakes, authentications, and secure keys.",
         ),
         bot_01=Bot("GET-Bot", "Processes read calls, returning requested information quickly."),
         bot_02=Bot("POST-Bot", "Validates incoming datasets, routing them to write actions."),
@@ -502,16 +502,16 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Real-time revenue strategy; live financial forecasting.",
         offline_mode="Offline budget modeling; delayed transaction logging.",
         agent_alpha=Agent(
-            "The Treasurer", "Monitors resource usage, scaling idle services to approach zero-cost."
+            "The Treasurer", "Monitors resource usage, scaling idle services to approach zero-cost.",
         ),
         agent_beta=Agent(
-            "The Actuary", "Evaluates system runtime efficiency, mapping ROI metrics."
+            "The Actuary", "Evaluates system runtime efficiency, mapping ROI metrics.",
         ),
         bot_01=Bot("Ledger-Bot", "Logs system financial variables, compute costs, and usage logs."),
         bot_02=Bot("Coin-Bot", "Manages system credits and tracks processing priority tokens."),
         bot_03=Bot("Ticker-Bot", "Tracks cloud rates to buy server space during off-peak hours."),
         bot_04=Bot(
-            "Receipt-Bot", "Generates transaction recaps, usage invoices, and expense charts."
+            "Receipt-Bot", "Generates transaction recaps, usage invoices, and expense charts.",
         ),
         worker_port=8013,
         worker_path="workers/payments-service/",
@@ -529,22 +529,22 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Real-Time Trading; active passive income generation.",
         offline_mode="Offline portfolio review; delayed trade queuing.",
         agent_alpha=Agent(
-            "The Speculator", "Assesses server cost trends to buy bulk compute resources."
+            "The Speculator", "Assesses server cost trends to buy bulk compute resources.",
         ),
         agent_beta=Agent(
-            "The Trader", "Automates bidding on open compute marketplaces for affordability."
+            "The Trader", "Automates bidding on open compute marketplaces for affordability.",
         ),
         bot_01=Bot(
-            "Bidder-Bot", "Submits buy requests on real-time server auctions for processes."
+            "Bidder-Bot", "Submits buy requests on real-time server auctions for processes.",
         ),
         bot_02=Bot(
-            "Asker-Bot", "Sets pricing rules for when external platforms buy Arcadian power."
+            "Asker-Bot", "Sets pricing rules for when external platforms buy Arcadian power.",
         ),
         bot_03=Bot(
-            "Miner-Bot", "Utilizes idle GPU capacity to run calculations or generate assets."
+            "Miner-Bot", "Utilizes idle GPU capacity to run calculations or generate assets.",
         ),
         bot_04=Bot(
-            "Harvester-Bot", "Identifies and frees up neglected storage blocks across servers."
+            "Harvester-Bot", "Identifies and frees up neglected storage blocks across servers.",
         ),
         worker_port=8012,
         worker_path="workers/orders-service/",
@@ -562,22 +562,22 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live global event streams; real-time system monitoring.",
         offline_mode="Offline log review; offline actions queued for sync.",
         agent_alpha=Agent(
-            "The Watcher", "Scans monitoring logs in real-time for unusual anomalies/spikes."
+            "The Watcher", "Scans monitoring logs in real-time for unusual anomalies/spikes.",
         ),
         agent_beta=Agent(
-            "The Scribe", "Compresses long log files into searchable summary journals."
+            "The Scribe", "Compresses long log files into searchable summary journals.",
         ),
         bot_01=Bot(
-            "Log-Alpha-Bot", "Captures UI interactions, button clicks, and front-end errors."
+            "Log-Alpha-Bot", "Captures UI interactions, button clicks, and front-end errors.",
         ),
         bot_02=Bot(
-            "Log-Beta-Bot", "Gathers background server signals, database calls, and backend tasks."
+            "Log-Beta-Bot", "Gathers background server signals, database calls, and backend tasks.",
         ),
         bot_03=Bot(
-            "Tracer-Bot", "Tracks data paths across multiple servers to isolate bottlenecks."
+            "Tracer-Bot", "Tracks data paths across multiple servers to isolate bottlenecks.",
         ),
         bot_04=Bot(
-            "Timestamp-Bot", "Applies high-precision UTC marks to every event for accuracy."
+            "Timestamp-Bot", "Applies high-precision UTC marks to every event for accuracy.",
         ),
         worker_port=8007,
         worker_path="workers/monitoring/",
@@ -595,15 +595,15 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Active Wiki editing; real-time refinery; live search.",
         offline_mode="Offline cached Wiki access; offline entry drafting.",
         agent_alpha=Agent(
-            "The Curator", "Identifies duplicated wiki pages and flags outdated articles."
+            "The Curator", "Identifies duplicated wiki pages and flags outdated articles.",
         ),
         agent_beta=Agent("The Indexer", "Adds searchable tags and conceptual links to wiki pages."),
         bot_01=Bot(
-            "Page-Bot", "Processes text inputs, rendering clean wiki documents in markdown."
+            "Page-Bot", "Processes text inputs, rendering clean wiki documents in markdown.",
         ),
         bot_02=Bot("Bookmark-Bot", "Logs user favourite files and recent reading history."),
         bot_03=Bot(
-            "Spine-Bot", "Ensures all internal page links work, keeping documents connected."
+            "Spine-Bot", "Ensures all internal page links work, keeping documents connected.",
         ),
         bot_04=Bot("Dust-Jacket-Bot", "Generates quick summaries of newly updated documentation."),
         worker_port=8017,
@@ -622,17 +622,17 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live educational modules; cloud-based tutoring.",
         offline_mode="Downloaded course materials; offline quiz execution.",
         agent_alpha=Agent(
-            "The Tutor", "Modifies materials and guides to match user progress/skill."
+            "The Tutor", "Modifies materials and guides to match user progress/skill.",
         ),
         agent_beta=Agent(
-            "The Proctor", "Evaluates practice coding exercises and logs test scores."
+            "The Proctor", "Evaluates practice coding exercises and logs test scores.",
         ),
         bot_01=Bot(
-            "Chalk-Bot", "Projects visual charts and interactive terminal sandboxes in the UI."
+            "Chalk-Bot", "Projects visual charts and interactive terminal sandboxes in the UI.",
         ),
         bot_02=Bot("Board-Bot", "Manages course paths, student lists, and syllabus structures."),
         bot_03=Bot(
-            "Eraser-Bot", "Resets coding sandboxes, removing trial code for the next lesson."
+            "Eraser-Bot", "Resets coding sandboxes, removing trial code for the next lesson.",
         ),
         bot_04=Bot("Bell-Bot", "Sends notifications for class dates, live sessions, or deadlines."),
         worker_port=None,
@@ -651,15 +651,15 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live document uploading/tagging; real-time storage management.",
         offline_mode="Local document viewing; offline tagging (syncs later).",
         agent_alpha=Agent(
-            "The Filer", "Places files in structured folders, ensuring quick retrieval."
+            "The Filer", "Places files in structured folders, ensuring quick retrieval.",
         ),
         agent_beta=Agent("The Tagger", "Scans text documents to add descriptive, searchable tags."),
         bot_01=Bot("Scanner-Bot", "Performs OCR on image uploads to extract readable text."),
         bot_02=Bot(
-            "Stapler-Bot", "Bundles related drafts, spreadsheets, and pictures into packets."
+            "Stapler-Bot", "Bundles related drafts, spreadsheets, and pictures into packets.",
         ),
         bot_03=Bot(
-            "Folder-Bot", "Handles privacy and permission rules on individual files/directories."
+            "Folder-Bot", "Handles privacy and permission rules on individual files/directories.",
         ),
         bot_04=Bot(
             "Shredder-Bot",
@@ -681,18 +681,18 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Access to archived indexes; requesting data retrieval.",
         offline_mode="Read-only index access; review of restored data.",
         agent_alpha=Agent(
-            "The Undertaker", "Finds stale databases, archiving them in cold storage."
+            "The Undertaker", "Finds stale databases, archiving them in cold storage.",
         ),
         agent_beta=Agent(
-            "The Miner", "Searches deep archive catalogs, pulling up requested documents."
+            "The Miner", "Searches deep archive catalogs, pulling up requested documents.",
         ),
         bot_01=Bot(
-            "Compressor-Bot", "Runs file compression routines to keep cold storage costs low."
+            "Compressor-Bot", "Runs file compression routines to keep cold storage costs low.",
         ),
         bot_02=Bot("Extractor-Bot", "Unpacks old archives without data corruption."),
         bot_03=Bot("Dust-Bunny-Bot", "Identifies and deletes empty files and corrupted folders."),
         bot_04=Bot(
-            "Mothball-Bot", "Encrypts and locks retired legacy versions of platform software."
+            "Mothball-Bot", "Encrypts and locks retired legacy versions of platform software.",
         ),
         worker_port=None,
         worker_path="src/basement/",
@@ -710,15 +710,15 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live skill querying; real-time assistive routing.",
         offline_mode="Offline static matrix review; cached support docs.",
         agent_alpha=Agent(
-            "The Matchmaker", "Matches multi-node requests with the correct skilled AI/Agent."
+            "The Matchmaker", "Matches multi-node requests with the correct skilled AI/Agent.",
         ),
         agent_beta=Agent(
-            "The Router", "Re-routes service queries if a designated AI has high-load delays."
+            "The Router", "Re-routes service queries if a designated AI has high-load delays.",
         ),
         bot_01=Bot("Spark-1-Bot", "Emits active status signals to keep track of ready Agents."),
         bot_02=Bot("Spark-2-Bot", "Collects processing load updates to support routing decisions."),
         bot_03=Bot(
-            "Linker-Bot", "Establishes secure channels between seeking and assisting nodes."
+            "Linker-Bot", "Establishes secure channels between seeking and assisting nodes.",
         ),
         bot_04=Bot(
             "Pinger-Bot",
@@ -740,19 +740,19 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live Central Auth; Edge Auth; predictive threat monitoring.",
         offline_mode="Cached authentication; localized biometric app login.",
         agent_alpha=Agent(
-            "The Gatekeeper", "Checks incoming user logins, issuing secure, temporary keys."
+            "The Gatekeeper", "Checks incoming user logins, issuing secure, temporary keys.",
         ),
         agent_beta=Agent(
-            "The Bouncer", "Monitors login origins and activities, blocking suspicious IPs."
+            "The Bouncer", "Monitors login origins and activities, blocking suspicious IPs.",
         ),
         bot_01=Bot(
-            "Token-Minter-Bot", "Generates secure, time-limited tokens for node-crossing users."
+            "Token-Minter-Bot", "Generates secure, time-limited tokens for node-crossing users.",
         ),
         bot_02=Bot(
-            "Auth-Check-Bot", "Verifies active user permissions before unlocking private features."
+            "Auth-Check-Bot", "Verifies active user permissions before unlocking private features.",
         ),
         bot_03=Bot(
-            "Key-Gen-Bot", "Handles local encryption keys to authorize offline applications."
+            "Key-Gen-Bot", "Handles local encryption keys to authorize offline applications.",
         ),
         bot_04=Bot("Sentry-Bot", "Logs security events, highlighting failed login attempts."),
         worker_port=8005,
@@ -771,20 +771,20 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Real-time credential syncing; classified data retrieval.",
         offline_mode="Encrypted local vault access; local secret storage.",
         agent_alpha=Agent(
-            "Crypt-Keeper", "Coordinates zero-knowledge DB access; splits/protects keys."
+            "Crypt-Keeper", "Coordinates zero-knowledge DB access; splits/protects keys.",
         ),
         agent_beta=Agent(
-            "The Silencer", "Sanitizes outbound streams so sensitive data avoids general logs."
+            "The Silencer", "Sanitizes outbound streams so sensitive data avoids general logs.",
         ),
         bot_01=Bot("Hash-Bot", "Converts passwords and secrets into secure cryptographic strings."),
         bot_02=Bot(
-            "Salt-Bot", "Adds randomized padding to password strings to prevent dictionary attacks."
+            "Salt-Bot", "Adds randomized padding to password strings to prevent dictionary attacks.",
         ),
         bot_03=Bot(
-            "Cipher-Bot", "Runs real-time encryption and decryption on active secure files."
+            "Cipher-Bot", "Runs real-time encryption and decryption on active secure files.",
         ),
         bot_04=Bot(
-            "Padlock-Bot", "Instantly locks sensitive structures if a local breach is suspected."
+            "Padlock-Bot", "Instantly locks sensitive structures if a local breach is suspected.",
         ),
         worker_port=8024,
         worker_path="workers/config-service/",
@@ -802,22 +802,22 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live token minting for new cloud entities/incoming data.",
         offline_mode="Offline token generation (syncs/validates upon reconnect).",
         agent_alpha=Agent(
-            "The Minter", "Mints unique cryptographic identifier tokens for all new content."
+            "The Minter", "Mints unique cryptographic identifier tokens for all new content.",
         ),
         agent_beta=Agent(
-            "The Stamper", "Attaches verified, tamper-evident digital metadata to packets."
+            "The Stamper", "Attaches verified, tamper-evident digital metadata to packets.",
         ),
         bot_01=Bot(
-            "Seal-Bot", "Locks system-state snapshots, preventing unauthorized modifications."
+            "Seal-Bot", "Locks system-state snapshots, preventing unauthorized modifications.",
         ),
         bot_02=Bot(
-            "Wax-Bot", "Generates temporary, single-use visual watermarks for digital assets."
+            "Wax-Bot", "Generates temporary, single-use visual watermarks for digital assets.",
         ),
         bot_03=Bot(
-            "Signet-Bot", "Validates credentials, signing certificates for structural operations."
+            "Signet-Bot", "Validates credentials, signing certificates for structural operations.",
         ),
         bot_04=Bot(
-            "Seal-Stamp-Bot", "Applies file-system metadata to register the exact creation details."
+            "Seal-Stamp-Bot", "Applies file-system metadata to register the exact creation details.",
         ),
         worker_port=8015,
         worker_path="workers/identity-service/",
@@ -835,22 +835,22 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Real-time integrity scanning; instant quarantine triggers.",
         offline_mode="Local file integrity checks; isolated local holding.",
         agent_alpha=Agent(
-            "The Warden", "Oversees integrity scans for mutated or corrupted system files."
+            "The Warden", "Oversees integrity scans for mutated or corrupted system files.",
         ),
         agent_beta=Agent(
-            "The Inspector", "Compares active database hashes against secure Lighthouse standards."
+            "The Inspector", "Compares active database hashes against secure Lighthouse standards.",
         ),
         bot_01=Bot(
-            "Scan-Bot", "Performs background sweeps on directories, reading cryptographic stamps."
+            "Scan-Bot", "Performs background sweeps on directories, reading cryptographic stamps.",
         ),
         bot_02=Bot(
-            "Sniffer-Bot", "Analyzes transport packets for corrupted signatures/manipulations."
+            "Sniffer-Bot", "Analyzes transport packets for corrupted signatures/manipulations.",
         ),
         bot_03=Bot(
-            "Beam-Bot", "Isolates threatened memory spaces, cutting off surrounding connections."
+            "Beam-Bot", "Isolates threatened memory spaces, cutting off surrounding connections.",
         ),
         bot_04=Bot(
-            "Portal-Bot", "Safely moves compromised file layers directly into the secure Ice Box."
+            "Portal-Bot", "Safely moves compromised file layers directly into the secure Ice Box.",
         ),
         worker_port=None,
         worker_path="src/security/warp_tunnel/",
@@ -868,17 +868,17 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Real-time threat intel; live DDoS Mitigation; active scanning.",
         offline_mode="Offline threat log review; localized basic security scans.",
         agent_alpha=Agent(
-            "The Shield", "Configures dynamic firewall rules, blocking network threats live."
+            "The Shield", "Configures dynamic firewall rules, blocking network threats live.",
         ),
         agent_beta=Agent(
-            "The Spear", "Automatically performs pen-testing against internal defenses."
+            "The Spear", "Automatically performs pen-testing against internal defenses.",
         ),
         bot_01=Bot(
-            "Blocker-Bot", "Blacklists malicious IP ranges, halting DDoS attacks at the gateway."
+            "Blocker-Bot", "Blacklists malicious IP ranges, halting DDoS attacks at the gateway.",
         ),
         bot_02=Bot("Trace-Bot", "Traces malicious attacks back to origin networks for reporting."),
         bot_03=Bot(
-            "Patcher-Bot", "Applies emergency system patches to vulnerable software layers."
+            "Patcher-Bot", "Applies emergency system patches to vulnerable software layers.",
         ),
         bot_04=Bot(
             "Honeypot-Bot",
@@ -900,16 +900,16 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Nested sandbox generation; active deep-freeze quarantine.",
         offline_mode="Local secure containment; offline malware freezing.",
         agent_alpha=Agent(
-            "The Jailer", "Manages secure quarantine zones, keeping malicious payloads isolated."
+            "The Jailer", "Manages secure quarantine zones, keeping malicious payloads isolated.",
         ),
         agent_beta=Agent(
-            "The Interrogator", "Triggers/monitors quarantine code execution to document behaviors."
+            "The Interrogator", "Triggers/monitors quarantine code execution to document behaviors.",
         ),
         bot_01=Bot(
-            "Frostbite-Bot", "Halts execution threads when sandbox boundaries are breached."
+            "Frostbite-Bot", "Halts execution threads when sandbox boundaries are breached.",
         ),
         bot_02=Bot(
-            "Icicle-Bot", "Freezes dynamic processes to snapshot active RAM and memory spaces."
+            "Icicle-Bot", "Freezes dynamic processes to snapshot active RAM and memory spaces.",
         ),
         bot_03=Bot(
             "Glacier-Bot",
@@ -935,19 +935,19 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live streaming API connections; cross-ecosystem playback.",
         offline_mode="Playback of downloaded playlists; local media playing.",
         agent_alpha=Agent(
-            "The DJ", "Curates spatial music playlists/soundscapes to match user activities."
+            "The DJ", "Curates spatial music playlists/soundscapes to match user activities.",
         ),
         agent_beta=Agent(
-            "The Maestro", "Dynamically balances system alert volumes with external platforms."
+            "The Maestro", "Dynamically balances system alert volumes with external platforms.",
         ),
         bot_01=Bot(
-            "Play-Bot", "Connects/streams music data directly from Spotify, Apple, and Amazon."
+            "Play-Bot", "Connects/streams music data directly from Spotify, Apple, and Amazon.",
         ),
         bot_02=Bot(
-            "Pause-Bot", "Holds audio states and syncs current track metrics across devices."
+            "Pause-Bot", "Holds audio states and syncs current track metrics across devices.",
         ),
         bot_03=Bot(
-            "Skip-Bot", "Fetches adjacent track metadata, pre-buffering streams to stop latency."
+            "Skip-Bot", "Fetches adjacent track metadata, pre-buffering streams to stop latency.",
         ),
         bot_04=Bot(
             "Volume-Bot",
@@ -969,22 +969,22 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live market intel gathering; dynamic JSON blueprint generation.",
         offline_mode="Offline scraped data review; analysis of pre-generated blueprints.",
         agent_alpha=Agent(
-            "The Spy", "Gathers sentiment data from public channels to gauge market trends."
+            "The Spy", "Gathers sentiment data from public channels to gauge market trends.",
         ),
         agent_beta=Agent(
-            "The Oracle", "Converts intelligence records into structured development blueprints."
+            "The Oracle", "Converts intelligence records into structured development blueprints.",
         ),
         bot_01=Bot(
-            "Scraper-Bot", "Pulls text data from developer channels, social spaces, and trackers."
+            "Scraper-Bot", "Pulls text data from developer channels, social spaces, and trackers.",
         ),
         bot_02=Bot(
-            "Parser-Bot", "Sanitizes and categorizes scraped data, cleaning up format issues."
+            "Parser-Bot", "Sanitizes and categorizes scraped data, cleaning up format issues.",
         ),
         bot_03=Bot(
-            "Crawler-Bot", "Dispatches web agents to identify relevant API and tech changes."
+            "Crawler-Bot", "Dispatches web agents to identify relevant API and tech changes.",
         ),
         bot_04=Bot(
-            "Whisper-Bot", "Delivers summarized threat and trend alerts directly to strategic hubs."
+            "Whisper-Bot", "Delivers summarized threat and trend alerts directly to strategic hubs.",
         ),
         worker_port=8027,
         worker_path="workers/geo-service/",
@@ -1002,18 +1002,18 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live think tank collaboration; real-time node management.",
         offline_mode="Offline strategic planning; review of cached temporal data.",
         agent_alpha=Agent(
-            "The General", "Directs high-level development priorities, adjusting assignments."
+            "The General", "Directs high-level development priorities, adjusting assignments.",
         ),
         agent_beta=Agent(
-            "The Tactician", "Re-allocates team structures to meet immediate design objectives."
+            "The Tactician", "Re-allocates team structures to meet immediate design objectives.",
         ),
         bot_01=Bot(
-            "Map-Bot", "Projects system metrics on command dashboards, visualizing node relations."
+            "Map-Bot", "Projects system metrics on command dashboards, visualizing node relations.",
         ),
         bot_02=Bot("Compass-Bot", "Highlights project priorities, guiding developmental focuses."),
         bot_03=Bot("Clock-Bot", "Coordinates cross-node releases to ensure aligned rollouts."),
         bot_04=Bot(
-            "Radio-Bot", "Broadcasts executive platform priorities directly to low-tier Agents."
+            "Radio-Bot", "Broadcasts executive platform priorities directly to low-tier Agents.",
         ),
         worker_port=None,
         worker_path="deploy/",
@@ -1031,13 +1031,13 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live research collaboration; active simulation running.",
         offline_mode="Offline theoretical drafting; localized research models.",
         agent_alpha=Agent(
-            "The Professor", "Simulates untested programmatic changes to assess system impacts."
+            "The Professor", "Simulates untested programmatic changes to assess system impacts.",
         ),
         agent_beta=Agent(
-            "The Visionary", "Suggests structural updates and feature builds based on telemetry."
+            "The Visionary", "Suggests structural updates and feature builds based on telemetry.",
         ),
         bot_01=Bot(
-            "Beaker-Bot", "Handles lightweight, isolated experiment runtimes to test novel ideas."
+            "Beaker-Bot", "Handles lightweight, isolated experiment runtimes to test novel ideas.",
         ),
         bot_02=Bot("Bunsen-Bot", "Runs performance limits tests, checking system thresholds."),
         bot_03=Bot("Pipette-Bot", "Collects minute execution metrics from experiment test runs."),
@@ -1092,17 +1092,17 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live scheduling; temporal logic application; Time Travel debugging.",
         offline_mode="Local scheduling; offline calendar viewing; delayed execution.",
         agent_alpha=Agent(
-            "The Timekeeper", "Rearranges task backlogs and priorities to prevent bottlenecks."
+            "The Timekeeper", "Rearranges task backlogs and priorities to prevent bottlenecks.",
         ),
         agent_beta=Agent(
-            "The Time-Weaver", "Translates timeline parameters into interactive visual Gantt views."
+            "The Time-Weaver", "Translates timeline parameters into interactive visual Gantt views.",
         ),
         bot_01=Bot(
             "Tick-Bot",
             "Triggers routine cron jobs and automated calendar actions across platforms.",
         ),
         bot_02=Bot(
-            "Tock-Bot", "Evaluates run times, flagging processes that run over temporal parameters."
+            "Tock-Bot", "Evaluates run times, flagging processes that run over temporal parameters.",
         ),
         bot_03=Bot(
             "Pendulum-Bot",
@@ -1132,7 +1132,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Coordinates deployment pipelines, checking safety metrics before pushes.",
         ),
         agent_beta=Agent(
-            "The Dispatcher", "Launches automated server scaling, optimizing system allocations."
+            "The Dispatcher", "Launches automated server scaling, optimizing system allocations.",
         ),
         bot_01=Bot("Crane-Bot", "Deploys container setups seamlessly across cloud server hosts."),
         bot_02=Bot(
@@ -1163,14 +1163,14 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Centralized wellbeing dashboard; live routing to sub-nodes.",
         offline_mode="Local core relaxation exercises; offline dashboard status.",
         agent_alpha=Agent(
-            "The Guide", "Screens user stress metrics, suggesting wellbeing sub-nodes for relief."
+            "The Guide", "Screens user stress metrics, suggesting wellbeing sub-nodes for relief.",
         ),
         agent_beta=Agent(
             "The Healer",
             "Directs relaxation routines, helping users reset focus after intense sessions.",
         ),
         bot_01=Bot(
-            "Breath-Bot", "Plays pacing animations to guide calm, measured breathing patterns."
+            "Breath-Bot", "Plays pacing animations to guide calm, measured breathing patterns.",
         ),
         bot_02=Bot(
             "Pulse-Bot",
@@ -1239,7 +1239,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live API syncing with external wearables; real-time schedule management.",
         offline_mode="Secure local caching of health metrics; offline schedule review.",
         agent_alpha=Agent(
-            "The Shadow", "Mirrors daily habits to anticipate system and scheduling preferences."
+            "The Shadow", "Mirrors daily habits to anticipate system and scheduling preferences.",
         ),
         agent_beta=Agent(
             "The Scheduler",
@@ -1250,7 +1250,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Pulls data securely from health platforms, applying strict HIPAA encryption.",
         ),
         bot_02=Bot(
-            "Fetch-Bot", "Parses upcoming tasks to flag heavy scheduling days early for the user."
+            "Fetch-Bot", "Parses upcoming tasks to flag heavy scheduling days early for the user.",
         ),
         bot_03=Bot(
             "Nudge-Bot",
@@ -1288,7 +1288,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
             "Manages display performance, keeping spatial environments smooth and fluid.",
         ),
         bot_02=Bot(
-            "Track-Bot", "Translates head and hand actions into virtual movement inside scenes."
+            "Track-Bot", "Translates head and hand actions into virtual movement inside scenes.",
         ),
         bot_03=Bot(
             "Haptic-Bot",
@@ -1550,7 +1550,7 @@ def get_all_ids() -> List[Dict]:
                 "tier": "Location",
                 "name": loc_name,
                 "pillar": entity.pillar.value,
-            }
+            },
         )
         result.append(
             {
@@ -1558,7 +1558,7 @@ def get_all_ids() -> List[Dict]:
                 "tier": 3,
                 "name": entity.lead_ai,
                 "location": loc_name,
-            }
+            },
         )
         result.append(
             {
@@ -1567,7 +1567,7 @@ def get_all_ids() -> List[Dict]:
                 "name": entity.agent_alpha.code_name,
                 "location": loc_name,
                 "role": "Alpha",
-            }
+            },
         )
         result.append(
             {
@@ -1576,7 +1576,7 @@ def get_all_ids() -> List[Dict]:
                 "name": entity.agent_beta.code_name,
                 "location": loc_name,
                 "role": "Beta",
-            }
+            },
         )
         for bot_field, slot in [
             ("bot_01", "01"),
@@ -1592,6 +1592,6 @@ def get_all_ids() -> List[Dict]:
                     "name": bot.code_name,
                     "location": loc_name,
                     "slot": slot,
-                }
+                },
             )
     return result

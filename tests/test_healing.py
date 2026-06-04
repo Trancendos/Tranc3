@@ -71,7 +71,7 @@ class TestAnomalyDetector:
     """Tests for the AnomalyDetector class."""
 
     def _make_detector(
-        self, window_size: int = 100, z_threshold: float = 3.0, min_samples: int = 10
+        self, window_size: int = 100, z_threshold: float = 3.0, min_samples: int = 10,
     ):
         from src.healing.anomaly_detector import AnomalyDetector
 
@@ -82,7 +82,7 @@ class TestAnomalyDetector:
         )
 
     def _seed_normal(
-        self, detector, metric_name: str, count: int, mean: float = 50.0, std: float = 5.0
+        self, detector, metric_name: str, count: int, mean: float = 50.0, std: float = 5.0,
     ):
         """Seed a metric with `count` samples around `mean` ± `std`."""
         import random

@@ -335,7 +335,7 @@ class HypothesisFormer:
     def form_hypothesis(self, question: CosmicQuestion) -> Hypothesis:
         """Form a hypothesis for a given question."""
         patterns = self._hypothesis_patterns.get(
-            question.domain, self._hypothesis_patterns[KnowledgeDomain.META]
+            question.domain, self._hypothesis_patterns[KnowledgeDomain.META],
         )
         statement = random.choice(patterns) + f" regarding '{question.question[:50]}'"
 
@@ -357,7 +357,7 @@ class KnowledgeSynthesizer:
         self._connection_threshold = 0.4
 
     def compute_novelty(
-        self, fragment: KnowledgeFragment, existing: List[KnowledgeFragment]
+        self, fragment: KnowledgeFragment, existing: List[KnowledgeFragment],
     ) -> float:
         """Compute novelty of a new fragment against existing knowledge."""
         if not existing:
@@ -499,7 +499,7 @@ class CosmicCuriosityService:
         if depth >= 3:
             for sub_concept in [concept, "the nature of", "the origin of"]:
                 sub_q = self.question_generator.generate(
-                    sub_concept, domain_enum, QuestionDepth(depth - 1)
+                    sub_concept, domain_enum, QuestionDepth(depth - 1),
                 )
                 sub_q.parent_question_id = question.id
                 question.child_question_ids.append(sub_q.id)
@@ -515,7 +515,7 @@ class CosmicCuriosityService:
         }
 
     def acquire_knowledge(
-        self, content: str, domain: str = "meta", confidence: float = 0.5
+        self, content: str, domain: str = "meta", confidence: float = 0.5,
     ) -> Dict[str, Any]:
         """Acquire a new knowledge fragment."""
         domain_enum = KnowledgeDomain(domain)

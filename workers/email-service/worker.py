@@ -348,7 +348,7 @@ async def retry_email(email_id: int):
         if not row:
             raise HTTPException(status_code=404, detail="Email not found")
         conn.execute(
-            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (email_id,)
+            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (email_id,),
         )
         conn.commit()
     return {"retrying": email_id}
@@ -374,7 +374,7 @@ async def create_template(req: TemplateCreate):
 async def list_templates():
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT id, name, subject, created_at FROM templates ORDER BY name"
+            "SELECT id, name, subject, created_at FROM templates ORDER BY name",
         ).fetchall()
     return {"templates": [dict(r) for r in rows]}
 

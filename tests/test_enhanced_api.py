@@ -29,7 +29,7 @@ def _make_enhanced_mock():
         "evolution": MagicMock(
             get_stats=MagicMock(return_value={"generation": 1, "best_fitness": 0.9}),
             record_feedback=MagicMock(),
-        )
+        ),
     }
     return m
 
@@ -81,7 +81,7 @@ class TestCoreEndpoints:
 
     def test_think_with_personality(self, client):
         r = client.post(
-            "/think", json={"prompt": "Analyse portfolio risk", "personality": "dorris-fontaine"}
+            "/think", json={"prompt": "Analyse portfolio risk", "personality": "dorris-fontaine"},
         )
         assert r.status_code == 200
 

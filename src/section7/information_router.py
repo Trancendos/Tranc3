@@ -90,7 +90,7 @@ class InformationRouter:
         # Step 2: Dispatch to domain-specific hub
         if classification in (IntelligenceClass.THREAT, IntelligenceClass.CVE):
             result.cryptex_dispatched = self._dispatch_to_cryptex(
-                item_id=item_id, classification=classification, summary=summary, payload=payload
+                item_id=item_id, classification=classification, summary=summary, payload=payload,
             )
             # CVEs are also catalogued in The Library
             if classification == IntelligenceClass.CVE:
@@ -104,7 +104,7 @@ class InformationRouter:
 
         elif classification in (IntelligenceClass.RESEARCH, IntelligenceClass.ADVANCEMENT):
             result.think_tank_dispatched = self._dispatch_to_think_tank(
-                item_id=item_id, classification=classification, summary=summary, payload=payload
+                item_id=item_id, classification=classification, summary=summary, payload=payload,
             )
             # Advancements are also catalogued
             result.library_catalogued = self._catalogue_in_library(
@@ -193,7 +193,7 @@ class InformationRouter:
                 },
             )
             logger.info(
-                "section7: recorded %s item %s in observatory", classification.value, item_id
+                "section7: recorded %s item %s in observatory", classification.value, item_id,
             )
             return True
         except Exception as exc:

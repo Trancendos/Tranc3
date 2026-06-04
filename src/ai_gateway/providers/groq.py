@@ -65,7 +65,7 @@ class GroqProvider(AIProvider):
             raise RuntimeError(
                 "GROQ_API_KEY is required. Set the environment variable or "
                 "pass api_key to GroqProvider(). Free keys available at "
-                "https://console.groq.com/"
+                "https://console.groq.com/",
             )
 
         try:
@@ -201,7 +201,7 @@ class _GroqHttpxClient:
             except ImportError:
                 raise RuntimeError(
                     "Either 'groq' or 'httpx' package is required for Groq provider. "
-                    "Install with: pip install groq  OR  pip install httpx"
+                    "Install with: pip install groq  OR  pip install httpx",
                 ) from None
         return self._httpx
 

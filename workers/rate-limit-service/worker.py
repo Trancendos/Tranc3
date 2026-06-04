@@ -279,7 +279,7 @@ async def update_policy(name: str, req: PolicyUpdate):
         if updates:
             set_clause = ", ".join(f"{k} = ?" for k in updates)
             conn.execute(
-                f"UPDATE policies SET {set_clause} WHERE name = ?", [*updates.values(), name]
+                f"UPDATE policies SET {set_clause} WHERE name = ?", [*updates.values(), name],
             )
             conn.commit()
     # Evict cached buckets for this policy

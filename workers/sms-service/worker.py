@@ -287,7 +287,7 @@ async def retry_sms(sms_id: int):
         if not conn.execute("SELECT id FROM outbox WHERE id = ?", (sms_id,)).fetchone():
             raise HTTPException(status_code=404, detail="SMS not found")
         conn.execute(
-            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (sms_id,)
+            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (sms_id,),
         )
         conn.commit()
     return {"retrying": sms_id}
@@ -297,10 +297,10 @@ async def retry_sms(sms_id: int):
 async def stats():
     with get_conn() as conn:
         by_status = conn.execute(
-            "SELECT status, COUNT(*) as c FROM outbox GROUP BY status"
+            "SELECT status, COUNT(*) as c FROM outbox GROUP BY status",
         ).fetchall()
         by_provider = conn.execute(
-            "SELECT provider, COUNT(*) as c FROM outbox GROUP BY provider"
+            "SELECT provider, COUNT(*) as c FROM outbox GROUP BY provider",
         ).fetchall()
     return {
         "by_status": [dict(r) for r in by_status],

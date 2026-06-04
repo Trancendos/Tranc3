@@ -137,7 +137,7 @@ class ConfigSchema:
                 continue
             if entry.value is not None and not self._type_matches(entry.value, expected_type):
                 errors.append(
-                    f"Type mismatch for {key}: expected {expected_type}, got {type(entry.value).__name__}"
+                    f"Type mismatch for {key}: expected {expected_type}, got {type(entry.value).__name__}",
                 )
 
         return errors
@@ -198,7 +198,7 @@ class ConfigDriftDetector:
                     if current_val is None and baseline_val is not None:
                         drifted_keys.append(key)
                         details.append(
-                            {"key": key, "change": "removed", "was": str(baseline_val.value)}
+                            {"key": key, "change": "removed", "was": str(baseline_val.value)},
                         )
                         if baseline_val.required:
                             severity = DriftSeverity.CRITICAL
@@ -207,7 +207,7 @@ class ConfigDriftDetector:
                     elif current_val is not None and baseline_val is None:
                         drifted_keys.append(key)
                         details.append(
-                            {"key": key, "change": "added", "now": str(current_val.value)}
+                            {"key": key, "change": "added", "now": str(current_val.value)},
                         )
                     elif (
                         current_val
@@ -222,7 +222,7 @@ class ConfigDriftDetector:
                                 "was": str(baseline_val.value),
                                 "now": str(current_val.value),
                                 "source_change": f"{baseline_val.source.value} → {current_val.source.value}",
-                            }
+                            },
                         )
                         if current_val.sensitive:
                             severity = DriftSeverity.HIGH
@@ -282,11 +282,11 @@ class ConfigDriftDetectorService:
         core_schema.add_required("LOG_LEVEL", "str", "INFO", description="Logging level")
         core_schema.add_required("NANOSERVICE_POOL_SIZE", "int", 10, description="Worker pool size")
         core_schema.add_optional(
-            "ENABLE_QUANTUM", "bool", False, description="Quantum solver toggle"
+            "ENABLE_QUANTUM", "bool", False, description="Quantum solver toggle",
         )
         core_schema.add_optional("MAX_CONCURRENT_FLOWS", "int", 100, description="DNF flow limit")
         core_schema.add_optional(
-            "SHI_FALLBACK_ENABLED", "bool", True, description="SHI fallback chain"
+            "SHI_FALLBACK_ENABLED", "bool", True, description="SHI fallback chain",
         )
         self._detector.register_schema(core_schema)
 

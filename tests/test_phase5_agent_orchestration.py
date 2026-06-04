@@ -623,7 +623,7 @@ class TestMemoryStream:
 
         now = time.time()
         mem = EpisodicMemory(
-            content="Important Python task", importance=0.9, tags={"coding"}, timestamp=now
+            content="Important Python task", importance=0.9, tags={"coding"}, timestamp=now,
         )
         score = mem.combined_score(query="Python", now=now)
         assert score > 0.0
@@ -778,7 +778,7 @@ class TestTaskDecomposer:
 
         td = TaskDecomposer()
         decomp = run(
-            td.decompose("Fix the bug", context={"language": "Python", "component": "API"})
+            td.decompose("Fix the bug", context={"language": "Python", "component": "API"}),
         )
         assert len(decomp.subtasks) > 0
 
@@ -1208,8 +1208,8 @@ class TestSparkPhase5ToolHandlers:
                 {
                     "description": "Test goal",
                     "priority": 5,
-                }
-            )
+                },
+            ),
         )
         assert isinstance(result, dict)
 
@@ -1226,8 +1226,8 @@ class TestSparkPhase5ToolHandlers:
             _handle_agent_decompose_task(
                 {
                     "goal_description": "Analyze the codebase for performance issues",
-                }
-            )
+                },
+            ),
         )
         assert isinstance(result, dict)
         # Should contain decomposition info
@@ -1241,8 +1241,8 @@ class TestSparkPhase5ToolHandlers:
             _handle_agent_retrieve_memory(
                 {
                     "query": "test query",
-                }
-            )
+                },
+            ),
         )
         assert isinstance(result, dict)
 
@@ -1266,8 +1266,8 @@ class TestSparkPhase5ToolHandlers:
             _handle_agent_find_best(
                 {
                     "required_tags": ["coding", "debugging"],
-                }
-            )
+                },
+            ),
         )
         assert isinstance(result, dict)
 
@@ -1435,7 +1435,7 @@ class TestPhase5Integration:
                 importance=0.7,
                 tags={"research", "ai"},
                 metadata={"goal_id": goal_id},
-            )
+            ),
         )
 
         # Verify memory references the goal

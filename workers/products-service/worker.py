@@ -305,7 +305,7 @@ async def list_categories():
     """List all distinct product categories."""
     conn = db._get_conn()
     rows = conn.execute(
-        "SELECT category, COUNT(*) as count FROM products WHERE is_active=1 GROUP BY category ORDER BY count DESC"
+        "SELECT category, COUNT(*) as count FROM products WHERE is_active=1 GROUP BY category ORDER BY count DESC",
     ).fetchall()
     return {"categories": [dict(r) for r in rows]}
 

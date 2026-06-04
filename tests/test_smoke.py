@@ -110,7 +110,7 @@ class TestDigitalGridSmoke:
         ex = WorkflowExecutor()
         state = await ex.execute(wf, {"result": "smoke-ok"})
         _log.info(
-            "grid.smoke min_workflow status=%s elapsed_ms=%.1f", state.status, state.elapsed_ms
+            "grid.smoke min_workflow status=%s elapsed_ms=%.1f", state.status, state.elapsed_ms,
         )
         assert state.status == "completed"
         assert state.elapsed_ms >= 0

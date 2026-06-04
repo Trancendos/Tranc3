@@ -92,7 +92,7 @@ class MockDimensionalBus:
                 "target": target,
                 "payload": payload,
                 "source": source,
-            }
+            },
         )
 
     async def broadcast_pillar(self, pillar: str, payload: Dict[str, Any]) -> None:
@@ -100,7 +100,7 @@ class MockDimensionalBus:
             {
                 "pillar": pillar,
                 "payload": payload,
-            }
+            },
         )
 
 
@@ -218,7 +218,7 @@ class TestWorkerBridgeBase:
     async def test_publish_sentinel_no_sentinel(self):
         bridge = WorkerBridge("test-bridge")
         result = await bridge._publish_sentinel(
-            channel="agents", event_type="test", source="test", payload={}
+            channel="agents", event_type="test", source="test", payload={},
         )
         assert result is False
         assert bridge._stats["events_dropped"] == 1
@@ -227,7 +227,7 @@ class TestWorkerBridgeBase:
     async def test_publish_sentinel_with_sentinel(self, sentinel):
         bridge = WorkerBridge("test-bridge", sentinel=sentinel)
         result = await bridge._publish_sentinel(
-            channel="agents", event_type="test.event", source="test", payload={"key": "val"}
+            channel="agents", event_type="test.event", source="test", payload={"key": "val"},
         )
         assert result is True
         assert bridge._stats["events_published"] == 1
@@ -244,7 +244,7 @@ class TestWorkerBridgeBase:
     async def test_publish_bus_with_bus(self, bus):
         bridge = WorkerBridge("test-bridge", bus=bus)
         result = await bridge._publish_bus(
-            target="test-service", payload={"action": "test"}, source="bridge"
+            target="test-service", payload={"action": "test"}, source="bridge",
         )
         assert result is True
         assert bridge._stats["events_published"] == 1
@@ -258,7 +258,7 @@ class TestWorkerBridgeBase:
 
         bridge = WorkerBridge("test-bridge", sentinel=failing_sentinel)
         result = await bridge._publish_sentinel(
-            channel="agents", event_type="test", source="test", payload={}
+            channel="agents", event_type="test", source="test", payload={},
         )
         assert result is False
         assert bridge._stats["errors"] == 1

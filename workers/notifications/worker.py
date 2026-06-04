@@ -103,7 +103,7 @@ class NotificationTemplate(BaseModel):
 class UserPreferences(BaseModel):
     user_id: str
     channels_enabled: List[NotificationChannel] = Field(
-        default_factory=lambda: [NotificationChannel.in_app, NotificationChannel.email]
+        default_factory=lambda: [NotificationChannel.in_app, NotificationChannel.email],
     )
     quiet_hours_start: Optional[str] = None  # HH:MM format
     quiet_hours_end: Optional[str] = None
@@ -218,7 +218,7 @@ class NotificationsDatabase:
     # -- Notifications --
 
     def create_notification(
-        self, notif: NotificationRequest, status: NotificationStatus = NotificationStatus.pending
+        self, notif: NotificationRequest, status: NotificationStatus = NotificationStatus.pending,
     ) -> Dict[str, Any]:
         now = datetime.now(timezone.utc).isoformat()
         with self._cursor() as cur:
@@ -240,7 +240,7 @@ class NotificationsDatabase:
         return {"notification_id": notif.notification_id, "status": status.value}
 
     def update_status(
-        self, notification_id: str, status: NotificationStatus, error: Optional[str] = None
+        self, notification_id: str, status: NotificationStatus, error: Optional[str] = None,
     ):
         now = datetime.now(timezone.utc).isoformat()
         with self._cursor() as cur:
@@ -268,7 +268,7 @@ class NotificationsDatabase:
     def get_notification(self, notification_id: str) -> Optional[Dict[str, Any]]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT * FROM notifications WHERE notification_id=?", (notification_id,)
+            "SELECT * FROM notifications WHERE notification_id=?", (notification_id,),
         ).fetchone()
         return dict(row) if row else None
 
@@ -319,7 +319,7 @@ class NotificationsDatabase:
         conn = self._get_conn()
         if channel:
             rows = conn.execute(
-                "SELECT * FROM templates WHERE channel=? ORDER BY name", (channel,)
+                "SELECT * FROM templates WHERE channel=? ORDER BY name", (channel,),
             ).fetchall()
         else:
             rows = conn.execute("SELECT * FROM templates ORDER BY name").fetchall()
@@ -363,11 +363,11 @@ class NotificationDispatcher:
 
     @staticmethod
     async def dispatch_email(
-        user_id: str, subject: str, body: str, metadata: Dict[str, Any]
+        user_id: str, subject: str, body: str, metadata: Dict[str, Any],
     ) -> bool:
         """Email dispatch — in zero-cost mode, logs and marks as sent. Plug in SMTP or SES later."""
         logger.info(
-            "📧 EMAIL → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject)
+            "📧 EMAIL → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject),
         )  # codeql[py/cleartext-logging]
         # In production: integrate with self-hosted mail or free-tier SMTP
         return True
@@ -380,11 +380,11 @@ class NotificationDispatcher:
 
     @staticmethod
     async def dispatch_push(
-        user_id: str, subject: str, body: str, metadata: Dict[str, Any]
+        user_id: str, subject: str, body: str, metadata: Dict[str, Any],
     ) -> bool:
         """Push notification — zero-cost mode logs only. Plug in Web Push later."""
         logger.info(
-            "🔔 PUSH → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject)
+            "🔔 PUSH → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject),
         )  # codeql[py/cleartext-logging]
         return True
 
@@ -421,7 +421,7 @@ class NotificationDispatcher:
         try:
             data = json.dumps(payload).encode()
             req = urllib.request.Request(
-                url, data=data, method="POST"
+                url, data=data, method="POST",
             )  # codeql[py/ssrf] – URL validated against allowlist above
             req.add_header("Content-Type", "application/json")
             with urllib.request.urlopen(req, timeout=10) as resp:
@@ -432,11 +432,11 @@ class NotificationDispatcher:
 
     @staticmethod
     async def dispatch_in_app(
-        user_id: str, subject: str, body: str, metadata: Dict[str, Any]
+        user_id: str, subject: str, body: str, metadata: Dict[str, Any],
     ) -> bool:
         """In-app notification — stored in DB, client polls or uses WebSocket."""
         logger.info(
-            "💬 IN-APP → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject)
+            "💬 IN-APP → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject),
         )  # codeql[py/cleartext-logging]
         return True
 
@@ -552,13 +552,13 @@ async def send_notification(req: NotificationRequest):
     try:
         if req.channel == NotificationChannel.email:
             success = await dispatcher.dispatch_email(
-                req.user_id, req.subject, req.body, req.metadata
+                req.user_id, req.subject, req.body, req.metadata,
             )
         elif req.channel == NotificationChannel.sms:
             success = await dispatcher.dispatch_sms(req.user_id, req.body, req.metadata)
         elif req.channel == NotificationChannel.push:
             success = await dispatcher.dispatch_push(
-                req.user_id, req.subject, req.body, req.metadata
+                req.user_id, req.subject, req.body, req.metadata,
             )
         elif req.channel == NotificationChannel.webhook:
             webhook_url = req.metadata.get("webhook_url", "")
@@ -582,7 +582,7 @@ async def send_notification(req: NotificationRequest):
             )
         elif req.channel == NotificationChannel.in_app:
             success = await dispatcher.dispatch_in_app(
-                req.user_id, req.subject, req.body, req.metadata
+                req.user_id, req.subject, req.body, req.metadata,
             )
 
         if success:
@@ -590,13 +590,13 @@ async def send_notification(req: NotificationRequest):
             return {"ok": True, "notification_id": req.notification_id, "status": "sent"}
         else:
             db.update_status(
-                req.notification_id, NotificationStatus.failed, error="Dispatch failed"
+                req.notification_id, NotificationStatus.failed, error="Dispatch failed",
             )
             return {"ok": False, "notification_id": req.notification_id, "status": "failed"}
 
     except Exception as e:
         db.update_status(
-            req.notification_id, NotificationStatus.failed, error=safe_error_detail(e, 500)
+            req.notification_id, NotificationStatus.failed, error=safe_error_detail(e, 500),
         )
         logger.error("Notification dispatch error: %s", e)
         return {
@@ -622,8 +622,8 @@ async def list_notifications(
     """List notifications with optional filtering."""
     return {
         "notifications": db.list_notifications(
-            user_id=user_id, status=status, limit=limit, offset=offset
-        )
+            user_id=user_id, status=status, limit=limit, offset=offset,
+        ),
     }
 
 

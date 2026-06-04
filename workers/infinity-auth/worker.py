@@ -63,7 +63,7 @@ _jwt_secret_raw = os.environ.get("JWT_SECRET")
 if not _jwt_secret_raw:
     raise RuntimeError(
         "JWT_SECRET is not set. Infinity (auth service) cannot start without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
     )
 JWT_SECRET: str = _jwt_secret_raw
 JWT_ALGORITHM = "HS256"
@@ -484,7 +484,7 @@ async def register(user: UserRegister, _=Depends(rate_limit_check)):
     """
     # Check if username exists
     existing = db.execute(
-        "SELECT user_id FROM users WHERE username = ?", (user.username,)
+        "SELECT user_id FROM users WHERE username = ?", (user.username,),
     ).fetchone()
     if existing:
         raise HTTPException(status_code=409, detail="Username already exists")
@@ -523,7 +523,7 @@ async def register(user: UserRegister, _=Depends(rate_limit_check)):
     db.commit()
 
     logger.info(
-        "user_registered: username=%s role=%s", sanitize_for_log(user.username), role
+        "user_registered: username=%s role=%s", sanitize_for_log(user.username), role,
     )  # codeql[py/cleartext-logging]
 
     return TokenResponse(
@@ -617,7 +617,7 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     db.commit()
 
     logger.info(
-        "user_login: username=%s role=%s", sanitize_for_log(credentials.username), role
+        "user_login: username=%s role=%s", sanitize_for_log(credentials.username), role,
     )  # codeql[py/cleartext-logging]
 
     return TokenResponse(
@@ -772,7 +772,7 @@ async def enable_mfa(user: dict = Depends(get_current_user)):
 async def disable_mfa(user: dict = Depends(get_current_user)):
     """Disable MFA for the current user."""
     db.execute(
-        "UPDATE users SET mfa_enabled = 0, totp_secret = NULL WHERE user_id = ?", (user["sub"],)
+        "UPDATE users SET mfa_enabled = 0, totp_secret = NULL WHERE user_id = ?", (user["sub"],),
     )
     db.commit()
     return {"message": "MFA disabled"}
@@ -912,8 +912,8 @@ async def jwks():
                             "alg": "RS256",
                             "n": _b64url(pub_numbers.n, 256),
                             "e": _b64url(pub_numbers.e, 3),
-                        }
-                    ]
+                        },
+                    ],
                 }
         except Exception as exc:
             logger.debug("JWKS generation failed: %s", exc)
