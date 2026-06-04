@@ -88,7 +88,7 @@ class BlueprintEngine:
     ]
 
     def render(self, spec: BlueprintSpec) -> RenderedBlueprint:
-        """Render all artefacts for *spec* and return a fully populated RenderedBlueprint."""
+        """Render all artifacts for *spec* and return a fully populated RenderedBlueprint."""
         worker_py = self._render_worker(spec)
         dockerfile = self._render_dockerfile(spec)
         compose_snippet = self._render_compose(spec)

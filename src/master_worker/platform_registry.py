@@ -94,12 +94,20 @@ class Platform:
     def utilisation_pct(self) -> float:
         """Estimate quota utilisation 0.0–1.0."""
         ratios: List[float] = []
-        if self.quota.requests_per_month and self.usage.requests_this_month:
+        if self.quota.requests_per_month:
             ratios.append(self.usage.requests_this_month / self.quota.requests_per_month)
-        if self.quota.tokens_per_day and self.usage.tokens_used_today:
+        if self.quota.requests_per_minute:
+            ratios.append(self.usage.requests_this_minute / self.quota.requests_per_minute)
+        if self.quota.tokens_per_day:
             ratios.append(self.usage.tokens_used_today / self.quota.tokens_per_day)
-        if self.quota.bandwidth_gb_month and self.usage.bandwidth_gb_used:
+        if self.quota.tokens_per_minute:
+            ratios.append(self.usage.tokens_used_this_minute / self.quota.tokens_per_minute)
+        if self.quota.bandwidth_gb_month:
             ratios.append(self.usage.bandwidth_gb_used / self.quota.bandwidth_gb_month)
+        if self.quota.storage_gb:
+            ratios.append(self.usage.storage_gb_used / self.quota.storage_gb)
+        if self.quota.compute_hours_month:
+            ratios.append(self.usage.compute_hours_used / self.quota.compute_hours_month)
         return max(ratios) if ratios else 0.0
 
     def is_available(self) -> bool:
