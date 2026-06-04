@@ -720,10 +720,7 @@ async def _handle_knowledge_graph_expand(params: Dict[str, Any]) -> Dict[str, An
                 EdgeType[et.upper()] for et in etype_strs if et.upper() in EdgeType.__members__
             ]
         expanded = await kg.semantic_expand(
-            node_id,
-            depth=depth,
-            edge_types=etypes,
-            min_confidence=min_conf,
+            node_id, depth=depth, edge_types=etypes, min_confidence=min_conf,
         )
         return _ok(
             {

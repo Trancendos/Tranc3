@@ -176,11 +176,7 @@ class FormationController:
     """Controls drone formation patterns."""
 
     def compute_formation(
-        self,
-        center: GeoPosition,
-        formation: FormationType,
-        num_drones: int,
-        spacing: float = 10.0,
+        self, center: GeoPosition, formation: FormationType, num_drones: int, spacing: float = 10.0,
     ) -> List[GeoPosition]:
         positions = []
         if formation == FormationType.LINE:
@@ -316,10 +312,7 @@ class SwarmCoordinator:
             drone.neighbors = neighbors
 
     def set_formation(
-        self,
-        formation: FormationType,
-        center: Optional[GeoPosition] = None,
-        spacing: float = 10.0,
+        self, formation: FormationType, center: Optional[GeoPosition] = None, spacing: float = 10.0,
     ):
         self.current_formation = formation
         if center is None:
@@ -334,10 +327,7 @@ class SwarmCoordinator:
                 center = GeoPosition()
 
         target_positions = self.formation_controller.compute_formation(
-            center,
-            formation,
-            len(self.drones),
-            spacing,
+            center, formation, len(self.drones), spacing,
         )
         for i, drone in enumerate(self.drones.values()):
             if i < len(target_positions):
@@ -401,10 +391,7 @@ class MultiDroneSwarmSimulation:
         self._id = str(uuid.uuid4())[:8]
 
     def create_swarm(
-        self,
-        swarm_id: Optional[str] = None,
-        num_drones: int = 5,
-        spec: Optional[DroneSpec] = None,
+        self, swarm_id: Optional[str] = None, num_drones: int = 5, spec: Optional[DroneSpec] = None,
     ) -> SwarmCoordinator:
         sid = swarm_id or f"swarm-{str(uuid.uuid4())[:6]}"
         drones = []
@@ -436,10 +423,7 @@ class MultiDroneSwarmSimulation:
         return False
 
     def create_task(
-        self,
-        task_type: SwarmTaskType,
-        target: GeoPosition,
-        priority: int = 0,
+        self, task_type: SwarmTaskType, target: GeoPosition, priority: int = 0,
     ) -> SwarmTask:
         task = SwarmTask(
             task_type=task_type,

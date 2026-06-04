@@ -153,10 +153,7 @@ class FeatureFlagService:
         # Kill switch overrides everything
         if flag.state == FlagState.KILL_SWITCH:
             return FlagEvaluation(
-                flag_key=flag_key,
-                enabled=False,
-                reason="kill_switch",
-                variant="disabled",
+                flag_key=flag_key, enabled=False, reason="kill_switch", variant="disabled",
             )
 
         # Disabled state
@@ -197,17 +194,11 @@ class FeatureFlagService:
                 return result
 
         return FlagEvaluation(
-            flag_key=flag_key,
-            enabled=True,
-            reason="enabled_default",
-            variant="default",
+            flag_key=flag_key, enabled=True, reason="enabled_default", variant="default",
         )
 
     def _evaluate_rule(
-        self,
-        rule: FlagRule,
-        context: Dict[str, Any],
-        flag_key: str,
+        self, rule: FlagRule, context: Dict[str, Any], flag_key: str,
     ) -> Optional[FlagEvaluation]:
         if rule.strategy == RolloutStrategy.ALL:
             return FlagEvaluation(
@@ -374,11 +365,7 @@ class FeatureFlagService:
         self._change_listeners.append(listener)
 
     def gradual_rollout(
-        self,
-        flag_key: str,
-        start_time: float,
-        end_time: float,
-        actor: str = "",
+        self, flag_key: str, start_time: float, end_time: float, actor: str = "",
     ) -> bool:
         flag = self._flags.get(flag_key)
         if not flag:
@@ -395,10 +382,6 @@ class FeatureFlagService:
         )
         flag.updated_at = time.time()
         self._audit_action(
-            flag_key,
-            "gradual_rollout_started",
-            None,
-            f"{start_time}-{end_time}",
-            actor,
+            flag_key, "gradual_rollout_started", None, f"{start_time}-{end_time}", actor,
         )
         return True

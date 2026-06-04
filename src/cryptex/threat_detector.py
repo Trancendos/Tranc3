@@ -187,8 +187,7 @@ class Cryptex:
     def block_ip(self, ip: str) -> None:
         self._blocked_ips.add(ip)
         logger.warning(
-            "cryptex: blocked IP %s",
-            sanitize_for_log(ip),
+            "cryptex: blocked IP %s", sanitize_for_log(ip),
         )  # codeql[py/cleartext-logging]
 
     def unblock_ip(self, ip: str) -> None:
@@ -197,9 +196,7 @@ class Cryptex:
     # ── Signals ───────────────────────────────────────────────────────────────
 
     def recent_signals(
-        self,
-        limit: int = 50,
-        min_severity: Optional[ThreatSeverity] = None,
+        self, limit: int = 50, min_severity: Optional[ThreatSeverity] = None,
     ) -> List[ThreatSignal]:
         _order = [
             ThreatSeverity.INFO,

@@ -124,8 +124,7 @@ class PaymentsDatabase:
         if soft:
             with self._cursor() as cur:
                 cur.execute(
-                    f"UPDATE payments SET status='cancelled' WHERE {id_field}=?",
-                    (id_value,),
+                    f"UPDATE payments SET status='cancelled' WHERE {id_field}=?", (id_value,),
                 )
                 return cur.rowcount > 0
         else:

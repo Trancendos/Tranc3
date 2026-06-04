@@ -133,10 +133,7 @@ class ConnectionManager:
         )
 
     async def connect(
-        self,
-        ws: WebSocket,
-        user_id: str,
-        metadata: dict[str, Any] | None = None,
+        self, ws: WebSocket, user_id: str, metadata: dict[str, Any] | None = None,
     ) -> bool:
         """Accept a new WebSocket connection."""
         if self.total_connections >= self.max_connections:
@@ -150,9 +147,7 @@ class ConnectionManager:
             "metadata": metadata or {},
         }
         logger.info(
-            "ws_connected: user=%s, total=%s",
-            sanitize_for_log(user_id),
-            sanitize_for_log(self.total_connections),
+            "ws_connected: user=%s, total=%s", sanitize_for_log(user_id), self.total_connections,
         )  # codeql[py/cleartext-logging]
         return True
 
@@ -180,8 +175,7 @@ class ConnectionManager:
         conn_info = self._connections.pop(ws, None)
         if conn_info:
             logger.info(
-                "ws_disconnected: user=%s",
-                sanitize_for_log(conn_info.get("user_id", "unknown")),
+                "ws_disconnected: user=%s", sanitize_for_log(conn_info.get("user_id", "unknown")),
             )  # codeql[py/cleartext-logging]
 
     async def subscribe(self, ws: WebSocket, channel: str) -> bool:
@@ -232,10 +226,7 @@ class ConnectionManager:
         return recipients
 
     async def _broadcast_to_channel(
-        self,
-        channel: str,
-        message: WSMessage,
-        exclude: WebSocket | None = None,
+        self, channel: str, message: WSMessage, exclude: WebSocket | None = None,
     ) -> int:
         """Broadcast a message to all connections in a channel."""
         recipients = self._channels.get(channel, set())
@@ -280,8 +271,7 @@ def verify_token(token: str, secret: str = "") -> dict[str, Any] | None:
         return None
     except pyjwt.InvalidTokenError as e:
         logger.warning(
-            "token_verification_failed: %s",
-            sanitize_for_log(e),
+            "token_verification_failed: %s", sanitize_for_log(e),
         )  # codeql[py/cleartext-logging]
         return None
 

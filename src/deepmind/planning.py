@@ -112,11 +112,7 @@ class BeamSearchPlanner:
         return beam
 
     async def _async_expand(
-        self,
-        node: ThoughtNode,
-        goal: str,
-        context: Dict,
-        depth: int,
+        self, node: ThoughtNode, goal: str, context: Dict, depth: int,
     ) -> List[ThoughtNode]:
         """Expand a single thought node into child ThoughtNodes asynchronously."""
         next_thoughts = self._expand_thought(node.thought, context)

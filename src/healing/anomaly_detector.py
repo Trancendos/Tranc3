@@ -50,10 +50,7 @@ class AnomalyDetector:
         self._handlers.append(handler)
 
     def record(
-        self,
-        metric_name: str,
-        value: float,
-        metadata: Optional[Dict] = None,
+        self, metric_name: str, value: float, metadata: Optional[Dict] = None,
     ) -> Optional[Anomaly]:
         import time
 

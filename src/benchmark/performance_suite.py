@@ -179,11 +179,7 @@ class BenchmarkSuite:
         if config.warmup_requests > 0:
             logger.debug("Warming up with %d requests", config.warmup_requests)
             await self._run_batch(
-                target,
-                config.warmup_requests,
-                1,
-                config.timeout_seconds,
-                config.think_time_ms,
+                target, config.warmup_requests, 1, config.timeout_seconds, config.think_time_ms,
             )
 
         # Memory baseline

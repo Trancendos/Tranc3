@@ -79,17 +79,13 @@ class SelfEvolvingInference:
         return adapted_layer
 
     def apply_adaptation(
-        self,
-        base_output: torch.Tensor,
-        adaptation_layer: nn.Module,
+        self, base_output: torch.Tensor, adaptation_layer: nn.Module,
     ) -> torch.Tensor:
         """Apply evolutionary adaptation to output"""
         return adaptation_layer(base_output)
 
     def collect_feedback(
-        self,
-        response: Dict[str, Any],
-        user_feedback: Optional[Dict] = None,
+        self, response: Dict[str, Any], user_feedback: Optional[Dict] = None,
     ) -> Dict[str, Any]:
         """
         Collect and analyze feedback for evolution

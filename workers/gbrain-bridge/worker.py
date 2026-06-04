@@ -172,8 +172,7 @@ class PageRankEngine:
             dangling_contrib = PAGERANK_DAMPING * dangling_sum / n if n else 0.0
 
             new_scores: Dict[int, float] = dict.fromkeys(
-                range(n),
-                (1 - PAGERANK_DAMPING) / n + dangling_contrib,
+                range(n), (1 - PAGERANK_DAMPING) / n + dangling_contrib,
             )
             for src, links in out_links.items():
                 total_weight = sum(w for _, w in links)

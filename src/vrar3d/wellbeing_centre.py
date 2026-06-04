@@ -151,11 +151,7 @@ class VRAR3D:
     def _seed_scenes(self) -> None:
         for name, stype, desc, dur, tags in _DEFAULT_SCENES:
             scene = WellbeingScene(
-                name=name,
-                scene_type=stype,
-                description=desc,
-                duration_seconds=dur,
-                tags=tags,
+                name=name, scene_type=stype, description=desc, duration_seconds=dur, tags=tags,
             )
             self._scenes[scene.id] = scene
 
@@ -169,10 +165,7 @@ class VRAR3D:
         return self._scenes.get(scene_id)
 
     def start_session(
-        self,
-        user_id: str,
-        scene_id: str,
-        mood_before: Optional[int] = None,
+        self, user_id: str, scene_id: str, mood_before: Optional[int] = None,
     ) -> Optional[VRSession]:
         if scene_id not in self._scenes:
             return None
@@ -199,9 +192,7 @@ class VRAR3D:
         return session
 
     def recommend_scene(
-        self,
-        mood: Optional[int] = None,
-        sensitivity_level: str = "none",
+        self, mood: Optional[int] = None, sensitivity_level: str = "none",
     ) -> Optional[WellbeingScene]:
         """Recommend a scene based on mood or I-Mind sensitivity level."""
         if sensitivity_level == "critical":
@@ -230,10 +221,7 @@ class VRAR3D:
             from src.observability.observatory import EventCategory, observe
 
             observe(
-                event_type,
-                category=EventCategory.DATA,
-                service="vrar3d",
-                metadata=metadata or {},
+                event_type, category=EventCategory.DATA, service="vrar3d", metadata=metadata or {},
             )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream

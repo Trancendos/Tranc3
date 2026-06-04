@@ -120,8 +120,7 @@ class NvdFeedIngestor:
         # Description (prefer English)
         descs = cve_node.get("description", {}).get("description_data", [])
         description = next(
-            (d["value"] for d in descs if d.get("lang") == "en"),
-            "No description available.",
+            (d["value"] for d in descs if d.get("lang") == "en"), "No description available.",
         )
 
         # CVSS v3 preferred, fall back to v2
@@ -416,7 +415,7 @@ class OsvIngestor:
                 # Correct OSV payload structure — POST body must be JSON with
                 # a "package" key containing "ecosystem"; NOT a raw string.
                 payload = json.dumps({
-                    "package": {"ecosystem": ecosystem}
+                    "package": {"ecosystem": ecosystem},
                 }).encode("utf-8")
                 req = _ur.Request(
                     self.OSV_QUERY_URL,

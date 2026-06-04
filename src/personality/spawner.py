@@ -61,8 +61,8 @@ def _resolve_output_base(output_dir: str) -> Path:
             continue
 
     raise PathTraversalError(
-        f"Output directory {output_dir} is not under any allowed root. "
-        f"Allowed root count: {len(_ALLOWED_OUTPUT_ROOTS)}",
+        f"Output directory {candidate} is not under any allowed root. "
+        f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}",
     )
 
 

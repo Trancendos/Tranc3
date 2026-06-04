@@ -157,5 +157,5 @@ except Exception as e:
         sanitize_for_log(e),
     )
     raise RuntimeError(
-        "Tranc3 configuration failed. Check your environment variables and .env file.",
+        f"Tranc3 configuration failed: {e}. Check your environment variables and .env file.",
     ) from e

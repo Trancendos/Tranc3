@@ -12,29 +12,29 @@ from __future__ import annotations
 
 import asyncio
 import os
-import pytest
 from typing import List
 
-from src.master_worker.platform_registry import (
-    PlatformCategory,
-    PlatformHealth,
-    PlatformRegistry,
-)
-from src.master_worker.zero_cost_enforcer import ZeroCostEnforcer, QuotaStatus
+import pytest
+
 from src.master_worker.adaptive_blueprints import (
     BlueprintEngine,
     BlueprintSpec,
     BlueprintType,
 )
 from src.master_worker.mape_k import (
-    MapeKLoop,
-    MapeKConfig,
-    SystemSnapshot,
-    WorkerMetrics,
     ActionType,
     ControlLoopState,
+    MapeKConfig,
+    MapeKLoop,
+    SystemSnapshot,
+    WorkerMetrics,
 )
-
+from src.master_worker.platform_registry import (
+    PlatformCategory,
+    PlatformHealth,
+    PlatformRegistry,
+)
+from src.master_worker.zero_cost_enforcer import QuotaStatus, ZeroCostEnforcer
 
 # ---------------------------------------------------------------------------
 # PlatformRegistry
@@ -278,7 +278,7 @@ class TestBlueprintEngine:
 
 class TestMapeKLoop:
     def _make_snapshot(
-        self, healthy: int = 5, unhealthy: List[str] | None = None
+        self, healthy: int = 5, unhealthy: List[str] | None = None,
     ) -> SystemSnapshot:
         unhealthy = unhealthy or []
         metrics = [

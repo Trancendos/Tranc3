@@ -83,8 +83,7 @@ class TestVaultService:
 
     def test_create_and_get_secret(self, client):
         r = client.post(
-            "/secrets",
-            json={"key": "db-password", "value": "s3cret!", "tags": ["database"]},
+            "/secrets", json={"key": "db-password", "value": "s3cret!", "tags": ["database"]},
         )
         assert r.status_code == 201
         sid = r.json()["id"]
@@ -164,8 +163,7 @@ class TestTopologyService:
 
     def test_register_and_list_nodes(self, client):
         r = client.post(
-            "/nodes",
-            json={"name": "node-1", "type": "nas", "endpoint": "http://nas1:8000"},
+            "/nodes", json={"name": "node-1", "type": "nas", "endpoint": "http://nas1:8000"},
         )
         assert r.status_code == 201
         r2 = client.get("/nodes")
@@ -176,8 +174,7 @@ class TestTopologyService:
 
     def test_update_node_health(self, client):
         r = client.post(
-            "/nodes",
-            json={"name": "health-node", "type": "cloud", "endpoint": "http://c1:8000"},
+            "/nodes", json={"name": "health-node", "type": "cloud", "endpoint": "http://c1:8000"},
         )
         nid = r.json()["id"]
         r2 = client.put(f"/nodes/{nid}/health", json={"status": "healthy", "latency_ms": 42})
@@ -186,8 +183,7 @@ class TestTopologyService:
 
     def test_deregister_node(self, client):
         r = client.post(
-            "/nodes",
-            json={"name": "temp-node", "type": "hybrid", "endpoint": "http://h1:8000"},
+            "/nodes", json={"name": "temp-node", "type": "hybrid", "endpoint": "http://h1:8000"},
         )
         nid = r.json()["id"]
         r2 = client.delete(f"/nodes/{nid}")
@@ -219,8 +215,7 @@ class TestLedgerService:
 
     def test_append_and_list_entries(self, client):
         r = client.post(
-            "/entries",
-            json={"actor": "admin", "action": "create_secret", "resource": "db-pw"},
+            "/entries", json={"actor": "admin", "action": "create_secret", "resource": "db-pw"},
         )
         assert r.status_code == 201
         r2 = client.get("/entries")
@@ -458,8 +453,7 @@ class TestLangchainIntegrationService:
 
     def test_create_template(self, client):
         r = client.post(
-            "/templates",
-            json={"name": "greet", "template": "Hello {name}!", "variables": ["name"]},
+            "/templates", json={"name": "greet", "template": "Hello {name}!", "variables": ["name"]},
         )
         assert r.status_code == 201
         assert r.json()["name"] == "greet"
@@ -474,15 +468,13 @@ class TestLangchainIntegrationService:
 
     def test_create_chain(self, client):
         r = client.post(
-            "/chains",
-            json={"name": "seq-chain", "chain_type": "sequential", "template_ids": []},
+            "/chains", json={"name": "seq-chain", "chain_type": "sequential", "template_ids": []},
         )
         assert r.status_code == 201
 
     def test_create_document(self, client):
         r = client.post(
-            "/documents",
-            json={"name": "Test Doc", "content": "Some text content here."},
+            "/documents", json={"name": "Test Doc", "content": "Some text content here."},
         )
         assert r.status_code == 201
 
@@ -502,9 +494,7 @@ class TestLangchainIntegrationService:
 
 
 @pytest.mark.parametrize(
-    "client",
-    ["workers.deepagents-orchestrator-service.worker"],
-    indirect=True,
+    "client", ["workers.deepagents-orchestrator-service.worker"], indirect=True,
 )
 class TestDeepagentsOrchestratorService:
     def test_health(self, client):
@@ -538,8 +528,7 @@ class TestDeepagentsOrchestratorService:
 
     def test_delegate_task(self, client):
         a1 = client.post(
-            "/agents",
-            json={"name": "delegator", "capabilities": ["reasoning"]},
+            "/agents", json={"name": "delegator", "capabilities": ["reasoning"]},
         ).json()
         a2 = client.post("/agents", json={"name": "worker", "capabilities": ["coding"]}).json()
         t = client.post("/tasks", json={"title": "delegate-me", "priority": 5}).json()

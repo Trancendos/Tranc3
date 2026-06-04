@@ -760,8 +760,7 @@ class TestQueueService:
         client.post("/topics", json={"name": "ack-topic"})
         client.post("/topics/ack-topic/publish", json={"payload": {"x": 1}})
         consume = client.get(
-            "/topics/ack-topic/consume",
-            params={"consumer_id": "worker-ack"},
+            "/topics/ack-topic/consume", params={"consumer_id": "worker-ack"},
         ).json()
         msg_id = consume["messages"][0]["id"]
         r = client.post(f"/topics/ack-topic/ack/{msg_id}")
@@ -1056,8 +1055,7 @@ class TestAuditService:
 
     def test_get_entry_by_id(self, client):
         created = client.post(
-            "/audit",
-            json={"actor": "user:alice", "action": "update", "resource": "profile"},
+            "/audit", json={"actor": "user:alice", "action": "update", "resource": "profile"},
         ).json()
         # ID returned as integer in 'id' field
         entry_id = created["id"]

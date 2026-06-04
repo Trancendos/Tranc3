@@ -85,8 +85,7 @@ class Prime:
         # Lifecycle hooks
         self.lifecycle = LifecycleEmitter(name or prime_id)
         self.lifecycle.emit_lifecycle_sync(
-            LifecycleEvent.INIT,
-            {"id": self.id, "tier": 2, "pillar": pillar},
+            LifecycleEvent.INIT, {"id": self.id, "tier": 2, "pillar": pillar},
         )
 
     @property

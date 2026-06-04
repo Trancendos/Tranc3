@@ -281,9 +281,7 @@ class EntityNameUpdate(BaseModel):
 
     new_name: str = Field(..., min_length=1, max_length=120, description="The new display name")
     reason: str | None = Field(
-        default=None,
-        max_length=500,
-        description="Optional reason for rename",
+        default=None, max_length=500, description="Optional reason for rename",
     )
 
 
@@ -1608,8 +1606,7 @@ async def reset_entity_overrides(
     request: Request,
     entity_type: str | None = Query(None, description="Limit reset to a specific entity_type"),
     slot: str | None = Query(
-        None,
-        description="Limit reset to a specific slot (pass empty string for no-slot rows)",
+        None, description="Limit reset to a specific slot (pass empty string for no-slot rows)",
     ),
 ):
     """Reset name overrides for an entity — restores code defaults.

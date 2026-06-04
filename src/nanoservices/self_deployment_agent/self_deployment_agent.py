@@ -263,12 +263,7 @@ class ForgejoClient:
         return headers
 
     def create_commit(
-        self,
-        repo: str,
-        branch: str,
-        file_path: str,
-        content: str,
-        message: str,
+        self, repo: str, branch: str, file_path: str, content: str, message: str,
     ) -> Optional[str]:
         sha = hashlib.sha256(content.encode()).hexdigest()[:12]
         logger.info("Forgejo commit %s to %s/%s:%s — %s", sha, repo, branch, file_path, message)
@@ -283,12 +278,7 @@ class ForgejoClient:
         return True
 
     def create_pull_request(
-        self,
-        repo: str,
-        title: str,
-        head: str,
-        base: str = "main",
-        body: str = "",
+        self, repo: str, title: str, head: str, base: str = "main", body: str = "",
     ) -> Optional[int]:
         pr_id = abs(hash(title)) % 10000
         logger.info("Forgejo PR #%d: %s (%s→%s)", pr_id, title, head, base)
@@ -303,10 +293,7 @@ class HealthChecker:
     """Verifies deployment health via Kubernetes probes and custom checks."""
 
     def check_deployment_health(
-        self,
-        service_name: str,
-        namespace: str = "default",
-        timeout: float = 120.0,
+        self, service_name: str, namespace: str = "default", timeout: float = 120.0,
     ) -> Tuple[bool, Dict[str, Any]]:
         details: Dict[str, Any] = {"service": service_name, "namespace": namespace}
         try:
@@ -404,10 +391,7 @@ class DriftDetector:
         )
 
     def heuristic_drift_check(
-        self,
-        service_name: str,
-        expected_replicas: int = 1,
-        expected_image: str = "",
+        self, service_name: str, expected_replicas: int = 1, expected_image: str = "",
     ) -> DriftReport:
         logger.info("Heuristic drift check for %s", service_name)
         return DriftReport(
@@ -454,10 +438,7 @@ class SelfDeploymentAgent:
         self.state = DeploymentState.PLANNING
 
         logger.info(
-            "Deployment %s starting for %s:%s",
-            self._deploy_id,
-            cfg.service_name,
-            cfg.image_tag,
+            "Deployment %s starting for %s:%s", self._deploy_id, cfg.service_name, cfg.image_tag,
         )
 
         try:
@@ -493,8 +474,7 @@ class SelfDeploymentAgent:
 
             self.state = DeploymentState.VERIFYING
             healthy, health_details = self.health.check_deployment_health(
-                cfg.service_name,
-                timeout=cfg.health_check_timeout,
+                cfg.service_name, timeout=cfg.health_check_timeout,
             )
 
             if not healthy and cfg.auto_rollback:
@@ -532,11 +512,7 @@ class SelfDeploymentAgent:
             return result
 
     def _rollback(
-        self,
-        cfg: DeploymentConfig,
-        start_time: float,
-        current_sha: str,
-        reason: Dict[str, Any],
+        self, cfg: DeploymentConfig, start_time: float, current_sha: str, reason: Dict[str, Any],
     ) -> DeploymentResult:
         self.state = DeploymentState.ROLLING_BACK
         logger.info("Rolling back %s from commit %s", cfg.service_name, current_sha)

@@ -320,9 +320,7 @@ class DIDIdentityService:
         self._id = str(uuid.uuid4())[:8]
 
     def create_did(
-        self,
-        method: DIDMethod = DIDMethod.DID_KEY,
-        **kwargs: Any,
+        self, method: DIDMethod = DIDMethod.DID_KEY, **kwargs: Any,
     ) -> Tuple[str, DIDDocument]:
         handler = self.methods.get(method)
         if not handler:
@@ -330,8 +328,7 @@ class DIDIdentityService:
 
         if method == DIDMethod.DID_WEB:
             did, pub, priv = handler.create(
-                kwargs.get("domain", "tranc3.local"),
-                kwargs.get("path"),
+                kwargs.get("domain", "tranc3.local"), kwargs.get("path"),
             )
         elif method == DIDMethod.DID_TRANC3:
             did, pub, priv = handler.create(kwargs.get("namespace", "default"))
@@ -381,9 +378,7 @@ class DIDIdentityService:
         return True
 
     def create_presentation(
-        self,
-        holder_did: str,
-        credential_ids: List[str],
+        self, holder_did: str, credential_ids: List[str],
     ) -> VerifiablePresentation:
         creds = [self.credentials[cid] for cid in credential_ids if cid in self.credentials]
         vp = VerifiablePresentation(

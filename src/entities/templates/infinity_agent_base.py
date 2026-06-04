@@ -160,10 +160,7 @@ class InfinityAgent:
     # ------------------------------------------------------------------
 
     async def enqueue(
-        self,
-        task_type: str,
-        payload: dict[str, Any],
-        priority: int = 5,
+        self, task_type: str, payload: dict[str, Any], priority: int = 5,
     ) -> AgentTask:
         """Enqueue a task for processing. Raises QueueFull if backlog is at capacity."""
         task = AgentTask(task_type=task_type, payload=payload, priority=priority)
@@ -172,10 +169,7 @@ class InfinityAgent:
         return task
 
     def enqueue_nowait(
-        self,
-        task_type: str,
-        payload: dict[str, Any],
-        priority: int = 5,
+        self, task_type: str, payload: dict[str, Any], priority: int = 5,
     ) -> AgentTask:
         """Enqueue without blocking. Raises QueueFull if at capacity."""
         task = AgentTask(task_type=task_type, payload=payload, priority=priority)

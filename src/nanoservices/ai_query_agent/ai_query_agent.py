@@ -218,9 +218,7 @@ class AIQueryAgent:
         }
 
     async def process_query(
-        self,
-        natural_language: str,
-        context: Optional[Dict[str, Any]] = None,
+        self, natural_language: str, context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Process a natural language query through the full agent pipeline."""
         task = QueryTask(
@@ -403,8 +401,7 @@ class AIQueryAgent:
             return patterns["join"].format(relations=", ".join(relations), key="id")
         elif any(w in nl_lower for w in ["nest", "hierarchical", "nested"]):
             return patterns["nest"].format(
-                outer=relations[0],
-                inner=relations[1] if len(relations) > 1 else "nested",
+                outer=relations[0], inner=relations[1] if len(relations) > 1 else "nested",
             )
         elif any(w in nl_lower for w in ["find", "where", "filter"]):
             return patterns["find"].format(relations=", ".join(relations), condition="condition")
@@ -479,17 +476,13 @@ class AIQueryAgent:
         return {"success": True, "cached": True}
 
     async def _action_query_cache(
-        self,
-        action: AgentAction,
-        session: AgentSession,
+        self, action: AgentAction, session: AgentSession,
     ) -> Dict[str, Any]:
         """Query the plan cache."""
         return {"success": True, "found": False}
 
     async def _action_escalate_quantum(
-        self,
-        action: AgentAction,
-        session: AgentSession,
+        self, action: AgentAction, session: AgentSession,
     ) -> Dict[str, Any]:
         """Escalate to quantum solver."""
         return {"success": True, "quantum_escalated": True}

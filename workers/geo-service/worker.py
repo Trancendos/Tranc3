@@ -348,8 +348,7 @@ async def cache_stats():
     with get_conn() as conn:
         total = conn.execute("SELECT COUNT(*) FROM ip_cache").fetchone()[0]
         fresh = conn.execute(
-            "SELECT COUNT(*) FROM ip_cache WHERE cached_at > ?",
-            (now - CACHE_TTL,),
+            "SELECT COUNT(*) FROM ip_cache WHERE cached_at > ?", (now - CACHE_TTL,),
         ).fetchone()[0]
         by_source = conn.execute(
             "SELECT source, COUNT(*) as c FROM ip_cache GROUP BY source",

@@ -335,10 +335,7 @@ class ROS2ServiceBridge:
         logger.info("ROS2ServiceBridge initialized: %s", self.node_config.node_name)
 
     def create_publisher(
-        self,
-        topic: str,
-        topic_type: ROS2TopicType,
-        qos: ROS2QoSPolicy = ROS2QoSPolicy.RELIABLE,
+        self, topic: str, topic_type: ROS2TopicType, qos: ROS2QoSPolicy = ROS2QoSPolicy.RELIABLE,
     ) -> ROS2Publisher:
         """Create a ROS2 publisher for a topic."""
         pub = ROS2Publisher(topic=topic, topic_type=topic_type, qos=qos)

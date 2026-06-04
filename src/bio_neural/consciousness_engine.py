@@ -205,10 +205,7 @@ class SelfAwarenessModule(nn.Module if nn is not None else object):
 
         # Awareness score
         self.awareness_scorer = nn.Sequential(
-            nn.Linear(hidden_size, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1),
-            nn.Sigmoid(),
+            nn.Linear(hidden_size, 64), nn.ReLU(), nn.Linear(64, 1), nn.Sigmoid(),
         )
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, float]:

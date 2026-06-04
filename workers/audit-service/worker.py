@@ -303,11 +303,7 @@ async def verify_chain():
     broken_at = None
     for row in rows:
         expected = _compute_hash(
-            row["id"],
-            row["actor"],
-            row["action"],
-            row["timestamp"],
-            row["prev_hash"],
+            row["id"], row["actor"], row["action"], row["timestamp"], row["prev_hash"],
         )
         if row["chain_hash"] != expected or row["prev_hash"] != prev_hash:
             broken_at = row["id"]

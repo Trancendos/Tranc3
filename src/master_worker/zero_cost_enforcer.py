@@ -28,7 +28,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Awaitable
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from .platform_registry import PlatformHealth, PlatformRegistry
 
@@ -119,7 +119,7 @@ class ZeroCostEnforcer:
             return
         self._running = True
         self._task = asyncio.create_task(
-            self._enforcement_loop(), name="zero_cost_enforcer"
+            self._enforcement_loop(), name="zero_cost_enforcer",
         )
         logger.info("ZeroCostEnforcer started (interval=%.0fs)", self._check_interval)
 
@@ -156,7 +156,7 @@ class ZeroCostEnforcer:
             if re.search(pattern, lower):
                 raise ValueError(
                     f"ZERO-COST VIOLATION — blocked service call to: {url_or_service!r}\n"
-                    f"Reason: {reason}"
+                    f"Reason: {reason}",
                 )
 
     # ------------------------------------------------------------------

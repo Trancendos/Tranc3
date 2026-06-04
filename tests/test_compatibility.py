@@ -207,8 +207,7 @@ class TestPydanticV2Compatibility:
         from src.mcp.tools import SparkTool
 
         has_inner_config = hasattr(SparkTool, "Config") and isinstance(
-            getattr(SparkTool, "Config"),
-            type,
+            getattr(SparkTool, "Config"), type,
         )
         _log.info("compat.pydantic spark_tool has_inner_Config=%s", has_inner_config)
         assert not has_inner_config, "SparkTool must not use inner Config class (Pydantic v2)"
@@ -227,9 +226,7 @@ class TestPydanticV2Compatibility:
         # .to_dict() should work regardless of how it's implemented internally
         d = wf.to_dict()
         _log.info(
-            "compat.pydantic workflow_dict_type=%s keys=%s",
-            type(d).__name__,
-            list(d.keys())[:5],
+            "compat.pydantic workflow_dict_type=%s keys=%s", type(d).__name__, list(d.keys())[:5],
         )
         assert isinstance(d, dict)
 
@@ -244,9 +241,7 @@ class TestPydanticV2Compatibility:
             status="running",
         )
         _log.info(
-            "compat.pydantic exec_state elapsed_ms=%s status=%s",
-            state.elapsed_ms,
-            state.status,
+            "compat.pydantic exec_state elapsed_ms=%s status=%s", state.elapsed_ms, state.status,
         )
         assert isinstance(state.execution_id, str)
         assert isinstance(state.status, str)

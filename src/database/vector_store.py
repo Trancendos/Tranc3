@@ -98,20 +98,36 @@ class VectorStore:
 
     def upsert(self, vector_id: str, embedding: List[float], metadata: Dict) -> bool:
         try:
-            self._backend.upsert(vector_id, embedding, metadata)
+            if self._backend_name == "pinecone":
+                self._backend.upsert(
+                    vectors=[
+                        {
+                            "id": vector_id,
+                            "values": embedding,
+                            "metadata": metadata,
+                        },
+                    ],
+                )
+            else:
+                self._backend.upsert(vector_id, embedding, metadata)
             return True
         except Exception as e:
             logger.error("VectorStore upsert failed: %s", sanitize_for_log(e))
             return False
 
     def query(
-        self,
-        embedding: List[float],
-        top_k: int = 5,
-        filter: Optional[Dict] = None,  # noqa: A002
+        self, embedding: List[float], top_k: int = 5, filter: Optional[Dict] = None,
     ) -> List[Dict]:
         try:
-            return self._backend.query(embedding, top_k, filter)
+            if self._backend_name == "pinecone":
+                results = self._backend.query(
+                    vector=embedding, top_k=top_k, include_metadata=True, filter=filter or {},
+                )
+                return [
+                    {"id": m.id, "score": m.score, "metadata": m.metadata} for m in results.matches
+                ]
+            else:
+                return self._backend.query(embedding, top_k)
         except Exception as e:
             logger.error("VectorStore query failed: %s", sanitize_for_log(e))
             return []
@@ -264,7 +280,7 @@ class InMemoryVectorStore:
                 continue
             v = np.array(vec)
             score = float(
-                np.dot(query_vec, v) / (np.linalg.norm(query_vec) * np.linalg.norm(v) + 1e-8)
+                np.dot(query_vec, v) / (np.linalg.norm(query_vec) * np.linalg.norm(v) + 1e-8),
             )
             scores.append({"id": vid, "score": score, "metadata": meta})
         scores.sort(key=lambda x: x["score"], reverse=True)

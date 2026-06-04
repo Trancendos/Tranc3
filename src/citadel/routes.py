@@ -124,8 +124,7 @@ async def forgejo_webhook(
     event = request.headers.get("X-Gitea-Event", request.headers.get("X-Forgejo-Event", "unknown"))
     ref = payload.get("ref", "")
     sender = payload.get("pusher", {}).get(
-        "login",
-        payload.get("sender", {}).get("login", "forgejo"),
+        "login", payload.get("sender", {}).get("login", "forgejo"),
     )
 
     logger.info(
@@ -148,10 +147,7 @@ async def forgejo_webhook(
             version = payload.get("after", "unknown")[:8]
             status = DeployStatus.IN_PROGRESS if event == "push" else DeployStatus.SUCCESS
             record = get_citadel().record_deploy(
-                target=target,
-                version=version,
-                triggered_by=sender,
-                status=status,
+                target=target, version=version, triggered_by=sender, status=status,
             )
             return {"accepted": True, "deploy_id": record.id, "target": target.value}
 

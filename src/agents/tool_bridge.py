@@ -324,9 +324,7 @@ class ToolBridge:
     # -------------------------------------------------------------------
 
     def get_invocation_history(
-        self,
-        tool_name: Optional[str] = None,
-        limit: int = 50,
+        self, tool_name: Optional[str] = None, limit: int = 50,
     ) -> List[ToolResult]:
         """
         Return recent invocation history, optionally filtered by tool name.

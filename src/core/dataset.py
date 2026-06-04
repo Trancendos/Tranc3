@@ -83,9 +83,7 @@ class MultilingualDataset(Dataset):
                             except json.JSONDecodeError:
                                 continue
                 logger.info(
-                    "Loaded %s data from %s",
-                    sanitize_for_log(lang),
-                    sanitize_for_log(path),
+                    "Loaded %s data from %s", sanitize_for_log(lang), sanitize_for_log(path),
                 )
 
     def _generate_synthetic(self) -> List[Dict]:

@@ -146,9 +146,7 @@ class Basement:
         return [self._records[i] for i in ids[-limit:] if i in self._records]
 
     def recent(
-        self,
-        limit: int = 50,
-        source: Optional[ArchiveSource] = None,
+        self, limit: int = 50, source: Optional[ArchiveSource] = None,
     ) -> List[ArchiveRecord]:
         records = list(self._records.values())
         if source:
@@ -204,8 +202,7 @@ class Basement:
         try:
             vec = self._embedder.encode([query], normalize_embeddings=True)
             scores, indices = self._faiss_index.search(
-                vec.astype("float32"),
-                min(top_k, len(self._faiss_ids)),
+                vec.astype("float32"), min(top_k, len(self._faiss_ids)),
             )
             results = []
             for score, idx in zip(scores[0], indices[0], strict=False):

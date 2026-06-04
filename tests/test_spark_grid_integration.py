@@ -469,8 +469,7 @@ class TestGridBridge:
             from src.workflow.executor import event_bus as grid_bus
 
             await grid_bus.publish(
-                "workflow.completed",
-                {"workflow_id": "test-wf", "elapsed_ms": 1.0},
+                "workflow.completed", {"workflow_id": "test-wf", "elapsed_ms": 1.0},
             )
 
             # The bridge should have forwarded it as "grid.workflow.completed"

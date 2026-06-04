@@ -202,10 +202,7 @@ class AgentRuntime:
     # -----------------------------------------------------------------------
 
     async def assign_goal(
-        self,
-        description: str,
-        priority: int = 5,
-        metadata: Optional[Dict] = None,
+        self, description: str, priority: int = 5, metadata: Optional[Dict] = None,
     ) -> str:
         """
         Assign a new goal to the agent. Returns the goal ID.
@@ -286,8 +283,7 @@ class AgentRuntime:
 
                 if step.status == "completed":
                     await self._goal_manager.update_progress(
-                        active_goal.goal_id,
-                        increment=1.0 / len(decomposition.subtasks),
+                        active_goal.goal_id, increment=1.0 / len(decomposition.subtasks),
                     )
                 break
 

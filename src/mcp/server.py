@@ -103,8 +103,7 @@ class _SSEBus:
                 q.put_nowait(payload)
             except asyncio.QueueFull:
                 logger.warning(
-                    "mcp.sse queue full for subscriber=%s, dropping event",
-                    sanitize_for_log(sub_id),
+                    "mcp.sse queue full for subscriber=%s, dropping event", sanitize_for_log(sub_id),
                 )  # codeql[py/cleartext-logging]
             except Exception:
                 dead.append(sub_id)
@@ -214,8 +213,7 @@ async def _method_tools_call(params: Optional[Dict[str, Any]], request_id: Any) 
     except asyncio.TimeoutError:
         msg = f"Tool '{tool_name}' timed out after 60 s"
         logger.error(
-            "mcp.tools_call timeout tool=%s",
-            sanitize_for_log(tool_name),
+            "mcp.tools_call timeout tool=%s", sanitize_for_log(tool_name),
         )  # codeql[py/cleartext-logging]
         await _bus.publish("error", {"tool": tool_name, "error": msg, "request_id": request_id})
         return _err(request_id, ERR_TOOL_EXECUTION, msg)
@@ -237,8 +235,7 @@ async def _method_tools_call(params: Optional[Dict[str, Any]], request_id: Any) 
 
 
 async def _method_resources_list(
-    params: Optional[Dict[str, Any]],
-    request_id: Any,
+    params: Optional[Dict[str, Any]], request_id: Any,
 ) -> Dict[str, Any]:
     resources: List[Dict[str, Any]] = [
         {
@@ -316,8 +313,7 @@ router = APIRouter(prefix="/mcp", tags=["mcp"])
 
 @router.post("/rpc")
 async def rpc_endpoint(
-    request: Request,
-    current_user: dict = Depends(get_current_user),
+    request: Request, current_user: dict = Depends(get_current_user),
 ) -> JSONResponse:
     """
     JSON-RPC 2.0 entry-point.  Accepts a single request object or a batch array.
@@ -334,9 +330,7 @@ async def rpc_endpoint(
     if isinstance(body, list):
         return JSONResponse(
             content=_err(
-                None,
-                ERR_INVALID_REQUEST,
-                "Batch requests are not supported by this server",
+                None, ERR_INVALID_REQUEST, "Batch requests are not supported by this server",
             ),
             status_code=200,
         )
@@ -375,8 +369,7 @@ async def rpc_endpoint(
         return JSONResponse(content=result, status_code=200)
     except Exception as exc:
         logger.exception(
-            "mcp.rpc unhandled error method=%s",
-            sanitize_for_log(method),
+            "mcp.rpc unhandled error method=%s", sanitize_for_log(method),
         )  # codeql[py/cleartext-logging]
         return JSONResponse(
             content=_err(req_id, ERR_INTERNAL_ERROR, f"Internal error: {type(exc).__name__}"),
@@ -387,8 +380,7 @@ async def rpc_endpoint(
 
 @router.get("/sse")
 async def sse_endpoint(
-    request: Request,
-    current_user: dict = Depends(get_current_user),
+    request: Request, current_user: dict = Depends(get_current_user),
 ) -> StreamingResponse:
     """
     Server-Sent Events stream.  Clients connect here to receive async events
@@ -417,8 +409,7 @@ async def sse_endpoint(
         finally:
             _bus.unsubscribe(sub_id)
             logger.info(
-                "mcp.sse client disconnected sub_id=%s",
-                sanitize_for_log(sub_id),
+                "mcp.sse client disconnected sub_id=%s", sanitize_for_log(sub_id),
             )  # codeql[py/cleartext-logging]
 
     return StreamingResponse(
@@ -577,8 +568,7 @@ async def handle_rpc(body: Dict[str, Any], enhanced: Any = None) -> Dict[str, An
         return await handler(params, rpc_id)
     except Exception as exc:
         logger.exception(
-            "handle_rpc unhandled error method=%s",
-            sanitize_for_log(method),
+            "handle_rpc unhandled error method=%s", sanitize_for_log(method),
         )  # codeql[py/cleartext-logging]
         logger.exception(
             "mcp internal error method=%s detail=%s",

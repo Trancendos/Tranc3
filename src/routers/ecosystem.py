@@ -930,8 +930,7 @@ async def resolve_heartbeat_alert(alert_id: str):
     success = _heartbeat_aggregator.resolve_alert(alert_id)
     if not success:
         raise HTTPException(
-            status_code=404,
-            detail=f"Alert '{alert_id}' not found or already resolved",
+            status_code=404, detail=f"Alert '{alert_id}' not found or already resolved",
         )
     return {"status": "resolved", "alert_id": alert_id}
 

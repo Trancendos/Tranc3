@@ -317,9 +317,7 @@ async def register_model(body: ModelRegister):
 
 @_router.get("/models")
 async def list_models(
-    active_only: bool = True,
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    active_only: bool = True, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
 ):
     conn = _get_db()
     q = "SELECT * FROM models WHERE 1=1"

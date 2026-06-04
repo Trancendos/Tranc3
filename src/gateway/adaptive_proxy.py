@@ -70,8 +70,7 @@ class AdaptiveProxy:
             # Check circuit breaker
             if not breaker.can_execute():
                 logger.warning(
-                    "Circuit open for %s, trying alternatives",
-                    sanitize_for_log(service.name),
+                    "Circuit open for %s, trying alternatives", sanitize_for_log(service.name),
                 )
                 # Try to find an alternative service
                 alternatives = self.registry.find_by_capability(capability)

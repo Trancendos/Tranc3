@@ -186,13 +186,16 @@ class IBridge(ABC):
 
     @property
     @abstractmethod
-    def domain(self) -> BridgeDomain: ...
+    def domain(self) -> BridgeDomain:
+        ...
 
     @abstractmethod
-    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket: ...
+    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket:
+        ...
 
     @abstractmethod
-    def health_check(self) -> BridgeHealthReport: ...
+    def health_check(self) -> BridgeHealthReport:
+        ...
 
     @abstractmethod
     def scan_and_cleanup(self) -> List[str]:
@@ -413,7 +416,7 @@ class NexusBridge(IBridge):
     def scan_and_cleanup(self) -> List[str]:
         """Clean up stale channels and discovered agents."""
         actions = []
-        # _now = time.time()  # noqa: F841
+        # _now = time.time()  # noqa: assigned but unused
         # Clean channels with no recent activity
         stale_channels = [ch for ch, msgs in self._channels.items() if len(msgs) == 0]
         for ch in stale_channels:
@@ -636,7 +639,7 @@ class SentinelStation:
         #     requires_escalation=False,
         # )
 
-        # _result_packet = to_bridge.process_packet(packet)  # noqa: F841
+        # _result_packet = to_bridge.process_packet(packet)  # noqa: assigned but unused
 
         result = EscalationResult(
             success=True,
@@ -753,9 +756,7 @@ class SentinelStation:
         packet.security_token to a non-empty authorisation marker.
         """
         if not packet.security_token:
-            logger.warning(
-                "Sentinel: cross-bridge packet %s rejected — no security_token", packet.id
-            )
+            logger.warning("Sentinel: cross-bridge packet %s rejected — no security_token", packet.id)
             packet.metadata["sentinel_error"] = "cross_bridge_requires_security_token"
             return packet
 
@@ -779,9 +780,7 @@ class SentinelStation:
         packet.traffic_class = TrafficClass.UNKNOWN  # de-classify before handing off
         packet.metadata["cross_bridge_via"] = "sentinel"
         logger.info(
-            "Sentinel: cross-bridge packet %s routed to %s",
-            packet.id,
-            target_domain.value,
+            "Sentinel: cross-bridge packet %s routed to %s", packet.id, target_domain.value,
         )
         return bridge.process_packet(packet)
 

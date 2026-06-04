@@ -184,11 +184,7 @@ class ChronosSphere:
         **kwargs,
     ) -> CalendarEvent:
         event = CalendarEvent(
-            user_id=user_id,
-            title=title,
-            start_ts=start_ts,
-            end_ts=end_ts,
-            **kwargs,
+            user_id=user_id, title=title, start_ts=start_ts, end_ts=end_ts, **kwargs,
         )
         self._events[event.id] = event
         self._emit("chronos.event.created", {"event_id": event.id, "user_id": user_id})

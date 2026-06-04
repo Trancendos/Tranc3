@@ -291,8 +291,7 @@ class WorkflowExecutor:
                 },
             )
             logger.error(
-                "Topological sort failed: %s",
-                sanitize_for_log(exc),
+                "Topological sort failed: %s", sanitize_for_log(exc),
             )  # codeql[py/cleartext-logging]
             return state
 
@@ -305,8 +304,7 @@ class WorkflowExecutor:
                     state.status = "cancelled"
                     state.finished_at = time.monotonic()
                     logger.info(
-                        "Execution %s cancelled.",
-                        sanitize_for_log(execution_id),
+                        "Execution %s cancelled.", sanitize_for_log(execution_id),
                     )  # codeql[py/cleartext-logging]
                     return state
 
@@ -395,8 +393,7 @@ class WorkflowExecutor:
             return state is not None and state.status == "running"
         flag.set()
         logger.info(
-            "Cancel requested for execution %s.",
-            sanitize_for_log(execution_id),
+            "Cancel requested for execution %s.", sanitize_for_log(execution_id),
         )  # codeql[py/cleartext-logging]
         return True
 

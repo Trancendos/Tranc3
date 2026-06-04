@@ -33,12 +33,12 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Awaitable
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 import httpx
 
 from .platform_registry import PlatformRegistry
-from .zero_cost_enforcer import ZeroCostEnforcer, QuotaStatus
+from .zero_cost_enforcer import QuotaStatus, ZeroCostEnforcer
 
 logger = logging.getLogger(__name__)
 
@@ -230,7 +230,7 @@ class MapeKLoop:
         registry: Optional[PlatformRegistry] = None,
     ) -> None:
         self._config = config or MapeKConfig(
-            worker_ports=dict(self.DEFAULT_WORKER_PORTS)
+            worker_ports=dict(self.DEFAULT_WORKER_PORTS),
         )
         if not self._config.worker_ports:
             self._config.worker_ports = dict(self.DEFAULT_WORKER_PORTS)
@@ -436,7 +436,7 @@ class MapeKLoop:
     # ------------------------------------------------------------------
 
     def _plan(
-        self, analysis: Dict[str, Any], snapshot: SystemSnapshot
+        self, analysis: Dict[str, Any], snapshot: SystemSnapshot,
     ) -> List[AdaptationAction]:
         actions: List[AdaptationAction] = []
 
@@ -540,7 +540,7 @@ class MapeKLoop:
 
     async def _on_platform_rotation(self, old: str, new: str) -> None:
         self._knowledge.record_event("platform_rotation", {
-            "from": old, "to": new, "ts": time.time()
+            "from": old, "to": new, "ts": time.time(),
         })
         logger.info("Knowledge: recorded platform rotation %s → %s", old, new)
 

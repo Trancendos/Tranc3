@@ -304,10 +304,7 @@ class SymbiosisEngine:
         return relation
 
     def evaluate_symbiosis(
-        self,
-        relation: SymbioticRelation,
-        a: SymbioticAgent,
-        b: SymbioticAgent,
+        self, relation: SymbioticRelation, a: SymbioticAgent, b: SymbioticAgent,
     ) -> Dict[str, float]:
         """Evaluate the health of a symbiotic relationship."""
         a.fitness += relation.benefit_a
@@ -345,11 +342,7 @@ class StigmergicChannel:
         self.signals: Dict[str, StigmergicSignal] = {}
 
     def deposit(
-        self,
-        agent_id: str,
-        signal_type: str,
-        content: Dict[str, Any],
-        location: str = "",
+        self, agent_id: str, signal_type: str, content: Dict[str, Any], location: str = "",
     ) -> StigmergicSignal:
         """Deposit a stigmergic signal."""
         signal = StigmergicSignal(
@@ -363,10 +356,7 @@ class StigmergicChannel:
         return signal
 
     def sense(
-        self,
-        location: str = "",
-        signal_type: str = "",
-        min_intensity: float = 0.1,
+        self, location: str = "", signal_type: str = "", min_intensity: float = 0.1,
     ) -> List[StigmergicSignal]:
         """Sense stigmergic signals at a location."""
         results = []

@@ -132,10 +132,7 @@ def _run_blender(script: str, timeout: int) -> dict[str, Any]:
         }
 
     with tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".py",
-        delete=False,
-        dir="/tmp",
+        mode="w", suffix=".py", delete=False, dir="/tmp",
     ) as tmp:
         tmp.write(script)
         tmp_path = tmp.name
@@ -268,10 +265,8 @@ async def lifespan(app: FastAPI):
         logger.info("Blender found at: %s", sanitize_for_log(blender_path))
     else:
         logger.warning(
-            sanitize_for_log(
-                "Blender not found in PATH or standard locations — "
-                "all render/scene endpoints will return 503."
-            )
+            "Blender not found in PATH or standard locations — "
+            "all render/scene endpoints will return 503.",
         )
     yield
 

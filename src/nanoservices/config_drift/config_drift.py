@@ -282,17 +282,11 @@ class ConfigDriftDetectorService:
         core_schema.add_required("LOG_LEVEL", "str", "INFO", description="Logging level")
         core_schema.add_required("NANOSERVICE_POOL_SIZE", "int", 10, description="Worker pool size")
         core_schema.add_optional(
-            "ENABLE_QUANTUM",
-            "bool",
-            False,
-            description="Quantum solver toggle",
+            "ENABLE_QUANTUM", "bool", False, description="Quantum solver toggle",
         )
         core_schema.add_optional("MAX_CONCURRENT_FLOWS", "int", 100, description="DNF flow limit")
         core_schema.add_optional(
-            "SHI_FALLBACK_ENABLED",
-            "bool",
-            True,
-            description="SHI fallback chain",
+            "SHI_FALLBACK_ENABLED", "bool", True, description="SHI fallback chain",
         )
         self._detector.register_schema(core_schema)
 

@@ -160,9 +160,7 @@ class NRCQueryParser:
     """
 
     def parse(
-        self,
-        dsl: str,
-        dialect: NRCDialect = NRCDialect.TRANCEX_PYTHON,
+        self, dsl: str, dialect: NRCDialect = NRCDialect.TRANCEX_PYTHON,
     ) -> NRCQueryDefinition:
         """Parse an NRC DSL string into a structured query definition."""
         if dialect == NRCDialect.TRANCE_SCALA:
@@ -211,9 +209,7 @@ class NRCQueryParser:
 
         # Extract FROM relations
         from_match = re.search(
-            r"FROM\s+(.+?)(?:\s+WHERE|\s+NEST|\s+GROUP|\s*$)",
-            dsl,
-            re.IGNORECASE,
+            r"FROM\s+(.+?)(?:\s+WHERE|\s+NEST|\s+GROUP|\s*$)", dsl, re.IGNORECASE,
         )
         if from_match:
             relations = [r.strip() for r in from_match.group(1).split(",")]

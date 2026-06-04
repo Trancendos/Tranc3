@@ -592,8 +592,7 @@ async def get_metric(
     agg_fn = {"avg": "AVG", "sum": "SUM", "min": "MIN", "max": "MAX", "count": "COUNT"}[agg]
     with get_conn() as conn:
         row = conn.execute(
-            f"SELECT {agg_fn}(value) as result, COUNT(*) as samples FROM metrics {where}",
-            params,
+            f"SELECT {agg_fn}(value) as result, COUNT(*) as samples FROM metrics {where}", params,
         ).fetchone()
     return {"name": name, "aggregation": agg, "result": row["result"], "samples": row["samples"]}
 
@@ -1053,10 +1052,10 @@ async def summary():
         event_count = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         metric_count = conn.execute("SELECT COUNT(*) FROM metrics").fetchone()[0]
         top_events = conn.execute(
-            "SELECT event_type, COUNT(*) as c FROM events GROUP BY event_type ORDER BY c DESC LIMIT 10",
+            "SELECT event_type, COUNT(*) as c FROM events GROUP BY event_type ORDER BY c DESC LIMIT 5",
         ).fetchall()
         top_metrics = conn.execute(
-            "SELECT name, AVG(value) as avg_val, COUNT(*) as samples FROM metrics GROUP BY name ORDER BY samples DESC LIMIT 10",
+            "SELECT name, AVG(value) as avg_val FROM metrics GROUP BY name ORDER BY avg_val DESC LIMIT 5",
         ).fetchall()
         archive_rows = conn.execute(
             "SELECT filename, rows, date_from, date_to, archived_at FROM archive_log ORDER BY archived_at DESC LIMIT 10",

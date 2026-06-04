@@ -87,8 +87,7 @@ class TestCoreEndpoints:
 
     def test_think_with_personality(self, client):
         r = client.post(
-            "/think",
-            json={"prompt": "Analyse portfolio risk", "personality": "dorris-fontaine"},
+            "/think", json={"prompt": "Analyse portfolio risk", "personality": "dorris-fontaine"},
         )
         assert r.status_code == 200
 

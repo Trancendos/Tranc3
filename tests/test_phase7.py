@@ -334,11 +334,7 @@ async def test_fmd_distillation_loss():
     targets = [1.0, 2.0, 3.0, 4.0]
 
     total, kl, task = DistillationLoss.combined_loss(
-        student,
-        teacher,
-        targets,
-        alpha=0.5,
-        temperature=4.0,
+        student, teacher, targets, alpha=0.5, temperature=4.0,
     )
 
     assert total > 0

@@ -166,9 +166,7 @@ class ProjectionEngine:
 
         projection.updated_at = time.time()
         logger.info(
-            "Rebuilt projection %s with %d events",
-            projection_name,
-            len(self._store.get_events()),
+            "Rebuilt projection %s with %d events", projection_name, len(self._store.get_events()),
         )
         return projection
 
@@ -221,10 +219,7 @@ class AggregateRoot:
         # Subclasses override to apply event to state
 
     def _raise_event(
-        self,
-        event_type: EventType,
-        data: Dict[str, Any],
-        metadata: Dict[str, Any] = None,
+        self, event_type: EventType, data: Dict[str, Any], metadata: Dict[str, Any] = None,
     ) -> None:
         self._version += 1
         event = Event(

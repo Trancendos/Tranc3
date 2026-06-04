@@ -344,9 +344,7 @@ class TestWikilinkParsing:
         # Create source with wikilink
         await brain.put_page(
             KBPage(
-                id="source-page",
-                title="Source Page",
-                content="See [[Target Page]] for details.",
+                id="source-page", title="Source Page", content="See [[Target Page]] for details.",
             ),
         )
         # Check a link was created (via graph_search or store inspection)
@@ -362,9 +360,7 @@ class TestWikilinkParsing:
             KBPage(id="aliased", title="Aliased Target", content="I am the aliased target."),
         )
         await brain.put_page(
-            KBPage(
-                id="src-alias", title="Source", content="Click [[Aliased Target|here]] to read."
-            ),
+            KBPage(id="src-alias", title="Source", content="Click [[Aliased Target|here]] to read."),
         )
         # Should not raise
         p = await brain.get_page("src-alias")

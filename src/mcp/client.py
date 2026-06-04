@@ -266,9 +266,7 @@ class MCPClient:
 
         try:
             async with self._client.stream(
-                "GET",
-                "/sse",
-                headers={"Accept": "text/event-stream"},
+                "GET", "/sse", headers={"Accept": "text/event-stream"},
             ) as resp:
                 resp.raise_for_status()
                 async for line in resp.aiter_lines():
@@ -423,8 +421,7 @@ class MCPClientPool:
         """
 
         async def _ping(  # noqa: F841 – used in asyncio.gather below
-            server_name: str,
-            client: MCPClient,
+            server_name: str, client: MCPClient,
         ) -> tuple[str, Dict[str, Any]]:
             try:
                 start = time.monotonic()

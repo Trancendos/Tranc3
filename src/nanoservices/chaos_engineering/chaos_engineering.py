@@ -69,9 +69,7 @@ class ChaosExperiment:
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     name: str = ""
     fault: FaultSpec = field(
-        default_factory=lambda: FaultSpec(
-            fault_type=FaultType.LATENCY_INJECTION, target_service=""
-        ),
+        default_factory=lambda: FaultSpec(fault_type=FaultType.LATENCY_INJECTION, target_service=""),
     )
     hypotheses: List[SteadyStateHypothesis] = field(default_factory=list)
     state: ExperimentState = ExperimentState.PLANNED
@@ -153,8 +151,7 @@ class SteadyStateValidator:
         return all(self._check(h) for h in hypotheses)
 
     def validate_after(
-        self,
-        hypotheses: List[SteadyStateHypothesis],
+        self, hypotheses: List[SteadyStateHypothesis],
     ) -> List[SteadyStateHypothesis]:
         results = []
         for h in hypotheses:

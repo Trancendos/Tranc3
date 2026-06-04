@@ -250,10 +250,7 @@ class ModelCheckerSimulator:
     """Simulates model checking for finite-state systems."""
 
     def check_safety(
-        self,
-        states: List[Dict[str, Any]],
-        transitions: List[Tuple[int, int, str]],
-        invariant: str,
+        self, states: List[Dict[str, Any]], transitions: List[Tuple[int, int, str]], invariant: str,
     ) -> VerificationResult:
         violated_state = None
         for state in states:
@@ -360,9 +357,7 @@ class FormalVerificationService:
             prop.lean_code = self.template_gen.generate_safety_proof(name, formal_spec)
         elif property_type == PropertyType.INVARIANT:
             prop.lean_code = self.template_gen.generate_invariant_proof(
-                name,
-                formal_spec,
-                "transition",
+                name, formal_spec, "transition",
             )
         elif property_type == PropertyType.TERMINATION:
             prop.lean_code = self.template_gen.generate_termination_proof(name, formal_spec)
@@ -422,16 +417,14 @@ class FormalVerificationService:
         prop = self.properties.get(property_id)
         if not prop:
             return VerificationResult(
-                status=VerificationStatus.ERROR,
-                explanation="Property not found",
+                status=VerificationStatus.ERROR, explanation="Property not found",
             )
         if prop.property_type in (PropertyType.SAFETY, PropertyType.INVARIANT):
             return self.model_checker.check_safety(states, transitions, prop.formal_spec)
         elif prop.property_type == PropertyType.LIVENESS:
             return self.model_checker.check_liveness(states, transitions, prop.formal_spec)
         return VerificationResult(
-            status=VerificationStatus.UNKNOWN,
-            explanation="Unsupported for model checking",
+            status=VerificationStatus.UNKNOWN, explanation="Unsupported for model checking",
         )
 
     def get_service_status(self) -> Dict[str, Any]:

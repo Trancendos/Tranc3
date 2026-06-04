@@ -130,10 +130,7 @@ class InfinityBot:
         self._ewma_duration_ms: float = 0.0
 
         logger.info(
-            "%s initialised (tier=%d, interval=%.1fs)",
-            self.dna,
-            self.TIER,
-            interval_seconds,
+            "%s initialised (tier=%d, interval=%.1fs)", self.dna, self.TIER, interval_seconds,
         )
 
     # ------------------------------------------------------------------

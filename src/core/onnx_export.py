@@ -329,9 +329,7 @@ def _cli():
     parser.add_argument("--opset", default=_DEFAULT_OPSET, type=int, help="ONNX opset")
     parser.add_argument("--quantize", action="store_true", help="Also export INT8 variant")
     parser.add_argument(
-        "--embeddings",
-        action="store_true",
-        help="Also export embeddings-only graph",
+        "--embeddings", action="store_true", help="Also export embeddings-only graph",
     )
     parser.add_argument("--validate", action="store_true", help="Validate ONNX output numerically")
     args = parser.parse_args()

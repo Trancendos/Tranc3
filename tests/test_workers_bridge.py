@@ -41,8 +41,7 @@ def _import(dotted: str, path: Path):
 _hive_mod = _import("hive_worker", _ROOT / "workers" / "hive-service" / "worker.py")
 _nexus_mod = _import("nexus_worker", _ROOT / "workers" / "dimensional-nexus-service" / "worker.py")
 _bridge_mod = _import(
-    "infinity_bridge_worker",
-    _ROOT / "workers" / "infinity-bridge-service" / "worker.py",
+    "infinity_bridge_worker", _ROOT / "workers" / "infinity-bridge-service" / "worker.py",
 )
 
 
@@ -308,8 +307,7 @@ class TestInfinityBridgeWorker:
         """POST /users/connect creates a user context."""
         c = _client(_bridge_mod)
         r = c.post(
-            "/users/connect",
-            params={"user_id": "test-user-001", "location": "infinity_portal"},
+            "/users/connect", params={"user_id": "test-user-001", "location": "infinity_portal"},
         )
         assert r.status_code == 200
         data = r.json()

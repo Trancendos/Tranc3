@@ -128,9 +128,7 @@ class TFSequenceClassifier:
             x = tf.keras.layers.Dense(units, activation="relu", name=f"dense_{i}")(x)
 
         outputs = tf.keras.layers.Dense(
-            self.config.output_dim,
-            activation="softmax",
-            name="output",
+            self.config.output_dim, activation="softmax", name="output",
         )(x)
 
         self.model = tf.keras.Model(inputs=inputs, outputs=outputs, name=self.config.name)
@@ -273,8 +271,7 @@ class TFReinforcementAgent:
         self.target_network.set_weights(self.q_network.get_weights())
 
         self._optimizer = tf.keras.optimizers.Adam(
-            learning_rate=self.config.learning_rate,
-            clipnorm=10.0,
+            learning_rate=self.config.learning_rate, clipnorm=10.0,
         )
         self._loss_fn = tf.keras.losses.Huber()
 

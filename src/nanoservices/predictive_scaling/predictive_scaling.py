@@ -250,10 +250,7 @@ class PredictiveScalingEngine:
         return decision
 
     def get_forecast(
-        self,
-        service_name: str,
-        resource_type: ResourceType,
-        steps: int = 5,
+        self, service_name: str, resource_type: ResourceType, steps: int = 5,
     ) -> List[float]:
         key = f"{service_name}:{resource_type.value}"
         smoother = self._smoothers.get(key)

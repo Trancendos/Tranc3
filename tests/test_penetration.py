@@ -37,10 +37,7 @@ class TestInjectionPrevention:
         ],
     )
     async def test_sql_and_template_injection_in_tool_name(
-        self,
-        payload,
-        caplog,
-        sample_error_payloads,
+        self, payload, caplog, sample_error_payloads,
     ):
         """Malicious tool_name values must produce a 'not found' error, not execute anything."""
         from src.workflow.nodes import NodeConfig, NodeType, SparkToolNode
@@ -159,10 +156,7 @@ class TestOversizedInputs:
             node = SparkToolNode(nc)
             result = await node.execute({}, {})
             _log.info(
-                "pen.empty_name repr=%r success=%s error=%s",
-                empty,
-                result.success,
-                result.error,
+                "pen.empty_name repr=%r success=%s error=%s", empty, result.success, result.error,
             )
             assert not result.success
             assert result.error is not None

@@ -154,10 +154,7 @@ class T2ance:
     # ------------------------------------------------------------------
 
     def raise_hila(
-        self,
-        action_type: str,
-        payload: dict[str, Any],
-        requester_aid: str,
+        self, action_type: str, payload: dict[str, Any], requester_aid: str,
     ) -> HILARequest:
         """Raise a HIL-A approval request. Returns the pending request."""
         req = HILARequest(action_type=action_type, payload=payload, requester_aid=requester_aid)
@@ -166,21 +163,14 @@ class T2ance:
         return req
 
     def decide_hila(
-        self,
-        request_id: str,
-        approved: bool,
-        decided_by: str,
-        reason: str | None = None,
+        self, request_id: str, approved: bool, decided_by: str, reason: str | None = None,
     ) -> bool:
         """Approve or reject a pending HIL-A request."""
         for req in self._hila_queue:
             if req.request_id == request_id and req.approved is None:
                 req.decide(approved, decided_by, reason)
                 logger.info(
-                    "%s HIL-A %s: %s",
-                    self.dna,
-                    request_id,
-                    "APPROVED" if approved else "REJECTED",
+                    "%s HIL-A %s: %s", self.dna, request_id, "APPROVED" if approved else "REJECTED",
                 )
                 return True
         return False

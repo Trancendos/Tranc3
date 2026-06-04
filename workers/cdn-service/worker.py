@@ -321,8 +321,7 @@ async def register_asset(req: AssetRegister):
         meta = _register_file(conn, req.path, full_path)
         if req.cache_policy:
             conn.execute(
-                "UPDATE assets SET cache_policy=? WHERE path=?",
-                (req.cache_policy, req.path),
+                "UPDATE assets SET cache_policy=? WHERE path=?", (req.cache_policy, req.path),
             )
         conn.commit()
     return {"registered": req.path, **meta}

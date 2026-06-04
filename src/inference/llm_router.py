@@ -179,8 +179,7 @@ async def _try_groq(cfg: ProviderConfig, req: LLMRequest, client: httpx.AsyncCli
     if not api_key:
         raise ValueError("GROQ_API_KEY not set")
     model = os.getenv(
-        "GROQ_MODEL",
-        "llama-3.1-8b-instant",
+        "GROQ_MODEL", "llama-3.1-8b-instant",
     )  # free tier model (llama3-8b-8192 decommissioned)
     resp = await client.post(
         "https://api.groq.com/openai/v1/chat/completions",

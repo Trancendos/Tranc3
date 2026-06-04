@@ -47,8 +47,7 @@ class MultiCloudFederationController:
         asyncio.create_task(self._health_monitor_loop())
 
         logger.info(
-            "Federation controller started. Primary: %s",
-            sanitize_for_log(self.primary_cluster),
+            "Federation controller started. Primary: %s", sanitize_for_log(self.primary_cluster),
         )
 
     async def stop(self):
@@ -77,8 +76,7 @@ class MultiCloudFederationController:
 
         try:
             async with self.session.get(
-                f"{endpoint}/health",
-                timeout=aiohttp.ClientTimeout(total=5),
+                f"{endpoint}/health", timeout=aiohttp.ClientTimeout(total=5),
             ) as response:
                 if response.status == 200:
                     await response.json()
@@ -89,9 +87,7 @@ class MultiCloudFederationController:
                     self._mark_unhealthy(cluster)
         except Exception as e:
             logger.warning(
-                "Health check failed for %s: %s",
-                sanitize_for_log(cluster),
-                sanitize_for_log(e),
+                "Health check failed for %s: %s", sanitize_for_log(cluster), sanitize_for_log(e),
             )
             self._mark_unhealthy(cluster)
 
