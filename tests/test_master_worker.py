@@ -100,6 +100,34 @@ class TestPlatformRegistry:
         # All three ratios equal 0.5; max should be exactly 0.5
         assert abs(pct - 0.5) < 1e-9
 
+    def test_per_minute_counters_reset_after_window(self):
+        """Per-minute counters reset to 0 once 60 s have elapsed (no false exhaustion)."""
+        from src.master_worker.platform_registry import (
+            Platform,
+            PlatformCategory,
+            PlatformUsage,
+            QuotaLimits,
+        )
+
+        p = Platform(
+            name="reset_test",
+            category=PlatformCategory.AI_LLM,
+            priority=99,
+            quota=QuotaLimits(requests_per_minute=10, tokens_per_minute=1000),
+            usage=PlatformUsage(
+                requests_this_minute=9,
+                tokens_used_this_minute=950,
+                # Set window start 61 seconds in the past so it's already expired
+                minute_window_start=__import__("time").monotonic() - 61.0,
+            ),
+        )
+        # Before reset: utilisation appears near-full
+        pct = p.utilisation_pct()
+        # After reset (window expired): per-minute counters are 0 → ratio 0
+        assert pct == 0.0, f"Expected 0.0 after window reset, got {pct}"
+        assert p.usage.requests_this_minute == 0
+        assert p.usage.tokens_used_this_minute == 0
+
     def test_snapshot_returns_all_platforms(self):
         r = PlatformRegistry()
         snap = r.snapshot()
