@@ -42,10 +42,21 @@ logger = logging.getLogger(WORKER_NAME)
 
 # Allowlist of valid column names — prevents SQL injection via dynamic column interpolation.
 # Any key not in this set is rejected before it can reach a SQL string.
-_VALID_COLUMNS: frozenset = frozenset({
-    "identity_id", "user_id", "provider", "provider_id", "email",
-    "display_name", "avatar_url", "metadata", "verified", "created_at", "updated_at",
-})
+_VALID_COLUMNS: frozenset = frozenset(
+    {
+        "identity_id",
+        "user_id",
+        "provider",
+        "provider_id",
+        "email",
+        "display_name",
+        "avatar_url",
+        "metadata",
+        "verified",
+        "created_at",
+        "updated_at",
+    }
+)
 
 
 class IdentitiesDatabase:
