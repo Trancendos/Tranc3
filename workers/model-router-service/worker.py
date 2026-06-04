@@ -136,6 +136,17 @@ def _seed_default_models() -> None:
             5,
         ),
         ("nomic-embed-text", "ollama", "nomic-embed-text", 1, ["embedding"], 0.0, 50, 3),
+        # Cerebras free tier — 60k TPM / 1M TPD; zero-cost
+        (
+            "cerebras-llama3.3-70b",
+            "cerebras",
+            "llama3.3-70b",
+            1,
+            ["chat", "completion", "reasoning"],
+            0.0,
+            180,
+            6,
+        ),
     ]
     for name, provider, model_id, is_free, caps, cost, latency, priority in defaults:
         mid = _new_id()
