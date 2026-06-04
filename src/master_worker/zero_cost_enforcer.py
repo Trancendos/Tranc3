@@ -74,6 +74,8 @@ class QuotaStatus(str, Enum):
 
 @dataclass
 class QuotaReport:
+    """Per-platform quota status report produced by ZeroCostEnforcer.check_all()."""
+
     platform_name: str
     status: QuotaStatus
     utilisation_pct: float
@@ -116,6 +118,7 @@ class ZeroCostEnforcer:
         registry: Optional[PlatformRegistry] = None,
         check_interval_s: float = DEFAULT_CHECK_INTERVAL,
     ) -> None:
+        """Initialise the enforcer with an optional registry and check interval."""
         self._registry = registry or PlatformRegistry()
         self._check_interval = check_interval_s
         self._running = False
@@ -129,6 +132,7 @@ class ZeroCostEnforcer:
     # ------------------------------------------------------------------
 
     async def start(self) -> None:
+        """Start the background enforcement loop as an asyncio task."""
         if self._running:
             return
         self._running = True
@@ -139,6 +143,7 @@ class ZeroCostEnforcer:
         logger.info("ZeroCostEnforcer started (interval=%.0fs)", self._check_interval)
 
     async def stop(self) -> None:
+        """Cancel the background enforcement task and wait for it to finish cleanly."""
         self._running = False
         if self._task and not self._task.done():
             self._task.cancel()
@@ -180,6 +185,7 @@ class ZeroCostEnforcer:
     # ------------------------------------------------------------------
 
     def check_all(self) -> List[QuotaReport]:
+        """Return a QuotaReport for every enabled platform in the registry."""
         reports: List[QuotaReport] = []
         for name, platform in self._registry._platforms.items():
             if not platform.enabled:
@@ -291,6 +297,7 @@ class ZeroCostEnforcer:
     # ------------------------------------------------------------------
 
     async def _enforcement_loop(self) -> None:
+        """Background task: check quotas, rotate critical platforms, run daily cost assertions."""
         _daily_check_hour = -1
         while self._running:
             try:
@@ -337,6 +344,7 @@ class ZeroCostEnforcer:
     # ------------------------------------------------------------------
 
     def status(self) -> Dict[str, Any]:
+        """Return a serialisable status dict for the /master/zero-cost/status endpoint."""
         return {
             "running": self._running,
             "check_interval_s": self._check_interval,
