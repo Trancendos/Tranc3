@@ -52,6 +52,7 @@ class KnowledgeStore:
     """Persistent knowledge base for the MAPE-K loop."""
 
     def __init__(self) -> None:
+        """Initialise the fact base, history ring buffer, and default platform policies."""
         self._facts: Dict[str, Any] = {}
         self._history: List[Dict[str, Any]] = []
         self._policies: Dict[str, Any] = {
