@@ -115,7 +115,9 @@ services:
       - "8200:8200"
     volumes:
       - vault-data:/vault/data
+      - vault-logs:/vault/logs
       - ./deploy/vault/vault.hcl:/vault/config/vault.hcl:ro
+      - ./deploy/vault/policies:/vault/policies:ro
     healthcheck:
       test: ["CMD-SHELL", "vault status >/dev/null 2>&1 || [ $$? -eq 2 ]"]
       <<: *healthcheck-default
@@ -1605,6 +1607,8 @@ volumes:
   traefik-certs:
     driver: local
   vault-data:
+    driver: local
+  vault-logs:
     driver: local
   backend-models:
     driver: local
