@@ -132,13 +132,13 @@ export default function NotificationsPage() {
                     {channelIcon(ch.type)}
                     {ch.name}
                   </div>
-                  <span
-                    className={`text-xs ${statusColor(ch.status)}`}
-                    aria-label={ch.status === 'active' ? 'Active' : 'Inactive'}
-                  >
+                  <span className={`text-xs flex items-center gap-1 ${statusColor(ch.status)}`}>
                     {ch.status === 'active'
                       ? <CheckCircle size={14} aria-hidden="true" />
                       : <XCircle    size={14} aria-hidden="true" />}
+                    <span className="sr-only">
+                      {ch.status === 'active' ? 'Active' : 'Inactive'}
+                    </span>
                   </span>
                 </div>
                 {ch.dailyLimit != null && (

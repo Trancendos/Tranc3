@@ -1,0 +1,17 @@
+{
+  "url": "http://localhost:4173",
+  "timestamp": "2026-06-05T20:52:59.754Z",
+  "scores": {
+    "accessibility": 100,
+    "performance": 99,
+    "best_practices": 96,
+    "seo": 91
+  },
+  "a11y_threshold": 90,
+  "a11y_passed": true,
+  "failing_a11y_audits": [],
+  "reports": {
+    "html": "/home/user/Tranc3/reports/lighthouse.html",
+    "json": "/home/user/Tranc3/reports/lighthouse.json"
+  }
+}

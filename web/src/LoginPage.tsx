@@ -51,7 +51,7 @@ export default function LoginPage({ onLogin }: Props) {
     }
 
     return (
-        <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+        <main className="min-h-screen bg-gray-950 flex items-center justify-center p-4" id="main-content">
             <div className="w-full max-w-sm bg-gray-900 rounded-2xl p-8 shadow-2xl border border-gray-800">
                 <div className="text-center mb-8">
                     <div className="text-4xl mb-2">⚡</div>
@@ -99,10 +99,10 @@ export default function LoginPage({ onLogin }: Props) {
                     </button>
                 </form>
 
-                <p className="text-center text-gray-600 text-xs mt-6">
+                <p className="text-center text-gray-400 text-xs mt-6">
                     Free tier: 100 requests/hour
                 </p>
             </div>
-        </div>
+        </main>
     )
 }
