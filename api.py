@@ -96,6 +96,8 @@ from src.security.middleware import (  # noqa: F401  # intentional top-level imp
     SecurityHeadersMiddleware,
     ZeroTrustASGIMiddleware,
 )
+from src.observability.audit_middleware import AuditMiddleware  # noqa: F401
+from src.errors import ErrorCode, ErrorResponse, make_error_response  # noqa: F401
 from src.security.security_framework import (
     InputSanitizer,  # noqa: F401  # intentional top-level import
 )
@@ -561,6 +563,74 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(GovernanceMiddleware)
 app.add_middleware(ZeroTrustASGIMiddleware)
 app.add_middleware(RBACMiddleware)
+# AuditMiddleware runs outermost so it captures every request after auth resolution
+app.add_middleware(AuditMiddleware, service_name="tranc3-backend")
+
+
+# ── Global exception handlers ─────────────────────────────────────────────────
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Normalise all HTTPExceptions to the ErrorResponse envelope."""
+    from src.errors import ErrorCode, make_error_response
+    request_id = getattr(request.state, "request_id", None)
+
+    # If detail is already our structured dict, wrap it; otherwise use SYS_UNKNOWN fallback
+    if isinstance(exc.detail, dict) and "error" in exc.detail:
+        body = exc.detail
+        if request_id and isinstance(body.get("error"), dict):
+            body["error"]["request_id"] = request_id
+    else:
+        # Map common HTTP status codes to ErrorCode
+        _status_map = {
+            400: ErrorCode.SEC_INPUT_BLOCKED,
+            401: ErrorCode.AUTH_TOKEN_MISSING,
+            403: ErrorCode.AUTH_ACCOUNT_DISABLED,
+            404: ErrorCode.AUTH_USER_NOT_FOUND,
+            429: ErrorCode.RATE_HOURLY_EXCEEDED,
+        }
+        code = _status_map.get(exc.status_code, ErrorCode.SYS_UNKNOWN)
+        body = make_error_response(
+            code,
+            detail=str(exc.detail) if exc.detail else None,
+            request_id=request_id,
+        ).model_dump()
+
+    return JSONResponse(status_code=exc.status_code, content=body)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all for unhandled exceptions — log to Observatory, return structured 500."""
+    import traceback
+    from src.errors import ErrorCode, make_error_response
+    from src.observability.observatory import get_observatory, EventCategory, EventSeverity
+
+    request_id = getattr(request.state, "request_id", None)
+    tb = traceback.format_exc()
+
+    try:
+        get_observatory().record(
+            "http.unhandled_exception",
+            actor=None,
+            target=request.url.path,
+            category=EventCategory.SYSTEM,
+            severity=EventSeverity.CRITICAL,
+            outcome="failure",
+            metadata={
+                "exception_type": type(exc).__name__,
+                "traceback": tb[:2000],
+                "path": request.url.path,
+                "method": request.method,
+                "request_id": request_id,
+            },
+            session_id=request_id,
+        )
+    except Exception:
+        pass
+
+    body = make_error_response(ErrorCode.SYS_UNKNOWN, request_id=request_id).model_dump()
+    return JSONResponse(status_code=500, content=body)
 
 # ── The Spark (MCP server) ────────────────────────────────────────────────────
 from src.mcp.server import router as _mcp_router  # codeql[py/cyclic-import]
