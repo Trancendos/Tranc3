@@ -1898,6 +1898,71 @@ async def admin_settings_read(
     }
 
 
+# ── User Settings — encrypted, server-side, per-user ─────────────────────────
+
+class UserSettingWrite(BaseModel):
+    """Single key/value pair for POST /user/settings."""
+    key: str = Field(..., description="Setting name (must be in the allowed list)")
+    value: str = Field(..., description="Plaintext value to encrypt and store")
+
+
+@app.get(
+    "/user/settings",
+    tags=["settings"],
+    summary="List which settings this user has stored",
+    description=(
+        "Returns {key: 'set'|'unset'} for every allowed setting key. "
+        "Values are never returned — use this to know what has been saved."
+    ),
+)
+async def user_settings_list(current_user: dict = Depends(get_current_user)):
+    from src.settings_store import get_settings_store
+    username: str = current_user.get("username") or current_user.get("sub", "unknown")
+    return get_settings_store().list_keys(username)
+
+
+@app.post(
+    "/user/settings",
+    tags=["settings"],
+    summary="Store an encrypted setting",
+    description=(
+        "Encrypts *value* with AES-128-CBC (Fernet) before persisting. "
+        "Key must be in the allowed list. Empty value is rejected — use DELETE to clear."
+    ),
+    status_code=200,
+)
+async def user_settings_write(
+    body: UserSettingWrite,
+    current_user: dict = Depends(get_current_user),
+):
+    from src.settings_store import get_settings_store, ALLOWED_KEYS
+    username: str = current_user.get("username") or current_user.get("sub", "unknown")
+    if body.key not in ALLOWED_KEYS:
+        raise HTTPException(status_code=422, detail=f"Key '{body.key}' is not in the allowed settings list")
+    if not body.value.strip():
+        raise HTTPException(status_code=422, detail="value must not be empty — use DELETE /user/settings/{key} to clear")
+    get_settings_store().set(username, body.key, body.value)
+    return {"key": body.key, "status": "stored"}
+
+
+@app.delete(
+    "/user/settings/{key}",
+    tags=["settings"],
+    summary="Delete a stored setting",
+    description="Removes the encrypted value for *key*. Returns 404 if key was not set.",
+)
+async def user_settings_delete(
+    key: str,
+    current_user: dict = Depends(get_current_user),
+):
+    from src.settings_store import get_settings_store
+    username: str = current_user.get("username") or current_user.get("sub", "unknown")
+    deleted = get_settings_store().delete(username, key)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Setting '{key}' not found for this user")
+    return {"key": key, "status": "deleted"}
+
+
 @app.get(
     "/errors/{error_code}",
     tags=["docs"],
