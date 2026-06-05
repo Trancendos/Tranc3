@@ -884,11 +884,20 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8034/health"]
       <<: *healthcheck-default
 
-  skills-benchmark-service:
+  turings-hub-service:
     <<: *worker-platform
-    build: { context: ./workers/skills-benchmark-service, dockerfile: Dockerfile }
-    container_name: skills-benchmark-service-worker
+    build: { context: ., dockerfile: workers/turings-hub-service/Dockerfile }
+    container_name: turings-hub-service-worker
     ports: ["8035:8035"]
+    volumes:
+      - turings-hub-vrm:/app/assets/vrm
+      - turings-hub-animations:/app/assets/animations
+      - turings-hub-portraits:/app/assets/portraits
+      - turings-hub-audio:/app/assets/audio
+    environment:
+      - KOKORO_URL=http://kokoro:8880
+      - RHUBARB_BIN=/usr/local/bin/rhubarb
+      - PERSONALITY_DIR=/app/src/personality/profiles
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8035/health"]
       <<: *healthcheck-default
@@ -1604,6 +1613,14 @@ volumes:
   signoz-clickhouse-logs:
     driver: local
   signoz-query-data:
+    driver: local
+  turings-hub-vrm:
+    driver: local
+  turings-hub-animations:
+    driver: local
+  turings-hub-portraits:
+    driver: local
+  turings-hub-audio:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════
