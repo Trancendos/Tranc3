@@ -644,6 +644,40 @@ from src.observability.routes import (
 
 app.include_router(_observatory_router)
 
+# ── Capacity Guard (hard stops + utilisation status) ─────────────────────────
+from src.capacity.guard import (  # noqa: F401
+    CapacityService,
+    CapacityExceededError,
+    get_capacity_guard,
+)
+
+
+@app.get("/capacity/status", tags=["platform"], summary="Capacity utilisation for all external services")
+async def capacity_status(current_user: dict = Depends(get_current_user)):
+    """Returns live utilisation for all external services. Highlights services at 80/90/95/100%."""
+    guard = get_capacity_guard()
+    raw = guard.status()
+    # Partition by alert level for easy scanning
+    by_level: dict = {"hard_stop": [], "critical": [], "alert": [], "warning": [], "ok": []}
+    for svc, data in raw.items():
+        by_level[data["status"]].append({**data, "service": svc})
+    return {"services": raw, "by_level": by_level}
+
+
+@app.post("/capacity/reset/{service_id}", tags=["platform"], summary="Admin: reset a capacity counter")
+async def capacity_reset(service_id: str, current_user: dict = Depends(get_current_user)):
+    """Reset a single service counter (admin only — use after a billing window reset)."""
+    try:
+        svc = CapacityService(service_id)
+    except ValueError:
+        from src.errors import ErrorCode, make_error_response
+        raise HTTPException(status_code=404, detail=make_error_response(
+            ErrorCode.ENT_NOT_FOUND, f"Unknown capacity service: {service_id}"
+        ).model_dump())
+    get_capacity_guard().reset(svc)
+    return {"reset": service_id, "note": "Counter reset to zero. Window clock restarted."}
+
+
 # ── The Nexus (AI communications + transfer hub) ─────────────────────────────
 from src.nexus.routes import router as _nexus_router  # noqa: F401  # intentional top-level import
 
