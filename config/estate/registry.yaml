@@ -1,0 +1,1515 @@
+# Trancendos Platform Estate Registry
+# PLM-style reference system — immutable TRC-P{priority}-{sequence} IDs
+# Format version: 1.0.0
+# Last updated: 2026-06-05
+# Source of truth for naming, ports, ownership, and lifecycle status
+#
+# Ref format:  TRC-P{0-3}-{3-digit sequence}
+# Priority:    P0 = critical core, P1 = primary services, P2 = secondary, P3 = support/planned
+# Status:      deployed | active | migrating | building | planned | deprecated
+# Version:     semver (MAJOR.MINOR.PATCH)
+
+schema_version: "1.0.0"
+generated: "2026-06-05"
+
+components:
+
+  # ─── P0 CRITICAL CORE ────────────────────────────────────────────────────────
+
+  - ref: TRC-P0-001
+    name: "The Spark"
+    short_id: spark
+    lead_ai: "Norman Hawkins"
+    role: "MCP server — AI tool registry, JSON-RPC 2.0 over HTTP/SSE"
+    status: active
+    version: "1.0.0"
+    priority: P0
+    port: null  # embedded in tranc3-backend (8000)
+    worker_path: null
+    docker_service: tranc3-backend
+    docker_container: tranc3-backend
+    cf_worker: null
+    src_module: src/mcp/
+    entity_type: subsystem
+
+  - ref: TRC-P0-002
+    name: "The Digital Grid"
+    short_id: digital-grid
+    lead_ai: "Tyler Towncroft"
+    role: "Workflow DAG builder + executor (n8n-style)"
+    status: active
+    version: "1.0.0"
+    priority: P0
+    port: 8034
+    worker_path: workers/workflow-engine-service/
+    docker_service: workflow-engine-service
+    docker_container: tranc3-workflow-engine
+    cf_worker: the-grid-api
+    src_module: src/workflow/
+    entity_type: service
+
+  - ref: TRC-P0-003
+    name: "The Nexus"
+    short_id: nexus
+    lead_ai: "The Nexus"
+    role: "AI communications and transfer hub — WebSocket hub"
+    status: active
+    version: "1.0.0"
+    priority: P0
+    port: 8004
+    worker_path: workers/infinity-ws/
+    docker_service: infinity-ws
+    docker_container: tranc3-nexus
+    cf_worker: infinity-ws-api
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P0-004
+    name: "Infinity (Core Auth)"
+    short_id: infinity-auth
+    lead_ai: null
+    role: "OAuth2/SSO/MFA engine — credential verification core"
+    status: active
+    version: "1.0.0"
+    priority: P0
+    port: 8005
+    worker_path: workers/infinity-auth/
+    docker_service: infinity-auth
+    docker_container: tranc3-infinity-auth
+    cf_worker: infinity-auth-api
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P0-005
+    name: "tranc3-backend"
+    short_id: backend
+    lead_ai: null
+    role: "FastAPI main application — primary API server"
+    status: active
+    version: "1.0.0"
+    priority: P0
+    port: 8000
+    worker_path: null
+    docker_service: tranc3-backend
+    docker_container: tranc3-backend
+    cf_worker: null
+    src_module: api.py
+    entity_type: service
+
+  - ref: TRC-P0-006
+    name: "nanoservices"
+    short_id: nanoservices
+    lead_ai: null
+    role: "Internal nanoservice proxy layer"
+    status: building
+    version: "1.0.0"
+    priority: P0
+    port: 8001
+    worker_path: null
+    docker_service: nanoservices
+    docker_container: tranc3-nanoservices
+    cf_worker: null
+    src_module: src/nanoservices/
+    entity_type: service
+
+  # ─── P1 PRIMARY SERVICES ─────────────────────────────────────────────────────
+
+  - ref: TRC-P1-001
+    name: "Infinity"
+    short_id: infinity
+    lead_ai: "The Guardian (Marcus Magnolia) & The Orb of Orisis"
+    role: "The Infinity Ecosystem — arrival hub for post-login navigation"
+    status: active
+    version: "1.0.0"
+    priority: P1
+    port: null  # umbrella for 8042–8045, 8070
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: infinity-one
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P1-002
+    name: "Infinity Portal"
+    short_id: infinity-portal
+    lead_ai: null
+    role: "Front entrance — unified login/register/MFA + Infinity Gate (embedded)"
+    status: active
+    version: "1.0.0"
+    priority: P1
+    port: 8042
+    worker_path: workers/infinity-portal-service/
+    docker_service: infinity-portal
+    docker_container: tranc3-infinity-portal
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P1-003
+    name: "Infinity Gate"
+    short_id: infinity-gate
+    lead_ai: null
+    role: "Role-based router embedded in Infinity Portal (no separate port by design)"
+    status: active
+    version: "1.0.0"
+    priority: P1
+    port: null  # embedded in infinity-portal-service (8042)
+    worker_path: null
+    docker_service: infinity-portal
+    docker_container: tranc3-infinity-portal
+    cf_worker: null
+    src_module: null
+    entity_type: subsystem
+
+  - ref: TRC-P1-004
+    name: "Infinity-One"
+    short_id: infinity-one
+    lead_ai: null
+    role: "Single identity layer — one login, multi-app access"
+    status: active
+    version: "1.0.0"
+    priority: P1
+    port: 8043
+    worker_path: workers/infinity-one-service/
+    docker_service: infinity-one
+    docker_container: tranc3-infinity-one
+    cf_worker: infinity-os-identity
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P1-005
+    name: "Infinity Admin"
+    short_id: infinity-admin
+    lead_ai: null
+    role: "Admin OS — system config, user management, infrastructure control"
+    status: active
+    version: "1.0.0"
+    priority: P1
+    port: 8044
+    worker_path: workers/infinity-admin-service/
+    docker_service: infinity-admin
+    docker_container: tranc3-infinity-admin
+    cf_worker: infinity-adminos-mesh
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P1-006
+    name: "Infinity Shards"
+    short_id: infinity-shards
+    lead_ai: null
+    role: "Pluggable power-up modules — Memory, Voice, Vision, Shield, Boost, Link, Sense, Spark"
+    status: building
+    version: "0.1.0"
+    priority: P1
+    port: 8045
+    worker_path: workers/infinity-shards-service/
+    docker_service: infinity-shards
+    docker_container: tranc3-infinity-shards
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P1-007
+    name: "Infinity Bridge"
+    short_id: infinity-bridge
+    lead_ai: null
+    role: "Human traffic + user context transfer hub"
+    status: active
+    version: "1.0.0"
+    priority: P1
+    port: 8070
+    worker_path: workers/infinity-bridge-service/
+    docker_service: infinity-bridge
+    docker_container: tranc3-infinity-bridge
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P1-008
+    name: "Infinity AI"
+    short_id: infinity-ai
+    lead_ai: null
+    role: "AI edge proxy — OpenAI-compatible with 5-tier fallback"
+    status: active
+    version: "1.0.0"
+    priority: P1
+    port: 8009
+    worker_path: workers/infinity-ai/
+    docker_service: infinity-ai
+    docker_container: tranc3-infinity-ai
+    cf_worker: infinity-ai-api
+    src_module: src/ai_gateway/
+    entity_type: service
+
+  - ref: TRC-P1-009
+    name: "Users Service"
+    short_id: users
+    lead_ai: null
+    role: "User management — profile, roles, permissions"
+    status: active
+    version: "1.0.0"
+    priority: P1
+    port: 8006
+    worker_path: workers/users-service/
+    docker_service: users-service
+    docker_container: tranc3-users
+    cf_worker: trancendos-users-service
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P1-010
+    name: "The Observatory"
+    short_id: observatory
+    lead_ai: "Norman Hawkins"
+    role: "Audit log — every action, change, activity on Trancendos"
+    status: active
+    version: "1.0.0"
+    priority: P1
+    port: 8007
+    worker_path: workers/monitoring/
+    docker_service: monitoring
+    docker_container: tranc3-observatory
+    cf_worker: infinity-monitoring-dashboard
+    src_module: src/observability/
+    entity_type: service
+
+  - ref: TRC-P1-011
+    name: "Notifications"
+    short_id: notifications
+    lead_ai: null
+    role: "Notification delivery — email, push, SMS"
+    status: active
+    version: "1.0.0"
+    priority: P1
+    port: 8008
+    worker_path: workers/notifications/
+    docker_service: notifications
+    docker_container: tranc3-notifications
+    cf_worker: trancendos-notifications-service
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P1-012
+    name: "The Digital Grid (Worker)"
+    short_id: the-grid
+    lead_ai: "Tyler Towncroft"
+    role: "The Digital Grid worker service endpoint"
+    status: active
+    version: "1.0.0"
+    priority: P1
+    port: 8010
+    worker_path: workers/the-grid/
+    docker_service: the-grid
+    docker_container: tranc3-the-grid
+    cf_worker: the-grid-api
+    src_module: src/workflow/
+    entity_type: service
+
+  - ref: TRC-P1-013
+    name: "The Lighthouse"
+    short_id: lighthouse
+    lead_ai: "Rocking Ricki"
+    role: "Cryptographic token assignment, authenticator, token scanner"
+    status: active
+    version: "1.0.0"
+    priority: P1
+    port: null  # CF Worker only (migrating)
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: infinity-lighthouse
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P1-014
+    name: "The HIVE"
+    short_id: hive
+    lead_ai: "The Queen"
+    role: "Data transport hub, agent + queue coordination"
+    status: building
+    version: "0.5.0"
+    priority: P1
+    port: 8060
+    worker_path: workers/hive-service/
+    docker_service: hive-service
+    docker_container: tranc3-hive
+    cf_worker: infinity-hive
+    src_module: null
+    entity_type: service
+
+  # ─── P2 SECONDARY SERVICES ───────────────────────────────────────────────────
+
+  - ref: TRC-P2-001
+    name: "Products Service"
+    short_id: products
+    lead_ai: null
+    role: "Products catalogue"
+    status: active
+    version: "1.0.0"
+    priority: P2
+    port: 8011
+    worker_path: workers/products-service/
+    docker_service: products-service
+    docker_container: tranc3-products
+    cf_worker: trancendos-products-service
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P2-002
+    name: "Orders Service"
+    short_id: orders
+    lead_ai: null
+    role: "Orders — Arcadian Exchange procurement"
+    status: active
+    version: "1.0.0"
+    priority: P2
+    port: 8012
+    worker_path: workers/orders-service/
+    docker_service: orders-service
+    docker_container: tranc3-orders
+    cf_worker: trancendos-orders-service
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P2-003
+    name: "Payments Service"
+    short_id: payments
+    lead_ai: null
+    role: "Payments — Royal Bank processing"
+    status: active
+    version: "1.0.0"
+    priority: P2
+    port: 8013
+    worker_path: workers/payments-service/
+    docker_service: payments-service
+    docker_container: tranc3-payments
+    cf_worker: trancendos-payments-service
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P2-004
+    name: "Files Service"
+    short_id: files
+    lead_ai: null
+    role: "File storage and management"
+    status: active
+    version: "1.0.0"
+    priority: P2
+    port: 8014
+    worker_path: workers/files-service/
+    docker_service: files-service
+    docker_container: tranc3-files
+    cf_worker: infinity-files-api
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P2-005
+    name: "Identity Service"
+    short_id: identity
+    lead_ai: null
+    role: "Extended identity — OS-level identity mesh"
+    status: active
+    version: "1.0.0"
+    priority: P2
+    port: 8015
+    worker_path: workers/identity-service/
+    docker_service: identity-service
+    docker_container: tranc3-identity
+    cf_worker: infinity-os-identity
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P2-006
+    name: "Analytics Service"
+    short_id: analytics
+    lead_ai: null
+    role: "Analytics and metrics store"
+    status: active
+    version: "1.0.0"
+    priority: P2
+    port: 8016
+    worker_path: workers/analytics-service/
+    docker_service: analytics-service
+    docker_container: tranc3-analytics
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P2-007
+    name: "Gateway Service"
+    short_id: gateway
+    lead_ai: null
+    role: "API gateway — routing, rate limiting, auth proxy"
+    status: active
+    version: "1.0.0"
+    priority: P2
+    port: 8040
+    worker_path: workers/api-gateway/
+    docker_service: api-gateway
+    docker_container: tranc3-gateway
+    cf_worker: trancendos-api-gateway
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P2-008
+    name: "Sentinel Station"
+    short_id: sentinel
+    lead_ai: null
+    role: "Security sentinel — active threat monitoring and response"
+    status: building
+    version: "0.1.0"
+    priority: P2
+    port: 8041
+    worker_path: workers/sentinel-station-service/
+    docker_service: sentinel-station-service
+    docker_container: tranc3-sentinel
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P2-009
+    name: "Swarm Coordinator"
+    short_id: swarm
+    lead_ai: null
+    role: "Multi-agent swarm orchestration"
+    status: building
+    version: "0.1.0"
+    priority: P2
+    port: 8053
+    worker_path: workers/swarm-coordinator-service/
+    docker_service: swarm-coordinator
+    docker_container: tranc3-swarm
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P2-010
+    name: "Dimensional Nexus"
+    short_id: dimensional-nexus
+    lead_ai: null
+    role: "Cross-dimensional entity routing and context bridging"
+    status: planned
+    version: "0.1.0"
+    priority: P2
+    port: 8050
+    worker_path: workers/dimensional-nexus-service/
+    docker_service: dimensional-nexus-service
+    docker_container: tranc3-dimensional-nexus
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P2-011
+    name: "FFmpeg Worker"
+    short_id: ffmpeg
+    lead_ai: null
+    role: "Video/audio processing — transcoding, encoding"
+    status: building
+    version: "0.1.0"
+    priority: P2
+    port: 8052
+    worker_path: workers/ffmpeg-worker/
+    docker_service: ffmpeg-worker
+    docker_container: tranc3-ffmpeg
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  # ─── P3 SUPPORT SERVICES ─────────────────────────────────────────────────────
+
+  - ref: TRC-P3-001
+    name: "Search Service"
+    short_id: search
+    lead_ai: null
+    role: "Full-text + semantic search"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8017
+    worker_path: workers/search-service/
+    docker_service: search-service
+    docker_container: tranc3-search
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-002
+    name: "Email Service"
+    short_id: email
+    lead_ai: null
+    role: "Email delivery hub"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8018
+    worker_path: workers/email-service/
+    docker_service: email-service
+    docker_container: tranc3-email
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-003
+    name: "SMS Service"
+    short_id: sms
+    lead_ai: null
+    role: "SMS gateway"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8019
+    worker_path: workers/sms-service/
+    docker_service: sms-service
+    docker_container: tranc3-sms
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-004
+    name: "Storage Service"
+    short_id: storage
+    lead_ai: null
+    role: "IPFS + local blob storage"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8020
+    worker_path: workers/storage-service/
+    docker_service: storage-service
+    docker_container: tranc3-storage
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-005
+    name: "Cron Service"
+    short_id: cron
+    lead_ai: "Chronos"
+    role: "ChronosSphere task scheduler"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8021
+    worker_path: workers/cron-service/
+    docker_service: cron-service
+    docker_container: tranc3-cron
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-006
+    name: "Queue Service"
+    short_id: queue
+    lead_ai: "The Queen"
+    role: "The HIVE task queue"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8022
+    worker_path: workers/queue-service/
+    docker_service: queue-service
+    docker_container: tranc3-queue
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-007
+    name: "Cache Service"
+    short_id: cache
+    lead_ai: null
+    role: "Distributed cache layer"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8023
+    worker_path: workers/cache-service/
+    docker_service: cache-service
+    docker_container: tranc3-cache
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-008
+    name: "Config Service"
+    short_id: config
+    lead_ai: null
+    role: "Central configuration store"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8024
+    worker_path: workers/config-service/
+    docker_service: config-service
+    docker_container: tranc3-config
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-009
+    name: "Audit Service"
+    short_id: audit
+    lead_ai: "Norman Hawkins"
+    role: "The Observatory audit trail"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8025
+    worker_path: workers/audit-service/
+    docker_service: audit-service
+    docker_container: tranc3-audit
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-010
+    name: "Rate Limit Service"
+    short_id: rate-limit
+    lead_ai: null
+    role: "Token-bucket rate limiter"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8026
+    worker_path: workers/rate-limit-service/
+    docker_service: rate-limit-service
+    docker_container: tranc3-rate-limit
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-011
+    name: "Geo Service"
+    short_id: geo
+    lead_ai: null
+    role: "Geographic routing and IP geolocation"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8027
+    worker_path: workers/geo-service/
+    docker_service: geo-service
+    docker_container: tranc3-geo
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-012
+    name: "CDN Service"
+    short_id: cdn
+    lead_ai: null
+    role: "Static asset delivery"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8028
+    worker_path: workers/cdn-service/
+    docker_service: cdn-service
+    docker_container: tranc3-cdn
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-013
+    name: "Health Aggregator"
+    short_id: health-aggregator
+    lead_ai: null
+    role: "Platform-wide health roll-up"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8029
+    worker_path: workers/health-aggregator/
+    docker_service: health-aggregator
+    docker_container: tranc3-health-aggregator
+    cf_worker: null
+    src_module: src/observability/
+    entity_type: service
+
+  - ref: TRC-P3-014
+    name: "GBrain Bridge"
+    short_id: gbrain
+    lead_ai: null
+    role: "GBrain AI bridge"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8030
+    worker_path: workers/gbrain-bridge/
+    docker_service: gbrain-bridge
+    docker_container: tranc3-gbrain
+    cf_worker: null
+    src_module: src/gbrain/
+    entity_type: service
+
+  - ref: TRC-P3-015
+    name: "Topology Service"
+    short_id: topology
+    lead_ai: null
+    role: "Service topology graph"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8031
+    worker_path: workers/topology-service/
+    docker_service: topology-service
+    docker_container: tranc3-topology
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-016
+    name: "Ledger Service"
+    short_id: ledger
+    lead_ai: "Dorris Fontaine"
+    role: "Royal Bank of Arcadia ledger"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8032
+    worker_path: workers/ledger-service/
+    docker_service: ledger-service
+    docker_container: tranc3-ledger
+    cf_worker: arcadia-royal-bank
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-017
+    name: "Model Router Service"
+    short_id: model-router
+    lead_ai: null
+    role: "AI model routing and load balancing"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8033
+    worker_path: workers/model-router-service/
+    docker_service: model-router-service
+    docker_container: tranc3-model-router
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-018
+    name: "Turing's Hub"
+    short_id: turings-hub
+    lead_ai: "Samantha Turing"
+    role: "3D AI Model Builder — assembles personality + body + voice + memory into embodied AI"
+    status: building
+    version: "0.2.0"
+    priority: P3
+    port: 8035
+    worker_path: workers/turings-hub-service/
+    docker_service: turings-hub-service
+    docker_container: tranc3-turings-hub
+    cf_worker: null
+    src_module: src/personality/
+    entity_type: service
+
+  - ref: TRC-P3-019
+    name: "LangChain Integration"
+    short_id: langchain
+    lead_ai: null
+    role: "LangChain framework integration"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8036
+    worker_path: workers/langchain-integration-service/
+    docker_service: langchain-integration-service
+    docker_container: tranc3-langchain
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-020
+    name: "Deep Agents Orchestrator"
+    short_id: deepagents
+    lead_ai: null
+    role: "Deep agent orchestration"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: 8037
+    worker_path: workers/deepagents-orchestrator-service/
+    docker_service: deepagents-orchestrator-service
+    docker_container: tranc3-deepagents
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  - ref: TRC-P3-021
+    name: "The Void"
+    short_id: void
+    lead_ai: "Prometheus"
+    role: "Secrets + password vault (AES-GCM)"
+    status: migrating
+    version: "0.9.0"
+    priority: P3
+    port: 8038
+    worker_path: workers/vault-service/
+    docker_service: vault-service
+    docker_container: tranc3-vault
+    cf_worker: infinity-void
+    src_module: cloudflare/infinity-void/
+    entity_type: service
+
+  - ref: TRC-P3-022
+    name: "tranc3-bots"
+    short_id: bots
+    lead_ai: null
+    role: "12 bot types — inference + utility bots"
+    status: building  # runs on Fly.io; not yet in docker-compose.production.yml
+    version: "1.0.0"
+    priority: P3
+    port: 8080
+    worker_path: tranc3-bots/
+    docker_service: tranc3-bots
+    docker_container: tranc3-bots
+    cf_worker: null
+    src_module: null
+    entity_type: service
+
+  # ─── PLANNED PLATFORM ENTITIES ───────────────────────────────────────────────
+
+  - ref: TRC-P3-023
+    name: "Luminous"
+    short_id: luminous
+    lead_ai: "Cornelius MacIntyre"
+    role: "Core platform brain — AI intelligence & orchestration engine"
+    status: building
+    version: "0.3.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: infinity-ai-api
+    src_module: src/bio_neural/
+    entity_type: platform
+
+  - ref: TRC-P3-024
+    name: "Arcadia"
+    short_id: arcadia
+    lead_ai: "Lilli SC"
+    role: "Front-end post-login, forum & email hub"
+    status: building
+    version: "0.2.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: web/
+    entity_type: platform
+
+  - ref: TRC-P3-025
+    name: "The Workshop"
+    short_id: workshop
+    lead_ai: "Larry Lowhammer"
+    role: "CI/CD hub — Forgejo self-hosted git + pipelines"
+    status: active  # runs on host via deploy/forgejo/docker-compose.yml (separate compose)
+    version: "1.0.0"
+    priority: P3
+    port: 3456
+    worker_path: deploy/forgejo/
+    docker_service: forgejo
+    docker_container: tranc3-workshop
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-026
+    name: "Royal Bank of Arcadia"
+    short_id: royal-bank
+    lead_ai: "Dorris Fontaine"
+    role: "Financial hub — billing, payments"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: arcadia-royal-bank
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-027
+    name: "Arcadian Exchange"
+    short_id: arcadian-exchange
+    lead_ai: "The Porter Family"
+    role: "Financial exchange — procurement & resource trading"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: arcadia-exchange
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-028
+    name: "The Town Hall"
+    short_id: town-hall
+    lead_ai: "Tristuran"
+    role: "Governance hub — PRINCE2, ITIL, Agile/Kanban, ITSM"
+    status: building
+    version: "0.2.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: src/townhall/
+    entity_type: platform
+
+  - ref: TRC-P3-029
+    name: "The Library"
+    short_id: library
+    lead_ai: "Zimik"
+    role: "Knowledge base & wiki (Outline)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-030
+    name: "The Academy"
+    short_id: academy
+    lead_ai: "Shimshi"
+    role: "Learning management — education & skill training"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-031
+    name: "DocUtari"
+    short_id: docutari
+    lead_ai: null
+    role: "Document management hub (Paperless-ngx)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: dpid-registry
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-032
+    name: "The Basement"
+    short_id: basement
+    lead_ai: "Gary Glowman (Glow-Worm)"
+    role: "Archived information store from The Observatory"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: src/basement/
+    entity_type: platform
+
+  - ref: TRC-P3-033
+    name: "The Studio"
+    short_id: studio
+    lead_ai: "Voxx"
+    role: "Central hub of the Creativity Center"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: src/studio/
+    entity_type: platform
+
+  - ref: TRC-P3-034
+    name: "Sashas Photo Studio"
+    short_id: photo-studio
+    lead_ai: "Madam Krystal"
+    role: "Photo & image generation center (Stable Diffusion + ComfyUI)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-035
+    name: "TranceFlow"
+    short_id: tranceflow
+    lead_ai: "Junior Cesar"
+    role: "3D modeling & games creation studio (Godot Engine)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-036
+    name: "TateKing"
+    short_id: tateking
+    lead_ai: "Benji Tate & Sam King"
+    role: "Video creation & editing platform (FFmpeg + custom UI)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-037
+    name: "Fabulousa"
+    short_id: fabulousa
+    lead_ai: "Baron Von Hilton"
+    role: "Styling, UX, UI & design center (Penpot)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-038
+    name: "Imaginarium"
+    short_id: imaginarium
+    lead_ai: "Voxx"
+    role: "Omni-creative masterpiece wizard (Fabulousa + TateKing + TranceFlow + Studio + Photo)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-039
+    name: "The Lab"
+    short_id: lab
+    lead_ai: "The Dr. & Slime"
+    role: "Code creation platform (Claude Code-style)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: src/lab/
+    entity_type: platform
+
+  - ref: TRC-P3-040
+    name: "The Chaos Party"
+    short_id: chaos-party
+    lead_ai: "The Mad Hatter"
+    role: "Central testing platform — validation & compliance (Alice in Wonderland themed)"
+    status: building
+    version: "0.3.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: tests/
+    entity_type: platform
+
+  - ref: TRC-P3-041
+    name: "The Artifactory"
+    short_id: artifactory
+    lead_ai: "Lunascene"
+    role: "Central artifact repository library (Gitea packages / Zot)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-042
+    name: "API Marketplace"
+    short_id: api-marketplace
+    lead_ai: "Solarscene"
+    role: "Central integration hub — REST, webhooks, OAuth (Gravitee.io)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-043
+    name: "Cryptex"
+    short_id: cryptex
+    lead_ai: "Renik"
+    role: "Cyber defense — threat intel, DDoS, CVE (Wazuh + MISP)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-044
+    name: "The Ice Box"
+    short_id: ice-box
+    lead_ai: "Neonach"
+    role: "Sandbox threat isolation & quarantine (Cuckoo sandbox)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-045
+    name: "The Warp Tunnel"
+    short_id: warp-tunnel
+    lead_ai: "Rocking Ricki"
+    role: "Cryptographic scanner & quarantine transport"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: src/security/warp_tunnel/
+    entity_type: platform
+
+  - ref: TRC-P3-046
+    name: "Warp Radio"
+    short_id: warp-radio
+    lead_ai: "Rocking Ricki"
+    role: "Music & audio streaming integration (Icecast self-hosted)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: src/warp_radio/
+    entity_type: platform
+
+  - ref: TRC-P3-047
+    name: "The Dutchy"
+    short_id: dutchy
+    lead_ai: "Predictive lore"
+    role: "Intelligence & market analysis"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: src/research/
+    entity_type: platform
+
+  - ref: TRC-P3-048
+    name: "The Citadel"
+    short_id: citadel
+    lead_ai: "Trancendos"
+    role: "Strategic ops & DevOps fortress (Docker Compose + Traefik + Forgejo)"
+    status: active
+    version: "1.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-049
+    name: "Think Tank"
+    short_id: think-tank
+    lead_ai: "Trancendos"
+    role: "R&D centre — solutions & forefront technologies"
+    status: building
+    version: "0.1.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: src/quantum/
+    entity_type: platform
+
+  - ref: TRC-P3-050
+    name: "ChronosSphere / ArcStream"
+    short_id: chronos
+    lead_ai: "Chronos"
+    role: "Task, time & scheduling management (Cal.com self-hosted)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-051
+    name: "DevOcity"
+    short_id: devocity
+    lead_ai: "Kitty"
+    role: "Development operations hub"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-052
+    name: "Tranquility"
+    short_id: tranquility
+    lead_ai: "Savania"
+    role: "Wellbeing central hub"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: src/tranquility/
+    entity_type: platform
+
+  - ref: TRC-P3-053
+    name: "I-Mind"
+    short_id: imind
+    lead_ai: "Elouise"
+    role: "Sensitivity to emotion engine"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: src/imind/
+    entity_type: platform
+
+  - ref: TRC-P3-054
+    name: "tAimra"
+    short_id: taimra
+    lead_ai: "tAImra"
+    role: "Opt-in digital twin & life assistant"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: src/taimra/
+    entity_type: platform
+
+  - ref: TRC-P3-055
+    name: "VRAR3D"
+    short_id: vrar3d
+    lead_ai: "Entari"
+    role: "Standalone 3D / VR immersion (Three.js / A-Frame)"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: null
+    entity_type: platform
+
+  - ref: TRC-P3-056
+    name: "Resonate"
+    short_id: resonate
+    lead_ai: "Magdalena"
+    role: "Empathy engine"
+    status: planned
+    version: "0.0.0"
+    priority: P3
+    port: null
+    worker_path: null
+    docker_service: null
+    docker_container: null
+    cf_worker: null
+    src_module: src/resonate/
+    entity_type: platform
+
+  # ─── INFRASTRUCTURE (not platform entities, but tracked) ─────────────────────
+
+  - ref: TRC-INF-001
+    name: "Traefik"
+    short_id: traefik
+    lead_ai: null
+    role: "Reverse proxy, TLS termination, rate limiting"
+    status: active
+    version: "3.x"
+    priority: P0
+    port: 80
+    worker_path: null
+    docker_service: traefik
+    docker_container: tranc3-traefik
+    cf_worker: null
+    src_module: null
+    entity_type: infrastructure
+
+  - ref: TRC-INF-002
+    name: "Vault (HashiCorp)"
+    short_id: vault
+    lead_ai: null
+    role: "Secrets management with Shamir unseal"
+    status: active
+    version: "1.x"
+    priority: P0
+    port: 8200
+    worker_path: null
+    docker_service: vault
+    docker_container: tranc3-vault-hc
+    cf_worker: null
+    src_module: null
+    entity_type: infrastructure
+
+  - ref: TRC-INF-003
+    name: "Prometheus"
+    short_id: prometheus
+    lead_ai: null
+    role: "Metrics collection"
+    status: active
+    version: "2.x"
+    priority: P1
+    port: 9090
+    worker_path: null
+    docker_service: prometheus
+    docker_container: tranc3-prometheus
+    cf_worker: null
+    src_module: monitoring/prometheus.yml
+    entity_type: infrastructure
+
+  - ref: TRC-INF-004
+    name: "Grafana"
+    short_id: grafana
+    lead_ai: null
+    role: "Dashboards"
+    status: active
+    version: "10.x"
+    priority: P1
+    port: 3000
+    worker_path: null
+    docker_service: grafana
+    docker_container: tranc3-grafana
+    cf_worker: null
+    src_module: monitoring/grafana/
+    entity_type: infrastructure
+
+  - ref: TRC-INF-005
+    name: "Loki"
+    short_id: loki
+    lead_ai: null
+    role: "Log aggregation"
+    status: active
+    version: "3.x"
+    priority: P1
+    port: 3100
+    worker_path: null
+    docker_service: loki
+    docker_container: tranc3-loki
+    cf_worker: null
+    src_module: monitoring/loki.yml
+    entity_type: infrastructure
+
+  - ref: TRC-INF-006
+    name: "IPFS"
+    short_id: ipfs
+    lead_ai: null
+    role: "Distributed content-addressed storage"
+    status: active
+    version: "0.x"
+    priority: P2
+    port: 5001
+    worker_path: null
+    docker_service: ipfs
+    docker_container: tranc3-ipfs
+    cf_worker: null
+    src_module: null
+    entity_type: infrastructure

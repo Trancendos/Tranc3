@@ -916,15 +916,6 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8041/health"]
       <<: *healthcheck-default
 
-  skills-benchmark-service:
-    <<: *worker-platform
-    build: { context: ./workers/skills-benchmark-service, dockerfile: Dockerfile }
-    container_name: skills-benchmark-service-worker
-    ports: ["8035:8035"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8035/health"]
-      <<: *healthcheck-default
-
   langchain-integration-service:
     <<: *worker-platform
     build: { context: ./workers/langchain-integration-service, dockerfile: Dockerfile }
