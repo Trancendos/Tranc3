@@ -1,0 +1,160 @@
+---
+# ──────────────────────────────────────────────────────────────
+# Tranc3 Citadel — Rolling Deployment Playbook
+# ──────────────────────────────────────────────────────────────
+# For subsequent deployments AFTER initial setup.
+# Performs a rolling update: git pull → image pull →
+# docker compose up -d (restarts changed containers only).
+# Infrastructure services (Traefik, Vault, Prometheus) are NOT
+# restarted unless their config changed.
+#
+# Usage:
+#   ansible-playbook \
+#     -i deploy/ansible/inventory/citadel.yml \
+#     deploy/ansible/playbooks/citadel-deploy.yml
+#
+#   # Deploy a specific branch:
+#   ansible-playbook ... -e git_branch=feature/my-branch
+#
+#   # Skip image pull (deploy code change only):
+#   ansible-playbook ... --skip-tags pull
+# ──────────────────────────────────────────────────────────────
+
+- name: Citadel Rolling Deployment
+  hosts: citadel
+  become: true
+  gather_facts: false   # faster; we don't need facts for deploy
+
+  vars:
+    tranc3_root: /opt/tranc3
+    compose_file: docker-compose.production.yml
+    git_branch: "{{ git_branch | default('main') }}"
+    health_check_timeout_sec: "{{ health_check_timeout_sec | default(90) }}"
+
+    # P0/P1 workers to verify after deploy
+    p0_p1_health_checks:
+      - { name: "infinity-auth",        port: 8005, path: "/health" }
+      - { name: "infinity-ws",          port: 8004, path: "/health" }
+      - { name: "infinity-portal",      port: 8042, path: "/health" }
+      - { name: "infinity-one",         port: 8043, path: "/health" }
+      - { name: "infinity-admin",       port: 8044, path: "/health" }
+      - { name: "users-service",        port: 8006, path: "/health" }
+      - { name: "monitoring",           port: 8007, path: "/health" }
+      - { name: "notifications",        port: 8008, path: "/health" }
+      - { name: "infinity-ai",          port: 8009, path: "/health" }
+      - { name: "the-grid",             port: 8010, path: "/health" }
+      - { name: "gateway-service",      port: 8040, path: "/health" }
+      - { name: "sentinel-station",     port: 8041, path: "/health" }
+      - { name: "hive-service",         port: 8060, path: "/health" }
+      - { name: "infinity-bridge",      port: 8070, path: "/health" }
+
+  tasks:
+
+    # ── 1. Git pull ─────────────────────────────────────────────
+    - name: Pull latest changes from git
+      become_user: tranc3
+      git:
+        repo: "https://github.com/Trancendos/Tranc3.git"
+        dest: "{{ tranc3_root }}"
+        version: "{{ git_branch }}"
+        update: true
+        force: false
+      register: git_result
+      tags: [git]
+
+    - name: Show git update summary
+      debug:
+        msg: |
+          Branch : {{ git_branch }}
+          Before : {{ git_result.before | default('n/a') }}
+          After  : {{ git_result.after  | default('n/a') }}
+          Changed: {{ git_result.changed }}
+      tags: [git]
+
+    # ── 2. Pull updated Docker images ───────────────────────────
+    - name: Pull updated Docker images
+      become_user: tranc3
+      command:
+        cmd: docker compose -f {{ compose_file }} pull
+        chdir: "{{ tranc3_root }}"
+      register: pull_result
+      changed_when: "'Pull complete' in pull_result.stdout or pull_result.rc == 0"
+      timeout: 600
+      tags: [pull, docker]
+
+    # ── 3. Rolling update — restart only changed services ───────
+    - name: Apply rolling update (no infrastructure restart)
+      become_user: tranc3
+      command:
+        cmd: docker compose -f {{ compose_file }} up -d --no-recreate --remove-orphans
+        chdir: "{{ tranc3_root }}"
+      register: compose_up
+      changed_when: true
+      timeout: 300
+      tags: [docker, deploy]
+
+    - name: Show compose up output (last 30 lines)
+      debug:
+        msg: "{{ compose_up.stdout_lines[-30:] }}"
+      tags: [docker, deploy]
+
+    # ── 4. Health check all P0/P1 workers ──────────────────────
+    - name: Health check P0/P1 workers
+      uri:
+        url: "http://localhost:{{ item.port }}{{ item.path }}"
+        method: GET
+        return_content: false
+        status_code: 200
+      register: health_results
+      loop: "{{ p0_p1_health_checks }}"
+      loop_control:
+        label: "{{ item.name }}:{{ item.port }}"
+      until: health_results.status == 200
+      retries: "{{ (health_check_timeout_sec | int) // 5 }}"
+      delay: 5
+      failed_when: false
+      tags: [health]
+
+    # ── 5. Check running containers ─────────────────────────────
+    - name: List running containers
+      become_user: tranc3
+      command:
+        cmd: docker compose -f {{ compose_file }} ps --format table
+        chdir: "{{ tranc3_root }}"
+      register: docker_ps
+      changed_when: false
+      tags: [health, summary]
+
+    # ── 6. Build scorecard ──────────────────────────────────────
+    - name: Build health scorecard
+      set_fact:
+        health_scorecard: >-
+          {%- set results = [] -%}
+          {%- for r in health_results.results -%}
+            {%- set status = r.status | default(0) -%}
+            {%- set icon = '✅' if status == 200 else '❌' -%}
+            {%- set _ = results.append(icon + ' ' + r.item.name + ':' + r.item.port | string + ' → HTTP ' + status | string) -%}
+          {%- endfor -%}
+          {{ results | join('\n          ') }}
+      tags: [summary]
+
+    - name: Print deployment scorecard
+      debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════╗
+          ║         Tranc3 Citadel — Deployment Scorecard           ║
+          ╚══════════════════════════════════════════════════════════╝
+
+          Branch  : {{ git_branch }}
+          Commit  : {{ git_result.after | default('n/a') }}
+
+          P0/P1 Worker Health:
+          {{ health_scorecard }}
+
+          Running containers:
+          {{ docker_ps.stdout }}
+
+          Deploy complete. Monitor with:
+            ssh tranc3@{{ ansible_host | default(inventory_hostname) }} \
+              'docker compose -f /opt/tranc3/docker-compose.production.yml logs -f --tail=50'
+      tags: [summary, always]
