@@ -249,6 +249,44 @@ FREE_MODELS: Dict[str, List[FreeModelInfo]] = {
             notes="Local DeepSeek R1, requires Ollama installed",
         ),
     ],
+    "github-models": [
+        FreeModelInfo(
+            name="gpt-4o-mini",
+            provider="github-models",
+            tier=ProviderTier.FREE_TIER,
+            context_window=128000,
+            capabilities=["chat", "code", "reasoning", "vision"],
+            rate_limit="150 req/day, 15 RPM",
+            notes="GPT-4o-mini free via GitHub PAT — no credit card. Any GitHub account works.",
+        ),
+        FreeModelInfo(
+            name="gpt-4o",
+            provider="github-models",
+            tier=ProviderTier.FREE_TIER,
+            context_window=128000,
+            capabilities=["chat", "code", "reasoning", "vision"],
+            rate_limit="50 req/day, 10 RPM",
+            notes="GPT-4o free via GitHub PAT (50/day limit). No credit card.",
+        ),
+        FreeModelInfo(
+            name="meta-llama-3.1-70b-instruct",
+            provider="github-models",
+            tier=ProviderTier.FREE_TIER,
+            context_window=128000,
+            capabilities=["chat", "code"],
+            rate_limit="150 req/day, 15 RPM",
+            notes="Llama 3.1 70B free via GitHub PAT.",
+        ),
+        FreeModelInfo(
+            name="deepseek-r1",
+            provider="github-models",
+            tier=ProviderTier.FREE_TIER,
+            context_window=64000,
+            capabilities=["chat", "reasoning"],
+            rate_limit="150 req/day, 15 RPM",
+            notes="DeepSeek-R1 reasoning model free via GitHub PAT.",
+        ),
+    ],
     "huggingface": [
         FreeModelInfo(
             name="meta-llama/Llama-3.2-3B-Instruct",
@@ -317,17 +355,23 @@ ROUTING_CHAINS: Dict[str, ZeroCostRoutingChain] = {
     "zero_cost_full": ZeroCostRoutingChain(
         name="Zero-Cost Full Stack",
         description=(
-            "Maximum capability at zero cost. "
-            "Ollama → Groq → Gemini → Cerebras → SambaNova → OpenRouter → Offline"
+            "Maximum capability at zero cost — 13 providers. "
+            "Ollama → Groq → Gemini → GitHub Models (GPT-4o-mini) → Cerebras → SambaNova "
+            "→ OpenRouter → HuggingFace → Offline"
         ),
-        providers=["ollama", "groq", "gemini", "cerebras", "sambanova", "openrouter", "offline"],
+        providers=[
+            "ollama", "groq", "gemini", "github-models",
+            "cerebras", "sambanova", "openrouter", "huggingface", "offline",
+        ],
         models={
             "ollama": "llama3.2",
             "groq": "llama-3.3-70b-versatile",
             "gemini": "gemini-2.0-flash",
+            "github-models": "gpt-4o-mini",
             "cerebras": "llama3.3-70b",
             "sambanova": "Meta-Llama-3.3-70B-Instruct",
             "openrouter": "deepseek/deepseek-r1:free",
+            "huggingface": "meta-llama/Llama-3.2-3B-Instruct",
             "offline": "tranc3-offline",
         },
         estimated_cost_per_1k_requests="$0.00",
@@ -336,11 +380,13 @@ ROUTING_CHAINS: Dict[str, ZeroCostRoutingChain] = {
         name="Zero-Cost Cloud Only",
         description=(
             "No local hardware needed. "
-            "Groq → Gemini → Cerebras → SambaNova → OpenRouter → HuggingFace → Offline"
+            "Groq → Gemini → GitHub Models (GPT-4o-mini free) → Cerebras → SambaNova "
+            "→ OpenRouter → HuggingFace → Offline"
         ),
         providers=[
             "groq",
             "gemini",
+            "github-models",
             "cerebras",
             "sambanova",
             "openrouter",
@@ -350,6 +396,7 @@ ROUTING_CHAINS: Dict[str, ZeroCostRoutingChain] = {
         models={
             "groq": "llama-3.3-70b-versatile",
             "gemini": "gemini-2.0-flash",
+            "github-models": "gpt-4o-mini",
             "cerebras": "llama3.3-70b",
             "sambanova": "Meta-Llama-3.3-70B-Instruct",
             "openrouter": "openrouter/free",
@@ -441,6 +488,10 @@ def discover_available_providers() -> Dict[str, bool]:
 
     # HuggingFace — serverless inference free tier, requires HF_API_TOKEN
     available["huggingface"] = bool(os.getenv("HUGGINGFACE_API_TOKEN") or os.getenv("HF_API_TOKEN"))
+
+    # GitHub Models — free tier with any GitHub PAT (no credit card, no special scopes)
+    # 50 req/day for GPT-4o, 150 req/day for gpt-4o-mini / Llama 3.1 / DeepSeek-R1
+    available["github-models"] = bool(os.getenv("GITHUB_TOKEN"))
 
     # DeepSeek — requires API key (not free but cheap)
     available["deepseek"] = bool(os.getenv("DEEPSEEK_API_KEY"))

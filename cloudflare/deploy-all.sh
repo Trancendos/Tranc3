@@ -36,6 +36,7 @@ set_secrets() {
   echo "  Sign-up links (all free):"
   echo "    GROQ        → console.groq.com"
   echo "    GEMINI      → aistudio.google.com"
+  echo "    GITHUB      → github.com/settings/tokens (any PAT — 50/day GPT-4o free)"
   echo "    CEREBRAS    → cerebras.ai"
   echo "    SAMBANOVA   → sambanova.ai"
   echo "    OPENROUTER  → openrouter.ai"
@@ -50,7 +51,7 @@ set_secrets() {
   for key in GROQ_API_KEY GEMINI_API_KEY CEREBRAS_API_KEY SAMBANOVA_API_KEY \
              OPENROUTER_API_KEY HF_API_KEY DEEPSEEK_API_KEY \
              MISTRAL_API_KEY COHERE_API_KEY TOGETHER_API_KEY FIREWORKS_API_KEY \
-             TRANC3_AUTH_URL ALLOWED_ORIGINS; do
+             GITHUB_TOKEN TRANC3_AUTH_URL ALLOWED_ORIGINS; do
     read -rp "  $key (enter to skip): " val
     if [[ -n "$val" ]]; then
       echo "$val" | wrangler secret put "$key" --name tranc3-ai
@@ -219,7 +220,7 @@ green "  Search Rotation: https://tranc3-search.luminous-aimastermind.workers.de
 green "  Task Queue:      https://tranc3-queue.luminous-aimastermind.workers.dev/health"
 green ""
 green "  Zero-cost capacity per day (all providers combined):"
-green "    AI:      ~18,000 requests (12 providers)"
+green "    AI:      ~18,048 requests (13 providers, incl. GitHub Models GPT-4o-mini)"
 green "    Email:   600 emails/day — 18,000/month (3 providers)"
 green "    Storage: 40 GB total (R2 10GB + B2 10GB + Oracle 20GB)"
 green "    Search:  Unlimited (Typesense) + 20K/month fallback"

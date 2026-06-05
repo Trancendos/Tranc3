@@ -10,16 +10,17 @@
  *   1.  Cloudflare Workers AI — on-platform, fastest, ~10K req/day free
  *   2.  Groq                  — 6,000 RPM free (llama-3.1-8b-instant)
  *   3.  Google Gemini         — 15 RPM / 1M TPD free (gemini-1.5-flash)
- *   4.  Cerebras              — 60 RPM free (llama3.1-8b)
- *   5.  SambaNova             — 80 RPD free (Meta-Llama-3.1-8B-Instruct)
- *   6.  OpenRouter            — free models (meta-llama/llama-3.2-3b:free)
- *   7.  HuggingFace           — Inference API free tier
- *   8.  DeepSeek              — free tier (deepseek-chat)
- *   9.  Mistral               — free tier (mistral-small-latest, 500K tokens/month)
- *   10. Cohere                — free tier (command-r, 1K req/month)
- *   11. Together AI           — free tier ($1 credit, refreshes, llama-3.2-3b)
- *   12. Fireworks AI          — free tier (accounts/fireworks/models/llama-v3p1-8b-instruct)
- *   13. Honest stub           — always available, honest "degraded" response
+ *   4.  GitHub Models         — 50 RPD GPT-4o, 150 RPD Llama 3.1 70B (FREE, no credit card)
+ *   5.  Cerebras              — 60 RPM free (llama3.1-8b)
+ *   6.  SambaNova             — 80 RPD free (Meta-Llama-3.1-8B-Instruct)
+ *   7.  OpenRouter            — free models (meta-llama/llama-3.2-3b:free)
+ *   8.  HuggingFace           — Inference API free tier
+ *   9.  DeepSeek              — free tier (deepseek-chat)
+ *   10. Mistral               — free tier (mistral-small-latest, 500K tokens/month)
+ *   11. Cohere                — free tier (command-r, 1K req/month)
+ *   12. Together AI           — free tier ($1 credit, refreshes, llama-3.2-3b)
+ *   13. Fireworks AI          — free tier (accounts/fireworks/models/llama-v3p1-8b-instruct)
+ *   14. Honest stub           — always available, honest "degraded" response
  *
  * Bindings required (wrangler.toml + secrets):
  *   AI                → Workers AI binding (automatic on free plan)
@@ -36,6 +37,7 @@
  *   COHERE_API_KEY     → secret (dashboard.cohere.com — free trial, 1K req/month)
  *   TOGETHER_API_KEY   → secret (api.together.ai — free $1 credit)
  *   FIREWORKS_API_KEY  → secret (fireworks.ai — free tier)
+ *   GITHUB_TOKEN       → secret (github.com Personal Access Token — enables GitHub Models free tier)
  *   TRANC3_AUTH_URL    → infinity-auth-api worker URL (optional — skips JWT check if unset)
  *   ALLOWED_ORIGINS    → extra CORS origins (comma-separated)
  */
@@ -95,6 +97,32 @@ const PROVIDERS = [
       if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
       const data = await res.json();
       return { content: data.candidates[0].content.parts[0].text, provider: "gemini", model: "gemini-1.5-flash" };
+    },
+  },
+  {
+    id: "github-models",
+    name: "GitHub Models",
+    // Genuinely free: 50 RPD for GPT-4o, 150 RPD for Llama/DeepSeek — no credit card needed.
+    // Uses a GitHub Personal Access Token (no special scopes).
+    // Rate limits: 10 RPM (GPT-4o), 8K input + 4K output tokens per request.
+    dailyLimit: 48,
+    available: (env) => !!env.GITHUB_TOKEN,
+    chat: async (env, messages) => {
+      const res = await fetch("https://models.inference.ai.azure.com/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages,
+          max_tokens: 1024,
+        }),
+      });
+      if (!res.ok) throw new Error(`GitHub Models HTTP ${res.status}`);
+      const data = await res.json();
+      return { content: data.choices[0].message.content, provider: "github-models", model: "gpt-4o-mini" };
     },
   },
   {

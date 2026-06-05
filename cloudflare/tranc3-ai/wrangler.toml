@@ -30,6 +30,7 @@ id = "f321bee2495547ad9e224522f214defd"
 # OPENROUTER_API_KEY → https://openrouter.ai       (free models)
 # HF_API_KEY         → https://huggingface.co      (free inference API)
 # DEEPSEEK_API_KEY   → https://platform.deepseek.com (free tier)
+# GITHUB_TOKEN       → https://github.com/settings/tokens (free — any PAT works, 50 RPD GPT-4o)
 # TRANC3_AUTH_URL    → https://infinity-auth-api.luminous-aimastermind.workers.dev
 # ALLOWED_ORIGINS    → https://trancendos.com (comma-separated extras)
 # MISTRAL_API_KEY    → https://console.mistral.ai (free plan — 500K tokens/month)
