@@ -1,0 +1,41 @@
+name = "tranc3-queue"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+account_id = "e0214028cb64d31232f5662548a55e4e"
+
+[vars]
+ENVIRONMENT = "production"
+
+# ── Cloudflare Queues (primary — genuinely free, 1M messages/month) ───────────
+[[queues.producers]]
+queue = "tranc3-tasks"
+binding = "TASK_QUEUE"
+
+[[queues.consumers]]
+queue = "tranc3-tasks"
+max_batch_size = 10
+max_batch_timeout = 5
+
+# ── KV: queue stats + overflow store ─────────────────────────────────────────
+[[kv_namespaces]]
+binding = "CACHE"
+id = "2a0e09cfd22741eeb3245607ce6e76fd"
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+#
+# Queue provider rotation — all genuinely free tiers, zero cost:
+#
+# PRIMARY:   Cloudflare Queues — 1M messages/month free forever
+# SECONDARY: Upstash Redis     — 10,000 commands/day free forever
+# TERTIARY:  KV fallback       — uses existing CACHE KV as a simple queue
+#
+# UPSTASH_REDIS_URL   → from upstash.com (free tier — 10K commands/day)
+# UPSTASH_REDIS_TOKEN → from upstash.com
+# WEBHOOK_SECRET      → shared secret for consumer endpoint auth
+
+# ── First-time setup ──────────────────────────────────────────────────────────
+# Create the queue:
+#   wrangler queues create tranc3-tasks
+#
+# Then deploy:
+#   wrangler deploy

@@ -136,6 +136,19 @@ deploy_workers() {
   wrangler deploy
   green "✓ tranc3-storage deployed → https://tranc3-storage.luminous-aimastermind.workers.dev"
 
+  step "Deploying tranc3-search (adaptive search rotation — Typesense+Meilisearch+Algolia+KV)"
+  cd "$SCRIPT_DIR/search-rotation"
+  npm ci --silent
+  wrangler deploy
+  green "✓ tranc3-search deployed → https://tranc3-search.luminous-aimastermind.workers.dev"
+
+  step "Deploying tranc3-queue (adaptive task queue — CF Queues+Upstash+KV)"
+  cd "$SCRIPT_DIR/queue-rotation"
+  wrangler queues create tranc3-tasks 2>/dev/null || true
+  npm ci --silent
+  wrangler deploy
+  green "✓ tranc3-queue deployed → https://tranc3-queue.luminous-aimastermind.workers.dev"
+
   step "Deploying infinity-void (encrypted secrets vault)"
   cd "$SCRIPT_DIR/infinity-void"
   npm ci --silent
@@ -202,8 +215,15 @@ green "  curl https://tranc3-ai.luminous-aimastermind.workers.dev/api/v1/ai/stat
 green "  curl https://tranc3-notifications.luminous-aimastermind.workers.dev/status"
 green "  curl https://tranc3-storage.luminous-aimastermind.workers.dev/status"
 green ""
-green "  Zero-cost capacity per day:"
-green "    AI:      ~18,000 requests (12 providers combined)"
-green "    Email:   600 emails/day (Resend 100 + Brevo 300 + Mailjet 200)"
+green "  Search Rotation: https://tranc3-search.luminous-aimastermind.workers.dev/health"
+green "  Task Queue:      https://tranc3-queue.luminous-aimastermind.workers.dev/health"
+green ""
+green "  Zero-cost capacity per day (all providers combined):"
+green "    AI:      ~18,000 requests (12 providers)"
+green "    Email:   600 emails/day — 18,000/month (3 providers)"
 green "    Storage: 40 GB total (R2 10GB + B2 10GB + Oracle 20GB)"
+green "    Search:  Unlimited (Typesense) + 20K/month fallback"
+green "    Queue:   1M messages/month (CF Queues) + 10K/day (Upstash)"
+green ""
+green "  See FREE_TIER_REGISTRY.md for full honest breakdown of all free tiers."
 green "════════════════════════════════════════════════════════"
