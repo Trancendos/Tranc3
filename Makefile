@@ -1,7 +1,7 @@
 # TRANC3 Makefile
 # Usage: make bootstrap | make dev | make test | make deploy | make doctor
 
-.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend health health-json infra-plan swarm-run entity-audit ansible-health production-score dependency-audit
+.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate migrate-new db-provision db-reset db-status clean frontend health health-json infra-plan swarm-run entity-audit ansible-health production-score dependency-audit
 
 # ── Bootstrap (single-command platform setup) ─────────────────────────────────
 bootstrap:
@@ -65,6 +65,17 @@ dev-web:
 	cd web && npm run dev
 
 # ── Database ──────────────────────────────────────────────────────────────────
+db-provision:
+	@echo "Provisioning local PostgreSQL + running migrations..."
+	./scripts/db-provision.sh
+
+db-reset:
+	@echo "Resetting local database (drops all data)..."
+	./scripts/db-provision.sh --reset
+
+db-status:
+	./scripts/db-provision.sh --status
+
 migrate:
 	@echo "Running database migrations..."
 	alembic upgrade head
