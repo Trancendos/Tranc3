@@ -21,48 +21,48 @@ interface Personality { id: string; name: string }
 const LANGUAGES = [
   { code: 'en', name: 'English' }, { code: 'es', name: 'Español' },
   { code: 'fr', name: 'Français' }, { code: 'de', name: 'Deutsch' },
-  { code: 'zh', name: '中文' }, { code: 'ja', name: '日本語' },
-  { code: 'ko', name: '한국어' }, { code: 'ar', name: 'العربية' },
+  { code: 'zh', name: '中文' },    { code: 'ja', name: '日本語' },
+  { code: 'ko', name: '한국어' },  { code: 'ar', name: 'العربية' },
 ]
 
 const EMOTIONS = [
-  { id: 'neutral', label: 'Neutral', color: 'bg-gray-700 text-gray-300' },
-  { id: 'joy', label: 'Joy', color: 'bg-yellow-900 text-yellow-300' },
-  { id: 'sadness', label: 'Sadness', color: 'bg-blue-900 text-blue-300' },
-  { id: 'anger', label: 'Anger', color: 'bg-red-900 text-red-300' },
-  { id: 'fear', label: 'Fear', color: 'bg-purple-900 text-purple-300' },
+  { id: 'neutral',  label: 'Neutral',  color: 'bg-gray-700 text-gray-300' },
+  { id: 'joy',      label: 'Joy',      color: 'bg-yellow-900 text-yellow-300' },
+  { id: 'sadness',  label: 'Sadness',  color: 'bg-blue-900 text-blue-300' },
+  { id: 'anger',    label: 'Anger',    color: 'bg-red-900 text-red-300' },
+  { id: 'fear',     label: 'Fear',     color: 'bg-purple-900 text-purple-300' },
   { id: 'surprise', label: 'Surprise', color: 'bg-pink-900 text-pink-300' },
 ]
 
 export default function ChatView() {
-  const [token, setToken] = useState(localStorage.getItem('tranc3_token') || '')
-  const [username, setUsername] = useState(localStorage.getItem('tranc3_user') || '')
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [language, setLanguage] = useState('en')
+  const [token, setToken]         = useState(localStorage.getItem('tranc3_token') || '')
+  const [username, setUsername]   = useState(localStorage.getItem('tranc3_user') || '')
+  const [messages, setMessages]   = useState<Message[]>([])
+  const [input, setInput]         = useState('')
+  const [loading, setLoading]     = useState(false)
+  const [language, setLanguage]   = useState('en')
   const [personality, setPersonality] = useState('tranc3-base')
-  const [emotion, setEmotion] = useState('neutral')
+  const [emotion, setEmotion]     = useState('neutral')
   const [personalities, setPersonalities] = useState<Personality[]>([
-    { id: 'tranc3-base', name: 'Base' },
-    { id: 'tranc3-creative', name: 'Creative' },
-    { id: 'tranc3-analytical', name: 'Analytical' },
-    { id: 'tranc3-empathetic', name: 'Empathetic' },
+    { id: 'tranc3-base',         name: 'Base' },
+    { id: 'tranc3-creative',     name: 'Creative' },
+    { id: 'tranc3-analytical',   name: 'Analytical' },
+    { id: 'tranc3-empathetic',   name: 'Empathetic' },
     { id: 'tranc3-multilingual', name: 'Multilingual' },
   ])
   const [showUpgrade, setShowUpgrade] = useState(false)
-  const [dark, setDark] = useState(true)
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [dark, setDark]           = useState(true)
+  const [statusAnnouncement, setStatusAnnouncement] = useState('')
+  const bottomRef   = useRef<HTMLDivElement>(null)
+  const inputRef    = useRef<HTMLInputElement>(null)
 
   const emptyPrompts = [
-    "Explain quantum computing simply",
-    "Write a haiku about space",
-    "How do neural networks work?",
-    "Tell me a joke about coding"
+    'Explain quantum computing simply',
+    'Write a haiku about space',
+    'How do neural networks work?',
+    'Tell me a joke about coding',
   ]
 
-  // Fetch personalities from API on mount — Gap G20 action
   useEffect(() => {
     if (!token) return
     fetch(`${API}/personalities`, { headers: { Authorization: `Bearer ${token}` } })
@@ -72,11 +72,11 @@ export default function ChatView() {
           setPersonalities(data.personalities.map((id: string) => ({
             id,
             name: id.replace('tranc3-', '').replace(/-/g, ' ')
-              .replace(/\b\w/g, c => c.toUpperCase()),
+              .replace(/\b\w/g, (c: string) => c.toUpperCase()),
           })))
         }
       })
-      .catch(() => { })
+      .catch(() => {})
   }, [token])
 
   useEffect(() => {
@@ -104,9 +104,9 @@ export default function ChatView() {
       })
       if (r.ok) {
         const data = await r.json()
-        if (data.checkout_url) window.open(data.checkout_url, '_blank')
+        if (data.checkout_url) window.open(data.checkout_url, '_blank', 'noopener,noreferrer')
       }
-    } catch { }
+    } catch {}
     setShowUpgrade(false)
   }
 
@@ -120,6 +120,7 @@ export default function ChatView() {
     const text = input
     setInput('')
     setLoading(true)
+    setStatusAnnouncement('Sending message…')
 
     try {
       const r = await fetch(`${API}/chat`, {
@@ -135,10 +136,10 @@ export default function ChatView() {
         }),
       })
 
-      // Handle rate limit — Gap G11 action
       if (r.status === 429) {
         setShowUpgrade(true)
-        setMessages(p => p.slice(0, -1)) // remove optimistic message
+        setMessages(p => p.slice(0, -1))
+        setStatusAnnouncement('Rate limit reached. Please upgrade to continue.')
         return
       }
 
@@ -155,12 +156,14 @@ export default function ChatView() {
         quantum_used: data.quantum_used,
       }
       setMessages(p => [...p, aiMsg])
+      setStatusAnnouncement('Response received.')
     } catch {
       setMessages(p => [...p, {
         id: (Date.now() + 1).toString(),
         content: 'Something went wrong. Please try again.',
         sender: 'tranc3', timestamp: new Date(),
       }])
+      setStatusAnnouncement('An error occurred. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -170,96 +173,161 @@ export default function ChatView() {
 
   const navigate = useNavigate()
 
-  const bg = dark ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'
-  const sidebar = dark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-  const header = dark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-  const inputBg = dark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'
-  const msgAi = dark ? 'bg-gray-800 text-white' : 'bg-white border text-gray-900'
+  const bg       = dark ? 'bg-gray-950 text-white'           : 'bg-gray-50 text-gray-900'
+  const sidebar  = dark ? 'bg-gray-900 border-gray-800'      : 'bg-white border-gray-200'
+  const header   = dark ? 'bg-gray-900 border-gray-800'      : 'bg-white border-gray-200'
+  const inputBg  = dark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'
+  const msgAi    = dark ? 'bg-gray-800 text-white'           : 'bg-white border text-gray-900'
+
+  const activePersonalityName = personalities.find(p => p.id === personality)?.name ?? personality
 
   return (
     <div className={`flex h-screen ${bg}`}>
-      {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} onUpgrade={handleUpgrade} />}
+      {/* Screen-reader status announcer */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {statusAnnouncement}
+      </div>
+
+      {showUpgrade && (
+        <UpgradeModal onClose={() => setShowUpgrade(false)} onUpgrade={handleUpgrade} />
+      )}
 
       {/* Sidebar */}
-      <div className={`w-72 border-r ${sidebar} flex flex-col p-4 gap-4 overflow-y-auto`}>
+      <aside
+        aria-label="Chat settings"
+        className={`w-72 border-r ${sidebar} flex flex-col p-4 gap-4 overflow-y-auto`}
+      >
         <div className="flex items-center gap-2 mb-2">
-          <Zap className="w-5 h-5 text-blue-400" />
+          <Zap className="w-5 h-5 text-blue-400" aria-hidden="true" />
           <span className="font-bold text-lg">TRANC3</span>
-          <span className="ml-auto text-xs text-gray-500">{username}</span>
+          <span className="ml-auto text-xs text-gray-500" aria-label={`Logged in as ${username}`}>
+            {username}
+          </span>
         </div>
 
         {/* Dashboard Link */}
-        <button onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-xs text-gray-500 hover:text-blue-400 transition-colors py-2 px-2 rounded-lg hover:bg-gray-800/50">
-          <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2 text-xs text-gray-500 hover:text-blue-400 transition-colors py-2 px-2 rounded-lg hover:bg-gray-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+        >
+          <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
+          Dashboard
         </button>
 
         {/* Language */}
         <div>
-          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Globe className="w-3 h-3" /> Language</label>
-          <select value={language} onChange={e => setLanguage(e.target.value)}
-            className={`w-full rounded-lg px-3 py-2 text-sm border ${inputBg}`}>
+          <label htmlFor="chat-language" className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+            <Globe className="w-3 h-3" aria-hidden="true" /> Language
+          </label>
+          <select
+            id="chat-language"
+            value={language}
+            onChange={e => setLanguage(e.target.value)}
+            className={`w-full rounded-lg px-3 py-2 text-sm border ${inputBg} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500`}
+          >
             {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
           </select>
         </div>
 
-        {/* Personality — dynamic from API */}
+        {/* Personality */}
         <div>
-          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Settings className="w-3 h-3" /> Personality</label>
-          <select value={personality} onChange={e => setPersonality(e.target.value)}
-            className={`w-full rounded-lg px-3 py-2 text-sm border ${inputBg}`}>
+          <label htmlFor="chat-personality" className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+            <Settings className="w-3 h-3" aria-hidden="true" /> Personality
+          </label>
+          <select
+            id="chat-personality"
+            value={personality}
+            onChange={e => setPersonality(e.target.value)}
+            className={`w-full rounded-lg px-3 py-2 text-sm border ${inputBg} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500`}
+          >
             {personalities.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
 
         {/* Emotion */}
-        <div>
-          <label className="text-xs text-gray-500 mb-1">Your Emotion</label>
-          <div className="grid grid-cols-2 gap-1">
+        <fieldset>
+          <legend className="text-xs text-gray-500 mb-1">Your Emotion</legend>
+          <div className="grid grid-cols-2 gap-1" role="group" aria-label="Select your current emotion">
             {EMOTIONS.map(e => (
-              <button key={e.id} onClick={() => setEmotion(e.id)}
-                className={`text-xs py-1 px-2 rounded-lg transition-all ${emotion === e.id ? e.color : dark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
-                  }`}>
+              <button
+                key={e.id}
+                onClick={() => setEmotion(e.id)}
+                aria-pressed={emotion === e.id}
+                className={`text-xs py-1 px-2 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                  emotion === e.id ? e.color : dark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
+                }`}
+              >
                 {e.label}
               </button>
             ))}
           </div>
-        </div>
+        </fieldset>
 
         {/* Theme toggle */}
-        <button onClick={() => setDark(d => !d)}
-          className="text-xs text-gray-500 hover:text-gray-300 mt-auto">
+        <button
+          onClick={() => setDark(d => !d)}
+          aria-pressed={dark}
+          aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+          className="text-xs text-gray-500 hover:text-gray-300 mt-auto text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+        >
           {dark ? '☀️ Light mode' : '🌙 Dark mode'}
         </button>
 
-        <button onClick={logout}
-          className="flex items-center gap-2 text-xs text-gray-500 hover:text-red-400 transition-colors">
-          <LogOut className="w-3 h-3" /> Sign out
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 text-xs text-gray-500 hover:text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
+        >
+          <LogOut className="w-3 h-3" aria-hidden="true" /> Sign out
         </button>
-      </div>
+      </aside>
 
-      {/* Chat */}
-      <div className="flex-1 flex flex-col">
-        <div className={`px-6 py-3 border-b ${header} flex items-center gap-3`}>
-          <Brain className="w-5 h-5 text-blue-400" />
+      {/* Chat panel */}
+      <div className="flex-1 flex flex-col" role="region" aria-label="Chat conversation">
+        {/* Header */}
+        <header className={`px-6 py-3 border-b ${header} flex items-center gap-3`}>
+          <Brain className="w-5 h-5 text-blue-400" aria-hidden="true" />
           <div>
             <div className="font-semibold">TRANC3 Conscious AI</div>
-            <div className="text-xs text-gray-500">
-              {personalities.find(p => p.id === personality)?.name} · {language.toUpperCase()}
+            <div className="text-xs text-gray-500" aria-live="polite">
+              {activePersonalityName} · {language.toUpperCase()}
             </div>
           </div>
-        </div>
+        </header>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {/* Message log */}
+        <div
+          role="log"
+          aria-label="Conversation messages"
+          aria-live="polite"
+          aria-relevant="additions"
+          className="flex-1 overflow-y-auto p-6 space-y-4"
+        >
           {messages.length === 0 && (
             <div className="text-center text-gray-500 mt-16 max-w-2xl mx-auto">
-              <Zap className="w-12 h-12 mx-auto mb-4 opacity-30" />
+              <Zap className="w-12 h-12 mx-auto mb-4 opacity-30" aria-hidden="true" />
               <p className="text-lg font-medium">Start a conversation</p>
               <p className="text-sm mt-1 mb-8">Ask anything in any language</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+              <div
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6"
+                role="list"
+                aria-label="Suggested prompts"
+              >
                 {emptyPrompts.map((prompt, i) => (
-                  <button key={i} onClick={() => { setInput(prompt); setTimeout(() => inputRef.current?.focus(), 10); }}
-                    className={`text-left p-3 rounded-xl border transition-all text-sm hover:border-blue-500/50 hover:bg-blue-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${dark ? 'bg-gray-800/50 border-gray-700/50 text-gray-300' : 'bg-white border-gray-200 text-gray-600'}`}>
+                  <button
+                    key={i}
+                    role="listitem"
+                    onClick={() => { setInput(prompt); setTimeout(() => inputRef.current?.focus(), 10) }}
+                    className={`text-left p-3 rounded-xl border transition-all text-sm hover:border-blue-500/50 hover:bg-blue-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      dark
+                        ? 'bg-gray-800/50 border-gray-700/50 text-gray-300'
+                        : 'bg-white border-gray-200 text-gray-600'
+                    }`}
+                  >
                     {prompt}
                   </button>
                 ))}
@@ -267,61 +335,111 @@ export default function ChatView() {
             </div>
           )}
 
-          {messages.map(msg => (
-            <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-lg rounded-2xl px-4 py-3 ${msg.sender === 'user' ? 'bg-blue-600 text-white' : msgAi
-                }`}>
-                <p className="text-sm leading-relaxed">{msg.content}</p>
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  <span className="text-xs opacity-50">{msg.timestamp.toLocaleTimeString()}</span>
-                  {msg.emotion && msg.emotion !== 'neutral' && (
-                    <span className="text-xs opacity-60 bg-black/20 rounded px-1">{msg.emotion}</span>
-                  )}
-                  {/* Φ badge — RR Round 2 P7 + Gap G22 action */}
-                  {msg.phi !== undefined && msg.phi !== null && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${msg.phi > 2.0 ? 'bg-purple-600 text-white' :
-                        msg.phi > 1.0 ? 'bg-purple-900 text-purple-300' :
-                          'bg-gray-700 text-gray-400'
-                      }`}>
-                      Φ {msg.phi.toFixed(2)}
-                    </span>
-                  )}
-                  {msg.quantum_used && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-900 text-cyan-300">⚛ quantum</span>
-                  )}
-                </div>
+          {messages.map(msg => {
+            const isUser = msg.sender === 'user'
+            return (
+              <div
+                key={msg.id}
+                className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+              >
+                <article
+                  aria-label={`${isUser ? username || 'You' : 'TRANC3'} at ${msg.timestamp.toLocaleTimeString()}`}
+                  className={`max-w-lg rounded-2xl px-4 py-3 ${
+                    isUser ? 'bg-blue-600 text-white' : msgAi
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <time
+                      dateTime={msg.timestamp.toISOString()}
+                      className="text-xs opacity-50"
+                    >
+                      {msg.timestamp.toLocaleTimeString()}
+                    </time>
+                    {msg.emotion && msg.emotion !== 'neutral' && (
+                      <span
+                        aria-label={`Detected emotion: ${msg.emotion}`}
+                        className="text-xs opacity-60 bg-black/20 rounded px-1"
+                      >
+                        {msg.emotion}
+                      </span>
+                    )}
+                    {msg.phi !== undefined && msg.phi !== null && (
+                      <span
+                        aria-label={`Consciousness level phi ${msg.phi.toFixed(2)}`}
+                        className={`text-xs px-2 py-0.5 rounded-full font-mono ${
+                          msg.phi > 2.0 ? 'bg-purple-600 text-white'
+                          : msg.phi > 1.0 ? 'bg-purple-900 text-purple-300'
+                          : 'bg-gray-700 text-gray-400'
+                        }`}
+                      >
+                        Φ {msg.phi.toFixed(2)}
+                      </span>
+                    )}
+                    {msg.quantum_used && (
+                      <span
+                        aria-label="Quantum processing used"
+                        className="text-xs px-2 py-0.5 rounded-full bg-cyan-900 text-cyan-300"
+                      >
+                        ⚛ quantum
+                      </span>
+                    )}
+                  </div>
+                </article>
               </div>
-            </div>
-          ))}
+            )
+          })}
 
           {loading && (
-            <div className="flex justify-start">
-              <div className={`rounded-2xl px-4 py-3 ${msgAi}`}>
+            <div className="flex justify-start" aria-label="TRANC3 is typing" role="status">
+              <div className={`rounded-2xl px-4 py-3 ${msgAi}`} aria-hidden="true">
                 <div className="flex gap-1">
                   {[0, 1, 2].map(i => (
-                    <div key={i} className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: `${i * 0.15}s` }} />
+                    <div
+                      key={i}
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: `${i * 0.15}s` }}
+                    />
                   ))}
                 </div>
               </div>
             </div>
           )}
-          <div ref={bottomRef} />
+          <div ref={bottomRef} aria-hidden="true" />
         </div>
 
+        {/* Input bar */}
         <div className={`px-6 py-4 border-t ${header}`}>
-          <div className="flex gap-3">
-            <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
+          <form
+            onSubmit={e => { e.preventDefault(); send() }}
+            className="flex gap-3"
+            aria-label="Send a message"
+          >
+            <label htmlFor="chat-input" className="sr-only">Message</label>
+            <input
+              id="chat-input"
+              ref={inputRef}
+              value={input}
+              onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
-              placeholder="Type a message..."
-              aria-label="Message input"
+              placeholder="Type a message…"
+              aria-label="Message"
+              aria-describedby="chat-input-hint"
               className={`flex-1 rounded-xl px-4 py-3 text-sm border focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 ${inputBg}`}
-              disabled={loading} />
-            <button aria-label="Send message" onClick={send} disabled={loading || !input.trim()}
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
-              <Send className="w-4 h-4" />
+              disabled={loading}
+            />
+            <span id="chat-input-hint" className="sr-only">
+              Press Enter to send, or Shift+Enter for a new line
+            </span>
+            <button
+              type="submit"
+              aria-label="Send message"
+              disabled={loading || !input.trim()}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            >
+              <Send className="w-4 h-4" aria-hidden="true" />
             </button>
-          </div>
+          </form>
         </div>
       </div>
     </div>

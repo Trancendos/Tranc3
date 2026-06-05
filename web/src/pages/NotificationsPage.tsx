@@ -31,9 +31,9 @@ const MOCK_CHANNELS: Channel[] = [
 ]
 
 function channelIcon(type: Channel['type']) {
-  if (type === 'email') return <Mail size={14} />
-  if (type === 'webhook') return <Zap size={14} />
-  return <Bell size={14} />
+  if (type === 'email')   return <Mail    size={14} aria-hidden="true" />
+  if (type === 'webhook') return <Zap     size={14} aria-hidden="true" />
+  return                         <Bell    size={14} aria-hidden="true" />
 }
 
 function statusColor(s: Channel['status']) {
@@ -85,7 +85,7 @@ export default function NotificationsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Bell size={22} className="text-indigo-400" />
+            <Bell size={22} className="text-indigo-400" aria-hidden="true" />
             Alerts &amp; Notifications
           </h1>
           <p className="text-gray-400 text-sm mt-1">
@@ -96,7 +96,8 @@ export default function NotificationsPage() {
           {unread > 0 && (
             <button
               onClick={markAllRead}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-gray-300 transition-colors"
+              aria-label={`Mark all ${unread} notifications as read`}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             >
               Mark all read
             </button>
@@ -104,10 +105,12 @@ export default function NotificationsPage() {
           <button
             onClick={fetchStatus}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm text-white transition-colors"
+            aria-busy={loading}
+            aria-label={loading ? 'Refreshing notifications' : 'Refresh notifications'}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Refresh
+            <RefreshCw size={14} aria-hidden="true" className={loading ? 'animate-spin' : ''} />
+            {loading ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>
       </div>
@@ -119,27 +122,44 @@ export default function NotificationsPage() {
           {channels.map((ch) => {
             const pct = ch.dailyLimit ? Math.round((ch.dailyUsed ?? 0) / ch.dailyLimit * 100) : 0
             return (
-              <div key={ch.id} className="bg-gray-900 border border-gray-700 rounded-lg p-4">
+              <div
+                key={ch.id}
+                aria-label={`${ch.name} — ${ch.status}`}
+                className="bg-gray-900 border border-gray-700 rounded-lg p-4"
+              >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2 text-gray-200 text-sm font-medium">
                     {channelIcon(ch.type)}
                     {ch.name}
                   </div>
-                  <span className={`text-xs ${statusColor(ch.status)}`}>
-                    {ch.status === 'active' ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                  <span
+                    className={`text-xs ${statusColor(ch.status)}`}
+                    aria-label={ch.status === 'active' ? 'Active' : 'Inactive'}
+                  >
+                    {ch.status === 'active'
+                      ? <CheckCircle size={14} aria-hidden="true" />
+                      : <XCircle    size={14} aria-hidden="true" />}
                   </span>
                 </div>
                 {ch.dailyLimit != null && (
                   <>
-                    <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden mb-1">
+                    <div
+                      role="progressbar"
+                      aria-valuenow={pct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${ch.name}: ${pct}% of daily quota used`}
+                      className="h-1.5 bg-gray-700 rounded-full overflow-hidden mb-1"
+                    >
                       <div
+                        aria-hidden="true"
                         className={`h-full rounded-full transition-all ${
                           pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-yellow-500' : 'bg-green-500'
                         }`}
                         style={{ width: `${Math.min(pct, 100)}%` }}
                       />
                     </div>
-                    <p className="text-gray-500 text-xs">
+                    <p className="text-gray-500 text-xs" aria-hidden="true">
                       {ch.dailyUsed ?? 0} / {ch.dailyLimit} today ({pct}%)
                     </p>
                   </>
@@ -160,19 +180,25 @@ export default function NotificationsPage() {
         <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
           Recent Alerts
           {unread > 0 && (
-            <span className="text-xs bg-red-500 text-white rounded-full px-2 py-0.5">{unread}</span>
+            <span
+              aria-label={`${unread} unread`}
+              className="text-xs bg-red-500 text-white rounded-full px-2 py-0.5 tabular-nums"
+            >
+              {unread}
+            </span>
           )}
         </h2>
         {notifications.length === 0 ? (
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-8 text-center text-gray-500">
-            <Bell size={32} className="mx-auto mb-2 opacity-30" />
+          <div role="status" className="bg-gray-900 border border-gray-700 rounded-lg p-8 text-center text-gray-500">
+            <Bell size={32} aria-hidden="true" className="mx-auto mb-2 opacity-30" />
             <p>No notifications yet.</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <ol aria-label="Recent alerts" aria-live="polite" className="space-y-2 list-none">
             {notifications.map((n) => (
-              <div
+              <li
                 key={n.id}
+                aria-label={`${n.type}: ${n.title}${n.read ? ', read' : ', unread'}`}
                 className={`border rounded-lg p-4 ${notifColor(n.type)} ${n.read ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-start justify-between">
@@ -180,13 +206,13 @@ export default function NotificationsPage() {
                     <p className="text-white text-sm font-medium">{n.title}</p>
                     <p className="text-gray-400 text-xs mt-0.5">{n.message}</p>
                   </div>
-                  <span className="text-gray-500 text-xs whitespace-nowrap ml-4">
+                  <time dateTime={n.timestamp} className="text-gray-500 text-xs whitespace-nowrap ml-4">
                     {new Date(n.timestamp).toLocaleTimeString()}
-                  </span>
+                  </time>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ol>
         )}
       </div>
     </div>
