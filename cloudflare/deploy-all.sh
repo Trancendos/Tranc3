@@ -28,16 +28,67 @@ MODE="${1:-all}"
 
 # ── Secrets setup ─────────────────────────────────────────────────────────────
 set_secrets() {
-  step "Setting secrets for tranc3-ai (adaptive AI rotation)"
+  step "Setting secrets for tranc3-ai (adaptive AI rotation — 12 free providers)"
   echo "Set all free-tier API keys. Press Enter to skip any you don't have yet."
   echo "You need at least ONE to enable non-stub AI responses."
+  echo "All providers listed are genuinely free — no credit card required."
+  echo
+  echo "  Sign-up links (all free):"
+  echo "    GROQ        → console.groq.com"
+  echo "    GEMINI      → aistudio.google.com"
+  echo "    CEREBRAS    → cerebras.ai"
+  echo "    SAMBANOVA   → sambanova.ai"
+  echo "    OPENROUTER  → openrouter.ai"
+  echo "    HF          → huggingface.co"
+  echo "    DEEPSEEK    → platform.deepseek.com"
+  echo "    MISTRAL     → console.mistral.ai"
+  echo "    COHERE      → dashboard.cohere.com"
+  echo "    TOGETHER    → api.together.ai"
+  echo "    FIREWORKS   → fireworks.ai"
   echo
 
   for key in GROQ_API_KEY GEMINI_API_KEY CEREBRAS_API_KEY SAMBANOVA_API_KEY \
-             OPENROUTER_API_KEY HF_API_KEY DEEPSEEK_API_KEY TRANC3_AUTH_URL ALLOWED_ORIGINS; do
+             OPENROUTER_API_KEY HF_API_KEY DEEPSEEK_API_KEY \
+             MISTRAL_API_KEY COHERE_API_KEY TOGETHER_API_KEY FIREWORKS_API_KEY \
+             TRANC3_AUTH_URL ALLOWED_ORIGINS; do
     read -rp "  $key (enter to skip): " val
     if [[ -n "$val" ]]; then
       echo "$val" | wrangler secret put "$key" --name tranc3-ai
+      green "    ✓ $key set"
+    else
+      yellow "    ↷ $key skipped"
+    fi
+  done
+
+  step "Setting secrets for tranc3-notifications (adaptive email rotation)"
+  echo "All 3 email providers are genuinely free forever:"
+  echo "  Resend   → resend.com     (3K emails/month free)"
+  echo "  Brevo    → brevo.com      (9K emails/month free)"
+  echo "  Mailjet  → mailjet.com    (6K emails/month free)"
+  echo
+
+  for key in RESEND_API_KEY BREVO_API_KEY MAILJET_API_KEY MAILJET_SECRET_KEY FROM_EMAIL FROM_NAME; do
+    read -rp "  $key (enter to skip): " val
+    if [[ -n "$val" ]]; then
+      echo "$val" | wrangler secret put "$key" --name tranc3-notifications
+      green "    ✓ $key set"
+    else
+      yellow "    ↷ $key skipped"
+    fi
+  done
+
+  step "Setting secrets for tranc3-storage (adaptive storage rotation)"
+  echo "Storage provider rotation — all genuinely free forever:"
+  echo "  Cloudflare R2 → 10 GB free (configured via R2 binding — no secret needed)"
+  echo "  Backblaze B2  → backblaze.com    (10 GB free forever)"
+  echo "  Oracle Cloud  → oracle.com/cloud (20 GB free forever — Always Free tier)"
+  echo
+
+  for key in BACKBLAZE_KEY_ID BACKBLAZE_APP_KEY BACKBLAZE_BUCKET_ID BACKBLAZE_BUCKET_NAME \
+             ORACLE_NAMESPACE ORACLE_BUCKET_NAME ORACLE_REGION ORACLE_ACCESS_KEY ORACLE_SECRET_KEY; do
+    read -rp "  $key (enter to skip): " val
+    if [[ -n "$val" ]]; then
+      echo "$val" | wrangler secret put "$key" --name tranc3-storage
       green "    ✓ $key set"
     else
       yellow "    ↷ $key skipped"
@@ -65,11 +116,25 @@ set_secrets() {
 
 # ── Deploy workers ─────────────────────────────────────────────────────────────
 deploy_workers() {
-  step "Deploying tranc3-ai (adaptive AI gateway)"
+  step "Deploying tranc3-ai (adaptive AI gateway — 12 free providers)"
   cd "$SCRIPT_DIR/tranc3-ai"
   npm ci --silent
   wrangler deploy
   green "✓ tranc3-ai deployed → https://tranc3-ai.luminous-aimastermind.workers.dev"
+
+  step "Deploying tranc3-notifications (adaptive email rotation — Resend+Brevo+Mailjet)"
+  cd "$SCRIPT_DIR/notifications-rotation"
+  npm ci --silent
+  wrangler deploy
+  green "✓ tranc3-notifications deployed → https://tranc3-notifications.luminous-aimastermind.workers.dev"
+
+  step "Deploying tranc3-storage (adaptive storage rotation — R2+B2+Oracle)"
+  cd "$SCRIPT_DIR/storage-rotation"
+  # Create R2 bucket if it doesn't exist
+  wrangler r2 bucket create trancendos-storage 2>/dev/null || true
+  npm ci --silent
+  wrangler deploy
+  green "✓ tranc3-storage deployed → https://tranc3-storage.luminous-aimastermind.workers.dev"
 
   step "Deploying infinity-void (encrypted secrets vault)"
   cd "$SCRIPT_DIR/infinity-void"
@@ -126,10 +191,19 @@ green "════════════════════════�
 green "  Deploy complete!"
 green ""
 green "  Frontend:    https://trancendos.com"
-green "  AI Gateway:  https://tranc3-ai.luminous-aimastermind.workers.dev/health"
-green "  API Gateway: https://trancendos-api-gateway.luminous-aimastermind.workers.dev/health"
-green "  The Void:    https://infinity-void.luminous-aimastermind.workers.dev/health"
+green "  AI Gateway:      https://tranc3-ai.luminous-aimastermind.workers.dev/health"
+green "  Email Rotation:  https://tranc3-notifications.luminous-aimastermind.workers.dev/health"
+green "  Storage Rotation:https://tranc3-storage.luminous-aimastermind.workers.dev/health"
+green "  API Gateway:     https://trancendos-api-gateway.luminous-aimastermind.workers.dev/health"
+green "  The Void:        https://infinity-void.luminous-aimastermind.workers.dev/health"
 green ""
-green "  To check AI provider status:"
+green "  To check adaptive rotation status:"
 green "  curl https://tranc3-ai.luminous-aimastermind.workers.dev/api/v1/ai/status"
+green "  curl https://tranc3-notifications.luminous-aimastermind.workers.dev/status"
+green "  curl https://tranc3-storage.luminous-aimastermind.workers.dev/status"
+green ""
+green "  Zero-cost capacity per day:"
+green "    AI:      ~18,000 requests (12 providers combined)"
+green "    Email:   600 emails/day (Resend 100 + Brevo 300 + Mailjet 200)"
+green "    Storage: 40 GB total (R2 10GB + B2 10GB + Oracle 20GB)"
 green "════════════════════════════════════════════════════════"

@@ -32,6 +32,10 @@ id = "f321bee2495547ad9e224522f214defd"
 # DEEPSEEK_API_KEY   → https://platform.deepseek.com (free tier)
 # TRANC3_AUTH_URL    → https://infinity-auth-api.luminous-aimastermind.workers.dev
 # ALLOWED_ORIGINS    → https://trancendos.com (comma-separated extras)
+# MISTRAL_API_KEY    → https://console.mistral.ai (free plan — 500K tokens/month)
+# COHERE_API_KEY     → https://dashboard.cohere.com (free trial — 1K req/month)
+# TOGETHER_API_KEY   → https://api.together.ai (free $1 credit)
+# FIREWORKS_API_KEY  → https://fireworks.ai (free $1/month credit)
 
 # ── Deploy ────────────────────────────────────────────────────────────────────
 # wrangler secret put GROQ_API_KEY

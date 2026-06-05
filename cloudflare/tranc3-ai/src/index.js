@@ -6,16 +6,20 @@
  * Daily usage tracked in KV — automatically switches providers
  * when a limit approaches, ensuring 100% uptime at £0.
  *
- * Provider rotation (all free tier):
- *   1. Cloudflare Workers AI — on-platform, fastest, ~10K req/day free
- *   2. Groq                  — 6,000 RPM free (llama-3.1-8b-instant)
- *   3. Google Gemini         — 15 RPM / 1M TPD free (gemini-1.5-flash)
- *   4. Cerebras              — 60 RPM free (llama3.1-8b)
- *   5. SambaNova             — 80 RPD free (Meta-Llama-3.1-8B-Instruct)
- *   6. OpenRouter            — free models (meta-llama/llama-3.2-3b:free)
- *   7. HuggingFace           — Inference API free tier
- *   8. DeepSeek              — free tier (deepseek-chat)
- *   9. Honest stub           — always available, honest "degraded" response
+ * Provider rotation (all genuinely free tier, zero cost):
+ *   1.  Cloudflare Workers AI — on-platform, fastest, ~10K req/day free
+ *   2.  Groq                  — 6,000 RPM free (llama-3.1-8b-instant)
+ *   3.  Google Gemini         — 15 RPM / 1M TPD free (gemini-1.5-flash)
+ *   4.  Cerebras              — 60 RPM free (llama3.1-8b)
+ *   5.  SambaNova             — 80 RPD free (Meta-Llama-3.1-8B-Instruct)
+ *   6.  OpenRouter            — free models (meta-llama/llama-3.2-3b:free)
+ *   7.  HuggingFace           — Inference API free tier
+ *   8.  DeepSeek              — free tier (deepseek-chat)
+ *   9.  Mistral               — free tier (mistral-small-latest, 500K tokens/month)
+ *   10. Cohere                — free tier (command-r, 1K req/month)
+ *   11. Together AI           — free tier ($1 credit, refreshes, llama-3.2-3b)
+ *   12. Fireworks AI          — free tier (accounts/fireworks/models/llama-v3p1-8b-instruct)
+ *   13. Honest stub           — always available, honest "degraded" response
  *
  * Bindings required (wrangler.toml + secrets):
  *   AI                → Workers AI binding (automatic on free plan)
@@ -27,9 +31,13 @@
  *   SAMBANOVA_API_KEY → secret
  *   OPENROUTER_API_KEY→ secret
  *   HF_API_KEY        → secret
- *   DEEPSEEK_API_KEY  → secret
- *   TRANC3_AUTH_URL   → infinity-auth-api worker URL (optional — skips JWT check if unset)
- *   ALLOWED_ORIGINS   → extra CORS origins (comma-separated)
+ *   DEEPSEEK_API_KEY   → secret
+ *   MISTRAL_API_KEY    → secret (console.mistral.ai — free tier)
+ *   COHERE_API_KEY     → secret (dashboard.cohere.com — free trial, 1K req/month)
+ *   TOGETHER_API_KEY   → secret (api.together.ai — free $1 credit)
+ *   FIREWORKS_API_KEY  → secret (fireworks.ai — free tier)
+ *   TRANC3_AUTH_URL    → infinity-auth-api worker URL (optional — skips JWT check if unset)
+ *   ALLOWED_ORIGINS    → extra CORS origins (comma-separated)
  */
 
 // ── Provider definitions ───────────────────────────────────────────────────
@@ -177,6 +185,95 @@ const PROVIDERS = [
       if (!res.ok) throw new Error(`DeepSeek HTTP ${res.status}`);
       const data = await res.json();
       return { content: data.choices[0].message.content, provider: "deepseek", model: "deepseek-chat" };
+    },
+  },
+  // ── Extended rotation — more genuinely free providers ────────────────────
+  {
+    id: "mistral",
+    name: "Mistral AI",
+    // Free tier: La Plateforme free plan — 500K tokens/month (~16K tokens/day)
+    dailyLimit: 400,
+    available: (env) => !!env.MISTRAL_API_KEY,
+    chat: async (env, messages) => {
+      const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.MISTRAL_API_KEY}` },
+        body: JSON.stringify({ model: "mistral-small-latest", messages, max_tokens: 1024 }),
+      });
+      if (!res.ok) throw new Error(`Mistral HTTP ${res.status}`);
+      const data = await res.json();
+      return { content: data.choices[0].message.content, provider: "mistral", model: "mistral-small-latest" };
+    },
+  },
+  {
+    id: "cohere",
+    name: "Cohere",
+    // Free trial: 1,000 API calls/month (~33/day)
+    dailyLimit: 32,
+    available: (env) => !!env.COHERE_API_KEY,
+    chat: async (env, messages) => {
+      // Cohere uses its own message format
+      const systemMsg = messages.find((m) => m.role === "system");
+      const chatHistory = messages
+        .filter((m) => m.role !== "system" && m !== messages[messages.length - 1])
+        .map((m) => ({ role: m.role === "assistant" ? "CHATBOT" : "USER", message: m.content }));
+      const lastUser = messages.filter((m) => m.role === "user").pop();
+      const res = await fetch("https://api.cohere.com/v1/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.COHERE_API_KEY}` },
+        body: JSON.stringify({
+          model: "command-r",
+          message: lastUser?.content || "",
+          preamble: systemMsg?.content,
+          chat_history: chatHistory,
+          max_tokens: 1024,
+        }),
+      });
+      if (!res.ok) throw new Error(`Cohere HTTP ${res.status}`);
+      const data = await res.json();
+      return { content: data.text, provider: "cohere", model: "command-r" };
+    },
+  },
+  {
+    id: "together",
+    name: "Together AI",
+    // Free tier: $1 credit on signup (refreshes periodically), ~500 short calls
+    dailyLimit: 50,
+    available: (env) => !!env.TOGETHER_API_KEY,
+    chat: async (env, messages) => {
+      const res = await fetch("https://api.together.xyz/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.TOGETHER_API_KEY}` },
+        body: JSON.stringify({
+          model: "meta-llama/Llama-3.2-3B-Instruct-Turbo",
+          messages,
+          max_tokens: 1024,
+        }),
+      });
+      if (!res.ok) throw new Error(`Together AI HTTP ${res.status}`);
+      const data = await res.json();
+      return { content: data.choices[0].message.content, provider: "together", model: "Llama-3.2-3B-Instruct-Turbo" };
+    },
+  },
+  {
+    id: "fireworks",
+    name: "Fireworks AI",
+    // Free tier: $1/month credit — ~1000 short inference calls
+    dailyLimit: 33,
+    available: (env) => !!env.FIREWORKS_API_KEY,
+    chat: async (env, messages) => {
+      const res = await fetch("https://api.fireworks.ai/inference/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.FIREWORKS_API_KEY}` },
+        body: JSON.stringify({
+          model: "accounts/fireworks/models/llama-v3p1-8b-instruct",
+          messages,
+          max_tokens: 1024,
+        }),
+      });
+      if (!res.ok) throw new Error(`Fireworks HTTP ${res.status}`);
+      const data = await res.json();
+      return { content: data.choices[0].message.content, provider: "fireworks", model: "llama-v3p1-8b-instruct" };
     },
   },
 ];
