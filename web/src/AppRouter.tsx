@@ -57,8 +57,13 @@ export default function AppRouter() {
     <BrowserRouter>
       <React.Suspense
         fallback={
-          <div className="flex items-center justify-center h-screen bg-gray-950 text-gray-400 text-sm">
-            Loading…
+          <div
+            role="status"
+            aria-label="Loading page"
+            aria-live="polite"
+            className="flex items-center justify-center h-screen bg-gray-950 text-gray-400 text-sm"
+          >
+            <span aria-hidden="true">Loading…</span>
           </div>
         }
       >

@@ -59,11 +59,14 @@ export default function LoginPage({ onLogin }: Props) {
                     <p className="text-gray-400 text-sm mt-1">Conscious AI Platform</p>
                 </div>
 
-                <div className="flex rounded-lg bg-gray-800 p-1 mb-6">
+                <div role="group" aria-label="Account action" className="flex rounded-lg bg-gray-800 p-1 mb-6">
                     {(['login', 'register'] as const).map(m => (
-                        <button key={m} onClick={() => setMode(m)}
-                            className={`focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent flex-1 py-2 rounded-md text-sm font-medium transition-all ${mode === m ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
-                                }`}>
+                        <button
+                            key={m}
+                            onClick={() => setMode(m)}
+                            aria-pressed={mode === m}
+                            className={`focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent flex-1 py-2 rounded-md text-sm font-medium transition-all ${mode === m ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                        >
                             {m === 'login' ? 'Sign In' : 'Register'}
                         </button>
                     ))}

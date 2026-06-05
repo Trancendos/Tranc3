@@ -41,6 +41,11 @@ export default function ChatView() {
   const [input, setInput]         = useState('')
   const [loading, setLoading]     = useState(false)
   const [language, setLanguage]   = useState('en')
+
+  // Sync <html lang> with selected language
+  React.useEffect(() => {
+    document.documentElement.setAttribute('lang', language)
+  }, [language])
   const [personality, setPersonality] = useState('tranc3-base')
   const [emotion, setEmotion]     = useState('neutral')
   const [personalities, setPersonalities] = useState<Personality[]>([
@@ -425,6 +430,7 @@ export default function ChatView() {
               placeholder="Type a message…"
               aria-label="Message"
               aria-describedby="chat-input-hint"
+              inputMode="text"
               className={`flex-1 rounded-xl px-4 py-3 text-sm border focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 ${inputBg}`}
               disabled={loading}
             />
