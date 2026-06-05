@@ -1728,6 +1728,72 @@ async def admin_healing(
     return {"history": self_healer.get_history()}
 
 
+@app.post(
+    "/admin/settings",
+    tags=["admin"],
+    summary="Persist runtime settings",
+    description=(
+        "Accepts a JSON body of key-value pairs (API keys, env var overrides). "
+        "Values are stored in the process environment for the session. "
+        "Sensitive keys are redacted from logs. "
+        "Does NOT persist across restarts — use Docker .env or Vault for permanent storage."
+    ),
+)
+async def admin_settings_write(
+    payload: dict,
+    current_user: dict = Depends(get_current_user),
+    _perm: None = require_permission("admin:config"),
+):
+    """Store runtime setting overrides in the process environment."""
+    import os
+    from src.errors.error_catalog import ErrorCode
+
+    SENSITIVE = {"SECRET_KEY", "JWT_SECRET", "DATABASE_URL", "REDIS_URL"}
+    ALLOWED_KEYS = {
+        "GROQ_API_KEY", "GOOGLE_GEMINI_API_KEY", "GITHUB_TOKEN",
+        "CEREBRAS_API_KEY", "SAMBANOVA_API_KEY", "MISTRAL_API_KEY",
+        "COHERE_API_KEY", "DEEPSEEK_API_KEY", "OLLAMA_URL",
+        "SECRET_KEY", "JWT_SECRET", "DATABASE_URL", "REDIS_URL",
+    }
+    updated = []
+    skipped = []
+    for k, v in payload.items():
+        if k not in ALLOWED_KEYS:
+            skipped.append(k)
+            continue
+        if isinstance(v, str) and v:
+            os.environ[k] = v
+            updated.append(k if k not in SENSITIVE else f"{k}=***")
+    return {
+        "updated": updated,
+        "skipped": skipped,
+        "note": "Changes are in-process only. Restart or use .env for persistence.",
+    }
+
+
+@app.get(
+    "/admin/settings",
+    tags=["admin"],
+    summary="List runtime setting keys",
+    description="Returns which allowed setting keys are currently set (values are redacted).",
+)
+async def admin_settings_read(
+    current_user: dict = Depends(get_current_user),
+    _perm: None = require_permission("admin:config"),
+):
+    import os
+    ALLOWED_KEYS = {
+        "GROQ_API_KEY", "GOOGLE_GEMINI_API_KEY", "GITHUB_TOKEN",
+        "CEREBRAS_API_KEY", "SAMBANOVA_API_KEY", "MISTRAL_API_KEY",
+        "COHERE_API_KEY", "DEEPSEEK_API_KEY", "OLLAMA_URL",
+        "SECRET_KEY", "JWT_SECRET", "DATABASE_URL", "REDIS_URL",
+    }
+    return {
+        k: ("set" if os.environ.get(k) else "unset")
+        for k in sorted(ALLOWED_KEYS)
+    }
+
+
 @app.get(
     "/errors/{error_code}",
     tags=["docs"],

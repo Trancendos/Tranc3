@@ -902,6 +902,29 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8035/health"]
       <<: *healthcheck-default
 
+  sentinel-station-service:
+    <<: *worker-platform
+    build: { context: ./workers/sentinel-station-service, dockerfile: Dockerfile }
+    container_name: sentinel-station-service-worker
+    ports: ["8041:8041"]
+    environment:
+      SENTINEL_PORT: "8041"
+      SENTINEL_DB_PATH: /data/sentinel_station.db
+    volumes:
+      - sentinel-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8041/health"]
+      <<: *healthcheck-default
+
+  skills-benchmark-service:
+    <<: *worker-platform
+    build: { context: ./workers/skills-benchmark-service, dockerfile: Dockerfile }
+    container_name: skills-benchmark-service-worker
+    ports: ["8035:8035"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8035/health"]
+      <<: *healthcheck-default
+
   langchain-integration-service:
     <<: *worker-platform
     build: { context: ./workers/langchain-integration-service, dockerfile: Dockerfile }
@@ -1685,6 +1708,8 @@ volumes:
   signoz-clickhouse-logs:
     driver: local
   signoz-query-data:
+    driver: local
+  sentinel-data:
     driver: local
   portal-data:
     driver: local
