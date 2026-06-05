@@ -10,17 +10,49 @@ HashiCorp Vault on the Citadel. Single-node file-backed storage.
 | Task | Command |
 |---|---|
 | First-time init | `./scripts/vault-init.sh [--load-env .env.production]` |
-| Unseal after reboot | `./scripts/vault-unseal.sh --from-file` |
-| Unseal (manual keys) | `./scripts/vault-unseal.sh` |
-| Check Vault status | `./scripts/vault-unseal.sh --status` |
+| Unseal (from encrypted file) | `./scripts/vault-unseal.sh --from-file --verify` |
+| Unseal (manual key entry) | `./scripts/vault-unseal.sh` |
+| Unseal + renew tokens | `./scripts/vault-unseal.sh --from-file --verify --token-renew` |
+| Unseal non-interactively | `UNSEAL_PASSPHRASE="…" ./scripts/vault-unseal.sh --from-file --wait --json` |
+| Unseal with specific keys | `./scripts/vault-unseal.sh --from-file --key-index 2,4,5` |
+| Watch mode (auto re-unseal) | `./scripts/vault-unseal.sh --watch --from-file &` |
+| Check Vault status (human) | `./scripts/vault-unseal.sh --status` |
+| Check Vault status (JSON) | `./scripts/vault-unseal.sh --status --json` |
+| View unseal keys | `./scripts/vault-unseal.sh --decrypt-keys` |
+| View tokens | `./scripts/vault-unseal.sh --decrypt-tokens` |
 | Push .env → Vault | `./scripts/vault-sync-secrets.sh --push --env-file .env.production` |
 | Pull Vault → .env | `./scripts/vault-sync-secrets.sh --pull` |
 | List secrets | `./scripts/vault-sync-secrets.sh --list` |
 | Rotate all secrets | `./scripts/rotate-secrets.sh --all` |
 | Rotate specific keys | `./scripts/rotate-secrets.sh --keys SECRET_KEY,JWT_SECRET` |
 | Generate + push | `./scripts/generate_production_env.sh --force --push-to-vault` |
-| View unseal keys | `./scripts/vault-unseal.sh --decrypt-keys` |
-| View tokens | `./scripts/vault-unseal.sh --decrypt-tokens` |
+
+### vault-unseal.sh flags
+
+| Flag | Description |
+|---|---|
+| `--from-file` | Decrypt `vault-keys.enc` and use keys 1-3 automatically |
+| `--key-index N,M,P` | Use specific key indices from file (e.g. `2,4,5` instead of `1,2,3`) |
+| `--watch` | Daemon mode: poll every `--poll-interval` seconds, re-unseal on seal |
+| `--wait` | Wait up to `--timeout` seconds for Vault to start before attempting |
+| `--verify` | After unsealing, confirm KV accessible, token valid, audit log enabled |
+| `--snapshot` | Trigger raft snapshot before unsealing (no-op on file storage) |
+| `--token-renew` | Renew app + admin tokens from `vault-tokens.enc` after unsealing |
+| `--json` | Emit structured JSON result (for Ansible/CI) |
+| `--timeout N` | Seconds to wait in `--wait` mode (default: 120) |
+| `--poll-interval N` | Seconds between polls in `--watch` mode (default: 30) |
+| `UNSEAL_PASSPHRASE=…` | Skip passphrase prompt (set in env for non-interactive use) |
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Vault unsealed (or was already unsealed) |
+| `1` | Error / unexpected failure |
+| `2` | Vault sealed, no action taken (`--status` only) |
+| `3` | Vault not reachable |
+| `4` | Wrong passphrase or corrupted key file |
+| `5` | Vault not initialised |
 
 ---
 
