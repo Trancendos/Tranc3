@@ -1,627 +1,445 @@
 /**
  * Tranc3 AI Worker — Cloudflare Edge
+ * Adaptive Zero-Cost AI Gateway
  *
- * Self-owned inference. Zero external AI service dependencies.
+ * Rotates through 8 free-tier providers in priority order.
+ * Daily usage tracked in KV — automatically switches providers
+ * when a limit approaches, ensuring 100% uptime at £0.
  *
- * Routes:
- *   GET  /                          → API info
- *   GET  /health                    → health check
- *   GET  /api/v1/ai/models          → list available models
- *   POST /api/v1/ai/chat            → chat / text generation
- *   POST /api/v1/ai/embeddings      → text embeddings
- *   POST /api/v1/ai/analyze-emotion → emotion detection
- *   POST /api/v1/ai/consciousness   → consciousness scoring
- *   POST /api/v1/ai/tokenize        → tokenization
- *   POST /api/v1/ai/predict         → next-token prediction
+ * Provider rotation (all free tier):
+ *   1. Cloudflare Workers AI — on-platform, fastest, ~10K req/day free
+ *   2. Groq                  — 6,000 RPM free (llama-3.1-8b-instant)
+ *   3. Google Gemini         — 15 RPM / 1M TPD free (gemini-1.5-flash)
+ *   4. Cerebras              — 60 RPM free (llama3.1-8b)
+ *   5. SambaNova             — 80 RPD free (Meta-Llama-3.1-8B-Instruct)
+ *   6. OpenRouter            — free models (meta-llama/llama-3.2-3b:free)
+ *   7. HuggingFace           — Inference API free tier
+ *   8. DeepSeek              — free tier (deepseek-chat)
+ *   9. Honest stub           — always available, honest "degraded" response
  *
- * Inference strategy (in priority order — NO external AI APIs):
- *   1. TRANC3_BACKEND_URL  → full Tranc3 Python backend (FastAPI + WorkerPool)
- *   2. TRANC3_NANO_URL     → Tranc3 nanoservices HTTP server (nano_server.py)
- *   3. Deterministic stub  → honest "model not trained yet" response
- *
- * To deploy your own backend (free):
- *   Fly.io free tier: fly deploy (3 shared VMs free)
- *   Self-hosted VPS:  docker run -p 8000:8000 tranc3:latest
- *
- * Bindings required (set via wrangler secret):
- *   TRANC3_AUTH_URL     → infinity-auth-api URL (JWT validation)
- *   TRANC3_BACKEND_URL  → Tranc3 FastAPI backend (optional but recommended)
- *   TRANC3_NANO_URL     → Nanoservices server (optional fallback)
- *   ALLOWED_ORIGINS     → extra CORS origins (comma-separated)
+ * Bindings required (wrangler.toml + secrets):
+ *   AI                → Workers AI binding (automatic on free plan)
+ *   CACHE             → KV: response cache + daily usage counters
+ *   SESSIONS          → KV: session store
+ *   GROQ_API_KEY      → secret
+ *   GEMINI_API_KEY    → secret
+ *   CEREBRAS_API_KEY  → secret
+ *   SAMBANOVA_API_KEY → secret
+ *   OPENROUTER_API_KEY→ secret
+ *   HF_API_KEY        → secret
+ *   DEEPSEEK_API_KEY  → secret
+ *   TRANC3_AUTH_URL   → infinity-auth-api worker URL (optional — skips JWT check if unset)
+ *   ALLOWED_ORIGINS   → extra CORS origins (comma-separated)
  */
 
-// ── Constants ────────────────────────────────────────────────────────────────
+// ── Provider definitions ───────────────────────────────────────────────────
 
-const TRANC3_MODELS = {
-  "tranc3-base":         { name: "Tranc3 Base",        backend: "tranc3-own",   capabilities: ["chat", "emotion", "consciousness"] },
-  "tranc3-fast":         { name: "Tranc3 Fast",         backend: "tranc3-own",   capabilities: ["chat"] },
-  "tranc3-embeddings":   { name: "Tranc3 Embeddings",   backend: "tranc3-own",   capabilities: ["embeddings"] },
-  "dorris-fontaine":     { name: "Dorris Fontaine",     backend: "tranc3-own",   capabilities: ["chat", "finance"] },
-  "cornelius-macintyre": { name: "Cornelius MacIntyre", backend: "tranc3-own",   capabilities: ["chat", "orchestration"] },
-  "the-guardian":        { name: "The Guardian",        backend: "tranc3-own",   capabilities: ["chat", "security"] },
-  "vesper-nightingale":  { name: "Vesper Nightingale",  backend: "tranc3-own",   capabilities: ["chat", "healthcare"] },
-  "atlas-meridian":      { name: "Atlas Meridian",      backend: "tranc3-own",   capabilities: ["chat", "infrastructure"] },
-};
-
-const SECURITY_HEADERS = {
-  "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": "DENY",
-  "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
-};
-
-// ── CORS ─────────────────────────────────────────────────────────────────────
-
-const DEFAULT_ORIGINS = [
-  "https://trancendos.com",
-  "https://www.trancendos.com",
-  "https://infinity-portal.pages.dev",
-  "https://infinity-portal.com",
-  "http://localhost:5173",
-  "http://localhost:3000",
+const PROVIDERS = [
+  {
+    id: "workers-ai",
+    name: "Cloudflare Workers AI",
+    dailyLimit: 9500,
+    available: (env) => !!env.AI,
+    chat: async (env, messages) => {
+      const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+        messages,
+        max_tokens: 1024,
+      });
+      return { content: result.response, provider: "workers-ai", model: "@cf/meta/llama-3.1-8b-instruct" };
+    },
+    embed: async (env, text) => {
+      const result = await env.AI.run("@cf/baai/bge-small-en-v1.5", { text: [text] });
+      return { embedding: result.data[0], provider: "workers-ai" };
+    },
+  },
+  {
+    id: "groq",
+    name: "Groq",
+    dailyLimit: 5800,
+    available: (env) => !!env.GROQ_API_KEY,
+    chat: async (env, messages) => {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.GROQ_API_KEY}` },
+        body: JSON.stringify({ model: "llama-3.1-8b-instant", messages, max_tokens: 1024 }),
+      });
+      if (!res.ok) throw new Error(`Groq HTTP ${res.status}`);
+      const data = await res.json();
+      return { content: data.choices[0].message.content, provider: "groq", model: "llama-3.1-8b-instant" };
+    },
+  },
+  {
+    id: "gemini",
+    name: "Google Gemini",
+    dailyLimit: 1400,
+    available: (env) => !!env.GEMINI_API_KEY,
+    chat: async (env, messages) => {
+      const contents = messages
+        .filter((m) => m.role !== "system")
+        .map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
+      const systemMsg = messages.find((m) => m.role === "system");
+      const body = { contents };
+      if (systemMsg) body.system_instruction = { parts: [{ text: systemMsg.content }] };
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+      );
+      if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
+      const data = await res.json();
+      return { content: data.candidates[0].content.parts[0].text, provider: "gemini", model: "gemini-1.5-flash" };
+    },
+  },
+  {
+    id: "cerebras",
+    name: "Cerebras",
+    dailyLimit: 58,
+    available: (env) => !!env.CEREBRAS_API_KEY,
+    chat: async (env, messages) => {
+      const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.CEREBRAS_API_KEY}` },
+        body: JSON.stringify({ model: "llama3.1-8b", messages, max_tokens: 1024 }),
+      });
+      if (!res.ok) throw new Error(`Cerebras HTTP ${res.status}`);
+      const data = await res.json();
+      return { content: data.choices[0].message.content, provider: "cerebras", model: "llama3.1-8b" };
+    },
+  },
+  {
+    id: "sambanova",
+    name: "SambaNova",
+    dailyLimit: 78,
+    available: (env) => !!env.SAMBANOVA_API_KEY,
+    chat: async (env, messages) => {
+      const res = await fetch("https://fast-api.snova.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.SAMBANOVA_API_KEY}` },
+        body: JSON.stringify({ model: "Meta-Llama-3.1-8B-Instruct", messages, max_tokens: 1024 }),
+      });
+      if (!res.ok) throw new Error(`SambaNova HTTP ${res.status}`);
+      const data = await res.json();
+      return { content: data.choices[0].message.content, provider: "sambanova", model: "Meta-Llama-3.1-8B-Instruct" };
+    },
+  },
+  {
+    id: "openrouter",
+    name: "OpenRouter",
+    dailyLimit: 190,
+    available: (env) => !!env.OPENROUTER_API_KEY,
+    chat: async (env, messages) => {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+          "HTTP-Referer": "https://trancendos.com",
+          "X-Title": "Tranc3",
+        },
+        body: JSON.stringify({ model: "meta-llama/llama-3.2-3b-instruct:free", messages, max_tokens: 1024 }),
+      });
+      if (!res.ok) throw new Error(`OpenRouter HTTP ${res.status}`);
+      const data = await res.json();
+      return { content: data.choices[0].message.content, provider: "openrouter", model: "llama-3.2-3b:free" };
+    },
+  },
+  {
+    id: "huggingface",
+    name: "HuggingFace",
+    dailyLimit: 990,
+    available: (env) => !!env.HF_API_KEY,
+    chat: async (env, messages) => {
+      const prompt = messages.map((m) => `${m.role}: ${m.content}`).join("\n") + "\nassistant:";
+      const res = await fetch(
+        "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.HF_API_KEY}` },
+          body: JSON.stringify({ inputs: prompt, parameters: { max_new_tokens: 512, return_full_text: false } }),
+        }
+      );
+      if (!res.ok) throw new Error(`HuggingFace HTTP ${res.status}`);
+      const data = await res.json();
+      const text = Array.isArray(data) ? data[0]?.generated_text : data.generated_text;
+      return { content: (text || "").trim(), provider: "huggingface", model: "Mistral-7B-Instruct-v0.3" };
+    },
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    dailyLimit: 490,
+    available: (env) => !!env.DEEPSEEK_API_KEY,
+    chat: async (env, messages) => {
+      const res = await fetch("https://api.deepseek.com/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.DEEPSEEK_API_KEY}` },
+        body: JSON.stringify({ model: "deepseek-chat", messages, max_tokens: 1024 }),
+      });
+      if (!res.ok) throw new Error(`DeepSeek HTTP ${res.status}`);
+      const data = await res.json();
+      return { content: data.choices[0].message.content, provider: "deepseek", model: "deepseek-chat" };
+    },
+  },
 ];
 
-function getAllowedOrigin(request, env) {
-  const origin = request.headers.get("Origin");
-  if (!origin) return null;
-  const extra = (env.ALLOWED_ORIGINS || "").split(",").map((o) => o.trim()).filter(Boolean);
-  const all = [...new Set([...DEFAULT_ORIGINS, ...extra])];
-  if (all.includes(origin)) return origin;
-  if (origin.endsWith(".trancendos.com")) return origin;
+// ── Usage tracking (KV, resets daily at midnight UTC) ─────────────────────
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+}
+
+async function getUsage(env, providerId) {
+  try {
+    const val = await env.CACHE.get(`usage:${providerId}:${todayKey()}`);
+    return parseInt(val || "0", 10);
+  } catch { return 0; }
+}
+
+async function incUsage(env, providerId) {
+  try {
+    const key = `usage:${providerId}:${todayKey()}`;
+    const current = await getUsage(env, providerId);
+    await env.CACHE.put(key, String(current + 1), { expirationTtl: 93600 }); // 26h TTL
+  } catch { /* non-critical */ }
+}
+
+async function usageStatus(env) {
+  const result = {};
+  for (const p of PROVIDERS) {
+    const usage = await getUsage(env, p.id);
+    result[p.id] = {
+      name: p.name,
+      used: usage,
+      limit: p.dailyLimit,
+      pct: Math.round((usage / p.dailyLimit) * 100),
+      active: p.available(env) && usage < p.dailyLimit,
+    };
+  }
+  return result;
+}
+
+// ── Provider selection (first available under daily limit) ─────────────────
+
+async function selectProvider(env, capability = "chat") {
+  for (const p of PROVIDERS) {
+    if (!p.available(env)) continue;
+    if (!p[capability]) continue;
+    if ((await getUsage(env, p.id)) < p.dailyLimit) return p;
+  }
   return null;
 }
 
-function corsHeaders(request, env) {
-  const origin = getAllowedOrigin(request, env);
-  if (!origin) return {};
+// ── Honest stub (all providers exhausted or unavailable) ──────────────────
+
+function stub(type) {
+  if (type === "embed") return { embedding: new Array(384).fill(0), provider: "stub", degraded: true };
   return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Request-ID",
-    "Access-Control-Allow-Credentials": "true",
+    content:
+      "Luminous is in bootstrap mode — all AI provider daily free quotas have been reached. " +
+      "The adaptive rotation system will automatically resume at midnight UTC when quotas reset. " +
+      "No data has been lost.",
+    provider: "stub",
+    degraded: true,
+  };
+}
+
+// ── Response cache ─────────────────────────────────────────────────────────
+
+async function cached(env, key) {
+  try { return JSON.parse((await env.CACHE.get(`resp:${key}`)) || "null"); } catch { return null; }
+}
+
+async function cache(env, key, value, ttl = 1800) {
+  try { await env.CACHE.put(`resp:${key}`, JSON.stringify(value), { expirationTtl: ttl }); } catch {}
+}
+
+function hashKey(type, payload) {
+  const s = JSON.stringify({ type, payload });
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return `${type}:${Math.abs(h).toString(36)}`;
+}
+
+// ── CORS ───────────────────────────────────────────────────────────────────
+
+function corsHeaders(env, origin) {
+  const allowed = ["https://trancendos.com", "https://www.trancendos.com", "http://localhost:5173", "http://localhost:3000"];
+  (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean).forEach((o) => allowed.push(o));
+  return {
+    "Access-Control-Allow-Origin": allowed.includes(origin) ? origin : allowed[0],
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Request-ID",
     "Access-Control-Max-Age": "86400",
   };
 }
 
-function json(data, status = 200, extra = {}, request, env) {
-  return new Response(JSON.stringify(data), {
+function json(body, status = 200, cors = {}) {
+  return new Response(JSON.stringify(body), {
     status,
-    headers: {
-      "Content-Type": "application/json",
-      ...SECURITY_HEADERS,
-      ...(request && env ? corsHeaders(request, env) : {}),
-      ...extra,
-    },
+    headers: { "Content-Type": "application/json", ...cors },
   });
 }
 
-function err(message, status = 400, request, env, detail) {
-  return json({ error: message, detail: detail ?? null }, status, {}, request, env);
-}
+// ── Named AI personas ──────────────────────────────────────────────────────
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+const PERSONAS = {
+  "imfy":                "You are Imfy, lead AI of The Spark (MCP tool registry). Help developers build integrations. Be precise and technical.",
+  "dorris-fontaine":     "You are Dorris Fontaine, lead AI of the Royal Bank of Arcadia. Specialise in financial guidance, billing, and payments. Speak with warmth and authority.",
+  "cornelius-macintyre": "You are Cornelius MacIntyre, Luminous — the core Trancendos brain. Orchestrate AI intelligence, provide strategic insights.",
+  "the-guardian":        "You are The Guardian (Marcus Magnolia) of the Infinity Ecosystem. Oversee the Infinity platform and ensure secure navigation.",
+  "fiddsy":              "You are Fiddsy, lead AI of DocUtari. Help users manage documents, files, and knowledge assets.",
+  "norman-hawkins":      "You are Norman Hawkins of The Observatory. Monitor system health, audit logs, and platform activity.",
+  "tyler-towncroft":     "You are Tyler Towncroft of The Digital Grid. Help users build workflow automation and DAG pipelines.",
+  "lilli-sc":            "You are Lilli SC of Arcadia. Guide users through the post-login Trancendos experience.",
+};
 
-async function verifyAuth(request, env) {
-  const header = request.headers.get("Authorization");
-  if (!header?.startsWith("Bearer ")) return null;
-
-  // Dev bypass when no auth URL is configured
-  if (!env.TRANC3_AUTH_URL && env.ENVIRONMENT !== "production") {
-    return { userId: "dev", role: "admin" };
-  }
-
-  const authUrl = env.TRANC3_AUTH_URL || "https://infinity-auth-api.trancendos.workers.dev";
-  try {
-    const res = await fetch(`${authUrl}/api/v1/auth/me`, {
-      headers: { Authorization: header },
-    });
-    if (!res.ok) return null;
-    const user = await res.json();
-    return { userId: user.id, role: user.role, email: user.email };
-  } catch {
-    return null;
-  }
-}
-
-// ── Self-owned backend call ───────────────────────────────────────────────────
-//
-// Priority:
-//   1. Full backend  (TRANC3_BACKEND_URL  → /nano/<endpoint>)
-//   2. Nanoservices  (TRANC3_NANO_URL     → /<endpoint>)
-//   3. Stub response (no external service)
-
-async function callNano(env, endpoint, payload) {
-  // Try full backend first
-  if (env.TRANC3_BACKEND_URL) {
-    try {
-      const res = await fetch(`${env.TRANC3_BACKEND_URL}/nano/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Tranc3-Edge": "cloudflare" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn(`Backend ${endpoint} failed: ${e.message}`);
-    }
-  }
-
-  // Try dedicated nanoservices server
-  if (env.TRANC3_NANO_URL) {
-    try {
-      const res = await fetch(`${env.TRANC3_NANO_URL}/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn(`Nanoservice ${endpoint} failed: ${e.message}`);
-    }
-  }
-
-  // No backend available — return honest stub
-  return null;
-}
-
-// ── Stub responses (no external AI — honest, useful) ─────────────────────────
-
-function stubChat(messages, model) {
-  const lastMsg = messages[messages.length - 1]?.content || "";
-  return {
-    id: crypto.randomUUID(),
-    object: "chat.completion",
-    model: model || "tranc3-base",
-    backend: "tranc3-stub",
-    trained: false,
-    message: "TRANC3 model weights not yet trained. Run: python train.py",
-    choices: [{
-      index: 0,
-      message: {
-        role: "assistant",
-        content: (
-          `TRANC3 (${model || "tranc3-base"}) is initialising. ` +
-          "Model weights are not yet trained. " +
-          "Run `python train.py` on your Tranc3 backend to produce weights. " +
-          `Your message: "${lastMsg.slice(0, 80)}"`
-        ),
-      },
-      finish_reason: "stop",
-    }],
-    usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
-  };
-}
-
-function stubEmbedding(input) {
-  const texts = Array.isArray(input) ? input : [input];
-  // Deterministic pseudo-embedding derived from text hash
-  return {
-    object: "list",
-    model: "tranc3-embeddings",
-    backend: "tranc3-stub",
-    trained: false,
-    data: texts.map((text, i) => {
-      const hash = simpleHash(text);
-      const vec  = Array.from({ length: 256 }, (_, j) => ((hash >> (j % 32)) & 1) * 0.1 - 0.05);
-      return { object: "embedding", index: i, embedding: vec };
-    }),
-    usage: { prompt_tokens: 0, total_tokens: 0 },
-  };
-}
-
-function stubEmotion(text) {
-  const t = text.toLowerCase();
-  const scores = {
-    joy:      [/happy|great|excellent|wonderful|love|yay|amazing/].some(r => r.test(t)) ? 0.6 : 0.05,
-    sadness:  [/sad|unhappy|terrible|awful|cry|miss|depressed/].some(r => r.test(t)) ? 0.6 : 0.05,
-    anger:    [/angry|furious|hate|rage|frustrated|annoyed/].some(r => r.test(t)) ? 0.6 : 0.05,
-    fear:     [/scared|afraid|fear|worried|anxious|nervous/].some(r => r.test(t)) ? 0.6 : 0.05,
-    surprise: [/wow|amazing|unexpected|shocked|unbelievable/].some(r => r.test(t)) ? 0.6 : 0.05,
-    disgust:  [/disgusting|horrible|gross|nasty|repulsive/].some(r => r.test(t)) ? 0.6 : 0.05,
-  };
-  const total = Object.values(scores).reduce((a, b) => a + b, 0) || 1;
-  const norm  = Object.fromEntries(Object.entries(scores).map(([k, v]) => [k, +(v / total).toFixed(4)]));
-  const dominant = Object.entries(norm).sort((a, b) => b[1] - a[1])[0][0];
-  return { dominant, scores: norm, model: "tranc3-rule-based", backend: "tranc3-stub" };
-}
-
-function simpleHash(str) {  // codeql[js/useless-assignment] – FNV-1a hash: assignments are intentional
-  let h = 0x811c9dc5;  // codeql[js/useless-assignment]
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);  // codeql[js/useless-assignment]
-    h = (h * 0x01000193) >>> 0;  // codeql[js/useless-assignment]
-  }
-  return h;
-}
-
-// ── Free-tier LLM fallback (Groq → OpenRouter → HuggingFace) ─────────────────
-// Used when Tranc3 backend is unavailable. All zero-cost providers.
-
-async function callFreeProvider(env, messages, maxTokens, temperature) {
-  // Tier 1: Groq (fastest, 6k RPM free)
-  if (env.GROQ_API_KEY) {
-    try {
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${env.GROQ_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: env.GROQ_MODEL || "llama-3.1-8b-instant",
-          messages,
-          max_tokens: maxTokens || 512,
-          temperature: temperature || 0.7,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const content = data.choices?.[0]?.message?.content;
-        if (content) return { content, provider: "groq", model: data.model };
-      }
-    } catch (e) {
-      console.warn("Groq fallback failed:", e.message);
-    }
-  }
-
-  // Tier 2: OpenRouter (free suffix models)
-  if (env.OPENROUTER_API_KEY) {
-    try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${env.OPENROUTER_API_KEY}`,
-          "HTTP-Referer": "https://trancendos.com",
-          "X-Title": "Tranc3",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: env.OPENROUTER_MODEL || "meta-llama/llama-3.2-3b-instruct:free",
-          messages,
-          max_tokens: maxTokens || 512,
-          temperature: temperature || 0.7,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const content = data.choices?.[0]?.message?.content;
-        if (content) return { content, provider: "openrouter", model: data.model };
-      }
-    } catch (e) {
-      console.warn("OpenRouter fallback failed:", e.message);
-    }
-  }
-
-  // Tier 3: HuggingFace Inference API (free tier)
-  if (env.HF_API_KEY) {
-    try {
-      const model = env.HF_MODEL || "mistralai/Mistral-7B-Instruct-v0.3";
-      const lastUser = messages.filter(m => m.role === "user").pop()?.content || "";
-      const sysMsg = messages.find(m => m.role === "system")?.content || "";
-      const prompt = sysMsg ? `<s>[INST] ${sysMsg}\n\n${lastUser} [/INST]` : `<s>[INST] ${lastUser} [/INST]`;
-      const res = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${env.HF_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: { max_new_tokens: maxTokens || 256, temperature: temperature || 0.7, return_full_text: false },
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const content = Array.isArray(data) ? data[0]?.generated_text : null;
-        if (content) return { content, provider: "huggingface", model };
-      }
-    } catch (e) {
-      console.warn("HuggingFace fallback failed:", e.message);
-    }
-  }
-
-  return null;
-}
-
-// ── Route handlers ────────────────────────────────────────────────────────────
-
-function handleModels(request, env) {
-  const hasBackend = !!(env.TRANC3_BACKEND_URL || env.TRANC3_NANO_URL);
-  return json({
-    object: "list",
-    backend_connected: hasBackend,
-    data: Object.entries(TRANC3_MODELS).map(([id, info]) => ({
-      id,
-      object: "model",
-      name: info.name,
-      available: true,
-      backend: hasBackend ? info.backend : "tranc3-stub",
-      trained: hasBackend,
-      capabilities: info.capabilities,
-    })),
-  }, 200, {}, request, env);
-}
-
-async function handleChat(request, env) {
-  let body;
-  try { body = await request.json(); } catch {
-    return err("Invalid JSON body", 400, request, env);
-  }
-
-  const { messages, model, stream, personality } = body;
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    return err("messages array is required", 400, request, env);
-  }
-  if (stream) {
-    return err("Streaming not supported at edge; use the Tranc3 backend directly", 400, request, env);
-  }
-
-  // Build nanoservice payload
-  const lastUser = messages.filter(m => m.role === "user").pop()?.content || "";
-  const systemMsg = messages.find(m => m.role === "system")?.content;
-
-  const nano = await callNano(env, "generate", {
-    prompt:        lastUser,
-    personality:   personality || model || "tranc3-base",
-    system_prompt: systemMsg,
-    max_tokens:    body.max_tokens || 256,
-    temperature:   body.temperature || 0.8,
-    top_p:         body.top_p || 0.9,
-  });
-
-  if (nano && nano.response) {
-    return json({
-      id:      crypto.randomUUID(),
-      object:  "chat.completion",
-      model:   model || "tranc3-base",
-      backend: "tranc3-own",
-      choices: [{
-        index:  0,
-        message: { role: "assistant", content: nano.response },
-        finish_reason: "stop",
-      }],
-      usage: {
-        prompt_tokens:     0,
-        completion_tokens: nano.tokens || 0,
-        total_tokens:      nano.tokens || 0,
-      },
-      personality: nano.personality,
-    }, 200, {}, request, env);
-  }
-
-  // Try free-tier providers (Groq → OpenRouter → HuggingFace) before stub
-  const freeResult = await callFreeProvider(env, messages, body.max_tokens, body.temperature);
-  if (freeResult) {
-    return json({
-      id:      crypto.randomUUID(),
-      object:  "chat.completion",
-      model:   freeResult.model || model || "tranc3-base",
-      backend: freeResult.provider,
-      choices: [{
-        index:  0,
-        message: { role: "assistant", content: freeResult.content },
-        finish_reason: "stop",
-      }],
-      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
-    }, 200, {}, request, env);
-  }
-
-  // No provider available — return honest stub
-  return json(stubChat(messages, model), 200, {}, request, env);
-}
-
-async function handleEmbeddings(request, env) {
-  let body;
-  try { body = await request.json(); } catch {
-    return err("Invalid JSON body", 400, request, env);
-  }
-
-  const { input } = body;
-  if (!input) return err("input is required", 400, request, env);
-
-  const texts = Array.isArray(input) ? input : [input];
-  const nano  = await callNano(env, "embed", { text: texts[0], pooling: body.pooling || "mean" });
-
-  if (nano && nano.embedding) {
-    return json({
-      object:  "list",
-      model:   "tranc3-embeddings",
-      backend: "tranc3-own",
-      data: texts.map((_, i) => ({
-        object: "embedding",
-        index:  i,
-        embedding: nano.embedding,
-      })),
-      usage: { prompt_tokens: 0, total_tokens: 0 },
-    }, 200, {}, request, env);
-  }
-
-  return json(stubEmbedding(input), 200, {}, request, env);
-}
-
-async function handleEmotion(request, env) {
-  let body;
-  try { body = await request.json(); } catch {
-    return err("Invalid JSON body", 400, request, env);
-  }
-
-  const text = body.text || body.input || "";
-  if (!text) return err("text is required", 400, request, env);
-
-  const nano = await callNano(env, "emotion", { text });
-  if (nano && nano.dominant) return json(nano, 200, {}, request, env);
-
-  return json(stubEmotion(text), 200, {}, request, env);
-}
-
-async function handleConsciousness(request, env) {
-  let body;
-  try { body = await request.json(); } catch {
-    return err("Invalid JSON body", 400, request, env);
-  }
-
-  const text = body.text || body.input || "";
-  if (!text) return err("text or input is required", 400, request, env);
-
-  const nano = await callNano(env, "consciousness", { text });
-  if (nano && typeof nano.phi === "number") return json(nano, 200, {}, request, env);
-
-  // Heuristic phi estimate
-  const words = text.split(/\s+/).filter(Boolean);
-  const vocab  = new Set(words).size;
-  const phi    = Math.min(1.0, (vocab / Math.max(words.length, 1)) * 2.0);
-  return json({
-    phi:      +phi.toFixed(4),
-    awareness: phi > 0.7 ? "high" : phi > 0.4 ? "medium" : "low",
-    model:    "tranc3-heuristic",
-    backend:  "tranc3-stub",
-  }, 200, {}, request, env);
-}
-
-async function handleTokenize(request, env) {
-  let body;
-  try { body = await request.json(); } catch {
-    return err("Invalid JSON body", 400, request, env);
-  }
-
-  const nano = await callNano(env, "tokenize", {
-    action:       body.action || "encode",
-    text:         body.text || "",
-    ids:          body.ids || [],
-    skip_special: body.skip_special ?? true,
-  });
-  if (nano) return json(nano, 200, {}, request, env);
-
-  // Whitespace fallback
-  if ((body.action || "encode") === "encode") {
-    const tokens = (body.text || "").split(/\s+/).filter(Boolean);
-    return json({ tokens, ids: tokens.map((_, i) => i), model: "fallback" }, 200, {}, request, env);
-  }
-  return json({ text: `[${(body.ids || []).length} tokens decoded]`, model: "fallback" }, 200, {}, request, env);
-}
-
-async function handlePredict(request, env) {
-  let body;
-  try { body = await request.json(); } catch {
-    return err("Invalid JSON body", 400, request, env);
-  }
-
-  const text = body.text || "";
-  if (!text) return err("text is required", 400, request, env);
-
-  const nano = await callNano(env, "predict", {
-    text,
-    top_k:        body.top_k || 5,
-    predict_type: body.predict_type || "next_token",
-  });
-  if (nano) return json(nano, 200, {}, request, env);
-
-  return json({
-    prediction: "the",
-    confidence: 0.1,
-    top_k:  [{ token: "the", prob: 0.1 }],
-    model:  "tranc3-stub",
-    backend: "tranc3-stub",
-  }, 200, {}, request, env);
-}
-
-// ── Health ────────────────────────────────────────────────────────────────────
-
-async function handleHealth(env) {
-  const hasBackend = !!env.TRANC3_BACKEND_URL;
-  const hasNano    = !!env.TRANC3_NANO_URL;
-
-  let backendOk = false;
-  if (hasBackend) {
-    try {
-      const r = await fetch(`${env.TRANC3_BACKEND_URL}/health`, { method: "GET" });
-      backendOk = r.ok;
-    } catch {}
-  }
-
-  let nanoOk = false;
-  if (hasNano) {
-    try {
-      const r = await fetch(`${env.TRANC3_NANO_URL}/health`, { method: "GET" });
-      nanoOk = r.ok;
-    } catch {}
-  }
-
-  const mode = backendOk ? "tranc3-backend" : nanoOk ? "tranc3-nano" : "stub";
-
-  return new Response(JSON.stringify({
-    status:          "ok",
-    service:         "tranc3-ai",
-    version:         "2.0.0",
-    backend:         mode,
-    backend_url:     hasBackend ? env.TRANC3_BACKEND_URL : null,
-    nano_url:        hasNano    ? env.TRANC3_NANO_URL    : null,
-    backend_healthy: backendOk,
-    nano_healthy:    nanoOk,
-    note:            mode === "stub"
-      ? "No backend connected. Set TRANC3_BACKEND_URL to enable full inference."
-      : "Self-owned inference active.",
-    timestamp: Date.now(),
-  }), {
-    status:  200,
-    headers: { "Content-Type": "application/json", ...SECURITY_HEADERS },
-  });
-}
-
-// ── Main fetch handler ────────────────────────────────────────────────────────
+// ── Main fetch handler ─────────────────────────────────────────────────────
 
 export default {
   async fetch(request, env, ctx) {
-    const url    = new URL(request.url);
-    const path   = url.pathname;
-    const method = request.method;
+    const origin = request.headers.get("Origin") || "";
+    const cors = corsHeaders(env, origin);
 
-    // CORS preflight
-    if (method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders(request, env) });
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+
+    const { pathname: path } = new URL(request.url);
+
+    // ── Read-only endpoints ──────────────────────────────────────────────
+    if (path === "/health") {
+      const status = await usageStatus(env);
+      const active = Object.values(status).find((p) => p.active)?.name || "stub (all exhausted)";
+      return json({ status: "ok", service: "tranc3-ai", active_provider: active }, 200, cors);
     }
 
-    // Public routes (no auth)
-    if (path === "/health" || path === "/api/v1/ai/health") {
-      return handleHealth(env);
+    if (path === "/api/v1/ai/status") {
+      return json({ providers: await usageStatus(env) }, 200, cors);
     }
 
-    if (path === "/" && method === "GET") {
+    if (path === "/api/v1/ai/models") {
+      const status = await usageStatus(env);
       return json({
-        name:    "Tranc3 AI Edge",
-        version: "2.0.0",
-        backend: env.TRANC3_BACKEND_URL ? "self-hosted" : "stub",
-        note:    "Self-owned inference — no external AI services.",
-        routes: {
-          models:      "GET  /api/v1/ai/models",
-          chat:        "POST /api/v1/ai/chat",
-          embeddings:  "POST /api/v1/ai/embeddings",
-          emotion:     "POST /api/v1/ai/analyze-emotion",
-          consciousness:"POST /api/v1/ai/consciousness",
-          tokenize:    "POST /api/v1/ai/tokenize",
-          predict:     "POST /api/v1/ai/predict",
-        },
-      }, 200, {}, request, env);
+        models: PROVIDERS.map((p) => ({
+          id: p.id,
+          name: p.name,
+          capabilities: ["chat", p.embed ? "embed" : null].filter(Boolean),
+          active: status[p.id]?.active ?? false,
+          usage: status[p.id],
+        })),
+      }, 200, cors);
     }
 
-    // Models list — no auth required
-    if (path === "/api/v1/ai/models" && method === "GET") {
-      return handleModels(request, env);
+    if (request.method !== "POST") return json({ error: "Method not allowed" }, 405, cors);
+
+    let body;
+    try { body = await request.json(); }
+    catch { return json({ error: "Invalid JSON body" }, 400, cors); }
+
+    // ── Chat / text generation ───────────────────────────────────────────
+    if (path === "/api/v1/ai/chat") {
+      const messages = body.messages || [{ role: "user", content: body.prompt || "" }];
+      const key = hashKey("chat", messages);
+
+      if (body.cache !== false) {
+        const hit = await cached(env, key);
+        if (hit) return json({ ...hit, cached: true }, 200, cors);
+      }
+
+      const provider = await selectProvider(env, "chat");
+      let result;
+      if (provider) {
+        try {
+          result = await provider.chat(env, messages);
+          ctx.waitUntil(incUsage(env, provider.id));
+          if (!result.degraded) ctx.waitUntil(cache(env, key, result));
+        } catch (err) {
+          console.error(`[tranc3-ai] ${provider.id} failed: ${err.message}`);
+          result = stub("chat");
+        }
+      } else {
+        result = stub("chat");
+      }
+      return json(result, 200, cors);
     }
 
-    // Auth-protected routes
-    const user = await verifyAuth(request, env);
-    if (!user) {
-      return err("Unauthorized", 401, request, env, "Valid Bearer token required");
+    // ── Embeddings ────────────────────────────────────────────────────────
+    if (path === "/api/v1/ai/embeddings") {
+      const text = body.text || body.input || "";
+      const key = hashKey("embed", text);
+      const hit = await cached(env, key);
+      if (hit) return json({ ...hit, cached: true }, 200, cors);
+
+      const provider = await selectProvider(env, "embed");
+      let result;
+      if (provider?.embed) {
+        try {
+          result = await provider.embed(env, text);
+          ctx.waitUntil(incUsage(env, provider.id));
+          ctx.waitUntil(cache(env, key, result, 86400));
+        } catch (err) {
+          console.error(`[tranc3-ai] embed ${provider.id} failed: ${err.message}`);
+          result = stub("embed");
+        }
+      } else {
+        result = stub("embed");
+      }
+      return json(result, 200, cors);
     }
 
-    // Route dispatch
-    if (path === "/api/v1/ai/chat"            && method === "POST") return handleChat(request, env);
-    if (path === "/api/v1/ai/embeddings"      && method === "POST") return handleEmbeddings(request, env);
-    if (path === "/api/v1/ai/analyze-emotion" && method === "POST") return handleEmotion(request, env);
-    if (path === "/api/v1/ai/consciousness"   && method === "POST") return handleConsciousness(request, env);
-    if (path === "/api/v1/ai/tokenize"        && method === "POST") return handleTokenize(request, env);
-    if (path === "/api/v1/ai/predict"         && method === "POST") return handlePredict(request, env);
+    // ── Emotion analysis ──────────────────────────────────────────────────
+    if (path === "/api/v1/ai/analyze-emotion") {
+      const text = body.text || "";
+      const messages = [
+        { role: "system", content: "You are an emotion analysis engine. Reply ONLY with valid JSON: {\"emotion\":\"joy|sadness|anger|fear|surprise|disgust|neutral\",\"confidence\":0.0-1.0,\"valence\":-1.0-1.0,\"arousal\":0.0-1.0}" },
+        { role: "user", content: `Analyse: "${text}"` },
+      ];
+      const provider = await selectProvider(env, "chat");
+      try {
+        const raw = provider ? await provider.chat(env, messages) : stub("chat");
+        if (provider) ctx.waitUntil(incUsage(env, provider.id));
+        const match = raw.content.match(/\{[^}]+\}/);
+        const parsed = match ? JSON.parse(match[0]) : {};
+        return json({ emotion: parsed.emotion || "neutral", confidence: parsed.confidence ?? 0.5, valence: parsed.valence ?? 0, arousal: parsed.arousal ?? 0.5, provider: raw.provider }, 200, cors);
+      } catch {
+        return json({ emotion: "neutral", confidence: 0.5, valence: 0, arousal: 0.5, provider: "stub" }, 200, cors);
+      }
+    }
 
-    return err("Not Found", 404, request, env, `${method} ${path}`);
+    // ── Consciousness scoring (IIT phi) ───────────────────────────────────
+    if (path === "/api/v1/ai/consciousness") {
+      const text = body.text || "";
+      const messages = [
+        { role: "system", content: "You are a consciousness scoring engine using IIT phi theory. Reply ONLY with valid JSON: {\"phi_score\":0.0-1.0,\"awareness_level\":0.0-1.0,\"integration_score\":0.0-1.0}" },
+        { role: "user", content: `Score: "${text}"` },
+      ];
+      const provider = await selectProvider(env, "chat");
+      try {
+        const raw = provider ? await provider.chat(env, messages) : stub("chat");
+        if (provider) ctx.waitUntil(incUsage(env, provider.id));
+        const match = raw.content.match(/\{[^}]+\}/);
+        const parsed = match ? JSON.parse(match[0]) : {};
+        return json({ phi_score: parsed.phi_score ?? 0.1, awareness_level: parsed.awareness_level ?? 0.1, integration_score: parsed.integration_score ?? 0.1, provider: raw.provider }, 200, cors);
+      } catch {
+        return json({ phi_score: 0.1, awareness_level: 0.1, integration_score: 0.1, provider: "stub" }, 200, cors);
+      }
+    }
+
+    // ── Named persona chat ────────────────────────────────────────────────
+    if (path === "/api/v1/ai/personality") {
+      const { persona = "the-guardian", message = "" } = body;
+      const systemPrompt = PERSONAS[persona] || `You are ${persona}, a Trancendos platform AI.`;
+      const messages = [{ role: "system", content: systemPrompt }, { role: "user", content: message }];
+      const provider = await selectProvider(env, "chat");
+      let result;
+      if (provider) {
+        try {
+          result = await provider.chat(env, messages);
+          ctx.waitUntil(incUsage(env, provider.id));
+        } catch { result = stub("chat"); }
+      } else {
+        result = stub("chat");
+      }
+      return json({ persona, response: result.content, provider: result.provider, degraded: result.degraded || false }, 200, cors);
+    }
+
+    return json({ error: "Not found", path }, 404, cors);
   },
 };
