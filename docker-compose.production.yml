@@ -1085,6 +1085,44 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Infinity Portal — Front Entrance + Infinity Gate (Port 8042) ─────────
+  infinity-portal:
+    <<: *worker-common
+    build:
+      context: .
+      dockerfile: workers/infinity-portal-service/Dockerfile
+    container_name: infinity-portal-worker
+    ports:
+      - "8042:8042"
+    environment:
+      INFINITY_PORTAL_DB_PATH: /app/data/infinity_portal.db
+      AUTH_SERVICE_URL: http://infinity-auth-worker:8005
+      INFINITY_ONE_URL: http://infinity-one-worker:8043
+      INFINITY_ADMIN_URL: http://infinity-admin-worker:8044
+    volumes:
+      - portal-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8042/health"]
+      <<: *healthcheck-default
+
+  # ── Infinity-One — Single Identity Layer (Port 8043) ──────────────────────
+  infinity-one:
+    <<: *worker-common
+    build:
+      context: .
+      dockerfile: workers/infinity-one-service/Dockerfile
+    container_name: infinity-one-worker
+    ports:
+      - "8043:8043"
+    environment:
+      INFINITY_ONE_DB_PATH: /app/data/infinity_one.db
+      AUTH_SERVICE_URL: http://infinity-auth-worker:8005
+    volumes:
+      - infinity-one-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8043/health"]
+      <<: *healthcheck-default
+
   # ── Infinity Admin — Entity & Config Management (Port 8044) ──────────────
   infinity-admin:
     <<: *worker-common
@@ -1101,6 +1139,40 @@ services:
       - admin-data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8044/health"]
+      <<: *healthcheck-default
+
+  # ── Infinity Shards — Pluggable Entity Power-Ups (Port 8045) ─────────────
+  infinity-shards:
+    <<: *worker-common
+    build:
+      context: .
+      dockerfile: workers/infinity-shards-service/Dockerfile
+    container_name: infinity-shards-worker
+    ports:
+      - "8045:8045"
+    environment:
+      INFINITY_SHARDS_DB_PATH: /app/data/infinity_shards.db
+      AUTH_SERVICE_URL: http://infinity-auth-worker:8005
+    volumes:
+      - shards-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8045/health"]
+      <<: *healthcheck-default
+
+  # ── Infinity Bridge — Human Traffic Transfer Hub (Port 8070) ──────────────
+  infinity-bridge:
+    <<: *worker-common
+    build:
+      context: .
+      dockerfile: workers/infinity-bridge-service/Dockerfile
+    container_name: infinity-bridge-worker
+    ports:
+      - "8070:8070"
+    environment:
+      INFINITY_BRIDGE_PORT: "8070"
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-change-me}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8070/health"]
       <<: *healthcheck-default
 
   # ── Qdrant — High-performance vector database (Apache 2.0) ─────────────
@@ -1613,6 +1685,12 @@ volumes:
   signoz-clickhouse-logs:
     driver: local
   signoz-query-data:
+    driver: local
+  portal-data:
+    driver: local
+  infinity-one-data:
+    driver: local
+  shards-data:
     driver: local
   turings-hub-vrm:
     driver: local

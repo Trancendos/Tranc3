@@ -58,7 +58,14 @@ Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `sr
 | **The Digital Grid** | Tyler Towncroft | Workflow DAG builder + executor (n8n-style) | ✅ In repo | `src/workflow/` |
 | **The Void** | Prometheus | Secrets + password vault (AES-GCM) | 🔧 Migrating | `cloudflare/infinity-void/` → self-hosted |
 | **The Workshop** | Larry Lowhammer | CI/CD hub — Forgejo self-hosted git + pipelines | ✅ In repo | `deploy/forgejo/` |
-| **Infinity** | The Guardian (Anchor: Orb of Orisis) | OAuth, SSO, central user management (1 account, all services) | ✅ Self-hosted | `workers/infinity-auth/` (Port 8005) |
+| **Infinity** | The Guardian (Marcus Magnolia) & The Orb of Orisis | The Infinity Ecosystem — arrival hub for post-login navigation. 6 sub-systems below. | ✅ Self-hosted | Multiple workers (Ports 8005, 8042–8045, 8070) |
+| **↳ Infinity Portal** | — | Front entrance to the Trancendos Universe — unified login/register/MFA | ✅ Self-hosted | `workers/infinity-portal-service/` (Port 8042) |
+| **↳ Infinity Gate** | — | Role-based router (embedded in Portal): Admin→Infinity Admin, User→Arcadia, DevOps→Citadel | ✅ Embedded | Inside `infinity-portal-service` (no separate port — by design) |
+| **↳ Infinity-One** | — | Single identity layer — one login, multi-app access; identity profiles across all services | ✅ Self-hosted | `workers/infinity-one-service/` (Port 8043) |
+| **↳ Infinity Admin** | — | Admin OS — system config, user management, prime/pillar oversight, infrastructure control | ✅ Self-hosted | `workers/infinity-admin-service/` (Port 8044) |
+| **↳ Infinity Bridge** | — | Human traffic + user context transfer hub (one of Three Bridges alongside Nexus + HIVE) | ✅ Self-hosted | `workers/infinity-bridge-service/` (Port 8070) |
+| **↳ Infinity Shards** | — | Pluggable power-up modules — extend any entity's capabilities (Memory, Voice, Vision, Shield, Boost, Link, Sense, Spark shards) | 🔧 Building | `workers/infinity-shards-service/` (Port 8045) |
+| **↳ Infinity (Core Auth)** | — | OAuth2/SSO/MFA engine — the credential verification core all sub-systems delegate to | ✅ Self-hosted | `workers/infinity-auth/` (Port 8005) |
 | **The Lighthouse** | Rocking Ricki | Cryptographic token assignment, authenticator, token scanner | ✅ Deployed | CF: `infinity-lighthouse` |
 | **The HIVE** | The Queen | Data transport hub, agent + queue coordination | ✅ Deployed | CF: `infinity-hive` |
 | **Royal Bank of Arcadia** | Dorris Fontaine | Financial hub — billing, payments | ✅ Deployed | CF: `arcadia-royal-bank` |
@@ -184,7 +191,12 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | nanoservices | 8001 | — | `src/nanoservices/` | Internal proxy |
 | tranc3-bots | 8080 | — | `tranc3-bots/` | 12 bot types |
 | infinity-ws | 8004 | P0 | `workers/infinity-ws/` | infinity-ws-api |
-| infinity-auth | 8005 | P0 | `workers/infinity-auth/` | infinity-auth-api |
+| infinity-auth | 8005 | P0 | `workers/infinity-auth/` | Infinity Core Auth engine (OAuth2/SSO/MFA) |
+| infinity-portal-service | 8042 | P1 | `workers/infinity-portal-service/` | Infinity Portal — front entrance + Infinity Gate (embedded) |
+| infinity-one-service | 8043 | P1 | `workers/infinity-one-service/` | Infinity-One — single identity layer |
+| infinity-admin-service | 8044 | P1 | `workers/infinity-admin-service/` | Infinity Admin — Admin OS |
+| infinity-shards-service | 8045 | P1 | `workers/infinity-shards-service/` | Infinity Shards — pluggable entity power-ups |
+| infinity-bridge-service | 8070 | P1 | `workers/infinity-bridge-service/` | Infinity Bridge — human traffic transfer hub |
 | users-service | 8006 | P1 | `workers/users-service/` | trancendos-users-service |
 | monitoring | 8007 | P1 | `workers/monitoring/` | infinity-monitoring-dashboard |
 | notifications | 8008 | P1 | `workers/notifications/` | trancendos-notifications-service |
