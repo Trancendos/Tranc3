@@ -1,0 +1,13 @@
+{
+  "name": "tranc3-notifications",
+  "version": "1.0.0",
+  "description": "Adaptive zero-cost email rotation — Resend + Brevo + Mailjet",
+  "main": "src/index.js",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^3"
+  }
+}

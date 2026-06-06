@@ -1,0 +1,277 @@
+---
+# ──────────────────────────────────────────────────────────────
+# Tranc3 Citadel — First-Time Setup Playbook
+# ──────────────────────────────────────────────────────────────
+# Runs AFTER cloud-init has completed (typically 5–8 minutes after
+# terraform apply). Validates the bootstrap, pulls the repo,
+# generates the production env, and starts the compose stack.
+#
+# Usage:
+#   ansible-playbook \
+#     -i deploy/ansible/inventory/citadel.yml \
+#     deploy/ansible/playbooks/citadel-setup.yml
+#
+# Requirements:
+#   - Ansible 2.14+
+#   - citadel.yml inventory filled in (see citadel.yml.example)
+#   - SSH key at ansible_ssh_private_key_file path
+# ──────────────────────────────────────────────────────────────
+
+- name: Citadel First-Time Setup
+  hosts: citadel
+  become: true
+  gather_facts: true
+
+  vars:
+    tranc3_root: /opt/tranc3
+    compose_file: docker-compose.production.yml
+    git_branch: "{{ git_branch | default('main') }}"
+    deploy_profile: "{{ deploy_profile | default('core') }}"
+    health_check_timeout_sec: "{{ health_check_timeout_sec | default(120) }}"
+
+  tasks:
+
+    # ── 1. Wait for SSH to be reachable ────────────────────────
+    - name: Wait for SSH to become available (up to 5 minutes)
+      wait_for_connection:
+        delay: 10
+        timeout: 300
+        sleep: 5
+      tags: [wait, always]
+
+    - name: Gather facts after SSH is available
+      setup:
+      tags: [always]
+
+    # ── 2. Verify cloud-init completed ─────────────────────────
+    - name: Check cloud-init bootstrap log exists
+      stat:
+        path: /var/log/tranc3-bootstrap.log
+      register: bootstrap_log
+      tags: [verify]
+
+    - name: Display cloud-init bootstrap status
+      command: tail -5 /var/log/tranc3-bootstrap.log
+      register: bootstrap_tail
+      failed_when: false
+      changed_when: false
+      when: bootstrap_log.stat.exists
+      tags: [verify]
+
+    - name: Show bootstrap log tail
+      debug:
+        msg: "{{ bootstrap_tail.stdout_lines | default(['bootstrap log not yet present']) }}"
+      tags: [verify]
+
+    # ── 3. Verify Docker is installed and running ───────────────
+    - name: Verify Docker daemon is active
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+      tags: [verify, docker]
+
+    - name: Verify Docker Compose v2 is available
+      command: docker compose version
+      register: compose_version
+      changed_when: false
+      tags: [verify, docker]
+
+    - name: Show Docker Compose version
+      debug:
+        msg: "{{ compose_version.stdout }}"
+      tags: [verify, docker]
+
+    - name: Verify tranc3 user exists and is in docker group
+      command: id tranc3
+      register: tranc3_id
+      changed_when: false
+      tags: [verify]
+
+    - name: Show tranc3 user info
+      debug:
+        msg: "{{ tranc3_id.stdout }}"
+      tags: [verify]
+
+    # ── 4. Create directory structure ───────────────────────────
+    - name: Ensure required directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: tranc3
+        group: tranc3
+        mode: "0755"
+      loop:
+        - "{{ tranc3_root }}"
+        - "{{ tranc3_root }}/logs"
+        - "{{ tranc3_root }}/data"
+        - "{{ tranc3_root }}/backups"
+        - "{{ tranc3_root }}/secrets"
+        - /etc/tranc3
+      tags: [dirs]
+
+    # ── 5. Pull latest git changes ──────────────────────────────
+    - name: Ensure repo is cloned and on correct branch
+      become_user: tranc3
+      git:
+        repo: "https://github.com/Trancendos/Tranc3.git"
+        dest: "{{ tranc3_root }}"
+        version: "{{ git_branch }}"
+        force: false
+        update: true
+        depth: 0   # full clone for branch switching
+      register: git_result
+      tags: [git]
+
+    - name: Show git update result
+      debug:
+        msg: "Git: {{ git_result.after | default('no change') }}"
+      tags: [git]
+
+    # ── 6. Generate production environment ─────────────────────
+    - name: Check if .env.production already exists
+      stat:
+        path: "{{ tranc3_root }}/.env.production"
+      register: env_file
+      tags: [env]
+
+    - name: Generate production .env (generate_production_env.sh --force)
+      become_user: tranc3
+      command:
+        cmd: bash scripts/generate_production_env.sh --force
+        chdir: "{{ tranc3_root }}"
+      environment:
+        DOMAIN: "{{ domain | default('trancendos.com') }}"
+        ENVIRONMENT: production
+        GIT_BRANCH: "{{ git_branch }}"
+      register: gen_env
+      changed_when: gen_env.rc == 0
+      when: not env_file.stat.exists
+      tags: [env]
+
+    - name: Show env generation output
+      debug:
+        msg: "{{ gen_env.stdout_lines | default(['env file already present — skipped']) }}"
+      tags: [env]
+
+    # ── 7. Run citadel preflight checks ────────────────────────
+    - name: Run citadel preflight checks
+      become_user: tranc3
+      command:
+        cmd: python3 scripts/citadel_preflight.py
+        chdir: "{{ tranc3_root }}"
+      register: preflight
+      failed_when: preflight.rc != 0
+      changed_when: false
+      tags: [preflight]
+
+    - name: Show preflight output
+      debug:
+        msg: "{{ preflight.stdout_lines }}"
+      tags: [preflight]
+
+    # ── 8. Pull Docker images ───────────────────────────────────
+    - name: Pull all Docker Compose images
+      become_user: tranc3
+      command:
+        cmd: docker compose -f {{ compose_file }} pull
+        chdir: "{{ tranc3_root }}"
+      register: pull_result
+      changed_when: "'Pull complete' in pull_result.stdout or pull_result.rc == 0"
+      timeout: 600   # image pulls can take a while on first boot
+      tags: [docker, pull]
+
+    # ── 9. Start core services ──────────────────────────────────
+    - name: Start Docker Compose core services
+      become_user: tranc3
+      command:
+        cmd: >
+          docker compose -f {{ compose_file }}
+          {% if deploy_profile == 'core' %}
+          up -d --remove-orphans
+          infinity-auth infinity-ws infinity-portal-service
+          infinity-one-service infinity-admin-service users-service
+          monitoring notifications infinity-ai the-grid
+          gateway-service hive-service sentinel-station-service
+          {% else %}
+          up -d --remove-orphans
+          {% endif %}
+        chdir: "{{ tranc3_root }}"
+      register: compose_up
+      changed_when: true
+      timeout: 300
+      tags: [docker, start]
+
+    - name: Show compose up output
+      debug:
+        msg: "{{ compose_up.stdout_lines[-20:] }}"
+      tags: [docker, start]
+
+    # ── 10. Enable and start tranc3-citadel systemd service ─────
+    - name: Enable tranc3-citadel systemd service
+      systemd:
+        name: tranc3-citadel
+        enabled: true
+        daemon_reload: true
+      tags: [systemd]
+
+    # ── 11. Health check P0/P1 endpoints ───────────────────────
+    - name: Wait for infinity-auth health endpoint
+      uri:
+        url: "http://localhost:8005/health"
+        method: GET
+        return_content: true
+        status_code: 200
+      register: auth_health
+      until: auth_health.status == 200
+      retries: "{{ (health_check_timeout_sec | int) // 5 }}"
+      delay: 5
+      failed_when: false
+      tags: [health]
+
+    - name: Wait for API gateway health endpoint
+      uri:
+        url: "http://localhost:8000/health"
+        method: GET
+        return_content: true
+        status_code: 200
+      register: api_health
+      until: api_health.status == 200
+      retries: "{{ (health_check_timeout_sec | int) // 5 }}"
+      delay: 5
+      failed_when: false
+      tags: [health]
+
+    - name: Check running Docker containers
+      command: docker compose -f {{ compose_file }} ps --format table
+      args:
+        chdir: "{{ tranc3_root }}"
+      register: docker_ps
+      changed_when: false
+      become_user: tranc3
+      tags: [health]
+
+    # ── 12. Deployment summary ──────────────────────────────────
+    - name: Print deployment summary
+      debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════╗
+          ║         Tranc3 Citadel — Setup Complete                 ║
+          ╚══════════════════════════════════════════════════════════╝
+
+          Host    : {{ ansible_host | default(inventory_hostname) }}
+          Branch  : {{ git_branch }}
+          Profile : {{ deploy_profile }}
+
+          infinity-auth   :8005/health → {{ auth_health.status | default('TIMEOUT') }}
+          API gateway      :8000/health → {{ api_health.status  | default('TIMEOUT') }}
+
+          Running containers:
+          {{ docker_ps.stdout }}
+
+          Next steps:
+            1. Verify HTTPS is working: curl https://{{ domain | default('trancendos.com') }}/health
+            2. Check Traefik dashboard: http://{{ ansible_host }}:8888
+            3. Review logs: ssh tranc3@{{ ansible_host }} 'docker compose -f /opt/tranc3/docker-compose.production.yml logs -f'
+            4. Run UAT suite: pytest tests/test_uat.py -v --base-url=https://{{ domain | default('trancendos.com') }}
+      tags: [summary, always]

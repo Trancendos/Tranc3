@@ -1,0 +1,49 @@
+name = "tranc3-storage"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+account_id = "e0214028cb64d31232f5662548a55e4e"
+
+[vars]
+ENVIRONMENT = "production"
+
+# ── R2 buckets (Cloudflare Object Storage — primary, free tier) ───────────────
+# Free: 10 GB storage, 10M Class A (writes) + 100M Class B (reads) per month
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "trancendos-storage"
+
+# ── KV: usage counters + metadata index ──────────────────────────────────────
+[[kv_namespaces]]
+binding = "CACHE"
+id = "2a0e09cfd22741eeb3245607ce6e76fd"
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+#
+# Storage provider rotation — all genuinely free tiers, zero cost:
+#
+# PRIMARY:   Cloudflare R2      — 10GB free forever (R2_BUCKET binding above)
+# SECONDARY: Backblaze B2       — 10GB free forever
+# TERTIARY:  Oracle Object Storage — 20GB free forever (Always Free tier)
+#
+# BACKBLAZE_KEY_ID       → https://backblazeb2.com (Application Key ID)
+# BACKBLAZE_APP_KEY      → https://backblazeb2.com (Application Key)
+# BACKBLAZE_BUCKET_ID    → Backblaze bucket ID
+# BACKBLAZE_BUCKET_NAME  → Backblaze bucket name
+# ORACLE_NAMESPACE       → Oracle Cloud Object Storage namespace
+# ORACLE_BUCKET_NAME     → Oracle Cloud bucket name
+# ORACLE_REGION          → e.g. eu-frankfurt-1
+# ORACLE_ACCESS_KEY      → Oracle Cloud S3-compatible access key
+# ORACLE_SECRET_KEY      → Oracle Cloud S3-compatible secret key
+# ALLOWED_ORIGINS        → extra CORS origins (comma-separated)
+
+# ── Deploy ────────────────────────────────────────────────────────────────────
+# First create the R2 bucket:
+#   wrangler r2 bucket create trancendos-storage
+#
+# Then set secrets:
+#   wrangler secret put BACKBLAZE_KEY_ID --name tranc3-storage
+#   wrangler secret put BACKBLAZE_APP_KEY --name tranc3-storage
+#   ... (etc for each key)
+#
+# Then deploy:
+#   wrangler deploy

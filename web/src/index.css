@@ -1,3 +1,51 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Remove focus outline on programmatically-focused main landmark */
+#main-content:focus {
+  outline: none;
+}
+
+/* Disable animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High-contrast mode — ensure borders and interactive elements are visible */
+@media (forced-colors: active) {
+  .bg-gray-900,
+  .bg-gray-800,
+  .bg-gray-950 {
+    background-color: Canvas;
+    border-color: ButtonText;
+  }
+
+  button,
+  a {
+    forced-color-adjust: auto;
+  }
+
+  [role="progressbar"] > div {
+    background-color: Highlight;
+  }
+
+  .text-green-400,
+  .text-yellow-400,
+  .text-red-400,
+  .text-indigo-400 {
+    color: ButtonText;
+  }
+
+  /* Ensure status badges have borders in high-contrast */
+  [aria-label]:not(button):not(a) {
+    border: 1px solid ButtonText;
+  }
+}

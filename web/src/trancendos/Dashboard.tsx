@@ -312,9 +312,11 @@ function HubCard({ hub, onClick }: { hub: HubState; onClick: (hub: HubState) => 
   const pillarColor = colors.hubs[hub.id as keyof typeof colors.hubs] || colors.brand.primary
 
   return (
-    <div
+    <button
+      type="button"
       onClick={() => onClick(hub)}
-      className="group relative flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
+      aria-label={`${hub.name} — ${hub.status}. View details.`}
+      className="group relative flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-lg text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
       style={{
         backgroundColor: colors.brand.elevated,
         borderColor: hub.status === 'degraded' ? colors.status.degraded + '60' :
@@ -366,12 +368,14 @@ function HubCard({ hub, onClick }: { hub: HubState; onClick: (hub: HubState) => 
       </div>
 
       {/* Tier indicator */}
-      <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-           style={{ backgroundColor: colors.tier[hub.tier as keyof typeof colors.tier] + '30',
-                    color: colors.tier[hub.tier as keyof typeof colors.tier] }}>
+      <div
+        aria-hidden="true"
+        className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
+        style={{ backgroundColor: colors.tier[hub.tier as keyof typeof colors.tier] + '30',
+                 color: colors.tier[hub.tier as keyof typeof colors.tier] }}>
         T{hub.tier}
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -402,7 +406,12 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
   const displayHub = liveDetail || hub
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[420px] bg-gray-950 border-l border-gray-800 shadow-2xl z-50 flex flex-col overflow-hidden">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="hub-detail-title"
+      className="fixed inset-y-0 right-0 w-[420px] bg-gray-950 border-l border-gray-800 shadow-2xl z-50 flex flex-col overflow-hidden"
+    >
       {/* Header */}
       <div className="p-6 border-b border-gray-800" style={{ background: `linear-gradient(135deg, ${pillarColor}15, transparent)` }}>
         <div className="flex items-center justify-between mb-4">
@@ -412,12 +421,16 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
               <HubIcon hubId={hub.id} size={24} color={pillarColor} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">{displayHub.name}</h2>
+              <h2 id="hub-detail-title" className="text-lg font-bold text-white">{displayHub.name}</h2>
               <span className="text-xs text-gray-500">{pillarDef?.name} Pillar · Tier {displayHub.tier}</span>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors">
-            ✕
+          <button
+            onClick={onClose}
+            aria-label="Close hub detail panel"
+            className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+          >
+            <span aria-hidden="true">✕</span>
           </button>
         </div>
 
@@ -1015,9 +1028,13 @@ export default function TrancendosDashboard() {
 
   if (loading && hubStates.length === 0) {
     return (
-      <div className="flex h-screen bg-gray-950 text-white items-center justify-center">
+      <div
+        role="status"
+        aria-label="Loading ecosystem data"
+        className="flex h-screen bg-gray-950 text-white items-center justify-center"
+      >
         <div className="flex flex-col items-center gap-3">
-          <Loader2 size={32} className="animate-spin text-blue-500" />
+          <Loader2 size={32} aria-hidden="true" className="animate-spin text-blue-500" />
           <span className="text-sm text-gray-400">Loading Ecosystem Data...</span>
         </div>
       </div>

@@ -1,0 +1,103 @@
+---
+# DEFSTAN Compliance Gate
+# Runs on push to main and on all PRs.
+# Fails if overall compliance score < 70%.
+
+name: compliance-gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  compliance-check:
+    name: "DEFSTAN Compliance Gate"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pyyaml fastapi
+          # Install core package deps needed for compliance checker
+          pip install -r requirements.txt || pip install pyyaml fastapi pydantic
+
+      - name: Run compliance checker (summary)
+        run: |
+          python -m src.compliance.checker
+
+      - name: Run compliance CI gate
+        id: compliance_gate
+        run: |
+          python -m src.compliance.checker --ci
+        # Exit code 1 if score < 70% — will fail the job
+
+      - name: Generate compliance report artifact
+        if: always()
+        run: |
+          mkdir -p compliance-artifacts
+          python -m src.compliance.checker --report > compliance-artifacts/compliance_report.json
+          python -c "
+          from src.compliance.checker import load_and_check
+          from src.compliance.report_generator import generate_markdown, generate_html
+          r = load_and_check()
+          open('compliance-artifacts/compliance_report.md','w').write(generate_markdown(r))
+          open('compliance-artifacts/compliance_report.html','w').write(generate_html(r))
+          "
+
+      - name: Upload compliance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: defstan-compliance-report
+          path: compliance-artifacts/
+          retention-days: 30
+
+      - name: Post compliance summary on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let summary = 'DEFSTAN Compliance report not available';
+            try {
+              const report = JSON.parse(fs.readFileSync('compliance-artifacts/compliance_report.json', 'utf8'));
+              const score = report.overall_score;
+              const gate = score >= 70 ? 'PASS' : 'FAIL';
+              const counts = report.status_counts || {};
+              summary = [
+                `## DEFSTAN Compliance Gate — ${gate}`,
+                '',
+                `**Overall Score:** ${score.toFixed(1)}%`,
+                '',
+                '| Status | Count |',
+                '|--------|-------|',
+                ...Object.entries(counts).map(([s, n]) => `| ${s} | ${n} |`),
+                '',
+                '| Area | Standard | Score |',
+                '|------|----------|-------|',
+                ...Object.entries(report.areas || {}).map(([k, v]) =>
+                  `| ${v.area} | ${v.standard} | ${v.score_pct.toFixed(1)}% |`
+                ),
+              ].join('\n');
+            } catch (e) {
+              summary = `DEFSTAN Compliance check failed: ${e.message}`;
+            }
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary,
+            });
