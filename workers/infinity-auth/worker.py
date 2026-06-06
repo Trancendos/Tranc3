@@ -242,19 +242,28 @@ class AuthDatabase:
 
 
 def hash_password(password: str) -> str:
-    """Hash a password using SHA-256 with salt (argon2 in production)."""
-    salt = secrets.token_hex(16)
-    hash_val = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000).hex()
-    return f"{salt}:{hash_val}"
+    """Hash a password using bcrypt (work factor 12)."""
+    import bcrypt  # type: ignore[import-untyped]
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=12)).decode()
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
-    """Verify a password against stored hash."""
+    """Verify a password against a stored hash.
+
+    Supports both bcrypt hashes (new) and legacy PBKDF2-SHA256 hashes
+    (format ``salt:hexdigest``) so existing accounts keep working until
+    their next login triggers a transparent rehash.
+    """
     try:
+        if stored_hash.startswith("$2") and len(stored_hash) > 30:
+            # bcrypt hash
+            import bcrypt  # type: ignore[import-untyped]
+            return bcrypt.checkpw(password.encode(), stored_hash.encode())
+        # Legacy PBKDF2-SHA256: "salt:hexdigest"
         salt, hash_val = stored_hash.split(":", 1)
         computed = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000).hex()
         return hmac.compare_digest(hash_val, computed)
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError, Exception):
         return False
 
 
@@ -386,8 +395,8 @@ async def _lifespan(app: FastAPI):
                     worker_kit.health.record_fire("auth_health_reporter")
             except asyncio.CancelledError:
                 break
-            except Exception:
-                pass  # swallow background loop errors — not critical path
+            except Exception as _exc:
+                logger.warning("auth background health reporter error: %s", _exc)
 
     task = asyncio.create_task(_bg_loop())
     try:
@@ -574,6 +583,19 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     # Verify password
     if not verify_password(credentials.password, row["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # Transparently rehash legacy PBKDF2 hashes to bcrypt on successful login
+    stored = row["password_hash"]
+    if not (stored.startswith("$2") and len(stored) > 30):
+        try:
+            new_hash = hash_password(credentials.password)
+            db.execute(
+                "UPDATE users SET password_hash = ? WHERE user_id = ?",
+                (new_hash, row["user_id"]),
+            )
+            db.commit()
+        except Exception as _exc:
+            logger.warning("Password rehash failed for user=%s: %s", row["user_id"], _exc)
 
     # Check MFA
     if row["mfa_enabled"]:

@@ -31,7 +31,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+import httpx
+from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
@@ -40,6 +41,7 @@ from src.entities.health_metadata import health_entity_block
 logger = logging.getLogger("tranc3.workers.users-service")
 
 DATABASE_PATH = os.environ.get("USERS_DATABASE_PATH", "/data/users.db")
+NOTIFICATIONS_URL = os.environ.get("NOTIFICATIONS_SERVICE_URL", "http://localhost:8008")
 
 # ---------------------------------------------------------------------------
 # Pydantic models
@@ -483,17 +485,45 @@ async def update_role(user_id: str, body: RoleUpdateRequest):
     return _row_to_response(row)
 
 
+async def _dispatch_reset_email(user_id: str, email: str, token: str) -> None:
+    """Fire-and-forget: ask notifications-service to send the password-reset email."""
+    reset_link = os.environ.get("FRONTEND_URL", "http://localhost:3000") + f"/reset-password?token={token}"
+    payload = {
+        "user_id": user_id,
+        "channel": "email",
+        "priority": "high",
+        "subject": "Reset your Trancendos password",
+        "body": (
+            f"You requested a password reset.\n\n"
+            f"Click the link below to choose a new password (expires in 1 hour):\n\n"
+            f"{reset_link}\n\n"
+            f"If you did not request this, you can safely ignore this email."
+        ),
+        "metadata": {"email": email, "reset_token": token},
+    }
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post(f"{NOTIFICATIONS_URL}/notifications/send", json=payload)
+            if resp.status_code not in (200, 201):
+                logger.warning(
+                    "notifications-service returned %s for reset email user=%s",
+                    resp.status_code, user_id,
+                )
+    except Exception as exc:
+        logger.warning("Failed to dispatch reset email for user=%s: %s", user_id, exc)
+
+
 @_router.post("/users/password-reset/request", response_model=PasswordResetResponse)
-async def request_password_reset(body: PasswordResetRequest):
-    """Stub: generate a password-reset token (not emailed; use notifications-service)."""
+async def request_password_reset(body: PasswordResetRequest, background_tasks: BackgroundTasks):
+    """Generate a password-reset token and dispatch a reset email via notifications-service."""
     row = db.execute(
         "SELECT * FROM users WHERE email = ? AND is_active = 1",
         (str(body.email),),
     ).fetchone()
     if not row:
-        # Don't leak user existence
+        # Don't leak user existence — respond identically for unknown emails
         return PasswordResetResponse(
-            message="If that email is registered, a reset link has been generated.",
+            message="If that email is registered, a reset link has been sent.",
             reset_token="",
         )
     token = str(uuid.uuid4())
@@ -503,8 +533,9 @@ async def request_password_reset(body: PasswordResetRequest):
         (token, row["user_id"], str(body.email), now),
     )
     db.commit()
+    background_tasks.add_task(_dispatch_reset_email, row["user_id"], str(body.email), token)
     return PasswordResetResponse(
-        message="Password reset token generated.",
+        message="If that email is registered, a reset link has been sent.",
         reset_token=token,
     )
 
