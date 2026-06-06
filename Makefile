@@ -117,19 +117,6 @@ swarm-run:
 entity-audit:
 	@python3 scripts/entity_registry_audit.py
 
-# ── DEFSTAN Compliance ────────────────────────────────────────────────────────
-compliance-check:
-	@echo "Running DEFSTAN compliance check..."
-	python -m src.compliance.checker
-
-compliance-report:
-	@echo "Generating DEFSTAN compliance report..."
-	python -m src.compliance.checker --report
-
-compliance-ci:
-	@echo "Running DEFSTAN compliance CI gate (threshold: 70%)..."
-	python -m src.compliance.checker --ci
-
 ansible-health:
 	@ansible-playbook -i deploy/ansible/inventory/workers.yml deploy/ansible/playbooks/health-probe.yml
 
