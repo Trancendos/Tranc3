@@ -1,0 +1,936 @@
+---
+# DEFSTAN Compliance Register — Tranc3 / Trancendos Platform
+# Generated: 2026-06-06
+# Scope: Public civilian application modelled on DEF STAN discipline and rigour
+# Baseline standards: DEF STAN 00-700, 00-055, 00-056, 00-600, 00-044, 05-086, 05-057
+
+meta:
+  register_version: "1.0.0"
+  platform: "Tranc3 / Trancendos"
+  classification: "UNCLASSIFIED — PUBLIC"
+  owner: "Trancendos Platform Engineering"
+  last_updated: "2026-06-06"
+  review_cycle: "quarterly"
+
+requirements:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # INFORMATION ASSURANCE (DEF STAN 00-700 inspired)
+  # ─────────────────────────────────────────────────────────────────────────────
+  - id: REQ-IA-001
+    standard: "DEF STAN 00-700"
+    title: "Authentication and Access Control"
+    description: "All platform endpoints must enforce authentication. Unauthenticated requests must be rejected with a defined error response. Role-based access control must be enforced at the service boundary."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/auth/zero_trust.py
+        description: "Zero Trust IAM: device posture, MFA, geographic policies, risk scoring"
+      - type: code
+        path: src/auth/dependencies.py
+        description: "FastAPI auth dependency injected on all protected routes"
+      - type: test
+        path: tests/test_zero_trust.py
+        description: "Zero trust IAM boundary tests"
+      - type: test
+        path: tests/test_penetration.py
+        description: "Auth boundary penetration tests"
+    verification_method: code_review
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "JWT + Zero Trust layered authentication"
+
+  - id: REQ-IA-002
+    standard: "DEF STAN 00-700"
+    title: "Secrets and Credential Management"
+    description: "All platform secrets must be stored in a dedicated vault using encryption at rest. Secrets must never appear in source code, logs, or configuration files committed to version control."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: cloudflare/infinity-void/
+        description: "AES-GCM encrypted secrets vault (The Void) — PBKDF2 key derivation, 100k iterations, SHA-256"
+      - type: code
+        path: workers/vault-service/
+        description: "Self-hosted vault worker (port 8038) replacing CF Worker"
+      - type: test
+        path: tests/test_penetration.py
+        description: "Secret exposure penetration tests"
+    verification_method: code_review
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Migrating from Cloudflare Worker to self-hosted vault-service"
+
+  - id: REQ-IA-003
+    standard: "DEF STAN 00-700"
+    title: "Transport Layer Security"
+    description: "All external-facing endpoints must use TLS 1.2 or above. Unencrypted HTTP must be rejected or redirected. Internal service-to-service traffic on private networks is excepted."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: docker-compose.production.yml
+        description: "Traefik reverse proxy with TLS termination configured"
+      - type: code
+        path: cloudflare/trancendos-api-gateway/
+        description: "Cloudflare edge enforces TLS for api.trancendos.com"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-IA-004
+    standard: "DEF STAN 00-700"
+    title: "Input Validation and Injection Prevention"
+    description: "All user-supplied input must be validated against a defined schema before processing. SQL injection, command injection, and XSS vectors must be actively blocked."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/validation/loop_validator.py
+        description: "Loop and cascade-failure validation"
+      - type: code
+        path: Dimensional/sanitize.py
+        description: "Input sanitisation utilities used across all modules"
+      - type: test
+        path: tests/test_penetration.py
+        description: "OWASP injection tests (A03)"
+      - type: test
+        path: tests/test_validation.py
+        description: "Input validation and schema enforcement tests"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Pydantic v2 schema validation on all API models"
+
+  - id: REQ-IA-005
+    standard: "DEF STAN 00-700"
+    title: "Rate Limiting and Denial-of-Service Protection"
+    description: "All public-facing endpoints must enforce rate limits per tenant and per IP. Rate limit violations must be logged and returned as defined error codes."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/monetisation/billing.py
+        description: "Billing-tier rate limits: free 100/hr, pro 1k/hr, business 10k/hr"
+      - type: code
+        path: workers/rate-limit-service/
+        description: "Token-bucket rate limiter service (port 8026)"
+      - type: test
+        path: tests/test_compliance.py
+        description: "Rate limit enforcement tests (TestBillingCompliance)"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-IA-006
+    standard: "DEF STAN 00-700"
+    title: "Audit Logging"
+    description: "All security-relevant events (authentication, authorisation failures, data access, configuration changes) must be logged with timestamp, user identity, source IP, and action. Logs must be tamper-evident."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/observability/
+        description: "The Observatory: structured audit logging, tracing, metrics"
+      - type: code
+        path: workers/audit-service/
+        description: "Audit service (port 8025) — The Observatory audit trail"
+      - type: test
+        path: tests/test_observability.py
+        description: "Observability and audit log tests"
+    verification_method: code_review
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "W3C TraceContext propagation across all workers"
+
+  - id: REQ-IA-007
+    standard: "DEF STAN 00-700"
+    title: "Session Management"
+    description: "User sessions must have bounded lifetimes, be invalidated on logout, and be resistant to fixation and hijacking attacks. Session tokens must be cryptographically random."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/auth/zero_trust.py
+        description: "Session management with MFA and device posture checks"
+      - type: code
+        path: workers/infinity-auth/
+        description: "Infinity Core Auth: OAuth2/SSO/MFA engine (port 8005)"
+      - type: test
+        path: tests/test_auth.py
+        description: "Session management tests"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-IA-008
+    standard: "DEF STAN 00-700"
+    title: "CORS Policy Enforcement"
+    description: "Cross-Origin Resource Sharing headers must be explicitly configured. The wildcard (*) origin must not be used for authenticated endpoints. Allowed origins must be an approved allowlist."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: api.py
+        description: "FastAPI CORSMiddleware with ALLOWED_ORIGINS configuration"
+      - type: test
+        path: tests/test_penetration.py
+        description: "CORS boundary tests (A01)"
+    verification_method: code_review
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-IA-009
+    standard: "DEF STAN 00-700"
+    title: "Dependency Vulnerability Management"
+    description: "All third-party dependencies must be scanned for known CVEs on every merge to main. High and critical vulnerabilities must be resolved within defined SLAs."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: .forgejo/workflows/dependency-audit.yml
+        description: "Weekly + on-PR dependency scanning (pip-audit, Safety, npm audit)"
+      - type: code
+        path: .forgejo/workflows/security-scan.yml
+        description: "Python security: pip-audit, bandit, safety, ruff"
+    verification_method: audit
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-IA-010
+    standard: "DEF STAN 00-700"
+    title: "Data at Rest Encryption"
+    description: "Sensitive data stored in databases and file systems must be encrypted at rest using AES-256 or equivalent. Encryption keys must be managed separately from encrypted data."
+    status: PARTIAL
+    evidence:
+      - type: code
+        path: cloudflare/infinity-void/
+        description: "AES-GCM encrypted vault for secrets"
+      - type: code
+        path: fly.toml
+        description: "Fly.io 1GB encrypted volume at /app/models"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Database-level encryption depends on Supabase/PostgreSQL configuration; SQLite workers lack at-rest encryption — PLANNED for vault-service"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # SAFETY — SOFTWARE (DEF STAN 00-055 inspired)
+  # ─────────────────────────────────────────────────────────────────────────────
+  - id: REQ-SA-001
+    standard: "DEF STAN 00-055"
+    title: "Fail-Safe Design"
+    description: "The system must fail safely under unexpected conditions. AI inference failures must fall back through a defined degradation chain rather than returning undefined behaviour or crashing."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/core/tranc3_inference.py
+        description: "5-tier fallback: Ollama -> HuggingFace -> OpenRouter -> Backend -> OfflineProvider"
+      - type: code
+        path: src/mesh/
+        description: "Circuit breaker (closed/open/half-open) prevents cascade failures"
+      - type: test
+        path: tests/test_chaos.py
+        description: "Fault injection and resilience tests"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-SA-002
+    standard: "DEF STAN 00-055"
+    title: "Circuit Breaker Implementation"
+    description: "Inter-service calls must be protected by circuit breakers with defined thresholds, timeout windows, and half-open retry logic. Tripped circuits must be observable via health endpoints."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/mesh/
+        description: "CircuitBreaker with closed/open/half-open states, health monitoring, retries"
+      - type: code
+        path: src/validation/loop_validator.py
+        description: "LoopValidator prevents cascade failures"
+      - type: test
+        path: tests/test_mesh.py
+        description: "Circuit breaker state machine tests"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-SA-003
+    standard: "DEF STAN 00-055"
+    title: "AI Output Safety Constraints"
+    description: "AI-generated outputs must pass through safety validation before being returned to users. Outputs that exceed defined risk thresholds must be blocked or flagged."
+    status: PARTIAL
+    evidence:
+      - type: code
+        path: src/core/tranc3_inference.py
+        description: "Bootstrap mode with stub responses for safe fallback"
+      - type: code
+        path: src/bio_neural/
+        description: "Luminous consciousness engine with output validation"
+    verification_method: code_review
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Output safety filtering partially implemented; full content-moderation pipeline is PLANNED"
+
+  - id: REQ-SA-004
+    standard: "DEF STAN 00-055"
+    title: "Error Propagation Control"
+    description: "Unhandled exceptions must not propagate raw stack traces or internal error details to end users. All error responses must use the canonical error catalog."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/errors/error_catalog.py
+        description: "Canonical ErrorCode enum with structured error responses"
+      - type: test
+        path: tests/test_errors.py
+        description: "Error catalog and propagation tests"
+      - type: test
+        path: tests/test_compliance.py
+        description: "Error catalog format and completeness tests"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-SA-005
+    standard: "DEF STAN 00-055"
+    title: "Resource Exhaustion Prevention"
+    description: "The system must implement timeouts on all external calls, limit concurrent requests, and prevent resource exhaustion through connection pooling and backpressure mechanisms."
+    status: PARTIAL
+    evidence:
+      - type: code
+        path: src/mesh/
+        description: "ServiceMesh with httpx timeout configuration and retries"
+      - type: code
+        path: src/ai_gateway/
+        description: "Token budgets per tenant, LRU cache (1000 entries)"
+    verification_method: code_review
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Connection pool limits and global timeout policy not fully standardised across all workers"
+
+  - id: REQ-SA-006
+    standard: "DEF STAN 00-055"
+    title: "Threat Isolation"
+    description: "Suspected malicious content must be routed to an isolation environment (sandboxing) rather than processed in the main execution path."
+    status: PLANNED
+    evidence: []
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "The Ice Box (Cuckoo sandbox) and The Warp Tunnel are planned — not yet implemented"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # QUALITY ASSURANCE (DEF STAN 05-086 inspired)
+  # ─────────────────────────────────────────────────────────────────────────────
+  - id: REQ-QA-001
+    standard: "DEF STAN 05-086"
+    title: "Automated Test Coverage"
+    description: "All core platform modules must have automated test coverage. The test suite must include unit, integration, and end-to-end tests. Coverage reports must be generated on every CI run."
+    status: COMPLIANT
+    evidence:
+      - type: test
+        path: tests/test_smoke.py
+        description: "Fast sanity checks (<2s)"
+      - type: test
+        path: tests/test_uat.py
+        description: "User acceptance / end-to-end journeys"
+      - type: test
+        path: tests/test_chaos.py
+        description: "Fault injection and resilience"
+      - type: code
+        path: pyproject.toml
+        description: "pytest configuration with coverage settings"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "80+ test files covering all major subsystems"
+
+  - id: REQ-QA-002
+    standard: "DEF STAN 05-086"
+    title: "Static Code Analysis"
+    description: "All Python code must pass static analysis (linting and type checking) before merge. Identified issues must be resolved or explicitly waived."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: .pre-commit-config.yaml
+        description: "Pre-commit hooks: ruff, black, isort, bandit, semgrep"
+      - type: code
+        path: pyproject.toml
+        description: "ruff + mypy configuration"
+      - type: code
+        path: .forgejo/workflows/ci.yml
+        description: "CI linting pipeline on every push"
+    verification_method: audit
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-QA-003
+    standard: "DEF STAN 05-086"
+    title: "Continuous Integration Gate"
+    description: "No code may be merged to main without passing the CI pipeline including tests, linting, and security scans."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: .forgejo/workflows/ci.yml
+        description: "Forgejo CI pipeline on push/PR"
+      - type: code
+        path: .forgejo/workflows/production-gate.yml
+        description: "Production readiness gate"
+    verification_method: audit
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "All CI/CD runs through Forgejo (The Workshop)"
+
+  - id: REQ-QA-004
+    standard: "DEF STAN 05-086"
+    title: "Security Testing in CI"
+    description: "Security scans (SAST, dependency vulnerability scanning, secret detection) must run automatically on every PR to main."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: .forgejo/workflows/security-scan.yml
+        description: "bandit, semgrep SAST, gitleaks secret detection"
+      - type: code
+        path: .forgejo/workflows/dependency-audit.yml
+        description: "pip-audit, Safety, npm audit"
+    verification_method: audit
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-QA-005
+    standard: "DEF STAN 05-086"
+    title: "Test Evidence Traceability"
+    description: "Test results must be persisted in a machine-readable format and linked to requirements. Every test run must produce a timestamped artifact."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: pyproject.toml
+        description: "pytest configured to output logs/test_results.jsonl"
+      - type: test
+        path: tests/test_compliance.py
+        description: "Compliance test suite producing structured output"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "All targeted test suites produce logs/test_results.jsonl per CLAUDE.md"
+
+  - id: REQ-QA-006
+    standard: "DEF STAN 05-086"
+    title: "Chaos and Resilience Testing"
+    description: "The platform must undergo regular fault injection testing covering service unavailability, network partitions, and invalid input storms."
+    status: COMPLIANT
+    evidence:
+      - type: test
+        path: tests/test_chaos.py
+        description: "The Chaos Party: fault injection and resilience (Alice in Wonderland themed)"
+      - type: test
+        path: tests/test_resilience.py
+        description: "Resilience pattern tests"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-QA-007
+    standard: "DEF STAN 05-086"
+    title: "Performance Benchmarking"
+    description: "Key inference and API response paths must be benchmarked to establish baselines. Regressions against the baseline must fail CI."
+    status: PARTIAL
+    evidence:
+      - type: code
+        path: src/benchmark/
+        description: "Benchmarking infrastructure"
+      - type: test
+        path: tests/test_tranc3_ml.py
+        description: "ML performance tests"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Benchmarks exist but CI regression gate is not yet automated"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # CONFIGURATION MANAGEMENT (DEF STAN 00-044 inspired)
+  # ─────────────────────────────────────────────────────────────────────────────
+  - id: REQ-CM-001
+    standard: "DEF STAN 00-044"
+    title: "Version Control for All Artefacts"
+    description: "All source code, configuration, infrastructure-as-code, and documentation must be version-controlled in a designated repository. Direct edits to production without a version-controlled change are prohibited."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: .forgejo/workflows/
+        description: "All deployments via Forgejo (The Workshop) CI/CD pipelines"
+      - type: code
+        path: deploy/forgejo/
+        description: "Self-hosted Forgejo CI/CD — The Workshop"
+    verification_method: audit
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Forgejo at trancendos.com/the-workshop — no GitHub Actions"
+
+  - id: REQ-CM-002
+    standard: "DEF STAN 00-044"
+    title: "Database Schema Change Management"
+    description: "All database schema changes must be applied through migration scripts tracked in version control. Manual schema changes to production are prohibited."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: migrations/
+        description: "Alembic migration scripts"
+      - type: code
+        path: alembic.ini
+        description: "Alembic configuration"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "`make migrate` applies pending Alembic migrations"
+
+  - id: REQ-CM-003
+    standard: "DEF STAN 00-044"
+    title: "Environment Configuration Separation"
+    description: "Development, staging, and production configurations must be strictly separated. Production secrets must not be accessible in development environments."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: docker-compose.production.yml
+        description: "Production stack separate from development"
+      - type: code
+        path: docker-compose.development.yml
+        description: "Development stack"
+      - type: code
+        path: docker-compose.yml
+        description: "Base compose configuration"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-CM-004
+    standard: "DEF STAN 00-044"
+    title: "Infrastructure as Code"
+    description: "All infrastructure provisioning must be defined as code (IaC). Manual infrastructure creation is prohibited in production."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: docker-compose.production.yml
+        description: "Full production stack (38 workers + infrastructure) as Docker Compose"
+      - type: code
+        path: infrastructure/
+        description: "Infrastructure definitions"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Traefik + Vault + Prometheus + Grafana + Loki all IaC-defined"
+
+  - id: REQ-CM-005
+    standard: "DEF STAN 00-044"
+    title: "Dependency Pinning"
+    description: "All third-party dependency versions must be pinned in requirements files. Unpinned transitive dependencies must be resolved by a lock file."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: requirements.txt
+        description: "Pinned Python dependencies"
+      - type: code
+        path: package-lock.json
+        description: "npm lock file for frontend"
+      - type: code
+        path: renovate.json
+        description: "Renovate bot for automated dependency updates"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-CM-006
+    standard: "DEF STAN 00-044"
+    title: "Change Request Process"
+    description: "All significant platform changes must go through a documented change request process with approval before deployment to production."
+    status: PARTIAL
+    evidence:
+      - type: code
+        path: src/townhall/
+        description: "The Town Hall: PRINCE2, ITIL, Agile/Kanban governance"
+      - type: code
+        path: .forgejo/workflows/
+        description: "PR-based change workflow enforced by CI"
+    verification_method: audit
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Town Hall governance module is partially implemented — formal CAB process not yet enforced"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # SUPPORTABILITY (DEF STAN 00-600 inspired)
+  # ─────────────────────────────────────────────────────────────────────────────
+  - id: REQ-SU-001
+    standard: "DEF STAN 00-600"
+    title: "Health Monitoring Endpoints"
+    description: "Every service must expose a /health endpoint returning standardised health status. A platform-wide health aggregator must roll up all service statuses."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/observability/health.py
+        description: "Central health checker monitoring all P0-P2 services"
+      - type: code
+        path: workers/health-aggregator/
+        description: "Health aggregator service (port 8029)"
+      - type: test
+        path: tests/test_health.py
+        description: "Health endpoint tests"
+      - type: test
+        path: tests/test_all_workers_health.py
+        description: "All-workers health check tests"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-SU-002
+    standard: "DEF STAN 00-600"
+    title: "Metrics and Observability"
+    description: "All services must emit Prometheus-compatible metrics. Dashboards must exist covering latency, error rates, and saturation. Alerting must be configured for SLO breaches."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: monitoring/prometheus.yml
+        description: "Prometheus metrics collection from all workers"
+      - type: code
+        path: monitoring/grafana/
+        description: "Grafana dashboards (auto-provisioned)"
+      - type: code
+        path: workers/monitoring/
+        description: "Monitoring service (port 8007) with Prometheus alert rules"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-SU-003
+    standard: "DEF STAN 00-600"
+    title: "Distributed Tracing"
+    description: "All inter-service calls must propagate trace context (W3C TraceContext). Traces must be collectable and queryable for post-incident analysis."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/observability/tracing.py
+        description: "W3C TraceContext propagation across all workers"
+      - type: test
+        path: tests/test_tracing.py
+        description: "Distributed tracing tests"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-SU-004
+    standard: "DEF STAN 00-600"
+    title: "Structured Log Aggregation"
+    description: "All services must emit structured JSON logs. Logs must be aggregated centrally and searchable. Log retention must meet defined policy."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: monitoring/loki.yml
+        description: "Loki log aggregation"
+      - type: code
+        path: monitoring/promtail.yml
+        description: "Promtail log collection from Docker containers"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "JSON logs with trace_id, user_id, service_name bindings"
+
+  - id: REQ-SU-005
+    standard: "DEF STAN 00-600"
+    title: "Service Runbook Documentation"
+    description: "Every P0 and P1 service must have operational runbook documentation covering startup, shutdown, failure modes, and recovery procedures."
+    status: PARTIAL
+    evidence:
+      - type: code
+        path: docs/
+        description: "Platform documentation (partial)"
+      - type: code
+        path: CLAUDE.md
+        description: "Engineering reference with service map and port assignments"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "CLAUDE.md serves as engineering reference; dedicated operational runbooks are PLANNED"
+
+  - id: REQ-SU-006
+    standard: "DEF STAN 00-600"
+    title: "Disaster Recovery and Backup"
+    description: "Critical data stores must be backed up on a defined schedule. Recovery procedures must be documented and tested. RTO and RPO must be defined."
+    status: PLANNED
+    evidence: []
+    verification_method: audit
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Backup procedures and DR testing are planned but not yet implemented"
+
+  - id: REQ-SU-007
+    standard: "DEF STAN 00-600"
+    title: "Zero-Downtime Deployment"
+    description: "Production deployments must support rolling updates without service interruption. Health checks must gate traffic shifting."
+    status: PARTIAL
+    evidence:
+      - type: code
+        path: .forgejo/workflows/deploy-fly.yml
+        description: "Fly.io rolling deployment"
+      - type: code
+        path: docker-compose.production.yml
+        description: "Docker Compose with restart policies"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Fly.io supports rolling deploys; self-hosted worker rolling update strategy is PARTIAL"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # SOFTWARE DEVELOPMENT (DEF STAN 00-056 inspired)
+  # ─────────────────────────────────────────────────────────────────────────────
+  - id: REQ-SD-001
+    standard: "DEF STAN 00-056"
+    title: "Modular Architecture"
+    description: "Platform services must be architecturally decomposed into independent, loosely-coupled modules with defined interfaces. Circular dependencies are prohibited."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/
+        description: "Modular Python package structure (18+ named subsystems)"
+      - type: code
+        path: workers/
+        description: "38+ independent worker services with defined API contracts"
+    verification_method: code_review
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Each worker owns its own SQLite database; no shared state between workers"
+
+  - id: REQ-SD-002
+    standard: "DEF STAN 00-056"
+    title: "API Contract Versioning"
+    description: "All public APIs must be versioned. Breaking changes must increment the API major version. Consumers must have a deprecation notice period before breaking changes."
+    status: PARTIAL
+    evidence:
+      - type: code
+        path: api.py
+        description: "FastAPI with versioned endpoints"
+      - type: code
+        path: src/mcp/server.py
+        description: "MCP protocol version negotiation (protocolVersion field)"
+    verification_method: code_review
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "MCP protocol versioning fully implemented; REST API versioning is partial"
+
+  - id: REQ-SD-003
+    standard: "DEF STAN 00-056"
+    title: "Code Review Process"
+    description: "All code changes to main branches must be reviewed by at least one other developer. Review must cover correctness, security, and compliance."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: .forgejo/workflows/ci.yml
+        description: "PR-based workflow enforced by CI — no direct push to main"
+    verification_method: audit
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-SD-004
+    standard: "DEF STAN 00-056"
+    title: "Event-Driven Integration Pattern"
+    description: "Inter-service communication must use the defined event bus pattern for asynchronous operations. Synchronous calls must use the service mesh for resilience."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/event_bus/
+        description: "Pattern-based routing, subscriptions, SQLite persistence, batch processing"
+      - type: code
+        path: src/mesh/
+        description: "Service mesh with circuit breaker, health monitoring, retries"
+      - type: test
+        path: tests/test_event_bus.py
+        description: "Event bus tests"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-SD-005
+    standard: "DEF STAN 00-056"
+    title: "Personality and Entity Naming Governance"
+    description: "All platform entities must use canonical code names as defined in the entity registry. Deviations from canonical names in code, comments, routes, and logs are prohibited."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/entities/platform.py
+        description: "Canonical entity registry for all 43+ platform entities"
+      - type: code
+        path: PLATFORM_ENTITIES.md
+        description: "Canonical reference for all platform entities"
+    verification_method: code_review
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-SD-006
+    standard: "DEF STAN 00-056"
+    title: "Pydantic Schema Validation"
+    description: "All API request and response models must be defined using Pydantic v2. Schema validation must be enforced at the API boundary, not within business logic."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: api.py
+        description: "FastAPI with Pydantic v2 models on all endpoints"
+      - type: test
+        path: tests/test_compatibility.py
+        description: "Pydantic v2 and JSON-RPC 2.0 compatibility tests"
+      - type: test
+        path: tests/test_validation.py
+        description: "Input validation and schema enforcement tests"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-SD-007
+    standard: "DEF STAN 00-056"
+    title: "MCP Protocol Compliance"
+    description: "The Spark MCP server must implement the Model Context Protocol specification: JSON-RPC 2.0 over HTTP/SSE, initialize handshake, tools/list, resources/list, and defined error codes."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/mcp/server.py
+        description: "JSON-RPC 2.0 MCP server: initialize, tools/list, resources/list, SSE"
+      - type: test
+        path: tests/test_spark_grid_integration.py
+        description: "The Spark + The Digital Grid integration tests"
+      - type: test
+        path: tests/test_compliance.py
+        description: "MCP protocol compliance tests (TestMCPProtocolCompliance)"
+    verification_method: test
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # TECHNICAL DOCUMENTATION (DEF STAN 05-057 / IETM inspired)
+  # ─────────────────────────────────────────────────────────────────────────────
+  - id: REQ-TD-001
+    standard: "DEF STAN 05-057"
+    title: "Platform Architecture Documentation"
+    description: "A current, accurate architecture document must exist covering all deployed services, their interconnections, ports, and responsibilities."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: CLAUDE.md
+        description: "Comprehensive platform architecture reference (43 entities, 38+ workers, port map)"
+      - type: code
+        path: ARCHITECTURE_THREAT_MODEL.md
+        description: "STRIDE analysis and risk register"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-TD-002
+    standard: "DEF STAN 05-057"
+    title: "API Reference Documentation"
+    description: "All public-facing APIs must have machine-readable OpenAPI/Swagger documentation. Documentation must be kept in sync with the implementation."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: api.py
+        description: "FastAPI auto-generates OpenAPI 3.x documentation at /docs and /openapi.json"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-TD-003
+    standard: "DEF STAN 05-057"
+    title: "Security Assessment Documentation"
+    description: "A security assessment must exist documenting known risks, threat models, and mitigation measures."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: ARCHITECTURE_THREAT_MODEL.md
+        description: "STRIDE analysis and risk register for self-hosted architecture"
+      - type: code
+        path: SECURITY.md
+        description: "Security policy and vulnerability reporting"
+      - type: code
+        path: SECURITY-ASSESSMENT.md
+        description: "Detailed security assessment"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-TD-004
+    standard: "DEF STAN 05-057"
+    title: "Deployment and Operations Guide"
+    description: "Step-by-step deployment procedures must be documented for all environments. The guide must be maintained and validated with each major release."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: CLAUDE.md
+        description: "Manual deploy procedures for Fly.io and Cloudflare Workers"
+      - type: code
+        path: deploy/forgejo/
+        description: "Workshop setup scripts and nginx configuration"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-TD-005
+    standard: "DEF STAN 05-057"
+    title: "Entity and Naming Canonical Reference"
+    description: "A canonical reference for all platform entities, their names, roles, and status must be maintained and kept current."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: PLATFORM_ENTITIES.md
+        description: "Canonical reference for all 43+ platform entities"
+      - type: code
+        path: src/entities/platform.py
+        description: "Machine-readable entity registry"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""
+
+  - id: REQ-TD-006
+    standard: "DEF STAN 05-057"
+    title: "Data Flow and Privacy Documentation"
+    description: "Documentation must describe what personal data the platform processes, how it flows between services, and what legal basis applies (GDPR)."
+    status: PARTIAL
+    evidence:
+      - type: code
+        path: ARCHITECTURE_THREAT_MODEL.md
+        description: "Data flow documented in threat model"
+      - type: test
+        path: tests/test_compliance.py
+        description: "GDPR compliance codes verified"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Full Privacy Impact Assessment and Record of Processing Activities (ROPA) are PLANNED"
+
+  - id: REQ-TD-007
+    standard: "DEF STAN 05-057"
+    title: "Migration and Roadmap Documentation"
+    description: "The migration path from legacy infrastructure to self-hosted architecture must be documented with status tracking for each component."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: CF_WORKER_MIGRATION_ROADMAP.md
+        description: "Full migration plan for all 26+ CF Workers to self-hosted Python"
+      - type: code
+        path: CROSS_REPO_SYNERGY.md
+        description: "Maps 29 infinity-adminOS TypeScript packages to Python equivalents"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: ""

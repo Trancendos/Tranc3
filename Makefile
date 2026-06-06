@@ -1,7 +1,7 @@
 # TRANC3 Makefile
 # Usage: make bootstrap | make dev | make test | make deploy | make doctor
 
-.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate migrate-new db-provision db-reset db-status clean frontend health health-json infra-plan swarm-run entity-audit ansible-health production-score dependency-audit
+.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend health health-json infra-plan swarm-run entity-audit ansible-health production-score dependency-audit compliance-check compliance-report compliance-ci
 
 # ── Bootstrap (single-command platform setup) ─────────────────────────────────
 bootstrap:
@@ -65,17 +65,6 @@ dev-web:
 	cd web && npm run dev
 
 # ── Database ──────────────────────────────────────────────────────────────────
-db-provision:
-	@echo "Provisioning local PostgreSQL + running migrations..."
-	./scripts/db-provision.sh
-
-db-reset:
-	@echo "Resetting local database (drops all data)..."
-	./scripts/db-provision.sh --reset
-
-db-status:
-	./scripts/db-provision.sh --status
-
 migrate:
 	@echo "Running database migrations..."
 	alembic upgrade head
@@ -127,6 +116,19 @@ swarm-run:
 
 entity-audit:
 	@python3 scripts/entity_registry_audit.py
+
+# ── DEFSTAN Compliance ────────────────────────────────────────────────────────
+compliance-check:
+	@echo "Running DEFSTAN compliance check..."
+	python -m src.compliance.checker
+
+compliance-report:
+	@echo "Generating DEFSTAN compliance report..."
+	python -m src.compliance.checker --report
+
+compliance-ci:
+	@echo "Running DEFSTAN compliance CI gate (threshold: 70%)..."
+	python -m src.compliance.checker --ci
 
 ansible-health:
 	@ansible-playbook -i deploy/ansible/inventory/workers.yml deploy/ansible/playbooks/health-probe.yml
@@ -222,3 +224,16 @@ pre-commit-install:
 	pre-commit install --hook-type commit-msg
 
 security-full: security-install security-scan
+
+# ── DEFSTAN Compliance ────────────────────────────────────────────────────────
+compliance-check:
+	@echo "Running DEFSTAN compliance check..."
+	python -m src.compliance.checker
+
+compliance-report:
+	@echo "Generating DEFSTAN compliance report..."
+	python -m src.compliance.checker --report
+
+compliance-ci:
+	@echo "Running DEFSTAN compliance CI gate (threshold: 70%)..."
+	python -m src.compliance.checker --ci

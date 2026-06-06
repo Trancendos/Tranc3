@@ -778,6 +778,16 @@ from src.devocity.routes import (
 
 app.include_router(_devocity_router)
 
+# ── DEFSTAN Compliance Framework (The Chaos Party compliance tooling) ────────
+try:
+    from src.compliance.api_routes import router as _compliance_router
+
+    app.include_router(_compliance_router)
+except Exception:  # pragma: no cover — graceful degradation if pyyaml absent
+    import logging as _logging
+
+    _logging.getLogger(__name__).warning("Compliance router not loaded — pyyaml may be missing")
+
 # ── The Artifactory (OCI artefact repository — Zot foundation) ───────────────
 from src.artifactory.routes import (
     router as _artifactory_router,  # noqa: F401  # intentional top-level import
