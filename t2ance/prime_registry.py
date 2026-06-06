@@ -23,8 +23,7 @@ class PrimeRegistry:
 
     def __init__(self) -> None:
         self._primes: Dict[PrimeDomain, DomainPrime] = {
-            domain: DomainPrime(domain)
-            for domain in PrimeDomain
+            domain: DomainPrime(domain) for domain in PrimeDomain
         }
         self._entity_to_domain: Dict[str, PrimeDomain] = {
             entity_id: domain

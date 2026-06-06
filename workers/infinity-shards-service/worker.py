@@ -69,7 +69,11 @@ SHARD_CATALOGUE: Dict[str, Dict[str, Any]] = {
         "power_rating": 8,
         "capabilities": ["recall", "store", "forget", "summarise_history"],
         "config_schema": {
-            "vector_backend": {"type": "string", "default": "qdrant", "options": ["qdrant", "faiss", "memory"]},
+            "vector_backend": {
+                "type": "string",
+                "default": "qdrant",
+                "options": ["qdrant", "faiss", "memory"],
+            },
             "retention_days": {"type": "integer", "default": 90},
             "max_memories": {"type": "integer", "default": 10000},
         },
@@ -100,7 +104,11 @@ SHARD_CATALOGUE: Dict[str, Dict[str, Any]] = {
         "power_rating": 9,
         "capabilities": ["analyse_image", "describe_scene", "read_document", "detect_objects"],
         "config_schema": {
-            "model": {"type": "string", "default": "ollama/llava", "options": ["ollama/llava", "ollama/bakllava"]},
+            "model": {
+                "type": "string",
+                "default": "ollama/llava",
+                "options": ["ollama/llava", "ollama/bakllava"],
+            },
             "max_image_size_mb": {"type": "integer", "default": 10},
         },
         "compatible_entities": "*",
@@ -184,6 +192,7 @@ SHARD_CATALOGUE: Dict[str, Dict[str, Any]] = {
 
 # ── Database ──────────────────────────────────────────────────────────────────
 
+
 def get_db() -> sqlite3.Connection:
     Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3_connect(DB_PATH)
@@ -226,6 +235,7 @@ def init_db() -> None:
 
 # ── Pydantic Models ───────────────────────────────────────────────────────────
 
+
 class AttachShardRequest(BaseModel):
     shard_type: str
     config: Dict[str, Any] = Field(default_factory=dict)
@@ -265,6 +275,7 @@ class EntityPower(BaseModel):
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -290,6 +301,7 @@ app.add_middleware(
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _row_to_shard_record(row: sqlite3.Row) -> ShardRecord:
     meta = SHARD_CATALOGUE.get(row["shard_type"], {})
     config = json.loads(row["config"])
@@ -313,6 +325,7 @@ def _row_to_shard_record(row: sqlite3.Row) -> ShardRecord:
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
 
 @app.get("/health")
 async def health():
@@ -569,14 +582,14 @@ def _dispatch_capability(
     # Phase 1: return capability acknowledgement with routing info
     # Phase 2: add real httpx calls to each backend service
     ROUTING = {
-        "memory":  {"backend": "qdrant / vector store",    "endpoint": "/memory"},
-        "voice":   {"backend": "turings-hub-service:8035", "endpoint": "/entities/{entity_id}/speak"},
-        "vision":  {"backend": "infinity-ai:8009",         "endpoint": "/v1/chat/completions (vision)"},
-        "shield":  {"backend": "Dimensional security",     "endpoint": "/security/scan"},
-        "boost":   {"backend": "cache-service:8018",       "endpoint": "/cache/warm"},
-        "link":    {"backend": "Dimensional event bus",    "endpoint": "/bus/publish"},
-        "sense":   {"backend": "feed poller",              "endpoint": "/feeds/trigger"},
-        "spark":   {"backend": "mcp-server:8000/mcp",      "endpoint": "/mcp/rpc"},
+        "memory": {"backend": "qdrant / vector store", "endpoint": "/memory"},
+        "voice": {"backend": "turings-hub-service:8035", "endpoint": "/entities/{entity_id}/speak"},
+        "vision": {"backend": "infinity-ai:8009", "endpoint": "/v1/chat/completions (vision)"},
+        "shield": {"backend": "Dimensional security", "endpoint": "/security/scan"},
+        "boost": {"backend": "cache-service:8018", "endpoint": "/cache/warm"},
+        "link": {"backend": "Dimensional event bus", "endpoint": "/bus/publish"},
+        "sense": {"backend": "feed poller", "endpoint": "/feeds/trigger"},
+        "spark": {"backend": "mcp-server:8000/mcp", "endpoint": "/mcp/rpc"},
     }
     routing = ROUTING.get(shard_type, {})
     return {
@@ -608,5 +621,6 @@ async def get_shard_invocations(entity_id: str, shard_type: str, limit: int = 50
 
 if __name__ == "__main__":
     import uvicorn
+
     logging.basicConfig(level=logging.INFO)
     uvicorn.run(app, host="0.0.0.0", port=PORT)

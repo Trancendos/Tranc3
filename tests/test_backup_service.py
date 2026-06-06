@@ -94,6 +94,7 @@ def test_worker_db_resolved_path(monkeypatch, tmp_path):
 
 def test_rpo_minutes_ordering():
     from src.backup.registry import RPO_MINUTES
+
     assert RPO_MINUTES[BackupTier.CRITICAL] < RPO_MINUTES[BackupTier.HIGH]
     assert RPO_MINUTES[BackupTier.HIGH] < RPO_MINUTES[BackupTier.STANDARD]
     assert RPO_MINUTES[BackupTier.STANDARD] < RPO_MINUTES[BackupTier.LOW]
@@ -155,7 +156,9 @@ def test_backup_encrypted_file_not_plaintext(engine, worker_db):
 
 def test_backup_compression_reduces_size(engine, worker_db, tmp_db):
     result = engine.backup(worker_db)
-    assert result.meta.compressed_size_bytes < result.meta.size_bytes or result.meta.size_bytes < 100
+    assert (
+        result.meta.compressed_size_bytes < result.meta.size_bytes or result.meta.size_bytes < 100
+    )
 
 
 def test_backup_missing_db(engine, tmp_path):

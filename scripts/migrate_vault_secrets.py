@@ -100,7 +100,9 @@ def migrate(vault_db: str, dry_run: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Migrate vault-service secrets to The Void")
-    parser.add_argument("--dry-run", action="store_true", help="Print what would be migrated, don't write")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print what would be migrated, don't write"
+    )
     parser.add_argument("--vault-db", default=VAULT_DB, help="Path to vault-service SQLite DB")
     args = parser.parse_args()
 

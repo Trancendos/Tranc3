@@ -38,9 +38,10 @@ logger = logging.getLogger(__name__)
 
 try:
     import torch
-    import torch.nn as nn  # noqa: F401
+
     from ncps.torch import CfC  # type: ignore[import]
     from ncps.wirings import AutoNCP  # type: ignore[import]
+
     _USING_LNN = True
     logger.debug("personality.lnn: ncps.torch.CfC available — using LNN shaper")
 except ImportError:
@@ -49,7 +50,7 @@ except ImportError:
 
 # ── constants ─────────────────────────────────────────────────────────────────
 
-INPUT_DIM = 4   # [sentiment, domain_signal, turn_depth_norm, length_norm]
+INPUT_DIM = 4  # [sentiment, domain_signal, turn_depth_norm, length_norm]
 HIDDEN_UNITS = 64
 OUTPUT_DIM = 3  # [temperature_delta, top_p_delta, tone_weight]
 MAX_DT = 3600.0  # cap Δt to 1 hour to avoid CfC instability on very long gaps
@@ -58,22 +59,26 @@ EMA_ALPHA = 0.15  # smoothing factor for the fallback EMA tracker
 
 # ── public types ─────────────────────────────────────────────────────────────
 
+
 class LNNInput(NamedTuple):
     """Feature vector extracted from one conversation turn."""
-    sentiment: float    # -1 (negative) … +1 (positive)
+
+    sentiment: float  # -1 (negative) … +1 (positive)
     domain_signal: float  # 0 (off-topic) … 1 (on-domain)
     turn_depth_norm: float  # turn_index / max_turns, clipped to [0, 1]
-    length_norm: float   # token_count / 512, clipped to [0, 1]
+    length_norm: float  # token_count / 512, clipped to [0, 1]
 
 
 class LNNOutput(NamedTuple):
     """Parameter nudges produced by the LNN for this turn."""
+
     temperature_delta: float
     top_p_delta: float
     tone_weight: float
 
 
 # ── LNN shaper (CfC path) ─────────────────────────────────────────────────────
+
 
 class _CfCShaper:
     """CfC-backed personality shaper."""
@@ -95,7 +100,7 @@ class _CfCShaper:
         self._last_ts = now
 
         x = torch.tensor([[list(inp)]], dtype=torch.float32)  # (1, 1, INPUT_DIM)
-        ts = torch.tensor([[[dt]]], dtype=torch.float32)      # (1, 1, 1)
+        ts = torch.tensor([[[dt]]], dtype=torch.float32)  # (1, 1, 1)
 
         with torch.no_grad():
             out, self._h = self._model(x, self._h, timespans=ts)
@@ -109,6 +114,7 @@ class _CfCShaper:
 
 
 # ── EMA shaper (fallback path) ────────────────────────────────────────────────
+
 
 class _EMAShaper:
     """Exponential moving average fallback shaper (no torch required)."""
@@ -136,8 +142,7 @@ class _EMAShaper:
 
         targets = [target_temp, target_top_p, target_tone]
         self._state = [
-            decay * s + (1 - decay) * t
-            for s, t in zip(self._state, targets, strict=False)
+            decay * s + (1 - decay) * t for s, t in zip(self._state, targets, strict=False)
         ]
 
         return LNNOutput(
@@ -148,6 +153,7 @@ class _EMAShaper:
 
 
 # ── public API ────────────────────────────────────────────────────────────────
+
 
 class PersonalityLNN:
     """

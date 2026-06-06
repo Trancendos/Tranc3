@@ -37,6 +37,7 @@ logger = logging.getLogger("tranc3.platform.entity_rotation")
 # Entity IDs — every canonical platform entity
 # ---------------------------------------------------------------------------
 
+
 class EntityID(str, Enum):
     # Architectural
     THE_SPARK = "the-spark"
@@ -149,9 +150,11 @@ ENTITY_LEAD_AI: Dict[EntityID, str] = {
 # Data structures
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ServiceInstance:
     """A single backing instance for an entity."""
+
     url: str
     label: str
     is_primary: bool = True
@@ -180,6 +183,7 @@ class ServiceInstance:
 @dataclass
 class EntityRotationPool:
     """Rotation pool for one entity — primary + fallbacks, AI agent preserved."""
+
     entity_id: EntityID
     lead_ai: str
     instances: List[ServiceInstance] = field(default_factory=list)
@@ -188,9 +192,7 @@ class EntityRotationPool:
     last_rotation_at: float = 0.0
 
     # Callbacks invoked on rotation (e.g., emit to Sentinel Station)
-    on_rotate: Optional[Callable[[EntityID, str, str], None]] = field(
-        default=None, repr=False
-    )
+    on_rotate: Optional[Callable[[EntityID, str, str], None]] = field(default=None, repr=False)
 
     def add_instance(self, url: str, label: str, is_primary: bool = False) -> None:
         self.instances.append(ServiceInstance(url=url, label=label, is_primary=is_primary))
@@ -267,6 +269,7 @@ class EntityRotationPool:
 # Entity Rotator — singleton managing all 43 entity pools
 # ---------------------------------------------------------------------------
 
+
 class EntityRotator:
     """
     Central rotation manager for all 43 Trancendos platform entities.
@@ -291,165 +294,291 @@ class EntityRotator:
         """Build rotation pools for all 43 entities with their zero-cost backends."""
 
         # Architectural entities (self-hosted workers)
-        self._add_pool(EntityID.THE_SPARK, [
-            ("http://localhost:8000/mcp", "primary"),
-            ("http://localhost:8000/mcp", "local-replica-1"),
-        ])
-        self._add_pool(EntityID.THE_DIGITAL_GRID, [
-            ("http://localhost:8034", "primary"),
-            ("http://localhost:8000/workflow", "api-fallback"),
-        ])
-        self._add_pool(EntityID.THE_VOID, [
-            ("http://localhost:8038", "vault-primary"),
-            ("http://localhost:8038", "vault-replica"),
-        ])
-        self._add_pool(EntityID.THE_WORKSHOP, [
-            ("http://localhost:3456", "forgejo-primary"),
-        ])
-        self._add_pool(EntityID.INFINITY, [
-            ("http://localhost:8005", "auth-primary"),
-            ("http://localhost:8015", "identity-fallback"),
-        ])
-        self._add_pool(EntityID.THE_LIGHTHOUSE, [
-            ("http://localhost:8000/lighthouse", "primary"),
-        ])
-        self._add_pool(EntityID.THE_HIVE, [
-            ("http://localhost:8027", "queue-primary"),
-            ("http://localhost:8000/hive", "api-fallback"),
-        ])
-        self._add_pool(EntityID.THE_NEXUS, [
-            ("http://localhost:8004", "ws-primary"),
-        ])
-        self._add_pool(EntityID.THE_CITADEL, [
-            ("http://localhost:8000", "api-primary"),
-            ("http://localhost:8029", "health-aggregator"),
-        ])
-        self._add_pool(EntityID.LUMINOUS, [
-            ("http://localhost:8009", "ai-primary"),
-            ("http://localhost:11434", "ollama-local"),
-            ("http://localhost:8000/inference", "api-fallback"),
-        ])
-        self._add_pool(EntityID.THE_OBSERVATORY, [
-            ("http://localhost:8007", "monitoring-primary"),
-            ("http://localhost:8017", "audit-fallback"),
-        ])
+        self._add_pool(
+            EntityID.THE_SPARK,
+            [
+                ("http://localhost:8000/mcp", "primary"),
+                ("http://localhost:8000/mcp", "local-replica-1"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_DIGITAL_GRID,
+            [
+                ("http://localhost:8034", "primary"),
+                ("http://localhost:8000/workflow", "api-fallback"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_VOID,
+            [
+                ("http://localhost:8038", "vault-primary"),
+                ("http://localhost:8038", "vault-replica"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_WORKSHOP,
+            [
+                ("http://localhost:3456", "forgejo-primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.INFINITY,
+            [
+                ("http://localhost:8005", "auth-primary"),
+                ("http://localhost:8015", "identity-fallback"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_LIGHTHOUSE,
+            [
+                ("http://localhost:8000/lighthouse", "primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_HIVE,
+            [
+                ("http://localhost:8027", "queue-primary"),
+                ("http://localhost:8000/hive", "api-fallback"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_NEXUS,
+            [
+                ("http://localhost:8004", "ws-primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_CITADEL,
+            [
+                ("http://localhost:8000", "api-primary"),
+                ("http://localhost:8029", "health-aggregator"),
+            ],
+        )
+        self._add_pool(
+            EntityID.LUMINOUS,
+            [
+                ("http://localhost:8009", "ai-primary"),
+                ("http://localhost:11434", "ollama-local"),
+                ("http://localhost:8000/inference", "api-fallback"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_OBSERVATORY,
+            [
+                ("http://localhost:8007", "monitoring-primary"),
+                ("http://localhost:8017", "audit-fallback"),
+            ],
+        )
         # Commercial / Financial
-        self._add_pool(EntityID.ROYAL_BANK_OF_ARCADIA, [
-            ("http://localhost:8013", "payments-primary"),
-            ("http://localhost:8032", "ledger-fallback"),
-        ])
-        self._add_pool(EntityID.ARCADIAN_EXCHANGE, [
-            ("http://localhost:8012", "orders-primary"),
-        ])
+        self._add_pool(
+            EntityID.ROYAL_BANK_OF_ARCADIA,
+            [
+                ("http://localhost:8013", "payments-primary"),
+                ("http://localhost:8032", "ledger-fallback"),
+            ],
+        )
+        self._add_pool(
+            EntityID.ARCADIAN_EXCHANGE,
+            [
+                ("http://localhost:8012", "orders-primary"),
+            ],
+        )
         # Creativity
-        self._add_pool(EntityID.SASHAS_PHOTO_STUDIO, [
-            ("http://localhost:8188", "comfyui-primary"),  # ComfyUI zero-cost
-            ("http://localhost:8000/studio/photo", "api-stub"),
-        ])
-        self._add_pool(EntityID.TRANCEFLOW, [
-            ("http://localhost:8042", "godot-primary"),
-            ("http://localhost:8000/studio/3d", "api-stub"),
-        ])
-        self._add_pool(EntityID.TATEKING, [
-            ("http://localhost:8040", "ffmpeg-primary"),
-            ("http://localhost:8000/studio/video", "api-stub"),
-        ])
-        self._add_pool(EntityID.FABULOUSA, [
-            ("http://localhost:9001", "penpot-primary"),  # Penpot self-hosted zero-cost
-            ("http://localhost:8000/studio/design", "api-stub"),
-        ])
-        self._add_pool(EntityID.IMAGINARIUM, [
-            ("http://localhost:8000/imaginarium", "orchestrator-primary"),
-        ])
-        self._add_pool(EntityID.THE_STUDIO, [
-            ("http://localhost:8000/studio", "primary"),
-        ])
-        self._add_pool(EntityID.WARP_RADIO, [
-            ("http://localhost:8000/warp-radio", "primary"),
-        ])
-        self._add_pool(EntityID.VRAR3D, [
-            ("http://localhost:8000/vrar3d", "primary"),
-        ])
+        self._add_pool(
+            EntityID.SASHAS_PHOTO_STUDIO,
+            [
+                ("http://localhost:8188", "comfyui-primary"),  # ComfyUI zero-cost
+                ("http://localhost:8000/studio/photo", "api-stub"),
+            ],
+        )
+        self._add_pool(
+            EntityID.TRANCEFLOW,
+            [
+                ("http://localhost:8042", "godot-primary"),
+                ("http://localhost:8000/studio/3d", "api-stub"),
+            ],
+        )
+        self._add_pool(
+            EntityID.TATEKING,
+            [
+                ("http://localhost:8040", "ffmpeg-primary"),
+                ("http://localhost:8000/studio/video", "api-stub"),
+            ],
+        )
+        self._add_pool(
+            EntityID.FABULOUSA,
+            [
+                ("http://localhost:9001", "penpot-primary"),  # Penpot self-hosted zero-cost
+                ("http://localhost:8000/studio/design", "api-stub"),
+            ],
+        )
+        self._add_pool(
+            EntityID.IMAGINARIUM,
+            [
+                ("http://localhost:8000/imaginarium", "orchestrator-primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_STUDIO,
+            [
+                ("http://localhost:8000/studio", "primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.WARP_RADIO,
+            [
+                ("http://localhost:8000/warp-radio", "primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.VRAR3D,
+            [
+                ("http://localhost:8000/vrar3d", "primary"),
+            ],
+        )
         # Development / Code
-        self._add_pool(EntityID.THE_LAB, [
-            ("http://localhost:8000/lab", "primary"),
-        ])
-        self._add_pool(EntityID.THINK_TANK, [
-            ("http://localhost:8000/think-tank", "primary"),
-        ])
-        self._add_pool(EntityID.DEVOCITY, [
-            ("http://localhost:8000/devocity", "primary"),
-        ])
+        self._add_pool(
+            EntityID.THE_LAB,
+            [
+                ("http://localhost:8000/lab", "primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THINK_TANK,
+            [
+                ("http://localhost:8000/think-tank", "primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.DEVOCITY,
+            [
+                ("http://localhost:8000/devocity", "primary"),
+            ],
+        )
         # Knowledge
-        self._add_pool(EntityID.THE_LIBRARY, [
-            ("http://localhost:3000", "outline-primary"),  # Outline self-hosted zero-cost
-            ("http://localhost:8000/library", "api-stub"),
-        ])
-        self._add_pool(EntityID.THE_ACADEMY, [
-            ("http://localhost:8000/academy", "primary"),
-        ])
-        self._add_pool(EntityID.DOCUTARI, [
-            ("http://localhost:8010/api/documents", "paperless-primary"),  # Paperless-ngx
-            ("http://localhost:8014", "files-fallback"),
-        ])
-        self._add_pool(EntityID.THE_BASEMENT, [
-            ("http://localhost:8000/basement", "primary"),
-        ])
-        self._add_pool(EntityID.TURINGS_HUB, [
-            ("http://localhost:8035", "skills-primary"),
-            ("http://localhost:8000/personality", "api-fallback"),
-        ])
+        self._add_pool(
+            EntityID.THE_LIBRARY,
+            [
+                ("http://localhost:3000", "outline-primary"),  # Outline self-hosted zero-cost
+                ("http://localhost:8000/library", "api-stub"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_ACADEMY,
+            [
+                ("http://localhost:8000/academy", "primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.DOCUTARI,
+            [
+                ("http://localhost:8010/api/documents", "paperless-primary"),  # Paperless-ngx
+                ("http://localhost:8014", "files-fallback"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_BASEMENT,
+            [
+                ("http://localhost:8000/basement", "primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.TURINGS_HUB,
+            [
+                ("http://localhost:8035", "skills-primary"),
+                ("http://localhost:8000/personality", "api-fallback"),
+            ],
+        )
         # Security
-        self._add_pool(EntityID.CRYPTEX, [
-            ("http://localhost:55000", "wazuh-primary"),  # Wazuh self-hosted zero-cost
-            ("http://localhost:8000/cryptex", "api-stub"),
-        ])
-        self._add_pool(EntityID.THE_ICE_BOX, [
-            ("http://localhost:8090", "sandbox-primary"),
-            ("http://localhost:8000/icebox", "api-stub"),
-        ])
-        self._add_pool(EntityID.THE_WARP_TUNNEL, [
-            ("http://localhost:8000/warp-tunnel", "primary"),
-        ])
+        self._add_pool(
+            EntityID.CRYPTEX,
+            [
+                ("http://localhost:55000", "wazuh-primary"),  # Wazuh self-hosted zero-cost
+                ("http://localhost:8000/cryptex", "api-stub"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_ICE_BOX,
+            [
+                ("http://localhost:8090", "sandbox-primary"),
+                ("http://localhost:8000/icebox", "api-stub"),
+            ],
+        )
+        self._add_pool(
+            EntityID.THE_WARP_TUNNEL,
+            [
+                ("http://localhost:8000/warp-tunnel", "primary"),
+            ],
+        )
         # DevOps
-        self._add_pool(EntityID.THE_ARTIFACTORY, [
-            ("http://localhost:5000", "zot-primary"),  # Zot OCI registry zero-cost
-            ("http://localhost:8000/artifactory", "api-stub"),
-        ])
-        self._add_pool(EntityID.API_MARKETPLACE, [
-            ("http://localhost:8082", "gravitee-primary"),  # Gravitee CE zero-cost
-            ("http://localhost:8000/api-market", "api-stub"),
-        ])
+        self._add_pool(
+            EntityID.THE_ARTIFACTORY,
+            [
+                ("http://localhost:5000", "zot-primary"),  # Zot OCI registry zero-cost
+                ("http://localhost:8000/artifactory", "api-stub"),
+            ],
+        )
+        self._add_pool(
+            EntityID.API_MARKETPLACE,
+            [
+                ("http://localhost:8082", "gravitee-primary"),  # Gravitee CE zero-cost
+                ("http://localhost:8000/api-market", "api-stub"),
+            ],
+        )
         # Governance
-        self._add_pool(EntityID.THE_TOWN_HALL, [
-            ("http://localhost:8000/townhall", "primary"),
-        ])
-        self._add_pool(EntityID.ARCADIA, [
-            ("http://localhost:3001", "web-primary"),
-            ("http://localhost:8000/arcadia", "api-fallback"),
-        ])
+        self._add_pool(
+            EntityID.THE_TOWN_HALL,
+            [
+                ("http://localhost:8000/townhall", "primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.ARCADIA,
+            [
+                ("http://localhost:3001", "web-primary"),
+                ("http://localhost:8000/arcadia", "api-fallback"),
+            ],
+        )
         # Scheduling
-        self._add_pool(EntityID.CHRONOSSPHERE, [
-            ("http://localhost:3002", "cal-primary"),  # Cal.com self-hosted zero-cost
-            ("http://localhost:8021", "cron-fallback"),
-        ])
+        self._add_pool(
+            EntityID.CHRONOSSPHERE,
+            [
+                ("http://localhost:3002", "cal-primary"),  # Cal.com self-hosted zero-cost
+                ("http://localhost:8021", "cron-fallback"),
+            ],
+        )
         # Wellbeing
-        self._add_pool(EntityID.TRANQUILITY, [
-            ("http://localhost:8000/tranquility", "primary"),
-        ])
-        self._add_pool(EntityID.IMIND, [
-            ("http://localhost:8000/imind", "primary"),
-        ])
-        self._add_pool(EntityID.RESONATE, [
-            ("http://localhost:8000/resonate", "primary"),
-        ])
-        self._add_pool(EntityID.TAIMRA, [
-            ("http://localhost:8000/taimra", "primary"),
-        ])
+        self._add_pool(
+            EntityID.TRANQUILITY,
+            [
+                ("http://localhost:8000/tranquility", "primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.IMIND,
+            [
+                ("http://localhost:8000/imind", "primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.RESONATE,
+            [
+                ("http://localhost:8000/resonate", "primary"),
+            ],
+        )
+        self._add_pool(
+            EntityID.TAIMRA,
+            [
+                ("http://localhost:8000/taimra", "primary"),
+            ],
+        )
         # Intelligence
-        self._add_pool(EntityID.SECTION_7, [
-            ("http://localhost:8000/research", "primary"),
-        ])
+        self._add_pool(
+            EntityID.SECTION_7,
+            [
+                ("http://localhost:8000/research", "primary"),
+            ],
+        )
 
     def _add_pool(self, entity_id: EntityID, instances: list[tuple[str, str]]) -> None:
         pool = EntityRotationPool(
@@ -465,6 +594,7 @@ class EntityRotator:
         """Emit rotation event to Sentinel Station (non-blocking)."""
         try:
             from src.adaptive.provider_rotator import get_provider_rotator  # noqa
+
             logger.info(
                 "ROTATION_EVENT entity=%s from=%s to=%s lead_ai=%s",
                 entity_id.value,
@@ -497,7 +627,9 @@ class EntityRotator:
                 inst.record_failure()
                 logger.warning(
                     "[%s] Instance %s marked failed (failures=%d)",
-                    entity_id.value, url, inst.failures,
+                    entity_id.value,
+                    url,
+                    inst.failures,
                 )
                 break
 
@@ -521,6 +653,7 @@ class EntityRotator:
 
     async def _health_loop(self, interval_s: float) -> None:
         import httpx
+
         while True:
             try:
                 async with httpx.AsyncClient(timeout=5.0) as client:
@@ -554,11 +687,13 @@ class EntityRotator:
         for pool in self._pools.values():
             for inst in pool.instances:
                 if not inst.zero_cost:
-                    violations.append({
-                        "entity": pool.entity_id.value,
-                        "url": inst.url,
-                        "label": inst.label,
-                    })
+                    violations.append(
+                        {
+                            "entity": pool.entity_id.value,
+                            "url": inst.url,
+                            "label": inst.label,
+                        }
+                    )
         return {
             "compliant": len(violations) == 0,
             "violations": violations,

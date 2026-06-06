@@ -97,11 +97,7 @@ class UserSettingsStore:
         f = _get_fernet()
         ciphertext = f.encrypt(value.encode()).decode()
         with self._session() as sess:
-            existing = (
-                sess.query(UserSetting)
-                .filter_by(username=username, key=key)
-                .first()
-            )
+            existing = sess.query(UserSetting).filter_by(username=username, key=key).first()
             if existing:
                 existing.encrypted_value = ciphertext
                 existing.updated_at = datetime.utcnow()
@@ -112,11 +108,7 @@ class UserSettingsStore:
     def get(self, username: str, key: str) -> Optional[str]:
         """Return the decrypted value for *username*/*key*, or None if not set."""
         with self._session() as sess:
-            row = (
-                sess.query(UserSetting)
-                .filter_by(username=username, key=key)
-                .first()
-            )
+            row = sess.query(UserSetting).filter_by(username=username, key=key).first()
             if not row:
                 return None
             try:
@@ -129,11 +121,7 @@ class UserSettingsStore:
     def delete(self, username: str, key: str) -> bool:
         """Remove *key* for *username*.  Returns True if a row was deleted."""
         with self._session() as sess:
-            deleted = (
-                sess.query(UserSetting)
-                .filter_by(username=username, key=key)
-                .delete()
-            )
+            deleted = sess.query(UserSetting).filter_by(username=username, key=key).delete()
             sess.commit()
             return bool(deleted)
 

@@ -78,7 +78,9 @@ class QuarantineStore:
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_q_hash ON quarantine(content_hash)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_q_verdict ON quarantine(verdict)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_q_active ON quarantine(released_at) WHERE released_at IS NULL")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_q_active ON quarantine(released_at) WHERE released_at IS NULL"
+            )
 
     # ------------------------------------------------------------------
     # Write operations
@@ -87,25 +89,36 @@ class QuarantineStore:
     def quarantine(self, report: AnalysisReport, *, source: str = "") -> str:
         """Store an analysis report; return the quarantine_id."""
         import uuid
+
         qid = str(uuid.uuid4())
-        findings_json = json.dumps([
-            {
-                "signature_id": f.signature_id,
-                "category": f.category.value,
-                "severity": f.severity,
-                "description": f.description,
-                "matched_text": f.matched_text,
-            }
-            for f in report.findings
-        ])
+        findings_json = json.dumps(
+            [
+                {
+                    "signature_id": f.signature_id,
+                    "category": f.category.value,
+                    "severity": f.severity,
+                    "description": f.description,
+                    "matched_text": f.matched_text,
+                }
+                for f in report.findings
+            ]
+        )
         with self._connect() as conn:
             conn.execute(
                 """INSERT INTO quarantine
                    (quarantine_id, content_hash, source, verdict, findings_json,
                     entropy, content_length, quarantined_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (qid, report.content_hash, source, report.verdict.value,
-                 findings_json, report.entropy, report.content_length, time.time()),
+                (
+                    qid,
+                    report.content_hash,
+                    source,
+                    report.verdict.value,
+                    findings_json,
+                    report.entropy,
+                    report.content_length,
+                    time.time(),
+                ),
             )
         return qid
 
@@ -149,11 +162,18 @@ class QuarantineStore:
     def stats(self) -> dict:
         with self._connect() as conn:
             total = conn.execute("SELECT COUNT(*) FROM quarantine").fetchone()[0]
-            active = conn.execute("SELECT COUNT(*) FROM quarantine WHERE released_at IS NULL").fetchone()[0]
+            active = conn.execute(
+                "SELECT COUNT(*) FROM quarantine WHERE released_at IS NULL"
+            ).fetchone()[0]
             malicious = conn.execute(
                 "SELECT COUNT(*) FROM quarantine WHERE verdict='malicious' AND released_at IS NULL"
             ).fetchone()[0]
-        return {"total": total, "active": active, "malicious": malicious, "released": total - active}
+        return {
+            "total": total,
+            "active": active,
+            "malicious": malicious,
+            "released": total - active,
+        }
 
     # ------------------------------------------------------------------
     # Helpers

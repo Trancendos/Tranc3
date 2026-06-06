@@ -94,9 +94,7 @@ class PolicyDecision:
     matched_rule_id: Optional[str]
     explanation: str
     audit_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    evaluated_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    evaluated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -159,9 +157,7 @@ def _evaluate_condition(condition: PolicyCondition, ctx: dict) -> bool:
     return False
 
 
-def _rule_matches_request(
-    rule: PolicyRule, resource: str, action: str
-) -> bool:
+def _rule_matches_request(rule: PolicyRule, resource: str, action: str) -> bool:
     """Return True if the rule is applicable to this resource/action."""
     if rule.resources:
         if not any(fnmatch.fnmatch(resource, pat) for pat in rule.resources):
@@ -234,9 +230,7 @@ class PolicyEngine:
         action: str,
         ctx: dict,
     ) -> PolicyDecision:
-        for ps in sorted(
-            self._policy_sets.values(), key=lambda p: p.id
-        ):
+        for ps in sorted(self._policy_sets.values(), key=lambda p: p.id):
             decision = self._evaluate_policy_set(ps, resource, action, ctx)
             if decision is not None:
                 return decision
@@ -258,9 +252,7 @@ class PolicyEngine:
         matching: list[PolicyRule] = []
 
         for rule in sorted_rules:
-            if _rule_matches_request(rule, resource, action) and _apply_conditions(
-                rule, ctx
-            ):
+            if _rule_matches_request(rule, resource, action) and _apply_conditions(rule, ctx):
                 matching.append(rule)
 
         if not matching:
@@ -329,9 +321,7 @@ class PolicyEngine:
         return list(self._audit_log)
 
 
-def _make_cache_key(
-    subject: dict, resource: str, action: str, context: dict
-) -> str:
+def _make_cache_key(subject: dict, resource: str, action: str, context: dict) -> str:
     """Create a deterministic string key for LRU cache."""
     import json
 

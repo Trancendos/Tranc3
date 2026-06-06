@@ -21,7 +21,7 @@ from typing import Literal
 class RateLimitResult:
     allowed: bool
     remaining: int
-    reset_ms: int      # ms until current window resets
+    reset_ms: int  # ms until current window resets
     retry_after_ms: int  # ms to wait before retrying (0 if allowed)
 
 

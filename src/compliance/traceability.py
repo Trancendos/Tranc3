@@ -68,12 +68,8 @@ def build_matrix(report: "ComplianceReport") -> dict[str, Any]:
     # Build requirement -> details
     req_map: dict[str, dict[str, Any]] = {}
     for r in report.requirements:
-        code_paths = [
-            e.path for e in r.evidence_checks if e.evidence_type == "code"
-        ]
-        test_paths = [
-            e.path for e in r.evidence_checks if e.evidence_type == "test"
-        ]
+        code_paths = [e.path for e in r.evidence_checks if e.evidence_type == "code"]
+        test_paths = [e.path for e in r.evidence_checks if e.evidence_type == "test"]
         req_map[r.req_id] = {
             "title": r.title,
             "standard": r.standard,
@@ -101,19 +97,13 @@ def build_matrix(report: "ComplianceReport") -> dict[str, Any]:
     # All requirement IDs that exist
     all_req_ids = {r.req_id for r in report.requirements}
     orphaned_tests = [
-        tf
-        for tf, reqs in test_to_reqs.items()
-        if not any(r in all_req_ids for r in reqs)
+        tf for tf, reqs in test_to_reqs.items() if not any(r in all_req_ids for r in reqs)
     ]
 
     summary = {
         "total_requirements": len(report.requirements),
-        "requirements_with_code_evidence": sum(
-            1 for r in req_map.values() if r["code_paths"]
-        ),
-        "requirements_with_test_evidence": sum(
-            1 for r in req_map.values() if r["test_paths"]
-        ),
+        "requirements_with_code_evidence": sum(1 for r in req_map.values() if r["code_paths"]),
+        "requirements_with_test_evidence": sum(1 for r in req_map.values() if r["test_paths"]),
         "orphaned_requirement_count": len(orphaned_reqs),
         "orphaned_test_count": len(orphaned_tests),
         "test_files_mapped": len(test_to_reqs),

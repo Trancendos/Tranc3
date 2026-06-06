@@ -55,7 +55,9 @@ def validate_username(username: str) -> str:
     """Alphanumeric + underscore/hyphen, 3–64 chars."""
     username = validate_non_empty(username, "username")
     if not re.fullmatch(r"[a-zA-Z0-9_\-]{3,64}", username):
-        raise ValueError("username must be 3–64 alphanumeric characters (underscores and hyphens allowed)")
+        raise ValueError(
+            "username must be 3–64 alphanumeric characters (underscores and hyphens allowed)"
+        )
     return username
 
 
@@ -75,6 +77,7 @@ def validate_port(port: int) -> int:
 
 
 # ── @audit_action decorator ───────────────────────────────────────────────────
+
 
 def audit_action(
     event_type: str,
@@ -116,6 +119,7 @@ def audit_action(
             session_id = None
             if request is not None:
                 from src.observability.audit_middleware import _extract_actor
+
                 actor = _extract_actor(request)
                 actor_ip = request.client.host if request.client else None
                 session_id = getattr(request.state, "request_id", None)
@@ -132,6 +136,7 @@ def audit_action(
             finally:
                 try:
                     from src.observability.observatory import get_observatory
+
                     get_observatory().record(
                         event_type,
                         actor=actor,

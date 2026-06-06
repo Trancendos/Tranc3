@@ -85,9 +85,7 @@ def generate_markdown(report: "ComplianceReport") -> str:
         ev_count = len(r.evidence_checks)
         ev_ok = sum(1 for e in r.evidence_checks if e.exists)
         ev_str = f"{ev_ok}/{ev_count}" if ev_count > 0 else "none"
-        lines.append(
-            f"| {r.req_id} | {r.standard} | {r.title} | {r.status} | {ev_str} |"
-        )
+        lines.append(f"| {r.req_id} | {r.standard} | {r.title} | {r.status} | {ev_str} |")
     lines.append("")
 
     # Traceability matrix
@@ -162,11 +160,14 @@ def generate_html(report: "ComplianceReport") -> str:
     req_rows = ""
     for r in sorted(report.requirements, key=lambda x: x.req_id):
         badge = _status_badge(r.status)
-        ev_items = "".join(
-            f'<li class="ev-{"ok" if e.exists else "missing"}">'
-            f'<code>{e.path}</code> — {e.description}</li>'
-            for e in r.evidence_checks
-        ) or "<li>No evidence recorded</li>"
+        ev_items = (
+            "".join(
+                f'<li class="ev-{"ok" if e.exists else "missing"}">'
+                f"<code>{e.path}</code> — {e.description}</li>"
+                for e in r.evidence_checks
+            )
+            or "<li>No evidence recorded</li>"
+        )
         req_rows += f"""
         <tr>
           <td><code>{r.req_id}</code></td>

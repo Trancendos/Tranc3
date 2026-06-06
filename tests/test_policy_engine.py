@@ -76,7 +76,9 @@ def test_default_deny_when_no_rules_match():
         PolicyEffect.ALLOW,
         [PolicyCondition("subject.role", PolicyOperator.eq, "admin")],
     )
-    ps = PolicySet(id="ps3", rules=[rule], combine_strategy="first_match", default_effect=PolicyEffect.DENY)
+    ps = PolicySet(
+        id="ps3", rules=[rule], combine_strategy="first_match", default_effect=PolicyEffect.DENY
+    )
     engine = _engine_with_set(ps)
 
     decision = engine.evaluate({"role": "user"}, "any/resource", "read")
@@ -139,7 +141,12 @@ def test_dot_notation_missing_path_fails_condition():
         PolicyEffect.ALLOW,
         [PolicyCondition("subject.profile.tier", PolicyOperator.eq, "pro")],
     )
-    ps = PolicySet(id="ps-dot-miss", rules=[rule], combine_strategy="first_match", default_effect=PolicyEffect.DENY)
+    ps = PolicySet(
+        id="ps-dot-miss",
+        rules=[rule],
+        combine_strategy="first_match",
+        default_effect=PolicyEffect.DENY,
+    )
     engine = _engine_with_set(ps)
 
     # subject has no nested profile
@@ -158,7 +165,9 @@ def test_glob_resource_matching():
         resources=["admin/*"],
         actions=["read", "write"],
     )
-    ps = PolicySet(id="ps-glob", rules=[rule], combine_strategy="first_match", default_effect=PolicyEffect.DENY)
+    ps = PolicySet(
+        id="ps-glob", rules=[rule], combine_strategy="first_match", default_effect=PolicyEffect.DENY
+    )
     engine = _engine_with_set(ps)
 
     # Matching resource and action
@@ -179,7 +188,9 @@ def test_operator_in():
         PolicyEffect.ALLOW,
         [PolicyCondition("subject.role", PolicyOperator.in_, ["admin", "moderator"])],
     )
-    ps = PolicySet(id="ps-in", rules=[rule], combine_strategy="first_match", default_effect=PolicyEffect.DENY)
+    ps = PolicySet(
+        id="ps-in", rules=[rule], combine_strategy="first_match", default_effect=PolicyEffect.DENY
+    )
     engine = _engine_with_set(ps)
     assert engine.evaluate({"role": "moderator"}, "r", "a").effect == PolicyEffect.ALLOW
     assert engine.evaluate({"role": "guest"}, "r", "a").effect == PolicyEffect.DENY
@@ -191,7 +202,12 @@ def test_operator_exists():
         PolicyEffect.ALLOW,
         [PolicyCondition("subject.mfa_verified", PolicyOperator.exists)],
     )
-    ps = PolicySet(id="ps-exists", rules=[rule], combine_strategy="first_match", default_effect=PolicyEffect.DENY)
+    ps = PolicySet(
+        id="ps-exists",
+        rules=[rule],
+        combine_strategy="first_match",
+        default_effect=PolicyEffect.DENY,
+    )
     engine = _engine_with_set(ps)
     assert engine.evaluate({"mfa_verified": True}, "r", "a").effect == PolicyEffect.ALLOW
     assert engine.evaluate({"role": "user"}, "r", "a").effect == PolicyEffect.DENY
@@ -203,7 +219,12 @@ def test_operator_matches_regex():
         PolicyEffect.ALLOW,
         [PolicyCondition("subject.email", PolicyOperator.matches, r"@trancendos\.com$")],
     )
-    ps = PolicySet(id="ps-regex", rules=[rule], combine_strategy="first_match", default_effect=PolicyEffect.DENY)
+    ps = PolicySet(
+        id="ps-regex",
+        rules=[rule],
+        combine_strategy="first_match",
+        default_effect=PolicyEffect.DENY,
+    )
     engine = _engine_with_set(ps)
     assert engine.evaluate({"email": "user@trancendos.com"}, "r", "a").effect == PolicyEffect.ALLOW
     assert engine.evaluate({"email": "user@gmail.com"}, "r", "a").effect == PolicyEffect.DENY

@@ -131,7 +131,11 @@ def _sqlite_get(key: str) -> Dict[str, Any]:
         value = _decrypt_secret(row["encrypted_value"])
     except Exception:  # noqa: BLE001
         conn.close()
-        return {"ok": False, "backend": "sqlite", "error": "decryption failed — record may be corrupted"}
+        return {
+            "ok": False,
+            "backend": "sqlite",
+            "error": "decryption failed — record may be corrupted",
+        }
     _append_audit(conn, row["id"], "secret.read", details={"via": "openbao_client"})
     conn.commit()
     conn.close()

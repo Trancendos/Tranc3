@@ -27,9 +27,9 @@ class TierCommandType(str, Enum):
     ENFORCE_ZERO_COST = "ENFORCE_ZERO_COST"
     SUSPEND_PAID_CALLS = "SUSPEND_PAID_CALLS"
     # Intelligence
-    PROMOTE_AGENT = "PROMOTE_AGENT"       # Tier 4 → Tier 3 temporary elevation
-    RECALL_AGENT = "RECALL_AGENT"         # Pull Tier 4 agent back
-    SPAWN_WORKER = "SPAWN_WORKER"         # Spin up Tier 5 worker
+    PROMOTE_AGENT = "PROMOTE_AGENT"  # Tier 4 → Tier 3 temporary elevation
+    RECALL_AGENT = "RECALL_AGENT"  # Pull Tier 4 agent back
+    SPAWN_WORKER = "SPAWN_WORKER"  # Spin up Tier 5 worker
     TERMINATE_WORKER = "TERMINATE_WORKER"
     # Platform
     PLATFORM_HEALTH_CHECK = "PLATFORM_HEALTH_CHECK"
@@ -39,13 +39,13 @@ class TierCommandType(str, Enum):
 @dataclass
 class TierCommand:
     command_type: TierCommandType
-    source_tier: int                        # 1 = Trance-One, 2 = T2ance, etc.
+    source_tier: int  # 1 = Trance-One, 2 = T2ance, etc.
     target_tier: int
     target_entity: Optional[str] = None
     payload: Dict[str, Any] = field(default_factory=dict)
-    command_id: str = field(default_factory=lambda: f"cmd-{int(time.time()*1000)}")
+    command_id: str = field(default_factory=lambda: f"cmd-{int(time.time() * 1000)}")
     issued_at: float = field(default_factory=time.time)
-    priority: int = 5                       # 1 = highest, 10 = lowest
+    priority: int = 5  # 1 = highest, 10 = lowest
 
 
 @dataclass
@@ -54,7 +54,7 @@ class TierEvent:
     source_entity: Optional[str]
     event_type: str
     payload: Dict[str, Any] = field(default_factory=dict)
-    event_id: str = field(default_factory=lambda: f"evt-{int(time.time()*1000)}")
+    event_id: str = field(default_factory=lambda: f"evt-{int(time.time() * 1000)}")
     occurred_at: float = field(default_factory=time.time)
 
 
@@ -76,9 +76,7 @@ class TierBridge:
         self._command_log: List[TierCommand] = []
         self._event_log: List[TierEvent] = []
 
-    def register_command_handler(
-        self, command_type: TierCommandType, handler: HandlerFn
-    ) -> None:
+    def register_command_handler(self, command_type: TierCommandType, handler: HandlerFn) -> None:
         self._command_handlers.setdefault(command_type, []).append(handler)
 
     def register_event_listener(self, listener: EventListenerFn) -> None:
@@ -99,9 +97,7 @@ class TierBridge:
             try:
                 handler(command)
             except Exception as exc:
-                logger.error(
-                    "Handler error for %s: %s", command.command_type.value, exc
-                )
+                logger.error("Handler error for %s: %s", command.command_type.value, exc)
 
     def surface_event(self, event: TierEvent) -> None:
         """Surface an event from a lower tier upward."""

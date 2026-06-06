@@ -87,7 +87,9 @@ class WarpTunnel:
             .allow=True → route to downstream handler
             .allow=False → reject and surface block_reason to caller
         """
-        raw: bytes = content.encode("utf-8", errors="replace") if isinstance(content, str) else content
+        raw: bytes = (
+            content.encode("utf-8", errors="replace") if isinstance(content, str) else content
+        )
 
         # Size gate — avoids scanning multi-GB payloads
         if self.config.max_content_bytes and len(raw) > self.config.max_content_bytes:
@@ -102,9 +104,8 @@ class WarpTunnel:
         report = self._analyser.analyse(raw, source=source)
 
         qid: Optional[str] = None
-        should_block = (
-            report.verdict in self.config.block_verdicts
-            or (self.config.strict_mode and report.verdict in self.config.warn_verdicts)
+        should_block = report.verdict in self.config.block_verdicts or (
+            self.config.strict_mode and report.verdict in self.config.warn_verdicts
         )
         should_quarantine = should_block or report.verdict in self.config.warn_verdicts
 
@@ -125,7 +126,9 @@ class WarpTunnel:
                 reason += f" [quarantine_id={qid}]"
             logger.warning(
                 "warp_tunnel: BLOCKED content from %s — %s — qid=%s",
-                source, report.verdict.value, qid,
+                source,
+                report.verdict.value,
+                qid,
             )
             return TunnelResult(
                 allow=False,
@@ -139,7 +142,9 @@ class WarpTunnel:
         if report.verdict in self.config.warn_verdicts:
             logger.info(
                 "warp_tunnel: WARN content from %s — %s — qid=%s",
-                source, report.verdict.value, qid,
+                source,
+                report.verdict.value,
+                qid,
             )
 
         return TunnelResult(

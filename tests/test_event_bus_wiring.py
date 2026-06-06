@@ -28,8 +28,10 @@ from src.event_bus.wiring import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _envelope(event_type: str, data: dict | None = None) -> EventEnvelope:
     import uuid
+
     return EventEnvelope(
         event_type=event_type,
         data=data or {},
@@ -41,6 +43,7 @@ def _envelope(event_type: str, data: dict | None = None) -> EventEnvelope:
 # Singleton
 # ---------------------------------------------------------------------------
 
+
 def test_get_event_bus_singleton():
     b1 = get_event_bus()
     b2 = get_event_bus()
@@ -51,6 +54,7 @@ def test_get_event_bus_singleton():
 # ---------------------------------------------------------------------------
 # wire_platform_events registers callbacks
 # ---------------------------------------------------------------------------
+
 
 def test_wire_platform_events_registers_callbacks():
     bus = EventBus()
@@ -73,18 +77,22 @@ def test_wire_platform_events_registers_callbacks():
 # Sentinel channel mapping
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("event_type,expected_channel", [
-    ("ai.inference.complete", "ai"),
-    ("ai.inference.failed", "ai"),
-    ("auth.token.issued", "auth"),
-    ("user.login", "users"),
-    ("workflow.completed", "workflows"),
-    ("service.health.changed", "platform"),
-    ("secret.stored", "security"),
-    ("order.created", "financial"),
-    ("payment.received", "financial"),
-    ("notification.sent", "platform"),
-])
+
+@pytest.mark.parametrize(
+    "event_type,expected_channel",
+    [
+        ("ai.inference.complete", "ai"),
+        ("ai.inference.failed", "ai"),
+        ("auth.token.issued", "auth"),
+        ("user.login", "users"),
+        ("workflow.completed", "workflows"),
+        ("service.health.changed", "platform"),
+        ("secret.stored", "security"),
+        ("order.created", "financial"),
+        ("payment.received", "financial"),
+        ("notification.sent", "platform"),
+    ],
+)
 def test_sentinel_channel_mapping(event_type, expected_channel):
     assert _event_type_to_sentinel_channel(event_type) == expected_channel
 
@@ -92,6 +100,7 @@ def test_sentinel_channel_mapping(event_type, expected_channel):
 # ---------------------------------------------------------------------------
 # Observatory → EventBus mapping
 # ---------------------------------------------------------------------------
+
 
 def _make_audit_event(category_name: str, event_type: str):
     """
@@ -122,6 +131,7 @@ def _make_audit_event(category_name: str, event_type: str):
 
     # Patch the wiring module to use *our* EventCategory so identity checks pass
     import src.event_bus.wiring as _wiring
+
     _wiring._observatory_module = mod  # store for reference (unused, just safety)
 
     # We need to patch the EventCategory imported inside _audit_category_to_event_type.
@@ -135,25 +145,28 @@ def _make_audit_event(category_name: str, event_type: str):
     )
 
 
-@pytest.mark.parametrize("cat,et,expected", [
-    ("AI", "ai.inference.complete-done", PlatformEventType.AI_INFERENCE_COMPLETE),
-    ("AI", "ai.inference.failed", PlatformEventType.AI_INFERENCE_FAILED),
-    ("AI", "ai.inference.request", PlatformEventType.AI_INFERENCE_REQUEST),
-    ("WORKFLOW", "workflow.completed", PlatformEventType.WORKFLOW_COMPLETED),
-    ("WORKFLOW", "workflow.failed", PlatformEventType.WORKFLOW_FAILED),
-    ("WORKFLOW", "workflow.started", PlatformEventType.WORKFLOW_STARTED),
-    ("AUTH", "user.login", PlatformEventType.USER_LOGIN),
-    ("AUTH", "user.logout", PlatformEventType.USER_LOGOUT),
-    ("AUTH", "auth.token.issue", PlatformEventType.AUTH_TOKEN_ISSUED),
-    ("AUTH", "auth.token.revoke", PlatformEventType.AUTH_TOKEN_REVOKED),
-    ("SECRETS", "secret.stored", PlatformEventType.SECRET_STORED),
-    ("SECRETS", "secret.retrieved", PlatformEventType.SECRET_RETRIEVED),
-    ("SECRETS", "secret.rotated", PlatformEventType.SECRET_ROTATED),
-    ("SECRETS", "secret.deleted", PlatformEventType.SECRET_DELETED),
-    # Non-wired categories return None
-    ("SYSTEM", "system.startup", None),
-    ("DATA", "data.created", None),
-])
+@pytest.mark.parametrize(
+    "cat,et,expected",
+    [
+        ("AI", "ai.inference.complete-done", PlatformEventType.AI_INFERENCE_COMPLETE),
+        ("AI", "ai.inference.failed", PlatformEventType.AI_INFERENCE_FAILED),
+        ("AI", "ai.inference.request", PlatformEventType.AI_INFERENCE_REQUEST),
+        ("WORKFLOW", "workflow.completed", PlatformEventType.WORKFLOW_COMPLETED),
+        ("WORKFLOW", "workflow.failed", PlatformEventType.WORKFLOW_FAILED),
+        ("WORKFLOW", "workflow.started", PlatformEventType.WORKFLOW_STARTED),
+        ("AUTH", "user.login", PlatformEventType.USER_LOGIN),
+        ("AUTH", "user.logout", PlatformEventType.USER_LOGOUT),
+        ("AUTH", "auth.token.issue", PlatformEventType.AUTH_TOKEN_ISSUED),
+        ("AUTH", "auth.token.revoke", PlatformEventType.AUTH_TOKEN_REVOKED),
+        ("SECRETS", "secret.stored", PlatformEventType.SECRET_STORED),
+        ("SECRETS", "secret.retrieved", PlatformEventType.SECRET_RETRIEVED),
+        ("SECRETS", "secret.rotated", PlatformEventType.SECRET_ROTATED),
+        ("SECRETS", "secret.deleted", PlatformEventType.SECRET_DELETED),
+        # Non-wired categories return None
+        ("SYSTEM", "system.startup", None),
+        ("DATA", "data.created", None),
+    ],
+)
 def test_audit_category_to_event_type(cat, et, expected):
     audit_event = _make_audit_event(cat, et)
     result = _audit_category_to_event_type(audit_event)
@@ -163,6 +176,7 @@ def test_audit_category_to_event_type(cat, et, expected):
 # ---------------------------------------------------------------------------
 # Library emits EventBus article events
 # ---------------------------------------------------------------------------
+
 
 def test_library_emits_article_created_event():
     """Library.create() should call bus.emit_async with 'article.created'."""
@@ -207,6 +221,7 @@ def test_library_emits_article_deleted_event():
 # Library AI handler
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_library_on_ai_event_creates_article():
     from src.event_bus.wiring import _library_on_ai_event
@@ -217,7 +232,12 @@ async def test_library_on_ai_event_creates_article():
 
     env = _envelope(
         PlatformEventType.AI_INFERENCE_COMPLETE,
-        {"prompt": "What is quantum?", "response": "A quantum is…", "model": "qnc", "provider": "think-tank"},
+        {
+            "prompt": "What is quantum?",
+            "response": "A quantum is…",
+            "model": "qnc",
+            "provider": "think-tank",
+        },
     )
     await _library_on_ai_event(env)
 
@@ -240,6 +260,7 @@ async def test_library_on_ai_event_skips_empty_response():
 # ---------------------------------------------------------------------------
 # Workflow handler
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_library_on_workflow_completed():
@@ -274,6 +295,7 @@ async def test_library_on_workflow_other_events_skipped():
 # Sentinel forward handler (mocked HTTP)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_sentinel_forward_posts_to_correct_url():
     from src.event_bus.wiring import _sentinel_forward
@@ -297,6 +319,7 @@ async def test_sentinel_forward_posts_to_correct_url():
     with patch.dict("os.environ", {"SENTINEL_URL": "http://sentinel:8041"}):
         # httpx may not be installed in all environments — mock at module level
         import sys
+
         fake_httpx = MagicMock()
         fake_httpx.AsyncClient = MagicMock(return_value=mock_client)
         with patch.dict(sys.modules, {"httpx": fake_httpx}):

@@ -122,22 +122,16 @@ class SecurityReporter:
             if rule_id and count > 0:
                 by_rule[rule_id][directory] = count
 
-        total_obs = sum(
-            sum(dirs.values()) for dirs in by_rule.values()
-        )
+        total_obs = sum(sum(dirs.values()) for dirs in by_rule.values())
         total_dirs = len({d for dirs in by_rule.values() for d in dirs})
 
         # Compute trends from enriched history
         rule_summaries = []
-        for rule_id, dir_counts in sorted(
-            by_rule.items(), key=lambda x: -sum(x[1].values())
-        ):
+        for rule_id, dir_counts in sorted(by_rule.items(), key=lambda x: -sum(x[1].values())):
             trend, delta = self._compute_trend(rule_id)
             info = rule_info(rule_id)
             top_dirs = sorted(dir_counts.items(), key=lambda x: -x[1])[:5]
-            top_with_entity = [
-                (d, entity_for_directory(d), c) for d, c in top_dirs
-            ]
+            top_with_entity = [(d, entity_for_directory(d), c) for d, c in top_dirs]
             rule_summaries.append(
                 RuleSummary(
                     rule_id=rule_id,
@@ -163,9 +157,7 @@ class SecurityReporter:
 
         severity_rank = {"critical": 4, "high": 3, "medium": 2, "low": 1, "unknown": 0}
         hotspots = []
-        for entity, rule_counts in sorted(
-            entity_obs.items(), key=lambda x: -sum(x[1].values())
-        ):
+        for entity, rule_counts in sorted(entity_obs.items(), key=lambda x: -sum(x[1].values())):
             total = sum(rule_counts.values())
             highest = max(
                 (rule_info(r) for r in rule_counts if rule_info(r)),
@@ -229,7 +221,13 @@ class SecurityReporter:
             "",
         ]
 
-        severity_icon = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢", "unknown": "⚪"}
+        severity_icon = {
+            "critical": "🔴",
+            "high": "🟠",
+            "medium": "🟡",
+            "low": "🟢",
+            "unknown": "⚪",
+        }
         trend_icon = {"improving": "↓", "degrading": "↑", "stable": "→", "unknown": "?"}
 
         lines.append("── RULE BREAKDOWN ─────────────────────────────────────────────────")
@@ -241,7 +239,9 @@ class SecurityReporter:
             lines.append(
                 f"\n  {icon} {r.rule_id} — {r.rule_name}  [{r.severity}]  {trend} {delta_str}  [{fixable}]"
             )
-            lines.append(f"     Observations: {r.total_observations:,}  across {r.directory_count} directories")
+            lines.append(
+                f"     Observations: {r.total_observations:,}  across {r.directory_count} directories"
+            )
             lines.append(f"     What it means: {r.what_it_means[:120]}...")
             lines.append(f"     Fix: {r.remediation_summary[:100]}...")
             lines.append("     Top hotspot directories:")
@@ -252,7 +252,9 @@ class SecurityReporter:
         lines.append("── ENTITY HOTSPOTS ─────────────────────────────────────────────────")
         for h in report.entity_hotspots[:7]:
             icon = severity_icon.get(h.highest_severity, "⚪")
-            rules = ", ".join(f"{k}({v:,})" for k, v in sorted(h.rule_breakdown.items(), key=lambda x: -x[1])[:4])
+            rules = ", ".join(
+                f"{k}({v:,})" for k, v in sorted(h.rule_breakdown.items(), key=lambda x: -x[1])[:4]
+            )
             lines.append(f"  {icon} {h.entity:<40} {h.total_observations:>8,} obs  [{rules}]")
 
         lines.append("")
@@ -270,10 +272,7 @@ class SecurityReporter:
         Compares the last 5 scans vs the 5 before that. Returns trend and delta.
         """
         # Only works with enriched history (new schema with per_rule_counts)
-        enriched = [
-            h for h in self._history
-            if "per_rule_counts" in h
-        ]
+        enriched = [h for h in self._history if "per_rule_counts" in h]
         if len(enriched) < 4:
             return "unknown", 0
 
@@ -364,6 +363,7 @@ def main() -> None:
 
     if args.json:
         import dataclasses
+
         print(json.dumps(dataclasses.asdict(report), indent=2, default=str))
     else:
         report.rule_summaries = report.rule_summaries[: args.top]

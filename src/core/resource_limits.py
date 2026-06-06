@@ -76,6 +76,7 @@ class ResourceLimits:
         """Return an httpx.Timeout object from these limits."""
         try:
             import httpx
+
             return httpx.Timeout(
                 connect=self.http_connect_timeout,
                 read=self.http_read_timeout,
@@ -89,6 +90,7 @@ class ResourceLimits:
         """Return an httpx.Limits object from these limits."""
         try:
             import httpx
+
             return httpx.Limits(
                 max_connections=self.http_max_connections,
                 max_keepalive_connections=self.http_max_keepalive,

@@ -334,7 +334,9 @@ async def lifespan(app: FastAPI):
         model = AdvancedTransformerModel(cfg)
         if os.path.exists(cfg.model_path):
             if _TORCH_AVAILABLE and torch is not None:
-                model.load_state_dict(torch.load(cfg.model_path, map_location="cpu", weights_only=True))
+                model.load_state_dict(
+                    torch.load(cfg.model_path, map_location="cpu", weights_only=True)
+                )
             logger.info("Model weights loaded")
         else:
             logger.warning("No model weights — echo mode active")
@@ -599,6 +601,8 @@ async def api_version_header_middleware(request, call_next):
     response = await call_next(request)
     response.headers[_API_VERSION_HEADER] = _API_VERSION
     return response
+
+
 app.add_middleware(GovernanceMiddleware)
 app.add_middleware(ZeroTrustASGIMiddleware)
 app.add_middleware(RBACMiddleware)
@@ -608,10 +612,12 @@ app.add_middleware(AuditMiddleware, service_name="tranc3-backend")
 
 # ── Global exception handlers ─────────────────────────────────────────────────
 
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """Normalise all HTTPExceptions to the ErrorResponse envelope."""
     from src.errors import ErrorCode
+
     request_id = getattr(request.state, "request_id", None)
 
     # If detail is already our structured dict, wrap it; otherwise use SYS_UNKNOWN fallback
@@ -671,6 +677,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     body = make_error_response(ErrorCode.SYS_UNKNOWN, request_id=request_id).model_dump()
     return JSONResponse(status_code=500, content=body)
 
+
 # ── The Spark (MCP server) ────────────────────────────────────────────────────
 from src.mcp.server import router as _mcp_router  # codeql[py/cyclic-import]
 
@@ -691,7 +698,9 @@ from src.capacity.guard import (  # noqa: F401
 )
 
 
-@app.get("/capacity/status", tags=["platform"], summary="Capacity utilisation for all external services")
+@app.get(
+    "/capacity/status", tags=["platform"], summary="Capacity utilisation for all external services"
+)
 async def capacity_status(current_user: dict = Depends(get_current_user)):
     """Returns live utilisation for all external services. Highlights services at 80/90/95/100%."""
     guard = get_capacity_guard()
@@ -703,16 +712,22 @@ async def capacity_status(current_user: dict = Depends(get_current_user)):
     return {"services": raw, "by_level": by_level}
 
 
-@app.post("/capacity/reset/{service_id}", tags=["platform"], summary="Admin: reset a capacity counter")
+@app.post(
+    "/capacity/reset/{service_id}", tags=["platform"], summary="Admin: reset a capacity counter"
+)
 async def capacity_reset(service_id: str, current_user: dict = Depends(get_current_user)):
     """Reset a single service counter (admin only — use after a billing window reset)."""
     try:
         svc = CapacityService(service_id)
     except ValueError:
         from src.errors import ErrorCode, make_error_response
-        raise HTTPException(status_code=404, detail=make_error_response(
-            ErrorCode.ENT_NOT_FOUND, f"Unknown capacity service: {service_id}"
-        ).model_dump())
+
+        raise HTTPException(
+            status_code=404,
+            detail=make_error_response(
+                ErrorCode.ENT_NOT_FOUND, f"Unknown capacity service: {service_id}"
+            ).model_dump(),
+        )
     get_capacity_guard().reset(svc)
     return {"reset": service_id, "note": "Counter reset to zero. Window clock restarted."}
 
@@ -1917,10 +1932,19 @@ async def admin_settings_write(
 
     SENSITIVE = {"SECRET_KEY", "JWT_SECRET", "DATABASE_URL", "REDIS_URL"}
     ALLOWED_KEYS = {
-        "GROQ_API_KEY", "GOOGLE_GEMINI_API_KEY", "GITHUB_TOKEN",
-        "CEREBRAS_API_KEY", "SAMBANOVA_API_KEY", "MISTRAL_API_KEY",
-        "COHERE_API_KEY", "DEEPSEEK_API_KEY", "OLLAMA_URL",
-        "SECRET_KEY", "JWT_SECRET", "DATABASE_URL", "REDIS_URL",
+        "GROQ_API_KEY",
+        "GOOGLE_GEMINI_API_KEY",
+        "GITHUB_TOKEN",
+        "CEREBRAS_API_KEY",
+        "SAMBANOVA_API_KEY",
+        "MISTRAL_API_KEY",
+        "COHERE_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "OLLAMA_URL",
+        "SECRET_KEY",
+        "JWT_SECRET",
+        "DATABASE_URL",
+        "REDIS_URL",
     }
     updated = []
     skipped = []
@@ -1949,22 +1973,31 @@ async def admin_settings_read(
     _perm: None = require_permission("admin:config"),
 ):
     import os
+
     ALLOWED_KEYS = {
-        "GROQ_API_KEY", "GOOGLE_GEMINI_API_KEY", "GITHUB_TOKEN",
-        "CEREBRAS_API_KEY", "SAMBANOVA_API_KEY", "MISTRAL_API_KEY",
-        "COHERE_API_KEY", "DEEPSEEK_API_KEY", "OLLAMA_URL",
-        "SECRET_KEY", "JWT_SECRET", "DATABASE_URL", "REDIS_URL",
+        "GROQ_API_KEY",
+        "GOOGLE_GEMINI_API_KEY",
+        "GITHUB_TOKEN",
+        "CEREBRAS_API_KEY",
+        "SAMBANOVA_API_KEY",
+        "MISTRAL_API_KEY",
+        "COHERE_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "OLLAMA_URL",
+        "SECRET_KEY",
+        "JWT_SECRET",
+        "DATABASE_URL",
+        "REDIS_URL",
     }
-    return {
-        k: ("set" if os.environ.get(k) else "unset")
-        for k in sorted(ALLOWED_KEYS)
-    }
+    return {k: ("set" if os.environ.get(k) else "unset") for k in sorted(ALLOWED_KEYS)}
 
 
 # ── User Settings — encrypted, server-side, per-user ─────────────────────────
 
+
 class UserSettingWrite(BaseModel):
     """Single key/value pair for POST /user/settings."""
+
     key: str = Field(..., description="Setting name (must be in the allowed list)")
     value: str = Field(..., description="Plaintext value to encrypt and store")
 
@@ -1980,6 +2013,7 @@ class UserSettingWrite(BaseModel):
 )
 async def user_settings_list(current_user: dict = Depends(get_current_user)):
     from src.settings_store import get_settings_store
+
     username: str = current_user.get("username") or current_user.get("sub", "unknown")
     return get_settings_store().list_keys(username)
 
@@ -1999,11 +2033,17 @@ async def user_settings_write(
     current_user: dict = Depends(get_current_user),
 ):
     from src.settings_store import get_settings_store, ALLOWED_KEYS
+
     username: str = current_user.get("username") or current_user.get("sub", "unknown")
     if body.key not in ALLOWED_KEYS:
-        raise HTTPException(status_code=422, detail=f"Key '{body.key}' is not in the allowed settings list")
+        raise HTTPException(
+            status_code=422, detail=f"Key '{body.key}' is not in the allowed settings list"
+        )
     if not body.value.strip():
-        raise HTTPException(status_code=422, detail="value must not be empty — use DELETE /user/settings/{key} to clear")
+        raise HTTPException(
+            status_code=422,
+            detail="value must not be empty — use DELETE /user/settings/{key} to clear",
+        )
     get_settings_store().set(username, body.key, body.value)
     return {"key": body.key, "status": "stored"}
 
@@ -2019,6 +2059,7 @@ async def user_settings_delete(
     current_user: dict = Depends(get_current_user),
 ):
     from src.settings_store import get_settings_store
+
     username: str = current_user.get("username") or current_user.get("sub", "unknown")
     deleted = get_settings_store().delete(username, key)
     if not deleted:

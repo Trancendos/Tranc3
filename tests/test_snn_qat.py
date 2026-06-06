@@ -25,8 +25,10 @@ import pytest
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
+
 def _fresh_snn_module() -> ModuleType:
     import importlib
+
     for key in list(sys.modules):
         if "personality.snn_qat" in key:
             del sys.modules[key]
@@ -35,14 +37,17 @@ def _fresh_snn_module() -> ModuleType:
 
 # ── fallback (float MLP) path ─────────────────────────────────────────────────
 
+
 def test_float_mlp_backend():
     from src.personality.snn_qat import SNNModel
+
     m = SNNModel(force_fallback=True)
     assert m.backend == "float_mlp"
 
 
 def test_infer_returns_triple():
     from src.personality.snn_qat import SNNModel
+
     m = SNNModel(force_fallback=True)
     result = m.infer([0.5, 0.8, 0.2, 0.4])
     assert len(result) == 3
@@ -50,6 +55,7 @@ def test_infer_returns_triple():
 
 def test_infer_bounds():
     from src.personality.snn_qat import SNNModel
+
     m = SNNModel(force_fallback=True)
     arousal, valence, engagement = m.infer([1.0, 1.0, 1.0, 1.0])
     assert 0.0 <= arousal <= 1.0
@@ -59,6 +65,7 @@ def test_infer_bounds():
 
 def test_infer_negative_features_bounded():
     from src.personality.snn_qat import SNNModel
+
     m = SNNModel(force_fallback=True)
     # Negative inputs should still produce clamped [0,1] outputs
     result = m.infer([-1.0, -1.0, 0.0, 0.0])
@@ -67,6 +74,7 @@ def test_infer_negative_features_bounded():
 
 def test_infer_wrong_dim_raises():
     from src.personality.snn_qat import SNNModel
+
     m = SNNModel(force_fallback=True)
     with pytest.raises(ValueError):
         m.infer([0.5, 0.8])  # only 2 dims, expects 4
@@ -74,6 +82,7 @@ def test_infer_wrong_dim_raises():
 
 def test_infer_too_many_dims_raises():
     from src.personality.snn_qat import SNNModel
+
     m = SNNModel(force_fallback=True)
     with pytest.raises(ValueError):
         m.infer([0.1, 0.2, 0.3, 0.4, 0.5])
@@ -82,6 +91,7 @@ def test_infer_too_many_dims_raises():
 def test_float_mlp_deterministic():
     """Fixed-seed MLP must produce identical outputs on repeated calls."""
     from src.personality.snn_qat import SNNModel
+
     m1 = SNNModel(force_fallback=True)
     m2 = SNNModel(force_fallback=True)
     features = [0.3, 0.6, 0.1, 0.9]
@@ -90,6 +100,7 @@ def test_float_mlp_deterministic():
 
 def test_infer_accepts_tuple():
     from src.personality.snn_qat import SNNModel
+
     m = SNNModel(force_fallback=True)
     result = m.infer((0.5, 0.5, 0.5, 0.5))
     assert len(result) == 3
@@ -97,26 +108,32 @@ def test_infer_accepts_tuple():
 
 def test_export_onnx_returns_false_without_torch():
     from src.personality.snn_qat import SNNModel
+
     m = SNNModel(force_fallback=True)
     assert m.export_onnx("/tmp/test_model.onnx") is False  # nosec B108
 
 
 # ── force_fallback flag ───────────────────────────────────────────────────────
 
+
 def test_force_fallback_ignores_torch():
     from src.personality.snn_qat import SNNModel
+
     m = SNNModel(force_fallback=True)
     assert m.backend == "float_mlp"
 
 
 # ── mocked SNN (torch + snntorch + brevitas) path ────────────────────────────
 
+
 def _make_torch_mock() -> MagicMock:
     fake_torch = MagicMock()
     out_tensor = MagicMock()
     out_tensor.__getitem__ = MagicMock(return_value=MagicMock(tolist=lambda: [0.6, 0.4, 0.7]))
     fake_torch.tensor.return_value = MagicMock()
-    fake_torch.zeros.return_value = MagicMock(__add__=lambda s, o: s, __truediv__=lambda s, d: out_tensor)
+    fake_torch.zeros.return_value = MagicMock(
+        __add__=lambda s, o: s, __truediv__=lambda s, d: out_tensor
+    )
     ctx = MagicMock()
     ctx.__enter__ = MagicMock(return_value=None)
     ctx.__exit__ = MagicMock(return_value=False)

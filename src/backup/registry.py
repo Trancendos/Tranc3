@@ -19,33 +19,33 @@ from typing import List
 
 
 class BackupTier(Enum):
-    CRITICAL = "critical"   # backup every 15 min
-    HIGH = "high"           # backup every 1 h
-    STANDARD = "standard"   # backup every 6 h
-    LOW = "low"             # backup every 24 h
+    CRITICAL = "critical"  # backup every 15 min
+    HIGH = "high"  # backup every 1 h
+    STANDARD = "standard"  # backup every 6 h
+    LOW = "low"  # backup every 24 h
 
 
 # Retention policy: (daily_count, weekly_count, monthly_count)
 RETENTION: dict[BackupTier, tuple[int, int, int]] = {
     BackupTier.CRITICAL: (7, 4, 6),
-    BackupTier.HIGH:     (7, 4, 3),
+    BackupTier.HIGH: (7, 4, 3),
     BackupTier.STANDARD: (7, 4, 2),
-    BackupTier.LOW:      (3, 2, 1),
+    BackupTier.LOW: (3, 2, 1),
 }
 
 # RTO / RPO targets in minutes
 RTO_MINUTES: dict[BackupTier, int] = {
     BackupTier.CRITICAL: 60,
-    BackupTier.HIGH:     240,
+    BackupTier.HIGH: 240,
     BackupTier.STANDARD: 1440,
-    BackupTier.LOW:      4320,
+    BackupTier.LOW: 4320,
 }
 
 RPO_MINUTES: dict[BackupTier, int] = {
     BackupTier.CRITICAL: 15,
-    BackupTier.HIGH:     60,
+    BackupTier.HIGH: 60,
     BackupTier.STANDARD: 360,
-    BackupTier.LOW:      1440,
+    BackupTier.LOW: 1440,
 }
 
 
@@ -53,9 +53,9 @@ RPO_MINUTES: dict[BackupTier, int] = {
 class WorkerDB:
     """Descriptor for a single worker's SQLite database."""
 
-    worker: str                    # canonical worker name
-    env_var: str                   # env var for the database path
-    default_path: str              # default path when env var not set
+    worker: str  # canonical worker name
+    env_var: str  # env var for the database path
+    default_path: str  # default path when env var not set
     tier: BackupTier
     description: str = ""
     extra_paths: List[str] = field(default_factory=list)  # additional DB files
@@ -311,6 +311,5 @@ WORKER_DATABASE_REGISTRY: List[WorkerDB] = [
 # Convenience lookups
 REGISTRY_BY_WORKER: dict[str, WorkerDB] = {w.worker: w for w in WORKER_DATABASE_REGISTRY}
 REGISTRY_BY_TIER: dict[BackupTier, list[WorkerDB]] = {
-    tier: [w for w in WORKER_DATABASE_REGISTRY if w.tier == tier]
-    for tier in BackupTier
+    tier: [w for w in WORKER_DATABASE_REGISTRY if w.tier == tier] for tier in BackupTier
 }

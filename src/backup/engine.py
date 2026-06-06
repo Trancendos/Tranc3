@@ -108,7 +108,9 @@ def _backup_key() -> bytes:
         try:
             master = bytes.fromhex(master_hex.strip())
             return HKDF(
-                algorithm=hashes.SHA256(), length=32, salt=salt,
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=salt,
                 info=b"backup-file-encryption",
             ).derive(master)
         except ValueError:
@@ -116,10 +118,14 @@ def _backup_key() -> bytes:
 
     if secret_key:
         return PBKDF2HMAC(
-            algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100_000,
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100_000,
         ).derive(secret_key.encode())
 
     import socket
+
     seed = f"dev-backup:{socket.gethostname()}".encode()
     return hashlib.sha256(seed).digest()
 
@@ -134,7 +140,7 @@ def _encrypt_bytes(data: bytes) -> bytes:
 def _decrypt_bytes(data: bytes) -> bytes:
     if not data.startswith(_ENC_MAGIC):
         raise ValueError("Not an encrypted backup (missing BKPENC1 magic)")
-    payload = data[len(_ENC_MAGIC):]
+    payload = data[len(_ENC_MAGIC) :]
     iv, ct = payload[:12], payload[12:]
     return AESGCM(_backup_key()).decrypt(iv, ct, None)
 
@@ -226,8 +232,12 @@ class BackupEngine:
 
             logger.info(
                 "backup OK worker=%s tier=%s size=%d→%d verified=%s dur=%.0fms",
-                worker_db.worker, worker_db.tier.value, raw_size, len(final_bytes),
-                verified, duration_ms,
+                worker_db.worker,
+                worker_db.tier.value,
+                raw_size,
+                len(final_bytes),
+                verified,
+                duration_ms,
             )
 
             # Step 6: prune old backups
@@ -267,7 +277,9 @@ class BackupEngine:
         worker_db = REGISTRY_BY_WORKER.get(worker)
         if not worker_db and not target_path:
             return RestoreResult(
-                success=False, worker=worker, restored_to="",
+                success=False,
+                worker=worker,
+                restored_to="",
                 backup_path=backup_path or "",
                 verified=False,
                 error=f"Worker '{worker}' not in registry and no target_path given",
@@ -280,16 +292,22 @@ class BackupEngine:
             backup_path = self._latest_backup(worker)
             if not backup_path:
                 return RestoreResult(
-                    success=False, worker=worker, restored_to=live_path,
-                    backup_path="", verified=False,
+                    success=False,
+                    worker=worker,
+                    restored_to=live_path,
+                    backup_path="",
+                    verified=False,
                     error=f"No backups found for worker '{worker}'",
                 )
 
         bp = Path(backup_path)
         if not bp.exists():
             return RestoreResult(
-                success=False, worker=worker, restored_to=live_path,
-                backup_path=backup_path, verified=False,
+                success=False,
+                worker=worker,
+                restored_to=live_path,
+                backup_path=backup_path,
+                verified=False,
                 error=f"Backup file not found: {backup_path}",
             )
 
@@ -312,16 +330,22 @@ class BackupEngine:
             if dry_run:
                 Path(tmp_path).unlink(missing_ok=True)
                 return RestoreResult(
-                    success=verified, worker=worker, restored_to=live_path,
-                    backup_path=backup_path, verified=verified,
+                    success=verified,
+                    worker=worker,
+                    restored_to=live_path,
+                    backup_path=backup_path,
+                    verified=verified,
                     error=None if verified else "Integrity check failed (dry run)",
                 )
 
             if not verified:
                 Path(tmp_path).unlink(missing_ok=True)
                 return RestoreResult(
-                    success=False, worker=worker, restored_to=live_path,
-                    backup_path=backup_path, verified=False,
+                    success=False,
+                    worker=worker,
+                    restored_to=live_path,
+                    backup_path=backup_path,
+                    verified=False,
                     error="Integrity check failed — refusing to overwrite live database",
                 )
 
@@ -334,15 +358,22 @@ class BackupEngine:
 
             logger.info("restore OK worker=%s from=%s to=%s", worker, backup_path, live_path)
             return RestoreResult(
-                success=True, worker=worker, restored_to=live_path,
-                backup_path=backup_path, verified=True,
+                success=True,
+                worker=worker,
+                restored_to=live_path,
+                backup_path=backup_path,
+                verified=True,
             )
 
         except Exception as exc:
             logger.exception("restore FAILED worker=%s: %s", worker, exc)
             return RestoreResult(
-                success=False, worker=worker, restored_to=live_path,
-                backup_path=backup_path, verified=False, error=str(exc),
+                success=False,
+                worker=worker,
+                restored_to=live_path,
+                backup_path=backup_path,
+                verified=False,
+                error=str(exc),
             )
 
     def list_backups(self, worker: Optional[str] = None) -> List[dict]:
@@ -376,15 +407,17 @@ class BackupEngine:
         for worker_db in WORKER_DATABASE_REGISTRY:
             latest_path = self._latest_backup(worker_db.worker)
             if not latest_path:
-                workers_status.append({
-                    "worker": worker_db.worker,
-                    "tier": worker_db.tier.value,
-                    "status": "NO_BACKUP",
-                    "last_backup": None,
-                    "age_minutes": None,
-                    "rpo_minutes": worker_db.backup_interval_minutes,
-                    "rpo_breached": True,
-                })
+                workers_status.append(
+                    {
+                        "worker": worker_db.worker,
+                        "tier": worker_db.tier.value,
+                        "status": "NO_BACKUP",
+                        "last_backup": None,
+                        "age_minutes": None,
+                        "rpo_minutes": worker_db.backup_interval_minutes,
+                        "rpo_breached": True,
+                    }
+                )
                 continue
 
             meta_path = Path(latest_path).with_suffix("").with_suffix(".meta.json")
@@ -406,18 +439,20 @@ class BackupEngine:
                 except Exception:
                     pass
 
-            workers_status.append({
-                "worker": worker_db.worker,
-                "tier": worker_db.tier.value,
-                "status": "OK" if not rpo_breached else "RPO_BREACHED",
-                "last_backup": meta.get("timestamp"),
-                "age_minutes": age_minutes,
-                "rpo_minutes": worker_db.backup_interval_minutes,
-                "rto_minutes": worker_db.rto_minutes,
-                "rpo_breached": rpo_breached,
-                "verified": meta.get("verified", False),
-                "size_bytes": meta.get("compressed_size_bytes"),
-            })
+            workers_status.append(
+                {
+                    "worker": worker_db.worker,
+                    "tier": worker_db.tier.value,
+                    "status": "OK" if not rpo_breached else "RPO_BREACHED",
+                    "last_backup": meta.get("timestamp"),
+                    "age_minutes": age_minutes,
+                    "rpo_minutes": worker_db.backup_interval_minutes,
+                    "rto_minutes": worker_db.rto_minutes,
+                    "rpo_breached": rpo_breached,
+                    "verified": meta.get("verified", False),
+                    "size_bytes": meta.get("compressed_size_bytes"),
+                }
+            )
 
         total = len(workers_status)
         healthy = sum(1 for w in workers_status if w["status"] == "OK")
@@ -466,7 +501,11 @@ class BackupEngine:
         if not worker_dir.exists():
             return None
         backups = sorted(
-            [f for f in worker_dir.iterdir() if f.suffix in (".enc", ".gz") and not f.name.endswith(".meta.json")],
+            [
+                f
+                for f in worker_dir.iterdir()
+                if f.suffix in (".enc", ".gz") and not f.name.endswith(".meta.json")
+            ],
             key=lambda f: f.name,
             reverse=True,
         )
@@ -480,8 +519,11 @@ class BackupEngine:
             return
 
         backups = sorted(
-            [f for f in worker_dir.iterdir()
-             if not f.name.endswith(".meta.json") and f.suffix in (".enc", ".gz")],
+            [
+                f
+                for f in worker_dir.iterdir()
+                if not f.name.endswith(".meta.json") and f.suffix in (".enc", ".gz")
+            ],
             key=lambda f: f.name,
             reverse=True,
         )

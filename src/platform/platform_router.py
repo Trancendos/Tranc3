@@ -19,6 +19,7 @@ router = APIRouter(prefix="/platform", tags=["platform"])
 # Entity Rotation endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.get("/rotation/status")
 async def rotation_status():
     """Full rotation status for all 43 entities."""
@@ -100,6 +101,7 @@ async def entity_foundations(entity_id: str):
 # Intelligent Scanner endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.get("/scan/last")
 async def last_scan_report():
     """Return the last completed scan report."""
@@ -121,6 +123,7 @@ async def run_scan(background_tasks: BackgroundTasks):
 # ---------------------------------------------------------------------------
 # Smart Detector endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get("/detector/alerts")
 async def get_alerts():

@@ -89,8 +89,11 @@ async def get_traceability_matrix() -> dict[str, Any]:
     return build_matrix(report)
 
 
-@router.get("/export/markdown", summary="Download Markdown compliance report",
-            response_class=PlainTextResponse)
+@router.get(
+    "/export/markdown",
+    summary="Download Markdown compliance report",
+    response_class=PlainTextResponse,
+)
 async def export_markdown() -> PlainTextResponse:
     """Downloads the compliance report as a Markdown document."""
     report = _get_report()
@@ -102,8 +105,7 @@ async def export_markdown() -> PlainTextResponse:
     )
 
 
-@router.get("/export/html", summary="Download HTML compliance report",
-            response_class=HTMLResponse)
+@router.get("/export/html", summary="Download HTML compliance report", response_class=HTMLResponse)
 async def export_html() -> HTMLResponse:
     """Downloads a self-contained HTML compliance report (no external deps)."""
     report = _get_report()

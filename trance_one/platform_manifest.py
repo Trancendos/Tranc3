@@ -28,22 +28,22 @@ class Pillar(str, Enum):
 
 
 class TierLevel(int, Enum):
-    TIER_1_SOVEREIGN = 1       # Trance-One
-    TIER_2_PRIME = 2           # T2ance
-    TIER_3_BASE_AI = 3         # Tranc3 (this repo)
-    TIER_4_AGENT = 4           # Infinity-Agent (Alpha + Beta)
-    TIER_5_WORKER = 5          # Infinity-Worker (Bots/Workers/Scrapers)
+    TIER_1_SOVEREIGN = 1  # Trance-One
+    TIER_2_PRIME = 2  # T2ance
+    TIER_3_BASE_AI = 3  # Tranc3 (this repo)
+    TIER_4_AGENT = 4  # Infinity-Agent (Alpha + Beta)
+    TIER_5_WORKER = 5  # Infinity-Worker (Bots/Workers/Scrapers)
 
 
 @dataclass
 class EntityManifestEntry:
     entity_id: str
     display_name: str
-    lead_ai: str               # primary Tier 3 AI that powers this entity
+    lead_ai: str  # primary Tier 3 AI that powers this entity
     pillar: Pillar
-    src_path: str              # canonical code path within the repo
+    src_path: str  # canonical code path within the repo
     foundation_keys: List[str] = field(default_factory=list)
-    status: str = "planned"    # "live" | "partial" | "planned" | "migrating"
+    status: str = "planned"  # "live" | "partial" | "planned" | "migrating"
     port: Optional[int] = None
     lead_ais: List[str] = field(default_factory=list)  # all AIs when entity has multiple
 
@@ -181,7 +181,13 @@ ENTITY_MANIFEST: Dict[str, EntityManifestEntry] = {
         foundation_keys=[],
         status="live",
         port=8012,
-        lead_ais=["Clarence Porter", "Ann Porter", "George Porter", "Edward Porter", "James Porter"],
+        lead_ais=[
+            "Clarence Porter",
+            "Ann Porter",
+            "George Porter",
+            "Edward Porter",
+            "James Porter",
+        ],
     ),
     "chronossphere": EntityManifestEntry(
         entity_id="chronossphere",
@@ -470,6 +476,7 @@ ENTITY_MANIFEST: Dict[str, EntityManifestEntry] = {
 # ---------------------------------------------------------------------------
 # PlatformManifest — singleton accessor
 # ---------------------------------------------------------------------------
+
 
 class PlatformManifest:
     """Read-only view of the canonical 43-entity platform manifest."""

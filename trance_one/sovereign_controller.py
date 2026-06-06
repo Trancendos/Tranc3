@@ -44,13 +44,15 @@ class PlatformState:
     active_entities: Dict[str, bool] = field(default_factory=dict)
     zero_cost_violations: List[str] = field(default_factory=list)
     emergency_failovers: int = 0
-    tier_health: Dict[int, str] = field(default_factory=lambda: {
-        TIER_SOVEREIGN: "healthy",
-        TIER_PRIME: "unknown",
-        TIER_BASE_AI: "unknown",
-        TIER_AGENT: "unknown",
-        TIER_WORKER: "unknown",
-    })
+    tier_health: Dict[int, str] = field(
+        default_factory=lambda: {
+            TIER_SOVEREIGN: "healthy",
+            TIER_PRIME: "unknown",
+            TIER_BASE_AI: "unknown",
+            TIER_AGENT: "unknown",
+            TIER_WORKER: "unknown",
+        }
+    )
 
 
 class SovereignController:
@@ -106,22 +108,22 @@ class SovereignController:
         """
         try:
             from src.platform.zero_cost_service_map import audit_zero_cost
+
             audit = audit_zero_cost()
             if not audit["compliant"]:
                 self._state.zero_cost_violations = [
-                    f"{v['entity']}:{v['foundation']}"
-                    for v in audit.get("violations", [])
+                    f"{v['entity']}:{v['foundation']}" for v in audit.get("violations", [])
                 ]
-                self._bridge.issue_command(TierCommand(
-                    command_type=TierCommandType.SUSPEND_PAID_CALLS,
-                    source_tier=TIER_SOVEREIGN,
-                    target_tier=TIER_BASE_AI,
-                    payload={"violations": self._state.zero_cost_violations},
-                    priority=1,
-                ))
-                logger.critical(
-                    "ZERO-COST VIOLATION: %s", self._state.zero_cost_violations
+                self._bridge.issue_command(
+                    TierCommand(
+                        command_type=TierCommandType.SUSPEND_PAID_CALLS,
+                        source_tier=TIER_SOVEREIGN,
+                        target_tier=TIER_BASE_AI,
+                        payload={"violations": self._state.zero_cost_violations},
+                        priority=1,
+                    )
                 )
+                logger.critical("ZERO-COST VIOLATION: %s", self._state.zero_cost_violations)
             else:
                 self._state.zero_cost_violations = []
         except ImportError:
@@ -129,12 +131,14 @@ class SovereignController:
 
     async def _probe_tier_health(self) -> None:
         """Surface tier health state events upward from T2/T3."""
-        self._bridge.surface_event(TierEvent(
-            source_tier=TIER_SOVEREIGN,
-            source_entity=None,
-            event_type="SOVEREIGN_HEARTBEAT",
-            payload={"platform_state": self.status()},
-        ))
+        self._bridge.surface_event(
+            TierEvent(
+                source_tier=TIER_SOVEREIGN,
+                source_entity=None,
+                event_type="SOVEREIGN_HEARTBEAT",
+                payload={"platform_state": self.status()},
+            )
+        )
 
     # -----------------------------------------------------------------------
     # Emergency authority
@@ -143,33 +147,39 @@ class SovereignController:
     def emergency_rotate(self, entity_id: str) -> None:
         """Force an emergency rotation — highest-priority command."""
         self._state.emergency_failovers += 1
-        self._bridge.issue_command(TierCommand(
-            command_type=TierCommandType.ROTATE_ENTITY,
-            source_tier=TIER_SOVEREIGN,
-            target_tier=TIER_BASE_AI,
-            target_entity=entity_id,
-            payload={"reason": "sovereign_emergency_rotate"},
-            priority=1,
-        ))
+        self._bridge.issue_command(
+            TierCommand(
+                command_type=TierCommandType.ROTATE_ENTITY,
+                source_tier=TIER_SOVEREIGN,
+                target_tier=TIER_BASE_AI,
+                target_entity=entity_id,
+                payload={"reason": "sovereign_emergency_rotate"},
+                priority=1,
+            )
+        )
         logger.warning("Sovereign emergency rotate: entity=%s", entity_id)
 
     def activate_entity(self, entity_id: str) -> None:
         self._state.active_entities[entity_id] = True
-        self._bridge.issue_command(TierCommand(
-            command_type=TierCommandType.ACTIVATE_ENTITY,
-            source_tier=TIER_SOVEREIGN,
-            target_tier=TIER_BASE_AI,
-            target_entity=entity_id,
-        ))
+        self._bridge.issue_command(
+            TierCommand(
+                command_type=TierCommandType.ACTIVATE_ENTITY,
+                source_tier=TIER_SOVEREIGN,
+                target_tier=TIER_BASE_AI,
+                target_entity=entity_id,
+            )
+        )
 
     def deactivate_entity(self, entity_id: str) -> None:
         self._state.active_entities[entity_id] = False
-        self._bridge.issue_command(TierCommand(
-            command_type=TierCommandType.DEACTIVATE_ENTITY,
-            source_tier=TIER_SOVEREIGN,
-            target_tier=TIER_BASE_AI,
-            target_entity=entity_id,
-        ))
+        self._bridge.issue_command(
+            TierCommand(
+                command_type=TierCommandType.DEACTIVATE_ENTITY,
+                source_tier=TIER_SOVEREIGN,
+                target_tier=TIER_BASE_AI,
+                target_entity=entity_id,
+            )
+        )
 
     # -----------------------------------------------------------------------
     # Status

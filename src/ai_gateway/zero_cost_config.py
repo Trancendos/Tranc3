@@ -351,8 +351,15 @@ ROUTING_CHAINS: Dict[str, ZeroCostRoutingChain] = {
             "→ OpenRouter → HuggingFace → Offline"
         ),
         providers=[
-            "ollama", "groq", "gemini", "github-models",
-            "cerebras", "sambanova", "openrouter", "huggingface", "offline",
+            "ollama",
+            "groq",
+            "gemini",
+            "github-models",
+            "cerebras",
+            "sambanova",
+            "openrouter",
+            "huggingface",
+            "offline",
         ],
         models={
             "ollama": "llama3.2",

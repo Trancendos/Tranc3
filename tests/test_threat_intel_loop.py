@@ -31,6 +31,7 @@ from src.section7.threat_intel_loop import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_item(cve_id="CVE-2025-0001", severity="HIGH", source="nvd", tags=None):
     """Build a minimal IntelligenceItem-like object."""
     obj = MagicMock()
@@ -44,6 +45,7 @@ def _make_item(cve_id="CVE-2025-0001", severity="HIGH", source="nvd", tags=None)
 # ---------------------------------------------------------------------------
 # Anomaly detection
 # ---------------------------------------------------------------------------
+
 
 def test_detect_anomalies_flags_critical():
     items = [_make_item(severity="CRITICAL")]
@@ -87,6 +89,7 @@ def test_detect_anomalies_empty_packages():
 # EventBus emission helpers
 # ---------------------------------------------------------------------------
 
+
 def test_emit_cve_ingested_calls_bus():
     emitted = []
     fake_bus = MagicMock()
@@ -129,6 +132,7 @@ def test_emit_cve_ingested_survives_bus_error():
 # Full cycle (stubbed ingestors)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_run_cycle_emits_cve_ingested_events():
     """
@@ -156,9 +160,13 @@ async def test_run_cycle_emits_cve_ingested_events():
     try:
         _ci.get_default_ingestors = lambda **kw: [FakeIngestor()]
         _ia.IntelligenceAgent = lambda: MagicMock(ingest_many=lambda b: [])
-        with patch("src.section7.threat_intel_loop._emit_cve_ingested",
-                   side_effect=lambda cve_id, severity, source: cve_emits.append(cve_id)), \
-             patch("src.section7.threat_intel_loop._emit_threat_detected"):
+        with (
+            patch(
+                "src.section7.threat_intel_loop._emit_cve_ingested",
+                side_effect=lambda cve_id, severity, source: cve_emits.append(cve_id),
+            ),
+            patch("src.section7.threat_intel_loop._emit_threat_detected"),
+        ):
             await _run_cycle(platform_packages=[])
     finally:
         if orig_ingestors is not None:
@@ -188,11 +196,15 @@ async def test_run_cycle_anomaly_detection_emits_threat():
     try:
         _ci.get_default_ingestors = lambda **kw: [FakeIngestor()]
         _ia.IntelligenceAgent = lambda: MagicMock(ingest_many=lambda b: [])
-        with patch("src.section7.threat_intel_loop._emit_cve_ingested"), \
-             patch("src.section7.threat_intel_loop._emit_threat_detected",
-                   side_effect=lambda signal_id, category, severity, evidence: threat_emits.append(
-                       {"signal_id": signal_id, "severity": severity}
-                   )):
+        with (
+            patch("src.section7.threat_intel_loop._emit_cve_ingested"),
+            patch(
+                "src.section7.threat_intel_loop._emit_threat_detected",
+                side_effect=lambda signal_id, category, severity, evidence: threat_emits.append(
+                    {"signal_id": signal_id, "severity": severity}
+                ),
+            ),
+        ):
             await _run_cycle(platform_packages=[])
     finally:
         if orig_ingestors is not None:
@@ -207,6 +219,7 @@ async def test_run_cycle_anomaly_detection_emits_threat():
 @pytest.mark.asyncio
 async def test_run_cycle_ingestor_error_does_not_crash():
     """A failing ingestor must not stop the cycle."""
+
     class BrokenIngestor:
         def fetch(self):
             raise RuntimeError("network timeout")
@@ -230,8 +243,10 @@ async def test_run_cycle_ingestor_error_does_not_crash():
         _ia.IntelligenceAgent = lambda: MagicMock(
             ingest_many=lambda b: [ingested.append(x) or "id" for x in b]
         )
-        with patch("src.section7.threat_intel_loop._emit_cve_ingested"), \
-             patch("src.section7.threat_intel_loop._emit_threat_detected"):
+        with (
+            patch("src.section7.threat_intel_loop._emit_cve_ingested"),
+            patch("src.section7.threat_intel_loop._emit_threat_detected"),
+        ):
             await _run_cycle(platform_packages=[])
     finally:
         if orig_ingestors is not None:
@@ -244,6 +259,7 @@ async def test_run_cycle_ingestor_error_does_not_crash():
 # ---------------------------------------------------------------------------
 # Start / stop lifecycle
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_start_stop_creates_and_cancels_task():
@@ -266,6 +282,7 @@ async def test_start_twice_returns_same_task():
 # ---------------------------------------------------------------------------
 # EventBus new event type enums
 # ---------------------------------------------------------------------------
+
 
 def test_security_event_types_in_enum():
     from src.event_bus.types import PlatformEventType

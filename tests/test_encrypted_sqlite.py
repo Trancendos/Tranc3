@@ -55,6 +55,7 @@ def test_tamper_detection(db_path):
     blob = _encrypt_bytes(key, b"sensitive")
     tampered = blob[:-4] + bytes([blob[-4] ^ 0xFF]) + blob[-3:]
     from cryptography.exceptions import InvalidTag
+
     with pytest.raises((InvalidTag, Exception)):
         _decrypt_bytes(key, tampered)
 

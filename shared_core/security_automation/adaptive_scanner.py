@@ -479,7 +479,10 @@ class AdaptiveScanner:
 
         # Build per-entity counts using the rule catalog entity map
         try:
-            from shared_core.security_automation.rule_catalog import entity_for_directory as _entity_for_dir
+            from shared_core.security_automation.rule_catalog import (
+                entity_for_directory as _entity_for_dir,
+            )
+
             per_entity: Dict[str, int] = {}
             for av in violations:
                 directory = str(Path(av.file).parent).replace("\\", "/")
@@ -494,14 +497,16 @@ class AdaptiveScanner:
                 "violation_count": len(violations),
                 "per_rule_counts": per_rule,
                 "per_entity_counts": per_entity,
-                "new_since_last": len([
-                    av for av in violations
-                    if self._pattern_key(av.base) not in self._prev_pattern_keys
-                ]),
-                "suppressed_count": len([
-                    av for av in violations
-                    if av.confidence_level == Confidence.SUPPRESSED
-                ]),
+                "new_since_last": len(
+                    [
+                        av
+                        for av in violations
+                        if self._pattern_key(av.base) not in self._prev_pattern_keys
+                    ]
+                ),
+                "suppressed_count": len(
+                    [av for av in violations if av.confidence_level == Confidence.SUPPRESSED]
+                ),
             }
         )
         if len(self._history) > 100:

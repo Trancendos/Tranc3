@@ -105,6 +105,7 @@ def _derive_key(db_path: str) -> bytes:
         return key
 
     import socket
+
     logger.warning(
         "No TRANC3_DB_MASTER_KEY or SECRET_KEY; using dev-mode encryption key for %s "
         "— NOT suitable for production",
@@ -169,16 +170,15 @@ def decrypt_field(db_path: str, value: Any) -> Any:
     return value
 
 
-def decrypt_row(db_path: str, row: Optional[tuple], columns: Optional[List[int]] = None) -> Optional[tuple]:
+def decrypt_row(
+    db_path: str, row: Optional[tuple], columns: Optional[List[int]] = None
+) -> Optional[tuple]:
     """Decrypt selected columns (by index) of *row*, or all columns if *columns* is None."""
     if row is None:
         return None
     if columns is None:
         return tuple(decrypt_field(db_path, v) for v in row)
-    return tuple(
-        decrypt_field(db_path, v) if i in columns else v
-        for i, v in enumerate(row)
-    )
+    return tuple(decrypt_field(db_path, v) if i in columns else v for i, v in enumerate(row))
 
 
 # ---------------------------------------------------------------------------
@@ -193,7 +193,7 @@ def _encrypt_bytes(key: bytes, plaintext: bytes) -> bytes:
 
 
 def _decrypt_bytes(key: bytes, blob: bytes) -> bytes:
-    raw = base64.b64decode(blob[len(_SENTINEL):])
+    raw = base64.b64decode(blob[len(_SENTINEL) :])
     iv, ct = raw[:12], raw[12:]
     return AESGCM(key).decrypt(iv, ct, None)
 
@@ -229,6 +229,7 @@ class EncryptedKVStore:
 
     def _key_hash(self, key: str) -> str:
         import hmac as _hmac
+
         return _hmac.new(
             _derive_key(self.db_path),
             key.encode(),
@@ -237,6 +238,7 @@ class EncryptedKVStore:
 
     def set(self, key: str, value: str) -> None:
         from datetime import datetime, timezone
+
         h = self._key_hash(key)
         enc = encrypt_field(self.db_path, value)
         now = datetime.now(timezone.utc).isoformat()
@@ -258,9 +260,7 @@ class EncryptedKVStore:
 
     def delete(self, key: str) -> bool:
         h = self._key_hash(key)
-        cur = self._conn.execute(
-            f"DELETE FROM {self.table} WHERE key_hash=?", (h,)
-        )
+        cur = self._conn.execute(f"DELETE FROM {self.table} WHERE key_hash=?", (h,))
         self._conn.commit()
         return cur.rowcount > 0
 
