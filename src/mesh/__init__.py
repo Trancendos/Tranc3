@@ -15,7 +15,16 @@ Usage:
     result = await mesh.call("auth-api", "/verify-token", {"token": "..."})
 """
 
+from src.mesh.bulkhead import Bulkhead, BulkheadFullError, BulkheadMetrics, BulkheadTimeoutError, create_bulkhead
 from src.mesh.circuit_breaker import CircuitBreaker, CircuitState
+from src.mesh.rate_limiter import (
+    FixedWindowLimiter,
+    RateLimitResult,
+    SlidingWindowLimiter,
+    TokenBucketLimiter,
+    create_rate_limiter,
+)
+from src.mesh.retry import RetryExhaustedError, RetryPolicy, with_retry, with_retry_sync
 from src.mesh.service_mesh import ServiceDescriptor, ServiceHealth, ServiceMesh
 from src.mesh.types import (
     CircuitBreakerConfig,
@@ -29,8 +38,27 @@ from src.mesh.types import (
 )
 
 __all__ = [
+    # Bulkhead
+    "Bulkhead",
+    "BulkheadFullError",
+    "BulkheadMetrics",
+    "BulkheadTimeoutError",
+    "create_bulkhead",
+    # Circuit breaker
     "CircuitBreaker",
     "CircuitState",
+    # Rate limiters
+    "FixedWindowLimiter",
+    "RateLimitResult",
+    "SlidingWindowLimiter",
+    "TokenBucketLimiter",
+    "create_rate_limiter",
+    # Retry
+    "RetryExhaustedError",
+    "RetryPolicy",
+    "with_retry",
+    "with_retry_sync",
+    # Service mesh
     "ServiceMesh",
     "ServiceDescriptor",
     "ServiceHealth",

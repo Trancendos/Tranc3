@@ -237,3 +237,10 @@ compliance-report:
 compliance-ci:
 	@echo "Running DEFSTAN compliance CI gate (threshold: 70%)..."
 	python -m src.compliance.checker --ci
+
+gate-check:
+	@echo "Running 13-Gate lifecycle compliance check..."
+	python -m src.compliance.gate_lifecycle
+
+zero-cost-status:
+	python -c "from src.monitoring.zero_cost_tracker import tracker; import json; print(json.dumps(tracker.get_summary(), indent=2))"

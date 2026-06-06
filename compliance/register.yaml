@@ -970,3 +970,48 @@ requirements:
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
     notes: ""
+
+  - id: REQ-SA-010
+    standard: "DEF STAN 05-057"
+    title: "Bulkhead Isolation Pattern"
+    description: "The platform must implement the bulkhead pattern to isolate failures and limit concurrent executions, preventing one failing service from consuming all available resources."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/mesh/bulkhead.py
+        description: "Bulkhead class using asyncio.Semaphore with configurable max_concurrent, max_queue, queue_timeout; raises BulkheadFullError and BulkheadTimeoutError"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Ported from infinity-adminOS @trancendos/kernel resilience/bulkhead.ts"
+
+  - id: REQ-SA-011
+    standard: "DEF STAN 05-057"
+    title: "ABAC Policy Engine for Fine-Grained Access Control"
+    description: "The platform must implement an Attribute-Based Access Control (ABAC) policy engine supporting declarative rule DSL, policy sets with combination strategies, and full audit logging."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/auth/policy_engine.py
+        description: "PolicyEngine with PolicySet, PolicyRule, PolicyCondition, PolicyEffect enum, LRU cache, audit log — ported from @trancendos/policy-engine"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Supports first_match, deny_overrides, allow_overrides, majority combination strategies"
+
+  - id: REQ-SU-010
+    standard: "DEF STAN 05-057"
+    title: "Free-Tier Usage Monitoring to Prevent Cost Overruns"
+    description: "The platform must track free-tier consumption across all external dependencies (Fly.io, Cloudflare Workers, Upstash Redis, Supabase, Pinecone) and alert when usage approaches limits."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/monitoring/zero_cost_tracker.py
+        description: "ZeroCostTracker with SQLite backend, record_usage/check_alerts/get_summary — defines FREE_TIER_LIMITS for all 6 services"
+      - type: code
+        path: src/monitoring/api_routes.py
+        description: "FastAPI routes: GET /monitoring/zero-cost, GET /monitoring/zero-cost/{service}, POST /monitoring/zero-cost/record, GET /monitoring/zero-cost/alerts"
+    verification_method: inspection
+    last_reviewed: "2026-06-06"
+    reviewer: "Trancendos"
+    notes: "Module-level singleton 'tracker' provides zero-setup usage recording"

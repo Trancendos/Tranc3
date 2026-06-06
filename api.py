@@ -875,6 +875,10 @@ from src.routers.admin_os import router as _admin_os_router  # noqa: F401
 
 app.include_router(_admin_os_router)
 
+from src.monitoring.api_routes import router as monitoring_router  # noqa: F401
+
+app.include_router(monitoring_router, tags=["monitoring"])
+
 # ── Dashboard & Infinity Admin OS (static, zero-cost) ─────────────────────────
 _DASHBOARD_DIR = os.path.join(os.path.dirname(__file__), "dashboard")
 if os.path.isdir(_DASHBOARD_DIR):
