@@ -438,12 +438,28 @@ async def lifespan(app: FastAPI):
     except Exception as _eb_exc:
         logger.warning("Event Bus wiring unavailable: %s", sanitize_for_log(_eb_exc))
 
+    # Section 7 threat intelligence loop — CVE/OSV/CISA feed polling
+    _threat_intel_task = None
+    try:
+        from src.section7.threat_intel_loop import start_threat_intel_loop
+
+        _threat_intel_task = await start_threat_intel_loop()
+        logger.info("Section 7 threat intel loop started (TR3-006)")
+    except Exception as _ti_exc:
+        logger.warning("Section 7 threat intel loop unavailable: %s", sanitize_for_log(_ti_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield
 
     logger.info("TRANC3 shutting down")
     _bootstrap_complete = False
+    try:
+        from src.section7.threat_intel_loop import stop_threat_intel_loop
+
+        await stop_threat_intel_loop()
+    except Exception:
+        pass
     if _knowledge_brain is not None:
         try:
             await _knowledge_brain.stop_dream_cycle()
