@@ -173,14 +173,22 @@ def _duckdb_conn() -> "duckdb.DuckDBPyConnection":
         except Exception:
             pass  # older DuckDB builds have it auto-loaded
 
+    # Paths used in ATTACH/read_parquet are server-controlled config values (not
+    # user input). Validate them defensively to satisfy static analysis tools.
+    def _safe_path(p: str) -> str:
+        """Reject paths that contain characters unsafe in SQL string literals."""
+        if any(c in p for c in ("'", '"', ";", "\\")):
+            raise ValueError(f"Unsafe character in DB path: {p!r}")
+        return p
+
     # Attach live SQLite as 'live'
-    con.execute(f"ATTACH '{DB_PATH}' AS live (TYPE sqlite, READ_ONLY)")
+    con.execute(f"ATTACH '{_safe_path(str(DB_PATH))}' AS live (TYPE sqlite, READ_ONLY)")
 
     # Discover archived Parquet files
     parquet_files = sorted(PARQUET_DIR.glob("events_*.parquet"))
 
     if parquet_files:
-        parquet_glob = str(PARQUET_DIR / "events_*.parquet")
+        parquet_glob = _safe_path(str(PARQUET_DIR / "events_*.parquet"))
         con.execute(f"""
             CREATE VIEW all_events AS
             SELECT id, event_type, user_id, session_id, properties, timestamp, date_str
@@ -197,10 +205,13 @@ def _duckdb_conn() -> "duckdb.DuckDBPyConnection":
         """)
 
     # Attach available cross-service databases
+    _safe_alias_re = re.compile(r"^[a-z_][a-z0-9_]*$")
     for alias, path in _CROSS_SERVICE_DBS.items():
+        if not _safe_alias_re.match(alias):
+            continue  # skip misconfigured alias
         if Path(path).exists():
             try:
-                con.execute(f"ATTACH '{path}' AS {alias}_db (TYPE sqlite, READ_ONLY)")
+                con.execute(f"ATTACH '{_safe_path(path)}' AS {alias}_db (TYPE sqlite, READ_ONLY)")
             except Exception as exc:
                 logger.debug("DuckDB: could not attach %s db: %s", alias, exc)
 
@@ -244,18 +255,35 @@ async def _archive_old_events() -> Dict[str, Any]:
     total_archived = 0
     files_written: List[str] = []
 
+    # month values come from SQLite's strftime — validate format before use in SQL
+    _month_re = re.compile(r"^\d{4}_\d{2}$")
+
     for (month,) in months:
+        if not _month_re.match(month):
+            logger.warning("archive: skipping unexpected month value %r", month)
+            continue
+
         parquet_path = PARQUET_DIR / f"events_{month}.parquet"
         if parquet_path.exists():
             continue  # already archived this month
 
         con = _duckdb_conn()
         try:
+            # Use ? params for user-derived values; month is regex-validated above
             row_count = con.execute(
-                f"SELECT COUNT(*) FROM live.events WHERE strftime('%Y_%m', timestamp, 'unixepoch') = '{month}' AND timestamp < {cutoff_ts}"
+                "SELECT COUNT(*) FROM live.events"
+                f" WHERE strftime('%Y_%m', timestamp, 'unixepoch') = '{month}'"
+                " AND timestamp < ?",
+                [cutoff_ts],
             ).fetchone()[0]
 
             if row_count == 0:
+                continue
+
+            # COPY destination path is server-controlled; parquet_path validated by PARQUET_DIR prefix
+            safe_parquet = str(parquet_path)
+            if any(c in safe_parquet for c in ("'", '"', ";")):
+                logger.error("archive: unsafe parquet path %r — skipping", safe_parquet)
                 continue
 
             con.execute(
@@ -263,10 +291,11 @@ async def _archive_old_events() -> Dict[str, Any]:
                 COPY (
                     SELECT * FROM live.events
                     WHERE strftime('%Y_%m', timestamp, 'unixepoch') = '{month}'
-                      AND timestamp < {cutoff_ts}
+                      AND timestamp < ?
                     ORDER BY timestamp
-                ) TO '{parquet_path}' (FORMAT PARQUET, COMPRESSION ZSTD)
-                """
+                ) TO '{safe_parquet}' (FORMAT PARQUET, COMPRESSION ZSTD)
+                """,
+                [cutoff_ts],
             )
 
             # Log archive in SQLite
@@ -588,31 +617,30 @@ async def active_users(
     con = _duckdb_conn()
     try:
         since_ts = (datetime.now(timezone.utc) - timedelta(days=days)).timestamp()
+        wau_ts = (datetime.now(timezone.utc) - timedelta(days=7)).timestamp()
+        mau_ts = (datetime.now(timezone.utc) - timedelta(days=30)).timestamp()
 
-        dau_rows = con.execute(f"""
-            SELECT
-                date_str,
-                COUNT(DISTINCT user_id) FILTER (WHERE user_id IS NOT NULL) AS dau
-            FROM all_events
-            WHERE timestamp >= {since_ts}
-            GROUP BY date_str
-            ORDER BY date_str DESC
-        """).fetchall()
+        dau_rows = con.execute(
+            "SELECT date_str,"
+            " COUNT(DISTINCT user_id) FILTER (WHERE user_id IS NOT NULL) AS dau"
+            " FROM all_events"
+            " WHERE timestamp >= ?"
+            " GROUP BY date_str"
+            " ORDER BY date_str DESC",
+            [since_ts],
+        ).fetchall()
 
-        # WAU and MAU from the most recent complete window
-        wau = con.execute(f"""
-            SELECT COUNT(DISTINCT user_id) AS wau
-            FROM all_events
-            WHERE user_id IS NOT NULL
-              AND timestamp >= {(datetime.now(timezone.utc) - timedelta(days=7)).timestamp()}
-        """).fetchone()[0]
+        wau = con.execute(
+            "SELECT COUNT(DISTINCT user_id) AS wau FROM all_events"
+            " WHERE user_id IS NOT NULL AND timestamp >= ?",
+            [wau_ts],
+        ).fetchone()[0]
 
-        mau = con.execute(f"""
-            SELECT COUNT(DISTINCT user_id) AS mau
-            FROM all_events
-            WHERE user_id IS NOT NULL
-              AND timestamp >= {(datetime.now(timezone.utc) - timedelta(days=30)).timestamp()}
-        """).fetchone()[0]
+        mau = con.execute(
+            "SELECT COUNT(DISTINCT user_id) AS mau FROM all_events"
+            " WHERE user_id IS NOT NULL AND timestamp >= ?",
+            [mau_ts],
+        ).fetchone()[0]
 
         return {
             "window_days": days,
@@ -636,34 +664,31 @@ async def retention_cohorts(
     con = _duckdb_conn()
     try:
         # First appearance of each user = cohort entry date
-        rows = con.execute(f"""
-            WITH first_seen AS (
-                SELECT user_id, MIN(timestamp) AS first_ts, MIN(date_str) AS cohort_date
-                FROM all_events
-                WHERE user_id IS NOT NULL AND timestamp >= {since_ts}
-                GROUP BY user_id
-            ),
-            activity AS (
-                SELECT e.user_id,
-                       f.first_ts,
-                       f.cohort_date,
-                       e.timestamp AS event_ts,
-                       CAST((e.timestamp - f.first_ts) / 86400 AS INTEGER) AS day_offset
-                FROM all_events e
-                JOIN first_seen f ON e.user_id = f.user_id
-                WHERE e.user_id IS NOT NULL
-            )
-            SELECT
-                cohort_date,
-                COUNT(DISTINCT user_id) AS cohort_size,
-                COUNT(DISTINCT CASE WHEN day_offset >= 1  THEN user_id END) AS retained_d1,
-                COUNT(DISTINCT CASE WHEN day_offset >= 7  THEN user_id END) AS retained_d7,
-                COUNT(DISTINCT CASE WHEN day_offset >= 30 THEN user_id END) AS retained_d30
-            FROM activity
-            GROUP BY cohort_date
-            ORDER BY cohort_date DESC
-            LIMIT 60
-        """).fetchall()
+        rows = con.execute(
+            "WITH first_seen AS ("
+            "  SELECT user_id, MIN(timestamp) AS first_ts, MIN(date_str) AS cohort_date"
+            "  FROM all_events"
+            "  WHERE user_id IS NOT NULL AND timestamp >= ?"
+            "  GROUP BY user_id"
+            "),"
+            "activity AS ("
+            "  SELECT e.user_id, f.first_ts, f.cohort_date, e.timestamp AS event_ts,"
+            "         CAST((e.timestamp - f.first_ts) / 86400 AS INTEGER) AS day_offset"
+            "  FROM all_events e"
+            "  JOIN first_seen f ON e.user_id = f.user_id"
+            "  WHERE e.user_id IS NOT NULL"
+            ")"
+            "SELECT cohort_date,"
+            "  COUNT(DISTINCT user_id) AS cohort_size,"
+            "  COUNT(DISTINCT CASE WHEN day_offset >= 1  THEN user_id END) AS retained_d1,"
+            "  COUNT(DISTINCT CASE WHEN day_offset >= 7  THEN user_id END) AS retained_d7,"
+            "  COUNT(DISTINCT CASE WHEN day_offset >= 30 THEN user_id END) AS retained_d30"
+            " FROM activity"
+            " GROUP BY cohort_date"
+            " ORDER BY cohort_date DESC"
+            " LIMIT 60",
+            [since_ts],
+        ).fetchall()
 
         cohorts = []
         for r in rows:
@@ -693,24 +718,27 @@ async def session_analysis(
     if not _DUCKDB_AVAILABLE:
         raise HTTPException(status_code=503, detail="DuckDB not available")
 
-    ts_filter = f"AND timestamp >= {since}" if since else ""
     con = _duckdb_conn()
     try:
-        rows = con.execute(f"""
-            SELECT
-                session_id,
-                COUNT(*)                              AS depth,
-                MIN(timestamp)                        AS session_start,
-                MAX(timestamp)                        AS session_end,
-                MAX(timestamp) - MIN(timestamp)       AS duration_seconds,
-                MIN(event_type)                       AS first_event,
-                MAX(event_type)                       AS last_event
-            FROM all_events
-            WHERE session_id IS NOT NULL {ts_filter}
-            GROUP BY session_id
-            ORDER BY session_start DESC
-            LIMIT {limit}
-        """).fetchall()
+        # Build base query; since is Optional[float] — pass as param, never interpolate
+        base_sql = (
+            "SELECT session_id,"
+            " COUNT(*) AS depth,"
+            " MIN(timestamp) AS session_start,"
+            " MAX(timestamp) AS session_end,"
+            " MAX(timestamp) - MIN(timestamp) AS duration_seconds,"
+            " MIN(event_type) AS first_event,"
+            " MAX(event_type) AS last_event"
+            " FROM all_events"
+            " WHERE session_id IS NOT NULL"
+        )
+        params: list = []
+        if since is not None:
+            base_sql += " AND timestamp >= ?"
+            params.append(since)
+        # LIMIT: Pydantic-validated int (ge=1, le=10000) — safe to interpolate as int literal
+        base_sql += f" GROUP BY session_id ORDER BY session_start DESC LIMIT {int(limit)}"
+        rows = con.execute(base_sql, params).fetchall()
 
         sessions = [
             {
@@ -750,31 +778,33 @@ async def top_journeys(
     if not _DUCKDB_AVAILABLE:
         raise HTTPException(status_code=503, detail="DuckDB not available")
 
-    ts_filter = f"AND timestamp >= {since}" if since else ""
     con = _duckdb_conn()
     try:
-        rows = con.execute(f"""
-            WITH ordered AS (
-                SELECT
-                    session_id,
-                    event_type,
-                    ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY timestamp) AS step
-                FROM all_events
-                WHERE session_id IS NOT NULL {ts_filter}
-            ),
-            journeys AS (
-                SELECT
-                    session_id,
-                    STRING_AGG(event_type, ' → ' ORDER BY step) AS journey
-                FROM ordered
-                GROUP BY session_id
-            )
-            SELECT journey, COUNT(*) AS count
-            FROM journeys
-            GROUP BY journey
-            ORDER BY count DESC
-            LIMIT {top_n}
-        """).fetchall()
+        # since is Optional[float] — pass as param; top_n is Pydantic int (ge=1, le=100)
+        base_cte = (
+            "WITH ordered AS ("
+            "  SELECT session_id, event_type,"
+            "    ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY timestamp) AS step"
+            "  FROM all_events"
+            "  WHERE session_id IS NOT NULL"
+        )
+        params: list = []
+        if since is not None:
+            base_cte += " AND timestamp >= ?"
+            params.append(since)
+        journey_sql = (
+            base_cte
+            + "),"
+            "journeys AS ("
+            "  SELECT session_id,"
+            "    STRING_AGG(event_type, ' → ' ORDER BY step) AS journey"
+            "  FROM ordered GROUP BY session_id"
+            ")"
+            # top_n is a Pydantic-validated int literal — safe to interpolate
+            f" SELECT journey, COUNT(*) AS count FROM journeys"
+            f" GROUP BY journey ORDER BY count DESC LIMIT {int(top_n)}"
+        )
+        rows = con.execute(journey_sql, params).fetchall()
 
         return {
             "top_n": top_n,
@@ -868,8 +898,8 @@ async def olap_query(req: OlapQueryIn):
     if not _DUCKDB_AVAILABLE:
         raise HTTPException(status_code=503, detail="DuckDB not available")
 
-    # Enforce row limit by wrapping
-    safe_sql = f"SELECT * FROM ({req.sql}) AS _q LIMIT {req.limit}"
+    # Wrap in LIMIT — req.limit is a Pydantic-validated int (ge=1, le=QUERY_ROW_LIMIT)
+    safe_sql = f"SELECT * FROM ({req.sql}) AS _q LIMIT {int(req.limit)}"
 
     con = _duckdb_conn()
     try:
