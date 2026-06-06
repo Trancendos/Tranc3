@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import List, Optional, Sequence
+from typing import List, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ try:
     import torch
     import torch.nn as nn
     import snntorch as snn  # type: ignore[import]
-    from snntorch import functional as SF  # type: ignore[import]
+    from snntorch import functional as SF  # type: ignore[import]  # noqa: F401
     import brevitas.nn as qnn  # type: ignore[import]
     from brevitas.quant import Int8WeightPerTensorFloat  # type: ignore[import]
     from brevitas.quant import Int8ActPerTensorFloat  # type: ignore[import]

@@ -320,6 +320,12 @@ def _rhubarb_visemes(wav_path: str) -> Optional[List[Dict[str, Any]]]:
     Rhubarb must be installed and on PATH (or RHUBARB_BIN env set).
     """
     try:
+        # Validate wav_path is an absolute path to an existing file (no shell=True, so injection
+        # via arguments is not possible, but we still ensure the path is safe).
+        import os as _os
+        if not _os.path.isabs(wav_path) or not _os.path.isfile(wav_path):
+            logger.warning("Rhubarb: invalid or missing wav_path: %s", wav_path)
+            return None
         result = subprocess.run(
             [RHUBARB_BIN, "--recognizer", "phonetic", "--exportFormat", "json", wav_path],
             capture_output=True,
@@ -414,8 +420,6 @@ async def health():
 
     rhubarb_alive = (
         subprocess.run([RHUBARB_BIN, "--version"], capture_output=True, timeout=3).returncode == 0
-        if True
-        else False
     )
 
     return {

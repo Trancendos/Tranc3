@@ -16,8 +16,7 @@ Usage
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Optional
 
 from src.security.ice_box.analyser import ThreatAnalyser, ThreatVerdict

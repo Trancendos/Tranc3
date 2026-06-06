@@ -13,7 +13,6 @@ Tests:
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -248,7 +247,7 @@ async def test_run_cycle_ingestor_error_does_not_crash():
 
 @pytest.mark.asyncio
 async def test_start_stop_creates_and_cancels_task():
-    with patch("src.section7.threat_intel_loop._run_loop", new_callable=AsyncMock) as mock_loop:
+    with patch("src.section7.threat_intel_loop._run_loop", new_callable=AsyncMock):
         task = await start_threat_intel_loop(interval_secs=9999)
         assert task is not None
         assert not task.done()

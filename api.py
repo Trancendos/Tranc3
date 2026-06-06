@@ -97,7 +97,7 @@ from src.security.middleware import (  # noqa: F401  # intentional top-level imp
     ZeroTrustASGIMiddleware,
 )
 from src.observability.audit_middleware import AuditMiddleware  # noqa: F401
-from src.errors import ErrorResponse, make_error_response  # noqa: F401
+from src.errors import make_error_response  # noqa: F401
 from src.security.security_framework import (
     InputSanitizer,  # noqa: F401  # intentional top-level import
 )

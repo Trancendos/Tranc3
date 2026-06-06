@@ -7,7 +7,6 @@ from __future__ import annotations
 import gzip
 import os
 import sqlite3
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -15,7 +14,7 @@ import pytest
 os.environ["SECRET_KEY"] = "test-backup-secret-key-for-unit-tests-at-least-32chars"
 os.environ.pop("TRANC3_DB_ENCRYPTION_DISABLED", None)
 
-from src.backup.engine import BackupEngine, _backup_key, _decrypt_bytes, _encrypt_bytes
+from src.backup.engine import BackupEngine, _decrypt_bytes, _encrypt_bytes
 from src.backup.registry import (
     REGISTRY_BY_TIER,
     REGISTRY_BY_WORKER,

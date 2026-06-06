@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sqlite3
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from pathlib import Path
 

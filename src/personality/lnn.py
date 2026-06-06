@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import torch
-    import torch.nn as nn
+    import torch.nn as nn  # noqa: F401
     from ncps.torch import CfC  # type: ignore[import]
     from ncps.wirings import AutoNCP  # type: ignore[import]
     _USING_LNN = True
@@ -137,7 +137,7 @@ class _EMAShaper:
         targets = [target_temp, target_top_p, target_tone]
         self._state = [
             decay * s + (1 - decay) * t
-            for s, t in zip(self._state, targets)
+            for s, t in zip(self._state, targets, strict=False)
         ]
 
         return LNNOutput(

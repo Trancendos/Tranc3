@@ -27,7 +27,7 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
-from src.event_bus.types import EventEnvelope, EventSubscription, PlatformEventType
+from src.event_bus.types import EventEnvelope, PlatformEventType
 
 if TYPE_CHECKING:
     from src.event_bus.bus import EventBus
@@ -266,7 +266,7 @@ def attach_observatory_bridge(bus: "EventBus") -> None:
 
     This is started as a background asyncio task at application startup.
     """
-    from src.observability.observatory import EventCategory, get_observatory  # noqa: PLC0415
+    from src.observability.observatory import get_observatory  # noqa: PLC0415
 
     obs = get_observatory()
     queue = obs.subscribe(maxsize=2000)

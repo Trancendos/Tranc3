@@ -11,7 +11,6 @@ Verifies that:
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -211,7 +210,7 @@ def test_library_emits_article_deleted_event():
 @pytest.mark.asyncio
 async def test_library_on_ai_event_creates_article():
     from src.event_bus.wiring import _library_on_ai_event
-    from src.library.knowledge_base import Library, get_library
+    from src.library.knowledge_base import get_library
 
     lib = get_library()
     initial_count = len(lib._articles)

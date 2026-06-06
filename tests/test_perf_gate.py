@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import json
 import sys
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -23,7 +22,6 @@ import pytest
 
 def _import_gate(tmp_baseline: Path):
     """Re-import perf_gate with a patched BASELINE_PATH."""
-    import importlib
     for k in list(sys.modules):
         if "perf_gate" in k:
             del sys.modules[k]
