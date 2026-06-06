@@ -1,5 +1,7 @@
 # tests/test_enhanced_api.py
-# Tests for api_enhanced.py — covers auth, rate limiting, all endpoint groups.
+# LEGACY TEST — api_enhanced.py has been archived to archive/api_enhanced.py.
+# Canonical tests for these routes now live in tests/test_canonical_routes.py.
+# This file is retained for historical reference only; it imports from archive/.
 # Uses TestClient with mocked subsystems so no real Redis/DB/AI needed.
 
 import os
@@ -43,6 +45,7 @@ def client():
     ):
         from fastapi.testclient import TestClient
 
+        import sys, os as _os; sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), '..', 'archive'))
         from api_enhanced import app
 
         # Manually inject mock into app state (lifespan won't run in TestClient)
@@ -345,6 +348,7 @@ class TestAuthAndRateLimiting:
 
     def test_rate_limit_in_memory_tracking(self):
         """Verify _rate_store tracks requests per IP."""
+        import sys, os as _os; sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), '..', 'archive'))
         import api_enhanced as api
 
         initial = len(api._rate_store)
