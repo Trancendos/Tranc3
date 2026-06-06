@@ -576,7 +576,7 @@ function Sidebar({
           {/* Nav to Chat */}
           <div className="px-3 py-2 border-b border-gray-800">
             <button onClick={() => navigate('/')}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-500 hover:text-white hover:bg-gray-900 transition-colors">
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-500 hover:text-white hover:bg-gray-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
               <MessageSquare size={14} />
               <span>Back to Chat</span>
             </button>
@@ -588,7 +588,7 @@ function Sidebar({
             <div className="flex gap-1">
               {(['TRUE_NAS', 'HYBRID', 'CLOUD_ONLY'] as SystemMode[]).map(mode => (
                 <button key={mode} onClick={() => onModeChange(mode)}
-                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
+                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                           systemMode === mode ? 'text-white' : 'text-gray-600 hover:text-gray-400'
                         }`}
                         style={systemMode === mode ? {
@@ -626,7 +626,7 @@ function Sidebar({
           {/* Overview */}
           <div className="px-3 py-2">
             <button onClick={() => onSelectPillar(null)}
-                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors ${
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                       activePillar === null ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
                     }`}>
               <LayoutDashboard size={14} />
@@ -654,7 +654,7 @@ function Sidebar({
 
               return (
                 <button key={pillar.id} onClick={() => onSelectPillar(pillar.id)}
-                        className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs transition-colors ${
+                        className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                           activePillar === pillar.id ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
                         }`}>
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: pillar.color }} />
@@ -673,14 +673,16 @@ function Sidebar({
       {collapsed && (
         <div className="flex-1 flex flex-col items-center py-3 gap-2">
           <button onClick={() => onSelectPillar(null)}
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+                  aria-label="Overview"
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                     activePillar === null ? 'bg-gray-800 text-white' : 'text-gray-600 hover:text-white hover:bg-gray-900'
                   }`}>
             <LayoutDashboard size={16} />
           </button>
           {pillars.map(pillar => (
             <button key={pillar.id} onClick={() => onSelectPillar(pillar.id)}
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+                    aria-label={`Filter by ${pillar.name} pillar`}
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                       activePillar === pillar.id ? 'bg-gray-800' : 'hover:bg-gray-900'
                     }`}
                     title={pillar.name}>
@@ -936,7 +938,7 @@ function SecurityWidget({ security }: { security: SecurityPosture | null }) {
           <span className="text-xs font-semibold text-gray-300">Security Posture</span>
         </div>
         <button onClick={() => { setScanStatus('scanning'); setTimeout(() => setScanStatus('complete'), 2000) }}
-                className="text-[10px] px-2 py-1 rounded bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors">
+                className="text-[10px] px-2 py-1 rounded bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
           {scanStatus === 'scanning' ? 'Scanning...' : scanStatus === 'complete' ? '✓ Done' : 'Run Scan'}
         </button>
       </div>
