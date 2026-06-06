@@ -108,7 +108,8 @@ class TestErrorCatalogCompliance:
             pytest.skip("ERROR_DEFINITIONS not exported from error_catalog")  # type: ignore[unreachable]
             return  # unreachable, but helps static analysis
         # 200 is valid for informational/degraded-mode responses (echo mode, fallback active)
-        valid = {200, 400, 401, 403, 404, 409, 422, 429, 500, 502, 503}
+        # 504 is valid for workflow/orchestration timeouts (gateway-style intermediary)
+        valid = {200, 400, 401, 403, 404, 409, 422, 429, 500, 502, 503, 504}
         invalid = []
         for code, defn in ERROR_DEFINITIONS.items():
             status = defn.get("http_status")

@@ -782,7 +782,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "Infinity": LocationEntity(
         location="Infinity",
         pillar=Pillar.SECURITY,
-        lead_ai="The Guardian (Marcus Magnolia)",  # Two AIs: The Guardian (Marcus Magnolia), The Orb of Orisis
+        lead_ai="The Guardian (Anchor: Orb of Orisis)",
         abilities=[
             "Predictive Threat Modeling: Orb provides 'Future Sight.'",
             "Quantum Access Tokens: Expiring tokens for user transfer.",
@@ -1551,6 +1551,7 @@ LOCATION_ABBREVS: Dict[str, str] = {
     "Arcadian Exchange": "AEX",
     "Warp Radio": "WRA",
     # Knowledge
+    "Section 7": "S07",
     "The Observatory": "OBS",
     "The Library": "LIB",
     "The Academy": "ACA",
