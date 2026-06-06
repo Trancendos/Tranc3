@@ -148,6 +148,38 @@ class QuantumNeuralCore:
 
             return secrets.token_hex(32)
 
+    def _emit_inference_event(
+        self,
+        prompt: str,
+        response: str,
+        model: str,
+        provider: str,
+        *,
+        failed: bool = False,
+    ) -> None:
+        """Emit an AI_INFERENCE_COMPLETE or AI_INFERENCE_FAILED event to the platform EventBus."""
+        try:
+            from src.event_bus import PlatformEventType, get_event_bus  # noqa: PLC0415
+
+            bus = get_event_bus()
+            event_type = (
+                PlatformEventType.AI_INFERENCE_FAILED
+                if failed
+                else PlatformEventType.AI_INFERENCE_COMPLETE
+            )
+            bus.emit_async(
+                event_type=event_type,
+                data={
+                    "prompt": prompt[:500],
+                    "response": response[:2000],
+                    "model": model,
+                    "provider": provider,
+                },
+                source="think-tank",
+            )
+        except Exception as exc:  # nosec B110
+            logger.debug("quantum_core: emit_inference_event failed: %s", exc)
+
     def get_state_info(self) -> Dict:
         return {
             "num_qubits": self.num_qubits,

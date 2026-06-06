@@ -428,6 +428,16 @@ async def lifespan(app: FastAPI):
     except Exception as _ab_exc:
         logger.warning("Admin OS auto-backup unavailable: %s", sanitize_for_log(_ab_exc))
 
+    # Event Bus wiring — Observatory → EventBus → Library/ThinkTank/Search/Sentinel
+    try:
+        from src.event_bus import get_event_bus
+        from src.event_bus.wiring import wire_platform_events
+
+        wire_platform_events(get_event_bus())
+        logger.info("Event Bus wiring active (TR3-005)")
+    except Exception as _eb_exc:
+        logger.warning("Event Bus wiring unavailable: %s", sanitize_for_log(_eb_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield
