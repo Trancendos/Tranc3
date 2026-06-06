@@ -18,6 +18,7 @@ import math
 import os
 import re
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -183,7 +184,7 @@ class KnowledgeBrain:
     def __init__(self, db_path: str = ":memory:", markdown_dir: Optional[str] = None) -> None:
         self._db_path = db_path
         self._markdown_dir = Path(markdown_dir) if markdown_dir else None
-        self._conn = sqlite3.connect(db_path, check_same_thread=False)
+        self._conn = sqlite3_connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._bm25 = BM25Index()
         self._init_db()

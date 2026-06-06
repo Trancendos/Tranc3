@@ -9,6 +9,7 @@ import asyncio
 import json
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -114,7 +115,7 @@ class SkillCreate(BaseModel):
 
 
 def get_db() -> sqlite3.Connection:
-    db = sqlite3.connect(str(DB_PATH), timeout=10)
+    db = sqlite3_connect(str(DB_PATH), timeout=10)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA journal_mode=WAL")
     return db

@@ -25,10 +25,11 @@ import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect, encrypt_field, decrypt_field
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -114,9 +115,13 @@ class RoleUpdateRequest(BaseModel):
 
 
 class UsersDatabase:
+    # Columns encrypted with AES-GCM at rest (not used in WHERE/INDEX)
+    _ENCRYPTED_COLUMNS = {"bio", "avatar_url", "preferences", "display_name"}
+
     def __init__(self, db_path: str = DATABASE_PATH) -> None:
+        self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(db_path, check_same_thread=False)
+        self._conn = sqlite3_connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript("""
             CREATE TABLE IF NOT EXISTS users (
@@ -147,6 +152,19 @@ class UsersDatabase:
             CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
         """)
         self._conn.commit()
+
+    def _enc(self, column: str, value: Any) -> Any:
+        if column in self._ENCRYPTED_COLUMNS:
+            return encrypt_field(self.db_path, value)
+        return value
+
+    def _dec_row(self, row: sqlite3.Row) -> sqlite3.Row:
+        """Return a plain dict with encrypted columns decrypted."""
+        d = dict(row)
+        for col in self._ENCRYPTED_COLUMNS:
+            if col in d and d[col] is not None:
+                d[col] = decrypt_field(self.db_path, d[col])
+        return d
 
     def execute(self, sql: str, params: tuple = ()) -> sqlite3.Cursor:
         return self._conn.execute(sql, params)
@@ -202,28 +220,29 @@ db = UsersDatabase()
 # ---------------------------------------------------------------------------
 
 
-def _row_to_response(row: sqlite3.Row) -> UserResponse:
-    prefs = row["preferences"]
+def _row_to_response(row) -> UserResponse:
+    d = db._dec_row(row) if isinstance(row, sqlite3.Row) else row
+    prefs = d.get("preferences") or "{}"
     if isinstance(prefs, str):
         try:
             prefs = json.loads(prefs)
         except Exception:
             prefs = {}
     return UserResponse(
-        user_id=row["user_id"],
-        username=row["username"],
-        email=row["email"],
-        display_name=row["display_name"] or "",
-        role=row["role"],
+        user_id=d["user_id"],
+        username=d["username"],
+        email=d["email"],
+        display_name=d.get("display_name") or "",
+        role=d["role"],
         preferences=prefs,
-        is_active=bool(row["is_active"]),
-        is_locked=bool(row["is_locked"]),
-        bio=row["bio"] or "",
-        avatar_url=row["avatar_url"] or "",
-        timezone=row["timezone"] or "UTC",
-        last_login=row["last_login"],
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
+        is_active=bool(d["is_active"]),
+        is_locked=bool(d["is_locked"]),
+        bio=d.get("bio") or "",
+        avatar_url=d.get("avatar_url") or "",
+        timezone=d.get("timezone") or "UTC",
+        last_login=d.get("last_login"),
+        created_at=d["created_at"],
+        updated_at=d.get("updated_at"),
     )
 
 
@@ -264,11 +283,11 @@ async def create_user(user: UserCreate):
                 user_id,
                 user.username,
                 user.email,
-                user.display_name,
+                db._enc("display_name", user.display_name),
                 user.role,
-                prefs_json,
-                user.bio,
-                user.avatar_url,
+                db._enc("preferences", prefs_json),
+                db._enc("bio", user.bio),
+                db._enc("avatar_url", user.avatar_url),
                 user.timezone,
                 now,
             ),
@@ -363,19 +382,19 @@ async def update_user(user_id: str, update: UserUpdate):
 
     updates: dict = {}
     if update.display_name is not None:
-        updates["display_name"] = update.display_name
+        updates["display_name"] = db._enc("display_name", update.display_name)
     if update.email is not None:
         updates["email"] = str(update.email)
     if update.role is not None:
         updates["role"] = update.role
     if update.preferences is not None:
-        updates["preferences"] = json.dumps(update.preferences)
+        updates["preferences"] = db._enc("preferences", json.dumps(update.preferences))
     if update.is_active is not None:
         updates["is_active"] = 1 if update.is_active else 0
     if update.bio is not None:
-        updates["bio"] = update.bio
+        updates["bio"] = db._enc("bio", update.bio)
     if update.avatar_url is not None:
-        updates["avatar_url"] = update.avatar_url
+        updates["avatar_url"] = db._enc("avatar_url", update.avatar_url)
     if update.timezone is not None:
         updates["timezone"] = update.timezone
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()

@@ -25,6 +25,7 @@ import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -74,7 +75,7 @@ logger = logging.getLogger("vault-service")
 
 def _get_db() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3_connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")

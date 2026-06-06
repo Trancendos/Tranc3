@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from pathlib import Path
 
 import pytest
@@ -18,7 +19,7 @@ from src.entities.orchestrator_effective import (
 @pytest.fixture
 def orch_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     db_path = tmp_path / "infinity_admin.db"
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3_connect(db_path)
     conn.execute(
         """CREATE TABLE entity_overrides (
             id TEXT PRIMARY KEY,
@@ -42,7 +43,7 @@ def orch_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_orchestrator_override_roundtrip(orch_db: Path) -> None:
-    conn = sqlite3.connect(orch_db)
+    conn = sqlite3_connect(orch_db)
     upsert_orchestrator_override(
         conn,
         "cornelius",

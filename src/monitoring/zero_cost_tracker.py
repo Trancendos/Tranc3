@@ -11,6 +11,7 @@ Zero-cost: SQLite backend, no external dependencies.
 from __future__ import annotations
 
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -93,7 +94,7 @@ _RESET_PERIOD: dict[str, dict[str, str]] = {
 
 def _ensure_db(path: Path) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path), check_same_thread=False)
+    conn = sqlite3_connect(str(path), check_same_thread=False)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute(
         """

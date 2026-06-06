@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,7 +25,7 @@ def db_path() -> Path:
 
 def get_connection() -> sqlite3.Connection:
     _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
+    conn = sqlite3_connect(str(_DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     _ensure_schema(conn)
     return conn

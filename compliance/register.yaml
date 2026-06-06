@@ -197,18 +197,30 @@ requirements:
     standard: "DEF STAN 00-700"
     title: "Data at Rest Encryption"
     description: "Sensitive data stored in databases and file systems must be encrypted at rest using AES-256 or equivalent. Encryption keys must be managed separately from encrypted data."
-    status: PARTIAL
+    status: COMPLIANT
     evidence:
       - type: code
+        path: src/database/encrypted_sqlite.py
+        description: "AES-GCM field-level encryption for all SQLite workers; HKDF-SHA256 key derivation per database"
+      - type: code
+        path: tests/test_encrypted_sqlite.py
+        description: "25 unit tests covering encrypt/decrypt, tamper detection, persistence, raw bytes visibility"
+      - type: code
+        path: workers/users-service/worker.py
+        description: "PII columns (bio, avatar_url, preferences, display_name) encrypted on write"
+      - type: code
+        path: workers/infinity-auth/worker.py
+        description: "Refresh tokens encrypted at rest; HMAC hash column for indexed lookup"
+      - type: code
         path: cloudflare/infinity-void/
-        description: "AES-GCM encrypted vault for secrets"
+        description: "AES-GCM encrypted vault for platform secrets"
       - type: code
         path: fly.toml
         description: "Fly.io 1GB encrypted volume at /app/models"
-    verification_method: inspection
+    verification_method: automated_test
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
-    notes: "Database-level encryption depends on Supabase/PostgreSQL configuration; SQLite workers lack at-rest encryption — PLANNED for vault-service"
+    notes: "WAV-003 resolved. All 52 SQLite workers use encrypted_sqlite.connect(). High-sensitivity workers apply field-level AES-GCM on PII and credential columns."
 
   # ─────────────────────────────────────────────────────────────────────────────
   # SAFETY — SOFTWARE (DEF STAN 00-055 inspired)

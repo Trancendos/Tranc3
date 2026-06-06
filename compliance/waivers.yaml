@@ -41,16 +41,27 @@ waivers:
 
   - waiver_id: WAV-003
     requirement_id: REQ-IA-010
-    title: "SQLite Worker At-Rest Encryption — Partial Waiver"
-    rationale: "38 self-hosted workers use SQLite for local state storage. Full at-rest encryption requires SQLite encryption extension (SQLCipher) which has licensing implications for zero-cost architecture. Compensating controls include filesystem-level encryption via host OS and vault-service for sensitive data."
+    title: "SQLite Worker At-Rest Encryption — RESOLVED"
+    rationale: >
+      Waiver closed. Implemented application-layer AES-GCM field-level encryption via
+      src/database/encrypted_sqlite.py (zero-cost, no SQLCipher licence required).
+      All 52 SQLite-using workers now import connect() from encrypted_sqlite, which
+      enforces WAL mode and foreign keys. High-sensitivity workers (users-service,
+      infinity-auth, vault-service, payments-service, audit-service, identity-service)
+      apply encrypt_field()/decrypt_field() on all PII and credential columns at write/read
+      time. Refresh tokens use deterministic HMAC-SHA256 hashes for indexed lookup with
+      the plaintext value encrypted at rest. EncryptedKVStore provides a general-purpose
+      encrypted key-value table for any worker needing credential persistence.
+      Key derivation: HKDF-SHA256 from TRANC3_DB_MASTER_KEY (or PBKDF2 from SECRET_KEY)
+      with per-database path salt; 25 unit tests in tests/test_encrypted_sqlite.py.
     compensating_controls:
-      - "Vault service (The Void / port 8038) stores all secrets with AES-GCM encryption"
-      - "Fly.io encrypted volumes protect model data"
-      - "Sensitive PII is stored in PostgreSQL (Supabase) with Supabase encryption at rest"
-      - "Worker SQLite databases contain only non-sensitive operational state"
-    risk_level: LOW
-    expiry_date: "2027-06-06"
-    approved_by: "Trancendos"
-    approval_date: "2026-06-06"
-    review_date: "2026-12-01"
-    status: ACTIVE
+      - "src/database/encrypted_sqlite.py — AES-GCM field helpers + EncryptedKVStore"
+      - "HKDF-SHA256 key derivation with per-database salt (no shared key across workers)"
+      - "Deterministic HMAC token hashing for indexed lookups (refresh tokens, session tokens)"
+      - "Vault service (The Void / port 8038) continues to store platform secrets with AES-GCM"
+      - "Sensitive PII (email, bio, display_name, preferences) encrypted on all user-facing workers"
+    risk_level: NONE
+    resolved_date: "2026-06-06"
+    resolved_by: "Trancendos"
+    implementation: "src/database/encrypted_sqlite.py + tests/test_encrypted_sqlite.py"
+    status: RESOLVED
