@@ -121,7 +121,8 @@ export default function SettingsPage() {
   }
 
   // ── Clear a stored field ─────────────────────────────────────────────────────
-  async function clearField(key: string) {
+  async function clearField(key: string, label: string) {
+    if (!window.confirm(`Are you sure you want to delete ${label}?`)) return
     setField(key, 'deleting')
     try {
       const res = await fetch(`${API}/user/settings/${encodeURIComponent(key)}`, {
@@ -275,9 +276,10 @@ export default function SettingsPage() {
                         {isSet && (
                           <button
                             type="button"
-                            onClick={() => clearField(v.key)}
+                            onClick={() => clearField(v.key, v.label)}
                             disabled={isBusy}
                             aria-label={`Clear stored ${v.label}`}
+                            title={`Clear stored ${v.label}`}
                             className="text-gray-600 hover:text-red-400 disabled:opacity-40 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-400 rounded"
                           >
                             {status === 'deleting'
@@ -307,6 +309,7 @@ export default function SettingsPage() {
                             type="button"
                             onClick={() => toggle(v.key)}
                             aria-label={visible[v.key] ? `Hide ${v.label}` : `Show ${v.label}`}
+                            title={visible[v.key] ? `Hide ${v.label}` : `Show ${v.label}`}
                             aria-pressed={visible[v.key]}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 rounded"
                           >
