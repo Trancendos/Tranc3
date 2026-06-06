@@ -217,8 +217,16 @@ class AuthDatabase:
                 window_start TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS token_revocations (
+                jti TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                revoked_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL
+            );
+
             CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
             CREATE INDEX IF NOT EXISTS idx_sessions_refresh ON sessions(refresh_token_hash);
+            CREATE INDEX IF NOT EXISTS idx_revocations_user ON token_revocations(user_id);
         """)
         # Migration: add refresh_token_hash if upgrading from older schema
         try:
@@ -242,7 +250,11 @@ class AuthDatabase:
 
 # ── Password Hashing ───────────────────────────────────────────────────────────
 
-_BCRYPT_ROUNDS = int(os.environ.get("BCRYPT_ROUNDS", "12"))
+try:
+    _BCRYPT_ROUNDS = int(os.environ.get("BCRYPT_ROUNDS", "12"))
+except ValueError:
+    _BCRYPT_ROUNDS = 12
+_BCRYPT_ROUNDS = max(12, _BCRYPT_ROUNDS)  # never allow rounds < 12
 
 
 def _is_bcrypt_hash(stored_hash: str) -> bool:
@@ -466,10 +478,21 @@ worker_kit = InfinityWorkerKit(
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict[str, Any]:
-    """Validate JWT token and return user payload."""
+    """Validate JWT token and return user payload.
+
+    Checks the token_revocations table so that logged-out tokens are
+    immediately rejected even before their exp claim elapses.
+    """
     payload = decode_access_token(credentials.credentials)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+    jti = payload.get("jti")
+    if jti:
+        revoked = db.execute(
+            "SELECT 1 FROM token_revocations WHERE jti = ?", (jti,)
+        ).fetchone()
+        if revoked:
+            raise HTTPException(status_code=401, detail="Token has been revoked")
     return payload
 
 
@@ -744,8 +767,21 @@ async def refresh_token(request: RefreshRequest, _=Depends(rate_limit_check)):
 
 @app.post("/auth/logout")
 async def logout(user: dict = Depends(get_current_user)):
-    """Revoke all sessions for the current user."""
-    db.execute("UPDATE sessions SET is_revoked = 1 WHERE user_id = ?", (user["sub"],))
+    """Revoke all sessions and the current JWT for the user."""
+    user_id = user["sub"]
+    db.execute("UPDATE sessions SET is_revoked = 1 WHERE user_id = ?", (user_id,))
+    jti = user.get("jti")
+    if jti:
+        exp = user.get("exp", int(time.time()) + JWT_EXPIRY_MINUTES * 60)
+        db.execute(
+            "INSERT OR IGNORE INTO token_revocations (jti, user_id, revoked_at, expires_at) VALUES (?, ?, ?, ?)",
+            (
+                jti,
+                user_id,
+                datetime.now(timezone.utc).isoformat(),
+                datetime.fromtimestamp(exp, tz=timezone.utc).isoformat(),
+            ),
+        )
     db.commit()
     return {"message": "Logged out successfully"}
 
@@ -1064,9 +1100,10 @@ async def token_endpoint(req: TokenRequest):
 
 
 async def _refresh_via_token(refresh_token: str) -> dict:
+    # sessions table stores refresh_token_hash (sha256 via db.token_hash)
     row = db.execute(
-        "SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > ?",
-        (refresh_token, int(time.time())),
+        "SELECT * FROM sessions WHERE refresh_token_hash = ? AND is_revoked = 0 AND expires_at > ?",
+        (db.token_hash(refresh_token), datetime.now(timezone.utc).isoformat()),
     ).fetchone()
     if not row:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
@@ -1075,13 +1112,19 @@ async def _refresh_via_token(refresh_token: str) -> dict:
         raise HTTPException(status_code=401, detail="User not found")
     from jose import jwt as _jwt  # noqa: PLC0415
 
+    role = user["role"] if "role" in user.keys() else "user"
+    tier = _get_tier_for_role(role)
+    infinity_role = _get_infinity_role_for_role(role)
     claims = {
         "sub": user["user_id"],
         "username": user["username"],
-        "role": user["role"],
+        "role": role,
+        "tier": tier.value,
+        "infinity_role": infinity_role.value,
         "iss": AUTH_ISSUER,
         "iat": int(time.time()),
         "exp": int(time.time()) + JWT_EXPIRY_MINUTES * 60,
+        "jti": str(uuid.uuid4()),
     }
     return {
         "access_token": _jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALGORITHM),

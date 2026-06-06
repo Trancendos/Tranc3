@@ -518,8 +518,11 @@ async def _dispatch_reset_email(user_id: str, email: str, token: str) -> None:
         "metadata": {"user_id": user_id},
     }
     try:
-        client = _http_client or httpx.AsyncClient(timeout=5.0)
-        resp = await client.post(f"{NOTIFICATIONS_URL}/notifications/send", json=payload)
+        if _http_client is not None:
+            resp = await _http_client.post(f"{NOTIFICATIONS_URL}/notifications/send", json=payload)
+        else:
+            async with httpx.AsyncClient(timeout=5.0) as _fallback:
+                resp = await _fallback.post(f"{NOTIFICATIONS_URL}/notifications/send", json=payload)
         if resp.status_code not in (200, 201):
             logger.warning(
                 "notifications-service returned %s for reset email user=%s",

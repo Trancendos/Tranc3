@@ -1829,12 +1829,15 @@ async def rename_orchestrator(
         actor,
     )
     db.execute(
-        """INSERT INTO admin_actions (id, actor_id, action_type, target, details, created_at)
-           VALUES (?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO admin_actions
+           (id, action_type, actor_id, actor_username, target_type, target_id, details, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             uuid.uuid4().hex[:16],
-            actor,
             "orchestrator_renamed",
+            actor,
+            actor,
+            "orchestrator",
             orchestrator_id,
             json.dumps(
                 {

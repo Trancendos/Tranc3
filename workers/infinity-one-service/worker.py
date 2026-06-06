@@ -514,15 +514,19 @@ async def create_identity(request: Request, identity: IdentityCreate):
         raise HTTPException(status_code=409, detail="Identity already exists")
 
     # Determine tier and infinity_role from role
-    from Dimensional.infinity.nomenclature import (
-        get_infinity_role_for_role as _girr,
-    )
-    from Dimensional.infinity.nomenclature import (
-        get_tier_for_role as _gtr,
-    )
+    from shared_core.infinity.nomenclature import InfinityRole as _IR, Tier as _T
 
-    tier = _gtr(identity.role)
-    infinity_role = _girr(identity.role)
+    _role_tier = {
+        "admin": _T.ADMIN, "superadmin": _T.ADMIN, "devops": _T.ADMIN,
+        "moderator": _T.PILLAR, "manager": _T.PILLAR, "pillar": _T.PILLAR,
+    }
+    _role_ir = {
+        "admin": _IR.ADMIN, "superadmin": _IR.ADMIN,
+        "devops": _IR.DEVOPS, "moderator": _IR.MODERATOR,
+        "manager": _IR.MANAGER,
+    }
+    tier = _role_tier.get(identity.role.lower().strip(), _T.HUMAN)
+    infinity_role = _role_ir.get(identity.role.lower().strip(), _IR.USER)
 
     now = datetime.now(timezone.utc).isoformat()
     db.execute(
@@ -685,15 +689,19 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
         updates.append("role = ?")
         params.append(update.role)
         # Update tier and infinity_role based on new role
-        from Dimensional.infinity.nomenclature import (
-            get_infinity_role_for_role as _girr,
-        )
-        from Dimensional.infinity.nomenclature import (
-            get_tier_for_role as _gtr,
-        )
+        from shared_core.infinity.nomenclature import InfinityRole as _IR, Tier as _T
 
-        tier = _gtr(update.role)
-        infinity_role = _girr(update.role)
+        _role_tier = {
+            "admin": _T.ADMIN, "superadmin": _T.ADMIN, "devops": _T.ADMIN,
+            "moderator": _T.PILLAR, "manager": _T.PILLAR, "pillar": _T.PILLAR,
+        }
+        _role_ir = {
+            "admin": _IR.ADMIN, "superadmin": _IR.ADMIN,
+            "devops": _IR.DEVOPS, "moderator": _IR.MODERATOR,
+            "manager": _IR.MANAGER,
+        }
+        tier = _role_tier.get(update.role.lower().strip(), _T.HUMAN)
+        infinity_role = _role_ir.get(update.role.lower().strip(), _IR.USER)
         updates.append("tier = ?")
         params.append(tier.value)
         updates.append("infinity_role = ?")
