@@ -67,6 +67,14 @@ except ImportError:
     duckdb = None  # type: ignore[assignment]
     _DUCKDB_AVAILABLE = False
 
+try:
+    import polars as pl  # type: ignore[import-untyped]
+
+    _POLARS_AVAILABLE = True
+except ImportError:
+    pl = None  # type: ignore[assignment]
+    _POLARS_AVAILABLE = False
+
 import sqlite3
 
 # ── Configuration ─────────────────────────────────────────────────────────────
@@ -219,16 +227,16 @@ def _duckdb_conn() -> "duckdb.DuckDBPyConnection":
 
 
 def _safe_select(sql: str) -> None:
-    """Raise HTTPException if SQL is not a pure SELECT statement."""
+    """Raise ValueError if SQL is not a pure SELECT statement (used inside Pydantic validators → 422)."""
     normalised = sql.strip().upper()
     if not normalised.startswith("SELECT") and not normalised.startswith("WITH"):
-        raise HTTPException(status_code=400, detail="Only SELECT queries are permitted")
+        raise ValueError("Only SELECT queries are permitted")
     # Block any mutation keywords
     forbidden = re.compile(
         r"\b(INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|TRUNCATE|REPLACE|ATTACH|DETACH|COPY|EXPORT|IMPORT)\b"
     )
     if forbidden.search(normalised):
-        raise HTTPException(status_code=400, detail="Mutation statements are not permitted")
+        raise ValueError("Mutation statements are not permitted")
 
 
 # ── Archival task ─────────────────────────────────────────────────────────────
@@ -431,6 +439,7 @@ async def health():
         "archive_batches": archive_count,
         "parquet_files": len(parquet_files),
         "parquet_bytes": parquet_total_bytes,
+        "polars_available": _POLARS_AVAILABLE,
     }
 
 
@@ -692,16 +701,17 @@ async def retention_cohorts(
 
         cohorts = []
         for r in rows:
-            size = r[2] or 1  # avoid div-by-zero
+            # SELECT returns: cohort_date(0), cohort_size(1), retained_d1(2), retained_d7(3), retained_d30(4)
+            size = r[1] or 1  # avoid div-by-zero
             cohorts.append({
-                "cohort_date": r[1],
-                "cohort_size": r[2],
-                "day_1_retained": r[3],
-                "day_7_retained": r[4],
-                "day_30_retained": r[5],
-                "day_1_rate": round(r[3] / size, 4),
-                "day_7_rate": round(r[4] / size, 4),
-                "day_30_rate": round(r[5] / size, 4),
+                "cohort_date": r[0],
+                "cohort_size": r[1],
+                "day_1_retained": r[2],
+                "day_7_retained": r[3],
+                "day_30_retained": r[4],
+                "day_1_rate": round(r[2] / size, 4),
+                "day_7_rate": round(r[3] / size, 4),
+                "day_30_rate": round(r[4] / size, 4),
             })
 
         return {"cohort_window_days": cohort_days, "cohorts": cohorts}
@@ -927,6 +937,88 @@ async def trigger_archive(background_tasks: BackgroundTasks):
         "archive_after_days": ARCHIVE_AFTER_DAYS,
         "parquet_dir": str(PARQUET_DIR),
     }
+
+
+# ── Polars DataFrame endpoint ─────────────────────────────────────────────────
+
+
+class DataFrameIn(BaseModel):
+    sql: str = Field(min_length=1, max_length=4000, description="DuckDB SELECT to materialise as a Polars DataFrame")
+    operations: List[str] = Field(
+        default=[],
+        description=(
+            "Polars operations to apply after materialising. "
+            "Supported: 'describe', 'null_count', 'dtypes', "
+            "'value_counts:<col>', 'corr:<col_a>:<col_b>'"
+        ),
+    )
+    limit: int = Field(default=1000, ge=1, le=QUERY_ROW_LIMIT)
+
+    @field_validator("sql")
+    @classmethod
+    def must_be_select(cls, v: str) -> str:
+        _safe_select(v)
+        return v
+
+
+@_router.post("/analytics/dataframe")
+async def analytics_dataframe(body: DataFrameIn):
+    """
+    Execute a DuckDB SELECT, materialise the result as a Polars DataFrame,
+    and apply optional DataFrame operations (describe, corr, value_counts …).
+
+    This endpoint is the natural integration point between The Dutchy
+    (intelligence & market analysis) and the platform's event/metric data.
+    """
+    if not _DUCKDB_AVAILABLE:
+        raise HTTPException(status_code=503, detail="DuckDB not available")
+    if not _POLARS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Polars not available")
+
+    con = _duckdb_conn()
+    try:
+        # Materialise query → Polars via Arrow (zero-copy path)
+        arrow_table = con.execute(body.sql).arrow()
+        df = pl.from_arrow(arrow_table)
+        if len(df) > int(body.limit):
+            df = df.head(int(body.limit))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Query error: {exc}") from exc
+    finally:
+        con.close()
+
+    result: Dict[str, Any] = {
+        "rows": len(df),
+        "columns": df.columns,
+        "schema": {col: str(dtype) for col, dtype in zip(df.columns, df.dtypes)},
+        "data": df.to_dicts(),
+    }
+
+    # Apply optional operations
+    for op in body.operations:
+        try:
+            if op == "describe":
+                result["describe"] = df.describe().to_dicts()
+            elif op == "null_count":
+                result["null_count"] = df.null_count().to_dicts()[0]
+            elif op == "dtypes":
+                result["dtypes"] = {c: str(t) for c, t in zip(df.columns, df.dtypes)}
+            elif op.startswith("value_counts:"):
+                col = op.split(":", 1)[1]
+                if col in df.columns:
+                    result[f"value_counts_{col}"] = (
+                        df[col].value_counts(sort=True).to_dicts()
+                    )
+            elif op.startswith("corr:"):
+                parts = op.split(":")
+                if len(parts) == 3:
+                    col_a, col_b = parts[1], parts[2]
+                    if col_a in df.columns and col_b in df.columns:
+                        result[f"corr_{col_a}_{col_b}"] = df[col_a].corr(df[col_b])
+        except Exception as exc:
+            result[f"op_error_{op}"] = str(exc)
+
+    return result
 
 
 # ── Summary dashboard ─────────────────────────────────────────────────────────

@@ -722,6 +722,19 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8016/health"]
       <<: *healthcheck-default
 
+  mlflow-service:
+    <<: *worker-platform
+    build: { context: ./workers/mlflow-service, dockerfile: Dockerfile }
+    container_name: mlflow-service-worker
+    ports: ["8039:8039"]
+    environment:
+      - MLFLOW_DATA_DIR=/data/mlflow-service
+    volumes:
+      - mlflow_data:/data/mlflow-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8039/health"]
+      <<: *healthcheck-default
+
   search-service:
     <<: *worker-platform
     build: { context: ./workers/search-service, dockerfile: Dockerfile }
@@ -1719,6 +1732,8 @@ volumes:
   turings-hub-portraits:
     driver: local
   turings-hub-audio:
+    driver: local
+  mlflow_data:
     driver: local
 
 # ═══════════════════════════════════════════════════════════════════════════

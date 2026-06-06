@@ -16,27 +16,47 @@ os.environ.setdefault("INTERNAL_SECRET", "")  # auth disabled in tests
 
 @pytest.fixture(scope="module")
 def client(tmp_path_factory):
+    import importlib.util
+    import sqlite3
+    import sys
+    from pathlib import Path
+    from unittest.mock import patch
+
     tmp = tmp_path_factory.mktemp("analytics_data")
     os.environ["ANALYTICS_DATA_DIR"] = str(tmp)
     os.environ["ANALYTICS_ARCHIVE_AFTER_DAYS"] = "1"
 
-    # Patch encrypted_sqlite to plain sqlite3 for tests
-    import sqlite3
-    from unittest.mock import patch
+    # The worker directory is named "analytics-service" (hyphen) which is not
+    # a valid Python package name, so we load it via importlib from its path.
+    worker_path = (
+        Path(__file__).parent.parent / "workers" / "analytics-service" / "worker.py"
+    )
+    module_name = "analytics_service_worker"
 
-    with patch("workers.analytics_service.worker.sqlite3_connect", side_effect=lambda p, **kw: sqlite3.connect(p, **kw)):
-        from fastapi.testclient import TestClient
-        import importlib
-        import sys
+    # Remove any previously cached module so env vars above take effect.
+    sys.modules.pop(module_name, None)
 
-        # Force fresh import so ANALYTICS_DATA_DIR is respected
-        for key in list(sys.modules.keys()):
-            if "analytics_service" in key:
-                del sys.modules[key]
+    spec = importlib.util.spec_from_file_location(module_name, worker_path)
+    assert spec is not None and spec.loader is not None, f"Cannot load {worker_path}"
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
 
-        from workers.analytics_service.worker import app  # noqa: PLC0415
+    # Replace the encrypted_sqlite module so that the worker's top-level import
+    # `from src.database.encrypted_sqlite import connect as sqlite3_connect`
+    # resolves to plain sqlite3.connect instead of the encrypted backend.
+    import types as _types
 
-        yield TestClient(app, raise_server_exceptions=True)
+    fake_enc = _types.ModuleType("src.database.encrypted_sqlite")
+    fake_enc.connect = lambda p, **kw: sqlite3.connect(p, **kw)  # type: ignore[attr-defined]
+    sys.modules.setdefault("src", _types.ModuleType("src"))
+    sys.modules.setdefault("src.database", _types.ModuleType("src.database"))
+    sys.modules["src.database.encrypted_sqlite"] = fake_enc
+
+    spec.loader.exec_module(module)  # type: ignore[union-attr]
+
+    from fastapi.testclient import TestClient
+
+    yield TestClient(module.app, raise_server_exceptions=True)
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
