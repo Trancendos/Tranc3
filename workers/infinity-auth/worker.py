@@ -34,7 +34,7 @@ import logging
 import os
 import secrets
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect, encrypt_field, decrypt_field
+from src.database.encrypted_sqlite import connect as sqlite3_connect, encrypt_field
 import time
 import uuid
 from contextlib import asynccontextmanager, contextmanager
