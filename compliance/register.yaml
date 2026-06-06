@@ -1,0 +1,156 @@
+---
+# DEFSTAN Compliance Register — Tranc3 / Trancendos Platform
+# Updated: 2026-06-06
+# Format: area → requirements, each with status, evidence, gap notes.
+
+meta:
+  register_version: "2.0.0"
+  platform: "Tranc3 / Trancendos"
+  classification: "UNCLASSIFIED"
+  owner: "Trancendos Platform Engineering"
+  review_cycle: "quarterly"
+  gate_threshold: 70
+
+# ── Information Assurance ─────────────────────────────────────────────────────
+information_assurance:
+  standard: "DEF STAN 00-700"
+  requirements:
+    - id: REQ-IA-010
+      title: "Data at Rest Encryption"
+      status: COMPLIANT
+      evidence:
+        - "src/database/encrypted_sqlite.py — AES-GCM field-level encryption, HKDF-SHA256 key derivation"
+        - "tests/test_encrypted_sqlite.py — 25 unit tests"
+        - "Vault service (The Void / port 8038) stores platform secrets with AES-GCM"
+      resolved_date: "2026-06-06"
+      waiver: "WAV-003 (RESOLVED)"
+
+# ── Safety ────────────────────────────────────────────────────────────────────
+safety:
+  standard: "DEF STAN 00-055"
+  requirements:
+    - id: REQ-SA-003
+      title: "AI Output Safety Constraints"
+      status: COMPLIANT
+      evidence:
+        - "src/core/output_safety.py — OutputSafetyFilter: BLOCK/WARN/PASS pipeline"
+        - "Covers: credential leakage, PII, prompt-injection echoes, internal address leakage"
+        - "Integrated into tranc3-backend inference path"
+      resolved_date: "2026-06-06"
+
+    - id: REQ-SA-005
+      title: "Resource Exhaustion Prevention"
+      status: COMPLIANT
+      evidence:
+        - "src/core/resource_limits.py — ResourceLimits singleton: HTTP timeouts, pool caps, circuit breaker thresholds"
+        - "src/mesh/service_mesh.py — ServiceMesh enforces per-service timeouts and retries"
+        - "src/mesh/bulkhead.py — Bulkhead pattern caps concurrent executions per service"
+        - "src/mesh/rate_limiter.py — Token-bucket, sliding-window, fixed-window strategies"
+      resolved_date: "2026-06-06"
+
+    - id: REQ-SA-006
+      title: "Threat Isolation"
+      status: COMPLIANT
+      evidence:
+        - "src/security/ice_box/signatures.py — 30+ compiled YARA-style regex signatures, 9 threat categories"
+        - "src/security/ice_box/analyser.py — ThreatAnalyser with entropy + binary heuristics"
+        - "src/security/ice_box/quarantine.py — SQLite-backed QuarantineStore with audit trail"
+        - "src/security/warp_tunnel/tunnel.py — WarpTunnel: intercept → analyse → quarantine → block/allow"
+        - "workers/ice-box-service/worker.py (port 8046) — REST API: /scan, /quarantine, /stats, /health"
+        - "tests/test_ice_box.py — 38 unit tests"
+      resolved_date: "2026-06-06"
+      waiver: "WAV-001 (RESOLVED)"
+
+# ── Quality Assurance ─────────────────────────────────────────────────────────
+quality_assurance:
+  standard: "DEF STAN 05-086"
+  requirements:
+    - id: REQ-QA-007
+      title: "Performance Benchmarking"
+      status: COMPLIANT
+      evidence:
+        - "src/benchmark/performance_suite.py — Full latency/throughput benchmark suite (P50/P90/P95/P99)"
+        - "src/benchmark/perf_gate.py — CI regression gate: fails on >15% RPS drop or >20% P99 increase"
+        - "tests/test_perf_gate.py — 7 unit tests"
+        - ".forgejo/workflows/compliance-gate.yml — Automated gate runs on every push/PR to main"
+        - "Baseline stored as src/benchmark/baseline.json; seeded on first run, enforced thereafter"
+      resolved_date: "2026-06-06"
+
+# ── Configuration Management ──────────────────────────────────────────────────
+configuration_management:
+  standard: "DEF STAN 00-044"
+  requirements:
+    - id: REQ-CM-006
+      title: "Change Request Process"
+      status: COMPLIANT
+      evidence:
+        - "docs/change-request-process.md — Formal CR process (Normal/Significant/Emergency categories)"
+        - "docs/cab/CHARTER.md — CAB charter: mission, scope, quorum, decision authority"
+        - "docs/cab/MEMBERSHIP.md — Board membership register with roles and escalation path"
+        - "docs/cab/APPROVAL_WORKFLOW.md — Templates, approval process, CAB log"
+        - "Forgejo PR workflow enforces labels: cab-review-required, cab-approved"
+        - ".forgejo/workflows/compliance-gate.yml — CI gate blocks non-compliant merges"
+      resolved_date: "2026-06-06"
+
+# ── Supportability ────────────────────────────────────────────────────────────
+supportability:
+  standard: "DEF STAN 00-600"
+  requirements:
+    - id: REQ-SU-005
+      title: "Service Runbook Documentation"
+      status: COMPLIANT
+      evidence:
+        - "docs/runbooks/README.md — Runbook index"
+        - "docs/runbooks/api-backend.md — API backend runbook (health, start/stop, incident response)"
+        - "docs/runbooks/zero-downtime-deploy.md — Rolling deployment procedure"
+        - "docs/runbooks/disaster-recovery.md — DR runbook (5 scenarios, RTO/RPO, drill procedure)"
+
+    - id: REQ-SU-006
+      title: "Disaster Recovery and Backup"
+      status: COMPLIANT
+      evidence:
+        - "src/backup/engine.py — BackupEngine: hot-backup, gzip, AES-GCM encryption, integrity verify, pruning"
+        - "src/backup/registry.py — 31-worker registry with CRITICAL/HIGH/STANDARD/LOW tier classification"
+        - "workers/backup-service/worker.py (port 8039) — asyncio scheduler (CRITICAL=15min, HIGH=1h)"
+        - "scripts/dr_restore.py — DR restore CLI with list/verify/restore/dr-drill commands"
+        - "docs/runbooks/disaster-recovery.md — Formal DR runbook"
+        - "tests/test_backup_service.py — 30 unit tests"
+      resolved_date: "2026-06-06"
+      waiver: "WAV-002 (RESOLVED)"
+      rto_targets: {CRITICAL: "1h", HIGH: "4h", STANDARD: "24h", LOW: "72h"}
+      rpo_targets: {CRITICAL: "15min", HIGH: "1h", STANDARD: "6h", LOW: "24h"}
+
+    - id: REQ-SU-007
+      title: "Zero-Downtime Deployment"
+      status: COMPLIANT
+      evidence:
+        - "docker-compose.production.yml — All 38+ workers: restart: unless-stopped + healthcheck definitions"
+        - "docs/runbooks/zero-downtime-deploy.md — Manual rolling procedure"
+        - ".forgejo/workflows/deploy-self-hosted.yml — Rolling deploy automation"
+        - "Traefik reverse proxy manages traffic routing during updates"
+
+# ── Software Development ──────────────────────────────────────────────────────
+software_development:
+  standard: "DEF STAN 00-056"
+  requirements:
+    - id: REQ-SD-002
+      title: "API Contract Versioning"
+      status: COMPLIANT
+      evidence:
+        - "api.py — X-API-Version middleware attaches version header on all responses"
+        - "FastAPI app version=2.0.0 with OpenAPI spec at /docs and /openapi.json"
+        - "src/mcp/server.py — MCP protocolVersion negotiation"
+        - "docs/API_REFERENCE.md — Public API reference documentation"
+
+# ── Technical Documentation ───────────────────────────────────────────────────
+technical_documentation:
+  standard: "DEF STAN 05-057"
+  requirements:
+    - id: REQ-TD-006
+      title: "Data Flow and Privacy Documentation"
+      status: COMPLIANT
+      evidence:
+        - "docs/privacy/ROPA.md — Record of Processing Activities (UK GDPR Art. 30)"
+        - "docs/privacy/PRIVACY_IMPACT_ASSESSMENT.md — PIA with 7-risk register, GDPR legal bases"
+        - "ARCHITECTURE_THREAT_MODEL.md — STRIDE analysis includes data flow diagrams"
+        - "tests/test_compliance.py — GDPR compliance code verification"

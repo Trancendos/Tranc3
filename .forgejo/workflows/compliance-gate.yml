@@ -1,0 +1,92 @@
+---
+# DEFSTAN Compliance + Performance Regression Gate
+# REQ-QA-007: Automated CI gate enforcing compliance score ≥ 70%
+#              and catching latency/throughput regressions.
+#
+# Runs on every push and PR targeting main.
+
+name: compliance-gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  compliance-and-perf:
+    name: "DEFSTAN Compliance + Perf Gate (REQ-QA-007)"
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -q
+
+      # ── DEFSTAN compliance gate ──────────────────────────────────────────
+      - name: Run compliance checker
+        run: python -m src.compliance.checker
+        env:
+          SECRET_KEY: ci-compliance-gate-secret-key-32chars
+          JWT_SECRET: ci-compliance-gate-jwt-secret-32chars
+          DATABASE_URL: sqlite:///./test.db
+          ENVIRONMENT: test
+
+      - name: Enforce compliance score ≥ 70%
+        run: python -m src.compliance.checker --ci
+        env:
+          SECRET_KEY: ci-compliance-gate-secret-key-32chars
+          JWT_SECRET: ci-compliance-gate-jwt-secret-32chars
+          DATABASE_URL: sqlite:///./test.db
+          ENVIRONMENT: test
+
+      # ── Performance regression gate (REQ-QA-007) ─────────────────────────
+      - name: Restore perf baseline (if cached from prior run)
+        uses: actions/cache@v4
+        with:
+          path: src/benchmark/baseline.json
+          key: perf-baseline-${{ runner.os }}
+          restore-keys: perf-baseline-
+
+      - name: Run performance regression gate
+        id: perf_gate
+        run: python -m src.benchmark.perf_gate
+        env:
+          SECRET_KEY: ci-compliance-gate-secret-key-32chars
+          JWT_SECRET: ci-compliance-gate-jwt-secret-32chars
+          DATABASE_URL: sqlite:///./test.db
+          ENVIRONMENT: test
+
+      - name: Save updated perf baseline
+        uses: actions/cache@v4
+        if: always()
+        with:
+          path: src/benchmark/baseline.json
+          key: perf-baseline-${{ runner.os }}
+
+      # ── Perf gate tests ───────────────────────────────────────────────────
+      - name: Run perf gate unit tests
+        run: |
+          python -m pytest tests/test_perf_gate.py -q --tb=short
+        env:
+          SECRET_KEY: ci-compliance-gate-secret-key-32chars
+          JWT_SECRET: ci-compliance-gate-jwt-secret-32chars
+          DATABASE_URL: sqlite:///./test.db
+          ENVIRONMENT: test
+
+      # ── Upload artifacts ──────────────────────────────────────────────────
+      - name: Upload perf baseline artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-baseline-${{ github.sha }}
+          path: src/benchmark/baseline.json
+          retention-days: 90

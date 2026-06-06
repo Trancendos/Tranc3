@@ -211,3 +211,16 @@ pre-commit-install:
 	pre-commit install --hook-type commit-msg
 
 security-full: security-install security-scan
+
+# ── Compliance & Quality Gates ─────────────────────────────────────────────────
+gate-check:
+	python -m src.compliance.checker
+
+compliance-ci:
+	python -m src.compliance.checker --ci
+
+perf-gate:
+	python -m src.benchmark.perf_gate
+
+perf-gate-update:
+	python -m src.benchmark.perf_gate --update
