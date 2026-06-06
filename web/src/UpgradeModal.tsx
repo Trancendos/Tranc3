@@ -1,6 +1,6 @@
-import React, { useId } from 'react'
+import React, { useId, useState } from 'react'
 import { useFocusTrap } from './hooks/useFocusTrap'
-import { X, CheckCircle } from 'lucide-react'
+import { X, CheckCircle, Loader2 } from 'lucide-react'
 
 interface Props {
   onClose: () => void
@@ -39,7 +39,14 @@ const TIERS = [
 export default function UpgradeModal({ onClose, onUpgrade }: Props) {
   const titleId = useId()
   const descId  = useId()
+  const announceId = useId()
   const containerRef = useFocusTrap(true, onClose)
+  const [upgradingTier, setUpgradingTier] = useState<string | null>(null)
+
+  function handleUpgrade(tierId: string) {
+    setUpgradingTier(tierId)
+    onUpgrade(tierId)
+  }
 
   return (
     /* Backdrop */
@@ -66,6 +73,10 @@ export default function UpgradeModal({ onClose, onUpgrade }: Props) {
             <p id={descId} className="text-gray-400 text-sm mt-1">
               Upgrade your plan to continue chatting
             </p>
+            {/* Screen-reader live region for upgrade status */}
+            <div id={announceId} role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+              {upgradingTier ? `Starting ${upgradingTier} upgrade…` : ''}
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -99,10 +110,16 @@ export default function UpgradeModal({ onClose, onUpgrade }: Props) {
               </ul>
 
               <button
-                onClick={() => onUpgrade(tier.id)}
-                className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800"
+                onClick={() => handleUpgrade(tier.id)}
+                disabled={upgradingTier !== null}
+                aria-busy={upgradingTier === tier.id}
+                aria-describedby={announceId}
+                className="w-full mt-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 flex items-center justify-center gap-2"
               >
-                Upgrade to {tier.name}
+                {upgradingTier === tier.id && (
+                  <Loader2 size={13} aria-hidden="true" className="animate-spin" />
+                )}
+                {upgradingTier === tier.id ? `Upgrading to ${tier.name}…` : `Upgrade to ${tier.name}`}
               </button>
             </article>
           ))}

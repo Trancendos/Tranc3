@@ -59,6 +59,8 @@ export default function SettingsPage() {
   const [loadError, setLoadError]     = useState<string | null>(null)
   const [loadingKeys, setLoadingKeys] = useState(true)
   const [activeTab, setActiveTab]     = useState<TabId>('providers')
+  const [saveAllBusy, setSaveAllBusy] = useState(false)
+  const [announcement, setAnnounce]   = useState('')
 
   const tablistRef = useRef<HTMLDivElement>(null)
   const announceId = useId()
@@ -112,10 +114,12 @@ export default function SettingsPage() {
       setStored((p: Record<string, 'set' | 'unset'>) => ({ ...p, [key]: 'set' }))
       setDrafts((p: Record<string, string>) => { const n = { ...p }; delete n[key]; return n })
       setField(key, 'saved')
+      setAnnounce(`${key} saved.`)
       setTimeout(() => setField(key, 'idle'), 2500)
     } catch (err) {
       console.error('save failed', key, err)
       setField(key, 'error')
+      setAnnounce(`Error saving ${key}.`)
       setTimeout(() => setField(key, 'idle'), 3000)
     }
   }
@@ -143,7 +147,12 @@ export default function SettingsPage() {
   // ── Save all dirty (non-empty draft) fields at once ─────────────────────────
   async function saveAll() {
     const dirty = ENV_VARS.filter((v) => (drafts[v.key] ?? '').trim())
+    if (!dirty.length) return
+    setSaveAllBusy(true)
+    setAnnounce('Saving all changes…')
     await Promise.all(dirty.map((v) => saveField(v.key)))
+    setSaveAllBusy(false)
+    setAnnounce('All changes saved.')
   }
 
   // ── Tab keyboard nav ─────────────────────────────────────────────────────────
@@ -168,7 +177,7 @@ export default function SettingsPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       {/* Live region */}
-      <div id={announceId} role="status" aria-live="polite" aria-atomic="true" className="sr-only" />
+      <div id={announceId} role="status" aria-live="polite" aria-atomic="true" className="sr-only">{announcement}</div>
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -277,7 +286,8 @@ export default function SettingsPage() {
                             type="button"
                             onClick={() => clearField(v.key)}
                             disabled={isBusy}
-                            aria-label={`Clear stored ${v.label}`}
+                            aria-label={status === 'deleting' ? `Removing ${v.label}…` : `Clear stored ${v.label}`}
+                            aria-busy={status === 'deleting'}
                             className="text-gray-600 hover:text-red-400 disabled:opacity-40 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-400 rounded"
                           >
                             {status === 'deleting'
@@ -322,13 +332,14 @@ export default function SettingsPage() {
                           type="button"
                           onClick={() => saveField(v.key)}
                           disabled={isBusy}
-                          aria-label={`Save ${v.label}`}
+                          aria-label={status === 'saving' ? `Saving ${v.label}…` : `Save ${v.label}`}
+                          aria-busy={status === 'saving'}
                           className="flex items-center gap-1.5 px-3 py-2 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 rounded-lg text-xs text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 shrink-0"
                         >
                           {status === 'saving'
                             ? <RefreshCw size={12} aria-hidden="true" className="animate-spin" />
                             : <Save size={12} aria-hidden="true" />}
-                          Save
+                          {status === 'saving' ? 'Saving…' : 'Save'}
                         </button>
                       )}
                     </div>
@@ -345,21 +356,25 @@ export default function SettingsPage() {
       <div className="mt-8 flex items-center gap-3">
         <button
           onClick={saveAll}
-          disabled={!anyDirty}
+          disabled={!anyDirty || saveAllBusy}
+          aria-busy={saveAllBusy}
           aria-describedby={announceId}
           className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
         >
-          <Save size={14} aria-hidden="true" />
-          Save All Changes
+          {saveAllBusy
+            ? <RefreshCw size={14} aria-hidden="true" className="animate-spin" />
+            : <Save size={14} aria-hidden="true" />}
+          {saveAllBusy ? 'Saving Changes…' : 'Save All Changes'}
         </button>
         <button
           onClick={loadStatus}
           disabled={loadingKeys}
-          aria-label="Refresh settings status from server"
+          aria-label={loadingKeys ? 'Refreshing settings…' : 'Refresh settings status from server'}
+          aria-busy={loadingKeys}
           className="flex items-center gap-1.5 px-3 py-2 border border-gray-700 hover:border-gray-500 disabled:opacity-40 rounded-lg text-sm text-gray-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
         >
           <RefreshCw size={13} aria-hidden="true" className={loadingKeys ? 'animate-spin' : ''} />
-          Refresh
+          {loadingKeys ? 'Refreshing…' : 'Refresh'}
         </button>
       </div>
     </div>

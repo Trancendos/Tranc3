@@ -624,7 +624,8 @@ export default function ChatView() {
               />
               <button
                 type="submit"
-                aria-label="Send message"
+                aria-label={loading ? 'Sending message…' : 'Send message'}
+                aria-busy={loading}
                 disabled={loading || !input.trim() || atLimit}
                 className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               >
