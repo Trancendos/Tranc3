@@ -20,8 +20,6 @@ from typing import Dict, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from src.entities.health_metadata import health_entity_block
-
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -370,10 +368,8 @@ async def health() -> dict:
     available = _ffmpeg_available()
     return {
         "service": "ffmpeg-worker",
-        "port": 8052,
         "available": available,
         "ffmpeg_version": _ffmpeg_version(),
-        "entity": health_entity_block(8052, "ffmpeg-worker"),
     }
 
 
@@ -389,7 +385,7 @@ async def transcode(req: TranscodeRequest) -> dict:
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
     asyncio.create_task(
-        _run_job(job_id, _transcode(req.input_path, req.output_format, req.quality))
+        _run_job(job_id, _transcode(req.input_path, req.output_format, req.quality)),
     )
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
@@ -411,7 +407,9 @@ async def thumbnail(req: ThumbnailRequest) -> dict:
 
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
-    asyncio.create_task(_run_job(job_id, _thumbnail(req.input_path, req.timestamp_seconds)))
+    asyncio.create_task(
+        _run_job(job_id, _thumbnail(req.input_path, req.timestamp_seconds)),
+    )
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
 
@@ -423,7 +421,9 @@ async def compress(req: CompressRequest) -> dict:
 
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
-    asyncio.create_task(_run_job(job_id, _compress(req.input_path, req.target_mb)))
+    asyncio.create_task(
+        _run_job(job_id, _compress(req.input_path, req.target_mb)),
+    )
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
 

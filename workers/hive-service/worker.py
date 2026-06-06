@@ -160,7 +160,7 @@ async def _worker_startup():
                 )
                 await hive.start_pipeline(pipeline.pipeline_id)
                 logger.info(
-                    f"Created and started pipeline: {pipe_cfg['name']} ({pipeline.pipeline_id})"
+                    f"Created and started pipeline: {pipe_cfg['name']} ({pipeline.pipeline_id})",
                 )
         except Exception as e:
             logger.warning(f"Failed to create pipeline {pipe_cfg['name']}: {e}")
@@ -195,7 +195,7 @@ async def _worker_startup():
 
     logger.info(
         f"HIVE ready: {len(sources)} sources, {len(sinks)} sinks, "
-        f"{len(pipeline_configs)} pipelines, port {WORKER_PORT}"
+        f"{len(pipeline_configs)} pipelines, port {WORKER_PORT}",
     )
 
 

@@ -230,7 +230,7 @@ class EventBus:
                     data=data,
                     source=source,
                     tenant_id=tenant_id,
-                )
+                ),
             )
         except RuntimeError:
             logger.warning("emit_async_no_loop", extra={"event_type": event_type})

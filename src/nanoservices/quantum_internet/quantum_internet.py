@@ -693,14 +693,14 @@ class QuantumInternetService:
                 node_id="alice",
                 node_type=QuantumNodeType.END_NODE,
                 position_km=0.0,
-            )
+            ),
         )
         self.network.add_node(
             QuantumNode(
                 node_id="bob",
                 node_type=QuantumNodeType.END_NODE,
                 position_km=spacing_km * (num_nodes - 1),
-            )
+            ),
         )
 
         # Create repeaters
@@ -711,7 +711,7 @@ class QuantumInternetService:
                     node_id=rid,
                     node_type=QuantumNodeType.REPEATER,
                     position_km=spacing_km * i,
-                )
+                ),
             )
             self.network.add_repeater(QuantumRepeater(rid))
 
@@ -727,7 +727,7 @@ class QuantumInternetService:
                     source_node=n1,
                     target_node=n2,
                     length_km=dist,
-                )
+                ),
             )
 
         return {

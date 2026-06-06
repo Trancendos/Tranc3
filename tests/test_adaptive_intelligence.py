@@ -158,8 +158,8 @@ class TestProactiveDefenseLayer:
                     "path": "/health",
                     "method": "GET",
                     "user_agent": "TestClient/1.0",
-                }
-            )
+                },
+            ),
         )
         assert result.allowed is True
 
@@ -187,7 +187,7 @@ class TestProactiveDefenseLayer:
                         "path": f"/portal/login?attempt={i}",
                         "method": "POST",
                         "user_agent": "python-requests/2.28",
-                    }
+                    },
                 )
 
         _run_coro(_run_many())

@@ -359,7 +359,7 @@ def test_cve_scanner_analyse_items_with_mock_cryptex():
             raw_content="CVE-2024-9999 remote code execution exploit",
             title="CVE-2024-9999",
             metadata={"cve_id": "CVE-2024-9999", "severity": "CRITICAL", "cvss_score": 9.8},
-        )
+        ),
     ]
 
     mock_signal = MagicMock()
@@ -415,7 +415,7 @@ def test_nvd_parse_item():
         "cve": {
             "CVE_data_meta": {"ID": "CVE-2024-12345"},
             "description": {
-                "description_data": [{"lang": "en", "value": "A critical RCE vulnerability."}]
+                "description_data": [{"lang": "en", "value": "A critical RCE vulnerability."}],
             },
             "references": {"reference_data": [{"url": "https://example.com/advisory"}]},
         },

@@ -179,21 +179,6 @@ async def require_internal_auth(
 _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
     with _lock:
@@ -275,11 +260,14 @@ async def update_policy(name: str, req: PolicyUpdate):
         row = conn.execute("SELECT * FROM policies WHERE name = ?", (name,)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Policy not found")
-        updates = dict(req.model_dump(exclude_none=True).items())
+        # Allowlist prevents any non-schema key from reaching the SQL string.
+        _updatable = frozenset({"capacity", "refill_rate", "description"})
+        updates = {k: v for k, v in req.model_dump(exclude_none=True).items() if k in _updatable}
         if updates:
-            set_clause = ", ".join(f"{k} = ?" for k in updates)
+            set_clause = ", ".join(f"{k} = ?" for k in updates)  # keys are allowlisted
             conn.execute(
-                f"UPDATE policies SET {set_clause} WHERE name = ?", [*updates.values(), name]
+                f"UPDATE policies SET {set_clause} WHERE name = ?",
+                [*updates.values(), name],
             )
             conn.commit()
     # Evict cached buckets for this policy

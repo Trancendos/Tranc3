@@ -573,7 +573,7 @@ class TestTelemetry:
                         file="a.py",
                         line=10 + i,
                         message=f"violation {i}",
-                    )
+                    ),
                 ]
                 result = ScanResult.from_violations(violations, commit=f"commit{i}", branch="main")
                 telemetry.save(result)

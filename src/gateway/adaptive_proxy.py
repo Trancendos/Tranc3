@@ -70,7 +70,8 @@ class AdaptiveProxy:
             # Check circuit breaker
             if not breaker.can_execute():
                 logger.warning(
-                    "Circuit open for %s, trying alternatives", sanitize_for_log(service.name)
+                    "Circuit open for %s, trying alternatives",
+                    sanitize_for_log(service.name),
                 )
                 # Try to find an alternative service
                 alternatives = self.registry.find_by_capability(capability)
@@ -84,7 +85,7 @@ class AdaptiveProxy:
                 )
                 if not service:
                     raise RuntimeError(
-                        f"All services for capability '{capability}' are unavailable"
+                        f"All services for capability '{capability}' are unavailable",
                     )
                 breaker = resilience.get_breaker(service.name)
 
@@ -106,7 +107,7 @@ class AdaptiveProxy:
                 self.router.record_error(service.name)
                 last_error = e
                 logger.warning(
-                    f"Call to {service.name} failed (attempt {attempt + 1}/{retries + 1}): {e}"
+                    f"Call to {service.name} failed (attempt {attempt + 1}/{retries + 1}): {e}",
                 )
 
                 if attempt < retries:

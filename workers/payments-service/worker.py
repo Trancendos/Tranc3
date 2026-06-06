@@ -123,7 +123,8 @@ class PaymentsDatabase:
         if soft:
             with self._cursor() as cur:
                 cur.execute(
-                    f"UPDATE payments SET status='cancelled' WHERE {id_field}=?", (id_value,)
+                    f"UPDATE payments SET status='cancelled' WHERE {id_field}=?",
+                    (id_value,),
                 )
                 return cur.rowcount > 0
         else:
@@ -289,7 +290,7 @@ async def payment_stats():
     """Aggregate payment statistics by status and total amounts."""
     conn = db._get_conn()
     rows = conn.execute(
-        "SELECT status, COUNT(*) as count, SUM(amount) as total FROM payments GROUP BY status"
+        "SELECT status, COUNT(*) as count, SUM(amount) as total FROM payments GROUP BY status",
     ).fetchall()
     return {"stats": [dict(r) for r in rows]}
 

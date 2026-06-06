@@ -258,7 +258,9 @@ class FlowRunner:
         self._event_handlers.append(handler)
 
     async def execute(
-        self, flow_id: str, input_data: Optional[Dict[str, Any]] = None
+        self,
+        flow_id: str,
+        input_data: Optional[Dict[str, Any]] = None,
     ) -> FlowExecution:
         definition = self._definitions.get(flow_id)
         if not definition:
@@ -377,7 +379,10 @@ class FlowRunner:
                     execution.output[f"{step.id}.{k}"] = v
 
     async def _run_step(
-        self, step: FlowStep, definition: FlowDefinition, execution: FlowExecution
+        self,
+        step: FlowStep,
+        definition: FlowDefinition,
+        execution: FlowExecution,
     ) -> None:
         result = StepResult(step_id=step.id, status=StepStatus.RUNNING, started_at=time.time())
         execution.step_results[step.id] = result

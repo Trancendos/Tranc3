@@ -59,7 +59,7 @@ def upsert(doc_id: str, vector: list[float], payload: dict[str, Any]) -> bool:
                     id=abs(hash(doc_id)) % (2**63),
                     vector=vector,
                     payload={**payload, "doc_id": doc_id},
-                )
+                ),
             ],
         )
         return True

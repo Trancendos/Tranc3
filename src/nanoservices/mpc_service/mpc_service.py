@@ -163,7 +163,7 @@ class GarbledCircuitSimulator:
                     "entries": [
                         hashlib.sha256(f"{gate_id}:{i}".encode()).hexdigest()[:16] for i in range(4)
                     ],
-                }
+                },
             )
 
         return {
@@ -173,17 +173,21 @@ class GarbledCircuitSimulator:
             "input_encoding": {
                 k: v[str(min(1, val))]
                 for k, v, val in zip(
-                    inputs.keys(), [wire_labels[k] for k in inputs.keys()], inputs.values()
+                    inputs.keys(),
+                    [wire_labels[k] for k in inputs.keys()],
+                    inputs.values(),
                 )
             },
         }
 
     def evaluate(
-        self, garbled_circuit: Dict[str, Any], encoded_inputs: Dict[str, str]
+        self,
+        garbled_circuit: Dict[str, Any],
+        encoded_inputs: Dict[str, str],
     ) -> Dict[str, Any]:
         return {
             "result": hashlib.sha256(
-                json.dumps(encoded_inputs, sort_keys=True).encode()
+                json.dumps(encoded_inputs, sort_keys=True).encode(),
             ).hexdigest()[:16],
             "num_gates": len(garbled_circuit.get("garbled_tables", [])),
         }
@@ -233,7 +237,11 @@ class MPCService:
         return False
 
     def create_session(
-        self, protocol: MPCProtocol, party_ids: List[str], threshold: int = 0, function: str = ""
+        self,
+        protocol: MPCProtocol,
+        party_ids: List[str],
+        threshold: int = 0,
+        function: str = "",
     ) -> MPCSession:
         active_parties = [pid for pid in party_ids if pid in self.parties]
         if len(active_parties) < 2:
@@ -265,7 +273,9 @@ class MPCService:
         return result
 
     def shamir_reconstruct(
-        self, session_id: str, share_dict: Optional[Dict[str, List[int]]] = None
+        self,
+        session_id: str,
+        share_dict: Optional[Dict[str, List[int]]] = None,
     ) -> Optional[int]:
         session = self.sessions.get(session_id)
         if not session:

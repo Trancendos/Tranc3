@@ -32,7 +32,7 @@ def _check_secret_key() -> None:
     if not secret:
         if _IS_PROD:
             raise RuntimeError(
-                "SECRET_KEY is not set. Set a strong random secret before deploying to production."
+                "SECRET_KEY is not set. Set a strong random secret before deploying to production.",
             )
         generated = secrets.token_hex(32)
         os.environ["SECRET_KEY"] = generated
@@ -53,7 +53,7 @@ def _check_jwt_secret() -> None:
     if not secret:
         if _IS_PROD:
             raise RuntimeError(
-                "JWT_SECRET is not set. Set a strong random secret before deploying to production."
+                "JWT_SECRET is not set. Set a strong random secret before deploying to production.",
             )
         # Dev: generate a random one per process (tokens won't survive restarts).
         generated = secrets.token_hex(32)
@@ -81,11 +81,11 @@ def _check_redis_url() -> None:
     if not os.getenv("REDIS_URL"):
         if _IS_PROD:
             raise RuntimeError(
-                "REDIS_URL is required in production (used for rate limiting and caching)."
+                "REDIS_URL is required in production (used for rate limiting and caching).",
             )
         logger.warning(
             "REDIS_URL not set — in-memory rate limiting active. "
-            "This does NOT persist across restarts or scale across replicas."
+            "This does NOT persist across restarts or scale across replicas.",
         )
 
 
@@ -94,7 +94,7 @@ def _check_cors_origins() -> None:
     if _IS_PROD and (not origins or origins == "*"):
         raise RuntimeError(
             "CORS_ORIGINS must be set to specific domain(s) in production. "
-            "Wildcard '*' is not acceptable."
+            "Wildcard '*' is not acceptable.",
         )
 
 
@@ -104,7 +104,7 @@ def _check_api_key() -> None:
         raise RuntimeError("TRANC3_API_KEY must be set in production when REQUIRE_AUTH=true.")
     if require_auth and not os.getenv("TRANC3_API_KEY") and not os.getenv("JWT_SECRET"):
         logger.warning(
-            "REQUIRE_AUTH=true but neither TRANC3_API_KEY nor JWT_SECRET is set — all requests will fail auth."
+            "REQUIRE_AUTH=true but neither TRANC3_API_KEY nor JWT_SECRET is set — all requests will fail auth.",
         )
 
 

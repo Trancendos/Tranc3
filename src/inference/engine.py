@@ -118,7 +118,7 @@ class Tranc3Engine:
 def run_cli(engine: Tranc3Engine):
     print(
         f"\nTranc3 [{engine.active_profile.name}] — type 'exit' to quit, "
-        f"'switch <profile>' to change personality\n"
+        f"'switch <profile>' to change personality\n",
     )
 
     history = []

@@ -248,7 +248,7 @@ class StaleEmbeddingBot(NanoBot):
                                 "content_id": item.get("id"),
                                 "updated_at": time.time(),
                             },
-                        }
+                        },
                     )
 
             # Step 3: upsert to Qdrant

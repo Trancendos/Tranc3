@@ -269,7 +269,7 @@ class TestFallbackRouter:
             # Score a path with low total_score to trigger fallback
             scored_paths = {}
             route = loop.run_until_complete(
-                router.get_fallback_route("A", "B", scored_paths, monitor)
+                router.get_fallback_route("A", "B", scored_paths, monitor),
             )
             # May return None or an OptimizedRoute
             assert route is None or isinstance(route, OptimizedRoute)

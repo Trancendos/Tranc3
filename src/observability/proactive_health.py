@@ -102,7 +102,7 @@ class ProactiveHealthMonitor:
                     message TEXT,
                     raised_at REAL,
                     acknowledged INTEGER DEFAULT 0
-                )"""
+                )""",
             )
             conn.commit()
 

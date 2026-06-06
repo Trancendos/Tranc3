@@ -501,7 +501,7 @@ async def get_skill_gaps():
                     "best_score": r["best_score"] or 0.0,
                     "avg_score": r["avg_score"] or 0.0,
                     "gap": "No model meets threshold (0.7)",
-                }
+                },
             )
     conn.close()
     return gaps
@@ -518,10 +518,10 @@ async def get_stats():
     total_suites = conn.execute("SELECT COUNT(*) as c FROM suites").fetchone()["c"]
     total_evals = conn.execute("SELECT COUNT(*) as c FROM evaluations").fetchone()["c"]
     completed = conn.execute(
-        "SELECT COUNT(*) as c FROM evaluations WHERE status='completed'"
+        "SELECT COUNT(*) as c FROM evaluations WHERE status='completed'",
     ).fetchone()["c"]
     pending = conn.execute(
-        "SELECT COUNT(*) as c FROM evaluations WHERE status='pending'"
+        "SELECT COUNT(*) as c FROM evaluations WHERE status='pending'",
     ).fetchone()["c"]
     conn.close()
     return {

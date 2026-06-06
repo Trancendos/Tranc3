@@ -95,7 +95,7 @@ class HuggingFaceProvider(AIProvider):
             # Model loading — HF returns 503 when model is loading
             if e.response.status_code == 503:
                 raise RuntimeError(
-                    f"HuggingFace model {model} is loading, try again later"
+                    f"HuggingFace model {model} is loading, try again later",
                 ) from None
             raise RuntimeError(f"HuggingFace HTTP error: {e.response.status_code}") from None
         except Exception as e:

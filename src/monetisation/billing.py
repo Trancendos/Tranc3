@@ -26,7 +26,9 @@ class BillingTier(str, Enum):
 
 
 def check_rate_limit(
-    user_id: str, tier: "BillingTier", request_count: int
+    user_id: str,
+    tier: "BillingTier",
+    request_count: int,
 ) -> Tuple[bool, Optional[str]]:
     """
     Check whether request_count exceeds the hourly rate limit for the given tier.
@@ -218,7 +220,11 @@ class StripeManager:
             logger.info("Stripe not configured — running in free-only mode")
 
     def create_checkout_session(
-        self, user_id: str, tier: str, success_url: str, cancel_url: str
+        self,
+        user_id: str,
+        tier: str,
+        success_url: str,
+        cancel_url: str,
     ) -> Optional[str]:
         """Create a Stripe checkout session. Returns checkout URL."""
         if not self._enabled:
@@ -246,7 +252,9 @@ class StripeManager:
             return "free"
         try:
             subs = self._stripe.Subscription.list(
-                customer=stripe_customer_id, status="active", limit=1
+                customer=stripe_customer_id,
+                status="active",
+                limit=1,
             )
             if not subs.data:
                 return "free"

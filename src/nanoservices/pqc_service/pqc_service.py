@@ -131,7 +131,8 @@ class MLKEMSimulator:
     """
 
     def keygen(
-        self, algorithm: PQCAlgorithm = PQCAlgorithm.ML_KEM_768
+        self,
+        algorithm: PQCAlgorithm = PQCAlgorithm.ML_KEM_768,
     ) -> Tuple[PQCPublicKey, PQCPrivateKey]:
         seed = uuid.uuid4().hex + uuid.uuid4().hex
         pk_data = hashlib.sha512(f"pk-{seed}".encode()).hexdigest()
@@ -178,7 +179,8 @@ class MLDSASimulator:
     """
 
     def keygen(
-        self, algorithm: PQCAlgorithm = PQCAlgorithm.ML_DSA_65
+        self,
+        algorithm: PQCAlgorithm = PQCAlgorithm.ML_DSA_65,
     ) -> Tuple[PQCPublicKey, PQCPrivateKey]:
         seed = uuid.uuid4().hex + uuid.uuid4().hex
         pk_data = hashlib.sha512(f"pk-dsa-{seed}".encode()).hexdigest()
@@ -283,7 +285,8 @@ class PQCService:
         self._id = str(uuid.uuid4())[:8]
 
     def generate_kem_keypair(
-        self, algorithm: PQCAlgorithm = PQCAlgorithm.ML_KEM_768
+        self,
+        algorithm: PQCAlgorithm = PQCAlgorithm.ML_KEM_768,
     ) -> Tuple[PQCPublicKey, PQCPrivateKey]:
         pk, sk = self.ml_kem.keygen(algorithm)
         self.public_keys[pk.key_id] = pk
@@ -307,7 +310,8 @@ class PQCService:
         return self.ml_kem.decapsulate(sk, ct)
 
     def generate_sign_keypair(
-        self, algorithm: PQCAlgorithm = PQCAlgorithm.ML_DSA_65
+        self,
+        algorithm: PQCAlgorithm = PQCAlgorithm.ML_DSA_65,
     ) -> Tuple[PQCPublicKey, PQCPrivateKey]:
         pk, sk = self.ml_dsa.keygen(algorithm)
         self.public_keys[pk.key_id] = pk

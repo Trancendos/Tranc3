@@ -324,7 +324,9 @@ class ToolBridge:
     # -------------------------------------------------------------------
 
     def get_invocation_history(
-        self, tool_name: Optional[str] = None, limit: int = 50
+        self,
+        tool_name: Optional[str] = None,
+        limit: int = 50,
     ) -> List[ToolResult]:
         """
         Return recent invocation history, optionally filtered by tool name.
@@ -349,7 +351,7 @@ class ToolBridge:
         successful = sum(1 for r in self._invocation_history if r.success)
         failed = len(self._invocation_history) - successful
         avg_duration = sum(r.duration_ms for r in self._invocation_history) / len(
-            self._invocation_history
+            self._invocation_history,
         )
         tools_used = sorted({r.tool_name for r in self._invocation_history})
 

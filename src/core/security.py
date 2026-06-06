@@ -77,7 +77,7 @@ def verify_model_integrity(path: str, expected_sha256: Optional[str] = None) -> 
 
     if expected_sha256 and actual_hash != expected_sha256:
         logger.error(
-            f"Integrity check FAILED for {path}. Expected: {expected_sha256}, Got: {actual_hash}"
+            f"Integrity check FAILED for {path}. Expected: {expected_sha256}, Got: {actual_hash}",
         )
         return False
 

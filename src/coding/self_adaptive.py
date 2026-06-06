@@ -191,7 +191,7 @@ class AdaptiveCodingEngine:
                     "timestamp": time.time(),
                     "fixes": fixes_applied,
                     "delta_before": regression["delta"],
-                }
+                },
             )
 
         return {"fixes_applied": fixes_applied, "improved": bool(fixes_applied)}

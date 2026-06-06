@@ -844,6 +844,17 @@ try:
 except ImportError:
     logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
+# ── Master Worker (MAPE-K sovereign orchestration engine) ────────────────────
+# Zero-cost enforcement, platform registry, adaptive blueprints.
+# Replaces GitHub Actions + Cloudflare Workers with self-hosted Python.
+try:
+    from src.master_worker.router import router as _master_worker_router  # noqa: F401
+
+    app.include_router(_master_worker_router)
+    logger.info("Master Worker router registered at /master")
+except Exception as _mw_err:
+    logger.warning("Master Worker router not loaded: %s", _mw_err)
+
 # ── Enhanced Capabilities (code gen, skills, planning, self-healing) ─────────
 # Migrated from legacy api_enhanced.py into the canonical entry point.
 from src.routers.enhanced_capabilities import router as _enhanced_router  # noqa: F401

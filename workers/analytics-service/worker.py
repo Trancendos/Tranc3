@@ -205,7 +205,7 @@ async def ingest_batch(batch: BatchEventsIn):
         ts = ev.timestamp or time.time()
         date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
         rows.append(
-            (ev.event_type, ev.user_id, ev.session_id, json.dumps(ev.properties), ts, date_str)
+            (ev.event_type, ev.user_id, ev.session_id, json.dumps(ev.properties), ts, date_str),
         )
     with get_conn() as conn:
         conn.executemany(
@@ -257,7 +257,7 @@ async def query_events(
 async def event_types():
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT event_type, COUNT(*) as count FROM events GROUP BY event_type ORDER BY count DESC"
+            "SELECT event_type, COUNT(*) as count FROM events GROUP BY event_type ORDER BY count DESC",
         ).fetchall()
     return {"types": [dict(r) for r in rows]}
 
@@ -312,7 +312,8 @@ async def get_metric(
     agg_fn = {"avg": "AVG", "sum": "SUM", "min": "MIN", "max": "MAX", "count": "COUNT"}[agg]
     with get_conn() as conn:
         row = conn.execute(
-            f"SELECT {agg_fn}(value) as result, COUNT(*) as samples FROM metrics {where}", params
+            f"SELECT {agg_fn}(value) as result, COUNT(*) as samples FROM metrics {where}",
+            params,
         ).fetchone()
     return {"name": name, "aggregation": agg, "result": row["result"], "samples": row["samples"]}
 
@@ -350,10 +351,10 @@ async def summary():
         event_count = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         metric_count = conn.execute("SELECT COUNT(*) FROM metrics").fetchone()[0]
         top_events = conn.execute(
-            "SELECT event_type, COUNT(*) as c FROM events GROUP BY event_type ORDER BY c DESC LIMIT 5"
+            "SELECT event_type, COUNT(*) as c FROM events GROUP BY event_type ORDER BY c DESC LIMIT 5",
         ).fetchall()
         top_metrics = conn.execute(
-            "SELECT name, AVG(value) as avg_val FROM metrics GROUP BY name ORDER BY avg_val DESC LIMIT 5"
+            "SELECT name, AVG(value) as avg_val FROM metrics GROUP BY name ORDER BY avg_val DESC LIMIT 5",
         ).fetchall()
     return {
         "total_events": event_count,
