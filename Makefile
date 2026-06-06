@@ -1,7 +1,7 @@
 # TRANC3 Makefile
 # Usage: make bootstrap | make dev | make test | make deploy | make doctor
 
-.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend health health-json infra-plan swarm-run entity-audit ansible-health production-score dependency-audit compliance-check compliance-report compliance-ci
+.PHONY: dev test deploy setup bootstrap doctor monitor lint migrate clean frontend frontend-check frontend-docker frontend-ci health health-json infra-plan swarm-run entity-audit ansible-health production-score dependency-audit compliance-check compliance-report compliance-ci
 
 # ── Bootstrap (single-command platform setup) ─────────────────────────────────
 bootstrap:
@@ -89,7 +89,19 @@ lint:
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
 frontend:
-	cd web && npm install && npm run build
+	cd web && npm ci && npm run build
+	@echo "✓ Frontend built → web/dist/ ($(shell du -sh web/dist 2>/dev/null | cut -f1) on disk)"
+
+frontend-check:
+	cd web && npm ci && npx tsc --noEmit
+
+frontend-docker:
+	docker build -t tranc3-web -f docker/Dockerfile.web .
+	@echo "✓ tranc3-web Docker image built"
+
+frontend-ci: frontend-check frontend
+	@test -f web/dist/index.html || (echo "✗ web/dist/index.html missing — build failed" && exit 1)
+	@echo "✓ Frontend CI passed"
 
 # ── Deploy ────────────────────────────────────────────────────────────────────
 deploy:

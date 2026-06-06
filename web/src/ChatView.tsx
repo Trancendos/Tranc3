@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Send, Settings, Globe, Zap, LogOut, Brain, LayoutDashboard,
   Sparkles, Cpu, Code2, BookOpen, Lightbulb, Heart, MessageCircle,
+  type LucideProps,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import LoginPage from './LoginPage'
@@ -26,7 +27,7 @@ interface Personality { id: string; name: string }
 // ── Suggested prompt chip definition ─────────────────────────────────────────
 interface PromptChip {
   text: string
-  icon: React.ComponentType<{ size?: number; 'aria-hidden'?: boolean | 'true' | 'false' }>
+  icon: React.ComponentType<LucideProps>
   category: string
 }
 

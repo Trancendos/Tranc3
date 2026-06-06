@@ -1,0 +1,76 @@
+name: Frontend Build & Type Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'docker/Dockerfile.web'
+      - 'docker/nginx.conf'
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'docker/Dockerfile.web'
+      - 'docker/nginx.conf'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: Build production bundle
+        run: npm run build
+        env:
+          VITE_API_URL: ''
+
+      - name: Verify dist output
+        run: |
+          test -f dist/index.html || (echo "✗ dist/index.html missing" && exit 1)
+          test -d dist/assets   || (echo "✗ dist/assets missing" && exit 1)
+          echo "✓ dist/index.html present"
+          du -sh dist/
+          ls -lh dist/assets/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tranc3-web-dist
+          path: web/dist/
+          retention-days: 7
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t tranc3-web:${{ github.sha }} -f docker/Dockerfile.web .
+
+      - name: Smoke test container
+        run: |
+          docker run -d --name tranc3-web-test -p 3000:80 tranc3-web:${{ github.sha }}
+          sleep 3
+          curl -sf http://localhost:3000/healthz || (docker logs tranc3-web-test && exit 1)
+          curl -sf http://localhost:3000/ | grep -q "<!DOCTYPE html>" || exit 1
+          docker stop tranc3-web-test
+          echo "✓ Container smoke test passed"
