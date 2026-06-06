@@ -9,7 +9,6 @@ Zero-cost: In-memory token buckets (fast), SQLite for policy persistence.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import logging
 import os
@@ -24,6 +23,8 @@ from typing import Dict, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8026
 WORKER_NAME = "rate-limit-service"
@@ -203,7 +204,7 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "active_buckets": active_buckets
+        "active_buckets": active_buckets,
     }
 
 

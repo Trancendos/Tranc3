@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 from src.entities.effective import build_overrides_map, resolve_entity
 from src.entities.platform import get_entity_by_pid
 

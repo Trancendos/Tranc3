@@ -11,7 +11,6 @@ Zero-cost: Pure in-process Python, SQLite storage, no external workflow engines.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -29,6 +28,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration

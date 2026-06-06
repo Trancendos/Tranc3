@@ -13,7 +13,11 @@ COMPOSE = ROOT / "docker-compose.production.yml"
 P0_WORKERS: list[tuple[str, int, list[str]]] = [
     ("tranc3-ai", 8001, []),
     ("infinity-void", 8002, []),
-    ("api-gateway", 8003, ["COPY --chown=worker:worker Dimensional/sanitize.py ./Dimensional/sanitize.py"]),
+    (
+        "api-gateway",
+        8003,
+        ["COPY --chown=worker:worker Dimensional/sanitize.py ./Dimensional/sanitize.py"],
+    ),
     ("infinity-ws", 8004, []),
     ("infinity-auth", 8005, ["COPY --chown=worker:worker shared_core/ ./shared_core/"]),
     ("users-service", 8006, []),

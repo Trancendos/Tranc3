@@ -10,7 +10,6 @@ Zero-cost: FastAPI + SQLite FTS5 (built-in), no external deps.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
@@ -25,6 +24,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8017
 WORKER_NAME = "search-service"
@@ -195,7 +196,7 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "indices": index_count,
-        "documents": doc_count
+        "documents": doc_count,
     }
 
 
