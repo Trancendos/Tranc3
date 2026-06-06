@@ -58,14 +58,21 @@ Canonical reference for all 43 platform entities: `PLATFORM_ENTITIES.md` and `sr
 | **The Digital Grid** | Tyler Towncroft | Workflow DAG builder + executor (n8n-style) | ✅ In repo | `src/workflow/` |
 | **The Void** | Prometheus | Secrets + password vault (AES-GCM) | 🔧 Migrating | `cloudflare/infinity-void/` → self-hosted |
 | **The Workshop** | Larry Lowhammer | CI/CD hub — Forgejo self-hosted git + pipelines | ✅ In repo | `deploy/forgejo/` |
-| **Infinity** | The Guardian (Anchor: Orb of Orisis) | OAuth, SSO, central user management (1 account, all services) | ✅ Self-hosted | `workers/infinity-auth/` (Port 8005) |
+| **Infinity** | The Guardian (Marcus Magnolia) & The Orb of Orisis | The Infinity Ecosystem — arrival hub for post-login navigation. 6 sub-systems below. | ✅ Self-hosted | Multiple workers (Ports 8005, 8042–8045, 8070) |
+| **↳ Infinity Portal** | — | Front entrance to the Trancendos Universe — unified login/register/MFA | ✅ Self-hosted | `workers/infinity-portal-service/` (Port 8042) |
+| **↳ Infinity Gate** | — | Role-based router (embedded in Portal): Admin→Infinity Admin, User→Arcadia, DevOps→Citadel | ✅ Embedded | Inside `infinity-portal-service` (no separate port — by design) |
+| **↳ Infinity-One** | — | Single identity layer — one login, multi-app access; identity profiles across all services | ✅ Self-hosted | `workers/infinity-one-service/` (Port 8043) |
+| **↳ Infinity Admin** | — | Admin OS — system config, user management, prime/pillar oversight, infrastructure control | ✅ Self-hosted | `workers/infinity-admin-service/` (Port 8044) |
+| **↳ Infinity Bridge** | — | Human traffic + user context transfer hub (one of Three Bridges alongside Nexus + HIVE) | ✅ Self-hosted | `workers/infinity-bridge-service/` (Port 8070) |
+| **↳ Infinity Shards** | — | Pluggable power-up modules — extend any entity's capabilities (Memory, Voice, Vision, Shield, Boost, Link, Sense, Spark shards) | 🔧 Building | `workers/infinity-shards-service/` (Port 8045) |
+| **↳ Infinity (Core Auth)** | — | OAuth2/SSO/MFA engine — the credential verification core all sub-systems delegate to | ✅ Self-hosted | `workers/infinity-auth/` (Port 8005) |
 | **The Lighthouse** | Rocking Ricki | Cryptographic token assignment, authenticator, token scanner | ✅ Deployed | CF: `infinity-lighthouse` |
 | **The HIVE** | The Queen | Data transport hub, agent + queue coordination | ✅ Deployed | CF: `infinity-hive` |
 | **Royal Bank of Arcadia** | Dorris Fontaine | Financial hub — billing, payments | ✅ Deployed | CF: `arcadia-royal-bank` |
 | **Arcadian Exchange** | The Porter Family | Financial exchange — procurement & resource trading | ✅ Deployed | CF: `arcadia-exchange` |
 | **The Observatory** | Norman Hawkins | Audit log — every action, change, activity on Trancendos | ✅ Self-hosted | `src/observability/`, `workers/monitoring/` |
 | **Luminous** | Cornelius MacIntyre | Core platform brain — AI intelligence & orchestration engine | 🔧 Partial | `src/bio_neural/`, `src/core/` |
-| **Turing's Hub** | Samantha Turing | AI creation centre — personality template creator | 🔧 Partial | `src/personality/` |
+| **Turing's Hub** | Samantha Turing | 3D AI Model Builder — the pod/capsule that unifies all platform services to build a complete, living, functioning AI entity (walks, talks, operates independently). Assembles personality + 3D body + voice + memory into one fully embodied being (e.g. Imfy, The Dr., George Porter) | 🔧 Partial | `src/personality/` |
 | **Arcadia** | Lilli SC | Front-end post-login, forum & email hub | 🔧 Partial | `web/` |
 | **The Nexus** | The Nexus | AI communications and transfer hub | 🔧 Self-hosted | `workers/infinity-ws/` (Port 8004) |
 | **The Town Hall** | Tristuran | Governance hub — PRINCE2, ITIL, Agile/Kanban, ITSM, rooms, templates | 🔧 Partial | `src/townhall/`, `config/townhall/`, `docs/THE_TOWN_HALL.md` |
@@ -184,7 +191,12 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | nanoservices | 8001 | — | `src/nanoservices/` | Internal proxy |
 | tranc3-bots | 8080 | — | `tranc3-bots/` | 12 bot types |
 | infinity-ws | 8004 | P0 | `workers/infinity-ws/` | infinity-ws-api |
-| infinity-auth | 8005 | P0 | `workers/infinity-auth/` | infinity-auth-api |
+| infinity-auth | 8005 | P0 | `workers/infinity-auth/` | Infinity Core Auth engine (OAuth2/SSO/MFA) |
+| infinity-portal-service | 8042 | P1 | `workers/infinity-portal-service/` | Infinity Portal — front entrance + Infinity Gate (embedded) |
+| infinity-one-service | 8043 | P1 | `workers/infinity-one-service/` | Infinity-One — single identity layer |
+| infinity-admin-service | 8044 | P1 | `workers/infinity-admin-service/` | Infinity Admin — Admin OS |
+| infinity-shards-service | 8045 | P1 | `workers/infinity-shards-service/` | Infinity Shards — pluggable entity power-ups |
+| infinity-bridge-service | 8070 | P1 | `workers/infinity-bridge-service/` | Infinity Bridge — human traffic transfer hub |
 | users-service | 8006 | P1 | `workers/users-service/` | trancendos-users-service |
 | monitoring | 8007 | P1 | `workers/monitoring/` | infinity-monitoring-dashboard |
 | notifications | 8008 | P1 | `workers/notifications/` | trancendos-notifications-service |
@@ -196,28 +208,34 @@ The Tranc3 platform has been transformed from a Cloudflare Workers + paid-servic
 | files-service | 8014 | P2 | `workers/files-service/` | infinity-files-api |
 | identity-service | 8015 | P2 | `workers/identity-service/` | infinity-os-identity |
 | analytics-service | 8016 | P3 | `workers/analytics-service/` | Analytics / metrics store |
-| audit-service | 8017 | P3 | `workers/audit-service/` | The Observatory audit trail |
-| cache-service | 8018 | P3 | `workers/cache-service/` | Distributed cache layer |
-| cdn-service | 8019 | P3 | `workers/cdn-service/` | Static asset delivery |
-| config-service | 8020 | P3 | `workers/config-service/` | Central configuration |
+| search-service | 8017 | P3 | `workers/search-service/` | Full-text + semantic search |
+| email-service | 8018 | P3 | `workers/email-service/` | Arcadia email hub |
+| sms-service | 8019 | P3 | `workers/sms-service/` | SMS gateway |
+| storage-service | 8020 | P3 | `workers/storage-service/` | IPFS + local blob storage |
 | cron-service | 8021 | P3 | `workers/cron-service/` | ChronosSphere task scheduler |
-| email-service | 8022 | P3 | `workers/email-service/` | Arcadia email hub |
-| geo-service | 8023 | P3 | `workers/geo-service/` | Geographic routing |
-| search-service | 8024 | P3 | `workers/search-service/` | Full-text + semantic search |
-| sms-service | 8025 | P3 | `workers/sms-service/` | SMS gateway |
-| storage-service | 8026 | P3 | `workers/storage-service/` | IPFS + local blob storage |
-| queue-service | 8027 | P3 | `workers/queue-service/` | The HIVE task queue |
-| rate-limit-service | 8028 | P3 | `workers/rate-limit-service/` | Token-bucket rate limiter |
+| queue-service | 8022 | P3 | `workers/queue-service/` | The HIVE task queue |
+| cache-service | 8023 | P3 | `workers/cache-service/` | Distributed cache layer |
+| config-service | 8024 | P3 | `workers/config-service/` | Central configuration |
+| audit-service | 8025 | P3 | `workers/audit-service/` | The Observatory audit trail |
+| rate-limit-service | 8026 | P3 | `workers/rate-limit-service/` | Token-bucket rate limiter |
+| geo-service | 8027 | P3 | `workers/geo-service/` | Geographic routing |
+| cdn-service | 8028 | P3 | `workers/cdn-service/` | Static asset delivery |
 | health-aggregator | 8029 | P3 | `workers/health-aggregator/` | Platform-wide health roll-up |
 | gbrain-bridge | 8030 | P3 | `workers/gbrain-bridge/` | GBrain AI bridge |
 | topology-service | 8031 | P3 | `workers/topology-service/` | Service topology graph |
 | ledger-service | 8032 | P3 | `workers/ledger-service/` | Royal Bank ledger |
 | model-router-service | 8033 | P3 | `workers/model-router-service/` | AI model routing |
 | workflow-engine-service | 8034 | P3 | `workers/workflow-engine-service/` | The Digital Grid engine |
-| skills-benchmark-service | 8035 | P3 | `workers/skills-benchmark-service/` | Turing's Hub benchmarks |
+| turings-hub-service | 8035 | P3 | `workers/turings-hub-service/` | Turing's Hub — 3D AI Model Builder (assembles personality + body + voice + memory into embodied AI) |
 | langchain-integration-service | 8036 | P3 | `workers/langchain-integration-service/` | LangChain integration |
 | deepagents-orchestrator-service | 8037 | P3 | `workers/deepagents-orchestrator-service/` | Deep agent orchestration |
 | vault-service | 8038 | P3 | `workers/vault-service/` | The Void self-hosted vault |
+| gateway-service | 8040 | P2 | `workers/gateway-service/` | API gateway — routing, rate limiting, auth proxy |
+| sentinel-station-service | 8041 | P2 | `workers/sentinel-station-service/` | Security sentinel — active threat monitoring |
+| dimensional-nexus-service | 8050 | P2 | `workers/dimensional-nexus-service/` | Cross-dimensional entity routing |
+| ffmpeg-worker | 8052 | P2 | `workers/ffmpeg-worker/` | Video/audio processing — transcoding |
+| swarm-coordinator-service | 8053 | P2 | `workers/swarm-coordinator-service/` | Multi-agent swarm orchestration |
+| hive-service | 8060 | P1 | `workers/hive-service/` | The HIVE — data transport hub, agent + queue coordination |
 
 ### Production Infrastructure Stack
 

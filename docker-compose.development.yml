@@ -6,14 +6,16 @@
 # Runs: docker compose -f docker-compose.development.yml up -d
 #
 # What's included (minimal — start fast):
+#   - postgres     : Local PostgreSQL 16 (port 5432)
 #   - tranc3-api   : FastAPI backend with hot-reload (port 8000)
 #   - redis        : Local Redis cache (port 6379)
 #   - infinity-ws  : WebSocket hub (port 8004)
 #   - infinity-auth: Auth worker (port 8005)
 #   - infinity-ai  : AI gateway worker (port 8009)
 #   - mailhog      : Local SMTP trap — catch all outbound email (port 8025/1025)
+#   - adminer      : DB browser → http://localhost:8080
 #
-# Database: SQLite by default (DATABASE_URL=sqlite:///./dev.db)
+# Database: PostgreSQL (postgresql://tranc3:tranc3dev@postgres:5432/tranc3)
 # Observability: stdout logs only (no Prometheus/Grafana overhead)
 
 version: "3.9"
@@ -38,6 +40,47 @@ x-worker-dev: &worker-dev
 
 services:
 
+  # ── PostgreSQL 16 — local development database ───────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: tranc3-dev-postgres
+    networks:
+      - tranc3-dev
+    env_file: []
+    environment:
+      POSTGRES_DB: tranc3
+      POSTGRES_USER: tranc3
+      POSTGRES_PASSWORD: tranc3dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./scripts/db-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tranc3 -d tranc3"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  # ── Alembic migration runner — runs once then exits ───────────────────────
+  db-migrate:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: tranc3-dev-migrate
+    networks:
+      - tranc3-dev
+    env_file: []
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql://tranc3:tranc3dev@postgres:5432/tranc3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   # ── FastAPI Backend — hot-reload ─────────────────────────────────────────
   api:
     <<: *dev-common
@@ -54,11 +97,16 @@ services:
     ports:
       - "8000:8000"
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
     environment:
       PYTHONUNBUFFERED: "1"
-      DATABASE_URL: sqlite:////app/dev.db
+      DATABASE_URL: postgresql://tranc3:tranc3dev@postgres:5432/tranc3
+      SETTINGS_DB_URL: postgresql://tranc3:tranc3dev@postgres:5432/tranc3
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: development
       DEBUG: "true"
@@ -108,9 +156,12 @@ services:
       - "8005:8005"
     environment:
       PORT: "8005"
-      DATABASE_URL: sqlite:////app/auth-dev.db
+      DATABASE_URL: postgresql://tranc3:tranc3dev@postgres:5432/tranc3
     depends_on:
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   # ── AI Gateway Worker ─────────────────────────────────────────────────────
   infinity-ai:
@@ -122,7 +173,10 @@ services:
       - "8009:8009"
     environment:
       PORT: "8009"
-      DATABASE_URL: sqlite:////app/ai-dev.db
+      DATABASE_URL: postgresql://tranc3:tranc3dev@postgres:5432/tranc3
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # ── MailHog — local SMTP trap (catch all outbound email) ─────────────────
   mailhog:
@@ -134,15 +188,21 @@ services:
       - "1025:1025"   # SMTP
       - "8025:8025"   # Web UI → http://localhost:8025
 
-  # ── adminer — lightweight database browser ───────────────────────────────
-  # Uncomment if using PostgreSQL locally:
-  # adminer:
-  #   image: adminer:4.8.1
-  #   container_name: tranc3-dev-adminer
-  #   networks:
-  #     - tranc3-dev
-  #   ports:
-  #     - "8080:8080"
+  # ── adminer — lightweight database browser → http://localhost:8080 ───────
+  # Server: postgres | User: tranc3 | Password: tranc3dev | Database: tranc3
+  adminer:
+    image: adminer:4.8.1
+    container_name: tranc3-dev-adminer
+    networks:
+      - tranc3-dev
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
 
 networks:
   tranc3-dev:
@@ -150,5 +210,7 @@ networks:
     driver: bridge
 
 volumes:
+  postgres_dev_data:
+    name: tranc3_postgres_dev
   redis_dev_data:
     name: tranc3_redis_dev

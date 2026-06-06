@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Generate .env.production for Citadel live deploy (self-hosted secrets, zero cloud required).
-# Usage: ./scripts/generate_production_env.sh [--force]
+# Usage: ./scripts/generate_production_env.sh [--force] [--push-to-vault]
+#
+# --force         Overwrite an existing .env.production
+# --push-to-vault After writing .env.production, push all secrets into Vault KV.
+#                 Requires VAULT_TOKEN (tranc3-admin policy) and Vault to be unsealed.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -8,9 +12,11 @@ cd "$ROOT"
 
 OUT="${ENV_OUT:-.env.production}"
 FORCE=false
+PUSH_TO_VAULT=false
 for arg in "$@"; do
   case "$arg" in
-    --force) FORCE=true ;;
+    --force)         FORCE=true ;;
+    --push-to-vault) PUSH_TO_VAULT=true ;;
   esac
 done
 
@@ -109,4 +115,14 @@ STRIPE_WEBHOOK_SECRET=
 EOF
 
 chmod 600 "$OUT"
-echo "Wrote $OUT (mode 600). Run: make deploy-live"
+echo "Wrote $OUT (mode 600)."
+
+if [[ "$PUSH_TO_VAULT" == true ]]; then
+  echo "Pushing secrets into Vault KV..."
+  VAULT_TOKEN="${VAULT_TOKEN:-}" \
+    ENV_OUT="$OUT" \
+    "$ROOT/scripts/vault-sync-secrets.sh" --push --env-file "$OUT"
+  echo "Vault push complete."
+fi
+
+echo "Next: make deploy-live"

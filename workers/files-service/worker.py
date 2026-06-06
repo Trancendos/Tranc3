@@ -183,6 +183,20 @@ async def list_all(limit: int = 50, offset: int = 0):
 @_router.post("/")
 async def create(data: Dict[str, Any]):
     """Create a new files entry."""
+    # Capacity hard stop — daily upload count and storage bytes
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+        from src.capacity.guard import CapacityService, CapacityExceededError, get_capacity_guard
+        _g = get_capacity_guard()
+        _g.consume(CapacityService.FILES_UPLOADS_DAILY, amount=1)
+        file_size = data.get("file_size", 0) or 0
+        if file_size:
+            _g.consume(CapacityService.STORAGE_BYTES, amount=int(file_size))
+    except Exception as _fe:
+        from src.capacity.guard import CapacityExceededError
+        if isinstance(_fe, CapacityExceededError):
+            raise HTTPException(status_code=503, detail=str(_fe))
     item_id = data.get("file_id", str(uuid.uuid4()))
     data["file_id"] = item_id
     created = db.create(data)

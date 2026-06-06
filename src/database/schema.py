@@ -241,6 +241,30 @@ class SystemMetric(Base):
 
 
 # ============================================================
+# USER SETTINGS (encrypted secrets)
+# ============================================================
+class UserSetting(Base):
+    """Per-user encrypted secret/setting.
+
+    Values are stored as Fernet ciphertext (AES-128-CBC + HMAC-SHA256).
+    The encryption key is derived from SECRET_KEY via HKDF — never stored here.
+    """
+
+    __tablename__ = "user_settings"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(64), nullable=False, index=True)
+    key = Column(String(128), nullable=False)
+    encrypted_value = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_user_settings_username_key", "username", "key", unique=True),
+    )
+
+
+# ============================================================
 # DATABASE MANAGER
 # ============================================================
 class DatabaseManager:

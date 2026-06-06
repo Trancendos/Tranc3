@@ -66,9 +66,34 @@ SERVICE_REGISTRY = {
     "infinity-auth": {
         "url": "http://localhost:8005/health",
         "priority": "P0",
-        "named": "Infinity",
+        "named": "Infinity (Core Auth)",
     },
     # ── P1 — Core Services ──────────────────────────────────────────────────
+    "infinity-portal": {
+        "url": "http://localhost:8042/health",
+        "priority": "P1",
+        "named": "Infinity Portal",
+    },
+    "infinity-one": {
+        "url": "http://localhost:8043/health",
+        "priority": "P1",
+        "named": "Infinity-One (Identity)",
+    },
+    "infinity-admin": {
+        "url": "http://localhost:8044/health",
+        "priority": "P1",
+        "named": "Infinity Admin",
+    },
+    "infinity-shards": {
+        "url": "http://localhost:8045/health",
+        "priority": "P1",
+        "named": "Infinity Shards",
+    },
+    "infinity-bridge": {
+        "url": "http://localhost:8070/health",
+        "priority": "P1",
+        "named": "Infinity Bridge",
+    },
     "users-service": {
         "url": "http://localhost:8006/health",
         "priority": "P1",
@@ -215,7 +240,7 @@ SERVICE_REGISTRY = {
     "skills-benchmark-service": {
         "url": "http://localhost:8035/health",
         "priority": "P3",
-        "named": "Skills Benchmark",
+        "named": "Turing's Hub (3D AI Model Builder)",
     },
     "langchain-integration-service": {
         "url": "http://localhost:8036/health",

@@ -278,6 +278,16 @@ def _ensure_topic(topic: str) -> None:
 @_router.post("/topics/{topic}/publish", status_code=201)
 async def publish(topic: str, req: PublishIn):
     _ensure_topic(topic)
+    # Capacity hard stop — queue depth
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+        from src.capacity.guard import CapacityService, CapacityExceededError, get_capacity_guard
+        get_capacity_guard().consume(CapacityService.QUEUE_DEPTH, amount=1)
+    except Exception as _qe:
+        from src.capacity.guard import CapacityExceededError
+        if isinstance(_qe, CapacityExceededError):
+            raise HTTPException(status_code=503, detail=str(_qe))
     now = time.time()
     msg_id = str(uuid.uuid4())
     visible_after = now + req.delay

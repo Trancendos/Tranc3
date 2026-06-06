@@ -20,7 +20,10 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt -q
+        run: |
+          pip install -r requirements.txt -q
+          # Ensure test runner extras are present even if requirements install is partial
+          pip install pytest-asyncio psycopg2-binary -q 2>/dev/null || true
 
       - name: Merge gate tests
         run: |

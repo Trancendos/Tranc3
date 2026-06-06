@@ -1,0 +1,47 @@
+# ──────────────────────────────────────────────────────────────
+# Tranc3 Citadel — Ansible Inventory Example
+# ──────────────────────────────────────────────────────────────
+# Copy to citadel.yml and fill in the real Citadel IP.
+# Obtain the IP from Terraform:
+#   cd deploy/terraform && terraform output -raw citadel_public_ip
+#
+# citadel.yml is gitignored — keep it that way.
+# ──────────────────────────────────────────────────────────────
+
+all:
+  hosts:
+    citadel:
+      ansible_host: "<CITADEL_PUBLIC_IP>"   # terraform output -raw citadel_public_ip
+      ansible_user: tranc3
+      ansible_ssh_private_key_file: ~/.ssh/tranc3_citadel
+      ansible_python_interpreter: /usr/bin/python3
+      # Uncomment if you need a specific SSH port:
+      # ansible_port: 22
+
+  vars:
+    # ── Platform ────────────────────────────────────────────
+    domain: trancendos.com
+    git_branch: main
+    # Change to your working branch during development:
+    # git_branch: claude/compassionate-mendel-qBXVv
+
+    # deploy_profile controls which compose services are started:
+    #   core    — P0/P1 workers only (fast boot, ~15 services)
+    #   full    — all 38 workers (production default)
+    deploy_profile: core
+
+    # ── Paths ────────────────────────────────────────────────
+    tranc3_root: /opt/tranc3
+    compose_file: docker-compose.production.yml
+
+    # ── Health check settings ────────────────────────────────
+    # Seconds to wait for each health endpoint before failing
+    health_check_timeout_sec: 120
+    # Ports to verify after deploy (P0/P1 workers)
+    health_check_ports:
+      - { name: "infinity-auth",  port: 8005, path: "/health" }
+      - { name: "api-gateway",    port: 8000, path: "/health" }
+      - { name: "infinity-ws",    port: 8004, path: "/health" }
+      - { name: "infinity-portal",port: 8042, path: "/health" }
+      - { name: "users-service",  port: 8006, path: "/health" }
+      - { name: "monitoring",     port: 8007, path: "/health" }

@@ -1,0 +1,32 @@
+name = "tranc3-notifications"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+account_id = "e0214028cb64d31232f5662548a55e4e"
+
+[vars]
+ENVIRONMENT = "production"
+
+# ── KV: daily usage counters (shared with tranc3-ai CACHE namespace) ─────────
+[[kv_namespaces]]
+binding = "CACHE"
+id = "2a0e09cfd22741eeb3245607ce6e76fd"
+
+# ── Secrets (set via: wrangler secret put <NAME> --name tranc3-notifications) ─
+#
+# Email provider rotation — all genuinely free tiers, zero cost:
+#
+# RESEND_API_KEY     → https://resend.com          (free: 3,000 emails/month, 100/day)
+# BREVO_API_KEY      → https://brevo.com           (free: 9,000 emails/month, 300/day)
+# MAILJET_API_KEY    → https://mailjet.com         (free: 6,000 emails/month, 200/day)
+# MAILJET_SECRET_KEY → https://mailjet.com         (required alongside API key)
+# FROM_EMAIL         → no-reply@trancendos.com     (verified sender)
+# FROM_NAME          → Trancendos
+
+# ── Deploy ────────────────────────────────────────────────────────────────────
+# wrangler secret put RESEND_API_KEY --name tranc3-notifications
+# wrangler secret put BREVO_API_KEY --name tranc3-notifications
+# wrangler secret put MAILJET_API_KEY --name tranc3-notifications
+# wrangler secret put MAILJET_SECRET_KEY --name tranc3-notifications
+# wrangler secret put FROM_EMAIL --name tranc3-notifications
+# wrangler secret put FROM_NAME --name tranc3-notifications
+# wrangler deploy

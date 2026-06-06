@@ -1,0 +1,13 @@
+{
+  "name": "tranc3-queue",
+  "version": "1.0.0",
+  "description": "Adaptive zero-cost task queue — CF Queues + Upstash Redis + KV fallback",
+  "main": "src/index.js",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^3"
+  }
+}
