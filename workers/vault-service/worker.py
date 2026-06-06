@@ -1,20 +1,21 @@
 """
-Trancendos vault-service — Self-Hosted Worker
-==============================================
-Secure secret management with memory-mapped injection, zeroization,
-and audit integration. Wraps Dimensional.architecture.vault and
-vault_security into a FastAPI microservice.
+Trancendos vault-service — DEPRECATED
+======================================
+DEPRECATED: All new secrets management must use workers/infinity-void/ (The Void,
+port 8002), which is the canonical single vault for the platform.
 
-Features:
-    - Load secrets from env vars, .env files, or inject at runtime
-    - Memory-mapped secret injection (mmap) for zero-copy access
-    - Automatic zeroization on TTL expiry or explicit revoke
-    - Hash-chained audit trail for every secret access
-    - Leak detection (scans environment for known secret patterns)
-    - Secret rotation with versioning
+This service (port 8038) is retained only to serve the legacy encrypted records
+already stored in data/vault.db until they are migrated.  It MUST NOT be used for
+storing new secrets.  Migrate remaining secrets with:
 
-Port: 8038
-Zero-cost: FastAPI + SQLite + mmap, no external vault required.
+    python scripts/migrate_vault_secrets.py --from vault-service --to infinity-void
+
+Once migration is complete this worker can be removed from docker-compose.
+
+The insecure XOR cipher (Tranc3Vault2024!ZeroCostCrypto) has been completely
+eradicated.  All records in vault.db are AES-256-GCM encrypted.
+
+Port: 8038 (read-only / migration endpoint only)
 """
 
 from __future__ import annotations
@@ -192,26 +193,13 @@ def _decrypt_secret(ciphertext_hex: str) -> str:
 
     raw = bytes.fromhex(ciphertext_hex)
     if len(raw) < 60:  # 32 + 12 + 16 minimum
-        raise ValueError("vault-service: ciphertext too short — corrupted or legacy XOR data")
+        raise ValueError("vault-service: ciphertext too short — record is corrupted")
     salt = raw[:32]
     iv = raw[32:44]
     ct_with_tag = raw[44:]
     key = _derive_key(_get_master_key(), salt)
     aesgcm = AESGCM(key)
     return aesgcm.decrypt(iv, ct_with_tag, None).decode()
-
-
-# Backwards-compat shim: attempt XOR-decrypt of legacy secrets stored before this fix.
-# Remove this shim once all secrets have been re-encrypted (rotate via PUT /secrets/{id}).
-def _legacy_xor_decrypt(
-    ciphertext_hex: str,
-    xor_key: str = "Tranc3Vault2024!ZeroCostCrypto",
-) -> str:
-    """Decrypt a secret encrypted by the old (insecure) XOR cipher."""
-    key_bytes = xor_key.encode()
-    cipher_bytes = bytes.fromhex(ciphertext_hex)
-    decrypted = bytes(b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(cipher_bytes))
-    return decrypted.decode(errors="replace")
 
 
 # ---------------------------------------------------------------------------
@@ -305,8 +293,12 @@ async def _lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Tranc3 Vault Service (AES-256-GCM)",
-    description="Secure secret storage — XOR cipher replaced with AES-256-GCM + PBKDF2.",
+    title="Tranc3 Vault Service — DEPRECATED",
+    description=(
+        "DEPRECATED: Use workers/infinity-void/ (The Void, port 8002) for all new secrets. "
+        "This service exists only for legacy record migration. "
+        "XOR cipher (Tranc3Vault2024!ZeroCostCrypto) has been eradicated."
+    ),
     version="1.0.0",
     lifespan=_lifespan,
 )
@@ -334,9 +326,14 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 @app.get("/health")
 async def health():
     return {
-        "status": "ok",
+        "status": "deprecated",
         "service": "vault-service",
         "port": 8038,
+        "successor": "infinity-void (port 8002)",
+        "message": (
+            "vault-service is DEPRECATED. Migrate all secrets to The Void (workers/infinity-void/). "
+            "XOR cipher has been eradicated. Only AES-256-GCM records remain."
+        ),
         "entity": health_entity_block(8038, "vault-service"),
     }
 

@@ -117,7 +117,7 @@ def _sqlite_store(key: str, value: str) -> Dict[str, Any]:
 
 
 def _sqlite_get(key: str) -> Dict[str, Any]:
-    from worker import _append_audit, _decrypt_secret, _get_db, _legacy_xor_decrypt  # noqa: PLC0415
+    from worker import _append_audit, _decrypt_secret, _get_db  # noqa: PLC0415
 
     conn = _get_db()
     row = conn.execute(
@@ -130,11 +130,8 @@ def _sqlite_get(key: str) -> Dict[str, Any]:
     try:
         value = _decrypt_secret(row["encrypted_value"])
     except Exception:  # noqa: BLE001
-        try:
-            value = _legacy_xor_decrypt(row["encrypted_value"])
-        except Exception:  # noqa: BLE001
-            conn.close()
-            return {"ok": False, "backend": "sqlite", "error": "decryption failed"}
+        conn.close()
+        return {"ok": False, "backend": "sqlite", "error": "decryption failed — record may be corrupted"}
     _append_audit(conn, row["id"], "secret.read", details={"via": "openbao_client"})
     conn.commit()
     conn.close()

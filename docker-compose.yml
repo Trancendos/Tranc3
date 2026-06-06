@@ -548,23 +548,30 @@ services:
 
   # ── Phase 20: P4 Ecosystem-Matrix Workers (ports 8030–8037) ──────────────
 
+  # DEPRECATED — vault-service is retained only for migrating legacy AES-256-GCM
+  # records to The Void (infinity-void, port 8002). Do NOT store new secrets here.
+  # Run: python scripts/migrate_vault_secrets.py then remove this block.
+  # XOR cipher (Tranc3Vault2024!ZeroCostCrypto) has been eradicated.
   vault-service:
     build:
       context: workers/vault-service
     container_name: tranc3-vault-service
     ports:
-      - "8030:8030"
+      - "8038:8038"
     environment:
       - VAULT_DB_PATH=/data/vault.db
-      - SERVICE_PORT=8030
+      - SERVICE_PORT=8038
+      - VAULT_DEPRECATED=1
     volumes:
       - vault_data:/data
-    restart: unless-stopped
+    restart: "no"
+    profiles:
+      - vault-migration
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8030/health"]
-      interval: 30s
+      test: ["CMD", "curl", "-f", "http://localhost:8038/health"]
+      interval: 60s
       timeout: 5s
-      retries: 3
+      retries: 1
 
   topology-service:
     build:
