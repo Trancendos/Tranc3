@@ -1,4 +1,6 @@
 FROM python:3.11-slim
+# Install curl for Docker healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 # Security: non-root user
 RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 

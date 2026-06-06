@@ -1,6 +1,9 @@
 # Exact-pinned — Do NOT use >= or ~=
+# NOTE: the mlflow Python package is intentionally absent — this service
+# reimplements the MLflow REST API v2 (subset) from scratch using FastAPI +
+# SQLite.  Installing mlflow would pull in ~30 heavy transitive dependencies
+# (pandas, scipy, sklearn, Flask, databricks-sdk …) with zero runtime benefit.
 fastapi==0.136.3
 starlette==1.1.0
 uvicorn==0.34.3
 pydantic==2.11.5
-mlflow==2.22.1

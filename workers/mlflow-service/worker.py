@@ -163,23 +163,39 @@ def _now_ms() -> int:
 
 
 def _run_to_dict(row: sqlite3.Row, db: sqlite3.Connection) -> Dict[str, Any]:
+    """Return a run in MLflow REST API v2 format.
+
+    The spec requires params, tags, and metrics as lists of {key, value[, ...]}
+    objects — NOT as plain dicts.  Returning dicts breaks all mlflow client SDK
+    parsing (mlflow.get_run(), mlflow.search_runs(), etc.).
+    """
     run_id = row["run_id"]
-    params = {r["key"]: r["value"] for r in db.execute(
-        "SELECT key, value FROM run_params WHERE run_id = ?", (run_id,)
-    )}
-    tags = {r["key"]: r["value"] for r in db.execute(
-        "SELECT key, value FROM run_tags WHERE run_id = ?", (run_id,)
-    )}
-    # Latest value per metric key
-    metrics = {}
+
+    # params → list of {key, value}
+    params_list = [
+        {"key": r["key"], "value": r["value"]}
+        for r in db.execute("SELECT key, value FROM run_params WHERE run_id = ?", (run_id,))
+    ]
+
+    # tags → list of {key, value}
+    tags_list = [
+        {"key": r["key"], "value": r["value"]}
+        for r in db.execute("SELECT key, value FROM run_tags WHERE run_id = ?", (run_id,))
+    ]
+
+    # metrics → list of latest {key, value, step, timestamp} per key
+    metrics_seen: set = set()
+    metrics_list = []
     for r in db.execute(
         "SELECT key, value, step, timestamp FROM run_metrics "
         "WHERE run_id = ? ORDER BY step DESC, id DESC",
         (run_id,),
     ):
-        if r["key"] not in metrics:
-            metrics[r["key"]] = {"key": r["key"], "value": r["value"],
-                                  "step": r["step"], "timestamp": r["timestamp"]}
+        if r["key"] not in metrics_seen:
+            metrics_seen.add(r["key"])
+            metrics_list.append({"key": r["key"], "value": r["value"],
+                                  "step": r["step"], "timestamp": r["timestamp"]})
+
     return {
         "run_id": run_id,
         "experiment_id": row["experiment_id"],
@@ -190,9 +206,9 @@ def _run_to_dict(row: sqlite3.Row, db: sqlite3.Connection) -> Dict[str, Any]:
         "artifact_uri": row["artifact_uri"],
         "lifecycle_stage": row["lifecycle_stage"],
         "user_id": row["user_id"],
-        "params": params,
-        "metrics": metrics,
-        "tags": tags,
+        "params": params_list,
+        "metrics": metrics_list,
+        "tags": tags_list,
     }
 
 
@@ -574,23 +590,39 @@ async def get_metric_history(run_id: str, metric_key: str):
 # ── Artifacts ─────────────────────────────────────────────────────────────────
 
 
-@app.post("/api/2.0/mlflow/artifacts/list")
+@app.get("/api/2.0/mlflow/artifacts/list")
 async def list_artifacts(run_id: str, path: str = ""):
+    """List artifacts for a run.
+
+    GET — matches the MLflow REST API spec (POST would break SDK clients).
+    Path traversal is prevented by resolving the joined path and asserting it
+    stays inside the run's artifact_uri root.
+    """
     db = _db()
     row = db.execute("SELECT artifact_uri FROM runs WHERE run_id = ?", (run_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Run not found")
-    artifact_dir = Path(row["artifact_uri"]) / path
+
+    root = Path(row["artifact_uri"]).resolve()
+
+    # Sanitise path: strip leading slashes/dots, resolve, and assert containment.
+    # This blocks both absolute paths and traversals like ../../etc/passwd.
+    safe_path = path.lstrip("/").replace("..", "")  # strip leading / and any .. segments
+    artifact_dir = (root / safe_path).resolve()
+    if not str(artifact_dir).startswith(str(root)):
+        raise HTTPException(status_code=400, detail="Invalid artifact path")
+
     if not artifact_dir.exists():
-        return {"files": [], "root_uri": str(Path(row["artifact_uri"]))}
+        return {"files": [], "root_uri": str(root)}
+
     files = []
     for p in artifact_dir.iterdir():
         files.append({
-            "path": str(p.relative_to(Path(row["artifact_uri"]))),
+            "path": str(p.relative_to(root)),
             "is_dir": p.is_dir(),
             "file_size": p.stat().st_size if p.is_file() else 0,
         })
-    return {"files": files, "root_uri": str(Path(row["artifact_uri"]))}
+    return {"files": files, "root_uri": str(root)}
 
 
 # ── Trancendos-native endpoints ────────────────────────────────────────────────
@@ -619,9 +651,9 @@ async def run_summary(run_id: str):
         "experiment_name": exp_row["name"] if exp_row else None,
         "status": run["status"],
         "duration_seconds": duration_s,
-        "params": run["params"],
-        "metrics": {k: v["value"] for k, v in run["metrics"].items()},
-        "tags": run["tags"],
+        "params": {p["key"]: p["value"] for p in run["params"]},
+        "metrics": {m["key"]: m["value"] for m in run["metrics"]},
+        "tags": {t["key"]: t["value"] for t in run["tags"]},
         "artifact_uri": run["artifact_uri"],
     }
 
@@ -638,13 +670,15 @@ async def compare_runs(body: CompareRunsIn):
         if not row:
             raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
         run = _run_to_dict(row, db)
-        metrics = {k: v["value"] for k, v in run["metrics"].items()}
+        # _run_to_dict returns metrics/params/tags as lists per MLflow REST spec;
+        # convert to dicts for the comparison view (internal convenience format).
+        metrics = {m["key"]: m["value"] for m in run["metrics"]}
         if body.metric_keys:
             metrics = {k: v for k, v in metrics.items() if k in body.metric_keys}
         result["runs"][run_id] = {
             "run_name": run["run_name"],
             "status": run["status"],
-            "params": run["params"],
+            "params": {p["key"]: p["value"] for p in run["params"]},
             "metrics": metrics,
         }
         all_metric_keys.update(metrics.keys())

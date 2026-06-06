@@ -977,11 +977,11 @@ async def analytics_dataframe(body: DataFrameIn):
 
     con = _duckdb_conn()
     try:
-        # Materialise query → Polars via Arrow (zero-copy path)
-        arrow_table = con.execute(body.sql).arrow()
+        # Push LIMIT into the SQL layer — avoids materialising the full result
+        # set in memory before truncating (same pattern as /analytics/query).
+        limited_sql = f"SELECT * FROM ({body.sql}) _q LIMIT {int(body.limit)}"
+        arrow_table = con.execute(limited_sql).arrow()
         df = pl.from_arrow(arrow_table)
-        if len(df) > int(body.limit):
-            df = df.head(int(body.limit))
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Query error: {exc}") from exc
     finally:
