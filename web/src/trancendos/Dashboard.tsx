@@ -9,8 +9,9 @@ import {
   ChevronDown, ChevronRight, Search, Bell, Settings, LayoutDashboard,
   RefreshCw, Wifi, WifiOff, ShieldAlert, Layers, CircuitBoard,
   BarChart3, Network, Lock, Unlock, EyeIcon, Gauge,
-  RadioTower, BrainCircuit, Loader2
+  RadioTower, BrainCircuit, Loader2, SunMoon
 } from 'lucide-react'
+import { useTheme } from '../contexts/ThemeContext'
 import { colors, pillars, hubIcons, type HubState, type SystemMode, type PillarDef } from './tokens'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -194,9 +195,12 @@ function SystemModeBadge({ mode, size = 'sm' }: { mode: SystemMode; size?: 'sm' 
   const textSz = size === 'sm' ? 'text-[10px]' : 'text-xs'
 
   return (
-    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full`}
-         style={{ backgroundColor: config.color + '20', border: `1px solid ${config.color}40` }}>
-      <Icon size={sz} color={config.color} />
+    <div
+      className={`flex items-center gap-1 px-2 py-0.5 rounded-full`}
+      style={{ backgroundColor: config.color + '20', border: `1px solid ${config.color}40` }}
+      aria-label={`System mode: ${config.label}`}
+    >
+      <Icon size={sz} color={config.color} aria-hidden="true" />
       <span className={`${textSz} font-medium`} style={{ color: config.color }}>{config.label}</span>
     </div>
   )
@@ -218,7 +222,7 @@ function StatusDot({ status, pulse = false }: { status: HubState['status']; puls
   const c = colorMap[status] || colors.status.unknown
 
   return (
-    <div className="relative flex items-center justify-center">
+    <div className="relative flex items-center justify-center" aria-hidden="true">
       <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c }} />
       {(pulse && (status === 'online' || status === 'booting')) && (
         <div className="absolute w-2.5 h-2.5 rounded-full animate-ping" style={{ backgroundColor: c, opacity: 0.4 }} />
@@ -241,9 +245,12 @@ function CircuitBreakerBadge({ state }: { state: HubState['circuitBreaker'] }) {
   const Icon = c.icon
 
   return (
-    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider"
-         style={{ backgroundColor: c.color + '20', color: c.color, border: `1px solid ${c.color}40` }}>
-      <Icon size={10} />
+    <div
+      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider"
+      style={{ backgroundColor: c.color + '20', color: c.color, border: `1px solid ${c.color}40` }}
+      aria-label={`Circuit breaker: ${c.label}`}
+    >
+      <Icon size={10} aria-hidden="true" />
       {c.label}
     </div>
   )
@@ -262,14 +269,14 @@ function HealthRing({ score, size = 40 }: { score: number; size?: number }) {
                 colors.status.offline
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
+    <div className="relative" style={{ width: size, height: size }} aria-label={`Health score: ${score}%`}>
+      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
         <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#1E293B" strokeWidth={3} />
         <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={3}
                 strokeDasharray={circumference} strokeDashoffset={offset}
                 strokeLinecap="round" className="transition-all duration-700" />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
         <span className="text-[10px] font-mono font-bold" style={{ color }}>{score}</span>
       </div>
     </div>
@@ -282,21 +289,24 @@ function HealthRing({ score, size = 40 }: { score: number; size?: number }) {
 
 function ApiStatusBadge({ connected, lastRefresh }: { connected: boolean; lastRefresh: Date | null }) {
   return (
-    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
-         style={{
-           backgroundColor: connected ? '#10B98115' : '#F59E0B15',
-           border: `1px solid ${connected ? '#10B98130' : '#F59E0B30'}`,
-         }}>
+    <div
+      className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
+      style={{
+        backgroundColor: connected ? '#10B98115' : '#F59E0B15',
+        border: `1px solid ${connected ? '#10B98130' : '#F59E0B30'}`,
+      }}
+      aria-label={connected ? `API connected, last refreshed ${lastRefresh?.toLocaleTimeString() ?? ''}` : 'Using mock data'}
+    >
       {connected ? (
-        <Wifi size={10} className="text-green-400" />
+        <Wifi size={10} className="text-green-400" aria-hidden="true" />
       ) : (
-        <WifiOff size={10} className="text-amber-400" />
+        <WifiOff size={10} className="text-amber-400" aria-hidden="true" />
       )}
       <span className={`text-[10px] font-medium ${connected ? 'text-green-400' : 'text-amber-400'}`}>
         {connected ? 'Live' : 'Mock'}
       </span>
       {lastRefresh && (
-        <span className="text-[9px] text-gray-600">
+        <span className="text-[9px] text-gray-600" aria-hidden="true">
           {lastRefresh.toLocaleTimeString()}
         </span>
       )}
@@ -461,8 +471,8 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
       {/* Services Grid */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {detailLoading && (
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Loader2 size={12} className="animate-spin" />
+          <div role="status" aria-live="polite" className="flex items-center gap-2 text-xs text-gray-500">
+            <Loader2 size={12} className="animate-spin" aria-hidden="true" />
             <span>Loading detail from API...</span>
           </div>
         )}
@@ -616,10 +626,16 @@ function Sidebar({
           {/* Search */}
           <div className="px-3 py-2 border-b border-gray-800">
             <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600" />
-              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                     placeholder="Search hubs..."
-                     className="w-full bg-gray-900 border border-gray-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-gray-700" />
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600" aria-hidden="true" />
+              <label htmlFor="hub-search" className="sr-only">Search hubs</label>
+              <input
+                id="hub-search"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search hubs..."
+                type="search"
+                className="w-full bg-gray-900 border border-gray-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-gray-700"
+              />
             </div>
           </div>
 
@@ -714,6 +730,7 @@ function TopBar({
   onRefresh: () => void
   refreshing: boolean
 }) {
+  const { theme, toggleTheme } = useTheme()
   const totalHubs = hubStates.length
   const onlineHubs = hubStates.filter(h => h.status === 'online').length
   const totalServices = hubStates.reduce((s, h) => s + h.services, 0)
@@ -731,47 +748,57 @@ function TopBar({
 
       <div className="flex items-center gap-6">
         {/* Stats */}
-        <div className="flex items-center gap-5 text-xs">
+        <dl className="flex items-center gap-5 text-xs" aria-label="Ecosystem statistics">
           <div className="flex items-center gap-1.5">
-            <Activity size={14} className="text-green-400" />
-            <span className="text-gray-400">{onlineHubs}/{totalHubs}</span>
-            <span className="text-gray-600">hubs</span>
+            <Activity size={14} className="text-green-400" aria-hidden="true" />
+            <dd className="text-gray-400">{onlineHubs}/{totalHubs}</dd>
+            <dt className="text-gray-600">hubs</dt>
           </div>
           <div className="flex items-center gap-1.5">
-            <Server size={14} className="text-blue-400" />
-            <span className="text-gray-400">{totalServices}</span>
-            <span className="text-gray-600">services</span>
+            <Server size={14} className="text-blue-400" aria-hidden="true" />
+            <dd className="text-gray-400">{totalServices}</dd>
+            <dt className="text-gray-600">services</dt>
           </div>
           <div className="flex items-center gap-1.5">
-            <Gauge size={14} style={{ color: modeColor }} />
-            <span className="text-gray-400">{avgHealth}%</span>
-            <span className="text-gray-600">health</span>
+            <Gauge size={14} style={{ color: modeColor }} aria-hidden="true" />
+            <dd className="text-gray-400">{avgHealth}%</dd>
+            <dt className="text-gray-600">health</dt>
           </div>
           {totalAlerts > 0 && (
             <div className="flex items-center gap-1.5">
-              <AlertTriangle size={14} className="text-amber-400" />
-              <span className="text-amber-400 font-semibold">{totalAlerts}</span>
-              <span className="text-gray-600">alerts</span>
+              <AlertTriangle size={14} className="text-amber-400" aria-hidden="true" />
+              <dd className="text-amber-400 font-semibold">{totalAlerts}</dd>
+              <dt className="text-gray-600">alerts</dt>
             </div>
           )}
-        </div>
+        </dl>
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          <button
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            onClick={toggleTheme}
+            className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+          >
+            <SunMoon size={16} aria-hidden="true" />
+          </button>
           <button aria-label="Refresh Dashboard" onClick={onRefresh}
                   className={`p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 ${refreshing ? 'animate-spin' : ''}`}>
-            <RefreshCw size={16} />
+            <RefreshCw size={16} aria-hidden="true" />
           </button>
-          <button aria-label="Notifications" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
-            <Bell size={16} />
+          <button
+            aria-label={totalAlerts > 0 ? `Notifications: ${totalAlerts} alert${totalAlerts !== 1 ? 's' : ''}` : 'Notifications'}
+            className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+          >
+            <Bell size={16} aria-hidden="true" />
             {totalAlerts > 0 && (
-              <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center">
+              <div aria-hidden="true" className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center">
                 <span className="text-[8px] font-bold text-white">{totalAlerts > 9 ? '9+' : totalAlerts}</span>
               </div>
             )}
           </button>
           <button aria-label="Settings" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
-            <Settings size={16} />
+            <Settings size={16} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -799,19 +826,23 @@ function NeuralBusViz({
   const protocol = neuralBus?.protocol ?? 'Neural-Bus/v1'
 
   return (
-    <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
+    <section aria-labelledby="neural-bus-heading" className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Radio size={14} className="text-violet-400" />
-          <span className="text-xs font-semibold text-gray-300">Neural Bus</span>
+          <Radio size={14} className="text-violet-400" aria-hidden="true" />
+          <h2 id="neural-bus-heading" className="text-xs font-semibold text-gray-300">Neural Bus</h2>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[9px] text-gray-600 font-mono">{protocol}</span>
+          <span className="text-[9px] text-gray-600 font-mono" aria-hidden="true">{protocol}</span>
           <span className="text-[10px] text-gray-600">{activeNodes} nodes active</span>
         </div>
       </div>
 
-      <div className="relative h-24 flex items-center justify-center">
+      <div
+        role="img"
+        aria-label={`Neural Bus topology: ${activeNodes} nodes active, status ${busStatus}`}
+        className="relative h-24 flex items-center justify-center"
+      >
         {/* Central node */}
         <div className="absolute w-8 h-8 rounded-full bg-violet-600/30 border border-violet-500/50 flex items-center justify-center">
           <Brain size={14} className="text-violet-300" />
@@ -854,7 +885,7 @@ function NeuralBusViz({
           })}
         </svg>
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -877,42 +908,42 @@ function CitadelWidget({
   const avgHealth = citadel?.avg_health ?? Math.round(hubStates.reduce((s, h) => s + h.healthScore, 0) / hubStates.length)
 
   return (
-    <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
+    <section aria-labelledby="citadel-heading" className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
       <div className="flex items-center gap-2 mb-3">
-        <Shield size={14} className="text-red-400" />
-        <span className="text-xs font-semibold text-gray-300">The Citadel — Master OS</span>
+        <Shield size={14} className="text-red-400" aria-hidden="true" />
+        <h2 id="citadel-heading" className="text-xs font-semibold text-gray-300">The Citadel — Master OS</h2>
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
+      <dl className="grid grid-cols-4 gap-2">
         <div className="flex flex-col items-center py-2 px-1 rounded-lg bg-gray-800/50">
-          <Server size={14} className="text-blue-400 mb-1" />
-          <span className="text-sm font-bold text-white">{totalServices}</span>
-          <span className="text-[9px] text-gray-600">Services</span>
+          <Server size={14} className="text-blue-400 mb-1" aria-hidden="true" />
+          <dd className="text-sm font-bold text-white">{totalServices}</dd>
+          <dt className="text-[9px] text-gray-600">Services</dt>
         </div>
         <div className="flex flex-col items-center py-2 px-1 rounded-lg bg-gray-800/50">
-          <Cpu size={14} className="text-emerald-400 mb-1" />
-          <span className="text-sm font-bold text-white">{totalAgents}</span>
-          <span className="text-[9px] text-gray-600">Agents</span>
+          <Cpu size={14} className="text-emerald-400 mb-1" aria-hidden="true" />
+          <dd className="text-sm font-bold text-white">{totalAgents}</dd>
+          <dt className="text-[9px] text-gray-600">Agents</dt>
         </div>
         <div className="flex flex-col items-center py-2 px-1 rounded-lg bg-gray-800/50">
-          <ShieldAlert size={14} className={openCircuits > 0 ? 'text-red-400 mb-1' : 'text-green-400 mb-1'} />
-          <span className={`text-sm font-bold ${openCircuits > 0 ? 'text-red-400' : 'text-green-400'}`}>{openCircuits}</span>
-          <span className="text-[9px] text-gray-600">Tripped</span>
+          <ShieldAlert size={14} className={openCircuits > 0 ? 'text-red-400 mb-1' : 'text-green-400 mb-1'} aria-hidden="true" />
+          <dd className={`text-sm font-bold ${openCircuits > 0 ? 'text-red-400' : 'text-green-400'}`}>{openCircuits}</dd>
+          <dt className="text-[9px] text-gray-600">Tripped</dt>
         </div>
         <div className="flex flex-col items-center py-2 px-1 rounded-lg bg-gray-800/50">
-          <Gauge size={14} style={{ color: avgHealth >= 85 ? '#10B981' : avgHealth >= 50 ? '#F59E0B' : '#EF4444' }} className="mb-1" />
-          <span className="text-sm font-bold text-white">{avgHealth}%</span>
-          <span className="text-[9px] text-gray-600">Health</span>
+          <Gauge size={14} style={{ color: avgHealth >= 85 ? '#10B981' : avgHealth >= 50 ? '#F59E0B' : '#EF4444' }} className="mb-1" aria-hidden="true" />
+          <dd className="text-sm font-bold text-white">{avgHealth}%</dd>
+          <dt className="text-[9px] text-gray-600">Health</dt>
         </div>
-      </div>
+      </dl>
 
       {halfOpenCircuits > 0 && (
-        <div className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-900/20 border border-amber-800/30">
-          <AlertTriangle size={12} className="text-amber-400" />
+        <div role="alert" className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-900/20 border border-amber-800/30">
+          <AlertTriangle size={12} className="text-amber-400" aria-hidden="true" />
           <span className="text-[10px] text-amber-400">{halfOpenCircuits} circuit(s) in half-open state</span>
         </div>
       )}
-    </div>
+    </section>
   )
 }
 
@@ -931,14 +962,21 @@ function SecurityWidget({ security }: { security: SecurityPosture | null }) {
   const vaultStatus = security?.vault_status ?? 'Sealed'
 
   return (
-    <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
+    <section aria-labelledby="security-heading" className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {scanStatus === 'scanning' ? 'Security scan in progress' : scanStatus === 'complete' ? 'Security scan complete' : ''}
+      </div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Lock size={14} className="text-emerald-400" />
-          <span className="text-xs font-semibold text-gray-300">Security Posture</span>
+          <Lock size={14} className="text-emerald-400" aria-hidden="true" />
+          <h2 id="security-heading" className="text-xs font-semibold text-gray-300">Security Posture</h2>
         </div>
-        <button onClick={() => { setScanStatus('scanning'); setTimeout(() => setScanStatus('complete'), 2000) }}
-                className="text-[10px] px-2 py-1 rounded bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+        <button
+          onClick={() => { setScanStatus('scanning'); setTimeout(() => setScanStatus('complete'), 2000) }}
+          aria-label={scanStatus === 'scanning' ? 'Security scan in progress' : scanStatus === 'complete' ? 'Security scan complete' : 'Run security scan'}
+          aria-busy={scanStatus === 'scanning'}
+          className="text-[10px] px-2 py-1 rounded bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
           {scanStatus === 'scanning' ? 'Scanning...' : scanStatus === 'complete' ? '✓ Done' : 'Run Scan'}
         </button>
       </div>
@@ -967,7 +1005,7 @@ function SecurityWidget({ security }: { security: SecurityPosture | null }) {
           <span className={`text-xs font-mono ${vaultStatus === 'Sealed' ? 'text-green-400' : 'text-amber-400'}`}>{vaultStatus}</span>
         </div>
       </div>
-    </div>
+    </section>
   )
 }
 
