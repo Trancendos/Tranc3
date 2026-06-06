@@ -37,7 +37,7 @@ const iconMap: Record<string, React.FC<any>> = {
 function HubIcon({ hubId, size = 20, color }: { hubId: string; size?: number; color?: string }) {
   const iconName = hubIcons[hubId] || 'Hexagon'
   const IconComp = iconMap[iconName] || Hexagon
-  return <IconComp size={size} color={color} />
+  return <IconComp size={size} color={color} aria-hidden="true" />
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -393,11 +393,63 @@ function HubCard({ hub, onClick }: { hub: HubState; onClick: (hub: HubState) => 
 // Hub Detail Panel (with live API detail fetch)
 // ─────────────────────────────────────────────────────────────────────────────
 
+const FOCUSABLE = [
+  'button:not([disabled])',
+  'a[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ')
+
 function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }) {
   const pillarColor = colors.hubs[hub.id as keyof typeof colors.hubs] || colors.brand.primary
   const pillarDef = pillars.find(p => p.id === hub.pillar)
   const [liveDetail, setLiveDetail] = useState<HubState | null>(null)
   const [detailLoading, setDetailLoading] = useState(true)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const closeBtnRef = useRef<HTMLButtonElement>(null)
+
+  // Auto-focus close button when panel opens; restore focus on close
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null
+    // Small delay ensures the panel is rendered and accessible
+    const timer = setTimeout(() => closeBtnRef.current?.focus(), 50)
+    return () => {
+      clearTimeout(timer)
+      // Return focus to the element that opened the panel
+      previousFocus?.focus()
+    }
+  }, [])
+
+  // Escape closes the panel
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose() }
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose])
+
+  // Focus trap — keep Tab/Shift+Tab within the panel
+  useEffect(() => {
+    const panel = panelRef.current
+    if (!panel) return
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+      const focusable = [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)]
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus() }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus() }
+      }
+    }
+    panel.addEventListener('keydown', handleTab)
+    return () => panel.removeEventListener('keydown', handleTab)
+  }, [])
 
   // Fetch detailed hub info from API when panel opens
   useEffect(() => {
@@ -416,7 +468,15 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
   const displayHub = liveDetail || hub
 
   return (
+    <>
+      {/* Backdrop — darkens main content behind dialog */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 bg-black/50 z-40"
+        onClick={onClose}
+      />
     <div
+      ref={panelRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby="hub-detail-title"
@@ -436,9 +496,10 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
             </div>
           </div>
           <button
+            ref={closeBtnRef}
             onClick={onClose}
             aria-label="Close hub detail panel"
-            className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-950"
           >
             <span aria-hidden="true">✕</span>
           </button>
@@ -532,6 +593,7 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
         </div>
       </div>
     </div>
+    </>
   )
 }
 
@@ -566,8 +628,8 @@ function Sidebar({
     <div className={`flex flex-col border-r border-gray-800 bg-gray-950 transition-all duration-200 ${collapsed ? 'w-16' : 'w-72'}`}>
       {/* Brand */}
       <div className="flex items-center gap-2 px-4 py-4 border-b border-gray-800">
-        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
-          <Brain size={18} className="text-white" />
+        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0" aria-hidden="true">
+          <Brain size={18} className="text-white" aria-hidden="true" />
         </div>
         {!collapsed && (
           <div className="flex-1 min-w-0">
@@ -575,9 +637,14 @@ function Sidebar({
             <div className="text-[10px] text-gray-600">Ecosystem Command</div>
           </div>
         )}
-        <button aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed(!collapsed)}
-                className="p-1 rounded hover:bg-gray-800 text-gray-600 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900">
-          <ChevronRight size={14} className={`transition-transform ${collapsed ? '' : 'rotate-180'}`} />
+        <button
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!collapsed}
+          aria-controls="dashboard-sidebar-nav"
+          onClick={() => setCollapsed(!collapsed)}
+          className="p-1 rounded hover:bg-gray-800 text-gray-600 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+        >
+          <ChevronRight size={14} className={`transition-transform ${collapsed ? '' : 'rotate-180'}`} aria-hidden="true" />
         </button>
       </div>
 
@@ -585,33 +652,50 @@ function Sidebar({
         <>
           {/* Nav to Chat */}
           <div className="px-3 py-2 border-b border-gray-800">
-            <button onClick={() => navigate('/')}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-500 hover:text-white hover:bg-gray-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-              <MessageSquare size={14} />
+            <button
+              onClick={() => navigate('/')}
+              aria-label="Back to Chat"
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-500 hover:text-white hover:bg-gray-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              <MessageSquare size={14} aria-hidden="true" />
               <span>Back to Chat</span>
             </button>
           </div>
 
           {/* System Mode Switcher */}
           <div className="px-3 py-3 border-b border-gray-800">
-            <div className="text-[10px] text-gray-600 uppercase tracking-wider mb-2 px-1">System Mode</div>
-            <div className="flex gap-1">
-              {(['TRUE_NAS', 'HYBRID', 'CLOUD_ONLY'] as SystemMode[]).map(mode => (
-                <button key={mode} onClick={() => onModeChange(mode)}
-                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                          systemMode === mode ? 'text-white' : 'text-gray-600 hover:text-gray-400'
-                        }`}
-                        style={systemMode === mode ? {
-                          backgroundColor: colors.systemMode[mode] + '25',
-                          border: `1px solid ${colors.systemMode[mode]}50`,
-                          color: colors.systemMode[mode],
-                        } : { border: '1px solid transparent' }}>
-                  {mode === 'TRUE_NAS' ? 'NAS' : mode === 'HYBRID' ? 'Mix' : 'Cloud'}
+            <div
+              id="system-mode-label"
+              className="text-[10px] text-gray-600 uppercase tracking-wider mb-2 px-1"
+            >
+              System Mode
+            </div>
+            <div role="group" aria-labelledby="system-mode-label" className="flex gap-1">
+              {([
+                ['TRUE_NAS',   'TrueNAS — local storage mode',  'NAS'],
+                ['HYBRID',     'Hybrid — mixed cloud and local', 'Mix'],
+                ['CLOUD_ONLY', 'Cloud Only — remote-first mode', 'Cloud'],
+              ] as [SystemMode, string, string][]).map(([mode, label, shortLabel]) => (
+                <button
+                  key={mode}
+                  onClick={() => onModeChange(mode)}
+                  aria-label={label}
+                  aria-pressed={systemMode === mode}
+                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-950 ${
+                    systemMode === mode ? 'text-white' : 'text-gray-600 hover:text-gray-400'
+                  }`}
+                  style={systemMode === mode ? {
+                    backgroundColor: colors.systemMode[mode] + '25',
+                    border: `1px solid ${colors.systemMode[mode]}50`,
+                    color: colors.systemMode[mode],
+                  } : { border: '1px solid transparent' }}
+                >
+                  {shortLabel}
                 </button>
               ))}
             </div>
-            {/* API status indicator */}
-            <div className="mt-2 flex items-center gap-1 px-1">
+            {/* API status — decorative; screen-reader version below */}
+            <div className="mt-2 flex items-center gap-1 px-1" aria-hidden="true">
               {apiConnected ? (
                 <Wifi size={10} className="text-green-500" />
               ) : (
@@ -621,6 +705,10 @@ function Sidebar({
                 {apiConnected ? 'Connected to API' : 'Using mock data'}
               </span>
             </div>
+            {/* Screen reader only status announcement */}
+            <span className="sr-only" role="status" aria-live="polite">
+              {apiConnected ? 'API connected — live data' : 'API unavailable — using mock data'}
+            </span>
           </div>
 
           {/* Search */}
@@ -632,20 +720,24 @@ function Sidebar({
                 id="hub-search"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search hubs..."
+                placeholder="Search hubs…"
                 type="search"
-                className="w-full bg-gray-900 border border-gray-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-gray-700"
+                autoComplete="off"
+                className="w-full bg-gray-900 border border-gray-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent transition-shadow"
               />
             </div>
           </div>
 
           {/* Overview */}
           <div className="px-3 py-2">
-            <button onClick={() => onSelectPillar(null)}
-                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                      activePillar === null ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
-                    }`}>
-              <LayoutDashboard size={14} />
+            <button
+              onClick={() => onSelectPillar(null)}
+              aria-pressed={activePillar === null}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-950 ${
+                activePillar === null ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
+              }`}
+            >
+              <LayoutDashboard size={14} aria-hidden="true" />
               <span className="flex-1 text-left">Overview</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-green-400">{onlineCount}</span>
@@ -658,8 +750,8 @@ function Sidebar({
           </div>
 
           {/* Pillars */}
-          <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-0.5">
-            <div className="text-[10px] text-gray-600 uppercase tracking-wider px-2 py-1">Pillars</div>
+          <div id="dashboard-sidebar-nav" className="flex-1 overflow-y-auto px-3 pb-3 space-y-0.5">
+            <div id="pillars-label" className="text-[10px] text-gray-600 uppercase tracking-wider px-2 py-1">Pillars</div>
             {pillars.map(pillar => {
               const pillarHubs = hubStates.filter(h => h.pillar === pillar.id)
               const pillarAlerts = pillarHubs.reduce((s, h) => s + h.alerts, 0)
@@ -669,10 +761,14 @@ function Sidebar({
               if (isFiltered) return null
 
               return (
-                <button key={pillar.id} onClick={() => onSelectPillar(pillar.id)}
-                        className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                          activePillar === pillar.id ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
-                        }`}>
+                <button
+                  key={pillar.id}
+                  onClick={() => onSelectPillar(pillar.id)}
+                  aria-pressed={activePillar === pillar.id}
+                  className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-950 ${
+                    activePillar === pillar.id ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
+                  }`}
+                >
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: pillar.color }} />
                   <span className="flex-1 text-left truncate">{pillar.name}</span>
                   <span className="text-[10px] text-gray-600">{pillar.hubs.length}</span>
@@ -687,22 +783,29 @@ function Sidebar({
       )}
 
       {collapsed && (
-        <div className="flex-1 flex flex-col items-center py-3 gap-2">
-          <button onClick={() => onSelectPillar(null)}
-                  aria-label="Overview"
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                    activePillar === null ? 'bg-gray-800 text-white' : 'text-gray-600 hover:text-white hover:bg-gray-900'
-                  }`}>
-            <LayoutDashboard size={16} />
+        <div id="dashboard-sidebar-nav" className="flex-1 flex flex-col items-center py-3 gap-2">
+          <button
+            onClick={() => onSelectPillar(null)}
+            aria-label="Show all hubs — Overview"
+            aria-pressed={activePillar === null}
+            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 ${
+              activePillar === null ? 'bg-gray-800 text-white' : 'text-gray-600 hover:text-white hover:bg-gray-900'
+            }`}
+          >
+            <LayoutDashboard size={16} aria-hidden="true" />
           </button>
           {pillars.map(pillar => (
-            <button key={pillar.id} onClick={() => onSelectPillar(pillar.id)}
-                    aria-label={`Filter by ${pillar.name} pillar`}
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                      activePillar === pillar.id ? 'bg-gray-800' : 'hover:bg-gray-900'
-                    }`}
-                    title={pillar.name}>
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: pillar.color }} />
+            <button
+              key={pillar.id}
+              onClick={() => onSelectPillar(pillar.id)}
+              aria-label={`Filter by ${pillar.name} pillar`}
+              aria-pressed={activePillar === pillar.id}
+              className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 ${
+                activePillar === pillar.id ? 'bg-gray-800' : 'hover:bg-gray-900'
+              }`}
+            >
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: pillar.color }} aria-hidden="true" />
+              <span className="sr-only">{pillar.name}</span>
             </button>
           ))}
         </div>
@@ -774,7 +877,12 @@ function TopBar({
         </dl>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        {/* Screen reader live announcement for refresh state */}
+        <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {refreshing ? 'Refreshing dashboard data…' : ''}
+        </span>
+
+        <div className="flex items-center gap-2" role="toolbar" aria-label="Dashboard actions">
           <button
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             onClick={toggleTheme}
@@ -782,12 +890,20 @@ function TopBar({
           >
             <SunMoon size={16} aria-hidden="true" />
           </button>
-          <button aria-label="Refresh Dashboard" onClick={onRefresh}
-                  className={`p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 ${refreshing ? 'animate-spin' : ''}`}>
-            <RefreshCw size={16} aria-hidden="true" />
+          <button
+            aria-label={refreshing ? 'Refreshing dashboard data' : 'Refresh dashboard'}
+            aria-busy={refreshing}
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {/* Spin only the icon, not the entire button (preserves focus ring) */}
+            <span className={refreshing ? 'block animate-spin' : 'block'} aria-hidden="true">
+              <RefreshCw size={16} />
+            </span>
           </button>
           <button
-            aria-label={totalAlerts > 0 ? `Notifications: ${totalAlerts} alert${totalAlerts !== 1 ? 's' : ''}` : 'Notifications'}
+            aria-label={totalAlerts > 0 ? `Notifications — ${totalAlerts} alert${totalAlerts !== 1 ? 's' : ''}` : 'Notifications — no alerts'}
             className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
             <Bell size={16} aria-hidden="true" />
@@ -797,7 +913,7 @@ function TopBar({
               </div>
             )}
           </button>
-          <button aria-label="Settings" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
+          <button aria-label="Open settings" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
             <Settings size={16} aria-hidden="true" />
           </button>
         </div>
@@ -861,14 +977,16 @@ function NeuralBusViz({
             : (colors.hubs[hubId as keyof typeof colors.hubs] || colors.brand.primary)
 
           return (
-            <div key={hubId}
-                 className="absolute w-5 h-5 rounded-full flex items-center justify-center transition-all duration-500"
-                 style={{
-                   transform: `translate(${x}px, ${y}px)`,
-                   backgroundColor: hubColor + '30',
-                   border: `1.5px solid ${hubColor}60`,
-                 }}
-                 title={hubId}>
+            <div
+              key={hubId}
+              aria-hidden="true"
+              className="absolute w-5 h-5 rounded-full flex items-center justify-center transition-all duration-500"
+              style={{
+                transform: `translate(${x}px, ${y}px)`,
+                backgroundColor: hubColor + '30',
+                border: `1.5px solid ${hubColor}60`,
+              }}
+            >
               <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: hubColor }} />
             </div>
           )

@@ -54,8 +54,9 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
         <button
           onClick={() => setCollapsed(!collapsed)}
           aria-expanded={!collapsed}
+          aria-controls="sidebar-nav-list"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="text-gray-400 hover:text-white transition-colors ml-auto rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 p-0.5"
+          className="text-gray-400 hover:text-white transition-colors ml-auto rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-900 p-0.5"
         >
           {collapsed
             ? <ChevronRight size={16} aria-hidden="true" />
@@ -64,7 +65,7 @@ export default function NavBar({ username, onLogout }: NavBarProps) {
       </div>
 
       {/* Nav items */}
-      <ul role="list" className="flex-1 py-2 overflow-y-auto space-y-0.5 px-1">
+      <ul id="sidebar-nav-list" role="list" className="flex-1 py-2 overflow-y-auto space-y-0.5 px-1">
         {NAV_ITEMS.map((item) => {
           const active = location.pathname === item.path
           return (
