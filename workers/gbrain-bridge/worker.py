@@ -27,6 +27,7 @@ import math
 import os
 import re
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from collections import defaultdict, deque
@@ -75,7 +76,7 @@ class _DB:
 
     def conn(self) -> sqlite3.Connection:
         if self._conn is None:
-            self._conn = sqlite3.connect(str(self._path), check_same_thread=False)
+            self._conn = sqlite3_connect(str(self._path), check_same_thread=False)
             self._conn.row_factory = sqlite3.Row
             self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("PRAGMA foreign_keys=ON")

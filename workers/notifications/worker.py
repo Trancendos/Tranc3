@@ -15,6 +15,7 @@ import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import threading
 import uuid
 from collections import defaultdict
@@ -155,7 +156,7 @@ class NotificationsDatabase:
 
     def _get_conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
+            self._local.conn = sqlite3_connect(str(self.db_path), timeout=10)
             self._local.conn.row_factory = sqlite3.Row
             self._local.conn.execute("PRAGMA journal_mode=WAL")
             self._local.conn.execute("PRAGMA synchronous=NORMAL")

@@ -2,12 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Remove focus outline on programmatically-focused main landmark */
+/* ── Focus ring design tokens ────────────────────────────────────────────────
+   Change these two custom properties to retheme focus rings site-wide.
+   Components reference Tailwind ring classes that map to these values:
+     ring-indigo-500  →  var(--tranc3-ring)
+     ring-blue-500    →  var(--tranc3-ring-alt)  (top-bar / dashboard sidebar)
+     ring-offset-gray-900  →  var(--tranc3-ring-offset-sidebar)
+     ring-offset-gray-950  →  var(--tranc3-ring-offset-topbar)
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --tranc3-ring:               #6366f1; /* indigo-500 */
+  --tranc3-ring-alt:           #3b82f6; /* blue-500  */
+  --tranc3-ring-offset:        #111827; /* gray-900  */
+  --tranc3-ring-offset-dark:   #030712; /* gray-950  */
+}
+
+/* ── Skip link — hidden visually until focused ───────────────────────────────
+   Base hidden state lives in index.html; this file adds the animation +
+   focus-visible upgrade so it meets WCAG 2.4.7 (visible focus).
+   ─────────────────────────────────────────────────────────────────────────── */
+.skip-link:focus {
+  animation: skip-appear 0.12s ease-out both;
+}
+
+@keyframes skip-appear {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* ── Global :focus-visible base ─────────────────────────────────────────────
+   Browsers that don't support :focus-visible still get an outline on
+   keyboard navigation (the :focus fallback); browsers that do support it
+   strip the outline for pointer/touch and let Tailwind's focus-visible:ring
+   classes take over.
+   ─────────────────────────────────────────────────────────────────────────── */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Remove focus outline on programmatically-focused landmarks ────────────── */
 #main-content:focus {
   outline: none;
 }
 
-/* Disable animations for users who prefer reduced motion */
+/* ── Reusable focus-ring utility classes ────────────────────────────────────
+   Use these on interactive elements so ring style is consistent and easy
+   to update platform-wide by changing the tokens above.
+
+   tr3-focus          — sidebar / modal context (indigo, gray-900 offset)
+   tr3-focus-blue     — dashboard top-bar context (blue, gray-950 offset)
+   tr3-focus-icon     — icon-only controls (blue, offset-2, rounded)
+   tr3-focus-inset    — nav items where an inset ring looks cleaner
+   ─────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .tr3-focus {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-900;
+  }
+  .tr3-focus-blue {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950;
+  }
+  .tr3-focus-icon {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 rounded-lg;
+  }
+  .tr3-focus-inset {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500;
+  }
+}
+
+/* ── Disable all animations for users who prefer reduced motion ──────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -17,9 +79,18 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  /* Prevent skip-link animation too */
+  .skip-link:focus {
+    animation: none;
+  }
 }
 
-/* High-contrast mode — ensure borders and interactive elements are visible */
+/* ── Windows High Contrast (forced-colors) mode ─────────────────────────────
+   Custom colours are reset to system colours in forced-colors mode.
+   We need explicit borders on elements that rely on background-colour alone
+   to convey state (e.g. active nav items, status rings).
+   ─────────────────────────────────────────────────────────────────────────── */
 @media (forced-colors: active) {
   .bg-gray-900,
   .bg-gray-800,
@@ -37,15 +108,31 @@
     background-color: Highlight;
   }
 
+  /* Status colours rendered as ButtonText in high-contrast */
   .text-green-400,
   .text-yellow-400,
   .text-red-400,
-  .text-indigo-400 {
+  .text-indigo-400,
+  .text-blue-400,
+  .text-amber-400 {
     color: ButtonText;
   }
 
-  /* Ensure status badges have borders in high-contrast */
+  /* Ensure status/info badges have visible borders */
   [aria-label]:not(button):not(a) {
     border: 1px solid ButtonText;
+  }
+
+  /* Active nav items must show visible selection in high-contrast */
+  [aria-current="page"],
+  [aria-pressed="true"] {
+    border: 2px solid Highlight;
+    outline: 2px solid Highlight;
+  }
+
+  /* Focus rings must use system Highlight colour */
+  :focus-visible {
+    outline: 3px solid Highlight !important;
+    outline-offset: 2px !important;
   }
 }

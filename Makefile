@@ -117,19 +117,6 @@ swarm-run:
 entity-audit:
 	@python3 scripts/entity_registry_audit.py
 
-# ── DEFSTAN Compliance ────────────────────────────────────────────────────────
-compliance-check:
-	@echo "Running DEFSTAN compliance check..."
-	python -m src.compliance.checker
-
-compliance-report:
-	@echo "Generating DEFSTAN compliance report..."
-	python -m src.compliance.checker --report
-
-compliance-ci:
-	@echo "Running DEFSTAN compliance CI gate (threshold: 70%)..."
-	python -m src.compliance.checker --ci
-
 ansible-health:
 	@ansible-playbook -i deploy/ansible/inventory/workers.yml deploy/ansible/playbooks/health-probe.yml
 
@@ -237,3 +224,31 @@ compliance-report:
 compliance-ci:
 	@echo "Running DEFSTAN compliance CI gate (threshold: 70%)..."
 	python -m src.compliance.checker --ci
+
+gate-check:
+	@echo "Running 13-Gate lifecycle compliance check..."
+	python -m src.compliance.gate_lifecycle
+
+zero-cost-status:
+	python -c "from src.monitoring.zero_cost_tracker import tracker; import json; print(json.dumps(tracker.get_summary(), indent=2))"
+
+# ── Disaster Recovery ─────────────────────────────────────────────────────────
+backup-status:
+	python scripts/dr_restore.py rpo-status
+
+backup-all:
+	python scripts/dr_restore.py list
+
+dr-drill:
+	@echo "Running DR drill (verify + dry-run restore all workers)..."
+	python scripts/dr_restore.py dr-drill
+
+dr-verify:
+	python scripts/dr_restore.py verify
+
+# ── Performance Regression Gate (REQ-QA-007) ──────────────────────────────────
+perf-gate:
+	python -m src.benchmark.perf_gate
+
+perf-gate-update:
+	python -m src.benchmark.perf_gate --update

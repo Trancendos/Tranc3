@@ -334,7 +334,7 @@ async def lifespan(app: FastAPI):
         model = AdvancedTransformerModel(cfg)
         if os.path.exists(cfg.model_path):
             if _TORCH_AVAILABLE and torch is not None:
-                model.load_state_dict(torch.load(cfg.model_path, map_location="cpu"))
+                model.load_state_dict(torch.load(cfg.model_path, map_location="cpu", weights_only=True))
             logger.info("Model weights loaded")
         else:
             logger.warning("No model weights — echo mode active")
@@ -428,12 +428,38 @@ async def lifespan(app: FastAPI):
     except Exception as _ab_exc:
         logger.warning("Admin OS auto-backup unavailable: %s", sanitize_for_log(_ab_exc))
 
+    # Event Bus wiring — Observatory → EventBus → Library/ThinkTank/Search/Sentinel
+    try:
+        from src.event_bus import get_event_bus
+        from src.event_bus.wiring import wire_platform_events
+
+        wire_platform_events(get_event_bus())
+        logger.info("Event Bus wiring active (TR3-005)")
+    except Exception as _eb_exc:
+        logger.warning("Event Bus wiring unavailable: %s", sanitize_for_log(_eb_exc))
+
+    # Section 7 threat intelligence loop — CVE/OSV/CISA feed polling
+    _threat_intel_task = None
+    try:
+        from src.section7.threat_intel_loop import start_threat_intel_loop
+
+        _threat_intel_task = await start_threat_intel_loop()
+        logger.info("Section 7 threat intel loop started (TR3-006)")
+    except Exception as _ti_exc:
+        logger.warning("Section 7 threat intel loop unavailable: %s", sanitize_for_log(_ti_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield
 
     logger.info("TRANC3 shutting down")
     _bootstrap_complete = False
+    try:
+        from src.section7.threat_intel_loop import stop_threat_intel_loop
+
+        await stop_threat_intel_loop()
+    except Exception:
+        pass
     if _knowledge_brain is not None:
         try:
             await _knowledge_brain.stop_dream_cycle()
@@ -874,6 +900,10 @@ app.include_router(_adaptive_router)
 from src.routers.admin_os import router as _admin_os_router  # noqa: F401
 
 app.include_router(_admin_os_router)
+
+from src.monitoring.api_routes import router as monitoring_router  # noqa: F401
+
+app.include_router(monitoring_router, tags=["monitoring"])
 
 # ── Dashboard & Infinity Admin OS (static, zero-cost) ─────────────────────────
 _DASHBOARD_DIR = os.path.join(os.path.dirname(__file__), "dashboard")

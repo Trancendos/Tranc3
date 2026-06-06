@@ -31,11 +31,14 @@ interface Job {
 }
 
 function statusIcon(s: Job['status']) {
-  const label = s === 'done' ? 'Done' : s === 'running' ? 'Running' : s === 'failed' ? 'Failed' : 'Pending'
-  if (s === 'done')    return <CheckCircle size={14} aria-label={label} className="text-green-400" />
-  if (s === 'running') return <Play        size={14} aria-label={label} className="text-indigo-400" />
-  if (s === 'failed')  return <XCircle     size={14} aria-label={label} className="text-red-400" />
-  return                      <Clock       size={14} aria-label={label} className="text-gray-400" />
+  if (s === 'done')    return <CheckCircle size={14} aria-hidden="true" className="text-green-400" />
+  if (s === 'running') return <Play        size={14} aria-hidden="true" className="text-indigo-400" />
+  if (s === 'failed')  return <XCircle     size={14} aria-hidden="true" className="text-red-400" />
+  return                      <Clock       size={14} aria-hidden="true" className="text-gray-400" />
+}
+
+const JOB_STATUS_LABEL: Record<Job['status'], string> = {
+  done: 'Done', running: 'Running', failed: 'Failed', pending: 'Pending',
 }
 
 function queueStatusColor(s: QueueStats['status']) {
@@ -89,6 +92,13 @@ export default function QueuePage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
+      {/* Live status announcer */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {lastRun
+          ? `Queue status updated at ${lastRun}. ${totalDepth} pending, ${totalProcessed} processed, ${totalFailed} failed.`
+          : 'Loading queue status…'}
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -103,7 +113,9 @@ export default function QueuePage() {
         <button
           onClick={fetchStatus}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm text-white transition-colors"
+          aria-busy={loading}
+          aria-label={loading ? 'Refreshing queue status' : 'Refresh queue status'}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
         >
           <RefreshCw size={14} aria-hidden="true" className={loading ? 'animate-spin' : ''} />
           {loading ? 'Refreshing…' : 'Refresh'}
@@ -111,14 +123,23 @@ export default function QueuePage() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div
+        className="grid grid-cols-3 gap-4 mb-6"
+        role="list"
+        aria-label="Queue summary statistics"
+      >
         {[
           { label: 'Pending', value: totalDepth, color: 'text-yellow-400 border-yellow-700' },
           { label: 'Processed', value: totalProcessed, color: 'text-green-400 border-green-700' },
           { label: 'Failed', value: totalFailed, color: 'text-red-400 border-red-700' },
         ].map(({ label, value, color }) => (
-          <div key={label} className={`bg-gray-900 border ${color} rounded-lg p-4`}>
-            <div className={`text-3xl font-bold ${color.split(' ')[0]}`}>{value}</div>
+          <div
+            key={label}
+            role="listitem"
+            aria-label={`${value} ${label}`}
+            className={`bg-gray-900 border ${color} rounded-lg p-4`}
+          >
+            <div className={`text-3xl font-bold tabular-nums ${color.split(' ')[0]}`} aria-hidden="true">{value}</div>
             <div className="text-gray-400 text-sm mt-1">{label}</div>
           </div>
         ))}
@@ -126,7 +147,7 @@ export default function QueuePage() {
 
       {/* Queue backends */}
       <div className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden mb-6">
-        <table className="w-full text-sm" aria-label="Queue backend providers">
+        <table className="w-full text-sm" aria-label="Queue backend providers" aria-busy={loading}>
           <thead>
             <tr className="border-b border-gray-700">
               <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Provider</th>
@@ -163,7 +184,11 @@ export default function QueuePage() {
           <h2 className="text-white font-semibold mb-3">Recent Jobs</h2>
           <div className="space-y-2">
             {jobs.map((j) => (
-              <div key={j.id} className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 flex items-center gap-3">
+              <div
+                key={j.id}
+                aria-label={`${JOB_STATUS_LABEL[j.status]}: ${j.type}`}
+                className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 flex items-center gap-3"
+              >
                 {statusIcon(j.status)}
                 <div className="flex-1 min-w-0">
                   <p className="text-gray-200 text-sm truncate">{j.type}</p>

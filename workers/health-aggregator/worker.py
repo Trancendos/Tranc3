@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -76,7 +77,7 @@ DEFAULT_SERVICES = [
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn

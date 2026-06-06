@@ -138,3 +138,49 @@ describe('NotificationsPage a11y', () => {
     expect(results).toHaveNoViolations()
   })
 })
+
+// ── TrancendosDashboard ───────────────────────────────────────────────────────
+
+describe('TrancendosDashboard a11y', () => {
+  it('has no axe violations (loading / mock-data state)', async () => {
+    global.fetch = async () => new Response('null', { status: 503 })
+
+    const { ThemeProvider } = await import('../contexts/ThemeContext')
+    const { container } = await import('../trancendos/Dashboard').then(
+      ({ default: TrancendosDashboard }) =>
+        withRouter(
+          <ThemeProvider>
+            <TrancendosDashboard />
+          </ThemeProvider>
+        )
+    )
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
+  })
+})
+
+// ── SparkDashboard ────────────────────────────────────────────────────────────
+
+describe('SparkDashboard a11y', () => {
+  it('has no axe violations (idle / empty tools state)', async () => {
+    global.fetch = async (url: RequestInfo | URL) => {
+      const u = url.toString()
+      if (u.includes('/mcp/health')) {
+        return new Response(JSON.stringify({ status: 'ok' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(JSON.stringify({ tools: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { container } = await import('../trancendos/SparkDashboard').then(
+      ({ default: SparkDashboard }) => withRouter(<SparkDashboard />)
+    )
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
+  })
+})

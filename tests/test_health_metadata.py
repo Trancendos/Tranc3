@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import tempfile
 from pathlib import Path
 
@@ -32,7 +33,7 @@ class TestOverrideStore:
     def test_load_from_sqlite(self, monkeypatch):
         with tempfile.TemporaryDirectory() as tmp:
             db_path = Path(tmp) / "admin.db"
-            conn = sqlite3.connect(db_path)
+            conn = sqlite3_connect(db_path)
             conn.execute(
                 """CREATE TABLE entity_overrides (
                 id TEXT PRIMARY KEY, location_pid TEXT, entity_type TEXT,

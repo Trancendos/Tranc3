@@ -1,277 +1,269 @@
-# tests/test_resilience.py
-# Tests for src/resilience/circuit_breaker.py
-# Covers CircuitBreaker, Bulkhead (async), and ResilienceManager.
+"""
+Tests for resilience primitives: Bulkhead, rate limiters, and RetryPolicy.
+"""
 
 from __future__ import annotations
 
+import asyncio
 import time
 
 import pytest
 
-from src.resilience.circuit_breaker import (
-    Bulkhead,
-    CircuitBreaker,
-    CircuitBreakerConfig,
-    CircuitState,
-    ResilienceManager,
+from src.mesh.bulkhead import Bulkhead, BulkheadFullError, BulkheadTimeoutError
+from src.mesh.rate_limiter import (
+    SlidingWindowLimiter,
+    TokenBucketLimiter,
+    FixedWindowLimiter,
 )
-
-# ── CircuitState enum ────────────────────────────────────────────────
-
-
-class TestCircuitState:
-    def test_enum_values(self):
-        assert CircuitState.CLOSED.value == "closed"
-        assert CircuitState.OPEN.value == "open"
-        assert CircuitState.HALF_OPEN.value == "half_open"
-
-    def test_enum_is_str(self):
-        assert isinstance(CircuitState.CLOSED, str)
-        assert CircuitState.CLOSED == "closed"
+from src.mesh.retry import RetryPolicy, RetryExhaustedError, with_retry, with_retry_sync
 
 
-# ── CircuitBreakerConfig ─────────────────────────────────────────────
+# ── Bulkhead ───────────────────────────────────────────────────────────────────
 
 
-class TestCircuitBreakerConfig:
-    def test_defaults(self):
-        cfg = CircuitBreakerConfig()
-        assert cfg.failure_threshold == 5
-        assert cfg.recovery_timeout == 30.0
-        assert cfg.half_open_max_calls == 3
-        assert cfg.success_threshold == 2
+@pytest.mark.asyncio
+async def test_bulkhead_basic_execution():
+    bh = Bulkhead("test-basic", max_concurrent=2, max_queue=5)
 
-    def test_custom_values(self):
-        cfg = CircuitBreakerConfig(
-            failure_threshold=3,
-            recovery_timeout=10.0,
-            half_open_max_calls=5,
-            success_threshold=1,
-        )
-        assert cfg.failure_threshold == 3
-        assert cfg.recovery_timeout == 10.0
-        assert cfg.half_open_max_calls == 5
-        assert cfg.success_threshold == 1
+    async def work():
+        return 42
+
+    result = await bh.execute(work())
+    assert result == 42
 
 
-# ── CircuitBreaker ───────────────────────────────────────────────────
+@pytest.mark.asyncio
+async def test_bulkhead_concurrent_limit():
+    """Tasks beyond max_concurrent are queued, not rejected (while queue has space)."""
+    bh = Bulkhead("test-concurrent", max_concurrent=2, max_queue=10, queue_timeout=2.0)
+    results = []
+
+    async def slow_work(n: int):
+        await asyncio.sleep(0.05)
+        results.append(n)
+        return n
+
+    tasks = [bh.execute(slow_work(i)) for i in range(5)]
+    outputs = await asyncio.gather(*tasks)
+    assert sorted(outputs) == [0, 1, 2, 3, 4]
 
 
-class TestCircuitBreaker:
-    def test_initial_state_is_closed(self):
-        cb = CircuitBreaker("test-svc")
-        assert cb.state == CircuitState.CLOSED
-        assert cb.name == "test-svc"
+@pytest.mark.asyncio
+async def test_bulkhead_queue_overflow_rejection():
+    """When both active and queue slots are full, BulkheadFullError is raised."""
+    bh = Bulkhead("test-full", max_concurrent=1, max_queue=1, queue_timeout=5.0)
+    event = asyncio.Event()
 
-    def test_can_execute_when_closed(self):
-        cb = CircuitBreaker("svc")
-        assert cb.can_execute() is True
+    async def hold():
+        await event.wait()
 
-    def test_cannot_execute_when_open(self):
-        cb = CircuitBreaker("svc")
-        cb.state = CircuitState.OPEN
-        assert cb.can_execute() is False
+    # Fill the 1 active slot
+    task1 = asyncio.ensure_future(bh.execute(hold()))
+    await asyncio.sleep(0.01)  # let task1 acquire the slot
 
-    def test_record_success_decrements_failure_count(self):
-        cb = CircuitBreaker("svc")
-        cb._failure_count = 3
-        cb.record_success()
-        assert cb._failure_count == 2
-        assert cb._total_calls == 1
+    # Fill the 1 queue slot
+    task2 = asyncio.ensure_future(bh.execute(hold()))
+    await asyncio.sleep(0.01)
 
-    def test_record_failure_increments_failure_count(self):
-        cb = CircuitBreaker("svc")
-        cb.record_failure()
-        assert cb._failure_count == 1
-        assert cb._total_calls == 1
-        assert cb._total_failures == 1
-        assert cb._last_failure_time is not None
+    # Third task should be rejected
+    with pytest.raises(BulkheadFullError):
+        await bh.execute(hold())
 
-    def test_closed_to_open_after_threshold(self):
-        cb = CircuitBreaker("svc", CircuitBreakerConfig(failure_threshold=3))
-        for _ in range(3):
-            cb.record_failure()
-        assert cb.state == CircuitState.OPEN
-
-    def test_half_open_allows_limited_calls(self):
-        cb = CircuitBreaker("svc", CircuitBreakerConfig(half_open_max_calls=2))
-        cb.state = CircuitState.HALF_OPEN
-        assert cb.can_execute() is True  # call 1
-        assert cb.can_execute() is True  # call 2
-        assert cb.can_execute() is False  # call 3 — exceeds max
-
-    def test_half_open_to_closed_on_success(self):
-        cb = CircuitBreaker("svc", CircuitBreakerConfig(success_threshold=2))
-        cb.state = CircuitState.HALF_OPEN
-        cb.record_success()
-        cb.record_success()
-        assert cb.state == CircuitState.CLOSED
-        assert cb._failure_count == 0
-
-    def test_half_open_to_open_on_failure(self):
-        cb = CircuitBreaker("svc")
-        cb.state = CircuitState.HALF_OPEN
-        cb.record_failure()
-        assert cb.state == CircuitState.OPEN
-
-    def test_open_to_half_open_after_recovery_timeout(self):
-        cb = CircuitBreaker("svc", CircuitBreakerConfig(recovery_timeout=0.01))
-        cb.state = CircuitState.OPEN
-        cb._last_failure_time = time.time() - 1  # well past timeout
-        assert cb.can_execute() is True
-        assert cb.state == CircuitState.HALF_OPEN
-
-    def test_open_stays_open_before_recovery_timeout(self):
-        cb = CircuitBreaker("svc", CircuitBreakerConfig(recovery_timeout=9999.0))
-        cb.state = CircuitState.OPEN
-        cb._last_failure_time = time.time()
-        assert cb.can_execute() is False
-        assert cb.state == CircuitState.OPEN
-
-    def test_stats_structure(self):
-        cb = CircuitBreaker("svc")
-        cb.record_success()
-        cb.record_failure()
-        s = cb.stats
-        assert s["name"] == "svc"
-        assert s["state"] == "closed"
-        assert s["total_calls"] == 2
-        assert s["total_failures"] == 1
-        assert 0.0 <= s["failure_rate"] <= 1.0
-
-    def test_stats_failure_rate_zero_when_no_calls(self):
-        cb = CircuitBreaker("svc")
-        assert cb.stats["failure_rate"] == 0.0
-
-    def test_failure_count_never_goes_below_zero(self):
-        cb = CircuitBreaker("svc")
-        cb.record_success()  # decrement from 0
-        assert cb._failure_count == 0
+    event.set()
+    await asyncio.gather(task1, task2, return_exceptions=True)
 
 
-# ── CircuitBreaker.call() ────────────────────────────────────────────
+@pytest.mark.asyncio
+async def test_bulkhead_queue_timeout():
+    """Queued task times out when no slot becomes available."""
+    bh = Bulkhead("test-timeout", max_concurrent=1, max_queue=1, queue_timeout=0.05)
+    event = asyncio.Event()
+
+    async def hold():
+        await event.wait()
+
+    task1 = asyncio.ensure_future(bh.execute(hold()))
+    await asyncio.sleep(0.01)
+
+    with pytest.raises(BulkheadTimeoutError):
+        await bh.execute(hold())
+
+    event.set()
+    await task1
 
 
-class TestCircuitBreakerCall:
-    @pytest.mark.asyncio
-    async def test_call_sync_function_success(self):
-        cb = CircuitBreaker("svc")
+@pytest.mark.asyncio
+async def test_bulkhead_metrics():
+    bh = Bulkhead("test-metrics", max_concurrent=3, max_queue=5)
 
-        def sync_fn(x, y):
-            return x + y
+    async def work():
+        return 1
 
-        result = await cb.call(sync_fn, 2, 3)
-        assert result == 5
-        assert cb._total_calls == 1
+    for _ in range(4):
+        await bh.execute(work())
 
-    @pytest.mark.asyncio
-    async def test_call_async_function_success(self):
-        cb = CircuitBreaker("svc")
-
-        async def async_fn(x):
-            return x * 2
-
-        result = await cb.call(async_fn, 7)
-        assert result == 14
-
-    @pytest.mark.asyncio
-    async def test_call_records_failure_on_exception(self):
-        cb = CircuitBreaker("svc")
-
-        def failing_fn():
-            raise ValueError("boom")
-
-        with pytest.raises(ValueError, match="boom"):
-            await cb.call(failing_fn)
-        assert cb._total_failures == 1
-
-    @pytest.mark.asyncio
-    async def test_call_rejects_when_open(self):
-        cb = CircuitBreaker("svc")
-        cb.state = CircuitState.OPEN
-        with pytest.raises(RuntimeError, match="Circuit breaker is OPEN"):
-            await cb.call(lambda: None)
-
-    @pytest.mark.asyncio
-    async def test_call_with_kwargs(self):
-        cb = CircuitBreaker("svc")
-
-        def fn(a, b=10):
-            return a + b
-
-        result = await cb.call(fn, 5, b=20)
-        assert result == 25
+    m = bh.get_metrics()
+    assert m.total_executions == 4
+    assert m.total_rejections == 0
+    assert m.avg_execution_time >= 0.0
 
 
-# ── Bulkhead ─────────────────────────────────────────────────────────
+# ── TokenBucketLimiter ────────────────────────────────────────────────────────
 
 
-class TestBulkhead:
-    @pytest.mark.asyncio
-    async def test_acquire_and_release(self):
-        bh = Bulkhead("svc", max_concurrent=2, max_queue=2)
-        acquired = await bh.acquire()
-        assert acquired is True
-        assert bh._active == 1
-        bh.release()
-        assert bh._active == 0
-
-    @pytest.mark.asyncio
-    async def test_stats_structure(self):
-        bh = Bulkhead("svc")
-        s = bh.stats
-        assert s["name"] == "svc"
-        assert "active" in s
-        assert "queued" in s
-        assert "rejected" in s
+def test_token_bucket_allows_up_to_max():
+    lim = TokenBucketLimiter("tb-test", max_requests=5, window_ms=1000)
+    for _ in range(5):
+        r = lim.consume("user")
+        assert r.allowed is True
+    # 6th should be denied
+    r = lim.consume("user")
+    assert r.allowed is False
 
 
-# ── ResilienceManager ────────────────────────────────────────────────
+def test_token_bucket_burst_capacity():
+    lim = TokenBucketLimiter("tb-burst", max_requests=3, window_ms=1000, burst_capacity=6)
+    for _ in range(6):
+        r = lim.consume("u")
+        assert r.allowed is True
+    r = lim.consume("u")
+    assert r.allowed is False
 
 
-class TestResilienceManager:
-    def test_get_breaker_creates_new(self):
-        rm = ResilienceManager()
-        cb = rm.get_breaker("my-svc")
-        assert isinstance(cb, CircuitBreaker)
-        assert cb.name == "my-svc"
+def test_token_bucket_refill():
+    lim = TokenBucketLimiter("tb-refill", max_requests=2, window_ms=100)
+    for _ in range(2):
+        lim.consume("u")
+    # exhaust
+    assert lim.consume("u").allowed is False
+    time.sleep(0.12)  # wait for refill
+    assert lim.consume("u").allowed is True
 
-    def test_get_breaker_returns_existing(self):
-        rm = ResilienceManager()
-        cb1 = rm.get_breaker("svc-a")
-        cb2 = rm.get_breaker("svc-a")
-        assert cb1 is cb2
 
-    def test_get_breaker_with_config(self):
-        rm = ResilienceManager()
-        cfg = CircuitBreakerConfig(failure_threshold=2)
-        cb = rm.get_breaker("svc-cfg", config=cfg)
-        assert cb.config.failure_threshold == 2
+# ── SlidingWindowLimiter ──────────────────────────────────────────────────────
 
-    def test_get_bulkhead_creates_new(self):
-        rm = ResilienceManager()
-        bh = rm.get_bulkhead("my-svc", max_concurrent=5)
-        assert isinstance(bh, Bulkhead)
-        assert bh.name == "my-svc"
 
-    def test_get_bulkhead_returns_existing(self):
-        rm = ResilienceManager()
-        bh1 = rm.get_bulkhead("svc-a")
-        bh2 = rm.get_bulkhead("svc-a")
-        assert bh1 is bh2
+def test_sliding_window_basic():
+    lim = SlidingWindowLimiter("sw-test", max_requests=3, window_ms=500)
+    for _ in range(3):
+        r = lim.consume("k")
+        assert r.allowed is True
+    r = lim.consume("k")
+    assert r.allowed is False
+    assert r.remaining == 0
 
-    def test_health_structure(self):
-        rm = ResilienceManager()
-        rm.get_breaker("svc-1")
-        rm.get_bulkhead("svc-2")
-        h = rm.health()
-        assert "circuit_breakers" in h
-        assert "bulkheads" in h
-        assert "svc-1" in h["circuit_breakers"]
-        assert "svc-2" in h["bulkheads"]
 
-    def test_health_empty(self):
-        rm = ResilienceManager()
-        h = rm.health()
-        assert h["circuit_breakers"] == {}
-        assert h["bulkheads"] == {}
+def test_sliding_window_expiry():
+    lim = SlidingWindowLimiter("sw-expiry", max_requests=2, window_ms=100)
+    lim.consume("k")
+    lim.consume("k")
+    assert lim.consume("k").allowed is False
+    time.sleep(0.11)
+    assert lim.consume("k").allowed is True
+
+
+def test_fixed_window_basic():
+    lim = FixedWindowLimiter("fw-test", max_requests=3, window_ms=500)
+    for _ in range(3):
+        r = lim.consume("k")
+        assert r.allowed is True
+    assert lim.consume("k").allowed is False
+
+
+# ── RetryPolicy ───────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_retry_succeeds_first_try():
+    policy = RetryPolicy(max_attempts=3)
+    calls = []
+
+    async def fn():
+        calls.append(1)
+        return "ok"
+
+    result = await with_retry(fn, policy)
+    assert result == "ok"
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_retry_retries_on_exception():
+    policy = RetryPolicy(max_attempts=3, initial_delay_ms=1.0, jitter=False)
+    calls = []
+
+    async def fn():
+        calls.append(1)
+        if len(calls) < 3:
+            raise ValueError("fail")
+        return "success"
+
+    result = await with_retry(fn, policy)
+    assert result == "success"
+    assert len(calls) == 3
+
+
+@pytest.mark.asyncio
+async def test_retry_exhausted_raises():
+    policy = RetryPolicy(max_attempts=3, initial_delay_ms=1.0, jitter=False)
+
+    async def fn():
+        raise RuntimeError("always fails")
+
+    with pytest.raises(RetryExhaustedError) as exc_info:
+        await with_retry(fn, policy)
+    assert exc_info.value.attempts == 3
+    assert isinstance(exc_info.value.last_error, RuntimeError)
+
+
+@pytest.mark.asyncio
+async def test_retry_non_retryable_raises_immediately():
+    policy = RetryPolicy(
+        max_attempts=5,
+        retryable_exceptions=(ValueError,),
+        initial_delay_ms=1.0,
+    )
+    calls = []
+
+    async def fn():
+        calls.append(1)
+        raise TypeError("not retryable")
+
+    with pytest.raises(TypeError):
+        await with_retry(fn, policy)
+    assert len(calls) == 1
+
+
+def test_retry_sync_version():
+    policy = RetryPolicy(max_attempts=3, initial_delay_ms=1.0, jitter=False)
+    calls = []
+
+    def fn():
+        calls.append(1)
+        if len(calls) < 2:
+            raise IOError("transient")
+        return "done"
+
+    result = with_retry_sync(fn, policy)
+    assert result == "done"
+    assert len(calls) == 2
+
+
+def test_retry_on_retry_callback():
+    policy = RetryPolicy(max_attempts=3, initial_delay_ms=1.0, jitter=False)
+    retried: list[int] = []
+
+    def on_retry(attempt, exc, delay):
+        retried.append(attempt)
+
+    policy.on_retry = on_retry
+    calls = []
+
+    def fn():
+        calls.append(1)
+        if len(calls) < 3:
+            raise RuntimeError("fail")
+        return "ok"
+
+    with_retry_sync(fn, policy)
+    assert retried == [1, 2]

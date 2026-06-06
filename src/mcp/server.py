@@ -541,14 +541,14 @@ async def _start_grid_bridge() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Standalone handle_rpc — callable from api_enhanced.py
+# Standalone handle_rpc — callable from any context outside the FastAPI router
 # ---------------------------------------------------------------------------
 
 
 async def handle_rpc(body: Dict[str, Any], enhanced: Any = None) -> Dict[str, Any]:
     """
     Process a raw JSON-RPC 2.0 request dict and return a response dict.
-    Usable outside the FastAPI router context (e.g. called from api_enhanced.py).
+    Usable outside the FastAPI router context.
     """
     rpc_id = body.get("id")
     method = body.get("method", "")

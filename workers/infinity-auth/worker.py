@@ -34,6 +34,7 @@ import logging
 import os
 import secrets
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect, encrypt_field, decrypt_field
 import time
 import uuid
 from contextlib import asynccontextmanager, contextmanager
@@ -176,7 +177,7 @@ class AuthDatabase:
     def __init__(self, db_path: str = DATABASE_PATH) -> None:
         self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(db_path, check_same_thread=False)
+        self._conn = sqlite3_connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._init_tables()
 
@@ -200,7 +201,8 @@ class AuthDatabase:
             CREATE TABLE IF NOT EXISTS sessions (
                 session_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
-                refresh_token TEXT UNIQUE NOT NULL,
+                refresh_token TEXT NOT NULL,
+                refresh_token_hash TEXT UNIQUE NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL,
                 expires_at TEXT NOT NULL,
                 is_revoked INTEGER DEFAULT 0,
@@ -214,8 +216,13 @@ class AuthDatabase:
             );
 
             CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
-            CREATE INDEX IF NOT EXISTS idx_sessions_refresh ON sessions(refresh_token);
+            CREATE INDEX IF NOT EXISTS idx_sessions_refresh ON sessions(refresh_token_hash);
         """)
+        # Migration: add refresh_token_hash if upgrading from older schema
+        try:
+            self._conn.execute("ALTER TABLE sessions ADD COLUMN refresh_token_hash TEXT UNIQUE DEFAULT ''")
+        except Exception:
+            pass  # column already exists
         self._conn.commit()
 
     def execute(self, sql: str, params: tuple = ()) -> sqlite3.Cursor:
@@ -223,6 +230,12 @@ class AuthDatabase:
 
     def commit(self) -> None:
         self._conn.commit()
+
+    def token_hash(self, token: str) -> str:
+        """HMAC-SHA256 of a token for deterministic indexed lookup."""
+        from src.database.encrypted_sqlite import _derive_key
+        key = _derive_key(self.db_path)
+        return hmac.new(key, token.encode(), hashlib.sha256).hexdigest()
 
 
 # ── Password Hashing ───────────────────────────────────────────────────────────
@@ -504,7 +517,8 @@ async def register(user: UserRegister, _=Depends(rate_limit_check)):
 
     db.execute(
         "INSERT INTO users (user_id, username, email, password_hash, display_name, created_at, role) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (user_id, user.username, user.email, password_hash, user.display_name, now, role),
+        (user_id, user.username, user.email, password_hash,
+         encrypt_field(db.db_path, user.display_name), now, role),
     )
     db.commit()
 
@@ -514,12 +528,12 @@ async def register(user: UserRegister, _=Depends(rate_limit_check)):
     access_token = create_access_token(user_id, user.username, role=role)
     refresh_token = create_refresh_token()
 
-    # Store session
+    # Store session (refresh token encrypted at rest)
     session_id = str(uuid.uuid4())
     expires_at = (datetime.now(timezone.utc) + timedelta(days=REFRESH_EXPIRY_DAYS)).isoformat()
     db.execute(
-        "INSERT INTO sessions (session_id, user_id, refresh_token, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
-        (session_id, user_id, refresh_token, now, expires_at),
+        "INSERT INTO sessions (session_id, user_id, refresh_token, refresh_token_hash, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (session_id, user_id, encrypt_field(db.db_path, refresh_token), db.token_hash(refresh_token), now, expires_at),
     )
     db.commit()
 
@@ -606,13 +620,13 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     access_token = create_access_token(user_id, username, role=role)
     refresh_token = create_refresh_token()
 
-    # Store session
+    # Store session (refresh token encrypted at rest)
     now = datetime.now(timezone.utc).isoformat()
     session_id = str(uuid.uuid4())
     expires_at = (datetime.now(timezone.utc) + timedelta(days=REFRESH_EXPIRY_DAYS)).isoformat()
     db.execute(
-        "INSERT INTO sessions (session_id, user_id, refresh_token, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
-        (session_id, user_id, refresh_token, now, expires_at),
+        "INSERT INTO sessions (session_id, user_id, refresh_token, refresh_token_hash, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (session_id, user_id, encrypt_field(db.db_path, refresh_token), db.token_hash(refresh_token), now, expires_at),
     )
 
     # Update last login
@@ -642,8 +656,8 @@ async def refresh_token(request: RefreshRequest, _=Depends(rate_limit_check)):
     """Refresh an access token using a valid refresh token."""
     # Find session
     row = db.execute(
-        "SELECT session_id, user_id, expires_at, is_revoked FROM sessions WHERE refresh_token = ?",
-        (request.refresh_token,),
+        "SELECT session_id, user_id, expires_at, is_revoked FROM sessions WHERE refresh_token_hash = ?",
+        (db.token_hash(request.refresh_token),),
     ).fetchone()
 
     if not row:
@@ -681,8 +695,8 @@ async def refresh_token(request: RefreshRequest, _=Depends(rate_limit_check)):
     # Create new session
     new_session_id = str(uuid.uuid4())
     db.execute(
-        "INSERT INTO sessions (session_id, user_id, refresh_token, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
-        (new_session_id, row["user_id"], new_refresh_token, now, new_expires_at),
+        "INSERT INTO sessions (session_id, user_id, refresh_token, refresh_token_hash, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (new_session_id, row["user_id"], encrypt_field(db.db_path, new_refresh_token), db.token_hash(new_refresh_token), now, new_expires_at),
     )
     db.commit()
 

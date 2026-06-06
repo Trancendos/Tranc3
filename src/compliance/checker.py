@@ -192,6 +192,14 @@ def _check_evidence(evidence_list: list[dict[str, Any]]) -> list[EvidenceCheck]:
     """Check whether each evidence path exists on disk."""
     results = []
     for ev in evidence_list:
+        # Support both dict-style and legacy string-style evidence entries
+        if isinstance(ev, str):
+            # "path/to/file — description" or just "path/to/file"
+            parts = ev.split(" — ", 1)
+            ev_path = parts[0].strip()
+            # Strip parenthetical suffixes like "(port 8046)"
+            ev_path = ev_path.split(" (")[0].strip()
+            ev = {"type": "code", "path": ev_path, "description": parts[1].strip() if len(parts) > 1 else ""}
         ev_path = ev.get("path", "")
         full_path = REPO_ROOT / ev_path
         # For directories, check the directory exists; for files, check the file

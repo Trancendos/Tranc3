@@ -403,7 +403,7 @@ class TestVaultSecretLoader:
         """Should detect potential secret leaks in environment."""
         from Dimensional.architecture.vault import VaultSecretLoader
 
-        os.environ["LEAKED_API_KEY"] = "sk-proj-abc123def456ghi789jkl012mno345pqr678stu901vwx234"
+        os.environ["LEAKED_API_KEY"] = "FAKE-NOT-A-SECRET-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         try:
             loader = VaultSecretLoader()
             leaks = loader.detect_leaks()

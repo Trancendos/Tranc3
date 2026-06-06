@@ -44,6 +44,7 @@ import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from collections import defaultdict
@@ -257,7 +258,7 @@ class FlowMonitor:
     def _init_db(self):
         """Initialize SQLite tables for persistent flow data."""
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3_connect(self.db_path) as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS hive_flow_metrics (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
