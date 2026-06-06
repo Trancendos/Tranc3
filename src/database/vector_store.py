@@ -181,7 +181,7 @@ class _QdrantBackend:
     def delete(self, vector_ids: List[str]) -> None:
         from qdrant_client.models import PointIdsList
 
-        int_ids = [abs(hash(vid)) % (2**63) for vid in vector_ids]
+        int_ids = [int(hashlib.sha256(vid.encode()).hexdigest()[:16], 16) for vid in vector_ids]
         self._client.delete(
             collection_name=_COLLECTION,
             points_selector=PointIdsList(points=int_ids),
