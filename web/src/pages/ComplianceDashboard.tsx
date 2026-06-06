@@ -410,7 +410,7 @@ export default function ComplianceDashboard() {
                   <span className="text-xs text-gray-500 flex-shrink-0 mr-3">{r.standard}</span>
                   <StatusBadge status={r.status} />
                   {!r.all_evidence_present && (
-                    <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 ml-2" title="Missing evidence" />
+                    <span title="Missing evidence"><AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 ml-2" aria-hidden="true" /></span>
                   )}
                 </button>
 
