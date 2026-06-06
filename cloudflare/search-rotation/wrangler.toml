@@ -1,0 +1,35 @@
+name = "tranc3-search"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+account_id = "e0214028cb64d31232f5662548a55e4e"
+
+[vars]
+ENVIRONMENT = "production"
+
+# ── KV: search index + usage counters ─────────────────────────────────────────
+[[kv_namespaces]]
+binding = "CACHE"
+id = "2a0e09cfd22741eeb3245607ce6e76fd"
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+#
+# Search provider rotation — all genuinely free tiers, zero cost:
+#
+# PRIMARY:    Cloudflare KV full-text (built-in, no extra setup)
+# SECONDARY:  Typesense Cloud free tier (3 nodes, 1M records, unlimited searches)
+# TERTIARY:   Meilisearch Cloud free tier (100K documents, 10K req/month)
+# QUATERNARY: Algolia free tier (10K req/month, 10K records)
+#
+# TYPESENSE_API_KEY    → cloud.typesense.org (free tier)
+# TYPESENSE_HOST       → your-cluster.typesense.net (from dashboard)
+# MEILISEARCH_HOST     → your-ms-host.meilisearch.io (free cloud tier)
+# MEILISEARCH_API_KEY  → from Meilisearch dashboard
+# ALGOLIA_APP_ID       → from Algolia dashboard (free: 10K req/month)
+# ALGOLIA_API_KEY      → Algolia Search API key
+# ALGOLIA_WRITE_KEY    → Algolia Admin API key (for indexing)
+# ALGOLIA_INDEX        → index name (default: trancendos)
+
+# ── Deploy ────────────────────────────────────────────────────────────────────
+# wrangler secret put TYPESENSE_API_KEY --name tranc3-search
+# ... (etc)
+# wrangler deploy

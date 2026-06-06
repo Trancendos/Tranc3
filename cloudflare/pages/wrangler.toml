@@ -1,0 +1,26 @@
+name = "trancendos-frontend"
+pages_build_output_dir = "../../web/dist"
+compatibility_date = "2024-09-23"
+account_id = "e0214028cb64d31232f5662548a55e4e"
+
+# Cloudflare Pages — serves the React/Vite frontend at trancendos.com
+#
+# Deploy steps:
+#   cd web && npm install && npm run build
+#   cd ../cloudflare/pages && wrangler pages deploy
+#
+# Or connect the GitHub repo in the Cloudflare dashboard:
+#   Build command:  cd web && npm install && npm run build
+#   Build output:   web/dist
+#   Root:           /
+#
+# Custom domain: trancendos.com (set in Pages dashboard → Custom domains)
+#
+# Environment variables (set in Pages dashboard → Settings → Environment variables):
+#   VITE_API_URL     = https://api.trancendos.com
+#   VITE_AI_URL      = https://tranc3-ai.luminous-aimastermind.workers.dev
+#   VITE_AUTH_URL    = https://infinity-auth-api.luminous-aimastermind.workers.dev
+#   VITE_WS_URL      = wss://infinity-ws.luminous-aimastermind.workers.dev
+
+[env.production.vars]
+NODE_ENV = "production"

@@ -263,7 +263,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "TateKing": LocationEntity(
         location="TateKing",
         pillar=Pillar.CREATIVITY,
-        lead_ai="Benji Tate & Sam King",
+        lead_ai="Benji Tate",  # Two separate AIs: Benji Tate, Sam King
         abilities=[
             "Cloud-Native NLE: Browser-based video editing.",
             "Timeline-as-Code: Translates edits into code.",
@@ -359,7 +359,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "The Lab": LocationEntity(
         location="The Lab",
         pillar=Pillar.DEVELOPMENT_CODE,
-        lead_ai="The Dr. & Slime",
+        lead_ai="The Dr. (Nikolai O'denhime)",  # Two separate AIs: The Dr., Slime
         abilities=[
             "Generative Syntax Matrix: Real-time pair programming.",
             "Instant Sandbox Compiling: Executes isolated code.",
@@ -519,7 +519,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "Arcadian Exchange": LocationEntity(
         location="Arcadian Exchange",
         pillar=Pillar.COMMERCIAL_FINANCIAL,
-        lead_ai="The Porter Family",
+        lead_ai="Clarence Porter",  # 5-AI family hub: Clarence, Ann, George, Edward, James Porter
         abilities=[
             "Micro-Transaction Trading: HFT trades of digital assets.",
             "Passive Income Routing: Invests idle system resources.",
@@ -641,7 +641,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "DocUtari": LocationEntity(
         location="DocUtari",
         pillar=Pillar.KNOWLEDGE,
-        lead_ai="To be Defined",
+        lead_ai="Fiddsy",
         abilities=[
             "Intelligent Auto-Tagging: Categorizes uploaded documents.",
             "Structured Foldering: Organizes files dynamically.",
@@ -671,7 +671,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "The Basement": LocationEntity(
         location="The Basement",
         pillar=Pillar.KNOWLEDGE,
-        lead_ai="Gary Glowman (Glow-Worm)",
+        lead_ai="Gary Glowman",
         abilities=[
             "Deep Cold Storage: Compresses and archives unused data.",
             "Data Retrieval: Restores highly compressed historical data.",
@@ -730,7 +730,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     "Infinity": LocationEntity(
         location="Infinity",
         pillar=Pillar.SECURITY,
-        lead_ai="The Guardian (Anchor: Orb of Orisis)",
+        lead_ai="The Guardian (Marcus Magnolia)",  # Two AIs: The Guardian (Marcus Magnolia), The Orb of Orisis
         abilities=[
             "Predictive Threat Modeling: Orb provides 'Future Sight.'",
             "Quantum Access Tokens: Expiring tokens for user transfer.",
@@ -956,15 +956,15 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         worker_port=None,
         worker_path="src/warp_radio/",
     ),
-    "The Dutchy": LocationEntity(
-        location="The Dutchy",
-        pillar=Pillar.DEVOPS,
-        lead_ai="Predictive lore",
+    "Section 7": LocationEntity(
+        location="Section 7",
+        pillar=Pillar.KNOWLEDGE,
+        lead_ai="The Dutchy",
         abilities=[
             "Quantum Sentiment Scraping: Analyzes data for market shifts.",
             "Structural Blueprint Generation: Converts intel into JSON.",
         ],
-        primary_function="Intelligence (Predictive lore, market intelligence)",
+        primary_function="Intelligence & Market Analysis",
         primes=["Trancendos"],
         online_mode="Live market intel gathering; dynamic JSON blueprint generation.",
         offline_mode="Offline scraped data review; analysis of pre-generated blueprints.",
@@ -1047,37 +1047,37 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
     ),
     "Turing's Hub": LocationEntity(
         location="Turing's Hub",
-        pillar=Pillar.DEVOPS,
+        pillar=Pillar.KNOWLEDGE,
         lead_ai="Samantha Turing",
         abilities=[
-            "Holistic Entity Genesis: Builds 3D avatars and personality tiers.",
-            "Somatic Rendering: Grants sight, sound, speech, and interaction.",
+            "Unified AI Genesis: Pulls inputs from every platform service to forge a complete, living AI entity (personality, voice, memory, 3D body) into a single capsule.",
+            "Somatic Rendering: Grants the finished entity sight, sound, speech, locomotion, and real-time interaction — they can walk, talk, and operate independently.",
         ],
-        primary_function="Central Creation Forge (3D Avatar & AI Entity Generation)",
+        primary_function="3D AI Model Builder — the pod/capsule that assembles all platform threads (Luminous, tAimra, The HIVE, The Nexus, etc.) and births a fully embodied, functioning AI entity (e.g. Imfy, The Dr., George Porter)",
         primes=["Trancendos"],
-        online_mode="Live entity configuration; real-time 3D sensory testing.",
-        offline_mode="Offline drafting of entity personas; local 3D avatar sculpting.",
+        online_mode="Live entity forge: real-time assembly of AI consciousness + 3D body + sensory stack; interactive testing of the completed entity.",
+        offline_mode="Offline persona drafting; local 3D avatar sculpting; staged assembly without live service connections.",
         agent_alpha=Agent(
-            "The Sculptor", "Designs and rigs detailed 3D virtual avatars and physical assets."
+            "The Sculptor", "Designs, rigs, and textures the detailed 3D body — skeleton, skin, expressions, and physical asset library."
         ),
         agent_beta=Agent(
             "The Geneticist",
-            "Outlines AI profiles, mapping personality metrics, skills, and tiers.",
+            "Draws from all upstream services to map the entity's full AI profile: personality matrix, memory seeds, skill tiers, emotional range, and consciousness parameters.",
         ),
-        bot_01=Bot("Wireframe-Bot", "Builds raw skeleton rigs to support fluid avatar movements."),
+        bot_01=Bot("Wireframe-Bot", "Builds raw skeleton rigs to support fluid avatar movements and physical presence."),
         bot_02=Bot(
-            "Texture-Bot", "Maps high-fidelity styles and graphic materials onto 3D assets."
+            "Texture-Bot", "Maps high-fidelity graphic materials, skin tones, and style overlays onto 3D assets."
         ),
         bot_03=Bot(
             "Vocoder-Bot",
-            "Synthesizes natural, human-sounding speech patterns for virtual avatars.",
+            "Synthesizes the entity's unique, natural-sounding voice — tone, accent, cadence, and emotional modulation.",
         ),
         bot_04=Bot(
             "Optic-Bot",
-            "Handles spatial recognition cameras to let avatars look and navigate correctly.",
+            "Handles spatial recognition and visual processing so the entity can observe, navigate, and respond to its environment.",
         ),
-        worker_port=None,
-        worker_path="src/personality/",
+        worker_port=8035,
+        worker_path="workers/skills-benchmark-service/",  # legacy worker name; true purpose is the 3D AI entity builder
     ),
     "ChronosSphere / ArcStream": LocationEntity(
         location="ChronosSphere / ArcStream",
@@ -1384,7 +1384,7 @@ _SUPPORTING_WORKER_MAP: Dict[int, str] = {
     8032: "Royal Bank of Arcadia",  # ledger-service
     8033: "Luminous",  # model-router-service
     8034: "The Digital Grid",  # workflow-engine-service
-    8035: "Turing's Hub",  # skills-benchmark-service
+    8035: "Turing's Hub",  # 3D AI Model Builder (worker: skills-benchmark-service)
     8036: "Luminous",  # langchain-integration-service
     8037: "The Nexus",  # deepagents-orchestrator-service
     8038: "The Void",  # vault-service

@@ -5,10 +5,19 @@ Structured logging, Prometheus metrics, distributed tracing, and health aggregat
 Zero-cost: No external APM services. All data stays in-process and SQLite.
 """
 
+from .audit_middleware import AuditMiddleware
 from .health import (
     SERVICE_REGISTRY,
     HealthChecker,
     SystemHealth,
+)
+from .observatory import (
+    AuditEvent,
+    EventCategory,
+    EventSeverity,
+    Observatory,
+    get_observatory,
+    observe,
 )
 from .metrics import (
     PROMETHEUS_AVAILABLE,
@@ -66,4 +75,12 @@ __all__ = [
     "HealthChecker",
     "SystemHealth",
     "SERVICE_REGISTRY",
+    # Observatory / audit
+    "AuditMiddleware",
+    "AuditEvent",
+    "EventCategory",
+    "EventSeverity",
+    "Observatory",
+    "get_observatory",
+    "observe",
 ]

@@ -2,7 +2,7 @@
 # Canonical narrative: docs/ZERO_COST_VENDOR_MATRIX.md
 # Verdict: approved | conditional | avoid — conditional needs caps/monitoring
 
-version: "2026-05-31"
+version: "2026-06"
 model: zero_cost_first
 
 approved_self_hosted:
@@ -15,15 +15,31 @@ approved_self_hosted:
   - id: gemini
     category: ai_inference
     cost: "free tier when GOOGLE_GEMINI_API_KEY set"
+  - id: github-models
+    category: ai_inference
+    cost: "free with any GitHub PAT — no credit card. 50 req/day GPT-4o, 150/day gpt-4o-mini"
+    notes: "GITHUB_TOKEN env var — any personal access token, no special scopes"
   - id: cerebras
     category: ai_inference
     cost: "free tier when CEREBRAS_API_KEY set"
   - id: sambanova
     category: ai_inference
     cost: "free tier when SAMBANOVA_API_KEY set"
+  - id: mistral
+    category: ai_inference
+    cost: "free tier — 500K tokens/month. MISTRAL_API_KEY"
+  - id: cohere
+    category: ai_inference
+    cost: "free tier — 100K tokens/month (token-based, not request-based). COHERE_API_KEY"
+  - id: deepseek
+    category: ai_inference
+    cost: "free tier (soft limits). DEEPSEEK_API_KEY"
   - id: forgejo
     category: cicd
     cost: "Forgejo OSS — The Workshop"
+  - id: woodpecker-ci
+    category: cicd
+    cost: "Apache 2.0 — self-hosted on Oracle VM alongside Forgejo"
   - id: traefik
     category: ingress
     cost: "OSS"
@@ -66,6 +82,12 @@ approved_self_hosted:
   - id: qdrant
     category: vector_db
     cost: "Apache 2.0 self-hosted"
+  - id: chromadb
+    category: vector_db
+    cost: "Apache 2.0 — local SQLite in dev, Postgres in prod"
+  - id: llama-cpp-python
+    category: ai_inference
+    cost: "MIT — GGUF quantized local inference (CPU/GPU)"
   - id: sqlite
     category: database
     cost: "public domain"
@@ -104,10 +126,26 @@ conditional_cloud:
     risk: idle_pause
   - id: github-public
     category: forge
-    limits: "unlimited Actions on public repos"
+    limits: "unlimited Actions on public repos; 2,000 min/month private repos"
     risk: private_repo_limits
+  - id: gitlab-free
+    category: forge
+    limits: "400 compute minutes/month shared runners; unlimited with self-hosted"
+    risk: monthly_cap
+  - id: together-ai
+    category: ai_inference
+    limits: "$1 credit on signup — refreshes periodically, NOT guaranteed"
+    risk: credits_expire
+  - id: fireworks-ai
+    category: ai_inference
+    limits: "$1/month credit — refreshes monthly, NOT guaranteed"
+    risk: credits_expire
 
 avoid_paid_default:
+  - id: replicate
+    reason: "Requires credit card even for free tier. NOT zero-cost."
+  - id: stability-ai
+    reason: "Free API tier ended 2024. No longer available."
   - id: fly-io-new-accounts
     reason: "No permanent free tier since 2024"
   - id: adobe-creative-cloud-pro

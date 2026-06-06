@@ -96,6 +96,8 @@ from src.security.middleware import (  # noqa: F401  # intentional top-level imp
     SecurityHeadersMiddleware,
     ZeroTrustASGIMiddleware,
 )
+from src.observability.audit_middleware import AuditMiddleware  # noqa: F401
+from src.errors import ErrorCode, ErrorResponse, make_error_response  # noqa: F401
 from src.security.security_framework import (
     InputSanitizer,  # noqa: F401  # intentional top-level import
 )
@@ -558,9 +560,90 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(SecurityHeadersMiddleware)
+
+
+# ── API version header (REQ-SD-002 — DEF STAN 00-056 API Contract Versioning) ─
+_API_VERSION = "2.0.0"
+_API_VERSION_HEADER = "X-API-Version"
+
+
+@app.middleware("http")
+async def api_version_header_middleware(request, call_next):
+    """Attach X-API-Version to every response for explicit contract versioning."""
+    response = await call_next(request)
+    response.headers[_API_VERSION_HEADER] = _API_VERSION
+    return response
 app.add_middleware(GovernanceMiddleware)
 app.add_middleware(ZeroTrustASGIMiddleware)
 app.add_middleware(RBACMiddleware)
+# AuditMiddleware runs outermost so it captures every request after auth resolution
+app.add_middleware(AuditMiddleware, service_name="tranc3-backend")
+
+
+# ── Global exception handlers ─────────────────────────────────────────────────
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Normalise all HTTPExceptions to the ErrorResponse envelope."""
+    from src.errors import ErrorCode, make_error_response
+    request_id = getattr(request.state, "request_id", None)
+
+    # If detail is already our structured dict, wrap it; otherwise use SYS_UNKNOWN fallback
+    if isinstance(exc.detail, dict) and "error" in exc.detail:
+        body = exc.detail
+        if request_id and isinstance(body.get("error"), dict):
+            body["error"]["request_id"] = request_id
+    else:
+        # Map common HTTP status codes to ErrorCode
+        _status_map = {
+            400: ErrorCode.SEC_INPUT_BLOCKED,
+            401: ErrorCode.AUTH_TOKEN_MISSING,
+            403: ErrorCode.AUTH_ACCOUNT_DISABLED,
+            404: ErrorCode.AUTH_USER_NOT_FOUND,
+            429: ErrorCode.RATE_HOURLY_EXCEEDED,
+        }
+        code = _status_map.get(exc.status_code, ErrorCode.SYS_UNKNOWN)
+        body = make_error_response(
+            code,
+            detail=str(exc.detail) if exc.detail else None,
+            request_id=request_id,
+        ).model_dump()
+
+    return JSONResponse(status_code=exc.status_code, content=body)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all for unhandled exceptions — log to Observatory, return structured 500."""
+    import traceback
+    from src.errors import ErrorCode, make_error_response
+    from src.observability.observatory import get_observatory, EventCategory, EventSeverity
+
+    request_id = getattr(request.state, "request_id", None)
+    tb = traceback.format_exc()
+
+    try:
+        get_observatory().record(
+            "http.unhandled_exception",
+            actor=None,
+            target=request.url.path,
+            category=EventCategory.SYSTEM,
+            severity=EventSeverity.CRITICAL,
+            outcome="failure",
+            metadata={
+                "exception_type": type(exc).__name__,
+                "traceback": tb[:2000],
+                "path": request.url.path,
+                "method": request.method,
+                "request_id": request_id,
+            },
+            session_id=request_id,
+        )
+    except Exception:
+        pass
+
+    body = make_error_response(ErrorCode.SYS_UNKNOWN, request_id=request_id).model_dump()
+    return JSONResponse(status_code=500, content=body)
 
 # ── The Spark (MCP server) ────────────────────────────────────────────────────
 from src.mcp.server import router as _mcp_router  # codeql[py/cyclic-import]
@@ -573,6 +656,40 @@ from src.observability.routes import (
 )
 
 app.include_router(_observatory_router)
+
+# ── Capacity Guard (hard stops + utilisation status) ─────────────────────────
+from src.capacity.guard import (  # noqa: F401
+    CapacityService,
+    CapacityExceededError,
+    get_capacity_guard,
+)
+
+
+@app.get("/capacity/status", tags=["platform"], summary="Capacity utilisation for all external services")
+async def capacity_status(current_user: dict = Depends(get_current_user)):
+    """Returns live utilisation for all external services. Highlights services at 80/90/95/100%."""
+    guard = get_capacity_guard()
+    raw = guard.status()
+    # Partition by alert level for easy scanning
+    by_level: dict = {"hard_stop": [], "critical": [], "alert": [], "warning": [], "ok": []}
+    for svc, data in raw.items():
+        by_level[data["status"]].append({**data, "service": svc})
+    return {"services": raw, "by_level": by_level}
+
+
+@app.post("/capacity/reset/{service_id}", tags=["platform"], summary="Admin: reset a capacity counter")
+async def capacity_reset(service_id: str, current_user: dict = Depends(get_current_user)):
+    """Reset a single service counter (admin only — use after a billing window reset)."""
+    try:
+        svc = CapacityService(service_id)
+    except ValueError:
+        from src.errors import ErrorCode, make_error_response
+        raise HTTPException(status_code=404, detail=make_error_response(
+            ErrorCode.ENT_NOT_FOUND, f"Unknown capacity service: {service_id}"
+        ).model_dump())
+    get_capacity_guard().reset(svc)
+    return {"reset": service_id, "note": "Counter reset to zero. Window clock restarted."}
+
 
 # ── The Nexus (AI communications + transfer hub) ─────────────────────────────
 from src.nexus.routes import router as _nexus_router  # noqa: F401  # intentional top-level import
@@ -673,6 +790,16 @@ from src.devocity.routes import (
 )
 
 app.include_router(_devocity_router)
+
+# ── DEFSTAN Compliance Framework (The Chaos Party compliance tooling) ────────
+try:
+    from src.compliance.api_routes import router as _compliance_router
+
+    app.include_router(_compliance_router)
+except Exception:  # pragma: no cover — graceful degradation if pyyaml absent
+    import logging as _logging
+
+    _logging.getLogger(__name__).warning("Compliance router not loaded — pyyaml may be missing")
 
 # ── The Artifactory (OCI artefact repository — Zot foundation) ───────────────
 from src.artifactory.routes import (
@@ -1726,6 +1853,137 @@ async def admin_healing(
 ):
     """Self-healing action history."""
     return {"history": self_healer.get_history()}
+
+
+@app.post(
+    "/admin/settings",
+    tags=["admin"],
+    summary="Persist runtime settings",
+    description=(
+        "Accepts a JSON body of key-value pairs (API keys, env var overrides). "
+        "Values are stored in the process environment for the session. "
+        "Sensitive keys are redacted from logs. "
+        "Does NOT persist across restarts — use Docker .env or Vault for permanent storage."
+    ),
+)
+async def admin_settings_write(
+    payload: dict,
+    current_user: dict = Depends(get_current_user),
+    _perm: None = require_permission("admin:config"),
+):
+    """Store runtime setting overrides in the process environment."""
+    import os
+    from src.errors.error_catalog import ErrorCode
+
+    SENSITIVE = {"SECRET_KEY", "JWT_SECRET", "DATABASE_URL", "REDIS_URL"}
+    ALLOWED_KEYS = {
+        "GROQ_API_KEY", "GOOGLE_GEMINI_API_KEY", "GITHUB_TOKEN",
+        "CEREBRAS_API_KEY", "SAMBANOVA_API_KEY", "MISTRAL_API_KEY",
+        "COHERE_API_KEY", "DEEPSEEK_API_KEY", "OLLAMA_URL",
+        "SECRET_KEY", "JWT_SECRET", "DATABASE_URL", "REDIS_URL",
+    }
+    updated = []
+    skipped = []
+    for k, v in payload.items():
+        if k not in ALLOWED_KEYS:
+            skipped.append(k)
+            continue
+        if isinstance(v, str) and v:
+            os.environ[k] = v
+            updated.append(k if k not in SENSITIVE else f"{k}=***")
+    return {
+        "updated": updated,
+        "skipped": skipped,
+        "note": "Changes are in-process only. Restart or use .env for persistence.",
+    }
+
+
+@app.get(
+    "/admin/settings",
+    tags=["admin"],
+    summary="List runtime setting keys",
+    description="Returns which allowed setting keys are currently set (values are redacted).",
+)
+async def admin_settings_read(
+    current_user: dict = Depends(get_current_user),
+    _perm: None = require_permission("admin:config"),
+):
+    import os
+    ALLOWED_KEYS = {
+        "GROQ_API_KEY", "GOOGLE_GEMINI_API_KEY", "GITHUB_TOKEN",
+        "CEREBRAS_API_KEY", "SAMBANOVA_API_KEY", "MISTRAL_API_KEY",
+        "COHERE_API_KEY", "DEEPSEEK_API_KEY", "OLLAMA_URL",
+        "SECRET_KEY", "JWT_SECRET", "DATABASE_URL", "REDIS_URL",
+    }
+    return {
+        k: ("set" if os.environ.get(k) else "unset")
+        for k in sorted(ALLOWED_KEYS)
+    }
+
+
+# ── User Settings — encrypted, server-side, per-user ─────────────────────────
+
+class UserSettingWrite(BaseModel):
+    """Single key/value pair for POST /user/settings."""
+    key: str = Field(..., description="Setting name (must be in the allowed list)")
+    value: str = Field(..., description="Plaintext value to encrypt and store")
+
+
+@app.get(
+    "/user/settings",
+    tags=["settings"],
+    summary="List which settings this user has stored",
+    description=(
+        "Returns {key: 'set'|'unset'} for every allowed setting key. "
+        "Values are never returned — use this to know what has been saved."
+    ),
+)
+async def user_settings_list(current_user: dict = Depends(get_current_user)):
+    from src.settings_store import get_settings_store
+    username: str = current_user.get("username") or current_user.get("sub", "unknown")
+    return get_settings_store().list_keys(username)
+
+
+@app.post(
+    "/user/settings",
+    tags=["settings"],
+    summary="Store an encrypted setting",
+    description=(
+        "Encrypts *value* with AES-128-CBC (Fernet) before persisting. "
+        "Key must be in the allowed list. Empty value is rejected — use DELETE to clear."
+    ),
+    status_code=200,
+)
+async def user_settings_write(
+    body: UserSettingWrite,
+    current_user: dict = Depends(get_current_user),
+):
+    from src.settings_store import get_settings_store, ALLOWED_KEYS
+    username: str = current_user.get("username") or current_user.get("sub", "unknown")
+    if body.key not in ALLOWED_KEYS:
+        raise HTTPException(status_code=422, detail=f"Key '{body.key}' is not in the allowed settings list")
+    if not body.value.strip():
+        raise HTTPException(status_code=422, detail="value must not be empty — use DELETE /user/settings/{key} to clear")
+    get_settings_store().set(username, body.key, body.value)
+    return {"key": body.key, "status": "stored"}
+
+
+@app.delete(
+    "/user/settings/{key}",
+    tags=["settings"],
+    summary="Delete a stored setting",
+    description="Removes the encrypted value for *key*. Returns 404 if key was not set.",
+)
+async def user_settings_delete(
+    key: str,
+    current_user: dict = Depends(get_current_user),
+):
+    from src.settings_store import get_settings_store
+    username: str = current_user.get("username") or current_user.get("sub", "unknown")
+    deleted = get_settings_store().delete(username, key)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Setting '{key}' not found for this user")
+    return {"key": key, "status": "deleted"}
 
 
 @app.get(

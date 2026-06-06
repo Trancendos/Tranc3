@@ -1,0 +1,121 @@
+---
+# Test Evidence Mapping — Tranc3 / Trancendos Platform
+# Maps test files to requirement IDs for traceability
+# Generated: 2026-06-06
+
+meta:
+  register_version: "1.0.0"
+  platform: "Tranc3 / Trancendos"
+  last_updated: "2026-06-06"
+
+test_evidence:
+  - test_file: tests/test_penetration.py
+    description: "OWASP injection / security boundary penetration tests"
+    covers:
+      - REQ-IA-001
+      - REQ-IA-002
+      - REQ-IA-004
+      - REQ-IA-008
+
+  - test_file: tests/test_zero_trust.py
+    description: "Zero Trust IAM boundary tests"
+    covers:
+      - REQ-IA-001
+      - REQ-IA-007
+
+  - test_file: tests/test_auth.py
+    description: "Authentication and session management tests"
+    covers:
+      - REQ-IA-007
+
+  - test_file: tests/test_compliance.py
+    description: "Error catalog, MCP protocol, GDPR, billing compliance"
+    covers:
+      - REQ-IA-005
+      - REQ-SA-004
+      - REQ-QA-005
+      - REQ-SD-007
+      - REQ-TD-006
+
+  - test_file: tests/test_chaos.py
+    description: "Fault injection and resilience tests (The Chaos Party)"
+    covers:
+      - REQ-SA-001
+      - REQ-QA-006
+
+  - test_file: tests/test_mesh.py
+    description: "Service mesh and circuit breaker tests"
+    covers:
+      - REQ-SA-002
+
+  - test_file: tests/test_resilience.py
+    description: "Resilience pattern tests"
+    covers:
+      - REQ-QA-006
+
+  - test_file: tests/test_health.py
+    description: "Health endpoint tests"
+    covers:
+      - REQ-SU-001
+
+  - test_file: tests/test_all_workers_health.py
+    description: "All-workers health check tests"
+    covers:
+      - REQ-SU-001
+
+  - test_file: tests/test_tracing.py
+    description: "Distributed tracing tests"
+    covers:
+      - REQ-SU-003
+
+  - test_file: tests/test_observability.py
+    description: "Observability and audit logging tests"
+    covers:
+      - REQ-IA-006
+
+  - test_file: tests/test_errors.py
+    description: "Error catalog and propagation tests"
+    covers:
+      - REQ-SA-004
+
+  - test_file: tests/test_validation.py
+    description: "Input validation and schema enforcement"
+    covers:
+      - REQ-IA-004
+      - REQ-SD-006
+
+  - test_file: tests/test_event_bus.py
+    description: "Event bus pattern tests"
+    covers:
+      - REQ-SD-004
+
+  - test_file: tests/test_compatibility.py
+    description: "JSON-RPC 2.0, Pydantic v2, serialization"
+    covers:
+      - REQ-SD-006
+      - REQ-SD-007
+
+  - test_file: tests/test_spark_grid_integration.py
+    description: "The Spark + The Digital Grid integration"
+    covers:
+      - REQ-SD-007
+
+  - test_file: tests/test_smoke.py
+    description: "Fast sanity checks"
+    covers:
+      - REQ-QA-001
+
+  - test_file: tests/test_uat.py
+    description: "User acceptance / end-to-end journeys"
+    covers:
+      - REQ-QA-001
+
+  - test_file: tests/test_tranc3_ml.py
+    description: "ML performance tests"
+    covers:
+      - REQ-QA-007
+
+  - test_file: tests/test_nanoservices.py
+    description: "Nanoservice layer tests (port 8001)"
+    covers:
+      - REQ-SD-001

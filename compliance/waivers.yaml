@@ -1,0 +1,56 @@
+---
+# DEFSTAN Compliance Waiver Register — Tranc3 / Trancendos Platform
+# Generated: 2026-06-06
+
+meta:
+  register_version: "1.0.0"
+  platform: "Tranc3 / Trancendos"
+  classification: "UNCLASSIFIED — PUBLIC"
+  owner: "Trancendos Platform Engineering"
+
+waivers:
+  - waiver_id: WAV-001
+    requirement_id: REQ-SA-006
+    title: "Threat Isolation Sandbox — Deferred"
+    rationale: "The Ice Box (Cuckoo sandbox) and The Warp Tunnel require significant infrastructure investment. The platform is in active development with rapidly evolving threat landscape. Compensating control (Sentinel Station active threat monitoring, port 8041) provides partial mitigation."
+    compensating_controls:
+      - "Sentinel Station service (port 8041) provides active threat monitoring"
+      - "Cryptex (Wazuh + MISP) is planned as the primary SIEM layer"
+      - "Input validation via Pydantic v2 blocks most injection vectors"
+    risk_level: MEDIUM
+    expiry_date: "2026-12-31"
+    approved_by: "Trancendos"
+    approval_date: "2026-06-06"
+    review_date: "2026-09-01"
+    status: ACTIVE
+
+  - waiver_id: WAV-002
+    requirement_id: REQ-SU-006
+    title: "Disaster Recovery Procedures — Deferred"
+    rationale: "Platform is in active development phase transitioning from Cloudflare to self-hosted. Formal DR procedures and backup schedules will be established once the self-hosted production stack is fully stabilised. Current Fly.io deployment provides implicit redundancy."
+    compensating_controls:
+      - "Fly.io provides region-level redundancy for legacy workers"
+      - "Cloudflare edge provides CDN-level resilience for API gateway"
+      - "SQLite databases are per-worker and easily snapshotted"
+    risk_level: MEDIUM
+    expiry_date: "2026-12-31"
+    approved_by: "Trancendos"
+    approval_date: "2026-06-06"
+    review_date: "2026-09-01"
+    status: ACTIVE
+
+  - waiver_id: WAV-003
+    requirement_id: REQ-IA-010
+    title: "SQLite Worker At-Rest Encryption — Partial Waiver"
+    rationale: "38 self-hosted workers use SQLite for local state storage. Full at-rest encryption requires SQLite encryption extension (SQLCipher) which has licensing implications for zero-cost architecture. Compensating controls include filesystem-level encryption via host OS and vault-service for sensitive data."
+    compensating_controls:
+      - "Vault service (The Void / port 8038) stores all secrets with AES-GCM encryption"
+      - "Fly.io encrypted volumes protect model data"
+      - "Sensitive PII is stored in PostgreSQL (Supabase) with Supabase encryption at rest"
+      - "Worker SQLite databases contain only non-sensitive operational state"
+    risk_level: LOW
+    expiry_date: "2027-06-06"
+    approved_by: "Trancendos"
+    approval_date: "2026-06-06"
+    review_date: "2026-12-01"
+    status: ACTIVE
