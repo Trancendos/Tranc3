@@ -18,13 +18,10 @@ Tests:
 
 from __future__ import annotations
 
-import math
 import sys
 from types import ModuleType
-from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -204,7 +201,6 @@ def test_cfc_path_uses_lnn_backend(monkeypatch):
 
 def test_cfc_shaper_step_returns_lnn_output(monkeypatch):
     """CfC shaper step() returns a properly bounded LNNOutput."""
-    import math as _math
 
     # tanh(0.1) * 0.3 ≈ 0.0997, tanh(-0.05) * 0.1 ≈ -0.005, tanh(0.2) ≈ 0.197
     raw_output = [0.1, -0.05, 0.2]

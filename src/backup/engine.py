@@ -31,7 +31,7 @@ import os
 import shutil
 import sqlite3
 import tempfile
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
@@ -369,7 +369,6 @@ class BackupEngine:
 
     def status(self) -> dict:
         """Return a summary of backup health for all registered workers."""
-        from datetime import timedelta
 
         now = datetime.now(timezone.utc)
         workers_status = []

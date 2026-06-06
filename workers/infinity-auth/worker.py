@@ -34,9 +34,11 @@ import logging
 import os
 import secrets
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect, encrypt_field
 import time
 import uuid
+
+import bcrypt  # type: ignore[import-untyped]
+from src.database.encrypted_sqlite import connect as sqlite3_connect, encrypt_field
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -240,11 +242,17 @@ class AuthDatabase:
 
 # ── Password Hashing ───────────────────────────────────────────────────────────
 
+_BCRYPT_ROUNDS = int(os.environ.get("BCRYPT_ROUNDS", "12"))
+
+
+def _is_bcrypt_hash(stored_hash: str) -> bool:
+    """Return True if *stored_hash* is a bcrypt hash (``$2a/b/x/y$`` prefix)."""
+    return stored_hash.startswith("$2") and len(stored_hash) > 30
+
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt (work factor 12)."""
-    import bcrypt  # type: ignore[import-untyped]
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=12)).decode()
+    """Hash a password using bcrypt (work factor controlled by BCRYPT_ROUNDS env var)."""
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode()
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
@@ -255,15 +263,13 @@ def verify_password(password: str, stored_hash: str) -> bool:
     their next login triggers a transparent rehash.
     """
     try:
-        if stored_hash.startswith("$2") and len(stored_hash) > 30:
-            # bcrypt hash
-            import bcrypt  # type: ignore[import-untyped]
+        if _is_bcrypt_hash(stored_hash):
             return bcrypt.checkpw(password.encode(), stored_hash.encode())
         # Legacy PBKDF2-SHA256: "salt:hexdigest"
         salt, hash_val = stored_hash.split(":", 1)
         computed = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000).hex()
         return hmac.compare_digest(hash_val, computed)
-    except (ValueError, AttributeError, Exception):
+    except (ValueError, AttributeError):
         return False
 
 
@@ -395,8 +401,8 @@ async def _lifespan(app: FastAPI):
                     worker_kit.health.record_fire("auth_health_reporter")
             except asyncio.CancelledError:
                 break
-            except Exception as _exc:
-                logger.warning("auth background health reporter error: %s", _exc)
+            except Exception:
+                logger.exception("auth background health reporter error")
 
     task = asyncio.create_task(_bg_loop())
     try:
@@ -585,8 +591,7 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     # Transparently rehash legacy PBKDF2 hashes to bcrypt on successful login
-    stored = row["password_hash"]
-    if not (stored.startswith("$2") and len(stored) > 30):
+    if not _is_bcrypt_hash(row["password_hash"]):
         try:
             new_hash = hash_password(credentials.password)
             db.execute(
@@ -594,8 +599,8 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
                 (new_hash, row["user_id"]),
             )
             db.commit()
-        except Exception as _exc:
-            logger.warning("Password rehash failed for user=%s: %s", row["user_id"], _exc)
+        except Exception:
+            logger.exception("Password rehash failed for user=%s", row["user_id"])
 
     # Check MFA
     if row["mfa_enabled"]:

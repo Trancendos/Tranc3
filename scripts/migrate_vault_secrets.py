@@ -20,7 +20,6 @@ from docker-compose and setting VAULT_DECOMMISSIONED=1.
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sqlite3
 import sys
@@ -29,9 +28,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-os.environ.setdefault("ENVIRONMENT", "development")
+import httpx  # noqa: E402
 
-import httpx
+os.environ.setdefault("ENVIRONMENT", "development")
 
 # Reuse vault-service crypto helpers directly (no running service needed)
 os.environ.setdefault("VAULT_MASTER_KEY", os.environ.get("VAULT_MASTER_KEY", ""))

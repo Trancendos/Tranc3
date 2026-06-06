@@ -28,10 +28,8 @@ Usage::
 from __future__ import annotations
 
 import logging
-import math
-import os
 from pathlib import Path
-from typing import Dict, Optional, Sequence
+from typing import Dict
 
 import numpy as np
 

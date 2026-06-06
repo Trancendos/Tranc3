@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac as _hmac
-import importlib
-import sys
 
 import pytest
 

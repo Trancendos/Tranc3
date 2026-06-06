@@ -13,9 +13,9 @@ import pytest
 
 os.environ.setdefault("SECRET_KEY", "ice-box-test-secret-key-at-least-32chars!")
 
-from src.security.ice_box.analyser import ThreatAnalyser, ThreatFinding, ThreatVerdict
+from src.security.ice_box.analyser import ThreatAnalyser, ThreatVerdict
 from src.security.ice_box.quarantine import QuarantineStore
-from src.security.ice_box.signatures import SignatureLibrary, ThreatCategory, get_library
+from src.security.ice_box.signatures import ThreatCategory, get_library
 from src.security.warp_tunnel.tunnel import TunnelConfig, WarpTunnel
 
 
@@ -185,7 +185,7 @@ def test_analyser_xss_verdict(analyser):
 
 
 def test_quarantine_store_creates_db(tmp_path):
-    q = QuarantineStore(tmp_path / "q.db")
+    QuarantineStore(tmp_path / "q.db")
     assert (tmp_path / "q.db").exists()
 
 

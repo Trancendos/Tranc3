@@ -22,7 +22,6 @@ matmul_i8(a, a_rows, a_cols, b, b_cols) → list[int]
 from __future__ import annotations
 
 import logging
-import math
 from typing import List, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
@@ -91,7 +90,7 @@ def _py_spike_rate_i8(
         raise ValueError("t_steps must be >= 1")
     hidden_dim = len(bias_l1)
     output_dim = len(bias_l2)
-    input_dim = len(inputs)
+    _input_dim = len(inputs)
 
     mem1 = [0.0] * hidden_dim
     mem2 = [0.0] * output_dim

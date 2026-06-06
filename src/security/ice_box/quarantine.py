@@ -9,11 +9,11 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
-from src.security.ice_box.analyser import AnalysisReport, ThreatVerdict
+from src.security.ice_box.analyser import AnalysisReport
 
 _DEFAULT_DB = Path("data/ice_box_quarantine.db")
 

@@ -4,7 +4,6 @@ Tests for the ABAC Policy Engine.
 
 from __future__ import annotations
 
-import pytest
 
 from src.auth.policy_engine import (
     PolicyCondition,

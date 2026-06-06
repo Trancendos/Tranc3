@@ -216,6 +216,21 @@ app.add_middleware(
 )
 db = UsersDatabase()
 
+# Shared async HTTP client — created once at startup, closed at shutdown.
+_http_client: httpx.AsyncClient | None = None
+
+
+@app.on_event("startup")
+async def _startup() -> None:
+    global _http_client
+    _http_client = httpx.AsyncClient(timeout=5.0)
+
+
+@app.on_event("shutdown")
+async def _shutdown() -> None:
+    if _http_client:
+        await _http_client.aclose()
+
 
 # ---------------------------------------------------------------------------
 # Helper
@@ -487,7 +502,8 @@ async def update_role(user_id: str, body: RoleUpdateRequest):
 
 async def _dispatch_reset_email(user_id: str, email: str, token: str) -> None:
     """Fire-and-forget: ask notifications-service to send the password-reset email."""
-    reset_link = os.environ.get("FRONTEND_URL", "http://localhost:3000") + f"/reset-password?token={token}"
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    reset_link = f"{frontend_url}/reset-password?token={token}"
     payload = {
         "user_id": user_id,
         "channel": "email",
@@ -499,18 +515,18 @@ async def _dispatch_reset_email(user_id: str, email: str, token: str) -> None:
             f"{reset_link}\n\n"
             f"If you did not request this, you can safely ignore this email."
         ),
-        "metadata": {"email": email, "reset_token": token},
+        "metadata": {"user_id": user_id},
     }
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.post(f"{NOTIFICATIONS_URL}/notifications/send", json=payload)
-            if resp.status_code not in (200, 201):
-                logger.warning(
-                    "notifications-service returned %s for reset email user=%s",
-                    resp.status_code, user_id,
-                )
-    except Exception as exc:
-        logger.warning("Failed to dispatch reset email for user=%s: %s", user_id, exc)
+        client = _http_client or httpx.AsyncClient(timeout=5.0)
+        resp = await client.post(f"{NOTIFICATIONS_URL}/notifications/send", json=payload)
+        if resp.status_code not in (200, 201):
+            logger.warning(
+                "notifications-service returned %s for reset email user=%s",
+                resp.status_code, user_id,
+            )
+    except Exception:
+        logger.exception("Failed to dispatch reset email for user=%s", user_id)
 
 
 @_router.post("/users/password-reset/request", response_model=PasswordResetResponse)
@@ -536,7 +552,7 @@ async def request_password_reset(body: PasswordResetRequest, background_tasks: B
     background_tasks.add_task(_dispatch_reset_email, row["user_id"], str(body.email), token)
     return PasswordResetResponse(
         message="If that email is registered, a reset link has been sent.",
-        reset_token=token,
+        reset_token="",
     )
 
 

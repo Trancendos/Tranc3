@@ -11,11 +11,11 @@ import hashlib
 import math
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional
 
-from src.security.ice_box.signatures import Signature, ThreatCategory, get_library
+from src.security.ice_box.signatures import ThreatCategory, get_library
 
 
 class ThreatVerdict(Enum):
