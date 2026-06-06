@@ -26,18 +26,40 @@ waivers:
 
   - waiver_id: WAV-002
     requirement_id: REQ-SU-006
-    title: "Disaster Recovery Procedures — Deferred"
-    rationale: "Platform is in active development phase transitioning from Cloudflare to self-hosted. Formal DR procedures and backup schedules will be established once the self-hosted production stack is fully stabilised. Current Fly.io deployment provides implicit redundancy."
+    title: "Disaster Recovery Procedures — RESOLVED"
+    rationale: >
+      Waiver closed. Implemented a complete DR and backup system:
+      backup-service worker (port 8039) runs an asyncio scheduler that backs up all
+      31 registered SQLite worker databases on tier-appropriate intervals
+      (CRITICAL=15min, HIGH=1h, STANDARD=6h, LOW=24h). Each backup uses SQLite's
+      hot-backup API (live-safe), gzip compression, AES-GCM encryption, and
+      SHA-256 integrity verification. Automated pruning enforces retention policies
+      (e.g. CRITICAL: 7 daily + 4 weekly + 6 monthly). Recovery is fully automated
+      via scripts/dr_restore.py with list/verify/restore/dr-drill commands.
+      The DR runbook documents 5 disaster scenarios, RTO/RPO targets, quarterly
+      drill procedure, and offsite replication guidance.
+      30 unit tests verify the backup engine end-to-end including tamper detection.
     compensating_controls:
-      - "Fly.io provides region-level redundancy for legacy workers"
-      - "Cloudflare edge provides CDN-level resilience for API gateway"
-      - "SQLite databases are per-worker and easily snapshotted"
-    risk_level: MEDIUM
-    expiry_date: "2026-12-31"
-    approved_by: "Trancendos"
-    approval_date: "2026-06-06"
-    review_date: "2026-09-01"
-    status: ACTIVE
+      - "workers/backup-service (port 8039) — automated scheduled backup daemon"
+      - "src/backup/engine.py — hot-backup, compress, AES-GCM encrypt, verify, prune"
+      - "src/backup/registry.py — 31-worker registry with RTO/RPO tier targets"
+      - "scripts/dr_restore.py — DR restore CLI with dr-drill command"
+      - "docs/runbooks/disaster-recovery.md — formal DR runbook"
+    risk_level: NONE
+    resolved_date: "2026-06-06"
+    resolved_by: "Trancendos"
+    implementation: "src/backup/ + workers/backup-service/ + scripts/dr_restore.py + docs/runbooks/disaster-recovery.md"
+    rto_targets:
+      CRITICAL: "1 hour"
+      HIGH: "4 hours"
+      STANDARD: "24 hours"
+      LOW: "72 hours"
+    rpo_targets:
+      CRITICAL: "15 minutes"
+      HIGH: "1 hour"
+      STANDARD: "6 hours"
+      LOW: "24 hours"
+    status: RESOLVED
 
   - waiver_id: WAV-003
     requirement_id: REQ-IA-010

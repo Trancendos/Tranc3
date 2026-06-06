@@ -244,3 +244,17 @@ gate-check:
 
 zero-cost-status:
 	python -c "from src.monitoring.zero_cost_tracker import tracker; import json; print(json.dumps(tracker.get_summary(), indent=2))"
+
+# ── Disaster Recovery ─────────────────────────────────────────────────────────
+backup-status:
+	python scripts/dr_restore.py rpo-status
+
+backup-all:
+	python scripts/dr_restore.py list
+
+dr-drill:
+	@echo "Running DR drill (verify + dry-run restore all workers)..."
+	python scripts/dr_restore.py dr-drill
+
+dr-verify:
+	python scripts/dr_restore.py verify

@@ -697,12 +697,30 @@ requirements:
     standard: "DEF STAN 00-600"
     title: "Disaster Recovery and Backup"
     description: "Critical data stores must be backed up on a defined schedule. Recovery procedures must be documented and tested. RTO and RPO must be defined."
-    status: PLANNED
-    evidence: []
-    verification_method: audit
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/backup/engine.py
+        description: "BackupEngine: SQLite hot-backup, gzip + AES-GCM encryption, integrity verification, pruning"
+      - type: code
+        path: src/backup/registry.py
+        description: "31-worker database registry with tier classification, RPO/RTO targets per tier"
+      - type: code
+        path: workers/backup-service/worker.py
+        description: "Backup daemon on port 8039 with asyncio scheduler: CRITICAL=15min, HIGH=1h, STANDARD=6h, LOW=24h"
+      - type: code
+        path: scripts/dr_restore.py
+        description: "DR restore CLI: list, verify, restore, restore-tier, rpo-status, dr-drill commands"
+      - type: docs
+        path: docs/runbooks/disaster-recovery.md
+        description: "Formal DR runbook covering 5 scenarios, RTO/RPO table, quarterly drill procedure, offsite replication guidance"
+      - type: test
+        path: tests/test_backup_service.py
+        description: "30 unit tests covering backup, verify, restore, prune, registry, encryption"
+    verification_method: automated_test
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
-    notes: "Backup procedures and DR testing are planned but not yet implemented"
+    notes: "WAV-002 resolved. RTO: CRITICAL=1h, HIGH=4h, STANDARD=24h, LOW=72h. RPO: CRITICAL=15min, HIGH=1h, STANDARD=6h, LOW=24h."
 
   - id: REQ-SU-007
     standard: "DEF STAN 00-600"
