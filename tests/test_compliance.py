@@ -277,10 +277,11 @@ class TestDEFSTANComplianceChecker:
 
     def test_register_loads_without_error(self):
         """compliance/register.yaml loads cleanly."""
-        from src.compliance.checker import load_and_check, REGISTER_PATH
+        from src.compliance.checker import REGISTER_PATH, load_and_check
 
         if not REGISTER_PATH.exists():
             import pytest
+
             pytest.skip("compliance/register.yaml not found")
         report = load_and_check(REGISTER_PATH)
         assert report is not None
@@ -288,26 +289,28 @@ class TestDEFSTANComplianceChecker:
 
     def test_all_required_fields_present(self):
         """Every requirement has id, standard, title, status."""
-        from src.compliance.checker import load_and_check, REGISTER_PATH
+        from src.compliance.checker import REGISTER_PATH, load_and_check
 
         if not REGISTER_PATH.exists():
             import pytest
+
             pytest.skip("compliance/register.yaml not found")
         report = load_and_check(REGISTER_PATH)
         for r in report.requirements:
-            assert r.req_id, f"Missing id in requirement"
+            assert r.req_id, "Missing id in requirement"
             assert r.standard, f"Missing standard in {r.req_id}"
             assert r.title, f"Missing title in {r.req_id}"
-            assert r.status in (
-                "COMPLIANT", "PARTIAL", "PLANNED", "WAIVED", "NA", "N/A"
-            ), f"Invalid status '{r.status}' in {r.req_id}"
+            assert r.status in ("COMPLIANT", "PARTIAL", "PLANNED", "WAIVED", "NA", "N/A"), (
+                f"Invalid status '{r.status}' in {r.req_id}"
+            )
 
     def test_no_duplicate_requirement_ids(self):
         """No two requirements share the same ID."""
-        from src.compliance.checker import load_and_check, REGISTER_PATH
+        from src.compliance.checker import REGISTER_PATH, load_and_check
 
         if not REGISTER_PATH.exists():
             import pytest
+
             pytest.skip("compliance/register.yaml not found")
         report = load_and_check(REGISTER_PATH)
         ids = [r.req_id for r in report.requirements]
@@ -317,10 +320,12 @@ class TestDEFSTANComplianceChecker:
     def test_requirement_id_format(self):
         """All IDs match REQ-{AREA}-{NNN} format."""
         import re
-        from src.compliance.checker import load_and_check, REGISTER_PATH
+
+        from src.compliance.checker import REGISTER_PATH, load_and_check
 
         if not REGISTER_PATH.exists():
             import pytest
+
             pytest.skip("compliance/register.yaml not found")
         pattern = re.compile(r"^REQ-[A-Z]{2,4}-\d{3}$")
         report = load_and_check(REGISTER_PATH)
@@ -329,20 +334,22 @@ class TestDEFSTANComplianceChecker:
 
     def test_compliance_score_is_computed(self):
         """Overall compliance score is a float between 0 and 100."""
-        from src.compliance.checker import load_and_check, REGISTER_PATH
+        from src.compliance.checker import REGISTER_PATH, load_and_check
 
         if not REGISTER_PATH.exists():
             import pytest
+
             pytest.skip("compliance/register.yaml not found")
         report = load_and_check(REGISTER_PATH)
         assert 0.0 <= report.overall_score <= 100.0
 
     def test_area_scores_computed(self):
         """Area summaries are populated for all 7 standard areas."""
-        from src.compliance.checker import load_and_check, REGISTER_PATH, AREA_STANDARDS
+        from src.compliance.checker import AREA_STANDARDS, REGISTER_PATH, load_and_check
 
         if not REGISTER_PATH.exists():
             import pytest
+
             pytest.skip("compliance/register.yaml not found")
         report = load_and_check(REGISTER_PATH)
         for area in AREA_STANDARDS:
@@ -354,11 +361,13 @@ class TestDEFSTANComplianceChecker:
     def test_report_generation_produces_valid_json(self):
         """generate_json produces valid JSON with required top-level keys."""
         import json
-        from src.compliance.checker import load_and_check, REGISTER_PATH
+
+        from src.compliance.checker import REGISTER_PATH, load_and_check
         from src.compliance.report_generator import generate_json
 
         if not REGISTER_PATH.exists():
             import pytest
+
             pytest.skip("compliance/register.yaml not found")
         report = load_and_check(REGISTER_PATH)
         json_str = generate_json(report)
@@ -368,11 +377,12 @@ class TestDEFSTANComplianceChecker:
 
     def test_report_generation_produces_markdown(self):
         """generate_markdown returns a non-empty string with expected headings."""
-        from src.compliance.checker import load_and_check, REGISTER_PATH
+        from src.compliance.checker import REGISTER_PATH, load_and_check
         from src.compliance.report_generator import generate_markdown
 
         if not REGISTER_PATH.exists():
             import pytest
+
             pytest.skip("compliance/register.yaml not found")
         report = load_and_check(REGISTER_PATH)
         md = generate_markdown(report)
@@ -383,10 +393,11 @@ class TestDEFSTANComplianceChecker:
 
     def test_ci_mode_passes_at_expected_threshold(self):
         """CI mode returns exit code 0 when score is above threshold."""
-        from src.compliance.checker import run, CI_PASS_THRESHOLD, load_and_check, REGISTER_PATH
+        from src.compliance.checker import CI_PASS_THRESHOLD, REGISTER_PATH, load_and_check, run
 
         if not REGISTER_PATH.exists():
             import pytest
+
             pytest.skip("compliance/register.yaml not found")
         report = load_and_check(REGISTER_PATH)
         # Only assert exit code matches expectation — don't assert score value

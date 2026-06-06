@@ -98,7 +98,6 @@ def build_matrix(report: "ComplianceReport") -> dict[str, Any]:
     ]
 
     # Orphaned tests: test files in test_evidence.yaml that map to no requirements
-    all_mapped_tests = set(test_to_reqs.keys())
     # All requirement IDs that exist
     all_req_ids = {r.req_id for r in report.requirements}
     orphaned_tests = [

@@ -20,7 +20,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse
 
 from src.compliance.checker import REGISTER_PATH, load_and_check
-from src.compliance.report_generator import generate_html, generate_json, generate_markdown
+from src.compliance.report_generator import generate_html, generate_markdown
 from src.compliance.traceability import build_matrix
 
 logger = logging.getLogger(__name__)

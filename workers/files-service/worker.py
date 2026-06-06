@@ -186,7 +186,8 @@ async def create(data: Dict[str, Any]):
     """Create a new files entry."""
     # Capacity hard stop — daily upload count and storage bytes
     try:
-        import sys, os
+        import sys
+        import os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
         from src.capacity.guard import CapacityService, CapacityExceededError, get_capacity_guard
         _g = get_capacity_guard()
