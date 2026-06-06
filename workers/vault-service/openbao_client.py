@@ -87,14 +87,15 @@ def _openbao_available() -> bool:
 
 
 def _sqlite_store(key: str, value: str) -> Dict[str, Any]:
+    import sqlite3
+
     from worker import (  # noqa: PLC0415
+        _append_audit,
         _encrypt_secret,
         _get_db,
         _new_id,
         _now,
-        _append_audit,
     )
-    import sqlite3
 
     conn = _get_db()
     sid = _new_id()
@@ -116,7 +117,7 @@ def _sqlite_store(key: str, value: str) -> Dict[str, Any]:
 
 
 def _sqlite_get(key: str) -> Dict[str, Any]:
-    from worker import _get_db, _decrypt_secret, _append_audit, _legacy_xor_decrypt  # noqa: PLC0415
+    from worker import _append_audit, _decrypt_secret, _get_db, _legacy_xor_decrypt  # noqa: PLC0415
 
     conn = _get_db()
     row = conn.execute("SELECT * FROM secrets WHERE key=? AND is_active=1", (key,)).fetchone()
@@ -138,7 +139,7 @@ def _sqlite_get(key: str) -> Dict[str, Any]:
 
 
 def _sqlite_delete(key: str) -> Dict[str, Any]:
-    from worker import _get_db, _append_audit, _now  # noqa: PLC0415
+    from worker import _append_audit, _get_db, _now  # noqa: PLC0415
 
     conn = _get_db()
     row = conn.execute("SELECT id FROM secrets WHERE key=? AND is_active=1", (key,)).fetchone()
