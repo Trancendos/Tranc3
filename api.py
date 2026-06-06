@@ -334,7 +334,7 @@ async def lifespan(app: FastAPI):
         model = AdvancedTransformerModel(cfg)
         if os.path.exists(cfg.model_path):
             if _TORCH_AVAILABLE and torch is not None:
-                model.load_state_dict(torch.load(cfg.model_path, map_location="cpu"))
+                model.load_state_dict(torch.load(cfg.model_path, map_location="cpu", weights_only=True))
             logger.info("Model weights loaded")
         else:
             logger.warning("No model weights — echo mode active")

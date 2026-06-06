@@ -46,12 +46,12 @@ def safe_torch_load(path: str, device: str = "cpu", **kwargs) -> Dict[str, Any]:
     import torch
 
     safe_kwargs = {**SAFE_TORCH_LOAD_KWARGS, "map_location": device, **kwargs}
-
-    # Force weights_only — never allow pickle deserialization
+    # Hard-enforce weights_only — callers cannot override this.
+    # Mitigates CVE-2024-48063, CVE-2025-32434, PYSEC-2026-139 (torch pickle RCE).
     safe_kwargs["weights_only"] = True
 
     try:
-        checkpoint = torch.load(path, **safe_kwargs, weights_only=True)
+        checkpoint = torch.load(path, **safe_kwargs)
         logger.info("Safe load successful: %s", sanitize_for_log(path))
         return checkpoint
     except Exception as e:
