@@ -98,7 +98,8 @@ async def create_event(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     end_ts = body.get("end_ts")
     if not all([user_id, title, start_ts, end_ts]):
         return JSONResponse(
-            {"error": "user_id, title, start_ts, end_ts are required"}, status_code=400
+            {"error": "user_id, title, start_ts, end_ts are required"},
+            status_code=400,
         )
     event = get_chronos().create_event(
         user_id=user_id,

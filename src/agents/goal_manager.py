@@ -266,7 +266,10 @@ class GoalManager:
     # -------------------------------------------------------------------
 
     async def update_progress(
-        self, goal_id: str, increment: float = 0.0, absolute: Optional[float] = None
+        self,
+        goal_id: str,
+        increment: float = 0.0,
+        absolute: Optional[float] = None,
     ) -> bool:
         """
         Update a goal's progress. Use increment for relative updates or

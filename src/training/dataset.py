@@ -43,7 +43,7 @@ class ConversationDataset(Dataset):
         data_path = Path(data_dir) / split
         if not data_path.exists():
             raise FileNotFoundError(
-                f"Data split not found: {data_path}\nRun: python scripts/prepare_data.py"
+                f"Data split not found: {data_path}\nRun: python scripts/prepare_data.py",
             )
 
         self.samples = self._load_and_tokenize(data_path)

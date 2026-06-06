@@ -32,7 +32,7 @@ class OllamaToolSchema:
             "type": "object",
             "properties": {},
             "required": [],
-        }
+        },
     )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -71,7 +71,7 @@ class OllamaMessage:
                     "function": {
                         "name": tc.name,
                         "arguments": tc.arguments,
-                    }
+                    },
                 }
                 for tc in self.tool_calls
             ]

@@ -100,7 +100,11 @@ class Tranquility:
         return self._profiles[user_id]
 
     def log_mood(
-        self, user_id: str, mood: int, notes: str = "", tags: Optional[List[str]] = None
+        self,
+        user_id: str,
+        mood: int,
+        notes: str = "",
+        tags: Optional[List[str]] = None,
     ) -> MoodEntry:
         profile = self.get_or_create(user_id)
         try:

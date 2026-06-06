@@ -226,7 +226,8 @@ class HolographicStorageEngine:
     def __init__(self, volume: StorageVolume):
         self.volume = volume
         self.properties = self.MEDIUM_PROPERTIES.get(
-            volume.medium, self.MEDIUM_PROPERTIES[StorageMedium.LITHIUM_NIOBATE]
+            volume.medium,
+            self.MEDIUM_PROPERTIES[StorageMedium.LITHIUM_NIOBATE],
         )
         self._diffraction_scheduler: List[float] = []
 

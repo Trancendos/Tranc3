@@ -292,7 +292,9 @@ class SelfHealingEngine:
         self._action_handlers[action] = handler
 
     def diagnose(
-        self, health: HealthCheck, anomaly: Optional[Anomaly] = None
+        self,
+        health: HealthCheck,
+        anomaly: Optional[Anomaly] = None,
     ) -> Optional[RepairAction]:
         if anomaly is None:
             return None
@@ -314,7 +316,10 @@ class SelfHealingEngine:
         return None
 
     def execute_repair(
-        self, action: RepairAction, target_service: str, anomaly_id: str = ""
+        self,
+        action: RepairAction,
+        target_service: str,
+        anomaly_id: str = "",
     ) -> RepairRecord:
         start = time.time()
         handler = self._action_handlers.get(action)
@@ -376,7 +381,8 @@ class AutoHealingDiagnosticsService:
         for m in metrics:
             self._detector.register_metric(m)
         logger.info(
-            "AutoHealingDiagnosticsService initialized with %d metric baselines", len(metrics)
+            "AutoHealingDiagnosticsService initialized with %d metric baselines",
+            len(metrics),
         )
 
     def report_health(self, check: HealthCheck) -> Optional[Anomaly]:
@@ -390,7 +396,9 @@ class AutoHealingDiagnosticsService:
         self._detector.observe("cpu_percent", check.cpu_percent, check.service_name)
         self._detector.observe("queue_depth", float(check.queue_depth), check.service_name)
         self._detector.observe(
-            "active_connections", float(check.active_connections), check.service_name
+            "active_connections",
+            float(check.active_connections),
+            check.service_name,
         )
 
         if anomaly:

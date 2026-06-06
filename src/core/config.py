@@ -89,7 +89,7 @@ class Tranc3Config(BaseSettings):
     def validate_secret_key(cls, v: str) -> str:
         if not v or not v.strip() or v == "dev-secret-key-change-in-production":
             raise ValueError(
-                "SECRET_KEY must be set to a real secret. Set the SECRET_KEY environment variable."
+                "SECRET_KEY must be set to a real secret. Set the SECRET_KEY environment variable.",
             )
         return v
 
@@ -98,7 +98,7 @@ class Tranc3Config(BaseSettings):
     def validate_jwt_secret(cls, v: str) -> str:
         if not v or not v.strip() or v == "dev-jwt-secret-change-in-production":
             raise ValueError(
-                "JWT_SECRET must be set to a real secret. Set the JWT_SECRET environment variable."
+                "JWT_SECRET must be set to a real secret. Set the JWT_SECRET environment variable.",
             )
         return v
 
@@ -152,5 +152,5 @@ except Exception as e:
 
     logging.getLogger(__name__).error(f"Configuration error: {e}")
     raise RuntimeError(
-        f"Tranc3 configuration failed: {e}. Check your environment variables and .env file."
+        f"Tranc3 configuration failed: {e}. Check your environment variables and .env file.",
     ) from e

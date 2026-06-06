@@ -93,7 +93,7 @@ class PersonalityMatrix:
 
         print(
             f"[PersonalityMatrix] Loaded {len(self._registry)} profile(s): "
-            f"{', '.join(self._registry.keys())}"
+            f"{', '.join(self._registry.keys())}",
         )
 
     def get(self, name: str) -> PersonalityProfile:

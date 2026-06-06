@@ -90,13 +90,15 @@ aeonmind/python/*.egg-info/
 # Nexus test artifacts
 bridge-*
 nexus-*
-<<<<<<< HEAD
 
 # Vault encrypted key files — back up offline, never commit
 deploy/vault/vault-keys.enc
 deploy/vault/vault-tokens.enc
 vault-init-keys.txt
+.claude/
 =======
-.claude/
->>>>>>> 1c4aebf (chore: ignore .claude/ agent worktree directory)
-.claude/
+
+# Runtime data directories (backups and test workspaces)
+data/admin_os_backups/
+data/test_admin_os_workspace/
+>>>>>>> 909afd2 (chore: update security learning state and ignore runtime data dirs)

@@ -644,7 +644,7 @@ def format_error_response(code: ErrorCode, detail: Optional[str] = None) -> Dict
             "docs_url": defn.docs_url,
             "retryable": defn.retryable,
             "severity": defn.severity,
-        }
+        },
     }
 
 

@@ -48,7 +48,7 @@ def client():
             TEST_API_KEY_USER,
             TEST_API_KEY_AGENT,
             TEST_API_KEY_BOT,
-        ]
+        ],
     )
 
     import importlib

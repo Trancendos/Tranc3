@@ -28,14 +28,17 @@ except ImportError:  # torch is an optional heavy dependency
             pass
 
     _nn_stub = _types.SimpleNamespace(
-        Module=_FakeModule, Linear=_FakeModule, LayerNorm=_FakeModule, Dropout=_FakeModule
+        Module=_FakeModule,
+        Linear=_FakeModule,
+        LayerNorm=_FakeModule,
+        Dropout=_FakeModule,
     )
     torch = _types.SimpleNamespace()  # type: ignore[assignment]
     nn = _nn_stub  # type: ignore[assignment]
     F = _types.SimpleNamespace()  # type: ignore[assignment]
     logger.warning(
         "PyTorch not installed — AdvancedTransformerModel unavailable. "
-        "Install torch to enable the neural inference backend."
+        "Install torch to enable the neural inference backend.",
     )
 
 
@@ -216,7 +219,7 @@ class AdvancedTransformerModel(nn.Module):
                     self.dropout_rate,
                 )
                 for _ in range(self.num_layers)
-            ]
+            ],
         )
 
         # Output

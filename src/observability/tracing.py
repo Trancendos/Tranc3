@@ -87,7 +87,7 @@ class Span:
                 "name": name,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "attributes": attrs,
-            }
+            },
         )
 
     def set_attribute(self, key: str, value: Any):
@@ -100,7 +100,7 @@ class Span:
                 "name": "exception",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "attributes": {"exception.type": error_type, "exception.message": message},
-            }
+            },
         )
 
     @property
@@ -201,7 +201,8 @@ class Tracer:
         if not conn:
             return []
         rows = conn.execute(
-            "SELECT * FROM spans WHERE trace_id=? ORDER BY start_time", (trace_id,)
+            "SELECT * FROM spans WHERE trace_id=? ORDER BY start_time",
+            (trace_id,),
         ).fetchall()
         return [dict(r) for r in rows]
 

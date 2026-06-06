@@ -137,7 +137,7 @@ class TestMCPProtocolCompliance:
                     "protocolVersion": "2024-11-05",
                     "clientInfo": {"name": "compliance", "version": "0"},
                 },
-            }
+            },
         )
         _log.info("compliance.mcp init resp keys=%s", list(resp.get("result", {}).keys()))
         assert "result" in resp
@@ -165,7 +165,7 @@ class TestMCPProtocolCompliance:
         from src.mcp.server import handle_rpc
 
         resp = await handle_rpc(
-            {"jsonrpc": "2.0", "id": 3, "method": "nonexistent_method", "params": {}}
+            {"jsonrpc": "2.0", "id": 3, "method": "nonexistent_method", "params": {}},
         )
         _log.info("compliance.mcp unknown_method error=%s", resp.get("error", {}).get("code"))
         assert "error" in resp
@@ -185,7 +185,7 @@ class TestMCPProtocolCompliance:
         from src.mcp.server import handle_rpc
 
         resp = await handle_rpc(
-            {"jsonrpc": "2.0", "id": 5, "method": "resources/list", "params": {}}
+            {"jsonrpc": "2.0", "id": 5, "method": "resources/list", "params": {}},
         )
         uris = {r["uri"] for r in resp["result"]["resources"]}
         _log.info("compliance.mcp resource_uris=%s", sorted(uris))

@@ -144,7 +144,7 @@ async def lifespan(app: FastAPI):
         logger.info("TripoSR package detected; model will be loaded on first request.")
     else:
         logger.warning(
-            "tsr package not found — /reconstruct will return 503 until TripoSR is installed."
+            "tsr package not found — /reconstruct will return 503 until TripoSR is installed.",
         )
     yield
 

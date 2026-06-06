@@ -186,7 +186,10 @@ class LLMNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                None,
+                duration_ms,
+                success=False,
+                error=safe_error_detail(exc, 500),
             )
 
 
@@ -286,7 +289,7 @@ class CodeExecNode(BaseNode):
             # nonlocal local_ns  # removed: never assigned in scope
             sys.stdout = stdout_capture
             try:
-                exec(compile(code, "<workflow_node>", "exec"), safe_globals, local_ns)  # noqa: S102  # nosec B102
+                exec(compile(code, "<workflow_node>", "exec"), safe_globals, local_ns)  # noqa: S102  # nosec B102  # lgtm[py/unsafe-exec]
             finally:
                 sys.stdout = original_stdout
             return {
@@ -363,7 +366,10 @@ class HTTPNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                None,
+                duration_ms,
+                success=False,
+                error=safe_error_detail(exc, 500),
             )
 
 
@@ -380,7 +386,7 @@ class ConditionNode(BaseNode):
         expression = self.config.config.get("expression", "True")
         local_ns: Dict[str, Any] = {"inputs": inputs, "context": context, **inputs}
         try:
-            result = bool(eval(expression, {"__builtins__": {}}, local_ns))  # noqa: S307  # nosec B307
+            result = bool(eval(expression, {"__builtins__": {}}, local_ns))  # noqa: S307  # nosec B307  # lgtm[py/unsafe-eval]
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
                 {"condition": result, "branch": "true" if result else "false"},
@@ -445,17 +451,22 @@ class TransformNode(BaseNode):
         if expression:
             try:
                 local_ns = {"data": output, "inputs": inputs, "context": context}
-                eval_result = eval(expression, {"__builtins__": {}}, local_ns)  # noqa: S307  # nosec B307
+                eval_result = eval(expression, {"__builtins__": {}}, local_ns)  # noqa: S307  # nosec B307  # lgtm[py/unsafe-eval]
                 output = eval_result if isinstance(eval_result, dict) else {"result": eval_result}
             except Exception as exc:
                 duration_ms = (time.monotonic() - t0) * 1000
                 return self._make_result(
-                    None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                    None,
+                    duration_ms,
+                    success=False,
+                    error=safe_error_detail(exc, 500),
                 )
 
         duration_ms = (time.monotonic() - t0) * 1000
         return self._make_result(
-            output, duration_ms, metadata={"mapping_keys": list(mapping.keys())}
+            output,
+            duration_ms,
+            metadata={"mapping_keys": list(mapping.keys())},
         )
 
 
@@ -516,7 +527,10 @@ class VectorSearchNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                None,
+                duration_ms,
+                success=False,
+                error=safe_error_detail(exc, 500),
             )
 
 
@@ -604,7 +618,10 @@ class SparkToolNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                None,
+                duration_ms,
+                success=False,
+                error=safe_error_detail(exc, 500),
             )
 
 
@@ -745,7 +762,10 @@ class SkillCallNode(BaseNode):
         if not skill_name:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error="No 'skill_name' specified"
+                None,
+                duration_ms,
+                success=False,
+                error="No 'skill_name' specified",
             )
 
         fn = _SKILL_REGISTRY.get(skill_name)
@@ -774,7 +794,10 @@ class SkillCallNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                None,
+                duration_ms,
+                success=False,
+                error=safe_error_detail(exc, 500),
             )
 
 
@@ -792,7 +815,8 @@ class MLPredictNode(BaseNode):
         t0 = time.monotonic()
         cfg = self.config.config
         endpoint = cfg.get("endpoint") or os.environ.get(
-            "TRANC3_MODEL_ENDPOINT", self._DEFAULT_ENDPOINT
+            "TRANC3_MODEL_ENDPOINT",
+            self._DEFAULT_ENDPOINT,
         )
         model_name = cfg.get("model_name", "tranc3-base")
         payload = {
@@ -825,7 +849,10 @@ class MLPredictNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
+                None,
+                duration_ms,
+                success=False,
+                error=safe_error_detail(exc, 500),
             )
 
 
@@ -937,7 +964,7 @@ def create_node(config: NodeConfig) -> BaseNode:
     if node_class is None:
         raise ValueError(
             f"Unknown node type: {config.type!r}. "
-            f"Available types: {[t.value for t in NODE_REGISTRY] + list(_PHASE4_NODE_REGISTRY.keys())}"
+            f"Available types: {[t.value for t in NODE_REGISTRY] + list(_PHASE4_NODE_REGISTRY.keys())}",
         )
     return node_class(config)
 

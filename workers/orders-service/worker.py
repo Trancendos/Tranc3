@@ -262,7 +262,8 @@ async def ship_order(order_id: str):
         raise HTTPException(404, f"Not found: {order_id}")
     if item.get("status") != "confirmed":
         raise HTTPException(
-            409, f"Order must be confirmed before shipping, got '{item.get('status')}'"
+            409,
+            f"Order must be confirmed before shipping, got '{item.get('status')}'",
         )
     db.update("order_id", order_id, {"status": "shipped"})
     return {"ok": True, "order_id": order_id, "status": "shipped"}
@@ -276,7 +277,8 @@ async def deliver_order(order_id: str):
         raise HTTPException(404, f"Not found: {order_id}")
     if item.get("status") != "shipped":
         raise HTTPException(
-            409, f"Order must be shipped before delivery, got '{item.get('status')}'"
+            409,
+            f"Order must be shipped before delivery, got '{item.get('status')}'",
         )
     db.update("order_id", order_id, {"status": "delivered"})
     return {"ok": True, "order_id": order_id, "status": "delivered"}
@@ -299,7 +301,7 @@ async def order_stats():
     """Order counts and total revenue by status."""
     conn = db._get_conn()
     rows = conn.execute(
-        "SELECT status, COUNT(*) as count, SUM(total) as revenue FROM orders GROUP BY status"
+        "SELECT status, COUNT(*) as count, SUM(total) as revenue FROM orders GROUP BY status",
     ).fetchall()
     return {"stats": [dict(r) for r in rows]}
 

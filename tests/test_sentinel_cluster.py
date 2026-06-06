@@ -243,7 +243,7 @@ class TestSentinelCluster:
         primary = SentinelClusterNode(node_id="node-1", role=NodeRole.PRIMARY, priority=1)
         for i in range(2, 5):
             cluster.add_node(
-                SentinelClusterNode(node_id=f"node-{i}", role=NodeRole.REPLICA, priority=i * 10)
+                SentinelClusterNode(node_id=f"node-{i}", role=NodeRole.REPLICA, priority=i * 10),
             )
         cluster.add_node(primary)
         health = cluster.get_health()

@@ -125,7 +125,7 @@ class SpikingNeuralNetwork(nn.Module):
         self.timesteps = timesteps
         sizes = [input_size] + hidden_sizes + [output_size]
         self.layers = nn.ModuleList(
-            [SpikingLayer(sizes[i], sizes[i + 1]) for i in range(len(sizes) - 1)]
+            [SpikingLayer(sizes[i], sizes[i + 1]) for i in range(len(sizes) - 1)],
         )
         self.stdp = STDPLearning()
         self.spike_rates: List[float] = []

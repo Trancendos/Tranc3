@@ -611,7 +611,7 @@ class SpinEdgeApp:
                 "trigger": trigger,
                 "memory_limit": wasm_module.memory_pages * 64 * 1024,
                 "cpu_cycles": wasm_module.cpu_cycles_limit,
-            }
+            },
         )
 
     def generate_spin_toml(self) -> str:
@@ -698,7 +698,7 @@ class WasmEdgeManager:
         self._module_registry[module.module_id] = module
         logger.info(
             f"Deployed NRC query {query.query_id} as WASM module "
-            f"{module.module_id} to tier {query.target_tier.name}"
+            f"{module.module_id} to tier {query.target_tier.name}",
         )
         return module
 

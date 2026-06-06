@@ -240,7 +240,7 @@ class TestHealingEndpoints:
     def test_dashboard_public_always_200(self, client):
         monitor_mock = MagicMock()
         monitor_mock.get_system_health = AsyncMock(
-            return_value={"status": "healthy", "services": {}}
+            return_value={"status": "healthy", "services": {}},
         )
         with patch("src.healing.health_monitor.health_monitor", monitor_mock):
             r = client.get("/healing/dashboard")

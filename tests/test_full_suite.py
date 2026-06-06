@@ -427,7 +427,7 @@ class TestHolographicMemory:
                 "temporal": torch.randn(4),
                 "frequency": torch.randn(4),
                 "consciousness": torch.randn(4),
-            }
+            },
         )
         results = hm.parallel_search(torch.randn(4))
         assert isinstance(results, list)
@@ -442,7 +442,7 @@ class TestHolographicMemory:
                 "temporal": torch.randn(4),
                 "frequency": torch.randn(4),
                 "consciousness": torch.randn(4),
-            }
+            },
         )
         result = hm.recall_by_association(torch.randn(4), ["spatial"])
         assert "raw" in result
@@ -593,7 +593,9 @@ class TestAPIIntegration:
         with patch(
             "redis.from_url",
             return_value=MagicMock(
-                ping=lambda: True, get=lambda k: None, set=lambda *a, **kw: True
+                ping=lambda: True,
+                get=lambda k: None,
+                set=lambda *a, **kw: True,
             ),
         ):
             from fastapi.testclient import TestClient

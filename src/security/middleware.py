@@ -83,7 +83,10 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
                 body_bytes = await request.body()
                 body_text = body_bytes.decode("utf-8", errors="replace")[:1000]
                 signals = cx.analyse_request(
-                    path=path, body=body_text, headers=dict(request.headers), ip=ip
+                    path=path,
+                    body=body_text,
+                    headers=dict(request.headers),
+                    ip=ip,
                 )
                 if any(s.severity.value == "critical" for s in signals):
                     return _JSONResponse(
@@ -125,7 +128,7 @@ class RBACMiddleware(BaseHTTPMiddleware):
             "/auth/register",
             "/auth/token",
             "/mcp/health",
-        }
+        },
     )
 
     async def dispatch(self, request: Request, call_next) -> Response:
@@ -194,7 +197,7 @@ class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
                     ZeroTrustOptions(
                         mfa_routes=mfa_routes,
                         blocked_countries=blocked_countries,
-                    )
+                    ),
                 )
                 logger.info("ZeroTrustASGIMiddleware active (MFA routes: %s)", mfa_routes)
             except Exception:

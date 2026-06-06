@@ -132,7 +132,10 @@ async def _execute_job(job: dict) -> None:
             payload = json.loads(job["payload"] or "{}")
             async with httpx.AsyncClient(timeout=30) as client:
                 resp = await client.request(
-                    job["method"], job["url"], json=payload, headers=headers
+                    job["method"],
+                    job["url"],
+                    json=payload,
+                    headers=headers,
                 )
             response_body = resp.text[:500]
             if resp.status_code >= 400:
@@ -281,7 +284,8 @@ async def list_jobs(enabled: Optional[bool] = None):
     with get_conn() as conn:
         if enabled is not None:
             rows = conn.execute(
-                "SELECT * FROM jobs WHERE enabled = ? ORDER BY name", (int(enabled),)
+                "SELECT * FROM jobs WHERE enabled = ? ORDER BY name",
+                (int(enabled),),
             ).fetchall()
         else:
             rows = conn.execute("SELECT * FROM jobs ORDER BY name").fetchall()

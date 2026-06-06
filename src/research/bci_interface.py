@@ -60,7 +60,8 @@ class BCISignalProcessor:
         features["dominant_band"] = dominant_band
         features["intent_signal"] = self._band_to_intent(dominant_band)
         features["consciousness_estimate"] = features.get("gamma_power", 0) + features.get(
-            "high_gamma_power", 0
+            "high_gamma_power",
+            0,
         )
 
         return features

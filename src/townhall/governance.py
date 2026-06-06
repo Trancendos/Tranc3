@@ -185,7 +185,7 @@ class TownHall:
                 score=1.0,
                 articles="Art.5,6,13,17,25,32,33,35",
                 check=_check_gdpr,
-            )
+            ),
         )
         self.register(
             Policy(
@@ -195,7 +195,7 @@ class TownHall:
                 description="UK GDPR / Data Protection Act 2018",
                 score=0.97,
                 articles="DPDPD Act 2024 deviations",
-            )
+            ),
         )
         self.register(
             Policy(
@@ -206,7 +206,7 @@ class TownHall:
                 score=1.0,
                 articles="All services within free tiers",
                 check=_check_zero_cost,
-            )
+            ),
         )
         self.register(
             Policy(
@@ -216,7 +216,7 @@ class TownHall:
                 description="User data ownership and zero lock-in guarantee",
                 score=0.95,
                 articles="User ownership · Zero lock-in · Right to export",
-            )
+            ),
         )
         self.register(
             Policy(
@@ -226,7 +226,7 @@ class TownHall:
                 description="Project management principles",
                 score=0.92,
                 articles="7 principles · 7 themes · 7 processes",
-            )
+            ),
         )
         self.register(
             Policy(
@@ -236,7 +236,7 @@ class TownHall:
                 description="IT service management best practices",
                 score=0.88,
                 articles="34 practices · Service Value System",
-            )
+            ),
         )
         self._register_registry_frameworks()
 

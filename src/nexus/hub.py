@@ -177,7 +177,8 @@ class NexusHub:
         q = self._direct.get(recipient)
         if q is None:
             logger.debug(
-                "nexus: no inbox for recipient=%s", sanitize_for_log(recipient)
+                "nexus: no inbox for recipient=%s",
+                sanitize_for_log(recipient),
             )  # codeql[py/cleartext-logging]
             self._stats["dropped"] += 1
             return None
@@ -199,7 +200,10 @@ class NexusHub:
     # ── AI routing ───────────────────────────────────────────────────────────
 
     async def route_inference(
-        self, prompt: str, personality: str = "tranc3-base", sender: str = "system"
+        self,
+        prompt: str,
+        personality: str = "tranc3-base",
+        sender: str = "system",
     ) -> Dict[str, Any]:
         """Route an inference request through Luminous (Tranc3Engine)."""
         try:
@@ -208,12 +212,15 @@ class NexusHub:
             engine = get_engine()
             result = await engine.generate(prompt, personality=personality)
             self.publish(
-                "ai.inference.complete", {"prompt_len": len(prompt), **result}, sender=sender
+                "ai.inference.complete",
+                {"prompt_len": len(prompt), **result},
+                sender=sender,
             )
             return result
         except Exception as exc:
             logger.error(
-                "nexus.route_inference error: %s", sanitize_for_log(exc)
+                "nexus.route_inference error: %s",
+                sanitize_for_log(exc),
             )  # codeql[py/cleartext-logging]
             return {"response": "", "error": safe_error_detail(exc, 500)}
 
