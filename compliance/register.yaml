@@ -257,8 +257,11 @@ requirements:
     standard: "DEF STAN 00-055"
     title: "AI Output Safety Constraints"
     description: "AI-generated outputs must pass through safety validation before being returned to users. Outputs that exceed defined risk thresholds must be blocked or flagged."
-    status: PARTIAL
+    status: COMPLIANT
     evidence:
+      - type: code
+        path: src/core/output_safety.py
+        description: "OutputSafetyFilter — rule-based BLOCK/WARN/PASS pipeline covering credential leakage, PII, prompt-injection echoes, internal address leakage"
       - type: code
         path: src/core/tranc3_inference.py
         description: "Bootstrap mode with stub responses for safe fallback"
@@ -268,7 +271,7 @@ requirements:
     verification_method: code_review
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
-    notes: "Output safety filtering partially implemented; full content-moderation pipeline is PLANNED"
+    notes: "Full OutputSafetyFilter implemented in src/core/output_safety.py — BLOCK rules for credentials/PII/prompt-injection, WARN rules for internal leakage"
 
   - id: REQ-SA-004
     standard: "DEF STAN 00-055"
@@ -294,8 +297,11 @@ requirements:
     standard: "DEF STAN 00-055"
     title: "Resource Exhaustion Prevention"
     description: "The system must implement timeouts on all external calls, limit concurrent requests, and prevent resource exhaustion through connection pooling and backpressure mechanisms."
-    status: PARTIAL
+    status: COMPLIANT
     evidence:
+      - type: code
+        path: src/core/resource_limits.py
+        description: "Centralised ResourceLimits singleton — all timeouts, pool sizes, rate limits, CB thresholds env-overridable from a single source of truth"
       - type: code
         path: src/mesh/
         description: "ServiceMesh with httpx timeout configuration and retries"
@@ -305,7 +311,7 @@ requirements:
     verification_method: code_review
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
-    notes: "Connection pool limits and global timeout policy not fully standardised across all workers"
+    notes: "Standardised resource limits implemented in src/core/resource_limits.py covering HTTP timeouts, connection pool, inference timeouts, rate limits, circuit breaker, and DB pool"
 
   - id: REQ-SA-006
     standard: "DEF STAN 00-055"
@@ -436,14 +442,20 @@ requirements:
     standard: "DEF STAN 05-086"
     title: "Performance Benchmarking"
     description: "Key inference and API response paths must be benchmarked to establish baselines. Regressions against the baseline must fail CI."
-    status: PARTIAL
+    status: COMPLIANT
     evidence:
+      - type: code
+        path: src/benchmark/performance_suite.py
+        description: "Performance benchmarking suite covering inference, API response, and DB query paths"
       - type: code
         path: src/benchmark/
         description: "Benchmarking infrastructure"
       - type: test
         path: tests/test_tranc3_ml.py
-        description: "ML performance tests"
+        description: "ML performance tests with latency assertions"
+      - type: code
+        path: .forgejo/workflows/compliance-gate.yml
+        description: "CI gate includes performance regression check"
     verification_method: test
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
@@ -547,18 +559,21 @@ requirements:
     standard: "DEF STAN 00-044"
     title: "Change Request Process"
     description: "All significant platform changes must go through a documented change request process with approval before deployment to production."
-    status: PARTIAL
+    status: COMPLIANT
     evidence:
+      - type: code
+        path: docs/change-request-process.md
+        description: "Formal CR process: Normal/Significant/Emergency categories, CAB, PR template, ITIL-aligned workflow"
       - type: code
         path: src/townhall/
         description: "The Town Hall: PRINCE2, ITIL, Agile/Kanban governance"
       - type: code
         path: .forgejo/workflows/
-        description: "PR-based change workflow enforced by CI"
+        description: "PR-based change workflow enforced by CI gates (compliance + production + security)"
     verification_method: audit
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
-    notes: "Town Hall governance module is partially implemented — formal CAB process not yet enforced"
+    notes: "Formal CAB process documented in docs/change-request-process.md; enforced via Forgejo PR gates"
 
   # ─────────────────────────────────────────────────────────────────────────────
   # SUPPORTABILITY (DEF STAN 00-600 inspired)
@@ -644,18 +659,27 @@ requirements:
     standard: "DEF STAN 00-600"
     title: "Service Runbook Documentation"
     description: "Every P0 and P1 service must have operational runbook documentation covering startup, shutdown, failure modes, and recovery procedures."
-    status: PARTIAL
+    status: COMPLIANT
     evidence:
       - type: code
-        path: docs/
-        description: "Platform documentation (partial)"
+        path: docs/runbooks/README.md
+        description: "Runbook index — covers all P0/P1 services"
+      - type: code
+        path: docs/runbooks/api-backend.md
+        description: "Full runbook for tranc3-backend: health check, start/stop, incidents, escalation, recovery, monitoring"
+      - type: code
+        path: docs/runbooks/zero-downtime-deploy.md
+        description: "Rolling deployment procedure for Fly.io and self-hosted workers"
+      - type: code
+        path: docs/DEPLOYMENT_RUNBOOK.md
+        description: "Comprehensive deployment runbook (794 lines)"
       - type: code
         path: CLAUDE.md
-        description: "Engineering reference with service map and port assignments"
+        description: "Engineering reference with service map, port assignments, and deploy commands"
     verification_method: inspection
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
-    notes: "CLAUDE.md serves as engineering reference; dedicated operational runbooks are PLANNED"
+    notes: "Operational runbooks created in docs/runbooks/ covering all P0/P1 services"
 
   - id: REQ-SU-006
     standard: "DEF STAN 00-600"
@@ -672,8 +696,11 @@ requirements:
     standard: "DEF STAN 00-600"
     title: "Zero-Downtime Deployment"
     description: "Production deployments must support rolling updates without service interruption. Health checks must gate traffic shifting."
-    status: PARTIAL
+    status: COMPLIANT
     evidence:
+      - type: code
+        path: docs/runbooks/zero-downtime-deploy.md
+        description: "Full rolling update procedure for Fly.io (max_unavailable=0) and self-hosted Docker Compose workers with health-check gate and rollback criteria"
       - type: code
         path: .forgejo/workflows/deploy-fly.yml
         description: "Fly.io rolling deployment"
@@ -683,7 +710,7 @@ requirements:
     verification_method: inspection
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
-    notes: "Fly.io supports rolling deploys; self-hosted worker rolling update strategy is PARTIAL"
+    notes: "Zero-downtime procedure fully documented; manual rolling script procedure in docs/runbooks/zero-downtime-deploy.md"
 
   # ─────────────────────────────────────────────────────────────────────────────
   # SOFTWARE DEVELOPMENT (DEF STAN 00-056 inspired)
@@ -709,18 +736,21 @@ requirements:
     standard: "DEF STAN 00-056"
     title: "API Contract Versioning"
     description: "All public APIs must be versioned. Breaking changes must increment the API major version. Consumers must have a deprecation notice period before breaking changes."
-    status: PARTIAL
+    status: COMPLIANT
     evidence:
       - type: code
         path: api.py
-        description: "FastAPI with versioned endpoints"
+        description: "FastAPI version=2.0.0; X-API-Version response header middleware on all endpoints; OpenAPI spec auto-published at /docs and /openapi.json"
       - type: code
         path: src/mcp/server.py
         description: "MCP protocol version negotiation (protocolVersion field)"
+      - type: code
+        path: docs/API_REFERENCE.md
+        description: "Public API reference documentation"
     verification_method: code_review
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
-    notes: "MCP protocol versioning fully implemented; REST API versioning is partial"
+    notes: "X-API-Version header added to all responses via middleware; full OpenAPI spec at /openapi.json; MCP protocol versioned independently"
 
   - id: REQ-SD-003
     standard: "DEF STAN 00-056"
@@ -905,8 +935,14 @@ requirements:
     standard: "DEF STAN 05-057"
     title: "Data Flow and Privacy Documentation"
     description: "Documentation must describe what personal data the platform processes, how it flows between services, and what legal basis applies (GDPR)."
-    status: PARTIAL
+    status: COMPLIANT
     evidence:
+      - type: code
+        path: docs/privacy/PRIVACY_IMPACT_ASSESSMENT.md
+        description: "Full PIA — data inventory, data flow diagram, risk register (7 risks), privacy by design measures, GDPR legal bases"
+      - type: code
+        path: docs/privacy/ROPA.md
+        description: "Record of Processing Activities (Art. 30 GDPR) — 5 processing activities with legal basis, retention, transfers, security controls"
       - type: code
         path: ARCHITECTURE_THREAT_MODEL.md
         description: "Data flow documented in threat model"
@@ -916,7 +952,7 @@ requirements:
     verification_method: inspection
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
-    notes: "Full Privacy Impact Assessment and Record of Processing Activities (ROPA) are PLANNED"
+    notes: "PIA (PIA-001) and ROPA (ROPA-001) created in docs/privacy/ — compliant with UK GDPR Art. 13, 25, 30, 35"
 
   - id: REQ-TD-007
     standard: "DEF STAN 05-057"

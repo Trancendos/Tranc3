@@ -560,6 +560,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(SecurityHeadersMiddleware)
+
+
+# ── API version header (REQ-SD-002 — DEF STAN 00-056 API Contract Versioning) ─
+_API_VERSION = "2.0.0"
+_API_VERSION_HEADER = "X-API-Version"
+
+
+@app.middleware("http")
+async def api_version_header_middleware(request, call_next):
+    """Attach X-API-Version to every response for explicit contract versioning."""
+    response = await call_next(request)
+    response.headers[_API_VERSION_HEADER] = _API_VERSION
+    return response
 app.add_middleware(GovernanceMiddleware)
 app.add_middleware(ZeroTrustASGIMiddleware)
 app.add_middleware(RBACMiddleware)
