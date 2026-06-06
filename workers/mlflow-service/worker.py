@@ -609,7 +609,12 @@ async def list_artifacts(run_id: str, path: str = ""):
     # This blocks both absolute paths and traversals like ../../etc/passwd.
     safe_path = path.lstrip("/").replace("..", "")  # strip leading / and any .. segments
     artifact_dir = (root / safe_path).resolve()
-    if not str(artifact_dir).startswith(str(root)):
+    # Use is_relative_to (Python 3.9+) which correctly handles prefix collisions
+    # (e.g. root=/data/runs/abc and sibling /data/runs/abc-evil would bypass a
+    # plain startswith check because "abc-evil".startswith("abc") is True).
+    try:
+        artifact_dir.relative_to(root)
+    except ValueError:
         raise HTTPException(status_code=400, detail="Invalid artifact path")
 
     if not artifact_dir.exists():

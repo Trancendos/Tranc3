@@ -10,6 +10,7 @@
 #
 # Pinecone has been removed — it was the only paid dependency in this module.
 
+import hashlib
 import logging
 import os
 from typing import Dict, List, Optional, Tuple
@@ -66,9 +67,10 @@ class VectorStore:
 
         # ── 2. Try FAISS (in-process persistent store) ────────────────────────
         try:
-            from src.knowledge.vector_store import FAISSVectorStore  # type: ignore[import]
+            # src/knowledge/vector_store.py exposes `VectorStore` (not FAISSVectorStore)
+            from src.knowledge.vector_store import VectorStore as _KnowledgeVS  # type: ignore[import]
 
-            store = FAISSVectorStore()
+            store = _KnowledgeVS()
             self._backend_name = "faiss"
             logger.info("VectorStore: FAISS backend active (file-backed, in-process)")
             return _FAISSBackend(store)
@@ -142,7 +144,7 @@ class _QdrantBackend:
             collection_name=_COLLECTION,
             points=[
                 PointStruct(
-                    id=abs(hash(vector_id)) % (2**63),
+                    id=int(hashlib.sha256(vector_id.encode()).hexdigest()[:16], 16),
                     vector=embedding,
                     payload={**metadata, "_vector_id": vector_id},
                 )

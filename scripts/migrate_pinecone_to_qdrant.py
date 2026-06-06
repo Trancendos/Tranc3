@@ -21,6 +21,7 @@ to re-run if interrupted).
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import sys
@@ -104,7 +105,7 @@ def main() -> None:
         for vec_id, vec_data in fetch_response.vectors.items():
             points.append(
                 PointStruct(
-                    id=abs(hash(vec_id)) % (2**63),
+                    id=int(hashlib.sha256(vec_id.encode()).hexdigest()[:16], 16),
                     vector=vec_data.values,
                     payload={**(vec_data.metadata or {}), "_vector_id": vec_id},
                 )
