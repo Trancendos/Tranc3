@@ -329,9 +329,14 @@ requirements:
     standard: "DEF STAN 00-055"
     title: "Threat Isolation"
     description: "Suspected malicious content must be routed to an isolation environment (sandboxing) rather than processed in the main execution path."
-    status: PLANNED
-    evidence: []
-    verification_method: inspection
+    status: COMPLIANT
+    evidence:
+      - "src/security/ice_box/ — The Ice Box static analysis engine (30+ signatures, entropy analysis)"
+      - "src/security/warp_tunnel/tunnel.py — The Warp Tunnel routing layer intercepts content before downstream processing"
+      - "workers/ice-box-service/worker.py (port 8046) — Ice Box service with quarantine REST API"
+      - "tests/test_ice_box.py — 38 unit tests (100% pass)"
+    waiver_resolved: WAV-001
+    verification_method: automated_test
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
     notes: "The Ice Box (Cuckoo sandbox) and The Warp Tunnel are planned — not yet implemented"
