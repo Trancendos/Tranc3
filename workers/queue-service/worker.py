@@ -283,7 +283,8 @@ async def publish(topic: str, req: PublishIn):
     _ensure_topic(topic)
     # Capacity hard stop — queue depth
     try:
-        import sys, os
+        import sys
+        import os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
         from src.capacity.guard import CapacityService, CapacityExceededError, get_capacity_guard
         get_capacity_guard().consume(CapacityService.QUEUE_DEPTH, amount=1)

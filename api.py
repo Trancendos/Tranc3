@@ -97,7 +97,7 @@ from src.security.middleware import (  # noqa: F401  # intentional top-level imp
     ZeroTrustASGIMiddleware,
 )
 from src.observability.audit_middleware import AuditMiddleware  # noqa: F401
-from src.errors import ErrorCode, ErrorResponse, make_error_response  # noqa: F401
+from src.errors import ErrorResponse, make_error_response  # noqa: F401
 from src.security.security_framework import (
     InputSanitizer,  # noqa: F401  # intentional top-level import
 )
@@ -611,7 +611,7 @@ app.add_middleware(AuditMiddleware, service_name="tranc3-backend")
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """Normalise all HTTPExceptions to the ErrorResponse envelope."""
-    from src.errors import ErrorCode, make_error_response
+    from src.errors import ErrorCode
     request_id = getattr(request.state, "request_id", None)
 
     # If detail is already our structured dict, wrap it; otherwise use SYS_UNKNOWN fallback
@@ -642,7 +642,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all for unhandled exceptions — log to Observatory, return structured 500."""
     import traceback
-    from src.errors import ErrorCode, make_error_response
+    from src.errors import ErrorCode
     from src.observability.observatory import get_observatory, EventCategory, EventSeverity
 
     request_id = getattr(request.state, "request_id", None)
@@ -1914,7 +1914,6 @@ async def admin_settings_write(
 ):
     """Store runtime setting overrides in the process environment."""
     import os
-    from src.errors.error_catalog import ErrorCode
 
     SENSITIVE = {"SECRET_KEY", "JWT_SECRET", "DATABASE_URL", "REDIS_URL"}
     ALLOWED_KEYS = {

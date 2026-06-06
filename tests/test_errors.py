@@ -49,6 +49,9 @@ class TestErrorCode:
             "SEC",
             "COMP",
             "SYS",
+            "WF",
+            "VAL",
+            "ENT",
         }
         assert domains == expected
 

@@ -46,9 +46,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -85,7 +84,11 @@ ENTITY_EMBODIMENT: Dict[str, Dict[str, Any]] = {
     "the-spark": {
         "voice": {"engine": "kokoro", "voice_id": "af_sky", "pitch": 1.1, "speed": 1.0},
         "avatar": {"vrm": "imfy.vrm", "portrait": "imfy.png"},
-        "animations": {"idle": "idle_tech.glb", "talk": "talk_gesture.glb", "think": "thinking.glb"},
+        "animations": {
+            "idle": "idle_tech.glb",
+            "talk": "talk_gesture.glb",
+            "think": "thinking.glb",
+        },
         "lead_ai": "Imfy",
     },
     "the-observatory": {
@@ -194,11 +197,12 @@ _DEFAULT_EMBODIMENT: Dict[str, Any] = {
 # Models
 # ---------------------------------------------------------------------------
 
+
 class SpeakRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=4096)
-    emotion: str = "neutral"          # neutral | happy | sad | angry | surprised | thinking
-    member: Optional[str] = None      # for multi-AI entities (Porter family etc.)
-    include_visemes: bool = True       # include Rhubarb lip-sync timeline
+    emotion: str = "neutral"  # neutral | happy | sad | angry | surprised | thinking
+    member: Optional[str] = None  # for multi-AI entities (Porter family etc.)
+    include_visemes: bool = True  # include Rhubarb lip-sync timeline
     stream: bool = False
 
 
@@ -217,7 +221,7 @@ class SpeakResponse(BaseModel):
     lead_ai: str
     text: str
     emotion: str
-    audio_url: Optional[str] = None    # served from /audio/{session_id}.wav
+    audio_url: Optional[str] = None  # served from /audio/{session_id}.wav
     visemes: Optional[List[Dict[str, Any]]] = None  # [{time_ms, shape, weight}]
     duration_ms: Optional[float] = None
     tts_engine: str = "unavailable"
@@ -227,10 +231,12 @@ class SpeakResponse(BaseModel):
 # TTS helpers
 # ---------------------------------------------------------------------------
 
+
 async def _synthesise_kokoro(text: str, voice_id: str, speed: float = 1.0) -> Optional[bytes]:
     """Call Kokoro TTS (OpenAI-compatible endpoint)."""
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
                 f"{KOKORO_URL}/v1/audio/speech",
@@ -248,7 +254,10 @@ async def _synthesise_piper(text: str, voice_id: str) -> Optional[bytes]:
     """Call Piper TTS via subprocess."""
     try:
         proc = await asyncio.create_subprocess_exec(
-            PIPER_BIN, "--model", voice_id, "--output_raw",
+            PIPER_BIN,
+            "--model",
+            voice_id,
+            "--output_raw",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
@@ -260,7 +269,9 @@ async def _synthesise_piper(text: str, voice_id: str) -> Optional[bytes]:
     return None
 
 
-async def _synthesise(entity_id: str, text: str, member: Optional[str] = None) -> tuple[bytes | None, str]:
+async def _synthesise(
+    entity_id: str, text: str, member: Optional[str] = None
+) -> tuple[bytes | None, str]:
     """Route TTS to the correct engine/voice for this entity."""
     embodiment = ENTITY_EMBODIMENT.get(entity_id, _DEFAULT_EMBODIMENT)
     voice_cfg = embodiment.get("voice", {})
@@ -273,7 +284,11 @@ async def _synthesise(entity_id: str, text: str, member: Optional[str] = None) -
         family = voice_cfg.get("family") or voice_cfg.get("dual", [])
         default_key = voice_cfg.get("default", "")
         chosen = next(
-            (m for m in family if m.get("member", "").lower().replace(" ", "-") == (member or default_key)),
+            (
+                m
+                for m in family
+                if m.get("member", "").lower().replace(" ", "-") == (member or default_key)
+            ),
             family[0] if family else None,
         )
         if chosen:
@@ -297,6 +312,7 @@ async def _synthesise(entity_id: str, text: str, member: Optional[str] = None) -
 # Rhubarb lip-sync helper
 # ---------------------------------------------------------------------------
 
+
 def _rhubarb_visemes(wav_path: str) -> Optional[List[Dict[str, Any]]]:
     """
     Run Rhubarb Lip Sync on a WAV file.
@@ -306,7 +322,9 @@ def _rhubarb_visemes(wav_path: str) -> Optional[List[Dict[str, Any]]]:
     try:
         result = subprocess.run(
             [RHUBARB_BIN, "--recognizer", "phonetic", "--exportFormat", "json", wav_path],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         if result.returncode != 0:
             logger.warning("Rhubarb error: %s", result.stderr[:200])
@@ -317,13 +335,15 @@ def _rhubarb_visemes(wav_path: str) -> Optional[List[Dict[str, Any]]]:
             {
                 "time_ms": int(cue["start"] * 1000),
                 "end_ms": int(cue["end"] * 1000),
-                "shape": cue["value"],   # A-H Preston Blair shapes
+                "shape": cue["value"],  # A-H Preston Blair shapes
                 "weight": 1.0,
             }
             for cue in data.get("mouthCues", [])
         ]
     except FileNotFoundError:
-        logger.info("Rhubarb not installed — lip sync unavailable (install from github.com/DanielSWolf/rhubarb-lip-sync)")
+        logger.info(
+            "Rhubarb not installed — lip sync unavailable (install from github.com/DanielSWolf/rhubarb-lip-sync)"
+        )
         return None
     except Exception as exc:
         logger.warning("Rhubarb failed: %s", exc)
@@ -341,6 +361,7 @@ _audio_cache: Dict[str, bytes] = {}
 # App
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     for d in (VRM_DIR, ANIM_DIR, PORTRAIT_DIR):
@@ -350,7 +371,9 @@ async def _lifespan(app: FastAPI):
     logger.info("Animation assets: %s", ANIM_DIR)
     logger.info(
         "TTS: Kokoro @ %s | Rhubarb: %s | Ollama @ %s",
-        KOKORO_URL, RHUBARB_BIN, OLLAMA_URL,
+        KOKORO_URL,
+        RHUBARB_BIN,
+        OLLAMA_URL,
     )
     yield
 
@@ -376,20 +399,24 @@ app.mount("/assets/portraits", StaticFiles(directory=str(PORTRAIT_DIR)), name="p
 # Health
 # ---------------------------------------------------------------------------
 
+
 @app.get("/health")
 async def health():
     kokoro_alive = False
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=2.0) as c:
             r = await c.get(f"{KOKORO_URL}/health")
             kokoro_alive = r.status_code == 200
     except Exception:
         pass
 
-    rhubarb_alive = subprocess.run(
-        [RHUBARB_BIN, "--version"], capture_output=True, timeout=3
-    ).returncode == 0 if True else False
+    rhubarb_alive = (
+        subprocess.run([RHUBARB_BIN, "--version"], capture_output=True, timeout=3).returncode == 0
+        if True
+        else False
+    )
 
     return {
         "status": "ok",
@@ -397,11 +424,15 @@ async def health():
         "port": PORT,
         "purpose": "3D AI Model Builder — entity assembly pod",
         "tts": {
-            "kokoro": "available" if kokoro_alive else "unavailable (install: github.com/eduardolat/kokoro-web)",
+            "kokoro": "available"
+            if kokoro_alive
+            else "unavailable (install: github.com/eduardolat/kokoro-web)",
             "piper": "check PIPER_BIN env",
         },
         "lip_sync": {
-            "rhubarb": "available" if rhubarb_alive else "unavailable (install: github.com/DanielSWolf/rhubarb-lip-sync)",
+            "rhubarb": "available"
+            if rhubarb_alive
+            else "unavailable (install: github.com/DanielSWolf/rhubarb-lip-sync)",
         },
         "entities_configured": len(ENTITY_EMBODIMENT),
         "vrm_assets": len(list(VRM_DIR.glob("*.vrm"))) if VRM_DIR.exists() else 0,
@@ -412,6 +443,7 @@ async def health():
 # ---------------------------------------------------------------------------
 # Entity manifest endpoints
 # ---------------------------------------------------------------------------
+
 
 @app.get("/entities")
 async def list_entities():
@@ -445,9 +477,11 @@ async def get_entity(entity_id: str):
             data = json.loads(profile_path.read_text())
             # Match on id or code_name
             ai_name = embodiment.get("lead_ai", "").lower()
-            if (data.get("id", "").lower() == ai_name or
-                    data.get("code_name", "").lower() == ai_name or
-                    profile_path.stem.lower() == ai_name.replace(" ", "-").replace("'", "")):
+            if (
+                data.get("id", "").lower() == ai_name
+                or data.get("code_name", "").lower() == ai_name
+                or profile_path.stem.lower() == ai_name.replace(" ", "-").replace("'", "")
+            ):
                 personality = data
                 break
         except Exception:
@@ -459,7 +493,7 @@ async def get_entity(entity_id: str):
     return {
         "entity_id": entity_id,
         "lead_ai": embodiment.get("lead_ai"),
-        "soul": personality,   # personality traits, behavior, system_prompt_prefix
+        "soul": personality,  # personality traits, behavior, system_prompt_prefix
         "voice": embodiment.get("voice"),
         "avatar": {
             **embodiment.get("avatar", {}),
@@ -478,13 +512,16 @@ async def get_entity(entity_id: str):
             "VRM assets not yet placed. Create character in VRoid Studio "
             "(vroid.com/en/studio), export as .vrm, place in "
             f"workers/turings-hub-service/assets/vrm/{vrm_file or entity_id + '.vrm'}"
-        ) if vrm_file and not (VRM_DIR / vrm_file).exists() else None,
+        )
+        if vrm_file and not (VRM_DIR / vrm_file).exists()
+        else None,
     }
 
 
 # ---------------------------------------------------------------------------
 # Speak — TTS + lip sync
 # ---------------------------------------------------------------------------
+
 
 @app.post("/entities/{entity_id}/speak", response_model=SpeakResponse)
 async def speak(entity_id: str, body: SpeakRequest):
@@ -521,6 +558,7 @@ async def speak(entity_id: str, body: SpeakRequest):
         try:
             if len(audio_bytes) > 44:
                 import struct
+
                 data_size = struct.unpack_from("<I", audio_bytes, 40)[0]
                 duration_ms = (data_size / (44100 * 2)) * 1000
         except Exception:
@@ -545,13 +583,16 @@ async def serve_audio(filename: str):
     if session_id not in _audio_cache:
         raise HTTPException(404, "Audio not found or expired") from None
     import io
+
     from fastapi.responses import StreamingResponse
+
     return StreamingResponse(io.BytesIO(_audio_cache[session_id]), media_type="audio/wav")
 
 
 # ---------------------------------------------------------------------------
 # WebSocket — real-time streaming
 # ---------------------------------------------------------------------------
+
 
 @app.websocket("/entities/{entity_id}/stream")
 async def entity_stream(ws: WebSocket, entity_id: str):
@@ -586,24 +627,33 @@ async def entity_stream(ws: WebSocket, entity_id: str):
             result = await speak(entity_id, req)
 
             import base64
+
             if result.audio_url:
                 session_id = result.audio_url.split("/")[-1].replace(".wav", "")
                 audio_bytes = _audio_cache.get(session_id, b"")
-                await ws.send_text(json.dumps({
-                    "type": "audio_chunk",
-                    "data": base64.b64encode(audio_bytes).decode(),
-                    "mime": "audio/wav",
-                }))
+                await ws.send_text(
+                    json.dumps(
+                        {
+                            "type": "audio_chunk",
+                            "data": base64.b64encode(audio_bytes).decode(),
+                            "mime": "audio/wav",
+                        }
+                    )
+                )
 
             if result.visemes:
                 await ws.send_text(json.dumps({"type": "visemes", "data": result.visemes}))
 
-            await ws.send_text(json.dumps({
-                "type": "done",
-                "duration_ms": result.duration_ms,
-                "tts_engine": result.tts_engine,
-                "emotion": result.emotion,
-            }))
+            await ws.send_text(
+                json.dumps(
+                    {
+                        "type": "done",
+                        "duration_ms": result.duration_ms,
+                        "tts_engine": result.tts_engine,
+                        "emotion": result.emotion,
+                    }
+                )
+            )
 
     except WebSocketDisconnect:
         pass
@@ -612,6 +662,7 @@ async def entity_stream(ws: WebSocket, entity_id: str):
 # ---------------------------------------------------------------------------
 # Forge — assemble a new entity
 # ---------------------------------------------------------------------------
+
 
 @app.post("/forge")
 async def forge_entity(body: ForgeRequest):
@@ -647,7 +698,7 @@ async def forge_entity(body: ForgeRequest):
             f"1. Create '{body.lead_ai}' character in VRoid Studio (vroid.com/en/studio)",
             f"2. Export as .vrm → place at workers/turings-hub-service/assets/vrm/{body.vrm_filename or body.entity_id + '.vrm'}",
             "3. Download idle + talk animations from Mixamo (mixamo.com), convert to GLB",
-            f"4. Place GLBs at workers/turings-hub-service/assets/animations/",
+            "4. Place GLBs at workers/turings-hub-service/assets/animations/",
             f"5. Test: POST /entities/{body.entity_id}/speak with sample text",
             "6. In browser: load TalkingHead class + three-vrm, point to this service",
         ],
@@ -657,6 +708,7 @@ async def forge_entity(body: ForgeRequest):
 # ---------------------------------------------------------------------------
 # Setup guide
 # ---------------------------------------------------------------------------
+
 
 @app.get("/setup")
 async def setup_guide():
@@ -693,13 +745,14 @@ async def setup_guide():
         "current_animations": [f.name for f in ANIM_DIR.glob("*.glb")] if ANIM_DIR.exists() else [],
         "entities_configured": len(ENTITY_EMBODIMENT),
         "entities_vrm_ready": sum(
-            1 for cfg in ENTITY_EMBODIMENT.values()
-            if cfg.get("avatar", {}).get("vrm")
-            and (VRM_DIR / cfg["avatar"]["vrm"]).exists()
+            1
+            for cfg in ENTITY_EMBODIMENT.values()
+            if cfg.get("avatar", {}).get("vrm") and (VRM_DIR / cfg["avatar"]["vrm"]).exists()
         ),
     }
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=PORT)
