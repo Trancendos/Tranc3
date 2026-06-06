@@ -12,8 +12,8 @@ os.environ.setdefault("JWT_SECRET", "test-jwt-not-for-prod")
 
 @pytest.fixture(autouse=True)
 def _reset_townhall_singletons():
-    import src.townhall.governance as gov
     import src.townhall.framework_registry as fr
+    import src.townhall.governance as gov
 
     gov._townhall = None
     fr._registry = None

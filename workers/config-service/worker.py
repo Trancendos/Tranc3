@@ -9,12 +9,12 @@ Zero-cost: FastAPI + SQLite, no external deps.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -24,6 +24,8 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8024
 WORKER_NAME = "config-service"
@@ -40,7 +42,7 @@ logger = logging.getLogger(WORKER_NAME)
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -194,7 +196,7 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "namespaces": ns_count,
-        "config_keys": cfg_count
+        "config_keys": cfg_count,
     }
 
 
@@ -270,7 +272,8 @@ async def get_key(namespace: str, key: str):
     _ensure_ns(namespace)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT * FROM configs WHERE namespace = ? AND key = ?", (namespace, key)
+            "SELECT * FROM configs WHERE namespace = ? AND key = ?",
+            (namespace, key),
         ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Config key not found")
@@ -286,7 +289,8 @@ async def set_key(namespace: str, key: str, req: ConfigSet):
     str_value = json.dumps(req.value) if req.value_type == "json" else str(req.value)
     with get_conn() as conn:
         existing = conn.execute(
-            "SELECT version, value FROM configs WHERE namespace = ? AND key = ?", (namespace, key)
+            "SELECT version, value FROM configs WHERE namespace = ? AND key = ?",
+            (namespace, key),
         ).fetchone()
         if existing:
             version = existing["version"] + 1
@@ -313,7 +317,8 @@ async def delete_key(namespace: str, key: str):
     _ensure_ns(namespace)
     with get_conn() as conn:
         if not conn.execute(
-            "SELECT id FROM configs WHERE namespace = ? AND key = ?", (namespace, key)
+            "SELECT id FROM configs WHERE namespace = ? AND key = ?",
+            (namespace, key),
         ).fetchone():
             raise HTTPException(status_code=404, detail="Config key not found")
         conn.execute("DELETE FROM configs WHERE namespace = ? AND key = ?", (namespace, key))

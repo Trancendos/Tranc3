@@ -85,14 +85,14 @@ class GeminiProvider(AIProvider):
         if not self._is_available():
             raise RuntimeError(
                 "GOOGLE_GEMINI_API_KEY is not set. "
-                "Get a free key at https://aistudio.google.com/apikey"
+                "Get a free key at https://aistudio.google.com/apikey",
             )
 
         model = request.model or self._default_model
         start = time.monotonic()
 
         messages: List[dict[str, Any]] = request.messages or [
-            {"role": "user", "content": request.prompt}
+            {"role": "user", "content": request.prompt},
         ]
 
         payload: dict[str, Any] = {
@@ -154,7 +154,7 @@ class GeminiProvider(AIProvider):
         if not self._is_available():
             raise RuntimeError(
                 "GOOGLE_GEMINI_API_KEY is not set. "
-                "Get a free key at https://aistudio.google.com/apikey"
+                "Get a free key at https://aistudio.google.com/apikey",
             )
 
         payload: dict[str, Any] = {

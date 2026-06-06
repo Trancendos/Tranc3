@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from pathlib import Path
 from typing import Dict
@@ -51,7 +52,7 @@ def load_all_overrides_by_pid(*, force: bool = False) -> Dict[str, Dict[str, str
         return result
 
     try:
-        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        conn = sqlite3_connect(f"file:{path}?mode=ro", uri=True)
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
             "SELECT location_pid, entity_type, slot, override_name FROM entity_overrides"

@@ -15,13 +15,13 @@ Zero-cost: FastAPI + SQLite, no external services required.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -40,6 +40,8 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
+
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -61,7 +63,7 @@ logger = logging.getLogger("skills-benchmark-service")
 
 def _get_db() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3_connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -500,7 +502,7 @@ async def get_skill_gaps():
                     "best_score": r["best_score"] or 0.0,
                     "avg_score": r["avg_score"] or 0.0,
                     "gap": "No model meets threshold (0.7)",
-                }
+                },
             )
     conn.close()
     return gaps
@@ -517,10 +519,10 @@ async def get_stats():
     total_suites = conn.execute("SELECT COUNT(*) as c FROM suites").fetchone()["c"]
     total_evals = conn.execute("SELECT COUNT(*) as c FROM evaluations").fetchone()["c"]
     completed = conn.execute(
-        "SELECT COUNT(*) as c FROM evaluations WHERE status='completed'"
+        "SELECT COUNT(*) as c FROM evaluations WHERE status='completed'",
     ).fetchone()["c"]
     pending = conn.execute(
-        "SELECT COUNT(*) as c FROM evaluations WHERE status='pending'"
+        "SELECT COUNT(*) as c FROM evaluations WHERE status='pending'",
     ).fetchone()["c"]
     conn.close()
     return {

@@ -31,10 +31,11 @@ interface Job {
 }
 
 function statusIcon(s: Job['status']) {
-  if (s === 'done') return <CheckCircle size={14} className="text-green-400" />
-  if (s === 'running') return <Play size={14} className="text-indigo-400" />
-  if (s === 'failed') return <XCircle size={14} className="text-red-400" />
-  return <Clock size={14} className="text-gray-400" />
+  const label = s === 'done' ? 'Done' : s === 'running' ? 'Running' : s === 'failed' ? 'Failed' : 'Pending'
+  if (s === 'done')    return <CheckCircle size={14} aria-label={label} className="text-green-400" />
+  if (s === 'running') return <Play        size={14} aria-label={label} className="text-indigo-400" />
+  if (s === 'failed')  return <XCircle     size={14} aria-label={label} className="text-red-400" />
+  return                      <Clock       size={14} aria-label={label} className="text-gray-400" />
 }
 
 function queueStatusColor(s: QueueStats['status']) {
@@ -91,7 +92,7 @@ export default function QueuePage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <ListTodo size={22} className="text-indigo-400" />
+            <ListTodo size={22} aria-hidden="true" className="text-indigo-400" />
             Queue
           </h1>
           <p className="text-gray-400 text-sm mt-1">
@@ -104,8 +105,8 @@ export default function QueuePage() {
           disabled={loading}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm text-white transition-colors"
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          Refresh
+          <RefreshCw size={14} aria-hidden="true" className={loading ? 'animate-spin' : ''} />
+          {loading ? 'Refreshing…' : 'Refresh'}
         </button>
       </div>
 
@@ -125,15 +126,15 @@ export default function QueuePage() {
 
       {/* Queue backends */}
       <div className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden mb-6">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" aria-label="Queue backend providers">
           <thead>
             <tr className="border-b border-gray-700">
-              <th className="text-left px-4 py-3 text-gray-400 font-medium">Provider</th>
-              <th className="text-right px-4 py-3 text-gray-400 font-medium">Depth</th>
-              <th className="text-right px-4 py-3 text-gray-400 font-medium">In Flight</th>
-              <th className="text-right px-4 py-3 text-gray-400 font-medium">Processed</th>
-              <th className="text-right px-4 py-3 text-gray-400 font-medium">Failed</th>
-              <th className="text-left px-4 py-3 text-gray-400 font-medium">Status</th>
+              <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Provider</th>
+              <th scope="col" className="text-right px-4 py-3 text-gray-400 font-medium">Depth</th>
+              <th scope="col" className="text-right px-4 py-3 text-gray-400 font-medium">In Flight</th>
+              <th scope="col" className="text-right px-4 py-3 text-gray-400 font-medium">Processed</th>
+              <th scope="col" className="text-right px-4 py-3 text-gray-400 font-medium">Failed</th>
+              <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Status</th>
             </tr>
           </thead>
           <tbody>

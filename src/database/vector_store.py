@@ -57,8 +57,8 @@ class VectorStore:
                             "id": vector_id,
                             "values": embedding,
                             "metadata": metadata,
-                        }
-                    ]
+                        },
+                    ],
                 )
             else:
                 self._backend.upsert(vector_id, embedding, metadata)
@@ -68,12 +68,18 @@ class VectorStore:
             return False
 
     def query(
-        self, embedding: List[float], top_k: int = 5, filter: Optional[Dict] = None
+        self,
+        embedding: List[float],
+        top_k: int = 5,
+        filter: Optional[Dict] = None,
     ) -> List[Dict]:
         try:
             if self._backend_name == "pinecone":
                 results = self._backend.query(
-                    vector=embedding, top_k=top_k, include_metadata=True, filter=filter or {}
+                    vector=embedding,
+                    top_k=top_k,
+                    include_metadata=True,
+                    filter=filter or {},
                 )
                 return [
                     {"id": m.id, "score": m.score, "metadata": m.metadata} for m in results.matches
@@ -127,7 +133,7 @@ class InMemoryVectorStore:
         for vid, (vec, meta) in self._store.items():
             v = np.array(vec)
             score = float(
-                np.dot(query_vec, v) / (np.linalg.norm(query_vec) * np.linalg.norm(v) + 1e-8)
+                np.dot(query_vec, v) / (np.linalg.norm(query_vec) * np.linalg.norm(v) + 1e-8),
             )
             scores.append({"id": vid, "score": score, "metadata": meta})
         scores.sort(key=lambda x: x["score"], reverse=True)

@@ -9,11 +9,11 @@ Zero-cost: In-memory token buckets (fast), SQLite for policy persistence.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -24,6 +24,8 @@ from typing import Dict, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8026
 WORKER_NAME = "rate-limit-service"
@@ -40,7 +42,7 @@ logger = logging.getLogger(WORKER_NAME)
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -178,21 +180,6 @@ async def require_internal_auth(
 _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
     with _lock:
@@ -203,7 +190,7 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "active_buckets": active_buckets
+        "active_buckets": active_buckets,
     }
 
 
@@ -274,11 +261,14 @@ async def update_policy(name: str, req: PolicyUpdate):
         row = conn.execute("SELECT * FROM policies WHERE name = ?", (name,)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Policy not found")
-        updates = dict(req.model_dump(exclude_none=True).items())
+        # Allowlist prevents any non-schema key from reaching the SQL string.
+        _updatable = frozenset({"capacity", "refill_rate", "description"})
+        updates = {k: v for k, v in req.model_dump(exclude_none=True).items() if k in _updatable}
         if updates:
-            set_clause = ", ".join(f"{k} = ?" for k in updates)
+            set_clause = ", ".join(f"{k} = ?" for k in updates)  # keys are allowlisted
             conn.execute(
-                f"UPDATE policies SET {set_clause} WHERE name = ?", [*updates.values(), name]
+                f"UPDATE policies SET {set_clause} WHERE name = ?",
+                [*updates.values(), name],
             )
             conn.commit()
     # Evict cached buckets for this policy

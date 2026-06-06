@@ -15,13 +15,13 @@ Zero-cost: FastAPI + SQLite, no external services required.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -41,6 +41,8 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
+
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -70,7 +72,7 @@ class TopologyMode(str, Enum):
 
 def _get_db() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3_connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -183,7 +185,10 @@ def _get_current_mode(conn: sqlite3.Connection) -> str:
 
 
 def _set_current_mode(
-    conn: sqlite3.Connection, mode: str, reason: str = "", triggered_by: str = "manual"
+    conn: sqlite3.Connection,
+    mode: str,
+    reason: str = "",
+    triggered_by: str = "manual",
 ) -> None:
     now = _now()
     prev = _get_current_mode(conn)
@@ -258,7 +263,8 @@ async def switch_mode(body: ModeSwitchRequest):
         target = TopologyMode(body.mode)
     except ValueError:
         raise HTTPException(
-            400, f"Invalid mode '{body.mode}'. Must be one of {[m.value for m in TopologyMode]}"
+            400,
+            f"Invalid mode '{body.mode}'. Must be one of {[m.value for m in TopologyMode]}",
         ) from None
 
     conn = _get_db()
@@ -272,7 +278,8 @@ async def switch_mode(body: ModeSwitchRequest):
 async def get_mode_history(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM topology_history ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM topology_history ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -317,7 +324,9 @@ async def register_node(body: NodeRegister):
 
 @_router.get("/nodes")
 async def list_nodes(
-    status: Optional[str] = None, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)
+    status: Optional[str] = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ):
     conn = _get_db()
     q = "SELECT * FROM node_health WHERE 1=1"
@@ -386,7 +395,8 @@ async def create_migration(body: MigrationCreate):
 async def list_migrations(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM migrations ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM migrations ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -443,7 +453,7 @@ async def get_stats():
     mode = _get_current_mode(conn)
     total_nodes = conn.execute("SELECT COUNT(*) as c FROM node_health").fetchone()["c"]
     healthy_nodes = conn.execute(
-        "SELECT COUNT(*) as c FROM node_health WHERE status='healthy'"
+        "SELECT COUNT(*) as c FROM node_health WHERE status='healthy'",
     ).fetchone()["c"]
     total_migrations = conn.execute("SELECT COUNT(*) as c FROM migrations").fetchone()["c"]
     conn.close()

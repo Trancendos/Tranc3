@@ -50,7 +50,7 @@ except ImportError:
     _HVAC_AVAILABLE = False
     logger.warning(
         "openbao_client: hvac package not installed — OpenBao backend unavailable. "
-        "Install with: pip install hvac"
+        "Install with: pip install hvac",
     )
 
 
@@ -87,14 +87,15 @@ def _openbao_available() -> bool:
 
 
 def _sqlite_store(key: str, value: str) -> Dict[str, Any]:
+    import sqlite3
+
     from worker import (  # noqa: PLC0415
+        _append_audit,
         _encrypt_secret,
         _get_db,
         _new_id,
         _now,
-        _append_audit,
     )
-    import sqlite3
 
     conn = _get_db()
     sid = _new_id()
@@ -116,21 +117,21 @@ def _sqlite_store(key: str, value: str) -> Dict[str, Any]:
 
 
 def _sqlite_get(key: str) -> Dict[str, Any]:
-    from worker import _get_db, _decrypt_secret, _append_audit, _legacy_xor_decrypt  # noqa: PLC0415
+    from worker import _append_audit, _decrypt_secret, _get_db  # noqa: PLC0415
 
     conn = _get_db()
-    row = conn.execute("SELECT * FROM secrets WHERE key=? AND is_active=1", (key,)).fetchone()
+    row = conn.execute(
+        "SELECT * FROM secrets WHERE key=? AND is_active=1",
+        (key,),
+    ).fetchone()
     if row is None:
         conn.close()
         return {"ok": False, "backend": "sqlite", "error": "not found"}
     try:
         value = _decrypt_secret(row["encrypted_value"])
     except Exception:  # noqa: BLE001
-        try:
-            value = _legacy_xor_decrypt(row["encrypted_value"])
-        except Exception:  # noqa: BLE001
-            conn.close()
-            return {"ok": False, "backend": "sqlite", "error": "decryption failed"}
+        conn.close()
+        return {"ok": False, "backend": "sqlite", "error": "decryption failed — record may be corrupted"}
     _append_audit(conn, row["id"], "secret.read", details={"via": "openbao_client"})
     conn.commit()
     conn.close()
@@ -138,7 +139,7 @@ def _sqlite_get(key: str) -> Dict[str, Any]:
 
 
 def _sqlite_delete(key: str) -> Dict[str, Any]:
-    from worker import _get_db, _append_audit, _now  # noqa: PLC0415
+    from worker import _append_audit, _get_db, _now  # noqa: PLC0415
 
     conn = _get_db()
     row = conn.execute("SELECT id FROM secrets WHERE key=? AND is_active=1", (key,)).fetchone()
@@ -146,7 +147,10 @@ def _sqlite_delete(key: str) -> Dict[str, Any]:
         conn.close()
         return {"ok": False, "backend": "sqlite", "error": "not found"}
     now = _now()
-    conn.execute("UPDATE secrets SET is_active=0, updated_at=? WHERE id=?", (now, row["id"]))
+    conn.execute(
+        "UPDATE secrets SET is_active=0, updated_at=? WHERE id=?",
+        (now, row["id"]),
+    )
     _append_audit(conn, row["id"], "secret.delete", details={"via": "openbao_client"})
     conn.commit()
     conn.close()
@@ -157,7 +161,9 @@ def _sqlite_list() -> Dict[str, Any]:
     from worker import _get_db  # noqa: PLC0415
 
     conn = _get_db()
-    rows = conn.execute("SELECT key FROM secrets WHERE is_active=1 ORDER BY key").fetchall()
+    rows = conn.execute(
+        "SELECT key FROM secrets WHERE is_active=1 ORDER BY key",
+    ).fetchall()
     conn.close()
     return {"ok": True, "backend": "sqlite", "keys": [r["key"] for r in rows]}
 

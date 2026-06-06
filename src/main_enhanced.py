@@ -141,7 +141,7 @@ class TRANC3Enhanced:
             else:
                 logger.warning(
                     "TRANC3 model not trained yet — bootstrap mode active. "
-                    "Run: python train.py  to train from scratch."
+                    "Run: python train.py  to train from scratch.",
                 )
         except Exception as e:
             logger.warning("TRANC3 engine init failed (non-fatal): %s", e)

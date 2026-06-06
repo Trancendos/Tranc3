@@ -34,7 +34,9 @@ class QuantumInferenceEngine:
         self.classical_model = nn.Linear(768, 768)  # Placeholder
 
     def quantum_attention(
-        self, input_tensor: torch.Tensor, user_id: Optional[str] = None
+        self,
+        input_tensor: torch.Tensor,
+        user_id: Optional[str] = None,
     ) -> torch.Tensor:
         """
         Quantum attention with classical fallback
@@ -46,7 +48,8 @@ class QuantumInferenceEngine:
             return self._quantum_attention_core(input_tensor)
         except Exception as e:
             logger.warning(
-                "Quantum attention failed, falling back to classical: %s", sanitize_for_log(e)
+                "Quantum attention failed, falling back to classical: %s",
+                sanitize_for_log(e),
             )
             return self._classical_attention(input_tensor)
 
@@ -95,7 +98,9 @@ class QuantumInferenceEngine:
         return torch.matmul(weights, input_tensor)
 
     def quantum_memory_recall(
-        self, query: torch.Tensor, user_id: Optional[str] = None
+        self,
+        query: torch.Tensor,
+        user_id: Optional[str] = None,
     ) -> Optional[torch.Tensor]:
         """
         Quantum-enhanced memory recall

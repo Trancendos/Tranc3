@@ -20,13 +20,13 @@ Zero-cost: FastAPI + SQLite + free-tier LLMs, no external orchestration required
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -45,6 +45,8 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
+
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -68,7 +70,7 @@ logger = logging.getLogger("langchain-integration-service")
 
 def _get_db() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3_connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -362,7 +364,8 @@ async def create_template(body: PromptTemplateCreate):
 async def list_templates(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM prompt_templates ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM prompt_templates ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+        (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -434,7 +437,8 @@ async def create_chain(body: ChainCreate):
 async def list_chains(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM chains ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM chains ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+        (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -549,7 +553,8 @@ async def create_document(body: DocumentCreate):
 async def list_documents(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM documents ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM documents ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -600,7 +605,8 @@ async def create_tool(body: AgentToolCreate):
 async def list_tools(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM agent_tools ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM agent_tools ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -653,7 +659,8 @@ async def create_graph(body: StateGraphCreate):
 async def list_graphs(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM state_graphs ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM state_graphs ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+        (limit, offset),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]

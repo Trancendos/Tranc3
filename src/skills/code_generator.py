@@ -87,7 +87,7 @@ class CodeAnalyzer:
                         "line_count": (
                             node.end_lineno - node.lineno + 1 if hasattr(node, "end_lineno") else 0
                         ),
-                    }
+                    },
                 )
             elif isinstance(node, ast.ClassDef):
                 result["classes"].append({"name": node.name, "lineno": node.lineno})
@@ -104,7 +104,7 @@ class CodeAnalyzer:
         for fn in result["functions"]:
             if fn["line_count"] > 50:
                 result["issues"].append(
-                    f"Function '{fn['name']}' is long ({fn['line_count']} lines)."
+                    f"Function '{fn['name']}' is long ({fn['line_count']} lines).",
                 )
             if not fn["has_docstring"]:
                 result["issues"].append(f"Function '{fn['name']}' lacks a docstring.")
@@ -160,7 +160,7 @@ class CodeAnalyzer:
         Cyclomatic complexity estimate: 1 + count of decision-point keywords.
         """
         decision_pattern = re.compile(
-            r"\b(if|elif|else|for|while|except|and|or|not\s+\w+\s+in|case)\b"
+            r"\b(if|elif|else|for|while|except|and|or|not\s+\w+\s+in|case)\b",
         )
         try:
             tree = ast.parse(code)
@@ -267,7 +267,7 @@ class CodeSelfImprover:
                 "improvements": applied,
                 "quality": quality,
                 "duration_ms": (time.perf_counter() - t0) * 1000.0,
-            }
+            },
         )
 
         return CodeResult(
@@ -363,7 +363,7 @@ class CodeSelfImprover:
                         start + 1,
                         f"{comment_indent}# TODO: Function '{name}' is {fn_len} lines "
                         f"— consider extracting helper functions.",
-                    )
+                    ),
                 )
                 modified = True
 

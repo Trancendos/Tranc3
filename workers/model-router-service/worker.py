@@ -15,13 +15,13 @@ Zero-cost: FastAPI + SQLite, routes to free-tier LLMs only.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -40,6 +40,8 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
+
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -61,7 +63,7 @@ logger = logging.getLogger("model-router-service")
 
 def _get_db() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3_connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -122,7 +124,7 @@ def _seed_default_models() -> None:
             250,
             7,
         ),
-        ("gpt-4o-mini", "openai", "gpt-4o-mini", 1, ["chat", "completion", "vision"], 0.0, 180, 6),
+        # gpt-4o-mini removed — OpenAI is a paid API (~$0.00015/1k tokens); zero-cost violation
         ("llama3.1:8b", "ollama", "llama3.1:8b", 1, ["chat", "completion"], 0.0, 200, 5),
         (
             "qwen2.5-coder:7b",
@@ -135,6 +137,17 @@ def _seed_default_models() -> None:
             5,
         ),
         ("nomic-embed-text", "ollama", "nomic-embed-text", 1, ["embedding"], 0.0, 50, 3),
+        # Cerebras free tier — 60k TPM / 1M TPD; zero-cost
+        (
+            "cerebras-llama3.3-70b",
+            "cerebras",
+            "llama3.3-70b",
+            1,
+            ["chat", "completion", "reasoning"],
+            0.0,
+            180,
+            6,
+        ),
     ]
     for name, provider, model_id, is_free, caps, cost, latency, priority in defaults:
         mid = _new_id()
@@ -304,7 +317,9 @@ async def register_model(body: ModelRegister):
 
 @_router.get("/models")
 async def list_models(
-    active_only: bool = True, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)
+    active_only: bool = True,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ):
     conn = _get_db()
     q = "SELECT * FROM models WHERE 1=1"
@@ -422,7 +437,7 @@ async def get_stats():
     free = conn.execute("SELECT COUNT(*) as c FROM models WHERE is_free=1").fetchone()["c"]
     active = conn.execute("SELECT COUNT(*) as c FROM models WHERE is_active=1").fetchone()["c"]
     total_requests = conn.execute(
-        "SELECT COALESCE(SUM(total_requests), 0) as c FROM models"
+        "SELECT COALESCE(SUM(total_requests), 0) as c FROM models",
     ).fetchone()["c"]
     conn.close()
     return {

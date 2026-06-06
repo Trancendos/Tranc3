@@ -11,7 +11,9 @@ export default function Layout({ children, username, onLogout }: LayoutProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-950 text-white">
       <NavBar username={username} onLogout={onLogout} />
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main id="main-content" className="flex-1 overflow-auto" tabIndex={-1}>
+        {children}
+      </main>
     </div>
   )
 }

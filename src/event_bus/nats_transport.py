@@ -171,12 +171,12 @@ class NATSTransport:
         if not _NATS_AVAILABLE:
             logger.debug(
                 "nats-py not installed — NATSTransport operating as no-op. "
-                "Install nats-py>=2.6.0 to enable NATS JetStream transport."
+                "Install nats-py>=2.6.0 to enable NATS JetStream transport.",
             )
         elif not self._url:
             logger.debug(
                 "NATS_URL not set — NATSTransport operating as no-op. "
-                "Set NATS_URL to enable NATS JetStream transport."
+                "Set NATS_URL to enable NATS JetStream transport.",
             )
 
     # ── Properties ───────────────────────────────────────────────────────
@@ -354,7 +354,7 @@ class NATSTransport:
                     max_age=7 * 24 * 3600,  # 7 days in seconds
                     storage="file",
                     num_replicas=1,
-                )
+                ),
             )
             logger.info(
                 "nats_stream_created",
@@ -367,7 +367,7 @@ class NATSTransport:
                     StreamConfig(
                         name=name,
                         subjects=subjects,
-                    )
+                    ),
                 )
                 logger.debug("nats_stream_updated: %s", name)
             except Exception as update_exc:  # noqa: BLE001

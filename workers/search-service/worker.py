@@ -10,12 +10,12 @@ Zero-cost: FastAPI + SQLite FTS5 (built-in), no external deps.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -25,6 +25,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8017
 WORKER_NAME = "search-service"
@@ -41,7 +43,7 @@ logger = logging.getLogger(WORKER_NAME)
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -195,7 +197,7 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "indices": index_count,
-        "documents": doc_count
+        "documents": doc_count,
     }
 
 
@@ -245,7 +247,8 @@ async def index_document(index: str, doc_id: str, doc: DocumentIn):
     now = time.time()
     with get_conn() as conn:
         existing = conn.execute(
-            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
+            "SELECT rowid FROM documents WHERE index_name=? AND id=?",
+            (index, doc_id),
         ).fetchone()
         if existing:
             conn.execute(
@@ -260,7 +263,8 @@ async def index_document(index: str, doc_id: str, doc: DocumentIn):
             )
             conn.execute("UPDATE indices SET doc_count=doc_count+1 WHERE name=?", (index,))
         row = conn.execute(
-            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
+            "SELECT rowid FROM documents WHERE index_name=? AND id=?",
+            (index, doc_id),
         ).fetchone()
         conn.execute(
             "INSERT INTO fts_default(rowid, id, index_name, title, body) VALUES (?,?,?,?,?)",
@@ -278,7 +282,8 @@ async def batch_index(index: str, req: BatchIndexIn):
     with get_conn() as conn:
         for doc in req.documents:
             existing = conn.execute(
-                "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc.id)
+                "SELECT rowid FROM documents WHERE index_name=? AND id=?",
+                (index, doc.id),
             ).fetchone()
             if existing:
                 conn.execute(
@@ -293,7 +298,8 @@ async def batch_index(index: str, req: BatchIndexIn):
                 )
                 inserted += 1
             row = conn.execute(
-                "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc.id)
+                "SELECT rowid FROM documents WHERE index_name=? AND id=?",
+                (index, doc.id),
             ).fetchone()
             conn.execute(
                 "INSERT INTO fts_default(rowid, id, index_name, title, body) VALUES (?,?,?,?,?)",
@@ -309,7 +315,8 @@ async def delete_document(index: str, doc_id: str):
     _ensure_index(index)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
+            "SELECT rowid FROM documents WHERE index_name=? AND id=?",
+            (index, doc_id),
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Document not found")

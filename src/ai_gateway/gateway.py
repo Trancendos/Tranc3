@@ -149,6 +149,20 @@ class AIGateway:
         config = tenant_config or DEFAULT_TENANT_CONFIG
         self._metrics.total_requests += 1
 
+        # 0. Capacity guard — check platform daily token budget
+        try:
+            from src.capacity.guard import CapacityService, get_capacity_guard
+            _guard = get_capacity_guard()
+            _guard.consume(CapacityService.AI_TOKENS_DAILY, amount=0)  # peek — actual tokens consumed post-call
+            _guard.consume(CapacityService.PLATFORM_REQUESTS_HOURLY, amount=1)
+            _guard.consume(CapacityService.PLATFORM_REQUESTS_DAILY, amount=1)
+        except Exception as _cap_err:
+            from src.capacity.guard import CapacityExceededError
+            if isinstance(_cap_err, CapacityExceededError):
+                raise AIGatewayError("CAPACITY_EXCEEDED", str(_cap_err)) from _cap_err
+            # Non-capacity errors in the guard must never block requests
+            pass
+
         # 1. Check token budget
         if config.daily_token_budget:
             if config.tokens_used_today >= config.daily_token_budget:
@@ -175,7 +189,8 @@ class AIGateway:
 
         if not routes:
             raise AIGatewayError(
-                "NO_ROUTES", "No applicable routes found and no providers registered"
+                "NO_ROUTES",
+                "No applicable routes found and no providers registered",
             )
 
         # 4. Try each route in priority order
@@ -199,7 +214,7 @@ class AIGateway:
                 routed_request = request.model_copy(
                     update={
                         "model": route.model or request.model,
-                    }
+                    },
                 )
 
                 # Execute with optional timeout
@@ -223,6 +238,30 @@ class AIGateway:
 
                 # Update token usage
                 config.tokens_used_today += response.tokens_total
+
+                # Capacity guard — record actual token consumption + per-provider requests
+                try:
+                    from src.capacity.guard import CapacityService, get_capacity_guard
+                    _g = get_capacity_guard()
+                    if response.tokens_total:
+                        _g.consume(CapacityService.AI_TOKENS_DAILY, amount=response.tokens_total)
+                        if "cerebras" in route.provider.lower():
+                            _g.consume(CapacityService.CEREBRAS_TOKENS, amount=response.tokens_total)
+                    _provider = route.provider.lower()
+                    if "groq" in _provider:
+                        _g.consume(CapacityService.GROQ_REQUESTS, amount=1)
+                    elif "gemini" in _provider or "google" in _provider:
+                        _g.consume(CapacityService.GEMINI_REQUESTS, amount=1)
+                    elif "sambanova" in _provider:
+                        _g.consume(CapacityService.SAMBANOVA_REQUESTS, amount=1)
+                    elif "openrouter" in _provider:
+                        _g.consume(CapacityService.OPENROUTER_REQUESTS, amount=1)
+                    elif "huggingface" in _provider or "hf" in _provider:
+                        _g.consume(CapacityService.HUGGINGFACE_REQUESTS, amount=1)
+                    elif "github" in _provider:
+                        _g.consume(CapacityService.GITHUB_MODELS_REQUESTS, amount=1)
+                except Exception:
+                    pass  # Capacity tracking must never break successful responses
 
                 return response
 
@@ -322,7 +361,7 @@ class AIGateway:
                 )
             except asyncio.TimeoutError:
                 raise RuntimeError(
-                    f"Provider {provider.name} exceeded {max_latency_ms}ms latency"
+                    f"Provider {provider.name} exceeded {max_latency_ms}ms latency",
                 ) from None
         else:
             return await provider.complete(request)
@@ -337,7 +376,10 @@ class AIGateway:
         return None
 
     def _cache_response(
-        self, request: AIRequest, config: TenantAIConfig, response: AIResponse
+        self,
+        request: AIRequest,
+        config: TenantAIConfig,
+        response: AIResponse,
     ) -> None:
         """Cache a response."""
         cache_key = self._make_cache_key(request, config)

@@ -114,7 +114,7 @@ class TestBridgeDispatcher:
         loop = asyncio.new_event_loop()
         try:
             result = loop.run_until_complete(
-                dispatcher.dispatch(BridgeTarget.NEXUS, "process", {"data": 1})
+                dispatcher.dispatch(BridgeTarget.NEXUS, "process", {"data": 1}),
             )
             assert result["result"] == "ok"
         finally:

@@ -1,0 +1,28 @@
+[package]
+name = "tranc3_crypto"
+version = "0.1.0"
+edition = "2021"
+description = "Memory-safe, constant-time AES-256-GCM cryptographic nanoservice (PyO3)"
+
+[lib]
+name = "tranc3_crypto"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"] }
+aes-gcm = { version = "0.10", features = ["aes"] }
+pbkdf2 = { version = "0.12", features = ["hmac"] }
+sha2 = "0.10"
+hmac = "0.12"
+rand = "0.8"
+zeroize = { version = "1.8", features = ["derive"] }
+hex = "0.4"
+base64 = "0.22"
+hkdf = "0.12"
+subtle = "2.6"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

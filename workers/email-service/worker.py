@@ -10,7 +10,6 @@ Zero-cost: FastAPI + SQLite + smtplib (stdlib), no external deps.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import email.mime.multipart
@@ -20,6 +19,7 @@ import logging
 import os
 import smtplib
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -30,6 +30,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8018
 WORKER_NAME = "email-service"
@@ -55,7 +57,7 @@ MAX_RETRIES = 3
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -280,7 +282,7 @@ async def health():
         "smtp_configured": bool(SMTP_HOST),
         "pending": pending,
         "sent": sent,
-        "failed": failed
+        "failed": failed,
     }
 
 
@@ -347,7 +349,8 @@ async def retry_email(email_id: int):
         if not row:
             raise HTTPException(status_code=404, detail="Email not found")
         conn.execute(
-            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (email_id,)
+            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?",
+            (email_id,),
         )
         conn.commit()
     return {"retrying": email_id}
@@ -373,7 +376,7 @@ async def create_template(req: TemplateCreate):
 async def list_templates():
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT id, name, subject, created_at FROM templates ORDER BY name"
+            "SELECT id, name, subject, created_at FROM templates ORDER BY name",
         ).fetchall()
     return {"templates": [dict(r) for r in rows]}
 

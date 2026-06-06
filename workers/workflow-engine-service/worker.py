@@ -16,13 +16,13 @@ Zero-cost: FastAPI + SQLite, no external orchestration required.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -42,6 +42,8 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
+
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -63,7 +65,7 @@ logger = logging.getLogger("workflow-engine-service")
 
 def _get_db() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3_connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -315,7 +317,8 @@ async def create_workflow(body: WorkflowCreate):
 async def list_workflows(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM workflows ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset)
+        "SELECT * FROM workflows ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+        (limit, offset),
     ).fetchall()
     conn.close()
     return [
@@ -535,7 +538,8 @@ async def create_checkpoint(run_id: str, body: CheckpointCreate):
 async def get_run_logs(run_id: str):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM checkpoints WHERE run_id=? ORDER BY created_at", (run_id,)
+        "SELECT * FROM checkpoints WHERE run_id=? ORDER BY created_at",
+        (run_id,),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]

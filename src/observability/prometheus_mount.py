@@ -14,19 +14,28 @@ def _route_exists(app: Any, path: str) -> bool:
     return False
 
 
+_worker_up_gauge = None
+
+
 def _ensure_worker_info_metric(service_name: str) -> None:
+    global _worker_up_gauge
     if service_name in _REGISTERED:
         return
     try:
-        from prometheus_client import Gauge
+        from prometheus_client import Gauge, REGISTRY
 
-        Gauge(
-            "tranc3_worker_up",
-            "Worker process is serving metrics",
-            ["service"],
-        ).labels(service=service_name).set(1)
+        if "tranc3_worker_up" in REGISTRY._names_to_collectors:
+            REGISTRY.unregister(REGISTRY._names_to_collectors["tranc3_worker_up"])
+
+        if _worker_up_gauge is None:
+            _worker_up_gauge = Gauge(
+                "tranc3_worker_up",
+                "Worker process is serving metrics",
+                ["service"],
+            )
+        _worker_up_gauge.labels(service=service_name).set(1)
         _REGISTERED.add(service_name)
-    except ImportError:
+    except Exception:
         pass
 
 

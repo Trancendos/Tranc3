@@ -434,7 +434,7 @@ class A2ARouter:
             self._skill_index[skill.id].append(card.id)
 
         logger.info(
-            f"A2A Router: Registered agent {card.id} ({card.name}) with {len(card.skills)} skills"
+            f"A2A Router: Registered agent {card.id} ({card.name}) with {len(card.skills)} skills",
         )
 
     def unregister(self, agent_id: str) -> None:

@@ -33,6 +33,7 @@ import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -105,6 +106,7 @@ except Exception:  # pragma: no cover
     def get_entity_by_pid(pid: str):  # type: ignore[misc]
         return None
 
+
 from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
@@ -117,7 +119,7 @@ _jwt_secret_raw = os.environ.get("JWT_SECRET")
 if not _jwt_secret_raw:
     raise RuntimeError(
         "JWT_SECRET is not set. This service cannot validate tokens without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
     )
 JWT_SECRET: str = _jwt_secret_raw
 
@@ -157,7 +159,7 @@ class AdminDatabase:
     def __init__(self, db_path: str = DB_PATH) -> None:
         self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(db_path, check_same_thread=False)
+        self._conn = sqlite3_connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._init_tables()
 
@@ -279,7 +281,9 @@ class EntityNameUpdate(BaseModel):
 
     new_name: str = Field(..., min_length=1, max_length=120, description="The new display name")
     reason: str | None = Field(
-        default=None, max_length=500, description="Optional reason for rename"
+        default=None,
+        max_length=500,
+        description="Optional reason for rename",
     )
 
 
@@ -387,7 +391,7 @@ async def _lifespan(app: FastAPI):
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "smart_adaptive": True,
             },
-        )
+        ),
     )
 
     logger.info("Infinity-Admin ready — management OS for the Trancendos Universe ✨")
@@ -409,7 +413,7 @@ async def _lifespan(app: FastAPI):
                             event_type="health_report",
                             source="infinity_admin",
                             payload=summary_dict,
-                        )
+                        ),
                     )
                 # Defense reporter — publish incidents to security channel
                 if worker_kit.health.should_fire("defense_reporter"):
@@ -426,7 +430,7 @@ async def _lifespan(app: FastAPI):
                                     "stats": defense_stats,
                                     "incidents": defense_incidents[:10],
                                 },
-                            )
+                            ),
                         )
             except asyncio.CancelledError:
                 break
@@ -768,7 +772,7 @@ async def list_primes():
                 "pillar_name": prime.pillar.display_name,
                 "pillar_accent": prime.pillar.accent_color,
                 "description": prime.description,
-            }
+            },
         )
 
     return {"primes": primes_data, "total": len(primes_data)}
@@ -790,7 +794,7 @@ async def list_pillars():
                 "prime_id": prime_id,
                 "prime_name": prime.name if prime else "Unassigned",
                 "prime_tier": prime.tier.display_name if prime else None,
-            }
+            },
         )
 
     return {"pillars": pillars_data, "total": len(pillars_data)}
@@ -810,7 +814,7 @@ async def list_tiers():
                 "is_intelligence": tier.is_intelligence,
                 "is_governance": tier.is_governance,
                 "infinity_designation": tier.infinity_designation,
-            }
+            },
         )
 
     return {"tiers": tiers_data, "total": len(tiers_data)}
@@ -904,7 +908,7 @@ async def transfer_systems_status():
                 "transfers": info.get("transfers", ""),
                 "description": info.get("description", ""),
                 "enabled": enabled,
-            }
+            },
         )
 
     return {"transfer_systems": systems, "total": len(systems)}
@@ -926,7 +930,7 @@ async def list_locations():
                 "name": info.get("name", ""),
                 "purpose": info.get("purpose", ""),
                 "description": info.get("description", ""),
-            }
+            },
         )
 
     return {"locations": locations, "total": len(locations)}
@@ -1214,7 +1218,7 @@ async def list_entities(pillar: str | None = None):
 
     # Preload all overrides in one query — avoids N+1 (3 queries × 43 entities = 129 queries)
     all_ov_rows = db.execute(
-        "SELECT location_pid, entity_type, slot, override_name FROM entity_overrides"
+        "SELECT location_pid, entity_type, slot, override_name FROM entity_overrides",
     ).fetchall()
     ov_loc_map: dict[str, str] = {}
     ov_ai_map: dict[str, str] = {}
@@ -1247,7 +1251,7 @@ async def list_entities(pillar: str | None = None):
                 "prime_count": len(entity.primes) if entity.primes else 0,
                 "worker_port": getattr(entity, "worker_port", None),
                 "active_overrides": ov_count_map.get(pid, 0),
-            }
+            },
         )
 
     results.sort(key=lambda x: x["pid"])
@@ -1314,7 +1318,7 @@ async def rename_location(pid: str, body: EntityNameUpdate, request: Request):
                 "original": original,
                 "new_name": body.new_name,
             },
-        )
+        ),
     )
 
     return {
@@ -1366,7 +1370,7 @@ async def rename_lead_ai(pid: str, body: EntityNameUpdate, request: Request):
                 "original": original,
                 "new_name": body.new_name,
             },
-        )
+        ),
     )
 
     return {
@@ -1434,7 +1438,7 @@ async def rename_prime(pid: str, prime_idx: int, body: EntityNameUpdate, request
                 "original": original,
                 "new_name": body.new_name,
             },
-        )
+        ),
     )
 
     return {
@@ -1502,7 +1506,7 @@ async def rename_agent(pid: str, role: str, body: EntityNameUpdate, request: Req
                 "original": original,
                 "new_name": body.new_name,
             },
-        )
+        ),
     )
 
     return {
@@ -1571,7 +1575,7 @@ async def rename_bot(pid: str, slot: str, body: EntityNameUpdate, request: Reque
                 "original": original,
                 "new_name": body.new_name,
             },
-        )
+        ),
     )
 
     return {
@@ -1604,7 +1608,8 @@ async def reset_entity_overrides(
     request: Request,
     entity_type: str | None = Query(None, description="Limit reset to a specific entity_type"),
     slot: str | None = Query(
-        None, description="Limit reset to a specific slot (pass empty string for no-slot rows)"
+        None,
+        description="Limit reset to a specific slot (pass empty string for no-slot rows)",
     ),
 ):
     """Reset name overrides for an entity — restores code defaults.
@@ -1658,7 +1663,7 @@ async def reset_entity_overrides(
                 "entity_type": entity_type,
                 "slot": slot,
             },
-        )
+        ),
     )
 
     return {

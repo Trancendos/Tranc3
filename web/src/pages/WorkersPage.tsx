@@ -41,18 +41,29 @@ const PRIORITY_COLORS: Record<Worker['priority'], string> = {
   P3: 'bg-gray-800 text-gray-400 border-gray-600',
 }
 
-function StatusIcon({ status }: { status: Worker['status'] }) {
-  if (status === 'ok') return <CheckCircle size={14} className="text-green-400" />
-  if (status === 'degraded') return <AlertCircle size={14} className="text-yellow-400" />
-  if (status === 'down') return <XCircle size={14} className="text-red-400" />
-  return <AlertCircle size={14} className="text-gray-600" />
+const STATUS_LABEL: Record<Worker['status'], string> = {
+  ok: 'Online',
+  degraded: 'Degraded',
+  down: 'Down',
+  unknown: 'Unknown',
 }
+
+function StatusIcon({ status }: { status: Worker['status'] }) {
+  const label = STATUS_LABEL[status]
+  if (status === 'ok')       return <CheckCircle size={14} aria-hidden="true" className="text-green-400" />
+  if (status === 'degraded') return <AlertCircle size={14} aria-hidden="true" className="text-yellow-400" />
+  if (status === 'down')     return <XCircle     size={14} aria-hidden="true" className="text-red-400" />
+  return                            <AlertCircle size={14} aria-hidden="true" className="text-gray-600" />
+}
+
+const FILTERS = ['all', 'P0', 'P1', 'P2', 'P3'] as const
+type Filter = typeof FILTERS[number]
 
 export default function WorkersPage() {
   const [workers, setWorkers] = useState<Worker[]>(WORKERS)
   const [checking, setChecking] = useState(false)
   const [lastRun, setLastRun] = useState<string | null>(null)
-  const [filter, setFilter] = useState<'all' | 'P0' | 'P1' | 'P2' | 'P3'>('all')
+  const [filter, setFilter] = useState<Filter>('all')
 
   const checkAll = useCallback(async () => {
     setChecking(true)
@@ -85,15 +96,22 @@ export default function WorkersPage() {
   }, [checkAll])
 
   const visible = filter === 'all' ? workers : workers.filter((w) => w.priority === filter)
-  const ok = workers.filter((w) => w.status === 'ok').length
+  const ok   = workers.filter((w) => w.status === 'ok').length
   const down = workers.filter((w) => w.status === 'down').length
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
+      {/* Live announcer */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {lastRun
+          ? `Health check complete at ${lastRun}. ${ok} of ${workers.length} workers online.`
+          : 'Checking worker health…'}
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Server size={22} className="text-indigo-400" />
+            <Server size={22} aria-hidden="true" className="text-indigo-400" />
             Workers
           </h1>
           <p className="text-gray-400 text-sm mt-1">
@@ -104,20 +122,23 @@ export default function WorkersPage() {
         <button
           onClick={checkAll}
           disabled={checking}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm text-white transition-colors"
+          aria-busy={checking}
+          aria-label={checking ? 'Checking all workers' : 'Check all workers'}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-sm text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
         >
-          <RefreshCw size={14} className={checking ? 'animate-spin' : ''} />
-          Check All
+          <RefreshCw size={14} aria-hidden="true" className={checking ? 'animate-spin' : ''} />
+          {checking ? 'Checking…' : 'Check All'}
         </button>
       </div>
 
       {/* Priority filter */}
-      <div className="flex gap-2 mb-5 flex-wrap">
-        {(['all', 'P0', 'P1', 'P2', 'P3'] as const).map((p) => (
+      <div role="group" aria-label="Filter by priority" className="flex gap-2 mb-5 flex-wrap">
+        {FILTERS.map((p) => (
           <button
             key={p}
             onClick={() => setFilter(p)}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
+            aria-pressed={filter === p}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
               filter === p
                 ? 'bg-indigo-600 text-white border-indigo-500'
                 : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'
@@ -130,15 +151,15 @@ export default function WorkersPage() {
 
       {/* Workers table */}
       <div className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm" aria-label="Worker service health" aria-busy={checking}>
           <thead>
             <tr className="border-b border-gray-700">
-              <th className="text-left px-4 py-3 text-gray-400 font-medium">Service</th>
-              <th className="text-left px-4 py-3 text-gray-400 font-medium">Priority</th>
-              <th className="text-left px-4 py-3 text-gray-400 font-medium">Port</th>
-              <th className="text-left px-4 py-3 text-gray-400 font-medium">Status</th>
-              <th className="text-left px-4 py-3 text-gray-400 font-medium">Latency</th>
-              <th className="text-left px-4 py-3 text-gray-400 font-medium">Path</th>
+              <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Service</th>
+              <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Priority</th>
+              <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Port</th>
+              <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Status</th>
+              <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Latency</th>
+              <th scope="col" className="text-left px-4 py-3 text-gray-400 font-medium">Path</th>
             </tr>
           </thead>
           <tbody>
@@ -152,17 +173,22 @@ export default function WorkersPage() {
                 </td>
                 <td className="px-4 py-3 text-gray-500 font-mono text-xs">{w.port}</td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5">
+                  <div
+                    className="flex items-center gap-1.5"
+                    aria-label={`${w.name}: ${STATUS_LABEL[w.status]}`}
+                  >
                     <StatusIcon status={w.status} />
                     <span className={`capitalize text-xs ${
-                      w.status === 'ok' ? 'text-green-400' :
+                      w.status === 'ok'       ? 'text-green-400' :
                       w.status === 'degraded' ? 'text-yellow-400' :
-                      w.status === 'down' ? 'text-red-400' : 'text-gray-500'
-                    }`}>{w.status}</span>
+                      w.status === 'down'     ? 'text-red-400' : 'text-gray-500'
+                    }`}>{STATUS_LABEL[w.status]}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-gray-400 text-xs">
-                  {w.latencyMs != null ? `${w.latencyMs}ms` : '—'}
+                <td className="px-4 py-3 text-gray-400 text-xs tabular-nums">
+                  {w.latencyMs != null
+                    ? <span aria-label={`${w.latencyMs} milliseconds`}>{w.latencyMs}ms</span>
+                    : <span aria-label="Not yet measured">—</span>}
                 </td>
                 <td className="px-4 py-3 text-gray-600 text-xs font-mono">{w.path}</td>
               </tr>
@@ -172,8 +198,9 @@ export default function WorkersPage() {
       </div>
 
       {down > 0 && (
-        <p className="text-yellow-500 text-xs mt-3">
-          {down} worker{down > 1 ? 's are' : ' is'} down — start with <code className="font-mono bg-gray-800 px-1 rounded">make dev-api</code> or the Docker Compose stack.
+        <p className="text-yellow-500 text-xs mt-3" role="note">
+          {down} worker{down > 1 ? 's are' : ' is'} down — start with{' '}
+          <code className="font-mono bg-gray-800 px-1 rounded">make dev-api</code> or the Docker Compose stack.
         </p>
       )}
     </div>

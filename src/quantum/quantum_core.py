@@ -24,7 +24,10 @@ class NeuromorphicInterface:
         self.synaptic_plasticity = config.get("plasticity", "STDP")
 
     def create_spiking_network(
-        self, input_dim: int, hidden_layers: List[int], output_dim: int
+        self,
+        input_dim: int,
+        hidden_layers: List[int],
+        output_dim: int,
     ) -> nn.ModuleList:
         class SpikingNeuron(nn.Module):
             def __init__(self, input_size, output_size, tau=10.0):
@@ -65,11 +68,13 @@ class QuantumNeuralCore:
         try:
             self.backend = AerSimulator(method="statevector")
             logger.info(
-                "QuantumNeuralCore initialised: %s qubits", sanitize_for_log(self.num_qubits)
+                "QuantumNeuralCore initialised: %s qubits",
+                sanitize_for_log(self.num_qubits),
             )
         except Exception as e:
             logger.warning(
-                "AerSimulator init failed: %s — falling back to classical", sanitize_for_log(e)
+                "AerSimulator init failed: %s — falling back to classical",
+                sanitize_for_log(e),
             )
             self.backend = None
 
@@ -116,7 +121,8 @@ class QuantumNeuralCore:
 
         except Exception as e:
             logger.warning(
-                "Quantum attention failed: %s — using classical fallback", sanitize_for_log(e)
+                "Quantum attention failed: %s — using classical fallback",
+                sanitize_for_log(e),
             )
             return self._classical_attention_fallback(input_state)
 
@@ -141,6 +147,38 @@ class QuantumNeuralCore:
             import secrets
 
             return secrets.token_hex(32)
+
+    def _emit_inference_event(
+        self,
+        prompt: str,
+        response: str,
+        model: str,
+        provider: str,
+        *,
+        failed: bool = False,
+    ) -> None:
+        """Emit an AI_INFERENCE_COMPLETE or AI_INFERENCE_FAILED event to the platform EventBus."""
+        try:
+            from src.event_bus import PlatformEventType, get_event_bus  # noqa: PLC0415
+
+            bus = get_event_bus()
+            event_type = (
+                PlatformEventType.AI_INFERENCE_FAILED
+                if failed
+                else PlatformEventType.AI_INFERENCE_COMPLETE
+            )
+            bus.emit_async(
+                event_type=event_type,
+                data={
+                    "prompt": prompt[:500],
+                    "response": response[:2000],
+                    "model": model,
+                    "provider": provider,
+                },
+                source="think-tank",
+            )
+        except Exception as exc:  # nosec B110
+            logger.debug("quantum_core: emit_inference_event failed: %s", exc)
 
     def get_state_info(self) -> Dict:
         return {

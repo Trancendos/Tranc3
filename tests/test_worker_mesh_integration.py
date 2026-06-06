@@ -80,7 +80,7 @@ class TestServiceMeshWorkerRegistration:
                     url="http://localhost",
                     port=port,
                     category=category,
-                )
+                ),
             )
         assert len(mesh.get_services()) == 4
         for name, port, category in workers:
@@ -117,7 +117,7 @@ class TestServiceMeshWorkerRegistration:
                 url="http://localhost",
                 port=8000,
                 circuit_breaker_config=custom_config,
-            )
+            ),
         )
         cb = mesh.get_circuit_breaker("test-worker")
         assert cb.config.failure_threshold == 10
@@ -325,7 +325,7 @@ class TestServiceMeshHealthChecks:
                 url="http://localhost",
                 port=8000,
                 health_endpoint="/health",
-            )
+            ),
         )
 
         # Register a handler that simulates health check
@@ -350,7 +350,7 @@ class TestServiceMeshHealthChecks:
                 url="http://localhost",
                 port=8000,
                 health_endpoint="/health",
-            )
+            ),
         )
 
         # Initial health should be UNKNOWN
@@ -368,7 +368,7 @@ class TestServiceMeshHealthChecks:
                 url="http://localhost",
                 port=19999,
                 health_endpoint="/health",
-            )
+            ),
         )
 
         # This will actually try to connect and fail (no server on 19999)
@@ -395,7 +395,7 @@ class TestServiceMeshHealthChecks:
                     url="http://localhost",
                     port=8000 + i,
                     health_endpoint="/health",
-                )
+                ),
             )
 
             async def health_handler(path, payload, wid=i):
@@ -538,7 +538,7 @@ class TestMultiWorkerCommunication:
                 url="http://localhost",
                 port=8002,
                 category=ServiceCategory.AUTH,
-            )
+            ),
         )
 
         # Register users worker
@@ -548,7 +548,7 @@ class TestMultiWorkerCommunication:
                 url="http://localhost",
                 port=8003,
                 category=ServiceCategory.CORE,
-            )
+            ),
         )
 
         # Mock users worker handler
@@ -612,7 +612,7 @@ class TestMultiWorkerCommunication:
                     name=f"worker-{i}",
                     url="http://localhost",
                     port=8000 + i,
-                )
+                ),
             )
 
         async def worker_handler(path, payload):
@@ -644,7 +644,7 @@ class TestMultiWorkerCommunication:
                 url="http://localhost",
                 port=8000,
                 dependencies=["infinity-auth", "users-service"],
-            )
+            ),
         )
         mesh.register(
             ServiceDescriptor(
@@ -652,7 +652,7 @@ class TestMultiWorkerCommunication:
                 url="http://localhost",
                 port=8002,
                 dependencies=[],
-            )
+            ),
         )
         mesh.register(
             ServiceDescriptor(
@@ -660,7 +660,7 @@ class TestMultiWorkerCommunication:
                 url="http://localhost",
                 port=8003,
                 dependencies=["infinity-auth"],
-            )
+            ),
         )
 
         graph = mesh.get_dependency_graph()

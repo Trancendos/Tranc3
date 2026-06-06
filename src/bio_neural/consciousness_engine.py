@@ -87,7 +87,7 @@ class IITCalculator:
             part2 = connectivity[split:, split:]
 
             mi_parts = self._mutual_information_matrix(part1) + self._mutual_information_matrix(
-                part2
+                part2,
             )
 
             phi = whole_mi - mi_parts
@@ -183,7 +183,7 @@ class SelfAwarenessModule(nn.Module):
                     nn.GELU(),
                 )
                 for _ in range(depth)
-            ]
+            ],
         )
 
         # Meta-cognition
@@ -191,7 +191,10 @@ class SelfAwarenessModule(nn.Module):
 
         # Awareness score
         self.awareness_scorer = nn.Sequential(
-            nn.Linear(hidden_size, 64), nn.ReLU(), nn.Linear(64, 1), nn.Sigmoid()
+            nn.Linear(hidden_size, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1),
+            nn.Sigmoid(),
         )
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, float]:

@@ -44,7 +44,7 @@ class Tranc3Tokenizer:
         if not os.path.exists(model_path):
             raise FileNotFoundError(
                 f"Tokenizer model not found at {model_path}.\n"
-                f"Run: python scripts/train_tokenizer.py --data_dir data/raw"
+                f"Run: python scripts/train_tokenizer.py --data_dir data/raw",
             )
         self.sp = spm.SentencePieceProcessor()
         self.sp.load(model_path)

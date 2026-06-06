@@ -62,7 +62,7 @@ class DeepSeekProvider(AIProvider):
         if not self.api_key:
             raise RuntimeError(
                 "DEEPSEEK_API_KEY is required. Get one at https://platform.deepseek.com/ "
-                "For zero-cost, use OpenRouter with deepseek/deepseek-r1:free instead."
+                "For zero-cost, use OpenRouter with deepseek/deepseek-r1:free instead.",
             )
 
         try:
@@ -182,7 +182,7 @@ class _DeepSeekHttpxClient:
             except ImportError:
                 raise RuntimeError(
                     "Either 'openai' or 'httpx' package is required. "
-                    "Install with: pip install openai  OR  pip install httpx"
+                    "Install with: pip install openai  OR  pip install httpx",
                 ) from None
         return self._httpx
 

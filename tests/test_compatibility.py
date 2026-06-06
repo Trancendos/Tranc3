@@ -39,7 +39,7 @@ class TestJSONRPC20Compatibility:
                     "protocolVersion": "2024-11-05",
                     "clientInfo": {"name": "compat", "version": "0"},
                 },
-            }
+            },
         )
         _log.info("compat.jsonrpc string_id id=%s keys=%s", resp.get("id"), list(resp.keys()))
         assert resp.get("id") == "str-id-001"
@@ -58,7 +58,7 @@ class TestJSONRPC20Compatibility:
                     "protocolVersion": "2024-11-05",
                     "clientInfo": {"name": "compat", "version": "0"},
                 },
-            }
+            },
         )
         _log.info("compat.jsonrpc integer_id id=%s", resp.get("id"))
         assert resp.get("id") == 42
@@ -79,7 +79,7 @@ class TestJSONRPC20Compatibility:
                     }
                     if method == "initialize"
                     else {},
-                }
+                },
             )
             _log.info("compat.jsonrpc method=%s has_jsonrpc=%s", method, "jsonrpc" in resp)
             assert "jsonrpc" in resp
@@ -111,7 +111,7 @@ class TestJSONRPC20Compatibility:
                     "name": "get_system_health",
                     "arguments": {"subsystems": ["mcp_server"]},
                 },
-            }
+            },
         )
         _log.info("compat.jsonrpc tools_call resp_keys=%s", list(resp.keys()))
         # Must be either a result or an error
@@ -137,7 +137,7 @@ class TestMCPProtocolVersionCompatibility:
                     "protocolVersion": "2024-11-05",
                     "clientInfo": {"name": "c", "version": "0"},
                 },
-            }
+            },
         )
         _log.info("compat.mcp proto_version result_keys=%s", list(resp.get("result", {}).keys()))
         assert "result" in resp
@@ -156,7 +156,7 @@ class TestMCPProtocolVersionCompatibility:
                     "protocolVersion": "2024-11-05",
                     "clientInfo": {"name": "c", "version": "0"},
                 },
-            }
+            },
         )
         info = resp["result"]["serverInfo"]
         _log.info(
@@ -182,7 +182,7 @@ class TestMCPProtocolVersionCompatibility:
                     "protocolVersion": "2024-11-05",
                     "clientInfo": {"name": "c", "version": "0"},
                 },
-            }
+            },
         )
         caps = resp["result"]["capabilities"]
         _log.info("compat.mcp capabilities=%s", list(caps.keys()))
@@ -207,7 +207,8 @@ class TestPydanticV2Compatibility:
         from src.mcp.tools import SparkTool
 
         has_inner_config = hasattr(SparkTool, "Config") and isinstance(
-            getattr(SparkTool, "Config"), type
+            getattr(SparkTool, "Config"),
+            type,
         )
         _log.info("compat.pydantic spark_tool has_inner_Config=%s", has_inner_config)
         assert not has_inner_config, "SparkTool must not use inner Config class (Pydantic v2)"
@@ -226,7 +227,9 @@ class TestPydanticV2Compatibility:
         # .to_dict() should work regardless of how it's implemented internally
         d = wf.to_dict()
         _log.info(
-            "compat.pydantic workflow_dict_type=%s keys=%s", type(d).__name__, list(d.keys())[:5]
+            "compat.pydantic workflow_dict_type=%s keys=%s",
+            type(d).__name__,
+            list(d.keys())[:5],
         )
         assert isinstance(d, dict)
 
@@ -241,7 +244,9 @@ class TestPydanticV2Compatibility:
             status="running",
         )
         _log.info(
-            "compat.pydantic exec_state elapsed_ms=%s status=%s", state.elapsed_ms, state.status
+            "compat.pydantic exec_state elapsed_ms=%s status=%s",
+            state.elapsed_ms,
+            state.status,
         )
         assert isinstance(state.execution_id, str)
         assert isinstance(state.status, str)
@@ -345,7 +350,7 @@ class TestGridSparkEngineAgreement:
                     "protocolVersion": "2024-11-05",
                     "clientInfo": {"name": "c", "version": "0"},
                 },
-            }
+            },
         )
         grid = resp["result"]["serverInfo"].get("grid")
         _log.info(

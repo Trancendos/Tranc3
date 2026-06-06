@@ -18,6 +18,7 @@ import math
 import os
 import re
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -183,7 +184,7 @@ class KnowledgeBrain:
     def __init__(self, db_path: str = ":memory:", markdown_dir: Optional[str] = None) -> None:
         self._db_path = db_path
         self._markdown_dir = Path(markdown_dir) if markdown_dir else None
-        self._conn = sqlite3.connect(db_path, check_same_thread=False)
+        self._conn = sqlite3_connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._bm25 = BM25Index()
         self._init_db()
@@ -287,7 +288,8 @@ class KnowledgeBrain:
         if cursor.rowcount > 0:
             self._bm25.remove(page_id)
             self._conn.execute(
-                "DELETE FROM links WHERE source_id = ? OR target_id = ?", (page_id, page_id)
+                "DELETE FROM links WHERE source_id = ? OR target_id = ?",
+                (page_id, page_id),
             )
             self._conn.commit()
             return True
@@ -297,7 +299,8 @@ class KnowledgeBrain:
         """List all pages, optionally filtered by source."""
         if source is not None:
             rows = self._conn.execute(
-                "SELECT * FROM pages WHERE source = ? ORDER BY updated_at DESC", (source,)
+                "SELECT * FROM pages WHERE source = ? ORDER BY updated_at DESC",
+                (source,),
             ).fetchall()
         else:
             rows = self._conn.execute("SELECT * FROM pages ORDER BY updated_at DESC").fetchall()
@@ -372,7 +375,7 @@ class KnowledgeBrain:
         sources = [
             r[0]
             for r in self._conn.execute(
-                "SELECT DISTINCT source FROM pages WHERE source != ''"
+                "SELECT DISTINCT source FROM pages WHERE source != ''",
             ).fetchall()
         ]
         return {

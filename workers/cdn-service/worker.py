@@ -10,13 +10,13 @@ Zero-cost: FastAPI + local filesystem, no external CDN cost.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import hashlib
 import logging
 import mimetypes
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -27,6 +27,8 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8028
 WORKER_NAME = "cdn-service"
@@ -51,7 +53,7 @@ logger = logging.getLogger(WORKER_NAME)
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -192,7 +194,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "registered_assets": asset_count,
         "total_bytes": total_size,
-        "total_serves": serve_count
+        "total_serves": serve_count,
     }
 
 
@@ -220,10 +222,10 @@ async def list_assets(
 async def asset_stats():
     with get_conn() as conn:
         by_policy = conn.execute(
-            "SELECT cache_policy, COUNT(*) as count, SUM(size) as bytes FROM assets GROUP BY cache_policy"
+            "SELECT cache_policy, COUNT(*) as count, SUM(size) as bytes FROM assets GROUP BY cache_policy",
         ).fetchall()
         top = conn.execute(
-            "SELECT path, serve_count FROM assets ORDER BY serve_count DESC LIMIT 10"
+            "SELECT path, serve_count FROM assets ORDER BY serve_count DESC LIMIT 10",
         ).fetchall()
     return {"by_policy": [dict(r) for r in by_policy], "top_assets": [dict(r) for r in top]}
 
@@ -301,7 +303,8 @@ async def register_asset(req: AssetRegister):
         meta = _register_file(conn, req.path, full_path)
         if req.cache_policy:
             conn.execute(
-                "UPDATE assets SET cache_policy=? WHERE path=?", (req.cache_policy, req.path)
+                "UPDATE assets SET cache_policy=? WHERE path=?",
+                (req.cache_policy, req.path),
             )
         conn.commit()
     return {"registered": req.path, **meta}

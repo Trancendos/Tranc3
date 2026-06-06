@@ -23,13 +23,13 @@ Zero-cost: FastAPI + httpx + SQLite cache, no external deps.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -64,6 +64,7 @@ from Dimensional.infinity.sentinel_station import (
     SharedSSEGenerator,
     get_sentinel_station,
 )
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -76,7 +77,7 @@ _jwt_secret_raw = os.environ.get("JWT_SECRET")
 if not _jwt_secret_raw:
     raise RuntimeError(
         "JWT_SECRET is not set. This service cannot validate tokens without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
     )
 JWT_SECRET: str = _jwt_secret_raw
 
@@ -142,7 +143,7 @@ worker_kit = InfinityWorkerKit(
 
 def _get_db() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3_connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -175,7 +176,7 @@ def _init_db() -> None:
             reason      TEXT,
             timestamp   TEXT NOT NULL
         );
-        """
+        """,
     )
     conn.close()
 
@@ -265,7 +266,7 @@ async def _lifespan(app: FastAPI):
                             event_type="gateway_health_report",
                             source="gateway",
                             payload=summary,
-                        )
+                        ),
                     )
             except asyncio.CancelledError:
                 break
@@ -1163,7 +1164,7 @@ async def _broadcast_event(
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "data": payload,
             "channel": channel,
-        }
+        },
     )
     disconnected = []
     for ws in ws_auth_manager.connections:
@@ -1254,8 +1255,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     "data": overview,
                     "authenticated": user is not None,
                     "tier": user.get("tier", "human") if user else "human",
-                }
-            )
+                },
+            ),
         )
 
         while True:
@@ -1278,8 +1279,8 @@ async def websocket_endpoint(websocket: WebSocket):
                             {
                                 "type": "subscribed",
                                 "channels": channels,
-                            }
-                        )
+                            },
+                        ),
                     )
                 elif msg_type == "ping":
                     await websocket.send_text(json.dumps({"type": "pong"}))
@@ -1290,14 +1291,14 @@ async def websocket_endpoint(websocket: WebSocket):
                             {
                                 "type": "overview",
                                 "data": overview,
-                            }
-                        )
+                            },
+                        ),
                     )
                 elif msg_type == "heartbeat":
                     # Explicit heartbeat for connection keepalive
                     ws_auth_manager.update_activity(websocket)
                     await websocket.send_text(
-                        json.dumps({"type": "heartbeat_ack", "ts": time.time()})
+                        json.dumps({"type": "heartbeat_ack", "ts": time.time()}),
                     )
             except json.JSONDecodeError:
                 await websocket.send_text(
@@ -1305,8 +1306,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         {
                             "type": "error",
                             "message": "Invalid JSON",
-                        }
-                    )
+                        },
+                    ),
                 )
     except WebSocketDisconnect:
         pass

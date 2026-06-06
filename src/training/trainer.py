@@ -169,7 +169,7 @@ class Trainer:
 
         print(f"\n[Trainer] Starting training — {self.cfg.max_steps:,} steps")
         print(
-            f"[Trainer] Effective batch size: {self.cfg.batch_size * self.cfg.grad_accum_steps}\n"
+            f"[Trainer] Effective batch size: {self.cfg.batch_size * self.cfg.grad_accum_steps}\n",
         )
 
         while self.step < self.cfg.max_steps:
@@ -210,7 +210,7 @@ class Trainer:
                     f"step {self.step:6d}/{self.cfg.max_steps} | "
                     f"loss {avg_loss:.4f} | "
                     f"lr {lr:.2e} | "
-                    f"{elapsed:.1f}s"
+                    f"{elapsed:.1f}s",
                 )
                 t0 = time.time()
 

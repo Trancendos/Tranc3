@@ -72,7 +72,7 @@ class LoRATrainingConfig:
             "out_proj",
             "qkv_proj",
             "down_proj",
-        ]
+        ],
     )
     quantize_4bit: bool = False
     use_dora: bool = False
@@ -267,8 +267,8 @@ class LoRATrainer:
                 self.save_adapter(
                     str(
                         Path(self.cfg.checkpoint_dir)
-                        / f"{self.cfg.run_name}_step{self.step + 1}.pt"
-                    )
+                        / f"{self.cfg.run_name}_step{self.step + 1}.pt",
+                    ),
                 )
 
             self.step += 1

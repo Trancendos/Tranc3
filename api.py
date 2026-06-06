@@ -334,7 +334,7 @@ async def lifespan(app: FastAPI):
         model = AdvancedTransformerModel(cfg)
         if os.path.exists(cfg.model_path):
             if _TORCH_AVAILABLE and torch is not None:
-                model.load_state_dict(torch.load(cfg.model_path, map_location="cpu"))
+                model.load_state_dict(torch.load(cfg.model_path, map_location="cpu", weights_only=True))
             logger.info("Model weights loaded")
         else:
             logger.warning("No model weights — echo mode active")
@@ -428,12 +428,38 @@ async def lifespan(app: FastAPI):
     except Exception as _ab_exc:
         logger.warning("Admin OS auto-backup unavailable: %s", sanitize_for_log(_ab_exc))
 
+    # Event Bus wiring — Observatory → EventBus → Library/ThinkTank/Search/Sentinel
+    try:
+        from src.event_bus import get_event_bus
+        from src.event_bus.wiring import wire_platform_events
+
+        wire_platform_events(get_event_bus())
+        logger.info("Event Bus wiring active (TR3-005)")
+    except Exception as _eb_exc:
+        logger.warning("Event Bus wiring unavailable: %s", sanitize_for_log(_eb_exc))
+
+    # Section 7 threat intelligence loop — CVE/OSV/CISA feed polling
+    _threat_intel_task = None
+    try:
+        from src.section7.threat_intel_loop import start_threat_intel_loop
+
+        _threat_intel_task = await start_threat_intel_loop()
+        logger.info("Section 7 threat intel loop started (TR3-006)")
+    except Exception as _ti_exc:
+        logger.warning("Section 7 threat intel loop unavailable: %s", sanitize_for_log(_ti_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield
 
     logger.info("TRANC3 shutting down")
     _bootstrap_complete = False
+    try:
+        from src.section7.threat_intel_loop import stop_threat_intel_loop
+
+        await stop_threat_intel_loop()
+    except Exception:
+        pass
     if _knowledge_brain is not None:
         try:
             await _knowledge_brain.stop_dream_cycle()
@@ -560,6 +586,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(SecurityHeadersMiddleware)
+
+
+# ── API version header (REQ-SD-002 — DEF STAN 00-056 API Contract Versioning) ─
+_API_VERSION = "2.0.0"
+_API_VERSION_HEADER = "X-API-Version"
+
+
+@app.middleware("http")
+async def api_version_header_middleware(request, call_next):
+    """Attach X-API-Version to every response for explicit contract versioning."""
+    response = await call_next(request)
+    response.headers[_API_VERSION_HEADER] = _API_VERSION
+    return response
 app.add_middleware(GovernanceMiddleware)
 app.add_middleware(ZeroTrustASGIMiddleware)
 app.add_middleware(RBACMiddleware)
@@ -643,6 +682,40 @@ from src.observability.routes import (
 )
 
 app.include_router(_observatory_router)
+
+# ── Capacity Guard (hard stops + utilisation status) ─────────────────────────
+from src.capacity.guard import (  # noqa: F401
+    CapacityService,
+    CapacityExceededError,
+    get_capacity_guard,
+)
+
+
+@app.get("/capacity/status", tags=["platform"], summary="Capacity utilisation for all external services")
+async def capacity_status(current_user: dict = Depends(get_current_user)):
+    """Returns live utilisation for all external services. Highlights services at 80/90/95/100%."""
+    guard = get_capacity_guard()
+    raw = guard.status()
+    # Partition by alert level for easy scanning
+    by_level: dict = {"hard_stop": [], "critical": [], "alert": [], "warning": [], "ok": []}
+    for svc, data in raw.items():
+        by_level[data["status"]].append({**data, "service": svc})
+    return {"services": raw, "by_level": by_level}
+
+
+@app.post("/capacity/reset/{service_id}", tags=["platform"], summary="Admin: reset a capacity counter")
+async def capacity_reset(service_id: str, current_user: dict = Depends(get_current_user)):
+    """Reset a single service counter (admin only — use after a billing window reset)."""
+    try:
+        svc = CapacityService(service_id)
+    except ValueError:
+        from src.errors import ErrorCode, make_error_response
+        raise HTTPException(status_code=404, detail=make_error_response(
+            ErrorCode.ENT_NOT_FOUND, f"Unknown capacity service: {service_id}"
+        ).model_dump())
+    get_capacity_guard().reset(svc)
+    return {"reset": service_id, "note": "Counter reset to zero. Window clock restarted."}
+
 
 # ── The Nexus (AI communications + transfer hub) ─────────────────────────────
 from src.nexus.routes import router as _nexus_router  # noqa: F401  # intentional top-level import
@@ -744,6 +817,16 @@ from src.devocity.routes import (
 
 app.include_router(_devocity_router)
 
+# ── DEFSTAN Compliance Framework (The Chaos Party compliance tooling) ────────
+try:
+    from src.compliance.api_routes import router as _compliance_router
+
+    app.include_router(_compliance_router)
+except Exception:  # pragma: no cover — graceful degradation if pyyaml absent
+    import logging as _logging
+
+    _logging.getLogger(__name__).warning("Compliance router not loaded — pyyaml may be missing")
+
 # ── The Artifactory (OCI artefact repository — Zot foundation) ───────────────
 from src.artifactory.routes import (
     router as _artifactory_router,  # noqa: F401  # intentional top-level import
@@ -787,6 +870,17 @@ try:
 except ImportError:
     logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
 
+# ── Master Worker (MAPE-K sovereign orchestration engine) ────────────────────
+# Zero-cost enforcement, platform registry, adaptive blueprints.
+# Replaces GitHub Actions + Cloudflare Workers with self-hosted Python.
+try:
+    from src.master_worker.router import router as _master_worker_router  # noqa: F401
+
+    app.include_router(_master_worker_router)
+    logger.info("Master Worker router registered at /master")
+except Exception as _mw_err:
+    logger.warning("Master Worker router not loaded: %s", _mw_err)
+
 # ── Enhanced Capabilities (code gen, skills, planning, self-healing) ─────────
 # Migrated from legacy api_enhanced.py into the canonical entry point.
 from src.routers.enhanced_capabilities import router as _enhanced_router  # noqa: F401
@@ -806,6 +900,10 @@ app.include_router(_adaptive_router)
 from src.routers.admin_os import router as _admin_os_router  # noqa: F401
 
 app.include_router(_admin_os_router)
+
+from src.monitoring.api_routes import router as monitoring_router  # noqa: F401
+
+app.include_router(monitoring_router, tags=["monitoring"])
 
 # ── Dashboard & Infinity Admin OS (static, zero-cost) ─────────────────────────
 _DASHBOARD_DIR = os.path.join(os.path.dirname(__file__), "dashboard")
@@ -1862,6 +1960,71 @@ async def admin_settings_read(
         k: ("set" if os.environ.get(k) else "unset")
         for k in sorted(ALLOWED_KEYS)
     }
+
+
+# ── User Settings — encrypted, server-side, per-user ─────────────────────────
+
+class UserSettingWrite(BaseModel):
+    """Single key/value pair for POST /user/settings."""
+    key: str = Field(..., description="Setting name (must be in the allowed list)")
+    value: str = Field(..., description="Plaintext value to encrypt and store")
+
+
+@app.get(
+    "/user/settings",
+    tags=["settings"],
+    summary="List which settings this user has stored",
+    description=(
+        "Returns {key: 'set'|'unset'} for every allowed setting key. "
+        "Values are never returned — use this to know what has been saved."
+    ),
+)
+async def user_settings_list(current_user: dict = Depends(get_current_user)):
+    from src.settings_store import get_settings_store
+    username: str = current_user.get("username") or current_user.get("sub", "unknown")
+    return get_settings_store().list_keys(username)
+
+
+@app.post(
+    "/user/settings",
+    tags=["settings"],
+    summary="Store an encrypted setting",
+    description=(
+        "Encrypts *value* with AES-128-CBC (Fernet) before persisting. "
+        "Key must be in the allowed list. Empty value is rejected — use DELETE to clear."
+    ),
+    status_code=200,
+)
+async def user_settings_write(
+    body: UserSettingWrite,
+    current_user: dict = Depends(get_current_user),
+):
+    from src.settings_store import get_settings_store, ALLOWED_KEYS
+    username: str = current_user.get("username") or current_user.get("sub", "unknown")
+    if body.key not in ALLOWED_KEYS:
+        raise HTTPException(status_code=422, detail=f"Key '{body.key}' is not in the allowed settings list")
+    if not body.value.strip():
+        raise HTTPException(status_code=422, detail="value must not be empty — use DELETE /user/settings/{key} to clear")
+    get_settings_store().set(username, body.key, body.value)
+    return {"key": body.key, "status": "stored"}
+
+
+@app.delete(
+    "/user/settings/{key}",
+    tags=["settings"],
+    summary="Delete a stored setting",
+    description="Removes the encrypted value for *key*. Returns 404 if key was not set.",
+)
+async def user_settings_delete(
+    key: str,
+    current_user: dict = Depends(get_current_user),
+):
+    from src.settings_store import get_settings_store
+    username: str = current_user.get("username") or current_user.get("sub", "unknown")
+    deleted = get_settings_store().delete(username, key)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Setting '{key}' not found for this user")
+    return {"key": key, "status": "deleted"}
 
 
 @app.get(

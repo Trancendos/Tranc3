@@ -10,13 +10,13 @@ Zero-cost: FastAPI + SQLite + asyncio, no external deps.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -27,6 +27,8 @@ import httpx
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8021
 WORKER_NAME = "cron-service"
@@ -43,7 +45,7 @@ logger = logging.getLogger(WORKER_NAME)
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -131,7 +133,10 @@ async def _execute_job(job: dict) -> None:
             payload = json.loads(job["payload"] or "{}")
             async with httpx.AsyncClient(timeout=30) as client:
                 resp = await client.request(
-                    job["method"], job["url"], json=payload, headers=headers
+                    job["method"],
+                    job["url"],
+                    json=payload,
+                    headers=headers,
                 )
             response_body = resp.text[:500]
             if resp.status_code >= 400:
@@ -271,7 +276,7 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "total_jobs": total,
-        "active_jobs": active
+        "active_jobs": active,
     }
 
 
@@ -280,7 +285,8 @@ async def list_jobs(enabled: Optional[bool] = None):
     with get_conn() as conn:
         if enabled is not None:
             rows = conn.execute(
-                "SELECT * FROM jobs WHERE enabled = ? ORDER BY name", (int(enabled),)
+                "SELECT * FROM jobs WHERE enabled = ? ORDER BY name",
+                (int(enabled),),
             ).fetchall()
         else:
             rows = conn.execute("SELECT * FROM jobs ORDER BY name").fetchall()

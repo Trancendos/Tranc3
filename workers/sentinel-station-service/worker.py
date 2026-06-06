@@ -29,13 +29,13 @@ Zero-cost: FastAPI + SQLite, Redis optional (graceful fallback).
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -69,6 +69,7 @@ from Dimensional.infinity.sentinel_station import (
 
 # Phase 22.6: Smart Adaptive Intelligence + ReactiveState
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from src.entities.health_metadata import health_entity_block
 
 # Optional: ReactiveState for live Sentinel topology
 try:
@@ -88,7 +89,7 @@ _jwt_secret_raw = os.environ.get("JWT_SECRET")
 if not _jwt_secret_raw:
     raise RuntimeError(
         "JWT_SECRET is not set. This service cannot validate tokens without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
     )
 JWT_SECRET: str = _jwt_secret_raw
 
@@ -131,7 +132,7 @@ if _REACTIVE_AVAILABLE:
                 "subscribers": 0,
                 "events_published": 0,
                 "redis_connected": False,
-            }
+            },
         )
     except Exception:
         sentinel_topology_state = None
@@ -146,7 +147,7 @@ else:
 
 def _get_db() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3_connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -173,7 +174,7 @@ def _init_db() -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_event_log_channel ON event_log(channel);
         CREATE INDEX IF NOT EXISTS idx_event_log_created ON event_log(created_at);
-        """
+        """,
     )
     conn.close()
 
@@ -262,7 +263,7 @@ async def _lifespan(app: FastAPI):
                                 "subscribers": stats.get("total_subscribers", 0),
                                 "events_published": stats.get("events_published", 0),
                                 "redis_connected": sentinel.is_redis_connected,
-                            }
+                            },
                         )
                     worker_kit.health.record_fire("topology_updater")
 
@@ -278,7 +279,7 @@ async def _lifespan(app: FastAPI):
                             event_type="sentinel_health_report",
                             source="sentinel_station",
                             payload=summary_dict,
-                        )
+                        ),
                     )
             except asyncio.CancelledError:
                 break
@@ -503,7 +504,7 @@ async def publish_events_batch(events: list[EventPublish], request: Request):
                 "id": event.id,
                 "channel": event.channel,
                 "event_type": event.event_type,
-            }
+            },
         )
 
     return {
@@ -699,7 +700,7 @@ async def _sentinel_event_generator():
                         {
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                             "service": "sentinel-station",
-                        }
+                        },
                     ),
                 }
                 await asyncio.sleep(30)

@@ -10,7 +10,6 @@ Gracefully degrades to 503 when Blender is not installed.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import logging
 import os
@@ -26,6 +25,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8050
 WORKER_NAME = "blender-worker"
@@ -130,7 +131,12 @@ def _run_blender(script: str, timeout: int) -> dict[str, Any]:
             "returncode": -1,
         }
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, dir="/tmp") as tmp:
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        suffix=".py",
+        delete=False,
+        dir="/tmp",
+    ) as tmp:
         tmp.write(script)
         tmp_path = tmp.name
 
@@ -239,7 +245,7 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning(
             "Blender not found in PATH or standard locations — "
-            "all render/scene endpoints will return 503."
+            "all render/scene endpoints will return 503.",
         )
     yield
 
@@ -271,13 +277,18 @@ app.add_middleware(
 async def health():
     blender_path = blender_available()
     return {
-        "entity": health_entity_block(8050, "blender-worker"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "blender_available": blender_path is not None,
         "blender_path": blender_path,
+        "entity": {
+            "platform_service": "TranceFlow",
+            "lead_ai": "Junior Cesar",
+            "role": "3D modeling & games creation studio",
+            "status": "Planned",
+        },
     }
 
 

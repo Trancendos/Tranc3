@@ -182,7 +182,7 @@ def stub_chat(messages: list[dict], model: str = "tranc3-base") -> dict:
                     ),
                 },
                 "finish_reason": "stop",
-            }
+            },
         ],
         "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
     }
@@ -384,7 +384,7 @@ async def chat(request: Request, authorization: str | None = Header(None)):
                     "index": 0,
                     "message": {"role": "assistant", "content": nano["response"]},
                     "finish_reason": "stop",
-                }
+                },
             ],
             "usage": {
                 "prompt_tokens": 0,

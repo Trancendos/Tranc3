@@ -25,13 +25,13 @@ Zero-cost: FastAPI + SQLite. No external deps.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -65,6 +65,7 @@ from Dimensional.infinity.sentinel_station import (
 
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -76,7 +77,7 @@ _jwt_secret_raw = os.environ.get("JWT_SECRET")
 if not _jwt_secret_raw:
     raise RuntimeError(
         "JWT_SECRET is not set. This service cannot validate tokens without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"'
+        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
     )
 JWT_SECRET: str = _jwt_secret_raw
 
@@ -116,7 +117,7 @@ class OneDatabase:
     def __init__(self, db_path: str = DB_PATH) -> None:
         self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(db_path, check_same_thread=False)
+        self._conn = sqlite3_connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._init_tables()
 
@@ -312,7 +313,7 @@ async def _lifespan(app: FastAPI):
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "smart_adaptive": True,
             },
-        )
+        ),
     )
 
     logger.info("Infinity-One ready — single identity, multi-app access ✨")
@@ -333,7 +334,7 @@ async def _lifespan(app: FastAPI):
                             event_type="health_report",
                             source="infinity_one",
                             payload=summary_dict,
-                        )
+                        ),
                     )
             except asyncio.CancelledError:
                 break
@@ -567,7 +568,7 @@ async def create_identity(request: Request, identity: IdentityCreate):
                 "username": identity.username,
                 "role": identity.role,
             },
-        )
+        ),
     )
 
     return IdentityResponse(
@@ -728,7 +729,7 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
             event_type="identity_updated",
             source="infinity_one",
             payload={"user_id": user_id},
-        )
+        ),
     )
 
     return {"message": "Identity updated", "user_id": user_id}
@@ -765,7 +766,7 @@ async def deactivate_identity(user_id: str, request: Request):
             event_type="identity_deactivated",
             source="infinity_one",
             payload={"user_id": user_id, "username": row["username"]},
-        )
+        ),
     )
 
     return {"message": "Identity deactivated", "user_id": user_id}
@@ -937,7 +938,7 @@ async def identity_summary():
 
     # By pillar
     pillar_rows = db.execute(
-        "SELECT pillar, COUNT(*) as cnt FROM identities WHERE pillar IS NOT NULL GROUP BY pillar"
+        "SELECT pillar, COUNT(*) as cnt FROM identities WHERE pillar IS NOT NULL GROUP BY pillar",
     ).fetchall()
     by_pillar = {r["pillar"]: r["cnt"] for r in pillar_rows}
 
@@ -960,10 +961,10 @@ async def stats():
     """Get Infinity-One service statistics."""
     total_identities = db.execute("SELECT COUNT(*) as cnt FROM identities").fetchone()["cnt"]
     active_identities = db.execute(
-        "SELECT COUNT(*) as cnt FROM identities WHERE is_active = 1"
+        "SELECT COUNT(*) as cnt FROM identities WHERE is_active = 1",
     ).fetchone()["cnt"]
     total_app_access = db.execute(
-        "SELECT COUNT(*) as cnt FROM app_access WHERE is_revoked = 0"
+        "SELECT COUNT(*) as cnt FROM app_access WHERE is_revoked = 0",
     ).fetchone()["cnt"]
     total_devices = db.execute("SELECT COUNT(*) as cnt FROM devices").fetchone()["cnt"]
     total_events = db.execute("SELECT COUNT(*) as cnt FROM identity_events").fetchone()["cnt"]

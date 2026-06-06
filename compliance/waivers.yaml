@@ -1,0 +1,104 @@
+---
+# DEFSTAN Compliance Waiver Register — Tranc3 / Trancendos Platform
+# Generated: 2026-06-06
+
+meta:
+  register_version: "1.0.0"
+  platform: "Tranc3 / Trancendos"
+  classification: "UNCLASSIFIED — PUBLIC"
+  owner: "Trancendos Platform Engineering"
+
+waivers:
+  - waiver_id: WAV-001
+    requirement_id: REQ-SA-006
+    title: "Threat Isolation Sandbox — RESOLVED"
+    rationale: >
+      Waiver closed. Implemented a pure-Python, zero-cost threat isolation system
+      comprising The Ice Box (static analysis engine) and The Warp Tunnel (isolation
+      routing layer). The Ice Box provides YARA-style static threat detection with 30+
+      compiled regex signatures across 9 threat categories (INJECTION, XSS,
+      PATH_TRAVERSAL, MALWARE, CREDENTIAL_LEAK, EXFILTRATION, SUSPICIOUS_EXEC,
+      BINARY_EXPLOIT, POLICY_VIOLATION) plus Shannon entropy analysis and binary magic
+      detection. The Warp Tunnel intercepts all inbound content before it reaches
+      downstream services, routes suspicious/malicious content to a SQLite-backed
+      quarantine store, and blocks processing of confirmed threats. The ice-box-service
+      worker (port 8046, Lead AI: Neonach) exposes a REST API for scanning, quarantine
+      management, and release workflows. 38 unit tests verify the full pipeline.
+    compensating_controls:
+      - "src/security/ice_box/signatures.py — 30+ compiled YARA-style regex signatures, 9 threat categories"
+      - "src/security/ice_box/analyser.py — ThreatAnalyser with entropy + binary heuristics"
+      - "src/security/ice_box/quarantine.py — SQLite-backed QuarantineStore with full audit trail"
+      - "src/security/warp_tunnel/tunnel.py — WarpTunnel routing layer: intercept → analyse → quarantine → block/allow"
+      - "workers/ice-box-service/worker.py (port 8046) — REST API: /scan, /quarantine, /stats, /health"
+      - "tests/test_ice_box.py — 38 unit tests covering signatures, analyser, quarantine, and tunnel"
+      - "Strict mode flag blocks SUSPICIOUS content in addition to MALICIOUS"
+      - "Sentinel Station service (port 8041) continues to provide active runtime threat monitoring"
+    risk_level: NONE
+    resolved_date: "2026-06-06"
+    resolved_by: "Trancendos"
+    implementation: "src/security/ice_box/ + src/security/warp_tunnel/ + workers/ice-box-service/ + tests/test_ice_box.py"
+    status: RESOLVED
+
+  - waiver_id: WAV-002
+    requirement_id: REQ-SU-006
+    title: "Disaster Recovery Procedures — RESOLVED"
+    rationale: >
+      Waiver closed. Implemented a complete DR and backup system:
+      backup-service worker (port 8039) runs an asyncio scheduler that backs up all
+      31 registered SQLite worker databases on tier-appropriate intervals
+      (CRITICAL=15min, HIGH=1h, STANDARD=6h, LOW=24h). Each backup uses SQLite's
+      hot-backup API (live-safe), gzip compression, AES-GCM encryption, and
+      SHA-256 integrity verification. Automated pruning enforces retention policies
+      (e.g. CRITICAL: 7 daily + 4 weekly + 6 monthly). Recovery is fully automated
+      via scripts/dr_restore.py with list/verify/restore/dr-drill commands.
+      The DR runbook documents 5 disaster scenarios, RTO/RPO targets, quarterly
+      drill procedure, and offsite replication guidance.
+      30 unit tests verify the backup engine end-to-end including tamper detection.
+    compensating_controls:
+      - "workers/backup-service (port 8039) — automated scheduled backup daemon"
+      - "src/backup/engine.py — hot-backup, compress, AES-GCM encrypt, verify, prune"
+      - "src/backup/registry.py — 31-worker registry with RTO/RPO tier targets"
+      - "scripts/dr_restore.py — DR restore CLI with dr-drill command"
+      - "docs/runbooks/disaster-recovery.md — formal DR runbook"
+    risk_level: NONE
+    resolved_date: "2026-06-06"
+    resolved_by: "Trancendos"
+    implementation: "src/backup/ + workers/backup-service/ + scripts/dr_restore.py + docs/runbooks/disaster-recovery.md"
+    rto_targets:
+      CRITICAL: "1 hour"
+      HIGH: "4 hours"
+      STANDARD: "24 hours"
+      LOW: "72 hours"
+    rpo_targets:
+      CRITICAL: "15 minutes"
+      HIGH: "1 hour"
+      STANDARD: "6 hours"
+      LOW: "24 hours"
+    status: RESOLVED
+
+  - waiver_id: WAV-003
+    requirement_id: REQ-IA-010
+    title: "SQLite Worker At-Rest Encryption — RESOLVED"
+    rationale: >
+      Waiver closed. Implemented application-layer AES-GCM field-level encryption via
+      src/database/encrypted_sqlite.py (zero-cost, no SQLCipher licence required).
+      All 52 SQLite-using workers now import connect() from encrypted_sqlite, which
+      enforces WAL mode and foreign keys. High-sensitivity workers (users-service,
+      infinity-auth, vault-service, payments-service, audit-service, identity-service)
+      apply encrypt_field()/decrypt_field() on all PII and credential columns at write/read
+      time. Refresh tokens use deterministic HMAC-SHA256 hashes for indexed lookup with
+      the plaintext value encrypted at rest. EncryptedKVStore provides a general-purpose
+      encrypted key-value table for any worker needing credential persistence.
+      Key derivation: HKDF-SHA256 from TRANC3_DB_MASTER_KEY (or PBKDF2 from SECRET_KEY)
+      with per-database path salt; 25 unit tests in tests/test_encrypted_sqlite.py.
+    compensating_controls:
+      - "src/database/encrypted_sqlite.py — AES-GCM field helpers + EncryptedKVStore"
+      - "HKDF-SHA256 key derivation with per-database salt (no shared key across workers)"
+      - "Deterministic HMAC token hashing for indexed lookups (refresh tokens, session tokens)"
+      - "Vault service (The Void / port 8038) continues to store platform secrets with AES-GCM"
+      - "Sensitive PII (email, bio, display_name, preferences) encrypted on all user-facing workers"
+    risk_level: NONE
+    resolved_date: "2026-06-06"
+    resolved_by: "Trancendos"
+    implementation: "src/database/encrypted_sqlite.py + tests/test_encrypted_sqlite.py"
+    status: RESOLVED

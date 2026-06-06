@@ -8,11 +8,11 @@ Zero-cost: FastAPI + SQLite, no external dependencies.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import threading
 import uuid
 from contextlib import contextmanager
@@ -22,6 +22,8 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -48,7 +50,7 @@ class FilesDatabase:
 
     def _get_conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
+            self._local.conn = sqlite3_connect(str(self.db_path), timeout=10)
             self._local.conn.row_factory = sqlite3.Row
             self._local.conn.execute("PRAGMA journal_mode=WAL")
             self._local.conn.execute("PRAGMA synchronous=NORMAL")
@@ -183,6 +185,20 @@ async def list_all(limit: int = 50, offset: int = 0):
 @_router.post("/")
 async def create(data: Dict[str, Any]):
     """Create a new files entry."""
+    # Capacity hard stop — daily upload count and storage bytes
+    try:
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+        from src.capacity.guard import CapacityService, CapacityExceededError, get_capacity_guard
+        _g = get_capacity_guard()
+        _g.consume(CapacityService.FILES_UPLOADS_DAILY, amount=1)
+        file_size = data.get("file_size", 0) or 0
+        if file_size:
+            _g.consume(CapacityService.STORAGE_BYTES, amount=int(file_size))
+    except Exception as _fe:
+        from src.capacity.guard import CapacityExceededError
+        if isinstance(_fe, CapacityExceededError):
+            raise HTTPException(status_code=503, detail=str(_fe))
     item_id = data.get("file_id", str(uuid.uuid4()))
     data["file_id"] = item_id
     created = db.create(data)
@@ -273,10 +289,10 @@ async def storage_stats():
     """Total storage used per user and overall."""
     conn = db._get_conn()
     total = conn.execute(
-        "SELECT SUM(size_bytes) as total_bytes, COUNT(*) as file_count FROM files"
+        "SELECT SUM(size_bytes) as total_bytes, COUNT(*) as file_count FROM files",
     ).fetchone()
     by_user = conn.execute(
-        "SELECT user_id, SUM(size_bytes) as bytes, COUNT(*) as files FROM files GROUP BY user_id ORDER BY bytes DESC LIMIT 20"
+        "SELECT user_id, SUM(size_bytes) as bytes, COUNT(*) as files FROM files GROUP BY user_id ORDER BY bytes DESC LIMIT 20",
     ).fetchall()
     return {
         "total_bytes": total["total_bytes"] or 0,

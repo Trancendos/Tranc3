@@ -42,6 +42,7 @@ import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from collections import defaultdict
@@ -445,7 +446,7 @@ class HealthAggregator:
     def _init_db(self) -> None:
         """Initialize the health database."""
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3_connect(self.db_path)
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS service_health (
                 service_id TEXT PRIMARY KEY,
@@ -478,7 +479,7 @@ class HealthAggregator:
         """Register an AI/Agent/Bot service for health tracking in the Nexus."""
         async with self._lock:
             self._services[health.service_id] = health
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3_connect(self.db_path)
         conn.execute(
             """INSERT OR REPLACE INTO service_health
                (service_id, service_name, pillar, tier_requirement, status,
@@ -521,7 +522,7 @@ class HealthAggregator:
             if metadata:
                 svc.metadata.update(metadata)
 
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3_connect(self.db_path)
         conn.execute(
             """UPDATE service_health
                SET status=?, last_heartbeat=?, response_time_ms=?, error_count=?, metadata=?

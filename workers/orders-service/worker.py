@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import threading
 import uuid
 from contextlib import contextmanager
@@ -49,7 +50,7 @@ class OrdersDatabase:
 
     def _get_conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
+            self._local.conn = sqlite3_connect(str(self.db_path), timeout=10)
             self._local.conn.row_factory = sqlite3.Row
             self._local.conn.execute("PRAGMA journal_mode=WAL")
             self._local.conn.execute("PRAGMA synchronous=NORMAL")
@@ -262,7 +263,8 @@ async def ship_order(order_id: str):
         raise HTTPException(404, f"Not found: {order_id}")
     if item.get("status") != "confirmed":
         raise HTTPException(
-            409, f"Order must be confirmed before shipping, got '{item.get('status')}'"
+            409,
+            f"Order must be confirmed before shipping, got '{item.get('status')}'",
         )
     db.update("order_id", order_id, {"status": "shipped"})
     return {"ok": True, "order_id": order_id, "status": "shipped"}
@@ -276,7 +278,8 @@ async def deliver_order(order_id: str):
         raise HTTPException(404, f"Not found: {order_id}")
     if item.get("status") != "shipped":
         raise HTTPException(
-            409, f"Order must be shipped before delivery, got '{item.get('status')}'"
+            409,
+            f"Order must be shipped before delivery, got '{item.get('status')}'",
         )
     db.update("order_id", order_id, {"status": "delivered"})
     return {"ok": True, "order_id": order_id, "status": "delivered"}
@@ -299,7 +302,7 @@ async def order_stats():
     """Order counts and total revenue by status."""
     conn = db._get_conn()
     rows = conn.execute(
-        "SELECT status, COUNT(*) as count, SUM(total) as revenue FROM orders GROUP BY status"
+        "SELECT status, COUNT(*) as count, SUM(total) as revenue FROM orders GROUP BY status",
     ).fetchall()
     return {"stats": [dict(r) for r in rows]}
 

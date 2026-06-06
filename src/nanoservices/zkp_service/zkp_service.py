@@ -133,7 +133,11 @@ class Groth16Simulator:
         return pk, vk
 
     def prove(
-        self, circuit: ZKPCircuit, pk: str, public_inputs: List[str], private_inputs: List[str]
+        self,
+        circuit: ZKPCircuit,
+        pk: str,
+        public_inputs: List[str],
+        private_inputs: List[str],
     ) -> str:
         data = f"{circuit.circuit_id}:{pk}:{':'.join(public_inputs)}:{':'.join(private_inputs[:1])}"
         proof = hashlib.sha256(data.encode()).hexdigest()
@@ -151,10 +155,13 @@ class BulletproofSimulator:
     """Simulates Bulletproof-style range proofs."""
 
     def prove_range(
-        self, value: int, min_val: int = 0, max_val: int = 2**32 - 1
+        self,
+        value: int,
+        min_val: int = 0,
+        max_val: int = 2**32 - 1,
     ) -> Tuple[str, bool]:
         commitment = hashlib.sha256(
-            f"commit-{value}-{random.randint(0, 2**64)}".encode()
+            f"commit-{value}-{random.randint(0, 2**64)}".encode(),
         ).hexdigest()
         in_range = min_val <= value <= max_val
         proof = f"bp-{commitment[:48]}-{int(in_range)}"
@@ -210,7 +217,10 @@ class ZKPService:
         return circuit
 
     def generate_proof(
-        self, circuit_id: str, public_inputs: List[str], private_inputs: Optional[List[str]] = None
+        self,
+        circuit_id: str,
+        public_inputs: List[str],
+        private_inputs: Optional[List[str]] = None,
     ) -> ZKPProof:
         circuit = self.circuits.get(circuit_id)
         if not circuit:
@@ -228,12 +238,15 @@ class ZKPService:
                 p, g, x, y = self.schnorr.generate_keypair()
                 r, challenge, s = self.schnorr.prove(secret, p, g)
                 proof.proof_data = json.dumps(
-                    {"r": r, "c": challenge, "s": s, "y": y, "p": p, "g": g}
+                    {"r": r, "c": challenge, "s": s, "y": y, "p": p, "g": g},
                 )
             elif circuit.proof_system == ProofSystem.GROTH16:
                 pk, _ = self.groth16.setup(circuit)
                 proof.proof_data = self.groth16.prove(
-                    circuit, pk, public_inputs, private_inputs or []
+                    circuit,
+                    pk,
+                    public_inputs,
+                    private_inputs or [],
                 )
             elif circuit.proof_system == ProofSystem.BULLETPROOF:
                 value = int(private_inputs[0]) if private_inputs else 0
@@ -241,7 +254,7 @@ class ZKPService:
                 proof.proof_data = bp_proof
             else:
                 proof.proof_data = hashlib.sha256(
-                    f"{circuit_id}:{':'.join(public_inputs)}".encode()
+                    f"{circuit_id}:{':'.join(public_inputs)}".encode(),
                 ).hexdigest()
 
             proof.status = ProofStatus.GENERATED
@@ -266,11 +279,19 @@ class ZKPService:
             if proof.proof_system == ProofSystem.SCHNORR:
                 data = json.loads(proof.proof_data)
                 result = self.schnorr.verify(
-                    data["r"], data["c"], data["s"], data["y"], data["p"], data["g"]
+                    data["r"],
+                    data["c"],
+                    data["s"],
+                    data["y"],
+                    data["p"],
+                    data["g"],
                 )
             elif proof.proof_system == ProofSystem.GROTH16:
                 result = self.groth16.verify(
-                    circuit, circuit.verification_key, proof.public_inputs, proof.proof_data
+                    circuit,
+                    circuit.verification_key,
+                    proof.public_inputs,
+                    proof.proof_data,
                 )
             elif proof.proof_system == ProofSystem.BULLETPROOF:
                 result = self.bulletproof.verify_range(proof.proof_data)

@@ -16,6 +16,7 @@ import fnmatch
 import json
 import logging
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from datetime import datetime, timezone
@@ -93,7 +94,7 @@ class EventBus:
         """Initialise SQLite persistence."""
         db_path = Path(path)
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(str(db_path))
+        self._db = sqlite3_connect(str(db_path))
         self._db.execute("""
             CREATE TABLE IF NOT EXISTS events (
                 event_id TEXT PRIMARY KEY,
@@ -230,7 +231,7 @@ class EventBus:
                     data=data,
                     source=source,
                     tenant_id=tenant_id,
-                )
+                ),
             )
         except RuntimeError:
             logger.warning("emit_async_no_loop", extra={"event_type": event_type})

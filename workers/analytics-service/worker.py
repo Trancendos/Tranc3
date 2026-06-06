@@ -9,12 +9,12 @@ Zero-cost: FastAPI + SQLite (FTS5 for event search), no external deps.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import json
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -24,6 +24,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8016
 WORKER_NAME = "analytics-service"
@@ -40,7 +42,7 @@ logger = logging.getLogger(WORKER_NAME)
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -180,7 +182,7 @@ async def health():
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "event_count": event_count,
-        "metric_count": metric_count
+        "metric_count": metric_count,
     }
 
 
@@ -204,7 +206,7 @@ async def ingest_batch(batch: BatchEventsIn):
         ts = ev.timestamp or time.time()
         date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
         rows.append(
-            (ev.event_type, ev.user_id, ev.session_id, json.dumps(ev.properties), ts, date_str)
+            (ev.event_type, ev.user_id, ev.session_id, json.dumps(ev.properties), ts, date_str),
         )
     with get_conn() as conn:
         conn.executemany(
@@ -256,7 +258,7 @@ async def query_events(
 async def event_types():
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT event_type, COUNT(*) as count FROM events GROUP BY event_type ORDER BY count DESC"
+            "SELECT event_type, COUNT(*) as count FROM events GROUP BY event_type ORDER BY count DESC",
         ).fetchall()
     return {"types": [dict(r) for r in rows]}
 
@@ -311,7 +313,8 @@ async def get_metric(
     agg_fn = {"avg": "AVG", "sum": "SUM", "min": "MIN", "max": "MAX", "count": "COUNT"}[agg]
     with get_conn() as conn:
         row = conn.execute(
-            f"SELECT {agg_fn}(value) as result, COUNT(*) as samples FROM metrics {where}", params
+            f"SELECT {agg_fn}(value) as result, COUNT(*) as samples FROM metrics {where}",
+            params,
         ).fetchone()
     return {"name": name, "aggregation": agg, "result": row["result"], "samples": row["samples"]}
 
@@ -349,10 +352,10 @@ async def summary():
         event_count = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         metric_count = conn.execute("SELECT COUNT(*) FROM metrics").fetchone()[0]
         top_events = conn.execute(
-            "SELECT event_type, COUNT(*) as c FROM events GROUP BY event_type ORDER BY c DESC LIMIT 5"
+            "SELECT event_type, COUNT(*) as c FROM events GROUP BY event_type ORDER BY c DESC LIMIT 5",
         ).fetchall()
         top_metrics = conn.execute(
-            "SELECT name, AVG(value) as avg_val FROM metrics GROUP BY name ORDER BY avg_val DESC LIMIT 5"
+            "SELECT name, AVG(value) as avg_val FROM metrics GROUP BY name ORDER BY avg_val DESC LIMIT 5",
         ).fetchall()
     return {
         "total_events": event_count,

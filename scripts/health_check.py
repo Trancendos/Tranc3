@@ -28,8 +28,8 @@ try:
 except ImportError:
     _HAS_HTTPX = False
     print("warning: httpx not installed — using urllib fallback", file=sys.stderr)
-    import urllib.request
     import urllib.error
+    import urllib.request
 
 
 TIMEOUT = float(os.environ.get("HEALTH_TIMEOUT", "5"))

@@ -1,10 +1,23 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
+import { ThemeProvider } from './contexts/ThemeContext'
 import './index.css'
 
+// Automated accessibility audits in development
+if (import.meta.env.DEV) {
+  import('@axe-core/react').then(({ default: axe }) => {
+    axe(React, ReactDOM, 1000)
+  })
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
+  <React.StrictMode>
+    <ErrorBoundary>
+      <ThemeProvider>
         <App />
-    </React.StrictMode>
+      </ThemeProvider>
+    </ErrorBoundary>
+  </React.StrictMode>
 )

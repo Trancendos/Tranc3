@@ -72,7 +72,7 @@ def _resolve_output_base(output_dir: str) -> Path:
 
     raise PathTraversalError(
         f"Output directory {candidate} is not under any allowed root. "
-        f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}"
+        f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}",
     )
 
 
@@ -419,7 +419,7 @@ class PersonalitySpawner:
         else:
             path.write_text(
                 "fastapi==0.111.0\nuvicorn[standard]==0.29.0\npydantic==2.7.1\n"
-                "python-dotenv==1.0.1\npyyaml==6.0.1\n"
+                "python-dotenv==1.0.1\npyyaml==6.0.1\n",
             )
         return [str(path)]
 

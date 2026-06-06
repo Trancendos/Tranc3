@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from pathlib import Path
 from typing import Any
@@ -54,14 +55,14 @@ class AutoEvolve:
 
     def _init_db(self) -> None:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self._db_path) as conn:
+        with sqlite3_connect(self._db_path) as conn:
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS evolution_results (
                     entity_id TEXT,
                     evolved_at REAL,
                     best_config TEXT,
                     PRIMARY KEY (entity_id, evolved_at)
-                )"""
+                )""",
             )
             conn.commit()
 
@@ -87,7 +88,7 @@ class AutoEvolve:
             if best:
                 import json
 
-                with sqlite3.connect(self._db_path) as conn:
+                with sqlite3_connect(self._db_path) as conn:
                     conn.execute(
                         "INSERT OR REPLACE INTO evolution_results VALUES (?,?,?)",
                         (eid, time.time(), json.dumps(best)),
@@ -100,7 +101,9 @@ class AutoEvolve:
     async def run(self) -> None:
         self._running = True
         logger.info(
-            "AutoEvolve started (%d entities, interval=%.0fs)", len(self._entities), self._interval
+            "AutoEvolve started (%d entities, interval=%.0fs)",
+            len(self._entities),
+            self._interval,
         )
         while self._running:
             now = time.monotonic()

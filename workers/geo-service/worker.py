@@ -14,13 +14,13 @@ Zero-cost: FastAPI + SQLite cache + free public APIs, no paid deps.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import logging
 import math
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -31,6 +31,8 @@ import httpx
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8027
 WORKER_NAME = "geo-service"
@@ -48,7 +50,7 @@ logger = logging.getLogger(WORKER_NAME)
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -290,7 +292,7 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "cached_ips": cached
+        "cached_ips": cached,
     }
 
 
@@ -335,10 +337,11 @@ async def cache_stats():
     with get_conn() as conn:
         total = conn.execute("SELECT COUNT(*) FROM ip_cache").fetchone()[0]
         fresh = conn.execute(
-            "SELECT COUNT(*) FROM ip_cache WHERE cached_at > ?", (now - CACHE_TTL,)
+            "SELECT COUNT(*) FROM ip_cache WHERE cached_at > ?",
+            (now - CACHE_TTL,),
         ).fetchone()[0]
         by_source = conn.execute(
-            "SELECT source, COUNT(*) as c FROM ip_cache GROUP BY source"
+            "SELECT source, COUNT(*) as c FROM ip_cache GROUP BY source",
         ).fetchall()
     return {
         "total_cached": total,

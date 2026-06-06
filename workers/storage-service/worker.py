@@ -10,7 +10,6 @@ Zero-cost: FastAPI + SQLite + local filesystem, no cloud storage needed.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import hashlib
 import logging
@@ -19,6 +18,7 @@ import os
 import secrets
 import shutil
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -29,6 +29,8 @@ from fastapi import APIRouter, Depends, FastAPI, File, Header, HTTPException, Qu
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8020
 WORKER_NAME = "storage-service"
@@ -47,7 +49,7 @@ logger = logging.getLogger(WORKER_NAME)
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -186,7 +188,7 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "buckets": bucket_count,
         "objects": obj_count,
-        "total_bytes": total_size
+        "total_bytes": total_size,
     }
 
 
@@ -220,7 +222,8 @@ async def delete_bucket(bucket: str):
         if not conn.execute("SELECT name FROM buckets WHERE name = ?", (bucket,)).fetchone():
             raise HTTPException(status_code=404, detail="Bucket not found")
         obj_count = conn.execute(
-            "SELECT COUNT(*) FROM objects WHERE bucket=?", (bucket,)
+            "SELECT COUNT(*) FROM objects WHERE bucket=?",
+            (bucket,),
         ).fetchone()[0]
         if obj_count > 0:
             raise HTTPException(status_code=409, detail=f"Bucket not empty ({obj_count} objects)")
@@ -256,7 +259,8 @@ async def list_objects(
                 (bucket, f"{prefix}%", limit, offset),
             ).fetchall()
             total = conn.execute(
-                "SELECT COUNT(*) FROM objects WHERE bucket=? AND key LIKE ?", (bucket, f"{prefix}%")
+                "SELECT COUNT(*) FROM objects WHERE bucket=? AND key LIKE ?",
+                (bucket, f"{prefix}%"),
             ).fetchone()[0]
         else:
             rows = conn.execute(
@@ -264,7 +268,8 @@ async def list_objects(
                 (bucket, limit, offset),
             ).fetchall()
             total = conn.execute(
-                "SELECT COUNT(*) FROM objects WHERE bucket=?", (bucket,)
+                "SELECT COUNT(*) FROM objects WHERE bucket=?",
+                (bucket,),
             ).fetchone()[0]
     return {"bucket": bucket, "total": total, "objects": [dict(r) for r in rows]}
 
@@ -302,7 +307,8 @@ async def get_object_meta(bucket: str, key: str):
     _ensure_bucket(bucket)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT * FROM objects WHERE bucket=? AND key=?", (bucket, key)
+            "SELECT * FROM objects WHERE bucket=? AND key=?",
+            (bucket, key),
         ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Object not found")
@@ -314,7 +320,8 @@ async def download_object(bucket: str, key: str):
     _ensure_bucket(bucket)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT path, content_type, etag FROM objects WHERE bucket=? AND key=?", (bucket, key)
+            "SELECT path, content_type, etag FROM objects WHERE bucket=? AND key=?",
+            (bucket, key),
         ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Object not found")
@@ -329,7 +336,8 @@ async def delete_object(bucket: str, key: str):
     _ensure_bucket(bucket)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT path FROM objects WHERE bucket=? AND key=?", (bucket, key)
+            "SELECT path FROM objects WHERE bucket=? AND key=?",
+            (bucket, key),
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Object not found")
@@ -346,7 +354,8 @@ async def create_download_token(bucket: str, key: str, ttl: int = Query(3600)):
     _ensure_bucket(bucket)
     with get_conn() as conn:
         if not conn.execute(
-            "SELECT key FROM objects WHERE bucket=? AND key=?", (bucket, key)
+            "SELECT key FROM objects WHERE bucket=? AND key=?",
+            (bucket, key),
         ).fetchone():
             raise HTTPException(status_code=404, detail="Object not found")
         token = secrets.token_urlsafe(32)
@@ -363,7 +372,8 @@ async def download_via_token(token: str):
     now = time.time()
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT bucket, key, expires_at FROM download_tokens WHERE token=?", (token,)
+            "SELECT bucket, key, expires_at FROM download_tokens WHERE token=?",
+            (token,),
         ).fetchone()
     if not row or row["expires_at"] < now:
         raise HTTPException(status_code=403, detail="Token expired or invalid")
@@ -374,7 +384,7 @@ async def download_via_token(token: str):
 async def storage_stats():
     with get_conn() as conn:
         by_bucket = conn.execute(
-            "SELECT bucket, COUNT(*) as objects, SUM(size) as bytes FROM objects GROUP BY bucket"
+            "SELECT bucket, COUNT(*) as objects, SUM(size) as bytes FROM objects GROUP BY bucket",
         ).fetchall()
     return {"buckets": [dict(r) for r in by_bucket]}
 

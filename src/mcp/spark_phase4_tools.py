@@ -212,7 +212,7 @@ async def _handle_neural_mesh_topology(params: Dict[str, Any]) -> Dict[str, Any]
                 "edges": snapshot.get("edges", []),
                 "partition_count": len(partitions),
                 "partitions": [list(p) for p in partitions],
-            }
+            },
         )
     except Exception as exc:
         logger.exception("neural_mesh_topology error")
@@ -301,7 +301,7 @@ async def _handle_collective_memory_query(params: Dict[str, Any]) -> Dict[str, A
                         "topic": entry.topic,
                         "tags": sorted(entry.tags),
                         "priority": entry.priority.name,
-                    }
+                    },
                 ]
         elif topic:
             entries = await cm.query_by_topic(topic, limit=limit)
@@ -376,7 +376,7 @@ async def _handle_meta_learn_adapt(params: Dict[str, Any]) -> Dict[str, Any]:
                     "adapted": False,
                     "parameters": base_params,
                     "message": "No matching prototypes found; returned base parameters",
-                }
+                },
             )
         return _ok(
             {
@@ -385,7 +385,7 @@ async def _handle_meta_learn_adapt(params: Dict[str, Any]) -> Dict[str, Any]:
                 "parameters": result.adapted_parameters,
                 "confidence": result.confidence,
                 "match_score": result.matched_score,
-            }
+            },
         )
     except Exception as exc:
         logger.exception("meta_learn_adapt error")
@@ -435,7 +435,7 @@ async def _handle_attention_route(params: Dict[str, Any]) -> Dict[str, Any]:
                 "selected_service": decision.selected_service,
                 "attention_weights": decision.attention_weights,
                 "confidence": decision.confidence,
-            }
+            },
         )
     except Exception as exc:
         logger.exception("attention_route error")
@@ -471,7 +471,7 @@ async def _handle_causal_predict(params: Dict[str, Any]) -> Dict[str, Any]:
                 "effects": dict(result.effects),
                 "confidence": result.confidence,
                 "reasoning_chain": result.reasoning_chain,
-            }
+            },
         )
     except Exception as exc:
         logger.exception("causal_predict error")
@@ -501,7 +501,7 @@ async def _handle_causal_diagnose(params: Dict[str, Any]) -> Dict[str, Any]:
                 "causes": dict(result.causes),
                 "confidence": result.confidence,
                 "reasoning_chain": result.reasoning_chain,
-            }
+            },
         )
     except Exception as exc:
         logger.exception("causal_diagnose error")
@@ -539,7 +539,7 @@ async def _handle_causal_counterfactual(params: Dict[str, Any]) -> Dict[str, Any
                 "confidence": result.confidence,
                 "reasoning_chain": result.reasoning_chain,
                 "intervention_applied": intervention,
-            }
+            },
         )
     except Exception as exc:
         logger.exception("causal_counterfactual error")
@@ -599,7 +599,7 @@ async def _handle_knowledge_graph_add(params: Dict[str, Any]) -> Dict[str, Any]:
                 "edge_id": edge_id,
                 "fingerprint": node.fingerprint,
                 "graph_stats": stats,
-            }
+            },
         )
     except Exception as exc:
         logger.exception("knowledge_graph_add error")
@@ -643,7 +643,7 @@ async def _handle_knowledge_graph_query(params: Dict[str, Any]) -> Dict[str, Any
                     for n in nodes
                 ],
                 "count": len(nodes),
-            }
+            },
         )
     except Exception as exc:
         logger.exception("knowledge_graph_query error")
@@ -684,7 +684,7 @@ async def _handle_knowledge_graph_path(params: Dict[str, Any]) -> Dict[str, Any]
         else:
             path = await kg.shortest_path(source_id, target_id, edge_type=etype)
             return _ok(
-                {"path": path, "length": len(path) - 1 if path else None, "mode": "shortest"}
+                {"path": path, "length": len(path) - 1 if path else None, "mode": "shortest"},
             )
     except Exception as exc:
         logger.exception("knowledge_graph_path error")
@@ -720,7 +720,10 @@ async def _handle_knowledge_graph_expand(params: Dict[str, Any]) -> Dict[str, An
                 EdgeType[et.upper()] for et in etype_strs if et.upper() in EdgeType.__members__
             ]
         expanded = await kg.semantic_expand(
-            node_id, depth=depth, edge_types=etypes, min_confidence=min_conf
+            node_id,
+            depth=depth,
+            edge_types=etypes,
+            min_confidence=min_conf,
         )
         return _ok(
             {
@@ -736,7 +739,7 @@ async def _handle_knowledge_graph_expand(params: Dict[str, Any]) -> Dict[str, An
                 ],
                 "count": len(expanded),
                 "seed_node_id": node_id,
-            }
+            },
         )
     except Exception as exc:
         logger.exception("knowledge_graph_expand error")
@@ -787,7 +790,7 @@ async def _handle_foresight_predict(params: Dict[str, Any]) -> Dict[str, Any]:
                 "top_outcomes": [{"outcome": o, "probability": round(p, 4)} for o, p in top],
                 "entropy": round(entropy, 4),
                 "confidence": round(confidence, 4),
-            }
+            },
         )
     except Exception as exc:
         logger.exception("foresight_predict error")
@@ -824,7 +827,7 @@ async def _handle_analytics_intent(params: Dict[str, Any]) -> Dict[str, Any]:
                 "intent_scores": [{"intent": i, "score": round(s, 4)} for i, s in sorted_intents],
                 "dominant_intent": predictor.dominant_intent(scores),
                 "message_length": len(message),
-            }
+            },
         )
     except Exception as exc:
         logger.exception("analytics_intent error")
@@ -867,7 +870,7 @@ async def _handle_nanobot_dispatch(params: Dict[str, Any]) -> Dict[str, Any]:
             else:
                 return _err(
                     f"Unknown failure_mode '{failure_mode_str}'. "
-                    f"Valid: {[f.name for f in FailureMode]}"
+                    f"Valid: {[f.name for f in FailureMode]}",
                 )
         elif metrics:
             report = await dispatcher.dispatch_from_metrics(metrics, config=override_cfg)
@@ -880,7 +883,7 @@ async def _handle_nanobot_dispatch(params: Dict[str, Any]) -> Dict[str, Any]:
                 "success": report.get("success"),
                 "actions_taken": report.get("actions_taken", []),
                 "duration_ms": report.get("duration_ms"),
-            }
+            },
         )
     except Exception as exc:
         logger.exception("nanobot_dispatch error")

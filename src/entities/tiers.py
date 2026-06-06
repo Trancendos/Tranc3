@@ -85,7 +85,8 @@ class Prime:
         # Lifecycle hooks
         self.lifecycle = LifecycleEmitter(name or prime_id)
         self.lifecycle.emit_lifecycle_sync(
-            LifecycleEvent.INIT, {"id": self.id, "tier": 2, "pillar": pillar}
+            LifecycleEvent.INIT,
+            {"id": self.id, "tier": 2, "pillar": pillar},
         )
 
     @property
@@ -232,7 +233,7 @@ class Prime:
                     "running": ai_running,
                     "agents": ai_agents,
                     "bots": ai_bots,
-                }
+                },
             )
 
         return HealthReport(
@@ -470,7 +471,7 @@ class Sovereign:
                     "totalAgents": ph.total_agents,
                     "totalBots": ph.total_bots,
                     "subHealths": ph.sub_healths,
-                }
+                },
             )
 
         return HealthReport(

@@ -147,7 +147,7 @@ class TestRegressionDetector:
                 type_hint_coverage=1.0,
                 error_handling_score=0.5,
                 overall_score=0.8,
-            )
+            ),
         )
         assert det.detect_regression() is None
 
@@ -164,7 +164,7 @@ class TestRegressionDetector:
                 type_hint_coverage=0.5,
                 error_handling_score=0.5,
                 overall_score=0.5,
-            )
+            ),
         )
         det.record(
             CodeQualityMetric(
@@ -177,7 +177,7 @@ class TestRegressionDetector:
                 type_hint_coverage=1.0,
                 error_handling_score=0.5,
                 overall_score=0.8,
-            )
+            ),
         )
         assert det.detect_regression() is None
 
@@ -194,7 +194,7 @@ class TestRegressionDetector:
                 type_hint_coverage=1.0,
                 error_handling_score=1.0,
                 overall_score=0.9,
-            )
+            ),
         )
         det.record(
             CodeQualityMetric(
@@ -207,7 +207,7 @@ class TestRegressionDetector:
                 type_hint_coverage=0.0,
                 error_handling_score=0.0,
                 overall_score=0.3,
-            )
+            ),
         )
         result = det.detect_regression()
         assert result is not None
@@ -229,7 +229,7 @@ class TestRegressionDetector:
                 type_hint_coverage=1.0,
                 error_handling_score=1.0,
                 overall_score=0.9,
-            )
+            ),
         )
         det.record(
             CodeQualityMetric(
@@ -242,7 +242,7 @@ class TestRegressionDetector:
                 type_hint_coverage=0.0,
                 error_handling_score=0.0,
                 overall_score=0.2,
-            )
+            ),
         )
         result = det.detect_regression()
         assert result is not None
@@ -265,7 +265,7 @@ class TestRegressionDetector:
                     type_hint_coverage=1.0,
                     error_handling_score=1.0,
                     overall_score=0.8,
-                )
+                ),
             )
         assert len(det._history) <= 50
 
@@ -282,7 +282,7 @@ class TestRegressionDetector:
                 type_hint_coverage=1.0,
                 error_handling_score=1.0,
                 overall_score=0.8,
-            )
+            ),
         )
         det.record(
             CodeQualityMetric(
@@ -295,7 +295,7 @@ class TestRegressionDetector:
                 type_hint_coverage=0.8,
                 error_handling_score=0.5,
                 overall_score=0.6,
-            )
+            ),
         )
         # Delta is -0.2 which is > -0.5 threshold, so no regression
         assert det.detect_regression() is None

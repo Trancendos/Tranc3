@@ -1,0 +1,206 @@
+# ══════════════════════════════════════════════════════════════════
+# Tranc3 Platform — Terraform Variables Example
+# ══════════════════════════════════════════════════════════════════
+#
+# ⚠  NEVER COMMIT REAL VALUES  ⚠
+# Copy this file to terraform.tfvars and fill in your actual values.
+# terraform.tfvars is in .gitignore — keep it that way.
+#
+# Alternatively, export sensitive values as environment variables:
+#   export TF_VAR_oci_tenancy_ocid="ocid1.tenancy.oc1...."
+#   export TF_VAR_oci_user_ocid="ocid1.user.oc1...."
+#   export TF_VAR_cloudflare_api_token="your-token-here"
+#
+# ══════════════════════════════════════════════════════════════════
+
+# ────────────────────────────────────────────────────────────────
+# SECTION 1 — OCI Authentication
+# ────────────────────────────────────────────────────────────────
+# Where to find these values:
+#   OCI Console → Profile (top-right) → Tenancy → OCID
+#   OCI Console → Profile → My Profile → OCID
+#   OCI Console → Profile → API Keys → Add API Key → Fingerprint
+# ────────────────────────────────────────────────────────────────
+
+oci_tenancy_ocid = "ocid1.tenancy.oc1..aaaaaaaaXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+# OCI Console → Profile (top-right avatar) → Tenancy: <name>
+# → click the tenancy name → OCID (copy button)
+
+oci_user_ocid = "ocid1.user.oc1..aaaaaaaaXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+# OCI Console → Profile → My Profile → OCID
+
+oci_fingerprint = "xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx"
+# OCI Console → Profile → API Keys → the fingerprint shown for your key
+# Format: colon-separated hex pairs
+
+oci_private_key_path = "~/.oci/oci_api_key.pem"
+# Path to the PEM private key you downloaded when adding the API key.
+# Alternatively, paste the key content into oci_private_key below and
+# leave this as the default.
+
+# oci_private_key = ""
+# Paste the full PEM private key content here if you prefer not to
+# use a key file path. Leave blank if using oci_private_key_path.
+
+oci_region = "uk-london-1"
+# Your OCI tenancy's HOME region — check:
+#   OCI Console → Administration → Region Management → Home Region
+# Common values: us-ashburn-1, us-phoenix-1, eu-frankfurt-1,
+#                uk-london-1, ap-sydney-1, ca-toronto-1
+
+oci_compartment_ocid = "ocid1.compartment.oc1..aaaaaaaaXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+# OCI Console → Identity & Security → Compartments → your compartment → OCID
+# If using the root compartment, this equals oci_tenancy_ocid.
+
+# ────────────────────────────────────────────────────────────────
+# SECTION 2 — Citadel Instance
+# ────────────────────────────────────────────────────────────────
+# The Citadel is the primary production server.
+# It uses ALL 4 OCPU and ALL 24 GB RAM of the A1 Flex Always Free
+# allocation. Leave the other A1 instances (nanoservice, ceph_node,
+# k3s_edge) at 0 or comment them out in oci-free-tier.tf.
+# ────────────────────────────────────────────────────────────────
+
+citadel_ocpus         = 4     # MUST be 4 — full A1 allocation
+citadel_memory_gbs    = 24    # MUST be 24 — full A1 allocation
+citadel_boot_volume_gbs = 100 # 47–200 GB; 100 GB fits all 38 workers
+
+# ────────────────────────────────────────────────────────────────
+# SECTION 3 — Network Configuration
+# ────────────────────────────────────────────────────────────────
+
+vcn_cidr            = "10.0.0.0/16"
+public_subnet_cidr  = "10.0.1.0/24"
+private_subnet_cidr = "10.0.2.0/24"
+ceph_subnet_cidr    = "10.0.3.0/24"
+vcn_dns_label       = "tranc3"
+
+enable_internet_gateway = true
+enable_nat_gateway      = true
+enable_service_gateway  = true
+
+# ────────────────────────────────────────────────────────────────
+# SECTION 4 — Domain & Git
+# ────────────────────────────────────────────────────────────────
+
+domain          = "trancendos.com"
+github_repo_url = "https://github.com/Trancendos/Tranc3.git"
+git_branch      = "main"
+# Swap git_branch to your working branch during development, e.g.:
+# git_branch = "claude/compassionate-mendel-qBXVv"
+
+# ────────────────────────────────────────────────────────────────
+# SECTION 5 — DNS / Cloudflare
+# ────────────────────────────────────────────────────────────────
+# Where to find these values:
+#   Zone ID:    Cloudflare dashboard → your domain → Overview →
+#               (right sidebar) Zone ID
+#   API Token:  Cloudflare dashboard → My Profile → API Tokens →
+#               Create Token → use "Edit zone DNS" template →
+#               restrict to Zone: trancendos.com
+# ────────────────────────────────────────────────────────────────
+
+cloudflare_zone_id   = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# 32-character hex string from Cloudflare dashboard → Overview panel
+
+cloudflare_api_token = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# Cloudflare API token — must have Zone:DNS:Edit permission
+# Minimum required scopes: Zone.DNS.Edit for zone trancendos.com
+
+# Cloudflare R2 storage (optional — leave blank to disable R2 fallback)
+cloudflare_r2_account_id        = ""
+cloudflare_r2_access_key_id     = ""
+cloudflare_r2_secret_access_key = ""
+cloudflare_r2_bucket            = "tranc3-archive"
+
+# ────────────────────────────────────────────────────────────────
+# SECTION 6 — System Config
+# ────────────────────────────────────────────────────────────────
+
+environment = "production"
+# One of: production, staging, development
+
+system_mode = "hybrid"
+# One of: true_nas (fully local), hybrid (local+cloud), cloud_only
+
+# Traefik dashboard access restriction — set to your home/office IP
+admin_cidr_block = "203.0.113.10/32"
+# IMPORTANT: change this to your real IP!
+# Find your IP: curl -s ifconfig.me
+# Use x.x.x.x/32 for a single IP, x.x.x.0/24 for a /24 block.
+# The default 0.0.0.0/0 leaves the Traefik dashboard exposed to
+# the internet — restrict it before deploying to production.
+
+# ────────────────────────────────────────────────────────────────
+# SECTION 7 — SSH
+# ────────────────────────────────────────────────────────────────
+# Generate a dedicated key pair for Citadel:
+#   ssh-keygen -t ed25519 -C "tranc3-citadel" -f ~/.ssh/tranc3_citadel
+# Then paste the public key content below.
+# ────────────────────────────────────────────────────────────────
+
+ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... tranc3-citadel"
+# The full public key string (one line), e.g.:
+# ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHxxxxxxxxxxxxxxxxxxx tranc3-citadel
+
+ssh_authorized_keys = []
+# Optional: additional public keys to add to the tranc3 user.
+# Useful for team access without sharing a single key:
+# ssh_authorized_keys = [
+#   "ssh-ed25519 AAAA... dev-laptop",
+#   "ssh-ed25519 AAAA... ci-runner",
+# ]
+
+# ────────────────────────────────────────────────────────────────
+# SECTION 8 — Idle Defense (OCI Always Free reclamation guard)
+# ────────────────────────────────────────────────────────────────
+# OCI reclaims Always Free instances idle for 7 consecutive days.
+# Enable to run periodic CPU bursts and prevent reclamation.
+
+idle_defense_enabled                = true
+idle_defense_burst_cron             = "*/5 * * * *"   # every 5 minutes
+idle_defense_burst_duration_seconds = 30              # 30-second burst
+idle_defense_cpu_target_percent     = 25              # ~25% CPU load
+
+# ────────────────────────────────────────────────────────────────
+# SECTION 9 — Storage & Boot Volumes (ancillary nodes)
+# ────────────────────────────────────────────────────────────────
+# These are for nanoservice, ceph_node, k3s_edge (oci-free-tier.tf).
+# If you are running Citadel as the sole A1 instance (recommended),
+# comment these instances out in oci-free-tier.tf instead.
+
+nanoservice_boot_volume_gbs = 47
+ceph_boot_volume_gbs        = 47
+k3s_boot_volume_gbs         = 47
+
+# Reduce OCPU/RAM to 0 if not provisioning ancillary nodes:
+nanoservice_ocpus      = 0
+nanoservice_memory_gbs = 0
+ceph_node_ocpus        = 0
+ceph_node_memory_gbs   = 0
+k3s_edge_ocpus         = 0
+k3s_edge_memory_gbs    = 0
+
+# ────────────────────────────────────────────────────────────────
+# SECTION 10 — Object Storage & HSM
+# ────────────────────────────────────────────────────────────────
+
+bucket_name_prefix        = "tranc3"
+enable_lifecycle_policies = true
+hot_to_warm_days          = 7
+warm_to_cold_days         = 30
+cold_to_archive_days      = 90
+
+hsm_provider = "softhsm2"  # softhsm2 | yubihsm2 | disabled
+# hsm_pin    = "change-me-hsm-pin"     # set via TF_VAR_hsm_pin
+# hsm_so_pin = "change-me-hsm-so-pin"  # set via TF_VAR_hsm_so_pin
+
+# ────────────────────────────────────────────────────────────────
+# SECTION 11 — Tags
+# ────────────────────────────────────────────────────────────────
+
+project_tags = {
+  "project"    = "tranc3"
+  "team"       = "trancendos"
+  "cost-center" = "platform"
+}

@@ -13,12 +13,12 @@ Zero-cost: FastAPI + SQLite + httpx, no mandatory paid deps.
 """
 
 from __future__ import annotations
-from src.entities.health_metadata import health_entity_block
 
 import asyncio
 import logging
 import os
 import sqlite3
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -29,6 +29,8 @@ import httpx
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8019
 WORKER_NAME = "sms-service"
@@ -51,7 +53,7 @@ logger = logging.getLogger(WORKER_NAME)
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
@@ -230,7 +232,7 @@ async def health():
         "provider": SMS_PROVIDER,
         "pending": pending,
         "sent": sent,
-        "failed": failed
+        "failed": failed,
     }
 
 
@@ -286,7 +288,8 @@ async def retry_sms(sms_id: int):
         if not conn.execute("SELECT id FROM outbox WHERE id = ?", (sms_id,)).fetchone():
             raise HTTPException(status_code=404, detail="SMS not found")
         conn.execute(
-            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (sms_id,)
+            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?",
+            (sms_id,),
         )
         conn.commit()
     return {"retrying": sms_id}
@@ -296,10 +299,10 @@ async def retry_sms(sms_id: int):
 async def stats():
     with get_conn() as conn:
         by_status = conn.execute(
-            "SELECT status, COUNT(*) as c FROM outbox GROUP BY status"
+            "SELECT status, COUNT(*) as c FROM outbox GROUP BY status",
         ).fetchall()
         by_provider = conn.execute(
-            "SELECT provider, COUNT(*) as c FROM outbox GROUP BY provider"
+            "SELECT provider, COUNT(*) as c FROM outbox GROUP BY provider",
         ).fetchall()
     return {
         "by_status": [dict(r) for r in by_status],

@@ -256,7 +256,7 @@ class WorkflowBuilder:
         # Single-node workflows are fine; only flag orphans in multi-node graphs
         if len(node_ids) > 1 and orphans:
             errors.append(
-                f"Orphan nodes (no edges): {sorted(orphans)}. Connect them or remove them."
+                f"Orphan nodes (no edges): {sorted(orphans)}. Connect them or remove them.",
             )
 
         # --- Trigger node presence ---
@@ -422,7 +422,7 @@ def self_healing_workflow() -> WorkflowDefinition:
                     "timeout_sec": 15.0,
                     "retry_count": 2,
                 },
-            ]
+            ],
         },
         timeout=30.0,
     )
@@ -441,7 +441,7 @@ def self_healing_workflow() -> WorkflowDefinition:
                 "    'severity': diagnosis.get('severity', 'unknown'),\n"
                 "    'timestamp': __import__('datetime').datetime.utcnow().isoformat(),\n"
                 "}\n"
-            )
+            ),
         },
         timeout=45.0,
         retry_count=1,
@@ -538,7 +538,7 @@ def ml_training_workflow() -> WorkflowDefinition:
                 "    'sample_count': len(processed),\n"
                 "    'feature_keys': list(processed[0].keys()) if processed else [],\n"
                 "}\n"
-            )
+            ),
         },
         timeout=120.0,
         retry_count=1,
@@ -571,7 +571,7 @@ def ml_training_workflow() -> WorkflowDefinition:
                 "    'passed_threshold': passed,\n"
                 "    'model_id': train_result.get('model_id'),\n"
                 "}\n"
-            )
+            ),
         },
         timeout=30.0,
         retry_count=1,
@@ -586,7 +586,7 @@ def ml_training_workflow() -> WorkflowDefinition:
                 "loss": "result.loss",
                 "passed": "result.passed_threshold",
                 "model_id": "result.model_id",
-            }
+            },
         },
         timeout=5.0,
     )

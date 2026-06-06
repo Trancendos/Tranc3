@@ -351,7 +351,10 @@ class NeuralMesh:
                 if edge:
                     edge.penalize()
                 logger.warning(
-                    "neural_mesh: back-pressure on %s->%s/%s", source_id, target_id, channel
+                    "neural_mesh: back-pressure on %s->%s/%s",
+                    source_id,
+                    target_id,
+                    channel,
                 )
 
         # Notify registered handlers
