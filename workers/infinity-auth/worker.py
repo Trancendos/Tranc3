@@ -416,15 +416,35 @@ async def _lifespan(app: FastAPI):
             except Exception:
                 logger.exception("auth background health reporter error")
 
+    async def _revocation_cleanup_loop():
+        """Purge expired revocation records hourly to keep the table lean."""
+        while True:
+            try:
+                await asyncio.sleep(3600)
+                deleted = db.execute(
+                    "DELETE FROM token_revocations WHERE expires_at < ?",
+                    (datetime.now(timezone.utc).isoformat(),),
+                ).rowcount
+                db.commit()
+                if deleted:
+                    logger.info("Revocation cleanup: purged %d expired entries", deleted)
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                logger.exception("revocation cleanup error")
+
     task = asyncio.create_task(_bg_loop())
+    cleanup_task = asyncio.create_task(_revocation_cleanup_loop())
     try:
         yield
     finally:
         task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass  # expected: task was cancelled, shutdown can proceed
+        cleanup_task.cancel()
+        for t in (task, cleanup_task):
+            try:
+                await t
+            except asyncio.CancelledError:
+                pass
         await worker_kit.shutdown()
         logger.info("Infinity-Auth smart adaptive layer stopped")
 
@@ -935,6 +955,47 @@ async def update_user_role(
         "tier": tier.value,
         "infinity_role": infinity_role.value,
     }
+
+
+# ── Admin: revoke all tokens for a user ──────────────────────────────────────
+
+
+@app.post("/auth/admin/revoke-user-tokens/{user_id}", tags=["admin"])
+async def admin_revoke_user_tokens(
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Immediately revoke all active tokens for a user (admin only)."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+
+    # Verify target user exists
+    user_row = db.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if not user_row:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Revoke all active sessions — marks sessions table + purges via token_revocations
+    sessions = db.execute(
+        "SELECT session_id, expires_at FROM sessions WHERE user_id = ? AND is_revoked = 0",
+        (user_id,),
+    ).fetchall()
+
+    now = datetime.now(timezone.utc).isoformat()
+    # Also revoke any JTIs in the revocation table that belong to this user
+    db.execute(
+        "INSERT OR IGNORE INTO token_revocations (jti, user_id, revoked_at, expires_at) "
+        "SELECT 'session:' || session_id, ?, ?, expires_at FROM sessions WHERE user_id = ? AND is_revoked = 0",
+        (user_id, now, user_id),
+    )
+    db.execute("UPDATE sessions SET is_revoked = 1 WHERE user_id = ?", (user_id,))
+    db.commit()
+
+    logger.warning(
+        "Admin revoked all tokens for user_id=%s by admin_user_id=%s",
+        sanitize_for_log(user_id),
+        sanitize_for_log(current_user.get("user_id", "unknown")),
+    )
+    return {"revoked": len(sessions), "user_id": user_id}
 
 
 # ── OIDC Discovery (RFC 8414 / OpenID Connect Discovery 1.0) ────────────────

@@ -21,6 +21,8 @@ Features:
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import logging
 import os
@@ -34,8 +36,10 @@ from typing import Any, List, Optional
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr, Field
 
+from shared_core.sanitize import sanitize_for_log
 from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger("tranc3.workers.users-service")
@@ -589,6 +593,100 @@ async def roles_summary():
         "SELECT role, COUNT(*) as count FROM users WHERE is_active = 1 GROUP BY role",
     ).fetchall()
     return {"roles": {row["role"]: row["count"] for row in rows}}
+
+
+# ── GDPR Endpoints (Art. 15/17/20) ───────────────────────────────────────────
+
+_SAR_PII_FIELDS = [
+    "user_id", "username", "email", "display_name", "bio", "avatar_url",
+    "timezone", "role", "preferences", "created_at", "updated_at", "last_login",
+]
+
+
+@_router.get("/users/{user_id}/data-export")
+async def gdpr_data_export(
+    user_id: str,
+    format: str = Query(default="json", pattern="^(json|csv)$"),
+    x_caller_user_id: Optional[str] = Header(default=None),
+    x_caller_role: Optional[str] = Header(default=None),
+):
+    """GDPR Art. 15 & 20 — Subject Access Request data export."""
+    # Authorization: caller must be the subject or an admin
+    if x_caller_user_id != user_id and x_caller_role != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    row = db.execute(
+        f"SELECT {', '.join(_SAR_PII_FIELDS)} FROM users WHERE user_id = ?",
+        (user_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    subject = {k: db._dec_row(row).get(k) for k in _SAR_PII_FIELDS}
+    subject["preferences"] = json.loads(subject.get("preferences") or "{}")
+
+    logger.info(
+        "GDPR SAR export: user_id=%s requested_by=%s format=%s",
+        sanitize_for_log(user_id),
+        sanitize_for_log(x_caller_user_id or "unknown"),
+        format,
+    )
+
+    if format == "csv":
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=_SAR_PII_FIELDS)
+        writer.writeheader()
+        csv_row = {**subject, "preferences": json.dumps(subject["preferences"])}
+        writer.writerow(csv_row)
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="data-export-{user_id}.csv"'},
+        )
+
+    return {
+        "subject": subject,
+        "export_metadata": {
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "format": "json",
+            "gdpr_article": "Art. 15 & 20 GDPR",
+            "data_controller": "Trancendos",
+        },
+    }
+
+
+@_router.delete("/users/{user_id}/data")
+async def gdpr_erase_user(
+    user_id: str,
+    x_caller_role: Optional[str] = Header(default=None),
+):
+    """GDPR Art. 17 — Right to erasure (soft-delete PII)."""
+    if x_caller_role != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+
+    row = db.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    db.execute(
+        """UPDATE users SET
+            username = ?, email = ?, display_name = ?, bio = ?,
+            avatar_url = ?, preferences = '{}', is_active = 0,
+            updated_at = ?
+           WHERE user_id = ?""",
+        (
+            f"deleted_user_{user_id[:8]}",
+            "deleted@deleted",
+            "",
+            "",
+            "",
+            datetime.now(timezone.utc).isoformat(),
+            user_id,
+        ),
+    )
+    logger.info("GDPR Art. 17 erasure: user_id=%s erased_by_admin", sanitize_for_log(user_id))
+    return {"deleted": True, "user_id": user_id, "gdpr_article": "Art. 17 GDPR"}
 
 
 app.include_router(_router)

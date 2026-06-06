@@ -513,20 +513,11 @@ async def create_identity(request: Request, identity: IdentityCreate):
     if existing:
         raise HTTPException(status_code=409, detail="Identity already exists")
 
-    # Determine tier and infinity_role from role
-    from shared_core.infinity.nomenclature import InfinityRole as _IR, Tier as _T
+    # Determine tier and infinity_role from role using canonical mapping functions
+    from shared_core.infinity.nomenclature import get_tier_for_role, get_infinity_role_for_role
 
-    _role_tier = {
-        "admin": _T.ADMIN, "superadmin": _T.ADMIN, "devops": _T.ADMIN,
-        "moderator": _T.PILLAR, "manager": _T.PILLAR, "pillar": _T.PILLAR,
-    }
-    _role_ir = {
-        "admin": _IR.ADMIN, "superadmin": _IR.ADMIN,
-        "devops": _IR.DEVOPS, "moderator": _IR.MODERATOR,
-        "manager": _IR.MANAGER,
-    }
-    tier = _role_tier.get(identity.role.lower().strip(), _T.HUMAN)
-    infinity_role = _role_ir.get(identity.role.lower().strip(), _IR.USER)
+    tier = get_tier_for_role(identity.role)
+    infinity_role = get_infinity_role_for_role(identity.role)
 
     now = datetime.now(timezone.utc).isoformat()
     db.execute(

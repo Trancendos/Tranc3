@@ -10,9 +10,9 @@
 #
 # Pinecone has been removed — it was the only paid dependency in this module.
 
-import hashlib
 import logging
 import os
+import uuid
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -20,6 +20,16 @@ import numpy as np
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
+
+# UUID5 namespace for deterministic, collision-free Qdrant point IDs.
+# Matches the same formula in scripts/migrate_pinecone_to_qdrant.py.
+_UUID_NS = uuid.UUID("6ba7b811-9dad-11d1-80b4-00c04fd430c8")  # uuid.NAMESPACE_URL
+
+
+def _point_id(vector_id: str) -> str:
+    """Return a deterministic UUID5 string ID for a given vector_id."""
+    return str(uuid.uuid5(_UUID_NS, vector_id))
+
 
 _EMBED_DIM = int(os.environ.get("EMBED_DIM", "384"))
 _COLLECTION = os.environ.get("QDRANT_COLLECTION", "tranc3-memory")
@@ -144,7 +154,7 @@ class _QdrantBackend:
             collection_name=_COLLECTION,
             points=[
                 PointStruct(
-                    id=int(hashlib.sha256(vector_id.encode()).hexdigest()[:16], 16),
+                    id=_point_id(vector_id),
                     vector=embedding,
                     payload={**metadata, "_vector_id": vector_id},
                 )
@@ -181,10 +191,10 @@ class _QdrantBackend:
     def delete(self, vector_ids: List[str]) -> None:
         from qdrant_client.models import PointIdsList
 
-        int_ids = [int(hashlib.sha256(vid.encode()).hexdigest()[:16], 16) for vid in vector_ids]
+        point_ids = [_point_id(vid) for vid in vector_ids]
         self._client.delete(
             collection_name=_COLLECTION,
-            points_selector=PointIdsList(points=int_ids),
+            points_selector=PointIdsList(points=point_ids),
         )
 
     def delete_by_metadata(self, key: str, value: str) -> None:
