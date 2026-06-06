@@ -448,6 +448,7 @@ class AdaptiveScanner:
 
     def _record_observations(self, violations: List[AdaptiveViolation]) -> None:
         """Record observations from this scan for future learning."""
+        self._prev_pattern_keys = set(self._patterns.keys())
         for av in violations:
             key = self._pattern_key(av.base)
             filepath = av.file.replace("\\", "/")
@@ -470,11 +471,37 @@ class AdaptiveScanner:
                 obs.false_positive_count += 1
 
         # Record scan in history (keep last 100)
+        # Build per-rule counts
+        per_rule: Dict[str, int] = {}
+        for av in violations:
+            rid = av.rule_id
+            per_rule[rid] = per_rule.get(rid, 0) + 1
+
+        # Build per-entity counts using the rule catalog entity map
+        try:
+            from shared_core.security_automation.rule_catalog import entity_for_directory as _entity_for_dir
+            per_entity: Dict[str, int] = {}
+            for av in violations:
+                directory = str(Path(av.file).parent).replace("\\", "/")
+                entity = _entity_for_dir(directory)
+                per_entity[entity] = per_entity.get(entity, 0) + 1
+        except ImportError:
+            per_entity = {}
+
         self._history.append(
             {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "violation_count": len(violations),
-                "pattern_keys": [self._pattern_key(v.base) for v in violations],
+                "per_rule_counts": per_rule,
+                "per_entity_counts": per_entity,
+                "new_since_last": len([
+                    av for av in violations
+                    if self._pattern_key(av.base) not in self._prev_pattern_keys
+                ]),
+                "suppressed_count": len([
+                    av for av in violations
+                    if av.confidence_level == Confidence.SUPPRESSED
+                ]),
             }
         )
         if len(self._history) > 100:
