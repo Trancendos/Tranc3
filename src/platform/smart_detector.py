@@ -44,6 +44,7 @@ logger = logging.getLogger("tranc3.platform.smart_detector")
 # Alert types
 # ---------------------------------------------------------------------------
 
+
 class AlertType(str, Enum):
     ANOMALY_SPIKE = "ANOMALY_SPIKE"
     ANOMALY_LATENCY = "ANOMALY_LATENCY"
@@ -85,6 +86,7 @@ class DetectorAlert:
 # ---------------------------------------------------------------------------
 # Sliding window statistics
 # ---------------------------------------------------------------------------
+
 
 class SlidingWindowStats:
     """Maintains a fixed-size sliding window of numeric values with Z-score."""
@@ -129,25 +131,40 @@ class SlidingWindowStats:
 # ---------------------------------------------------------------------------
 
 THREAT_PATTERNS: List[Tuple[AlertType, str, re.Pattern]] = [
-    (AlertType.THREAT_INJECTION,
-     "SQL injection attempt",
-     re.compile(r"(?i)(\bunion\b.*\bselect\b|'\s*or\s*'1'\s*=\s*'1|drop\s+table|;\s*delete\s+from)", re.I)),
-
-    (AlertType.THREAT_INJECTION,
-     "XSS attempt",
-     re.compile(r"<script[^>]*>|javascript:|on\w+\s*=", re.I)),
-
-    (AlertType.THREAT_PATH_TRAVERSAL,
-     "Path traversal attempt",
-     re.compile(r"\.\./|\.\.\\|%2e%2e[%/\\]", re.I)),
-
-    (AlertType.THREAT_SSRF,
-     "SSRF / internal IP probe",
-     re.compile(r"(?:http|ftp)s?://(?:127\.0\.0\.1|0\.0\.0\.0|169\.254\.|10\.|172\.1[6-9]\.|192\.168\.)", re.I)),
-
-    (AlertType.THREAT_PROMPT_INJECTION,
-     "Prompt injection attempt",
-     re.compile(r"(?i)(ignore\s+previous\s+instructions|system\s+prompt|forget\s+everything|act\s+as\s+(an?\s+)?(?:ai|assistant|gpt|claude)|jailbreak)", re.I)),
+    (
+        AlertType.THREAT_INJECTION,
+        "SQL injection attempt",
+        re.compile(
+            r"(?i)(\bunion\b.*\bselect\b|'\s*or\s*'1'\s*=\s*'1|drop\s+table|;\s*delete\s+from)",
+            re.I,
+        ),
+    ),
+    (
+        AlertType.THREAT_INJECTION,
+        "XSS attempt",
+        re.compile(r"<script[^>]*>|javascript:|on\w+\s*=", re.I),
+    ),
+    (
+        AlertType.THREAT_PATH_TRAVERSAL,
+        "Path traversal attempt",
+        re.compile(r"\.\./|\.\.\\|%2e%2e[%/\\]", re.I),
+    ),
+    (
+        AlertType.THREAT_SSRF,
+        "SSRF / internal IP probe",
+        re.compile(
+            r"(?:http|ftp)s?://(?:127\.0\.0\.1|0\.0\.0\.0|169\.254\.|10\.|172\.1[6-9]\.|192\.168\.)",
+            re.I,
+        ),
+    ),
+    (
+        AlertType.THREAT_PROMPT_INJECTION,
+        "Prompt injection attempt",
+        re.compile(
+            r"(?i)(ignore\s+previous\s+instructions|system\s+prompt|forget\s+everything|act\s+as\s+(an?\s+)?(?:ai|assistant|gpt|claude)|jailbreak)",
+            re.I,
+        ),
+    ),
 ]
 
 # Paid provider domains — alert if any entity tries to call these
@@ -163,6 +180,7 @@ PAID_PROVIDER_PATTERNS = re.compile(
 # Per-entity detector state
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class EntityDetectorState:
     entity_id: str
@@ -175,9 +193,7 @@ class EntityDetectorState:
     _error_count: int = 0
     _window_start: float = field(default_factory=time.monotonic)
     # AI agent response pattern baseline (simple token count distribution)
-    _ai_response_lengths: Deque[int] = field(
-        default_factory=lambda: collections.deque(maxlen=100)
-    )
+    _ai_response_lengths: Deque[int] = field(default_factory=lambda: collections.deque(maxlen=100))
 
     def tick(self) -> None:
         """Flush per-minute counters into stats windows."""
@@ -205,6 +221,7 @@ class EntityDetectorState:
 # SmartDetector
 # ---------------------------------------------------------------------------
 
+
 class SmartDetector:
     """
     Detects anomalies, threats, and drift across all 43 platform entities.
@@ -212,10 +229,10 @@ class SmartDetector:
     """
 
     # Thresholds
-    Z_SCORE_THRESHOLD = 3.5       # Alert if Z-score exceeds this
-    ERROR_RATE_THRESHOLD = 15.0   # Alert if error rate % exceeds this
-    LATENCY_Z_THRESHOLD = 4.0     # Latency Z-score alarm level
-    AI_DRIFT_THRESHOLD = 3.0      # AI response length Z-score for drift
+    Z_SCORE_THRESHOLD = 3.5  # Alert if Z-score exceeds this
+    ERROR_RATE_THRESHOLD = 15.0  # Alert if error rate % exceeds this
+    LATENCY_Z_THRESHOLD = 4.0  # Latency Z-score alarm level
+    AI_DRIFT_THRESHOLD = 3.0  # AI response length Z-score for drift
 
     def __init__(self) -> None:
         self._states: Dict[str, EntityDetectorState] = {}
@@ -286,7 +303,9 @@ class SmartDetector:
                 self._alert_queue.append(alert)
                 logger.warning(
                     "[THREAT] %s entity=%s type=%s",
-                    description, entity_id, alert_type.value,
+                    description,
+                    entity_id,
+                    alert_type.value,
                 )
         if PAID_PROVIDER_PATTERNS.search(full_text):
             alert = DetectorAlert(
@@ -298,9 +317,7 @@ class SmartDetector:
             )
             immediate.append(alert)
             self._alert_queue.append(alert)
-            logger.critical(
-                "[ZERO-COST VIOLATION] entity=%s attempted paid API call", entity_id
-            )
+            logger.critical("[ZERO-COST VIOLATION] entity=%s attempted paid API call", entity_id)
         return immediate
 
     # -----------------------------------------------------------------------
@@ -310,40 +327,46 @@ class SmartDetector:
     def _check_latency_anomaly(self, state: EntityDetectorState, value: float) -> None:
         z = state.latency_stats.z_score(value)
         if z > self.LATENCY_Z_THRESHOLD:
-            self._emit(DetectorAlert(
-                alert_type=AlertType.ANOMALY_LATENCY,
-                entity_id=state.entity_id,
-                lead_ai=state.lead_ai,
-                message=f"Latency spike: {value:.0f}ms (Z={z:.1f}) on {state.entity_id}",
-                value=value,
-                threshold=self.LATENCY_Z_THRESHOLD,
-                severity="MEDIUM",
-            ))
+            self._emit(
+                DetectorAlert(
+                    alert_type=AlertType.ANOMALY_LATENCY,
+                    entity_id=state.entity_id,
+                    lead_ai=state.lead_ai,
+                    message=f"Latency spike: {value:.0f}ms (Z={z:.1f}) on {state.entity_id}",
+                    value=value,
+                    threshold=self.LATENCY_Z_THRESHOLD,
+                    severity="MEDIUM",
+                )
+            )
 
     def _check_error_rate(self, state: EntityDetectorState, value: float) -> None:
         if value > self.ERROR_RATE_THRESHOLD:
-            self._emit(DetectorAlert(
-                alert_type=AlertType.ANOMALY_ERROR_RATE,
-                entity_id=state.entity_id,
-                lead_ai=state.lead_ai,
-                message=f"High error rate {value:.1f}% on {state.entity_id} (threshold={self.ERROR_RATE_THRESHOLD}%)",
-                value=value,
-                threshold=self.ERROR_RATE_THRESHOLD,
-                severity="HIGH",
-            ))
+            self._emit(
+                DetectorAlert(
+                    alert_type=AlertType.ANOMALY_ERROR_RATE,
+                    entity_id=state.entity_id,
+                    lead_ai=state.lead_ai,
+                    message=f"High error rate {value:.1f}% on {state.entity_id} (threshold={self.ERROR_RATE_THRESHOLD}%)",
+                    value=value,
+                    threshold=self.ERROR_RATE_THRESHOLD,
+                    severity="HIGH",
+                )
+            )
 
     def _check_rps_anomaly(self, state: EntityDetectorState, value: float) -> None:
         z = state.rps_stats.z_score(value)
         if z > self.Z_SCORE_THRESHOLD:
-            self._emit(DetectorAlert(
-                alert_type=AlertType.ANOMALY_SPIKE,
-                entity_id=state.entity_id,
-                lead_ai=state.lead_ai,
-                message=f"Request rate spike: {value:.1f} rps (Z={z:.1f}) on {state.entity_id}",
-                value=value,
-                threshold=self.Z_SCORE_THRESHOLD,
-                severity="MEDIUM",
-            ))
+            self._emit(
+                DetectorAlert(
+                    alert_type=AlertType.ANOMALY_SPIKE,
+                    entity_id=state.entity_id,
+                    lead_ai=state.lead_ai,
+                    message=f"Request rate spike: {value:.1f} rps (Z={z:.1f}) on {state.entity_id}",
+                    value=value,
+                    threshold=self.Z_SCORE_THRESHOLD,
+                    severity="MEDIUM",
+                )
+            )
 
     def _check_ai_drift(self, state: EntityDetectorState, response_len: int) -> None:
         buf = state._ai_response_lengths
@@ -356,18 +379,20 @@ class SmartDetector:
             return
         z = abs(response_len - mean) / std
         if z > self.AI_DRIFT_THRESHOLD:
-            self._emit(DetectorAlert(
-                alert_type=AlertType.DRIFT_AI_AGENT,
-                entity_id=state.entity_id,
-                lead_ai=state.lead_ai,
-                message=(
-                    f"AI agent drift detected: {state.lead_ai} response length "
-                    f"{response_len} chars deviates {z:.1f}σ from baseline on {state.entity_id}"
-                ),
-                value=float(response_len),
-                threshold=self.AI_DRIFT_THRESHOLD,
-                severity="LOW",
-            ))
+            self._emit(
+                DetectorAlert(
+                    alert_type=AlertType.DRIFT_AI_AGENT,
+                    entity_id=state.entity_id,
+                    lead_ai=state.lead_ai,
+                    message=(
+                        f"AI agent drift detected: {state.lead_ai} response length "
+                        f"{response_len} chars deviates {z:.1f}σ from baseline on {state.entity_id}"
+                    ),
+                    value=float(response_len),
+                    threshold=self.AI_DRIFT_THRESHOLD,
+                    severity="LOW",
+                )
+            )
 
     def _emit(self, alert: DetectorAlert) -> None:
         self._alert_queue.append(alert)
@@ -406,9 +431,7 @@ class SmartDetector:
             "latency_std_ms": round(state.latency_stats.std(), 2),
             "error_rate_mean_pct": round(state.error_rate_stats.mean(), 2),
             "rps_mean": round(state.rps_stats.mean(), 4),
-            "pending_alerts": sum(
-                1 for a in self._alert_queue if a.entity_id == entity_id
-            ),
+            "pending_alerts": sum(1 for a in self._alert_queue if a.entity_id == entity_id),
         }
 
     def platform_health_summary(self) -> dict:
@@ -422,8 +445,7 @@ class SmartDetector:
             "critical": critical,
             "high": high,
             "zero_cost_compliant": not any(
-                a.alert_type == AlertType.ZERO_COST_VIOLATION
-                for a in self._alert_queue
+                a.alert_type == AlertType.ZERO_COST_VIOLATION for a in self._alert_queue
             ),
             "entities": [self.entity_health(eid) for eid in self._states],
         }

@@ -156,7 +156,9 @@ class ZeroCostTracker:
         )
         self._db.commit()
 
-    def _build_record(self, service: str, metric: str, current: float, updated_at: str) -> UsageRecord:
+    def _build_record(
+        self, service: str, metric: str, current: float, updated_at: str
+    ) -> UsageRecord:
         limit = FREE_TIER_LIMITS.get(service, {}).get(metric, 0.0)
         pct = (current / limit * 100) if limit > 0 else 0.0
         reset_period = _RESET_PERIOD.get(service, {}).get(metric, "unknown")

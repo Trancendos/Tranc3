@@ -101,6 +101,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
     def _get_observatory(self):
         if self._observatory is None:
             from src.observability.observatory import get_observatory
+
             self._observatory = get_observatory()
         return self._observatory
 

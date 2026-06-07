@@ -261,9 +261,7 @@ class UserSetting(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    __table_args__ = (
-        Index("ix_user_settings_username_key", "username", "key", unique=True),
-    )
+    __table_args__ = (Index("ix_user_settings_username_key", "username", "key", unique=True),)
 
 
 # ============================================================

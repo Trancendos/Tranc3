@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac as _hmac
-import importlib
-import sys
 
 import pytest
 
@@ -44,6 +42,7 @@ MIN_CT_LEN = SALT_LEN + NONCE_LEN + TAG_LEN  # 60
 # Availability
 # ---------------------------------------------------------------------------
 
+
 def test_is_rust_available_returns_bool():
     result = is_rust_available()
     assert isinstance(result, bool)
@@ -52,6 +51,7 @@ def test_is_rust_available_returns_bool():
 # ---------------------------------------------------------------------------
 # Encrypt / Decrypt roundtrip
 # ---------------------------------------------------------------------------
+
 
 def test_encrypt_returns_bytes():
     ct = encrypt(b"hello", "myseed")
@@ -125,6 +125,7 @@ def test_encrypt_unicode_key():
 # HMAC-SHA256
 # ---------------------------------------------------------------------------
 
+
 def test_hmac_sha256_returns_32_bytes():
     tag = hmac_sha256(b"key", b"data")
     assert isinstance(tag, bytes)
@@ -152,6 +153,7 @@ def test_hmac_sha256_deterministic():
 # Constant-time equality
 # ---------------------------------------------------------------------------
 
+
 def test_constant_time_eq_equal():
     assert constant_time_eq(b"hello", b"hello") is True
 
@@ -172,6 +174,7 @@ def test_constant_time_eq_empty():
 # ---------------------------------------------------------------------------
 # HKDF-SHA256
 # ---------------------------------------------------------------------------
+
 
 def test_derive_key_hkdf_returns_32_bytes():
     key = derive_key_hkdf(b"seed", b"salt", b"info")
@@ -200,6 +203,7 @@ def test_derive_key_hkdf_different_salt():
 # ---------------------------------------------------------------------------
 # PBKDF2-HMAC-SHA256
 # ---------------------------------------------------------------------------
+
 
 def test_derive_key_pbkdf2_returns_32_bytes():
     key = derive_key_pbkdf2("passphrase", b"saltsalt")
@@ -233,6 +237,7 @@ def test_derive_key_pbkdf2_correct_value():
 # ---------------------------------------------------------------------------
 # Python fallback path
 # ---------------------------------------------------------------------------
+
 
 def test_python_fallback_encrypt_decrypt(monkeypatch):
     """Force the Python fallback path by monkeypatching _USING_RUST to False."""

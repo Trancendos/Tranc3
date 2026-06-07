@@ -15,7 +15,13 @@ Usage:
     result = await mesh.call("auth-api", "/verify-token", {"token": "..."})
 """
 
-from src.mesh.bulkhead import Bulkhead, BulkheadFullError, BulkheadMetrics, BulkheadTimeoutError, create_bulkhead
+from src.mesh.bulkhead import (
+    Bulkhead,
+    BulkheadFullError,
+    BulkheadMetrics,
+    BulkheadTimeoutError,
+    create_bulkhead,
+)
 from src.mesh.circuit_breaker import CircuitBreaker, CircuitState
 from src.mesh.rate_limiter import (
     FixedWindowLimiter,

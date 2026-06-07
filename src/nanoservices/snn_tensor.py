@@ -22,7 +22,6 @@ matmul_i8(a, a_rows, a_cols, b, b_cols) → list[int]
 from __future__ import annotations
 
 import logging
-import math
 from typing import List, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
@@ -37,6 +36,7 @@ try:
         dequantize_i8_to_f32 as _rust_dequantize,
         matmul_i8 as _rust_matmul,
     )
+
     _USING_RUST = True
     logger.debug("snn_tensor: Rust extension loaded — using tranc3_snn kernels")
 except ImportError:
@@ -45,6 +45,7 @@ except ImportError:
 
 
 # ── Python fallback implementations ──────────────────────────────────────────
+
 
 def _py_leaky_step_i8(
     weights: Sequence[int],
@@ -64,9 +65,9 @@ def _py_leaky_step_i8(
     spikes: List[int] = []
     new_mem: List[float] = []
     for j in range(out_dim):
-        row = weights[j * in_dim:(j + 1) * in_dim]
+        row = weights[j * in_dim : (j + 1) * in_dim]
         current = sum(int(w) * x for w, x in zip(row, inputs)) + bias[j]
-        current = max(0.0, current)   # ReLU
+        current = max(0.0, current)  # ReLU
         nm = beta * mem[j] + current
         if nm >= threshold:
             spikes.append(1)
@@ -91,7 +92,6 @@ def _py_spike_rate_i8(
         raise ValueError("t_steps must be >= 1")
     hidden_dim = len(bias_l1)
     output_dim = len(bias_l2)
-    input_dim = len(inputs)
 
     mem1 = [0.0] * hidden_dim
     mem2 = [0.0] * output_dim
@@ -143,6 +143,7 @@ def _py_matmul_i8(
 
 # ── public API (dispatch to Rust or Python) ───────────────────────────────────
 
+
 def leaky_step_i8(
     weights: Sequence[int],
     bias: Sequence[float],
@@ -172,9 +173,14 @@ def spike_rate_i8(
     """Two-layer SNN forward pass; returns spike-rate vector."""
     if _USING_RUST:
         return _rust_spike_rate_i8(
-            list(weights_l1), list(bias_l1),
-            list(weights_l2), list(bias_l2),
-            list(inputs), t_steps, beta, threshold,
+            list(weights_l1),
+            list(bias_l1),
+            list(weights_l2),
+            list(bias_l2),
+            list(inputs),
+            t_steps,
+            beta,
+            threshold,
         )
     return _py_spike_rate_i8(
         weights_l1, bias_l1, weights_l2, bias_l2, inputs, t_steps, beta, threshold

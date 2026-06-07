@@ -50,6 +50,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # Severity levels
 # ---------------------------------------------------------------------------
 
+
 class Severity(str, Enum):
     CRITICAL = "CRITICAL"
     HIGH = "HIGH"
@@ -61,6 +62,7 @@ class Severity(str, Enum):
 # ---------------------------------------------------------------------------
 # Finding — a single scanner result
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class Finding:
@@ -91,6 +93,7 @@ class Finding:
 # ---------------------------------------------------------------------------
 # Scan Report
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ScanReport:
@@ -134,6 +137,7 @@ class ScanReport:
 # Individual scanner functions
 # ---------------------------------------------------------------------------
 
+
 def _run_subprocess(cmd: list[str], timeout: int = 120) -> tuple[int, str, str]:
     try:
         result = subprocess.run(
@@ -171,15 +175,19 @@ async def scan_dependencies_pip_audit(report: ScanReport) -> None:
         for item in data.get("dependencies", []):
             for vuln in item.get("vulns", []):
                 sev_str = vuln.get("fix_versions", [])
-                severity = Severity.HIGH if vuln.get("id", "").startswith("PYSEC") else Severity.MEDIUM
-                report.findings.append(Finding(
-                    scanner="pip-audit",
-                    severity=severity,
-                    title=f"CVE in {item['name']}=={item['version']}",
-                    detail=vuln.get("description", "No description"),
-                    cve_id=vuln.get("id"),
-                    remediation=f"Upgrade to: {sev_str}" if sev_str else "Update dependency",
-                ))
+                severity = (
+                    Severity.HIGH if vuln.get("id", "").startswith("PYSEC") else Severity.MEDIUM
+                )
+                report.findings.append(
+                    Finding(
+                        scanner="pip-audit",
+                        severity=severity,
+                        title=f"CVE in {item['name']}=={item['version']}",
+                        detail=vuln.get("description", "No description"),
+                        cve_id=vuln.get("id"),
+                        remediation=f"Upgrade to: {sev_str}" if sev_str else "Update dependency",
+                    )
+                )
     except json.JSONDecodeError:
         report.error_log.append("pip-audit JSON parse failed")
 
@@ -188,11 +196,14 @@ async def scan_secret_leaks(report: ScanReport) -> None:
     """Detect exposed secrets in .env, config, and source files."""
     report.scanners_run.append("secret-leak-detector")
     SECRET_PATTERNS = [
-        (r'(?i)(secret_key|jwt_secret|api_key|password|token)\s*=\s*["\'](?!your_|<|{{|test|fake|dummy|example)[^"\']{8,}', Severity.CRITICAL),
-        (r'sk-[a-zA-Z0-9]{32,}', Severity.CRITICAL),  # OpenAI keys
-        (r'AIza[0-9A-Za-z_\-]{35}', Severity.CRITICAL),  # Google API
-        (r'-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----', Severity.CRITICAL),
-        (r'(?i)password\s*[:=]\s*\S+', Severity.MEDIUM),
+        (
+            r'(?i)(secret_key|jwt_secret|api_key|password|token)\s*=\s*["\'](?!your_|<|{{|test|fake|dummy|example)[^"\']{8,}',
+            Severity.CRITICAL,
+        ),
+        (r"sk-[a-zA-Z0-9]{32,}", Severity.CRITICAL),  # OpenAI keys
+        (r"AIza[0-9A-Za-z_\-]{35}", Severity.CRITICAL),  # Google API
+        (r"-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----", Severity.CRITICAL),
+        (r"(?i)password\s*[:=]\s*\S+", Severity.MEDIUM),
     ]
     search_dirs = [
         REPO_ROOT / "src",
@@ -216,14 +227,16 @@ async def scan_secret_leaks(report: ScanReport) -> None:
                 for pattern, severity in SECRET_PATTERNS:
                     matches = re.findall(pattern, content)
                     if matches:
-                        report.findings.append(Finding(
-                            scanner="secret-leak-detector",
-                            severity=severity,
-                            title=f"Potential secret exposure in {path.name}",
-                            detail=f"Pattern matched {len(matches)} time(s) in {path.relative_to(REPO_ROOT)}",
-                            file_path=str(path.relative_to(REPO_ROOT)),
-                            remediation="Move to .env (gitignored) or use The Void vault service",
-                        ))
+                        report.findings.append(
+                            Finding(
+                                scanner="secret-leak-detector",
+                                severity=severity,
+                                title=f"Potential secret exposure in {path.name}",
+                                detail=f"Pattern matched {len(matches)} time(s) in {path.relative_to(REPO_ROOT)}",
+                                file_path=str(path.relative_to(REPO_ROOT)),
+                                remediation="Move to .env (gitignored) or use The Void vault service",
+                            )
+                        )
             except Exception:
                 continue
 
@@ -232,6 +245,7 @@ async def scan_worker_ports(report: ScanReport) -> None:
     """Check all registered worker ports are reachable (or note offline)."""
     report.scanners_run.append("port-liveness")
     import socket
+
     WORKER_PORTS = {
         8000: "tranc3-backend",
         8004: "infinity-ws (The Nexus)",
@@ -257,6 +271,7 @@ async def scan_worker_ports(report: ScanReport) -> None:
     }
     loop = asyncio.get_event_loop()
     for port, name in WORKER_PORTS.items():
+
         def check(p: int) -> bool:
             try:
                 s = socket.create_connection(("localhost", p), timeout=1.0)
@@ -264,15 +279,18 @@ async def scan_worker_ports(report: ScanReport) -> None:
                 return True
             except Exception:
                 return False
+
         alive = await loop.run_in_executor(None, check, port)
         if not alive:
-            report.findings.append(Finding(
-                scanner="port-liveness",
-                severity=Severity.INFO,
-                title=f"Worker offline: {name}",
-                detail=f"Port {port} not reachable on localhost",
-                remediation=f"Start worker: make dev-api or docker-compose up {name.split()[0]}",
-            ))
+            report.findings.append(
+                Finding(
+                    scanner="port-liveness",
+                    severity=Severity.INFO,
+                    title=f"Worker offline: {name}",
+                    detail=f"Port {port} not reachable on localhost",
+                    remediation=f"Start worker: make dev-api or docker-compose up {name.split()[0]}",
+                )
+            )
 
 
 async def scan_requirements_drift(report: ScanReport) -> None:
@@ -292,14 +310,16 @@ async def scan_requirements_drift(report: ScanReport) -> None:
                     continue
                 # Unpinned: no == pin
                 if "==" not in line and ">=" not in line and "~=" not in line:
-                    report.findings.append(Finding(
-                        scanner="requirements-drift",
-                        severity=Severity.LOW,
-                        title=f"Unpinned dependency: {line}",
-                        detail=f"In {req_file.relative_to(REPO_ROOT)}",
-                        file_path=str(req_file.relative_to(REPO_ROOT)),
-                        remediation=f"Pin to a specific version: {line}==<version>",
-                    ))
+                    report.findings.append(
+                        Finding(
+                            scanner="requirements-drift",
+                            severity=Severity.LOW,
+                            title=f"Unpinned dependency: {line}",
+                            detail=f"In {req_file.relative_to(REPO_ROOT)}",
+                            file_path=str(req_file.relative_to(REPO_ROOT)),
+                            remediation=f"Pin to a specific version: {line}==<version>",
+                        )
+                    )
         except Exception:
             continue
 
@@ -315,19 +335,22 @@ async def scan_owasp_headers(report: ScanReport) -> None:
     ]
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=3.0) as client:
             for port in [8000, 8005, 8009]:
                 try:
                     resp = await client.get(f"http://localhost:{port}/health")
                     missing = [h for h in REQUIRED_HEADERS if h not in resp.headers]
                     if missing:
-                        report.findings.append(Finding(
-                            scanner="owasp-headers",
-                            severity=Severity.MEDIUM,
-                            title=f"Missing security headers on port {port}",
-                            detail=f"Missing: {', '.join(missing)}",
-                            remediation="Add middleware: SecurityHeadersMiddleware from src/auth/zero_trust.py",
-                        ))
+                        report.findings.append(
+                            Finding(
+                                scanner="owasp-headers",
+                                severity=Severity.MEDIUM,
+                                title=f"Missing security headers on port {port}",
+                                detail=f"Missing: {', '.join(missing)}",
+                                remediation="Add middleware: SecurityHeadersMiddleware from src/auth/zero_trust.py",
+                            )
+                        )
                 except Exception:
                     pass
     except ImportError:
@@ -337,6 +360,7 @@ async def scan_owasp_headers(report: ScanReport) -> None:
 # ---------------------------------------------------------------------------
 # IntelligentScanner — orchestrates all scanners
 # ---------------------------------------------------------------------------
+
 
 class IntelligentScanner:
     """

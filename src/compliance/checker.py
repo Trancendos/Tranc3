@@ -198,7 +198,11 @@ def _check_evidence(evidence_list: list[dict[str, Any]]) -> list[EvidenceCheck]:
             ev_path = parts[0].strip()
             # Strip parenthetical suffixes like "(port 8046)"
             ev_path = ev_path.split(" (")[0].strip()
-            ev = {"type": "code", "path": ev_path, "description": parts[1].strip() if len(parts) > 1 else ""}
+            ev = {
+                "type": "code",
+                "path": ev_path,
+                "description": parts[1].strip() if len(parts) > 1 else "",
+            }
         ev_path = ev.get("path", "")
         full_path = REPO_ROOT / ev_path
         # For directories, check the directory exists; for files, check the file
@@ -313,8 +317,10 @@ def print_summary(report: ComplianceReport) -> None:
     print()
 
     # Per-area table
-    print(f"  {'Area':<6} {'Standard':<22} {'Reqs':>4} {'Pass':>4} {'Part':>4} {'Plan':>4} {'Score':>6}")
-    print(f"  {'-'*6} {'-'*22} {'-'*4} {'-'*4} {'-'*4} {'-'*4} {'-'*6}")
+    print(
+        f"  {'Area':<6} {'Standard':<22} {'Reqs':>4} {'Pass':>4} {'Part':>4} {'Plan':>4} {'Score':>6}"
+    )
+    print(f"  {'-' * 6} {'-' * 22} {'-' * 4} {'-' * 4} {'-' * 4} {'-' * 4} {'-' * 6}")
     for area_code in sorted(report.areas.keys()):
         a = report.areas[area_code]
         std_short = a.standard.replace("DEF STAN ", "DS ")

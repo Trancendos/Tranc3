@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import sqlite3
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from dataclasses import dataclass, field

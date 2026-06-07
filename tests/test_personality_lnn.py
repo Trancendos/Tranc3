@@ -18,16 +18,13 @@ Tests:
 
 from __future__ import annotations
 
-import math
 import sys
 from types import ModuleType
-from typing import Any
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
+
 
 def _fresh_lnn_module() -> ModuleType:
     """Re-import lnn with a clean sys.modules cache."""
@@ -35,13 +32,16 @@ def _fresh_lnn_module() -> ModuleType:
         if "personality.lnn" in key:
             del sys.modules[key]
     import importlib
+
     return importlib.import_module("src.personality.lnn")
 
 
 # ── LNNInput / LNNOutput types ────────────────────────────────────────────────
 
+
 def test_lnn_input_fields():
     from src.personality.lnn import LNNInput
+
     inp = LNNInput(sentiment=0.5, domain_signal=0.8, turn_depth_norm=0.2, length_norm=0.4)
     assert inp.sentiment == 0.5
     assert inp.domain_signal == 0.8
@@ -51,6 +51,7 @@ def test_lnn_input_fields():
 
 def test_lnn_output_fields():
     from src.personality.lnn import LNNOutput
+
     out = LNNOutput(temperature_delta=0.1, top_p_delta=-0.02, tone_weight=0.3)
     assert out.temperature_delta == 0.1
     assert out.top_p_delta == -0.02
@@ -59,8 +60,10 @@ def test_lnn_output_fields():
 
 # ── EMA shaper (force_fallback) ───────────────────────────────────────────────
 
+
 def test_ema_shaper_returns_lnn_output():
     from src.personality.lnn import LNNInput, LNNOutput, PersonalityLNN
+
     lnn = PersonalityLNN(force_fallback=True)
     assert lnn.backend == "ema"
     inp = LNNInput(sentiment=0.5, domain_signal=0.8, turn_depth_norm=0.1, length_norm=0.2)
@@ -70,6 +73,7 @@ def test_ema_shaper_returns_lnn_output():
 
 def test_ema_shaper_outputs_bounded():
     from src.personality.lnn import LNNInput, PersonalityLNN
+
     lnn = PersonalityLNN(force_fallback=True)
     for _ in range(20):
         inp = LNNInput(sentiment=1.0, domain_signal=1.0, turn_depth_norm=1.0, length_norm=1.0)
@@ -81,6 +85,7 @@ def test_ema_shaper_outputs_bounded():
 
 def test_ema_shaper_negative_sentiment():
     from src.personality.lnn import LNNInput, PersonalityLNN
+
     lnn = PersonalityLNN(force_fallback=True)
     for _ in range(15):
         inp = LNNInput(sentiment=-1.0, domain_signal=0.0, turn_depth_norm=0.5, length_norm=0.5)
@@ -91,6 +96,7 @@ def test_ema_shaper_negative_sentiment():
 
 def test_ema_shaper_reset_reproducible():
     from src.personality.lnn import LNNInput, PersonalityLNN
+
     lnn = PersonalityLNN(force_fallback=True)
     inp = LNNInput(sentiment=0.9, domain_signal=0.9, turn_depth_norm=0.5, length_norm=0.5)
 
@@ -111,6 +117,7 @@ def test_ema_shaper_reset_reproducible():
 
 def test_ema_multiple_steps_change_state():
     from src.personality.lnn import LNNInput, PersonalityLNN
+
     lnn = PersonalityLNN(force_fallback=True)
     inp = LNNInput(sentiment=1.0, domain_signal=1.0, turn_depth_norm=0.0, length_norm=0.0)
     out0 = lnn.step(inp)
@@ -122,12 +129,15 @@ def test_ema_multiple_steps_change_state():
 
 # ── apply_to_profile clamping ──────────────────────────────────────────────────
 
+
 def test_apply_to_profile_clamps_temperature():
     from src.personality.lnn import LNNInput, PersonalityLNN
+
     lnn = PersonalityLNN(force_fallback=True)
     # Force extreme state by patching the shaper
     with patch.object(lnn._shaper, "step") as mock_step:
         from src.personality.lnn import LNNOutput
+
         mock_step.return_value = LNNOutput(temperature_delta=5.0, top_p_delta=5.0, tone_weight=0.0)
         inp = LNNInput(0.0, 0.0, 0.0, 0.0)
         temp, top_p = lnn.apply_to_profile(inp, temperature=1.0, top_p=0.9)
@@ -137,10 +147,14 @@ def test_apply_to_profile_clamps_temperature():
 
 def test_apply_to_profile_clamps_minimum():
     from src.personality.lnn import LNNInput, PersonalityLNN
+
     lnn = PersonalityLNN(force_fallback=True)
     with patch.object(lnn._shaper, "step") as mock_step:
         from src.personality.lnn import LNNOutput
-        mock_step.return_value = LNNOutput(temperature_delta=-5.0, top_p_delta=-5.0, tone_weight=0.0)
+
+        mock_step.return_value = LNNOutput(
+            temperature_delta=-5.0, top_p_delta=-5.0, tone_weight=0.0
+        )
         inp = LNNInput(0.0, 0.0, 0.0, 0.0)
         temp, top_p = lnn.apply_to_profile(inp, temperature=0.5, top_p=0.5)
     assert temp >= 0.1
@@ -149,6 +163,7 @@ def test_apply_to_profile_clamps_minimum():
 
 def test_apply_to_profile_normal_nudge():
     from src.personality.lnn import LNNInput, PersonalityLNN
+
     lnn = PersonalityLNN(force_fallback=True)
     inp = LNNInput(sentiment=0.5, domain_signal=0.8, turn_depth_norm=0.2, length_norm=0.3)
     temp, top_p = lnn.apply_to_profile(inp, temperature=0.8, top_p=0.92)
@@ -158,13 +173,16 @@ def test_apply_to_profile_normal_nudge():
 
 # ── force_fallback flag ───────────────────────────────────────────────────────
 
+
 def test_force_fallback_ignores_torch():
     from src.personality.lnn import PersonalityLNN
+
     lnn = PersonalityLNN(force_fallback=True)
     assert lnn.backend == "ema"
 
 
 # ── CfC path (mocked torch + ncps) ───────────────────────────────────────────
+
 
 def test_cfc_path_uses_lnn_backend(monkeypatch):
     """When ncps and torch are available, PersonalityLNN should use CfC backend."""
@@ -204,7 +222,6 @@ def test_cfc_path_uses_lnn_backend(monkeypatch):
 
 def test_cfc_shaper_step_returns_lnn_output(monkeypatch):
     """CfC shaper step() returns a properly bounded LNNOutput."""
-    import math as _math
 
     # tanh(0.1) * 0.3 ≈ 0.0997, tanh(-0.05) * 0.1 ≈ -0.005, tanh(0.2) ≈ 0.197
     raw_output = [0.1, -0.05, 0.2]

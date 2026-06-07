@@ -42,8 +42,7 @@ class SafetyResult:
     verdict: SafetyVerdict
     triggered_rules: List[str] = field(default_factory=list)
     safe_fallback: str = (
-        "I'm unable to provide that response. "
-        "Please rephrase your request or contact support."
+        "I'm unable to provide that response. Please rephrase your request or contact support."
     )
     details: Dict[str, Any] = field(default_factory=dict)
 
@@ -65,7 +64,10 @@ class OutputSafetyFilter:
         # Internal secret references
         (r"(?i)(SECRET_KEY|JWT_SECRET|DATABASE_URL)\s*[:=]\s*\S+", "internal-secret-ref"),
         # Prompt injection echoes
-        (r"(?i)(ignore previous instructions|forget your system prompt|you are now)", "prompt-injection-echo"),
+        (
+            r"(?i)(ignore previous instructions|forget your system prompt|you are now)",
+            "prompt-injection-echo",
+        ),
         # PII exfiltration patterns
         (r"\b\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}\b", "pii-card-number"),
         (r"\b[A-Z]{2}\d{6}[A-Z]\b", "pii-passport-number"),
@@ -81,14 +83,8 @@ class OutputSafetyFilter:
     ]
 
     def __init__(self) -> None:
-        self._block_compiled = [
-            (re.compile(pat), rule_id)
-            for pat, rule_id in self._BLOCK_PATTERNS
-        ]
-        self._warn_compiled = [
-            (re.compile(pat), rule_id)
-            for pat, rule_id in self._WARN_PATTERNS
-        ]
+        self._block_compiled = [(re.compile(pat), rule_id) for pat, rule_id in self._BLOCK_PATTERNS]
+        self._warn_compiled = [(re.compile(pat), rule_id) for pat, rule_id in self._WARN_PATTERNS]
 
     def check(
         self,

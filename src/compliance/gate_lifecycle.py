@@ -27,9 +27,7 @@ class GateResult:
     score: int  # 0-100
     findings: list[str] = field(default_factory=list)
     blockers: list[str] = field(default_factory=list)
-    checked_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    checked_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 # ── Gate implementations ───────────────────────────────────────────────────────
@@ -50,10 +48,12 @@ def _count_glob(root: Path, pattern: str) -> int:
 
 def _gate(number: int, name: str) -> Callable:
     """Decorator that annotates a gate function with its number and name."""
+
     def decorator(fn: Callable) -> Callable:
         fn._gate_number = number
         fn._gate_name = name
         return fn
+
     return decorator
 
 
@@ -460,9 +460,19 @@ def gate_12(root: Path) -> GateResult:
 # ── Runner ────────────────────────────────────────────────────────────────────
 
 _GATE_FUNCTIONS = [
-    gate_0, gate_1, gate_2, gate_3, gate_4,
-    gate_5, gate_6, gate_7, gate_8, gate_9,
-    gate_10, gate_11, gate_12,
+    gate_0,
+    gate_1,
+    gate_2,
+    gate_3,
+    gate_4,
+    gate_5,
+    gate_6,
+    gate_7,
+    gate_8,
+    gate_9,
+    gate_10,
+    gate_11,
+    gate_12,
 ]
 
 

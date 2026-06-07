@@ -45,7 +45,10 @@ def client():
     ):
         from fastapi.testclient import TestClient
 
-        import sys, os as _os; sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), '..', 'archive'))
+        import sys
+        import os as _os
+
+        sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "..", "archive"))
         from api_enhanced import app
 
         # Manually inject mock into app state (lifespan won't run in TestClient)
@@ -348,7 +351,10 @@ class TestAuthAndRateLimiting:
 
     def test_rate_limit_in_memory_tracking(self):
         """Verify _rate_store tracks requests per IP."""
-        import sys, os as _os; sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), '..', 'archive'))
+        import sys
+        import os as _os
+
+        sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "..", "archive"))
         import api_enhanced as api
 
         initial = len(api._rate_store)

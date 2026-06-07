@@ -38,12 +38,10 @@ SECRET_KEY          Fallback passphrase for key derivation
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -64,6 +62,7 @@ def _engine() -> BackupEngine:
 
 
 # ── Commands ──────────────────────────────────────────────────────────────────
+
 
 def cmd_list(args) -> int:
     eng = _engine()
@@ -87,7 +86,9 @@ def cmd_verify(args) -> int:
         if not workers:
             print(f"ERROR: worker '{args.worker}' not in registry", file=sys.stderr)
             return 1
-        results = {args.worker: eng._verify(Path(eng._latest_backup(args.worker) or ""), args.worker)}
+        results = {
+            args.worker: eng._verify(Path(eng._latest_backup(args.worker) or ""), args.worker)
+        }
     else:
         results = eng.verify_all()
 
@@ -126,7 +127,10 @@ def cmd_restore_tier(args) -> int:
     try:
         tier = BackupTier(args.tier)
     except ValueError:
-        print(f"ERROR: unknown tier '{args.tier}'. Valid: critical, high, standard, low", file=sys.stderr)
+        print(
+            f"ERROR: unknown tier '{args.tier}'. Valid: critical, high, standard, low",
+            file=sys.stderr,
+        )
         return 1
 
     workers = REGISTRY_BY_TIER.get(tier, [])
@@ -163,7 +167,9 @@ def cmd_rpo_status(args) -> int:
         print("  RPO BREACHED:")
         for w in breached:
             age = f"{w['age_minutes']:.0f}min" if w["age_minutes"] is not None else "never"
-            print(f"    ✗ {w['worker']:40s} tier={w['tier']:8s} age={age:>10s} rpo={w['rpo_minutes']}min")
+            print(
+                f"    ✗ {w['worker']:40s} tier={w['tier']:8s} age={age:>10s} rpo={w['rpo_minutes']}min"
+            )
 
     print("\n  ALL WORKERS:")
     for w in status["workers"]:
@@ -177,9 +183,9 @@ def cmd_rpo_status(args) -> int:
 def cmd_dr_drill(args) -> int:
     """Full DR drill: verify + dry-run restore all workers. Safe — no live DBs touched."""
     eng = _engine()
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  TRANCENDOS DR DRILL — {datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     print("\n[1/2] Verifying all backups...")
     verify_results = eng.verify_all()
@@ -191,9 +197,9 @@ def cmd_dr_drill(args) -> int:
         restore_results[worker_db.worker] = result
 
     # Report
-    print(f"\n{'─'*60}")
+    print(f"\n{'─' * 60}")
     print(f"  {'WORKER':<40} VERIFY  RESTORE")
-    print(f"{'─'*60}")
+    print(f"{'─' * 60}")
     all_ok = True
     for worker_db in WORKER_DATABASE_REGISTRY:
         v = "✓" if verify_results.get(worker_db.worker) else "✗"
@@ -203,7 +209,7 @@ def cmd_dr_drill(args) -> int:
             all_ok = False
         print(f"  {worker_db.worker:<40} {v}       {r}")
 
-    print(f"{'─'*60}")
+    print(f"{'─' * 60}")
     v_ok = sum(1 for v in verify_results.values() if v)
     r_ok = sum(1 for r in restore_results.values() if r and r.success)
     total = len(WORKER_DATABASE_REGISTRY)
@@ -215,6 +221,7 @@ def cmd_dr_drill(args) -> int:
 
 
 # ── CLI entry point ──────────────────────────────────────────────────────────
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -236,13 +243,16 @@ def main() -> int:
     p_restore = sub.add_parser("restore", help="Restore a worker database")
     p_restore.add_argument("--worker", required=True, help="Worker name")
     p_restore.add_argument("--backup-path", help="Specific backup file (default: latest)")
-    p_restore.add_argument("--dry-run", action="store_true", default=False,
-                           help="Verify only — do not overwrite live DB")
+    p_restore.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="Verify only — do not overwrite live DB",
+    )
 
     # restore-tier
     p_tier = sub.add_parser("restore-tier", help="Restore all workers of a given tier")
-    p_tier.add_argument("--tier", required=True,
-                        choices=["critical", "high", "standard", "low"])
+    p_tier.add_argument("--tier", required=True, choices=["critical", "high", "standard", "low"])
     p_tier.add_argument("--dry-run", action="store_true", default=False)
 
     # rpo-status

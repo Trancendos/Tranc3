@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import List, Optional, Sequence
+from typing import List, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +43,11 @@ try:
     import torch
     import torch.nn as nn
     import snntorch as snn  # type: ignore[import]
-    from snntorch import functional as SF  # type: ignore[import]
+
     import brevitas.nn as qnn  # type: ignore[import]
     from brevitas.quant import Int8WeightPerTensorFloat  # type: ignore[import]
     from brevitas.quant import Int8ActPerTensorFloat  # type: ignore[import]
+
     _USING_SNN = True
     logger.debug("personality.snn_qat: snntorch+brevitas available — using SNN QAT")
 except ImportError:
@@ -58,12 +59,13 @@ except ImportError:
 INPUT_DIM = 4
 HIDDEN_DIM = 32
 OUTPUT_DIM = 3
-T_STEPS = 8        # temporal unrolling window
-BETA = 0.9         # Leaky membrane decay constant
-THRESHOLD = 1.0    # spike threshold
+T_STEPS = 8  # temporal unrolling window
+BETA = 0.9  # Leaky membrane decay constant
+THRESHOLD = 1.0  # spike threshold
 
 
 # ── SNN QAT model (snntorch + brevitas path) ──────────────────────────────────
+
 
 def _build_snn_model() -> "nn.Module":
     """Build a two-layer quantized SNN (returns nn.Module)."""
@@ -72,7 +74,8 @@ def _build_snn_model() -> "nn.Module":
         def __init__(self) -> None:
             super().__init__()
             self.fc1 = qnn.QuantLinear(
-                INPUT_DIM, HIDDEN_DIM,
+                INPUT_DIM,
+                HIDDEN_DIM,
                 bias=True,
                 weight_quant=Int8WeightPerTensorFloat,
                 input_quant=Int8ActPerTensorFloat,
@@ -80,7 +83,8 @@ def _build_snn_model() -> "nn.Module":
             )
             self.lif1 = snn.Leaky(beta=BETA, threshold=THRESHOLD, learn_beta=False)
             self.fc2 = qnn.QuantLinear(
-                HIDDEN_DIM, OUTPUT_DIM,
+                HIDDEN_DIM,
+                OUTPUT_DIM,
                 bias=True,
                 weight_quant=Int8WeightPerTensorFloat,
                 input_quant=Int8ActPerTensorFloat,
@@ -99,25 +103,27 @@ def _build_snn_model() -> "nn.Module":
             spike_acc = torch.zeros(batch, OUTPUT_DIM)
 
             for t in range(T_STEPS):
-                xt = x[:, t, :]            # (batch, input_dim)
+                xt = x[:, t, :]  # (batch, input_dim)
                 cur1 = self.fc1(xt)
                 spk1, mem1 = self.lif1(cur1, mem1)
                 cur2 = self.fc2(spk1)
                 spk2, mem2 = self.lif2(cur2, mem2)
                 spike_acc = spike_acc + spk2
 
-            return spike_acc / T_STEPS   # spike rate in [0, ~1]
+            return spike_acc / T_STEPS  # spike rate in [0, ~1]
 
     return _SNNQAT()
 
 
 # ── Float MLP fallback ────────────────────────────────────────────────────────
 
+
 class _FloatMLP:
     """Simple ReLU MLP fallback — no torch, no quantization."""
 
     def __init__(self) -> None:
         import random
+
         rng = random.Random(42)  # fixed seed for determinism
 
         def _rand_weights(rows: int, cols: int) -> List[List[float]]:
@@ -150,6 +156,7 @@ class _FloatMLP:
 
 
 # ── public API ────────────────────────────────────────────────────────────────
+
 
 class SNNModel:
     """
@@ -212,6 +219,7 @@ class SNNModel:
 
         try:
             import torch
+
             dummy = torch.zeros(1, T_STEPS, INPUT_DIM)
             torch.onnx.export(
                 self._model,

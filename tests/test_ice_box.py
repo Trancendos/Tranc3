@@ -13,9 +13,9 @@ import pytest
 
 os.environ.setdefault("SECRET_KEY", "ice-box-test-secret-key-at-least-32chars!")
 
-from src.security.ice_box.analyser import ThreatAnalyser, ThreatFinding, ThreatVerdict
+from src.security.ice_box.analyser import ThreatAnalyser, ThreatVerdict
 from src.security.ice_box.quarantine import QuarantineStore
-from src.security.ice_box.signatures import SignatureLibrary, ThreatCategory, get_library
+from src.security.ice_box.signatures import ThreatCategory, get_library
 from src.security.warp_tunnel.tunnel import TunnelConfig, WarpTunnel
 
 
@@ -122,7 +122,7 @@ def test_scan_pickle_abuse():
 def test_scan_returns_all_matching():
     lib = get_library()
     # Both XSS and injection in same payload
-    findings = lib.scan('<script>alert(1)</script>; DROP TABLE users --')
+    findings = lib.scan("<script>alert(1)</script>; DROP TABLE users --")
     cats = {s.category for s in findings}
     assert ThreatCategory.XSS in cats
     assert ThreatCategory.INJECTION in cats
@@ -175,7 +175,7 @@ def test_analyser_critical_count(analyser):
 
 
 def test_analyser_xss_verdict(analyser):
-    report = analyser.analyse('<img src=x onerror=alert(1)>')
+    report = analyser.analyse("<img src=x onerror=alert(1)>")
     assert report.verdict in (ThreatVerdict.MALICIOUS, ThreatVerdict.SUSPICIOUS)
 
 
@@ -185,7 +185,7 @@ def test_analyser_xss_verdict(analyser):
 
 
 def test_quarantine_store_creates_db(tmp_path):
-    q = QuarantineStore(tmp_path / "q.db")
+    QuarantineStore(tmp_path / "q.db")
     assert (tmp_path / "q.db").exists()
 
 
@@ -258,7 +258,7 @@ def test_tunnel_blocks_sql_injection(tunnel):
 
 
 def test_tunnel_blocks_xss(tunnel):
-    result = tunnel.scan('<script>document.cookie</script>')
+    result = tunnel.scan("<script>document.cookie</script>")
     assert result.allow is False
 
 

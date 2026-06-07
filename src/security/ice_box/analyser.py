@@ -11,11 +11,11 @@ import hashlib
 import math
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional
 
-from src.security.ice_box.signatures import Signature, ThreatCategory, get_library
+from src.security.ice_box.signatures import ThreatCategory, get_library
 
 
 class ThreatVerdict(Enum):
@@ -75,13 +75,13 @@ def _shannon_entropy(data: bytes) -> float:
 
 # Known binary file magic bytes that are suspicious in text contexts
 _BINARY_MAGIC: list[bytes] = [
-    b"MZ",           # Windows PE
-    b"\x7fELF",      # Linux ELF
+    b"MZ",  # Windows PE
+    b"\x7fELF",  # Linux ELF
     b"\xca\xfe\xba\xbe",  # Mach-O
-    b"PK\x03\x04",   # ZIP (potential zip-slip vector)
-    b"%PDF",         # PDF (potential embedded script)
-    b"\xff\xd8\xff", # JPEG
-    b"\x89PNG",      # PNG
+    b"PK\x03\x04",  # ZIP (potential zip-slip vector)
+    b"%PDF",  # PDF (potential embedded script)
+    b"\xff\xd8\xff",  # JPEG
+    b"\x89PNG",  # PNG
 ]
 
 _NULL_BYTE_RE = re.compile(rb"\x00{4,}")
@@ -93,13 +93,15 @@ class ThreatAnalyser:
     """
 
     # Entropy thresholds
-    HIGH_ENTROPY_THRESHOLD = 5.5   # packed/encrypted/b64 shellcode indicator
+    HIGH_ENTROPY_THRESHOLD = 5.5  # packed/encrypted/b64 shellcode indicator
     BINARY_ENTROPY_THRESHOLD = 7.0  # near-random binary content
 
     def analyse(self, content: str | bytes, *, source: str = "") -> AnalysisReport:
         t0 = time.monotonic()
 
-        raw: bytes = content.encode("utf-8", errors="replace") if isinstance(content, str) else content
+        raw: bytes = (
+            content.encode("utf-8", errors="replace") if isinstance(content, str) else content
+        )
         text: str = raw.decode("utf-8", errors="replace")
 
         content_hash = hashlib.sha256(raw).hexdigest()
@@ -114,31 +116,37 @@ class ThreatAnalyser:
         for sig in library.scan(text):
             match = sig.pattern.search(text)
             matched = match.group(0)[:120] if match else ""
-            findings.append(ThreatFinding(
-                signature_id=sig.id,
-                category=sig.category,
-                severity=sig.severity,
-                description=sig.description,
-                matched_text=matched,
-            ))
+            findings.append(
+                ThreatFinding(
+                    signature_id=sig.id,
+                    category=sig.category,
+                    severity=sig.severity,
+                    description=sig.description,
+                    matched_text=matched,
+                )
+            )
 
         # Entropy-based synthetic finding
         if entropy >= self.BINARY_ENTROPY_THRESHOLD and len(raw) > 64:
-            findings.append(ThreatFinding(
-                signature_id="SIG-ENT-001",
-                category=ThreatCategory.MALWARE,
-                severity="high",
-                description=f"Near-random entropy ({entropy:.2f} bits/byte) — possible encrypted/packed payload",
-            ))
+            findings.append(
+                ThreatFinding(
+                    signature_id="SIG-ENT-001",
+                    category=ThreatCategory.MALWARE,
+                    severity="high",
+                    description=f"Near-random entropy ({entropy:.2f} bits/byte) — possible encrypted/packed payload",
+                )
+            )
 
         # Binary magic in non-binary context
         if suspicious_binary:
-            findings.append(ThreatFinding(
-                signature_id="SIG-BIN-003",
-                category=ThreatCategory.BINARY_EXPLOIT,
-                severity="high",
-                description="Binary file magic bytes detected in text context",
-            ))
+            findings.append(
+                ThreatFinding(
+                    signature_id="SIG-BIN-003",
+                    category=ThreatCategory.BINARY_EXPLOIT,
+                    severity="high",
+                    description="Binary file magic bytes detected in text context",
+                )
+            )
 
         verdict = self._verdict(findings)
         duration_ms = (time.monotonic() - t0) * 1000

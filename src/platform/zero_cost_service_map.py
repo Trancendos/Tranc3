@@ -281,48 +281,48 @@ FOUNDATIONS: Dict[str, ZeroCostFoundation] = {
 # ---------------------------------------------------------------------------
 
 ENTITY_FOUNDATION_MAP: Dict[str, List[str]] = {
-    "the-spark":            ["nats"],
-    "the-digital-grid":     ["n8n"],
-    "the-void":             ["vault_hashicorp"],
-    "the-workshop":         ["forgejo"],
-    "infinity":             [],  # custom FastAPI — already implemented
-    "the-lighthouse":       [],  # custom Python — already implemented
-    "the-hive":             ["nats"],
-    "the-nexus":            [],  # custom FastAPI WebSocket — already implemented
-    "the-citadel":          ["grafana", "prometheus"],
-    "luminous":             ["ollama", "langgraph", "qdrant"],
-    "the-observatory":      ["grafana", "prometheus", "loki", "tempo"],
+    "the-spark": ["nats"],
+    "the-digital-grid": ["n8n"],
+    "the-void": ["vault_hashicorp"],
+    "the-workshop": ["forgejo"],
+    "infinity": [],  # custom FastAPI — already implemented
+    "the-lighthouse": [],  # custom Python — already implemented
+    "the-hive": ["nats"],
+    "the-nexus": [],  # custom FastAPI WebSocket — already implemented
+    "the-citadel": ["grafana", "prometheus"],
+    "luminous": ["ollama", "langgraph", "qdrant"],
+    "the-observatory": ["grafana", "prometheus", "loki", "tempo"],
     "royal-bank-of-arcadia": [],  # custom FastAPI — already implemented
-    "arcadian-exchange":    [],  # custom FastAPI — already implemented
-    "sashas-photo-studio":  ["comfyui"],
-    "tranceflow":           ["godot", "three_js"],
-    "tateking":             ["ffmpeg"],
-    "fabulousa":            ["penpot"],
-    "imaginarium":          ["comfyui", "ffmpeg", "godot"],
-    "the-studio":           ["comfyui", "ffmpeg"],
-    "warp-radio":           ["liquidsoap"],
-    "vrar3d":               ["aframe", "three_js"],
-    "the-lab":              [],  # custom Python — already implemented
-    "think-tank":           [],  # custom Python (qiskit) — already implemented
-    "devocity":             ["grafana"],
-    "the-library":          ["outline"],
-    "the-academy":          ["openedx"],
-    "docutari":             ["paperless_ngx"],
-    "the-basement":         [],  # custom Python — already implemented
-    "turings-hub":          ["ollama"],
-    "cryptex":              ["wazuh", "misp"],
-    "the-ice-box":          [],  # custom Python sandbox
-    "the-warp-tunnel":      [],  # custom Python — already implemented
-    "the-artifactory":      ["zot"],
-    "api-marketplace":      ["gravitee"],
-    "the-town-hall":        [],  # custom FastAPI — already implemented
-    "arcadia":              [],  # React SPA — already implemented
-    "chronossphere":        ["cal_com"],
-    "tranquility":          [],  # custom Python — to implement
-    "imind":                ["ollama"],
-    "resonate":             ["ollama"],
-    "taimra":               ["ollama", "qdrant"],
-    "section-7":            ["qdrant"],
+    "arcadian-exchange": [],  # custom FastAPI — already implemented
+    "sashas-photo-studio": ["comfyui"],
+    "tranceflow": ["godot", "three_js"],
+    "tateking": ["ffmpeg"],
+    "fabulousa": ["penpot"],
+    "imaginarium": ["comfyui", "ffmpeg", "godot"],
+    "the-studio": ["comfyui", "ffmpeg"],
+    "warp-radio": ["liquidsoap"],
+    "vrar3d": ["aframe", "three_js"],
+    "the-lab": [],  # custom Python — already implemented
+    "think-tank": [],  # custom Python (qiskit) — already implemented
+    "devocity": ["grafana"],
+    "the-library": ["outline"],
+    "the-academy": ["openedx"],
+    "docutari": ["paperless_ngx"],
+    "the-basement": [],  # custom Python — already implemented
+    "turings-hub": ["ollama"],
+    "cryptex": ["wazuh", "misp"],
+    "the-ice-box": [],  # custom Python sandbox
+    "the-warp-tunnel": [],  # custom Python — already implemented
+    "the-artifactory": ["zot"],
+    "api-marketplace": ["gravitee"],
+    "the-town-hall": [],  # custom FastAPI — already implemented
+    "arcadia": [],  # React SPA — already implemented
+    "chronossphere": ["cal_com"],
+    "tranquility": [],  # custom Python — to implement
+    "imind": ["ollama"],
+    "resonate": ["ollama"],
+    "taimra": ["ollama", "qdrant"],
+    "section-7": ["qdrant"],
 }
 
 

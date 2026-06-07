@@ -27,7 +27,7 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
-from src.event_bus.types import EventEnvelope, EventSubscription, PlatformEventType
+from src.event_bus.types import EventEnvelope, PlatformEventType
 
 if TYPE_CHECKING:
     from src.event_bus.bus import EventBus
@@ -37,6 +37,7 @@ logger = logging.getLogger("tranc3.event_bus.wiring")
 # ---------------------------------------------------------------------------
 # Handler: Library — AI inference → Knowledge Base article
 # ---------------------------------------------------------------------------
+
 
 async def _library_on_ai_event(envelope: EventEnvelope) -> None:
     """On AI_INFERENCE_COMPLETE, auto-create a Library article summarising the result."""
@@ -74,6 +75,7 @@ async def _library_on_ai_event(envelope: EventEnvelope) -> None:
 # Handler: Library — Workflow completed → KB entry
 # ---------------------------------------------------------------------------
 
+
 async def _library_on_workflow_event(envelope: EventEnvelope) -> None:
     """On WORKFLOW_COMPLETED, auto-create a Library article documenting the run."""
     try:
@@ -108,6 +110,7 @@ async def _library_on_workflow_event(envelope: EventEnvelope) -> None:
 # ---------------------------------------------------------------------------
 # Handler: Think Tank — AI inference → index result
 # ---------------------------------------------------------------------------
+
 
 async def _thinktank_on_ai_event(envelope: EventEnvelope) -> None:
     """
@@ -149,6 +152,7 @@ async def _thinktank_on_ai_event(envelope: EventEnvelope) -> None:
 # ---------------------------------------------------------------------------
 # Handler: Search Service — article created/updated → index document
 # ---------------------------------------------------------------------------
+
 
 async def _search_on_article_created(envelope: EventEnvelope) -> None:
     """Forward Library article.created / article.updated to search-service for FTS indexing."""
@@ -210,6 +214,7 @@ async def _search_on_article_deleted(envelope: EventEnvelope) -> None:
 # Handler: Sentinel Station — forward every event via REST
 # ---------------------------------------------------------------------------
 
+
 async def _sentinel_forward(envelope: EventEnvelope) -> None:
     """
     Broadcast every platform event to Sentinel Station for cross-gateway distribution.
@@ -259,6 +264,7 @@ def _event_type_to_sentinel_channel(event_type: str) -> str:
 # Observatory → EventBus bridge
 # ---------------------------------------------------------------------------
 
+
 def attach_observatory_bridge(bus: "EventBus") -> None:
     """
     Subscribe an asyncio.Queue to Observatory and forward each AuditEvent
@@ -266,7 +272,7 @@ def attach_observatory_bridge(bus: "EventBus") -> None:
 
     This is started as a background asyncio task at application startup.
     """
-    from src.observability.observatory import EventCategory, get_observatory  # noqa: PLC0415
+    from src.observability.observatory import get_observatory  # noqa: PLC0415
 
     obs = get_observatory()
     queue = obs.subscribe(maxsize=2000)
@@ -361,6 +367,7 @@ def _audit_category_to_event_type(audit_event: Any) -> "str | None":
 # ---------------------------------------------------------------------------
 # Public wiring entry point
 # ---------------------------------------------------------------------------
+
 
 def wire_platform_events(bus: "EventBus") -> None:
     """

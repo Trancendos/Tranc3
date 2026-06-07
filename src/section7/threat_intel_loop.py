@@ -39,6 +39,7 @@ _task: Optional[asyncio.Task] = None
 # EventBus emission helpers
 # ---------------------------------------------------------------------------
 
+
 def _emit_cve_ingested(cve_id: str, severity: str, source: str) -> None:
     try:
         from src.event_bus import get_event_bus  # noqa: PLC0415
@@ -74,6 +75,7 @@ def _emit_threat_detected(signal_id: str, category: str, severity: str, evidence
 # Anomaly detector — compares incoming CVEs against platform dependencies
 # ---------------------------------------------------------------------------
 
+
 def _load_platform_packages() -> List[str]:
     """
     Return a best-effort list of installed Python package names for
@@ -103,25 +105,29 @@ def _detect_anomalies(items: List[Any], platform_packages: List[str]) -> List[Di
 
         # Flag CRITICAL/HIGH CVEs unconditionally
         if severity in ("CRITICAL", "HIGH"):
-            anomalies.append({
-                "cve_id": cve_id,
-                "severity": severity,
-                "title": getattr(item, "title", ""),
-                "reason": f"severity={severity}",
-                "tags": tags,
-            })
+            anomalies.append(
+                {
+                    "cve_id": cve_id,
+                    "severity": severity,
+                    "title": getattr(item, "title", ""),
+                    "reason": f"severity={severity}",
+                    "tags": tags,
+                }
+            )
             continue
 
         # Flag if any tag matches an installed package
         for pkg in platform_packages:
             if pkg and any(pkg in tag for tag in tags):
-                anomalies.append({
-                    "cve_id": cve_id,
-                    "severity": severity,
-                    "title": getattr(item, "title", ""),
-                    "reason": f"affects_installed_package:{pkg}",
-                    "tags": tags,
-                })
+                anomalies.append(
+                    {
+                        "cve_id": cve_id,
+                        "severity": severity,
+                        "title": getattr(item, "title", ""),
+                        "reason": f"affects_installed_package:{pkg}",
+                        "tags": tags,
+                    }
+                )
                 break
 
     return anomalies
@@ -130,6 +136,7 @@ def _detect_anomalies(items: List[Any], platform_packages: List[str]) -> List[Di
 # ---------------------------------------------------------------------------
 # Main loop
 # ---------------------------------------------------------------------------
+
 
 async def _run_loop(interval_secs: int) -> None:
     """Inner async loop — runs cycles separated by interval_secs."""
@@ -204,15 +211,15 @@ async def _run_cycle(platform_packages: List[str]) -> None:
         )
 
     # Ingest into the agent → router → Cryptex + Library
-    routed_ids = await asyncio.get_event_loop().run_in_executor(
-        None, agent.ingest_many, all_items
-    )
+    routed_ids = await asyncio.get_event_loop().run_in_executor(None, agent.ingest_many, all_items)
 
     # Emit threat.detected events for anomalies
     for anomaly in anomalies:
         _emit_threat_detected(
             signal_id=anomaly["cve_id"],
-            category="outdated_component" if "affects_installed_package" in anomaly["reason"] else "cve",
+            category="outdated_component"
+            if "affects_installed_package" in anomaly["reason"]
+            else "cve",
             severity=anomaly["severity"].lower(),
             evidence=anomaly["title"],
         )
@@ -230,6 +237,7 @@ async def _run_cycle(platform_packages: List[str]) -> None:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 async def start_threat_intel_loop(interval_secs: int = _DEFAULT_INTERVAL) -> asyncio.Task:
     """

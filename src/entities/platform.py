@@ -1158,15 +1158,20 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         online_mode="Live entity forge: real-time assembly of AI consciousness + 3D body + sensory stack; interactive testing of the completed entity.",
         offline_mode="Offline persona drafting; local 3D avatar sculpting; staged assembly without live service connections.",
         agent_alpha=Agent(
-            "The Sculptor", "Designs, rigs, and textures the detailed 3D body — skeleton, skin, expressions, and physical asset library."
+            "The Sculptor",
+            "Designs, rigs, and textures the detailed 3D body — skeleton, skin, expressions, and physical asset library.",
         ),
         agent_beta=Agent(
             "The Geneticist",
             "Draws from all upstream services to map the entity's full AI profile: personality matrix, memory seeds, skill tiers, emotional range, and consciousness parameters.",
         ),
-        bot_01=Bot("Wireframe-Bot", "Builds raw skeleton rigs to support fluid avatar movements and physical presence."),
+        bot_01=Bot(
+            "Wireframe-Bot",
+            "Builds raw skeleton rigs to support fluid avatar movements and physical presence.",
+        ),
         bot_02=Bot(
-            "Texture-Bot", "Maps high-fidelity graphic materials, skin tones, and style overlays onto 3D assets."
+            "Texture-Bot",
+            "Maps high-fidelity graphic materials, skin tones, and style overlays onto 3D assets.",
         ),
         bot_03=Bot(
             "Vocoder-Bot",

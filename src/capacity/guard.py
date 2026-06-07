@@ -31,37 +31,38 @@ logger = logging.getLogger("tranc3.capacity")
 
 # ── Capacity service identifiers ──────────────────────────────────────────────
 
+
 class CapacityService(str, Enum):
     # AI providers — daily request limits
-    GROQ_REQUESTS        = "groq.requests.daily"       # 14,400/day free tier
-    GEMINI_REQUESTS      = "gemini.requests.daily"     # 1,500/day free tier
-    CEREBRAS_TOKENS      = "cerebras.tokens.daily"     # 1,000,000 tokens/day free tier
-    SAMBANOVA_REQUESTS   = "sambanova.requests.daily"  # free tier (conservative 500/day)
-    OPENROUTER_REQUESTS  = "openrouter.requests.minute" # 20/min free tier
-    HUGGINGFACE_REQUESTS = "huggingface.requests.daily" # free tier (conservative 300/day)
+    GROQ_REQUESTS = "groq.requests.daily"  # 14,400/day free tier
+    GEMINI_REQUESTS = "gemini.requests.daily"  # 1,500/day free tier
+    CEREBRAS_TOKENS = "cerebras.tokens.daily"  # 1,000,000 tokens/day free tier
+    SAMBANOVA_REQUESTS = "sambanova.requests.daily"  # free tier (conservative 500/day)
+    OPENROUTER_REQUESTS = "openrouter.requests.minute"  # 20/min free tier
+    HUGGINGFACE_REQUESTS = "huggingface.requests.daily"  # free tier (conservative 300/day)
     GITHUB_MODELS_REQUESTS = "github_models.requests.daily"  # 150/day (GitHub PAT free)
 
     # AI gateway — token budgets
-    AI_TOKENS_DAILY      = "ai.tokens.daily"           # configurable per tenant
+    AI_TOKENS_DAILY = "ai.tokens.daily"  # configurable per tenant
 
     # Storage
-    STORAGE_BYTES        = "storage.bytes.total"       # configurable per deployment
-    FILES_UPLOADS_DAILY  = "files.uploads.daily"       # configurable
+    STORAGE_BYTES = "storage.bytes.total"  # configurable per deployment
+    FILES_UPLOADS_DAILY = "files.uploads.daily"  # configurable
 
     # Queue
-    QUEUE_DEPTH          = "queue.depth"               # in-flight messages
+    QUEUE_DEPTH = "queue.depth"  # in-flight messages
 
     # Platform-level request budget (free-tier deployments)
     PLATFORM_REQUESTS_HOURLY = "platform.requests.hourly"
-    PLATFORM_REQUESTS_DAILY  = "platform.requests.daily"
+    PLATFORM_REQUESTS_DAILY = "platform.requests.daily"
 
 
 # ── Threshold constants ───────────────────────────────────────────────────────
 
-THRESHOLD_WARN     = 0.80   # 80%  — WARNING log + Observatory
-THRESHOLD_ALERT    = 0.90   # 90%  — WARNING Observatory + Cryptex notified
-THRESHOLD_CRITICAL = 0.95   # 95%  — CRITICAL Observatory + Cryptex notified
-THRESHOLD_HARD     = 1.00   # 100% — CapacityExceededError raised
+THRESHOLD_WARN = 0.80  # 80%  — WARNING log + Observatory
+THRESHOLD_ALERT = 0.90  # 90%  — WARNING Observatory + Cryptex notified
+THRESHOLD_CRITICAL = 0.95  # 95%  — CRITICAL Observatory + Cryptex notified
+THRESHOLD_HARD = 1.00  # 100% — CapacityExceededError raised
 
 
 class CapacityExceededError(Exception):
@@ -80,12 +81,13 @@ class CapacityExceededError(Exception):
 
 # ── Service limit registry ────────────────────────────────────────────────────
 
+
 @dataclass
 class ServiceLimit:
     service: CapacityService
-    limit: int                          # hard limit (provider-documented or configured)
-    window_seconds: int                 # rolling window for the counter
-    description: str                    # human-readable label
+    limit: int  # hard limit (provider-documented or configured)
+    window_seconds: int  # rolling window for the counter
+    description: str  # human-readable label
     # Runtime state (not part of config)
     _used: int = field(default=0, repr=False, compare=False)
     _window_start: float = field(default_factory=time.time, repr=False, compare=False)
@@ -105,23 +107,56 @@ class ServiceLimit:
 
 # Default limits — all free-tier documented values
 _DEFAULT_LIMITS: list[ServiceLimit] = [
-    ServiceLimit(CapacityService.GROQ_REQUESTS,         14_400,      86_400, "Groq free tier — 14,400 req/day"),
-    ServiceLimit(CapacityService.GEMINI_REQUESTS,        1_500,      86_400, "Gemini free tier — 1,500 req/day"),
-    ServiceLimit(CapacityService.CEREBRAS_TOKENS,    1_000_000,      86_400, "Cerebras free tier — 1M tokens/day"),
-    ServiceLimit(CapacityService.SAMBANOVA_REQUESTS,       500,      86_400, "SambaNova free tier — conservative 500 req/day"),
-    ServiceLimit(CapacityService.OPENROUTER_REQUESTS,       20,          60, "OpenRouter free tier — 20 req/min"),
-    ServiceLimit(CapacityService.HUGGINGFACE_REQUESTS,     300,      86_400, "HuggingFace free tier — 300 req/day"),
-    ServiceLimit(CapacityService.GITHUB_MODELS_REQUESTS,   150,      86_400, "GitHub Models — 150 req/day (PAT free)"),
-    ServiceLimit(CapacityService.AI_TOKENS_DAILY,      100_000,      86_400, "AI gateway default tenant token budget"),
-    ServiceLimit(CapacityService.STORAGE_BYTES,    10_737_418_240, 86_400 * 365, "Storage — 10 GB default"),  # 10 GB
-    ServiceLimit(CapacityService.FILES_UPLOADS_DAILY,    1_000,      86_400, "File uploads — 1,000/day default"),
-    ServiceLimit(CapacityService.QUEUE_DEPTH,           10_000,          60, "Queue depth — 10k messages in-flight"),
-    ServiceLimit(CapacityService.PLATFORM_REQUESTS_HOURLY, 10_000,   3_600, "Platform requests — 10k/hour default"),
-    ServiceLimit(CapacityService.PLATFORM_REQUESTS_DAILY, 100_000,  86_400, "Platform requests — 100k/day default"),
+    ServiceLimit(CapacityService.GROQ_REQUESTS, 14_400, 86_400, "Groq free tier — 14,400 req/day"),
+    ServiceLimit(
+        CapacityService.GEMINI_REQUESTS, 1_500, 86_400, "Gemini free tier — 1,500 req/day"
+    ),
+    ServiceLimit(
+        CapacityService.CEREBRAS_TOKENS, 1_000_000, 86_400, "Cerebras free tier — 1M tokens/day"
+    ),
+    ServiceLimit(
+        CapacityService.SAMBANOVA_REQUESTS,
+        500,
+        86_400,
+        "SambaNova free tier — conservative 500 req/day",
+    ),
+    ServiceLimit(CapacityService.OPENROUTER_REQUESTS, 20, 60, "OpenRouter free tier — 20 req/min"),
+    ServiceLimit(
+        CapacityService.HUGGINGFACE_REQUESTS, 300, 86_400, "HuggingFace free tier — 300 req/day"
+    ),
+    ServiceLimit(
+        CapacityService.GITHUB_MODELS_REQUESTS,
+        150,
+        86_400,
+        "GitHub Models — 150 req/day (PAT free)",
+    ),
+    ServiceLimit(
+        CapacityService.AI_TOKENS_DAILY, 100_000, 86_400, "AI gateway default tenant token budget"
+    ),
+    ServiceLimit(
+        CapacityService.STORAGE_BYTES, 10_737_418_240, 86_400 * 365, "Storage — 10 GB default"
+    ),  # 10 GB
+    ServiceLimit(
+        CapacityService.FILES_UPLOADS_DAILY, 1_000, 86_400, "File uploads — 1,000/day default"
+    ),
+    ServiceLimit(CapacityService.QUEUE_DEPTH, 10_000, 60, "Queue depth — 10k messages in-flight"),
+    ServiceLimit(
+        CapacityService.PLATFORM_REQUESTS_HOURLY,
+        10_000,
+        3_600,
+        "Platform requests — 10k/hour default",
+    ),
+    ServiceLimit(
+        CapacityService.PLATFORM_REQUESTS_DAILY,
+        100_000,
+        86_400,
+        "Platform requests — 100k/day default",
+    ),
 ]
 
 
 # ── CapacityGuard ─────────────────────────────────────────────────────────────
+
 
 class CapacityGuard:
     """
@@ -140,6 +175,7 @@ class CapacityGuard:
         if self._observatory is None:
             try:
                 from src.observability.observatory import get_observatory
+
                 self._observatory = get_observatory()
             except Exception:
                 pass
@@ -190,19 +226,31 @@ class CapacityGuard:
         # Only emit when crossing a new threshold (not on every call)
         if util >= THRESHOLD_CRITICAL and sl._last_threshold < THRESHOLD_CRITICAL:
             sl._last_threshold = THRESHOLD_CRITICAL
-            self._emit(sl, util, "critical",
-                       f"{sl.description}: {round(util*100,1)}% capacity — HARD STOP IMMINENT. "
-                       f"Used {sl._used}/{sl.limit} in this window.")
+            self._emit(
+                sl,
+                util,
+                "critical",
+                f"{sl.description}: {round(util * 100, 1)}% capacity — HARD STOP IMMINENT. "
+                f"Used {sl._used}/{sl.limit} in this window.",
+            )
         elif util >= THRESHOLD_ALERT and sl._last_threshold < THRESHOLD_ALERT:
             sl._last_threshold = THRESHOLD_ALERT
-            self._emit(sl, util, "warning",
-                       f"{sl.description}: {round(util*100,1)}% capacity — approaching limit. "
-                       f"Used {sl._used}/{sl.limit}.")
+            self._emit(
+                sl,
+                util,
+                "warning",
+                f"{sl.description}: {round(util * 100, 1)}% capacity — approaching limit. "
+                f"Used {sl._used}/{sl.limit}.",
+            )
         elif util >= THRESHOLD_WARN and sl._last_threshold < THRESHOLD_WARN:
             sl._last_threshold = THRESHOLD_WARN
-            self._emit(sl, util, "info",
-                       f"{sl.description}: {round(util*100,1)}% capacity — monitoring. "
-                       f"Used {sl._used}/{sl.limit}.")
+            self._emit(
+                sl,
+                util,
+                "info",
+                f"{sl.description}: {round(util * 100, 1)}% capacity — monitoring. "
+                f"Used {sl._used}/{sl.limit}.",
+            )
 
     def _emit(self, sl: ServiceLimit, util: float, severity_str: str, message: str) -> None:
         logger.warning("capacity [%s] %.1f%% — %s", sl.service.value, util * 100, message)
@@ -211,6 +259,7 @@ class CapacityGuard:
             return
         try:
             from src.observability.observatory import EventCategory, EventSeverity
+
             _sev_map = {
                 "info": EventSeverity.INFO,
                 "warning": EventSeverity.WARNING,
@@ -253,10 +302,14 @@ class CapacityGuard:
                     "window_seconds": sl.window_seconds,
                     "description": sl.description,
                     "status": (
-                        "hard_stop" if util >= 1.0
-                        else "critical" if util >= THRESHOLD_CRITICAL
-                        else "alert" if util >= THRESHOLD_ALERT
-                        else "warning" if util >= THRESHOLD_WARN
+                        "hard_stop"
+                        if util >= 1.0
+                        else "critical"
+                        if util >= THRESHOLD_CRITICAL
+                        else "alert"
+                        if util >= THRESHOLD_ALERT
+                        else "warning"
+                        if util >= THRESHOLD_WARN
                         else "ok"
                     ),
                 }

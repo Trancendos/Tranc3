@@ -13,6 +13,7 @@ Checks the estate against registry.yaml and docker-compose.production.yml:
 Usage:
     python scripts/estate_lint.py [--strict]
 """
+
 from __future__ import annotations
 
 import sys
@@ -126,25 +127,57 @@ def check_compose_vs_registry(components: list[dict], compose: dict) -> tuple[li
     # Compose services not tracked in registry
     # Services in separate compose files or external deployments
     skip_infra = {
-        "traefik", "vault", "prometheus", "grafana", "loki", "promtail", "ipfs", "redis",
+        "traefik",
+        "vault",
+        "prometheus",
+        "grafana",
+        "loki",
+        "promtail",
+        "ipfs",
+        "redis",
         # Third-party tools with their own compose entries (not platform entities)
-        "ollama", "qdrant", "valkey", "nats", "victoriametrics", "tempo", "langfuse",
-        "signoz-frontend", "signoz-query-service", "signoz-otel-collector", "signoz-clickhouse",
-        "woodpecker-server", "woodpecker-agent", "watchtower", "falco",
-        "outline", "outline-db", "outline-redis",
-        "calcom", "calcom-db",
-        "penpot-frontend", "penpot-backend", "penpot-db", "penpot-exporter",
-        "zot", "krakend", "openbao",
-        "dependency-track-apiserver", "dependency-track-frontend",
-        "blender-worker", "triposr-worker",
+        "ollama",
+        "qdrant",
+        "valkey",
+        "nats",
+        "victoriametrics",
+        "tempo",
+        "langfuse",
+        "signoz-frontend",
+        "signoz-query-service",
+        "signoz-otel-collector",
+        "signoz-clickhouse",
+        "woodpecker-server",
+        "woodpecker-agent",
+        "watchtower",
+        "falco",
+        "outline",
+        "outline-db",
+        "outline-redis",
+        "calcom",
+        "calcom-db",
+        "penpot-frontend",
+        "penpot-backend",
+        "penpot-db",
+        "penpot-exporter",
+        "zot",
+        "krakend",
+        "openbao",
+        "dependency-track-apiserver",
+        "dependency-track-frontend",
+        "blender-worker",
+        "triposr-worker",
         # Volume-only entries (not actual services)
         "langfuse-db",
         # Legacy CF Workers still referenced in docker-compose during migration
-        "tranc3-ai", "infinity-void",
+        "tranc3-ai",
+        "infinity-void",
     }
     for svc in compose_services:
         if svc not in registry_services and svc not in skip_infra:
-            warnings.append(f"UNREGISTERED SERVICE: '{svc}' in docker-compose but not in registry.yaml")
+            warnings.append(
+                f"UNREGISTERED SERVICE: '{svc}' in docker-compose but not in registry.yaml"
+            )
 
     return errors, warnings
 

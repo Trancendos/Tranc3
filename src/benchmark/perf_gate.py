@@ -30,13 +30,14 @@ from typing import Dict, List, NamedTuple, Optional
 BASELINE_PATH = Path(__file__).parent / "baseline.json"
 
 # Regression thresholds
-RPS_REGRESSION_RATIO = 0.85    # measured RPS < baseline * this → regression
-P99_REGRESSION_RATIO = 1.20    # measured P99 > baseline * this → regression
+RPS_REGRESSION_RATIO = 0.85  # measured RPS < baseline * this → regression
+P99_REGRESSION_RATIO = 1.20  # measured P99 > baseline * this → regression
 
 
 # ---------------------------------------------------------------------------
 # Micro-benchmark helpers
 # ---------------------------------------------------------------------------
+
 
 class BenchResult(NamedTuple):
     name: str
@@ -77,65 +78,81 @@ def _run_micro(name: str, fn, n: int = 200, warmup: int = 20) -> BenchResult:
 # Benchmark suite (pure-Python, no server needed)
 # ---------------------------------------------------------------------------
 
+
 def _build_suite() -> List[BenchResult]:
     results: List[BenchResult] = []
 
     # 1. Encrypted-SQLite field round-trip (REQ-IA-010)
     try:
         from src.database.encrypted_sqlite import encrypt_field, decrypt_field
+
         payload = b"sensitive_value_" * 4
         key = b"\x00" * 32
-        results.append(_run_micro(
-            "encrypted_sqlite_roundtrip",
-            lambda: decrypt_field(encrypt_field(payload, key), key),
-        ))
+        results.append(
+            _run_micro(
+                "encrypted_sqlite_roundtrip",
+                lambda: decrypt_field(encrypt_field(payload, key), key),
+            )
+        )
     except Exception:
         results.append(BenchResult("encrypted_sqlite_roundtrip", 0.0, 0.0, 0.0, 1.0))
 
     # 2. Output safety filter (REQ-SA-003)
     try:
         from src.core.output_safety import OutputSafetyFilter
+
         f = OutputSafetyFilter()
-        results.append(_run_micro(
-            "output_safety_filter",
-            lambda: f.check("Hello, the answer is 42. Here is some helpful output."),
-        ))
+        results.append(
+            _run_micro(
+                "output_safety_filter",
+                lambda: f.check("Hello, the answer is 42. Here is some helpful output."),
+            )
+        )
     except Exception:
         results.append(BenchResult("output_safety_filter", 0.0, 0.0, 0.0, 1.0))
 
     # 3. Resource limits lookup (REQ-SA-005)
     try:
         from src.core.resource_limits import ResourceLimits
+
         rl = ResourceLimits()
-        results.append(_run_micro(
-            "resource_limits_lookup",
-            lambda: rl.http_timeout,
-            n=500,
-        ))
+        results.append(
+            _run_micro(
+                "resource_limits_lookup",
+                lambda: rl.http_timeout,
+                n=500,
+            )
+        )
     except Exception:
         results.append(BenchResult("resource_limits_lookup", 0.0, 0.0, 0.0, 1.0))
 
     # 4. SNN tensor quantize (TR3-010)
     try:
         from src.nanoservices.snn_tensor import quantize_f32_to_i8
+
         data = [float(i) / 100 for i in range(128)]
-        results.append(_run_micro(
-            "snn_quantize_128",
-            lambda: quantize_f32_to_i8(data, 0.01),
-            n=500,
-        ))
+        results.append(
+            _run_micro(
+                "snn_quantize_128",
+                lambda: quantize_f32_to_i8(data, 0.01),
+                n=500,
+            )
+        )
     except Exception:
         results.append(BenchResult("snn_quantize_128", 0.0, 0.0, 0.0, 1.0))
 
     # 5. Ice Box threat scan (REQ-SA-006)
     try:
         from src.security.ice_box.analyser import ThreatAnalyser
+
         analyser = ThreatAnalyser()
         sample = "SELECT * FROM users WHERE id=1; DROP TABLE users;--"
-        results.append(_run_micro(
-            "ice_box_scan",
-            lambda: analyser.analyse(sample),
-        ))
+        results.append(
+            _run_micro(
+                "ice_box_scan",
+                lambda: analyser.analyse(sample),
+            )
+        )
     except Exception:
         results.append(BenchResult("ice_box_scan", 0.0, 0.0, 0.0, 1.0))
 
@@ -145,6 +162,7 @@ def _build_suite() -> List[BenchResult]:
 # ---------------------------------------------------------------------------
 # Baseline management
 # ---------------------------------------------------------------------------
+
 
 def load_baseline() -> Optional[Dict[str, dict]]:
     if not BASELINE_PATH.exists():
@@ -160,6 +178,7 @@ def save_baseline(results: List[BenchResult]) -> None:
 # ---------------------------------------------------------------------------
 # Gate logic
 # ---------------------------------------------------------------------------
+
 
 def run_gate(update: bool = False, report: bool = False) -> int:
     results = _build_suite()

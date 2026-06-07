@@ -68,6 +68,7 @@ def constant_time_eq(a: bytes, b: bytes) -> bool:
     if _USING_RUST:
         return _rust.constant_time_eq(a, b)  # type: ignore[union-attr]
     import hmac as _hmac
+
     return _hmac.compare_digest(a, b)
 
 
@@ -96,6 +97,7 @@ _NONCE_LEN = 12
 def _python_encrypt(plaintext: bytes, key_seed: str) -> bytes:
     import os
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
     salt = os.urandom(_SALT_LEN)
     nonce = os.urandom(_NONCE_LEN)
     key = _python_pbkdf2(key_seed, salt)
@@ -107,9 +109,10 @@ def _python_decrypt(ciphertext: bytes, key_seed: str) -> bytes:
     if len(ciphertext) < _SALT_LEN + _NONCE_LEN + 16:
         raise ValueError("ciphertext too short")
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
     salt = ciphertext[:_SALT_LEN]
-    nonce = ciphertext[_SALT_LEN:_SALT_LEN + _NONCE_LEN]
-    ct = ciphertext[_SALT_LEN + _NONCE_LEN:]
+    nonce = ciphertext[_SALT_LEN : _SALT_LEN + _NONCE_LEN]
+    ct = ciphertext[_SALT_LEN + _NONCE_LEN :]
     key = _python_pbkdf2(key_seed, salt)
     return AESGCM(key).decrypt(nonce, ct, None)
 
@@ -117,6 +120,7 @@ def _python_decrypt(ciphertext: bytes, key_seed: str) -> bytes:
 def _python_pbkdf2(seed: str, salt: bytes) -> bytes:
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
     kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100_000)
     return kdf.derive(seed.encode())
 
@@ -124,10 +128,12 @@ def _python_pbkdf2(seed: str, salt: bytes) -> bytes:
 def _python_hkdf(seed: bytes, salt: bytes, info: bytes) -> bytes:
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+
     return HKDF(algorithm=hashes.SHA256(), length=32, salt=salt, info=info).derive(seed)
 
 
 def _python_hmac(key: bytes, data: bytes) -> bytes:
     import hashlib
     import hmac as _hmac
+
     return _hmac.new(key, data, hashlib.sha256).digest()

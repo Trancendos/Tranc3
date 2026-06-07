@@ -48,16 +48,26 @@ async def manifest_by_pillar(pillar: str):
         p = Pillar(pillar)
     except ValueError:
         from fastapi import HTTPException
+
         raise HTTPException(
             status_code=404,
             detail=f"Unknown pillar: {pillar}. Valid: {[p.value for p in Pillar]}",
         ) from None
     manifest = get_manifest()
     entities = manifest.by_pillar(p)
-    return {"pillar": pillar, "count": len(entities), "entities": [
-        {"entity_id": e.entity_id, "display_name": e.display_name, "lead_ai": e.lead_ai, "status": e.status}
-        for e in entities
-    ]}
+    return {
+        "pillar": pillar,
+        "count": len(entities),
+        "entities": [
+            {
+                "entity_id": e.entity_id,
+                "display_name": e.display_name,
+                "lead_ai": e.lead_ai,
+                "status": e.status,
+            }
+            for e in entities
+        ],
+    }
 
 
 @router.post("/emergency/rotate/{entity_id}")

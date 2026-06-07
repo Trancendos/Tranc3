@@ -27,9 +27,9 @@ class StreamSource:
     id: str
     name: str
     url: str
-    format: str = "mp3"          # mp3, ogg, aac
+    format: str = "mp3"  # mp3, ogg, aac
     bitrate_kbps: int = 128
-    cost: str = "zero"           # Icecast self-hosted = zero cost
+    cost: str = "zero"  # Icecast self-hosted = zero cost
     active: bool = False
     listeners: int = 0
 
@@ -80,6 +80,7 @@ class WarpRadio:
         """Check Icecast health and current listener count."""
         try:
             import httpx
+
             async with httpx.AsyncClient(timeout=3.0) as client:
                 r = await client.get(
                     f"{self.config.icecast_url}/status-json.xsl",

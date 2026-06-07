@@ -320,6 +320,14 @@ def _rhubarb_visemes(wav_path: str) -> Optional[List[Dict[str, Any]]]:
     Rhubarb must be installed and on PATH (or RHUBARB_BIN env set).
     """
     try:
+        # Resolve to absolute path first, then verify existence.
+        # No shell=True so argument injection is not possible, but we still
+        # ensure the file exists before invoking the subprocess.
+        resolved = Path(wav_path).resolve()
+        if not resolved.is_file():
+            logger.warning("Rhubarb: invalid or missing wav_path: %s", wav_path)
+            return None
+        wav_path = str(resolved)
         result = subprocess.run(
             [RHUBARB_BIN, "--recognizer", "phonetic", "--exportFormat", "json", wav_path],
             capture_output=True,
@@ -412,11 +420,13 @@ async def health():
     except Exception:
         pass
 
-    rhubarb_alive = (
-        subprocess.run([RHUBARB_BIN, "--version"], capture_output=True, timeout=3).returncode == 0
-        if True
-        else False
-    )
+    try:
+        rhubarb_alive = (
+            subprocess.run([RHUBARB_BIN, "--version"], capture_output=True, timeout=3).returncode
+            == 0
+        )
+    except (FileNotFoundError, subprocess.SubprocessError):
+        rhubarb_alive = False
 
     return {
         "status": "ok",

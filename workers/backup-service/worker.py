@@ -59,9 +59,9 @@ engine = BackupEngine(backup_root=BACKUP_ROOT, encrypt=True)
 # ── Schedule intervals (minutes) ────────────────────────────────────────────
 _SCHEDULE: dict[BackupTier, int] = {
     BackupTier.CRITICAL: 15,
-    BackupTier.HIGH:     60,
+    BackupTier.HIGH: 60,
     BackupTier.STANDARD: 360,
-    BackupTier.LOW:      1440,
+    BackupTier.LOW: 1440,
 }
 
 _last_run: dict[str, str] = {}  # worker → ISO timestamp of last backup attempt
@@ -69,6 +69,7 @@ _run_stats: dict[str, dict] = {}
 
 
 # ── Background scheduler ─────────────────────────────────────────────────────
+
 
 async def _backup_tier(tier: BackupTier) -> None:
     workers = REGISTRY_BY_TIER.get(tier, [])
@@ -122,6 +123,7 @@ router = APIRouter(prefix="/backup")
 
 # ── Pydantic models ───────────────────────────────────────────────────────────
 
+
 class BackupRunRequest(BaseModel):
     worker: Optional[str] = None
     tier: Optional[str] = None
@@ -135,6 +137,7 @@ class RestoreRequest(BaseModel):
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+
 
 @app.get("/health")
 async def health():
@@ -187,7 +190,11 @@ async def run_backup(req: BackupRunRequest):
                 "size_bytes": result.meta.compressed_size_bytes,
                 "verified": result.meta.verified,
             }
-        return {"success": result.success, "meta": result.meta.__dict__ if result.meta else None, "error": result.error}
+        return {
+            "success": result.success,
+            "meta": result.meta.__dict__ if result.meta else None,
+            "error": result.error,
+        }
 
     if req.tier:
         try:
@@ -253,4 +260,5 @@ app.include_router(router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)

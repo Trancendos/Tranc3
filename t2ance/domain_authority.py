@@ -31,36 +31,65 @@ class PrimeDomain(str, Enum):
 # Mapping: domain → entity IDs it governs
 DOMAIN_ENTITY_MAP: Dict[PrimeDomain, List[str]] = {
     PrimeDomain.ARCHITECTURAL: [
-        "the-spark", "the-digital-grid", "the-hive", "the-nexus",
-        "infinity", "luminous",
+        "the-spark",
+        "the-digital-grid",
+        "the-hive",
+        "the-nexus",
+        "infinity",
+        "luminous",
     ],
     PrimeDomain.COMMERCIAL: [
-        "royal-bank-of-arcadia", "arcadian-exchange", "chronossphere",
+        "royal-bank-of-arcadia",
+        "arcadian-exchange",
+        "chronossphere",
     ],
     PrimeDomain.CREATIVE: [
-        "the-studio", "sashas-photo-studio", "tranceflow", "tateking",
-        "fabulousa", "imaginarium", "warp-radio", "vrar3d",
+        "the-studio",
+        "sashas-photo-studio",
+        "tranceflow",
+        "tateking",
+        "fabulousa",
+        "imaginarium",
+        "warp-radio",
+        "vrar3d",
     ],
     PrimeDomain.DEVELOPMENT: [
-        "the-workshop", "the-lab", "think-tank", "the-artifactory",
-        "api-marketplace", "devocity", "the-chaos-party",
+        "the-workshop",
+        "the-lab",
+        "think-tank",
+        "the-artifactory",
+        "api-marketplace",
+        "devocity",
+        "the-chaos-party",
     ],
     PrimeDomain.KNOWLEDGE: [
-        "the-library", "the-academy", "docutari", "the-basement",
-        "turings-hub", "section-7",
+        "the-library",
+        "the-academy",
+        "docutari",
+        "the-basement",
+        "turings-hub",
+        "section-7",
     ],
     PrimeDomain.SECURITY: [
-        "cryptex", "the-void", "the-lighthouse", "the-ice-box",
+        "cryptex",
+        "the-void",
+        "the-lighthouse",
+        "the-ice-box",
         "the-warp-tunnel",
     ],
     PrimeDomain.WELLBEING: [
-        "tranquility", "imind", "resonate", "taimra",
+        "tranquility",
+        "imind",
+        "resonate",
+        "taimra",
     ],
     PrimeDomain.GOVERNANCE: [
-        "the-town-hall", "arcadia",
+        "the-town-hall",
+        "arcadia",
     ],
     PrimeDomain.OPERATIONS: [
-        "the-citadel", "the-observatory",
+        "the-citadel",
+        "the-observatory",
     ],
 }
 
@@ -94,30 +123,39 @@ class DomainPrime:
             domain=self.domain,
             decision_type="ROTATION",
             target_entity=entity_id,
-            rationale=reason if approved else f"Entity {entity_id} not under {self.domain.value} authority",
+            rationale=reason
+            if approved
+            else f"Entity {entity_id} not under {self.domain.value} authority",
             approved=approved,
         )
         self._decisions.append(decision)
         if approved:
             logger.info("%s approved rotation for %s: %s", self.domain.value, entity_id, reason)
         else:
-            logger.warning("%s denied rotation for %s (out of domain)", self.domain.value, entity_id)
+            logger.warning(
+                "%s denied rotation for %s (out of domain)", self.domain.value, entity_id
+            )
         return decision
 
     def escalate_to_sovereign(self, entity_id: str, issue: str) -> None:
         """Escalate unresolvable issue to Trance-One."""
         logger.warning(
             "%s escalating %s to Trance-One: %s",
-            self.domain.value, entity_id, issue,
+            self.domain.value,
+            entity_id,
+            issue,
         )
         try:
             from trance_one.tier_bridge import TierEvent, get_tier_bridge
-            get_tier_bridge().surface_event(TierEvent(
-                source_tier=2,
-                source_entity=entity_id,
-                event_type="PRIME_ESCALATION",
-                payload={"domain": self.domain.value, "issue": issue},
-            ))
+
+            get_tier_bridge().surface_event(
+                TierEvent(
+                    source_tier=2,
+                    source_entity=entity_id,
+                    event_type="PRIME_ESCALATION",
+                    payload={"domain": self.domain.value, "issue": issue},
+                )
+            )
         except ImportError:
             pass
 

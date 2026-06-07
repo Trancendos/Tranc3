@@ -18,15 +18,15 @@ Tests:
 from __future__ import annotations
 
 import sys
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
 
 def _make_dummy_onnx(tmp_path: Path) -> str:
     """Create a dummy .onnx file (content doesn't matter for fallback tests)."""
@@ -37,6 +37,7 @@ def _make_dummy_onnx(tmp_path: Path) -> str:
 
 def _fresh_module():
     import importlib
+
     for k in list(sys.modules):
         if "openvino_pipeline" in k:
             del sys.modules[k]
@@ -45,8 +46,10 @@ def _fresh_module():
 
 # ── numpy fallback (no openvino) ──────────────────────────────────────────────
 
+
 def test_numpy_fallback_backend(tmp_path):
     from src.core.openvino_pipeline import OpenVINOPipeline
+
     path = _make_dummy_onnx(tmp_path)
     pipeline = OpenVINOPipeline(path, force_fallback=True)
     assert pipeline.backend == "numpy_fallback"
@@ -54,6 +57,7 @@ def test_numpy_fallback_backend(tmp_path):
 
 def test_infer_returns_signals_key(tmp_path):
     from src.core.openvino_pipeline import OpenVINOPipeline
+
     path = _make_dummy_onnx(tmp_path)
     pipeline = OpenVINOPipeline(path, force_fallback=True)
     out = pipeline.infer({"features": np.array([0.5, 0.8, 0.2, 0.4], dtype=np.float32)})
@@ -62,6 +66,7 @@ def test_infer_returns_signals_key(tmp_path):
 
 def test_infer_output_shape(tmp_path):
     from src.core.openvino_pipeline import OpenVINOPipeline
+
     path = _make_dummy_onnx(tmp_path)
     pipeline = OpenVINOPipeline(path, force_fallback=True)
     out = pipeline.infer({"features": np.array([0.5, 0.8, 0.2, 0.4], dtype=np.float32)})
@@ -70,6 +75,7 @@ def test_infer_output_shape(tmp_path):
 
 def test_infer_output_bounded(tmp_path):
     from src.core.openvino_pipeline import OpenVINOPipeline
+
     path = _make_dummy_onnx(tmp_path)
     pipeline = OpenVINOPipeline(path, force_fallback=True)
     out = pipeline.infer({"features": np.array([1.0, -1.0, 0.5, 0.0], dtype=np.float32)})
@@ -78,6 +84,7 @@ def test_infer_output_bounded(tmp_path):
 
 def test_numpy_fallback_deterministic(tmp_path):
     from src.core.openvino_pipeline import OpenVINOPipeline
+
     path = _make_dummy_onnx(tmp_path)
     p1 = OpenVINOPipeline(path, force_fallback=True)
     p2 = OpenVINOPipeline(path, force_fallback=True)
@@ -89,6 +96,7 @@ def test_numpy_fallback_deterministic(tmp_path):
 
 def test_from_snn_model_convenience(tmp_path):
     from src.core.openvino_pipeline import OpenVINOPipeline
+
     path = _make_dummy_onnx(tmp_path)
     pipeline = OpenVINOPipeline.from_snn_model(path, force_fallback=True)
     assert pipeline.backend == "numpy_fallback"
@@ -96,12 +104,14 @@ def test_from_snn_model_convenience(tmp_path):
 
 def test_missing_model_file_raises():
     from src.core.openvino_pipeline import OpenVINOPipeline
+
     with pytest.raises(FileNotFoundError):
         OpenVINOPipeline("/nonexistent/path/model.onnx", force_fallback=True)
 
 
 def test_unsupported_extension_raises(tmp_path):
     from src.core.openvino_pipeline import OpenVINOPipeline
+
     bad_path = tmp_path / "model.pb"
     bad_path.write_bytes(b"fake")
     with pytest.raises(ValueError):
@@ -111,6 +121,7 @@ def test_unsupported_extension_raises(tmp_path):
 def test_infer_accepts_any_input_key(tmp_path):
     """Pipeline should accept any input key name (not just 'features')."""
     from src.core.openvino_pipeline import OpenVINOPipeline
+
     path = _make_dummy_onnx(tmp_path)
     pipeline = OpenVINOPipeline(path, force_fallback=True)
     out = pipeline.infer({"x": np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float32)})
@@ -118,6 +129,7 @@ def test_infer_accepts_any_input_key(tmp_path):
 
 
 # ── mocked OpenVINO path ──────────────────────────────────────────────────────
+
 
 def test_openvino_backend_selected_when_available(monkeypatch, tmp_path):
     """When openvino is importable, backend should be 'openvino'."""

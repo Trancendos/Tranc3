@@ -43,9 +43,7 @@ class AgentTask:
     description: str = ""
     priority: int = 5  # 0-10
     status: str = "pending"  # pending|running|completed|failed
-    created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     started_at: Optional[str] = None
     completed_at: Optional[str] = None
     result: Optional[str] = None
@@ -232,9 +230,7 @@ class AgentOrchestrator:
             )
             self._tasks[task.id] = task
             if task.status == "pending":
-                heapq.heappush(
-                    self._queue, (-task.priority, task.created_at, task.id)
-                )
+                heapq.heappush(self._queue, (-task.priority, task.created_at, task.id))
 
 
 # ── Module-level singleton ─────────────────────────────────────────────────────

@@ -152,12 +152,16 @@ class AIGateway:
         # 0. Capacity guard — check platform daily token budget
         try:
             from src.capacity.guard import CapacityService, get_capacity_guard
+
             _guard = get_capacity_guard()
-            _guard.consume(CapacityService.AI_TOKENS_DAILY, amount=0)  # peek — actual tokens consumed post-call
+            _guard.consume(
+                CapacityService.AI_TOKENS_DAILY, amount=0
+            )  # peek — actual tokens consumed post-call
             _guard.consume(CapacityService.PLATFORM_REQUESTS_HOURLY, amount=1)
             _guard.consume(CapacityService.PLATFORM_REQUESTS_DAILY, amount=1)
         except Exception as _cap_err:
             from src.capacity.guard import CapacityExceededError
+
             if isinstance(_cap_err, CapacityExceededError):
                 raise AIGatewayError("CAPACITY_EXCEEDED", str(_cap_err)) from _cap_err
             # Non-capacity errors in the guard must never block requests
@@ -242,11 +246,14 @@ class AIGateway:
                 # Capacity guard — record actual token consumption + per-provider requests
                 try:
                     from src.capacity.guard import CapacityService, get_capacity_guard
+
                     _g = get_capacity_guard()
                     if response.tokens_total:
                         _g.consume(CapacityService.AI_TOKENS_DAILY, amount=response.tokens_total)
                         if "cerebras" in route.provider.lower():
-                            _g.consume(CapacityService.CEREBRAS_TOKENS, amount=response.tokens_total)
+                            _g.consume(
+                                CapacityService.CEREBRAS_TOKENS, amount=response.tokens_total
+                            )
                     _provider = route.provider.lower()
                     if "groq" in _provider:
                         _g.consume(CapacityService.GROQ_REQUESTS, amount=1)

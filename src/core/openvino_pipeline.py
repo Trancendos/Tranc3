@@ -28,10 +28,8 @@ Usage::
 from __future__ import annotations
 
 import logging
-import math
-import os
 from pathlib import Path
-from typing import Dict, Optional, Sequence
+from typing import Dict
 
 import numpy as np
 
@@ -41,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from openvino.runtime import Core  # type: ignore[import]
+
     _USING_OV = True
     logger.debug("openvino_pipeline: OpenVINO runtime available")
 except ImportError:
@@ -55,6 +54,7 @@ _SUPPORTED_EXTENSIONS = {".onnx", ".xml"}
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
+
 def _validate_model_path(path: str) -> Path:
     p = Path(path)
     if not p.exists():
@@ -65,6 +65,7 @@ def _validate_model_path(path: str) -> Path:
 
 
 # ── OpenVINO pipeline ─────────────────────────────────────────────────────────
+
 
 class _OVPipeline:
     """OpenVINO-backed inference pipeline."""
@@ -81,11 +82,14 @@ class _OVPipeline:
 
     def infer(self, inputs: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
         self._infer_request.infer(inputs)
-        return {name: self._infer_request.get_output_tensor(i).data
-                for i, name in enumerate(self._output_names)}
+        return {
+            name: self._infer_request.get_output_tensor(i).data
+            for i, name in enumerate(self._output_names)
+        }
 
 
 # ── NumPy fallback pipeline ───────────────────────────────────────────────────
+
 
 class _NumpyFallbackPipeline:
     """
@@ -109,12 +113,13 @@ class _NumpyFallbackPipeline:
     def infer(self, inputs: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
         # Accept any key for the first (and only) input
         x = next(iter(inputs.values())).flatten().astype(np.float32)
-        h = np.maximum(0, self._w1 @ x + self._b1)   # ReLU
+        h = np.maximum(0, self._w1 @ x + self._b1)  # ReLU
         out = self._sigmoid(self._w2 @ h + self._b2)
         return {"signals": out}
 
 
 # ── public API ────────────────────────────────────────────────────────────────
+
 
 class OpenVINOPipeline:
     """
