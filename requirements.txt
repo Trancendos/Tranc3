@@ -78,6 +78,7 @@ urllib3==2.7.0
 # === Authentication & Password Hashing ===
 # bcrypt: password hashing — used by src/auth/ for stored credentials
 bcrypt==4.3.0
+pyotp==2.9.0
 # passlib: high-level password hashing API wrapping bcrypt
 passlib==1.7.4
 
@@ -93,7 +94,7 @@ psycopg2-binary==2.9.10
 # Fixes: CVE-2025-71176 (tempfile race condition)
 pytest==9.0.3
 # pytest-asyncio: async test support (marks @pytest.mark.asyncio)
-pytest-asyncio==0.26.0
+pytest-asyncio==1.4.0
 # httpx is already pinned above — TestClient uses it for async transport
 
 # === Graph / Flow Algorithms ===
