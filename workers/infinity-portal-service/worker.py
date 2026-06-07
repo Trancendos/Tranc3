@@ -1015,6 +1015,23 @@ async def portal_logout(request: Request):
     )
     db.commit()
 
+    # Revoke JWT at auth service so the token cannot be reused
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as _client:
+                _revoke_resp = await _client.post(
+                    f"{AUTH_SERVICE_URL}/auth/logout",
+                    headers={"Authorization": auth_header},
+                )
+                if _revoke_resp.status_code >= 400:
+                    logger.warning(
+                        "portal_logout: auth service returned %d when revoking JWT — token may still be active",
+                        _revoke_resp.status_code,
+                    )
+        except Exception:
+            logger.warning("portal_logout: could not reach auth service to revoke JWT")
+
     # Log event
     client_ip = request.client.host if request.client else "unknown"
     _log_portal_event(

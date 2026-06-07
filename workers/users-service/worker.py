@@ -21,6 +21,8 @@ Features:
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import logging
 import os
@@ -31,15 +33,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+import httpx
+from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr, Field
 
+from shared_core.sanitize import sanitize_for_log
 from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger("tranc3.workers.users-service")
 
 DATABASE_PATH = os.environ.get("USERS_DATABASE_PATH", "/data/users.db")
+NOTIFICATIONS_URL = os.environ.get("NOTIFICATIONS_SERVICE_URL", "http://localhost:8008")
 
 # ---------------------------------------------------------------------------
 # Pydantic models
@@ -109,6 +115,30 @@ class RoleUpdateRequest(BaseModel):
     role: str = Field(pattern=r"^(user|admin|moderator)$")
 
 
+class ConsentUpdate(BaseModel):
+    """GDPR Art. 6/7 — explicit, granular consent flags."""
+    analytics: Optional[bool] = None
+    marketing_email: Optional[bool] = None
+    marketing_sms: Optional[bool] = None
+    data_sharing: Optional[bool] = None
+    personalisation: Optional[bool] = None
+    extra: Optional[dict] = Field(default=None)
+
+
+class ConsentRecord(BaseModel):
+    user_id: str
+    analytics: bool = False
+    marketing_email: bool = False
+    marketing_sms: bool = False
+    data_sharing: bool = False
+    personalisation: bool = False
+    extra: dict = Field(default_factory=dict)
+    consented_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
@@ -124,6 +154,19 @@ class UsersDatabase:
         self._conn = sqlite3_connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript("""
+            CREATE TABLE IF NOT EXISTS consent (
+                user_id          TEXT PRIMARY KEY,
+                analytics        INTEGER DEFAULT 0,
+                marketing_email  INTEGER DEFAULT 0,
+                marketing_sms    INTEGER DEFAULT 0,
+                data_sharing     INTEGER DEFAULT 0,
+                personalisation  INTEGER DEFAULT 0,
+                extra            TEXT DEFAULT '{}',
+                consented_at     TEXT,
+                updated_at       TEXT,
+                ip_address       TEXT,
+                user_agent       TEXT
+            );
             CREATE TABLE IF NOT EXISTS users (
                 user_id       TEXT PRIMARY KEY,
                 username      TEXT UNIQUE NOT NULL,
@@ -213,6 +256,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 db = UsersDatabase()
+
+# Shared async HTTP client — created once at startup, closed at shutdown.
+_http_client: httpx.AsyncClient | None = None
+
+
+@app.on_event("startup")
+async def _startup() -> None:
+    global _http_client
+    _http_client = httpx.AsyncClient(timeout=5.0)
+
+
+@app.on_event("shutdown")
+async def _shutdown() -> None:
+    if _http_client:
+        await _http_client.aclose()
 
 
 # ---------------------------------------------------------------------------
@@ -483,17 +541,49 @@ async def update_role(user_id: str, body: RoleUpdateRequest):
     return _row_to_response(row)
 
 
+async def _dispatch_reset_email(user_id: str, email: str, token: str) -> None:
+    """Fire-and-forget: ask notifications-service to send the password-reset email."""
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    reset_link = f"{frontend_url}/reset-password?token={token}"
+    payload = {
+        "user_id": user_id,
+        "channel": "email",
+        "priority": "high",
+        "subject": "Reset your Trancendos password",
+        "body": (
+            f"You requested a password reset.\n\n"
+            f"Click the link below to choose a new password (expires in 1 hour):\n\n"
+            f"{reset_link}\n\n"
+            f"If you did not request this, you can safely ignore this email."
+        ),
+        "metadata": {"user_id": user_id},
+    }
+    try:
+        if _http_client is not None:
+            resp = await _http_client.post(f"{NOTIFICATIONS_URL}/notifications/send", json=payload)
+        else:
+            async with httpx.AsyncClient(timeout=5.0) as _fallback:
+                resp = await _fallback.post(f"{NOTIFICATIONS_URL}/notifications/send", json=payload)
+        if resp.status_code not in (200, 201):
+            logger.warning(
+                "notifications-service returned %s for reset email user=%s",
+                resp.status_code, sanitize_for_log(user_id),
+            )
+    except Exception:
+        logger.exception("Failed to dispatch reset email for user=%s", sanitize_for_log(user_id))
+
+
 @_router.post("/users/password-reset/request", response_model=PasswordResetResponse)
-async def request_password_reset(body: PasswordResetRequest):
-    """Stub: generate a password-reset token (not emailed; use notifications-service)."""
+async def request_password_reset(body: PasswordResetRequest, background_tasks: BackgroundTasks):
+    """Generate a password-reset token and dispatch a reset email via notifications-service."""
     row = db.execute(
         "SELECT * FROM users WHERE email = ? AND is_active = 1",
         (str(body.email),),
     ).fetchone()
     if not row:
-        # Don't leak user existence
+        # Don't leak user existence — respond identically for unknown emails
         return PasswordResetResponse(
-            message="If that email is registered, a reset link has been generated.",
+            message="If that email is registered, a reset link has been sent.",
             reset_token="",
         )
     token = str(uuid.uuid4())
@@ -503,9 +593,10 @@ async def request_password_reset(body: PasswordResetRequest):
         (token, row["user_id"], str(body.email), now),
     )
     db.commit()
+    background_tasks.add_task(_dispatch_reset_email, row["user_id"], str(body.email), token)
     return PasswordResetResponse(
-        message="Password reset token generated.",
-        reset_token=token,
+        message="If that email is registered, a reset link has been sent.",
+        reset_token="",
     )
 
 
@@ -539,6 +630,239 @@ async def roles_summary():
         "SELECT role, COUNT(*) as count FROM users WHERE is_active = 1 GROUP BY role",
     ).fetchall()
     return {"roles": {row["role"]: row["count"] for row in rows}}
+
+
+# ── GDPR Endpoints (Art. 15/17/20) ───────────────────────────────────────────
+
+_SAR_PII_FIELDS = [
+    "user_id", "username", "email", "display_name", "bio", "avatar_url",
+    "timezone", "role", "preferences", "created_at", "updated_at", "last_login",
+]
+
+
+@_router.get("/users/{user_id}/data-export")
+async def gdpr_data_export(
+    user_id: str,
+    format: str = Query(default="json", pattern="^(json|csv)$"),
+    x_caller_user_id: Optional[str] = Header(default=None),
+    x_caller_role: Optional[str] = Header(default=None),
+):
+    """GDPR Art. 15 & 20 — Subject Access Request data export."""
+    if x_caller_user_id != user_id and x_caller_role != "admin":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    row = db.execute(
+        f"SELECT {', '.join(_SAR_PII_FIELDS)} FROM users WHERE user_id = ?",
+        (user_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    subject = {k: db._dec_row(row).get(k) for k in _SAR_PII_FIELDS}
+    subject["preferences"] = json.loads(subject.get("preferences") or "{}")
+
+    consent_row = db.execute("SELECT * FROM consent WHERE user_id = ?", (user_id,)).fetchone()
+    subject["consent"] = dict(consent_row) if consent_row else {}
+
+    logger.info(
+        "GDPR SAR export: user_id=%s requested_by=%s format=%s",
+        sanitize_for_log(user_id),
+        sanitize_for_log(x_caller_user_id or "unknown"),
+        format,
+    )
+
+    if format == "csv":
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=_SAR_PII_FIELDS)
+        writer.writeheader()
+        # Prefix cells starting with formula characters to prevent CSV injection
+        csv_row = {}
+        for k, v in subject.items():
+            if k == "consent":
+                continue
+            sv = json.dumps(v) if isinstance(v, (dict, list)) else str(v or "")
+            csv_row[k] = ("'" + sv) if sv and sv[0] in ("=", "+", "-", "@", "\t", "\r") else sv
+        writer.writerow(csv_row)
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="data-export-{user_id}.csv"'},
+        )
+
+    return {
+        "subject": subject,
+        "export_metadata": {
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "format": "json",
+            "gdpr_article": "Art. 15 & 20 GDPR",
+            "data_controller": "Trancendos",
+        },
+    }
+
+
+@_router.delete("/users/{user_id}/data")
+async def gdpr_erase_user(
+    user_id: str,
+    x_caller_role: Optional[str] = Header(default=None),
+):
+    """GDPR Art. 17 — Right to erasure (soft-delete PII)."""
+    if x_caller_role != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+
+    row = db.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    now = datetime.now(timezone.utc).isoformat()
+    db.execute(
+        """UPDATE users SET
+            username = ?, email = ?, display_name = ?, bio = ?,
+            avatar_url = ?, preferences = '{}', is_active = 0,
+            updated_at = ?
+           WHERE user_id = ?""",
+        (
+            f"deleted_user_{user_id[:8]}",
+            f"deleted_{user_id}@deleted.invalid",  # unique per user — prevents UNIQUE violation
+            "",
+            "",
+            "",
+            now,
+            user_id,
+        ),
+    )
+    db.commit()
+    # Reset consent on erasure
+    db.execute(
+        """INSERT INTO consent (user_id, analytics, marketing_email, marketing_sms,
+                data_sharing, personalisation, extra, updated_at)
+           VALUES (?,0,0,0,0,0,'{}',?)
+           ON CONFLICT(user_id) DO UPDATE SET
+               analytics=0, marketing_email=0, marketing_sms=0,
+               data_sharing=0, personalisation=0, updated_at=excluded.updated_at""",
+        (user_id, now),
+    )
+    db.commit()
+    logger.info("GDPR Art. 17 erasure: user_id=%s erased_by_admin", sanitize_for_log(user_id))
+    return {"deleted": True, "user_id": user_id, "gdpr_article": "Art. 17 GDPR"}
+
+
+# ── Consent Endpoints (GDPR Art. 6/7) ────────────────────────────────────────
+
+
+@_router.get("/users/{user_id}/consent", response_model=ConsentRecord)
+async def get_consent(user_id: str):
+    """Return current GDPR consent flags for a user."""
+    user_row = db.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if not user_row:
+        raise HTTPException(status_code=404, detail="User not found")
+    row = db.execute("SELECT * FROM consent WHERE user_id = ?", (user_id,)).fetchone()
+    if not row:
+        return ConsentRecord(user_id=user_id)
+    extra_val = row["extra"]
+    try:
+        extra_val = json.loads(extra_val) if isinstance(extra_val, str) else (extra_val or {})
+    except Exception:
+        extra_val = {}
+    return ConsentRecord(
+        user_id=user_id,
+        analytics=bool(row["analytics"]),
+        marketing_email=bool(row["marketing_email"]),
+        marketing_sms=bool(row["marketing_sms"]),
+        data_sharing=bool(row["data_sharing"]),
+        personalisation=bool(row["personalisation"]),
+        extra=extra_val,
+        consented_at=row["consented_at"],
+        updated_at=row["updated_at"],
+        ip_address=row["ip_address"],
+        user_agent=row["user_agent"],
+    )
+
+
+@_router.post("/users/{user_id}/consent", response_model=ConsentRecord)
+async def upsert_consent(
+    user_id: str,
+    body: ConsentUpdate,
+    x_forwarded_for: Optional[str] = Header(default=None, alias="X-Forwarded-For"),
+    user_agent: Optional[str] = Header(default=None, alias="User-Agent"),
+):
+    """Set or update GDPR consent flags (merge — existing flags unchanged unless specified)."""
+    user_row = db.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if not user_row:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    now = datetime.now(timezone.utc).isoformat()
+    existing = db.execute("SELECT * FROM consent WHERE user_id = ?", (user_id,)).fetchone()
+
+    if existing:
+        updates: dict = {"updated_at": now}
+        if body.analytics is not None:
+            updates["analytics"] = 1 if body.analytics else 0
+        if body.marketing_email is not None:
+            updates["marketing_email"] = 1 if body.marketing_email else 0
+        if body.marketing_sms is not None:
+            updates["marketing_sms"] = 1 if body.marketing_sms else 0
+        if body.data_sharing is not None:
+            updates["data_sharing"] = 1 if body.data_sharing else 0
+        if body.personalisation is not None:
+            updates["personalisation"] = 1 if body.personalisation else 0
+        if body.extra is not None:
+            try:
+                old_extra = json.loads(existing["extra"]) if existing["extra"] else {}
+            except Exception:
+                old_extra = {}
+            updates["extra"] = json.dumps({**old_extra, **body.extra})
+        if x_forwarded_for:
+            updates["ip_address"] = x_forwarded_for.split(",")[0].strip()
+        if user_agent:
+            updates["user_agent"] = user_agent
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        db.execute(
+            f"UPDATE consent SET {set_clause} WHERE user_id = ?",
+            (*updates.values(), user_id),
+        )
+    else:
+        db.execute(
+            """INSERT INTO consent
+               (user_id, analytics, marketing_email, marketing_sms, data_sharing,
+                personalisation, extra, consented_at, updated_at, ip_address, user_agent)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                user_id,
+                1 if body.analytics else 0,
+                1 if body.marketing_email else 0,
+                1 if body.marketing_sms else 0,
+                1 if body.data_sharing else 0,
+                1 if body.personalisation else 0,
+                json.dumps(body.extra or {}),
+                now,
+                now,
+                x_forwarded_for.split(",")[0].strip() if x_forwarded_for else None,
+                user_agent,
+            ),
+        )
+    db.commit()
+    return await get_consent(user_id)
+
+
+@_router.delete("/users/{user_id}/consent")
+async def withdraw_consent(user_id: str):
+    """Withdraw all GDPR consent (sets all flags to False, GDPR Art. 7(3))."""
+    user_row = db.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if not user_row:
+        raise HTTPException(status_code=404, detail="User not found")
+    now = datetime.now(timezone.utc).isoformat()
+    db.execute(
+        """INSERT INTO consent (user_id, analytics, marketing_email, marketing_sms,
+                data_sharing, personalisation, extra, updated_at)
+           VALUES (?,0,0,0,0,0,'{}',?)
+           ON CONFLICT(user_id) DO UPDATE SET
+               analytics=0, marketing_email=0, marketing_sms=0,
+               data_sharing=0, personalisation=0, updated_at=excluded.updated_at""",
+        (user_id, now),
+    )
+    db.commit()
+    return {"message": "All consent withdrawn", "user_id": user_id, "withdrawn_at": now}
 
 
 app.include_router(_router)

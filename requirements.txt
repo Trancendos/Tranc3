@@ -130,11 +130,20 @@ cachetools==5.5.0
 #   15MB binary, 1M+ msg/s, replaces SQLite queue for high-volume paths
 nats-py==2.7.2
 
-# === Redis Client ===
+# === Redis/Valkey Client ===
 # redis: Used by api.py, src/core/redis_store.py, src/core/feature_flags.py,
 #   src/security/security_framework.py, src/mcp/tools.py for caching, session
 #   management, pub/sub, and feature flag evaluation. Also used by tranc3-bots.
+#   Production target: self-hosted Valkey (Redis-compatible, BSD-3, zero cost).
+#   docker-compose.production.yml runs Valkey on port 6379.
 redis==7.4.0
+
+# === Vector DB Client ===
+# qdrant-client: Self-hosted Qdrant vector database (Apache 2.0, zero cost).
+#   Replaces Pinecone (paid). docker-compose.production.yml runs Qdrant on port 6333.
+#   Used by src/database/vector_store.py (primary backend) and
+#   src/knowledge/qdrant_store.py (knowledge/RAG layer).
+qdrant-client==1.14.3
 
 # === Master Worker / BotSwarm / Task Orchestration ===
 # pyyaml: YAML task definition parsing — powers src/master/task_loader.py
