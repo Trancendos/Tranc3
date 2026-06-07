@@ -13,3 +13,6 @@
 ## 2026-06-05 - Icon-only Controls Navigation
 **Learning:** The Trancendos dashboard (master OS) contains a lot of dense operational metrics and several icon-only control buttons (e.g. settings, notifications, refresh, close panels) that lack critical accessibility context. It also has complex sidebar navigation elements that rely purely on visual hover cues rather than explicit focus states.
 **Action:** Audit and add explicit `aria-label` attributes to all icon-only interactions and ensure uniform keyboard navigation by applying `focus-visible:ring-2 focus-visible:ring-blue-500` to them so they are accessible and visually noticeable during tabbed navigation.
+## 2026-06-07 - Added focus-visible classes to Spark Dashboard
+**Learning:** Adding focus-visible classes to custom elements such as interactive tabs and buttons provides improved visual cues for keyboard navigation without relying on inline styling adjustments.
+**Action:** Always include focus-visible utility classes when writing custom, styled interactive elements to ensure full keyboard navigation support and WCAG compliance.

@@ -398,6 +398,7 @@ export default function SparkDashboard() {
                 tabIndex={activeTab === tab ? 0 : -1}
                 onClick={() => setActiveTab(tab)}
                 onKeyDown={(e) => handleTabKeyDown(e, tab)}
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-900"
                 style={{
                   background: activeTab === tab ? C.primaryGhost : "transparent",
                   border: `1px solid ${activeTab === tab ? C.primary : "transparent"}`,
@@ -479,6 +480,7 @@ export default function SparkDashboard() {
             disabled={bundlePulse}
             aria-busy={bundlePulse}
             aria-describedby={bundleStatusId}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-900"
             style={{
               background: bundlePulse
                 ? `linear-gradient(135deg, ${C.accent}, #F7BC4E)`
