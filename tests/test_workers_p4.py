@@ -77,8 +77,9 @@ class TestVaultService:
         r = client.get("/health")
         assert r.status_code == 200
         d = r.json()
-        assert d["status"] == "ok"
+        assert d["status"] == "deprecated"
         assert d["service"] == "vault-service"
+        assert "successor" in d
 
     def test_create_and_get_secret(self, client):
         r = client.post(

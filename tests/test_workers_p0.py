@@ -310,7 +310,7 @@ class TestAuthPasswordHashing:
     def test_hash_password_returns_string(self):
         hashed = auth_mod.hash_password("testpassword123")
         assert isinstance(hashed, str)
-        assert ":" in hashed  # salt:hash format
+        assert hashed.startswith("$2")  # bcrypt format
 
     def test_hash_password_different_salts(self):
         h1 = auth_mod.hash_password("samepassword")

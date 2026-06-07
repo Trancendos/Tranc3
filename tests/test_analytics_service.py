@@ -10,7 +10,6 @@ import os
 import pytest
 
 os.environ.setdefault("ENVIRONMENT", "test")
-os.environ.setdefault("INTERNAL_SECRET", "")  # auth disabled in tests
 
 
 @pytest.fixture(scope="module")
@@ -23,6 +22,11 @@ def client(tmp_path_factory):
     tmp = tmp_path_factory.mktemp("analytics_data")
     os.environ["ANALYTICS_DATA_DIR"] = str(tmp)
     os.environ["ANALYTICS_ARCHIVE_AFTER_DAYS"] = "1"
+    os.environ["INTERNAL_SECRET"] = ""  # disable internal auth for analytics worker tests
+
+    tranc3_root = Path(__file__).resolve().parent.parent
+    if str(tranc3_root) not in sys.path:
+        sys.path.insert(0, str(tranc3_root))
 
     # The worker directory is named "analytics-service" (hyphen) which is not
     # a valid Python package name, so we load it via importlib from its path.
@@ -37,22 +41,33 @@ def client(tmp_path_factory):
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
 
-    # Replace the encrypted_sqlite module so that the worker's top-level import
-    # `from src.database.encrypted_sqlite import connect as sqlite3_connect`
-    # resolves to plain sqlite3.connect instead of the encrypted backend.
+    # Use plain sqlite3.connect for analytics tests without permanently stubbing
+    # encrypted_sqlite (other suites import _derive_key from the real module).
+    import importlib
     import types as _types
 
+    importlib.import_module("src")
+    importlib.import_module("src.database")
+    real_enc = importlib.import_module("src.database.encrypted_sqlite")
+    original_enc = sys.modules.get("src.database.encrypted_sqlite")
     fake_enc = _types.ModuleType("src.database.encrypted_sqlite")
     fake_enc.connect = lambda p, **kw: sqlite3.connect(p, **kw)  # type: ignore[attr-defined]
-    sys.modules.setdefault("src", _types.ModuleType("src"))
-    sys.modules.setdefault("src.database", _types.ModuleType("src.database"))
+    fake_enc._derive_key = real_enc._derive_key
     sys.modules["src.database.encrypted_sqlite"] = fake_enc
 
-    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    try:
+        spec.loader.exec_module(module)  # type: ignore[union-attr]
+        module.init_db()
 
-    from fastapi.testclient import TestClient
+        from fastapi.testclient import TestClient
 
-    yield TestClient(module.app, raise_server_exceptions=True)
+        with TestClient(module.app, raise_server_exceptions=True) as test_client:
+            yield test_client
+    finally:
+        if original_enc is not None:
+            sys.modules["src.database.encrypted_sqlite"] = original_enc
+        else:
+            sys.modules["src.database.encrypted_sqlite"] = real_enc
 
 
 # ── Health ────────────────────────────────────────────────────────────────────

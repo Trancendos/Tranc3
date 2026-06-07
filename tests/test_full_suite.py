@@ -78,7 +78,7 @@ class TestErrorCatalog:
     def test_error_http_statuses_valid(self):
         from src.errors.error_catalog import CATALOG
 
-        valid_statuses = {200, 400, 401, 403, 404, 422, 429, 500, 503}
+        valid_statuses = {200, 400, 401, 403, 404, 409, 422, 429, 500, 503, 504}
         for code, defn in CATALOG.items():
             assert defn.http_status in valid_statuses, (
                 f"{code} has invalid HTTP status {defn.http_status}"

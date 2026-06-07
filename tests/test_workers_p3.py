@@ -130,7 +130,7 @@ class TestAnalyticsService:
         assert r.status_code == 200
         data = r.json()
         assert data["status"] == "healthy"
-        assert "event_count" in data
+        assert "live_events" in data
 
     def test_track_event(self, client):
         r = client.post(
@@ -212,7 +212,7 @@ class TestAnalyticsService:
         r = client.get("/summary")
         assert r.status_code == 200
         data = r.json()
-        assert "total_events" in data
+        assert "live_events" in data
 
 
 # ===========================================================================
@@ -1733,7 +1733,9 @@ class TestEnhancedUsersService:
         assert r.status_code == 200
         data = r.json()
         assert "reset_token" in data
-        assert len(data["reset_token"]) > 0
+        # Token is emailed via notifications-service; API no longer returns it.
+        assert data["reset_token"] == ""
+        assert "reset link" in data["message"].lower()
 
     def test_password_reset_unknown_email(self, client):
         r = client.post(
