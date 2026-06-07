@@ -144,11 +144,11 @@
 
 | Category | Total | ✅ Implemented | ⚠️ Partial/Planned | ❌ N/A |
 |----------|-------|---------------|-------------------|--------|
-| Clause 5 (Organisational) | 37 | 12 | 23 | 2 |
+| Clause 5 (Organisational) | 37 | 13 | 22 | 2 |
 | Clause 6 (People) | 8 | 2 | 6 | 0 |
 | Clause 7 (Physical) | 14 | 0 | 0 | 14 |
-| Clause 8 (Technological) | 34 | 21 | 11 | 2 |
-| **Total** | **93** | **35** | **40** | **18** |
+| Clause 8 (Technological) | 34 | 24 | 9 | 1 |
+| **Total** | **93** | **39** | **37** | **17** |
 
 ---
 

@@ -118,7 +118,6 @@ async def export_html() -> HTMLResponse:
 
 from src.compliance.ai_governance import (  # noqa: E402
     MODEL_REGISTRY,
-    AIIncident,
     IncidentSeverity,
     classify_risk,
     generate_fairness_report,

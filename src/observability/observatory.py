@@ -15,8 +15,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import sqlite3
+import threading
 import time
 import uuid
 from collections import deque
@@ -127,6 +129,7 @@ class Observatory:
         self._write_queue: Optional[asyncio.Queue] = None
         self._writer_task: Optional[asyncio.Task] = None
         self._unflushed: List[AuditEvent] = []
+        self._unflushed_lock = threading.Lock()
         self._flush_task: Optional[asyncio.Task] = None
         self._db_conn: Optional[sqlite3.Connection] = None
 
@@ -160,7 +163,8 @@ class Observatory:
             session_id=session_id,
         )
         self._buffer.append(event)
-        self._unflushed.append(event)
+        with self._unflushed_lock:
+            self._unflushed.append(event)
         logger.debug(  # codeql[py/cleartext-logging]
             "observatory: %s actor=%s target=%s outcome=%s",
             sanitize_for_log(event_type),
@@ -240,10 +244,11 @@ class Observatory:
 
     def flush_to_db(self) -> int:
         """Write pending events to SQLite. Returns number of events flushed."""
-        if not self._unflushed:
-            return 0
-        batch = self._unflushed[:]
-        self._unflushed.clear()
+        with self._unflushed_lock:
+            if not self._unflushed:
+                return 0
+            batch = self._unflushed[:]
+            self._unflushed.clear()
         try:
             conn = self._get_db()
             conn.executemany(
@@ -256,7 +261,7 @@ class Observatory:
                         e.id, e.timestamp, e.event_type, e.category.value,
                         e.severity.value, e.actor, e.actor_ip, e.target,
                         e.service, e.location, e.outcome,
-                        __import__("json").dumps(e.metadata), e.session_id,
+                        json.dumps(e.metadata), e.session_id,
                     )
                     for e in batch
                 ],
@@ -265,7 +270,8 @@ class Observatory:
             return len(batch)
         except Exception:
             logger.exception("observatory: flush_to_db failed — re-queuing %d events", len(batch))
-            self._unflushed[:0] = batch  # prepend back
+            with self._unflushed_lock:
+                self._unflushed[:0] = batch  # prepend back
             return 0
 
     def purge_old_events(self) -> int:
@@ -289,12 +295,12 @@ class Observatory:
             while True:
                 await asyncio.sleep(_FLUSH_INTERVAL)
                 try:
-                    flushed = self.flush_to_db()
+                    flushed = await asyncio.to_thread(self.flush_to_db)
                     if flushed:
                         logger.debug("observatory: flushed %d events to audit DB", flushed)
                     # Hourly purge (every ~60 flush cycles)
                     if int(time.time()) % 3600 < _FLUSH_INTERVAL:
-                        purged = self.purge_old_events()
+                        purged = await asyncio.to_thread(self.purge_old_events)
                         if purged:
                             logger.info(
                                 "observatory: purged %d events older than %d days",
@@ -316,6 +322,9 @@ class Observatory:
             except asyncio.CancelledError:
                 pass
         self.flush_to_db()
+        if self._db_conn:
+            self._db_conn.close()
+            self._db_conn = None
 
     def stats(self) -> Dict[str, Any]:
         """Return summary statistics about the event buffer."""

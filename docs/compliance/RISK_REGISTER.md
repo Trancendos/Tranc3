@@ -78,7 +78,7 @@
 | **Controls** | Parameterised queries throughout; Pydantic input validation; `test_penetration.py` OWASP suite; bandit SAST |
 | **Residual Likelihood** | 1 (Rare) |
 | **Residual Impact** | 4 (Major) |
-| **Residual Risk** | **Low (4)** |
+| **Residual Risk** | **Medium (4)** |
 | **Owner** | Engineering Lead |
 | **Treatment** | Reduce |
 | **Review Date** | 2026-12-07 |
@@ -99,7 +99,7 @@
 | **Controls** | Observatory audit log; GDPR SAR/erasure endpoints; consent management; 90-day retention policy; ICO registration pending |
 | **Residual Likelihood** | 2 (Unlikely) |
 | **Residual Impact** | 4 (Major) |
-| **Residual Risk** | **Medium (8)** |
+| **Residual Risk** | **High (8)** |
 | **Owner** | ISMS Lead |
 | **Treatment** | Reduce — complete ICO registration; document breach response procedure |
 | **Review Date** | 2026-09-07 |
@@ -141,7 +141,7 @@
 | **Controls** | Exact-pinned requirements (no `>=`); weekly pip-audit + safety scan; hash verification planned; Forgejo dependency audit workflow |
 | **Residual Likelihood** | 1 (Rare) |
 | **Residual Impact** | 4 (Major) |
-| **Residual Risk** | **Low (4)** |
+| **Residual Risk** | **Medium (4)** |
 | **Owner** | Engineering Lead |
 | **Treatment** | Reduce |
 | **Review Date** | 2026-12-07 |
@@ -158,11 +158,11 @@
 | **Vulnerability** | Admin roles with broad access |
 | **Likelihood** | 2 (Unlikely) |
 | **Impact** | 4 (Major) |
-| **Inherent Risk** | **Medium (8)** |
+| **Inherent Risk** | **High (8)** |
 | **Controls** | Observatory audit trail for all admin actions; RBAC separation; MFA for admin; Forgejo branch protection prevents unreviewed changes |
 | **Residual Likelihood** | 1 (Rare) |
 | **Residual Impact** | 4 (Major) |
-| **Residual Risk** | **Low (4)** |
+| **Residual Risk** | **Medium (4)** |
 | **Owner** | ISMS Lead |
 | **Treatment** | Reduce |
 | **Review Date** | 2026-12-07 |
@@ -200,7 +200,7 @@
 | **Vulnerability** | SQLite files on single Docker volumes without off-site replication |
 | **Likelihood** | 2 (Unlikely) |
 | **Impact** | 4 (Major) |
-| **Inherent Risk** | **Medium (8)** |
+| **Inherent Risk** | **High (8)** |
 | **Controls** | WAL mode on all SQLite DBs; Docker volume mounts; Fly.io encrypted volumes; IPFS for content; backup schedule pending |
 | **Residual Likelihood** | 2 (Unlikely) |
 | **Residual Impact** | 3 (Moderate) |
@@ -238,13 +238,13 @@
 |---------|-------|----------|----------|
 | R-001 | Credential / Secret Exposure | Critical | Medium |
 | R-002 | JWT Compromise | High | Medium |
-| R-003 | SQL Injection | High | Low |
-| R-004 | GDPR Compliance Failure | High | Medium |
+| R-003 | SQL Injection | High | Medium |
+| R-004 | GDPR Compliance Failure | High | High |
 | R-005 | Denial of Service | High | Medium |
-| R-006 | Supply Chain Compromise | High | Low |
-| R-007 | Insider Threat | Medium | Low |
+| R-006 | Supply Chain Compromise | High | Medium |
+| R-007 | Insider Threat | High | Medium |
 | R-008 | AI Bias / Harmful Output | High | Medium |
-| R-009 | Data Loss | Medium | Medium |
+| R-009 | Data Loss | High | Medium |
 | R-010 | Infrastructure Misconfiguration | High | Medium |
 
 ---

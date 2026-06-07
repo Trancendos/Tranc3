@@ -567,10 +567,10 @@ async def _dispatch_reset_email(user_id: str, email: str, token: str) -> None:
         if resp.status_code not in (200, 201):
             logger.warning(
                 "notifications-service returned %s for reset email user=%s",
-                resp.status_code, user_id,
+                resp.status_code, sanitize_for_log(user_id),
             )
     except Exception:
-        logger.exception("Failed to dispatch reset email for user=%s", user_id)
+        logger.exception("Failed to dispatch reset email for user=%s", sanitize_for_log(user_id))
 
 
 @_router.post("/users/password-reset/request", response_model=PasswordResetResponse)
