@@ -1,5 +1,5 @@
 # TRANC3 — Python Dependencies
-# Updated: 2026-05 — CVE Remediation & Security Hardening
+# Updated: 2026-06-07 — CVE Remediation & Security Hardening
 # All versions EXACT-PINNED for security and reproducibility
 # Do NOT use >= or ~= — exact pins prevent supply-chain drift
 
