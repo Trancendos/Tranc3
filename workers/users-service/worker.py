@@ -115,6 +115,30 @@ class RoleUpdateRequest(BaseModel):
     role: str = Field(pattern=r"^(user|admin|moderator)$")
 
 
+class ConsentUpdate(BaseModel):
+    """GDPR Art. 6/7 — explicit, granular consent flags."""
+    analytics: Optional[bool] = None
+    marketing_email: Optional[bool] = None
+    marketing_sms: Optional[bool] = None
+    data_sharing: Optional[bool] = None
+    personalisation: Optional[bool] = None
+    extra: Optional[dict] = Field(default=None)
+
+
+class ConsentRecord(BaseModel):
+    user_id: str
+    analytics: bool = False
+    marketing_email: bool = False
+    marketing_sms: bool = False
+    data_sharing: bool = False
+    personalisation: bool = False
+    extra: dict = Field(default_factory=dict)
+    consented_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
@@ -130,6 +154,19 @@ class UsersDatabase:
         self._conn = sqlite3_connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript("""
+            CREATE TABLE IF NOT EXISTS consent (
+                user_id          TEXT PRIMARY KEY,
+                analytics        INTEGER DEFAULT 0,
+                marketing_email  INTEGER DEFAULT 0,
+                marketing_sms    INTEGER DEFAULT 0,
+                data_sharing     INTEGER DEFAULT 0,
+                personalisation  INTEGER DEFAULT 0,
+                extra            TEXT DEFAULT '{}',
+                consented_at     TEXT,
+                updated_at       TEXT,
+                ip_address       TEXT,
+                user_agent       TEXT
+            );
             CREATE TABLE IF NOT EXISTS users (
                 user_id       TEXT PRIMARY KEY,
                 username      TEXT UNIQUE NOT NULL,
@@ -611,7 +648,6 @@ async def gdpr_data_export(
     x_caller_role: Optional[str] = Header(default=None),
 ):
     """GDPR Art. 15 & 20 — Subject Access Request data export."""
-    # Authorization: caller must be the subject or an admin
     if x_caller_user_id != user_id and x_caller_role != "admin":
         raise HTTPException(status_code=403, detail="Access denied")
 
@@ -625,6 +661,9 @@ async def gdpr_data_export(
     subject = {k: db._dec_row(row).get(k) for k in _SAR_PII_FIELDS}
     subject["preferences"] = json.loads(subject.get("preferences") or "{}")
 
+    consent_row = db.execute("SELECT * FROM consent WHERE user_id = ?", (user_id,)).fetchone()
+    subject["consent"] = dict(consent_row) if consent_row else {}
+
     logger.info(
         "GDPR SAR export: user_id=%s requested_by=%s format=%s",
         sanitize_for_log(user_id),
@@ -636,7 +675,13 @@ async def gdpr_data_export(
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=_SAR_PII_FIELDS)
         writer.writeheader()
-        csv_row = {**subject, "preferences": json.dumps(subject["preferences"])}
+        # Prefix cells starting with formula characters to prevent CSV injection
+        csv_row = {}
+        for k, v in subject.items():
+            if k == "consent":
+                continue
+            sv = json.dumps(v) if isinstance(v, (dict, list)) else str(v or "")
+            csv_row[k] = ("'" + sv) if sv and sv[0] in ("=", "+", "-", "@", "\t", "\r") else sv
         writer.writerow(csv_row)
         output.seek(0)
         return StreamingResponse(
@@ -669,6 +714,7 @@ async def gdpr_erase_user(
     if not row:
         raise HTTPException(status_code=404, detail="User not found")
 
+    now = datetime.now(timezone.utc).isoformat()
     db.execute(
         """UPDATE users SET
             username = ?, email = ?, display_name = ?, bio = ?,
@@ -677,16 +723,146 @@ async def gdpr_erase_user(
            WHERE user_id = ?""",
         (
             f"deleted_user_{user_id[:8]}",
-            "deleted@deleted",
+            f"deleted_{user_id}@deleted.invalid",  # unique per user — prevents UNIQUE violation
             "",
             "",
             "",
-            datetime.now(timezone.utc).isoformat(),
+            now,
             user_id,
         ),
     )
+    db.commit()
+    # Reset consent on erasure
+    db.execute(
+        """INSERT INTO consent (user_id, analytics, marketing_email, marketing_sms,
+                data_sharing, personalisation, extra, updated_at)
+           VALUES (?,0,0,0,0,0,'{}',?)
+           ON CONFLICT(user_id) DO UPDATE SET
+               analytics=0, marketing_email=0, marketing_sms=0,
+               data_sharing=0, personalisation=0, updated_at=excluded.updated_at""",
+        (user_id, now),
+    )
+    db.commit()
     logger.info("GDPR Art. 17 erasure: user_id=%s erased_by_admin", sanitize_for_log(user_id))
     return {"deleted": True, "user_id": user_id, "gdpr_article": "Art. 17 GDPR"}
+
+
+# ── Consent Endpoints (GDPR Art. 6/7) ────────────────────────────────────────
+
+
+@_router.get("/users/{user_id}/consent", response_model=ConsentRecord)
+async def get_consent(user_id: str):
+    """Return current GDPR consent flags for a user."""
+    user_row = db.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if not user_row:
+        raise HTTPException(status_code=404, detail="User not found")
+    row = db.execute("SELECT * FROM consent WHERE user_id = ?", (user_id,)).fetchone()
+    if not row:
+        return ConsentRecord(user_id=user_id)
+    extra_val = row["extra"]
+    try:
+        extra_val = json.loads(extra_val) if isinstance(extra_val, str) else (extra_val or {})
+    except Exception:
+        extra_val = {}
+    return ConsentRecord(
+        user_id=user_id,
+        analytics=bool(row["analytics"]),
+        marketing_email=bool(row["marketing_email"]),
+        marketing_sms=bool(row["marketing_sms"]),
+        data_sharing=bool(row["data_sharing"]),
+        personalisation=bool(row["personalisation"]),
+        extra=extra_val,
+        consented_at=row["consented_at"],
+        updated_at=row["updated_at"],
+        ip_address=row["ip_address"],
+        user_agent=row["user_agent"],
+    )
+
+
+@_router.post("/users/{user_id}/consent", response_model=ConsentRecord)
+async def upsert_consent(
+    user_id: str,
+    body: ConsentUpdate,
+    x_forwarded_for: Optional[str] = Header(default=None, alias="X-Forwarded-For"),
+    user_agent: Optional[str] = Header(default=None, alias="User-Agent"),
+):
+    """Set or update GDPR consent flags (merge — existing flags unchanged unless specified)."""
+    user_row = db.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if not user_row:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    now = datetime.now(timezone.utc).isoformat()
+    existing = db.execute("SELECT * FROM consent WHERE user_id = ?", (user_id,)).fetchone()
+
+    if existing:
+        updates: dict = {"updated_at": now}
+        if body.analytics is not None:
+            updates["analytics"] = 1 if body.analytics else 0
+        if body.marketing_email is not None:
+            updates["marketing_email"] = 1 if body.marketing_email else 0
+        if body.marketing_sms is not None:
+            updates["marketing_sms"] = 1 if body.marketing_sms else 0
+        if body.data_sharing is not None:
+            updates["data_sharing"] = 1 if body.data_sharing else 0
+        if body.personalisation is not None:
+            updates["personalisation"] = 1 if body.personalisation else 0
+        if body.extra is not None:
+            try:
+                old_extra = json.loads(existing["extra"]) if existing["extra"] else {}
+            except Exception:
+                old_extra = {}
+            updates["extra"] = json.dumps({**old_extra, **body.extra})
+        if x_forwarded_for:
+            updates["ip_address"] = x_forwarded_for.split(",")[0].strip()
+        if user_agent:
+            updates["user_agent"] = user_agent
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        db.execute(
+            f"UPDATE consent SET {set_clause} WHERE user_id = ?",
+            (*updates.values(), user_id),
+        )
+    else:
+        db.execute(
+            """INSERT INTO consent
+               (user_id, analytics, marketing_email, marketing_sms, data_sharing,
+                personalisation, extra, consented_at, updated_at, ip_address, user_agent)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                user_id,
+                1 if body.analytics else 0,
+                1 if body.marketing_email else 0,
+                1 if body.marketing_sms else 0,
+                1 if body.data_sharing else 0,
+                1 if body.personalisation else 0,
+                json.dumps(body.extra or {}),
+                now,
+                now,
+                x_forwarded_for.split(",")[0].strip() if x_forwarded_for else None,
+                user_agent,
+            ),
+        )
+    db.commit()
+    return await get_consent(user_id)
+
+
+@_router.delete("/users/{user_id}/consent")
+async def withdraw_consent(user_id: str):
+    """Withdraw all GDPR consent (sets all flags to False, GDPR Art. 7(3))."""
+    user_row = db.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if not user_row:
+        raise HTTPException(status_code=404, detail="User not found")
+    now = datetime.now(timezone.utc).isoformat()
+    db.execute(
+        """INSERT INTO consent (user_id, analytics, marketing_email, marketing_sms,
+                data_sharing, personalisation, extra, updated_at)
+           VALUES (?,0,0,0,0,0,'{}',?)
+           ON CONFLICT(user_id) DO UPDATE SET
+               analytics=0, marketing_email=0, marketing_sms=0,
+               data_sharing=0, personalisation=0, updated_at=excluded.updated_at""",
+        (user_id, now),
+    )
+    db.commit()
+    return {"message": "All consent withdrawn", "user_id": user_id, "withdrawn_at": now}
 
 
 app.include_router(_router)
