@@ -83,6 +83,21 @@ See `docs/CVE_REMEDIATION_REPORT.md` for the complete list of 66 resolved CVEs.
 | cryptography | (new) | 48.0.0 | CVE-2026-26007, CVE-2024-12797, +2 more |
 | undici | (new) | 7.15.0 | CVE-2026-1525, CVE-2026-22036, +3 more |
 
+### Dependabot Remediation (2026-06)
+
+| Alert | Package | Severity | Action | Status |
+|-------|---------|----------|--------|--------|
+| #30 | protobuf (Rust) | Moderate | `prometheus` 0.13 → 0.14; lockfile now pins protobuf 3.7.2 (GHSA-2gh3-rmm4-6rq5) | Fixed |
+| #31 | go-redis | Low | Removed unused `github.com/redis/go-redis/v9` from `dnf_orchestrator`; fixed invalid `uuid v1.21.0` → v1.6.0 | Fixed |
+| #41, #42 | chromadb | Critical | Bumped to 1.5.9; **no upstream patch yet** for GHSA-f4j7-r4q5-qw2c (CVE-2026-45829) | Mitigated |
+
+**ChromaDB compensating controls (until a patched release):**
+- Use embedded `chromadb.PersistentClient` / `chromadb.Client` only (`src/nanoservices/vector_plan_cache/vector_plan_cache.py`).
+- Never set `trust_remote_code=true` on Chroma collections.
+- Do not expose the Chroma HTTP server to untrusted networks.
+
+**CI/CD:** All scanning runs through Forgejo (The Workshop) — `.forgejo/workflows/security-scan.yml` and `dependency-audit.yml`. No GitHub Actions.
+
 ## Compliance Alignment
 
 - **OWASP Top 10 (2021)** — All categories addressed

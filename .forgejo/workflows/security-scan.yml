@@ -31,7 +31,7 @@ name: Security Scan
 
 on:
   push:
-    branches: [main, "security/*", "claude/*"]
+    branches: [main, "security/*", "claude/*", "cursor/*"]
   pull_request:
     branches: [main]
   schedule:
@@ -60,6 +60,12 @@ jobs:
             --format json --output logs/pip-audit-results.json || true
           pip-audit --requirement requirements.txt \
             --vulnerability-service osv || true
+          if [ -f requirements-ai.txt ]; then
+            pip-audit --requirement requirements-ai.txt \
+              --format json --output logs/pip-audit-ai-results.json || true
+            pip-audit --requirement requirements-ai.txt \
+              --vulnerability-service osv || true
+          fi
         continue-on-error: true
 
       - name: bandit (SAST — medium+ severity GATE)
