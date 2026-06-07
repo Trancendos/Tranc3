@@ -45,8 +45,7 @@ import logging
 import os
 import secrets
 import sqlite3
-import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Coroutine, Dict, List, Optional
@@ -365,7 +364,7 @@ class KeyRotationService:
         if not cols:
             cols = ["id","key_id","key_type","rotated_at","rotated_by",
                     "previous_key_fingerprint","new_key_fingerprint","success","notes"]
-        return [dict(zip(cols, r)) for r in rows]
+        return [dict(zip(cols, r, strict=False)) for r in rows]
 
     def purge_previous_keys(self) -> int:
         """Delete previous (old) key values older than grace period."""

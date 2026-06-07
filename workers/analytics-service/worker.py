@@ -918,7 +918,7 @@ async def olap_query(req: OlapQueryIn):
         rows = relation.fetchall()
         return {
             "columns": columns,
-            "rows": [dict(zip(columns, r)) for r in rows],
+            "rows": [dict(zip(columns, r, strict=False)) for r in rows],
             "row_count": len(rows),
             "limit": req.limit,
         }
@@ -990,7 +990,7 @@ async def analytics_dataframe(body: DataFrameIn):
     result: Dict[str, Any] = {
         "rows": len(df),
         "columns": df.columns,
-        "schema": {col: str(dtype) for col, dtype in zip(df.columns, df.dtypes)},
+        "schema": {col: str(dtype) for col, dtype in zip(df.columns, df.dtypes, strict=False)},
         "data": df.to_dicts(),
     }
 
@@ -1002,7 +1002,7 @@ async def analytics_dataframe(body: DataFrameIn):
             elif op == "null_count":
                 result["null_count"] = df.null_count().to_dicts()[0]
             elif op == "dtypes":
-                result["dtypes"] = {c: str(t) for c, t in zip(df.columns, df.dtypes)}
+                result["dtypes"] = {c: str(t) for c, t in zip(df.columns, df.dtypes, strict=False)}
             elif op.startswith("value_counts:"):
                 col = op.split(":", 1)[1]
                 if col in df.columns:

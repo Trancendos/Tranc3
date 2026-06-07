@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import os
-import time
 
 import pytest
 
@@ -20,7 +19,6 @@ def client(tmp_path_factory):
     import sqlite3
     import sys
     from pathlib import Path
-    from unittest.mock import patch
 
     tmp = tmp_path_factory.mktemp("analytics_data")
     os.environ["ANALYTICS_DATA_DIR"] = str(tmp)
