@@ -55,13 +55,12 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sqlite3
 import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
-import sqlite3
 
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -158,6 +157,7 @@ def init_db() -> None:
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+
 def _now_ms() -> int:
     return int(time.time() * 1000)
 
@@ -193,8 +193,14 @@ def _run_to_dict(row: sqlite3.Row, db: sqlite3.Connection) -> Dict[str, Any]:
     ):
         if r["key"] not in metrics_seen:
             metrics_seen.add(r["key"])
-            metrics_list.append({"key": r["key"], "value": r["value"],
-                                  "step": r["step"], "timestamp": r["timestamp"]})
+            metrics_list.append(
+                {
+                    "key": r["key"],
+                    "value": r["value"],
+                    "step": r["step"],
+                    "timestamp": r["timestamp"],
+                }
+            )
 
     return {
         "run_id": run_id,
@@ -225,6 +231,7 @@ def _experiment_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
 
 
 # ── Pydantic schemas ───────────────────────────────────────────────────────────
+
 
 class CreateExperimentIn(BaseModel):
     name: str = Field(min_length=1, max_length=256)
@@ -307,6 +314,7 @@ class CompareRunsIn(BaseModel):
 
 # ── FastAPI app ────────────────────────────────────────────────────────────────
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
@@ -380,9 +388,7 @@ async def get_experiment(experiment_id: str):
 @app.get("/api/2.0/mlflow/experiments/get-by-name")
 async def get_experiment_by_name(experiment_name: str):
     db = _db()
-    row = db.execute(
-        "SELECT * FROM experiments WHERE name = ?", (experiment_name,)
-    ).fetchone()
+    row = db.execute("SELECT * FROM experiments WHERE name = ?", (experiment_name,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Experiment not found")
     return {"experiment": _experiment_to_dict(row)}
@@ -401,7 +407,9 @@ async def list_experiments(view_type: str = "ACTIVE_ONLY"):
 @app.get("/experiments")
 async def list_experiments_shortcut():
     db = _db()
-    rows = db.execute("SELECT * FROM experiments WHERE lifecycle_stage = 'active' ORDER BY creation_time DESC").fetchall()
+    rows = db.execute(
+        "SELECT * FROM experiments WHERE lifecycle_stage = 'active' ORDER BY creation_time DESC"
+    ).fetchall()
     return {"experiments": [_experiment_to_dict(r) for r in rows]}
 
 
@@ -426,8 +434,15 @@ async def create_run(body: CreateRunIn):
     db.execute(
         "INSERT INTO runs (run_id, experiment_id, run_name, status, start_time, artifact_uri, user_id, tags) "
         "VALUES (?, ?, ?, 'RUNNING', ?, ?, ?, ?)",
-        (run_id, body.experiment_id, body.run_name, now, artifact_uri,
-         body.user_id, json.dumps(tags)),
+        (
+            run_id,
+            body.experiment_id,
+            body.run_name,
+            now,
+            artifact_uri,
+            body.user_id,
+            json.dumps(tags),
+        ),
     )
     for key, value in tags.items():
         db.execute(
@@ -582,8 +597,10 @@ async def get_metric_history(run_id: str, metric_key: str):
         (run_id, metric_key),
     ).fetchall()
     return {
-        "metrics": [{"key": r["key"], "value": r["value"],
-                      "timestamp": r["timestamp"], "step": r["step"]} for r in rows]
+        "metrics": [
+            {"key": r["key"], "value": r["value"], "timestamp": r["timestamp"], "step": r["step"]}
+            for r in rows
+        ]
     }
 
 
@@ -615,18 +632,20 @@ async def list_artifacts(run_id: str, path: str = ""):
     try:
         artifact_dir.relative_to(root)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid artifact path")
+        raise HTTPException(status_code=400, detail="Invalid artifact path") from None
 
     if not artifact_dir.exists():
         return {"files": [], "root_uri": str(root)}
 
     files = []
     for p in artifact_dir.iterdir():
-        files.append({
-            "path": str(p.relative_to(root)),
-            "is_dir": p.is_dir(),
-            "file_size": p.stat().st_size if p.is_file() else 0,
-        })
+        files.append(
+            {
+                "path": str(p.relative_to(root)),
+                "is_dir": p.is_dir(),
+                "file_size": p.stat().st_size if p.is_file() else 0,
+            }
+        )
     return {"files": files, "root_uri": str(root)}
 
 

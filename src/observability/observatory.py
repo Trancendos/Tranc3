@@ -258,10 +258,19 @@ class Observatory:
                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 [
                     (
-                        e.id, e.timestamp, e.event_type, e.category.value,
-                        e.severity.value, e.actor, e.actor_ip, e.target,
-                        e.service, e.location, e.outcome,
-                        json.dumps(e.metadata), e.session_id,
+                        e.id,
+                        e.timestamp,
+                        e.event_type,
+                        e.category.value,
+                        e.severity.value,
+                        e.actor,
+                        e.actor_ip,
+                        e.target,
+                        e.service,
+                        e.location,
+                        e.outcome,
+                        json.dumps(e.metadata),
+                        e.session_id,
                     )
                     for e in batch
                 ],
@@ -304,7 +313,8 @@ class Observatory:
                         if purged:
                             logger.info(
                                 "observatory: purged %d events older than %d days",
-                                purged, _RETENTION_DAYS,
+                                purged,
+                                _RETENTION_DAYS,
                             )
                 except asyncio.CancelledError:
                     raise

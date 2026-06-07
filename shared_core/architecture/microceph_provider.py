@@ -34,7 +34,7 @@ from Dimensional.architecture.microceph_provider import (  # noqa: F401
     RgwManager,
     crush_hash,
     crush_place,
-    straw2_choose,
     get_microceph_provider,
     shutdown_microceph_provider,
+    straw2_choose,
 )

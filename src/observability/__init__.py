@@ -11,14 +11,6 @@ from .health import (
     HealthChecker,
     SystemHealth,
 )
-from .observatory import (
-    AuditEvent,
-    EventCategory,
-    EventSeverity,
-    Observatory,
-    get_observatory,
-    observe,
-)
 from .metrics import (
     PROMETHEUS_AVAILABLE,
     log,
@@ -30,6 +22,14 @@ from .metrics import (
     record_revenue,
     record_tokens,
     timed_operation,
+)
+from .observatory import (
+    AuditEvent,
+    EventCategory,
+    EventSeverity,
+    Observatory,
+    get_observatory,
+    observe,
 )
 from .tracing import (
     Span,

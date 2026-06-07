@@ -12,11 +12,9 @@ import hmac as _hmac
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Import the shim under test
 # ---------------------------------------------------------------------------
-
 from src.security.rust_crypto import (
     constant_time_eq,
     decrypt,
@@ -26,7 +24,6 @@ from src.security.rust_crypto import (
     hmac_sha256,
     is_rust_available,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

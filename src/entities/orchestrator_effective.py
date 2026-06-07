@@ -8,9 +8,9 @@ do not require editing Dimensional/infinity/nomenclature.py.
 from __future__ import annotations
 
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 from typing import Any
 
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.override_store import _db_path, invalidate_override_cache
 
 ORCHESTRATOR_PID = "__ORCHESTRATOR__"

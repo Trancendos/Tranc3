@@ -65,6 +65,7 @@ from src.database.schema import (  # noqa: F401  # intentional top-level import
     Message,
 )
 from src.database.vector_store import vector_store  # noqa: F401  # intentional top-level import
+from src.errors import make_error_response  # noqa: F401
 from src.errors.error_catalog import (  # noqa: F401  # intentional top-level import
     ErrorCode,
     format_error_response,
@@ -75,6 +76,7 @@ from src.monetisation.billing import TIERS  # noqa: F401  # intentional top-leve
 from src.monetisation.billing import (
     enforcer as tier_enforcer,  # noqa: F401  # intentional top-level import
 )
+from src.observability.audit_middleware import AuditMiddleware  # noqa: F401
 from src.observability.metrics import (  # noqa: F401  # intentional top-level import
     log,
     record_churn_risk,
@@ -96,8 +98,6 @@ from src.security.middleware import (  # noqa: F401  # intentional top-level imp
     SecurityHeadersMiddleware,
     ZeroTrustASGIMiddleware,
 )
-from src.observability.audit_middleware import AuditMiddleware  # noqa: F401
-from src.errors import make_error_response  # noqa: F401
 from src.security.security_framework import (
     InputSanitizer,  # noqa: F401  # intentional top-level import
 )
@@ -648,8 +648,9 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all for unhandled exceptions — log to Observatory, return structured 500."""
     import traceback
+
     from src.errors import ErrorCode
-    from src.observability.observatory import get_observatory, EventCategory, EventSeverity
+    from src.observability.observatory import EventCategory, EventSeverity, get_observatory
 
     request_id = getattr(request.state, "request_id", None)
     tb = traceback.format_exc()
@@ -692,8 +693,8 @@ app.include_router(_observatory_router)
 
 # ── Capacity Guard (hard stops + utilisation status) ─────────────────────────
 from src.capacity.guard import (  # noqa: F401
-    CapacityService,
     CapacityExceededError,
+    CapacityService,
     get_capacity_guard,
 )
 
@@ -2032,7 +2033,7 @@ async def user_settings_write(
     body: UserSettingWrite,
     current_user: dict = Depends(get_current_user),
 ):
-    from src.settings_store import get_settings_store, ALLOWED_KEYS
+    from src.settings_store import ALLOWED_KEYS, get_settings_store
 
     username: str = current_user.get("username") or current_user.get("sub", "unknown")
     if body.key not in ALLOWED_KEYS:

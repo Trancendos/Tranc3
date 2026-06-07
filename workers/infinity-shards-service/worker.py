@@ -41,7 +41,6 @@ import json
 import logging
 import os
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -51,6 +50,8 @@ from typing import Any, Dict, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 logger = logging.getLogger(__name__)
 
@@ -400,7 +401,7 @@ async def attach_shard(entity_id: str, req: AttachShardRequest):
         raise HTTPException(
             status_code=409,
             detail=f"Shard '{req.shard_type}' is already attached to entity '{entity_id}'",
-        )
+        ) from None
 
     return {
         "message": f"{meta['name']} {meta['symbol']} attached to {entity_id}",

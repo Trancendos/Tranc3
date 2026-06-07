@@ -9,7 +9,6 @@ import asyncio
 import json
 import os
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -27,6 +26,8 @@ from fastapi import (
 )
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
+
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 # ── Config ───────────────────────────────────────────────────────────────────
 SERVICE_NAME = "deepagents-orchestrator"

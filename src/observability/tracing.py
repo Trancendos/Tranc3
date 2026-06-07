@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import threading
 import time
 import uuid
@@ -19,6 +18,8 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 logger = logging.getLogger("tranc3.tracing")
 

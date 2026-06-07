@@ -58,6 +58,7 @@ _ENFORCE = os.environ.get("DATA_RESIDENCY_ENFORCE", "true").lower() == "true"
 # Exceptions
 # ---------------------------------------------------------------------------
 
+
 class DataResidencyViolation(Exception):
     """Raised when a write is attempted outside the allowed residency regions."""
 
@@ -72,6 +73,7 @@ class DataResidencyViolation(Exception):
 # ---------------------------------------------------------------------------
 # Core dataclass
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ResidencyConfig:
@@ -92,7 +94,8 @@ class ResidencyConfig:
                 raise DataResidencyViolation(self.region, self.allowed_regions)
             logger.warning(
                 "data_residency: non-compliant region '%s' (allowed: %s) — enforcement disabled",
-                self.region, self.allowed_regions,
+                self.region,
+                self.allowed_regions,
             )
 
     def namespaced_path(self, base_path: str) -> str:
@@ -113,6 +116,7 @@ class ResidencyConfig:
 # ---------------------------------------------------------------------------
 # Module-level singleton (re-reads env on each call so hot-reload works)
 # ---------------------------------------------------------------------------
+
 
 def get_residency() -> ResidencyConfig:
     """Return the current residency configuration (reads env at call time)."""
@@ -147,36 +151,53 @@ def enforce_residency(region: Optional[str] = None) -> ResidencyConfig:
 # Audit helper (fires an Observatory event if available)
 # ---------------------------------------------------------------------------
 
+
 def _audit_violation(region: str, allowed: list[str]) -> None:
     try:
-        from src.observability.observatory import get_observatory, AuditEvent, EventCategory, EventSeverity  # noqa: PLC0415
+        from src.observability.observatory import (  # noqa: PLC0415
+            AuditEvent,
+            EventCategory,
+            EventSeverity,
+            get_observatory,
+        )
+
         obs = get_observatory()
-        obs.record(AuditEvent(
-            event_type="data_residency_violation",
-            actor="system",
-            target=f"region:{region}",
-            outcome="blocked",
-            category=EventCategory.SECURITY,
-            severity=EventSeverity.SECURITY,
-            metadata={"active_region": region, "allowed_regions": allowed},
-        ))
+        obs.record(
+            AuditEvent(
+                event_type="data_residency_violation",
+                actor="system",
+                target=f"region:{region}",
+                outcome="blocked",
+                category=EventCategory.SECURITY,
+                severity=EventSeverity.SECURITY,
+                metadata={"active_region": region, "allowed_regions": allowed},
+            )
+        )
     except Exception:
         pass  # Observatory unavailable — log only
 
 
 def _audit_write(region: str, path: str) -> None:
     try:
-        from src.observability.observatory import get_observatory, AuditEvent, EventCategory, EventSeverity  # noqa: PLC0415
+        from src.observability.observatory import (  # noqa: PLC0415
+            AuditEvent,
+            EventCategory,
+            EventSeverity,
+            get_observatory,
+        )
+
         obs = get_observatory()
-        obs.record(AuditEvent(
-            event_type="data_residency_write",
-            actor="system",
-            target=path,
-            outcome="allowed",
-            category=EventCategory.DATA,
-            severity=EventSeverity.INFO,
-            metadata={"region": region},
-        ))
+        obs.record(
+            AuditEvent(
+                event_type="data_residency_write",
+                actor="system",
+                target=path,
+                outcome="allowed",
+                category=EventCategory.DATA,
+                severity=EventSeverity.INFO,
+                metadata={"region": region},
+            )
+        )
     except Exception:
         pass
 
@@ -184,6 +205,7 @@ def _audit_write(region: str, path: str) -> None:
 # ---------------------------------------------------------------------------
 # FastAPI dependency
 # ---------------------------------------------------------------------------
+
 
 async def _residency_dependency() -> ResidencyConfig:
     try:
@@ -203,8 +225,10 @@ ResidencyCheckDep = Annotated[ResidencyConfig, Depends(_residency_dependency)]
 # Decorator
 # ---------------------------------------------------------------------------
 
+
 def residency_required(fn: Callable) -> Callable:
     """Decorator: enforce data residency before executing the wrapped function."""
+
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         enforce_residency()
@@ -216,6 +240,7 @@ def residency_required(fn: Callable) -> Callable:
         return await fn(*args, **kwargs)
 
     import asyncio  # noqa: PLC0415
+
     if asyncio.iscoroutinefunction(fn):
         return async_wrapper
     return wrapper
@@ -224,6 +249,7 @@ def residency_required(fn: Callable) -> Callable:
 # ---------------------------------------------------------------------------
 # Storage path helper
 # ---------------------------------------------------------------------------
+
 
 def region_namespaced_path(base_path: str) -> str:
     """
@@ -255,6 +281,7 @@ def ensure_region_dir(base_path: str) -> Path:
 # Middleware (optional — add to FastAPI app)
 # ---------------------------------------------------------------------------
 
+
 class DataResidencyMiddleware:
     """
     ASGI middleware that adds X-Data-Residency-Region response header and
@@ -278,6 +305,7 @@ class DataResidencyMiddleware:
             _audit_violation(cfg.region, cfg.allowed_regions)
             if cfg.enforce:
                 from starlette.responses import JSONResponse  # noqa: PLC0415
+
                 response = JSONResponse(
                     {"detail": f"Data residency violation: region '{cfg.region}' not allowed"},
                     status_code=403,

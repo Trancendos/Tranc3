@@ -58,6 +58,7 @@ HEALTH_URL = os.environ.get("HEALTH_AGGREGATOR_URL", "http://localhost:8029/heal
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -96,6 +97,7 @@ def _sqlite_query(db_path: str, sql: str, params: tuple = ()) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Collectors
 # ---------------------------------------------------------------------------
+
 
 def collect_audit_snapshot(output_dir: Path, dry_run: bool, manifest: dict) -> None:
     """Last 10 000 events from Observatory SQLite, grouped by category/severity."""
@@ -235,16 +237,22 @@ def collect_dependency_scan(output_dir: Path, dry_run: bool, manifest: dict) -> 
     try:
         r = subprocess.run(
             ["pip-audit", "--format=json", "--no-deps"],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True,
+            text=True,
+            timeout=120,
         )
-        pip_result = json.loads(r.stdout) if r.stdout.strip() else {"raw": r.stdout, "stderr": r.stderr}
+        pip_result = (
+            json.loads(r.stdout) if r.stdout.strip() else {"raw": r.stdout, "stderr": r.stderr}
+        )
     except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
         pip_result = {"skipped": True, "reason": str(exc)}
 
     try:
         r = subprocess.run(
             ["bandit", "-r", "src/", "workers/", "-f", "json", "-ll"],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True,
+            text=True,
+            timeout=120,
         )
         bandit_result = json.loads(r.stdout) if r.stdout.strip() else {"raw": r.stdout}
     except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
@@ -267,15 +275,30 @@ def collect_compliance_gate(output_dir: Path, dry_run: bool, manifest: dict) -> 
     result: dict = {"skipped": True, "reason": "pytest not available"}
     try:
         r = subprocess.run(
-            ["python", "-m", "pytest", "tests/test_compliance.py",
-             "--tb=short", "--json-report", "--json-report-file=/tmp/compliance_report.json", "-q"],
-            capture_output=True, text=True, timeout=300, cwd="/home/user/Tranc3",
+            [
+                "python",
+                "-m",
+                "pytest",
+                "tests/test_compliance.py",
+                "--tb=short",
+                "--json-report",
+                "--json-report-file=/tmp/compliance_report.json",
+                "-q",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            cwd="/home/user/Tranc3",
         )
         report_path = Path("/tmp/compliance_report.json")
         if report_path.exists():
             result = json.loads(report_path.read_text())
         else:
-            result = {"returncode": r.returncode, "stdout": r.stdout[-2000:], "stderr": r.stderr[-500:]}
+            result = {
+                "returncode": r.returncode,
+                "stdout": r.stdout[-2000:],
+                "stderr": r.stderr[-500:],
+            }
     except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
         result = {"skipped": True, "reason": str(exc)}
 
@@ -290,15 +313,21 @@ def collect_data_residency(output_dir: Path, dry_run: bool, manifest: dict) -> N
     """Snapshot current DATA_RESIDENCY_REGION config and enforcement status."""
     log.info("Collecting data residency config...")
     region = os.environ.get("DATA_RESIDENCY_REGION", "eu-west")
-    allowed_regions = os.environ.get("DATA_RESIDENCY_ALLOWED_REGIONS", "eu-west,eu-central").split(",")
-    residency_log = _sqlite_query(
-        USERS_DB,
-        """
+    allowed_regions = os.environ.get("DATA_RESIDENCY_ALLOWED_REGIONS", "eu-west,eu-central").split(
+        ","
+    )
+    residency_log = (
+        _sqlite_query(
+            USERS_DB,
+            """
         SELECT region, COUNT(*) as record_count, MIN(created_at) as earliest, MAX(created_at) as latest
         FROM users
         GROUP BY region
         """,
-    ) if Path(USERS_DB).exists() else []
+        )
+        if Path(USERS_DB).exists()
+        else []
+    )
 
     data = {
         "collected_at": NOW.isoformat(),
@@ -319,6 +348,7 @@ def collect_health_snapshot(output_dir: Path, dry_run: bool, manifest: dict) -> 
     health_data: dict = {"skipped": True, "reason": "httpx not available or service unreachable"}
     try:
         import httpx  # noqa: PLC0415
+
         r = httpx.get(HEALTH_URL, timeout=10)
         health_data = r.json()
     except Exception as exc:
@@ -334,6 +364,7 @@ def collect_health_snapshot(output_dir: Path, dry_run: bool, manifest: dict) -> 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="SOC 2 Type II evidence collector")

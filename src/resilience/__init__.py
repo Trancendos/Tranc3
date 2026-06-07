@@ -1,8 +1,8 @@
 from .circuit_breaker import (
+    Bulkhead,
     CircuitBreaker,
     CircuitBreakerConfig,
     CircuitState,
-    Bulkhead,
     ResilienceManager,
     resilience,
 )

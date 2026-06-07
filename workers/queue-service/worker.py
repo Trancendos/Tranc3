@@ -15,7 +15,6 @@ import json
 import logging
 import os
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -27,6 +26,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8022
@@ -283,18 +283,18 @@ async def publish(topic: str, req: PublishIn):
     _ensure_topic(topic)
     # Capacity hard stop — queue depth
     try:
-        import sys
         import os
+        import sys
 
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-        from src.capacity.guard import CapacityService, CapacityExceededError, get_capacity_guard
+        from src.capacity.guard import CapacityExceededError, CapacityService, get_capacity_guard
 
         get_capacity_guard().consume(CapacityService.QUEUE_DEPTH, amount=1)
     except Exception as _qe:
         from src.capacity.guard import CapacityExceededError
 
         if isinstance(_qe, CapacityExceededError):
-            raise HTTPException(status_code=503, detail=str(_qe))
+            raise HTTPException(status_code=503, detail=str(_qe)) from _qe
     now = time.time()
     msg_id = str(uuid.uuid4())
     visible_after = now + req.delay

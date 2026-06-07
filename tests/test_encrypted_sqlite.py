@@ -15,8 +15,8 @@ os.environ["SECRET_KEY"] = "test-secret-key-for-encrypted-sqlite-unit-tests-32ch
 from src.database.encrypted_sqlite import (  # noqa: E402
     EncryptedKVStore,
     _decrypt_bytes,
-    _encrypt_bytes,
     _derive_key,
+    _encrypt_bytes,
     connect,
     decrypt_field,
     decrypt_row,

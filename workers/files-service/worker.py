@@ -12,7 +12,6 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import threading
 import uuid
 from contextlib import contextmanager
@@ -23,6 +22,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
@@ -187,11 +187,11 @@ async def create(data: Dict[str, Any]):
     """Create a new files entry."""
     # Capacity hard stop — daily upload count and storage bytes
     try:
-        import sys
         import os
+        import sys
 
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-        from src.capacity.guard import CapacityService, CapacityExceededError, get_capacity_guard
+        from src.capacity.guard import CapacityExceededError, CapacityService, get_capacity_guard
 
         _g = get_capacity_guard()
         _g.consume(CapacityService.FILES_UPLOADS_DAILY, amount=1)
@@ -202,7 +202,7 @@ async def create(data: Dict[str, Any]):
         from src.capacity.guard import CapacityExceededError
 
         if isinstance(_fe, CapacityExceededError):
-            raise HTTPException(status_code=503, detail=str(_fe))
+            raise HTTPException(status_code=503, detail=str(_fe)) from _fe
     item_id = data.get("file_id", str(uuid.uuid4()))
     data["file_id"] = item_id
     created = db.create(data)

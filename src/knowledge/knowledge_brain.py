@@ -18,12 +18,13 @@ import math
 import os
 import re
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
+
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 # ── Dataclasses ──────────────────────────────────────────────────────────────
 

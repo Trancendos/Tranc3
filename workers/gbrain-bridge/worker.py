@@ -27,7 +27,6 @@ import math
 import os
 import re
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from collections import defaultdict, deque
@@ -40,6 +39,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------

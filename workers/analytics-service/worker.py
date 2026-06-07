@@ -95,10 +95,10 @@ _INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 
 # Paths to other worker SQLite databases (for cross-service queries)
 _CROSS_SERVICE_DBS: Dict[str, str] = {
-    "audit":      os.environ.get("AUDIT_DB_PATH",      "/data/audit.db"),
+    "audit": os.environ.get("AUDIT_DB_PATH", "/data/audit.db"),
     "monitoring": os.environ.get("MONITORING_DB_PATH", "/data/monitoring.db"),
-    "auth":       os.environ.get("AUTH_DB_PATH",       "/data/auth.db"),
-    "users":      os.environ.get("USERS_DB_PATH",      "/data/users.db"),
+    "auth": os.environ.get("AUTH_DB_PATH", "/data/auth.db"),
+    "users": os.environ.get("USERS_DB_PATH", "/data/users.db"),
 }
 
 logging.basicConfig(
@@ -168,7 +168,9 @@ def init_db() -> None:
 def _duckdb_conn() -> "duckdb.DuckDBPyConnection":
     """Open a fresh DuckDB connection with SQLite attached and Parquet union view."""
     if not _DUCKDB_AVAILABLE:
-        raise HTTPException(status_code=503, detail="DuckDB not installed — OLAP queries unavailable")
+        raise HTTPException(
+            status_code=503, detail="DuckDB not installed — OLAP queries unavailable"
+        )
 
     con = duckdb.connect(database=":memory:")
 
@@ -703,16 +705,18 @@ async def retention_cohorts(
         for r in rows:
             # SELECT returns: cohort_date(0), cohort_size(1), retained_d1(2), retained_d7(3), retained_d30(4)
             size = r[1] or 1  # avoid div-by-zero
-            cohorts.append({
-                "cohort_date": r[0],
-                "cohort_size": r[1],
-                "day_1_retained": r[2],
-                "day_7_retained": r[3],
-                "day_30_retained": r[4],
-                "day_1_rate": round(r[2] / size, 4),
-                "day_7_rate": round(r[3] / size, 4),
-                "day_30_rate": round(r[4] / size, 4),
-            })
+            cohorts.append(
+                {
+                    "cohort_date": r[0],
+                    "cohort_size": r[1],
+                    "day_1_retained": r[2],
+                    "day_7_retained": r[3],
+                    "day_30_retained": r[4],
+                    "day_1_rate": round(r[2] / size, 4),
+                    "day_7_rate": round(r[3] / size, 4),
+                    "day_30_rate": round(r[4] / size, 4),
+                }
+            )
 
         return {"cohort_window_days": cohort_days, "cohorts": cohorts}
     finally:
@@ -803,8 +807,7 @@ async def top_journeys(
             base_cte += " AND timestamp >= ?"
             params.append(since)
         journey_sql = (
-            base_cte
-            + "),"
+            base_cte + "),"
             "journeys AS ("
             "  SELECT session_id,"
             "    STRING_AGG(event_type, ' → ' ORDER BY step) AS journey"
@@ -943,7 +946,11 @@ async def trigger_archive(background_tasks: BackgroundTasks):
 
 
 class DataFrameIn(BaseModel):
-    sql: str = Field(min_length=1, max_length=4000, description="DuckDB SELECT to materialise as a Polars DataFrame")
+    sql: str = Field(
+        min_length=1,
+        max_length=4000,
+        description="DuckDB SELECT to materialise as a Polars DataFrame",
+    )
     operations: List[str] = Field(
         default=[],
         description=(
@@ -1006,9 +1013,7 @@ async def analytics_dataframe(body: DataFrameIn):
             elif op.startswith("value_counts:"):
                 col = op.split(":", 1)[1]
                 if col in df.columns:
-                    result[f"value_counts_{col}"] = (
-                        df[col].value_counts(sort=True).to_dicts()
-                    )
+                    result[f"value_counts_{col}"] = df[col].value_counts(sort=True).to_dicts()
             elif op.startswith("corr:"):
                 parts = op.split(":")
                 if len(parts) == 3:

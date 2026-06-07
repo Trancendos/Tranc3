@@ -111,7 +111,7 @@ class ComplianceReport:
 
     @property
     def status_counts(self) -> dict[str, int]:
-        counts: dict[str, int] = {s: 0 for s in STATUS_ORDER}
+        counts: dict[str, int] = dict.fromkeys(STATUS_ORDER, 0)
         for req in self.requirements:
             s = req.status.upper()
             if s in counts:

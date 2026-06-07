@@ -84,7 +84,7 @@ def _build_suite() -> List[BenchResult]:
 
     # 1. Encrypted-SQLite field round-trip (REQ-IA-010)
     try:
-        from src.database.encrypted_sqlite import encrypt_field, decrypt_field
+        from src.database.encrypted_sqlite import decrypt_field, encrypt_field
 
         payload = b"sensitive_value_" * 4
         key = b"\x00" * 32

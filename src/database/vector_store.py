@@ -78,7 +78,9 @@ class VectorStore:
         # ── 2. Try FAISS (in-process persistent store) ────────────────────────
         try:
             # src/knowledge/vector_store.py exposes `VectorStore` (not FAISSVectorStore)
-            from src.knowledge.vector_store import VectorStore as _KnowledgeVS  # type: ignore[import]
+            from src.knowledge.vector_store import (
+                VectorStore as _KnowledgeVS,  # type: ignore[import]
+            )
 
             store = _KnowledgeVS()
             self._backend_name = "faiss"
@@ -167,7 +169,7 @@ class _QdrantBackend:
         top_k: int,
         filter: Optional[Dict] = None,  # noqa: A002
     ) -> List[Dict]:
-        from qdrant_client.models import Filter, FieldCondition, MatchValue
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
 
         qdrant_filter = None
         if filter:
@@ -198,13 +200,11 @@ class _QdrantBackend:
         )
 
     def delete_by_metadata(self, key: str, value: str) -> None:
-        from qdrant_client.models import Filter, FieldCondition, MatchValue
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
 
         self._client.delete(
             collection_name=_COLLECTION,
-            points_selector=Filter(
-                must=[FieldCondition(key=key, match=MatchValue(value=value))]
-            ),
+            points_selector=Filter(must=[FieldCondition(key=key, match=MatchValue(value=value))]),
         )
 
 
@@ -225,7 +225,11 @@ class _FAISSBackend:
     ) -> List[Dict]:
         results = self._store.search(embedding, top_k)
         if filter:
-            results = [r for r in results if all(r.get("metadata", {}).get(k) == v for k, v in filter.items())]
+            results = [
+                r
+                for r in results
+                if all(r.get("metadata", {}).get(k) == v for k, v in filter.items())
+            ]
         return results
 
     def delete(self, vector_ids: List[str]) -> None:

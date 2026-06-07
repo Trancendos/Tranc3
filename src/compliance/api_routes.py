@@ -17,7 +17,7 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from src.compliance.checker import REGISTER_PATH, load_and_check
 from src.compliance.report_generator import generate_html, generate_markdown
@@ -34,10 +34,12 @@ def _get_report():
         return load_and_check(REGISTER_PATH)
     except FileNotFoundError as e:
         logger.error("Compliance register not found: %s", e)
-        raise HTTPException(status_code=503, detail=f"Compliance register not available: {e}")
+        raise HTTPException(
+            status_code=503, detail=f"Compliance register not available: {e}"
+        ) from e
     except Exception as e:
         logger.error("Compliance checker error: %s", e)
-        raise HTTPException(status_code=500, detail=f"Compliance check failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Compliance check failed: {e}") from e
 
 
 @router.get("/status", summary="Live compliance status")
@@ -118,6 +120,8 @@ async def export_html() -> HTMLResponse:
 
 # ── AI Governance endpoints (EU AI Act / ISO 42001 / NIST AI RMF) ─────────────
 
+from pydantic import BaseModel as _BaseModel  # noqa: E402
+
 from src.compliance.ai_governance import (  # noqa: E402
     MODEL_REGISTRY,
     IncidentSeverity,
@@ -127,7 +131,6 @@ from src.compliance.ai_governance import (  # noqa: E402
     log_ai_incident,
     resolve_incident,
 )
-from pydantic import BaseModel as _BaseModel  # noqa: E402
 
 
 class _IncidentCreate(_BaseModel):

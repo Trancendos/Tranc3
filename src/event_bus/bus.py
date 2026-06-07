@@ -16,7 +16,6 @@ import fnmatch
 import json
 import logging
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from datetime import datetime, timezone
@@ -24,6 +23,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from Dimensional.sanitize import sanitize_for_log
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.event_bus.types import (
     DEFAULT_EVENT_BUS_CONFIG,
     DeliveryResult,

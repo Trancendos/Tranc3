@@ -42,10 +42,11 @@ _DB_PATH = Path(os.environ.get("AI_GOVERNANCE_DB_PATH", "/data/ai_governance.db"
 
 class RiskTier(str, Enum):
     """EU AI Act risk classification (Annex III & Art. 6)."""
-    UNACCEPTABLE = "unacceptable"   # Prohibited (Art. 5)
-    HIGH = "high"                   # Annex III high-risk systems
-    LIMITED = "limited"             # Transparency obligations (Art. 50)
-    MINIMAL = "minimal"             # General-purpose / no specific risk
+
+    UNACCEPTABLE = "unacceptable"  # Prohibited (Art. 5)
+    HIGH = "high"  # Annex III high-risk systems
+    LIMITED = "limited"  # Transparency obligations (Art. 50)
+    MINIMAL = "minimal"  # General-purpose / no specific risk
 
 
 class MetricStatus(str, Enum):
@@ -66,6 +67,7 @@ class IncidentSeverity(str, Enum):
 
 class FairnessMetric(BaseModel):
     """A single bias/fairness measurement."""
+
     value: Optional[float] = None
     threshold: float
     status: MetricStatus = MetricStatus.UNMEASURED
@@ -75,6 +77,7 @@ class FairnessMetric(BaseModel):
 
 class ModelCard(BaseModel):
     """Structured model card (EU AI Act Art. 13 + ISO 42001 §6.1)."""
+
     model_id: str
     name: str
     version: str
@@ -268,12 +271,21 @@ def log_ai_incident(
             """INSERT INTO ai_incidents
                (incident_id, model_id, description, severity, affected_users, reported_at, reporter)
                VALUES (?,?,?,?,?,?,?)""",
-            (incident.incident_id, model_id, description, severity.value,
-             affected_users, incident.reported_at, reporter),
+            (
+                incident.incident_id,
+                model_id,
+                description,
+                severity.value,
+                affected_users,
+                incident.reported_at,
+                reporter,
+            ),
         )
     logger.warning(
         "AI incident logged: model=%s severity=%s description=%s",
-        model_id, severity.value, description[:120],
+        model_id,
+        severity.value,
+        description[:120],
     )
     return incident
 
@@ -316,12 +328,20 @@ def classify_risk(model_id: str, use_case: str = "") -> Dict[str, Any]:
     # Escalation rules (non-exhaustive — extend as use cases are confirmed)
     escalation_keywords = {
         RiskTier.HIGH: [
-            "biometric", "credit scoring", "employment screening", "law enforcement",
-            "critical infrastructure", "medical diagnosis", "education assessment",
+            "biometric",
+            "credit scoring",
+            "employment screening",
+            "law enforcement",
+            "critical infrastructure",
+            "medical diagnosis",
+            "education assessment",
         ],
         RiskTier.UNACCEPTABLE: [
-            "subliminal manipulation", "social scoring", "real-time biometric surveillance",
-            "exploit vulnerability", "mass surveillance",
+            "subliminal manipulation",
+            "social scoring",
+            "real-time biometric surveillance",
+            "exploit vulnerability",
+            "mass surveillance",
         ],
     }
     use_lower = use_case.lower()
@@ -383,7 +403,9 @@ def generate_fairness_report(model_id: Optional[str] = None) -> Dict[str, Any]:
 
     unmeasured = sum(1 for s in overall_statuses if s == MetricStatus.UNMEASURED)
     failed = sum(1 for s in overall_statuses if s == MetricStatus.FAIL)
-    overall = "action_required" if failed > 0 else ("measurement_needed" if unmeasured > 0 else "pass")
+    overall = (
+        "action_required" if failed > 0 else ("measurement_needed" if unmeasured > 0 else "pass")
+    )
 
     return {
         "report_id": str(uuid.uuid4()),
@@ -411,7 +433,8 @@ def generate_fairness_report(model_id: Optional[str] = None) -> Dict[str, Any]:
         },
         "recommendations": [
             f"Run bias measurement suite to populate {unmeasured} unmeasured metrics"
-            if unmeasured > 0 else None,
+            if unmeasured > 0
+            else None,
             "Schedule first formal AI audit within next_audit_due dates",
             "Review prohibited_uses list against actual deployment use cases",
             "Consider high-risk classification review if deploying in regulated sectors",

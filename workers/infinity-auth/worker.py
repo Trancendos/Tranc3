@@ -36,14 +36,12 @@ import secrets
 import sqlite3
 import time
 import uuid
-
-import bcrypt  # type: ignore[import-untyped]
-from src.database.encrypted_sqlite import connect as sqlite3_connect, encrypt_field
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+import bcrypt  # type: ignore[import-untyped]
 import pyotp
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -56,6 +54,8 @@ from shared_core.infinity.nomenclature import InfinityRole, Tier
 # Phase 22.6: Smart Adaptive Intelligence
 from shared_core.infinity.worker_integration import InfinityWorkerKit
 from shared_core.sanitize import sanitize_for_log
+from src.database.encrypted_sqlite import connect as sqlite3_connect
+from src.database.encrypted_sqlite import encrypt_field
 from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger("tranc3.workers.infinity-auth")
@@ -511,9 +511,7 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     jti = payload.get("jti")
     if jti:
-        revoked = db.execute(
-            "SELECT 1 FROM token_revocations WHERE jti = ?", (jti,)
-        ).fetchone()
+        revoked = db.execute("SELECT 1 FROM token_revocations WHERE jti = ?", (jti,)).fetchone()
         if revoked:
             raise HTTPException(status_code=401, detail="Token has been revoked")
     return payload

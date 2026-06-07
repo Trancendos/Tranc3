@@ -27,7 +27,6 @@ import json
 import logging
 import os
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect, encrypt_field, decrypt_field
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,6 +39,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr, Field
 
 from shared_core.sanitize import sanitize_for_log
+from src.database.encrypted_sqlite import connect as sqlite3_connect
+from src.database.encrypted_sqlite import decrypt_field, encrypt_field
 from src.entities.health_metadata import health_entity_block
 
 logger = logging.getLogger("tranc3.workers.users-service")
@@ -117,6 +118,7 @@ class RoleUpdateRequest(BaseModel):
 
 class ConsentUpdate(BaseModel):
     """GDPR Art. 6/7 — explicit, granular consent flags."""
+
     analytics: Optional[bool] = None
     marketing_email: Optional[bool] = None
     marketing_sms: Optional[bool] = None
@@ -567,7 +569,8 @@ async def _dispatch_reset_email(user_id: str, email: str, token: str) -> None:
         if resp.status_code not in (200, 201):
             logger.warning(
                 "notifications-service returned %s for reset email user=%s",
-                resp.status_code, sanitize_for_log(user_id),
+                resp.status_code,
+                sanitize_for_log(user_id),
             )
     except Exception:
         logger.exception("Failed to dispatch reset email for user=%s", sanitize_for_log(user_id))
@@ -635,8 +638,18 @@ async def roles_summary():
 # ── GDPR Endpoints (Art. 15/17/20) ───────────────────────────────────────────
 
 _SAR_PII_FIELDS = [
-    "user_id", "username", "email", "display_name", "bio", "avatar_url",
-    "timezone", "role", "preferences", "created_at", "updated_at", "last_login",
+    "user_id",
+    "username",
+    "email",
+    "display_name",
+    "bio",
+    "avatar_url",
+    "timezone",
+    "role",
+    "preferences",
+    "created_at",
+    "updated_at",
+    "last_login",
 ]
 
 

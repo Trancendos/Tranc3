@@ -21,8 +21,8 @@ import re
 from typing import Any, Callable, Optional
 
 from fastapi import Request
-from src.observability.observatory import EventCategory, EventSeverity
 
+from src.observability.observatory import EventCategory, EventSeverity
 
 # ── Input validators ──────────────────────────────────────────────────────────
 

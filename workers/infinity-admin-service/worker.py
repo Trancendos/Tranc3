@@ -33,7 +33,6 @@ import json
 import logging
 import os
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -68,6 +67,7 @@ from Dimensional.infinity.sentinel_station import (
 
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 # Phase 22.4: Dimensional Services
 try:

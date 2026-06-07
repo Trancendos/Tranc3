@@ -31,7 +31,6 @@ import json
 import logging
 import os
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -65,6 +64,7 @@ from Dimensional.infinity.sentinel_station import (
 
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
@@ -514,7 +514,7 @@ async def create_identity(request: Request, identity: IdentityCreate):
         raise HTTPException(status_code=409, detail="Identity already exists")
 
     # Determine tier and infinity_role from role using canonical mapping functions
-    from shared_core.infinity.nomenclature import get_tier_for_role, get_infinity_role_for_role
+    from shared_core.infinity.nomenclature import get_infinity_role_for_role, get_tier_for_role
 
     tier = get_tier_for_role(identity.role)
     infinity_role = get_infinity_role_for_role(identity.role)
@@ -680,15 +680,22 @@ async def update_identity(user_id: str, update: IdentityUpdate, request: Request
         updates.append("role = ?")
         params.append(update.role)
         # Update tier and infinity_role based on new role
-        from shared_core.infinity.nomenclature import InfinityRole as _IR, Tier as _T
+        from shared_core.infinity.nomenclature import InfinityRole as _IR
+        from shared_core.infinity.nomenclature import Tier as _T
 
         _role_tier = {
-            "admin": _T.ADMIN, "superadmin": _T.ADMIN, "devops": _T.ADMIN,
-            "moderator": _T.PILLAR, "manager": _T.PILLAR, "pillar": _T.PILLAR,
+            "admin": _T.ADMIN,
+            "superadmin": _T.ADMIN,
+            "devops": _T.ADMIN,
+            "moderator": _T.PILLAR,
+            "manager": _T.PILLAR,
+            "pillar": _T.PILLAR,
         }
         _role_ir = {
-            "admin": _IR.ADMIN, "superadmin": _IR.ADMIN,
-            "devops": _IR.DEVOPS, "moderator": _IR.MODERATOR,
+            "admin": _IR.ADMIN,
+            "superadmin": _IR.ADMIN,
+            "devops": _IR.DEVOPS,
+            "moderator": _IR.MODERATOR,
             "manager": _IR.MANAGER,
         }
         tier = _role_tier.get(update.role.lower().strip(), _T.HUMAN)

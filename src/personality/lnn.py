@@ -38,7 +38,6 @@ logger = logging.getLogger(__name__)
 
 try:
     import torch
-
     from ncps.torch import CfC  # type: ignore[import]
     from ncps.wirings import AutoNCP  # type: ignore[import]
 

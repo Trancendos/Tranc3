@@ -11,10 +11,11 @@ Zero-cost: SQLite backend, no external dependencies.
 from __future__ import annotations
 
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 # ── Free-tier limit definitions ────────────────────────────────────────────────
 

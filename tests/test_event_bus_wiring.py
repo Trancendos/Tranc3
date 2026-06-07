@@ -23,7 +23,6 @@ from src.event_bus.wiring import (
     wire_platform_events,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -108,12 +107,14 @@ def _make_audit_event(category_name: str, event_type: str):
     _audit_category_to_event_type imports.  We avoid src/observability/__init__
     (which drags in structlog) by patching the import path used inside wiring.py.
     """
-    from src.event_bus.wiring import _audit_category_to_event_type  # noqa: F401 — ensure module loaded
-
     # Import observatory.py directly (avoids the __init__ structlog chain)
     import importlib.util
     import pathlib
     import sys
+
+    from src.event_bus.wiring import (
+        _audit_category_to_event_type,  # noqa: F401 — ensure module loaded
+    )
 
     mod_name = "_observatory_for_test"
     if mod_name not in sys.modules:

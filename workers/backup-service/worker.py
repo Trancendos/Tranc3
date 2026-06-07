@@ -43,8 +43,8 @@ from src.backup.engine import BackupEngine
 from src.backup.registry import (
     REGISTRY_BY_TIER,
     REGISTRY_BY_WORKER,
-    BackupTier,
     WORKER_DATABASE_REGISTRY,
+    BackupTier,
 )
 from src.entities.health_metadata import health_entity_block
 
@@ -88,7 +88,7 @@ async def _backup_tier(tier: BackupTier) -> None:
 
 async def _scheduler() -> None:
     """Asyncio scheduler — fires each tier on its interval."""
-    counters: dict[BackupTier, int] = {t: 0 for t in BackupTier}
+    counters: dict[BackupTier, int] = dict.fromkeys(BackupTier, 0)
     tick_seconds = 60  # check every minute
 
     while True:
@@ -200,7 +200,7 @@ async def run_backup(req: BackupRunRequest):
         try:
             tier = BackupTier(req.tier)
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"Unknown tier '{req.tier}'")
+            raise HTTPException(status_code=400, detail=f"Unknown tier '{req.tier}'") from None
         await _backup_tier(tier)
         return {"success": True, "tier": req.tier, "workers": len(REGISTRY_BY_TIER.get(tier, []))}
 

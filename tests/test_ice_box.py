@@ -18,7 +18,6 @@ from src.security.ice_box.quarantine import QuarantineStore
 from src.security.ice_box.signatures import ThreatCategory, get_library
 from src.security.warp_tunnel.tunnel import TunnelConfig, WarpTunnel
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

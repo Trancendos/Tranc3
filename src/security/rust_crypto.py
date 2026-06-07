@@ -96,6 +96,7 @@ _NONCE_LEN = 12
 
 def _python_encrypt(plaintext: bytes, key_seed: str) -> bytes:
     import os
+
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
     salt = os.urandom(_SALT_LEN)

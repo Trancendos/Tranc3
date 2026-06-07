@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import tempfile
 from pathlib import Path
 
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.effective import resolve_entity
 from src.entities.health_metadata import health_entity_block
 from src.entities.override_store import invalidate_override_cache, load_overrides_for_pid

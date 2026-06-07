@@ -26,9 +26,7 @@ def client(tmp_path_factory):
 
     # The worker directory is named "analytics-service" (hyphen) which is not
     # a valid Python package name, so we load it via importlib from its path.
-    worker_path = (
-        Path(__file__).parent.parent / "workers" / "analytics-service" / "worker.py"
-    )
+    worker_path = Path(__file__).parent.parent / "workers" / "analytics-service" / "worker.py"
     module_name = "analytics_service_worker"
 
     # Remove any previously cached module so env vars above take effect.
@@ -78,17 +76,16 @@ class TestHealth:
 
 class TestEventIngestion:
     def test_single_event(self, client):
-        r = client.post("/events", json={"event_type": "page_view", "user_id": "u1", "session_id": "s1"})
+        r = client.post(
+            "/events", json={"event_type": "page_view", "user_id": "u1", "session_id": "s1"}
+        )
         assert r.status_code == 201
         data = r.json()
         assert data["event_type"] == "page_view"
         assert "id" in data
 
     def test_batch_events(self, client):
-        events = [
-            {"event_type": "click", "user_id": f"u{i}", "session_id": "s2"}
-            for i in range(5)
-        ]
+        events = [{"event_type": "click", "user_id": f"u{i}", "session_id": "s2"} for i in range(5)]
         r = client.post("/events/batch", json={"events": events})
         assert r.status_code == 201
         assert r.json()["inserted"] == 5
@@ -207,7 +204,10 @@ class TestDuckDBOlap:
         self._skip_if_no_duckdb(client)
         r = client.post(
             "/analytics/query",
-            json={"sql": "SELECT event_type, COUNT(*) AS n FROM all_events GROUP BY event_type ORDER BY n DESC", "limit": 10},
+            json={
+                "sql": "SELECT event_type, COUNT(*) AS n FROM all_events GROUP BY event_type ORDER BY n DESC",
+                "limit": 10,
+            },
         )
         assert r.status_code == 200
         data = r.json()
@@ -216,7 +216,10 @@ class TestDuckDBOlap:
 
     def test_olap_query_rejects_insert(self, client):
         self._skip_if_no_duckdb(client)
-        r = client.post("/analytics/query", json={"sql": "INSERT INTO events (event_type) VALUES ('x')", "limit": 10})
+        r = client.post(
+            "/analytics/query",
+            json={"sql": "INSERT INTO events (event_type) VALUES ('x')", "limit": 10},
+        )
         assert r.status_code == 422  # rejected by field validator
 
     def test_olap_query_rejects_drop(self, client):

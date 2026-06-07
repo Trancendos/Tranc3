@@ -34,9 +34,7 @@ PINECONE_INDEX = os.environ.get("PINECONE_INDEX", "tranc3-memory")
 # Set PINECONE_NAMESPACES to a comma-separated list to migrate specific namespaces.
 # Leave empty to migrate the default namespace only.
 PINECONE_NAMESPACES = [
-    ns.strip()
-    for ns in os.environ.get("PINECONE_NAMESPACES", "").split(",")
-    if ns.strip()
+    ns.strip() for ns in os.environ.get("PINECONE_NAMESPACES", "").split(",") if ns.strip()
 ] or [""]  # [""] = default namespace
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
@@ -75,7 +73,9 @@ def main() -> None:
     stats = index.describe_index_stats()
     total_vectors = stats.total_vector_count
     vector_dim = stats.dimension
-    logger.info("Pinecone index '%s': %d vectors, dim=%d", PINECONE_INDEX, total_vectors, vector_dim)
+    logger.info(
+        "Pinecone index '%s': %d vectors, dim=%d", PINECONE_INDEX, total_vectors, vector_dim
+    )
 
     if total_vectors == 0:
         logger.info("No vectors to migrate — nothing to do")
@@ -149,7 +149,9 @@ def main() -> None:
                 migrated += len(points)
                 logger.info(
                     "Namespace %s — migrated %d vectors so far (total %d)",
-                    ns_label, len(points), migrated,
+                    ns_label,
+                    len(points),
+                    migrated,
                 )
 
             next_token = page.pagination.next if page.pagination else None
@@ -159,7 +161,9 @@ def main() -> None:
 
         logger.info("Namespace %s — done", ns_label)
 
-    logger.info("Migration complete — %d vectors upserted into Qdrant '%s'", migrated, QDRANT_COLLECTION)
+    logger.info(
+        "Migration complete — %d vectors upserted into Qdrant '%s'", migrated, QDRANT_COLLECTION
+    )
     logger.info("You can now remove PINECONE_API_KEY and PINECONE_INDEX from your environment.")
 
 

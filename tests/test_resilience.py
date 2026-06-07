@@ -11,12 +11,11 @@ import pytest
 
 from src.mesh.bulkhead import Bulkhead, BulkheadFullError, BulkheadTimeoutError
 from src.mesh.rate_limiter import (
+    FixedWindowLimiter,
     SlidingWindowLimiter,
     TokenBucketLimiter,
-    FixedWindowLimiter,
 )
-from src.mesh.retry import RetryPolicy, RetryExhaustedError, with_retry, with_retry_sync
-
+from src.mesh.retry import RetryExhaustedError, RetryPolicy, with_retry, with_retry_sync
 
 # ── Bulkhead ───────────────────────────────────────────────────────────────────
 

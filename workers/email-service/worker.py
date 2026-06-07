@@ -19,7 +19,6 @@ import logging
 import os
 import smtplib
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -31,6 +30,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8018

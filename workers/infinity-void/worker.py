@@ -31,7 +31,6 @@ import hashlib
 import json
 import os
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from collections import defaultdict
@@ -44,6 +43,8 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 # ── Configuration ───────────────────────────────────────────────
 

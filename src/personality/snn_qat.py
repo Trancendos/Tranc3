@@ -40,13 +40,14 @@ logger = logging.getLogger(__name__)
 # ── optional torch / snntorch / brevitas ──────────────────────────────────────
 
 try:
+    import brevitas.nn as qnn  # type: ignore[import]
+    import snntorch as snn  # type: ignore[import]
     import torch
     import torch.nn as nn
-    import snntorch as snn  # type: ignore[import]
-
-    import brevitas.nn as qnn  # type: ignore[import]
-    from brevitas.quant import Int8WeightPerTensorFloat  # type: ignore[import]
-    from brevitas.quant import Int8ActPerTensorFloat  # type: ignore[import]
+    from brevitas.quant import (
+        Int8ActPerTensorFloat,  # type: ignore[import]
+        Int8WeightPerTensorFloat,  # type: ignore[import]
+    )
 
     _USING_SNN = True
     logger.debug("personality.snn_qat: snntorch+brevitas available — using SNN QAT")

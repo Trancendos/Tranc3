@@ -11,10 +11,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 from pathlib import Path
 from typing import Any
+
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 logger = logging.getLogger(__name__)
 

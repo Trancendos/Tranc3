@@ -65,6 +65,7 @@ _CHECK_INTERVAL = 3600  # 1 hour
 # DB helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_db() -> sqlite3.Connection:
     Path(_DB_PATH).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(_DB_PATH, check_same_thread=False)
@@ -113,6 +114,7 @@ def _fingerprint(value: str) -> str:
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class RotationResult:
@@ -210,8 +212,11 @@ class KeyRotationService:
 
         if row is None:
             return RotationResult(
-                key_id=key_id, success=False, new_fingerprint="",
-                previous_fingerprint=None, rotated_at=now,
+                key_id=key_id,
+                success=False,
+                new_fingerprint="",
+                previous_fingerprint=None,
+                rotated_at=now,
                 error=f"key_id '{key_id}' not registered",
             )
 
@@ -224,9 +229,7 @@ class KeyRotationService:
 
         try:
             # Mark old as previous
-            conn.execute(
-                "UPDATE key_store SET is_previous = 1 WHERE key_id = ?", (key_id,)
-            )
+            conn.execute("UPDATE key_store SET is_previous = 1 WHERE key_id = ?", (key_id,))
             # Insert new active
             expires_at = None  # key_store doesn't expire; rotation_log tracks schedule
             conn.execute(
@@ -258,7 +261,11 @@ class KeyRotationService:
             os.environ[env_key] = new_value
             logger.info(
                 "key_rotation: rotated %s (%s) fingerprint %s→%s reason=%s",
-                key_id, key_type, old_fingerprint, new_fingerprint, reason,
+                key_id,
+                key_type,
+                old_fingerprint,
+                new_fingerprint,
+                reason,
             )
 
             # Call post-rotation hooks
@@ -269,7 +276,8 @@ class KeyRotationService:
                     logger.exception("key_rotation: hook failed for %s", key_id)
 
             result = RotationResult(
-                key_id=key_id, success=True,
+                key_id=key_id,
+                success=True,
                 new_fingerprint=new_fingerprint,
                 previous_fingerprint=old_fingerprint,
                 rotated_at=now,
@@ -287,9 +295,12 @@ class KeyRotationService:
             conn.commit()
             logger.exception("key_rotation: rotation FAILED for %s", key_id)
             result = RotationResult(
-                key_id=key_id, success=False, new_fingerprint="",
+                key_id=key_id,
+                success=False,
+                new_fingerprint="",
                 previous_fingerprint=old_fingerprint,
-                rotated_at=now, error=str(exc),
+                rotated_at=now,
+                error=str(exc),
             )
 
         return result
@@ -313,8 +324,10 @@ class KeyRotationService:
         conn.commit()
         return [
             {
-                "key_id": r[0], "key_type": r[1],
-                "last_rotated_at": r[2], "next_rotation_due": r[3],
+                "key_id": r[0],
+                "key_type": r[1],
+                "last_rotated_at": r[2],
+                "next_rotation_due": r[3],
                 "rotation_period_days": r[4],
             }
             for r in rows
@@ -341,9 +354,12 @@ class KeyRotationService:
         ).fetchall()
         return [
             {
-                "key_id": r[0], "key_type": r[1],
-                "last_rotated_at": r[2], "next_rotation_due": r[3],
-                "rotation_period_days": r[4], "is_overdue": bool(r[5]),
+                "key_id": r[0],
+                "key_type": r[1],
+                "last_rotated_at": r[2],
+                "next_rotation_due": r[3],
+                "rotation_period_days": r[4],
+                "is_overdue": bool(r[5]),
             }
             for r in rows
         ]
@@ -361,17 +377,24 @@ class KeyRotationService:
             ).fetchall()
         cols = [d[0] for d in conn.execute("SELECT * FROM rotation_log LIMIT 0").description or []]
         if not cols:
-            cols = ["id","key_id","key_type","rotated_at","rotated_by",
-                    "previous_key_fingerprint","new_key_fingerprint","success","notes"]
+            cols = [
+                "id",
+                "key_id",
+                "key_type",
+                "rotated_at",
+                "rotated_by",
+                "previous_key_fingerprint",
+                "new_key_fingerprint",
+                "success",
+                "notes",
+            ]
         return [dict(zip(cols, r, strict=False)) for r in rows]
 
     def purge_previous_keys(self) -> int:
         """Delete previous (old) key values older than grace period."""
         conn = self._db()
         cutoff = f"datetime('now', '-{_GRACE_DAYS} days')"
-        cur = conn.execute(
-            f"DELETE FROM key_store WHERE is_previous = 1 AND created_at < {cutoff}"
-        )
+        cur = conn.execute(f"DELETE FROM key_store WHERE is_previous = 1 AND created_at < {cutoff}")
         conn.commit()
         purged = cur.rowcount
         if purged:
@@ -401,7 +424,9 @@ class KeyRotationService:
                     logger.exception("key_rotation: background loop error")
 
         self._task = asyncio.ensure_future(_loop())
-        logger.info("key_rotation: background rotation loop started (interval=%ds)", _CHECK_INTERVAL)
+        logger.info(
+            "key_rotation: background rotation loop started (interval=%ds)", _CHECK_INTERVAL
+        )
 
     async def stop(self) -> None:
         if self._task:

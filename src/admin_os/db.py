@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import os
 import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.override_store import invalidate_override_cache
 
 _DB_PATH = Path(

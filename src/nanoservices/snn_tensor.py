@@ -29,12 +29,20 @@ logger = logging.getLogger(__name__)
 # ── attempt to load Rust extension ────────────────────────────────��──────────
 
 try:
+    from tranc3_snn import (
+        dequantize_i8_to_f32 as _rust_dequantize,
+    )
     from tranc3_snn import (  # type: ignore[import]
         leaky_step_i8 as _rust_leaky_step_i8,
-        spike_rate_i8 as _rust_spike_rate_i8,
-        quantize_f32_to_i8 as _rust_quantize,
-        dequantize_i8_to_f32 as _rust_dequantize,
+    )
+    from tranc3_snn import (
         matmul_i8 as _rust_matmul,
+    )
+    from tranc3_snn import (
+        quantize_f32_to_i8 as _rust_quantize,
+    )
+    from tranc3_snn import (
+        spike_rate_i8 as _rust_spike_rate_i8,
     )
 
     _USING_RUST = True

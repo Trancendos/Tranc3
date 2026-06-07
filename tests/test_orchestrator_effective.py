@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 from pathlib import Path
 
 import pytest
 
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.orchestrator_effective import (
     ORCHESTRATOR_PID,
     get_orchestrator_display_name,
