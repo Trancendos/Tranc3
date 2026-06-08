@@ -7,6 +7,8 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from Dimensional.path_validation import PathTraversalError, validate_path
+
 _ROOT = Path(os.environ.get("ADMIN_OS_WORKSPACE_ROOT", "data/admin_os_workspace")).resolve()
 
 
@@ -18,11 +20,10 @@ def workspace_root() -> Path:
 
 def _safe_path(relative: str) -> Path:
     rel = (relative or "").strip().replace("\\", "/").lstrip("/")
-    target = (workspace_root() / rel).resolve()
-    root = workspace_root()
-    if not str(target).startswith(str(root)):
-        raise PermissionError("Path escapes workspace root")
-    return target
+    try:
+        return validate_path(rel, workspace_root(), allow_create=True)
+    except PathTraversalError as exc:
+        raise PermissionError("Path escapes workspace root") from exc
 
 
 def list_dir(relative: str = "") -> dict[str, Any]:

@@ -9,6 +9,9 @@
   const ADMIN_URL = window.ADMIN_URL || ADMIN_OS;
 
   const $ = (id) => document.getElementById(id);
+  function esc(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  }
   const announce = (msg) => {
     const lr = $('live-region');
     if (lr) lr.textContent = msg;
@@ -54,8 +57,8 @@
     article.setAttribute('aria-labelledby', `${id}-title`);
     article.innerHTML = `
       <div class="window-chrome">
-        <h2 id="${id}-title" class="window-title">${title}</h2>
-        <button type="button" class="window-close" aria-label="Close ${title}">✕</button>
+        <h2 id="${id}-title" class="window-title">${esc(title)}</h2>
+        <button type="button" class="window-close" aria-label="Close ${esc(title)}">✕</button>
       </div>
       <div class="window-body">${html}</div>
     `;
@@ -173,12 +176,12 @@
       const rows = (data.entries || [])
         .map(
           (e) =>
-            `<tr data-path="${e.path}" data-type="${e.type}"><td>${e.type === 'directory' ? '📁' : '📄'}</td><td>${e.name}</td><td>${e.size ?? ''}</td></tr>`
+            `<tr data-path="${esc(e.path)}" data-type="${esc(e.type)}"><td>${e.type === 'directory' ? '📁' : '📄'}</td><td>${esc(e.name)}</td><td>${esc(e.size ?? '')}</td></tr>`
         )
         .join('');
       return `
         <div class="admin-toolbar">
-          <input id="files-path" type="text" value="${currentPath}" style="flex:1" aria-label="Path" />
+          <input id="files-path" type="text" value="${esc(currentPath)}" style="flex:1" aria-label="Path" />
           <button type="button" id="files-refresh">Refresh</button>
           <button type="button" id="files-mkdir" class="secondary">New folder</button>
           <button type="button" id="files-delete" class="secondary">Delete</button>
@@ -241,7 +244,7 @@
       win.querySelector('.window-body').innerHTML = await render();
       bind();
     } catch (e) {
-      win.querySelector('.window-body').innerHTML = `<p>${e.message}</p>`;
+      win.querySelector('.window-body').innerHTML = `<p>${esc(e.message)}</p>`;
     }
   }
 
@@ -249,12 +252,12 @@
     try {
       const data = await fetchJson(`${ADMIN_OS}/backups`);
       const rows = (data.backups || [])
-        .map((b) => `<tr><td>${b.created_at}</td><td>${b.trigger}</td><td>${b.size_bytes}</td><td>${b.path}</td></tr>`)
+        .map((b) => `<tr><td>${esc(b.created_at)}</td><td>${esc(b.trigger)}</td><td>${esc(b.size_bytes)}</td><td>${esc(b.path)}</td></tr>`)
         .join('');
       openAppWindow(
         'win-backups',
         'Backups',
-        `<p>Auto: every <strong>${data.config.auto_backup_hours}h</strong> (${data.config.auto_backup_enabled ? 'on' : 'off'})</p>
+        `<p>Auto: every <strong>${esc(data.config.auto_backup_hours)}h</strong> (${data.config.auto_backup_enabled ? 'on' : 'off'})</p>
          <button type="button" id="btn-backup-run">Run backup now</button>
          <table class="admin-table"><thead><tr><th>When</th><th>Trigger</th><th>Size</th><th>Path</th></tr></thead><tbody>${rows}</tbody></table>`
       );
@@ -264,7 +267,7 @@
         showBackups();
       });
     } catch (e) {
-      openAppWindow('win-backups', 'Backups', `<p>${e.message}</p>`);
+      openAppWindow('win-backups', 'Backups', `<p>${esc(e.message)}</p>`);
     }
   }
 
@@ -274,10 +277,10 @@
       openAppWindow(
         'win-system',
         'System Viewer',
-        `<pre style="font-size:11px;overflow:auto;max-height:400px">${JSON.stringify(data, null, 2)}</pre>`
+        `<pre style="font-size:11px;overflow:auto;max-height:400px">${esc(JSON.stringify(data, null, 2))}</pre>`
       );
     } catch (e) {
-      openAppWindow('win-system', 'System Viewer', `<p>${e.message}</p>`);
+      openAppWindow('win-system', 'System Viewer', `<p>${esc(e.message)}</p>`);
     }
   }
 
@@ -301,7 +304,7 @@
       tbody.innerHTML = (data.events || [])
         .map(
           (e) =>
-            `<tr><td>${new Date((e.timestamp || 0) * 1000).toLocaleTimeString()}</td><td>${e.event_type}</td><td>${e.actor || '—'}</td><td>${e.outcome}</td></tr>`
+            `<tr><td>${new Date((e.timestamp || 0) * 1000).toLocaleTimeString()}</td><td>${esc(e.event_type)}</td><td>${esc(e.actor || '—')}</td><td>${esc(e.outcome)}</td></tr>`
         )
         .join('');
     };
@@ -334,20 +337,20 @@
         .slice(0, 40)
         .map(
           (e) =>
-            `<tr><td>${e.pid || ''}</td><td>${e.location || ''}</td><td>${e.lead_ai || ''}</td></tr>`
+            `<tr><td>${esc(e.pid || '')}</td><td>${esc(e.location || '')}</td><td>${esc(e.lead_ai || '')}</td></tr>`
         )
         .join('');
       openAppWindow(
         'win-entities',
         'Entity Registry',
-        `<p>${data.total || 0} entities. Full editor on <a href="index.html#infinity-admin">dashboard</a>.</p>
+        `<p>${esc(data.total || 0)} entities. Full editor on <a href="index.html#infinity-admin">dashboard</a>.</p>
          <table style="width:100%;font-size:12px;border-collapse:collapse" role="table" aria-label="Entities preview">
            <thead><tr><th scope="col">PID</th><th scope="col">Location</th><th scope="col">Lead AI</th></tr></thead>
            <tbody>${rows || '<tr><td colspan="3">No data</td></tr>'}</tbody>
          </table>`
       );
     } catch (e) {
-      openAppWindow('win-entities', 'Entity Registry', `<p>Cannot reach Admin API: ${e.message}</p>`);
+      openAppWindow('win-entities', 'Entity Registry', `<p>Cannot reach Admin API: ${esc(e.message)}</p>`);
     }
   }
 
@@ -357,7 +360,7 @@
       openAppWindow(
         'win-adaptive',
         'Adaptive AI Rotation',
-        `<pre style="font-size:11px;overflow:auto;max-height:320px">${JSON.stringify(data, null, 2)}</pre>
+        `<pre style="font-size:11px;overflow:auto;max-height:320px">${esc(JSON.stringify(data, null, 2))}</pre>
          <p><button type="button" id="btn-proactive-run">Run proactive check now</button></p>`
       );
       document.getElementById('btn-proactive-run')?.addEventListener('click', async () => {
@@ -366,7 +369,7 @@
         showAdaptive();
       });
     } catch (e) {
-      openAppWindow('win-adaptive', 'Adaptive AI', `<p>${e.message}</p>`);
+      openAppWindow('win-adaptive', 'Adaptive AI', `<p>${esc(e.message)}</p>`);
     }
   }
 
@@ -374,7 +377,7 @@
     try {
       const data = await fetchJson(`${ADMIN_URL}/admin/orchestrators`);
       const list = (data.orchestrators || [])
-        .map((o) => `<li><strong>${o.name}</strong> <span style="color:var(--os-muted)">(${o.id})</span></li>`)
+        .map((o) => `<li><strong>${esc(o.name)}</strong> <span style="color:var(--os-muted)">(${esc(o.id)})</span></li>`)
         .join('');
       openAppWindow(
         'win-orch',
@@ -382,7 +385,7 @@
         `<ul>${list}</ul><p>Rename via PATCH /admin/orchestrators/{id}</p>`
       );
     } catch (e) {
-      openAppWindow('win-orch', 'Orchestrators', `<p>${e.message}</p>`);
+      openAppWindow('win-orch', 'Orchestrators', `<p>${esc(e.message)}</p>`);
     }
   }
 

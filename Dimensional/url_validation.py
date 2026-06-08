@@ -91,6 +91,10 @@ _ALLOWED_SCHEMES: set[str] = {"https"}
 # Maximum URL length to prevent buffer-based attacks
 _MAX_URL_LENGTH = 2048
 
+# Safe workflow/resource IDs for URL path interpolation (blocks traversal, @, etc.)
+_WORKFLOW_ID_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$")
+_MAX_WORKFLOW_ID_LENGTH = 128
+
 
 def _is_ip_private(ip_str: str) -> bool:
     """Return True if the IP address falls in a private/reserved range."""
@@ -231,3 +235,67 @@ def validate_webhook_url(url: str) -> str:
         SSRFError: If the URL fails SSRF safety checks.
     """
     return validate_url(url)
+
+
+def validate_workflow_id(workflow_id: str) -> str:
+    """Validate a workflow ID before interpolating it into an outbound URL path.
+
+    Blocks path traversal (``../``), URL metacharacters, and other values that
+    could alter the request target when embedded in a path segment.
+
+    Args:
+        workflow_id: The workflow identifier from a route parameter or payload.
+
+    Returns:
+        The validated workflow ID (unchanged).
+
+    Raises:
+        SSRFError: If the ID is empty, too long, or contains unsafe characters.
+    """
+    if not workflow_id:
+        raise SSRFError("Workflow ID must not be empty")
+
+    if len(workflow_id) > _MAX_WORKFLOW_ID_LENGTH:
+        raise SSRFError(
+            f"Workflow ID exceeds maximum length of {_MAX_WORKFLOW_ID_LENGTH} characters"
+        )
+
+    if not _WORKFLOW_ID_PATTERN.match(workflow_id):
+        raise SSRFError(f"Invalid workflow ID format: {workflow_id!r}")
+
+    return workflow_id
+
+
+def validate_ip_address(ip: str, *, allow_private: bool = False) -> str:
+    """Validate an IP address before interpolating it into an outbound URL path.
+
+    Ensures the value is a syntactically valid IPv4/IPv6 address.  By default,
+    private, loopback, link-local, and other reserved addresses are rejected so
+    they cannot be used to probe internal networks via third-party geo APIs.
+
+    Args:
+        ip: The IP address string (from a route parameter or batch payload).
+        allow_private: When ``True``, permit private/reserved addresses.
+            Use only for explicitly local lookups (e.g. localhost shortcuts).
+
+    Returns:
+        The canonical string form of the validated IP address.
+
+    Raises:
+        SSRFError: If the address is invalid or (when ``allow_private`` is
+            ``False``) falls in a private/reserved range.
+    """
+    if not ip or not ip.strip():
+        raise SSRFError("IP address must not be empty")
+
+    ip = ip.strip()
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError as exc:
+        raise SSRFError(f"Invalid IP address: {ip!r}") from exc
+
+    canonical = str(addr)
+    if not allow_private and _is_ip_private(canonical):
+        raise SSRFError(f"Private/reserved IP addresses are not allowed: {canonical}")
+
+    return canonical

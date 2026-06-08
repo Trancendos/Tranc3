@@ -20,6 +20,8 @@ from typing import Dict, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from Dimensional.path_validation import PathTraversalError, validate_path
+
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -72,6 +74,10 @@ _jobs: Dict[str, Job] = {}
 WORKDIR = Path(os.environ.get("FFMPEG_WORKDIR", "/app/workdir"))
 WORKDIR.mkdir(parents=True, exist_ok=True)
 
+# Allowed root for input media (paths must resolve under this directory)
+MEDIA_ROOT = Path(os.environ.get("FFMPEG_MEDIA_ROOT", str(WORKDIR / "media")))
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -94,6 +100,19 @@ def _ffmpeg_version() -> str:
     except Exception:
         pass
     return "unknown"
+
+
+def _validated_input_path(input_path: str) -> Path:
+    """Ensure input_path resolves to an existing file under MEDIA_ROOT."""
+    try:
+        resolved = validate_path(input_path, MEDIA_ROOT, must_exist=True, allow_create=False)
+    except PathTraversalError as exc:
+        raise HTTPException(status_code=400, detail="Invalid input path") from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Input file not found") from exc
+    if not resolved.is_file():
+        raise HTTPException(status_code=404, detail="Input file not found")
+    return resolved
 
 
 def _quality_to_crf(quality: str) -> str:
@@ -384,8 +403,9 @@ async def transcode(req: TranscodeRequest) -> dict:
 
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
+    validated_input = _validated_input_path(req.input_path)
     asyncio.create_task(
-        _run_job(job_id, _transcode(req.input_path, req.output_format, req.quality)),
+        _run_job(job_id, _transcode(str(validated_input), req.output_format, req.quality)),
     )
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
@@ -407,8 +427,9 @@ async def thumbnail(req: ThumbnailRequest) -> dict:
 
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
+    validated_input = _validated_input_path(req.input_path)
     asyncio.create_task(
-        _run_job(job_id, _thumbnail(req.input_path, req.timestamp_seconds)),
+        _run_job(job_id, _thumbnail(str(validated_input), req.timestamp_seconds)),
     )
     return {"job_id": job_id, "status": JobStatus.PENDING}
 
@@ -421,8 +442,9 @@ async def compress(req: CompressRequest) -> dict:
 
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
+    validated_input = _validated_input_path(req.input_path)
     asyncio.create_task(
-        _run_job(job_id, _compress(req.input_path, req.target_mb)),
+        _run_job(job_id, _compress(str(validated_input), req.target_mb)),
     )
     return {"job_id": job_id, "status": JobStatus.PENDING}
 

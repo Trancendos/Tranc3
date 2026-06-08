@@ -29,6 +29,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from Dimensional.path_validation import safe_join, validate_path
+
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -95,8 +97,11 @@ def init_db() -> None:
 
 
 def _object_path(bucket: str, key: str) -> Path:
-    safe_key = key.replace("/", os.sep)
-    return STORAGE_ROOT / bucket / safe_key
+    bucket_dir = safe_join(STORAGE_ROOT, bucket)
+    normalized_key = key.replace("\\", "/").lstrip("/")
+    if not normalized_key:
+        raise ValueError("Object key must not be empty")
+    return validate_path(normalized_key, bucket_dir, allow_create=True)
 
 
 def _etag(data: bytes) -> str:

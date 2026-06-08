@@ -83,6 +83,18 @@ See `docs/CVE_REMEDIATION_REPORT.md` for the complete list of 66 resolved CVEs.
 | cryptography | (new) | 48.0.0 | CVE-2026-26007, CVE-2024-12797, +2 more |
 | undici | (new) | 7.15.0 | CVE-2026-1525, CVE-2026-22036, +3 more |
 
+### Static Analysis Remediation Utilities (2026-06)
+
+CodeQL/Trivy findings for SSRF, path traversal, log injection, DOM XSS, and container privilege are addressed with shared helpers in `Dimensional/` and `shared_core/`:
+
+| Module | Purpose | Key APIs |
+|--------|---------|----------|
+| `url_validation.py` | Block SSRF to private/reserved hosts | `validate_url`, `validate_webhook_url`, `validate_workflow_id`, `validate_ip_address` |
+| `path_validation.py` | Prevent directory traversal | `validate_path`, `safe_join`, `sanitize_filename` |
+| `sanitize.py` | Strip control chars from log fields | `sanitize_for_log`, `sanitize_dict_for_log`, `SafeLogger` |
+
+Workers and Admin OS routes import these modules at trust boundaries (gateway proxy, CDN/storage/ffmpeg paths, notification logging). The Infinity Admin dashboard escapes dynamic HTML via `esc()` in `dashboard/admin-os.js` and `dashboard/app.js`.
+
 ## Compliance Alignment
 
 - **OWASP Top 10 (2021)** — All categories addressed

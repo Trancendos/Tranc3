@@ -63,6 +63,7 @@ from Dimensional.infinity.sentinel_station import (
     SharedSSEGenerator,
     get_sentinel_station,
 )
+from Dimensional.path_validation import PathTraversalError, validate_path
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -1342,19 +1343,29 @@ async def _cleanup_stale_connections():
 DASHBOARD_DIR = PathLib(__file__).parent.parent.parent / "dashboard"
 
 
+def _dashboard_file(path: str) -> PathLib:
+    """Resolve a dashboard asset path under DASHBOARD_DIR."""
+    try:
+        resolved = validate_path(path, DASHBOARD_DIR, must_exist=True, allow_create=False)
+    except PathTraversalError:
+        raise HTTPException(404, "File not found") from None
+    except FileNotFoundError:
+        raise HTTPException(404, "File not found") from None
+    if not resolved.is_file():
+        raise HTTPException(404, "File not found")
+    return resolved
+
+
 @app.get("/dashboard/{path:path}")
 async def serve_dashboard(path: str = "index.html"):
     """Serve the AI Platform dashboard static files."""
-    file_path = DASHBOARD_DIR / path
-    if file_path.exists() and file_path.is_file():
-        return FileResponse(str(file_path))
-    raise HTTPException(404, "File not found") from None
+    return FileResponse(str(_dashboard_file(path)))
 
 
 @app.get("/dashboard")
 async def serve_dashboard_index():
     """Serve the dashboard index."""
-    return FileResponse(str(DASHBOARD_DIR / "index.html"))
+    return FileResponse(str(_dashboard_file("index.html")))
 
 
 # ---------------------------------------------------------------------------
