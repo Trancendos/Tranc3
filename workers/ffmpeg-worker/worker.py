@@ -20,7 +20,7 @@ from typing import Dict, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from Dimensional.path_validation import PathTraversalError, validate_path
+from Dimensional.path_validation import PathTraversalError, validate_existing_file
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -105,14 +105,11 @@ def _ffmpeg_version() -> str:
 def _validated_input_path(input_path: str) -> Path:
     """Ensure input_path resolves to an existing file under MEDIA_ROOT."""
     try:
-        resolved = validate_path(input_path, MEDIA_ROOT, must_exist=True, allow_create=False)
+        return validate_existing_file(input_path, MEDIA_ROOT)
     except PathTraversalError as exc:
         raise HTTPException(status_code=400, detail="Invalid input path") from exc
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Input file not found") from exc
-    if not resolved.is_file():
-        raise HTTPException(status_code=404, detail="Input file not found")
-    return resolved
 
 
 def _quality_to_crf(quality: str) -> str:

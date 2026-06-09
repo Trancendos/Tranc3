@@ -82,6 +82,21 @@ def validate_path(
     return resolved
 
 
+def validate_existing_file(
+    path: Union[str, Path],
+    base_dir: Union[str, Path],
+) -> Path:
+    """Validate that *path* resolves to an existing regular file under *base_dir*.
+
+    Combines ``validate_path`` with an ``is_file()`` check so callers do not
+    need to touch user-influenced paths after validation (CodeQL path-injection).
+    """
+    resolved = validate_path(path, base_dir, must_exist=True, allow_create=False)
+    if not resolved.is_file():
+        raise FileNotFoundError(f"Validated path is not a file: {resolved}")
+    return resolved
+
+
 def safe_join(
     base_dir: Union[str, Path],
     *components: str,

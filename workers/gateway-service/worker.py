@@ -63,7 +63,7 @@ from Dimensional.infinity.sentinel_station import (
     SharedSSEGenerator,
     get_sentinel_station,
 )
-from Dimensional.path_validation import PathTraversalError, validate_path
+from Dimensional.path_validation import PathTraversalError, validate_existing_file
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -1346,14 +1346,11 @@ DASHBOARD_DIR = PathLib(__file__).parent.parent.parent / "dashboard"
 def _dashboard_file(path: str) -> PathLib:
     """Resolve a dashboard asset path under DASHBOARD_DIR."""
     try:
-        resolved = validate_path(path, DASHBOARD_DIR, must_exist=True, allow_create=False)
+        return validate_existing_file(path, DASHBOARD_DIR)
     except PathTraversalError:
         raise HTTPException(404, "File not found") from None
     except FileNotFoundError:
         raise HTTPException(404, "File not found") from None
-    if not resolved.is_file():
-        raise HTTPException(404, "File not found")
-    return resolved
 
 
 @app.get("/dashboard/{path:path}")

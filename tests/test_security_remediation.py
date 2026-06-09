@@ -49,6 +49,20 @@ class TestPathValidation:
             with pytest.raises(PathTraversalError):
                 validate_path("/etc/passwd", tmpdir)
 
+    def test_validate_existing_file_requires_file(self):
+        from Dimensional.path_validation import validate_existing_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = Path(tmpdir) / "asset.txt"
+            file_path.write_text("ok", encoding="utf-8")
+            resolved = validate_existing_file("asset.txt", tmpdir)
+            assert resolved == file_path.resolve()
+
+            subdir = Path(tmpdir) / "empty_dir"
+            subdir.mkdir()
+            with pytest.raises(FileNotFoundError, match="not a file"):
+                validate_existing_file("empty_dir", tmpdir)
+
     def test_safe_join_normal(self):
         from Dimensional.path_validation import safe_join
 

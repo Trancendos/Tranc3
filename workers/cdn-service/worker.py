@@ -27,7 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
-from Dimensional.path_validation import PathTraversalError, validate_path
+from Dimensional.path_validation import PathTraversalError, validate_existing_file
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -41,14 +41,13 @@ def _asset_file_path(relative_path: str) -> Path:
     """Resolve a user-supplied path under ASSETS_ROOT."""
     normalized = relative_path.lstrip("/")
     try:
-        resolved = validate_path(normalized, ASSETS_ROOT.resolve(), must_exist=True, allow_create=False)
+        return validate_existing_file(normalized, ASSETS_ROOT.resolve())
     except PathTraversalError:
         raise HTTPException(status_code=404, detail="Asset not found") from None
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Asset not found") from None
-    if not resolved.is_file():
-        raise HTTPException(status_code=404, detail="Asset not found")
-    return resolved
+
+
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 ASSETS_ROOT.mkdir(parents=True, exist_ok=True)
 

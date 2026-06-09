@@ -35,7 +35,9 @@ jobs:
         include:
           - language: python
             build-mode: none
-            packs: codeql/python-queries:AlertSuppression.ql
+            packs: >-
+              codeql/python-queries:AlertSuppression.ql,
+              ./.github/codeql/tranc3-python-models
             sarif-name: python
           - language: javascript-typescript
             build-mode: none

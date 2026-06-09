@@ -1,0 +1,7 @@
+name: trancendos/tranc3-python-models
+version: 0.0.1
+library: false
+extensionTargets:
+  codeql/python-all: "*"
+dataExtensions:
+  - models/path-validation.yml
