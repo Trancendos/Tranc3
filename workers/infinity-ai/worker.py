@@ -32,9 +32,9 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from shared_core.sanitize import sanitize_for_log
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
-from shared_core.sanitize import sanitize_for_log
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -330,7 +330,9 @@ class OllamaClient:
                 result = json.loads(resp.read().decode())
                 return result
         except Exception as e:
-            logger.warning("Ollama request failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Ollama request failed: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             self._available = False
             return None
 
@@ -396,10 +398,14 @@ class OpenRouterClient:
             with urllib.request.urlopen(req, timeout=60) as resp:
                 return json.loads(resp.read().decode())
         except urllib.error.HTTPError as e:
-            logger.warning("OpenRouter HTTP error: %s %s", e.code, sanitize_for_log(e.reason))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "OpenRouter HTTP error: %s %s", e.code, sanitize_for_log(e.reason)
+            )  # codeql[py/cleartext-logging]
             return None
         except Exception as e:
-            logger.warning("OpenRouter request failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "OpenRouter request failed: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return None
 
 
@@ -448,7 +454,9 @@ class HuggingFaceClient:
                     text = result[0].get("generated_text", "")
                     return {"content": text}
                 elif isinstance(result, dict) and "error" in result:
-                    logger.warning("HuggingFace error: %s", sanitize_for_log(result["error"]))  # codeql[py/cleartext-logging]
+                    logger.warning(
+                        "HuggingFace error: %s", sanitize_for_log(result["error"])
+                    )  # codeql[py/cleartext-logging]
                     return None
                 return result
         except urllib.error.HTTPError as e:
@@ -458,7 +466,9 @@ class HuggingFaceClient:
                 logger.warning("HuggingFace HTTP error: %s", e.code)
             return None
         except Exception as e:
-            logger.warning("HuggingFace request failed: %s", sanitize_for_log(e))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "HuggingFace request failed: %s", sanitize_for_log(e)
+            )  # codeql[py/cleartext-logging]
             return None
 
 
@@ -555,7 +565,9 @@ class AIGatewayRouter:
                     ordered.append((enum_name, self._provider_map[enum_name]))
             return ordered or self._default_provider_order()
         except Exception as exc:
-            logger.warning("Adaptive order fallback: %s", sanitize_for_log(exc))  # codeql[py/cleartext-logging]
+            logger.warning(
+                "Adaptive order fallback: %s", sanitize_for_log(exc)
+            )  # codeql[py/cleartext-logging]
             return self._default_provider_order()
 
     def _make_cache_key(

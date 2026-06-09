@@ -42,6 +42,13 @@
     }
   }
 
+  /** Populate a container from app-authored markup (escape dynamic values with esc()). */
+  function setTrustedWindowHtml(container, html) {
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    container.replaceChildren(...template.content.childNodes);
+  }
+
   function openAppWindow(id, title, html) {
     const stack = $('window-stack');
     if (!stack) return;
@@ -55,14 +62,26 @@
     article.id = id;
     article.setAttribute('role', 'region');
     article.setAttribute('aria-labelledby', `${id}-title`);
-    article.innerHTML = `
-      <div class="window-chrome">
-        <h2 id="${id}-title" class="window-title">${esc(title)}</h2>
-        <button type="button" class="window-close" aria-label="Close ${esc(title)}">✕</button>
-      </div>
-      <div class="window-body">${html}</div>
-    `;
-    article.querySelector('.window-close')?.addEventListener('click', () => {
+
+    const chrome = document.createElement('div');
+    chrome.className = 'window-chrome';
+    const heading = document.createElement('h2');
+    heading.id = `${id}-title`;
+    heading.className = 'window-title';
+    heading.textContent = title;
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'window-close';
+    closeBtn.setAttribute('aria-label', `Close ${title}`);
+    closeBtn.textContent = '✕';
+    chrome.append(heading, closeBtn);
+
+    const body = document.createElement('div');
+    body.className = 'window-body';
+    setTrustedWindowHtml(body, html);
+
+    article.append(chrome, body);
+    closeBtn.addEventListener('click', () => {
       article.remove();
       announce(`${title} closed`);
     });
@@ -169,82 +188,143 @@
     }
   }
 
-  async function showFiles() {
-    let currentPath = '';
-    const render = async () => {
-      const data = await fetchJson(`${ADMIN_OS}/files?path=${encodeURIComponent(currentPath)}`);
-      const rows = (data.entries || [])
-        .map(
-          (e) =>
-            `<tr data-path="${esc(e.path)}" data-type="${esc(e.type)}"><td>${e.type === 'directory' ? '📁' : '📄'}</td><td>${esc(e.name)}</td><td>${esc(e.size ?? '')}</td></tr>`
-        )
-        .join('');
-      return `
-        <div class="admin-toolbar">
-          <input id="files-path" type="text" value="${esc(currentPath)}" style="flex:1" aria-label="Path" />
-          <button type="button" id="files-refresh">Refresh</button>
-          <button type="button" id="files-mkdir" class="secondary">New folder</button>
-          <button type="button" id="files-delete" class="secondary">Delete</button>
-        </div>
-        <table class="admin-table" role="table"><tbody>${rows}</tbody></table>
-        <label for="files-editor">File editor</label>
-        <textarea id="files-editor" class="admin-editor" aria-label="File content"></textarea>
-        <button type="button" id="files-save">Save file</button>
-        <p id="files-msg"></p>`;
+  function showWindowError(win, message) {
+    const body = win.querySelector('.window-body');
+    body.replaceChildren();
+    const p = document.createElement('p');
+    p.textContent = message;
+    body.appendChild(p);
+  }
+
+  async function mountFilesPanel(win, pathValue) {
+    const body = win.querySelector('.window-body');
+    body.replaceChildren();
+    const loading = document.createElement('p');
+    loading.textContent = 'Loading…';
+    body.appendChild(loading);
+
+    const data = await fetchJson(`${ADMIN_OS}/files?path=${encodeURIComponent(pathValue)}`);
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'admin-toolbar';
+
+    const pathInput = document.createElement('input');
+    pathInput.id = 'files-path';
+    pathInput.type = 'text';
+    pathInput.value = pathValue;
+    pathInput.style.flex = '1';
+    pathInput.setAttribute('aria-label', 'Path');
+
+    const refreshBtn = document.createElement('button');
+    refreshBtn.type = 'button';
+    refreshBtn.id = 'files-refresh';
+    refreshBtn.textContent = 'Refresh';
+
+    const mkdirBtn = document.createElement('button');
+    mkdirBtn.type = 'button';
+    mkdirBtn.id = 'files-mkdir';
+    mkdirBtn.className = 'secondary';
+    mkdirBtn.textContent = 'New folder';
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.id = 'files-delete';
+    deleteBtn.className = 'secondary';
+    deleteBtn.textContent = 'Delete';
+
+    toolbar.append(pathInput, refreshBtn, mkdirBtn, deleteBtn);
+
+    const table = document.createElement('table');
+    table.className = 'admin-table';
+    table.setAttribute('role', 'table');
+    const tbody = document.createElement('tbody');
+    for (const entry of data.entries || []) {
+      const tr = document.createElement('tr');
+      tr.dataset.path = entry.path ?? '';
+      tr.dataset.type = entry.type ?? '';
+      const iconCell = document.createElement('td');
+      iconCell.textContent = entry.type === 'directory' ? '📁' : '📄';
+      const nameCell = document.createElement('td');
+      nameCell.textContent = entry.name ?? '';
+      const sizeCell = document.createElement('td');
+      sizeCell.textContent = entry.size ?? '';
+      tr.append(iconCell, nameCell, sizeCell);
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+
+    const editorLabel = document.createElement('label');
+    editorLabel.setAttribute('for', 'files-editor');
+    editorLabel.textContent = 'File editor';
+
+    const editor = document.createElement('textarea');
+    editor.id = 'files-editor';
+    editor.className = 'admin-editor';
+    editor.setAttribute('aria-label', 'File content');
+
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.id = 'files-save';
+    saveBtn.textContent = 'Save file';
+
+    const msg = document.createElement('p');
+    msg.id = 'files-msg';
+
+    body.replaceChildren(toolbar, table, editorLabel, editor, saveBtn, msg);
+
+    refreshBtn.onclick = async () => {
+      await mountFilesPanel(win, pathInput.value);
     };
+
+    tbody.querySelectorAll('tr').forEach((tr) => {
+      tr.onclick = async () => {
+        const p = tr.dataset.path;
+        if (tr.dataset.type === 'directory') {
+          pathInput.value = p;
+          refreshBtn.click();
+        } else {
+          const f = await fetchJson(`${ADMIN_OS}/files/read?path=${encodeURIComponent(p)}`);
+          editor.value = f.content;
+          pathInput.value = p;
+          msg.textContent = `Editing ${p}`;
+        }
+      };
+    });
+
+    saveBtn.onclick = async () => {
+      const p = pathInput.value;
+      await fetch(`${ADMIN_OS}/files/write?path=${encodeURIComponent(p)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editor.value, create: true }),
+      });
+      announce('File saved');
+    };
+
+    mkdirBtn.onclick = async () => {
+      const name = prompt('Folder name (relative to current path):');
+      if (!name) return;
+      const p = pathValue ? `${pathValue}/${name}` : name;
+      await fetch(`${ADMIN_OS}/files/mkdir?path=${encodeURIComponent(p)}`, { method: 'POST' });
+      refreshBtn.click();
+    };
+
+    deleteBtn.onclick = async () => {
+      const p = pathInput.value;
+      if (!p || !confirm(`Delete ${p}?`)) return;
+      await fetch(`${ADMIN_OS}/files?path=${encodeURIComponent(p)}`, { method: 'DELETE' });
+      pathInput.value = '';
+      refreshBtn.click();
+    };
+  }
+
+  async function showFiles() {
     openAppWindow('win-files', 'Files', '<p>Loading…</p>');
     const win = document.getElementById('win-files');
-    const bind = () => {
-      win.querySelector('#files-refresh').onclick = async () => {
-        currentPath = win.querySelector('#files-path').value;
-        win.querySelector('.window-body').innerHTML = await render();
-        bind();
-      };
-      win.querySelectorAll('.admin-table tr').forEach((tr) => {
-        tr.onclick = async () => {
-          const p = tr.dataset.path;
-          if (tr.dataset.type === 'directory') {
-            currentPath = p;
-            win.querySelector('#files-path').value = p;
-            win.querySelector('#files-refresh').click();
-          } else {
-            const f = await fetchJson(`${ADMIN_OS}/files/read?path=${encodeURIComponent(p)}`);
-            win.querySelector('#files-editor').value = f.content;
-            win.querySelector('#files-path').value = p;
-            win.querySelector('#files-msg').textContent = `Editing ${p}`;
-          }
-        };
-      });
-      win.querySelector('#files-save').onclick = async () => {
-        const p = win.querySelector('#files-path').value;
-        const content = win.querySelector('#files-editor').value;
-        await fetch(`${ADMIN_OS}/files/write?path=${encodeURIComponent(p)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content, create: true }),
-        });
-        announce('File saved');
-      };
-      win.querySelector('#files-mkdir').onclick = async () => {
-        const name = prompt('Folder name (relative to current path):');
-        if (!name) return;
-        const p = currentPath ? `${currentPath}/${name}` : name;
-        await fetch(`${ADMIN_OS}/files/mkdir?path=${encodeURIComponent(p)}`, { method: 'POST' });
-        win.querySelector('#files-refresh').click();
-      };
-      win.querySelector('#files-delete').onclick = async () => {
-        const p = win.querySelector('#files-path').value;
-        if (!p || !confirm(`Delete ${p}?`)) return;
-        await fetch(`${ADMIN_OS}/files?path=${encodeURIComponent(p)}`, { method: 'DELETE' });
-        currentPath = '';
-        win.querySelector('#files-refresh').click();
-      };
-    };
     try {
-      win.querySelector('.window-body').innerHTML = await render();
-      bind();
+      await mountFilesPanel(win, '');
     } catch (e) {
-      win.querySelector('.window-body').innerHTML = `<p>${esc(e.message)}</p>`;
+      showWindowError(win, e.message);
     }
   }
 
@@ -301,12 +381,22 @@
       const q = cat ? `?limit=80&category=${encodeURIComponent(cat)}` : '?limit=80';
       const data = await fetchJson(`${ADMIN_OS}/events${q}`);
       const tbody = document.querySelector('#ev-table tbody');
-      tbody.innerHTML = (data.events || [])
-        .map(
-          (e) =>
-            `<tr><td>${new Date((e.timestamp || 0) * 1000).toLocaleTimeString()}</td><td>${esc(e.event_type)}</td><td>${esc(e.actor || '—')}</td><td>${esc(e.outcome)}</td></tr>`
-        )
-        .join('');
+      tbody.replaceChildren();
+      for (const e of data.events || []) {
+        const tr = document.createElement('tr');
+        const cells = [
+          new Date((e.timestamp || 0) * 1000).toLocaleTimeString(),
+          e.event_type ?? '',
+          e.actor || '—',
+          e.outcome ?? '',
+        ];
+        for (const cell of cells) {
+          const td = document.createElement('td');
+          td.textContent = cell;
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
     };
     document.getElementById('ev-refresh').onclick = load;
     document.getElementById('ev-live').onclick = () => {

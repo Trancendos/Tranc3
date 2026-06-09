@@ -117,6 +117,61 @@ class TestPathValidation:
             sanitize_filename("...")
 
 
+# ─── URL / SSRF Validation ───────────────────────────────────────────────────
+
+
+class TestUrlValidation:
+    """Tests for Dimensional.url_validation SSRF helpers."""
+
+    def test_validate_ip_address_rejects_ipv4_mapped_loopback(self):
+        from Dimensional.url_validation import SSRFError, validate_ip_address
+
+        with pytest.raises(SSRFError, match="Private/reserved"):
+            validate_ip_address("::ffff:127.0.0.1")
+
+    def test_validate_ip_address_accepts_public_ipv4(self):
+        from Dimensional.url_validation import validate_ip_address
+
+        assert validate_ip_address("8.8.8.8") == "8.8.8.8"
+
+    def test_validate_ip_address_rejects_private_ipv4(self):
+        from Dimensional.url_validation import SSRFError, validate_ip_address
+
+        with pytest.raises(SSRFError, match="Private/reserved"):
+            validate_ip_address("10.0.0.1")
+
+    def test_validate_workflow_id_rejects_traversal(self):
+        from Dimensional.url_validation import SSRFError, validate_workflow_id
+
+        with pytest.raises(SSRFError):
+            validate_workflow_id("../etc/passwd")
+
+    def test_validate_workflow_id_accepts_safe_id(self):
+        from Dimensional.url_validation import validate_workflow_id
+
+        assert validate_workflow_id("wf-123_abc") == "wf-123_abc"
+
+    @patch("socket.getaddrinfo")
+    def test_validate_url_rejects_private_resolution(self, mock_getaddrinfo):
+        from Dimensional.url_validation import SSRFError, validate_url
+
+        mock_getaddrinfo.return_value = [
+            (2, 1, 6, "", ("127.0.0.1", 443)),
+        ]
+        with pytest.raises(SSRFError, match="private/reserved"):
+            validate_url("https://example.com/webhook")
+
+    @patch("socket.getaddrinfo")
+    def test_validate_webhook_url_accepts_public_resolution(self, mock_getaddrinfo):
+        from Dimensional.url_validation import validate_webhook_url
+
+        mock_getaddrinfo.return_value = [
+            (2, 1, 6, "", ("93.184.216.34", 443)),
+        ]
+        url = validate_webhook_url("https://example.com/hook")
+        assert url == "https://example.com/hook"
+
+
 # ─── Error Handlers ───────────────────────────────────────────────────────────
 
 

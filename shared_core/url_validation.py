@@ -96,10 +96,19 @@ _WORKFLOW_ID_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$")
 _MAX_WORKFLOW_ID_LENGTH = 128
 
 
+def _normalize_ip_address(
+    addr: ipaddress.IPv4Address | ipaddress.IPv6Address,
+) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
+    """Map IPv4-mapped IPv6 addresses (e.g. ``::ffff:127.0.0.1``) to their IPv4 form."""
+    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+        return addr.ipv4_mapped
+    return addr
+
+
 def _is_ip_private(ip_str: str) -> bool:
     """Return True if the IP address falls in a private/reserved range."""
     try:
-        addr = ipaddress.ip_address(ip_str)
+        addr = _normalize_ip_address(ipaddress.ip_address(ip_str))
     except ValueError:
         return True  # If we can't parse it, treat as unsafe
 
@@ -290,7 +299,7 @@ def validate_ip_address(ip: str, *, allow_private: bool = False) -> str:
 
     ip = ip.strip()
     try:
-        addr = ipaddress.ip_address(ip)
+        addr = _normalize_ip_address(ipaddress.ip_address(ip))
     except ValueError as exc:
         raise SSRFError(f"Invalid IP address: {ip!r}") from exc
 
