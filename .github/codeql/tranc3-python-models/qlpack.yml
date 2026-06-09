@@ -1,6 +1,6 @@
 name: trancendos/tranc3-python-models
 version: 0.0.1
-library: false
+library: true
 extensionTargets:
   codeql/python-all: "*"
 dataExtensions:

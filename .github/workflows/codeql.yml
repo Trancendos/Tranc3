@@ -35,14 +35,15 @@ jobs:
         include:
           - language: python
             build-mode: none
-            packs: >-
-              codeql/python-queries:AlertSuppression.ql,
-              ./.github/codeql/tranc3-python-models
+            packs: codeql/python-queries:AlertSuppression.ql
             sarif-name: python
+            codeql-extra-options: >-
+              {"database":{"run-queries":["--additional-packs=${{ github.workspace }}/.github/codeql","--extension-packs=trancendos/tranc3-python-models"]}}
           - language: javascript-typescript
             build-mode: none
             packs: codeql/javascript-queries:AlertSuppression.ql
             sarif-name: javascript
+            codeql-extra-options: ""
 
     steps:
       - name: Checkout repository
@@ -59,6 +60,8 @@ jobs:
       - name: Perform CodeQL Analysis
         id: analyze
         uses: github/codeql-action/analyze@v4
+        env:
+          CODEQL_ACTION_EXTRA_OPTIONS: ${{ matrix.codeql-extra-options }}
         with:
           category: "/language:${{ matrix.language }}"
           output: sarif-results
