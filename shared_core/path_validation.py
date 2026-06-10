@@ -93,6 +93,14 @@ def validate_existing_file(
     return resolved
 
 
+def existing_file_path_str(
+    path: Union[str, Path],
+    base_dir: Union[str, Path],
+) -> str:
+    """Return filesystem path string for an existing file under *base_dir*."""
+    return str(validate_existing_file(path, base_dir))
+
+
 def safe_join(
     base_dir: Union[str, Path],
     *components: str,

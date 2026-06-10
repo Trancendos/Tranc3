@@ -27,7 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
-from Dimensional.path_validation import PathTraversalError, validate_existing_file
+from Dimensional.path_validation import PathTraversalError, existing_file_path_str, validate_existing_file
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -42,6 +42,17 @@ def _asset_file_path(relative_path: str) -> Path:
     normalized = relative_path.lstrip("/")
     try:
         return validate_existing_file(normalized, ASSETS_ROOT.resolve())
+    except PathTraversalError:
+        raise HTTPException(status_code=404, detail="Asset not found") from None
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Asset not found") from None
+
+
+def _asset_file_path_str(relative_path: str) -> str:
+    """Validated filesystem path string for FileResponse (CodeQL path-injection)."""
+    normalized = relative_path.lstrip("/")
+    try:
+        return existing_file_path_str(normalized, ASSETS_ROOT.resolve())
     except PathTraversalError:
         raise HTTPException(status_code=404, detail="Asset not found") from None
     except FileNotFoundError:
@@ -295,7 +306,7 @@ async def serve_asset(
         return Response(status_code=304, headers={"ETag": etag, "Cache-Control": cache_control})
 
     return FileResponse(
-        str(full_path),
+        _asset_file_path_str(path),
         media_type=content_type,
         headers={
             "ETag": etag,

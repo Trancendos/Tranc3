@@ -63,6 +63,16 @@ class TestPathValidation:
             with pytest.raises(FileNotFoundError, match="not a file"):
                 validate_existing_file("empty_dir", tmpdir)
 
+    def test_existing_file_path_str_returns_string(self):
+        from Dimensional.path_validation import existing_file_path_str
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = Path(tmpdir) / "asset.txt"
+            file_path.write_text("ok", encoding="utf-8")
+            resolved = existing_file_path_str("asset.txt", tmpdir)
+            assert isinstance(resolved, str)
+            assert resolved == str(file_path.resolve())
+
     def test_safe_join_normal(self):
         from Dimensional.path_validation import safe_join
 

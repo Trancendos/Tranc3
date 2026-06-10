@@ -37,13 +37,10 @@ jobs:
             build-mode: none
             packs: codeql/python-queries:AlertSuppression.ql
             sarif-name: python
-            codeql-extra-options: >-
-              {"database":{"run-queries":["--additional-packs=${{ github.workspace }}/.github/codeql","--extension-packs=trancendos/tranc3-python-models"]}}
           - language: javascript-typescript
             build-mode: none
             packs: codeql/javascript-queries:AlertSuppression.ql
             sarif-name: javascript
-            codeql-extra-options: ""
 
     steps:
       - name: Checkout repository
@@ -57,11 +54,16 @@ jobs:
           config-file: .github/codeql-config.yml
           packs: ${{ matrix.packs }}
 
+      # Matrix JSON does not expand ${{ github.workspace }}; set options via GITHUB_ENV.
+      - name: Configure Python path-injection model pack
+        if: matrix.language == 'python'
+        run: |
+          PACK_ROOT="${GITHUB_WORKSPACE}/.github/codeql"
+          echo "CODEQL_ACTION_EXTRA_OPTIONS={\"database\":{\"run-queries\":[\"--additional-packs=${PACK_ROOT}\",\"--extension-packs=trancendos/tranc3-python-models\"]}}" >> "$GITHUB_ENV"
+
       - name: Perform CodeQL Analysis
         id: analyze
         uses: github/codeql-action/analyze@v4
-        env:
-          CODEQL_ACTION_EXTRA_OPTIONS: ${{ matrix.codeql-extra-options }}
         with:
           category: "/language:${{ matrix.language }}"
           output: sarif-results
