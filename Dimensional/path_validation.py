@@ -109,6 +109,33 @@ def existing_file_path_str(
     return str(validate_existing_file(path, base_dir))
 
 
+def read_validated_file_text(
+    path: Union[str, Path],
+    base_dir: Union[str, Path],
+    *,
+    max_bytes: int = 512_000,
+    encoding: str = "utf-8",
+) -> tuple[str, int]:
+    """Read text from an existing file under *base_dir* after validation.
+
+    Keeps ``is_file()`` / ``read_text()`` inside this module so callers never
+    touch user-influenced paths after validation (CodeQL path-injection).
+    """
+    resolved = validate_existing_file(path, base_dir)
+    size = resolved.stat().st_size
+    if size > max_bytes:
+        raise ValueError(f"File too large ({size} bytes); max {max_bytes}")
+    return resolved.read_text(encoding=encoding, errors="replace"), size
+
+
+def remove_validated_file(
+    path: Union[str, Path],
+    base_dir: Union[str, Path],
+) -> None:
+    """Delete an existing file under *base_dir* after validation."""
+    validate_existing_file(path, base_dir).unlink()
+
+
 def safe_join(
     base_dir: Union[str, Path],
     *components: str,

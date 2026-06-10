@@ -73,6 +73,25 @@ class TestPathValidation:
             assert isinstance(resolved, str)
             assert resolved == str(file_path.resolve())
 
+    def test_read_validated_file_text_reads_under_base(self):
+        from Dimensional.path_validation import read_validated_file_text
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = Path(tmpdir) / "note.txt"
+            file_path.write_text("hello", encoding="utf-8")
+            text, size = read_validated_file_text("note.txt", tmpdir)
+            assert text == "hello"
+            assert size == 5
+
+    def test_remove_validated_file_deletes_under_base(self):
+        from Dimensional.path_validation import remove_validated_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = Path(tmpdir) / "gone.txt"
+            file_path.write_text("x", encoding="utf-8")
+            remove_validated_file("gone.txt", tmpdir)
+            assert not file_path.exists()
+
     def test_safe_join_normal(self):
         from Dimensional.path_validation import safe_join
 

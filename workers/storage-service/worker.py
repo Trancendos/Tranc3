@@ -29,8 +29,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from Dimensional.path_validation import safe_join, validate_path
-
+from Dimensional.path_validation import (
+    PathTraversalError,
+    existing_file_path_str,
+    remove_validated_file,
+    safe_join,
+    validate_path,
+)
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -102,6 +107,16 @@ def _object_path(bucket: str, key: str) -> Path:
     if not normalized_key:
         raise ValueError("Object key must not be empty")
     return validate_path(normalized_key, bucket_dir, allow_create=True)
+
+
+def _stored_object_file_path_str(stored_path: str) -> str:
+    """Validate DB-stored object path under STORAGE_ROOT (CodeQL path-injection)."""
+    try:
+        return existing_file_path_str(stored_path, STORAGE_ROOT.resolve())
+    except PathTraversalError as exc:
+        raise HTTPException(status_code=400, detail="Invalid object path") from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Object file missing from storage") from exc
 
 
 def _etag(data: bytes) -> str:
@@ -330,10 +345,12 @@ async def download_object(bucket: str, key: str):
         ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Object not found")
-    path = Path(row["path"])
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Object file missing from storage")
-    return FileResponse(str(path), media_type=row["content_type"], headers={"ETag": row["etag"]})
+    file_path = _stored_object_file_path_str(row["path"])
+    return FileResponse(
+        file_path,
+        media_type=row["content_type"],
+        headers={"ETag": row["etag"]},
+    )
 
 
 @_router.delete("/buckets/{bucket}/objects/{key:path}")
@@ -346,9 +363,12 @@ async def delete_object(bucket: str, key: str):
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Object not found")
-        path = Path(row["path"])
-        if path.exists():
-            path.unlink()
+        try:
+            remove_validated_file(row["path"], STORAGE_ROOT.resolve())
+        except PathTraversalError as exc:
+            raise HTTPException(status_code=400, detail="Invalid object path") from exc
+        except FileNotFoundError:
+            pass
         conn.execute("DELETE FROM objects WHERE bucket=? AND key=?", (bucket, key))
         conn.commit()
     return {"deleted": key, "bucket": bucket}

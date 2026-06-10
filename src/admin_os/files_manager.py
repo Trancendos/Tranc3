@@ -7,7 +7,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from Dimensional.path_validation import PathTraversalError, validate_path
+from Dimensional.path_validation import PathTraversalError, read_validated_file_text, validate_path
 
 _ROOT = Path(os.environ.get("ADMIN_OS_WORKSPACE_ROOT", "data/admin_os_workspace")).resolve()
 
@@ -55,13 +55,13 @@ def list_dir(relative: str = "") -> dict[str, Any]:
 
 
 def read_file(relative: str, *, max_bytes: int = 512_000) -> dict[str, Any]:
-    path = _safe_path(relative)
-    if not path.is_file():
-        raise FileNotFoundError(relative)
-    size = path.stat().st_size
-    if size > max_bytes:
-        raise ValueError(f"File too large ({size} bytes); max {max_bytes}")
-    text = path.read_text(encoding="utf-8", errors="replace")
+    rel = (relative or "").strip().replace("\\", "/").lstrip("/")
+    try:
+        text, size = read_validated_file_text(rel, workspace_root(), max_bytes=max_bytes)
+    except PathTraversalError as exc:
+        raise PermissionError("Path escapes workspace root") from exc
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(relative) from exc
     return {"path": relative, "size": size, "content": text, "encoding": "utf-8"}
 
 
