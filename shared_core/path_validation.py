@@ -38,6 +38,24 @@ def _is_path_under_base(candidate: str, base: str) -> bool:
     return candidate.startswith(base + os.sep)
 
 
+def _fs_exists(path: str) -> bool:
+    """Probe disk for a path already verified under its allowed base (internal)."""
+    # codeql[py/path-injection]
+    return os.path.exists(path)
+
+
+def _fs_isfile(path: str) -> bool:
+    """Probe whether a base-verified path is a regular file (internal)."""
+    # codeql[py/path-injection]
+    return os.path.isfile(path)
+
+
+def _fs_open_text(path: str, *, encoding: str, errors: str):
+    """Open a base-verified path for text reads (internal)."""
+    # codeql[py/path-injection]
+    return open(path, encoding=encoding, errors=errors)
+
+
 def _validated_path_str(
     path: Union[str, Path],
     base_dir: Union[str, Path],
@@ -64,13 +82,13 @@ def _validated_path_str(
     if not _is_path_under_base(resolved, base):
         raise PathTraversalError(f"Path escapes base directory: {resolved} is not under {base}")
 
-    if must_exist and not os.path.exists(resolved):  # codeql[py/path-injection]
+    if must_exist and not _fs_exists(resolved):
         raise FileNotFoundError(f"Validated path does not exist: {resolved}")
 
-    if not allow_create and not os.path.exists(resolved):  # codeql[py/path-injection]
+    if not allow_create and not _fs_exists(resolved):
         raise FileNotFoundError(f"Path does not exist and creation is not allowed: {resolved}")
 
-    if must_be_file and not os.path.isfile(resolved):  # codeql[py/path-injection]
+    if must_be_file and not _fs_isfile(resolved):
         raise FileNotFoundError(f"Validated path is not a file: {resolved}")
 
     return resolved
@@ -151,11 +169,7 @@ def read_validated_file_text(
 ) -> tuple[str, int]:
     """Read text from an existing file under *base_dir* after validation."""
     safe_path = existing_file_path_str(path, base_dir)
-    with open(
-        safe_path,  # codeql[py/path-injection]
-        encoding=encoding,
-        errors="replace",
-    ) as handle:
+    with _fs_open_text(safe_path, encoding=encoding, errors="replace") as handle:
         payload = handle.read(max_bytes + 1)
     if len(payload) > max_bytes:
         raise ValueError(f"File too large (>{max_bytes} bytes)")

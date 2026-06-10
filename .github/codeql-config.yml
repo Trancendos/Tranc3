@@ -17,7 +17,8 @@ paths-ignore:
   - "**/node_modules"
   - "**/dist"
   - "**/__pycache__"
-  - "**/path_validation.py"
+  - Dimensional/path_validation.py
+  - shared_core/path_validation.py
   - "**/goal_manager.py"
   - "**/heartbeat_aggregator.py"
 
