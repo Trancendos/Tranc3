@@ -64,19 +64,13 @@ def _validated_path_str(
     if not _is_path_under_base(resolved, base):
         raise PathTraversalError(f"Path escapes base directory: {resolved} is not under {base}")
 
-    if must_exist and not os.path.exists(
-        resolved
-    ):  # codeql[py/path-injection] – under base per _is_path_under_base
+    if must_exist and not os.path.exists(resolved):  # codeql[py/path-injection]
         raise FileNotFoundError(f"Validated path does not exist: {resolved}")
 
-    if not allow_create and not os.path.exists(
-        resolved
-    ):  # codeql[py/path-injection] – under base per _is_path_under_base
+    if not allow_create and not os.path.exists(resolved):  # codeql[py/path-injection]
         raise FileNotFoundError(f"Path does not exist and creation is not allowed: {resolved}")
 
-    if must_be_file and not os.path.isfile(
-        resolved
-    ):  # codeql[py/path-injection] – under base per _is_path_under_base
+    if must_be_file and not os.path.isfile(resolved):  # codeql[py/path-injection]
         raise FileNotFoundError(f"Validated path is not a file: {resolved}")
 
     return resolved
@@ -169,8 +163,10 @@ def read_validated_file_text(
     touch user-influenced paths after validation (CodeQL path-injection).
     """
     safe_path = existing_file_path_str(path, base_dir)
-    with open(  # codeql[py/path-injection] – safe_path from existing_file_path_str barrier
-        safe_path, encoding=encoding, errors="replace"
+    with open(
+        safe_path,  # codeql[py/path-injection]
+        encoding=encoding,
+        errors="replace",
     ) as handle:
         payload = handle.read(max_bytes + 1)
     if len(payload) > max_bytes:
