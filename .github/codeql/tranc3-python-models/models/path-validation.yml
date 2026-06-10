@@ -3,13 +3,29 @@ extensions:
       pack: codeql/python-all
       extensible: barrierModel
     data:
-      - ["Dimensional.path_validation", "Member[validate_path].ReturnValue", "path-injection"]
-      - ["Dimensional.path_validation", "Member[validate_existing_file].ReturnValue", "path-injection"]
-      - ["Dimensional.path_validation", "Member[existing_file_path_str].ReturnValue", "path-injection"]
-      - ["Dimensional.path_validation", "Member[safe_join].ReturnValue", "path-injection"]
-      - ["shared_core.path_validation", "Member[validate_path].ReturnValue", "path-injection"]
-      - ["shared_core.path_validation", "Member[validate_existing_file].ReturnValue", "path-injection"]
-      - ["shared_core.path_validation", "Member[existing_file_path_str].ReturnValue", "path-injection"]
-      - ["shared_core.path_validation", "Member[safe_join].ReturnValue", "path-injection"]
-      - ["Dimensional.path_validation", "Member[_validated_path_str].ReturnValue", "path-injection"]
-      - ["shared_core.path_validation", "Member[_validated_path_str].ReturnValue", "path-injection"]
+      - ["Dimensional", "Member[path_validation].Member[validate_path].ReturnValue", "path-injection"]
+      - ["Dimensional", "Member[path_validation].Member[validate_existing_file].ReturnValue", "path-injection"]
+      - ["Dimensional", "Member[path_validation].Member[existing_file_path_str].ReturnValue", "path-injection"]
+      - ["Dimensional", "Member[path_validation].Member[safe_join].ReturnValue", "path-injection"]
+      - ["Dimensional", "Member[path_validation].Member[_validated_path_str].ReturnValue", "path-injection"]
+      - ["shared_core", "Member[path_validation].Member[validate_path].ReturnValue", "path-injection"]
+      - ["shared_core", "Member[path_validation].Member[validate_existing_file].ReturnValue", "path-injection"]
+      - ["shared_core", "Member[path_validation].Member[existing_file_path_str].ReturnValue", "path-injection"]
+      - ["shared_core", "Member[path_validation].Member[safe_join].ReturnValue", "path-injection"]
+      - ["shared_core", "Member[path_validation].Member[_validated_path_str].ReturnValue", "path-injection"]
+  - addsTo:
+      pack: codeql/python-all
+      extensible: barrierGuardModel
+    data:
+      - [
+          "Dimensional",
+          "Member[path_validation].Member[_is_path_under_base].Argument[0]",
+          "true",
+          "path-injection",
+        ]
+      - [
+          "shared_core",
+          "Member[path_validation].Member[_is_path_under_base].Argument[0]",
+          "true",
+          "path-injection",
+        ]

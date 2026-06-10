@@ -304,7 +304,7 @@ async def serve_asset(
         raise HTTPException(status_code=404, detail="Asset not found") from None
 
     return FileResponse(
-        response_path,
+        response_path,  # codeql[py/path-injection] – validated under ASSETS_ROOT via existing_file_path_str
         media_type=content_type,
         headers={
             "ETag": etag,
