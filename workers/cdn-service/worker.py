@@ -52,17 +52,6 @@ def _asset_file_path(relative_path: str) -> Path:
         raise HTTPException(status_code=404, detail="Asset not found") from None
 
 
-def _asset_file_path_str(relative_path: str) -> str:
-    """Validated filesystem path string for FileResponse (CodeQL path-injection)."""
-    normalized = relative_path.lstrip("/")
-    try:
-        return existing_file_path_str(normalized, ASSETS_ROOT.resolve())
-    except PathTraversalError:
-        raise HTTPException(status_code=404, detail="Asset not found") from None
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Asset not found") from None
-
-
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 ASSETS_ROOT.mkdir(parents=True, exist_ok=True)
 
@@ -309,8 +298,13 @@ async def serve_asset(
     if if_none_match and if_none_match == etag:
         return Response(status_code=304, headers={"ETag": etag, "Cache-Control": cache_control})
 
-    return FileResponse(  # codeql[py/path-injection] – path validated via existing_file_path_str
-        _asset_file_path_str(path),
+    try:
+        response_path = existing_file_path_str(path.lstrip("/"), ASSETS_ROOT.resolve())
+    except (PathTraversalError, FileNotFoundError):
+        raise HTTPException(status_code=404, detail="Asset not found") from None
+
+    return FileResponse(
+        response_path,
         media_type=content_type,
         headers={
             "ETag": etag,

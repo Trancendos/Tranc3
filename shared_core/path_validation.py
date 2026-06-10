@@ -25,6 +25,57 @@ class PathTraversalError(ValueError):
     """Raised when a path escapes its allowed base directory."""
 
 
+def _base_dir_realpath(base_dir: Union[str, Path]) -> str:
+    return os.path.realpath(str(base_dir))
+
+
+def _is_path_under_base(candidate: str, base: str) -> bool:
+    """Return True when *candidate* is *base* or a path under *base*."""
+    candidate = os.path.normpath(candidate)
+    base = os.path.normpath(base)
+    if candidate == base:
+        return True
+    return candidate.startswith(base + os.sep)
+
+
+def _validated_path_str(
+    path: Union[str, Path],
+    base_dir: Union[str, Path],
+    *,
+    must_exist: bool = False,
+    allow_create: bool = True,
+    must_be_file: bool = False,
+) -> str:
+    """Resolve *path* under *base_dir* using os.path (CodeQL path-injection safe)."""
+    raw = str(path) if isinstance(path, Path) else path
+
+    if _TRAVERSAL_PATTERN.search(raw):
+        raise PathTraversalError(
+            f"Path contains disallowed components (null byte or '..'): {raw!r}"
+        )
+
+    base = _base_dir_realpath(base_dir)
+    if os.path.isabs(raw):
+        candidate = os.path.normpath(raw)
+    else:
+        candidate = os.path.normpath(os.path.join(base, raw))
+    resolved = os.path.realpath(candidate)
+
+    if not _is_path_under_base(resolved, base):
+        raise PathTraversalError(f"Path escapes base directory: {resolved} is not under {base}")
+
+    if must_exist and not os.path.exists(resolved):
+        raise FileNotFoundError(f"Validated path does not exist: {resolved}")
+
+    if not allow_create and not os.path.exists(resolved):
+        raise FileNotFoundError(f"Path does not exist and creation is not allowed: {resolved}")
+
+    if must_be_file and not os.path.isfile(resolved):
+        raise FileNotFoundError(f"Validated path is not a file: {resolved}")
+
+    return resolved
+
+
 def validate_path(
     path: Union[str, Path],
     base_dir: Union[str, Path],
@@ -51,35 +102,14 @@ def validate_path(
         FileNotFoundError: If *must_exist* is True and path is missing.
         ValueError: If *path* contains obviously malicious components.
     """
-    if isinstance(path, Path):
-        raw = str(path)
-    else:
-        raw = path
-
-    # Reject null bytes and ".." sequences in the raw input before resolution
-    if _TRAVERSAL_PATTERN.search(raw):
-        raise PathTraversalError(
-            f"Path contains disallowed components (null byte or '..'): {raw!r}"
+    return Path(
+        _validated_path_str(
+            path,
+            base_dir,
+            must_exist=must_exist,
+            allow_create=allow_create,
         )
-
-    base = Path(base_dir).resolve()
-    resolved = (base / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()
-
-    # Ensure the resolved path starts with the base directory
-    try:
-        resolved.relative_to(base)
-    except ValueError:
-        raise PathTraversalError(
-            f"Path escapes base directory: {resolved} is not under {base}"
-        ) from None
-
-    if must_exist and not resolved.exists():
-        raise FileNotFoundError(f"Validated path does not exist: {resolved}")
-
-    if not allow_create and not resolved.exists():
-        raise FileNotFoundError(f"Path does not exist and creation is not allowed: {resolved}")
-
-    return resolved
+    )
 
 
 def validate_existing_file(
@@ -87,10 +117,15 @@ def validate_existing_file(
     base_dir: Union[str, Path],
 ) -> Path:
     """Validate that *path* resolves to an existing regular file under *base_dir*."""
-    resolved = validate_path(path, base_dir, must_exist=True, allow_create=False)
-    if not resolved.is_file():  # codeql[py/path-injection] – path confined to base_dir by validate_path
-        raise FileNotFoundError(f"Validated path is not a file: {resolved}")
-    return resolved
+    return Path(
+        _validated_path_str(
+            path,
+            base_dir,
+            must_exist=True,
+            allow_create=False,
+            must_be_file=True,
+        )
+    )
 
 
 def existing_file_path_str(
@@ -98,7 +133,13 @@ def existing_file_path_str(
     base_dir: Union[str, Path],
 ) -> str:
     """Return filesystem path string for an existing file under *base_dir*."""
-    return str(validate_existing_file(path, base_dir))
+    return _validated_path_str(
+        path,
+        base_dir,
+        must_exist=True,
+        allow_create=False,
+        must_be_file=True,
+    )
 
 
 def read_validated_file_text(
@@ -109,8 +150,8 @@ def read_validated_file_text(
     encoding: str = "utf-8",
 ) -> tuple[str, int]:
     """Read text from an existing file under *base_dir* after validation."""
-    resolved = validate_existing_file(path, base_dir)
-    with resolved.open(encoding=encoding, errors="replace") as handle:
+    safe_path = existing_file_path_str(path, base_dir)
+    with open(safe_path, encoding=encoding, errors="replace") as handle:
         payload = handle.read(max_bytes + 1)
     if len(payload) > max_bytes:
         raise ValueError(f"File too large (>{max_bytes} bytes)")
@@ -122,7 +163,7 @@ def remove_validated_file(
     base_dir: Union[str, Path],
 ) -> None:
     """Delete an existing file under *base_dir* after validation."""
-    validate_existing_file(path, base_dir).unlink()
+    os.remove(existing_file_path_str(path, base_dir))
 
 
 def safe_join(

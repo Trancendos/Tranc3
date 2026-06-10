@@ -11,5 +11,5 @@ extensions:
       - ["shared_core.path_validation", "Member[validate_existing_file].ReturnValue", "path-injection"]
       - ["shared_core.path_validation", "Member[existing_file_path_str].ReturnValue", "path-injection"]
       - ["shared_core.path_validation", "Member[safe_join].ReturnValue", "path-injection"]
-      - ["Dimensional.path_validation", "Member[read_validated_file_text].ReturnValue.TupleElement[0]", "path-injection"]
-      - ["shared_core.path_validation", "Member[read_validated_file_text].ReturnValue.TupleElement[0]", "path-injection"]
+      - ["Dimensional.path_validation", "Member[_validated_path_str].ReturnValue", "path-injection"]
+      - ["shared_core.path_validation", "Member[_validated_path_str].ReturnValue", "path-injection"]

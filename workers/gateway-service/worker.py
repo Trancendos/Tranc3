@@ -1343,26 +1343,24 @@ async def _cleanup_stale_connections():
 DASHBOARD_DIR = PathLib(__file__).parent.parent.parent / "dashboard"
 
 
-def _dashboard_file_path(path: str) -> str:
-    """Resolve a dashboard asset path under DASHBOARD_DIR."""
-    try:
-        return existing_file_path_str(path, DASHBOARD_DIR)
-    except PathTraversalError:
-        raise HTTPException(404, "File not found") from None
-    except FileNotFoundError:
-        raise HTTPException(404, "File not found") from None
-
-
 @app.get("/dashboard/{path:path}")
 async def serve_dashboard(path: str = "index.html"):
     """Serve the AI Platform dashboard static files."""
-    return FileResponse(_dashboard_file_path(path))  # codeql[py/path-injection]
+    try:
+        safe_path = existing_file_path_str(path, DASHBOARD_DIR)
+    except (PathTraversalError, FileNotFoundError):
+        raise HTTPException(404, "File not found") from None
+    return FileResponse(safe_path)
 
 
 @app.get("/dashboard")
 async def serve_dashboard_index():
     """Serve the dashboard index."""
-    return FileResponse(_dashboard_file_path("index.html"))  # codeql[py/path-injection]
+    try:
+        safe_path = existing_file_path_str("index.html", DASHBOARD_DIR)
+    except (PathTraversalError, FileNotFoundError):
+        raise HTTPException(404, "File not found") from None
+    return FileResponse(safe_path)
 
 
 # ---------------------------------------------------------------------------
