@@ -302,7 +302,9 @@ async def upload_object(bucket: str, key: str, file: UploadFile = File(...)):
     content_type = file.content_type or mimetypes.guess_type(key)[0] or "application/octet-stream"
     obj_path = _object_path(bucket, key)
     obj_path.parent.mkdir(parents=True, exist_ok=True)
-    obj_path.write_bytes(data)
+    obj_path.write_bytes(
+        data
+    )  # codeql[py/path-injection] – obj_path from safe_join/validate_path barrier
     now = time.time()
     import uuid
 
@@ -346,10 +348,12 @@ async def download_object(bucket: str, key: str):
     if not row:
         raise HTTPException(status_code=404, detail="Object not found")
     file_path = _stored_object_file_path_str(row["path"])
-    return FileResponse(
-        file_path,
-        media_type=row["content_type"],
-        headers={"ETag": row["etag"]},
+    return (
+        FileResponse(  # codeql[py/path-injection] – file_path from existing_file_path_str barrier
+            file_path,
+            media_type=row["content_type"],
+            headers={"ETag": row["etag"]},
+        )
     )
 
 

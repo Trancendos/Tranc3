@@ -303,8 +303,8 @@ async def serve_asset(
     except (PathTraversalError, FileNotFoundError):
         raise HTTPException(status_code=404, detail="Asset not found") from None
 
-    return FileResponse(
-        response_path,  # codeql[py/path-injection] – validated under ASSETS_ROOT via existing_file_path_str
+    return FileResponse(  # codeql[py/path-injection] – response_path from existing_file_path_str barrier
+        response_path,
         media_type=content_type,
         headers={
             "ETag": etag,

@@ -196,7 +196,7 @@ async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
         palette_path = WORKDIR / f"{uuid.uuid4().hex}_palette.png"
         rc, _, stderr = await _run_ffmpeg(
             "-i",
-            input_path,
+            input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
             "-vf",
             "fps=10,scale=320:-1:flags=lanczos,palettegen",
             str(palette_path),
@@ -205,7 +205,7 @@ async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
             raise RuntimeError(f"Palette generation failed: {stderr[-500:]}")
         rc, _, stderr = await _run_ffmpeg(
             "-i",
-            input_path,
+            input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
             "-i",
             str(palette_path),
             "-lavfi",
@@ -219,7 +219,7 @@ async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
     elif output_format == "webm":
         rc, _, stderr = await _run_ffmpeg(
             "-i",
-            input_path,
+            input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
             "-c:v",
             "libvpx-vp9",
             "-crf",
@@ -234,7 +234,7 @@ async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
         # mp4
         rc, _, stderr = await _run_ffmpeg(
             "-i",
-            input_path,
+            input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
             "-c:v",
             "libx264",
             "-crf",
@@ -259,7 +259,7 @@ async def _thumbnail(input_path: str, timestamp_seconds: float) -> Path:
         "-ss",
         str(timestamp_seconds),
         "-i",
-        input_path,
+        input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
         "-frames:v",
         "1",
         "-q:v",
@@ -284,7 +284,7 @@ async def _compress(input_path: str, target_mb: float) -> Path:
         "format=duration",
         "-of",
         "default=noprint_wrappers=1:nokey=1",
-        input_path,
+        input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
@@ -309,7 +309,7 @@ async def _compress(input_path: str, target_mb: float) -> Path:
         # Pass 1
         rc, _, _ = await _run_ffmpeg(
             "-i",
-            input_path,
+            input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
             "-c:v",
             "libx264",
             "-b:v",
@@ -327,7 +327,7 @@ async def _compress(input_path: str, target_mb: float) -> Path:
             # Pass 2
             rc, _, stderr = await _run_ffmpeg(
                 "-i",
-                input_path,
+                input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
                 "-c:v",
                 "libx264",
                 "-b:v",
@@ -347,7 +347,7 @@ async def _compress(input_path: str, target_mb: float) -> Path:
     else:
         rc, _, stderr = await _run_ffmpeg(
             "-i",
-            input_path,
+            input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
             "-c:v",
             "libx264",
             "-crf",
@@ -398,9 +398,9 @@ async def transcode(req: TranscodeRequest) -> dict:
     if not _ffmpeg_available():
         raise HTTPException(status_code=503, detail="ffmpeg not found in PATH")
 
+    input_path = _validated_input_path_str(req.input_path)
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
-    input_path = _validated_input_path_str(req.input_path)
     asyncio.create_task(
         _run_job(job_id, _transcode(input_path, req.output_format, req.quality)),
     )
@@ -422,9 +422,9 @@ async def thumbnail(req: ThumbnailRequest) -> dict:
     if not _ffmpeg_available():
         raise HTTPException(status_code=503, detail="ffmpeg not found in PATH")
 
+    input_path = _validated_input_path_str(req.input_path)
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
-    input_path = _validated_input_path_str(req.input_path)
     asyncio.create_task(
         _run_job(job_id, _thumbnail(input_path, req.timestamp_seconds)),
     )
@@ -437,9 +437,9 @@ async def compress(req: CompressRequest) -> dict:
     if not _ffmpeg_available():
         raise HTTPException(status_code=503, detail="ffmpeg not found in PATH")
 
+    input_path = _validated_input_path_str(req.input_path)
     job_id = str(uuid.uuid4())
     _jobs[job_id] = Job(job_id)
-    input_path = _validated_input_path_str(req.input_path)
     asyncio.create_task(
         _run_job(job_id, _compress(input_path, req.target_mb)),
     )

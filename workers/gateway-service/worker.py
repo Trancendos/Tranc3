@@ -1350,8 +1350,10 @@ async def serve_dashboard(path: str = "index.html"):
         safe_path = existing_file_path_str(path, DASHBOARD_DIR)
     except (PathTraversalError, FileNotFoundError):
         raise HTTPException(404, "File not found") from None
-    return FileResponse(
-        safe_path,  # codeql[py/path-injection] – validated under DASHBOARD_DIR via existing_file_path_str
+    return (
+        FileResponse(  # codeql[py/path-injection] – safe_path from existing_file_path_str barrier
+            safe_path,
+        )
     )
 
 
@@ -1362,8 +1364,10 @@ async def serve_dashboard_index():
         safe_path = existing_file_path_str("index.html", DASHBOARD_DIR)
     except (PathTraversalError, FileNotFoundError):
         raise HTTPException(404, "File not found") from None
-    return FileResponse(
-        safe_path,  # codeql[py/path-injection] – validated under DASHBOARD_DIR via existing_file_path_str
+    return (
+        FileResponse(  # codeql[py/path-injection] – safe_path from existing_file_path_str barrier
+            safe_path,
+        )
     )
 
 
