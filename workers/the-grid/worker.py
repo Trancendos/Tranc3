@@ -29,6 +29,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from Dimensional.url_validation import SSRFError, validate_webhook_url
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -38,6 +39,10 @@ from src.entities.health_metadata import health_entity_block
 WORKER_PORT = 8010
 WORKER_NAME = "the-grid-api"
 DB_PATH = Path(__file__).parent / "data" / "grid.db"
+_NOTIFICATIONS_DISPATCH_URL = os.environ.get(
+    "NOTIFICATIONS_SERVICE_URL",
+    "http://127.0.0.1:8008/notifications/send",
+)
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
@@ -362,9 +367,15 @@ class WorkflowEngine:
 
         url = step.config.get("url", "")
         method = step.config.get("method", "GET").upper()
+        if not url:
+            return {"status": "failed", "error": "http_call step requires config.url"}
+        try:
+            validated_url = validate_webhook_url(url)
+        except SSRFError as exc:
+            return {"status": "failed", "error": str(exc)}
         try:
             if method == "GET":
-                req = urllib.request.Request(url, method="GET")
+                req = urllib.request.Request(validated_url, method="GET")
                 with urllib.request.urlopen(req, timeout=30) as resp:
                     body = resp.read().decode()
                     return {
@@ -373,7 +384,7 @@ class WorkflowEngine:
                     }
             else:
                 data = json.dumps(step.config.get("body", {})).encode()
-                req = urllib.request.Request(url, data=data, method=method)
+                req = urllib.request.Request(validated_url, data=data, method=method)
                 req.add_header("Content-Type", "application/json")
                 with urllib.request.urlopen(req, timeout=30) as resp:
                     body = resp.read().decode()
@@ -414,7 +425,12 @@ class WorkflowEngine:
         """Send a notification (via the notifications service)."""
         import urllib.request
 
-        notif_url = step.config.get("notifications_url", "http://localhost:8008/notifications/send")
+        notif_url = step.config.get("notifications_url") or _NOTIFICATIONS_DISPATCH_URL
+        if step.config.get("notifications_url"):
+            try:
+                notif_url = validate_webhook_url(notif_url)
+            except SSRFError as exc:
+                return {"status": "failed", "error": str(exc)}
         payload = {
             "user_id": step.config.get("user_id", "system"),
             "channel": step.config.get("channel", "in_app"),
