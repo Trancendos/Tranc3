@@ -4,7 +4,7 @@
 # Stage 2: serve  — nginx:alpine serves the static bundle
 #
 # Build:  docker build -t tranc3-web ./web
-# Run:    docker run -p 3000:80 tranc3-web
+# Run:    docker run -p 3000:8080 tranc3-web
 
 # ── Stage 1: build ────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
@@ -36,9 +36,16 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Custom nginx config: SPA routing (all paths → index.html) + security headers
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+# Security: run nginx as non-root on an unprivileged port (Trivy AVD-DS-0002)
+RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx \
+    && touch /var/run/nginx.pid \
+    && chown nginx:nginx /var/run/nginx.pid
+
+USER nginx
+
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO- http://localhost:80/ || exit 1
+    CMD wget -qO- http://localhost:8080/healthz || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

@@ -5,3 +5,4 @@ extensionTargets:
   codeql/python-all: "*"
 dataExtensions:
   - models/path-validation.yml
+  - models/url-validation.yml

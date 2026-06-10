@@ -1,0 +1,9 @@
+extensions:
+  - addsTo:
+      pack: codeql/python-all
+      extensible: barrierModel
+    data:
+      - ["Dimensional", "Member[url_validation].Member[validate_url].ReturnValue", "full-ssrf"]
+      - ["Dimensional", "Member[url_validation].Member[validate_webhook_url].ReturnValue", "full-ssrf"]
+      - ["shared_core", "Member[url_validation].Member[validate_url].ReturnValue", "full-ssrf"]
+      - ["shared_core", "Member[url_validation].Member[validate_webhook_url].ReturnValue", "full-ssrf"]

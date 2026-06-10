@@ -419,14 +419,14 @@ class NotificationDispatcher:
 
         # SSRF validation — blocks private IPs, metadata endpoints, non-HTTPS
         try:
-            validate_webhook_url(url)
+            validated_url = validate_webhook_url(url)
         except SSRFError as e:
             logger.warning("Webhook URL blocked by SSRF protection: %s", e)
             return False
 
         # Optional domain allowlist check
         if _WEBHOOK_ALLOWED_DOMAINS:
-            parsed = urlparse(url)
+            parsed = urlparse(validated_url)
             hostname = (parsed.hostname or "").lower()
             if hostname not in _WEBHOOK_ALLOWED_DOMAINS:
                 logger.warning(
@@ -439,10 +439,10 @@ class NotificationDispatcher:
         try:
             data = json.dumps(payload).encode()
             req = urllib.request.Request(
-                url,
+                validated_url,
                 data=data,
                 method="POST",
-            )  # codeql[py/ssrf] – URL validated against allowlist above
+            )
             req.add_header("Content-Type", "application/json")
             with urllib.request.urlopen(req, timeout=10) as resp:
                 return resp.status < 400
@@ -597,14 +597,14 @@ async def send_notification(req: NotificationRequest):
                 return {"ok": False, "reason": "webhook_url missing from metadata"}
             # Validate webhook URL at the endpoint level (defense-in-depth)
             try:
-                validate_webhook_url(webhook_url)
+                validated_webhook_url = validate_webhook_url(webhook_url)
             except SSRFError as e:
                 raise HTTPException(
                     status_code=400,
                     detail=f"Webhook URL rejected: {e}",
                 ) from None
             success = await dispatcher.dispatch_webhook(
-                webhook_url,
+                validated_webhook_url,
                 {
                     "subject": req.subject,
                     "body": req.body,

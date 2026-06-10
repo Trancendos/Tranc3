@@ -18,7 +18,10 @@ spec:
         app: nsa-broker
         tier: "2"
     spec:
-      hostIPC: true  # Required for /dev/shm access
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: nsa-broker
           image: nsa-broker:latest
@@ -47,11 +50,17 @@ spec:
               port: 7780
             initialDelaySeconds: 3
             periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
       volumes:
         - name: shm
-          hostPath:
-            path: /dev/shm
-            type: DirectoryOrCreate
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
 ---
 # SHI Gateway Deployment — Self-Hosted Inference
 apiVersion: apps/v1
@@ -73,7 +82,10 @@ spec:
         app: shi-gateway
         tier: "3"
     spec:
-      hostIPC: true
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: shi-gateway
           image: shi-gateway:latest
@@ -103,11 +115,17 @@ spec:
               port: 7781
             initialDelaySeconds: 10
             periodSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
       volumes:
         - name: shm
-          hostPath:
-            path: /dev/shm
-            type: DirectoryOrCreate
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
         - name: models
           persistentVolumeClaim:
             claimName: models-pvc
@@ -132,7 +150,10 @@ spec:
         app: dnf-orchestrator
         tier: "2"
     spec:
-      hostIPC: true
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: dnf-orchestrator
           image: dnf-orchestrator:latest
@@ -152,8 +173,14 @@ spec:
           volumeMounts:
             - name: shm
               mountPath: /dev/shm
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
       volumes:
         - name: shm
-          hostPath:
-            path: /dev/shm
-            type: DirectoryOrCreate
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi

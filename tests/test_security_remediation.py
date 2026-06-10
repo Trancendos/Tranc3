@@ -214,6 +214,23 @@ class TestUrlValidation:
         url = validate_webhook_url("https://example.com/hook")
         assert url == "https://example.com/hook"
 
+    @pytest.mark.asyncio
+    @patch("urllib.request.urlopen")
+    @patch("socket.getaddrinfo")
+    async def test_dispatch_webhook_uses_validated_url(self, mock_getaddrinfo, mock_urlopen):
+        from workers.notifications.worker import NotificationDispatcher
+
+        mock_getaddrinfo.return_value = [
+            (2, 1, 6, "", ("93.184.216.34", 443)),
+        ]
+        mock_urlopen.return_value.__enter__.return_value = MagicMock(status=200)
+
+        url = "https://example.com/hook"
+        ok = await NotificationDispatcher.dispatch_webhook(url, {"event": "test"})
+        assert ok is True
+        called_url = mock_urlopen.call_args[0][0].full_url
+        assert called_url == url
+
 
 # ─── Error Handlers ───────────────────────────────────────────────────────────
 
