@@ -1,0 +1,35 @@
+name: PR Readiness Audit
+
+on:
+  schedule:
+    - cron: "30 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  pr-readiness:
+    name: GitHub PR readiness (requires gh)
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PR readiness audit (open PRs)
+        run: |
+          if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+            python3 scripts/pr_readiness_audit.py --state open --limit 100 --json \
+              > logs/pr_readiness_audit_latest.json
+            python3 scripts/pr_readiness_audit.py --state open --limit 100 \
+              | tee logs/pr_readiness_audit_latest.md
+          else
+            echo "SKIP: gh CLI not authenticated — PR audit requires GitHub access"
+            mkdir -p logs
+            echo '{"skipped": true, "reason": "gh not available"}' > logs/pr_readiness_audit_latest.json
+          fi
+
+      - name: Upload PR audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-readiness-audit
+          path: |
+            logs/pr_readiness_audit_latest.json
+            logs/pr_readiness_audit_latest.md

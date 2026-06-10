@@ -154,6 +154,9 @@ citadel-compose-validate:
 branch-audit:
 	@python3 scripts/branch_benefit_audit.py
 
+pr-audit:
+	@python3 scripts/pr_readiness_audit.py --state open --limit 100 --fail-on-unstable
+
 pr-hygiene:
 	@python3 scripts/pr_hygiene.py
 

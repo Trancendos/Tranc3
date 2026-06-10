@@ -8,3 +8,7 @@
 pytest==9.0.3
 pytest-asyncio==1.4.0  # 0.25.0 required pytest<9; 1.4.0 supports pytest<10,>=8.4
 pytest-cov==5.0.0
+
+# Worker deps imported by the test suite (e.g. infinity-auth TOTP/MFA via pyotp).
+# Kept in sync with workers/infinity-auth/requirements-worker.txt.
+pyotp==2.9.0

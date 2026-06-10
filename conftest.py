@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import tempfile
 import time
 
 import pytest
@@ -25,6 +26,25 @@ for _var, _default in (
     ("INTERNAL_SECRET", "tranc3-test-internal-secret-do-not-use-in-prod"),
 ):
     os.environ[_var] = os.environ.get(_var) or _default
+
+# ── Worker SQLite DB paths ───────────────────────────────────────────────────
+# Some workers default SQLite paths to `/data/<name>.db` (production volumes).
+# Tests import worker modules directly, which can open DBs at import time.
+# Point configurable paths at a writable temp dir so collection never fails.
+_WORKER_DATA_DIR = os.environ.get("TRANC3_TEST_DATA_DIR") or tempfile.mkdtemp(
+    prefix="tranc3-test-data-"
+)
+os.environ["TRANC3_TEST_DATA_DIR"] = _WORKER_DATA_DIR
+for _var, _fname in (
+    ("USERS_DB_PATH", "users.db"),
+    ("AUTH_DATABASE_PATH", "auth.db"),
+):
+    os.environ[_var] = os.environ.get(_var) or os.path.join(_WORKER_DATA_DIR, _fname)
+
+# STORAGE_ROOT defaults to /mnt/data/tranc3 (NAS in production) — not writable in CI.
+os.environ["STORAGE_ROOT"] = os.environ.get("STORAGE_ROOT") or os.path.join(
+    _WORKER_DATA_DIR, "storage"
+)
 
 # ── Configure root test logger ────────────────────────────────────────────────
 logging.basicConfig(
