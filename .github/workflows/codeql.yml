@@ -82,6 +82,7 @@ jobs:
           output: sarif-results/${{ matrix.sarif-name }}.sarif
 
       - name: Upload SARIF
+        id: upload
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: sarif-results/${{ matrix.sarif-name }}.sarif
@@ -91,7 +92,7 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'pull_request'
         uses: advanced-security/dismiss-alerts@v2
         with:
-          sarif-id: ${{ steps.analyze.outputs.sarif-id }}
+          sarif-id: ${{ steps.upload.outputs.sarif-id }}
           sarif-file: sarif-results/${{ matrix.sarif-name }}.sarif
         env:
           GITHUB_TOKEN: ${{ github.token }}
