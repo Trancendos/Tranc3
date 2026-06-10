@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from Dimensional.path_validation import PathTraversalError, safe_join, sanitize_filename
+from Dimensional.path_validation import PathTraversalError, safe_join, sanitize_filename, validate_path
 
 logger = logging.getLogger(__name__)
 
@@ -48,31 +48,15 @@ def _resolve_output_base(output_dir: str) -> Path:
         PathTraversalError: If the path escapes all allowed roots.
         FileNotFoundError: If the parent of the path does not exist.
     """
-    candidate = Path(output_dir).resolve()
-
-    # Allow the path if it already exists and is under an allowed root
     for allowed_root in _ALLOWED_OUTPUT_ROOTS:
         try:
-            candidate.relative_to(allowed_root)
-            return candidate
-        except ValueError:
+            return validate_path(output_dir, allowed_root, allow_create=True)
+        except PathTraversalError:
             continue
 
-    # Also allow if the resolved parent exists and is under an allowed root
-    # (this handles the common case where output_dir is "./spawned" which
-    # may not yet exist)
-    parent = candidate.parent
-    if parent.exists():
-        for allowed_root in _ALLOWED_OUTPUT_ROOTS:
-            try:
-                parent.relative_to(allowed_root)
-                return candidate
-            except ValueError:
-                continue
-
     raise PathTraversalError(
-        f"Output directory {candidate} is not under any allowed root. "
-        f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}",
+        f"Output directory {output_dir} is not under any allowed root. "
+        f"Allowed root count: {len(_ALLOWED_OUTPUT_ROOTS)}",
     )
 
 

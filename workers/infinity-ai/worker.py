@@ -32,6 +32,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from Dimensional.url_validation import SSRFError, validate_ollama_base_url
 from shared_core.sanitize import sanitize_for_log
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
@@ -45,7 +46,15 @@ DB_PATH = Path(__file__).parent / "data" / "ai_gateway.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 # Provider configuration — zero-cost providers only
-OLLAMA_BASE_URL = "http://localhost:11434"
+def _load_ollama_base_url() -> str:
+    raw = os.getenv("OLLAMA_URL", "http://localhost:11434")
+    try:
+        return validate_ollama_base_url(raw)
+    except SSRFError as exc:
+        raise RuntimeError(f"Invalid OLLAMA_URL: {exc}") from exc
+
+
+OLLAMA_BASE_URL = _load_ollama_base_url()
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 HUGGINGFACE_BASE_URL = "https://api-inference.huggingface.co"
 
@@ -510,7 +519,7 @@ class AIGatewayRouter:
     def __init__(self, db: AIDatabase):
         self.db = db
         self.cache = LRUCache(max_size=500)
-        self.ollama = OllamaClient()
+        self.ollama = OllamaClient(OLLAMA_BASE_URL)
         self.openrouter = OpenRouterClient()
         self.huggingface = HuggingFaceClient()
         self.offline = OfflineClient()

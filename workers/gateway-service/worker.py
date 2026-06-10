@@ -64,6 +64,7 @@ from Dimensional.infinity.sentinel_station import (
     get_sentinel_station,
 )
 from Dimensional.path_validation import PathTraversalError, existing_file_path_str
+from Dimensional.url_validation import SSRFError, validate_workflow_id
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -843,10 +844,15 @@ async def run_workflow(workflow_id: str, request: Request):
     _check_rbac(request, "POST:/api/workflows/{id}/run", "POST")
     _check_abac(request, "workflow", resource_id=workflow_id, action="execute")
 
+    try:
+        safe_workflow_id = validate_workflow_id(workflow_id)
+    except SSRFError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     async with httpx.AsyncClient() as client:
         try:
             r = await client.post(
-                f"{_base_url('workflow')}/workflows/{workflow_id}/run",
+                f"{_base_url('workflow')}/workflows/{safe_workflow_id}/run",
                 json={},
                 timeout=10.0,
             )

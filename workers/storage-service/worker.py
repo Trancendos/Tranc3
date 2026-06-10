@@ -31,9 +31,12 @@ from pydantic import BaseModel
 
 from Dimensional.path_validation import (
     PathTraversalError,
+    ensure_validated_directory,
     existing_file_path_str,
     remove_validated_file,
+    remove_validated_tree,
     safe_join,
+    sanitize_filename,
     validate_path,
 )
 from src.database.encrypted_sqlite import connect as sqlite3_connect
@@ -232,7 +235,8 @@ async def create_bucket(req: BucketCreate):
             (req.name, req.description, time.time()),
         )
         conn.commit()
-    (STORAGE_ROOT / req.name).mkdir(parents=True, exist_ok=True)
+    safe_name = sanitize_filename(req.name)
+    ensure_validated_directory(safe_name, STORAGE_ROOT)
     return {"name": req.name}
 
 
@@ -249,9 +253,8 @@ async def delete_bucket(bucket: str):
             raise HTTPException(status_code=409, detail=f"Bucket not empty ({obj_count} objects)")
         conn.execute("DELETE FROM buckets WHERE name = ?", (bucket,))
         conn.commit()
-    bucket_dir = STORAGE_ROOT / bucket
-    if bucket_dir.exists():
-        shutil.rmtree(str(bucket_dir))
+    safe_bucket = sanitize_filename(bucket)
+    remove_validated_tree(safe_bucket, STORAGE_ROOT)
     return {"deleted": bucket}
 
 

@@ -28,6 +28,8 @@ from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
+
+from Dimensional.url_validation import SSRFError, validate_ip_address
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -114,7 +116,8 @@ def _save_cache(ip: str, data: dict, source: str) -> None:
 
 
 async def _lookup_ip_api(ip: str) -> Optional[dict]:
-    url = f"http://ip-api.com/json/{ip}?fields=status,country,countryCode,regionName,city,lat,lon,timezone,isp,org"
+    safe_ip = validate_ip_address(ip)
+    url = f"http://ip-api.com/json/{safe_ip}?fields=status,country,countryCode,regionName,city,lat,lon,timezone,isp,org"
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get(url)
@@ -138,7 +141,8 @@ async def _lookup_ip_api(ip: str) -> Optional[dict]:
 
 
 async def _lookup_ipapi_co(ip: str) -> Optional[dict]:
-    url = f"https://ipapi.co/{ip}/json/"
+    safe_ip = validate_ip_address(ip)
+    url = f"https://ipapi.co/{safe_ip}/json/"
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get(url, headers={"User-Agent": "trancendos-geo-service/1.0"})
@@ -176,22 +180,27 @@ def _stub_result(ip: str) -> dict:
 
 
 async def lookup_ip(ip: str) -> dict:
-    cached = _get_cached(ip)
+    try:
+        safe_ip = validate_ip_address(ip)
+    except SSRFError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    cached = _get_cached(safe_ip)
     if cached:
         return {**cached, "cached": True}
 
     # Try ip-api.com first, then ipapi.co
-    data = await _lookup_ip_api(ip)
+    data = await _lookup_ip_api(safe_ip)
     source = "ip-api.com"
     if not data:
-        data = await _lookup_ipapi_co(ip)
+        data = await _lookup_ipapi_co(safe_ip)
         source = "ipapi.co"
     if not data:
-        data = _stub_result(ip)
+        data = _stub_result(safe_ip)
         source = "stub"
 
-    _save_cache(ip, data, source)
-    return {**data, "ip": ip, "source": source, "cached": False}
+    _save_cache(safe_ip, data, source)
+    return {**data, "ip": safe_ip, "source": source, "cached": False}
 
 
 # ---------------------------------------------------------------------------

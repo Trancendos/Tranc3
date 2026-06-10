@@ -44,6 +44,14 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from Dimensional.path_validation import (
+    PathTraversalError,
+    ensure_validated_directory,
+    read_validated_json,
+    remove_validated_tree,
+    sanitize_filename,
+    write_validated_json,
+)
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 # ── Configuration ───────────────────────────────────────────────
@@ -350,11 +358,16 @@ async def store_secret(request: Request, authorization: str | None = Header(None
     encrypted = encrypt_secret(plaintext, MASTER_KEY_SEED)
 
     # Store payload in R2-like file storage
-    r2_key = f"secrets/{user_id}/{secret_id}"
-    r2_path = R2_DIR / user_id / secret_id
-    r2_path.mkdir(parents=True, exist_ok=True)
-    with open(r2_path / "payload.json", "w") as f:
-        json.dump({"ciphertext": encrypted["ciphertext"]}, f)
+    safe_user = sanitize_filename(user_id)
+    safe_secret = sanitize_filename(secret_id)
+    r2_key = f"secrets/{safe_user}/{safe_secret}"
+    secret_rel = f"{safe_user}/{safe_secret}"
+    ensure_validated_directory(secret_rel, R2_DIR)
+    write_validated_json(
+        f"{secret_rel}/payload.json",
+        R2_DIR,
+        {"ciphertext": encrypted["ciphertext"]},
+    )
 
     conn = get_db()
     conn.execute(
@@ -423,14 +436,15 @@ async def retrieve_secret(request: Request, authorization: str | None = Header(N
         conn.close()
         raise HTTPException(status_code=410, detail="Secret is not active")
 
-    # Read payload from R2-like storage
-    r2_path = R2_DIR / user_id / secret_id / "payload.json"
-    if r2_path.exists():
-        with open(r2_path) as f:
-            payload = json.load(f)
-    else:
+    # Read payload from R2-like file storage
+    safe_user = sanitize_filename(user_id)
+    safe_secret = sanitize_filename(secret_id)
+    payload_rel = f"{safe_user}/{safe_secret}/payload.json"
+    try:
+        payload = read_validated_json(payload_rel, R2_DIR)
+    except (FileNotFoundError, PathTraversalError, json.JSONDecodeError):
         conn.close()
-        raise HTTPException(status_code=404, detail="Payload not found")
+        raise HTTPException(status_code=404, detail="Payload not found") from None
 
     plaintext = decrypt_secret(payload["ciphertext"], row["iv"], row["salt"], MASTER_KEY_SEED)
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -507,11 +521,9 @@ async def delete_secret(secret_id: str, request: Request, authorization: str | N
         raise HTTPException(status_code=403, detail="Forbidden")
 
     # Crypto-shred: delete R2 payload
-    r2_path = R2_DIR / user_id / secret_id
-    if r2_path.exists():
-        import shutil
-
-        shutil.rmtree(r2_path, ignore_errors=True)
+    safe_user = sanitize_filename(user_id)
+    safe_secret = sanitize_filename(secret_id)
+    remove_validated_tree(f"{safe_user}/{safe_secret}", R2_DIR)
 
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     conn.execute(

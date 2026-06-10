@@ -15,9 +15,11 @@
 from __future__ import annotations
 
 import ipaddress
+import json
 import logging
 import re
-from typing import Optional
+import urllib.request
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -308,3 +310,30 @@ def validate_ip_address(ip: str, *, allow_private: bool = False) -> str:
         raise SSRFError(f"Private/reserved IP addresses are not allowed: {canonical}")
 
     return canonical
+
+
+def validate_ollama_base_url(url: str) -> str:
+    """Validate an Ollama provider base URL.
+
+    Loopback HTTP (localhost / 127.0.0.1 / ::1) is permitted for local inference.
+    All other hosts must use HTTPS and pass standard SSRF checks.
+    """
+    if not url or not url.strip():
+        raise SSRFError("Ollama base URL must not be empty")
+
+    normalized = url.strip().rstrip("/")
+    parsed = urlparse(normalized)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme == "http" and host in {"localhost", "127.0.0.1", "::1"}:
+        return normalized
+    return validate_url(normalized)
+
+
+def post_json_webhook(url: str, payload: Any, *, timeout: float = 10.0) -> bool:
+    """POST JSON to a validated webhook URL (SSRF-safe outbound request)."""
+    validated_url = validate_webhook_url(url)
+    data = json.dumps(payload).encode()
+    req = urllib.request.Request(validated_url, data=data, method="POST")
+    req.add_header("Content-Type", "application/json")
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.status < 400

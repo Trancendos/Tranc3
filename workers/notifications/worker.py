@@ -11,6 +11,7 @@ Zero-cost: In-process dispatch, SQLite storage, no external SaaS.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -30,7 +31,7 @@ from pydantic import BaseModel, Field
 
 from Dimensional.error_handlers import safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
-from Dimensional.url_validation import SSRFError, validate_webhook_url
+from Dimensional.url_validation import SSRFError, post_json_webhook, validate_webhook_url
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -414,7 +415,6 @@ class NotificationDispatcher:
         request is made.  Only HTTPS URLs to public, non-reserved hosts
         are permitted.  See Dimensional.url_validation for details.
         """
-        import urllib.request
         from urllib.parse import urlparse
 
         # SSRF validation — blocks private IPs, metadata endpoints, non-HTTPS
@@ -430,22 +430,14 @@ class NotificationDispatcher:
             hostname = (parsed.hostname or "").lower()
             if hostname not in _WEBHOOK_ALLOWED_DOMAINS:
                 logger.warning(
-                    "Webhook domain '%s' not in allowlist: %s",
+                    "Webhook domain '%s' not in allowlist (%d domains configured)",
                     sanitize_for_log(hostname),
-                    _WEBHOOK_ALLOWED_DOMAINS,  # codeql[py/cleartext-logging]
+                    len(_WEBHOOK_ALLOWED_DOMAINS),
                 )
                 return False
 
         try:
-            data = json.dumps(payload).encode()
-            req = urllib.request.Request(
-                validated_url,
-                data=data,
-                method="POST",
-            )
-            req.add_header("Content-Type", "application/json")
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                return resp.status < 400
+            return await asyncio.to_thread(post_json_webhook, validated_url, payload)
         except Exception as e:
             logger.error("Webhook dispatch failed: %s", e)
             return False

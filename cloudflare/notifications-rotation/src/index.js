@@ -210,7 +210,17 @@ function json(body, status = 200, cors = {}) {
 // ── Request validation ─────────────────────────────────────────────────────
 
 function validateEmail(email) {
-  return typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (typeof email !== "string") return false;
+  const at = email.indexOf("@");
+  if (at <= 0 || at !== email.lastIndexOf("@")) return false;
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  if (!local || !domain) return false;
+  if (domain.indexOf(".") <= 0 || domain.endsWith(".")) return false;
+  for (const ch of local + domain) {
+    if (ch === " " || ch === "\n" || ch === "\r" || ch === "\t") return false;
+  }
+  return true;
 }
 
 function validateSendRequest(body) {

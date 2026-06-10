@@ -418,6 +418,28 @@ export class CompileBot extends Bot {
     }
   }
 
+  private stripGenericTypeParameters(code: string): string {
+    let result = '';
+    let depth = 0;
+    for (let i = 0; i < code.length; i += 1) {
+      const ch = code[i];
+      if (ch === '<') {
+        depth += 1;
+        continue;
+      }
+      if (ch === '>') {
+        if (depth > 0) {
+          depth -= 1;
+        }
+        continue;
+      }
+      if (depth === 0) {
+        result += ch;
+      }
+    }
+    return result;
+  }
+
   private transpileTypeScript(code: string, options: Record<string, unknown>): { code: string } {
     let output = code;
 
@@ -425,7 +447,7 @@ export class CompileBot extends Bot {
     // In production, would use the TypeScript compiler API
     output = output.replace(/:\s*(?:string|number|boolean|any|void|never|undefined|null|object|unknown|never)\b/g, '');
     output = output.replace(/:\s*[A-Z]\w*(?:<[^>]+>)?/g, ''); // custom type annotations
-    output = output.replace(/<[^>]+>/g, ''); // generic type parameters
+    output = this.stripGenericTypeParameters(output);
     output = output.replace(/interface\s+\w+\s*\{[^}]*\}/g, ''); // remove interfaces
     output = output.replace(/type\s+\w+\s*=\s*[^;]+;/g, ''); // remove type aliases
     output = output.replace(/enum\s+\w+\s*\{[^}]*\}/g, ''); // remove enums (simplified)

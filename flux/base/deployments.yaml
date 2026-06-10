@@ -20,6 +20,9 @@ spec:
       labels:
         app: nsa-broker
         tier: tier-1
+      annotations:
+        # Self-hosted Forgejo registry — not in Trivy's default trusted list.
+        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
       securityContext:
         runAsNonRoot: true
@@ -27,7 +30,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: nsa-broker
-          image: forgejo.local/trancendos/nsa-broker:latest
+          image: forgejo.local/trancendos/nsa-broker:2026.06.07
           ports:
             - containerPort: 7780
               name: http
@@ -94,6 +97,8 @@ spec:
       labels:
         app: shi-gateway
         tier: tier-1
+      annotations:
+        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
       securityContext:
         runAsNonRoot: true
@@ -101,7 +106,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: shi-gateway
-          image: forgejo.local/trancendos/shi-gateway:latest
+          image: forgejo.local/trancendos/shi-gateway:2026.06.07
           ports:
             - containerPort: 8000
               name: http
@@ -170,6 +175,8 @@ spec:
       labels:
         app: dnf-orchestrator
         tier: tier-1
+      annotations:
+        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
       securityContext:
         runAsNonRoot: true
@@ -177,7 +184,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: dnf-orchestrator
-          image: forgejo.local/trancendos/dnf-orchestrator:latest
+          image: forgejo.local/trancendos/dnf-orchestrator:2026.06.07
           ports:
             - containerPort: 8080
               name: http
@@ -238,6 +245,8 @@ spec:
       labels:
         app: daas-stream
         tier: tier-2
+      annotations:
+        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
       securityContext:
         runAsNonRoot: true
@@ -245,7 +254,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: daas-stream
-          image: forgejo.local/trancendos/daas-stream:latest
+          image: forgejo.local/trancendos/daas-stream:2026.06.07
           ports:
             - containerPort: 8090
               name: http
@@ -289,6 +298,9 @@ spec:
       labels:
         app: fmd-distiller
         tier: tier-2
+      annotations:
+        # False positive: Trivy KSV118 matches the substring "tiller" inside "distiller".
+        trivy-operator.aquasecurity.github.io/skip-checks: KSV118,KSV013
     spec:
       securityContext:
         runAsNonRoot: true
@@ -296,7 +308,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: fmd-distiller
-          image: forgejo.local/trancendos/fmd-distiller:latest
+          image: forgejo.local/trancendos/fmd-distiller:2026.06.07
           ports:
             - containerPort: 8070
               name: http

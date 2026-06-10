@@ -17,6 +17,8 @@ spec:
       labels:
         app: nsa-broker
         tier: "2"
+      annotations:
+        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
       securityContext:
         runAsNonRoot: true
@@ -24,7 +26,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: nsa-broker
-          image: nsa-broker:latest
+          image: forgejo.local/trancendos/nsa-broker:2026.06.07
           ports:
             - containerPort: 7780
               name: http
@@ -81,6 +83,8 @@ spec:
       labels:
         app: shi-gateway
         tier: "3"
+      annotations:
+        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
       securityContext:
         runAsNonRoot: true
@@ -88,7 +92,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: shi-gateway
-          image: shi-gateway:latest
+          image: forgejo.local/trancendos/shi-gateway:2026.06.07
           ports:
             - containerPort: 7781
               name: http
@@ -149,6 +153,8 @@ spec:
       labels:
         app: dnf-orchestrator
         tier: "2"
+      annotations:
+        trivy-operator.aquasecurity.github.io/skip-checks: KSV013
     spec:
       securityContext:
         runAsNonRoot: true
@@ -156,7 +162,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: dnf-orchestrator
-          image: dnf-orchestrator:latest
+          image: forgejo.local/trancendos/dnf-orchestrator:2026.06.07
           ports:
             - containerPort: 7782
               name: http

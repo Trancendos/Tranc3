@@ -92,6 +92,44 @@ class TestPathValidation:
             remove_validated_file("gone.txt", tmpdir)
             assert not file_path.exists()
 
+    def test_ensure_validated_directory_creates_under_base(self):
+        from Dimensional.path_validation import ensure_validated_directory
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            created = ensure_validated_directory("nested/bucket", tmpdir)
+            created_path = Path(created)
+            assert created_path.exists()
+            assert str(created_path).startswith(tmpdir)
+
+    def test_remove_validated_tree_deletes_directory(self):
+        from Dimensional.path_validation import ensure_validated_directory, remove_validated_tree
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target = Path(ensure_validated_directory("to-delete", tmpdir))
+            (target / "file.txt").write_text("x", encoding="utf-8")
+            remove_validated_tree("to-delete", tmpdir)
+            assert not target.exists()
+
+    def test_list_validated_children_lists_directory(self):
+        from Dimensional.path_validation import ensure_validated_directory, list_validated_children
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            bucket = Path(ensure_validated_directory("artifacts", tmpdir))
+            (bucket / "a.txt").write_text("a", encoding="utf-8")
+            (bucket / "b.txt").write_text("b", encoding="utf-8")
+            children = list_validated_children("artifacts", tmpdir)
+            names = {child["name"] for child in children}
+            assert names == {"a.txt", "b.txt"}
+
+    def test_write_and_read_validated_json_roundtrip(self):
+        from Dimensional.path_validation import read_validated_json, write_validated_json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload = {"event": "test", "count": 2}
+            write_validated_json("state/data.json", tmpdir, payload)
+            loaded = read_validated_json("state/data.json", tmpdir)
+            assert loaded == payload
+
     def test_safe_join_normal(self):
         from Dimensional.path_validation import safe_join
 
@@ -213,6 +251,34 @@ class TestUrlValidation:
         ]
         url = validate_webhook_url("https://example.com/hook")
         assert url == "https://example.com/hook"
+
+    def test_validate_ollama_base_url_rejects_private_host(self):
+        from Dimensional.url_validation import SSRFError, validate_ollama_base_url
+
+        with pytest.raises(SSRFError):
+            validate_ollama_base_url("http://10.0.0.1:11434")
+
+    def test_validate_ollama_base_url_accepts_localhost_alias(self):
+        from Dimensional.url_validation import validate_ollama_base_url
+
+        # localhost is allowed for Ollama dev — validated separately from webhooks
+        url = validate_ollama_base_url("http://localhost:11434")
+        assert url == "http://localhost:11434"
+
+    @patch("urllib.request.urlopen")
+    @patch("socket.getaddrinfo")
+    def test_post_json_webhook_uses_validated_url(self, mock_getaddrinfo, mock_urlopen):
+        from Dimensional.url_validation import post_json_webhook
+
+        mock_getaddrinfo.return_value = [
+            (2, 1, 6, "", ("93.184.216.34", 443)),
+        ]
+        mock_urlopen.return_value.__enter__.return_value = MagicMock(status=200)
+
+        ok = post_json_webhook("https://example.com/hook", {"event": "test"})
+        assert ok is True
+        called_url = mock_urlopen.call_args[0][0].full_url
+        assert called_url == "https://example.com/hook"
 
     @pytest.mark.asyncio
     @patch("urllib.request.urlopen")
@@ -391,6 +457,40 @@ class TestSpawnerSecurity:
         result = sanitize_filename("repo/../../../etc")
         assert "/" not in result
         assert "\\" not in result
+
+
+class TestWeakCryptoAndLogging:
+    """Regression tests for weak hashing and cleartext route logging."""
+
+    def test_feature_flag_hash_uses_sha256(self):
+        import hashlib
+
+        from src.nanoservices.feature_flags.feature_flags import FeatureFlagService
+
+        service = FeatureFlagService()
+        bucket = service._hash_bucket("user-123:flag-name")
+        expected = int(hashlib.sha256(b"user-123:flag-name").hexdigest()[:8], 16) / 0xFFFFFFFF
+        assert bucket == expected
+
+    def test_middleware_logs_route_count_not_full_list(self, caplog):
+        import logging
+        import os
+        from unittest.mock import MagicMock
+
+        from src.security.middleware import ZeroTrustASGIMiddleware
+
+        with patch.dict(
+            os.environ,
+            {
+                "ZERO_TRUST_ENABLED": "true",
+                "ZERO_TRUST_MFA_ROUTES": "/admin,/settings/mfa,/billing",
+            },
+        ):
+            with patch("src.auth.zero_trust.ZeroTrustMiddleware", MagicMock()):
+                with caplog.at_level(logging.INFO):
+                    ZeroTrustASGIMiddleware(MagicMock())
+        assert "3 MFA routes configured" in caplog.text
+        assert "/admin" not in caplog.text
 
 
 class TestSpawnerEndToEnd:

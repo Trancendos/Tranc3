@@ -60,6 +60,8 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+from Dimensional.path_validation import PathTraversalError, list_validated_children, validate_path
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
@@ -621,29 +623,26 @@ async def list_artifacts(run_id: str, path: str = ""):
         raise HTTPException(status_code=404, detail="Run not found")
 
     root = Path(row["artifact_uri"]).resolve()
+    subpath = path.lstrip("/") if path else ""
 
-    # Sanitise path: strip leading slashes/dots, resolve, and assert containment.
-    # This blocks both absolute paths and traversals like ../../etc/passwd.
-    safe_path = path.lstrip("/").replace("..", "")  # strip leading / and any .. segments
-    artifact_dir = (root / safe_path).resolve()
-    # Use is_relative_to (Python 3.9+) which correctly handles prefix collisions
-    # (e.g. root=/data/runs/abc and sibling /data/runs/abc-evil would bypass a
-    # plain startswith check because "abc-evil".startswith("abc") is True).
     try:
-        artifact_dir.relative_to(root)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid artifact path") from None
+        validate_path(subpath or ".", root, must_exist=False, allow_create=False)
+    except PathTraversalError as exc:
+        raise HTTPException(status_code=400, detail="Invalid artifact path") from exc
 
-    if not artifact_dir.exists():
+    try:
+        children = list_validated_children(subpath or ".", root)
+    except FileNotFoundError:
         return {"files": [], "root_uri": str(root)}
 
     files = []
-    for p in artifact_dir.iterdir():
+    for entry in children:
+        rel = f"{subpath}/{entry['name']}".strip("/") if subpath else entry["name"]
         files.append(
             {
-                "path": str(p.relative_to(root)),
-                "is_dir": p.is_dir(),
-                "file_size": p.stat().st_size if p.is_file() else 0,
+                "path": rel,
+                "is_dir": entry["is_dir"],
+                "file_size": entry["file_size"],
             }
         )
     return {"files": files, "root_uri": str(root)}

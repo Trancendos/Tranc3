@@ -5,5 +5,13 @@ extensions:
     data:
       - ["Dimensional", "Member[url_validation].Member[validate_url].ReturnValue", "full-ssrf"]
       - ["Dimensional", "Member[url_validation].Member[validate_webhook_url].ReturnValue", "full-ssrf"]
+      - ["Dimensional", "Member[url_validation].Member[validate_workflow_id].ReturnValue", "full-ssrf"]
+      - ["Dimensional", "Member[url_validation].Member[validate_ip_address].ReturnValue", "full-ssrf"]
+      - ["Dimensional", "Member[url_validation].Member[validate_ollama_base_url].ReturnValue", "full-ssrf"]
+      - ["Dimensional", "Member[url_validation].Member[post_json_webhook].Argument[0]", "full-ssrf"]
       - ["shared_core", "Member[url_validation].Member[validate_url].ReturnValue", "full-ssrf"]
       - ["shared_core", "Member[url_validation].Member[validate_webhook_url].ReturnValue", "full-ssrf"]
+      - ["shared_core", "Member[url_validation].Member[validate_workflow_id].ReturnValue", "full-ssrf"]
+      - ["shared_core", "Member[url_validation].Member[validate_ip_address].ReturnValue", "full-ssrf"]
+      - ["shared_core", "Member[url_validation].Member[validate_ollama_base_url].ReturnValue", "full-ssrf"]
+      - ["shared_core", "Member[url_validation].Member[post_json_webhook].Argument[0]", "full-ssrf"]

@@ -366,10 +366,20 @@ export class CloneBot extends Bot {
   // ───────────────────────────────────────────────────────────────────────────
 
   private detectLicense(url: string): string | undefined {
-    // Simple heuristic based on known hosting patterns
-    if (url.includes('github.com')) return 'MIT (assumed)';
-    if (url.includes('gitlab.com')) return 'Various';
-    if (url.includes('forgejo')) return 'Custom';
+    try {
+      const hostname = new URL(url).hostname.toLowerCase();
+      if (hostname === 'github.com' || hostname.endsWith('.github.com')) {
+        return 'MIT (assumed)';
+      }
+      if (hostname === 'gitlab.com' || hostname.endsWith('.gitlab.com')) {
+        return 'Various';
+      }
+      if (hostname.includes('forgejo')) {
+        return 'Custom';
+      }
+    } catch {
+      return undefined;
+    }
     return undefined;
   }
 }

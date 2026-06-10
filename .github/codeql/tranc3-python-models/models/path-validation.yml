@@ -8,11 +8,17 @@ extensions:
       - ["Dimensional", "Member[path_validation].Member[existing_file_path_str].ReturnValue", "path-injection"]
       - ["Dimensional", "Member[path_validation].Member[safe_join].ReturnValue", "path-injection"]
       - ["Dimensional", "Member[path_validation].Member[_validated_path_str].ReturnValue", "path-injection"]
+      - ["Dimensional", "Member[path_validation].Member[ensure_validated_directory].ReturnValue", "path-injection"]
+      - ["Dimensional", "Member[path_validation].Member[list_validated_children].ReturnValue", "path-injection"]
+      - ["Dimensional", "Member[path_validation].Member[read_validated_json].ReturnValue", "path-injection"]
       - ["shared_core", "Member[path_validation].Member[validate_path].ReturnValue", "path-injection"]
       - ["shared_core", "Member[path_validation].Member[validate_existing_file].ReturnValue", "path-injection"]
       - ["shared_core", "Member[path_validation].Member[existing_file_path_str].ReturnValue", "path-injection"]
       - ["shared_core", "Member[path_validation].Member[safe_join].ReturnValue", "path-injection"]
       - ["shared_core", "Member[path_validation].Member[_validated_path_str].ReturnValue", "path-injection"]
+      - ["shared_core", "Member[path_validation].Member[ensure_validated_directory].ReturnValue", "path-injection"]
+      - ["shared_core", "Member[path_validation].Member[list_validated_children].ReturnValue", "path-injection"]
+      - ["shared_core", "Member[path_validation].Member[read_validated_json].ReturnValue", "path-injection"]
   - addsTo:
       pack: codeql/python-all
       extensible: barrierGuardModel
@@ -24,8 +30,32 @@ extensions:
           "path-injection",
         ]
       - [
+          "Dimensional",
+          "Member[path_validation].Member[remove_validated_tree].Argument[0]",
+          "true",
+          "path-injection",
+        ]
+      - [
+          "Dimensional",
+          "Member[path_validation].Member[write_validated_json].Argument[0]",
+          "true",
+          "path-injection",
+        ]
+      - [
           "shared_core",
           "Member[path_validation].Member[_is_path_under_base].Argument[0]",
+          "true",
+          "path-injection",
+        ]
+      - [
+          "shared_core",
+          "Member[path_validation].Member[remove_validated_tree].Argument[0]",
+          "true",
+          "path-injection",
+        ]
+      - [
+          "shared_core",
+          "Member[path_validation].Member[write_validated_json].Argument[0]",
           "true",
           "path-injection",
         ]
