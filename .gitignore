@@ -39,8 +39,10 @@ venv/
 .venv/
 env/
 
-# Models & cache
+# Models & cache (ML weights — not CodeQL extension models under .github/codeql/)
 models/
+!.github/codeql/
+!.github/codeql/**
 cache/
 *.pt
 *.bin

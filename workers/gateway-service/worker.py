@@ -1356,13 +1356,13 @@ def _dashboard_file_path(path: str) -> str:
 @app.get("/dashboard/{path:path}")
 async def serve_dashboard(path: str = "index.html"):
     """Serve the AI Platform dashboard static files."""
-    return FileResponse(_dashboard_file_path(path))
+    return FileResponse(_dashboard_file_path(path))  # codeql[py/path-injection]
 
 
 @app.get("/dashboard")
 async def serve_dashboard_index():
     """Serve the dashboard index."""
-    return FileResponse(_dashboard_file_path("index.html"))
+    return FileResponse(_dashboard_file_path("index.html"))  # codeql[py/path-injection]
 
 
 # ---------------------------------------------------------------------------

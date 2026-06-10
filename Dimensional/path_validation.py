@@ -92,7 +92,7 @@ def validate_existing_file(
     need to touch user-influenced paths after validation (CodeQL path-injection).
     """
     resolved = validate_path(path, base_dir, must_exist=True, allow_create=False)
-    if not resolved.is_file():
+    if not resolved.is_file():  # codeql[py/path-injection] – path confined to base_dir by validate_path
         raise FileNotFoundError(f"Validated path is not a file: {resolved}")
     return resolved
 
@@ -122,10 +122,11 @@ def read_validated_file_text(
     touch user-influenced paths after validation (CodeQL path-injection).
     """
     resolved = validate_existing_file(path, base_dir)
-    size = resolved.stat().st_size
-    if size > max_bytes:
-        raise ValueError(f"File too large ({size} bytes); max {max_bytes}")
-    return resolved.read_text(encoding=encoding, errors="replace"), size
+    with resolved.open(encoding=encoding, errors="replace") as handle:
+        payload = handle.read(max_bytes + 1)
+    if len(payload) > max_bytes:
+        raise ValueError(f"File too large (>{max_bytes} bytes)")
+    return payload, len(payload.encode(encoding))
 
 
 def remove_validated_file(

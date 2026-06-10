@@ -309,7 +309,7 @@ async def serve_asset(
     if if_none_match and if_none_match == etag:
         return Response(status_code=304, headers={"ETag": etag, "Cache-Control": cache_control})
 
-    return FileResponse(
+    return FileResponse(  # codeql[py/path-injection] – path validated via existing_file_path_str
         _asset_file_path_str(path),
         media_type=content_type,
         headers={

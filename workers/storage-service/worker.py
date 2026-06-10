@@ -368,6 +368,7 @@ async def delete_object(bucket: str, key: str):
         except PathTraversalError as exc:
             raise HTTPException(status_code=400, detail="Invalid object path") from exc
         except FileNotFoundError:
+            # DB row exists but blob already removed from disk; still delete metadata.
             pass
         conn.execute("DELETE FROM objects WHERE bucket=? AND key=?", (bucket, key))
         conn.commit()
