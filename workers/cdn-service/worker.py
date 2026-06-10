@@ -27,7 +27,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
-from Dimensional.path_validation import PathTraversalError, existing_file_path_str, validate_existing_file
+from Dimensional.path_validation import (
+    PathTraversalError,
+    existing_file_path_str,
+    validate_existing_file,
+)
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
