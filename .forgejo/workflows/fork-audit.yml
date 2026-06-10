@@ -1,0 +1,33 @@
+name: Fork Audit
+
+on:
+  schedule:
+    - cron: "45 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  fork-audit:
+    name: GitHub fork inventory
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fork audit (requires gh)
+        run: |
+          if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+            python3 scripts/fork_audit.py --repo Trancendos/Tranc3
+          else
+            echo "SKIP: gh CLI not authenticated"
+            mkdir -p logs
+            echo '{"skipped": true, "reason": "gh not available"}' > logs/fork_audit_latest.json
+          fi
+
+      - name: Upload fork audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fork-audit
+          path: |
+            logs/fork_audit_latest.json
+            logs/fork_audit_latest.md
+            logs/fork_audit_*.json

@@ -12,6 +12,18 @@
 | `cursor/production-entity-swarm-6d5c` | (prior) Entity overrides DB, swarm coordinator |
 | `jules-*` | Cosine similarity optimizations (already present on main) |
 | `palette-aria-*` | ChatView `aria-label` (already present on main) |
+| `a7b72c2` (cherry-pick) | `conftest.py` worker SQLite paths, `pyotp` test dep, JWT error split in auth gateway |
+| `4efcbf6` (security) | Full GitHub Security tab remediation on `main` |
+
+## Merged remote refs (0 commits ahead — delete candidates)
+
+Run `make stale-branch-cleanup` for the live list. Typical candidates (verify before `--apply`):
+
+- `cursor/security-codeql-remediation-e51c`, `cursor/consolidate-open-prs-e51c`
+- `feat/phase20-*`, `feat/phase22-*`, `feat/phase28-*`
+- `claude/fix-*`, `cursor/windows-*`, `palette-spark-dashboard-a11y-*`
+
+Protected from auto-delete: `cursor/production-integration-*`, `claude/loving-mendel-*`, `phase-24/*`.
 
 ## Blocked — do not blind merge
 
@@ -35,11 +47,17 @@
 
 ## Automation
 
-- `python3 scripts/branch_benefit_audit.py` → `logs/branch_benefit_audit_latest.md`
+- `make branch-audit` → `logs/branch_benefit_audit_latest.md` (ahead + merged sections)
+- `make stale-branch-cleanup` / `make stale-branch-cleanup-apply` → delete 0-ahead remote refs
+- `make integration-plan` → scoped PR plan for `cursor/production-integration-8d67`
+- `make fork-audit` → `logs/fork_audit_latest.md` (requires `gh auth`)
+- `make pr-audit` → open PR readiness (requires `gh auth`)
 - `python3 scripts/citadel_preflight.py` — pre-deploy gate
 - `python3 scripts/pr_hygiene.py [--apply]` — close superseded PRs #84–89
 - `config/swarm/manifests/citadel-deploy.yaml` — swarm preflight bundle
-- Forgejo: `.forgejo/workflows/citadel-preflight.yml`, `branch-integration-audit.yml`
+- Forgejo weekly: `branch-integration-audit.yml`, `pr-readiness-audit.yml`, `stale-branch-cleanup.yml`, `fork-audit.yml`, `integration-scope-plan.yml`, `citadel-preflight.yml`
+
+See `logs/integration_scope_cursor_production-integration-8d67_latest.md` for the scoped breakdown of the large integration branch.
 
 ## External repos / forks
 
@@ -48,7 +66,7 @@ This workspace is **Trancendos/Tranc3**. Related work may exist in:
 - **infinity-adminOS** (TypeScript) — mapped in `CROSS_REPO_SYNERGY.md`; Python ports live under `src/mesh/`, `src/event_bus/`, `src/ai_gateway/`
 - **Cloudflare Workers** (`cloudflare/*`) — migrating to `workers/*` per `CF_WORKER_MIGRATION_ROADMAP.md`
 
-No additional GitHub forks were cloned in-agent; run `branch_benefit_audit.py` after adding remotes.
+Fork state is **not** inferable from git alone. Run `make fork-audit` (or weekly Forgejo `fork-audit.yml`) and review `logs/fork_audit_latest.md`. Forks are never auto-merged into `main`.
 
 ## Citadel deploy (operator)
 

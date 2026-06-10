@@ -1,0 +1,35 @@
+name: Integration Scope Plan
+
+on:
+  schedule:
+    - cron: "15 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Remote branch name (without origin/)"
+        required: false
+        default: "cursor/production-integration-8d67"
+
+jobs:
+  scope-plan:
+    name: Scoped PR breakdown for large branches
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all remotes
+        run: git fetch origin --prune
+
+      - name: Generate integration scope plan
+        run: python3 scripts/integration_scope_plan.py --branch "${{ inputs.branch }}"
+
+      - name: Upload scope plan
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-scope-plan
+          path: |
+            logs/integration_scope_*_latest.md
+            logs/integration_scope_*.json

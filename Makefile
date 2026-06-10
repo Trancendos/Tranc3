@@ -154,6 +154,18 @@ citadel-compose-validate:
 branch-audit:
 	@python3 scripts/branch_benefit_audit.py
 
+stale-branch-cleanup:
+	@python3 scripts/stale_branch_cleanup.py
+
+stale-branch-cleanup-apply:
+	@python3 scripts/stale_branch_cleanup.py --apply
+
+integration-plan:
+	@python3 scripts/integration_scope_plan.py --branch cursor/production-integration-8d67
+
+fork-audit:
+	@python3 scripts/fork_audit.py
+
 pr-audit:
 	@python3 scripts/pr_readiness_audit.py --state open --limit 100 --fail-on-unstable
 

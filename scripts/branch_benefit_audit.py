@@ -89,6 +89,35 @@ def _verdict(branch: str, ahead: int, files: int, deletions: int) -> tuple[str, 
     return "blocked", "Large diff — integrate via focused PRs only"
 
 
+def _merged_refs(base: str = DEFAULT_BASE) -> list[BranchReport]:
+    """Remote branches with zero commits ahead of base (candidates for deletion)."""
+    merged: list[BranchReport] = []
+    for branch in _remote_branches():
+        if branch == base:
+            continue
+        try:
+            ahead = int(_run(["git", "rev-list", "--count", f"{base}..origin/{branch}"]))
+            behind = int(_run(["git", "rev-list", "--count", f"origin/{branch}..{base}"]))
+        except subprocess.CalledProcessError:
+            continue
+        if ahead != 0:
+            continue
+        merged.append(
+            BranchReport(
+                name=branch,
+                ahead=0,
+                behind=behind,
+                files_changed=0,
+                insertions=0,
+                deletions=0,
+                verdict="merged",
+                notes="No commits ahead of main — safe to delete remote ref",
+            )
+        )
+    merged.sort(key=lambda r: r.name)
+    return merged
+
+
 def audit(base: str = DEFAULT_BASE) -> list[BranchReport]:
     reports: list[BranchReport] = []
     for branch in _remote_branches():
@@ -119,7 +148,9 @@ def audit(base: str = DEFAULT_BASE) -> list[BranchReport]:
     return reports
 
 
-def _write_outputs(reports: list[BranchReport], base: str) -> None:
+def _write_outputs(
+    reports: list[BranchReport], merged: list[BranchReport], base: str
+) -> None:
     LOGS.mkdir(parents=True, exist_ok=True)
     ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     json_path = LOGS / f"branch_benefit_audit_{ts}.json"
@@ -127,13 +158,22 @@ def _write_outputs(reports: list[BranchReport], base: str) -> None:
     payload = {
         "base": base,
         "generated_at": ts,
-        "branches": [asdict(r) for r in reports],
+        "branches_ahead": [asdict(r) for r in reports],
+        "branches_merged": [asdict(r) for r in merged],
+        "merged_count": len(merged),
+        "ahead_count": len(reports),
     }
     json_path.write_text(json.dumps(payload, indent=2))
     lines = [
         "# Branch benefit audit",
         "",
         f"Base: `{base}` | Generated: {ts}",
+        "",
+        f"**Ahead of main:** {len(reports)} | **Merged (0 ahead):** {len(merged)}",
+        "",
+        "Run `make stale-branch-cleanup` to list deletable merged refs.",
+        "",
+        "## Branches ahead of main",
         "",
         "| Branch | Ahead | Behind | Files | +/− | Verdict | Notes |",
         "|--------|------:|-------:|------:|-----|---------|-------|",
@@ -143,6 +183,20 @@ def _write_outputs(reports: list[BranchReport], base: str) -> None:
             f"| `{r.name}` | {r.ahead} | {r.behind} | {r.files_changed} | "
             f"+{r.insertions}/−{r.deletions} | **{r.verdict}** | {r.notes} |"
         )
+    if merged:
+        lines.extend(
+            [
+                "",
+                "## Merged into main (0 commits ahead)",
+                "",
+                "These remote refs can be deleted after review (`make stale-branch-cleanup-apply`).",
+                "",
+                "| Branch | Behind main | Notes |",
+                "|--------|------------:|-------|",
+            ]
+        )
+        for r in merged:
+            lines.append(f"| `{r.name}` | {r.behind} | {r.notes} |")
     md_path.write_text("\n".join(lines) + "\n")
     print(f"Wrote {json_path}")
     print(f"Wrote {md_path}")
@@ -154,10 +208,14 @@ def main() -> int:
     args = parser.parse_args()
     subprocess.run(["git", "fetch", "origin", "--prune"], cwd=ROOT, check=False)
     reports = audit(args.base)
-    _write_outputs(reports, args.base)
+    merged = _merged_refs(args.base)
+    _write_outputs(reports, merged, args.base)
     blocked = sum(1 for r in reports if r.verdict == "blocked")
     cherry = sum(1 for r in reports if r.verdict == "cherry-pick")
-    print(f"Summary: {len(reports)} branches ahead | {cherry} cherry-pick | {blocked} blocked")
+    print(
+        f"Summary: {len(reports)} ahead | {len(merged)} merged | "
+        f"{cherry} cherry-pick | {blocked} blocked"
+    )
     return 0
 
 

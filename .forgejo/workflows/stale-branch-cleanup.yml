@@ -1,0 +1,44 @@
+name: Stale Branch Cleanup
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Delete deletable merged remote branches (requires maintainer token)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  stale-branches:
+    name: Remote branch hygiene
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all remotes
+        run: git fetch origin --prune
+
+      - name: Stale branch report (dry-run)
+        if: inputs.apply != 'true'
+        run: python3 scripts/stale_branch_cleanup.py --base main
+
+      - name: Delete merged remote branches
+        if: inputs.apply == 'true'
+        run: python3 scripts/stale_branch_cleanup.py --base main --apply
+
+      - name: Upload cleanup report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stale-branch-cleanup
+          path: |
+            logs/stale_branch_cleanup_latest.md
+            logs/stale_branch_cleanup_*.json
