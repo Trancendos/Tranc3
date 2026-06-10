@@ -40,7 +40,11 @@ llama-cpp-python==0.3.9
 # ChromaDB: Local SQLite-backed vector store. No server needed in dev.
 # Production: runs with PostgreSQL backend (Supabase free tier or self-hosted Postgres).
 # Use for: RAG pipelines, semantic search, context memory.
-chromadb==1.0.12
+# GHSA-f4j7-r4q5-qw2c / CVE-2026-45829: pre-auth code injection when trust_remote_code=true
+# on Chroma server collections API. No patched PyPI release yet (last_affected 1.5.9).
+# Mitigation: embedded PersistentClient/Client only (vector_plan_cache.py); never enable
+# trust_remote_code; do not expose Chroma HTTP server to untrusted networks.
+chromadb==1.5.9
 
 # === Structured LLM Outputs ===
 # instructor: Pydantic-validated structured outputs from any LLM API.
