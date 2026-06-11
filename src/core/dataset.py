@@ -1,13 +1,22 @@
 # src/core/dataset.py
 # MultilingualDataset — Gap G2 + Brainwriting R1 action
+from __future__ import annotations
 
 import json
 import logging
 import os
 from typing import Dict, List, Optional
 
-import torch
-from torch.utils.data import Dataset
+try:
+    import torch
+    from torch.utils.data import Dataset
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    Dataset = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 
 from Dimensional.sanitize import sanitize_for_log
 

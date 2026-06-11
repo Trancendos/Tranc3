@@ -4,8 +4,17 @@ import logging
 from typing import Dict, List
 
 import numpy as np
-import torch
-import torch.nn as nn
+
+try:
+    import torch
+    import torch.nn as nn
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    nn = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import QFT
 from qiskit_aer import AerSimulator
@@ -28,8 +37,13 @@ class NeuromorphicInterface:
         input_dim: int,
         hidden_layers: List[int],
         output_dim: int,
-    ) -> nn.ModuleList:
-        class SpikingNeuron(nn.Module):
+    ) -> "nn.ModuleList":
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                "create_spiking_network requires PyTorch, but it is not available in this runtime."
+            )
+
+        class SpikingNeuron(nn.Module if nn is not None else object):
             def __init__(self, input_size, output_size, tau=10.0):
                 super().__init__()
                 self.fc = nn.Linear(input_size, output_size, bias=False)

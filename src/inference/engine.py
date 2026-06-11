@@ -10,7 +10,14 @@ Security: Uses safe_torch_load to prevent pickle-based RCE (CVE-2024-48063, CVE-
 
 from typing import Any, Dict, List, Optional
 
-import torch
+try:
+    import torch
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 
 from ..core.config import InferenceConfig, ModelConfig
 from ..core.model import Tranc3Model

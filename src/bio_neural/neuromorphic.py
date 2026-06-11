@@ -1,12 +1,22 @@
 # src/bio_neural/neuromorphic.py
 # TRANC3 Complete Spiking Neural Network — merged from DOC-07
+from __future__ import annotations
 
 import logging
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-import torch
-import torch.nn as nn
+
+try:
+    import torch
+    import torch.nn as nn
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    nn = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 
 from Dimensional.sanitize import sanitize_for_log
 
@@ -16,7 +26,7 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # LEAKY INTEGRATE-AND-FIRE NEURON
 # ============================================================
-class LIFNeuron(nn.Module):
+class LIFNeuron(nn.Module if nn is not None else object):
     def __init__(
         self,
         tau_mem: float = 20.0,
@@ -48,7 +58,7 @@ class LIFNeuron(nn.Module):
 # ============================================================
 # SPIKING LAYER
 # ============================================================
-class SpikingLayer(nn.Module):
+class SpikingLayer(nn.Module if nn is not None else object):
     def __init__(
         self,
         input_size: int,
@@ -56,6 +66,10 @@ class SpikingLayer(nn.Module):
         tau_mem: float = 20.0,
         tau_syn: float = 5.0,
     ):
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                "SpikingLayer requires PyTorch, but it is not available in this runtime."
+            )
         super().__init__()
         self.input_size = input_size
         self.output_size = output_size
@@ -111,7 +125,7 @@ class STDPLearning:
 # ============================================================
 # FULL SPIKING NEURAL NETWORK
 # ============================================================
-class SpikingNeuralNetwork(nn.Module):
+class SpikingNeuralNetwork(nn.Module if nn is not None else object):
     def __init__(
         self,
         input_size: int = 768,
