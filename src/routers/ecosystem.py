@@ -30,6 +30,8 @@ import random
 import time
 from typing import Any, Dict, List, Optional
 
+from Dimensional.error_handlers import safe_error_detail
+from Dimensional.sanitize import sanitize_for_log
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
@@ -711,7 +713,8 @@ async def get_storage_health():
         provider = _storage_factory.get_provider()
         return await provider.health()
     except Exception as e:
-        return {"status": "error", "error": str(e)}
+        _log.warning("Storage health check failed: %s", sanitize_for_log(e))
+        return {"status": "error", "error": "Storage health check failed"}
 
 
 # ---------------------------------------------------------------------------
@@ -734,8 +737,8 @@ async def get_ai_model_catalog(provider: Optional[str] = None):
             "catalog": catalog,
         }
     except Exception as exc:
-        _log.error("Failed to get AI model catalog: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        _log.error("Failed to get AI model catalog: %s", sanitize_for_log(exc))
+        raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
 
 
 @router.get("/ai/providers")
@@ -764,8 +767,8 @@ async def get_ai_provider_status():
             ),
         }
     except Exception as exc:
-        _log.error("Failed to discover AI providers: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        _log.error("Failed to discover AI providers: %s", sanitize_for_log(exc))
+        raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
 
 
 @router.get("/ai/routing-chains")
@@ -802,8 +805,8 @@ async def get_ai_routing_chains():
             "chains": chains,
         }
     except Exception as exc:
-        _log.error("Failed to get routing chains: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        _log.error("Failed to get routing chains: %s", sanitize_for_log(exc))
+        raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
 
 
 @router.post("/ai/optimal-chain")
@@ -822,8 +825,8 @@ async def get_optimal_routing_chain(chain_name: Optional[str] = None):
             "route_rules": chain.get_route_rules(),
         }
     except Exception as exc:
-        _log.error("Failed to get optimal chain: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        _log.error("Failed to get optimal chain: %s", sanitize_for_log(exc))
+        raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
 
 
 # ---------------------------------------------------------------------------

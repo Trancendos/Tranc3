@@ -150,7 +150,12 @@ try:
 except Exception as e:
     import logging
 
-    logging.getLogger(__name__).error(f"Configuration error: {e}")
+    from shared_core.sanitize import sanitize_for_log
+
+    logging.getLogger(__name__).error(
+        "Configuration error: %s",
+        sanitize_for_log(e),
+    )
     raise RuntimeError(
-        f"Tranc3 configuration failed: {e}. Check your environment variables and .env file.",
+        "Tranc3 configuration failed. Check your environment variables and .env file.",
     ) from e

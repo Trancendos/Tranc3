@@ -64,6 +64,7 @@ from Dimensional.infinity.sentinel_station import (
 
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.sanitize import sanitize_for_log
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -801,9 +802,14 @@ async def grant_app_access(user_id: str, access: AppAccessGrant, request: Reques
     ).fetchone()
 
     if existing:
+        logger.warning(
+            "Duplicate app access rejected user=%s app=%s",
+            sanitize_for_log(user_id),
+            sanitize_for_log(access.app_name),
+        )
         raise HTTPException(
             status_code=409,
-            detail=f"Active access already exists for app '{access.app_name}'",
+            detail="Active access already exists",
         )
 
     access_id = uuid.uuid4().hex[:16]

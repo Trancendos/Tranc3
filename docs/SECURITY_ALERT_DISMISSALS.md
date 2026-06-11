@@ -1,0 +1,35 @@
+# Security Alert Dismissals (Tier 0)
+
+Documented false positives and intentional suppressions on `main`. Rescan after merge
+to bulk-close stale GitHub Security alerts.
+
+## Trivy / Kubernetes (Flux)
+
+| Alert | Check | Disposition | Mitigation |
+|-------|-------|-------------|------------|
+| #2450 | KSV118 Tiller deployed | False positive | `fmd-distiller` is not Helm Tiller; skip on pod template in `flux/base/deployments.yaml` |
+| #2476–#2451 | KSV013 untrusted registry | Accepted risk | Self-hosted Forgejo (`forgejo.local`); skip on all nanoservice pod templates in both Flux trees |
+| #1513–#1515 | KSV104 ConfigMap sensitive content | False positive | ConfigMaps hold non-secret env keys only (LOG_LEVEL, URLs); metadata skip on ConfigMaps |
+
+## Dependencies
+
+| Alert | CVE / package | Disposition | Mitigation |
+|-------|---------------|-------------|------------|
+| #1 | sentencepiece CVE-2026-1260 | Fixed | Pinned `sentencepiece==0.2.1`; listed in `.trivyignore` |
+
+## CodeQL Notes (deferred paths)
+
+Bulk fixes deferred until those trees are in active development:
+
+- `archive/` — legacy, not deployed
+- `Dimensional/` duplicate architecture copies — mirror of `shared_core/`
+- Cyclic-import Notes in MCP/workflow modules — structural; lazy imports acceptable
+- Empty-except Notes in `shared_core/` — batch follow-up, not live worker paths
+
+## Live-path fixes (this branch)
+
+- P1 #1137: ZFS TOCTOU — atomic open+stat in `tranc3-ts/src/providers/ZFSProvider.ts`
+- P1/P2B: Exception exposure — `safe_error_detail()` in live workers and `src/routers/*`
+- P2A: Log injection — `sanitize_for_log()` in `src/core/config.py`, `src/mcp/server.py`
+- P3: Pod `runAsUser`/`runAsGroup`/`fsGroup` 65534 in both Flux deployment trees
+- CodeQL Notes: `NotImplementedError`, explicit returns, narrowed except in live `src/` paths

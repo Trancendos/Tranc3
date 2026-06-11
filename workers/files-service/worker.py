@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from shared_core.error_handlers import safe_error_detail
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -202,7 +203,7 @@ async def create(data: Dict[str, Any]):
         from src.capacity.guard import CapacityExceededError
 
         if isinstance(_fe, CapacityExceededError):
-            raise HTTPException(status_code=503, detail=str(_fe)) from _fe
+            raise HTTPException(status_code=503, detail=safe_error_detail(_fe, 503)) from _fe
     item_id = data.get("file_id", str(uuid.uuid4()))
     data["file_id"] = item_id
     created = db.create(data)

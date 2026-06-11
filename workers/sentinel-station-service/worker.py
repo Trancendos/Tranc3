@@ -68,6 +68,7 @@ from Dimensional.infinity.sentinel_station import (
 
 # Phase 22.6: Smart Adaptive Intelligence + ReactiveState
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.sanitize import sanitize_for_log
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -194,9 +195,15 @@ def _check_rbac(request: Request, endpoint: str, method: str) -> None:
     """Check RBAC access for the given endpoint/method. Raises 403 if denied."""
     user = _get_user(request)
     if not rbac_engine.check_access(user, endpoint, method):
+        logger.warning(
+            "RBAC denied method=%s endpoint=%s user=%s",
+            sanitize_for_log(method),
+            sanitize_for_log(endpoint),
+            sanitize_for_log(user.get("sub", "anonymous")),
+        )
         raise HTTPException(
             status_code=403,
-            detail=f"Access denied: insufficient permissions for {method} {endpoint}",
+            detail="Access denied: insufficient permissions",
         )
 
 
@@ -433,9 +440,10 @@ async def publish_event(body: EventPublish, request: Request):
     # Validate channel name
     valid_channels = [ch.value for ch in SentinelChannel]
     if body.channel not in valid_channels:
+        logger.warning("Invalid channel rejected: %s", sanitize_for_log(body.channel))
         raise HTTPException(
             400,
-            detail=f"Invalid channel: {body.channel}. Valid channels: {', '.join(valid_channels)}",
+            detail="Invalid channel",
         )
 
     # Publish through Sentinel Station
@@ -490,7 +498,7 @@ async def publish_events_batch(events: list[EventPublish], request: Request):
 
     for i, body in enumerate(events):
         if body.channel not in valid_channels:
-            errors.append({"index": i, "error": f"Invalid channel: {body.channel}"})
+            errors.append({"index": i, "error": "Invalid channel"})
             continue
 
         event = await sentinel.publish(
@@ -559,9 +567,10 @@ async def create_subscription(body: SubscriptionCreate, request: Request):
 
     valid_channels = [ch.value for ch in SentinelChannel]
     if body.channel not in valid_channels:
+        logger.warning("Invalid channel rejected: %s", sanitize_for_log(body.channel))
         raise HTTPException(
             400,
-            detail=f"Invalid channel: {body.channel}. Valid channels: {', '.join(valid_channels)}",
+            detail="Invalid channel",
         )
 
     # Subscribe through Sentinel Station
@@ -662,9 +671,10 @@ async def channel_stats(channel_name: str, request: Request):
 
     valid_channels = [ch.value for ch in SentinelChannel]
     if channel_name not in valid_channels:
+        logger.warning("Invalid channel rejected: %s", sanitize_for_log(channel_name))
         raise HTTPException(
             400,
-            detail=f"Invalid channel: {channel_name}. Valid channels: {', '.join(valid_channels)}",
+            detail="Invalid channel",
         )
 
     stats = sentinel.get_stats()

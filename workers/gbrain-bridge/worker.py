@@ -39,6 +39,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from shared_core.error_handlers import safe_error_detail
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -504,7 +505,7 @@ async def health() -> Response:  # type: ignore[return-value]
             "entity": health_entity_block(WORKER_PORT, WORKER_NAME),
         }
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=503, detail=safe_error_detail(exc, 503)) from exc
 
 
 @_router.post("/nodes", status_code=201)
@@ -531,7 +532,7 @@ async def create_node(body: NodeCreate) -> Response:  # type: ignore[return-valu
         )
         db.commit()
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=safe_error_detail(exc, 400)) from exc
     return {  # type: ignore[return-value]
         "node_id": node_id,
         "title": body.title,
@@ -570,7 +571,7 @@ async def create_edge(body: EdgeCreate) -> Response:  # type: ignore[return-valu
         )
         db.commit()
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=safe_error_detail(exc, 400)) from exc
     return {"edge_id": edge_id, "source_id": body.source_id, "target_id": body.target_id}  # type: ignore[return-value]
 
 

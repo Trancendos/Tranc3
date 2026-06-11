@@ -211,6 +211,7 @@ def with_retry(max_attempts: int = 3, backoff: float = 1.0, exceptions=(Exceptio
                         f"Retry {attempt}/{max_attempts} for {func.__name__}: {e} — waiting {wait}s",
                     )
                     time.sleep(wait)
+            raise RuntimeError(f"Retry loop exhausted for {func.__name__}")
 
         return wrapper
 

@@ -29,6 +29,8 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from Dimensional.error_handlers import safe_error_detail
+from Dimensional.sanitize import sanitize_for_log
 from Dimensional.url_validation import SSRFError, validate_webhook_url
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
@@ -595,9 +597,10 @@ async def execute_workflow(workflow_id: str, input_data: Dict[str, Any] = None):
             "status": execution.status.value,
         }
     except ValueError as e:
-        raise HTTPException(404, str(e)) from None
+        raise HTTPException(404, safe_error_detail(e, 404)) from None
     except Exception as e:
-        raise HTTPException(500, f"Execution failed: {e}") from None
+        logger.error("Workflow execution failed: %s", sanitize_for_log(e))
+        raise HTTPException(500, safe_error_detail(e, 500)) from None
 
 
 @_router.get("/executions")

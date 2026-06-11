@@ -56,6 +56,8 @@ from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware, WebSocketAu
 from Dimensional.infinity.nomenclature import InfinityRole, Pillar, SentinelChannel, Tier
 from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
 from Dimensional.infinity.rbac import RBACEngine
+from Dimensional.error_handlers import safe_error_detail
+from Dimensional.sanitize import sanitize_for_log
 
 # Phase 22.3: Sentinel Station event bus integration
 from Dimensional.infinity.sentinel_station import (
@@ -354,10 +356,20 @@ def _check_rbac(request: Request, endpoint: str, method: str) -> None:
             audit = rbac_engine.get_audit_context(user, endpoint, method)
             _log_access_audit(audit)
         except Exception:
-            logger.warning("RBAC audit logging failed for %s %s", method, endpoint)
+            logger.warning(
+                "RBAC audit logging failed for %s %s",
+                sanitize_for_log(method),
+                sanitize_for_log(endpoint),
+            )
+        logger.warning(
+            "RBAC denied %s %s for user=%s",
+            sanitize_for_log(method),
+            sanitize_for_log(endpoint),
+            sanitize_for_log(user.get("sub", "anonymous")),
+        )
         raise HTTPException(
             status_code=403,
-            detail=f"Access denied: insufficient permissions for {method} {endpoint}",
+            detail="Access denied: insufficient permissions",
         )
 
 
@@ -384,9 +396,16 @@ def _check_abac(
     environment = {"threat_level": abac_engine.threat_level.value}
 
     if not abac_engine.evaluate(subject, resource, action_attrs, environment):
+        logger.warning(
+            "ABAC denied action=%s resource=%s/%s user=%s",
+            sanitize_for_log(action),
+            sanitize_for_log(resource_type),
+            sanitize_for_log(resource_id),
+            sanitize_for_log(user.get("sub", "anonymous")),
+        )
         raise HTTPException(
             status_code=403,
-            detail=f"Access denied: ABAC policy denies {action} on {resource_type}/{resource_id}",
+            detail="Access denied: policy denies this action",
         )
 
 
@@ -847,7 +866,8 @@ async def run_workflow(workflow_id: str, request: Request):
     try:
         safe_workflow_id = validate_workflow_id(workflow_id)
     except SSRFError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("Invalid workflow id rejected: %s", sanitize_for_log(exc))
+        raise HTTPException(status_code=400, detail=safe_error_detail(exc, 400)) from exc
 
     async with httpx.AsyncClient() as client:
         try:
@@ -932,9 +952,10 @@ async def set_threat_level(body: dict, request: Request):
     try:
         new_level = ThreatLevel(level_str)
     except ValueError:
+        logger.warning("Invalid threat level rejected: %s", sanitize_for_log(level_str))
         raise HTTPException(
             400,
-            detail=f"Invalid threat level: {level_str}. Use: low, medium, high, critical",
+            detail="Invalid threat level. Use: low, medium, high, critical",
         ) from None
 
     old_level = abac_engine.threat_level

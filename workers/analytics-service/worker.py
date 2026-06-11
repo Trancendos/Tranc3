@@ -54,6 +54,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, Header, HTTPEx
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
+from shared_core.error_handlers import safe_error_detail
+from shared_core.sanitize import sanitize_for_log
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -861,7 +863,8 @@ async def platform_summary():
                     "failed_logins": auth_stats[3],
                 }
             except Exception as exc:
-                result["auth_7d"] = {"error": str(exc)}
+                logger.warning("Platform auth_7d query failed: %s", sanitize_for_log(exc))
+                result["auth_7d"] = {"error": "Data unavailable"}
 
         # Audit chain length
         if Path(_CROSS_SERVICE_DBS["audit"]).exists():
@@ -869,7 +872,8 @@ async def platform_summary():
                 audit_count = con.execute("SELECT COUNT(*) FROM audit_db.audit_log").fetchone()[0]
                 result["audit"] = {"total_entries": audit_count}
             except Exception as exc:
-                result["audit"] = {"error": str(exc)}
+                logger.warning("Platform audit query failed: %s", sanitize_for_log(exc))
+                result["audit"] = {"error": "Data unavailable"}
 
         # User count from users-service
         if Path(_CROSS_SERVICE_DBS["users"]).exists():
@@ -885,7 +889,8 @@ async def platform_summary():
                     "active": user_stats[1],
                 }
             except Exception as exc:
-                result["users"] = {"error": str(exc)}
+                logger.warning("Platform users query failed: %s", sanitize_for_log(exc))
+                result["users"] = {"error": "Data unavailable"}
 
         return {"platform": result, "generated_at": datetime.now(timezone.utc).isoformat()}
     finally:
@@ -926,7 +931,7 @@ async def olap_query(req: OlapQueryIn):
             "limit": req.limit,
         }
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Query error: {exc}") from exc
+        raise HTTPException(status_code=400, detail=safe_error_detail(exc, 400)) from exc
     finally:
         con.close()
 
@@ -990,7 +995,7 @@ async def analytics_dataframe(body: DataFrameIn):
         arrow_table = con.execute(limited_sql).arrow()
         df = pl.from_arrow(arrow_table)
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Query error: {exc}") from exc
+        raise HTTPException(status_code=400, detail=safe_error_detail(exc, 400)) from exc
     finally:
         con.close()
 
@@ -1021,7 +1026,8 @@ async def analytics_dataframe(body: DataFrameIn):
                     if col_a in df.columns and col_b in df.columns:
                         result[f"corr_{col_a}_{col_b}"] = df[col_a].corr(df[col_b])
         except Exception as exc:
-            result[f"op_error_{op}"] = str(exc)
+            logger.warning("DataFrame operation %s failed: %s", op, sanitize_for_log(exc))
+            result[f"op_error_{op}"] = "Operation failed"
 
     return result
 

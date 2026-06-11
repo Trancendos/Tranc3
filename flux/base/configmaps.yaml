@@ -6,6 +6,8 @@ kind: ConfigMap
 metadata:
   name: tranc3-config
   namespace: tranc3
+  annotations:
+    trivy-operator.aquasecurity.github.io/skip-checks: KSV104
 data:
   LOG_LEVEL: "INFO"
   ENVIRONMENT: "production"
@@ -25,6 +27,8 @@ kind: ConfigMap
 metadata:
   name: tranc3-dev-config
   namespace: tranc3
+  annotations:
+    trivy-operator.aquasecurity.github.io/skip-checks: KSV104
 data:
   LOG_LEVEL: "DEBUG"
   ENVIRONMENT: "development"
@@ -34,6 +38,8 @@ kind: ConfigMap
 metadata:
   name: tranc3-staging-config
   namespace: tranc3
+  annotations:
+    trivy-operator.aquasecurity.github.io/skip-checks: KSV104
 data:
   LOG_LEVEL: "INFO"
   ENVIRONMENT: "staging"
