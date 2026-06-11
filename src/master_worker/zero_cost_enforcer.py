@@ -270,17 +270,19 @@ class ZeroCostEnforcer:
         fallback = self._registry.best_for(platform.category)
         fallback_name = fallback.name if fallback else None
 
+        _safe_name = exhausted_name.replace("\n", " ").replace("\r", " ")  # codeql[py/log-injection]
+        _safe_fallback = (fallback_name or "none").replace("\n", " ").replace("\r", " ")
         if fallback_name:
             logger.info(
                 "Platform rotation: %r → %r (category=%s)",
-                exhausted_name,
-                fallback_name,
+                _safe_name,
+                _safe_fallback,
                 platform.category.value,
             )
         else:
             logger.error(
                 "Platform rotation: %r exhausted, NO fallback available for %s",
-                exhausted_name,
+                _safe_name,
                 platform.category.value,
             )
 
