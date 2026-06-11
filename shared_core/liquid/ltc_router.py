@@ -23,8 +23,7 @@ from typing import Any, Dict, List
 logger = logging.getLogger(__name__)
 
 _NCPS_AVAILABLE = (
-    importlib.util.find_spec("torch") is not None
-    and importlib.util.find_spec("ncps") is not None
+    importlib.util.find_spec("torch") is not None and importlib.util.find_spec("ncps") is not None
 )
 
 

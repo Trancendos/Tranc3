@@ -7,6 +7,7 @@ Full training loop with:
   - Checkpoint save/resume
   - Validation loop with perplexity reporting
 """
+
 from __future__ import annotations
 
 import math
