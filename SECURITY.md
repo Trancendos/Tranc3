@@ -101,12 +101,17 @@ Workers and Admin OS routes import these modules at trust boundaries (gateway pr
 |-------|---------|----------|--------|--------|
 | #30 | protobuf (Rust) | Moderate | `prometheus` 0.13 → 0.14; lockfile now pins protobuf 3.7.2 (GHSA-2gh3-rmm4-6rq5) | Fixed |
 | #31 | go-redis | Low | Removed unused `github.com/redis/go-redis/v9` from `dnf_orchestrator`; fixed invalid `uuid v1.21.0` → v1.6.0 | Fixed |
-| #41, #42 | chromadb | Critical | Bumped to 1.5.9; **no upstream patch yet** for GHSA-f4j7-r4q5-qw2c (CVE-2026-45829) | Mitigated |
+| #41, #42 | chromadb | Critical | Removed from `requirements-ai.txt` (no upstream patch for GHSA-f4j7-r4q5-qw2c); optional manual install only | Mitigated |
+| #45 | torch | Low | PYSEC-2025-194 (`torch.jit.script`); **not used** in codebase; pinned `torch==2.12.0` (latest) | Risk accepted |
+| #1 | Supabase service_role JWT | Critical | Hardcoded key removed in `2375429`; script uses env vars only — **rotate key in Supabase** | Fixed (rotate) |
 
 **ChromaDB compensating controls (until a patched release):**
+- Not a declared dependency — install manually only when needed for local dev.
 - Use embedded `chromadb.PersistentClient` / `chromadb.Client` only (`src/nanoservices/vector_plan_cache/vector_plan_cache.py`).
 - Never set `trust_remote_code=true` on Chroma collections.
 - Do not expose the Chroma HTTP server to untrusted networks.
+
+**PyTorch JIT (alert #45):** `torch.jit.script` / `torch.jit.trace` are never called; see `SECURITY-ASSESSMENT.md`.
 
 **CI/CD:** All scanning runs through Forgejo (The Workshop) — `.forgejo/workflows/security-scan.yml` and `dependency-audit.yml`. GitHub Actions runs CodeQL and Trivy for the Security tab.
 

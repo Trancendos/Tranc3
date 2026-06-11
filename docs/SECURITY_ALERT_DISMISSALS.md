@@ -15,7 +15,15 @@ to bulk-close stale GitHub Security alerts.
 
 | Alert | CVE / package | Disposition | Mitigation |
 |-------|---------------|-------------|------------|
-| #1 | sentencepiece CVE-2026-1260 | Fixed | Pinned `sentencepiece==0.2.1`; listed in `.trivyignore` |
+| #1 (sentencepiece) | sentencepiece CVE-2026-1260 | Fixed | Pinned `sentencepiece==0.2.1`; listed in `.trivyignore` |
+| #41, #42 | chromadb GHSA-f4j7-r4q5-qw2c / CVE-2026-45829 | Fixed | Removed from `requirements-ai.txt`; embedded client + in-memory fallback only |
+| #45 | torch PYSEC-2025-194 (`torch.jit.script`) | Risk accepted | JIT never used; `torch==2.12.0` is latest PyPI |
+
+## Secret scanning
+
+| Alert | Location | Disposition | Mitigation |
+|-------|----------|-------------|------------|
+| #1 (Supabase) | `deploy/forgejo/set-org-secrets.sh` (historical) | Fixed | Commit `2375429` — env vars only; **rotate `SUPABASE_SERVICE_ROLE_KEY` in Supabase dashboard** (key was in git history and may have been exposed) |
 
 ## CodeQL Notes (deferred paths)
 
@@ -66,7 +74,10 @@ For each alert in the tables above, open the alert → **Close as** → choose:
 | #2450 | False positive | KSV118: `fmd-distiller` pod name contains substring "tiller"; not Helm Tiller. Skip in `flux/base/deployments.yaml` annotations. |
 | #2476–#2451 | Risk accepted | KSV013: self-hosted Forgejo registry (`forgejo.local`); intentional for zero-cost stack. Skips on nanoservice pod templates in both Flux trees. |
 | #1513–#1515 | False positive | KSV104: ConfigMaps hold non-secret env keys only (LOG_LEVEL, URLs); metadata skip on ConfigMaps. |
-| #1 | Fixed | sentencepiece CVE-2026-1260: pinned `sentencepiece==0.2.1` in `requirements.txt` + `.trivyignore`. |
+| #1 (sentencepiece) | Fixed | sentencepiece CVE-2026-1260: pinned `sentencepiece==0.2.1` in `requirements.txt` + `.trivyignore`. |
+| #41, #42 | Fixed | chromadb GHSA-f4j7-r4q5-qw2c: removed from `requirements-ai.txt`; optional embedded client only; see `SECURITY.md`. |
+| #45 | Risk accepted | torch PYSEC-2025-194: `torch.jit.script` never used; `torch==2.12.0` latest PyPI. |
+| #1 (Supabase) | Revoked | After rotating `SUPABASE_SERVICE_ROLE_KEY` in Supabase; script fixed in `2375429`; see `docs/credential-rotation-advisory.md`. |
 
 ### 3. External check failures (no repo action)
 

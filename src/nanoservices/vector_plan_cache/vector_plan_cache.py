@@ -221,6 +221,7 @@ class ChromaDBPlanStore:
         try:
             import chromadb
 
+            # CVE-2026-45829: only embedded client — never chromadb server / trust_remote_code.
             if persist_dir:
                 self._client = chromadb.PersistentClient(path=persist_dir)
             else:
