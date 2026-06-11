@@ -49,6 +49,7 @@ from Dimensional.dimensionals import (
     get_dimensional_registry,
     get_underverse_registry,
 )
+from Dimensional.error_handlers import safe_error_detail
 
 # Phase 22: Infinity Ecosystem security integration
 from Dimensional.infinity.abac import ABACEngine, get_default_policies
@@ -56,8 +57,6 @@ from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware, WebSocketAu
 from Dimensional.infinity.nomenclature import InfinityRole, Pillar, SentinelChannel, Tier
 from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
 from Dimensional.infinity.rbac import RBACEngine
-from Dimensional.error_handlers import safe_error_detail
-from Dimensional.sanitize import sanitize_for_log
 
 # Phase 22.3: Sentinel Station event bus integration
 from Dimensional.infinity.sentinel_station import (
@@ -66,6 +65,7 @@ from Dimensional.infinity.sentinel_station import (
     get_sentinel_station,
 )
 from Dimensional.path_validation import PathTraversalError, existing_file_path_str
+from Dimensional.sanitize import sanitize_for_log
 from Dimensional.url_validation import SSRFError, validate_workflow_id
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
@@ -211,7 +211,7 @@ async def _lifespan(app: FastAPI):
     await sentinel.start()
     logger.info(
         "Sentinel Station started (backend: %s)",
-        "redis" if sentinel.is_redis_connected else "fallback",
+        sanitize_for_log("redis" if sentinel.is_redis_connected else "fallback"),
     )
 
     # Create shared SSE generator for broadcasting events
@@ -275,7 +275,7 @@ async def _lifespan(app: FastAPI):
             except asyncio.CancelledError:
                 break
             except Exception as exc:
-                logger.debug("Gateway background loop error: %s", exc)
+                logger.debug("Gateway background loop error: %s", sanitize_for_log(exc))
 
     _bg_task = asyncio.create_task(_bg_loop())
 
@@ -1360,7 +1360,7 @@ async def _cleanup_stale_connections():
                 pass
             ws_auth_manager.unregister_connection(ws)
         if stale:
-            logger.info("Cleaned up %d stale WebSocket connections", len(stale))
+            logger.info("Cleaned up %d stale WebSocket connections", sanitize_for_log(len(stale)))
 
 
 # ---------------------------------------------------------------------------

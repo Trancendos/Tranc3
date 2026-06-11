@@ -21,6 +21,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from Dimensional.path_validation import PathTraversalError, existing_file_path_str
+from Dimensional.sanitize import sanitize_for_log
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -174,11 +175,11 @@ async def _run_job(job_id: str, coro) -> None:  # noqa: ANN001
         output_path = await coro
         job.output_path = str(output_path)
         job.status = JobStatus.DONE
-        log.info("job %s done → %s", job_id, output_path)
+        log.info("job %s done → %s", sanitize_for_log(job_id), sanitize_for_log(output_path))
     except Exception as exc:  # noqa: BLE001
         job.status = JobStatus.FAILED
         job.error = str(exc)
-        log.error("job %s failed: %s", job_id, exc)
+        log.error("job %s failed: %s", sanitize_for_log(job_id), sanitize_for_log(exc))
 
 
 # ---------------------------------------------------------------------------

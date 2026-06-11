@@ -340,7 +340,7 @@ class Cryptex:
         ]
         for rule in rules:
             self._rules.append(rule)
-        logger.debug("cryptex: registered %d default rules", len(rules))
+        logger.debug("cryptex: registered %d default rules", sanitize_for_log(len(rules)))
 
 
 # ── Module-level singleton ────────────────────────────────────────────────────

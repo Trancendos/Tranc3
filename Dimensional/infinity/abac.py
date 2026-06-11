@@ -46,6 +46,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 
 from Dimensional.infinity.nomenclature import InfinityRole, Tier
+from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +228,7 @@ class ABACEngine:
     @threat_level.setter
     def threat_level(self, level: ThreatLevel) -> None:
         self._threat_level = level
-        logger.info("ABAC threat level changed to: %s", level.value)
+        logger.info("ABAC threat level changed to: %s", sanitize_for_log(level.value))
 
     def add_policy(self, policy: Policy) -> None:
         """Add a policy to the engine."""
@@ -297,7 +298,7 @@ class ABACEngine:
                         return False
             except ValueError as _exc:
                 logger.debug(
-                    "suppressed %s", _exc, exc_info=False
+                    "suppressed %s", sanitize_for_log(_exc), exc_info=False
                 )  # Unknown sensitivity, skip check
 
         # Pre-policy checks: threat-level adaptive access
@@ -313,7 +314,7 @@ class ABACEngine:
                     )
                     return False
         except ValueError as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+            logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
 
         # Evaluate policies
         permit_matched = False
@@ -369,11 +370,11 @@ class ABACEngine:
         if not granted:
             logger.info(
                 "ABAC denied: user=%s role=%s action=%s resource=%s reason=%s",
-                subject.get("sub", "anonymous"),
-                subject.get("role", "unknown"),
-                action.get("action", "unknown"),
-                resource.get("type", "unknown"),
-                reason,
+                sanitize_for_log(subject.get("sub", "anonymous")),
+                sanitize_for_log(subject.get("role", "unknown")),
+                sanitize_for_log(action.get("action", "unknown")),
+                sanitize_for_log(resource.get("type", "unknown")),
+                sanitize_for_log(reason),
             )
 
 

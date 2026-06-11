@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+from Dimensional.sanitize import sanitize_for_log
 from t2ance.prime_registry import get_prime_registry
 
 logger = logging.getLogger("t2ance.tier_relay")
@@ -28,7 +29,9 @@ class TierRelay:
         registry = get_prime_registry()
         prime = registry.prime_for_entity(entity_id)
         if not prime:
-            logger.warning("No Prime governs entity %s — escalating to sovereign", entity_id)
+            logger.warning(
+                "No Prime governs entity %s — escalating to sovereign", sanitize_for_log(entity_id)
+            )
             return True  # Allow by default if no prime defined (edge case)
         decision = prime.authorise_rotation(entity_id, reason)
         if not decision.approved:

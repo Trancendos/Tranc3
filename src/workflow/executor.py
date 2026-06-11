@@ -70,7 +70,9 @@ class WorkflowEventBus:
     def subscribe(self, event: str, callback: Callable) -> None:
         """Register a callback for a named event. Wildcards (*) match all events."""
         self._subscribers[event].append(callback)
-        logger.debug("Subscribed to event '%s': %s", event, callback)
+        logger.debug(
+            "Subscribed to event '%s': %s", sanitize_for_log(event), sanitize_for_log(callback)
+        )
 
     def unsubscribe(self, event: str, callback: Callable) -> bool:
         """Remove a previously registered callback. Returns True if found."""
@@ -338,12 +340,18 @@ class WorkflowExecutor:
                     "elapsed_ms": state.elapsed_ms,
                 },
             )
-            logger.info("Workflow '%s' completed in %.1fms.", workflow.name, state.elapsed_ms)
+            logger.info(
+                "Workflow '%s' completed in %.1fms.",
+                sanitize_for_log(workflow.name),
+                sanitize_for_log(state.elapsed_ms),
+            )
 
         except asyncio.CancelledError:
             state.status = "cancelled"
             state.finished_at = time.monotonic()
-            logger.info("Execution %s cancelled via CancelledError.", execution_id)
+            logger.info(
+                "Execution %s cancelled via CancelledError.", sanitize_for_log(execution_id)
+            )
 
         except Exception as exc:  # noqa: BLE001
             state.status = "failed"
@@ -416,7 +424,9 @@ class WorkflowExecutor:
             nc: Optional[NodeConfig] = workflow.nodes.get(node_id)
             if nc is None:
                 state.node_statuses[node_id] = "failed"
-                logger.error("Node '%s' not found in workflow definition.", node_id)
+                logger.error(
+                    "Node '%s' not found in workflow definition.", sanitize_for_log(node_id)
+                )
                 return
 
             # Collect inputs from upstream, fall back to initial_inputs for roots
@@ -460,7 +470,11 @@ class WorkflowExecutor:
                         "execution_id": context.get("execution_id"),
                     },
                 )
-                logger.debug("Node '%s' completed in %.1fms.", node_id, result.duration_ms)
+                logger.debug(
+                    "Node '%s' completed in %.1fms.",
+                    sanitize_for_log(node_id),
+                    sanitize_for_log(result.duration_ms),
+                )
             else:
                 state.node_statuses[node_id] = "failed"
                 node_outputs[node_id] = None
@@ -474,7 +488,11 @@ class WorkflowExecutor:
                         "execution_id": context.get("execution_id"),
                     },
                 )
-                logger.warning("Node '%s' failed: %s", node_id, result.error)
+                logger.warning(
+                    "Node '%s' failed: %s",
+                    sanitize_for_log(node_id),
+                    sanitize_for_log(result.error),
+                )
 
         await asyncio.gather(*[_run_node(nid) for nid in layer])
 

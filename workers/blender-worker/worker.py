@@ -26,6 +26,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from Dimensional.sanitize import sanitize_for_log
+
 WORKER_PORT = 8050
 WORKER_NAME = "blender-worker"
 
@@ -186,8 +188,8 @@ def _blender_response_body(result: dict[str, Any], **extra: Any) -> dict[str, An
     if result.get("stderr"):
         logger.warning(
             "Blender process failed (rc=%s): %s",
-            result["returncode"],
-            result["stderr"],
+            sanitize_for_log(result["returncode"]),
+            sanitize_for_log(result["stderr"]),
         )
     body["message"] = "Blender process failed"
     return body
@@ -263,11 +265,13 @@ def _build_scene_script(
 async def lifespan(app: FastAPI):
     blender_path = blender_available()
     if blender_path:
-        logger.info("Blender found at: %s", blender_path)
+        logger.info("Blender found at: %s", sanitize_for_log(blender_path))
     else:
         logger.warning(
-            "Blender not found in PATH or standard locations — "
-            "all render/scene endpoints will return 503.",
+            sanitize_for_log(
+                "Blender not found in PATH or standard locations — "
+                "all render/scene endpoints will return 503."
+            )
         )
     yield
 
@@ -324,7 +328,7 @@ async def render_script(req: RenderRequest):
     if not blender_available():
         return _unavailable_response()
 
-    logger.info("Running render script (timeout=%ds)", req.timeout)
+    logger.info("Running render script (timeout=%ds)", sanitize_for_log(req.timeout))
     result = _run_blender(req.script, req.timeout)
 
     status_code = 200 if result["success"] else 500
@@ -361,9 +365,9 @@ async def create_scene(req: CreateSceneRequest):
 
     logger.info(
         "Creating scene: %d objects, render=%s, timeout=%ds",
-        len(req.objects),
-        req.render,
-        req.timeout,
+        sanitize_for_log(len(req.objects)),
+        sanitize_for_log(req.render),
+        sanitize_for_log(req.timeout),
     )
     result = _run_blender(script, req.timeout)
 

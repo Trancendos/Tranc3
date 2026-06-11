@@ -225,7 +225,11 @@ def _duckdb_conn() -> "duckdb.DuckDBPyConnection":
             try:
                 con.execute(f"ATTACH '{_safe_path(path)}' AS {alias}_db (TYPE sqlite, READ_ONLY)")
             except Exception as exc:
-                logger.debug("DuckDB: could not attach %s db: %s", alias, exc)
+                logger.debug(
+                    "DuckDB: could not attach %s db: %s",
+                    sanitize_for_log(alias),
+                    sanitize_for_log(exc),
+                )
 
     return con
 
@@ -272,7 +276,7 @@ async def _archive_old_events() -> Dict[str, Any]:
 
     for (month,) in months:
         if not _month_re.match(month):
-            logger.warning("archive: skipping unexpected month value %r", month)
+            logger.warning("archive: skipping unexpected month value %r", sanitize_for_log(month))
             continue
 
         parquet_path = PARQUET_DIR / f"events_{month}.parquet"
@@ -295,7 +299,9 @@ async def _archive_old_events() -> Dict[str, Any]:
             # COPY destination path is server-controlled; parquet_path validated by PARQUET_DIR prefix
             safe_parquet = str(parquet_path)
             if any(c in safe_parquet for c in ("'", '"', ";")):
-                logger.error("archive: unsafe parquet path %r — skipping", safe_parquet)
+                logger.error(
+                    "archive: unsafe parquet path %r — skipping", sanitize_for_log(safe_parquet)
+                )
                 continue
 
             con.execute(
@@ -335,7 +341,11 @@ async def _archive_old_events() -> Dict[str, Any]:
 
             total_archived += row_count
             files_written.append(f"events_{month}.parquet")
-            logger.info("archive: wrote %s (%d rows)", parquet_path.name, row_count)
+            logger.info(
+                "archive: wrote %s (%d rows)",
+                sanitize_for_log(parquet_path.name),
+                sanitize_for_log(row_count),
+            )
         finally:
             con.close()
 
@@ -393,7 +403,7 @@ class OlapQueryIn(BaseModel):
 async def lifespan(app: FastAPI):
     init_db()
     backend = "DuckDB OLAP + SQLite" if _DUCKDB_AVAILABLE else "SQLite only (DuckDB not installed)"
-    logger.info("analytics-service ready — backend: %s", backend)
+    logger.info("analytics-service ready — backend: %s", sanitize_for_log(backend))
     yield
 
 
@@ -1026,7 +1036,9 @@ async def analytics_dataframe(body: DataFrameIn):
                     if col_a in df.columns and col_b in df.columns:
                         result[f"corr_{col_a}_{col_b}"] = df[col_a].corr(df[col_b])
         except Exception as exc:
-            logger.warning("DataFrame operation %s failed: %s", op, sanitize_for_log(exc))
+            logger.warning(
+                "DataFrame operation %s failed: %s", sanitize_for_log(op), sanitize_for_log(exc)
+            )
             result[f"op_error_{op}"] = "Operation failed"
 
     return result

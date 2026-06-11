@@ -85,6 +85,73 @@ client messages (never embeds `str(exc)`), satisfying CodeQL `py/exception-infor
 
 **Post-merge:** Run CodeQL on `main` and close the above alerts after rescan confirms clearance.
 
+## CodeQL CWE-117 — Log injection (`py/log-injection`)
+
+**Branch:** `cursor/codeql-log-injection-e51c`
+
+**Pattern:** User-controlled or external values (exceptions, stderr, workflow IDs, usernames,
+URLs, client metadata) must not flow into log format strings via f-strings or `str.format`.
+Use `%`-style logging with `sanitize_for_log(value)` from `Dimensional/sanitize.py` (or
+`shared_core/sanitize.py` under `shared_core/`). Central handlers
+`log_server_error()` in `Dimensional/error_handlers.py` and `shared_core/error_handlers.py`
+sanitize `context`, exception type, and message before writing.
+
+**Tooling (safe to keep):** `scripts/remediate_cwe117.py` (targeted replacements),
+`scripts/remediate_cwe117_libcst.py` (libcst codemod for `logger.*` positional args).
+Do **not** use `scripts/remediate_cwe117_ast.py` (`ast.unparse` corrupts formatting).
+
+| Alert ID(s) | File | Fix |
+|-------------|------|-----|
+| #2578, #2577, #2573, #2572, #2136 | `workers/blender-worker/worker.py` | `sanitize_for_log` on returncode, stderr, scene paths |
+| #2576, #2227 | `src/workflow/routes.py`, `src/workflow/executor.py` | Workflow ID + exception in `%s` logs |
+| #2571 | `Dimensional/error_handlers.py` | `log_server_error` ref logging |
+| #2570, #2367–#2365 | `archive/api_enhanced.py` | Request metadata + errors |
+| #2493, #2483, #2231 | `src/mcp/server.py` | Client/tool identifiers in MCP logs |
+| #2491, #2490 | `workers/infinity-one-service/worker.py` | Identity/session fields |
+| #2489, #2488, #2487, #1891 | `workers/sentinel-station-service/worker.py`, `Dimensional/infinity/sentinel_station.py` | Threat/event context |
+| #2486 | `workers/analytics-service/worker.py` | Query/event parameters |
+| #2485, #2484 | `workers/gateway-service/worker.py` | Route/upstream identifiers |
+| #2477, #2241–#2236, #541 | `workers/notifications/worker.py` | Channel, recipient, dispatch errors |
+| #2406–#2404 | `src/compliance/ai_governance.py` | Policy/model identifiers |
+| #2388–#2385 | `workers/users-service/worker.py` | User IDs and auth context |
+| #2384, #2383, #2244–#2242, #1002–#1000 | `workers/infinity-auth/worker.py` | Token/session/username fields |
+| #2382 | `src/database/vector_store.py` | Namespace/collection IDs |
+| #2259 | `t2ance/tier_relay.py` | Relay peer metadata |
+| #2258 | `trance_one/sovereign_controller.py` | Controller state |
+| #2246, #2245 | `src/master_worker/zero_cost_enforcer.py` | Enforcement targets |
+| #2235 | `workers/infinity-ws/worker.py` | WebSocket client info |
+| #2234, #877 | `workers/api-gateway/worker.py` | Request path/client |
+| #2233 | `src/cryptex/threat_detector.py` | Threat signatures |
+| #2230 | `src/observability/routes.py` | *(already on `main`)* metric labels |
+| #2229 | `src/library/knowledge_base.py` | Document/query IDs |
+| #2228 | `src/nexus/hub.py` | Hub routing context |
+| #2226 | `src/resonate/empathy.py` | *(already on `main`)* session fields |
+| #2225 | `src/taimra/digital_twin.py` | *(already on `main`)* twin IDs |
+| #2143 | `workers/ffmpeg-worker/worker.py` | FFmpeg stderr/args |
+| #1890 | `Dimensional/security_automation/defense_engine.py` | Rule/threat context |
+| #1889, #1888 | `Dimensional/infinity/abac.py` | ABAC subject/resource |
+| #1438–#1436 | `Dimensional/hive/hive_core.py` | Queue/agent identifiers |
+| #950 | `src/compliance/magna_carta.py` | *(already on `main`)* |
+| #949 | `src/security/ip_protection.py` | IP/asset identifiers |
+| #868, #867 | `src/citadel/routes.py` | *(already on `main`)* |
+| #866, #865 | `src/artifactory/registry.py` | Artifact names |
+| #864 | `src/devocity/portal.py` | Portal resource IDs |
+| #863–#860 | `src/observability/observatory.py` | Service/metric labels |
+| #859, #858 | `src/apimarket/marketplace.py` | *(already on `main`)* |
+| #854 | `src/registry/file_registry.py` | *(already on `main`)* paths |
+| #850 | `src/citadel/devops_hub.py` | DevOps action context |
+| #847 | `src/lab/code_lab.py` | *(already on `main`)* |
+| #387 | `src/chronos/scheduler.py` | *(already on `main`)* job IDs |
+| #379 | `src/deepmind/planning.py` | Plan step metadata |
+| #365 | `src/auth/db_user_manager.py` | Username/email fields |
+| #71, #70 | `src/personality/spawner.py` | Spawn profile names |
+
+**Residual Notes (optional follow-up):** A handful of `logger.debug("… %s", "unknown")` literals
+and `exc_info=True`-only calls may still flag until CodeQL rescan; use `sanitize_for_log("unknown")`
+or `# codeql[py/log-injection]` only where the value is provably static.
+
+**Post-merge:** Run CodeQL on `main` and bulk-close the above after rescan confirms clearance.
+
 ## Live-path fixes (this branch)
 
 - P1 #1137: ZFS TOCTOU — atomic open+stat in `tranc3-ts/src/providers/ZFSProvider.ts`

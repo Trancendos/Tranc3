@@ -140,8 +140,8 @@ async def _method_initialize(params: Optional[Dict[str, Any]], request_id: Any) 
     client_info = (params or {}).get("clientInfo", {})
     logger.info(
         "mcp.initialize client=%s version=%s",
-        client_info.get("name", "unknown"),
-        client_info.get("version", "unknown"),
+        sanitize_for_log(client_info.get("name", "unknown")),
+        sanitize_for_log(client_info.get("version", "unknown")),
     )
     return _ok(
         request_id,
@@ -397,7 +397,7 @@ async def sse_endpoint(
     """
     await _start_grid_bridge()
     sub_id, queue = _bus.subscribe()
-    logger.info("mcp.sse client connected sub_id=%s", sub_id)
+    logger.info("mcp.sse client connected sub_id=%s", sanitize_for_log(sub_id))
 
     async def _event_generator() -> AsyncGenerator[str, None]:
         # Greeting

@@ -23,6 +23,7 @@ from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBea
 from pydantic import BaseModel, Field
 
 from Dimensional.error_handlers import log_server_error
+from Dimensional.sanitize import sanitize_for_log
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("tranc3.api")
@@ -260,7 +261,7 @@ async def think(req: ThinkRequest, request: Request):
             result["personality_vector"] = vec.tolist()
             result["personality"] = req.personality
         except Exception as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+            logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
     return result
 
 
@@ -272,7 +273,11 @@ async def call_mcp_tool(req: MCPToolRequest, request: Request):
     enhanced = request.app.state.enhanced
     result = await enhanced.call_mcp_tool(req.tool, req.params)
     if "error" in result:
-        logger.warning("MCP tool error for %s: %s", req.tool, result["error"])
+        logger.warning(
+            "MCP tool error for %s: %s",
+            sanitize_for_log(req.tool),
+            sanitize_for_log(result["error"]),
+        )
         raise HTTPException(status_code=404, detail="MCP tool not found or unavailable")
     return result
 
@@ -317,7 +322,7 @@ async def mcp_sse(request: Request):
                 try:
                     queue.put_nowait(data)
                 except asyncio.QueueFull as _exc:
-                    logger.debug("suppressed %s", _exc, exc_info=False)
+                    logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
 
             event_bus.subscribe("*", cb)
             while True:
@@ -346,7 +351,7 @@ async def execute_workflow(req: WorkflowRequest, request: Request):
     enhanced = request.app.state.enhanced
     result = await enhanced.execute_workflow(req.workflow, req.inputs)
     if result.get("error"):
-        logger.warning("Workflow execution error: %s", result["error"])
+        logger.warning("Workflow execution error: %s", sanitize_for_log(result["error"]))
         raise HTTPException(status_code=500, detail="Workflow execution failed")
     return result
 

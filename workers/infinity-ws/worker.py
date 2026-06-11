@@ -152,7 +152,7 @@ class ConnectionManager:
         logger.info(
             "ws_connected: user=%s, total=%s",
             sanitize_for_log(user_id),
-            self.total_connections,
+            sanitize_for_log(self.total_connections),
         )  # codeql[py/cleartext-logging]
         return True
 

@@ -43,7 +43,6 @@ import hashlib
 import json
 import logging
 import os
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from collections import defaultdict
@@ -60,6 +59,8 @@ from pydantic import BaseModel, Field
 from Dimensional.infinity.nomenclature import (
     SentinelChannel,
 )
+from Dimensional.sanitize import sanitize_for_log
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 logger = logging.getLogger("hive")
 
@@ -379,7 +380,12 @@ class SwarmCoordinator:
         )
         async with self._lock:
             self._swarms[swarm.swarm_id] = swarm
-        logger.info(f"Swarm created: {name} ({swarm.swarm_id}) — {purpose}")
+        logger.info(
+            "Swarm created: %s (%s) — %s",
+            sanitize_for_log(name),
+            sanitize_for_log(swarm.swarm_id),
+            sanitize_for_log(purpose),
+        )
         return swarm
 
     async def add_node(self, swarm_id: str, node: SwarmNode) -> None:
@@ -391,7 +397,7 @@ class SwarmCoordinator:
             # Auto-activate swarm if it has at least one node
             if self._swarms[swarm_id].status == SwarmStatus.FORMING:
                 self._swarms[swarm_id].status = SwarmStatus.ACTIVE
-                logger.info(f"Swarm {swarm_id} activated with first node")
+                logger.info("Swarm %s activated with first node", sanitize_for_log(swarm_id))
 
     async def remove_node(self, swarm_id: str, node_id: str) -> None:
         """Remove a processing node from a swarm."""
@@ -402,7 +408,7 @@ class SwarmCoordinator:
             swarm.nodes = [n for n in swarm.nodes if n.node_id != node_id]
             if not swarm.nodes and swarm.status == SwarmStatus.ACTIVE:
                 swarm.status = SwarmStatus.DRAINING
-                logger.info(f"Swarm {swarm_id} draining — no nodes remaining")
+                logger.info("Swarm %s draining — no nodes remaining", sanitize_for_log(swarm_id))
 
     async def update_task_progress(
         self,
@@ -432,7 +438,10 @@ class SwarmCoordinator:
                     SwarmStatus.COMPLETED if swarm.failed_tasks == 0 else SwarmStatus.FAILED
                 )
                 logger.info(
-                    f"Swarm {swarm_id} completed: {swarm.completed_tasks} done, {swarm.failed_tasks} failed"
+                    "Swarm %s completed: %s done, %s failed",
+                    sanitize_for_log(swarm_id),
+                    sanitize_for_log(swarm.completed_tasks),
+                    sanitize_for_log(swarm.failed_tasks),
                 )
 
     async def get_swarm(self, swarm_id: str) -> Optional[Swarm]:
@@ -455,7 +464,7 @@ class SwarmCoordinator:
                 self._swarms[swarm_id].status = SwarmStatus.DRAINING
                 self._swarms[swarm_id].nodes = []
                 del self._swarms[swarm_id]
-                logger.info(f"Swarm {swarm_id} dissolved")
+                logger.info("Swarm %s dissolved", sanitize_for_log(swarm_id))
 
 
 # ---------------------------------------------------------------------------
@@ -499,7 +508,11 @@ class PipelineManager:
         )
         async with self._lock:
             self._pipelines[pipeline.pipeline_id] = pipeline
-        logger.info(f"Pipeline created: {name} ({pipeline.pipeline_id})")
+        logger.info(
+            "Pipeline created: %s (%s)",
+            sanitize_for_log(name),
+            sanitize_for_log(pipeline.pipeline_id),
+        )
         return pipeline
 
     async def start_pipeline(self, pipeline_id: str) -> None:
@@ -508,7 +521,7 @@ class PipelineManager:
             if pipeline_id not in self._pipelines:
                 raise ValueError(f"Pipeline {pipeline_id} not found")
             self._pipelines[pipeline_id].status = PipelineStatus.RUNNING
-            logger.info(f"Pipeline {pipeline_id} started")
+            logger.info("Pipeline %s started", sanitize_for_log(pipeline_id))
 
     async def pause_pipeline(self, pipeline_id: str) -> None:
         """Pause a running pipeline."""
@@ -518,7 +531,7 @@ class PipelineManager:
             if self._pipelines[pipeline_id].status != PipelineStatus.RUNNING:
                 raise ValueError(f"Pipeline {pipeline_id} is not running")
             self._pipelines[pipeline_id].status = PipelineStatus.PAUSED
-            logger.info(f"Pipeline {pipeline_id} paused")
+            logger.info("Pipeline %s paused", sanitize_for_log(pipeline_id))
 
     async def route_chunk(self, chunk: DataChunk) -> DataChunk:
         """Route a data chunk through its pipeline."""
@@ -541,7 +554,11 @@ class PipelineManager:
                 pipeline.total_chunks = max(pipeline.total_chunks, pipeline.delivered_chunks)
 
         await self.flow_monitor.record_chunk_status("delivered")
-        logger.debug(f"Chunk {chunk.chunk_id} delivered via pipeline {chunk.pipeline_id}")
+        logger.debug(
+            "Chunk %s delivered via pipeline %s",
+            sanitize_for_log(chunk.chunk_id),
+            sanitize_for_log(chunk.pipeline_id),
+        )
         return chunk
 
     async def fail_chunk(self, chunk_id: str, pipeline_id: str, reason: str = "") -> None:
@@ -550,7 +567,12 @@ class PipelineManager:
             if pipeline_id in self._pipelines:
                 self._pipelines[pipeline_id].failed_chunks += 1
         await self.flow_monitor.record_chunk_status("failed")
-        logger.warning(f"Chunk {chunk_id} failed on pipeline {pipeline_id}: {reason}")
+        logger.warning(
+            "Chunk %s failed on pipeline %s: %s",
+            sanitize_for_log(chunk_id),
+            sanitize_for_log(pipeline_id),
+            sanitize_for_log(reason),
+        )
 
     async def get_pipeline(self, pipeline_id: str) -> Optional[DataPipeline]:
         """Get a pipeline by ID."""
@@ -604,7 +626,7 @@ class Hive:
         self._event_subscribers: Dict[str, Set[str]] = defaultdict(set)
         self._started_at = time.time()
         self._lock = asyncio.Lock()
-        logger.info(f"HIVE initialized: {self.node_id}")
+        logger.info("HIVE initialized: %s", sanitize_for_log(self.node_id))
 
     # -- Data Source Management --
 
@@ -624,7 +646,12 @@ class Hive:
         )
         async with self._lock:
             self._sources[source.source_id] = source
-        logger.info(f"HIVE source registered: {name} ({source.source_id}) — {data_type}")
+        logger.info(
+            "HIVE source registered: %s (%s) — %s",
+            sanitize_for_log(name),
+            sanitize_for_log(source.source_id),
+            sanitize_for_log(data_type),
+        )
         return source
 
     async def update_source_status(
@@ -655,7 +682,12 @@ class Hive:
         )
         async with self._lock:
             self._sinks[sink.sink_id] = sink
-        logger.info(f"HIVE sink registered: {name} ({sink.sink_id}) — {data_type}")
+        logger.info(
+            "HIVE sink registered: %s (%s) — %s",
+            sanitize_for_log(name),
+            sanitize_for_log(sink.sink_id),
+            sanitize_for_log(data_type),
+        )
         return sink
 
     async def update_sink_status(
@@ -751,8 +783,10 @@ class Hive:
         await self.flow_monitor.record_chunk_status("pending")
         delivered_chunk = await self.pipeline_manager.route_chunk(chunk)
         logger.info(
-            f"HIVE data routed: {chunk.chunk_id} ({size_bytes} bytes, {priority.value}) "
-            f"from {source_id} → {sink_id}"
+            sanitize_for_log(
+                f"HIVE data routed: {chunk.chunk_id} ({size_bytes} bytes, {priority.value}) "
+                f"from {source_id} → {sink_id}"
+            )
         )
         return delivered_chunk
 
@@ -776,13 +810,22 @@ class Hive:
             payload=payload or {},
             correlation_id=correlation_id,
         )
-        logger.info(f"HIVE event: {event_type} on {channel} from {source}")
+        logger.info(
+            "HIVE event: %s on %s from %s",
+            sanitize_for_log(event_type),
+            sanitize_for_log(channel),
+            sanitize_for_log(source),
+        )
         return event
 
     async def subscribe_channel(self, channel: str, subscriber_id: str) -> None:
         """Subscribe to a HIVE data channel."""
         self._event_subscribers[channel].add(subscriber_id)
-        logger.info(f"HIVE subscriber {subscriber_id} joined channel {channel}")
+        logger.info(
+            "HIVE subscriber %s joined channel %s",
+            sanitize_for_log(subscriber_id),
+            sanitize_for_log(channel),
+        )
 
     async def unsubscribe_channel(self, channel: str, subscriber_id: str) -> None:
         """Unsubscribe from a HIVE data channel."""
@@ -893,7 +936,7 @@ class HiveWSManager:
     async def connect(self, ws: WebSocket) -> None:
         await ws.accept()
         self._connections.append(ws)
-        logger.info(f"HIVE dashboard connected: {ws.client}")
+        logger.info("HIVE dashboard connected: %s", sanitize_for_log(ws.client))
 
     def disconnect(self, ws: WebSocket) -> None:
         if ws in self._connections:

@@ -681,7 +681,7 @@ async def gdpr_data_export(
         "GDPR SAR export: user_id=%s requested_by=%s format=%s",
         sanitize_for_log(user_id),
         sanitize_for_log(x_caller_user_id or "unknown"),
-        format,
+        sanitize_for_log(format),
     )
 
     if format == "csv":

@@ -107,7 +107,7 @@ class NexusHub:
         logger.debug(
             "nexus: +subscriber topic=%s total=%d",
             sanitize_for_log(topic),
-            len(self._topics[topic]),
+            sanitize_for_log(len(self._topics[topic])),
         )  # codeql[py/cleartext-logging]
         return q
 

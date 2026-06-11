@@ -222,8 +222,8 @@ async def _lifespan(app: FastAPI):
     await sentinel.start()
     logger.info(
         "Sentinel Station started (backend: %s, port: %d)",
-        "redis" if sentinel.is_redis_connected else "fallback",
-        PORT,
+        sanitize_for_log("redis" if sentinel.is_redis_connected else "fallback"),
+        sanitize_for_log(PORT),
     )
 
     # Create shared SSE generator for broadcasting events
@@ -291,7 +291,7 @@ async def _lifespan(app: FastAPI):
             except asyncio.CancelledError:
                 break
             except Exception as exc:
-                logger.debug("Sentinel background loop error: %s", exc)
+                logger.debug("Sentinel background loop error: %s", sanitize_for_log(exc))
 
     _bg_task = asyncio.create_task(_bg_loop())
 

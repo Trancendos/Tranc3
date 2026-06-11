@@ -284,7 +284,7 @@ class IdentitySummary(BaseModel):
 async def _lifespan(app: FastAPI):
     """Startup/shutdown lifecycle for the Infinity-One service."""
     # ── Startup ──
-    logger.info("Infinity-One starting on port %d", PORT)
+    logger.info("Infinity-One starting on port %d", sanitize_for_log(PORT))
 
     # Start Sentinel Station
     await sentinel.start()
@@ -340,7 +340,7 @@ async def _lifespan(app: FastAPI):
             except asyncio.CancelledError:
                 break
             except Exception as exc:
-                logger.debug("Infinity-One background loop error: %s", exc)
+                logger.debug("Infinity-One background loop error: %s", sanitize_for_log(exc))
 
     _bg_task = asyncio.create_task(_background_loop())
 

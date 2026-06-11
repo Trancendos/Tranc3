@@ -16,6 +16,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from Dimensional.sanitize import sanitize_for_log
 from trance_one.platform_manifest import (
     PlatformManifest,
     get_manifest,
@@ -94,7 +95,7 @@ class SovereignController:
                 await self._enforce_zero_cost_policy()
                 await self._probe_tier_health()
             except Exception as exc:
-                logger.error("Sovereign loop error: %s", exc)
+                logger.error("Sovereign loop error: %s", sanitize_for_log(exc))
             await asyncio.sleep(60.0)
 
     # -----------------------------------------------------------------------
@@ -123,7 +124,9 @@ class SovereignController:
                         priority=1,
                     )
                 )
-                logger.critical("ZERO-COST VIOLATION: %s", self._state.zero_cost_violations)
+                logger.critical(
+                    "ZERO-COST VIOLATION: %s", sanitize_for_log(self._state.zero_cost_violations)
+                )
             else:
                 self._state.zero_cost_violations = []
         except ImportError:
@@ -157,7 +160,7 @@ class SovereignController:
                 priority=1,
             )
         )
-        logger.warning("Sovereign emergency rotate: entity=%s", entity_id)
+        logger.warning("Sovereign emergency rotate: entity=%s", sanitize_for_log(entity_id))
 
     def activate_entity(self, entity_id: str) -> None:
         self._state.active_entities[entity_id] = True
@@ -214,8 +217,8 @@ class SovereignController:
                 self._state.zero_cost_violations.append(entity)
                 logger.critical(
                     "Sovereign received zero-cost violation from T%d entity=%s",
-                    event.source_tier,
-                    entity,
+                    sanitize_for_log(event.source_tier),
+                    sanitize_for_log(entity),
                 )
         elif event.event_type.startswith("TIER_HEALTH_"):
             tier_num = event.payload.get("tier")

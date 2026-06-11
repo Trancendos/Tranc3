@@ -65,6 +65,7 @@ from Dimensional.infinity.sentinel_config import (
     SentinelStationConfig,
     sentinel_config,
 )
+from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +118,7 @@ class SentinelEvent:
                 compressed=obj.get("compressed", False),
             )
         except (json.JSONDecodeError, KeyError) as e:
-            logger.warning("Failed to deserialize SentinelEvent: %s", e)
+            logger.warning("Failed to deserialize SentinelEvent: %s", sanitize_for_log(e))
             return cls()
 
 
@@ -165,7 +166,7 @@ class CircuitBreaker:
             self._state = CircuitState.OPEN
             logger.warning(
                 "Sentinel Station circuit breaker OPEN after %d failures",
-                self._failure_count,
+                sanitize_for_log(self._failure_count),
             )
 
     @property
@@ -214,7 +215,7 @@ class InProcessPubSub:
                     try:
                         queue.get_nowait()
                     except asyncio.QueueEmpty as _exc:
-                        logger.debug("suppressed %s", _exc, exc_info=False)
+                        logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
                     self._stats["dropped"] += 1
                 queue.put_nowait(event)
                 delivered += 1
@@ -239,7 +240,7 @@ class InProcessPubSub:
             try:
                 self._subscribers[channel].remove(queue)
             except ValueError as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+                logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
             if not self._subscribers[channel]:
                 del self._subscribers[channel]
 
@@ -296,10 +297,14 @@ class RedisConnectionManager:
             # Test connection
             await self._client.ping()
             self._connected = True
-            logger.info("Sentinel Station connected to Redis at %s", self._config.host)
+            logger.info(
+                "Sentinel Station connected to Redis at %s", sanitize_for_log(self._config.host)
+            )
             return True
         except Exception as e:
-            logger.warning("Sentinel Station failed to connect to Redis: %s", str(e)[:200])
+            logger.warning(
+                "Sentinel Station failed to connect to Redis: %s", sanitize_for_log(str(e)[:200])
+            )
             self._connected = False
             return False
 
@@ -310,21 +315,21 @@ class RedisConnectionManager:
                 await self._pubsub.unsubscribe()
                 await self._pubsub.aclose()
             except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+                logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
             self._pubsub = None
 
         if self._client:
             try:
                 await self._client.aclose()
             except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+                logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
             self._client = None
 
         if self._pool:
             try:
                 await self._pool.disconnect()
             except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+                logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
             self._pool = None
 
         self._connected = False
@@ -352,7 +357,7 @@ class RedisConnectionManager:
             receivers = await self._client.publish(channel, message)
             return receivers
         except Exception as e:
-            logger.warning("Redis publish failed: %s", str(e)[:200])
+            logger.warning("Redis publish failed: %s", sanitize_for_log(str(e)[:200]))
             self._connected = False
             return 0
 
@@ -364,9 +369,11 @@ class RedisConnectionManager:
             if not self._pubsub:
                 self._pubsub = self._client.pubsub()
             await self._pubsub.subscribe(channel)
-            logger.info("Sentinel Station subscribed to Redis channel: %s", channel)
+            logger.info(
+                "Sentinel Station subscribed to Redis channel: %s", sanitize_for_log(channel)
+            )
         except Exception as e:
-            logger.warning("Redis subscribe failed: %s", str(e)[:200])
+            logger.warning("Redis subscribe failed: %s", sanitize_for_log(str(e)[:200]))
 
     async def unsubscribe(self, channel: str) -> None:
         """Unsubscribe from a Redis channel."""
@@ -375,7 +382,7 @@ class RedisConnectionManager:
         try:
             await self._pubsub.unsubscribe(channel)
         except Exception as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+            logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
 
     async def get_messages(self, timeout: float = 0.1) -> List[Dict[str, Any]]:
         """Get messages from subscribed channels.
@@ -393,9 +400,9 @@ class RedisConnectionManager:
                 messages.append(msg)
                 msg = self._pubsub.get_message(ignore_subscribe_messages=True)
         except asyncio.TimeoutError as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+            logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
         except Exception as _exc:
-            logger.debug("suppressed %s", _exc, exc_info=False)
+            logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
         return messages
 
 
@@ -475,7 +482,7 @@ class SentinelStation:
             self._circuit_breaker.record_success()
             logger.info(
                 "Sentinel Station started with Redis backend (prefix: %s)",
-                self._config.redis_channel_prefix,
+                sanitize_for_log(self._config.redis_channel_prefix),
             )
         else:
             self._circuit_breaker.record_failure()
@@ -497,7 +504,7 @@ class SentinelStation:
             try:
                 await self._listener_task
             except asyncio.CancelledError as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+                logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
             self._listener_task = None
 
         await self._redis_mgr.disconnect()
@@ -603,7 +610,7 @@ class SentinelStation:
             try:
                 self._local_handlers[channel].remove(handler)
             except ValueError as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+                logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
 
         # Unsubscribe from Redis
         if channel in self._subscribed_channels:
@@ -638,7 +645,9 @@ class SentinelStation:
                             try:
                                 data = gzip.decompress(bytes.fromhex(data)).decode()
                             except Exception as _exc:
-                                logger.debug("suppressed %s", _exc, exc_info=False)
+                                logger.debug(
+                                    "suppressed %s", sanitize_for_log(_exc), exc_info=False
+                                )
 
                         event = SentinelEvent.from_json(data)
                         self._stats["events_received"] += 1
@@ -650,7 +659,9 @@ class SentinelStation:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.warning("Sentinel Station Redis listener error: %s", str(e)[:200])
+                logger.warning(
+                    "Sentinel Station Redis listener error: %s", sanitize_for_log(str(e)[:200])
+                )
                 await asyncio.sleep(1)
 
     async def _run_handler(
@@ -671,8 +682,8 @@ class SentinelStation:
                 except Exception as e:
                     logger.warning(
                         "Sentinel Station handler error on channel %s: %s",
-                        channel,
-                        str(e)[:200],
+                        sanitize_for_log(channel),
+                        sanitize_for_log(str(e)[:200]),
                     )
             except asyncio.TimeoutError:
                 continue
