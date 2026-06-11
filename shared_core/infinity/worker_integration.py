@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 try:
     from shared_core.infinity.adaptive_intelligence import (  # codeql[py/cyclic-import]
         SUBSYSTEM_AVAILABILITY,
-        InfinityHealthOrchestrator,  # noqa: F401
+        InfinityHealthOrchestrator,  # noqa: F401  # codeql[py/unused-import]
         create_orchestrator,
     )
 

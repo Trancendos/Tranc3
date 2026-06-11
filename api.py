@@ -693,7 +693,6 @@ app.include_router(_observatory_router)
 
 # ── Capacity Guard (hard stops + utilisation status) ─────────────────────────
 from src.capacity.guard import (  # noqa: F401
-    CapacityExceededError,
     CapacityService,
     get_capacity_guard,
 )

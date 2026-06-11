@@ -1,5 +1,5 @@
 # Re-export from canonical location — Dimensional.architecture is the source of truth.
-from Dimensional.architecture.microceph_provider import (  # noqa: F401
+from Dimensional.architecture.microceph_provider import (  # noqa: F401  # codeql[py/unused-import]
     CEPH_CMD,
     CEPH_CONF_PATH,
     COMMAND_TIMEOUT_SECONDS,

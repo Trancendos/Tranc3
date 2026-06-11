@@ -1,5 +1,5 @@
 # Re-export from canonical location — Dimensional.architecture is the source of truth.
-from Dimensional.architecture.oci_adaptive_provider import (  # noqa: F401
+from Dimensional.architecture.oci_adaptive_provider import (  # noqa: F401  # codeql[py/unused-import]
     CIRCUIT_BREAKER_FAILURE_THRESHOLD,
     CIRCUIT_BREAKER_RECOVERY_SECONDS,
     IDLE_RECLAIM_THRESHOLD_CPU_PCT,
@@ -21,5 +21,5 @@ from Dimensional.architecture.oci_adaptive_provider import (  # noqa: F401
     R2Config,
     StorageTier,
     SystemMode,
-    _aws_sig4_sign,  # noqa: F401
+    _aws_sig4_sign,  # noqa: F401  # codeql[py/unused-import]
 )

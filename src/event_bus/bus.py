@@ -37,12 +37,11 @@ from src.event_bus.types import (
 
 # Optional NATS transport — imported lazily to avoid hard dependency
 try:
-    from src.event_bus.nats_transport import NATSTransport, _event_type_to_subject
+    from src.event_bus.nats_transport import _event_type_to_subject
 
     _NATS_TRANSPORT_AVAILABLE = True
 except ImportError:
     _NATS_TRANSPORT_AVAILABLE = False
-    NATSTransport = None  # type: ignore[assignment,misc]
     _event_type_to_subject = None  # type: ignore[assignment]
 
 logger = logging.getLogger("tranc3.event_bus")

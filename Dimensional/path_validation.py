@@ -15,7 +15,7 @@ import os
 import re
 import shutil
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterator, Union
+from typing import Any, Union
 
 logger = logging.getLogger(__name__)
 

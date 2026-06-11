@@ -37,6 +37,23 @@ to bulk-close stale GitHub Security alerts.
   `src/workflow/`). Scope: package `__init__.py` barrels, infinity worker kit, proactive wiring,
   service bus, auth middleware, and sentinel vault checks.
 
+**Unused-import Notes (CodeQL `py/unused-import`, branch `cursor/codeql-unused-imports-e51c`):**
+
+| Alert ID(s) | File | Fix |
+|-------------|------|-----|
+| #2562, #1827, #1828 | `shared_core/liquid/ltc_router.py` | Probe via `importlib.util.find_spec` instead of importing `torch`/`ncps` at module load |
+| #2560, #2561 | `*/infinity/worker_integration.py` | `# codeql[py/unused-import]` on re-exported `InfinityHealthOrchestrator` |
+| #2558–#2559 | `*/infinity/proactive_defense.py` | Removed unused `FirewallAction`, `ThreatLevel` optional imports |
+| #2546–#2551, #2552–#2557 | `*/infinity/adaptive_intelligence.py` | Dropped unused optional symbols (`PulseMode`, `Anomaly`, `RepairStrategy`, `ReactiveState`, `ProbabilityVector`, `ThreatLevel`) |
+| #1021, #1458 | `*/infinity/fluidic_gateway.py` | Removed unused `_global_causal_bus` import |
+| #2478 | `Dimensional/path_validation.py` | Removed unused `Iterator` |
+| #2409 | `api.py` | Removed unused `CapacityExceededError` import |
+| #2331, #2328 | `Dimensional/hive/hive_core.py`, `bridge/bridge_core.py` | Removed unused `sqlite3` (uses `sqlite3_connect` helper) |
+| #2172, #2118 | `shared_core/architecture/*_provider.py` | `# codeql[py/unused-import]` on barrel re-exports |
+| #2149 | `src/event_bus/bus.py` | Import only `_event_type_to_subject` (not `NATSTransport`) |
+| #958 | `src/neural/attention_router.py` | Removed dead numpy probe (`_HAS_NUMPY` never read) |
+| #2332, #1897 | `src/personality/lnn.py`, `src/skills/code_generator.py` | Already valid / suppressed — close after rescan |
+
 **Still deferred (structural / low priority):**
 
 - `archive/` — legacy, not deployed; empty-except fixed for consistency only

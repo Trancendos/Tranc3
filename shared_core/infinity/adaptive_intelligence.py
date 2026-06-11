@@ -78,28 +78,24 @@ logger = logging.getLogger(__name__)
 try:
     from shared_core.architecture.adaptive_pulse import (  # codeql[py/cyclic-import]
         AdaptivePulseController,
-        PulseMode,
     )
 
     _PULSE_AVAILABLE = True
 except ImportError:
     _PULSE_AVAILABLE = False
     AdaptivePulseController = None  # type: ignore[assignment,misc]
-    PulseMode = None  # type: ignore[assignment,misc]
 
 try:
-    from src.healing.anomaly_detector import Anomaly, AnomalyDetector  # codeql[py/cyclic-import]
+    from src.healing.anomaly_detector import AnomalyDetector  # codeql[py/cyclic-import]
 
     _ANOMALY_AVAILABLE = True
 except ImportError:
     _ANOMALY_AVAILABLE = False
     AnomalyDetector = None  # type: ignore[assignment,misc]
-    Anomaly = None  # type: ignore[assignment,misc]
 
 try:
     from src.healing.self_repair import (  # codeql[py/cyclic-import]
         AdaptiveConfigTuner,
-        RepairStrategy,
         SelfRepairEngine,
     )
 
@@ -108,13 +104,9 @@ except ImportError:
     _REPAIR_AVAILABLE = False
     SelfRepairEngine = None  # type: ignore[assignment,misc]
     AdaptiveConfigTuner = None  # type: ignore[assignment,misc]
-    RepairStrategy = None  # type: ignore[assignment,misc]
 
 try:
-    from src.fluidic.reactive_state import (  # codeql[py/cyclic-import]  # noqa: F401
-        ReactiveState,
-        StateStore,
-    )
+    from src.fluidic.reactive_state import StateStore  # codeql[py/cyclic-import]
 
     _REACTIVE_AVAILABLE = True
 except ImportError:
@@ -142,9 +134,8 @@ except ImportError:
     TelemetryMiddleware = None  # type: ignore[assignment,misc]
 
 try:
-    from src.adaptive.foresight import (  # codeql[py/cyclic-import]  # noqa: F401
+    from src.adaptive.foresight import (  # codeql[py/cyclic-import]
         ConversationTrajectoryPredictor,
-        ProbabilityVector,
     )
 
     _FORESIGHT_AVAILABLE = True
@@ -155,14 +146,12 @@ except ImportError:
 try:
     from shared_core.security_automation.defense_engine import (  # codeql[py/cyclic-import]
         DefenseEngine,
-        ThreatLevel,
     )
 
     _DEFENSE_AVAILABLE = True
 except ImportError:
     _DEFENSE_AVAILABLE = False
     DefenseEngine = None  # type: ignore[assignment,misc]
-    ThreatLevel = None  # type: ignore[assignment,misc]
 
 
 # ── Health Tier ───────────────────────────────────────────────────────────────

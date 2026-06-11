@@ -62,16 +62,12 @@ logger = logging.getLogger(__name__)
 try:
     from shared_core.security_automation.defense_engine import (  # codeql[py/cyclic-import]
         DefenseEngine,
-        FirewallAction,
-        ThreatLevel,
     )
 
     _DEFENSE_AVAILABLE = True
 except ImportError:
     _DEFENSE_AVAILABLE = False
     DefenseEngine = None  # type: ignore[assignment,misc]
-    FirewallAction = None  # type: ignore[assignment,misc]
-    ThreatLevel = None  # type: ignore[assignment,misc]
 
 try:
     from shared_core.security_automation.adaptive_scanner import (  # codeql[py/cyclic-import]

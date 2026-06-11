@@ -43,7 +43,6 @@ import hashlib
 import json
 import logging
 import os
-import sqlite3
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
