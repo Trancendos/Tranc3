@@ -17,7 +17,6 @@ from __future__ import annotations
 import importlib.util
 import os
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -106,14 +105,14 @@ class TestSwarmCoordinatorService:
         )
         r = authed.post("/run")
         # Empty manifest dir → 200 with empty or quick result (not 401)
-        assert r.status_code in (200, 422, 500)
+        assert r.status_code in (200, 422)
         assert r.status_code != 401
 
     def test_run_allowed_when_no_secret_configured(self):
         """When INTERNAL_SECRET is empty (dev mode), /run is open."""
         # _INTERNAL_SECRET is "" by default — endpoint is permissive
         r = self.client.post("/run")
-        assert r.status_code in (200, 422, 500)
+        assert r.status_code in (200, 422)
         assert r.status_code != 401
 
 

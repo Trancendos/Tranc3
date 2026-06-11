@@ -25,6 +25,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from src.entities.health_metadata import health_entity_block
+from src.errors.error_catalog import ErrorCode
 
 try:
     import yaml
@@ -149,7 +150,7 @@ async def _require_internal_auth(
     if not _INTERNAL_SECRET:
         return
     if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
+        raise HTTPException(status_code=401, detail=ErrorCode.AUTH_TOKEN_INVALID.value)
 
 
 class RunRequest(BaseModel):

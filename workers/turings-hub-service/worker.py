@@ -433,7 +433,7 @@ async def health():
                 ).returncode
                 == 0
             )
-        except subprocess.SubprocessError:
+        except (OSError, subprocess.SubprocessError):
             rhubarb_alive = False
 
     return {

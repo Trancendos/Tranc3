@@ -16,7 +16,6 @@ Usage
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass
 from typing import Optional
 
@@ -92,7 +91,7 @@ class WarpTunnel:
             content.encode("utf-8", errors="replace") if isinstance(content, str) else content
         )
         # Sanitize source for log safety — strip ASCII control chars to prevent log injection.
-        safe_source = re.sub(r"[\x00-\x1f\x7f]", "?", str(source)[:64])
+        safe_source = str(source)[:64].encode("unicode_escape").decode("ascii")
 
         # Size gate — avoids scanning multi-GB payloads
         if self.config.max_content_bytes and len(raw) > self.config.max_content_bytes:
