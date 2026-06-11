@@ -9,7 +9,13 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import torch
+try:
+    import torch
+
+    _TORCH_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    torch = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +53,17 @@ class Tranc3Engine:
     ):
         self._model_path = Path(model_path or _DEFAULT_MODEL_PATH)
         self._tokenizer_path = Path(tokenizer_path or _DEFAULT_TOKENIZER_PATH)
-        self._device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
+        if _TORCH_AVAILABLE:
+            self._device = torch.device(  # type: ignore[union-attr]
+                device or ("cuda" if torch.cuda.is_available() else "cpu")  # type: ignore[union-attr]
+            )
+        else:
+            self._device = None
         self._model = None
         self._tokenizer = None
         self._loaded = False
-        self._bootstrap_mode = False
+        # Bootstrap mode when torch is unavailable or weights are missing
+        self._bootstrap_mode = not _TORCH_AVAILABLE
 
     # ─── Lifecycle ─────────────────────────────────────────────────────────────
 
