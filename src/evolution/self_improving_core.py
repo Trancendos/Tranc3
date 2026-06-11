@@ -1,5 +1,6 @@
 # src/evolution/self_improving_core.py
 # TRANC3 Self-Evolution Engine
+from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
@@ -209,6 +210,10 @@ class SelfEvolvingArchitecture:
 
     def get_best_genome(self) -> torch.Tensor:
         """Return best genome as a torch tensor for model injection."""
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                "get_best_genome requires PyTorch, but it is not available in this runtime."
+            )
         best = max(self.population, key=lambda x: x.fitness)
         return torch.tensor(best.genome, dtype=torch.float32)
 

@@ -1,5 +1,6 @@
 # src/quantum/quantum_engine.py
 # TRANC3 Full Quantum Module
+from __future__ import annotations
 
 import logging
 from typing import Dict, List, Optional

@@ -1,4 +1,5 @@
-# src/core/consciousness_integration.py
+# src/bio_neural/consciousness_integration.py
+from __future__ import annotations
 
 import logging
 
