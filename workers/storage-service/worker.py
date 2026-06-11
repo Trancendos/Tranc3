@@ -28,6 +28,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from shared_core.path_validation import (
+    PathTraversalError,
+    ensure_validated_directory,
+    existing_file_path_str,
+    remove_validated_file,
+    remove_validated_tree,
+    safe_join,
+    sanitize_filename,
+    validate_path,
+)
 from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8020
@@ -47,7 +57,7 @@ logger = logging.getLogger(WORKER_NAME)
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn

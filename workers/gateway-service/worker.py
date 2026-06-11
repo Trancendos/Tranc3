@@ -64,6 +64,9 @@ from Dimensional.infinity.sentinel_station import (
     SharedSSEGenerator,
     get_sentinel_station,
 )
+from Dimensional.sanitize import sanitize_for_log
+from shared_core.path_validation import PathTraversalError, existing_file_path_str
+from shared_core.url_validation import SSRFError, validate_workflow_id
 from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
@@ -143,7 +146,7 @@ worker_kit = InfinityWorkerKit(
 
 def _get_db() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3_connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn

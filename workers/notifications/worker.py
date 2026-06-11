@@ -11,12 +11,12 @@ Zero-cost: In-process dispatch, SQLite storage, no external SaaS.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import os
 import sqlite3
 import threading
+import urllib.request
 import uuid
 from collections import defaultdict
 from contextlib import contextmanager
@@ -29,9 +29,9 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import log_server_error
+from Dimensional.error_handlers import log_server_error, safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
-from Dimensional.url_validation import SSRFError, post_json_webhook, validate_webhook_url
+from Dimensional.url_validation import SSRFError, validate_webhook_url
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 

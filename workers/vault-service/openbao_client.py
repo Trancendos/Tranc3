@@ -117,7 +117,7 @@ def _sqlite_store(key: str, value: str) -> Dict[str, Any]:
 
 
 def _sqlite_get(key: str) -> Dict[str, Any]:
-    from worker import _append_audit, _decrypt_secret, _get_db, _legacy_xor_decrypt  # noqa: PLC0415
+    from worker import _append_audit, _decrypt_secret, _get_db  # noqa: PLC0415
 
     conn = _get_db()
     row = conn.execute(

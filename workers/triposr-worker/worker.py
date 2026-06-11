@@ -28,6 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from Dimensional.error_handlers import log_server_error
 from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8051

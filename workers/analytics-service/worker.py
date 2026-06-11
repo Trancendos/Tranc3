@@ -81,7 +81,6 @@ import sqlite3
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8016
 WORKER_NAME = "analytics-service"
@@ -450,6 +449,8 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "event_count": event_count,
         "metric_count": metric_count,
+        "archive_count": archive_count,
+        "parquet_total_bytes": parquet_total_bytes,
     }
 
 
