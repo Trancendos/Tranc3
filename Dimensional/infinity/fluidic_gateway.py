@@ -438,8 +438,8 @@ class InfinityFluidicGateway:
                         }
                     ),
                 )
-            except RuntimeError:
-                pass
+            except RuntimeError as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
     # ── Query Interface ───────────────────────────────────────────────────────
 

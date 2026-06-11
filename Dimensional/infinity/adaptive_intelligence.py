@@ -667,8 +667,8 @@ class InfinityHealthOrchestrator:
                     else 0.0,
                     "entropy": round(traj.entropy(), 4) if hasattr(traj, "entropy") else 0.0,
                 }
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         return HealthSummary(
             service_name=self.config.service_name,
@@ -713,8 +713,8 @@ class InfinityHealthOrchestrator:
             try:
                 incidents = self.defense.list_incidents()
                 return [i.to_dict() if hasattr(i, "to_dict") else i for i in incidents]
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
         return []
 
 

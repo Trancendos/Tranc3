@@ -224,8 +224,8 @@ def validate_url(
                 for network in blocked_networks:
                     if addr in network:
                         raise SSRFError(f"URL resolves to blocked IP range: {ip_str} in {network}")
-        except socket.gaierror:
-            pass  # Already handled above
+        except socket.gaierror as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)  # Already handled above
 
     return url
 

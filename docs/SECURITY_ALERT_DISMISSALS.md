@@ -19,12 +19,18 @@ to bulk-close stale GitHub Security alerts.
 
 ## CodeQL Notes (deferred paths)
 
-Bulk fixes deferred until those trees are in active development:
+**Addressed (PR follow-up on `cursor/codeql-deferred-cleanup-e51c`):**
 
-- `archive/` — legacy, not deployed
-- `Dimensional/` duplicate architecture copies — mirror of `shared_core/`
-- Cyclic-import Notes in MCP/workflow modules — structural; lazy imports acceptable
-- Empty-except Notes in `shared_core/` — batch follow-up, not live worker paths
+- Empty-except (`except: pass`) in `shared_core/`, `Dimensional/`, and `archive/` — replaced with
+  `logger.debug("suppressed %s", _exc, exc_info=False)` via `scripts/fix_empty_except_pass.py`
+  (~157 handlers across 56 files). Intentional null-stub `pass` in `_Null*` classes unchanged.
+
+**Still deferred (structural / low priority):**
+
+- Cyclic-import Notes in `shared_core/` and `Dimensional/` package barrels — mirror trees not on
+  live worker paths; same pattern as live `src/mcp/` and `src/workflow/` (lazy imports + optional
+  `# codeql[py/cyclic-import]` when CodeQL flags a specific edge)
+- `archive/` — legacy, not deployed; empty-except fixed for consistency only
 
 ## Live-path fixes (this branch)
 
@@ -61,5 +67,6 @@ For each alert in the table above, open the alert → **Close as** → choose:
 
 ### 4. Follow-up branch (optional)
 
-- `shared_core/` empty-except and cyclic-import CodeQL Notes
-- `Dimensional/` mirror tree and `archive/` bulk Notes
+- **Done:** bulk empty-except in `shared_core/`, `Dimensional/`, `archive/` (see PR for
+  `cursor/codeql-deferred-cleanup-e51c`)
+- **Optional:** cyclic-import suppressions in deferred trees if CodeQL still reports them after rescan

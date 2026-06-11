@@ -222,8 +222,8 @@ class ProactiveDefenseLayer:
                 predicted_threat = getattr(predicted, "level", "none")
                 if isinstance(predicted_threat, Enum):
                     predicted_threat = predicted_threat.value
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         # ── DefenseEngine firewall evaluation ─────────────────────────────
         if self.engine:
@@ -312,8 +312,8 @@ class ProactiveDefenseLayer:
                         source=source_ip,
                         affected_services=[self.service_name],
                     )
-                except Exception:
-                    pass
+                except Exception as _exc:
+                    logger.debug("suppressed %s", _exc, exc_info=False)
             await self._publish_threat_event(source_ip, threat_level, path, "incident_created")
 
     async def _publish_threat_event(

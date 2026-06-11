@@ -609,7 +609,7 @@ class Sentinel:
                 try:
                     content = path.read_text(encoding="utf-8")
                     state[f"file:{config_file}"] = hashlib.sha256(content.encode()).hexdigest()[:16]
-                except OSError:
-                    pass
+                except OSError as _exc:
+                    logger.debug("suppressed %s", _exc, exc_info=False)
 
         return state

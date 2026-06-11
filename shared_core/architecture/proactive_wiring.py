@@ -328,8 +328,8 @@ class ProactiveSystemBootstrap:
             for handler in self._event_handlers:
                 try:
                     event_bus.unsubscribe("*", handler)
-                except Exception:
-                    pass
+                except Exception as _exc:
+                    logger.debug("suppressed %s", _exc, exc_info=False)
 
         # Mark all bridges as disconnected
         for bridge in self._bridges.values():
@@ -839,8 +839,10 @@ class ProactiveSystemBootstrap:
                             max_units=free_limit,
                             free_tier_limit=free_limit,
                         )
-                    except Exception:
-                        pass  # Resource may already be registered
+                    except Exception as _exc:
+                        logger.debug(
+                            "suppressed %s", _exc, exc_info=False
+                        )  # Resource may already be registered
 
             bridge.mark_connected()
             self._bridges[BridgeType.SCALER] = bridge
@@ -932,8 +934,8 @@ class ProactiveSystemBootstrap:
         for name, baseline in daemon_intervals.items():
             try:
                 self._pulse.register(name, baseline)
-            except Exception:
-                pass  # May already be registered
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)  # May already be registered
 
         logger.info(
             "ProactiveSystemBootstrap: Registered %d pulse-controlled daemons",
@@ -1182,8 +1184,8 @@ class ProactiveSystemBootstrap:
                 mode = OrchestratorMode(value) if isinstance(value, str) else value
                 self._orchestrator.set_mode(mode)
                 logger.info("ProactiveSystemBootstrap: Orchestrator mode → %s", mode.value)
-            except (ValueError, AttributeError):
-                pass
+            except (ValueError, AttributeError) as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
         elif key == "proactive.orchestration_interval":
             if hasattr(self._orchestrator, "_orchestration_interval"):
                 self._orchestrator._orchestration_interval = float(value)
@@ -1251,8 +1253,8 @@ class ProactiveSystemBootstrap:
         if self._orchestrator and hasattr(self._orchestrator, "get_dashboard"):
             try:
                 orchestrator_dashboard = self._orchestrator.get_dashboard()
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         # Get health profile if available
         health_profile = {}
@@ -1260,8 +1262,8 @@ class ProactiveSystemBootstrap:
             try:
                 hp = self._orchestrator.get_health_profile()
                 health_profile = hp.to_dict() if hasattr(hp, "to_dict") else {}
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         # Get zero-cost status if available
         zero_cost_status = {}
@@ -1269,24 +1271,24 @@ class ProactiveSystemBootstrap:
             try:
                 zc = self._orchestrator.get_zero_cost_status()
                 zero_cost_status = zc.to_dict() if hasattr(zc, "to_dict") else {}
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         # Get pulse state if available
         pulse_state = {}
         if self._pulse and hasattr(self._pulse, "get_all_intervals"):
             try:
                 pulse_state = self._pulse.get_all_intervals()
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         # Get scaler state if available
         scaler_state = {}
         if self._scaler and hasattr(self._scaler, "get_all_decisions"):
             try:
                 scaler_state = self._scaler.get_all_decisions()
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         return {
             "system_status": status,

@@ -177,12 +177,12 @@ class InfinityWorkerKit:
         """Stop all layers cleanly."""
         try:
             await self.health.stop()
-        except Exception:
-            pass
+        except Exception as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
         try:
             await self.gateway.stop()
-        except Exception:
-            pass
+        except Exception as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
         self._started = False
         logger.info("InfinityWorkerKit[%s] stopped", self.service_name)
 

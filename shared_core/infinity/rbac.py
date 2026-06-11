@@ -238,8 +238,8 @@ class RBACEngine:
                 try:
                     pillar = Pillar(pillar_str)
                     perms = perms | self._pillar_permissions.get(pillar, Permission.NONE)
-                except ValueError:
-                    pass
+                except ValueError as _exc:
+                    logger.debug("suppressed %s", _exc, exc_info=False)
 
         return perms
 

@@ -169,8 +169,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
                         from auth import user_manager
 
                         user = user_manager.get_user(username)
-                    except Exception:
-                        pass
+                    except Exception as _exc:
+                        logger.debug("suppressed %s", _exc, exc_info=False)
                     if not user:
                         user = {
                             "sub": username,

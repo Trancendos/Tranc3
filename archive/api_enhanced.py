@@ -259,8 +259,8 @@ async def think(req: ThinkRequest, request: Request):
             vec = matrix.get_personality_vector(req.personality)
             result["personality_vector"] = vec.tolist()
             result["personality"] = req.personality
-        except Exception:
-            pass
+        except Exception as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
     return result
 
 
@@ -315,8 +315,8 @@ async def mcp_sse(request: Request):
             async def cb(data: Any):
                 try:
                     queue.put_nowait(data)
-                except asyncio.QueueFull:
-                    pass
+                except asyncio.QueueFull as _exc:
+                    logger.debug("suppressed %s", _exc, exc_info=False)
 
             event_bus.subscribe("*", cb)
             while True:
