@@ -11,7 +11,8 @@ from typing import Any, Dict, Optional
 
 try:
     import torch
-except ImportError:  # pragma: no cover
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
     torch = None  # type: ignore[assignment]
     _TORCH_AVAILABLE = False
 else:
