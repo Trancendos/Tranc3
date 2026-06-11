@@ -33,3 +33,33 @@ Bulk fixes deferred until those trees are in active development:
 - P2A: Log injection — `sanitize_for_log()` in `src/core/config.py`, `src/mcp/server.py`
 - P3: Pod `runAsUser`/`runAsGroup`/`fsGroup` 65534 in both Flux deployment trees
 - CodeQL Notes: `NotImplementedError`, explicit returns, narrowed except in live `src/` paths
+
+## Post-merge checklist (`main` @ `2c007066`, 2026-06-11)
+
+Merged via PR #108. CI on merge: Ruff, Pytest, CodeQL, and Trivy workflow scans passed.
+
+### 1. Rescan Security tab
+
+1. Open **GitHub → Trancendos/Tranc3 → Security**
+2. Trigger or wait for CodeQL + Dependabot + Trivy rescans on `main`
+3. Filter **Code scanning** → severity **Error** → confirm live worker/router paths no longer appear
+
+### 2. Bulk-close stale Trivy K8s alerts
+
+For each alert in the table above, open the alert → **Close as** → choose:
+
+| Disposition | Close reason |
+|-------------|--------------|
+| False positive | KSV118 Tiller / KSV104 ConfigMap (mitigation in Flux annotations) |
+| Risk accepted | KSV013 untrusted registry (self-hosted Forgejo) |
+| Fixed | sentencepiece CVE (pinned in requirements) |
+
+### 3. External check failures (no repo action)
+
+- **CodeSlick Security** — monthly analysis quota exhausted; re-enable when quota resets
+- **Standalone Trivy** status check — external app; Trivy **workflow** scans pass on `main`
+
+### 4. Follow-up branch (optional)
+
+- `shared_core/` empty-except and cyclic-import CodeQL Notes
+- `Dimensional/` mirror tree and `archive/` bulk Notes
