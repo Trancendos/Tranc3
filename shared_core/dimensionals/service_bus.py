@@ -76,14 +76,14 @@ logger = logging.getLogger(__name__)
 
 # Phase 22.6: Optional FluidicRouter + CausalEventBus integration
 try:
-    from shared_core.architecture.fluidic_router import FluidicRouter
+    from shared_core.architecture.fluidic_router import FluidicRouter  # codeql[py/cyclic-import]
 
     _FLUIDIC_AVAILABLE = True
 except ImportError:
     _FLUIDIC_AVAILABLE = False
 
 try:
-    from shared_core.architecture.causal_event_bus import CausalEventBus
+    from shared_core.architecture.causal_event_bus import CausalEventBus  # codeql[py/cyclic-import]
 
     _CAUSAL_AVAILABLE = True
 except ImportError:

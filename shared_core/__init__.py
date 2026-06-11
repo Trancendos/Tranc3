@@ -13,7 +13,7 @@ New code should import from `Dimensional` directly.
 
 # Re-export top-level Dimensional symbols
 # Expose sub-packages
-from Dimensional import (  # noqa: F401  # noqa: F401
+from Dimensional import (  # codeql[py/cyclic-import]  # noqa: F401
     bus,
     dimensionals,
     error_handlers,

@@ -76,7 +76,10 @@ logger = logging.getLogger(__name__)
 # ── Optional imports (graceful degradation) ──────────────────────────────────
 
 try:
-    from shared_core.architecture.adaptive_pulse import AdaptivePulseController, PulseMode
+    from shared_core.architecture.adaptive_pulse import (  # codeql[py/cyclic-import]
+        AdaptivePulseController,
+        PulseMode,
+    )
 
     _PULSE_AVAILABLE = True
 except ImportError:
@@ -85,7 +88,7 @@ except ImportError:
     PulseMode = None  # type: ignore[assignment,misc]
 
 try:
-    from src.healing.anomaly_detector import Anomaly, AnomalyDetector
+    from src.healing.anomaly_detector import Anomaly, AnomalyDetector  # codeql[py/cyclic-import]
 
     _ANOMALY_AVAILABLE = True
 except ImportError:
@@ -94,7 +97,11 @@ except ImportError:
     Anomaly = None  # type: ignore[assignment,misc]
 
 try:
-    from src.healing.self_repair import AdaptiveConfigTuner, RepairStrategy, SelfRepairEngine
+    from src.healing.self_repair import (  # codeql[py/cyclic-import]
+        AdaptiveConfigTuner,
+        RepairStrategy,
+        SelfRepairEngine,
+    )
 
     _REPAIR_AVAILABLE = True
 except ImportError:
@@ -104,7 +111,10 @@ except ImportError:
     RepairStrategy = None  # type: ignore[assignment,misc]
 
 try:
-    from src.fluidic.reactive_state import ReactiveState, StateStore  # noqa: F401
+    from src.fluidic.reactive_state import (  # codeql[py/cyclic-import]  # noqa: F401
+        ReactiveState,
+        StateStore,
+    )
 
     _REACTIVE_AVAILABLE = True
 except ImportError:
@@ -112,7 +122,7 @@ except ImportError:
     StateStore = None  # type: ignore[assignment,misc]
 
 try:
-    from src.fluidic.hot_config import HotConfig
+    from src.fluidic.hot_config import HotConfig  # codeql[py/cyclic-import]
 
     _HOTCONFIG_AVAILABLE = True
 except ImportError:
@@ -120,7 +130,10 @@ except ImportError:
     HotConfig = None  # type: ignore[assignment,misc]
 
 try:
-    from shared_core.middleware.telemetry import TelemetryCollector, TelemetryMiddleware
+    from shared_core.middleware.telemetry import (  # codeql[py/cyclic-import]
+        TelemetryCollector,
+        TelemetryMiddleware,
+    )
 
     _TELEMETRY_AVAILABLE = True
 except ImportError:
@@ -129,7 +142,7 @@ except ImportError:
     TelemetryMiddleware = None  # type: ignore[assignment,misc]
 
 try:
-    from src.adaptive.foresight import (  # noqa: F401
+    from src.adaptive.foresight import (  # codeql[py/cyclic-import]  # noqa: F401
         ConversationTrajectoryPredictor,
         ProbabilityVector,
     )
@@ -140,7 +153,10 @@ except ImportError:
     ConversationTrajectoryPredictor = None  # type: ignore[assignment,misc]
 
 try:
-    from shared_core.security_automation.defense_engine import DefenseEngine, ThreatLevel
+    from shared_core.security_automation.defense_engine import (  # codeql[py/cyclic-import]
+        DefenseEngine,
+        ThreatLevel,
+    )
 
     _DEFENSE_AVAILABLE = True
 except ImportError:

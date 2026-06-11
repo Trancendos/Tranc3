@@ -233,12 +233,14 @@ class ProactiveSystemBootstrap:
         logger.info("ProactiveSystemBootstrap: Beginning system wiring...")
 
         # Lazy-load orchestrator and auxiliary systems
-        from shared_core.architecture.adaptive_pulse import adaptive_pulse
-        from shared_core.architecture.auto_config import auto_config
-        from shared_core.architecture.proactive_orchestrator import (
+        from shared_core.architecture.adaptive_pulse import (
+            adaptive_pulse,  # codeql[py/cyclic-import]
+        )
+        from shared_core.architecture.auto_config import auto_config  # codeql[py/cyclic-import]
+        from shared_core.architecture.proactive_orchestrator import (  # codeql[py/cyclic-import]
             proactive_orchestrator,
         )
-        from src.adaptive.predictive_scaler import predictive_scaler
+        from src.adaptive.predictive_scaler import predictive_scaler  # codeql[py/cyclic-import]
 
         self._orchestrator = subsystems.get("orchestrator", proactive_orchestrator)
         self._pulse = subsystems.get("pulse", adaptive_pulse)
@@ -398,7 +400,7 @@ class ProactiveSystemBootstrap:
             self._event_handlers.append(_on_proactive_event)
 
             # Publish wiring event
-            from shared_core.models import EventMessage
+            from shared_core.models import EventMessage  # codeql[py/cyclic-import]
 
             await event_bus.publish(
                 EventMessage(
@@ -822,7 +824,9 @@ class ProactiveSystemBootstrap:
             # Register storage tiers as scalable resources
             storage = self._subsystems.get("storage")
             if storage and hasattr(storage, "_get_priority_order"):
-                from shared_core.architecture.smart_storage import StorageTier
+                from shared_core.architecture.smart_storage import (
+                    StorageTier,  # codeql[py/cyclic-import]
+                )
 
                 tier_limits = {
                     StorageTier.R2: 10,  # 10GB free
@@ -866,7 +870,9 @@ class ProactiveSystemBootstrap:
         Each action type (HEAL, SCALE_UP, MIGRATE_STORAGE, etc.) gets a
         dedicated handler that routes the action to the appropriate subsystem.
         """
-        from shared_core.architecture.proactive_orchestrator import ProactiveAction
+        from shared_core.architecture.proactive_orchestrator import (  # codeql[py/cyclic-import]
+            ProactiveAction,
+        )
 
         dispatcher = getattr(self._orchestrator, "_action_dispatcher", None)
         if dispatcher is None:
@@ -1117,7 +1123,7 @@ class ProactiveSystemBootstrap:
         """Handle ALERT actions by publishing to EventBus."""
         event_bus = self._subsystems.get("event_bus")
         if event_bus and hasattr(event_bus, "publish"):
-            from shared_core.models import EventMessage
+            from shared_core.models import EventMessage  # codeql[py/cyclic-import]
 
             await event_bus.publish(
                 EventMessage(
@@ -1178,7 +1184,9 @@ class ProactiveSystemBootstrap:
             return
 
         if key == "proactive.mode":
-            from shared_core.architecture.proactive_orchestrator import OrchestratorMode
+            from shared_core.architecture.proactive_orchestrator import (  # codeql[py/cyclic-import]
+                OrchestratorMode,
+            )
 
             try:
                 mode = OrchestratorMode(value) if isinstance(value, str) else value

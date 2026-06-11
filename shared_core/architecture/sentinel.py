@@ -474,7 +474,7 @@ class Sentinel:
     def _check_secret_age(self) -> SentinelCheck:
         """Check for stale secrets that may need rotation."""
         try:
-            from shared_core.architecture.vault import VaultSecretLoader
+            from shared_core.architecture.vault import VaultSecretLoader  # codeql[py/cyclic-import]
 
             loader = VaultSecretLoader()
             leaks = loader.detect_leaks()

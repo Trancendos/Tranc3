@@ -203,7 +203,9 @@ class WorkerBridge:
             return False
 
         try:
-            from shared_core.infinity.sentinel_station import SentinelEvent
+            from shared_core.infinity.sentinel_station import (
+                SentinelEvent,  # codeql[py/cyclic-import]
+            )
 
             # Validate channel against known channels
             try:

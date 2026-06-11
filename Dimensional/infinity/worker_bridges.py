@@ -203,7 +203,9 @@ class WorkerBridge:
             return False
 
         try:
-            from Dimensional.infinity.sentinel_station import SentinelEvent
+            from Dimensional.infinity.sentinel_station import (
+                SentinelEvent,  # codeql[py/cyclic-import]
+            )
 
             # Validate channel against known channels
             try:

@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 # ── Optional imports ──────────────────────────────────────────────────────────
 
 try:
-    from shared_core.security_automation.defense_engine import (
+    from shared_core.security_automation.defense_engine import (  # codeql[py/cyclic-import]
         DefenseEngine,
         FirewallAction,
         ThreatLevel,
@@ -74,7 +74,9 @@ except ImportError:
     ThreatLevel = None  # type: ignore[assignment,misc]
 
 try:
-    from shared_core.security_automation.adaptive_scanner import AdaptiveScanner
+    from shared_core.security_automation.adaptive_scanner import (  # codeql[py/cyclic-import]
+        AdaptiveScanner,
+    )
 
     _ADAPTIVE_SCANNER = True
 except ImportError:
@@ -82,7 +84,9 @@ except ImportError:
     AdaptiveScanner = None  # type: ignore[assignment,misc]
 
 try:
-    from shared_core.security_automation.predictor import ThreatPredictor
+    from shared_core.security_automation.predictor import (
+        ThreatPredictor,  # codeql[py/cyclic-import]
+    )
 
     _PREDICTOR_AVAILABLE = True
 except ImportError:

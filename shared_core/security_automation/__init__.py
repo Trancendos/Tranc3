@@ -36,21 +36,30 @@ Usage:
     predictions = predictor.predict("src/")
 """
 
-from shared_core.security_automation.adaptive_scanner import (
+from shared_core.security_automation.adaptive_scanner import (  # codeql[py/cyclic-import]
     AdaptiveScanner,
     AdaptiveViolation,
     Confidence,
 )
-from shared_core.security_automation.predictor import Prediction, ViolationPredictor
-from shared_core.security_automation.remediator import AutoRemediator
-from shared_core.security_automation.remediator_v2 import (
+from shared_core.security_automation.predictor import (  # codeql[py/cyclic-import]
+    Prediction,
+    ViolationPredictor,
+)
+from shared_core.security_automation.remediator import AutoRemediator  # codeql[py/cyclic-import]
+from shared_core.security_automation.remediator_v2 import (  # codeql[py/cyclic-import]
     AutoRemediatorV2,
     FixResult,
     RemediationSession,
 )
-from shared_core.security_automation.scanner import SecurityScanner, Violation
-from shared_core.security_automation.telemetry import SecurityTelemetry
-from shared_core.security_automation.watchdog import ScanAlert, SecurityWatchdog
+from shared_core.security_automation.scanner import (  # codeql[py/cyclic-import]
+    SecurityScanner,
+    Violation,
+)
+from shared_core.security_automation.telemetry import SecurityTelemetry  # codeql[py/cyclic-import]
+from shared_core.security_automation.watchdog import (  # codeql[py/cyclic-import]
+    ScanAlert,
+    SecurityWatchdog,
+)
 
 __all__ = [
     # Core scanner

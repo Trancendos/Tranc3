@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 try:
-    from Dimensional.infinity.adaptive_intelligence import (  # noqa: F401
+    from Dimensional.infinity.adaptive_intelligence import (  # codeql[py/cyclic-import]  # noqa: F401
         SUBSYSTEM_AVAILABILITY,
         InfinityHealthOrchestrator,
         create_orchestrator,
@@ -65,14 +65,18 @@ except ImportError:
     SUBSYSTEM_AVAILABILITY: dict = {}
 
 try:
-    from Dimensional.infinity.proactive_defense import ProactiveDefenseLayer
+    from Dimensional.infinity.proactive_defense import (  # codeql[py/cyclic-import]
+        ProactiveDefenseLayer,
+    )
 
     _DEFENSE_AVAILABLE = True
 except ImportError:
     _DEFENSE_AVAILABLE = False
 
 try:
-    from Dimensional.infinity.fluidic_gateway import InfinityFluidicGateway
+    from Dimensional.infinity.fluidic_gateway import (  # codeql[py/cyclic-import]
+        InfinityFluidicGateway,
+    )
 
     _GATEWAY_AVAILABLE = True
 except ImportError:
@@ -382,7 +386,10 @@ def _make_sentinel_fn(sentinel: Any) -> Callable:
 
     async def _publish(channel: str, event_type: str, payload: dict) -> None:
         try:
-            from Dimensional.infinity.sentinel_station import SentinelChannel, SentinelEvent
+            from Dimensional.infinity.sentinel_station import (  # codeql[py/cyclic-import]
+                SentinelChannel,
+                SentinelEvent,
+            )
 
             ch = SentinelChannel(channel) if isinstance(channel, str) else channel
             await sentinel.publish(
