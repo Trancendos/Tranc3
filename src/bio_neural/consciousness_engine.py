@@ -5,8 +5,17 @@ import logging
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
-import torch
-import torch.nn as nn
+
+try:
+    import torch
+    import torch.nn as nn
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    nn = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 
 from Dimensional.sanitize import sanitize_for_log
 
@@ -109,7 +118,7 @@ class IITCalculator:
 # ============================================================
 # GLOBAL WORKSPACE THEORY
 # ============================================================
-class GlobalWorkspace(nn.Module):
+class GlobalWorkspace(nn.Module if nn is not None else object):
     """
     Global Workspace Theory (GWT) implementation
     Simulates conscious broadcast of information
@@ -165,7 +174,7 @@ class GlobalWorkspace(nn.Module):
 # ============================================================
 # SELF-AWARENESS MODULE
 # ============================================================
-class SelfAwarenessModule(nn.Module):
+class SelfAwarenessModule(nn.Module if nn is not None else object):
     """
     Self-awareness through recursive self-modeling
     """
@@ -225,7 +234,7 @@ class SelfAwarenessModule(nn.Module):
 # ============================================================
 # FULL CONSCIOUSNESS MODEL
 # ============================================================
-class ConsciousnessModel(nn.Module):
+class ConsciousnessModel(nn.Module if nn is not None else object):
     """
     Complete consciousness simulation system
     Integrates IIT, GWT, and self-awareness
@@ -301,7 +310,7 @@ class ConsciousnessModel(nn.Module):
 # ============================================================
 # EMOTION DETECTOR
 # ============================================================
-class EmotionDetector(nn.Module):
+class EmotionDetector(nn.Module if nn is not None else object):
     """Detect and classify emotions from neural state"""
 
     EMOTIONS = ["neutral", "happy", "sad", "angry", "surprised", "fearful", "disgusted"]

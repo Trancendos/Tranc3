@@ -7,7 +7,15 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 import numpy as np
-import torch
+
+try:
+    import torch
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 
 from Dimensional.sanitize import sanitize_for_log
 

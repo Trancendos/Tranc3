@@ -11,9 +11,19 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    nn = None  # type: ignore[assignment]
+    F = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +51,7 @@ class FusedRepresentation:
 # ─── Modality Encoders ─────────────────────────────────────────────────────────
 
 
-class TextEncoder(nn.Module):
+class TextEncoder(nn.Module if nn is not None else object):
     """Transformer-based text encoder."""
 
     def __init__(
@@ -77,7 +87,7 @@ class TextEncoder(nn.Module):
             return self.forward(tokens)
 
 
-class VisionEncoder(nn.Module):
+class VisionEncoder(nn.Module if nn is not None else object):
     """Lightweight CNN vision encoder (ResNet-inspired)."""
 
     def __init__(self, out_dim: int = 256):
@@ -111,7 +121,7 @@ class VisionEncoder(nn.Module):
             return self.forward(img)
 
 
-class StructuredEncoder(nn.Module):
+class StructuredEncoder(nn.Module if nn is not None else object):
     """Encodes structured data (dicts, tables) to dense embeddings."""
 
     def __init__(self, input_dim: int = 128, out_dim: int = 256):
@@ -148,7 +158,7 @@ class StructuredEncoder(nn.Module):
 # ─── Cross-Modal Attention Fusion ──────────────────────────────────────────────
 
 
-class CrossModalAttention(nn.Module):
+class CrossModalAttention(nn.Module if nn is not None else object):
     """
     Attend over multiple modality embeddings to produce a fused representation.
     Each modality is a "token" in the attention sequence.
@@ -179,7 +189,7 @@ class CrossModalAttention(nn.Module):
 # ─── Gemini-Inspired Multi-Modal Model ────────────────────────────────────────
 
 
-class GeminiMultiModalModel(nn.Module):
+class GeminiMultiModalModel(nn.Module if nn is not None else object):
     """
     Gemini-inspired multi-modal model.
     Encodes text, images, and structured data; fuses via cross-modal attention;

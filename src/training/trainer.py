@@ -14,9 +14,19 @@ import time
 from pathlib import Path
 from typing import Optional
 
-import torch
-import torch.nn as nn
-from torch.cuda.amp import GradScaler, autocast
+try:
+    import torch
+    import torch.nn as nn
+    from torch.cuda.amp import GradScaler, autocast
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    nn = None  # type: ignore[assignment]
+    GradScaler = None  # type: ignore[assignment]
+    autocast = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 
 from ..core.config import ModelConfig, TrainingConfig
 from ..core.model import Tranc3Model

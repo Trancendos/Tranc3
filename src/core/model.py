@@ -13,9 +13,18 @@ Architecture: Decoder-only transformer (GPT-style)
 import math
 from typing import Optional, Tuple
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    nn = None  # type: ignore[assignment]
+    F = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 
 from .config import ModelConfig
 
@@ -24,7 +33,7 @@ from .config import ModelConfig
 # ---------------------------------------------------------------------------
 
 
-class RotaryEmbedding(nn.Module):
+class RotaryEmbedding(nn.Module if nn is not None else object):
     """
     Encodes position information directly into the attention query/key vectors.
     More generalizable than learned absolute position embeddings.
@@ -66,7 +75,7 @@ class RotaryEmbedding(nn.Module):
 # ---------------------------------------------------------------------------
 
 
-class MultiHeadAttention(nn.Module):
+class MultiHeadAttention(nn.Module if nn is not None else object):
     def __init__(self, config: ModelConfig):
         super().__init__()
         self.n_heads = config.n_heads
@@ -120,7 +129,7 @@ class MultiHeadAttention(nn.Module):
 # ---------------------------------------------------------------------------
 
 
-class FeedForward(nn.Module):
+class FeedForward(nn.Module if nn is not None else object):
     """
     SwiGLU activation: better gradient flow and representation capacity
     than standard ReLU/GELU for language modelling.
@@ -148,7 +157,7 @@ class FeedForward(nn.Module):
 # ---------------------------------------------------------------------------
 
 
-class TransformerBlock(nn.Module):
+class TransformerBlock(nn.Module if nn is not None else object):
     def __init__(self, config: ModelConfig):
         super().__init__()
         self.norm1 = nn.LayerNorm(config.d_model)
@@ -168,7 +177,7 @@ class TransformerBlock(nn.Module):
 # ---------------------------------------------------------------------------
 
 
-class Tranc3Model(nn.Module):
+class Tranc3Model(nn.Module if nn is not None else object):
     """
     The core Tranc3 language model.
     Decoder-only transformer with RoPE, SwiGLU, and pre-norm.

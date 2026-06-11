@@ -7,7 +7,15 @@ logger = logging.getLogger("src.bio_neural.consciousness_integration")
 from typing import Any, Dict, List, Optional  # noqa: E402
 
 import numpy as np  # noqa: E402
-import torch  # noqa: E402
+
+try:  # noqa: E402
+    import torch
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: E402
 from src.bio_neural.consciousness_engine import ConsciousnessModel  # noqa: E402

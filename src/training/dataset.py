@@ -15,8 +15,17 @@ import random
 from pathlib import Path
 from typing import Dict, List
 
-import torch
-from torch.utils.data import DataLoader, Dataset
+try:
+    import torch
+    from torch.utils.data import DataLoader, Dataset
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    DataLoader = None  # type: ignore[assignment]
+    Dataset = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 
 from ..core.tokenizer import Tranc3Tokenizer
 

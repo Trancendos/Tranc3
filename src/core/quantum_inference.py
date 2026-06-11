@@ -7,8 +7,17 @@ logger = logging.getLogger("src.core.quantum_inference")
 from typing import Optional  # noqa: E402
 
 import numpy as np  # noqa: E402
-import torch  # noqa: E402
-import torch.nn as nn  # noqa: E402
+
+try:  # noqa: E402
+    import torch
+    import torch.nn as nn
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    nn = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister  # noqa: E402
 from qiskit_aer import AerSimulator  # noqa: E402
 

@@ -2,9 +2,18 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+except (ImportError, RuntimeError, OSError):  # pragma: no cover
+    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
+    torch = None  # type: ignore[assignment]
+    nn = None  # type: ignore[assignment]
+    F = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +29,7 @@ class WorldModelConfig:
     reward_scale: float = 1.0
 
 
-class RepresentationNetwork(nn.Module):
+class RepresentationNetwork(nn.Module if nn is not None else object):
     """Encodes raw observations into a compact latent state.
 
     Architecture: linear projection → LayerNorm → ReLU (repeated) → state_dim output.
@@ -68,7 +77,7 @@ class RepresentationNetwork(nn.Module):
         return self.net(obs)
 
 
-class DynamicsNetwork(nn.Module):
+class DynamicsNetwork(nn.Module if nn is not None else object):
     """Predicts the next latent state and immediate reward given state + action.
 
     The action is represented as a one-hot (or soft) vector of length action_dim
@@ -117,7 +126,7 @@ class DynamicsNetwork(nn.Module):
         return next_state, reward
 
 
-class PredictionNetwork(nn.Module):
+class PredictionNetwork(nn.Module if nn is not None else object):
     """Policy and value heads operating on the latent state.
 
     Returns raw logits over the action vocabulary (to be softmax-ed externally)
@@ -157,7 +166,7 @@ class PredictionNetwork(nn.Module):
         return policy_logits, value
 
 
-class MuZeroWorldModel(nn.Module):
+class MuZeroWorldModel(nn.Module if nn is not None else object):
     """MuZero-style world model combining representation, dynamics, and prediction.
 
     This implements the three core MuZero functions:
