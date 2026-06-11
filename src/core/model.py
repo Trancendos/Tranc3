@@ -9,6 +9,7 @@ Architecture: Decoder-only transformer (GPT-style)
 - SwiGLU activation in feed-forward (better than ReLU for language tasks)
 - Rotary positional embeddings (RoPE) — no learned position table needed
 """
+from __future__ import annotations
 
 import math
 from typing import Optional, Tuple
@@ -40,6 +41,10 @@ class RotaryEmbedding(nn.Module if nn is not None else object):
     """
 
     def __init__(self, dim: int, max_seq_len: int = 2048):
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                "RotaryEmbedding requires PyTorch, but it is not available in this runtime."
+            )
         super().__init__()
         inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2).float() / dim))
         self.register_buffer("inv_freq", inv_freq)

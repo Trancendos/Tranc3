@@ -28,6 +28,17 @@ else:
 logger = logging.getLogger(__name__)
 
 
+class _TorchRequiredMixin:
+    """Raises a clear RuntimeError when PyTorch is unavailable at construction time."""
+
+    def __init__(self, *args, **kwargs):
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                f"{self.__class__.__name__} requires PyTorch, but it is not available in this runtime."
+            )
+        super().__init__(*args, **kwargs)
+
+
 # ─── Multi-Modal Input ─────────────────────────────────────────────────────────
 
 
@@ -51,7 +62,7 @@ class FusedRepresentation:
 # ─── Modality Encoders ─────────────────────────────────────────────────────────
 
 
-class TextEncoder(nn.Module if nn is not None else object):
+class TextEncoder(_TorchRequiredMixin, nn.Module if nn is not None else object):
     """Transformer-based text encoder."""
 
     def __init__(
@@ -87,7 +98,7 @@ class TextEncoder(nn.Module if nn is not None else object):
             return self.forward(tokens)
 
 
-class VisionEncoder(nn.Module if nn is not None else object):
+class VisionEncoder(_TorchRequiredMixin, nn.Module if nn is not None else object):
     """Lightweight CNN vision encoder (ResNet-inspired)."""
 
     def __init__(self, out_dim: int = 256):
@@ -121,7 +132,7 @@ class VisionEncoder(nn.Module if nn is not None else object):
             return self.forward(img)
 
 
-class StructuredEncoder(nn.Module if nn is not None else object):
+class StructuredEncoder(_TorchRequiredMixin, nn.Module if nn is not None else object):
     """Encodes structured data (dicts, tables) to dense embeddings."""
 
     def __init__(self, input_dim: int = 128, out_dim: int = 256):
@@ -158,7 +169,7 @@ class StructuredEncoder(nn.Module if nn is not None else object):
 # ─── Cross-Modal Attention Fusion ──────────────────────────────────────────────
 
 
-class CrossModalAttention(nn.Module if nn is not None else object):
+class CrossModalAttention(_TorchRequiredMixin, nn.Module if nn is not None else object):
     """
     Attend over multiple modality embeddings to produce a fused representation.
     Each modality is a "token" in the attention sequence.
@@ -189,7 +200,7 @@ class CrossModalAttention(nn.Module if nn is not None else object):
 # ─── Gemini-Inspired Multi-Modal Model ────────────────────────────────────────
 
 
-class GeminiMultiModalModel(nn.Module if nn is not None else object):
+class GeminiMultiModalModel(_TorchRequiredMixin, nn.Module if nn is not None else object):
     """
     Gemini-inspired multi-modal model.
     Encodes text, images, and structured data; fuses via cross-modal attention;

@@ -1,5 +1,6 @@
 # src/bio_neural/neuromorphic.py
 # TRANC3 Complete Spiking Neural Network — merged from DOC-07
+from __future__ import annotations
 
 import logging
 from typing import Dict, List, Optional, Tuple
@@ -65,6 +66,10 @@ class SpikingLayer(nn.Module if nn is not None else object):
         tau_mem: float = 20.0,
         tau_syn: float = 5.0,
     ):
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                "SpikingLayer requires PyTorch, but it is not available in this runtime."
+            )
         super().__init__()
         self.input_size = input_size
         self.output_size = output_size

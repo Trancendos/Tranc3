@@ -33,7 +33,12 @@ def _get_device(device: Optional[str]) -> Optional[torch.device]:
             device,
         )
     if torch is not None:  # type-narrows torch from Optional to module
-        return torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
+        try:
+            default = "cuda" if torch.cuda.is_available() else "cpu"
+        except RuntimeError:
+            logger.warning("CUDA availability check failed; falling back to CPU device.")
+            default = "cpu"
+        return torch.device(device or default)
     return None
 
 

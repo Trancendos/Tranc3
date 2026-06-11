@@ -37,7 +37,12 @@ class NeuromorphicInterface:
         input_dim: int,
         hidden_layers: List[int],
         output_dim: int,
-    ) -> nn.ModuleList:
+    ) -> "nn.ModuleList":
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                "create_spiking_network requires PyTorch, but it is not available in this runtime."
+            )
+
         class SpikingNeuron(nn.Module if nn is not None else object):
             def __init__(self, input_size, output_size, tau=10.0):
                 super().__init__()

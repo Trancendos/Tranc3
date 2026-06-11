@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
@@ -38,6 +40,10 @@ class RepresentationNetwork(nn.Module if nn is not None else object):
     """
 
     def __init__(self, config: WorldModelConfig) -> None:
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                "RepresentationNetwork requires PyTorch, but it is not available in this runtime."
+            )
         super().__init__()
         obs_dim = config.state_dim * 4  # Canonical observable width
         self.config = config

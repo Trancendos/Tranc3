@@ -1,5 +1,6 @@
 # src/core/dataset.py
 # MultilingualDataset — Gap G2 + Brainwriting R1 action
+from __future__ import annotations
 
 import json
 import logging

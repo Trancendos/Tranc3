@@ -1,5 +1,6 @@
 # src/bio_neural/consciousness_engine.py
 # TRANC3 Full Consciousness Engine (IIT-based)
+from __future__ import annotations
 
 import logging
 from typing import Any, Dict, List, Tuple
@@ -125,6 +126,10 @@ class GlobalWorkspace(nn.Module if nn is not None else object):
     """
 
     def __init__(self, hidden_size: int = 768, workspace_size: int = 256):
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                "GlobalWorkspace requires PyTorch, but it is not available in this runtime."
+            )
         super().__init__()
         self.workspace_size = workspace_size
 
