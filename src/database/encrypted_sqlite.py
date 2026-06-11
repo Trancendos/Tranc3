@@ -224,7 +224,9 @@ class EncryptedKVStore:
 
     def __init__(self, db_path: str, table: str = "kv_encrypted") -> None:
         if not _TABLE_NAME_RE.match(table):
-            raise ValueError(f"[{ErrorCode.DB_INVALID_IDENTIFIER.value}] Invalid table name: {table!r}")
+            raise ValueError(
+                f"[{ErrorCode.DB_INVALID_IDENTIFIER.value}] Invalid table name: {table!r}"
+            )
         self.db_path = db_path
         self.table = table
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
