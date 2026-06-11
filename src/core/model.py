@@ -9,6 +9,7 @@ Architecture: Decoder-only transformer (GPT-style)
 - SwiGLU activation in feed-forward (better than ReLU for language tasks)
 - Rotary positional embeddings (RoPE) — no learned position table needed
 """
+
 from __future__ import annotations
 
 import math

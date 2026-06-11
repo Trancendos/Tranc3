@@ -34,7 +34,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import safe_error_detail
+from Dimensional.error_handlers import log_server_error
 from Dimensional.sanitize import sanitize_for_log
 
 _log = logging.getLogger("tranc3.ecosystem")
@@ -738,8 +738,10 @@ async def get_ai_model_catalog(provider: Optional[str] = None):
             "catalog": catalog,
         }
     except Exception as exc:
-        _log.error("Failed to get AI model catalog: %s", sanitize_for_log(exc))
-        raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
+        raise HTTPException(
+            status_code=500,
+            detail=log_server_error(exc, 500, context="AI model catalog"),
+        ) from exc
 
 
 @router.get("/ai/providers")
@@ -768,8 +770,10 @@ async def get_ai_provider_status():
             ),
         }
     except Exception as exc:
-        _log.error("Failed to discover AI providers: %s", sanitize_for_log(exc))
-        raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
+        raise HTTPException(
+            status_code=500,
+            detail=log_server_error(exc, 500, context="AI provider discovery"),
+        ) from exc
 
 
 @router.get("/ai/routing-chains")
@@ -806,8 +810,10 @@ async def get_ai_routing_chains():
             "chains": chains,
         }
     except Exception as exc:
-        _log.error("Failed to get routing chains: %s", sanitize_for_log(exc))
-        raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
+        raise HTTPException(
+            status_code=500,
+            detail=log_server_error(exc, 500, context="AI routing chains"),
+        ) from exc
 
 
 @router.post("/ai/optimal-chain")
@@ -826,8 +832,10 @@ async def get_optimal_routing_chain(chain_name: Optional[str] = None):
             "route_rules": chain.get_route_rules(),
         }
     except Exception as exc:
-        _log.error("Failed to get optimal chain: %s", sanitize_for_log(exc))
-        raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500)) from exc
+        raise HTTPException(
+            status_code=500,
+            detail=log_server_error(exc, 500, context="optimal AI routing chain"),
+        ) from exc
 
 
 # ---------------------------------------------------------------------------

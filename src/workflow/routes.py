@@ -18,7 +18,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Body, Path
 from fastapi.responses import JSONResponse
 
-from Dimensional.error_handlers import safe_error_detail
+from Dimensional.error_handlers import log_server_error
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/grid", tags=["digital-grid"])
@@ -118,7 +118,10 @@ async def run_workflow(
         return JSONResponse({"error": "Workflow execution timed out"}, status_code=504)
     except Exception as exc:
         logger.error("grid: execution error workflow=%s: %s", workflow_id, exc)
-        return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
+        return JSONResponse(
+            {"error": log_server_error(exc, 500, context=f"workflow run {workflow_id}")},
+            status_code=500,
+        )
     return {
         "execution_id": state.execution_id,
         "workflow_id": workflow_id,

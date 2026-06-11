@@ -379,7 +379,7 @@ class TestRemediatorInfoExposure:
 
                 with open(str(path)) as f:
                     content = f.read()
-                assert "safe_error_detail" in content
+                assert "safe_error_detail" in content or "log_server_error" in content
                 assert "detail=str(exc)" not in content
         finally:
             path.unlink()
@@ -680,7 +680,7 @@ class TestIntegrationScanFixRescan:
 
                 with open(str(path)) as f:
                     content = f.read()
-                assert "safe_error_detail" in content
+                assert "safe_error_detail" in content or "log_server_error" in content
                 assert "detail=str(exc)" not in content
         finally:
             path.unlink(missing_ok=True)

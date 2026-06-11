@@ -29,7 +29,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import safe_error_detail
+from Dimensional.error_handlers import log_server_error
 from Dimensional.sanitize import sanitize_for_log
 from Dimensional.url_validation import SSRFError, post_json_webhook, validate_webhook_url
 from src.database.encrypted_sqlite import connect as sqlite3_connect
@@ -591,9 +591,10 @@ async def send_notification(req: NotificationRequest):
             try:
                 validated_webhook_url = validate_webhook_url(webhook_url)
             except SSRFError as e:
+                log_server_error(e, 400, context="webhook URL validation")
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Webhook URL rejected: {e}",
+                    detail="Webhook URL rejected",
                 ) from None
             success = await dispatcher.dispatch_webhook(
                 validated_webhook_url,
@@ -623,17 +624,17 @@ async def send_notification(req: NotificationRequest):
             return {"ok": False, "notification_id": req.notification_id, "status": "failed"}
 
     except Exception as e:
+        safe_message = log_server_error(e, 500, context="notification dispatch")
         db.update_status(
             req.notification_id,
             NotificationStatus.failed,
-            error=safe_error_detail(e, 500),
+            error=safe_message,
         )
-        logger.error("Notification dispatch error: %s", e)
         return {
             "ok": False,
             "notification_id": req.notification_id,
             "status": "failed",
-            "error": safe_error_detail(e, 500),
+            "error": safe_message,
         }
 
 
