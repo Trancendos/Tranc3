@@ -383,7 +383,7 @@ class MapeKLoop:
 
     async def _probe_worker(self, client: httpx.AsyncClient, name: str, port: int) -> WorkerMetrics:
         """GET /health on the worker at *port* and return a WorkerMetrics record."""
-        url = f"{self._config.base_worker_url}:{port}/health"
+        url = f"{self._config.base_worker_url.rstrip('/')}:{port}/health"
         t0 = time.monotonic()
         try:
             resp = await client.get(url)

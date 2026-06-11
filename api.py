@@ -406,6 +406,17 @@ async def lifespan(app: FastAPI):
     except Exception as _po_exc:
         logger.warning("Proactive orchestrator unavailable: %s", sanitize_for_log(_po_exc))
 
+    # MAPE-K sovereign control loop (Master Worker — autonomic platform orchestration)
+    _mape_k_loop = None
+    try:
+        from src.master_worker.mape_k import MapeKLoop
+
+        _mape_k_loop = MapeKLoop()
+        await _mape_k_loop.start()
+        logger.info("MAPE-K control loop started (Master Worker)")
+    except Exception as _mk_exc:
+        logger.warning("MAPE-K loop unavailable: %s", sanitize_for_log(_mk_exc))
+
     try:
         from src.adaptive.cloud_rotation_loop import start_cloud_auto_rotation
         from src.platform.infrastructure_mode import infrastructure_status
@@ -463,12 +474,11 @@ async def lifespan(app: FastAPI):
 
     logger.info("TRANC3 shutting down")
     _bootstrap_complete = False
-    try:
-        from src.section7.threat_intel_loop import stop_threat_intel_loop
-
-        await stop_threat_intel_loop()
-    except Exception:
-        pass
+    if _mape_k_loop is not None:
+        try:
+            await _mape_k_loop.stop()
+        except Exception as _mk_stop_exc:
+            logger.warning("MAPE-K loop stop error: %s", sanitize_for_log(_mk_stop_exc))
     if _knowledge_brain is not None:
         try:
             await _knowledge_brain.stop_dream_cycle()

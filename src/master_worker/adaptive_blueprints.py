@@ -177,9 +177,11 @@ class BlueprintEngine:
 
 
             app = FastAPI(title="{spec.name}", version="1.0.0", lifespan=lifespan)
+            _raw_origins = os.environ.get("ALLOWED_ORIGINS", "")
+            _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
             app.add_middleware(
                 CORSMiddleware,
-                allow_origins=os.environ.get("ALLOWED_ORIGINS", "").split(","),
+                allow_origins=_allowed_origins or ["*"],
                 allow_methods=["*"],
                 allow_headers=["*"],
             )
