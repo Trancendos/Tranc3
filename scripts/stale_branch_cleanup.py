@@ -109,9 +109,7 @@ def _write_outputs(stale: list[StaleBranch], base: str, remote: str) -> None:
     ]
     for b in stale:
         note = b.reason or ("safe to delete" if not b.protected else "")
-        lines.append(
-            f"| `{b.name}` | {b.behind} | {'yes' if b.protected else 'no'} | {note} |"
-        )
+        lines.append(f"| `{b.name}` | {b.behind} | {'yes' if b.protected else 'no'} | {note} |")
     md_path.write_text("\n".join(lines) + "\n")
     print(f"Wrote {json_path}")
     print(f"Wrote {md_path}")

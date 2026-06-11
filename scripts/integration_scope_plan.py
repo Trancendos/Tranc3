@@ -21,7 +21,11 @@ SCOPE_RULES: list[tuple[str, str, str]] = [
     ("workers/", "Workers & Docker", "cherry-pick per worker; verify healthchecks (curl)"),
     ("deploy/", "Deploy / Citadel", "review compose + Traefik separately"),
     ("cloudflare/", "Cloudflare Workers", "legacy — prefer self-hosted migration path"),
-    ("shared_core/", "Shared core", "BLOCK — integration branch deletes modules; do not bulk merge"),
+    (
+        "shared_core/",
+        "Shared core",
+        "BLOCK — integration branch deletes modules; do not bulk merge",
+    ),
     ("src/", "Backend src/", "review + test; avoid cross-cutting deletes"),
     ("Dimensional/", "Dimensional layer", "medium risk — run targeted tests"),
     ("web/", "Arcadia frontend", "UX/a11y scoped PRs"),
@@ -97,11 +101,15 @@ def analyze(base: str, branch: str) -> tuple[list[ScopeBucket], dict[str, int]]:
             b.modified += 1
             totals["modified"] += 1
 
-    ordered = sorted(buckets.values(), key=lambda b: (-b.deleted, -(b.added + b.modified), b.prefix))
+    ordered = sorted(
+        buckets.values(), key=lambda b: (-b.deleted, -(b.added + b.modified), b.prefix)
+    )
     return ordered, totals
 
 
-def _write_outputs(branch: str, base: str, buckets: list[ScopeBucket], totals: dict[str, int]) -> None:
+def _write_outputs(
+    branch: str, base: str, buckets: list[ScopeBucket], totals: dict[str, int]
+) -> None:
     LOGS.mkdir(parents=True, exist_ok=True)
     ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     slug = branch.replace("/", "_")

@@ -148,9 +148,7 @@ def audit(base: str = DEFAULT_BASE) -> list[BranchReport]:
     return reports
 
 
-def _write_outputs(
-    reports: list[BranchReport], merged: list[BranchReport], base: str
-) -> None:
+def _write_outputs(reports: list[BranchReport], merged: list[BranchReport], base: str) -> None:
     LOGS.mkdir(parents=True, exist_ok=True)
     ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     json_path = LOGS / f"branch_benefit_audit_{ts}.json"
