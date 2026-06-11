@@ -32,6 +32,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+from Dimensional.sanitize import sanitize_for_log
+
 logger = logging.getLogger("tranc3.compliance.ai_governance")
 
 _DB_PATH = Path(os.environ.get("AI_GOVERNANCE_DB_PATH", "/data/ai_governance.db"))
@@ -283,9 +285,9 @@ def log_ai_incident(
         )
     logger.warning(
         "AI incident logged: model=%s severity=%s description=%s",
-        model_id,
-        severity.value,
-        description[:120],
+        sanitize_for_log(model_id),
+        sanitize_for_log(severity.value),
+        sanitize_for_log(description[:120]),
     )
     return incident
 

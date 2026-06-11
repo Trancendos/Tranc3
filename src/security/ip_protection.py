@@ -124,7 +124,7 @@ class AbuseDetector:
             record.violation_count += 1
             record.flags.add("scraping")
             self._blocked.add(ip)
-            logger.warning(f"IP_PROTECTION: Blocked {ip} for scraping ({recent} req/min)")
+            logger.warning("IP_PROTECTION: Blocked %s for scraping (%s req/min)", sanitize_for_log(ip), sanitize_for_log(recent))
             return {
                 "allowed": False,
                 "reason": "Rate abuse detected — IP blocked for 1 hour",
@@ -145,7 +145,7 @@ class AbuseDetector:
                 violations.append({"type": "model_extraction", "pattern": pattern.pattern[:40]})
 
         if violations:
-            logger.warning(f"IP_PROTECTION: Violations from user {user_id}: {violations}")
+            logger.warning("IP_PROTECTION: Violations from user %s: %s", sanitize_for_log(user_id), sanitize_for_log(violations))
             return {
                 "allowed": False,
                 "violations": violations,

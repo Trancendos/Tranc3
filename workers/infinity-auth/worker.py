@@ -430,7 +430,7 @@ async def _lifespan(app: FastAPI):
                 ).rowcount
                 db.commit()
                 if deleted:
-                    logger.info("Revocation cleanup: purged %d expired entries", deleted)
+                    logger.info("Revocation cleanup: purged %d expired entries", sanitize_for_log(deleted))
             except asyncio.CancelledError:
                 break
             except Exception:
@@ -613,7 +613,7 @@ async def register(user: UserRegister, _=Depends(rate_limit_check)):
     logger.info(
         "user_registered: username=%s role=%s",
         sanitize_for_log(user.username),
-        role,
+        sanitize_for_log(role),
     )  # codeql[py/cleartext-logging]
 
     return TokenResponse(
@@ -658,7 +658,7 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
             )
             db.commit()
         except Exception:
-            logger.exception("Password rehash failed for user=%s", row["user_id"])
+            logger.exception("Password rehash failed for user=%s", sanitize_for_log(row["user_id"]))
 
     # Check MFA
     if row["mfa_enabled"]:
@@ -728,7 +728,7 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     logger.info(
         "user_login: username=%s role=%s",
         sanitize_for_log(credentials.username),
-        role,
+        sanitize_for_log(role),
     )  # codeql[py/cleartext-logging]
 
     return TokenResponse(
@@ -971,8 +971,8 @@ async def update_user_role(
 
     logger.info(
         "role_updated: user_id=%s new_role=%s by=%s",
-        user_id,
-        role,
+        sanitize_for_log(user_id),
+        sanitize_for_log(role),
         sanitize_for_log(current_user.get("username", "unknown")),
     )
 
@@ -1089,7 +1089,7 @@ async def jwks():
                     ],
                 }
         except Exception as exc:
-            logger.debug("JWKS generation failed: %s", exc)
+            logger.debug("JWKS generation failed: %s", sanitize_for_log(exc))
     return {"keys": []}
 
 

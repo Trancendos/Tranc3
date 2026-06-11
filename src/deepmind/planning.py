@@ -104,9 +104,9 @@ class BeamSearchPlanner:
 
             logger.debug(
                 "Beam search depth %d: %d candidates → %d kept",
-                depth,
-                len(candidates),
-                len(beam),
+                sanitize_for_log(depth),
+                sanitize_for_log(len(candidates)),
+                sanitize_for_log(len(beam)),
             )
 
         return beam
@@ -461,8 +461,8 @@ class StrategicPlanner:
         logger.info(  # codeql[py/cleartext-logging]
             "plan_action: goal=%r, plan_len=%d, confidence=%.3f",
             sanitize_for_log(goal[:60]),
-            len(valid_plan),
-            combined_confidence,
+            sanitize_for_log(len(valid_plan)),
+            sanitize_for_log(combined_confidence),
         )
 
         return {

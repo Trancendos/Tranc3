@@ -278,7 +278,7 @@ class Observatory:
             conn.commit()
             return len(batch)
         except Exception:
-            logger.exception("observatory: flush_to_db failed — re-queuing %d events", len(batch))
+            logger.exception("observatory: flush_to_db failed — re-queuing %d events", sanitize_for_log(len(batch)))
             with self._unflushed_lock:
                 self._unflushed[:0] = batch  # prepend back
             return 0
@@ -306,15 +306,15 @@ class Observatory:
                 try:
                     flushed = await asyncio.to_thread(self.flush_to_db)
                     if flushed:
-                        logger.debug("observatory: flushed %d events to audit DB", flushed)
+                        logger.debug("observatory: flushed %d events to audit DB", sanitize_for_log(flushed))
                     # Hourly purge (every ~60 flush cycles)
                     if int(time.time()) % 3600 < _FLUSH_INTERVAL:
                         purged = await asyncio.to_thread(self.purge_old_events)
                         if purged:
                             logger.info(
                                 "observatory: purged %d events older than %d days",
-                                purged,
-                                _RETENTION_DAYS,
+                                sanitize_for_log(purged),
+                                sanitize_for_log(_RETENTION_DAYS),
                             )
                 except asyncio.CancelledError:
                     raise

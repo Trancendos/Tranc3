@@ -70,7 +70,7 @@ class VectorStore:
             # Smoke-test connectivity
             client.get_collection(_COLLECTION)
             self._backend_name = "qdrant"
-            logger.info("VectorStore: Qdrant backend active at %s", _QDRANT_URL)
+            logger.info("VectorStore: Qdrant backend active at %s", sanitize_for_log(_QDRANT_URL))
             return _QdrantBackend(client)
         except Exception as e:
             logger.info("Qdrant unavailable (%s) — trying FAISS", sanitize_for_log(e))

@@ -30,6 +30,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
+from Dimensional.sanitize import sanitize_for_log
+
 from .platform_registry import PlatformHealth, PlatformRegistry
 
 logger = logging.getLogger(__name__)
@@ -140,7 +142,7 @@ class ZeroCostEnforcer:
             self._enforcement_loop(),
             name="zero_cost_enforcer",
         )
-        logger.info("ZeroCostEnforcer started (interval=%.0fs)", self._check_interval)
+        logger.info("ZeroCostEnforcer started (interval=%.0fs)", sanitize_for_log(self._check_interval))
 
     async def stop(self) -> None:
         """Cancel the background enforcement task and wait for it to finish cleanly."""
@@ -244,8 +246,8 @@ class ZeroCostEnforcer:
         if violations:
             logger.warning(
                 "ZERO-COST ASSERTION FAILED: %d violation(s)\n%s",
-                len(violations),
-                "\n".join(f"  • {v}" for v in violations),
+                sanitize_for_log(len(violations)),
+                sanitize_for_log("\n".join(f"  • {v}" for v in violations)),
             )
         else:
             logger.debug("Zero-cost assertion PASSED — £0 spend confirmed")
@@ -273,22 +275,22 @@ class ZeroCostEnforcer:
         if fallback_name:
             logger.info(
                 "Platform rotation: %r → %r (category=%s)",
-                exhausted_name,
-                fallback_name,
-                platform.category.value,
+                sanitize_for_log(exhausted_name),
+                sanitize_for_log(fallback_name),
+                sanitize_for_log(platform.category.value),
             )
         else:
             logger.error(
                 "Platform rotation: %r exhausted, NO fallback available for %s",
-                exhausted_name,
-                platform.category.value,
+                sanitize_for_log(exhausted_name),
+                sanitize_for_log(platform.category.value),
             )
 
         for cb in self._rotation_callbacks:
             try:
                 await cb(exhausted_name, fallback_name or "none")
             except Exception as exc:
-                logger.warning("Rotation callback failed: %s", exc)
+                logger.warning("Rotation callback failed: %s", sanitize_for_log(exc))
 
         return fallback_name
 
@@ -306,8 +308,8 @@ class ZeroCostEnforcer:
                     if report.status == QuotaStatus.CRITICAL:
                         logger.warning(
                             "Quota CRITICAL on %s (%.1f%%) — pre-emptive rotation",
-                            report.platform_name,
-                            report.utilisation_pct,
+                            sanitize_for_log(report.platform_name),
+                            sanitize_for_log(report.utilisation_pct),
                         )
                         fallback = await self.rotate_platform(report.platform_name)
                         report.action_taken = f"rotated_to:{fallback}"
@@ -315,8 +317,8 @@ class ZeroCostEnforcer:
                     elif report.status == QuotaStatus.WARNING:
                         logger.info(
                             "Quota WARNING on %s (%.1f%%) — monitoring",
-                            report.platform_name,
-                            report.utilisation_pct,
+                            sanitize_for_log(report.platform_name),
+                            sanitize_for_log(report.utilisation_pct),
                         )
                         report.action_taken = "monitoring"
 
@@ -335,7 +337,7 @@ class ZeroCostEnforcer:
             except asyncio.CancelledError:
                 break  # Expected when we cancel the task
             except Exception as exc:
-                logger.error("ZeroCostEnforcer loop error: %s", exc)
+                logger.error("ZeroCostEnforcer loop error: %s", sanitize_for_log(exc))
 
             await asyncio.sleep(self._check_interval)
 

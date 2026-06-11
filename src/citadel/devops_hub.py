@@ -183,9 +183,9 @@ class TheCitadel:
                     self._service_health[svc] = ServiceHealthStatus(status_val)
                 except ValueError:
                     logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
-            logger.info("citadel: loaded %d deploys from Redis", len(self._deploys))
+            logger.info("citadel: loaded %d deploys from Redis", sanitize_for_log(len(self._deploys)))
         except Exception as exc:
-            logger.warning("citadel: Redis hydration skipped: %s", exc)
+            logger.warning("citadel: Redis hydration skipped: %s", sanitize_for_log(exc))
 
     async def _persist_deploy(self, record: DeployRecord) -> None:
         try:

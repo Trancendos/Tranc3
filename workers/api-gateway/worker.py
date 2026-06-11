@@ -361,7 +361,7 @@ async def gateway(request: Request, path: str):
                 sanitize_for_log(request.method),
                 sanitize_for_log(path),
                 resp.status_code,
-                elapsed * 1000,
+                sanitize_for_log(elapsed * 1000),
             )  # codeql[py/cleartext-logging]
             return JSONResponse(
                 content=json.loads(resp.text)

@@ -421,7 +421,7 @@ class NotificationDispatcher:
         try:
             validated_url = validate_webhook_url(url)
         except SSRFError as e:
-            logger.warning("Webhook URL blocked by SSRF protection: %s", e)
+            logger.warning("Webhook URL blocked by SSRF protection: %s", sanitize_for_log(e))
             return False
 
         # Optional domain allowlist check
@@ -432,14 +432,14 @@ class NotificationDispatcher:
                 logger.warning(
                     "Webhook domain '%s' not in allowlist (%d domains configured)",
                     sanitize_for_log(hostname),
-                    len(_WEBHOOK_ALLOWED_DOMAINS),
+                    sanitize_for_log(len(_WEBHOOK_ALLOWED_DOMAINS)),
                 )
                 return False
 
         try:
             return await asyncio.to_thread(post_json_webhook, validated_url, payload)
         except Exception as e:
-            logger.error("Webhook dispatch failed: %s", e)
+            logger.error("Webhook dispatch failed: %s", sanitize_for_log(e))
             return False
 
     @staticmethod

@@ -22,6 +22,7 @@ from Dimensional.path_validation import (
     sanitize_filename,
     validate_path,
 )
+from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,7 @@ class PersonalitySpawner:
             raise FileExistsError(f"Target directory already exists: {target}")
 
         target.mkdir(parents=True, exist_ok=False)
-        logger.info("Spawning personality '%s' into %s", personality_id, target)
+        logger.info("Spawning personality '%s' into %s", sanitize_for_log(personality_id), sanitize_for_log(target))
 
         files_written = []
         files_written += self._write_config(target, profile)
@@ -441,5 +442,5 @@ class PersonalitySpawner:
                 pid = data.get("id", f.stem)
                 profiles[pid] = data
             except Exception as e:
-                logger.warning("Failed to load personality profile %s: %s", f, e)
+                logger.warning("Failed to load personality profile %s: %s", sanitize_for_log(f), sanitize_for_log(e))
         return profiles
