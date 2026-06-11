@@ -47,6 +47,7 @@ import base64
 import hashlib
 import logging
 import os
+import re
 import sqlite3
 from pathlib import Path
 from typing import Any, List, Optional
@@ -56,9 +57,13 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
+from src.errors.error_catalog import ErrorCode
+
 logger = logging.getLogger("tranc3.database.encrypted_sqlite")
 
 _SENTINEL = b"ENC1:"
+# Table name whitelist: must start with letter/underscore, contain only alphanumerics/underscores.
+_TABLE_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 _KEY_CACHE: dict[str, bytes] = {}
 
 # ---------------------------------------------------------------------------
@@ -218,6 +223,10 @@ class EncryptedKVStore:
     """
 
     def __init__(self, db_path: str, table: str = "kv_encrypted") -> None:
+        if not _TABLE_NAME_RE.match(table):
+            raise ValueError(
+                f"[{ErrorCode.DB_INVALID_IDENTIFIER.value}] Invalid table name: {table!r}"
+            )
         self.db_path = db_path
         self.table = table
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
