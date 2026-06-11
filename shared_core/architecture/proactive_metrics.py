@@ -412,8 +412,8 @@ class ProactiveMetricsCollector:
                     pulse_metrics = self._pulse.get_metrics()
                     if isinstance(pulse_metrics, dict):
                         vitals.pulse_mode = pulse_metrics.get("current_mode", "steady")
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         # Config-derived vitals
         if self._config:
@@ -421,8 +421,8 @@ class ProactiveMetricsCollector:
                 if hasattr(self._config, "get_active_profile"):
                     profile = self._config.get_active_profile()
                     vitals.config_profile = str(profile) if profile else "unknown"
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         # Scaler-derived vitals
         if self._scaler:
@@ -433,8 +433,8 @@ class ProactiveMetricsCollector:
                         latest = decisions[-1] if isinstance(decisions, list) else decisions
                         if hasattr(latest, "direction"):
                             vitals.scaling_direction = latest.direction.value
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         # Bootstrap-derived vitals
         if self._bootstrap:
@@ -453,8 +453,8 @@ class ProactiveMetricsCollector:
                             "subsystems_total",
                             0,
                         )
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         # Determine health trend from history
         vitals.health_trend = self._compute_health_trend()
@@ -479,8 +479,8 @@ class ProactiveMetricsCollector:
                         errors=bridge_data.get("errors", 0),
                         last_activity=bridge_data.get("last_activity"),
                     )
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         # From individual subsystem stats
         subsystem_map = {
@@ -517,8 +517,8 @@ class ProactiveMetricsCollector:
                             status="active",
                             custom_metrics=stats,
                         )
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         return metrics
 
@@ -539,8 +539,8 @@ class ProactiveMetricsCollector:
                     "active_heals": stats.get("active_heals", 0),
                     "migrations_triggered": stats.get("migrations_triggered", 0),
                 }
-        except Exception:
-            pass
+        except Exception as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
 
         return {}
 
@@ -554,8 +554,8 @@ class ProactiveMetricsCollector:
                 zc = self._orchestrator.get_zero_cost_status()
                 if hasattr(zc, "to_dict"):
                     return zc.to_dict()
-        except Exception:
-            pass
+        except Exception as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
 
         return {"compliant": True, "details": "no_data"}
 
@@ -571,8 +571,8 @@ class ProactiveMetricsCollector:
             if hasattr(self._pulse, "get_all_intervals"):
                 details["intervals"] = self._pulse.get_all_intervals()
             return details
-        except Exception:
-            pass
+        except Exception as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
 
         return {}
 
@@ -588,8 +588,8 @@ class ProactiveMetricsCollector:
             if hasattr(self._scaler, "get_stats"):
                 details["stats"] = self._scaler.get_stats()
             return details
-        except Exception:
-            pass
+        except Exception as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
 
         return {}
 

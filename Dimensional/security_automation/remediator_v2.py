@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import ast
 import difflib
+import logging
 import os
 import shutil
 import subprocess
@@ -35,6 +36,8 @@ from Dimensional.security_automation.scanner import (
     Category,
     Violation,
 )
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Data models
@@ -520,8 +523,10 @@ class AutoRemediatorV2:
                     session.git_stash_ref = result.stdout.strip()
                 # Pop the stash immediately — we just wanted a checkpoint
                 subprocess.run(["git", "stash", "pop"], capture_output=True, timeout=30)
-            except (subprocess.TimeoutExpired, FileNotFoundError):
-                pass  # Git not available or no changes to stash
+            except (subprocess.TimeoutExpired, FileNotFoundError) as _exc:
+                logger.debug(
+                    "suppressed %s", _exc, exc_info=False
+                )  # Git not available or no changes to stash
 
         # Group violations by file
         by_file: Dict[str, List[Violation]] = {}
@@ -570,8 +575,8 @@ class AutoRemediatorV2:
         if session.backup_dir and os.path.exists(session.backup_dir):
             try:
                 shutil.rmtree(session.backup_dir)
-            except OSError:
-                pass
+            except OSError as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         return success
 
@@ -702,8 +707,8 @@ class AutoRemediatorV2:
                             os.path.basename(filepath),
                         ),
                     )
-                except OSError:
-                    pass
+                except OSError as _exc:
+                    logger.debug("suppressed %s", _exc, exc_info=False)
 
         # Write modified file
         try:

@@ -198,8 +198,8 @@ class SecurityWatchdog:
             try:
                 self._observer.stop()
                 self._observer.join(timeout=5.0)
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
             self._observer = None
 
         if self._thread is not None:

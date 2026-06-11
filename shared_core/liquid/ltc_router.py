@@ -13,10 +13,13 @@ All operations are synchronous; call from FastAPI via run_in_executor if needed.
 
 from __future__ import annotations
 
+import logging
 import math
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
+
+logger = logging.getLogger(__name__)
 
 _NCPS_AVAILABLE = False
 _TORCH_AVAILABLE = False
@@ -30,10 +33,10 @@ try:
         from ncps.wirings import AutoNCP  # type: ignore  # noqa: F401
 
         _NCPS_AVAILABLE = True
-    except ImportError:
-        pass
-except ImportError:
-    pass
+    except ImportError as _exc:
+        logger.debug("suppressed %s", _exc, exc_info=False)
+except ImportError as _exc:
+    logger.debug("suppressed %s", _exc, exc_info=False)
 
 
 @dataclass

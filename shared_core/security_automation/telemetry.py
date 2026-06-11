@@ -18,6 +18,7 @@ Features:
 from __future__ import annotations
 
 import json
+import logging
 from collections import Counter
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -25,6 +26,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from shared_core.security_automation.scanner import Severity, Violation
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Data model
@@ -545,8 +548,8 @@ class SecurityTelemetry:
             )
             if result.returncode == 0:
                 return result.stdout.strip()
-        except (OSError, subprocess.TimeoutExpired):
-            pass  # nosec B110 – graceful fallback when git unavailable
+        except (OSError, subprocess.TimeoutExpired) as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)  # nosec B110 – graceful fallback when git unavailable
         return "unknown"
 
     @staticmethod
@@ -563,6 +566,6 @@ class SecurityTelemetry:
             )
             if result.returncode == 0:
                 return result.stdout.strip()
-        except (OSError, subprocess.TimeoutExpired):
-            pass  # nosec B110 – graceful fallback when git unavailable
+        except (OSError, subprocess.TimeoutExpired) as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)  # nosec B110 – graceful fallback when git unavailable
         return "unknown"

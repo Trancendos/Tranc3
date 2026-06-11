@@ -521,8 +521,8 @@ class OciKeepaliveWorker:
             self._task.cancel()
             try:
                 await self._task
-            except asyncio.CancelledError:
-                pass
+            except asyncio.CancelledError as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
     # ------------------------------------------------------------------
     async def _loop(self) -> None:
@@ -550,8 +550,10 @@ class OciKeepaliveWorker:
                     headers={"Authorization": "Bearer Oracle"},
                 ) as resp:
                     await resp.read()
-        except Exception:
-            pass  # metadata not available outside OCI — that's fine
+        except Exception as _exc:
+            logger.debug(
+                "suppressed %s", _exc, exc_info=False
+            )  # metadata not available outside OCI — that's fine
 
         self._last_ping = time.monotonic()
         logger.debug("oci_keepalive.ping_ok")

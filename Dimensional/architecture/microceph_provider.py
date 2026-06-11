@@ -1054,8 +1054,8 @@ class CephHealthMonitor:
             self._task.cancel()
             try:
                 await self._task
-            except asyncio.CancelledError:
-                pass
+            except asyncio.CancelledError as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
     async def _loop(self) -> None:
         while self._running:

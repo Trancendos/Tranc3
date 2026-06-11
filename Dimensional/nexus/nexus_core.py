@@ -41,8 +41,6 @@ import hashlib
 import json
 import logging
 import os
-import sqlite3
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 import time
 import uuid
 from collections import defaultdict
@@ -59,6 +57,7 @@ from pydantic import BaseModel, Field
 from Dimensional.infinity.abac import ABACEngine
 from Dimensional.infinity.nomenclature import SentinelChannel
 from Dimensional.infinity.rbac import RBACEngine
+from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 logger = logging.getLogger("nexus")
 
@@ -617,8 +616,8 @@ class HealthAggregator:
                                 "severity": "high",
                             }
                         )
-                except (ValueError, TypeError):
-                    pass
+                except (ValueError, TypeError) as _exc:
+                    logger.debug("suppressed %s", _exc, exc_info=False)
 
             # Check response time
             if svc.response_time_ms and svc.response_time_ms > self._thresholds["response_time_ms"]:
@@ -1291,8 +1290,8 @@ def create_nexus_app() -> FastAPI:
                         await ws.send_text(
                             json.dumps({"type": "subscribed", "channel": msg["channel"]})
                         )
-                except (json.JSONDecodeError, KeyError):
-                    pass
+                except (json.JSONDecodeError, KeyError) as _exc:
+                    logger.debug("suppressed %s", _exc, exc_info=False)
         except WebSocketDisconnect:
             _ws_manager.disconnect(ws)
 

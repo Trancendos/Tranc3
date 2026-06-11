@@ -76,14 +76,14 @@ logger = logging.getLogger(__name__)
 
 # Phase 22.6: Optional FluidicRouter + CausalEventBus integration
 try:
-    from shared_core.architecture.fluidic_router import FluidicRouter
+    from shared_core.architecture.fluidic_router import FluidicRouter  # codeql[py/cyclic-import]
 
     _FLUIDIC_AVAILABLE = True
 except ImportError:
     _FLUIDIC_AVAILABLE = False
 
 try:
-    from shared_core.architecture.causal_event_bus import CausalEventBus
+    from shared_core.architecture.causal_event_bus import CausalEventBus  # codeql[py/cyclic-import]
 
     _CAUSAL_AVAILABLE = True
 except ImportError:
@@ -341,8 +341,8 @@ class DimensionalServiceBus:
             self._listener_task.cancel()
             try:
                 await self._listener_task
-            except asyncio.CancelledError:
-                pass
+            except asyncio.CancelledError as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
             self._listener_task = None
 
         # Cancel any pending requests
@@ -594,8 +594,8 @@ class DimensionalServiceBus:
         if service_id in self._handlers:
             try:
                 self._handlers[service_id].remove(handler)
-            except ValueError:
-                pass
+            except ValueError as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
             if not self._handlers[service_id]:
                 del self._handlers[service_id]
 
@@ -762,8 +762,8 @@ class DimensionalServiceBus:
                             delivered = True
                         except Exception as e:
                             logger.warning("Local pillar dispatch error: %s", str(e)[:200])
-            except ValueError:
-                pass
+            except ValueError as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         # Broadcast handlers
         if not message.target:

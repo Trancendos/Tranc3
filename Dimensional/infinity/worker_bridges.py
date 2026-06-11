@@ -177,8 +177,8 @@ class WorkerBridge:
             task.cancel()
             try:
                 await task
-            except asyncio.CancelledError:
-                pass
+            except asyncio.CancelledError as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
         self._listeners.clear()
         self._status = BridgeStatus.STOPPED
         logger.info("WorkerBridge[%s]: Stopped", self._bridge_name)
@@ -203,7 +203,9 @@ class WorkerBridge:
             return False
 
         try:
-            from Dimensional.infinity.sentinel_station import SentinelEvent
+            from Dimensional.infinity.sentinel_station import (
+                SentinelEvent,  # codeql[py/cyclic-import]
+            )
 
             # Validate channel against known channels
             try:
@@ -714,8 +716,8 @@ class AdminConfigTunerBridge(WorkerBridge):
                                 for r in self._pending_recommendations
                                 if r.get("recommendation_id") != rec_id
                             ]
-        except asyncio.CancelledError:
-            pass
+        except asyncio.CancelledError as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
         except Exception as exc:
             logger.error(
                 "AdminConfigTunerBridge: Config listener error: %s",
@@ -1179,8 +1181,8 @@ class RegistryDiscoveryBridge(WorkerBridge):
                         },
                         source="registry_discovery_bridge",
                     )
-        except asyncio.CancelledError:
-            pass
+        except asyncio.CancelledError as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
         except Exception as exc:
             logger.error(
                 "RegistryDiscoveryBridge: Registry listener error: %s",
@@ -1326,8 +1328,8 @@ class RegistryDiscoveryBridge(WorkerBridge):
         if self._bus is not None and pillar:
             try:
                 await self._bus.broadcast_pillar(pillar, change_payload)
-            except Exception:
-                pass
+            except Exception as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
 
         return sentinel_result
 

@@ -474,7 +474,7 @@ class Sentinel:
     def _check_secret_age(self) -> SentinelCheck:
         """Check for stale secrets that may need rotation."""
         try:
-            from Dimensional.architecture.vault import VaultSecretLoader
+            from Dimensional.architecture.vault import VaultSecretLoader  # codeql[py/cyclic-import]
 
             loader = VaultSecretLoader()
             leaks = loader.detect_leaks()
@@ -609,7 +609,7 @@ class Sentinel:
                 try:
                     content = path.read_text(encoding="utf-8")
                     state[f"file:{config_file}"] = hashlib.sha256(content.encode()).hexdigest()[:16]
-                except OSError:
-                    pass
+                except OSError as _exc:
+                    logger.debug("suppressed %s", _exc, exc_info=False)
 
         return state

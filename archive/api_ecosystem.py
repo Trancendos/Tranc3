@@ -70,14 +70,14 @@ async def lifespan(app: FastAPI):
             provider = _storage_factory.get_provider()
             if hasattr(provider, "stop_auto_sync"):
                 await provider.stop_auto_sync()
-        except Exception:
-            pass
+        except Exception as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
 
     # Stop auto-discovery
     try:
         await _registry.stop_discovery()
-    except Exception:
-        pass
+    except Exception as _exc:
+        logger.debug("suppressed %s", _exc, exc_info=False)
 
     logger.info("Shutdown complete")
 
@@ -562,8 +562,8 @@ async def get_neural_bus():
                 for edge in node.edges:
                     target = edge.target if hasattr(edge, "target") else str(edge)
                     connections.append({"from": hub["id"], "to": target})
-        except Exception:
-            pass
+        except Exception as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
 
     return {
         "activeNodes": len(online_hubs),

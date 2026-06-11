@@ -272,15 +272,15 @@ class RaftNode:
             self._election_timer.cancel()
             try:
                 await self._election_timer
-            except asyncio.CancelledError:
-                pass
+            except asyncio.CancelledError as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
             self._election_timer = None
         if self._heartbeat_task:
             self._heartbeat_task.cancel()
             try:
                 await self._heartbeat_task
-            except asyncio.CancelledError:
-                pass
+            except asyncio.CancelledError as _exc:
+                logger.debug("suppressed %s", _exc, exc_info=False)
             self._heartbeat_task = None
         logger.info("RaftNode %s stopped", self._config.node_id)
 
@@ -292,8 +292,8 @@ class RaftNode:
             loop = asyncio.get_event_loop()
             _timeout = self._config.election_timeout_ms / 1000.0
             self._election_timer = loop.create_task(self._election_timeout())
-        except RuntimeError:
-            pass
+        except RuntimeError as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
 
     async def _election_timeout(self) -> None:
         """Handle election timeout — become candidate and start election."""
@@ -340,8 +340,8 @@ class RaftNode:
         try:
             loop = asyncio.get_event_loop()
             self._heartbeat_task = loop.create_task(self._send_heartbeats())
-        except RuntimeError:
-            pass
+        except RuntimeError as _exc:
+            logger.debug("suppressed %s", _exc, exc_info=False)
 
     async def _send_heartbeats(self) -> None:
         """Send periodic heartbeats as leader."""
