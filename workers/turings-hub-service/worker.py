@@ -428,7 +428,7 @@ async def health():
     if RHUBARB_BIN is not None:
         try:
             rhubarb_alive = (
-                subprocess.run(
+                subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
                     [RHUBARB_BIN, "--version"], capture_output=True, timeout=3
                 ).returncode
                 == 0

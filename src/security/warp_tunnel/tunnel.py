@@ -90,8 +90,8 @@ class WarpTunnel:
         raw: bytes = (
             content.encode("utf-8", errors="replace") if isinstance(content, str) else content
         )
-        # Sanitize source for log safety — strip ASCII control chars to prevent log injection.
-        safe_source = str(source)[:64].encode("unicode_escape").decode("ascii")
+        # Sanitize source for log safety — replace newlines/CRs to prevent log injection (CWE-117).
+        safe_source = str(source)[:64].replace("\n", "\\n").replace("\r", "\\r")
 
         # Size gate — avoids scanning multi-GB payloads
         if self.config.max_content_bytes and len(raw) > self.config.max_content_bytes:
