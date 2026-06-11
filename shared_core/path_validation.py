@@ -168,16 +168,27 @@ def validate_path(
         raise PathTraversalError(
             f"Path contains disallowed components (null byte or '..'): {raw!r}",
         )
-    )
 
+    base = _base_dir_realpath(base_dir)
+    if os.path.isabs(raw):
+        candidate = os.path.normpath(raw)
+    else:
+        candidate = os.path.normpath(os.path.join(base, raw))
+    resolved = os.path.realpath(candidate)
 
     # Ensure the resolved path starts with the base directory
-    try:
-        resolved.relative_to(base)
-    except ValueError:
+    if not _is_path_under_base(resolved, base):
         raise PathTraversalError(
             f"Path escapes base directory: {resolved} is not under {base}",
-        ) from None
+        )
+
+    if must_exist and not _fs_exists(resolved):
+        raise FileNotFoundError(f"Validated path does not exist: {resolved}")
+
+    if not allow_create and not _fs_exists(resolved):
+        raise FileNotFoundError(f"Path does not exist and creation is not allowed: {resolved}")
+
+    return Path(resolved)
 
 
 def existing_file_path_str(
