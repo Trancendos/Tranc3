@@ -365,8 +365,8 @@ async def search(
         d = dict(r)
         try:
             d["metadata"] = json.loads(d["metadata"])
-        except Exception:
-            pass
+        except json.JSONDecodeError:
+            d["metadata"] = {}
         results.append(d)
     return {"query": q, "index": index, "results": results, "count": len(results)}
 

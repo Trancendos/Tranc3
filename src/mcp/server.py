@@ -220,10 +220,20 @@ async def _method_tools_call(params: Optional[Dict[str, Any]], request_id: Any) 
         await _bus.publish("error", {"tool": tool_name, "error": msg, "request_id": request_id})
         return _err(request_id, ERR_TOOL_EXECUTION, msg)
     except Exception as exc:
-        msg = f"{type(exc).__name__}: {exc}"
-        logger.exception("mcp.tools_call error tool=%s", tool_name)
-        await _bus.publish("error", {"tool": tool_name, "error": msg, "request_id": request_id})
-        return _err(request_id, ERR_TOOL_EXECUTION, f"Tool execution failed: {msg}")
+        logger.exception(
+            "mcp.tools_call error tool=%s detail=%s",
+            sanitize_for_log(tool_name),
+            sanitize_for_log(exc),
+        )
+        await _bus.publish(
+            "error",
+            {
+                "tool": tool_name,
+                "error": type(exc).__name__,
+                "request_id": request_id,
+            },
+        )
+        return _err(request_id, ERR_TOOL_EXECUTION, "Tool execution failed")
 
 
 async def _method_resources_list(
@@ -570,4 +580,9 @@ async def handle_rpc(body: Dict[str, Any], enhanced: Any = None) -> Dict[str, An
             "handle_rpc unhandled error method=%s",
             sanitize_for_log(method),
         )  # codeql[py/cleartext-logging]
-        return _err(rpc_id, ERR_INTERNAL_ERROR, f"Internal error: {type(exc).__name__}: {exc}")
+        logger.exception(
+            "mcp internal error method=%s detail=%s",
+            sanitize_for_log(method),
+            sanitize_for_log(exc),
+        )
+        return _err(rpc_id, ERR_INTERNAL_ERROR, f"Internal error: {type(exc).__name__}")

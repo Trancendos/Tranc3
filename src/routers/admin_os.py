@@ -6,6 +6,7 @@ from fastapi import APIRouter, Body, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
+from Dimensional.error_handlers import safe_error_detail
 from src.admin_os import backups, domain_model, events, files_manager, system_viewer
 from src.admin_os.db import upsert_override
 from src.entities.override_store import invalidate_override_cache
@@ -111,9 +112,9 @@ async def files_list(path: str = Query("", description="Relative path under work
     try:
         return files_manager.list_dir(path)
     except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+        raise HTTPException(404, safe_error_detail(exc, 404)) from exc
     except (PermissionError, NotADirectoryError) as exc:
-        raise HTTPException(400, str(exc)) from exc
+        raise HTTPException(400, safe_error_detail(exc, 400)) from exc
 
 
 @router.get("/files/read")
@@ -121,9 +122,9 @@ async def files_read(path: str = Query(...)):
     try:
         return files_manager.read_file(path)
     except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+        raise HTTPException(404, safe_error_detail(exc, 404)) from exc
     except ValueError as exc:
-        raise HTTPException(413, str(exc)) from exc
+        raise HTTPException(413, safe_error_detail(exc, 413)) from exc
 
 
 @router.put("/files/write")
@@ -131,9 +132,9 @@ async def files_write(path: str = Query(...), body: FileWriteBody = Body(...)):
     try:
         return files_manager.write_file(path, body.content, create=body.create)
     except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+        raise HTTPException(404, safe_error_detail(exc, 404)) from exc
     except IsADirectoryError as exc:
-        raise HTTPException(400, str(exc)) from exc
+        raise HTTPException(400, safe_error_detail(exc, 400)) from exc
 
 
 @router.post("/files/mkdir")
@@ -141,7 +142,7 @@ async def files_mkdir(path: str = Query(...)):
     try:
         return files_manager.mkdir(path)
     except PermissionError as exc:
-        raise HTTPException(403, str(exc)) from exc
+        raise HTTPException(403, safe_error_detail(exc, 403)) from exc
 
 
 @router.delete("/files")
@@ -149,9 +150,9 @@ async def files_delete(path: str = Query(...)):
     try:
         return files_manager.delete_path(path)
     except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+        raise HTTPException(404, safe_error_detail(exc, 404)) from exc
     except PermissionError as exc:
-        raise HTTPException(403, str(exc)) from exc
+        raise HTTPException(403, safe_error_detail(exc, 403)) from exc
 
 
 @router.get("/backups")

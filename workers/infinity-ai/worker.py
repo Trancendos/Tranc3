@@ -45,6 +45,7 @@ WORKER_NAME = "infinity-ai"
 DB_PATH = Path(__file__).parent / "data" / "ai_gateway.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
+
 # Provider configuration — zero-cost providers only
 def _load_ollama_base_url() -> str:
     raw = os.getenv("OLLAMA_URL", "http://localhost:11434")

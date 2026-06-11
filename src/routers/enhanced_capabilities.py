@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 
 from auth import get_current_user
 from Dimensional.error_handlers import safe_error_detail
+from Dimensional.sanitize import sanitize_for_log
 
 _log = logging.getLogger("tranc3.enhanced_capabilities")
 
@@ -224,8 +225,8 @@ async def healing_dashboard():
 
         return await health_monitor.get_system_health()
     except Exception as exc:
-        _log.warning("healing.dashboard error: %s", exc)
-        return {"status": "degraded", "error": str(exc)}
+        _log.warning("healing.dashboard error: %s", sanitize_for_log(exc))
+        return {"status": "degraded", "error": "Health monitor unavailable"}
 
 
 @router.post("/healing/repair", tags=["healing"])

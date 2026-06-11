@@ -85,6 +85,7 @@ from Dimensional.infinity.sentinel_station import (
 
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
+from Dimensional.sanitize import sanitize_for_log
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -785,9 +786,13 @@ async def portal_login(request: Request, login: PortalLogin):
         },
     )
     if not defense_result.allowed:
+        logger.warning(
+            "Defense layer blocked login: %s",
+            sanitize_for_log(defense_result.reason),
+        )
         raise HTTPException(
             status_code=429,
-            detail=f"Request blocked by defense layer: {defense_result.reason}",
+            detail="Request blocked by defense layer",
         )
 
     # Call Infinity Auth for authentication
@@ -910,9 +915,13 @@ async def portal_register(request: Request, registration: PortalRegister):
         },
     )
     if not defense_result.allowed:
+        logger.warning(
+            "Defense layer blocked login: %s",
+            sanitize_for_log(defense_result.reason),
+        )
         raise HTTPException(
             status_code=429,
-            detail=f"Request blocked by defense layer: {defense_result.reason}",
+            detail="Request blocked by defense layer",
         )
 
     # Call Infinity Auth for registration

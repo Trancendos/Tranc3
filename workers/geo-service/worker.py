@@ -29,6 +29,8 @@ from typing import Optional
 import httpx
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 
+from Dimensional.error_handlers import safe_error_detail
+from Dimensional.sanitize import sanitize_for_log
 from Dimensional.url_validation import SSRFError, validate_ip_address
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -183,7 +185,8 @@ async def lookup_ip(ip: str) -> dict:
     try:
         safe_ip = validate_ip_address(ip)
     except SSRFError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning("Invalid IP address rejected: %s", sanitize_for_log(exc))
+        raise HTTPException(status_code=400, detail=safe_error_detail(exc, 400)) from exc
 
     cached = _get_cached(safe_ip)
     if cached:

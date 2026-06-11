@@ -27,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from src.database.encrypted_sqlite import connect as sqlite3_connect
+from shared_core.error_handlers import safe_error_detail
 from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8022
@@ -272,7 +273,7 @@ async def delete_topic(topic: str):
 def _ensure_topic(topic: str) -> None:
     with get_conn() as conn:
         if not conn.execute("SELECT name FROM topics WHERE name = ?", (topic,)).fetchone():
-            raise HTTPException(status_code=404, detail=f"Topic '{topic}' not found")
+            raise HTTPException(status_code=404, detail="Topic not found")
 
 
 # --- Publish ---
@@ -294,7 +295,7 @@ async def publish(topic: str, req: PublishIn):
         from src.capacity.guard import CapacityExceededError
 
         if isinstance(_qe, CapacityExceededError):
-            raise HTTPException(status_code=503, detail=str(_qe)) from _qe
+            raise HTTPException(status_code=503, detail=safe_error_detail(_qe, 503)) from _qe
     now = time.time()
     msg_id = str(uuid.uuid4())
     visible_after = now + req.delay

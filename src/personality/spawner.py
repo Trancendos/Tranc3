@@ -16,7 +16,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from Dimensional.path_validation import PathTraversalError, safe_join, sanitize_filename, validate_path
+from Dimensional.path_validation import (
+    PathTraversalError,
+    safe_join,
+    sanitize_filename,
+    validate_path,
+)
 
 logger = logging.getLogger(__name__)
 
