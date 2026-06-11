@@ -40,7 +40,10 @@ class QuantumInferenceEngine:
             self.num_qubits = min(config.get("num_qubits", 8), 16)  # Limit for simulation
 
         # Classical fallback
-        self.classical_model = nn.Linear(768, 768)  # Placeholder
+        if _TORCH_AVAILABLE:
+            self.classical_model = nn.Linear(768, 768)  # Placeholder
+        else:
+            self.classical_model = None
 
     def quantum_attention(
         self,

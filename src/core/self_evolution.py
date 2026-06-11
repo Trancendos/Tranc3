@@ -1,4 +1,5 @@
 # src/core/self_evolution.py
+from __future__ import annotations
 
 import logging
 

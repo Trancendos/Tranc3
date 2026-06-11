@@ -21,8 +21,8 @@ try:
 except (ImportError, RuntimeError, OSError):  # pragma: no cover
     # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
     torch = None  # type: ignore[assignment]
-    DataLoader = None  # type: ignore[assignment]
-    Dataset = None  # type: ignore[assignment]
+    DataLoader = object  # type: ignore[assignment,misc]
+    Dataset = object  # type: ignore[assignment,misc]
     _TORCH_AVAILABLE = False
 else:
     _TORCH_AVAILABLE = True

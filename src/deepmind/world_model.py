@@ -92,6 +92,10 @@ class DynamicsNetwork(nn.Module if nn is not None else object):
     """
 
     def __init__(self, config: WorldModelConfig) -> None:
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                "DynamicsNetwork requires PyTorch, but it is not available in this runtime."
+            )
         super().__init__()
         in_dim = config.state_dim + config.action_dim
 
@@ -140,6 +144,10 @@ class PredictionNetwork(nn.Module if nn is not None else object):
     """
 
     def __init__(self, config: WorldModelConfig) -> None:
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                "PredictionNetwork requires PyTorch, but it is not available in this runtime."
+            )
         super().__init__()
         self.config = config
 
@@ -185,6 +193,10 @@ class MuZeroWorldModel(nn.Module if nn is not None else object):
     """
 
     def __init__(self, config: WorldModelConfig) -> None:
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                "MuZeroWorldModel requires PyTorch, but it is not available in this runtime."
+            )
         super().__init__()
         self.config = config
         self.representation = RepresentationNetwork(config)

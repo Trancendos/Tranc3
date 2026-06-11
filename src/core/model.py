@@ -30,6 +30,9 @@ else:
 
 from .config import ModelConfig
 
+# Deferred no_grad decorator — evaluated at import time when torch may be None
+_no_grad = torch.no_grad() if _TORCH_AVAILABLE else (lambda f: f)
+
 # ---------------------------------------------------------------------------
 # Rotary Positional Embeddings (RoPE)
 # ---------------------------------------------------------------------------
@@ -253,7 +256,7 @@ class Tranc3Model(nn.Module if nn is not None else object):
 
         return logits, loss
 
-    @torch.no_grad()
+    @_no_grad
     def generate(
         self,
         input_ids: torch.Tensor,
