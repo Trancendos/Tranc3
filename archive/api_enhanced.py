@@ -273,7 +273,11 @@ async def call_mcp_tool(req: MCPToolRequest, request: Request):
     enhanced = request.app.state.enhanced
     result = await enhanced.call_mcp_tool(req.tool, req.params)
     if "error" in result:
-        logger.warning("MCP tool error for %s: %s", sanitize_for_log(req.tool), sanitize_for_log(result["error"]))
+        logger.warning(
+            "MCP tool error for %s: %s",
+            sanitize_for_log(req.tool),
+            sanitize_for_log(result["error"]),
+        )
         raise HTTPException(status_code=404, detail="MCP tool not found or unavailable")
     return result
 

@@ -84,9 +84,7 @@ REPLACEMENTS: dict[str, list[tuple[str, str]]] = {
 }
 
 # F-string logger conversions for hive_core
-FSTRING_LOGGER_RE = re.compile(
-    r'logger\.(debug|info|warning|error|exception)\(f"([^"]*)"\)'
-)
+FSTRING_LOGGER_RE = re.compile(r'logger\.(debug|info|warning|error|exception)\(f"([^"]*)"\)')
 
 
 def _ensure_import(content: str, import_line: str) -> str:
@@ -160,9 +158,7 @@ def apply_replacements(rel_path: str) -> bool:
         return False
     content = path.read_text()
     original = content
-    import_line = (
-        SHARED_CORE_IMPORT if rel_path.startswith("shared_core/") else DIMENSIONAL_IMPORT
-    )
+    import_line = SHARED_CORE_IMPORT if rel_path.startswith("shared_core/") else DIMENSIONAL_IMPORT
     for old, new in REPLACEMENTS.get(rel_path, []):
         if old in content:
             content = content.replace(old, new)

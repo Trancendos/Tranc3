@@ -225,7 +225,11 @@ def _duckdb_conn() -> "duckdb.DuckDBPyConnection":
             try:
                 con.execute(f"ATTACH '{_safe_path(path)}' AS {alias}_db (TYPE sqlite, READ_ONLY)")
             except Exception as exc:
-                logger.debug("DuckDB: could not attach %s db: %s", sanitize_for_log(alias), sanitize_for_log(exc))
+                logger.debug(
+                    "DuckDB: could not attach %s db: %s",
+                    sanitize_for_log(alias),
+                    sanitize_for_log(exc),
+                )
 
     return con
 
@@ -295,7 +299,9 @@ async def _archive_old_events() -> Dict[str, Any]:
             # COPY destination path is server-controlled; parquet_path validated by PARQUET_DIR prefix
             safe_parquet = str(parquet_path)
             if any(c in safe_parquet for c in ("'", '"', ";")):
-                logger.error("archive: unsafe parquet path %r — skipping", sanitize_for_log(safe_parquet))
+                logger.error(
+                    "archive: unsafe parquet path %r — skipping", sanitize_for_log(safe_parquet)
+                )
                 continue
 
             con.execute(
@@ -335,7 +341,11 @@ async def _archive_old_events() -> Dict[str, Any]:
 
             total_archived += row_count
             files_written.append(f"events_{month}.parquet")
-            logger.info("archive: wrote %s (%d rows)", sanitize_for_log(parquet_path.name), sanitize_for_log(row_count))
+            logger.info(
+                "archive: wrote %s (%d rows)",
+                sanitize_for_log(parquet_path.name),
+                sanitize_for_log(row_count),
+            )
         finally:
             con.close()
 
@@ -1026,7 +1036,9 @@ async def analytics_dataframe(body: DataFrameIn):
                     if col_a in df.columns and col_b in df.columns:
                         result[f"corr_{col_a}_{col_b}"] = df[col_a].corr(df[col_b])
         except Exception as exc:
-            logger.warning("DataFrame operation %s failed: %s", sanitize_for_log(op), sanitize_for_log(exc))
+            logger.warning(
+                "DataFrame operation %s failed: %s", sanitize_for_log(op), sanitize_for_log(exc)
+            )
             result[f"op_error_{op}"] = "Operation failed"
 
     return result

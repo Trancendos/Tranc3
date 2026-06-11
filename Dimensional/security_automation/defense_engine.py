@@ -181,7 +181,10 @@ class DefenseEngine:
         self._blocked_count = 0
         self._allowed_count = 0
         self._seed_default_firewall_rules()
-        logger.info("DefenseEngine initialized with %d default rules", sanitize_for_log(len(self._firewall_rules)))
+        logger.info(
+            "DefenseEngine initialized with %d default rules",
+            sanitize_for_log(len(self._firewall_rules)),
+        )
 
     # ─── Firewall ────────────────────────────────────────────
 

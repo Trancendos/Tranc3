@@ -430,7 +430,9 @@ async def _lifespan(app: FastAPI):
                 ).rowcount
                 db.commit()
                 if deleted:
-                    logger.info("Revocation cleanup: purged %d expired entries", sanitize_for_log(deleted))
+                    logger.info(
+                        "Revocation cleanup: purged %d expired entries", sanitize_for_log(deleted)
+                    )
             except asyncio.CancelledError:
                 break
             except Exception:

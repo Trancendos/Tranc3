@@ -124,7 +124,9 @@ class SovereignController:
                         priority=1,
                     )
                 )
-                logger.critical("ZERO-COST VIOLATION: %s", sanitize_for_log(self._state.zero_cost_violations))
+                logger.critical(
+                    "ZERO-COST VIOLATION: %s", sanitize_for_log(self._state.zero_cost_violations)
+                )
             else:
                 self._state.zero_cost_violations = []
         except ImportError:

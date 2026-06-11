@@ -107,7 +107,11 @@ class PersonalitySpawner:
             raise FileExistsError(f"Target directory already exists: {target}")
 
         target.mkdir(parents=True, exist_ok=False)
-        logger.info("Spawning personality '%s' into %s", sanitize_for_log(personality_id), sanitize_for_log(target))
+        logger.info(
+            "Spawning personality '%s' into %s",
+            sanitize_for_log(personality_id),
+            sanitize_for_log(target),
+        )
 
         files_written = []
         files_written += self._write_config(target, profile)
@@ -442,5 +446,9 @@ class PersonalitySpawner:
                 pid = data.get("id", f.stem)
                 profiles[pid] = data
             except Exception as e:
-                logger.warning("Failed to load personality profile %s: %s", sanitize_for_log(f), sanitize_for_log(e))
+                logger.warning(
+                    "Failed to load personality profile %s: %s",
+                    sanitize_for_log(f),
+                    sanitize_for_log(e),
+                )
         return profiles

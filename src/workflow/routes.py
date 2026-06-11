@@ -85,7 +85,11 @@ async def register_workflow(body: Dict[str, Any] = Body(...)):
     except Exception:
         return JSONResponse({"error": "Invalid workflow definition"}, status_code=400)
     _workflow_registry[wf.id] = wf
-    logger.info("grid: registered workflow id=%s name=%s", sanitize_for_log(wf.id), sanitize_for_log(wf.name))
+    logger.info(
+        "grid: registered workflow id=%s name=%s",
+        sanitize_for_log(wf.id),
+        sanitize_for_log(wf.name),
+    )
     try:
         from src.observability.observatory import EventCategory, observe
 

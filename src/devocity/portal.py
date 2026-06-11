@@ -192,7 +192,9 @@ class DevOcity:
                 except Exception:
                     pass  # nosec B110 — graceful degradation; error logged upstream
 
-            logger.info("devocity: loaded %d accounts from Redis", sanitize_for_log(len(self._accounts)))
+            logger.info(
+                "devocity: loaded %d accounts from Redis", sanitize_for_log(len(self._accounts))
+            )
         except Exception as exc:
             logger.warning("devocity: Redis hydration skipped: %s", sanitize_for_log(exc))
 

@@ -29,7 +29,9 @@ class TierRelay:
         registry = get_prime_registry()
         prime = registry.prime_for_entity(entity_id)
         if not prime:
-            logger.warning("No Prime governs entity %s — escalating to sovereign", sanitize_for_log(entity_id))
+            logger.warning(
+                "No Prime governs entity %s — escalating to sovereign", sanitize_for_log(entity_id)
+            )
             return True  # Allow by default if no prime defined (edge case)
         decision = prime.authorise_rotation(entity_id, reason)
         if not decision.approved:

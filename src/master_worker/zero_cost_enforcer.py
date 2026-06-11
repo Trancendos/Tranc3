@@ -142,7 +142,9 @@ class ZeroCostEnforcer:
             self._enforcement_loop(),
             name="zero_cost_enforcer",
         )
-        logger.info("ZeroCostEnforcer started (interval=%.0fs)", sanitize_for_log(self._check_interval))
+        logger.info(
+            "ZeroCostEnforcer started (interval=%.0fs)", sanitize_for_log(self._check_interval)
+        )
 
     async def stop(self) -> None:
         """Cancel the background enforcement task and wait for it to finish cleanly."""

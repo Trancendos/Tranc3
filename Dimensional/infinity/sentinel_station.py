@@ -297,10 +297,14 @@ class RedisConnectionManager:
             # Test connection
             await self._client.ping()
             self._connected = True
-            logger.info("Sentinel Station connected to Redis at %s", sanitize_for_log(self._config.host))
+            logger.info(
+                "Sentinel Station connected to Redis at %s", sanitize_for_log(self._config.host)
+            )
             return True
         except Exception as e:
-            logger.warning("Sentinel Station failed to connect to Redis: %s", sanitize_for_log(str(e)[:200]))
+            logger.warning(
+                "Sentinel Station failed to connect to Redis: %s", sanitize_for_log(str(e)[:200])
+            )
             self._connected = False
             return False
 
@@ -365,7 +369,9 @@ class RedisConnectionManager:
             if not self._pubsub:
                 self._pubsub = self._client.pubsub()
             await self._pubsub.subscribe(channel)
-            logger.info("Sentinel Station subscribed to Redis channel: %s", sanitize_for_log(channel))
+            logger.info(
+                "Sentinel Station subscribed to Redis channel: %s", sanitize_for_log(channel)
+            )
         except Exception as e:
             logger.warning("Redis subscribe failed: %s", sanitize_for_log(str(e)[:200]))
 
@@ -639,7 +645,9 @@ class SentinelStation:
                             try:
                                 data = gzip.decompress(bytes.fromhex(data)).decode()
                             except Exception as _exc:
-                                logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
+                                logger.debug(
+                                    "suppressed %s", sanitize_for_log(_exc), exc_info=False
+                                )
 
                         event = SentinelEvent.from_json(data)
                         self._stats["events_received"] += 1
@@ -651,7 +659,9 @@ class SentinelStation:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.warning("Sentinel Station Redis listener error: %s", sanitize_for_log(str(e)[:200]))
+                logger.warning(
+                    "Sentinel Station Redis listener error: %s", sanitize_for_log(str(e)[:200])
+                )
                 await asyncio.sleep(1)
 
     async def _run_handler(
