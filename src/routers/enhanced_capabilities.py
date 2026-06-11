@@ -20,9 +20,9 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from Dimensional.sanitize import sanitize_for_log
 from auth import get_current_user
 from Dimensional.error_handlers import safe_error_detail
+from Dimensional.sanitize import sanitize_for_log
 
 _log = logging.getLogger("tranc3.enhanced_capabilities")
 

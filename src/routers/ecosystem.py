@@ -30,11 +30,12 @@ import random
 import time
 from typing import Any, Dict, List, Optional
 
-from Dimensional.error_handlers import safe_error_detail
-from Dimensional.sanitize import sanitize_for_log
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
+
+from Dimensional.error_handlers import safe_error_detail
+from Dimensional.sanitize import sanitize_for_log
 
 _log = logging.getLogger("tranc3.ecosystem")
 

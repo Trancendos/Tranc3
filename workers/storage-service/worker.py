@@ -16,7 +16,6 @@ import logging
 import mimetypes
 import os
 import secrets
-import shutil
 import sqlite3
 import time
 from contextlib import asynccontextmanager

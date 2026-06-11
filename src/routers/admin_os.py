@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from Dimensional.error_handlers import safe_error_detail
 from fastapi import APIRouter, Body, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
+from Dimensional.error_handlers import safe_error_detail
 from src.admin_os import backups, domain_model, events, files_manager, system_viewer
 from src.admin_os.db import upsert_override
 from src.entities.override_store import invalidate_override_cache
