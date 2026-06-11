@@ -7,6 +7,7 @@ The model does the language generation; the personality shapes the behaviour.
 
 Security: Uses safe_torch_load to prevent pickle-based RCE (CVE-2024-48063, CVE-2025-32434)
 """
+
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
