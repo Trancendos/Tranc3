@@ -11,13 +11,30 @@ from typing import Any, Dict, Optional
 
 try:
     import torch
-
-    _TORCH_AVAILABLE = True
 except ImportError:  # pragma: no cover
     torch = None  # type: ignore[assignment]
     _TORCH_AVAILABLE = False
+else:
+    _TORCH_AVAILABLE = True
 
 logger = logging.getLogger(__name__)
+
+
+def _get_device(device: Optional[str]) -> Optional[torch.device]:
+    """Select compute device; returns None when PyTorch is unavailable.
+
+    Emits a warning if a specific device is requested but torch is absent so
+    callers are not silently surprised by bootstrap-mode falling back.
+    """
+    if device is not None and not _TORCH_AVAILABLE:
+        logger.warning(
+            "Device %r requested but PyTorch is not available — ignoring; bootstrap mode active.",
+            device,
+        )
+    if torch is not None:  # type-narrows torch from Optional to module
+        return torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
+    return None
+
 
 _DEFAULT_MODEL_PATH = os.getenv("TRANC3_MODEL_PATH", "./models/tranc3-v1/tranc3-final.pt")
 _DEFAULT_TOKENIZER_PATH = os.getenv("TRANC3_TOKENIZER_PATH", "./models/tokenizer")
@@ -53,12 +70,7 @@ class Tranc3Engine:
     ):
         self._model_path = Path(model_path or _DEFAULT_MODEL_PATH)
         self._tokenizer_path = Path(tokenizer_path or _DEFAULT_TOKENIZER_PATH)
-        if _TORCH_AVAILABLE:
-            self._device = torch.device(  # type: ignore[union-attr]
-                device or ("cuda" if torch.cuda.is_available() else "cpu")  # type: ignore[union-attr]
-            )
-        else:
-            self._device = None
+        self._device = _get_device(device)
         self._model = None
         self._tokenizer = None
         self._loaded = False
