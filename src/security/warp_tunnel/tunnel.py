@@ -90,10 +90,14 @@ class WarpTunnel:
         raw: bytes = (
             content.encode("utf-8", errors="replace") if isinstance(content, str) else content
         )
+        # Sanitize source for log safety — replace newlines/CRs to prevent log injection (CWE-117).
+        safe_source = str(source)[:64].replace("\n", "\\n").replace("\r", "\\r")
 
         # Size gate — avoids scanning multi-GB payloads
         if self.config.max_content_bytes and len(raw) > self.config.max_content_bytes:
-            logger.warning("warp_tunnel: oversized payload (%d bytes) from %s", len(raw), source)
+            logger.warning(
+                "warp_tunnel: oversized payload (%d bytes) from %s", len(raw), safe_source
+            )
             return TunnelResult(
                 allow=False,
                 verdict=ThreatVerdict.MALICIOUS,
@@ -126,7 +130,7 @@ class WarpTunnel:
                 reason += f" [quarantine_id={qid}]"
             logger.warning(
                 "warp_tunnel: BLOCKED content from %s — %s — qid=%s",
-                source,
+                safe_source,
                 report.verdict.value,
                 qid,
             )
@@ -142,7 +146,7 @@ class WarpTunnel:
         if report.verdict in self.config.warn_verdicts:
             logger.info(
                 "warp_tunnel: WARN content from %s — %s — qid=%s",
-                source,
+                safe_source,
                 report.verdict.value,
                 qid,
             )

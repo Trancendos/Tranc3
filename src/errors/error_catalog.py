@@ -49,6 +49,7 @@ class ErrorCode(str, Enum):
     DB_WRITE_FAILED = "TRANC3-DB-002"
     DB_READ_FAILED = "TRANC3-DB-003"
     DB_MIGRATION_NEEDED = "TRANC3-DB-004"
+    DB_INVALID_IDENTIFIER = "TRANC3-DB-005"
 
     # Quantum
     QUANT_BACKEND_FAILED = "TRANC3-QUANT-001"
@@ -317,6 +318,15 @@ CATALOG: Dict[ErrorCode, ErrorDefinition] = {
         docs_url="/docs/errors/TRANC3-DB-004",
         self_heal="run_migrations",
         severity="critical",
+    ),
+    ErrorCode.DB_INVALID_IDENTIFIER: ErrorDefinition(
+        code=ErrorCode.DB_INVALID_IDENTIFIER,
+        http_status=400,
+        title="Invalid Database Identifier",
+        message="A database identifier (table or column name) failed validation.",
+        guidance="Identifiers must start with a letter or underscore and contain only alphanumerics and underscores.",
+        docs_url="/docs/errors/TRANC3-DB-005",
+        severity="error",
     ),
     # Quantum
     ErrorCode.QUANT_BACKEND_FAILED: ErrorDefinition(

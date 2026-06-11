@@ -11,6 +11,7 @@ Zero-cost: subprocess + local scripts only (no paid APIs).
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -21,10 +22,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from src.entities.health_metadata import health_entity_block
+from src.errors.error_catalog import ErrorCode
 
 try:
     import yaml
@@ -32,6 +34,7 @@ except ImportError:
     yaml = None  # type: ignore
 
 WORKER_PORT = int(os.environ.get("SWARM_COORDINATOR_PORT", "8053"))
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
 WORKER_NAME = "swarm-coordinator"
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_DIR = Path(os.environ.get("SWARM_MANIFEST_DIR", ROOT / "config/swarm/manifests"))
@@ -142,6 +145,15 @@ async def startup() -> None:
     )
 
 
+async def _require_internal_auth(
+    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
+) -> None:
+    if not _INTERNAL_SECRET:
+        return
+    if not hmac.compare_digest(x_internal_secret, _INTERNAL_SECRET):
+        raise HTTPException(status_code=401, detail=ErrorCode.AUTH_TOKEN_INVALID.value)
+
+
 class RunRequest(BaseModel):
     manifest: str | None = Field(
         default=None,
@@ -172,7 +184,7 @@ async def status():
     }
 
 
-@app.post("/run")
+@app.post("/run", dependencies=[Depends(_require_internal_auth)])
 async def run_now(body: RunRequest | None = None):
     """Trigger an immediate manifest run (all or one file)."""
     async with _run_lock:
