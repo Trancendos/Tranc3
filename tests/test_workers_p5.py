@@ -681,7 +681,7 @@ class TestTuringsHubService:
 
     def test_get_entity_not_found(self):
         r = self.client.get("/entities/nonexistent-entity-id")
-        assert r.status_code in (404, 200)
+        assert r.status_code == 404
 
     def test_speak_not_found(self):
         r = self.client.post(
@@ -692,4 +692,4 @@ class TestTuringsHubService:
 
     def test_forge_missing_body(self):
         r = self.client.post("/forge", json={})
-        assert r.status_code in (422, 400, 404, 200)
+        assert r.status_code in (422, 400)

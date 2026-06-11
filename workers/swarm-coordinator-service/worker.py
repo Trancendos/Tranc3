@@ -11,6 +11,7 @@ Zero-cost: subprocess + local scripts only (no paid APIs).
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -149,7 +150,7 @@ async def _require_internal_auth(
 ) -> None:
     if not _INTERNAL_SECRET:
         return
-    if x_internal_secret != _INTERNAL_SECRET:
+    if not hmac.compare_digest(x_internal_secret, _INTERNAL_SECRET):
         raise HTTPException(status_code=401, detail=ErrorCode.AUTH_TOKEN_INVALID.value)
 
 
