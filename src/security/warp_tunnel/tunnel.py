@@ -16,6 +16,7 @@ Usage
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from typing import Optional
 
@@ -90,10 +91,14 @@ class WarpTunnel:
         raw: bytes = (
             content.encode("utf-8", errors="replace") if isinstance(content, str) else content
         )
+        # Sanitize source for log safety — strip ASCII control chars to prevent log injection.
+        safe_source = re.sub(r"[\x00-\x1f\x7f]", "?", str(source)[:64])
 
         # Size gate — avoids scanning multi-GB payloads
         if self.config.max_content_bytes and len(raw) > self.config.max_content_bytes:
-            logger.warning("warp_tunnel: oversized payload (%d bytes) from %s", len(raw), source)
+            logger.warning(
+                "warp_tunnel: oversized payload (%d bytes) from %s", len(raw), safe_source
+            )
             return TunnelResult(
                 allow=False,
                 verdict=ThreatVerdict.MALICIOUS,
@@ -126,7 +131,7 @@ class WarpTunnel:
                 reason += f" [quarantine_id={qid}]"
             logger.warning(
                 "warp_tunnel: BLOCKED content from %s — %s — qid=%s",
-                source,
+                safe_source,
                 report.verdict.value,
                 qid,
             )
@@ -142,7 +147,7 @@ class WarpTunnel:
         if report.verdict in self.config.warn_verdicts:
             logger.info(
                 "warp_tunnel: WARN content from %s — %s — qid=%s",
-                source,
+                safe_source,
                 report.verdict.value,
                 qid,
             )

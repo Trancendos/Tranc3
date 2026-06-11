@@ -39,6 +39,7 @@ import asyncio
 import json
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
 import uuid
@@ -68,7 +69,10 @@ PORTRAIT_DIR = ASSETS_DIR / "portraits"
 PERSONALITY_DIR = Path(os.environ.get("PERSONALITY_DIR", "/app/src/personality/profiles"))
 
 # External tool paths (set via env or auto-detected)
-RHUBARB_BIN = os.environ.get("RHUBARB_BIN", "rhubarb")
+# shutil.which() resolves to an absolute path of a real executable, or None.
+# Using a resolved absolute path satisfies subprocess security scanners and
+# prevents tainted-env-arg injection (no shell=True is used anywhere here).
+RHUBARB_BIN: Optional[str] = shutil.which(os.environ.get("RHUBARB_BIN", "rhubarb"))
 KOKORO_URL = os.environ.get("KOKORO_URL", "http://localhost:8080")
 PIPER_BIN = os.environ.get("PIPER_BIN", "piper")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
@@ -319,10 +323,15 @@ def _rhubarb_visemes(wav_path: str) -> Optional[List[Dict[str, Any]]]:
     Returns a list of {time_ms, shape, weight} dicts for each phoneme frame.
     Rhubarb must be installed and on PATH (or RHUBARB_BIN env set).
     """
+    if RHUBARB_BIN is None:
+        logger.info(
+            "Rhubarb not installed — lip sync unavailable"
+            " (install from github.com/DanielSWolf/rhubarb-lip-sync)"
+        )
+        return None
     try:
-        # Resolve to absolute path first, then verify existence.
-        # No shell=True so argument injection is not possible, but we still
-        # ensure the file exists before invoking the subprocess.
+        # Resolve wav_path to absolute and verify existence before subprocess.
+        # RHUBARB_BIN is already an absolute path resolved via shutil.which().
         resolved = Path(wav_path).resolve()
         if not resolved.is_file():
             logger.warning("Rhubarb: invalid or missing wav_path: %s", wav_path)
@@ -348,11 +357,6 @@ def _rhubarb_visemes(wav_path: str) -> Optional[List[Dict[str, Any]]]:
             }
             for cue in data.get("mouthCues", [])
         ]
-    except FileNotFoundError:
-        logger.info(
-            "Rhubarb not installed — lip sync unavailable (install from github.com/DanielSWolf/rhubarb-lip-sync)"
-        )
-        return None
     except Exception as exc:
         logger.warning("Rhubarb failed: %s", exc)
         return None
@@ -420,13 +424,17 @@ async def health():
     except Exception:
         pass
 
-    try:
-        rhubarb_alive = (
-            subprocess.run([RHUBARB_BIN, "--version"], capture_output=True, timeout=3).returncode
-            == 0
-        )
-    except (FileNotFoundError, subprocess.SubprocessError):
-        rhubarb_alive = False
+    rhubarb_alive = False
+    if RHUBARB_BIN is not None:
+        try:
+            rhubarb_alive = (
+                subprocess.run(
+                    [RHUBARB_BIN, "--version"], capture_output=True, timeout=3
+                ).returncode
+                == 0
+            )
+        except subprocess.SubprocessError:
+            rhubarb_alive = False
 
     return {
         "status": "ok",
