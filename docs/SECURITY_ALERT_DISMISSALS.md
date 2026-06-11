@@ -58,6 +58,33 @@ to bulk-close stale GitHub Security alerts.
 
 - `archive/` — legacy, not deployed; empty-except fixed for consistency only
 
+## CodeQL CWE-209 — Information exposure through an exception
+
+**Branch:** `cursor/codeql-exception-exposure-e51c`
+
+**Pattern:** `log_server_error(exc, status_code, context=...)` in `Dimensional/error_handlers.py`
+and `shared_core/error_handlers.py` logs the real exception server-side and returns static
+client messages (never embeds `str(exc)`), satisfying CodeQL `py/exception-information-leakage`.
+
+| Alert ID(s) | File | Fix |
+|-------------|------|-----|
+| #2492 | `src/routers/ecosystem.py:715` | Already static; sibling routes migrated to `log_server_error` |
+| #2367, #2366, #2365 | `archive/api_enhanced.py` | `safe_error_detail` → `log_server_error`; no `result["error"]` passthrough |
+| #2363, #2362 | `archive/api_ecosystem.py` | `str(e)` / `detail=str(e)` → `log_server_error` |
+| #2135, #2134 | `workers/blender-worker/worker.py` | `_blender_response_body()` — stderr logged server-side only |
+| #2133–#2129 | `workers/triposr-worker/worker.py` | All `/reconstruct` error paths use `log_server_error` |
+| #2092 | `workers/health-aggregator/worker.py` | `_check_one` details use static message via `log_server_error` |
+| #2065 | `src/routers/enhanced_capabilities.py` | All capability handlers use `log_server_error` |
+| #839 | `workers/notifications/worker.py` | SSRF + dispatch failures use static messages |
+| #346 | `workers/monitoring/worker.py` | `collect_health` unhealthy metadata via `log_server_error` |
+| #550, #549, #548, #27 | `src/nexus/routes.py` | Publish/send/inference handlers |
+| #345, #344 | `src/quantum/routes.py` | Quantum route handlers |
+| #343, #342 | `src/bio_neural/routes.py` | Consciousness/neuromorphic handlers |
+| #341 | `src/workflow/routes.py` | `run_workflow` handler |
+| #336–#340 | `src/personality/turingshub/routes.py` | Personality spawn/list/matrix handlers |
+
+**Post-merge:** Run CodeQL on `main` and close the above alerts after rescan confirms clearance.
+
 ## Live-path fixes (this branch)
 
 - P1 #1137: ZFS TOCTOU — atomic open+stat in `tranc3-ts/src/providers/ZFSProvider.ts`

@@ -344,6 +344,30 @@ class TestErrorHandlers:
             result = safe_error_detail(long_error, 500)
             assert len(result) <= 210  # 200 + "..."
 
+    def test_log_server_error_never_exposes_exception_text(self):
+        from Dimensional.error_handlers import log_server_error
+
+        secret = "postgres://user:secret@db.internal:5432/app"
+        with patch("Dimensional.error_handlers._IS_PROD", True):
+            result = log_server_error(Exception(secret), 500, context="unit test")
+        assert secret not in result
+        assert "ref:" in result
+
+    def test_log_server_error_development_still_static(self):
+        from Dimensional.error_handlers import log_server_error
+
+        with patch("Dimensional.error_handlers._IS_PROD", False):
+            result = log_server_error(Exception("internal stack trace detail"), 503)
+        assert "internal stack trace detail" not in result
+        assert "unavailable" in result.lower()
+
+    def test_log_server_error_status_messages(self):
+        from Dimensional.error_handlers import log_server_error
+
+        with patch("Dimensional.error_handlers._IS_PROD", False):
+            assert "not found" in log_server_error(Exception("x"), 404).lower()
+            assert "permission" in log_server_error(Exception("x"), 403).lower()
+
 
 # ─── Log Sanitization ────────────────────────────────────────────────────────
 

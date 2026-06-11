@@ -159,14 +159,38 @@ def _run_blender(script: str, timeout: int) -> dict[str, Any]:
             "returncode": -1,
         }
     except Exception as exc:
+        logger.exception("Blender subprocess failed")
         return {
             "success": False,
             "stdout": "",
-            "stderr": str(exc),
+            "stderr": "Blender process failed",
             "returncode": -1,
+            "_internal_error": repr(exc),
         }
     finally:
         Path(tmp_path).unlink(missing_ok=True)
+
+
+def _blender_response_body(result: dict[str, Any], **extra: Any) -> dict[str, Any]:
+    """Build a CWE-209-safe API payload from a Blender subprocess result."""
+    body: dict[str, Any] = {
+        "success": result["success"],
+        "returncode": result["returncode"],
+        **extra,
+    }
+    if result["success"]:
+        body["stdout"] = result["stdout"]
+        body["stderr"] = result["stderr"]
+        return body
+
+    if result.get("stderr"):
+        logger.warning(
+            "Blender process failed (rc=%s): %s",
+            result["returncode"],
+            result["stderr"],
+        )
+    body["message"] = "Blender process failed"
+    return body
 
 
 # ---------------------------------------------------------------------------
@@ -306,12 +330,7 @@ async def render_script(req: RenderRequest):
     status_code = 200 if result["success"] else 500
     return JSONResponse(
         status_code=status_code,
-        content={
-            "success": result["success"],
-            "returncode": result["returncode"],
-            "stdout": result["stdout"],
-            "stderr": result["stderr"],
-        },
+        content=_blender_response_body(result),
     )
 
 
@@ -348,14 +367,11 @@ async def create_scene(req: CreateSceneRequest):
     )
     result = _run_blender(script, req.timeout)
 
-    response_body: dict[str, Any] = {
-        "success": result["success"],
-        "object_count": len(req.objects),
-        "rendered": req.render and result["success"],
-        "returncode": result["returncode"],
-        "stdout": result["stdout"],
-        "stderr": result["stderr"],
-    }
+    response_body = _blender_response_body(
+        result,
+        object_count=len(req.objects),
+        rendered=req.render and result["success"],
+    )
 
     if req.render and result["success"]:
         # Blender appends the frame number, e.g. output0001.png

@@ -28,6 +28,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from Dimensional.error_handlers import log_server_error
+
 logger = logging.getLogger("tranc3.ecosystem")
 
 # ─── Lifespan: Startup/Shutdown ──────────────────────────────────────────────
@@ -683,7 +685,10 @@ async def get_storage_health():
         health = await provider.health()
         return health
     except Exception as e:
-        return {"status": "error", "error": str(e)}
+        return {
+            "status": "error",
+            "error": log_server_error(e, 500, context="storage health"),
+        }
 
 
 # ─── New: AI Gateway Endpoints ─────────────────────────────────────────────────────
@@ -708,8 +713,10 @@ async def get_ai_model_catalog(provider: Optional[str] = None):
             "catalog": catalog,
         }
     except Exception as e:
-        logger.error("Failed to get AI model catalog: %s", str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=log_server_error(e, 500, context="AI model catalog"),
+        ) from e
 
 
 @app.get("/api/ecosystem/ai/providers")
@@ -742,8 +749,10 @@ async def get_ai_provider_status():
             ),
         }
     except Exception as e:
-        logger.error("Failed to discover AI providers: %s", str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=log_server_error(e, 500, context="AI provider discovery"),
+        ) from e
 
 
 @app.get("/api/ecosystem/ai/routing-chains")
@@ -784,8 +793,10 @@ async def get_ai_routing_chains():
             "chains": chains,
         }
     except Exception as e:
-        logger.error("Failed to get routing chains: %s", str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=log_server_error(e, 500, context="AI routing chains"),
+        ) from e
 
 
 @app.post("/api/ecosystem/ai/optimal-chain")
@@ -809,8 +820,10 @@ async def get_optimal_routing_chain(chain_name: Optional[str] = None):
             "route_rules": chain.get_route_rules(),
         }
     except Exception as e:
-        logger.error("Failed to get optimal chain: %s", str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=log_server_error(e, 500, context="optimal AI routing chain"),
+        ) from e
 
 
 # ─── New: Heartbeat Monitoring Endpoints ────────────────────────────────────

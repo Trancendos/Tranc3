@@ -11,7 +11,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
 
-from Dimensional.error_handlers import safe_error_detail
+from Dimensional.error_handlers import log_server_error
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/luminous", tags=["luminous"])
@@ -60,7 +60,10 @@ async def calculate_phi(body: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     except ImportError:
         return JSONResponse({"error": "Required dependency not available"}, status_code=503)
     except Exception as exc:
-        return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
+        return JSONResponse(
+            {"error": log_server_error(exc, 500, context="consciousness phi")},
+            status_code=500,
+        )
 
 
 @router.post("/neuromorphic/process")
@@ -92,4 +95,7 @@ async def neuromorphic_process(body: Dict[str, Any] = Body(...)) -> Dict[str, An
     except ImportError:
         return JSONResponse({"error": "Required dependency not available"}, status_code=503)
     except Exception as exc:
-        return JSONResponse({"error": safe_error_detail(exc, 500)}, status_code=500)
+        return JSONResponse(
+            {"error": log_server_error(exc, 500, context="neuromorphic process")},
+            status_code=500,
+        )

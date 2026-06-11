@@ -27,6 +27,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from Dimensional.error_handlers import log_server_error
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -138,12 +139,17 @@ async def _check_one(name: str, url: str) -> dict:
         }
     except Exception as exc:
         ms = (time.time() - start) * 1000
+        safe_message = log_server_error(
+            exc,
+            503,
+            context=f"health check for {name}",
+        )
         return {
             "service": name,
             "status": "down",
             "http_code": None,
             "response_ms": round(ms, 1),
-            "details": {"error": str(exc)},
+            "details": {"error": safe_message},
         }
 
 
