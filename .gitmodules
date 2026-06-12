@@ -1,0 +1,6 @@
+[submodule "compliance/magna-carta"]
+	path = compliance/magna-carta
+	url = https://github.com/Trancendos/Magna-Carta.git
+[submodule "workers/cranbania"]
+	path = workers/cranbania
+	url = https://github.com/Trancendos/CranBania.git
