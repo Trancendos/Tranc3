@@ -62,10 +62,10 @@ class VaultClient:
                 self._cache[secret_name] = (value, datetime.now(timezone.utc))
                 return value
         except httpx.HTTPStatusError as e:
-            logger.error("Vault secret fetch failed for %s: %s", secret_name, e)
+            logger.error("Vault secret fetch failed (name redacted): %s", e)
             raise VaultError(f"Failed to fetch secret '{secret_name}': {e}") from e
         except Exception as e:
-            logger.warning("Vault unreachable, falling back to env for %s: %s", secret_name, e)
+            logger.warning("Vault unreachable, falling back to env (name redacted): %s", e)
             env_val = os.getenv(secret_name.upper().replace("-", "_"), "")
             if env_val:
                 return env_val

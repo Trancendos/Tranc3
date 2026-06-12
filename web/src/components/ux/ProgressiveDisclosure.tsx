@@ -36,9 +36,10 @@ function useDisclosureGate(gate: GateType, delay: number) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
+  const supportsHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
   const toggle = useCallback(() => {
-    if (gate === 'click') setOpen(o => !o)
-  }, [gate])
+    if (gate === 'click' || (gate === 'hover' && !supportsHover)) setOpen(o => !o)
+  }, [gate, supportsHover])
 
   useEffect(() => {
     if (gate === 'time') {
@@ -55,7 +56,7 @@ function useDisclosureGate(gate: GateType, delay: number) {
     }
   }, [gate, delay])
 
-  const hoverProps = gate === 'hover'
+  const hoverProps = gate === 'hover' && supportsHover
     ? {
         onMouseEnter: () => setOpen(true),
         onMouseLeave: () => setOpen(false),
@@ -64,15 +65,15 @@ function useDisclosureGate(gate: GateType, delay: number) {
       }
     : {}
 
-  return { open, toggle, ref, hoverProps }
+  return { open, toggle, ref, hoverProps, supportsHover }
 }
 
 function DisclosureItem({ layer, animate }: { layer: DisclosureLayer; animate: boolean }) {
   const gate = layer.gate ?? 'click'
   const delay = layer.delay ?? 2000
-  const { open, toggle, ref, hoverProps } = useDisclosureGate(gate, delay)
+  const { open, toggle, ref, hoverProps, supportsHover } = useDisclosureGate(gate, delay)
   const detailId = `pd-detail-${layer.id}`
-  const isInteractive = gate === 'click' || gate === 'hover'
+  const isInteractive = gate === 'click' || (gate === 'hover' && supportsHover)
 
   return (
     <div

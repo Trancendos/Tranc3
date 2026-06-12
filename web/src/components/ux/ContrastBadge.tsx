@@ -25,14 +25,16 @@ function contrastRatio(l1: number, l2: number): number {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
+const HEX_RE = /^[0-9a-fA-F]+$/
+
 /** Parse #rrggbb or #rgb hex to [r,g,b] */
 function parseHex(hex: string): [number, number, number] | null {
   const clean = hex.replace('#', '')
-  if (clean.length === 3) {
+  if (clean.length === 3 && HEX_RE.test(clean)) {
     const [r, g, b] = clean.split('').map(c => parseInt(c + c, 16))
     return [r, g, b]
   }
-  if (clean.length === 6) {
+  if (clean.length === 6 && HEX_RE.test(clean)) {
     return [
       parseInt(clean.slice(0, 2), 16),
       parseInt(clean.slice(2, 4), 16),

@@ -69,19 +69,26 @@ function HierarchyNodeItem({ node, gap }: { node: HierarchyNode; gap: string }) 
     <div style={{ display: 'flex', flexDirection: 'column', gap }}>
       <Tag style={LEVEL_STYLES[node.level]}>{node.content}</Tag>
       {node.children && node.children.length > 0 && (
-        <div
+        <ul
+          role="list"
           style={{
             paddingLeft: 'var(--ux-space-4)',
             borderLeft: '2px solid var(--ux-border)',
             display: 'flex',
             flexDirection: 'column',
             gap,
+            listStyle: 'none',
+            margin: 0,
+            padding: 0,
+            paddingInlineStart: 'var(--ux-space-4)',
           }}
         >
           {node.children.map(child => (
-            <HierarchyNodeItem key={child.id} node={child} gap={gap} />
+            <li key={child.id} role="listitem">
+              <HierarchyNodeItem node={child} gap={gap} />
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   )

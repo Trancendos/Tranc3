@@ -37,7 +37,7 @@ interface AdaptiveGridProps {
   as?: keyof JSX.IntrinsicElements
 }
 
-const GAP_TOKEN: Record<string, string> = {
+const GAP_TOKEN: Record<NonNullable<AdaptiveGridProps['gap']>, string> = {
   none: '0',
   xs: 'var(--ux-space-1)',
   sm: 'var(--ux-space-2)',
@@ -60,7 +60,7 @@ export function AdaptiveGrid({
 
   let gridTemplateColumns: string
   if (mode === 'fixed') {
-    const count = typeof cols === 'number' ? cols : (cols?.md ?? cols?.sm ?? 1)
+    const count = typeof cols === 'number' ? cols : (cols?.xl ?? cols?.lg ?? cols?.md ?? cols?.sm ?? cols?.xs ?? 1)
     gridTemplateColumns = `repeat(${count}, 1fr)`
   } else {
     gridTemplateColumns = `repeat(${mode}, minmax(${minColWidth}px, 1fr))`

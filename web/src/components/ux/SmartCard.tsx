@@ -106,11 +106,11 @@ export function SmartCard({
   return (
     <div
       className={`ux-smart-card ${className}`}
-      role={interactive ? 'button' : undefined}
-      tabIndex={interactive ? 0 : undefined}
+      role={interactive && onClick ? 'button' : undefined}
+      tabIndex={interactive && onClick ? 0 : undefined}
       aria-label={ariaLabel}
       aria-busy={status === 'loading'}
-      onClick={interactive ? onClick : undefined}
+      onClick={interactive && onClick ? onClick : undefined}
       onKeyDown={interactive && onClick ? e => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() }
       } : undefined}
@@ -119,7 +119,7 @@ export function SmartCard({
         borderRadius: 'var(--ux-radius-lg)',
         padding: PAD_MAP[padding],
         transition: 'box-shadow var(--ux-dur-base) var(--ux-ease-out), transform var(--ux-dur-fast) var(--ux-ease-out)',
-        cursor: interactive ? 'pointer' : 'default',
+        cursor: interactive && onClick ? 'pointer' : 'default',
         outline: 'none',
         overflow: 'hidden',
         ...VARIANT_STYLES[variant],
