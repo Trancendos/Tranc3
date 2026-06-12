@@ -628,6 +628,17 @@ def main() -> int:
         print(f"\n  Note: PostgreSQL not detected. SQLite is used for local dev.")
         print(f"  For production, set DATABASE_URL to a real PostgreSQL instance.")
 
+    # Audit key reminder
+    import pathlib as _pl
+    _key_file = _pl.Path("logs/audit/.audit_signing_key")
+    if env.get("AUDIT_SIGNING_KEY") and not is_placeholder(env.get("AUDIT_SIGNING_KEY", "")):
+        ok(f"AUDIT_SIGNING_KEY written to .env — add to Forgejo secrets for CI verification")
+    elif _key_file.exists():
+        warn(
+            f"AUDIT_SIGNING_KEY was generated from existing key file {_key_file}. "
+            "Copy the value from .env into Forgejo → Settings → Secrets → AUDIT_SIGNING_KEY"
+        )
+
     return 0 if not errors else 0  # warnings don't fail the script
 
 
