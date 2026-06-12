@@ -158,7 +158,9 @@ def validate_path(
         FileNotFoundError: If *must_exist* is True and path is missing.
         ValueError: If *path* contains obviously malicious components.
     """
-    return Path(_validated_path_str(path, base_dir, must_exist=must_exist, allow_create=allow_create))
+    return Path(
+        _validated_path_str(path, base_dir, must_exist=must_exist, allow_create=allow_create)
+    )
 
 
 def existing_file_path_str(

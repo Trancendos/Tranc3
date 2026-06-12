@@ -273,7 +273,9 @@ class ZeroCostEnforcer:
         _safe_name = exhausted_name.replace("\n", " ").replace(
             "\r", " "
         )  # codeql[py/log-injection]
-        _safe_fallback = (fallback_name or "none").replace("\n", " ").replace("\r", " ")  # codeql[py/log-injection]
+        _safe_fallback = (
+            (fallback_name or "none").replace("\n", " ").replace("\r", " ")
+        )  # codeql[py/log-injection]
         if fallback_name:
             logger.info(
                 "Platform rotation: %r → %r (category=%s)",
