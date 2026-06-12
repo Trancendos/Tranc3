@@ -41,6 +41,7 @@ export function ChoiceGroup({
             type="button"
             role="radio"
             aria-checked={selected === choice.id}
+            data-selected={selected === choice.id ? 'true' : undefined}
             onClick={() => onSelect(choice.id)}
             className={`ux-fitts-secondary ${selected === choice.id ? 'ux-selected' : ''}`}
             style={selected === choice.id ? {

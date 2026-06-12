@@ -35,7 +35,7 @@ export function ParetoInsight({ items, title, className = '' }: ParetoInsightPro
       <ul className="ux-proximity-group" role="list" aria-label="Items by impact">
         {all.map(item => {
           const isTop = topIds.has(item.id)
-          const max   = all[0]?.value ?? 1
+          const max   = all[0]?.value || 1
           const pct   = Math.round((item.value / max) * 100)
 
           return (

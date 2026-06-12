@@ -14,10 +14,11 @@ interface ChunkedGridProps<T> {
   chunkLabel?: (chunkIndex: number, total: number) => string
   className?: string
   itemClassName?: string
+  keyExtractor?: (item: T, index: number) => string | number
 }
 
 export function ChunkedGrid<T>({
-  items, renderItem, chunkSize = 7, chunkLabel, className = '', itemClassName = ''
+  items, renderItem, chunkSize = 7, chunkLabel, className = '', itemClassName = '', keyExtractor
 }: ChunkedGridProps<T>) {
   const chunks = useMiller(items, chunkSize)
 
@@ -25,7 +26,7 @@ export function ChunkedGrid<T>({
     return (
       <div className={`ux-miller-chunk ${className}`} role="list">
         {items.map((item, i) => (
-          <div key={i} className={`ux-miller-chunk-item ${itemClassName}`} role="listitem">
+          <div key={keyExtractor ? keyExtractor(item, i) : i} className={`ux-miller-chunk-item ${itemClassName}`} role="listitem">
             {renderItem(item, i)}
           </div>
         ))}
@@ -43,11 +44,14 @@ export function ChunkedGrid<T>({
             </h3>
           )}
           <div className="ux-miller-chunk" role="list">
-            {chunk.map((item, i) => (
-              <div key={i} className={`ux-miller-chunk-item ${itemClassName}`} role="listitem">
-                {renderItem(item, ci * chunkSize + i)}
-              </div>
-            ))}
+            {chunk.map((item, i) => {
+              const globalIdx = ci * chunkSize + i
+              return (
+                <div key={keyExtractor ? keyExtractor(item, globalIdx) : globalIdx} className={`ux-miller-chunk-item ${itemClassName}`} role="listitem">
+                  {renderItem(item, globalIdx)}
+                </div>
+              )
+            })}
           </div>
         </section>
       ))}

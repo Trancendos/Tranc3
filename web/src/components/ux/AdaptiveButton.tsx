@@ -28,6 +28,7 @@ export function AdaptiveButton({
   disabled,
   className = '',
   style,
+  type = 'button',
   ...rest
 }: AdaptiveButtonProps) {
   const fitts = useFitts(importance)
@@ -36,6 +37,7 @@ export function AdaptiveButton({
 
   return (
     <button
+      type={type}
       {...fitts}
       {...aestheticProps}
       {...rest}

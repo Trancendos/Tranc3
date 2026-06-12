@@ -23,7 +23,7 @@ def check(name: str, critical: bool = True):
 @check("torch", critical=True)
 def _torch():
     import torch
-    x = torch.randn(2, 2) @ torch.randn(2, 2)
+    _ = torch.randn(2, 2) @ torch.randn(2, 2)
     return f"v{torch.__version__} cuda={torch.cuda.is_available()}"
 
 
@@ -68,7 +68,8 @@ def _pyswarms():
 
 @check("PersonalityLNN (integrated)", critical=True)
 def _personality_lnn():
-    import sys, os
+    import sys
+    import os
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     from src.personality.lnn import PersonalityLNN, LNNInput, _USING_LNN
     lnn = PersonalityLNN()
@@ -98,7 +99,8 @@ def _qiskit():
 
 @check("QuantumOptimizationEngine (integrated)", critical=False)
 def _quantum_engine():
-    import sys, os
+    import sys
+    import os
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     from src.quantum.quantum_engine import QuantumOptimizationEngine
     import numpy as np
@@ -112,14 +114,15 @@ def _quantum_engine():
 
 @check("GeneticOptimizer (integrated)", critical=True)
 def _genetic_optimizer():
-    import sys, os
+    import sys
+    import os
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     from src.nanoservices.genetic_optimizer.genetic_optimizer import (
         GeneticOptimizer, GeneSpec, Objective, ObjectiveType
     )
     specs = [GeneSpec("lr", 0.0001, 0.1), GeneSpec("batch", 8.0, 128.0)]
     objs = [Objective("latency", ObjectiveType.MINIMIZE)]
-    go = GeneticOptimizer(specs, objs)
+    GeneticOptimizer(specs, objs)
     return "GeneticOptimizer ready"
 
 

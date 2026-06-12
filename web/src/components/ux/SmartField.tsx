@@ -18,18 +18,19 @@ interface SmartFieldProps {
   className?: string
   required?: boolean
   autoComplete?: string
+  defaultValue?: string
 }
 
 export function SmartField({
   label, type = 'text', placeholder = ' ', hint,
   validate, normalise = true, onChange, className = '',
-  required = false, autoComplete,
+  required = false, autoComplete, defaultValue = '',
 }: SmartFieldProps) {
   const id = useId()
   const hintId = `${id}-hint`
   const errorId = `${id}-error`
   const { normalise: norm } = usePostel()
-  const { value, dirty, error, valid, onChange: handleChange } = useTesler(validate)
+  const { value, dirty, error, valid, onChange: handleChange } = useTesler(validate, defaultValue)
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value

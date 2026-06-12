@@ -63,7 +63,7 @@ export function useMiller<T>(items: T[], chunkSize = 7): T[][] {
 export function useGoalGradient(current: number, total: number) {
   const percent = total > 0 ? Math.round((current / total) * 100) : 0
   const completion: 'low' | 'medium' | 'high' = percent < 33 ? 'low' : percent < 75 ? 'medium' : 'high'
-  const isComplete = current >= total
+  const isComplete = total > 0 && current >= total
   return { percent, completion, isComplete, remaining: total - current }
 }
 
@@ -82,11 +82,19 @@ export function useZeigarnik<T extends { id: string | number; completed?: boolea
    Triggers a celebratory animation at key positive moments.           */
 export function usePeakEnd() {
   const [celebrating, setCelebrating] = useState(false)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const celebrate = useCallback(() => {
     setCelebrating(true)
-    const t = setTimeout(() => setCelebrating(false), 700)
-    return () => clearTimeout(t)
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    timeoutRef.current = setTimeout(() => {
+      setCelebrating(false)
+      timeoutRef.current = null
+    }, 700)
   }, [])
+
+  useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }, [])
+
   return { celebrating, celebrate, celebrateClass: celebrating ? 'ux-peak-celebrate' : '' }
 }
 
@@ -95,16 +103,14 @@ export function usePeakEnd() {
    Provides a hover/focus elevation state for interactive surfaces.    */
 export function useAesthetic() {
   const [elevated, setElevated] = useState(false)
-  return {
-    elevated,
-    props: {
-      'data-interactive': 'true' as const,
-      onMouseEnter: () => setElevated(true),
-      onMouseLeave: () => setElevated(false),
-      onFocus:      () => setElevated(true),
-      onBlur:       () => setElevated(false),
-    },
-  }
+  const props = useMemo(() => ({
+    'data-interactive': 'true' as const,
+    onMouseEnter: () => setElevated(true),
+    onMouseLeave: () => setElevated(false),
+    onFocus:      () => setElevated(true),
+    onBlur:       () => setElevated(false),
+  }), [])
+  return { elevated, props }
 }
 
 /* ── Serial Position Effect ──────────────────────────────────────────────────
@@ -132,7 +138,7 @@ export function useVonRestorff(highlighted: boolean) {
    Minimise mental resources needed.
    Progressive disclosure: tracks which sections are expanded.         */
 export function useCognitiveLoad(sections: string[]) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set([sections[0]]))
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(sections))
   const toggle = useCallback((id: string) => {
     setExpanded(prev => {
       const next = new Set(prev)
@@ -184,8 +190,8 @@ export function useTesler(
   }, [validate])
 
   const reset = useCallback(() => {
-    setState({ value: initialValue, dirty: false, error: null, valid: true })
-  }, [initialValue])
+    setState({ value: initialValue, dirty: false, error: null, valid: !validate || !validate(initialValue) })
+  }, [initialValue, validate])
 
   return { ...state, onChange, reset }
 }
@@ -209,6 +215,8 @@ export function useSelectiveAttention() {
     style: focusedId && focusedId !== id ? { opacity: 0.4, transition: `opacity 150ms ease` } : undefined,
     onMouseEnter: () => setFocusedId(id),
     onMouseLeave: () => setFocusedId(null),
+    onFocus:      () => setFocusedId(id),
+    onBlur:       () => setFocusedId(null),
   }), [focusedId])
   return { focusedId, getProps }
 }

@@ -7,14 +7,9 @@ promote MC items from PARTIAL to COMPLIANT.
 
 from __future__ import annotations
 
-import asyncio
-import os
-import re
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 import yaml
 
@@ -186,7 +181,7 @@ def main() -> int:
     write_results(results)
     failed = [r for r in results if not r["passed"]]
     if failed:
-        print(f"\nFailed rules:")
+        print("\nFailed rules:")
         for r in failed:
             print(f"  {r['rule_id']}: {r['details']}")
     return 0 if not failed else 1

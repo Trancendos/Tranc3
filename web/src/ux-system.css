@@ -656,8 +656,8 @@ html {
 [aria-expanded="false"] .ux-chevron { transform: rotate(0deg);    transition: transform var(--ux-dur-fast) var(--ux-ease-out); }
 [aria-expanded="true"]  .ux-chevron { transform: rotate(180deg);  transition: transform var(--ux-dur-fast) var(--ux-ease-out); }
 
-/* ARIA busy — Doherty: user knows system is working */
-[aria-busy="true"]::after {
+/* ARIA busy — Doherty: user knows system is working (exclude buttons — they render their own spinner) */
+[aria-busy="true"]:not(button)::after {
   content: '';
   display: inline-block;
   width: 0.75em;

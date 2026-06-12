@@ -28,7 +28,7 @@ export function FlowZone({ children, contextLabel, contextMeta, idleMs = 3000, c
     >
       {/* Working Memory anchor — always-visible context */}
       {(contextLabel || contextMeta) && anchored && (
-        <div className="ux-memory-anchor" aria-label="Current context" role="banner">
+        <div className="ux-memory-anchor" aria-label="Current context" role="status">
           {contextLabel && <span className="ux-attention-secondary">{contextLabel}</span>}
           {contextMeta && <span className="ux-attention-meta">{contextMeta}</span>}
         </div>

@@ -6,7 +6,6 @@ automatically under load. Provides FastAPI middleware and standalone client.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from collections import defaultdict, deque

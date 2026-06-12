@@ -38,7 +38,9 @@ export function SelectiveList({ items, className = '', label }: SelectiveListPro
           role={item.onClick ? 'button' : 'listitem'}
           tabIndex={item.onClick ? 0 : undefined}
           onClick={item.onClick}
-          onKeyDown={item.onClick ? e => e.key === 'Enter' && item.onClick?.() : undefined}
+          onKeyDown={item.onClick ? e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.onClick?.() }
+          } : undefined}
           {...getProps(item.id)}
           className="ux-jakob-nav-item"
           style={{
