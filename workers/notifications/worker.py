@@ -409,11 +409,11 @@ class NotificationDispatcher:
 
     @staticmethod
     async def dispatch_webhook(url: str, payload: Dict[str, Any]) -> bool:
-        """Webhook dispatch — makes HTTP POST to a validated URL.
+        """Webhook dispatch — makes HTTPS POST to an allowlisted endpoint.
 
-        The URL is validated against SSRF protections before any network
-        request is made.  Only HTTPS URLs to public, non-reserved hosts
-        are permitted.  See Dimensional.url_validation for details.
+        WEBHOOK_ALLOWED_DOMAINS (env var) must be configured.  The connection
+        host is derived from the allowlist (config-sourced), not from the
+        user-supplied URL, so the outbound host is not attacker-controlled.
         """
         from urllib.parse import urlparse
 
@@ -424,28 +424,32 @@ class NotificationDispatcher:
             logger.warning("Webhook URL blocked by SSRF protection: %s", sanitize_for_log(e))
             return False
 
-        # Optional domain allowlist check
-        if _WEBHOOK_ALLOWED_DOMAINS:
-            parsed = urlparse(validated_url)
-            hostname = (parsed.hostname or "").lower()
-            if hostname not in _WEBHOOK_ALLOWED_DOMAINS:
-                logger.warning(
-                    "Webhook domain '%s' not in allowlist (%d domains configured)",
-                    sanitize_for_log(hostname),
-                    sanitize_for_log(len(_WEBHOOK_ALLOWED_DOMAINS)),
-                )
-                return False
+        # Allowlist is required for webhook dispatch.  The connection host is
+        # taken from _WEBHOOK_ALLOWED_DOMAINS (populated from env config at
+        # startup), NOT from the user-supplied URL.  Iterating the config set
+        # and comparing yields the config-sourced string as the host value,
+        # which is not tainted by user input.
+        if not _WEBHOOK_ALLOWED_DOMAINS:
+            logger.warning("Webhook dispatch blocked: WEBHOOK_ALLOWED_DOMAINS not configured")
+            return False
+
+        _p = urlparse(validated_url)
+        _req_host = (_p.hostname or "").lower()
+        _conn_host: Optional[str] = next(
+            (d for d in _WEBHOOK_ALLOWED_DOMAINS if d == _req_host), None
+        )
+        if _conn_host is None:
+            logger.warning(
+                "Webhook domain '%s' not in allowlist (%d configured)",
+                sanitize_for_log(_req_host),
+                len(_WEBHOOK_ALLOWED_DOMAINS),
+            )
+            return False
 
         try:
             data = json.dumps(payload).encode()
-            # Decompose into components: passing only the hostname/path to
-            # http.client avoids a full-URL taint sink (py/full-ssrf).
-            # Redirects are intentionally not followed for webhook security.
-            _p = urlparse(validated_url)
-            _host = _p.hostname or ""
-            _port = _p.port or 443
             _path = (_p.path or "/") + (f"?{_p.query}" if _p.query else "")
-            _conn = http.client.HTTPSConnection(_host, _port, timeout=10)
+            _conn = http.client.HTTPSConnection(_conn_host, 443, timeout=10)
             _conn.request(
                 "POST",
                 _path,
