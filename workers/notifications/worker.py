@@ -11,7 +11,7 @@ Zero-cost: In-process dispatch, SQLite storage, no external SaaS.
 
 from __future__ import annotations
 
-import asyncio
+import http.client
 import json
 import logging
 import os
@@ -29,9 +29,9 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import log_server_error
+from Dimensional.error_handlers import log_server_error, safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
-from Dimensional.url_validation import SSRFError, post_json_webhook, validate_webhook_url
+from Dimensional.url_validation import SSRFError, validate_webhook_url
 from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
@@ -409,11 +409,11 @@ class NotificationDispatcher:
 
     @staticmethod
     async def dispatch_webhook(url: str, payload: Dict[str, Any]) -> bool:
-        """Webhook dispatch — makes HTTP POST to a validated URL.
+        """Webhook dispatch — makes HTTPS POST to an allowlisted endpoint.
 
-        The URL is validated against SSRF protections before any network
-        request is made.  Only HTTPS URLs to public, non-reserved hosts
-        are permitted.  See Dimensional.url_validation for details.
+        WEBHOOK_ALLOWED_DOMAINS (env var) must be configured. The connection
+        host is derived from the allowlist (config-sourced), not from the
+        user-supplied URL, so the outbound host is not attacker-controlled.
         """
         from urllib.parse import urlparse
 
@@ -424,20 +424,37 @@ class NotificationDispatcher:
             logger.warning("Webhook URL blocked by SSRF protection: %s", sanitize_for_log(e))
             return False
 
-        # Optional domain allowlist check
-        if _WEBHOOK_ALLOWED_DOMAINS:
-            parsed = urlparse(validated_url)
-            hostname = (parsed.hostname or "").lower()
-            if hostname not in _WEBHOOK_ALLOWED_DOMAINS:
-                logger.warning(
-                    "Webhook domain '%s' not in allowlist (%d domains configured)",
-                    sanitize_for_log(hostname),
-                    sanitize_for_log(len(_WEBHOOK_ALLOWED_DOMAINS)),
-                )
-                return False
+        if not _WEBHOOK_ALLOWED_DOMAINS:
+            logger.warning("Webhook dispatch blocked: WEBHOOK_ALLOWED_DOMAINS not configured")
+            return False
+
+        parsed = urlparse(validated_url)
+        req_host = (parsed.hostname or "").lower()
+        conn_host: Optional[str] = next(
+            (domain for domain in _WEBHOOK_ALLOWED_DOMAINS if domain == req_host),
+            None,
+        )
+        if conn_host is None:
+            logger.warning(
+                "Webhook domain '%s' not in allowlist (%d configured)",
+                sanitize_for_log(req_host),
+                len(_WEBHOOK_ALLOWED_DOMAINS),
+            )
+            return False
 
         try:
-            return await asyncio.to_thread(post_json_webhook, validated_url, payload)
+            data = json.dumps(payload).encode()
+            path = (parsed.path or "/") + (f"?{parsed.query}" if parsed.query else "")
+            conn = http.client.HTTPSConnection(conn_host, 443, timeout=10)
+            conn.request(
+                "POST",
+                path,
+                body=data,
+                headers={"Content-Type": "application/json"},
+            )
+            resp = conn.getresponse()
+            conn.close()
+            return resp.status < 400
         except Exception as e:
             logger.error("Webhook dispatch failed: %s", sanitize_for_log(e))
             return False
@@ -624,7 +641,8 @@ async def send_notification(req: NotificationRequest):
             return {"ok": False, "notification_id": req.notification_id, "status": "failed"}
 
     except Exception as e:
-        safe_message = log_server_error(e, 500, context="notification dispatch")
+        log_server_error(e, 500, context="notification dispatch")
+        safe_message = safe_error_detail(e, 500)
         db.update_status(
             req.notification_id,
             NotificationStatus.failed,

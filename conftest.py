@@ -36,7 +36,8 @@ _WORKER_DATA_DIR = os.environ.get("TRANC3_TEST_DATA_DIR") or tempfile.mkdtemp(
 )
 os.environ["TRANC3_TEST_DATA_DIR"] = _WORKER_DATA_DIR
 for _var, _fname in (
-    ("USERS_DB_PATH", "users.db"),
+    ("USERS_DATABASE_PATH", "users.db"),
+    ("USERS_DB_PATH", "users.db"),  # legacy alias used by older branches/docs
     ("AUTH_DATABASE_PATH", "auth.db"),
 ):
     os.environ[_var] = os.environ.get(_var) or os.path.join(_WORKER_DATA_DIR, _fname)
