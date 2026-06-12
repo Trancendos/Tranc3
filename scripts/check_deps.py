@@ -77,6 +77,39 @@ def _personality_lnn():
     return f"shaper={mode} temp_delta={out.temperature_delta:.4f}"
 
 
+@check("qiskit (Think Tank)", critical=False)
+def _qiskit():
+    from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+    from qiskit import transpile as qiskit_transpile
+    from qiskit.circuit.library import QFT
+    from qiskit_aer import AerSimulator
+    n = 4
+    qr = QuantumRegister(n, "q")
+    cr = ClassicalRegister(n, "c")
+    qc = QuantumCircuit(qr, cr)
+    qc.h(qr)
+    qc.append(QFT(n, do_swaps=True).decompose(), qr)
+    qc.measure(qr, cr)
+    backend = AerSimulator(method="statevector")
+    job = backend.run(qiskit_transpile(qc, backend), shots=64)
+    counts = job.result().get_counts()
+    return f"v{__import__('qiskit').__version__} shots=64 outcomes={len(counts)}"
+
+
+@check("QuantumOptimizationEngine (integrated)", critical=False)
+def _quantum_engine():
+    import sys, os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    from src.quantum.quantum_engine import QuantumOptimizationEngine
+    import numpy as np
+    engine = QuantumOptimizationEngine(num_qubits=4)
+    info = engine.get_quantum_state_info()
+    params = np.random.rand(12)
+    updated = engine.quantum_parameter_optimization(0.5, params)
+    assert len(updated) == len(params)
+    return f"qubits={info['num_qubits']} backend={info['backend']}"
+
+
 @check("GeneticOptimizer (integrated)", critical=True)
 def _genetic_optimizer():
     import sys, os

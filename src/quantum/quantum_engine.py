@@ -16,6 +16,7 @@ except (ImportError, RuntimeError, OSError):  # pragma: no cover
 else:
     _TORCH_AVAILABLE = True
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
+from qiskit import transpile as qiskit_transpile
 from qiskit.circuit.library import QFT
 from qiskit_aer import AerSimulator
 
@@ -48,8 +49,8 @@ class QuantumCircuitBuilder:
         for i in range(num_qubits - 1):
             qc.cx(qr[i], qr[i + 1])
 
-        # Apply QFT for attention scoring
-        qft = QFT(num_qubits)
+        # Apply QFT for attention scoring — decompose so AerSimulator can run without transpile
+        qft = QFT(num_qubits, do_swaps=True).decompose()
         qc.append(qft, qr)
 
         # Measure
@@ -206,7 +207,13 @@ class QuantumOptimizationEngine:
 
     def quantum_attention_scores(self, query: torch.Tensor, key: torch.Tensor) -> torch.Tensor:
         """Compute attention scores using quantum circuits"""
-        B, H, T, D = query.shape
+        # Support arbitrary tensor shapes (2D, 3D, 4D)
+        orig_shape = query.shape
+        ndim = query.dim()
+        # Extract sequence length: last-but-one dim if ≥2D, else 1
+        T = orig_shape[-2] if ndim >= 2 else 1
+        B = orig_shape[0] if ndim >= 1 else 1
+        H = orig_shape[1] if ndim >= 3 else 1
 
         # Flatten for quantum processing
         q_flat = query.detach().cpu().numpy().reshape(-1)[: self.num_qubits]
@@ -215,7 +222,7 @@ class QuantumOptimizationEngine:
         qc = self.circuit_builder.build_attention_circuit(self.num_qubits, q_flat)
 
         try:
-            job = self.backend.run(qc, shots=1024)
+            job = self.backend.run(qiskit_transpile(qc, self.backend), shots=1024)
             counts = job.result().get_counts()
 
             # Convert counts to attention weights
@@ -242,7 +249,7 @@ class QuantumOptimizationEngine:
         qc.measure_all()
 
         try:
-            job = self.backend.run(qc, shots=512)
+            job = self.backend.run(qiskit_transpile(qc, self.backend), shots=512)
             counts = job.result().get_counts()
 
             # Extract optimal parameters from measurement
