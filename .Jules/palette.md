@@ -16,3 +16,7 @@
 ## 2026-06-07 - Added focus-visible classes to Spark Dashboard
 **Learning:** Adding focus-visible classes to custom elements such as interactive tabs and buttons provides improved visual cues for keyboard navigation without relying on inline styling adjustments.
 **Action:** Always include focus-visible utility classes when writing custom, styled interactive elements to ensure full keyboard navigation support and WCAG compliance.
+
+## 2024-06-12 - Interactive Elements Without Focus and ARIA
+**Learning:** Custom components like dropdowns (`<select>`) and accordions in newly added dashboards often miss vital accessibility properties out of the box, such as keyboard focus indicators (`focus-visible:ring-2`) and states (`aria-expanded`, `aria-controls`, `aria-label`). Users relying on keyboards or screen readers will struggle to perceive or interact with them.
+**Action:** When adding or reviewing new UI dashboards or interactive components, explicitly check for `focus-visible` styling on buttons and inputs, and ensure ARIA bindings (`aria-label`, `aria-expanded`, `aria-controls`) are attached to custom interactive elements.

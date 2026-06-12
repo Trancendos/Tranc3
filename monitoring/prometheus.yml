@@ -193,6 +193,55 @@ scrape_configs:
         labels:
           priority: 'P2'
 
+  - job_name: 'sentinel-station-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['sentinel-station-service:8041']
+        labels:
+          service: 'sentinel-station-service'
+          priority: 'P2'
+          named: 'Sentinel Station'
+
+  # ── P3 Workers (8016–8029) ───────────────────────────────────────────
+  - job_name: 'p3-workers'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'analytics-service:8016'
+          - 'search-service:8017'
+          - 'email-service:8018'
+          - 'sms-service:8019'
+          - 'storage-service:8020'
+          - 'cron-service:8021'
+          - 'queue-service:8022'
+          - 'cache-service:8023'
+          - 'config-service:8024'
+          - 'audit-service:8025'
+          - 'rate-limit-service:8026'
+          - 'geo-service:8027'
+          - 'cdn-service:8028'
+          - 'health-aggregator:8029'
+        labels:
+          priority: 'P3'
+
+  # ── P3 Intelligence / AI Layer (8030–8039) ───────────────────────────
+  - job_name: 'p3-intelligence'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'gbrain-bridge:8030'
+          - 'topology-service:8031'
+          - 'ledger-service:8032'
+          - 'model-router-service:8033'
+          - 'workflow-engine-service:8034'
+          - 'turings-hub-service:8035'
+          - 'langchain-integration-service:8036'
+          - 'deepagents-orchestrator-service:8037'
+          - 'vault-service:8038'
+          - 'mlflow-service:8039'
+        labels:
+          priority: 'P3'
+
   # ── Creative Workers ─────────────────────────────────────────────────
   - job_name: 'creative-workers'
     metrics_path: '/metrics'
@@ -310,6 +359,36 @@ scrape_configs:
           - http://notifications:8008/health
           - http://infinity-ai:8009/health
           - http://the-grid:8010/health
+          - http://products-service:8011/health
+          - http://orders-service:8012/health
+          - http://payments-service:8013/health
+          - http://files-service:8014/health
+          - http://identity-service:8015/health
+          - http://analytics-service:8016/health
+          - http://search-service:8017/health
+          - http://email-service:8018/health
+          - http://sms-service:8019/health
+          - http://storage-service:8020/health
+          - http://cron-service:8021/health
+          - http://queue-service:8022/health
+          - http://cache-service:8023/health
+          - http://config-service:8024/health
+          - http://audit-service:8025/health
+          - http://rate-limit-service:8026/health
+          - http://geo-service:8027/health
+          - http://cdn-service:8028/health
+          - http://health-aggregator:8029/health
+          - http://gbrain-bridge:8030/health
+          - http://topology-service:8031/health
+          - http://ledger-service:8032/health
+          - http://model-router-service:8033/health
+          - http://workflow-engine-service:8034/health
+          - http://turings-hub-service:8035/health
+          - http://langchain-integration-service:8036/health
+          - http://deepagents-orchestrator-service:8037/health
+          - http://vault-service:8038/health
+          - http://mlflow-service:8039/health
+          - http://sentinel-station-service:8041/health
           - http://blender-worker:8050/health
           - http://triposr-worker:8051/health
           - http://ffmpeg-worker:8052/health
