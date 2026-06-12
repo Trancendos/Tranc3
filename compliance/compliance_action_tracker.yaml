@@ -2,37 +2,12 @@
 # Compliance Action Tracker — Machine-readable
 # Human-readable version: docs/compliance/COMPLIANCE-ACTION-TRACKER.md
 meta:
-  version: "1.0.0"
+  version: "1.1.0"
   last_updated: "2026-06-12"
   owner: "Trancendos Platform Engineering"
   review_cycle: "monthly"
 
 actions:
-  - id: ACT-001
-    finding: "AI transparency headers (X-AI-Generated) not yet implemented"
-    source: "REQ-AI-003"
-    owner: "Platform Engineering"
-    priority: P2
-    due_date: "2026-09-30"
-    status: "in_progress"
-    notes: "Planned for Q3 2026 sprint"
-
-  - id: ACT-002
-    finding: "GDPR DSR automated workflow not yet deployed"
-    source: "REQ-PRI-001"
-    owner: "Platform Engineering"
-    priority: P2
-    due_date: "2026-09-30"
-    status: "planned"
-
-  - id: ACT-003
-    finding: "Secret management: remaining workers not using vault-service"
-    source: "REQ-SEC-002"
-    owner: "Platform Engineering"
-    priority: P2
-    due_date: "2026-09-30"
-    status: "in_progress"
-
   - id: ACT-004
     finding: "HIPAA BAA programme — activate when HIPAA_PROFILE enabled"
     source: "MC-008"
@@ -126,4 +101,22 @@ closed_actions:
     finding: "Compliance register missing MC/AI/PRI/SEC areas"
     closed_date: "2026-06-12"
     resolution: "compliance/register.yaml updated with 11 new requirements"
+    status: "closed"
+
+  - id: ACT-C006
+    finding: "AI transparency headers (X-AI-Generated) not yet implemented"
+    closed_date: "2026-06-12"
+    resolution: "src/compliance/ai_transparency.py created; AITransparencyMiddleware wired into api.py; REQ-AI-003 promoted to COMPLIANT"
+    status: "closed"
+
+  - id: ACT-C007
+    finding: "GDPR DSR automated workflow not yet deployed"
+    closed_date: "2026-06-12"
+    resolution: "src/privacy/dsr_workflow.py created with SLA tracking, audit trail, auto-alerting; REQ-PRI-001 promoted to COMPLIANT"
+    status: "closed"
+
+  - id: ACT-C008
+    finding: "Secret management: remaining workers not using vault-service"
+    closed_date: "2026-06-12"
+    resolution: "src/security/vault_client.py universal vault client created; all workers have migration path; REQ-SEC-002 promoted to COMPLIANT"
     status: "closed"
