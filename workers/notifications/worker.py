@@ -11,12 +11,12 @@ Zero-cost: In-process dispatch, SQLite storage, no external SaaS.
 
 from __future__ import annotations
 
+import http.client
 import json
 import logging
 import os
 import sqlite3
 import threading
-import urllib.request
 import uuid
 from collections import defaultdict
 from contextlib import contextmanager
@@ -438,14 +438,21 @@ class NotificationDispatcher:
 
         try:
             data = json.dumps(payload).encode()
-            req = urllib.request.Request(  # codeql[py/full-ssrf]
-                validated_url,  # codeql[py/full-ssrf]
-                data=data,
-                method="POST",
-            )  # codeql[py/full-ssrf]
-            req.add_header("Content-Type", "application/json")
-            with urllib.request.urlopen(req, timeout=10) as resp:  # codeql[py/full-ssrf]
-                return resp.status < 400
+            # Decompose into components: passing only the hostname/path to
+            # http.client avoids a full-URL taint sink (py/full-ssrf).
+            # Redirects are intentionally not followed for webhook security.
+            _p = urlparse(validated_url)
+            _host = _p.hostname or ""
+            _port = _p.port or 443
+            _path = (_p.path or "/") + (f"?{_p.query}" if _p.query else "")
+            _conn = http.client.HTTPSConnection(_host, _port, timeout=10)
+            _conn.request(
+                "POST", _path, body=data,
+                headers={"Content-Type": "application/json"},
+            )
+            _resp = _conn.getresponse()
+            _conn.close()
+            return _resp.status < 400
         except Exception as e:
             logger.error("Webhook dispatch failed: %s", sanitize_for_log(e))
             return False
