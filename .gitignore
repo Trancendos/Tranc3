@@ -96,3 +96,4 @@ nexus-*
 # Runtime data directories (backups and test workspaces)
 data/admin_os_backups/
 data/test_admin_os_workspace/
+.claude/worktrees/
