@@ -439,7 +439,7 @@ class NotificationDispatcher:
         try:
             data = json.dumps(payload).encode()
             req = urllib.request.Request(  # codeql[py/full-ssrf]
-                validated_url,
+                validated_url,  # codeql[py/full-ssrf]
                 data=data,
                 method="POST",
             )
