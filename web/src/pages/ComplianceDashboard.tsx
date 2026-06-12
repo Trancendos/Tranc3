@@ -249,14 +249,16 @@ export default function ComplianceDashboard() {
         <div className="flex items-center gap-3">
           <button
             onClick={fetchData}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 bg-gray-800 rounded-lg hover:bg-gray-700 transition"
+            disabled={loading}
+            aria-busy={loading}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 bg-gray-800 rounded-lg hover:bg-gray-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
           <button
             onClick={downloadReport}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-500 transition"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-500 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
             <Download className="w-4 h-4" />
             Generate Report
@@ -370,7 +372,8 @@ export default function ComplianceDashboard() {
             <select
               value={filterArea}
               onChange={e => setFilterArea(e.target.value)}
-              className="text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1.5 focus:outline-none"
+              aria-label="Filter by standard area"
+              className="text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             >
               <option value="ALL">All Areas</option>
               {areas.map(a => (
@@ -380,7 +383,8 @@ export default function ComplianceDashboard() {
             <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1.5 focus:outline-none"
+              aria-label="Filter by compliance status"
+              className="text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             >
               <option value="ALL">All Statuses</option>
               {['COMPLIANT', 'PARTIAL', 'PLANNED', 'WAIVED', 'NA'].map(s => (
@@ -398,8 +402,10 @@ export default function ComplianceDashboard() {
               <div key={r.id} className="border border-gray-800 rounded-lg overflow-hidden">
                 {/* Row header */}
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition text-left"
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset"
                   onClick={() => setExpandedReq(expandedReq === r.id ? null : r.id)}
+                  aria-expanded={expandedReq === r.id}
+                  aria-controls={`panel-${r.id}`}
                 >
                   {expandedReq === r.id
                     ? <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
@@ -416,7 +422,7 @@ export default function ComplianceDashboard() {
 
                 {/* Expanded panel */}
                 {expandedReq === r.id && (
-                  <div className="px-4 pb-4 border-t border-gray-800 bg-gray-900/50">
+                  <div id={`panel-${r.id}`} className="px-4 pb-4 border-t border-gray-800 bg-gray-900/50">
                     {r.notes && (
                       <p className="text-xs text-gray-400 mt-3 italic">{r.notes}</p>
                     )}
