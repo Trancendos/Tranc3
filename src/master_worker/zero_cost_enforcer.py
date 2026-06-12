@@ -282,13 +282,13 @@ class ZeroCostEnforcer:
                 _safe_name,
                 _safe_fallback,
                 platform.category.value,
-            )
+            )  # codeql[py/log-injection]
         else:
             logger.error(
                 "Platform rotation: %r exhausted, NO fallback available for %s",
                 _safe_name,
                 platform.category.value,
-            )
+            )  # codeql[py/log-injection]
 
         for cb in self._rotation_callbacks:
             try:
