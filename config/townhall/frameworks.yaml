@@ -1,153 +1,40 @@
-# The Town Hall — framework registry (governance, compliance, delivery, design)
-# Canonical narrative: docs/THE_TOWN_HALL.md
+# Tranc3 — Active Governance Frameworks
+# Referenced by: src/compliance/cab_gate.py, MC-RULE-007
+meta:
+  version: "1.0.0"
+  last_updated: "2026-06-12"
+  owner: "Trancendos Platform Engineering"
 
-version: "2026-05-31"
-location: The Town Hall
-lead_ai: Tristuran
-pid: PID-TWH
+active_frameworks:
+  - id: "magna-carta"
+    name: "Magna Carta v1"
+    status: "active"
+    config_path: "compliance/magna-carta/config/magna_carta_config.json"
+    register_path: "compliance/magna-carta/compliance/magna_carta_register.yaml"
+    enforcement_mode: "advisory"
+    cab_required: true
 
-domains:
-  governance:
-    - id: governance-core
-      name: Governance Core
-      standard: internal
-      status: active
-    - id: magna-carta
-      name: Trancendos Magna Carta
-      standard: internal
-      status: active
+  - id: "defstan"
+    name: "DEF STAN 00-700 / 00-055 / 05-086"
+    status: "active"
+    register_path: "compliance/register.yaml"
+    cab_required: false
 
-  agile:
-    - id: agile-manifesto
-      name: Agile Delivery
-      standard: Agile
-      status: active
-    - id: scrum
-      name: Scrum
-      standard: Scrum Guide
-      status: planned
-    - id: kanban
-      name: Kanban
-      standard: Kanban Method
-      status: active
-
-  itsm:
-    - id: itsm-core
-      name: IT Service Management
-      standard: ITSM
-      status: active
-    - id: itil4
-      name: ITIL 4
-      standard: ITIL 4
-      status: active
-
-  project_management:
-    - id: prince2-7
-      name: PRINCE2 7th Edition
-      standard: PRINCE2 7
-      status: active
-
-  compliance:
-    - id: gdpr
-      name: GDPR
-      standard: EU GDPR
-      status: active
-    - id: uk-gdpr
-      name: UK GDPR / DPA 2018
-      standard: UK-GDPR
-      status: active
-    - id: zero-cost
-      name: Zero-Cost Mandate
-      standard: Trancendos Fortiere
-      status: active
-    - id: compliance-framework
-      name: Compliancy Framework
-      standard: internal
-      status: active
-    - id: regulation-framework
-      name: Regulation Framework
-      standard: internal
-      status: active
-
-  security:
-    - id: security-framework
-      name: Security Framework
-      standard: OWASP + Zero Trust
-      status: active
-
-  legal_ip_finance:
-    - id: legal-compliance
-      name: Legal Compliance Framework
-      standard: internal
-      status: active
-    - id: intellectual-property
-      name: Intellectual Property Framework
-      standard: internal
-      status: active
-    - id: financial-oversight
-      name: Financial Oversight Framework
-      standard: internal
-      status: active
-
-  architecture:
-    - id: foundation-framework
-      name: The Foundation Framework
-      standard: Trancendos
-      status: active
-    - id: universe-framework
-      name: The Trancendos Universe Framework
-      standard: Trancendos
-      status: active
-    - id: app-per-app
-      name: App per App Frameworks
-      standard: Trancendos
-      status: active
-    - id: design-system
-      name: Design System Template
-      standard: Fabulousa / Penpot
-      status: planned
-    - id: add
-      name: Architectural Design Document
-      standard: ADD
-      status: active
-    - id: ddd
-      name: Detailed Design Document
-      standard: DDD
-      status: active
-    - id: blueprint
-      name: Blueprint Document Framework
-      standard: internal
-      status: active
-
-  documentation:
-    - id: policy-documentation
-      name: Policy Documentation
-      standard: internal
-      status: active
-    - id: procedural-documentation
-      name: Procedural Documentation
-      standard: internal
-      status: active
-    - id: legislation
-      name: Legislation Register
-      standard: internal
-      status: active
-    - id: cookbooks
-      name: Cookbooks & Runbooks
-      standard: internal
-      status: active
-    - id: bibles-guides
-      name: Bibles, Guides & Templates
-      standard: internal
-      status: active
-
-rooms:
-  - id: board-room
-    name: BoardRoom
-    purpose: Executive decisions, strategy, approvals
-  - id: war-room
-    name: WarRoom
-    purpose: Incident command, P0 response, adaptive rotation
-  - id: meeting-room
-    name: MeetingRooms
-    purpose: Scheduled governance sessions, standups, reviews
+cab:
+  enabled: true
+  require_approval_for:
+    - "infrastructure_change"
+    - "security_config_change"
+    - "production_deployment"
+    - "database_migration"
+    - "dependency_upgrade"
+    - "access_control_change"
+  auto_approve:
+    - "documentation_update"
+    - "test_addition"
+    - "minor_bugfix"
+  approval_timeout_hours: 72
+  min_approvers: 1
+  emergency_bypass_roles:
+    - "platform_owner"
+    - "security_lead"

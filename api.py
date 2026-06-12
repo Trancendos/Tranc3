@@ -93,6 +93,8 @@ from src.security.ip_protection import (  # noqa: F401  # intentional top-level 
     watermarker,
 )
 from src.compliance.middleware import MagnaCartaMiddleware  # noqa: F401
+from src.compliance.cab_gate import CABMiddleware  # noqa: F401
+from src.compliance.ai_transparency import AITransparencyMiddleware  # noqa: F401
 from src.security.middleware import (  # noqa: F401  # intentional top-level import
     GovernanceMiddleware,
     RBACMiddleware,
@@ -589,6 +591,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(AITransparencyMiddleware)
 
 
 # ── API version header (REQ-SD-002 — DEF STAN 00-056 API Contract Versioning) ─
@@ -609,6 +612,10 @@ app.add_middleware(GovernanceMiddleware)
 # are already on request.state when compliance rules execute. Advisory by default.
 app.add_middleware(MagnaCartaMiddleware)
 app.add_middleware(ZeroTrustASGIMiddleware)
+# CABMiddleware: enforces X-Change-ID on mutating requests to protected paths when enabled.
+# Runs innermost (added first, executes last after auth+MC checks complete).
+if os.getenv("CAB_GATE_ENABLED", "false").lower() == "true":
+    app.add_middleware(CABMiddleware)
 app.add_middleware(RBACMiddleware)
 # AuditMiddleware runs outermost so it captures every request after auth resolution
 app.add_middleware(AuditMiddleware, service_name="tranc3-backend")

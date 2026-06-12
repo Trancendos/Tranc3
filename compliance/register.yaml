@@ -1143,12 +1143,15 @@ requirements:
     standard: "EU AI Act / ISO 42001"
     title: "AI Transparency Headers"
     description: "All AI-generated responses must include X-AI-Model and X-AI-Provider headers for transparency."
-    status: PLANNED
-    evidence: []
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/compliance/ai_transparency.py
+        description: "AITransparencyMiddleware injects X-AI-Generated, X-AI-Model, X-AI-Provider, X-AI-Assistive-Only"
     verification_method: inspection
     last_reviewed: "2026-06-12"
     reviewer: "Trancendos"
-    notes: "MC-RULE-008 (AI transparency) in magna_carta.py — header injection planned for response path"
+    notes: "EU AI Act Art. 50 — transparency labels on all AI inference routes"
 
   # ─── Privacy (PRI) ───────────────────────────────────────────────────────────
   - id: REQ-PRI-001

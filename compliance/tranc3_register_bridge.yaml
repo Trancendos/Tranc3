@@ -1,0 +1,98 @@
+# Tranc3 ↔ Magna Carta Register Bridge
+# Maps Magna Carta rules to Tranc3 implementation evidence
+# Machine-readable; consumed by src/compliance/checker.py
+meta:
+  version: "1.0.0"
+  generated: "2026-06-12"
+  source_register: "compliance/magna-carta/compliance/magna_carta_register.yaml"
+  target_register: "compliance/register.yaml"
+
+mappings:
+  - mc_rule: "MC-RULE-001"
+    mc_title: "Protected route authentication"
+    tranc3_refs:
+      - req_id: "REQ-IA-001"
+        area: "IA"
+        impl_path: "src/compliance/magna_carta.py"
+        status: "COMPLIANT"
+      - req_id: "REQ-MC-001"
+        area: "MC"
+        impl_path: "src/compliance/magna_carta.py"
+        status: "COMPLIANT"
+
+  - mc_rule: "MC-RULE-002"
+    mc_title: "PII and privacy protection"
+    tranc3_refs:
+      - req_id: "REQ-MC-002"
+        area: "MC"
+        impl_path: "src/compliance/magna_carta.py"
+        status: "COMPLIANT"
+      - req_id: "REQ-PRI-001"
+        area: "PRI"
+        status: "PLANNED"
+
+  - mc_rule: "MC-RULE-003"
+    mc_title: "Rate limiting"
+    tranc3_refs:
+      - req_id: "REQ-MC-003"
+        area: "MC"
+        impl_path: "workers/rate-limit-service/app.py"
+        status: "COMPLIANT"
+
+  - mc_rule: "MC-RULE-004"
+    mc_title: "AI governance"
+    tranc3_refs:
+      - req_id: "REQ-AI-001"
+        area: "AI"
+        impl_path: "src/compliance/ai_governance.py"
+        status: "COMPLIANT"
+      - req_id: "REQ-AI-002"
+        area: "AI"
+        impl_path: "src/ai_gateway/router.py"
+        status: "COMPLIANT"
+
+  - mc_rule: "MC-RULE-005"
+    mc_title: "Zero-cost sovereignty"
+    tranc3_refs:
+      - req_id: "REQ-AI-002"
+        area: "AI"
+        impl_path: "src/ai_gateway/router.py"
+        status: "COMPLIANT"
+
+  - mc_rule: "MC-RULE-006"
+    mc_title: "Audit logging"
+    tranc3_refs:
+      - req_id: "REQ-PRI-002"
+        area: "PRI"
+        impl_path: "src/compliance/middleware.py"
+        status: "COMPLIANT"
+      - req_id: "REQ-IA-002"
+        area: "IA"
+        impl_path: "src/observability/"
+        status: "COMPLIANT"
+
+  - mc_rule: "MC-RULE-007"
+    mc_title: "Town Hall governance gate"
+    tranc3_refs:
+      - req_id: "REQ-MC-003"
+        area: "MC"
+        impl_path: "src/compliance/cab_gate.py"
+        status: "COMPLIANT"
+      - req_id: "REQ-SD-001"
+        area: "SD"
+        status: "COMPLIANT"
+
+  - mc_rule: "MC-RULE-008"
+    mc_title: "AI transparency"
+    tranc3_refs:
+      - req_id: "REQ-AI-003"
+        area: "AI"
+        impl_path: "src/compliance/magna_carta.py"
+        status: "PLANNED"
+
+  - mc_rule: "MC-RULE-009"
+    mc_title: "GDPR transparency"
+    tranc3_refs:
+      - req_id: "REQ-PRI-001"
+        area: "PRI"
+        status: "PLANNED"

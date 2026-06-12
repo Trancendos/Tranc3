@@ -354,8 +354,18 @@ def _ingest_requirements(
         if req_id in waived_req_ids:
             effective_status = "WAIVED"
 
+        # Normalise Magna Carta programme status to standard STATUS_ORDER values.
+        # PROGRAMME_ARTEFACT = documentation programme item; auto-promote to PARTIAL
+        # when all evidence paths are present (evidence verified but not yet production-validated).
+        if effective_status == "PROGRAMME_ARTEFACT":
+            effective_status = "PLANNED"  # default if evidence missing
+
         checks = _check_evidence(evidence_list)
         all_present = all(c.exists for c in checks) if checks else True
+
+        # Evidence-based auto-promotion: PLANNED + all evidence present → PARTIAL
+        if effective_status == "PLANNED" and all_present and checks:
+            effective_status = "PARTIAL"
 
         result = RequirementResult(
             req_id=req_id,

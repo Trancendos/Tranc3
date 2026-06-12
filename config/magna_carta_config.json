@@ -1,0 +1,274 @@
+{
+  "meta": {
+    "framework": "magna_carta_v1",
+    "version": "1.0.0",
+    "platform": "Tranc3 / Trancendos",
+    "owner": "Trancendos Platform Engineering",
+    "classification": "UNCLASSIFIED \u2014 PUBLIC",
+    "last_updated": "2026-06-09",
+    "review_cycle": "quarterly",
+    "documentation_repo": "https://github.com/Trancendos/magna-carta",
+    "register_path": "compliance/magna_carta_register.yaml"
+  },
+  "enforcement": {
+    "mode": "advisory",
+    "fail_closed_on_violation": false,
+    "audit_all_checks": true,
+    "log_level": "info",
+    "auto_escalate_on_signal": true,
+    "trigger_register": "compliance/framework_triggers.yaml"
+  },
+  "profiles": {
+    "HIPAA_PROFILE": "disabled",
+    "CCPA_SCOPE": "disabled",
+    "PCI_SCOPE": "disabled",
+    "FEDRAMP_SCOPE": "disabled",
+    "LGPD_SCOPE": "disabled",
+    "US_AI_FALLBACK": "disabled",
+    "PAYMENTS_LIVE": "disabled",
+    "CORE_PLATFORM": "enabled",
+    "GDPR_SCOPE": "enabled",
+    "AI_GOVERNANCE": "enabled",
+    "PECR_SCOPE": "enabled",
+    "ISO_CERTIFICATION_SCOPE": "disabled",
+    "SOC_AUDIT_SCOPE": "disabled",
+    "NIST_BASELINE": "enabled",
+    "GLOBAL_PRIVACY_PACK": "disabled",
+    "INTL_ASSURANCE_SCOPE": "disabled",
+    "US_GOV_SCOPE": "disabled",
+    "EU_INDUSTRY_SCOPE": "disabled",
+    "POPIA_SCOPE": "disabled",
+    "DORA_SCOPE": "disabled",
+    "NHS_DSPT_SCOPE": "disabled",
+    "CMMC_SCOPE": "disabled"
+  },
+  "rules": [
+    {
+      "id": "MC-RULE-001",
+      "type": "authentication",
+      "title": "Protected route authentication",
+      "description": "Requests to protected API paths must include a valid JWT and pass Zero Trust evaluation.",
+      "policy_ref": "POL-SEC-001",
+      "defstan_ref": "REQ-IA-001",
+      "severity": "high",
+      "enabled": true,
+      "scope": {
+        "paths": [
+          "/api/*",
+          "/townhall/*",
+          "/vault/*"
+        ],
+        "exclude_paths": [
+          "/health",
+          "/metrics",
+          "/docs",
+          "/openapi.json"
+        ]
+      },
+      "checks": [
+        "jwt_present",
+        "jwt_not_expired",
+        "zero_trust_passed"
+      ]
+    },
+    {
+      "id": "MC-RULE-002",
+      "type": "privacy",
+      "title": "PII and sensitive data handling",
+      "description": "Personally identifiable information must not appear in logs or responses without lawful basis and sanitisation.",
+      "policy_ref": "POL-PRI-001",
+      "defstan_ref": "REQ-IA-004",
+      "gdpr_ref": "Art. 5, Art. 25",
+      "severity": "high",
+      "enabled": true,
+      "checks": [
+        "pii_sanitised_in_logs",
+        "consent_recorded_for_marketing",
+        "data_minimisation_applied"
+      ],
+      "blocked_fields": [
+        "password",
+        "ssn",
+        "credit_card",
+        "api_key",
+        "refresh_token",
+        "phi",
+        "medical_record_number",
+        "health_plan_id"
+      ]
+    },
+    {
+      "id": "MC-RULE-003",
+      "type": "rate_limit",
+      "title": "Tier-based rate limiting",
+      "description": "Public endpoints enforce billing-tier rate limits per tenant and per IP.",
+      "policy_ref": "POL-SEC-001",
+      "defstan_ref": "REQ-IA-005",
+      "severity": "medium",
+      "enabled": true,
+      "checks": [
+        "tenant_limit_enforced",
+        "ip_limit_enforced",
+        "violation_logged"
+      ],
+      "tiers": {
+        "free": {
+          "requests_per_hour": 100
+        },
+        "pro": {
+          "requests_per_hour": 1000
+        },
+        "business": {
+          "requests_per_hour": 10000
+        }
+      }
+    },
+    {
+      "id": "MC-RULE-004",
+      "type": "ai_governance",
+      "title": "AI inference governance",
+      "description": "AI routes must enforce model registration, risk tier documentation, and prohibited-use blocks.",
+      "policy_ref": "POL-AI-001",
+      "defstan_ref": "REQ-AI-001",
+      "eu_ai_act_ref": "Art. 9, Art. 50",
+      "severity": "high",
+      "enabled": true,
+      "scope": {
+        "paths": [
+          "/ai/*",
+          "/infinity-ai/*",
+          "/model-router/*"
+        ]
+      },
+      "checks": [
+        "model_registered",
+        "risk_tier_documented",
+        "prohibited_use_blocked",
+        "ai_content_labelled",
+        "human_review_required_for_high_risk"
+      ],
+      "prohibited_uses": [
+        "social_scoring",
+        "real_time_biometric_identification_public",
+        "manipulative_subliminal_techniques",
+        "unauthorised_law_enforcement_profiling"
+      ]
+    },
+    {
+      "id": "MC-RULE-005",
+      "type": "zero_cost",
+      "title": "Zero-cost sovereignty",
+      "description": "Deployments must not mandate paid third-party APIs where a self-hosted alternative exists in Tranc3.",
+      "policy_ref": "docs/01-MAGNACARTA-FOUNDATION.md",
+      "magna_carta_ref": "MC-002",
+      "severity": "medium",
+      "enabled": true,
+      "checks": [
+        "no_mandatory_paid_api",
+        "self_hosted_alternative_documented",
+        "vendor_lock_in_assessed"
+      ],
+      "allowed_exceptions": [
+        "customer_opt_in_paid_provider",
+        "regulatory_mandated_service"
+      ]
+    },
+    {
+      "id": "MC-RULE-006",
+      "type": "audit",
+      "title": "Security event audit logging",
+      "description": "Authentication, authorisation failures, and configuration changes must emit structured audit events.",
+      "policy_ref": "POL-SEC-001",
+      "defstan_ref": "REQ-IA-006",
+      "soc2_ref": "CC7.2",
+      "severity": "high",
+      "enabled": true,
+      "checks": [
+        "timestamp_present",
+        "actor_identity_present",
+        "source_ip_present",
+        "action_recorded",
+        "tamper_evident_storage"
+      ],
+      "events": [
+        "auth_success",
+        "auth_failure",
+        "access_denied",
+        "config_change",
+        "secret_access",
+        "data_export"
+      ]
+    },
+    {
+      "id": "MC-RULE-007",
+      "type": "governance",
+      "title": "Town Hall governance gate",
+      "description": "Material platform changes require Town Hall approval before production promotion.",
+      "policy_ref": "POL-OPS-002",
+      "magna_carta_ref": "MC-003",
+      "severity": "medium",
+      "enabled": true,
+      "checks": [
+        "change_record_exists",
+        "cab_approval_for_high_risk",
+        "compliance_review_complete"
+      ],
+      "high_risk_change_types": [
+        "auth_model_change",
+        "encryption_key_rotation",
+        "data_retention_change",
+        "ai_model_deployment",
+        "supplier_onboarding"
+      ]
+    },
+    {
+      "id": "MC-RULE-008",
+      "type": "transparency",
+      "title": "Digital rights transparency",
+      "description": "Users must receive clear notice of data processing, AI involvement, and digital rights.",
+      "policy_ref": "POL-PRI-001",
+      "magna_carta_ref": "MC-001",
+      "gdpr_ref": "Art. 13, Art. 14",
+      "severity": "medium",
+      "enabled": true,
+      "checks": [
+        "privacy_notice_linked",
+        "ai_disclosure_when_applicable",
+        "rights_contact_documented"
+      ]
+    },
+    {
+      "id": "MC-RULE-009",
+      "type": "health_data",
+      "title": "HIPAA and PHI boundary controls",
+      "description": "When HIPAA_PROFILE is enabled, PHI must use encrypted storage, US residency, BAA coverage, blocked external AI egress, and tiered marketing claims.",
+      "policy_ref": "docs/compliance/HIPAA-ALIGNMENT.md",
+      "magna_carta_ref": "MC-008",
+      "hipaa_ref": "45 CFR \u00a7164.312",
+      "severity": "high",
+      "enabled": true,
+      "scope": {
+        "paths": [
+          "/sync/*",
+          "/wellbeing/*",
+          "/health/*"
+        ],
+        "profile_flag": "HIPAA_PROFILE=enabled"
+      },
+      "checks": [
+        "baa_signed",
+        "phi_encrypted_at_rest",
+        "phi_encrypted_in_transit",
+        "us_data_residency",
+        "phi_redacted_in_logs",
+        "external_ai_on_phi_blocked",
+        "marketing_claim_tier_valid"
+      ],
+      "marketing_claim_tiers": {
+        "tier_a": "hipaa_aligned_controls_with_baa",
+        "tier_b": "hipaa_ready_deployment",
+        "tier_c": "hipaa_compliant_requires_attestation"
+      }
+    }
+  ]
+}

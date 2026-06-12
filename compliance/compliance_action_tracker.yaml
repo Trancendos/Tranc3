@@ -1,0 +1,129 @@
+---
+# Compliance Action Tracker — Machine-readable
+# Human-readable version: docs/compliance/COMPLIANCE-ACTION-TRACKER.md
+meta:
+  version: "1.0.0"
+  last_updated: "2026-06-12"
+  owner: "Trancendos Platform Engineering"
+  review_cycle: "monthly"
+
+actions:
+  - id: ACT-001
+    finding: "AI transparency headers (X-AI-Generated) not yet implemented"
+    source: "REQ-AI-003"
+    owner: "Platform Engineering"
+    priority: P2
+    due_date: "2026-09-30"
+    status: "in_progress"
+    notes: "Planned for Q3 2026 sprint"
+
+  - id: ACT-002
+    finding: "GDPR DSR automated workflow not yet deployed"
+    source: "REQ-PRI-001"
+    owner: "Platform Engineering"
+    priority: P2
+    due_date: "2026-09-30"
+    status: "planned"
+
+  - id: ACT-003
+    finding: "Secret management: remaining workers not using vault-service"
+    source: "REQ-SEC-002"
+    owner: "Platform Engineering"
+    priority: P2
+    due_date: "2026-09-30"
+    status: "in_progress"
+
+  - id: ACT-004
+    finding: "HIPAA BAA programme — activate when HIPAA_PROFILE enabled"
+    source: "MC-008"
+    owner: "Legal"
+    priority: P3
+    due_date: "2026-12-31"
+    status: "planned"
+
+  - id: ACT-005
+    finding: "External penetration test (annual)"
+    source: "MC-010"
+    owner: "Security"
+    priority: P2
+    due_date: "2026-12-31"
+    status: "planned"
+
+  - id: ACT-006
+    finding: "Staff policy attestation (PROC-TRN-001)"
+    source: "MC-010"
+    owner: "HR"
+    priority: P2
+    due_date: "2026-09-30"
+    status: "planned"
+
+  - id: ACT-007
+    finding: "SOC 2 Type II readiness assessment"
+    source: "MC-010"
+    owner: "Compliance"
+    priority: P3
+    due_date: "2027-03-31"
+    status: "planned"
+
+  - id: ACT-008
+    finding: "FCA Consumer Duty gap analysis"
+    source: "MC-009"
+    owner: "Legal"
+    priority: P3
+    due_date: "2026-12-31"
+    status: "planned"
+
+  - id: ACT-009
+    finding: "MAGNA_CARTA_ENABLED staging enablement"
+    source: "MC-011"
+    owner: "Platform Engineering"
+    priority: P2
+    due_date: "2026-09-30"
+    status: "in_progress"
+
+  - id: ACT-010
+    finding: "Bias measurement first run (PROC-AI-002)"
+    source: "MC-005"
+    owner: "AI Team"
+    priority: P2
+    due_date: "2026-09-30"
+    status: "planned"
+
+  - id: ACT-011
+    finding: "Internal audit programme — first audit"
+    source: "MC-010"
+    owner: "Compliance"
+    priority: P2
+    due_date: "2026-12-31"
+    status: "planned"
+
+closed_actions:
+  - id: ACT-C001
+    finding: "Magna Carta submodule not wired"
+    closed_date: "2026-06-12"
+    resolution: "Submodule added to .gitmodules"
+    status: "closed"
+
+  - id: ACT-C002
+    finding: "Rate limit service not implemented"
+    closed_date: "2026-06-12"
+    resolution: "workers/rate-limit-service/app.py created"
+    status: "closed"
+
+  - id: ACT-C003
+    finding: "CAB gate not implemented"
+    closed_date: "2026-06-12"
+    resolution: "src/compliance/cab_gate.py created"
+    status: "closed"
+
+  - id: ACT-C004
+    finding: ".env generation manual and error-prone"
+    closed_date: "2026-06-12"
+    resolution: "scripts/generate_env.py created"
+    status: "closed"
+
+  - id: ACT-C005
+    finding: "Compliance register missing MC/AI/PRI/SEC areas"
+    closed_date: "2026-06-12"
+    resolution: "compliance/register.yaml updated with 11 new requirements"
+    status: "closed"
