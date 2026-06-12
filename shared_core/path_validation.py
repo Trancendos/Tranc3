@@ -158,37 +158,7 @@ def validate_path(
         FileNotFoundError: If *must_exist* is True and path is missing.
         ValueError: If *path* contains obviously malicious components.
     """
-    if isinstance(path, Path):
-        raw = str(path)
-    else:
-        raw = path
-
-    # Reject null bytes and ".." sequences in the raw input before resolution
-    if _TRAVERSAL_PATTERN.search(raw):
-        raise PathTraversalError(
-            f"Path contains disallowed components (null byte or '..'): {raw!r}",
-        )
-
-    base = _base_dir_realpath(base_dir)
-    if os.path.isabs(raw):
-        candidate = os.path.normpath(raw)
-    else:
-        candidate = os.path.normpath(os.path.join(base, raw))
-    resolved = os.path.realpath(candidate)
-
-    # Ensure the resolved path starts with the base directory
-    if not _is_path_under_base(resolved, base):
-        raise PathTraversalError(
-            f"Path escapes base directory: {resolved} is not under {base}",
-        )
-
-    if must_exist and not _fs_exists(resolved):
-        raise FileNotFoundError(f"Validated path does not exist: {resolved}")
-
-    if not allow_create and not _fs_exists(resolved):
-        raise FileNotFoundError(f"Path does not exist and creation is not allowed: {resolved}")
-
-    return Path(resolved)
+    return Path(_validated_path_str(path, base_dir, must_exist=must_exist, allow_create=allow_create))
 
 
 def existing_file_path_str(

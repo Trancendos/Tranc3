@@ -439,10 +439,10 @@ class NotificationDispatcher:
         try:
             data = json.dumps(payload).encode()
             req = urllib.request.Request(
-                url,
+                validated_url,
                 data=data,
                 method="POST",
-            )  # codeql[py/ssrf] – URL validated against allowlist above
+            )
             req.add_header("Content-Type", "application/json")
             with urllib.request.urlopen(req, timeout=10) as resp:
                 return resp.status < 400

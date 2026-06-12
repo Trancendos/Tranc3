@@ -379,7 +379,11 @@ class OsvIngestor:
         "PyPI": ["requests", "django", "flask", "cryptography", "pillow", "setuptools", "urllib3"],
         "npm": ["express", "lodash", "axios", "moment", "node-fetch", "semver"],
         "Go": ["github.com/gorilla/mux", "github.com/gin-gonic/gin", "golang.org/x/net"],
-        "Maven": ["org.apache.log4j:log4j-core", "org.springframework:spring-core", "commons-collections:commons-collections"],
+        "Maven": [
+            "org.apache.log4j:log4j-core",
+            "org.springframework:spring-core",
+            "commons-collections:commons-collections",
+        ],
         "NuGet": ["Newtonsoft.Json", "System.Net.Http", "Microsoft.AspNetCore.Http"],
         "Rust": ["openssl", "tokio", "hyper"],
     }
@@ -459,10 +463,8 @@ class OsvIngestor:
                 continue  # partial failure — skip this ecosystem, carry on with others
 
             # batch_data["results"] is a list parallel to eco_queries
-            for (_eco, _pkg), result in zip(
-                eco_meta, batch_data.get("results", []), strict=False
-            ):
-                for vuln in (result.get("vulns", []) if result else []):
+            for (_eco, _pkg), result in zip(eco_meta, batch_data.get("results", []), strict=False):
+                for vuln in result.get("vulns", []) if result else []:
                     try:
                         vuln_id = vuln.get("id", "UNKNOWN")
                         # Map OSV id to CVE id if available
