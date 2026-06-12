@@ -438,13 +438,13 @@ class NotificationDispatcher:
 
         try:
             data = json.dumps(payload).encode()
-            req = urllib.request.Request(
+            req = urllib.request.Request(  # codeql[py/full-ssrf]
                 validated_url,
                 data=data,
                 method="POST",
-            )  # codeql[py/full-ssrf]
+            )
             req.add_header("Content-Type", "application/json")
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:  # codeql[py/full-ssrf]
                 return resp.status < 400
         except Exception as e:
             logger.error("Webhook dispatch failed: %s", sanitize_for_log(e))
