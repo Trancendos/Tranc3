@@ -129,7 +129,7 @@ class BareExceptChecker(RuleChecker):
                             message="Bare 'except:' catches SystemExit/KeyboardInterrupt",
                             suggestion="Replace with 'except Exception:' to avoid catching base exceptions",
                             fixable=True,
-                        )
+                        ),
                     )
         return violations
 
@@ -161,7 +161,7 @@ class ExcVarChecker(RuleChecker):
                             message=f"Reference to '{node.id}' — not available in Python 3.11+",
                             suggestion="Use the 'as e' variable from 'except Exception as e' instead",
                             fixable=True,
-                        )
+                        ),
                     )
         return violations
 
@@ -233,7 +233,7 @@ class TypeExcChecker(RuleChecker):
                         message="type(__exc).__name__ — variable not available in Python 3.11+",
                         suggestion='Replace with the exception variable name or literal "unknown"',
                         fixable=True,
-                    )
+                    ),
                 )
         return violations
 
@@ -271,7 +271,7 @@ class UnclosedFileChecker(RuleChecker):
                                     message="open() without context manager — file may not be closed",
                                     suggestion="Use 'with open(path) as f: data = f.read()'",
                                     fixable=True,
-                                )
+                                ),
                             )
         return violations
 
@@ -321,7 +321,7 @@ class LogInjectionChecker(RuleChecker):
                                             '  logger.info("User %s logged in", sanitize_for_log(username))'
                                         ),
                                         fixable=True,
-                                    )
+                                    ),
                                 )
         return violations
 
@@ -362,7 +362,7 @@ class InfoExposureChecker(RuleChecker):
                                         message="str(exc) in error response — exposes internal details (CWE-209)",
                                         suggestion="Use safe_error_detail(exc, status_code) instead of str(exc)",
                                         fixable=True,
-                                    )
+                                    ),
                                 )
         return violations
 
@@ -455,7 +455,7 @@ class PathTraversalChecker(RuleChecker):
                                 message="open() with unvalidated path — potential path traversal (CWE-022)",
                                 suggestion="Use validate_path(user_path, base_dir) from shared_core.path_validation",
                                 fixable=False,
-                            )
+                            ),
                         )
 
             # 2. Path.write_text() / Path.write_bytes() / Path.mkdir()
@@ -476,7 +476,7 @@ class PathTraversalChecker(RuleChecker):
                                 message=f"Path.{method}() with unvalidated path — potential path traversal (CWE-022)",
                                 suggestion="Use validate_path(path, base_dir) from shared_core.path_validation before this call",
                                 fixable=False,
-                            )
+                            ),
                         )
 
                 # 3. shutil.copy() / shutil.copy2() / shutil.move() etc.
@@ -497,7 +497,7 @@ class PathTraversalChecker(RuleChecker):
                                         message=f"shutil.{method}() with unvalidated destination — potential path traversal (CWE-022)",
                                         suggestion="Use validate_path(dst, base_dir) from shared_core.path_validation before this call",
                                         fixable=False,
-                                    )
+                                    ),
                                 )
 
                 # 4. os.mkdir() / os.makedirs()
@@ -517,7 +517,7 @@ class PathTraversalChecker(RuleChecker):
                                         message=f"os.{method}() with unvalidated path — potential path traversal (CWE-022)",
                                         suggestion="Use validate_path(path, base_dir) from shared_core.path_validation",
                                         fixable=False,
-                                    )
+                                    ),
                                 )
 
         return violations
@@ -686,7 +686,7 @@ class WeakHashChecker(RuleChecker):
                                 message=f"hashlib.{node.func.attr}() — weak hash algorithm (CWE-327)",
                                 suggestion="Use hashlib.sha256() or higher, or add usedforsecurity=False if non-security",
                                 fixable=False,
-                            )
+                            ),
                         )
         return violations
 
@@ -761,7 +761,7 @@ class MixedReturnChecker(RuleChecker):
                                 message=f"Function '{node.name}' returns value in some paths but implicitly returns None",
                                 suggestion="Add explicit 'return None' at end of function",
                                 fixable=True,
-                            )
+                            ),
                         )
         return violations
 

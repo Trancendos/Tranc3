@@ -44,7 +44,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
@@ -76,7 +75,7 @@ logger = logging.getLogger("vault-service")
 
 def _get_db() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3_connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -200,6 +199,19 @@ def _decrypt_secret(ciphertext_hex: str) -> str:
     key = _derive_key(_get_master_key(), salt)
     aesgcm = AESGCM(key)
     return aesgcm.decrypt(iv, ct_with_tag, None).decode()
+
+
+# Backwards-compat shim: attempt XOR-decrypt of legacy secrets stored before this fix.
+# Remove this shim once all secrets have been re-encrypted (rotate via PUT /secrets/{id}).
+def _legacy_xor_decrypt(
+    ciphertext_hex: str,
+    xor_key: str = "Tranc3Vault2024!ZeroCostCrypto",
+) -> str:
+    """Decrypt a secret encrypted by the old (insecure) XOR cipher."""
+    key_bytes = xor_key.encode()
+    cipher_bytes = bytes.fromhex(ciphertext_hex)
+    decrypted = bytes(b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(cipher_bytes))
+    return decrypted.decode(errors="replace")
 
 
 # ---------------------------------------------------------------------------

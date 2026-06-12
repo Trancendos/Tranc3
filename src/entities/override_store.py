@@ -28,7 +28,7 @@ def _db_path() -> Path:
         os.environ.get(
             "ENTITY_OVERRIDES_DB",
             os.environ.get("INFINITY_ADMIN_DB_PATH", "data/infinity_admin.db"),
-        )
+        ),
     )
 
 
@@ -55,7 +55,7 @@ def load_all_overrides_by_pid(*, force: bool = False) -> Dict[str, Dict[str, str
         conn = sqlite3_connect(f"file:{path}?mode=ro", uri=True)
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
-            "SELECT location_pid, entity_type, slot, override_name FROM entity_overrides"
+            "SELECT location_pid, entity_type, slot, override_name FROM entity_overrides",
         ).fetchall()
         conn.close()
     except sqlite3.Error as exc:

@@ -124,7 +124,7 @@ async def _poll_loop() -> None:
                                 "manifest": str(mf),
                                 "status": "failed",
                                 "error": str(exc),
-                            }
+                            },
                         )
                 _last_run = {
                     "run_at": datetime.now(timezone.utc).isoformat(),

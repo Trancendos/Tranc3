@@ -154,7 +154,9 @@ class EnhancedServiceRegistry:
                 self._capabilities[cap_name].append(name)
 
         logger.info(
-            "Registered service: %s @ %s", sanitize_for_log(name), sanitize_for_log(endpoint)
+            "Registered service: %s @ %s",
+            sanitize_for_log(name),
+            sanitize_for_log(endpoint),
         )
         self._emit_discovery_event(
             "discovered",
@@ -185,7 +187,9 @@ class EnhancedServiceRegistry:
     # ── Capability-Based Routing ─────────────────────────────────
 
     def resolve(
-        self, capability: str, strategy: Optional[RoutingStrategy] = None
+        self,
+        capability: str,
+        strategy: Optional[RoutingStrategy] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Resolve the best service endpoint for a given capability.
@@ -196,7 +200,8 @@ class EnhancedServiceRegistry:
 
         if not candidates:
             logger.warning(
-                "No healthy service found for capability: %s", sanitize_for_log(capability)
+                "No healthy service found for capability: %s",
+                sanitize_for_log(capability),
             )
             return None
 
@@ -391,7 +396,8 @@ class EnhancedServiceRegistry:
 
                 for name in stale:
                     logger.warning(
-                        "Service %s heartbeat timeout — marking unhealthy", sanitize_for_log(name)
+                        "Service %s heartbeat timeout — marking unhealthy",
+                        sanitize_for_log(name),
                     )
                     self.update_health(name, "unhealthy")
 
@@ -486,7 +492,10 @@ class EnhancedServiceRegistry:
                 logger.error("Watcher error: %s", sanitize_for_log(str(e)))
 
     def _emit_discovery_event(
-        self, event_type: str, service_name: str, details: Dict[str, Any] = None
+        self,
+        event_type: str,
+        service_name: str,
+        details: Dict[str, Any] = None,
     ) -> None:
         """Emit a discovery event to watchers and log."""
         event = ServiceDiscoveryEvent(

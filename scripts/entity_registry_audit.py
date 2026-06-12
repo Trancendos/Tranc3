@@ -25,7 +25,7 @@ def main() -> int:
                         "severity": "error",
                         "pid": "PID-LAB",
                         "message": "Syntax-Sage must not appear in primes list",
-                    }
+                    },
                 )
 
     nexus = get_entity_by_pid("PID-NXS")
@@ -35,7 +35,7 @@ def main() -> int:
                 "severity": "warn",
                 "pid": "PID-NXS",
                 "message": "Lead AI should be Nexus-Prime not The Nexus",
-            }
+            },
         )
 
     undefined = [n for n, e in PLATFORM_ENTITIES.items() if "To be Defined" in (e.lead_ai or "")]
@@ -45,7 +45,7 @@ def main() -> int:
                 "severity": "info",
                 "location": name,
                 "message": "Lead AI still placeholder To be Defined",
-            }
+            },
         )
 
     report = {

@@ -46,7 +46,7 @@ class LazyLoader:
             if mod is None:
                 raise ImportError(
                     f"Optional dependency '{object.__getattribute__(self, '_module_name')}' "
-                    f"is not installed. {object.__getattribute__(self, '_description')}"
+                    f"is not installed. {object.__getattribute__(self, '_description')}",
                 )
             return mod
 
@@ -58,7 +58,8 @@ class LazyLoader:
             object.__setattr__(self, "_module", mod)
             object.__setattr__(self, "_loaded", True)
             logger.debug(
-                "Lazy-loaded: %s", sanitize_for_log(module_name)
+                "Lazy-loaded: %s",
+                sanitize_for_log(module_name),
             )  # codeql[py/cleartext-logging]
             return mod
         except ImportError as e:
@@ -80,7 +81,7 @@ class LazyLoader:
 
             raise ImportError(
                 f"Optional dependency '{module_name}' is not installed. "
-                f"{object.__getattribute__(self, '_description')}"
+                f"{object.__getattribute__(self, '_description')}",
             ) from e
         return None
 

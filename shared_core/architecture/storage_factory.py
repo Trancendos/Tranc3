@@ -272,7 +272,7 @@ class CloudStorageProvider(StorageProvider):
                 )
             except ImportError:
                 raise RuntimeError(
-                    "boto3 is required for CLOUD_ONLY mode. Install it with: pip install boto3"
+                    "boto3 is required for CLOUD_ONLY mode. Install it with: pip install boto3",
                 ) from None
         return self._client
 
@@ -290,7 +290,10 @@ class CloudStorageProvider(StorageProvider):
         client = self._get_client()
         client.put_object(Bucket=self._bucket, Key=path, Body=data)
         logger.debug(
-            "Wrote %d bytes to R2://%s/%s", len(data), self._bucket, sanitize_for_log(path)
+            "Wrote %d bytes to R2://%s/%s",
+            len(data),
+            self._bucket,
+            sanitize_for_log(path),
         )
 
     async def delete(self, path: str) -> None:

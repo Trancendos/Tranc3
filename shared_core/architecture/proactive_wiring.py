@@ -407,7 +407,7 @@ class ProactiveSystemBootstrap:
                     event_type="proactive.system_wired",
                     source="ProactiveSystemBootstrap",
                     data={"component": "event_bus", "status": "connected"},
-                )
+                ),
             )
 
             bridge.mark_connected()
@@ -1139,7 +1139,7 @@ class ProactiveSystemBootstrap:
                         else str(getattr(plan, "priority", "medium")),
                         "description": getattr(plan, "description", ""),
                     },
-                )
+                ),
             )
 
     async def _handle_reconfigure(self, plan: Any) -> None:

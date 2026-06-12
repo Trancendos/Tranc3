@@ -250,7 +250,7 @@ def _docker_cmd() -> list[str]:
     if shutil.which("docker"):
         return ["docker", "compose"]
     raise SystemExit(
-        "ERROR: Docker not found. Install Docker Desktop (Windows/Mac) or Docker Engine (Linux)."
+        "ERROR: Docker not found. Install Docker Desktop (Windows/Mac) or Docker Engine (Linux).",
     )
 
 
@@ -370,10 +370,10 @@ def main() -> int:
         _log("Gate-only mode complete (PASS).")
         if mode == "CLOUD_ONLY" or args.cloud_only:
             _log(
-                "  CLOUD_ONLY: cloud auto-rotation runs via API/Fly/CF — no Citadel Docker required."
+                "  CLOUD_ONLY: cloud auto-rotation runs via API/Fly/CF — no Citadel Docker required.",
             )
             _log(
-                "  When ready for local: PLATFORM_INFRA_MODE=LOCAL_ONLY scripts/citadel_deploy_all.py --local"
+                "  When ready for local: PLATFORM_INFRA_MODE=LOCAL_ONLY scripts/citadel_deploy_all.py --local",
             )
         return 0
 
@@ -397,7 +397,7 @@ def main() -> int:
     if not local_deploy:
         _log("")
         _log(
-            f"CLOUD_ONLY ({mode}): skipping Citadel Docker — use --local when your server is ready."
+            f"CLOUD_ONLY ({mode}): skipping Citadel Docker — use --local when your server is ready.",
         )
         _log("  Adaptive: GET /adaptive/mode and GET /adaptive/status on your running API.")
         return 0

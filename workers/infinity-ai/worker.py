@@ -702,7 +702,8 @@ class AIGatewayRouter:
 
                     rate_limited = "429" in str(e) or "rate" in str(e).lower()
                     get_provider_rotator().record_failure(
-                        provider_name.value, rate_limited=rate_limited
+                        provider_name.value,
+                        rate_limited=rate_limited,
                     )
                 except Exception:
                     pass

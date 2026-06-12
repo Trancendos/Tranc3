@@ -218,7 +218,7 @@ class EnvironmentDetector:
             [
                 self._detect_r2().detected,
                 self._detect_oci().detected,
-            ]
+            ],
         )
 
         if has_zfs and not has_cloud:
@@ -443,7 +443,7 @@ class EnvironmentDetector:
             and os.getenv("OCI_TENANCY_ID")
             and os.getenv("OCI_USER_ID")
             and os.getenv("OCI_FINGERPRINT")
-            and os.getenv("OCI_PRIVATE_KEY_PATH")
+            and os.getenv("OCI_PRIVATE_KEY_PATH"),
         )
         return DetectionResult(
             name="oci_available",
@@ -588,7 +588,7 @@ class AutoConfigManager:
                         },
                     },
                 ],
-            )
+            ),
         )
 
         # HYBRID Profile — local primary, cloud fallback
@@ -640,7 +640,7 @@ class AutoConfigManager:
                         "settings": {"storage.aws_tier_priority": 7, "storage.aws_free_gb": 25},
                     },
                 ],
-            )
+            ),
         )
 
         # CLOUD_ONLY Profile — cloud-first, zero-cost only
@@ -692,7 +692,7 @@ class AutoConfigManager:
                         "settings": {"storage.aws_tier_priority": 4, "storage.aws_free_gb": 25},
                     },
                 ],
-            )
+            ),
         )
 
         # Development Profile — fast iterations, verbose logging
@@ -723,7 +723,7 @@ class AutoConfigManager:
                     "logging.level": "DEBUG",
                 },
                 rules=[],
-            )
+            ),
         )
 
     # ------------------------------------------------------------------
@@ -833,7 +833,10 @@ class AutoConfigManager:
         self._total_rollbacks += 1
 
         logger.info(
-            "Config rolled back: %s (%s → %s)", sanitize_for_log(key), old_value, item.value
+            "Config rolled back: %s (%s → %s)",
+            sanitize_for_log(key),
+            old_value,
+            item.value,
         )
         return True
 

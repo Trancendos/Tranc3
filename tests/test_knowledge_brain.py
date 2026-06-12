@@ -363,7 +363,9 @@ class TestWikilinkParsing:
         )
         await brain.put_page(
             KBPage(
-                id="src-alias", title="Source", content="Click [[Aliased Target|here]] to read."
+                id="src-alias",
+                title="Source",
+                content="Click [[Aliased Target|here]] to read.",
             ),
         )
         # Should not raise

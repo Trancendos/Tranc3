@@ -104,7 +104,7 @@ def load_framework_registry() -> FrameworkRegistry:
                         standard=str(item.get("standard", "")),
                         status=str(item.get("status", "planned")),
                         domain=str(domain),
-                    )
+                    ),
                 )
 
     for item in data.get("rooms") or []:
@@ -114,7 +114,7 @@ def load_framework_registry() -> FrameworkRegistry:
                     id=str(item.get("id", "")),
                     name=str(item.get("name", "")),
                     purpose=str(item.get("purpose", "")),
-                )
+                ),
             )
     return reg
 

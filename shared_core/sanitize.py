@@ -110,7 +110,9 @@ def sanitize_dict_for_log(
             sanitized[key] = sanitize_for_log(value, max_length=max_length)
         elif isinstance(value, dict):
             sanitized[key] = sanitize_dict_for_log(
-                value, sensitive_keys=sensitive_keys, max_length=max_length
+                value,
+                sensitive_keys=sensitive_keys,
+                max_length=max_length,
             )
         else:
             sanitized[key] = value

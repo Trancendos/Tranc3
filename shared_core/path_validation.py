@@ -159,28 +159,7 @@ def validate_path(
         ValueError: If *path* contains obviously malicious components.
     """
     return Path(
-        _validated_path_str(
-            path,
-            base_dir,
-            must_exist=must_exist,
-            allow_create=allow_create,
-        )
-    )
-
-
-def validate_existing_file(
-    path: Union[str, Path],
-    base_dir: Union[str, Path],
-) -> Path:
-    """Validate that *path* resolves to an existing regular file under *base_dir*."""
-    return Path(
-        _validated_path_str(
-            path,
-            base_dir,
-            must_exist=True,
-            allow_create=False,
-            must_be_file=True,
-        )
+        _validated_path_str(path, base_dir, must_exist=must_exist, allow_create=allow_create)
     )
 
 
@@ -339,7 +318,7 @@ def safe_join(
         resolved.relative_to(base)
     except ValueError:
         raise PathTraversalError(
-            f"Joined path escapes base directory: {resolved} is not under {base}"
+            f"Joined path escapes base directory: {resolved} is not under {base}",
         ) from None
 
     return resolved

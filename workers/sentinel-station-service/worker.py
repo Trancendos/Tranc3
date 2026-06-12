@@ -45,7 +45,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-# Phase 22.4: Dimensional Services integration
 from Dimensional.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
@@ -68,8 +67,9 @@ from Dimensional.infinity.sentinel_station import (
 
 # Phase 22.6: Smart Adaptive Intelligence + ReactiveState
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
+
+# Phase 22.4: Dimensional Services integration
 from Dimensional.sanitize import sanitize_for_log
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
 # Optional: ReactiveState for live Sentinel topology
@@ -148,7 +148,7 @@ else:
 
 def _get_db() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3_connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn

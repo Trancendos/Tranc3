@@ -253,7 +253,7 @@ def _format_violations_text(violations: List[Violation]) -> str:
     for v in violations:
         lines.append(
             f"[{v.category.value}] {v.severity.value.upper()} "
-            f"{v.file}:{v.line}:{v.col} — {v.message}"
+            f"{v.file}:{v.line}:{v.col} — {v.message}",
         )
         if v.suggestion:
             lines.append(f"  💡 {v.suggestion}")
@@ -319,7 +319,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
     # Print summary
     print(
         f"\nScan complete: {len(violations)} violations found "
-        f"(of {len(all_violations)} total before filtering)"
+        f"(of {len(all_violations)} total before filtering)",
     )
 
     # Return exit code based on findings
@@ -466,7 +466,7 @@ def cmd_gate(args: argparse.Namespace) -> int:
         print(
             f"   Total violations: {result.total_violations} "
             f"(C:{result.critical} H:{result.high} M:{result.medium} "
-            f"L:{result.low} I:{result.info})"
+            f"L:{result.low} I:{result.info})",
         )
     else:
         print("❌ Quality gate FAILED")
@@ -475,7 +475,7 @@ def cmd_gate(args: argparse.Namespace) -> int:
         print(
             f"   Total violations: {result.total_violations} "
             f"(C:{result.critical} H:{result.high} M:{result.medium} "
-            f"L:{result.low} I:{result.info})"
+            f"L:{result.low} I:{result.info})",
         )
 
     # Save telemetry
@@ -513,7 +513,7 @@ def cmd_watch(args: argparse.Namespace) -> int:
                 print(
                     f"[{time.strftime('%H:%M:%S')}] "
                     f"⚠️  {len(violations)} violations "
-                    f"({len(critical_high)} critical/high)"
+                    f"({len(critical_high)} critical/high)",
                 )
                 for v in critical_high[:5]:
                     print(f"  [{v.category.value}] {v.file}:{v.line} — {v.message}")

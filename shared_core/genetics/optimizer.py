@@ -204,7 +204,8 @@ class GeneticOptimizer:
                 else:
                     span = float(hi) - float(lo)
                     child[key] = max(
-                        float(lo), min(float(hi), child[key] + self._rng.gauss(0, span * 0.1))
+                        float(lo),
+                        min(float(hi), child[key] + self._rng.gauss(0, span * 0.1)),
                     )
         child.pop("_fitness", None)
         return child
@@ -234,7 +235,7 @@ class GeneticOptimizer:
                     a, b = self._rng.sample(pop, 2)
                     c1, c2 = self._crossover(a, b)
                     offspring.extend(
-                        [self._evaluate(self._mutate(c1)), self._evaluate(self._mutate(c2))]
+                        [self._evaluate(self._mutate(c1)), self._evaluate(self._mutate(c2))],
                     )
                 else:
                     parent = self._rng.choice(pop)

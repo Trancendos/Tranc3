@@ -45,7 +45,7 @@ class RateLimitConfig:
             "prime": 5.0,
             "admin": 10.0,
             "service": 20.0,  # internal service accounts
-        }
+        },
     )
     # Key extraction: "ip", "jwt_sub", or "jwt_sub_with_ip_fallback"
     key_strategy: str = "jwt_sub_with_ip_fallback"

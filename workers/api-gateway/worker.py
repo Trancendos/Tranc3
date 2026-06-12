@@ -82,7 +82,7 @@ if ENVIRONMENT == "production":
     if missing_upstreams:
         raise RuntimeError(
             "API Gateway production startup requires upstream service URLs: "
-            + ", ".join(missing_upstreams)
+            + ", ".join(missing_upstreams),
         )
 
 # ── Logger ──────────────────────────────────────────────────────

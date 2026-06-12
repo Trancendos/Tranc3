@@ -262,7 +262,8 @@ class HeartbeatAggregator:
         self._incidents: Dict[str, HealthIncident] = {}
         self._last_aggregation: Optional[datetime] = None
         logger.info(
-            "HeartbeatAggregator initialized (retention=%ds)", self._config.retention_period
+            "HeartbeatAggregator initialized (retention=%ds)",
+            self._config.retention_period,
         )
 
     # ── Heartbeat Ingestion ────────────────────────────────────────────────
@@ -327,7 +328,7 @@ class HeartbeatAggregator:
                 current_metrics=heartbeat.metrics,
                 historical_metrics=[heartbeat.metrics],
                 status_history=[
-                    {"timestamp": heartbeat.timestamp, "status": heartbeat.status.value}
+                    {"timestamp": heartbeat.timestamp, "status": heartbeat.status.value},
                 ],
                 incidents=[],
             )
@@ -362,7 +363,7 @@ class HeartbeatAggregator:
             {
                 "timestamp": heartbeat.timestamp,
                 "status": heartbeat.status.value,
-            }
+            },
         )
         if len(existing.status_history) > self._config.max_status_history:
             existing.status_history = existing.status_history[-self._config.max_status_history :]
@@ -658,7 +659,7 @@ class HeartbeatAggregator:
                     avg_error_rate=round(avg_er, 1),
                     avg_cpu_usage=round(avg_cpu, 1),
                     avg_memory_usage=round(avg_mem, 1),
-                )
+                ),
             )
 
         return result
@@ -732,13 +733,15 @@ class HeartbeatAggregator:
                     avg_response_time=round(avg_rt),
                     avg_error_rate=round(avg_er, 1),
                     avg_uptime=round(avg_uptime),
-                )
+                ),
             )
 
         return trends
 
     def _generate_recommendations(
-        self, services: List[ServiceHealth], categories: List[CategoryHealth]
+        self,
+        services: List[ServiceHealth],
+        categories: List[CategoryHealth],
     ) -> List[str]:
         """Generate actionable recommendations based on current health state."""
         recs: List[str] = []
@@ -747,29 +750,29 @@ class HeartbeatAggregator:
         for service in services:
             if service.status == ServiceStatus.CRITICAL:
                 recs.append(
-                    f"\U0001f6a8 {service.service_name}: Investigate immediately — service in critical state"
+                    f"\U0001f6a8 {service.service_name}: Investigate immediately — service in critical state",
                 )
             elif service.status == ServiceStatus.DEGRADED:
                 recs.append(
-                    f"\u26a0\ufe0f {service.service_name}: Review metrics and investigate performance issues"
+                    f"\u26a0\ufe0f {service.service_name}: Review metrics and investigate performance issues",
                 )
 
             if service.missed_heartbeats > 3:
                 recs.append(
                     f"\U0001f50c {service.service_name}: Check connectivity — missed "
-                    f"{service.missed_heartbeats} heartbeats"
+                    f"{service.missed_heartbeats} heartbeats",
                 )
 
             if service.current_metrics:
                 if service.current_metrics.cpu_usage > 80:
                     recs.append(
                         f"\U0001f4bb {service.service_name}: High CPU usage "
-                        f"({service.current_metrics.cpu_usage:.0f}%) — consider scaling"
+                        f"({service.current_metrics.cpu_usage:.0f}%) — consider scaling",
                     )
                 if service.current_metrics.memory_usage > 80:
                     recs.append(
                         f"\U0001f9e0 {service.service_name}: High memory usage "
-                        f"({service.current_metrics.memory_usage:.0f}%) — check for leaks"
+                        f"({service.current_metrics.memory_usage:.0f}%) — check for leaks",
                     )
 
         # Category-level recommendations
@@ -777,17 +780,17 @@ class HeartbeatAggregator:
             if cat.status == ServiceStatus.CRITICAL:
                 recs.append(
                     f"\U0001f6a8 Category {cat.category.value}: Critical — "
-                    f"all affected services need attention"
+                    f"all affected services need attention",
                 )
             if cat.avg_response_time > 2000:
                 recs.append(
                     f"\u23f1\ufe0f {cat.category.value}: High response times — "
-                    f"optimize queries or add caching"
+                    f"optimize queries or add caching",
                 )
             if cat.avg_error_rate > 5:
                 recs.append(
                     f"\U0001f41b {cat.category.value}: Elevated error rates — "
-                    f"review logs and fix bugs"
+                    f"review logs and fix bugs",
                 )
 
         return recs[: self._config.max_recommendations]

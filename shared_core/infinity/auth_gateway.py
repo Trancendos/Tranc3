@@ -108,7 +108,9 @@ def _extract_api_key(request: Request) -> Optional[str]:
 
 
 def _validate_jwt_token(
-    token: str, secret: str, algorithm: str = "HS256"
+    token: str,
+    secret: str,
+    algorithm: str = "HS256",
 ) -> Optional[Dict[str, Any]]:
     """Validate a JWT token and return its payload.
 
@@ -235,7 +237,7 @@ class AuthGatewayMiddleware(BaseHTTPMiddleware):
         if not self._jwt_secret:
             logger.warning(
                 "JWT_SECRET not set — JWT authentication will not work. "
-                "Set the JWT_SECRET environment variable for production use."
+                "Set the JWT_SECRET environment variable for production use.",
             )
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -374,7 +376,9 @@ class WebSocketAuthManager:
         return None
 
     def register_connection(
-        self, websocket: WebSocket, user: Optional[Dict[str, Any]] = None
+        self,
+        websocket: WebSocket,
+        user: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """Register a WebSocket connection with user metadata.
 

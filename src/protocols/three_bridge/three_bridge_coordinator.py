@@ -754,7 +754,8 @@ class SentinelStation:
         """
         if not packet.security_token:
             logger.warning(
-                "Sentinel: cross-bridge packet %s rejected — no security_token", packet.id
+                "Sentinel: cross-bridge packet %s rejected — no security_token",
+                packet.id,
             )
             packet.metadata["sentinel_error"] = "cross_bridge_requires_security_token"
             return packet

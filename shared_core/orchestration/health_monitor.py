@@ -514,7 +514,11 @@ class AdaptiveHealthMonitor:
         self._callbacks.append(callback)
 
     def _notify_status_change(
-        self, name: str, old: HealthStatus, new: HealthStatus, result: HealthCheckResult
+        self,
+        name: str,
+        old: HealthStatus,
+        new: HealthStatus,
+        result: HealthCheckResult,
     ) -> None:
         """Notify callbacks of a status change."""
         for cb in self._callbacks:

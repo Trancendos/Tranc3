@@ -15,7 +15,7 @@ _DB_PATH = Path(
     os.environ.get(
         "ENTITY_OVERRIDES_DB",
         os.environ.get("INFINITY_ADMIN_DB_PATH", "data/infinity_admin.db"),
-    )
+    ),
 )
 
 
@@ -60,7 +60,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             value TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
-        """
+        """,
     )
     conn.execute("UPDATE entity_overrides SET slot = '' WHERE slot IS NULL")
     conn.commit()

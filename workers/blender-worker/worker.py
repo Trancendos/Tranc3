@@ -268,10 +268,8 @@ async def lifespan(app: FastAPI):
         logger.info("Blender found at: %s", sanitize_for_log(blender_path))
     else:
         logger.warning(
-            sanitize_for_log(
-                "Blender not found in PATH or standard locations — "
-                "all render/scene endpoints will return 503."
-            )
+            "Blender not found in PATH or standard locations — "
+            "all render/scene endpoints will return 503.",
         )
     yield
 

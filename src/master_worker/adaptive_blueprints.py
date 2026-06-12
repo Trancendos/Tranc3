@@ -177,9 +177,24 @@ class BlueprintEngine:
 
 
             app = FastAPI(title="{spec.name}", version="1.0.0", lifespan=lifespan)
+            _raw_origins = os.environ.get("ALLOWED_ORIGINS", "")
+            _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+            if not _allowed_origins:
+                _dev_envs = {{"development", "dev", "local", "test", "testing"}}
+                if ENVIRONMENT.lower() in _dev_envs:
+                    logger.warning(
+                        "%s: ALLOWED_ORIGINS not set — defaulting to allow-all (development only)",
+                        SERVICE_NAME,
+                    )
+                    _allowed_origins = ["*"]
+                else:
+                    logger.warning(
+                        "%s: ALLOWED_ORIGINS not set in non-development environment — CORS disabled (fail-safe)",
+                        SERVICE_NAME,
+                    )
             app.add_middleware(
                 CORSMiddleware,
-                allow_origins=os.environ.get("ALLOWED_ORIGINS", "").split(","),
+                allow_origins=_allowed_origins,
                 allow_methods=["*"],
                 allow_headers=["*"],
             )
