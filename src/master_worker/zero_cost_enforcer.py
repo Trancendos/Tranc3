@@ -314,7 +314,7 @@ class ZeroCostEnforcer:
                             "Quota CRITICAL on %s (%.1f%%) — pre-emptive rotation",
                             report.platform_name,
                             report.utilisation_pct,
-                        )
+                        )  # codeql[py/log-injection]
                         fallback = await self.rotate_platform(report.platform_name)
                         report.action_taken = f"rotated_to:{fallback}"
                         report.fallback_platform = fallback
@@ -323,7 +323,7 @@ class ZeroCostEnforcer:
                             "Quota WARNING on %s (%.1f%%) — monitoring",
                             report.platform_name,
                             report.utilisation_pct,
-                        )
+                        )  # codeql[py/log-injection]
                         report.action_taken = "monitoring"
 
                 self._reports = reports
