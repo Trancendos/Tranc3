@@ -281,21 +281,55 @@ class TestUrlValidation:
         assert called_url == "https://example.com/hook"
 
     @pytest.mark.asyncio
-    @patch("urllib.request.urlopen")
+    @patch("workers.notifications.worker.http.client.HTTPSConnection")
     @patch("socket.getaddrinfo")
-    async def test_dispatch_webhook_uses_validated_url(self, mock_getaddrinfo, mock_urlopen):
+    async def test_dispatch_webhook_uses_allowlisted_host(self, mock_getaddrinfo, mock_https_cls):
+        import workers.notifications.worker as notifications_worker
         from workers.notifications.worker import NotificationDispatcher
 
+        original = set(notifications_worker._WEBHOOK_ALLOWED_DOMAINS)
+        notifications_worker._WEBHOOK_ALLOWED_DOMAINS.add("example.com")
         mock_getaddrinfo.return_value = [
             (2, 1, 6, "", ("93.184.216.34", 443)),
         ]
-        mock_urlopen.return_value.__enter__.return_value = MagicMock(status=200)
+        mock_conn = MagicMock()
+        mock_resp = MagicMock(status=200)
+        mock_conn.getresponse.return_value = mock_resp
+        mock_https_cls.return_value = mock_conn
 
-        url = "https://example.com/hook"
-        ok = await NotificationDispatcher.dispatch_webhook(url, {"event": "test"})
-        assert ok is True
-        called_url = mock_urlopen.call_args[0][0].full_url
-        assert called_url == url
+        try:
+            url = "https://example.com/hook"
+            ok = await NotificationDispatcher.dispatch_webhook(url, {"event": "test"})
+            assert ok is True
+            mock_https_cls.assert_called_once_with("example.com", 443, timeout=10)
+            mock_conn.request.assert_called_once()
+            request_args = mock_conn.request.call_args
+            assert request_args[0][0] == "POST"
+            assert request_args[0][1] == "/hook"
+        finally:
+            notifications_worker._WEBHOOK_ALLOWED_DOMAINS.clear()
+            notifications_worker._WEBHOOK_ALLOWED_DOMAINS.update(original)
+
+    @pytest.mark.asyncio
+    @patch("socket.getaddrinfo")
+    async def test_dispatch_webhook_requires_allowlist(self, mock_getaddrinfo):
+        import workers.notifications.worker as notifications_worker
+        from workers.notifications.worker import NotificationDispatcher
+
+        original = set(notifications_worker._WEBHOOK_ALLOWED_DOMAINS)
+        notifications_worker._WEBHOOK_ALLOWED_DOMAINS.clear()
+        mock_getaddrinfo.return_value = [
+            (2, 1, 6, "", ("93.184.216.34", 443)),
+        ]
+        try:
+            ok = await NotificationDispatcher.dispatch_webhook(
+                "https://example.com/hook",
+                {"event": "test"},
+            )
+            assert ok is False
+        finally:
+            notifications_worker._WEBHOOK_ALLOWED_DOMAINS.clear()
+            notifications_worker._WEBHOOK_ALLOWED_DOMAINS.update(original)
 
 
 # ─── Error Handlers ───────────────────────────────────────────────────────────
