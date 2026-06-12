@@ -1235,9 +1235,14 @@ services:
       <<: *healthcheck-default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.cranbania.rule=PathPrefix(`/townhall`)"
-      - "traefik.http.routers.cranbania.middlewares=strip-townhall@docker"
+      - "traefik.http.routers.cranbania.rule=Host(`trancendos.com`) && PathPrefix(`/townhall`)"
+      - "traefik.http.routers.cranbania.entrypoints=websecure"
+      - "traefik.http.routers.cranbania.tls=true"
+      - "traefik.http.routers.cranbania.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.cranbania.middlewares=strip-townhall@docker,ratelimit-cranbania@docker"
       - "traefik.http.middlewares.strip-townhall.stripprefix.prefixes=/townhall"
+      - "traefik.http.middlewares.ratelimit-cranbania.ratelimit.average=100"
+      - "traefik.http.middlewares.ratelimit-cranbania.ratelimit.burst=50"
       - "traefik.http.services.cranbania.loadbalancer.server.port=8071"
 
   # ── Qdrant — High-performance vector database (Apache 2.0) ─────────────

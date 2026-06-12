@@ -36,9 +36,7 @@ WAIVERS_PATH = REPO_ROOT / "compliance" / "waivers.yaml"
 
 # Magna Carta register — loaded when MAGNA_CARTA_REGISTER_PATH is set or --magna-carta flag used
 _MC_REGISTER_ENV = os.environ.get("MAGNA_CARTA_REGISTER_PATH", "")
-MC_REGISTER_PATH: Path | None = (
-    Path(_MC_REGISTER_ENV) if _MC_REGISTER_ENV else None
-)
+MC_REGISTER_PATH: Path | None = Path(_MC_REGISTER_ENV) if _MC_REGISTER_ENV else None
 
 # Status ordering for summary display
 STATUS_ORDER = ["COMPLIANT", "PARTIAL", "PLANNED", "WAIVED", "NA"]
@@ -231,8 +229,6 @@ def _check_evidence(evidence_list: list[dict[str, Any]]) -> list[EvidenceCheck]:
     return results
 
 
-
-
 def load_magna_carta_register(mc_path: Path) -> list[dict[str, Any]]:
     """
     Load a Magna Carta register (magna_carta_register.yaml) and convert its
@@ -240,6 +236,10 @@ def load_magna_carta_register(mc_path: Path) -> list[dict[str, Any]]:
     Each MC row is prefixed with area code 'MC'.
     """
     data = _load_yaml(mc_path)
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"Magna Carta register at {mc_path} must be a YAML mapping, got {type(data).__name__}"
+        )
     rows = []
 
     # Support both flat list and programme-wrapped structures
@@ -257,11 +257,16 @@ def load_magna_carta_register(mc_path: Path) -> list[dict[str, Any]]:
 
     for item in items:
         mc_id = item.get("id", item.get("mc_id", "MC-???"))
-        # Normalise ID to REQ-MC-NNN form so area extraction works
-        if mc_id.startswith("MC-"):
-            req_id = f"REQ-MC-{mc_id[3:]}"
-        else:
+        # Normalise to REQ-<AREA>-<REST> form so area extraction works downstream.
+        # Handles: MC-001 → REQ-MC-001, AI-002 → REQ-AI-002, already-prefixed REQ-* pass through.
+        if mc_id.startswith("REQ-"):
             req_id = mc_id
+        else:
+            parts = mc_id.split("-", 1)
+            if len(parts) == 2 and parts[0] in AREA_STANDARDS:
+                req_id = f"REQ-{parts[0]}-{parts[1]}"
+            else:
+                req_id = f"REQ-MC-{mc_id}"
 
         rows.append(
             {
@@ -294,7 +299,7 @@ def load_and_check_merged(
     report = _build_report(register_path)
 
     mc_path = mc_register_path or MC_REGISTER_PATH
-    if mc_path and mc_path.exists():
+    if mc_path and mc_path.is_file():
         mc_rows = load_magna_carta_register(mc_path)
         _ingest_requirements(report, mc_rows)
         logger.info("Merged %d Magna Carta rows from %s", len(mc_rows), mc_path)
@@ -336,7 +341,9 @@ def _ingest_requirements(
 ) -> None:
     """Add a list of raw requirement dicts into a ComplianceReport (mutates report)."""
     if waived_req_ids is None:
-        waived_req_ids = {w["requirement_id"] for w in report.waivers if w.get("status") == "ACTIVE"}
+        waived_req_ids = {
+            w["requirement_id"] for w in report.waivers if w.get("status") == "ACTIVE"
+        }
 
     for req_raw in requirements:
         req_id = req_raw.get("id", "UNKNOWN")

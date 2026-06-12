@@ -605,11 +605,11 @@ async def api_version_header_middleware(request, call_next):
 
 
 app.add_middleware(GovernanceMiddleware)
+# MagnaCartaMiddleware is inner to ZeroTrustASGIMiddleware so that jwt_claims/zero_trust_ok
+# are already on request.state when compliance rules execute. Advisory by default.
+app.add_middleware(MagnaCartaMiddleware)
 app.add_middleware(ZeroTrustASGIMiddleware)
 app.add_middleware(RBACMiddleware)
-# Magna Carta compliance middleware — runs after Zero Trust so jwt_claims/zero_trust_ok
-# are already on request.state. Advisory mode by default (MAGNA_CARTA_ENABLED=false).
-app.add_middleware(MagnaCartaMiddleware)
 # AuditMiddleware runs outermost so it captures every request after auth resolution
 app.add_middleware(AuditMiddleware, service_name="tranc3-backend")
 

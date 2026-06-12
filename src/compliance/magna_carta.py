@@ -75,7 +75,19 @@ _PROHIBITED_AI_USES = {
 _AI_ROUTE_PREFIXES = ("/ai/", "/infinity-ai/", "/model-router/")
 
 # Protected routes requiring auth (MC-RULE-001)
-_PROTECTED_PREFIXES = ("/api/", "/townhall/", "/vault/")
+_PROTECTED_PREFIXES = (
+    "/api/",
+    "/townhall/",
+    "/vault/",
+    "/chat",
+    "/billing/",
+    "/feedback",
+    "/consciousness/",
+    "/admin/",
+    "/memory/",
+    "/mcp/",
+    "/workflow/",
+)
 _EXCLUDED_PATHS = {"/health", "/metrics", "/docs", "/openapi.json", "/favicon.ico"}
 
 
@@ -116,7 +128,7 @@ class MagnaCartaCompliance:
 
         path = MAGNA_CARTA_CONFIG_PATH
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 cfg = json.load(f)
             logger.info("Magna Carta config loaded from %s", sanitize_for_log(path))
             return cfg
@@ -166,9 +178,10 @@ class MagnaCartaCompliance:
             result = self._apply_rule(rule, request_data)
             if not result["passed"]:
                 violations.append(result)
-                if self._enforcement.get("fail_closed_on_violation") and result.get(
-                    "severity"
-                ) == "high":
+                if (
+                    self._enforcement.get("fail_closed_on_violation")
+                    and result.get("severity") == "high"
+                ):
                     break  # stop on first high-severity breach in strict mode
 
         outcome = {
@@ -271,9 +284,7 @@ class MagnaCartaCompliance:
 
     # ── Rule implementations ──────────────────────────────────────────────────
 
-    def _rule_authentication(
-        self, rule: Dict, data: Dict
-    ) -> tuple[bool, str, Dict]:
+    def _rule_authentication(self, rule: Dict, data: Dict) -> tuple[bool, str, Dict]:
         """MC-RULE-001: JWT + Zero Trust check on protected paths."""
         path = data.get("path", "")
 
@@ -282,36 +293,39 @@ class MagnaCartaCompliance:
             return True, "Path not in protected scope", {}
 
         # Check scope exclusions from config
-        scope = rule.get("scope", {})
-        for excl in scope.get("exclude_paths", []):
+        scope = rule.get("scope") or {}
+        for excl in scope.get("exclude_paths") or []:
             excl_norm = excl.rstrip("*")
             if path.startswith(excl_norm) or path == excl_norm.rstrip("/"):
                 return True, "Path excluded from rule scope", {}
 
-        checks = rule.get("checks", [])
+        checks = rule.get("checks") or []
         failures = []
 
         if "jwt_present" in checks:
-            headers = data.get("headers", {})
-            auth = headers.get("authorization", headers.get("Authorization", ""))
-            if not auth.startswith("Bearer "):
+            headers = data.get("headers") or {}
+            auth = headers.get("authorization") or headers.get("Authorization") or ""
+            if not isinstance(auth, str) or not auth.startswith("Bearer "):
                 failures.append("jwt_present")
 
         if "jwt_not_expired" in checks:
-            claims = data.get("jwt_claims", {})
+            claims = data.get("jwt_claims") or {}
             import time
+
             exp = claims.get("exp")
-            if exp is not None and exp < int(time.time()):
+            if exp is None or int(exp) < int(time.time()):
                 failures.append("jwt_not_expired")
 
         if "zero_trust_passed" in checks:
-            if data.get("zero_trust_ok") is False:
+            if data.get("zero_trust_ok") is not True:
                 failures.append("zero_trust_passed")
 
         if failures:
-            return False, f"Authentication checks failed: {', '.join(failures)}", {
-                "failed_checks": failures
-            }
+            return (
+                False,
+                f"Authentication checks failed: {', '.join(failures)}",
+                {"failed_checks": failures},
+            )
         return True, "Authentication checks passed", {}
 
     def _rule_privacy(self, rule: Dict, data: Dict) -> tuple[bool, str, Dict]:
@@ -334,14 +348,16 @@ class MagnaCartaCompliance:
             if not isinstance(field_val, str):
                 continue
             for pat in _PII_FIELDS:
-                if re.search(rf'\b{pat}\b', field_val, re.IGNORECASE):
+                if re.search(rf"\b{pat}\b", field_val, re.IGNORECASE):
                     failures.append(f"raw_pattern:{pat}")
                     break
 
         if failures:
-            return False, f"PII/sensitive data exposure: {', '.join(failures[:5])}", {
-                "failed_checks": failures
-            }
+            return (
+                False,
+                f"PII/sensitive data exposure: {', '.join(failures[:5])}",
+                {"failed_checks": failures},
+            )
         return True, "Privacy checks passed", {}
 
     def _rule_rate_limit(self, rule: Dict, data: Dict) -> tuple[bool, str, Dict]:
@@ -358,9 +374,11 @@ class MagnaCartaCompliance:
         limit = tier_config.get("requests_per_hour", 100)
 
         if request_count > limit:
-            return False, (
-                f"Rate limit exceeded: {request_count}/{limit} req/hr for tier '{tenant_tier}'"
-            ), {"limit": limit, "count": request_count, "tier": tenant_tier}
+            return (
+                False,
+                (f"Rate limit exceeded: {request_count}/{limit} req/hr for tier '{tenant_tier}'"),
+                {"limit": limit, "count": request_count, "tier": tenant_tier},
+            )
 
         return True, f"Rate limit OK ({request_count}/{limit})", {}
 
@@ -390,7 +408,7 @@ class MagnaCartaCompliance:
 
         if "prohibited_use_blocked" in checks:
             use_lower = use_case.lower()
-            for prohibited in rule.get("prohibited_uses", []):
+            for prohibited in set(rule.get("prohibited_uses") or []) | _PROHIBITED_AI_USES:
                 if prohibited.replace("_", " ") in use_lower or prohibited in use_lower:
                     failures.append(f"prohibited_use:{prohibited}")
 
@@ -400,10 +418,14 @@ class MagnaCartaCompliance:
                 failures.append("high_risk_no_human_review")
 
         if failures:
-            return False, f"AI governance violations: {', '.join(failures)}", {
-                "failed_checks": failures,
-                "model_id": model_id,
-            }
+            return (
+                False,
+                f"AI governance violations: {', '.join(failures)}",
+                {
+                    "failed_checks": failures,
+                    "model_id": model_id,
+                },
+            )
         return True, "AI governance checks passed", {}
 
     def _rule_zero_cost(self, rule: Dict, data: Dict) -> tuple[bool, str, Dict]:
@@ -427,9 +449,11 @@ class MagnaCartaCompliance:
                 failures.append("vendor_lock_in_not_assessed")
 
         if failures:
-            return False, f"Zero-cost sovereignty violations: {', '.join(failures)}", {
-                "failed_checks": failures
-            }
+            return (
+                False,
+                f"Zero-cost sovereignty violations: {', '.join(failures)}",
+                {"failed_checks": failures},
+            )
         return True, "Zero-cost sovereignty checks passed", {}
 
     def _rule_audit(self, rule: Dict, data: Dict) -> tuple[bool, str, Dict]:
@@ -452,9 +476,11 @@ class MagnaCartaCompliance:
             failures.append("action_missing")
 
         if failures:
-            return False, f"Audit log completeness failures: {', '.join(failures)}", {
-                "failed_checks": failures
-            }
+            return (
+                False,
+                f"Audit log completeness failures: {', '.join(failures)}",
+                {"failed_checks": failures},
+            )
         return True, "Audit event completeness checks passed", {}
 
     def _rule_governance(self, rule: Dict, data: Dict) -> tuple[bool, str, Dict]:
@@ -479,10 +505,14 @@ class MagnaCartaCompliance:
                 failures.append("compliance_review_incomplete")
 
         if failures:
-            return False, f"Governance gate failures: {', '.join(failures)}", {
-                "failed_checks": failures,
-                "change_type": change_type,
-            }
+            return (
+                False,
+                f"Governance gate failures: {', '.join(failures)}",
+                {
+                    "failed_checks": failures,
+                    "change_type": change_type,
+                },
+            )
         return True, "Governance gate passed", {}
 
     def _rule_transparency(self, rule: Dict, data: Dict) -> tuple[bool, str, Dict]:
@@ -511,9 +541,11 @@ class MagnaCartaCompliance:
                 failures.append("rights_contact_undocumented")
 
         if failures:
-            return False, f"Transparency obligations unmet: {', '.join(failures)}", {
-                "failed_checks": failures
-            }
+            return (
+                False,
+                f"Transparency obligations unmet: {', '.join(failures)}",
+                {"failed_checks": failures},
+            )
         return True, "Transparency checks passed", {}
 
     def _rule_health_data(self, rule: Dict, data: Dict) -> tuple[bool, str, Dict]:
@@ -552,9 +584,11 @@ class MagnaCartaCompliance:
                 failures.append(f"invalid_marketing_claim_tier:{claim}")
 
         if failures:
-            return False, f"HIPAA/PHI boundary violations: {', '.join(failures)}", {
-                "failed_checks": failures
-            }
+            return (
+                False,
+                f"HIPAA/PHI boundary violations: {', '.join(failures)}",
+                {"failed_checks": failures},
+            )
         return True, "HIPAA health data checks passed", {}
 
 

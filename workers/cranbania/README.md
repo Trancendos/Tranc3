@@ -14,7 +14,7 @@ application with:
 - Kanban board with card types: feature, bug, incident, change, epic, task
 - Sprint management with burndown charts
 - ITSM-lite: SLA timers, incident queue, SLA scheduler, breach escalation
-- Prince2-lite governance layer
+- PRINCE2-lite governance layer
 - Visual canvas boards (Lucid/Miro-style nodes + edges + presence)
 - Workshop system with AI-assisted heuristic populate and template library
 - MCP server (40+ tools) — registered with The Spark on startup

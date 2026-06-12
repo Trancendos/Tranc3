@@ -34,11 +34,13 @@ if [ -d "$CB_TARGET/.git" ] || git submodule status "$CB_TARGET" &>/dev/null 2>&
   git submodule update --remote "$CB_TARGET" || git -C "$CB_TARGET" pull origin main
 else
   echo "[CranBania]   Adding submodule at $CB_TARGET ..."
-  # Remove the stub README/Dockerfile first if no real repo there yet
-  if [ -f "$CB_TARGET/Dockerfile" ] && [ ! -f "$CB_TARGET/package.json" ]; then
-    echo "[CranBania]   Removing stub files before submodule init..."
-    rm -rf "$CB_TARGET"
+  # Remove any stub files tracked in the index (Dockerfile/README were added as plain files
+  # in this PR; git submodule add requires the path to be absent from the git index).
+  if git ls-files --error-unmatch "$CB_TARGET" &>/dev/null 2>&1; then
+    echo "[CranBania]   Removing tracked stub files from index before submodule init..."
+    git rm -rf --cached "$CB_TARGET" || true
   fi
+  rm -rf "$CB_TARGET"
   git submodule add "$CB_URL" "$CB_TARGET"
 fi
 echo "[CranBania]   ✓ $CB_TARGET"
@@ -49,6 +51,8 @@ if [ -f "$ENV_FILE" ]; then
   echo ""
   echo "=== Checking .env for Magna Carta settings ==="
   if ! grep -q "MAGNA_CARTA_CONFIG_PATH" "$ENV_FILE"; then
+    # Ensure trailing newline before appending so values aren't concatenated onto existing lines
+    [ -n "$(tail -c1 "$ENV_FILE")" ] && printf '\n' >> "$ENV_FILE"
     echo "MAGNA_CARTA_ENABLED=false" >> "$ENV_FILE"
     echo "MAGNA_CARTA_CONFIG_PATH=./compliance/magna-carta/config/magna_carta_config.json" >> "$ENV_FILE"
     echo "MAGNA_CARTA_REGISTER_PATH=./compliance/magna-carta/compliance/magna_carta_register.yaml" >> "$ENV_FILE"

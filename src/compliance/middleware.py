@@ -13,17 +13,19 @@ from starlette.types import ASGIApp
 logger = logging.getLogger("tranc3.compliance.middleware")
 
 # Paths that never run through Magna Carta (health + metrics + SSE streams)
-_MC_SKIP_PATHS = frozenset({
-    "/health",
-    "/ready",
-    "/metrics",
-    "/openapi.json",
-    "/docs",
-    "/redoc",
-    "/favicon.ico",
-    "/mcp/sse",
-    "/observatory/sse",
-})
+_MC_SKIP_PATHS = frozenset(
+    {
+        "/health",
+        "/ready",
+        "/metrics",
+        "/openapi.json",
+        "/docs",
+        "/redoc",
+        "/favicon.ico",
+        "/mcp/sse",
+        "/observatory/sse",
+    }
+)
 
 
 class MagnaCartaMiddleware(BaseHTTPMiddleware):
@@ -41,7 +43,8 @@ class MagnaCartaMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app: ASGIApp) -> None:
         super().__init__(app)
-        from src.compliance.magna_carta import compliance, MAGNA_CARTA_ENABLED
+        from src.compliance.magna_carta import MAGNA_CARTA_ENABLED, compliance
+
         self._compliance = compliance
         self._enabled = MAGNA_CARTA_ENABLED
         if self._enabled:
@@ -57,13 +60,14 @@ class MagnaCartaMiddleware(BaseHTTPMiddleware):
         if path in _MC_SKIP_PATHS:
             return await call_next(request)
 
-        # Build request_data from available context
+        # Build request_data from available context.
+        # ZeroTrustASGIMiddleware (outer) has already decoded JWT and set request.state.
         headers = dict(request.headers)
         jwt_claims: dict = {}
         try:
             # Reuse already-decoded claims placed on request.state by ZeroTrustASGIMiddleware
             jwt_claims = getattr(request.state, "jwt_claims", {}) or {}
-        except Exception:
+        except Exception:  # noqa: BLE001 — request.state access can raise on uninitialized state
             pass
 
         zero_trust_ok = getattr(request.state, "zero_trust_ok", None)
@@ -74,23 +78,27 @@ class MagnaCartaMiddleware(BaseHTTPMiddleware):
             "path": path,
             "method": request.method,
             "headers": headers,
+            "query_params": dict(request.query_params),
+            "content_type": request.headers.get("content-type", ""),
+            "user_agent": request.headers.get("user-agent", ""),
             "user_id": getattr(request.state, "user_id", None),
             "jwt_claims": jwt_claims,
             "zero_trust_ok": zero_trust_ok,
             "tenant_tier": tenant_tier,
             "request_count": request_count,
             "ip": request.client.host if request.client else None,
+            # AI / governance fields populated from request.state when set by route handlers
+            "model_id": getattr(request.state, "model_id", None),
+            "use_case": getattr(request.state, "use_case", None),
+            "change_type": getattr(request.state, "change_type", None),
+            "cab_approved": getattr(request.state, "cab_approved", None),
         }
 
         result = self._compliance.check_request(request_data)
         violations = result.get("violations", [])
         is_compliant = result.get("compliant", True)
-        mode = result.get("mode", "advisory")
-        fail_closed = (
-            not is_compliant
-            and mode != "advisory"
-            and any(v.get("severity") == "high" for v in violations)
-        )
+        # Use fail_closed_on_violation from the config result (set by the rule engine)
+        fail_closed = result.get("fail_closed", False) and not is_compliant
 
         if not is_compliant:
             logger.warning(
@@ -100,8 +108,7 @@ class MagnaCartaMiddleware(BaseHTTPMiddleware):
                 [v.get("rule_id") for v in violations],
             )
 
-        if fail_closed:
-            # Only block in strict enforcement mode with high-severity violations
+        if fail_closed and any(v.get("severity") == "high" for v in violations):
             return JSONResponse(
                 {
                     "error": "Request blocked by compliance policy",
@@ -120,6 +127,26 @@ class MagnaCartaMiddleware(BaseHTTPMiddleware):
             )
 
         response = await call_next(request)
+
+        # Run response-side checks (MC-RULE-002 PII leakage, MC-RULE-008 transparency)
+        if hasattr(self._compliance, "check_response"):
+            try:
+                resp_result = self._compliance.check_response(
+                    {**request_data, "status_code": response.status_code}
+                )
+                resp_violations = resp_result.get("violations", [])
+                if resp_violations:
+                    violations = violations + resp_violations
+                    is_compliant = False
+                    logger.warning(
+                        "Magna Carta response violations on %s %s: %s",
+                        request.method,
+                        path,
+                        [v.get("rule_id") for v in resp_violations],
+                    )
+            except Exception:  # noqa: BLE001 — response checks must never crash the response
+                pass
+
         response.headers["X-MC-Compliant"] = "true" if is_compliant else "false"
         if violations:
             response.headers["X-MC-Violations"] = str(len(violations))
