@@ -20,16 +20,19 @@ interface ChunkedGridProps<T> {
 export function ChunkedGrid<T>({
   items, renderItem, chunkSize = 7, chunkLabel, className = '', itemClassName = '', keyExtractor
 }: ChunkedGridProps<T>) {
-  const chunks = useMiller(items, chunkSize)
+  const safeChunkSize = Math.max(1, Math.floor(chunkSize || 1))
+  const chunks = useMiller(items, safeChunkSize)
 
   if (chunks.length === 1) {
     return (
-      <div className={`ux-miller-chunk ${className}`} role="list">
-        {items.map((item, i) => (
-          <div key={keyExtractor ? keyExtractor(item, i) : i} className={`ux-miller-chunk-item ${itemClassName}`} role="listitem">
-            {renderItem(item, i)}
-          </div>
-        ))}
+      <div className={`ux-container-region ${className}`}>
+        <div className="ux-miller-chunk" role="list">
+          {items.map((item, i) => (
+            <div key={keyExtractor ? keyExtractor(item, i) : i} className={`ux-miller-chunk-item ${itemClassName}`} role="listitem">
+              {renderItem(item, i)}
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -43,15 +46,17 @@ export function ChunkedGrid<T>({
               {chunkLabel(ci, chunks.length)}
             </h3>
           )}
-          <div className="ux-miller-chunk" role="list">
-            {chunk.map((item, i) => {
-              const globalIdx = ci * chunkSize + i
-              return (
-                <div key={keyExtractor ? keyExtractor(item, globalIdx) : globalIdx} className={`ux-miller-chunk-item ${itemClassName}`} role="listitem">
-                  {renderItem(item, globalIdx)}
-                </div>
-              )
-            })}
+          <div className="ux-container-region">
+            <div className="ux-miller-chunk" role="list">
+              {chunk.map((item, i) => {
+                const globalIdx = ci * safeChunkSize + i
+                return (
+                  <div key={keyExtractor ? keyExtractor(item, globalIdx) : globalIdx} className={`ux-miller-chunk-item ${itemClassName}`} role="listitem">
+                    {renderItem(item, globalIdx)}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </section>
       ))}

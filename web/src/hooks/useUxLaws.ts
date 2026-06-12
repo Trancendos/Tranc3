@@ -41,7 +41,7 @@ export function useHicks<T>(items: T[], maxVisible = 7) {
   const visible = expanded ? items : items.slice(0, maxVisible)
   const hasMore = items.length > maxVisible
   const toggle = useCallback(() => setExpanded(e => !e), [])
-  return { visible, hasMore, expanded, toggle, hiddenCount: items.length - maxVisible }
+  return { visible, hasMore, expanded, toggle, hiddenCount: Math.max(0, items.length - maxVisible) }
 }
 
 /* ── Miller's Law ────────────────────────────────────────────────────────────
@@ -49,9 +49,11 @@ export function useHicks<T>(items: T[], maxVisible = 7) {
    Chunks an array into groups of chunkSize (default 7).               */
 export function useMiller<T>(items: T[], chunkSize = 7): T[][] {
   return useMemo(() => {
+    const size = Math.max(1, Math.floor(chunkSize))
+    if (size < 1) return [items]
     const chunks: T[][] = []
-    for (let i = 0; i < items.length; i += chunkSize) {
-      chunks.push(items.slice(i, i + chunkSize))
+    for (let i = 0; i < items.length; i += size) {
+      chunks.push(items.slice(i, i + size))
     }
     return chunks
   }, [items, chunkSize])
@@ -61,10 +63,11 @@ export function useMiller<T>(items: T[], chunkSize = 7): T[][] {
    Motivation increases as goal proximity increases.
    Returns progress metadata including "near completion" signals.       */
 export function useGoalGradient(current: number, total: number) {
-  const percent = total > 0 ? Math.round((current / total) * 100) : 0
+  const raw = total > 0 ? (current / total) * 100 : 0
+  const percent = Math.min(100, Math.max(0, Math.round(raw)))
   const completion: 'low' | 'medium' | 'high' = percent < 33 ? 'low' : percent < 75 ? 'medium' : 'high'
   const isComplete = total > 0 && current >= total
-  return { percent, completion, isComplete, remaining: total - current }
+  return { percent, completion, isComplete, remaining: Math.max(0, total - current) }
 }
 
 /* ── Zeigarnik Effect ────────────────────────────────────────────────────────
@@ -246,6 +249,7 @@ export function useFlow(idleMs = 3000) {
     }
     const events = ['mousemove','keydown','scroll','touchstart']
     events.forEach(e => window.addEventListener(e, activate, { passive: true }))
+    activate() // initialise the idle timer on mount
     return () => {
       events.forEach(e => window.removeEventListener(e, activate))
       clearTimeout(timerRef.current)
@@ -259,13 +263,14 @@ export function useFlow(idleMs = 3000) {
    Returns conventional keyboard navigation handlers (arrow keys etc). */
 export function useJakob(itemCount: number, orientation: 'horizontal' | 'vertical' = 'vertical') {
   const [activeIndex, setActiveIndex] = useState(0)
+  const count = Math.max(1, itemCount)
   const onKeyDown = useCallback((e: React.KeyboardEvent) => {
     const nextKey = orientation === 'vertical' ? 'ArrowDown' : 'ArrowRight'
     const prevKey = orientation === 'vertical' ? 'ArrowUp'   : 'ArrowLeft'
-    if (e.key === nextKey) { e.preventDefault(); setActiveIndex(i => (i + 1) % itemCount) }
-    if (e.key === prevKey) { e.preventDefault(); setActiveIndex(i => (i - 1 + itemCount) % itemCount) }
+    if (e.key === nextKey) { e.preventDefault(); setActiveIndex(i => (i + 1) % count) }
+    if (e.key === prevKey) { e.preventDefault(); setActiveIndex(i => (i - 1 + count) % count) }
     if (e.key === 'Home')  { e.preventDefault(); setActiveIndex(0) }
-    if (e.key === 'End')   { e.preventDefault(); setActiveIndex(itemCount - 1) }
-  }, [itemCount, orientation])
+    if (e.key === 'End')   { e.preventDefault(); setActiveIndex(count - 1) }
+  }, [count, orientation])
   return { activeIndex, setActiveIndex, onKeyDown }
 }

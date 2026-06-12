@@ -223,7 +223,8 @@ html {
   gap: var(--ux-space-4);
   /* 3-column grid that compresses gracefully — max 3 chunks visible = 9 items */
   grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
-  container-type: inline-size;
+  /* container-type is on the parent .ux-container-region wrapper, not here,
+     so @container rules can match .ux-miller-chunk as a descendant */
 }
 
 .ux-miller-chunk-item {
@@ -656,14 +657,15 @@ html {
 [aria-expanded="false"] .ux-chevron { transform: rotate(0deg);    transition: transform var(--ux-dur-fast) var(--ux-ease-out); }
 [aria-expanded="true"]  .ux-chevron { transform: rotate(180deg);  transition: transform var(--ux-dur-fast) var(--ux-ease-out); }
 
-/* ARIA busy — Doherty: user knows system is working (exclude buttons — they render their own spinner) */
-[aria-busy="true"]:not(button)::after {
+/* ARIA busy — Doherty: user knows system is working.
+   Excluded from elements that manage their own spinner via data-custom-spinner. */
+[aria-busy="true"]:not([data-custom-spinner])::after {
   content: '';
   display: inline-block;
   width: 0.75em;
   height: 0.75em;
   border: 2px solid transparent;
-  border-top-color: currentColor;
+  border-top-color: currentcolor;
   border-radius: 50%;
   animation: ux-spin 0.6s linear infinite;
   margin-left: 0.5em;
@@ -690,7 +692,7 @@ html {
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0,0,0,0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
 }
@@ -702,27 +704,42 @@ html {
   padding: inherit;
   margin: inherit;
   overflow: visible;
-  clip: auto;
+  clip-path: none;
   white-space: normal;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    LAYER 7 — CONTAINER QUERIES (adaptive/liquidic layouts)
-   Child components adapt to their container, not the viewport.
+   NOTE: @container rules match DESCENDANTS of the container, not the element
+   that establishes the container context. Wrapper elements carry the
+   container-type; children respond via @container.
    ═══════════════════════════════════════════════════════════════════════════ */
-@container (max-width: 400px) {
+
+/* Named container — wraps grid/pareto sections */
+.ux-container-region {
+  container-type: inline-size;
+  container-name: ux-region;
+}
+
+@container ux-region (max-width: 400px) {
   .ux-miller-chunk { grid-template-columns: 1fr; }
   .ux-pareto-layout { grid-template-columns: 1fr; }
   .ux-fitts-primary { width: 100%; }
 }
 
-@container (min-width: 600px) {
+@container ux-region (min-width: 600px) {
   .ux-miller-chunk { grid-template-columns: repeat(2, 1fr); }
 }
 
-@container (min-width: 900px) {
+@container ux-region (min-width: 900px) {
   .ux-miller-chunk { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* ── Flow state — hide secondary chrome in idle focus mode ──────────────── */
+[data-flow="active"] .ux-memory-anchor { opacity: 0.3; transition: opacity var(--ux-dur-moderate) var(--ux-ease-smooth); }
+[data-flow="active"] .ux-attention-meta { opacity: 0.5; transition: opacity var(--ux-dur-moderate) var(--ux-ease-smooth); }
+[data-flow="active"]:hover .ux-memory-anchor,
+[data-flow="active"]:hover .ux-attention-meta { opacity: 1; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    LAYER 8 — UTILITY BELT (atomic, composable)

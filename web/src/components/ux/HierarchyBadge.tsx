@@ -13,6 +13,7 @@ interface HierarchyBadgeProps {
   variant?: BadgeVariant
   dot?: boolean
   className?: string
+  style?: React.CSSProperties
 }
 
 const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
@@ -30,7 +31,7 @@ const dotColours: Record<BadgeVariant, string> = {
   warning: '#fbbf24', danger: '#f87171',   highlight: '#111827', muted: '#9ca3af',
 }
 
-export function HierarchyBadge({ label, variant = 'muted', dot = false, className = '' }: HierarchyBadgeProps) {
+export function HierarchyBadge({ label, variant = 'muted', dot = false, className = '', style: styleProp }: HierarchyBadgeProps) {
   return (
     <span
       className={className}
@@ -45,6 +46,7 @@ export function HierarchyBadge({ label, variant = 'muted', dot = false, classNam
         fontWeight: 500,
         letterSpacing: '0.02em',
         ...variantStyles[variant],
+        ...styleProp,
       }}
     >
       {dot && (

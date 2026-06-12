@@ -18,16 +18,17 @@ interface AccordionItem {
 
 interface AccordionClusterProps {
   items: AccordionItem[]
-  defaultOpen?: string[]
+  defaultOpen?: string | string[]
   className?: string
   label: string
 }
 
 export function AccordionCluster({ items, defaultOpen, className = '', label }: AccordionClusterProps) {
   const baseId = useId()
-  const { isExpanded, toggle } = useCognitiveLoad(
-    defaultOpen ?? (items[0] ? [items[0].id] : [])
-  )
+  const resolvedOpen = defaultOpen === undefined
+    ? (items[0] ? [items[0].id] : [])
+    : Array.isArray(defaultOpen) ? defaultOpen : [defaultOpen]
+  const { isExpanded, toggle } = useCognitiveLoad(resolvedOpen)
 
   return (
     <div className={`ux-flex-col ux-gap-2 ${className}`} role="region" aria-label={label}>

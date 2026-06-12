@@ -4,7 +4,7 @@
  * Wraps any content. When `celebrate` is called, plays a delight animation.
  * Use at task completion, onboarding finish, or first-value moments.
  */
-import React from 'react'
+import React, { useRef } from 'react'
 import { usePeakEnd } from '../../hooks/useUxLaws'
 
 interface CelebrationWrapperProps {
@@ -16,9 +16,13 @@ interface CelebrationWrapperProps {
 
 export function CelebrationWrapper({ children, triggerOn, message, className = '' }: CelebrationWrapperProps) {
   const { celebrating, celebrate, celebrateClass } = usePeakEnd()
+  const prevTrigger = useRef(false)
 
   React.useEffect(() => {
-    if (triggerOn) celebrate()
+    if (triggerOn && !prevTrigger.current) {
+      celebrate()
+    }
+    prevTrigger.current = triggerOn ?? false
   }, [triggerOn, celebrate])
 
   return (

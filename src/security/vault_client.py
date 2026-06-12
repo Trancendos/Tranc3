@@ -124,14 +124,14 @@ async def migrate_env_secrets_to_vault(
         try:
             await client.set_secret(
                 name,
-                value,
+                value,  # nosec B106 — value is env secret being migrated to vault, not logged
                 metadata={
                     "source": "env_migration",
                     "migrated_at": datetime.now(timezone.utc).isoformat(),
                 },
             )
             results[name] = True
-            logger.info("Migrated secret: %s", name)
+            logger.info("Migrated secret key: %s (value redacted)", name)
         except VaultError as e:
             logger.error("Migration failed for %s: %s", name, e)
             results[name] = False

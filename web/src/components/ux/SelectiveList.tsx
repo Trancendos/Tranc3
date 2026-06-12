@@ -31,37 +31,74 @@ export function SelectiveList({ items, className = '', label }: SelectiveListPro
       className={`ux-proximity-group ${className}`}
       role="list"
       aria-label={label}
+      style={{ listStyle: 'none', padding: 0, margin: 0 }}
     >
-      {positioned.map(({ item, isPrime }) => (
-        <li
-          key={item.id}
-          role={item.onClick ? 'button' : 'listitem'}
-          tabIndex={item.onClick ? 0 : undefined}
-          onClick={item.onClick}
-          onKeyDown={item.onClick ? e => {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.onClick?.() }
-          } : undefined}
-          {...getProps(item.id)}
-          className="ux-jakob-nav-item"
-          style={{
-            fontWeight: isPrime ? 600 : 400,
-            cursor: item.onClick ? 'pointer' : 'default',
-          }}
-          aria-label={item.featured ? `${item.label} — featured` : item.label}
-        >
-          <span style={{ flex: 1 }}>
-            {item.label}
-            {item.featured && (
-              <span className="ux-restorff-highlight" style={{ marginLeft: 'var(--ux-space-2)' }}>
-                Featured
-              </span>
+      {positioned.map(({ item, isPrime }) => {
+        const attentionProps = getProps(item.id)
+        const itemStyle: React.CSSProperties = {
+          fontWeight: isPrime ? 600 : 400,
+          ...(attentionProps.style ?? {}),
+        }
+
+        return (
+          <li
+            key={item.id}
+            data-focused={attentionProps['data-focused']}
+            onMouseEnter={attentionProps.onMouseEnter}
+            onMouseLeave={attentionProps.onMouseLeave}
+            onFocus={attentionProps.onFocus}
+            onBlur={attentionProps.onBlur}
+            style={itemStyle}
+          >
+            {item.onClick ? (
+              <button
+                type="button"
+                onClick={item.onClick}
+                className="ux-jakob-nav-item"
+                aria-label={item.featured ? `${item.label} — featured` : undefined}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  padding: 0,
+                  font: 'inherit',
+                  color: 'inherit',
+                }}
+              >
+                <span style={{ flex: 1 }}>
+                  {item.label}
+                  {item.featured && (
+                    <span className="ux-restorff-highlight" style={{ marginLeft: 'var(--ux-space-2)' }}>
+                      Featured
+                    </span>
+                  )}
+                </span>
+                {item.meta && <span className="ux-attention-meta">{item.meta}</span>}
+              </button>
+            ) : (
+              <div
+                className="ux-jakob-nav-item"
+                aria-label={item.featured ? `${item.label} — featured` : undefined}
+                style={{ display: 'flex', alignItems: 'center' }}
+              >
+                <span style={{ flex: 1 }}>
+                  {item.label}
+                  {item.featured && (
+                    <span className="ux-restorff-highlight" style={{ marginLeft: 'var(--ux-space-2)' }}>
+                      Featured
+                    </span>
+                  )}
+                </span>
+                {item.meta && <span className="ux-attention-meta">{item.meta}</span>}
+              </div>
             )}
-          </span>
-          {item.meta && (
-            <span className="ux-attention-meta">{item.meta}</span>
-          )}
-        </li>
-      ))}
+          </li>
+        )
+      })}
     </ul>
   )
 }

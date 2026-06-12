@@ -42,8 +42,10 @@ export function SmartField({
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     if (normalise && type !== 'password') {
       const cleaned = norm(e.target.value)
-      handleChange(cleaned)
-      onChange?.(cleaned)
+      if (cleaned !== value) {
+        handleChange(cleaned)
+        onChange?.(cleaned)
+      }
     }
   }
 
@@ -63,7 +65,7 @@ export function SmartField({
         value={value}
         required={required}
         autoComplete={autoComplete}
-        aria-describedby={[hint ? hintId : '', showError ? errorId : ''].filter(Boolean).join(' ') || undefined}
+        aria-describedby={[hint && !showError ? hintId : '', showError ? errorId : ''].filter(Boolean).join(' ') || undefined}
         aria-invalid={showError ? 'true' : undefined}
         aria-required={required}
         className="ux-tesler-input"

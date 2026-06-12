@@ -33,7 +33,7 @@ export function AdaptiveButton({
 }: AdaptiveButtonProps) {
   const fitts = useFitts(importance)
   const { props: aestheticProps } = useAesthetic()
-  const showSpinner = useDoherty(loading, 80)
+  const showSpinner = useDoherty(loading, 100)
 
   return (
     <button
@@ -44,6 +44,7 @@ export function AdaptiveButton({
       disabled={disabled || loading}
       aria-disabled={disabled || loading}
       aria-busy={loading}
+      data-custom-spinner={loading ? 'true' : undefined}
       className={`${fitts.className} ${className}`}
       style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--ux-space-2)', ...style }}
     >

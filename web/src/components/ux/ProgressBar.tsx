@@ -16,7 +16,8 @@ interface ProgressBarProps {
 }
 
 export function ProgressBar({ current, total, label, showPercent = true, className = '' }: ProgressBarProps) {
-  const { percent, completion, isComplete } = useGoalGradient(current, total)
+  const { percent: rawPercent, completion, isComplete } = useGoalGradient(current, total)
+  const percent = Math.min(100, Math.max(0, rawPercent))
   const { celebrate, celebrateClass } = usePeakEnd()
 
   React.useEffect(() => {
@@ -53,7 +54,7 @@ export function ProgressBar({ current, total, label, showPercent = true, classNa
           style={{ width: `${percent}%` }}
         />
       </div>
-      {isComplete && (
+      {isComplete && total > 0 && (
         <span className="ux-postel-success" role="status">
           Complete
         </span>
