@@ -131,8 +131,7 @@ async def migrate_env_secrets_to_vault(
                 },
             )
             results[name] = True
-            # lgtm[py/clear-text-logging-sensitive-data]
-            logger.info("Migrated secret key: %s (value redacted)", name)
+            logger.info("Secret migrated to vault (name redacted)")
         except VaultError as e:
             logger.error("Migration failed for %s: %s", name, e)
             results[name] = False
