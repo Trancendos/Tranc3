@@ -1204,6 +1204,47 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8070/health"]
       <<: *healthcheck-default
 
+  # ── CranBania — The Town Hall (Kanban + ITSM + Agile, Port 8071) ─────────────
+  # Entity: The Town Hall | Lead AI: Tristuran | Source: github.com/Trancendos/CranBania
+  # Governance hub: PRINCE2, ITIL, Agile/Kanban, ITSM, visual boards, workshops
+  # MCP server (40+ tools) auto-registered with The Spark on startup
+  # Magna Carta alignment: change cards enforce governance gate (MC-RULE-007)
+  cranbania:
+    <<: *worker-common
+    build:
+      context: workers/cranbania
+      dockerfile: Dockerfile
+    container_name: cranbania-worker
+    ports:
+      - "8071:8071"
+    environment:
+      PORT: "8071"
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      CRANBANIA_DATA_DIR: /app/data
+      CRANBANIA_API_KEY: ${CRANBANIA_API_KEY:-}
+      CRANBANIA_CRON_SECRET: ${CRANBANIA_CRON_SECRET:-}
+      CRANBANIA_FORGEJO_URL: ${CRANBANIA_FORGEJO_URL:-http://forgejo:3000}
+      CRANBANIA_WEBHOOK_SECRET: ${CRANBANIA_WEBHOOK_SECRET:-}
+      CRANBANIA_OBSERVATORY_URL: http://monitoring-worker:8007
+      MAGNA_CARTA_ENABLED: ${MAGNA_CARTA_ENABLED:-false}
+    volumes:
+      - cranbania-data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8071/api/board"]
+      <<: *healthcheck-default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cranbania.rule=Host(`trancendos.com`) && PathPrefix(`/townhall`)"
+      - "traefik.http.routers.cranbania.entrypoints=websecure"
+      - "traefik.http.routers.cranbania.tls=true"
+      - "traefik.http.routers.cranbania.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.cranbania.middlewares=strip-townhall@docker,ratelimit-cranbania@docker"
+      - "traefik.http.middlewares.strip-townhall.stripprefix.prefixes=/townhall"
+      - "traefik.http.middlewares.ratelimit-cranbania.ratelimit.average=100"
+      - "traefik.http.middlewares.ratelimit-cranbania.ratelimit.burst=50"
+      - "traefik.http.services.cranbania.loadbalancer.server.port=8071"
+
   # ── Qdrant — High-performance vector database (Apache 2.0) ─────────────
   # Free: self-hosted with unlimited vectors
   # Replaces Pinecone/paid vector services for The Spark RAG-MCP + knowledge search
@@ -1615,6 +1656,8 @@ services:
 # Volumes
 # ═══════════════════════════════════════════════════════════════════════════
 volumes:
+  cranbania-data:
+    driver: local
   traefik-config:
     driver: local
   traefik-certs:

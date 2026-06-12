@@ -1065,3 +1065,183 @@ requirements:
     last_reviewed: "2026-06-06"
     reviewer: "Trancendos"
     notes: "Module-level singleton 'tracker' provides zero-setup usage recording"
+
+  # ─── Magna Carta (MC) ───────────────────────────────────────────────────────
+  - id: REQ-MC-001
+    standard: "Magna Carta v1"
+    title: "JWT Authentication Enforcement"
+    description: "All protected routes must require a valid, non-expired JWT token. Tokens without an exp claim must be rejected."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/compliance/magna_carta.py
+        description: "MC-RULE-001 enforces JWT presence and expiry on all protected prefixes; exp=None triggers rejection"
+    verification_method: inspection
+    last_reviewed: "2026-06-12"
+    reviewer: "Trancendos"
+
+  - id: REQ-MC-002
+    standard: "Magna Carta v1"
+    title: "PII/Privacy Data Protection"
+    description: "Responses must be scanned for PII leakage patterns (SSN, card numbers, passwords). Violations trigger advisory logging or blocking."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/compliance/magna_carta.py
+        description: "MC-RULE-002 response-side PII scanner with regex patterns; check_response() called from MagnaCartaMiddleware"
+      - type: code
+        path: src/compliance/middleware.py
+        description: "MagnaCartaMiddleware calls check_response() after call_next()"
+    verification_method: inspection
+    last_reviewed: "2026-06-12"
+    reviewer: "Trancendos"
+
+  - id: REQ-MC-003
+    standard: "Magna Carta v1"
+    title: "Rate Limiting Enforcement"
+    description: "Per-client rate limiting must be applied to all API endpoints to prevent abuse."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/compliance/magna_carta.py
+        description: "MC-RULE-003 rate-limit compliance check; advisory mode by default"
+      - type: code
+        path: workers/rate-limit-service/app.py
+        description: "Token-bucket rate limiter service on port 8026"
+    verification_method: inspection
+    last_reviewed: "2026-06-12"
+    reviewer: "Trancendos"
+
+  # ─── AI Governance (AI) ─────────────────────────────────────────────────────
+  - id: REQ-AI-001
+    standard: "EU AI Act / ISO 42001"
+    title: "AI Use Case Governance"
+    description: "AI model use must be declared and checked against prohibited-use lists. Surveillance and manipulation use cases are prohibited."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/compliance/magna_carta.py
+        description: "MC-RULE-004 AI governance rule with prohibited_use list enforcement using _PROHIBITED_AI_USES"
+    verification_method: inspection
+    last_reviewed: "2026-06-12"
+    reviewer: "Trancendos"
+
+  - id: REQ-AI-002
+    standard: "EU AI Act / ISO 42001"
+    title: "Zero-Cost Sovereignty (No Vendor Lock-in)"
+    description: "The platform must not depend on paid external AI APIs. All inference must fall back through Ollama → HuggingFace free → OpenRouter free → offline stub."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/ai_gateway/router.py
+        description: "AIGatewayRouter 5-tier failover: Ollama→HuggingFace→OpenRouter→Fly.io→OfflineProvider"
+    verification_method: inspection
+    last_reviewed: "2026-06-12"
+    reviewer: "Trancendos"
+
+  - id: REQ-AI-003
+    standard: "EU AI Act / ISO 42001"
+    title: "AI Transparency Headers"
+    description: "All AI-generated responses must include X-AI-Model and X-AI-Provider headers for transparency."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/compliance/ai_transparency.py
+        description: "AITransparencyMiddleware injects X-AI-Generated, X-AI-Model, X-AI-Provider, X-AI-Assistive-Only"
+    verification_method: inspection
+    last_reviewed: "2026-06-12"
+    reviewer: "Trancendos"
+    notes: "EU AI Act Art. 50 — transparency labels on all AI inference routes"
+
+  # ─── Privacy (PRI) ───────────────────────────────────────────────────────────
+  - id: REQ-PRI-001
+    standard: "GDPR / UK GDPR"
+    title: "GDPR Transparency / Data Subject Rights"
+    description: "Platform must provide data subject access, deletion, and portability endpoints. Privacy policy must be accessible."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/privacy/dsr_workflow.py
+        description: "Automated GDPR DSR workflow — handles access, erasure, rectification, portability, restriction, objection; SLA tracking (30-day GDPR deadline); auto-alerting"
+      - type: code
+        path: src/compliance/magna_carta.py
+        description: "MC-RULE-009 GDPR transparency check wired in middleware"
+      - type: doc
+        path: docs/procedures/PROC-DSR-001-Data-Subject-Requests.md
+        description: "DSR handling procedure"
+      - type: doc
+        path: docs/policies/POL-PRI-001-Data-Protection-Privacy.md
+        description: "Data protection and privacy policy"
+    verification_method: inspection
+    last_reviewed: "2026-06-12"
+    reviewer: "Trancendos"
+    notes: "Automated DSR workflow implemented with SLA tracking and audit trail"
+
+  - id: REQ-PRI-002
+    standard: "GDPR / UK GDPR"
+    title: "Audit Logging for All Data Access"
+    description: "All access to personal data must be logged to The Observatory audit trail."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/compliance/middleware.py
+        description: "AuditMiddleware (outermost) logs every request including user_id, path, and compliance result"
+      - type: code
+        path: src/observability/
+        description: "The Observatory — structured audit log with trace_id, user_id, service_name"
+    verification_method: inspection
+    last_reviewed: "2026-06-12"
+    reviewer: "Trancendos"
+
+  # ─── Security (SEC) ──────────────────────────────────────────────────────────
+  - id: REQ-SEC-001
+    standard: "ISO 27001 / NIST CSF"
+    title: "Zero Trust Architecture"
+    description: "All requests must pass Zero Trust IAM checks: device posture, MFA, geographic policy, risk scoring."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/auth/zero_trust.py
+        description: "ZeroTrustASGIMiddleware: device posture, MFA, geo policy, risk scoring — sets request.state.zero_trust_ok"
+    verification_method: inspection
+    last_reviewed: "2026-06-12"
+    reviewer: "Trancendos"
+
+  - id: REQ-SEC-002
+    standard: "ISO 27001 / NIST CSF"
+    title: "Secret Management via The Void"
+    description: "All secrets must be stored in The Void vault (AES-GCM encrypted, PBKDF2 key derivation) — no plaintext secrets in code or env files."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: src/security/vault_client.py
+        description: "Universal vault client with env fallback, secret caching, migration helper — all workers migrate via this client"
+      - type: code
+        path: cloudflare/infinity-void/
+        description: "The Void CF Worker — AES-GCM encrypted vault with PBKDF2, D1 storage, audit trail"
+      - type: code
+        path: workers/vault-service/
+        description: "Self-hosted Vault service (port 8038) — migration target"
+      - type: code
+        path: src/security/jwt_rotator.py
+        description: "JWT secret rotation — auto-pushes rotated secrets to vault"
+    verification_method: inspection
+    last_reviewed: "2026-06-12"
+    reviewer: "Trancendos"
+    notes: "Universal vault client implemented; all workers now have single path to secrets; JWT rotation integrated"
+
+  - id: REQ-SEC-003
+    standard: "ISO 27001 / NIST CSF"
+    title: "Dependency Vulnerability Scanning"
+    description: "All dependencies must be scanned for CVEs on every PR. No high/critical unmitigated CVEs allowed in production."
+    status: COMPLIANT
+    evidence:
+      - type: code
+        path: .forgejo/workflows/dependency-audit.yml
+        description: "Weekly + on-PR: pip-audit, Safety, npm audit, Semgrep SAST, gitleaks secret detection"
+      - type: code
+        path: requirements.txt
+        description: "All deps exact-pinned; CVE comments inline documenting mitigations"
+    verification_method: inspection
+    last_reviewed: "2026-06-12"
+    reviewer: "Trancendos"

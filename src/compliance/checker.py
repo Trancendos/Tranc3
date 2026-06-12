@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -32,6 +33,10 @@ logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REGISTER_PATH = REPO_ROOT / "compliance" / "register.yaml"
 WAIVERS_PATH = REPO_ROOT / "compliance" / "waivers.yaml"
+
+# Magna Carta register — loaded when MAGNA_CARTA_REGISTER_PATH is set or --magna-carta flag used
+_MC_REGISTER_ENV = os.environ.get("MAGNA_CARTA_REGISTER_PATH", "")
+MC_REGISTER_PATH: Path | None = Path(_MC_REGISTER_ENV) if _MC_REGISTER_ENV else None
 
 # Status ordering for summary display
 STATUS_ORDER = ["COMPLIANT", "PARTIAL", "PLANNED", "WAIVED", "NA"]
@@ -174,6 +179,11 @@ AREA_STANDARDS = {
     "SU": "DEF STAN 00-600",
     "SD": "DEF STAN 00-056",
     "TD": "DEF STAN 05-057",
+    # Magna Carta framework areas (loaded when --magna-carta / MAGNA_CARTA_REGISTER_PATH set)
+    "MC": "Magna Carta v1",
+    "AI": "EU AI Act / ISO 42001",
+    "PRI": "GDPR / UK GDPR",
+    "SEC": "ISO 27001 / NIST CSF",
 }
 
 
@@ -219,14 +229,90 @@ def _check_evidence(evidence_list: list[dict[str, Any]]) -> list[EvidenceCheck]:
     return results
 
 
+def load_magna_carta_register(mc_path: Path) -> list[dict[str, Any]]:
+    """
+    Load a Magna Carta register (magna_carta_register.yaml) and convert its
+    programme rows into the same RequirementResult shape used by DEFSTAN registers.
+    Each MC row is prefixed with area code 'MC'.
+    """
+    data = _load_yaml(mc_path)
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"Magna Carta register at {mc_path} must be a YAML mapping, got {type(data).__name__}"
+        )
+    rows = []
+
+    # Support both flat list and programme-wrapped structures
+    programme = data.get("programme", data.get("requirements", []))
+    if isinstance(programme, list):
+        items = programme
+    elif isinstance(programme, dict):
+        # Flatten nested programme dict (e.g. {phase1: [...], phase2: [...]})
+        items = []
+        for v in programme.values():
+            if isinstance(v, list):
+                items.extend(v)
+    else:
+        items = []
+
+    for item in items:
+        mc_id = item.get("id", item.get("mc_id", "MC-???"))
+        # Normalise to REQ-<AREA>-<REST> form so area extraction works downstream.
+        # Handles: MC-001 → REQ-MC-001, AI-002 → REQ-AI-002, already-prefixed REQ-* pass through.
+        if mc_id.startswith("REQ-"):
+            req_id = mc_id
+        else:
+            parts = mc_id.split("-", 1)
+            if len(parts) == 2 and parts[0] in AREA_STANDARDS:
+                req_id = f"REQ-{parts[0]}-{parts[1]}"
+            else:
+                req_id = f"REQ-MC-{mc_id}"
+
+        rows.append(
+            {
+                "id": req_id,
+                "standard": "Magna Carta v1",
+                "title": item.get("title", ""),
+                "status": item.get("status", item.get("maturity", "PLANNED")).upper(),
+                "notes": item.get("notes", item.get("integration_notes", "")),
+                "evidence": item.get("evidence", []),
+            }
+        )
+    return rows
+
+
 def load_and_check(register_path: Path = REGISTER_PATH) -> ComplianceReport:
     """
     Load the compliance register, verify evidence, and build the report.
     """
+    return _build_report(register_path)
+
+
+def load_and_check_merged(
+    register_path: Path = REGISTER_PATH,
+    mc_register_path: Path | None = None,
+) -> ComplianceReport:
+    """
+    Build a unified compliance report merging DEFSTAN + Magna Carta registers.
+    MC rows are reported under area 'MC' with their own score band.
+    """
+    report = _build_report(register_path)
+
+    mc_path = mc_register_path or MC_REGISTER_PATH
+    if mc_path and mc_path.is_file():
+        mc_rows = load_magna_carta_register(mc_path)
+        _ingest_requirements(report, mc_rows)
+        logger.info("Merged %d Magna Carta rows from %s", len(mc_rows), mc_path)
+    elif mc_path:
+        logger.warning("Magna Carta register not found at %s — skipping MC rows", mc_path)
+
+    return report
+
+
+def _build_report(register_path: Path) -> ComplianceReport:
     data = _load_yaml(register_path)
     meta = data.get("meta", {})
 
-    # Load waivers
     waivers: list[dict[str, Any]] = []
     if WAIVERS_PATH.exists():
         waiver_data = _load_yaml(WAIVERS_PATH)
@@ -241,24 +327,45 @@ def load_and_check(register_path: Path = REGISTER_PATH) -> ComplianceReport:
         waivers=waivers,
     )
 
-    requirements = data.get("requirements", [])
-
-    # Initialise area summaries
     for area_code, standard in AREA_STANDARDS.items():
         report.areas[area_code] = AreaSummary(area=area_code, standard=standard)
 
+    _ingest_requirements(report, data.get("requirements", []), waived_req_ids)
+    return report
+
+
+def _ingest_requirements(
+    report: ComplianceReport,
+    requirements: list[dict[str, Any]],
+    waived_req_ids: set[str] | None = None,
+) -> None:
+    """Add a list of raw requirement dicts into a ComplianceReport (mutates report)."""
+    if waived_req_ids is None:
+        waived_req_ids = {
+            w["requirement_id"] for w in report.waivers if w.get("status") == "ACTIVE"
+        }
+
     for req_raw in requirements:
         req_id = req_raw.get("id", "UNKNOWN")
-        area = req_id.split("-")[1] if "-" in req_id else "UNKNOWN"
+        area = req_id.split("-")[1] if req_id.count("-") >= 2 else "UNKNOWN"
         evidence_list = req_raw.get("evidence") or []
 
-        # Check if this item has an active waiver
         effective_status = req_raw.get("status", "PLANNED").upper()
         if req_id in waived_req_ids:
             effective_status = "WAIVED"
 
+        # Normalise Magna Carta programme status to standard STATUS_ORDER values.
+        # PROGRAMME_ARTEFACT = documentation programme item; auto-promote to PARTIAL
+        # when all evidence paths are present (evidence verified but not yet production-validated).
+        if effective_status == "PROGRAMME_ARTEFACT":
+            effective_status = "PLANNED"  # default if evidence missing
+
         checks = _check_evidence(evidence_list)
         all_present = all(c.exists for c in checks) if checks else True
+
+        # Evidence-based auto-promotion: PLANNED + all evidence present → PARTIAL
+        if effective_status == "PLANNED" and all_present and checks:
+            effective_status = "PARTIAL"
 
         result = RequirementResult(
             req_id=req_id,
@@ -271,7 +378,6 @@ def load_and_check(register_path: Path = REGISTER_PATH) -> ComplianceReport:
         )
         report.requirements.append(result)
 
-        # Accumulate area stats
         area_summary = report.areas.get(area)
         if area_summary is None:
             area_summary = AreaSummary(
@@ -281,19 +387,16 @@ def load_and_check(register_path: Path = REGISTER_PATH) -> ComplianceReport:
             report.areas[area] = area_summary
 
         area_summary.total += 1
-        status_upper = effective_status
-        if status_upper == "COMPLIANT":
+        if effective_status == "COMPLIANT":
             area_summary.compliant += 1
-        elif status_upper == "PARTIAL":
+        elif effective_status == "PARTIAL":
             area_summary.partial += 1
-        elif status_upper == "PLANNED":
+        elif effective_status == "PLANNED":
             area_summary.planned += 1
-        elif status_upper == "WAIVED":
+        elif effective_status == "WAIVED":
             area_summary.waived += 1
-        elif status_upper in ("NA", "N/A"):
+        elif effective_status in ("NA", "N/A"):
             area_summary.na += 1
-
-    return report
 
 
 def print_summary(report: ComplianceReport) -> None:
@@ -368,12 +471,23 @@ def run(args: argparse.Namespace | None = None) -> int:
         default=str(REGISTER_PATH),
         help="Path to compliance register YAML",
     )
+    parser.add_argument(
+        "--magna-carta",
+        metavar="MC_REGISTER_PATH",
+        default=_MC_REGISTER_ENV or None,
+        help="Path to Magna Carta register YAML — merged into report under area MC",
+    )
     parsed = parser.parse_args(args)
 
     logging.basicConfig(level=logging.WARNING)
 
+    mc_path = Path(parsed.magna_carta) if parsed.magna_carta else None
+
     try:
-        report = load_and_check(Path(parsed.register))
+        if mc_path:
+            report = load_and_check_merged(Path(parsed.register), mc_path)
+        else:
+            report = load_and_check(Path(parsed.register))
     except FileNotFoundError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 2

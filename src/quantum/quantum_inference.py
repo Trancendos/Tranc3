@@ -19,6 +19,8 @@ except (ImportError, RuntimeError, OSError):  # pragma: no cover
 else:
     _TORCH_AVAILABLE = True
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister  # noqa: E402
+from qiskit import transpile as qiskit_transpile  # noqa: E402
+from qiskit.circuit.library import QFT  # noqa: E402
 from qiskit_aer import AerSimulator  # noqa: E402
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: E402
@@ -82,13 +84,13 @@ class QuantumInferenceEngine:
         qc.initialize(normalized_input.numpy(), qreg)
 
         # Quantum Fourier Transform for attention
-        qc.append(qc.qft(qreg), qreg)
+        qc.append(QFT(num_qubits, do_swaps=True).decompose(), qreg)
 
         # Measure
         qc.measure(qreg, creg)
 
         # Execute
-        job = self.backend.run(qc, shots=1024)
+        job = self.backend.run(qiskit_transpile(qc, self.backend), shots=1024)
         counts = job.result().get_counts()
 
         # Convert back to tensor
@@ -138,7 +140,7 @@ class QuantumInferenceEngine:
             # Measure
             qc.measure_all()
 
-            job = self.backend.run(qc, shots=1000)
+            job = self.backend.run(qiskit_transpile(qc, self.backend), shots=1000)
             job.result().get_counts()
 
             # Mock memory retrieval

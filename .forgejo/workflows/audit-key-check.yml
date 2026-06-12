@@ -1,0 +1,107 @@
+# .forgejo/workflows/audit-key-check.yml
+# The Workshop — Validates AUDIT_SIGNING_KEY is configured before any deployment.
+#
+# The AuditLedger uses HMAC-signed chain hashes. Without a stable key:
+#   - Tokens won't verify across restarts (single-node)
+#   - Tokens won't verify across nodes (multi-node / HA)
+#   - DR restoration will fail verification
+#
+# This workflow:
+#   1. Checks AUDIT_SIGNING_KEY is present in Forgejo secrets
+#   2. Validates it meets minimum entropy requirements (≥ 32 hex chars = 128-bit)
+#   3. Tests AuditLedger round-trip verification with the key
+#   4. Fails the deployment gate if key is absent or weak
+#
+# Secrets required in Forgejo:
+#   AUDIT_SIGNING_KEY — run `python scripts/generate_env.py` to generate
+
+name: Audit Key Health Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dimensional/architecture/audit_ledger.py"
+      - "src/audit/**"
+      - ".forgejo/workflows/audit-key-check.yml"
+  workflow_dispatch:
+
+jobs:
+  audit-key-check:
+    name: "AuditLedger Key Validation"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -q pyyaml
+
+      - name: Validate AUDIT_SIGNING_KEY is set
+        env:
+          AUDIT_SIGNING_KEY: ${{ secrets.AUDIT_SIGNING_KEY }}
+        run: |
+          if [ -z "${AUDIT_SIGNING_KEY}" ]; then
+            echo "::error title=AUDIT_SIGNING_KEY missing::AUDIT_SIGNING_KEY is not set in Forgejo secrets."
+            echo "Run: python scripts/generate_env.py to generate a key."
+            echo "Then add it to Forgejo → Settings → Secrets → AUDIT_SIGNING_KEY"
+            exit 1
+          fi
+
+          KEY_LEN=${#AUDIT_SIGNING_KEY}
+          if [ "$KEY_LEN" -lt 32 ]; then
+            echo "::error title=AUDIT_SIGNING_KEY too short::Key is ${KEY_LEN} chars; minimum 32 required (128-bit entropy)."
+            echo "Regenerate: python -c \"import secrets; print(secrets.token_hex(32))\""
+            exit 1
+          fi
+
+          echo "✅ AUDIT_SIGNING_KEY is set (${KEY_LEN} chars)"
+
+      - name: AuditLedger round-trip verification
+        env:
+          AUDIT_SIGNING_KEY: ${{ secrets.AUDIT_SIGNING_KEY }}
+        run: |
+          python - <<'EOF'
+          import os, sys, tempfile, pathlib
+
+          sys.path.insert(0, ".")
+          from Dimensional.architecture.audit_ledger import AuditLedger
+
+          with tempfile.TemporaryDirectory() as tmpdir:
+              ledger = AuditLedger(storage_dir=tmpdir)
+
+              # Write 5 records
+              for i in range(5):
+                  ledger.append(
+                      event_type="ci_verification",
+                      actor="audit-key-check-workflow",
+                      details={"step": i, "run": os.getenv("GITHUB_RUN_ID", "local")},
+                  )
+
+              # Verify chain with the same key (simulates restart)
+              ledger2 = AuditLedger(storage_dir=tmpdir)
+              valid = ledger2.verify_chain()
+              if not valid:
+                  print("❌ Chain verification FAILED — key mismatch or corruption", file=sys.stderr)
+                  sys.exit(1)
+
+              stats = ledger2.get_stats()
+              print(f"✅ AuditLedger chain verified: {stats['total_records']} records, chain_valid={stats['chain_valid']}")
+              print(f"   Key status: {stats['key_status']['recommendation']}")
+          EOF
+
+      - name: Emit key status advisory
+        env:
+          AUDIT_SIGNING_KEY: ${{ secrets.AUDIT_SIGNING_KEY }}
+        run: |
+          if [ -n "${AUDIT_SIGNING_KEY}" ]; then
+            echo "::notice title=AuditLedger::AUDIT_SIGNING_KEY is configured via Forgejo secret ✅"
+          else
+            echo "::warning title=AuditLedger::AUDIT_SIGNING_KEY is missing from secrets — key file fallback will be used on first start"
+          fi

@@ -92,6 +92,9 @@ from src.security.ip_protection import (  # noqa: F401  # intentional top-level 
     abuse_detector,
     watermarker,
 )
+from src.compliance.middleware import MagnaCartaMiddleware  # noqa: F401
+from src.compliance.cab_gate import CABMiddleware  # noqa: F401
+from src.compliance.ai_transparency import AITransparencyMiddleware  # noqa: F401
 from src.security.middleware import (  # noqa: F401  # intentional top-level import
     GovernanceMiddleware,
     RBACMiddleware,
@@ -236,6 +239,27 @@ async def lifespan(app: FastAPI):
     logger.info("TRANC3 starting up...")
     _bootstrap_complete = False
     cfg = Config()
+
+    # Audit signing key health check — warn early before any audit events are written
+    _audit_key = os.getenv("AUDIT_SIGNING_KEY", "")
+    if not _audit_key:
+        _key_file = "logs/audit/.audit_signing_key"
+        import pathlib
+        if pathlib.Path(_key_file).exists():
+            logger.warning(
+                "AUDIT_SIGNING_KEY not set in environment — using persistent key file (%s). "
+                "Single-node restarts will verify correctly. For multi-node or DR deployments "
+                "set AUDIT_SIGNING_KEY to the contents of that file in all instances. "
+                "Run: python scripts/generate_env.py to write it to .env",
+                _key_file,
+            )
+        else:
+            logger.warning(
+                "AUDIT_SIGNING_KEY not set — AuditLedger will generate and persist a key to "
+                "%s on first audit write. Set AUDIT_SIGNING_KEY env var (or run "
+                "python scripts/generate_env.py) to make verification portable.",
+                _key_file,
+            )
 
     # Database
     try:
@@ -588,6 +612,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(AITransparencyMiddleware)
 
 
 # ── API version header (REQ-SD-002 — DEF STAN 00-056 API Contract Versioning) ─
@@ -604,7 +629,14 @@ async def api_version_header_middleware(request, call_next):
 
 
 app.add_middleware(GovernanceMiddleware)
+# MagnaCartaMiddleware is inner to ZeroTrustASGIMiddleware so that jwt_claims/zero_trust_ok
+# are already on request.state when compliance rules execute. Advisory by default.
+app.add_middleware(MagnaCartaMiddleware)
 app.add_middleware(ZeroTrustASGIMiddleware)
+# CABMiddleware: enforces X-Change-ID on mutating requests to protected paths when enabled.
+# Runs innermost (added first, executes last after auth+MC checks complete).
+if os.getenv("CAB_GATE_ENABLED", "false").lower() == "true":
+    app.add_middleware(CABMiddleware)
 app.add_middleware(RBACMiddleware)
 # AuditMiddleware runs outermost so it captures every request after auth resolution
 app.add_middleware(AuditMiddleware, service_name="tranc3-backend")

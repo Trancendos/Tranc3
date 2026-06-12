@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Pre-push hook: warn if .env is missing or has placeholder secrets.
+# Install: git config core.hooksPath .githooks
+set -euo pipefail
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+if [ ! -f "$REPO_ROOT/.env" ]; then
+  echo "⚠  .env not found — run: make setup-dev"
+  exit 0
+fi
+cd "$REPO_ROOT"
+python scripts/generate_env.py --check --quiet || echo "⚠  .env has issues — run: python scripts/generate_env.py"
+exit 0

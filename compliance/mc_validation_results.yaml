@@ -1,0 +1,71 @@
+meta:
+  generated_at: '2026-06-12T17:46:20.955386+00:00'
+  generator: src/compliance/mc_validator.py
+  total_rules: 9
+  passed: 9
+  failed: 0
+  score_pct: 100.0
+results:
+- rule_id: MC-RULE-001
+  passed: true
+  details: 'Submodule dir exists: True, .gitmodules exists: True'
+  evidence:
+  - /home/user/Tranc3/.gitmodules
+  validated_at: '2026-06-12T17:46:20.839006+00:00'
+- rule_id: MC-RULE-002
+  passed: true
+  details: 'Sovereignty docs found: 3/3'
+  evidence:
+  - /home/user/Tranc3/docs/01-MAGNACARTA-FOUNDATION.md
+  - /home/user/Tranc3/FRAMEWORK.md
+  - /home/user/Tranc3/docs/architecture/AS-BUILT-ARCHITECTURE.md
+  validated_at: '2026-06-12T17:46:20.839092+00:00'
+- rule_id: MC-RULE-003
+  passed: true
+  details: 'Rate limit service: True'
+  evidence:
+  - /home/user/Tranc3/workers/rate-limit-service/app.py
+  - /home/user/Tranc3/src/security/adaptive_rate_limiter.py
+  validated_at: '2026-06-12T17:46:20.839129+00:00'
+- rule_id: MC-RULE-004
+  passed: true
+  details: 'Control map: True'
+  evidence:
+  - /home/user/Tranc3/docs/architecture/CONTROL-TO-COMPONENT-MAP.md
+  validated_at: '2026-06-12T17:46:20.839143+00:00'
+- rule_id: MC-RULE-005
+  passed: true
+  details: 'AI governance docs: 3/3'
+  evidence:
+  - /home/user/Tranc3/docs/compliance/AI-GOVERNANCE.md
+  - /home/user/Tranc3/docs/policies/POL-AI-001-AI-Ethics-Governance.md
+  - /home/user/Tranc3/src/compliance/ai_governance.py
+  validated_at: '2026-06-12T17:46:20.839179+00:00'
+- rule_id: MC-RULE-006
+  passed: true
+  details: 'Compliance blueprint docs: 3/3'
+  evidence:
+  - /home/user/Tranc3/docs/compliance/COMPLIANCE-BLUEPRINT.md
+  - /home/user/Tranc3/FRAMEWORK.md
+  - /home/user/Tranc3/docs/compliance/HIPAA-ALIGNMENT.md
+  validated_at: '2026-06-12T17:46:20.839249+00:00'
+- rule_id: MC-RULE-007
+  passed: true
+  details: 'CAB gate file: True, wired in api.py: True'
+  evidence:
+  - /home/user/Tranc3/src/compliance/cab_gate.py
+  validated_at: '2026-06-12T17:46:20.839584+00:00'
+- rule_id: MC-RULE-008
+  passed: true
+  details: 'HIPAA docs: 2'
+  evidence:
+  - /home/user/Tranc3/docs/compliance/HIPAA-ALIGNMENT.md
+  - /home/user/Tranc3/src/security/hipaa_sentinel.py
+  validated_at: '2026-06-12T17:46:20.839691+00:00'
+- rule_id: MC-RULE-009
+  passed: true
+  details: 'MAGNA_CARTA_ENABLED flag: True, action tracker: True'
+  evidence:
+  - /home/user/Tranc3/.env.example
+  - /home/user/Tranc3/compliance/compliance_action_tracker.yaml
+  validated_at: '2026-06-12T17:46:20.955292+00:00'
