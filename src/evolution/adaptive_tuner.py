@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Optional
 try:
     import numpy as np
     import pyswarms as ps
+
     _PSO_AVAILABLE = True
 except ImportError:
     _PSO_AVAILABLE = False
@@ -200,7 +201,11 @@ class AdaptiveTuner:
             for i, particle in enumerate(particles):
                 params = {n: float(v) for n, v in zip(param_names, particle, strict=False)}
                 try:
-                    fitness = self.fitness_fn(params) if not asyncio.iscoroutinefunction(self.fitness_fn) else 0.0
+                    fitness = (
+                        self.fitness_fn(params)
+                        if not asyncio.iscoroutinefunction(self.fitness_fn)
+                        else 0.0
+                    )
                     costs[i] = -fitness  # PSO minimises; negate for fitness maximisation
                 except Exception:
                     costs[i] = 1e9

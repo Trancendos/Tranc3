@@ -98,9 +98,7 @@ class CABGate:
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
-    def check_change(
-        self, change_type: str, change_id: str, requestor: str
-    ) -> dict[str, Any]:
+    def check_change(self, change_type: str, change_id: str, requestor: str) -> dict[str, Any]:
         """
         Return whether a registered change has CAB approval.
 
@@ -197,9 +195,7 @@ class CABGate:
 
         # Governance domain from frameworks.yaml lists change types that need CAB
         governance = self._config.get("domains", {}).get("governance", [])
-        cab_types = {
-            entry.get("id", "") for entry in governance if entry.get("status") == "active"
-        }
+        cab_types = {entry.get("id", "") for entry in governance if entry.get("status") == "active"}
         return change_type in cab_types or risk == "medium"
 
 

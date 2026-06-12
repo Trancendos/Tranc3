@@ -82,12 +82,16 @@ def _checksum(path: Path) -> str:
 
 def backup_database(db_path: Path) -> BackupResult:
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    rel = db_path.relative_to(Path(".")) if db_path.is_relative_to(Path(".")) else Path(db_path.name)
+    rel = (
+        db_path.relative_to(Path(".")) if db_path.is_relative_to(Path(".")) else Path(db_path.name)
+    )
     backup_path = BACKUP_DIR / rel.parent / f"{db_path.stem}_{ts}.db"
 
     success = _wal_backup(db_path, backup_path)
     if not success:
-        return BackupResult(str(db_path), str(backup_path), False, False, 0, "", "WAL backup failed")
+        return BackupResult(
+            str(db_path), str(backup_path), False, False, 0, "", "WAL backup failed"
+        )
 
     integrity_ok = _integrity_check(backup_path)
     size = backup_path.stat().st_size if backup_path.exists() else 0
@@ -96,7 +100,13 @@ def backup_database(db_path: Path) -> BackupResult:
     if not integrity_ok:
         logger.error("Integrity check failed on backup: %s", backup_path)
 
-    logger.info("Backup: %s -> %s (%d bytes, integrity=%s)", db_path.name, backup_path.name, size, integrity_ok)
+    logger.info(
+        "Backup: %s -> %s (%d bytes, integrity=%s)",
+        db_path.name,
+        backup_path.name,
+        size,
+        integrity_ok,
+    )
     return BackupResult(str(db_path), str(backup_path), True, integrity_ok, size, checksum, None)
 
 

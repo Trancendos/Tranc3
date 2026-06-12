@@ -62,6 +62,7 @@ class JWTRotator:
 
     def _log_event(self, event_type: str, details: str = "") -> None:
         import uuid
+
         with self._conn() as conn:
             conn.execute(
                 "INSERT INTO rotation_log (event_id, event_type, occurred_at, details) VALUES (?,?,?,?)",
@@ -98,7 +99,10 @@ class JWTRotator:
                 ),
             )
 
-        self._log_event("rotation", f"New secret {secret_id[:8]}... created; transition window {TRANSITION_WINDOW_HOURS}h")
+        self._log_event(
+            "rotation",
+            f"New secret {secret_id[:8]}... created; transition window {TRANSITION_WINDOW_HOURS}h",
+        )
         logger.info("JWT secret rotated. Secret ID: %s, expires: %s", secret_id, expires_at)
         return new_secret
 
@@ -136,6 +140,7 @@ class JWTRotator:
                     # Push to vault if available
                     try:
                         from src.security.vault_client import get_vault_client
+
                         client = get_vault_client()
                         await client.set_secret("jwt-secret", new_secret)
                         logger.info("New JWT secret pushed to vault")
@@ -157,7 +162,11 @@ class JWTRotator:
         last_rotation = last["created_at"] if last else None
         age_hours = None
         if last_rotation:
-            age_hours = round((datetime.now(timezone.utc) - datetime.fromisoformat(last_rotation)).total_seconds() / 3600, 1)
+            age_hours = round(
+                (datetime.now(timezone.utc) - datetime.fromisoformat(last_rotation)).total_seconds()
+                / 3600,
+                1,
+            )
         return {
             "active_secrets": active,
             "last_rotation": last_rotation,

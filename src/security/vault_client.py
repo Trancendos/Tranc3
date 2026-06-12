@@ -109,7 +109,9 @@ class VaultClient:
             return os.getenv(secret_name.upper().replace("-", "_"), "")
 
 
-async def migrate_env_secrets_to_vault(client: VaultClient, secret_names: list[str]) -> dict[str, bool]:
+async def migrate_env_secrets_to_vault(
+    client: VaultClient, secret_names: list[str]
+) -> dict[str, bool]:
     """Migrate named environment secrets into the vault (one-time migration helper)."""
     results: dict[str, bool] = {}
     for name in secret_names:
@@ -120,7 +122,14 @@ async def migrate_env_secrets_to_vault(client: VaultClient, secret_names: list[s
             results[name] = False
             continue
         try:
-            await client.set_secret(name, value, metadata={"source": "env_migration", "migrated_at": datetime.now(timezone.utc).isoformat()})
+            await client.set_secret(
+                name,
+                value,
+                metadata={
+                    "source": "env_migration",
+                    "migrated_at": datetime.now(timezone.utc).isoformat(),
+                },
+            )
             results[name] = True
             logger.info("Migrated secret: %s", name)
         except VaultError as e:

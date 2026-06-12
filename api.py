@@ -245,6 +245,7 @@ async def lifespan(app: FastAPI):
     if not _audit_key:
         _key_file = "logs/audit/.audit_signing_key"
         import pathlib
+
         if pathlib.Path(_key_file).exists():
             logger.warning(
                 "AUDIT_SIGNING_KEY not set in environment — using persistent key file (%s). "
