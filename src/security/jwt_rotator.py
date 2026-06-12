@@ -103,7 +103,7 @@ class JWTRotator:
             "rotation",
             f"New secret {secret_id[:8]}... created; transition window {TRANSITION_WINDOW_HOURS}h",
         )
-        logger.info("JWT secret rotated. Secret ID: %s, expires: %s", secret_id, expires_at)
+        logger.info("JWT secret rotated successfully (details in audit log)")
         return new_secret
 
     def cleanup_expired(self) -> int:

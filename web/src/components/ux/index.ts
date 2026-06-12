@@ -25,6 +25,16 @@ export { AdaptiveButton }     from './AdaptiveButton'      // Fitts's Law + Aest
 export { AccordionCluster }   from './AccordionCluster'   // Cognitive Load + Hick + Jakob
 export { FlowZone }           from './FlowZone'           // Flow + Working Memory
 export { ParetoInsight }      from './ParetoInsight'      // Pareto + Von Restorff
+export { StatusIndicator }    from './StatusIndicator'    // Nielsen #1: Visibility of System Status
+
+// ── Figma Design Principles — Fluidic / Adaptive / Intelligent cells ─────────
+export { VisualHierarchy }         from './VisualHierarchy'       // Visual hierarchy + typographic scale
+export { ProgressiveDisclosure }   from './ProgressiveDisclosure' // Progressive disclosure (click/scroll/time/hover)
+export { AdaptiveGrid, GridCell }  from './AdaptiveGrid'          // Liquid responsive grid (auto-fit/fill/fixed)
+export { SmartCard }               from './SmartCard'             // State-machine card (idle→loading→success|error)
+export { FocusTrap }               from './FocusTrap'             // ARIA APG dialog focus management
+export { ContrastBadge, ContrastPreview } from './ContrastBadge'  // WCAG contrast ratio checker
+export { ToastCluster, useToast }  from './ToastCluster'          // Managed toast notifications
 
 // ── Hooks (re-exported for direct use) ──────────────────────────────────────
 export {

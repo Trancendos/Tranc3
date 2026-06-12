@@ -133,7 +133,7 @@ async def migrate_env_secrets_to_vault(
             results[name] = True
             logger.info("Secret migrated to vault (name redacted)")
         except VaultError as e:
-            logger.error("Migration failed for %s: %s", name, e)
+            logger.error("Migration failed for secret (name redacted): %s", e)
             results[name] = False
     return results
 

@@ -148,10 +148,14 @@ class ContainerSentinel:
                                     f"SUID binary detected: {entry}",
                                 )
                                 new_alerts.append(a)
-                        except (PermissionError, OSError):
+                        except PermissionError:
                             pass  # stat() can race with file removal; skip inaccessible entries
-            except (PermissionError, OSError):
-                pass
+                        except OSError as _stat_err:
+                            logger.debug("Unexpected OS error stat-ing %s: %s", entry, _stat_err)
+            except PermissionError:
+                pass  # directory not accessible in this container context
+            except OSError as _dir_err:
+                logger.debug("Unexpected OS error iterating %s: %s", bin_dir, _dir_err)
         return new_alerts
 
     def check_environment(self) -> list[EscapeAlert]:
