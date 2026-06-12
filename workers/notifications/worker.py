@@ -442,7 +442,7 @@ class NotificationDispatcher:
                 validated_url,
                 data=data,
                 method="POST",
-            )  # codeql[py/ssrf]
+            )  # codeql[py/full-ssrf]
             req.add_header("Content-Type", "application/json")
             with urllib.request.urlopen(req, timeout=10) as resp:
                 return resp.status < 400

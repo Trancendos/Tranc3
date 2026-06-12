@@ -309,21 +309,24 @@ class ZeroCostEnforcer:
             try:
                 reports = self.check_all()
                 for report in reports:
+                    _safe_pname = report.platform_name.replace("\n", " ").replace(
+                        "\r", " "
+                    )  # codeql[py/log-injection]
                     if report.status == QuotaStatus.CRITICAL:
-                        logger.warning(
+                        logger.warning(  # codeql[py/log-injection]
                             "Quota CRITICAL on %s (%.1f%%) — pre-emptive rotation",
-                            report.platform_name,
+                            _safe_pname,
                             report.utilisation_pct,
-                        )  # codeql[py/log-injection]
+                        )
                         fallback = await self.rotate_platform(report.platform_name)
                         report.action_taken = f"rotated_to:{fallback}"
                         report.fallback_platform = fallback
                     elif report.status == QuotaStatus.WARNING:
-                        logger.info(
+                        logger.info(  # codeql[py/log-injection]
                             "Quota WARNING on %s (%.1f%%) — monitoring",
-                            report.platform_name,
+                            _safe_pname,
                             report.utilisation_pct,
-                        )  # codeql[py/log-injection]
+                        )
                         report.action_taken = "monitoring"
 
                 self._reports = reports
