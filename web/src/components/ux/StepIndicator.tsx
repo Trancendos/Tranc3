@@ -18,7 +18,7 @@ interface StepIndicatorProps {
 }
 
 export function StepIndicator({ steps, currentStep: rawStep, className = '' }: StepIndicatorProps) {
-  const currentStep = Math.min(steps.length - 1, Math.max(0, rawStep))
+  const currentStep = Math.min(steps.length, Math.max(0, rawStep))
   return (
     <nav aria-label="Progress steps" className={className}>
       <ol className="ux-goal-steps" role="list">

@@ -149,7 +149,7 @@ class ContainerSentinel:
                                 )
                                 new_alerts.append(a)
                         except (PermissionError, OSError):
-                            pass
+                            pass  # stat() can race with file removal; skip inaccessible entries
             except (PermissionError, OSError):
                 pass
         return new_alerts
