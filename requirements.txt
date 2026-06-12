@@ -105,9 +105,10 @@ networkx==3.6.1
 # === Adaptive / Evolutionary Systems ===
 # ncps: Liquid Time-Constant (LTC) neural networks — ODE-governed adaptive routing
 #   Replaces hand-coded decay math in src/fluidic/fluid_router.py
-ncps==0.0.7
+ncps==1.0.1
 # deap: NSGA-II + CMA-ES genetic algorithms — powers src/nanoservices/genetic_optimizer/
-deap==1.4.1
+# Note: 1.4.1 fails to build on systems without matching setuptools; 1.4.4 is the stable equivalent
+deap==1.4.4
 # pygad: Simple GA for worker hyperparameter tuning (batch_size, cache_ttl, concurrency)
 pygad==3.3.1
 # pyswarms: Particle Swarm Optimization — high-dimensional load balancing (10+ workers)
