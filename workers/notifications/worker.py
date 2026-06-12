@@ -447,7 +447,9 @@ class NotificationDispatcher:
             _path = (_p.path or "/") + (f"?{_p.query}" if _p.query else "")
             _conn = http.client.HTTPSConnection(_host, _port, timeout=10)
             _conn.request(
-                "POST", _path, body=data,
+                "POST",
+                _path,
+                body=data,
                 headers={"Content-Type": "application/json"},
             )
             _resp = _conn.getresponse()
