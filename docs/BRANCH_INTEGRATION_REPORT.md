@@ -14,6 +14,23 @@
 | `palette-aria-*` | ChatView `aria-label` (already present on main) |
 | `a7b72c2` (cherry-pick) | `conftest.py` worker SQLite paths, `pyotp` test dep, JWT error split in auth gateway |
 | `4efcbf6` (security) | Full GitHub Security tab remediation on `main` |
+| PR #116 | CWE-117 log injection (`sanitize_for_log` / `SafeLogger`) |
+| PR #118 | Torch import-time crash fixes (supersedes #117 torch portions) |
+| PR #119 | Notifications webhook SSRF hardening (`WEBHOOK_ALLOWED_DOMAINS`, `HTTPSConnection`) |
+
+## In flight
+
+| Branch | Scope |
+|--------|-------|
+| `cursor/integration-p3-prometheus-e51c` | Additive P3 Prometheus scrape jobs (8016–8039) + blackbox health probes; see `docs/MERGE_STRATEGY.md` |
+
+## Superseded — close / delete manually
+
+| Ref | Action |
+|-----|--------|
+| PR #117 (`claude/loving-mendel-dPsZ7`) | Close — superseded by #118 + #119 |
+| `cursor/production-readiness-*` (8 branches) | Delete remote after review — all ~305 commits behind `main`, 1–5 unique commits each |
+| `cursor/torch-import-fixes-e51c`, `cursor/security-alerts-*` | Already deleted (merged squash residue) |
 
 ## Merged remote refs (0 commits ahead — delete candidates)
 
@@ -34,7 +51,7 @@ Protected from auto-delete: `cursor/production-integration-*`, `claude/loving-me
 | `refactor/shared-core-to-dimensional` | Massive dimensional refactor |
 | `infra/phase16-adaptive-storage` | ~157k deletions |
 | `palette-a11y-improvements-*` | ~21k deletions |
-| `cursor/production-integration-8d67` | Mixed good fixes + mass `shared_core` removal |
+| `cursor/production-integration-8d67` | Mixed good fixes + mass `shared_core` removal; **Prometheus top commit regresses main** — cherry-pick observability additively only |
 
 ## Review queue (cherry-pick per file)
 
