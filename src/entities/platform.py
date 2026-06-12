@@ -1159,7 +1159,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         offline_mode="Offline persona drafting; local 3D avatar sculpting; staged assembly without live service connections.",
         agent_alpha=Agent(
             "The Sculptor",
-            "Designs, rigs, and textures the detailed 3D body — skeleton, skin, expressions, and physical asset library.",
+            "Designs and rigs detailed 3D virtual avatars and physical assets.",
         ),
         agent_beta=Agent(
             "The Geneticist",
@@ -1171,7 +1171,7 @@ PLATFORM_ENTITIES: Dict[str, LocationEntity] = {
         ),
         bot_02=Bot(
             "Texture-Bot",
-            "Maps high-fidelity graphic materials, skin tones, and style overlays onto 3D assets.",
+            "Maps high-fidelity styles and graphic materials onto 3D assets.",
         ),
         bot_03=Bot(
             "Vocoder-Bot",

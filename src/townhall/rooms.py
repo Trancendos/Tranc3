@@ -78,7 +78,10 @@ class RoomManager:
         return session
 
     def list_sessions(
-        self, room: RoomKind | None = None, *, active_only: bool = False
+        self,
+        room: RoomKind | None = None,
+        *,
+        active_only: bool = False,
     ) -> list[RoomSession]:
         out = list(self._sessions.values())
         if room is not None:

@@ -48,18 +48,21 @@ def check_dependencies() -> bool:
 
     # pip-audit
     all_passed &= run_command(
-        ["pip", "audit", "-r", "requirements.txt"], "pip-audit (requirements.txt)"
+        ["pip", "audit", "-r", "requirements.txt"],
+        "pip-audit (requirements.txt)",
     )
 
     # Check AI dependencies if they exist
     if Path("requirements-ai.txt").exists():
         all_passed &= run_command(
-            ["pip", "audit", "-r", "requirements-ai.txt"], "pip-audit (requirements-ai.txt)"
+            ["pip", "audit", "-r", "requirements-ai.txt"],
+            "pip-audit (requirements-ai.txt)",
         )
 
     # Safety check
     all_passed &= run_command(
-        ["safety", "check", "-r", "requirements.txt"], "Safety check (requirements.txt)"
+        ["safety", "check", "-r", "requirements.txt"],
+        "Safety check (requirements.txt)",
     )
 
     return all_passed

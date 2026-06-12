@@ -59,7 +59,11 @@ class ChatDataset(Dataset):
     """Wraps MultilingualDataset samples into tokenised tensors using Tranc3Tokenizer."""
 
     def __init__(
-        self, tokenizer, data_dir: str, max_length: int = 512, languages: Optional[List[str]] = None
+        self,
+        tokenizer,
+        data_dir: str,
+        max_length: int = 512,
+        languages: Optional[List[str]] = None,
     ):
         from src.core.dataset import MultilingualDataset
 
@@ -84,7 +88,8 @@ class ChatDataset(Dataset):
         response = sample.get("response", "")
         personality = sample.get("personality", "tranc3-base")
         system_prompt = sample.get(
-            "system_prompt", f"You are TRANC3, an advanced AI with {personality} personality."
+            "system_prompt",
+            f"You are TRANC3, an advanced AI with {personality} personality.",
         )
 
         # Encode as a single training sequence:
@@ -144,7 +149,7 @@ def train(args):
                     try:
                         rec = json.loads(line)
                         corpus_texts.append(
-                            rec.get("instruction", "") + " " + rec.get("response", "")
+                            rec.get("instruction", "") + " " + rec.get("response", ""),
                         )
                     except Exception:
                         logger.debug("Graceful degradation: %s", "unknown")  # nosec B110
@@ -301,7 +306,13 @@ def train(args):
 
 
 def _save_checkpoint(
-    model, optimizer, scheduler, step, out_dir: Path, best: bool = False, final: bool = False
+    model,
+    optimizer,
+    scheduler,
+    step,
+    out_dir: Path,
+    best: bool = False,
+    final: bool = False,
 ):
     state = {
         "step": step,

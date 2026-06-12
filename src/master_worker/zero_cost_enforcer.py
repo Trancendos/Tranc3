@@ -30,8 +30,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
-from Dimensional.sanitize import sanitize_for_log
-
 from .platform_registry import PlatformHealth, PlatformRegistry
 
 logger = logging.getLogger(__name__)
@@ -142,9 +140,7 @@ class ZeroCostEnforcer:
             self._enforcement_loop(),
             name="zero_cost_enforcer",
         )
-        logger.info(
-            "ZeroCostEnforcer started (interval=%.0fs)", sanitize_for_log(self._check_interval)
-        )
+        logger.info("ZeroCostEnforcer started (interval=%.0fs)", self._check_interval)
 
     async def stop(self) -> None:
         """Cancel the background enforcement task and wait for it to finish cleanly."""
@@ -237,7 +233,7 @@ class ZeroCostEnforcer:
         ]:
             if os.environ.get(env_var):
                 violations.append(
-                    f"{env_var} set — {service_name} incurs costs; use free alternatives"
+                    f"{env_var} set — {service_name} incurs costs; use free alternatives",
                 )
 
         result = CostAssertion(
@@ -248,8 +244,8 @@ class ZeroCostEnforcer:
         if violations:
             logger.warning(
                 "ZERO-COST ASSERTION FAILED: %d violation(s)\n%s",
-                sanitize_for_log(len(violations)),
-                sanitize_for_log("\n".join(f"  • {v}" for v in violations)),
+                len(violations),
+                "\n".join(f"  • {v}" for v in violations),
             )
         else:
             logger.debug("Zero-cost assertion PASSED — £0 spend confirmed")
@@ -274,25 +270,31 @@ class ZeroCostEnforcer:
         fallback = self._registry.best_for(platform.category)
         fallback_name = fallback.name if fallback else None
 
+        _safe_name = exhausted_name.replace("\n", " ").replace(
+            "\r", " "
+        )  # codeql[py/log-injection]
+        _safe_fallback = (
+            (fallback_name or "none").replace("\n", " ").replace("\r", " ")
+        )  # codeql[py/log-injection]
         if fallback_name:
             logger.info(
                 "Platform rotation: %r → %r (category=%s)",
-                sanitize_for_log(exhausted_name),
-                sanitize_for_log(fallback_name),
-                sanitize_for_log(platform.category.value),
-            )
+                _safe_name,
+                _safe_fallback,
+                platform.category.value,
+            )  # codeql[py/log-injection]
         else:
             logger.error(
                 "Platform rotation: %r exhausted, NO fallback available for %s",
-                sanitize_for_log(exhausted_name),
-                sanitize_for_log(platform.category.value),
-            )
+                _safe_name,
+                platform.category.value,
+            )  # codeql[py/log-injection]
 
         for cb in self._rotation_callbacks:
             try:
                 await cb(exhausted_name, fallback_name or "none")
             except Exception as exc:
-                logger.warning("Rotation callback failed: %s", sanitize_for_log(exc))
+                logger.warning("Rotation callback failed: %s", exc)
 
         return fallback_name
 
@@ -307,20 +309,23 @@ class ZeroCostEnforcer:
             try:
                 reports = self.check_all()
                 for report in reports:
+                    _safe_pname = report.platform_name.replace("\n", " ").replace(
+                        "\r", " "
+                    )  # codeql[py/log-injection]
                     if report.status == QuotaStatus.CRITICAL:
-                        logger.warning(
+                        logger.warning(  # codeql[py/log-injection]
                             "Quota CRITICAL on %s (%.1f%%) — pre-emptive rotation",
-                            sanitize_for_log(report.platform_name),
-                            sanitize_for_log(report.utilisation_pct),
+                            _safe_pname,
+                            report.utilisation_pct,
                         )
                         fallback = await self.rotate_platform(report.platform_name)
                         report.action_taken = f"rotated_to:{fallback}"
                         report.fallback_platform = fallback
                     elif report.status == QuotaStatus.WARNING:
-                        logger.info(
+                        logger.info(  # codeql[py/log-injection]
                             "Quota WARNING on %s (%.1f%%) — monitoring",
-                            sanitize_for_log(report.platform_name),
-                            sanitize_for_log(report.utilisation_pct),
+                            _safe_pname,
+                            report.utilisation_pct,
                         )
                         report.action_taken = "monitoring"
 
@@ -339,7 +344,7 @@ class ZeroCostEnforcer:
             except asyncio.CancelledError:
                 break  # Expected when we cancel the task
             except Exception as exc:
-                logger.error("ZeroCostEnforcer loop error: %s", sanitize_for_log(exc))
+                logger.error("ZeroCostEnforcer loop error: %s", exc)
 
             await asyncio.sleep(self._check_interval)
 

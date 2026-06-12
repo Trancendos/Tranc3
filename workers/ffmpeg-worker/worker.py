@@ -20,8 +20,8 @@ from typing import Dict, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from Dimensional.path_validation import PathTraversalError, existing_file_path_str
-from Dimensional.sanitize import sanitize_for_log
+from shared_core.path_validation import PathTraversalError, existing_file_path_str
+from shared_core.sanitize import sanitize_for_log
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -197,7 +197,7 @@ async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
         palette_path = WORKDIR / f"{uuid.uuid4().hex}_palette.png"
         rc, _, stderr = await _run_ffmpeg(
             "-i",
-            input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
+            input_path,
             "-vf",
             "fps=10,scale=320:-1:flags=lanczos,palettegen",
             str(palette_path),
@@ -206,7 +206,7 @@ async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
             raise RuntimeError(f"Palette generation failed: {stderr[-500:]}")
         rc, _, stderr = await _run_ffmpeg(
             "-i",
-            input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
+            input_path,
             "-i",
             str(palette_path),
             "-lavfi",
@@ -220,7 +220,7 @@ async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
     elif output_format == "webm":
         rc, _, stderr = await _run_ffmpeg(
             "-i",
-            input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
+            input_path,
             "-c:v",
             "libvpx-vp9",
             "-crf",
@@ -235,7 +235,7 @@ async def _transcode(input_path: str, output_format: str, quality: str) -> Path:
         # mp4
         rc, _, stderr = await _run_ffmpeg(
             "-i",
-            input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
+            input_path,
             "-c:v",
             "libx264",
             "-crf",
@@ -260,7 +260,7 @@ async def _thumbnail(input_path: str, timestamp_seconds: float) -> Path:
         "-ss",
         str(timestamp_seconds),
         "-i",
-        input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
+        input_path,
         "-frames:v",
         "1",
         "-q:v",
@@ -285,7 +285,7 @@ async def _compress(input_path: str, target_mb: float) -> Path:
         "format=duration",
         "-of",
         "default=noprint_wrappers=1:nokey=1",
-        input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
+        input_path,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
@@ -310,7 +310,7 @@ async def _compress(input_path: str, target_mb: float) -> Path:
         # Pass 1
         rc, _, _ = await _run_ffmpeg(
             "-i",
-            input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
+            input_path,
             "-c:v",
             "libx264",
             "-b:v",
@@ -328,7 +328,7 @@ async def _compress(input_path: str, target_mb: float) -> Path:
             # Pass 2
             rc, _, stderr = await _run_ffmpeg(
                 "-i",
-                input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
+                input_path,
                 "-c:v",
                 "libx264",
                 "-b:v",
@@ -348,7 +348,7 @@ async def _compress(input_path: str, target_mb: float) -> Path:
     else:
         rc, _, stderr = await _run_ffmpeg(
             "-i",
-            input_path,  # codeql[py/path-injection] – validated under MEDIA_ROOT via existing_file_path_str
+            input_path,
             "-c:v",
             "libx264",
             "-crf",

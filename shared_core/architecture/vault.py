@@ -188,7 +188,7 @@ class VaultSecretLoader:
                     name=name,
                     accessed_at=datetime.now(timezone.utc).isoformat(),
                     source=source,
-                )
+                ),
             )
 
         return value
@@ -313,7 +313,7 @@ class VaultSecretLoader:
                         location="environment",
                         risk_level="high",
                         description=f"Environment variable '{key}' appears to contain a real secret value",
-                    )
+                    ),
                 )
 
         # Check .env file
@@ -327,7 +327,7 @@ class VaultSecretLoader:
                             risk_level="medium",
                             description=f".env file variable '{key}' contains a secret value "
                             f"(acceptable if .env is in .gitignore)",
-                        )
+                        ),
                     )
 
         return findings

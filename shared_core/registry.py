@@ -52,7 +52,8 @@ class ServiceRegistry:
                     if not self._capability_index[cap.name]:
                         del self._capability_index[cap.name]
             logger.info(
-                "Deregistered service: %s", sanitize_for_log(name)
+                "Deregistered service: %s",
+                sanitize_for_log(name),
             )  # codeql[py/cleartext-logging]
             self._notify_watchers("deregister", name)
         return service
@@ -93,7 +94,10 @@ class ServiceRegistry:
             service.last_seen = time.time()
             if old_health != health:
                 logger.info(
-                    "Service %s: %s → %s", sanitize_for_log(name), old_health.value, health.value
+                    "Service %s: %s → %s",
+                    sanitize_for_log(name),
+                    old_health.value,
+                    health.value,
                 )  # codeql[py/cleartext-logging]
                 self._notify_watchers("health_change", name)
 
@@ -108,7 +112,8 @@ class ServiceRegistry:
                 watcher(event, service_name)
             except Exception as e:
                 logger.error(
-                    "Watcher error: %s", sanitize_for_log(e)
+                    "Watcher error: %s",
+                    sanitize_for_log(e),
                 )  # codeql[py/cleartext-logging]
 
     async def start_health_monitor(self) -> None:
@@ -132,7 +137,8 @@ class ServiceRegistry:
                     for name, service in list(self._services.items()):
                         try:
                             async with session.get(
-                                service.health_url, timeout=aiohttp.ClientTimeout(total=5)
+                                service.health_url,
+                                timeout=aiohttp.ClientTimeout(total=5),
                             ) as resp:
                                 if resp.status == 200:
                                     self.update_health(name, ServiceHealth.HEALTHY)
@@ -144,7 +150,8 @@ class ServiceRegistry:
                 break
             except Exception as e:
                 logger.error(
-                    "Health check loop error: %s", sanitize_for_log(e)
+                    "Health check loop error: %s",
+                    sanitize_for_log(e),
                 )  # codeql[py/cleartext-logging]
 
 

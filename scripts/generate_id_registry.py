@@ -356,7 +356,7 @@ GUARDIAN_FULL_TITLES = {
         "human_identity": "Marcus Magnolia",
         "full_title_infinity": "The Guardian (Anchor: Orb of Orisis)",
         "full_title_prime": "The Guardian (Marcus Magnolia)",
-    }
+    },
 }
 
 # ============================================================
@@ -509,7 +509,8 @@ def generate_id_registry():
 
         # Agents (Tier 4)
         for idx, (field, agent) in enumerate(
-            [("agent_alpha", entity.agent_alpha), ("agent_beta", entity.agent_beta)], start=1
+            [("agent_alpha", entity.agent_alpha), ("agent_beta", entity.agent_beta)],
+            start=1,
         ):
             agent_name = agent.code_name
             # Apply duplicate resolution
@@ -523,7 +524,7 @@ def generate_id_registry():
                     "tier": 4,
                     "role": "Alpha" if idx == 1 else "Beta",
                     "description": agent.description,
-                }
+                },
             )
 
         # Bots (Tier 5)
@@ -554,7 +555,7 @@ def generate_id_registry():
                     "tier": 5,
                     "slot": f"0{idx}",
                     "description": bot.description,
-                }
+                },
             )
 
         registry["locations"].append(loc_entry)
@@ -585,7 +586,7 @@ def save_registry_csv(registry, filepath):
             "Location": "",
             "Pillar": "",
             "Description": registry["sovereign"]["description"],
-        }
+        },
     )
 
     # Primes
@@ -599,7 +600,7 @@ def save_registry_csv(registry, filepath):
                 "Location": "",
                 "Pillar": "",
                 "Description": f"Governs: {', '.join(prime['governs'])}",
-            }
+            },
         )
 
     # Per-location entities
@@ -614,7 +615,7 @@ def save_registry_csv(registry, filepath):
                 "Location": loc["location"],
                 "Pillar": loc["pillar"],
                 "Description": loc["primary_function"],
-            }
+            },
         )
         # Agents
         for agent in loc["agents"]:
@@ -627,7 +628,7 @@ def save_registry_csv(registry, filepath):
                     "Location": loc["location"],
                     "Pillar": loc["pillar"],
                     "Description": agent["description"],
-                }
+                },
             )
         # Bots
         for bot in loc["bots"]:
@@ -640,7 +641,7 @@ def save_registry_csv(registry, filepath):
                     "Location": loc["location"],
                     "Pillar": loc["pillar"],
                     "Description": bot["description"],
-                }
+                },
             )
 
     fieldnames = ["ID", "Tier", "Type", "Name", "Location", "Pillar", "Description"]

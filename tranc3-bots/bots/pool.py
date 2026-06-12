@@ -87,7 +87,9 @@ class BotPool:
         r = await self.get_result(job.job_id, timeout=timeout)
         if r is None:
             return JobResult(
-                job_id=job.job_id, status=JobStatus.FAILED, error=f"Timeout after {timeout}s"
+                job_id=job.job_id,
+                status=JobStatus.FAILED,
+                error=f"Timeout after {timeout}s",
             )
         return r
 

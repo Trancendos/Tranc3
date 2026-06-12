@@ -38,11 +38,11 @@ class TestOverrideStore:
                 id TEXT PRIMARY KEY, location_pid TEXT, entity_type TEXT,
                 slot TEXT, original_name TEXT, override_name TEXT,
                 updated_at TEXT, updated_by TEXT,
-                UNIQUE(location_pid, entity_type, slot))"""
+                UNIQUE(location_pid, entity_type, slot))""",
             )
             conn.execute(
                 """INSERT INTO entity_overrides VALUES
-                ('1','PID-NXS','lead_ai','','Nexus-Prime','Custom-Nexus','now','test')"""
+                ('1','PID-NXS','lead_ai','','Nexus-Prime','Custom-Nexus','now','test')""",
             )
             conn.commit()
             conn.close()

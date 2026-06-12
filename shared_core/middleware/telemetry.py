@@ -101,7 +101,7 @@ class TelemetryCollector:
                 status_code=status_code,
                 method=method,
                 path=path,
-            )
+            ),
         )
         # Trim old records
         if len(self._request_records) > self._max_records:
@@ -186,7 +186,7 @@ class TelemetryCollector:
             for p in [50, 95, 99]:
                 idx = max(0, min(len(sorted_vals) - 1, int(len(sorted_vals) * p / 100)))
                 lines.append(
-                    f'{prom_name}{{service="{svc}",quantile="0.{p:02d}"}} {sorted_vals[idx]:.2f}'
+                    f'{prom_name}{{service="{svc}",quantile="0.{p:02d}"}} {sorted_vals[idx]:.2f}',
                 )
             lines.append(f'{prom_name}_count{{service="{svc}"}} {len(values)}')
             lines.append(f'{prom_name}_sum{{service="{svc}"}} {sum(values):.2f}')
@@ -194,7 +194,7 @@ class TelemetryCollector:
         # Built-in gauges
         metrics = self.get_metrics()
         lines.append(
-            f'tranc3_requests_per_second{{service="{svc}"}} {metrics["requests_per_second"]}'
+            f'tranc3_requests_per_second{{service="{svc}"}} {metrics["requests_per_second"]}',
         )
         lines.append(f'tranc3_error_rate{{service="{svc}"}} {metrics["error_rate"]}')
         lines.append(f'tranc3_uptime_seconds{{service="{svc}"}} {metrics["uptime_seconds"]}')
@@ -247,7 +247,8 @@ class TelemetryMiddleware(BaseHTTPMiddleware):
         response.headers["X-Trancendos-Service"] = os.getenv("SERVICE_NAME", "tranc3-api")
         response.headers["X-Trancendos-Version"] = os.getenv("SERVICE_VERSION", "1.0.0")
         response.headers["X-Trancendos-Mesh-Protocol"] = os.getenv(
-            "MESH_ROUTING_PROTOCOL", "static_port"
+            "MESH_ROUTING_PROTOCOL",
+            "static_port",
         )
         response.headers["X-Response-Time-Ms"] = f"{latency_ms:.2f}"
 

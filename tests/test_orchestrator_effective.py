@@ -30,7 +30,7 @@ def orch_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
             updated_at TEXT NOT NULL,
             updated_by TEXT,
             UNIQUE(location_pid, entity_type, slot)
-        )"""
+        )""",
     )
     conn.commit()
     conn.close()

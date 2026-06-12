@@ -35,7 +35,9 @@ def _gh_json(args: list[str]) -> dict | list:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--apply", action="store_true", help="Close PRs with comment (requires gh auth)"
+        "--apply",
+        action="store_true",
+        help="Close PRs with comment (requires gh auth)",
     )
     parser.add_argument("--repo", default="Trancendos/Tranc3")
     args = parser.parse_args()

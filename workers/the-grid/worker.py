@@ -31,8 +31,7 @@ from pydantic import BaseModel, Field
 
 from Dimensional.error_handlers import safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
-from Dimensional.url_validation import SSRFError, validate_webhook_url
-from src.database.encrypted_sqlite import connect as sqlite3_connect
+from shared_core.url_validation import SSRFError, validate_webhook_url
 from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
@@ -120,7 +119,7 @@ class GridDatabase:
 
     def _get_conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3_connect(str(self.db_path), timeout=10)
+            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
             self._local.conn.row_factory = sqlite3.Row
             self._local.conn.execute("PRAGMA journal_mode=WAL")
             self._local.conn.execute("PRAGMA synchronous=NORMAL")

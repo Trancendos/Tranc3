@@ -371,7 +371,7 @@ async def workflow_templates():
                 spark_ignition_workflow().to_dict(),
                 self_healing_workflow().to_dict(),
                 ml_training_workflow().to_dict(),
-            ]
+            ],
         }
     except Exception as e:
         raise HTTPException(status_code=503, detail=log_server_error(e, 503))
@@ -579,7 +579,7 @@ async def record_feedback(req: FeedbackRequest, request: Request):
             "quality_score": req.quality_score,
             "user_satisfaction": req.user_satisfaction,
             "session_id": req.session_id,
-        }
+        },
     )
     return {"recorded": True}
 

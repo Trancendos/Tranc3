@@ -57,7 +57,7 @@ def generate_jwt(
         {
             "iat": datetime.utcnow(),
             "exp": datetime.utcnow() + timedelta(minutes=expires_minutes),
-        }
+        },
     )
     return jwt.encode(to_encode, key, algorithm=algorithm)
 
@@ -78,7 +78,8 @@ def verify_jwt(
         return jwt.decode(token, key, algorithms=[algorithm])
     except Exception as e:
         logger.warning(
-            "JWT verification failed: %s", sanitize_for_log(e)
+            "JWT verification failed: %s",
+            sanitize_for_log(e),
         )  # codeql[py/cleartext-logging]
         raise
     return None

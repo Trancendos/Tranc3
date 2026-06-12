@@ -56,7 +56,6 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
-# Phase 22.4: Dimensional Services
 from Dimensional.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
@@ -85,8 +84,9 @@ from Dimensional.infinity.sentinel_station import (
 
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
+
+# Phase 22.4: Dimensional Services
 from Dimensional.sanitize import sanitize_for_log
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
@@ -148,7 +148,7 @@ class PortalDatabase:
     def __init__(self, db_path: str = DB_PATH) -> None:
         self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3_connect(db_path, check_same_thread=False)
+        self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._init_tables()
 

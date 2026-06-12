@@ -29,7 +29,6 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8019
@@ -53,7 +52,7 @@ logger = logging.getLogger(WORKER_NAME)
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3_connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn

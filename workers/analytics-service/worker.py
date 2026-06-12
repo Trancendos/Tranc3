@@ -81,6 +81,7 @@ import sqlite3
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
+
 WORKER_PORT = 8016
 WORKER_NAME = "analytics-service"
 
@@ -446,14 +447,10 @@ async def health():
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
-        "backend": "duckdb+sqlite" if _DUCKDB_AVAILABLE else "sqlite",
-        "duckdb_available": _DUCKDB_AVAILABLE,
-        "live_events": event_count,
-        "live_metrics": metric_count,
-        "archive_batches": archive_count,
-        "parquet_files": len(parquet_files),
-        "parquet_bytes": parquet_total_bytes,
-        "polars_available": _POLARS_AVAILABLE,
+        "event_count": event_count,
+        "metric_count": metric_count,
+        "archive_count": archive_count,
+        "parquet_total_bytes": parquet_total_bytes,
     }
 
 
@@ -1053,10 +1050,10 @@ async def summary():
         event_count = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         metric_count = conn.execute("SELECT COUNT(*) FROM metrics").fetchone()[0]
         top_events = conn.execute(
-            "SELECT event_type, COUNT(*) as c FROM events GROUP BY event_type ORDER BY c DESC LIMIT 10",
+            "SELECT event_type, COUNT(*) as c FROM events GROUP BY event_type ORDER BY c DESC LIMIT 5",
         ).fetchall()
         top_metrics = conn.execute(
-            "SELECT name, AVG(value) as avg_val, COUNT(*) as samples FROM metrics GROUP BY name ORDER BY samples DESC LIMIT 10",
+            "SELECT name, AVG(value) as avg_val FROM metrics GROUP BY name ORDER BY avg_val DESC LIMIT 5",
         ).fetchall()
         archive_rows = conn.execute(
             "SELECT filename, rows, date_from, date_to, archived_at FROM archive_log ORDER BY archived_at DESC LIMIT 10",

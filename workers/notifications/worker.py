@@ -411,7 +411,7 @@ class NotificationDispatcher:
     async def dispatch_webhook(url: str, payload: Dict[str, Any]) -> bool:
         """Webhook dispatch — makes HTTPS POST to an allowlisted endpoint.
 
-        WEBHOOK_ALLOWED_DOMAINS (env var) must be configured. The connection
+        WEBHOOK_ALLOWED_DOMAINS (env var) must be configured.  The connection
         host is derived from the allowlist (config-sourced), not from the
         user-supplied URL, so the outbound host is not attacker-controlled.
         """
@@ -424,37 +424,41 @@ class NotificationDispatcher:
             logger.warning("Webhook URL blocked by SSRF protection: %s", sanitize_for_log(e))
             return False
 
+        # Allowlist is required for webhook dispatch.  The connection host is
+        # taken from _WEBHOOK_ALLOWED_DOMAINS (populated from env config at
+        # startup), NOT from the user-supplied URL.  Iterating the config set
+        # and comparing yields the config-sourced string as the host value,
+        # which is not tainted by user input.
         if not _WEBHOOK_ALLOWED_DOMAINS:
             logger.warning("Webhook dispatch blocked: WEBHOOK_ALLOWED_DOMAINS not configured")
             return False
 
-        parsed = urlparse(validated_url)
-        req_host = (parsed.hostname or "").lower()
-        conn_host: Optional[str] = next(
-            (domain for domain in _WEBHOOK_ALLOWED_DOMAINS if domain == req_host),
-            None,
+        _p = urlparse(validated_url)
+        _req_host = (_p.hostname or "").lower()
+        _conn_host: Optional[str] = next(
+            (d for d in _WEBHOOK_ALLOWED_DOMAINS if d == _req_host), None
         )
-        if conn_host is None:
+        if _conn_host is None:
             logger.warning(
                 "Webhook domain '%s' not in allowlist (%d configured)",
-                sanitize_for_log(req_host),
+                sanitize_for_log(_req_host),
                 len(_WEBHOOK_ALLOWED_DOMAINS),
             )
             return False
 
         try:
             data = json.dumps(payload).encode()
-            path = (parsed.path or "/") + (f"?{parsed.query}" if parsed.query else "")
-            conn = http.client.HTTPSConnection(conn_host, 443, timeout=10)
-            conn.request(
+            _path = (_p.path or "/") + (f"?{_p.query}" if _p.query else "")
+            _conn = http.client.HTTPSConnection(_conn_host, 443, timeout=10)
+            _conn.request(
                 "POST",
-                path,
+                _path,
                 body=data,
                 headers={"Content-Type": "application/json"},
             )
-            resp = conn.getresponse()
-            conn.close()
-            return resp.status < 400
+            _resp = _conn.getresponse()
+            _conn.close()
+            return _resp.status < 400
         except Exception as e:
             logger.error("Webhook dispatch failed: %s", sanitize_for_log(e))
             return False
@@ -646,7 +650,7 @@ async def send_notification(req: NotificationRequest):
         db.update_status(
             req.notification_id,
             NotificationStatus.failed,
-            error=safe_message,
+            error=safe_error_detail(e, 500),
         )
         return {
             "ok": False,

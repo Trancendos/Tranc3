@@ -134,7 +134,9 @@ async def check_service(name: str, port: int, path: str, priority: str) -> Servi
         ok, code, ms, err, detail = await probe_httpx(name, url)
     else:
         ok, code, ms, err, detail = await asyncio.get_event_loop().run_in_executor(
-            None, probe_urllib, url
+            None,
+            probe_urllib,
+            url,
         )
     return ServiceResult(
         name=name,
@@ -210,7 +212,7 @@ def print_report(results: list[ServiceResult]) -> int:
     total = len(results)
     print(
         f"  {_c('BOLD', 'Summary:')} {_c('GREEN', str(healthy))} healthy, "
-        f"{_c('RED', str(total - healthy))} unhealthy of {total} services\n"
+        f"{_c('RED', str(total - healthy))} unhealthy of {total} services\n",
     )
 
     if p0_fail > 0:

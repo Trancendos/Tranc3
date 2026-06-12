@@ -43,7 +43,7 @@ def list_entities(*, pillar: str | None = None) -> list[dict[str, Any]]:
                 "worker_port": e.worker_port,
                 "worker_path": e.worker_path,
                 "override_keys": list(e.overrides_applied.keys()),
-            }
+            },
         )
     return out
 
@@ -91,14 +91,14 @@ def graph_nodes_edges() -> dict[str, Any]:
                 "label": e.location,
                 "type": "location",
                 "pillar": e.pillar,
-            }
+            },
         )
         nodes.append(
             {
                 "id": f"{e.pid}-lead",
                 "label": e.lead_ai,
                 "type": "lead_ai",
-            }
+            },
         )
         edges.append({"from": e.pid, "to": f"{e.pid}-lead", "relation": "lead_ai"})
         for i, prime in enumerate(e.primes):

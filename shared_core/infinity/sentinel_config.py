@@ -169,7 +169,7 @@ class SentinelStationConfig:
                 name=SentinelChannel.EVENTS.value,
                 description="General platform events and notifications",
             ),
-        }
+        },
     )
 
 

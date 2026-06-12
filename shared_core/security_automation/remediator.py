@@ -114,7 +114,7 @@ class AutoRemediator:
                     "file": filepath,
                     "violations_fixed": len(violations),
                     "dry_run": self.dry_run,
-                }
+                },
             )
 
     # -----------------------------------------------------------------------

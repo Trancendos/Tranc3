@@ -178,7 +178,7 @@ def validate_url(
     # --- Scheme check ---
     if parsed.scheme.lower() not in schemes:
         raise SSRFError(
-            f"URL scheme '{parsed.scheme}' is not allowed. Permitted schemes: {sorted(schemes)}"
+            f"URL scheme '{parsed.scheme}' is not allowed. Permitted schemes: {sorted(schemes)}",
         )
 
     # --- Hostname check ---
@@ -204,14 +204,14 @@ def validate_url(
             ip_str = sockaddr[0]
             if _is_ip_private(ip_str):
                 raise SSRFError(
-                    f"URL resolves to private/reserved IP address: {ip_str} (hostname: {hostname})"
+                    f"URL resolves to private/reserved IP address: {ip_str} (hostname: {hostname})",
                 )
     except socket.gaierror:
         # DNS resolution failure — treat as invalid rather than risk
         # a later resolution to an internal IP
         raise SSRFError(
             f"Could not resolve hostname '{hostname}'. "
-            "Unresolvable hostnames are rejected to prevent DNS rebinding attacks."
+            "Unresolvable hostnames are rejected to prevent DNS rebinding attacks.",
         ) from None
 
     # Also check additional blocked networks if provided

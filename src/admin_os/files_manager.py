@@ -43,7 +43,7 @@ def list_dir(relative: str = "") -> dict[str, Any]:
                     "type": "directory" if child.is_dir() else "file",
                     "size": stat.st_size if child.is_file() else None,
                     "modified": stat.st_mtime,
-                }
+                },
             )
         except OSError:
             continue

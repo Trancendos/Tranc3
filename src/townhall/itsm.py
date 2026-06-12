@@ -96,7 +96,9 @@ class ItsmService:
         return inc
 
     def update_incident_status(
-        self, incident_id: str, status: IncidentStatus
+        self,
+        incident_id: str,
+        status: IncidentStatus,
     ) -> ItsmIncident | None:
         inc = self._incidents.get(incident_id)
         if not inc:
