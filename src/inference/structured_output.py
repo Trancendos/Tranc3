@@ -10,6 +10,7 @@ models or paid APIs. Three strategies (tried in order):
 
 Zero-cost: uses stdlib json + optional lmformatenforcer (open-source).
 """
+
 from __future__ import annotations
 
 import json
@@ -22,6 +23,7 @@ logger = logging.getLogger("tranc3.inference.structured_output")
 # Optional: lmformatenforcer
 try:
     from lmformatenforcer import JsonSchemaParser  # type: ignore[import]  # noqa: F401
+
     _LMFE_AVAILABLE = True
 except ImportError:
     _LMFE_AVAILABLE = False

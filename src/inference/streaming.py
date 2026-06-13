@@ -14,6 +14,7 @@ Usage in FastAPI:
             media_type="text/event-stream",
         )
 """
+
 from __future__ import annotations
 
 import asyncio

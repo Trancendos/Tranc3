@@ -170,13 +170,16 @@ class AIGateway:
             # Fallback: try all providers in registration order, ranked by Thompson sampler
             try:
                 from src.inference.thompson_sampler import get_sampler
+
                 sampler = get_sampler()
                 ranked = sampler.rank_all()
                 registered = set(self._providers.keys())
                 ordered = [n for n in ranked if n in registered]
                 # Append any providers not in sampler
                 ordered += [n for n in self._providers.keys() if n not in ordered]
-                routes = [RouteRule(provider=name, priority=idx) for idx, name in enumerate(ordered)]
+                routes = [
+                    RouteRule(provider=name, priority=idx) for idx, name in enumerate(ordered)
+                ]
             except Exception:
                 routes = [
                     RouteRule(provider=name, priority=idx)
@@ -241,6 +244,7 @@ class AIGateway:
                 self._track_success(route.provider, response)
                 try:
                     from src.inference.thompson_sampler import get_sampler
+
                     get_sampler().record_success(
                         route.provider,
                         latency_ms=response.latency_ms if hasattr(response, "latency_ms") else 0.0,
@@ -279,6 +283,7 @@ class AIGateway:
                 self._track_error(route.provider)
                 try:
                     from src.inference.thompson_sampler import get_sampler
+
                     get_sampler().record_failure(route.provider)
                 except Exception:
                     pass

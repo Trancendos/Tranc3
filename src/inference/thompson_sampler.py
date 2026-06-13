@@ -13,6 +13,7 @@ occasionally probing degraded ones to detect recovery.
 
 Zero-cost: pure Python stdlib — no external dependencies.
 """
+
 from __future__ import annotations
 
 import random
@@ -116,10 +117,7 @@ class ThompsonSampler:
             theta = belief.sample()
             # Latency penalty: 0 = fast, 1 = slowest
             latency_penalty = 1.0 - (belief.avg_latency_ms / max_latency)
-            score = (
-                theta * (1.0 - self._latency_weight)
-                + latency_penalty * self._latency_weight
-            )
+            score = theta * (1.0 - self._latency_weight) + latency_penalty * self._latency_weight
             scored.append((score, belief.name))
 
         scored.sort(reverse=True)
