@@ -15,13 +15,13 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger("tranc3.inference.structured_output")
 
 # Optional: lmformatenforcer
 try:
-    from lmformatenforcer import JsonSchemaParser  # type: ignore[import]
+    from lmformatenforcer import JsonSchemaParser  # type: ignore[import]  # noqa: F401
     _LMFE_AVAILABLE = True
 except ImportError:
     _LMFE_AVAILABLE = False

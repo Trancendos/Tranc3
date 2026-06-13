@@ -6,7 +6,6 @@ logger = logging.getLogger("src.bio_neural.consciousness_integration")
 
 from typing import Any, Dict, List, Optional  # noqa: E402
 
-import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: E402

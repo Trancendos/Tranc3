@@ -15,7 +15,6 @@ Zero-cost: pure Python stdlib — no external dependencies.
 """
 from __future__ import annotations
 
-import math
 import random
 import sqlite3
 import time
