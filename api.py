@@ -538,9 +538,33 @@ async def lifespan(app: FastAPI):
     except Exception as _otel_exc:
         logger.warning("OpenTelemetry instrumentation failed: %s", sanitize_for_log(_otel_exc))
 
+    # Quota rotation daemon (zero-cost provider hard-stop at threshold)
+    _quota_rotation_task = None
+    try:
+        from src.adaptive.quota_rotation_loop import start_quota_rotation
+
+        _quota_rotation_task = asyncio.ensure_future(start_quota_rotation())
+        logger.info(
+            "Quota rotation daemon started (threshold=%.0f%%)",
+            float(os.getenv("QUOTA_THRESHOLD_PCT", "80")),
+        )
+    except Exception as _qr_exc:
+        logger.warning("Quota rotation daemon unavailable: %s", sanitize_for_log(_qr_exc))
+
+    # Health monitor → self-repair bridge
+    try:
+        from src.healing.health_repair_bridge import wire_health_to_repair
+
+        wire_health_to_repair()
+    except Exception as _bridge_exc:
+        logger.warning("Health→repair bridge unavailable: %s", sanitize_for_log(_bridge_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield
+
+    if _quota_rotation_task is not None:
+        _quota_rotation_task.cancel()
 
     logger.info("TRANC3 shutting down")
     _bootstrap_complete = False
