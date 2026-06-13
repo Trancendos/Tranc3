@@ -27,6 +27,7 @@ import json
 import logging
 import os
 import sqlite3
+import re
 import threading
 import time
 import uuid
@@ -135,16 +136,18 @@ def _compute_hash(
     prev_hash: str,
     event_id: str,
     timestamp: str,
+    service: str,
     action: str,
     actor: str,
     resource: str,
     outcome: str,
 ) -> str:
     """
-    SHA-256( prev_hash + event_id + timestamp + service + action + actor + resource + outcome )
-    All fields concatenated with '|' as separator to avoid ambiguity.
+    SHA-256( prev_hash | event_id | timestamp | service | action | actor | resource | outcome )
+    All fields concatenated with '|' to avoid ambiguity.  'service' is included so
+    an attacker cannot swap the originating service without breaking chain integrity.
     """
-    payload = "|".join([prev_hash, event_id, timestamp, action, actor, resource, outcome])
+    payload = "|".join([prev_hash, event_id, timestamp, service, action, actor, resource, outcome])
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -213,6 +216,7 @@ class HealthResponse(BaseModel):
     db_path: str
     total_events: int
     chain_valid: bool  # spot-check of last 100 entries
+    uptime_s: float = 0.0
 
 
 class VerifyResponse(BaseModel):
@@ -380,6 +384,7 @@ async def health() -> HealthResponse:
         db_path=str(DB_PATH),
         total_events=total,
         chain_valid=chain_valid,
+        uptime_s=round(time.monotonic() - _START_TIME, 2),
     )
 
 
@@ -425,6 +430,7 @@ async def append_event(
                     prev_hash,
                     event_id,
                     timestamp,
+                    body.service,
                     body.action,
                     body.actor,
                     body.resource,
@@ -463,8 +469,8 @@ async def append_event(
         "audit event appended id=%d event_id=%s action=%s actor=%s",
         row_id,
         event_id,
-        body.action,
-        body.actor,
+        re.sub(r"[\r\n\t]", " ", str(body.action))[:200],
+        re.sub(r"[\r\n\t]", " ", str(body.actor))[:200],
     )
     return AuditEventCreated(
         id=row_id,

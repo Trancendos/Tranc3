@@ -31,7 +31,7 @@ async def _on_health_event(event: dict) -> None:
     new_status = event.get("new_status", "")
     service_id = event.get("service_id", "unknown")
 
-    if new_status not in ("DEGRADED", "CRITICAL", "EMERGENCY"):
+    if new_status not in ("review", "rollback", "quarantine", "emergency"):
         return
 
     logger.info(
@@ -51,7 +51,7 @@ async def _on_health_event(event: dict) -> None:
             "timestamp": event.get("timestamp"),
         }
 
-        if new_status == "EMERGENCY":
+        if new_status == "emergency":
             results = await engine.emergency_repair(context)
         else:
             results = await engine.evaluate_and_repair(context)
@@ -80,7 +80,7 @@ async def _on_health_event(event: dict) -> None:
                 },
             )
         except Exception:
-            pass
+            pass  # observability is optional; repair must not block
 
     except Exception as exc:
         logger.error("health_repair_bridge: repair error for %s: %s", service_id, exc)
@@ -98,9 +98,8 @@ def wire_health_to_repair() -> bool:
         return True
 
     try:
-        from src.healing.health_monitor import LogicCoreHealthMonitor
+        from src.healing.health_monitor import health_monitor as monitor
 
-        monitor = LogicCoreHealthMonitor()
         monitor.subscribe_alerts(_on_health_event)
         _wired = True
         logger.info(

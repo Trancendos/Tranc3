@@ -60,7 +60,7 @@ _check() {
     local http_code body
 
     if [ "$VERBOSE" = "1" ]; then
-        body=$(curl -sf --max-time "$TIMEOUT" -w "\n%{http_code}" "$url" 2>/dev/null || echo -e "\nERR")
+        body=$(curl -s --max-time "$TIMEOUT" -w "\n%{http_code}" "$url" 2>/dev/null || echo -e "\nERR")
         http_code=$(echo "$body" | tail -1)
         body=$(echo "$body" | head -n -1)
     else

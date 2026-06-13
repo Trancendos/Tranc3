@@ -70,7 +70,7 @@ def _emit_observatory(event_type: str, **kwargs) -> None:
             **kwargs,
         )
     except Exception:
-        pass
+        pass  # observability is optional; startup must not block
 
 
 def _emit_event_bus(payload: dict) -> None:
@@ -81,7 +81,7 @@ def _emit_event_bus(payload: dict) -> None:
         bus = get_event_bus()
         asyncio.create_task(bus.publish("quota.rotation", payload))
     except Exception:
-        pass
+        pass  # event bus is optional; startup must not block
 
 
 def _check_and_rotate() -> Optional[str]:

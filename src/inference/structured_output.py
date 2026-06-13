@@ -20,10 +20,11 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger("tranc3.inference.structured_output")
 
-# Optional: lmformatenforcer
+# Optional: lmformatenforcer — only checking availability, not using the symbol
 try:
-    from lmformatenforcer import JsonSchemaParser  # type: ignore[import]  # noqa: F401
+    import lmformatenforcer as _lmfe_mod  # type: ignore[import]
 
+    del _lmfe_mod
     _LMFE_AVAILABLE = True
 except ImportError:
     _LMFE_AVAILABLE = False

@@ -15,6 +15,11 @@ REGISTRY="${REGISTRY:-ghcr.io/trancendos}"
 TAG="${TAG:-latest}"
 STACK_NAME="${STACK_NAME:-tranc3}"
 
+if [ -z "${SECRET_KEY:-}" ]; then
+    echo "ERROR: SECRET_KEY is required but not set. Aborting." >&2
+    exit 1
+fi
+
 echo "=== Trancendos Docker Swarm Init ==="
 
 # ── 1. Init or join swarm ──────────────────────────────────────────────────────
@@ -43,7 +48,7 @@ _create_secret() {
     if [ -n "$file" ] && [ -f "$file" ]; then
         docker secret create "$name" "$file"
     elif [ -n "$value" ]; then
-        echo "$value" | docker secret create "$name" -
+        printf "%s" "$value" | docker secret create "$name" -
     else
         echo "  WARNING: Secret '$name' has no value — set ${name^^} env var"
         return

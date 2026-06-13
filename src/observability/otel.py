@@ -28,56 +28,12 @@ OTEL_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:
 SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "tranc3")
 _ENABLED = os.getenv("OTEL_ENABLED", "true").lower() not in ("false", "0", "no")
 
-# ── Try to load real OpenTelemetry SDK ────────────────────────────────────────
+# ── Module-level state (uninitialised; call init_otel() at startup) ───────────
+# Note: initialisation is intentionally deferred so that workers can pass their
+# own service_name.  Module-level init would capture SERVICE_NAME at import
+# time, making init_otel(service_name=...) a no-op due to the _tracer guard.
 _tracer = None
 _meter = None
-
-try:
-    if _ENABLED:
-        from opentelemetry import metrics as otel_metrics
-        from opentelemetry import trace
-        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-        from opentelemetry.sdk.metrics import MeterProvider
-        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-        from opentelemetry.sdk.resources import Resource
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-        resource = Resource.create(
-            {
-                "service.name": SERVICE_NAME,
-                "service.namespace": "tranc3",
-                "deployment.environment": os.getenv("ENVIRONMENT", "production"),
-            }
-        )
-
-        _tp = TracerProvider(resource=resource)
-        _tp.add_span_processor(
-            BatchSpanProcessor(
-                OTLPSpanExporter(endpoint=OTEL_ENDPOINT),
-                max_queue_size=2048,
-                max_export_batch_size=512,
-                export_timeout_millis=10_000,
-            )
-        )
-        trace.set_tracer_provider(_tp)
-        _tracer = trace.get_tracer(SERVICE_NAME)
-
-        _reader = PeriodicExportingMetricReader(
-            OTLPMetricExporter(endpoint=OTEL_ENDPOINT),
-            export_interval_millis=60_000,
-        )
-        _mp = MeterProvider(resource=resource, metric_readers=[_reader])
-        otel_metrics.set_meter_provider(_mp)
-        _meter = otel_metrics.get_meter(SERVICE_NAME)
-
-        logger.info("OpenTelemetry SDK initialised → %s", OTEL_ENDPOINT)
-
-except ImportError:
-    logger.debug("opentelemetry packages not installed — tracing disabled (no-op mode)")
-except Exception as exc:
-    logger.warning("OpenTelemetry init failed: %s — falling back to no-op", exc)
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -263,7 +219,7 @@ def inject_trace_context(headers: dict | None = None) -> dict:
 
         inject(out)
     except Exception:
-        pass
+        pass  # propagation is best-effort; missing context header is non-fatal
     return out
 
 

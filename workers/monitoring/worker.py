@@ -112,7 +112,8 @@ if _PROM_AVAILABLE:
 
 _CREATE_ALERTS = """
 CREATE TABLE IF NOT EXISTS alerts (
-    id           TEXT PRIMARY KEY,
+    row_id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    id           TEXT NOT NULL,
     name         TEXT NOT NULL,
     severity     TEXT NOT NULL DEFAULT 'warning',
     message      TEXT NOT NULL DEFAULT '',
@@ -133,6 +134,7 @@ CREATE TABLE IF NOT EXISTS metrics_snapshots (
 )
 """
 
+_IDX_ALERTS_ID = "CREATE INDEX IF NOT EXISTS idx_alerts_id     ON alerts(id)"
 _IDX_ALERTS_SEV = "CREATE INDEX IF NOT EXISTS idx_alerts_sev    ON alerts(severity)"
 _IDX_ALERTS_FIRED = "CREATE INDEX IF NOT EXISTS idx_alerts_fired  ON alerts(fired_at)"
 _IDX_SNAP_SVC = "CREATE INDEX IF NOT EXISTS idx_snap_svc      ON metrics_snapshots(service)"
@@ -153,6 +155,7 @@ def _init_db() -> None:
     with _connect() as conn:
         conn.execute(_CREATE_ALERTS)
         conn.execute(_CREATE_SNAPSHOTS)
+        conn.execute(_IDX_ALERTS_ID)
         conn.execute(_IDX_ALERTS_SEV)
         conn.execute(_IDX_ALERTS_FIRED)
         conn.execute(_IDX_SNAP_SVC)
@@ -366,7 +369,7 @@ async def lifespan(app: FastAPI):
             try:
                 await _background_task
             except asyncio.CancelledError:
-                pass
+                pass  # expected on graceful shutdown; task was intentionally cancelled
         logger.info("%s shut down", WORKER_NAME)
 
 
@@ -482,29 +485,40 @@ async def ingest_alerts(
             )
             fired_at = am_alert.startsAt or now_iso
 
-            # Upsert — if same fingerprint already exists and is still firing, skip
-            existing = conn.execute(
-                "SELECT id, resolved_at FROM alerts WHERE id = ?", (alert_id,)
-            ).fetchone()
-            if existing and existing["resolved_at"] is None and am_alert.status == "firing":
-                continue  # already tracked
-
+            # Each alert firing is a new row to preserve history.
+            # For "resolved" events, update the most recent open row for this fingerprint.
             if am_alert.status == "resolved":
                 resolved_at = am_alert.endsAt or now_iso
-                conn.execute(
-                    "INSERT INTO alerts (id, name, severity, message, fired_at, resolved_at, labels_json) "
-                    "VALUES (?,?,?,?,?,?,?) "
-                    "ON CONFLICT(id) DO UPDATE SET resolved_at=excluded.resolved_at",
-                    (alert_id, name, severity, message, fired_at, resolved_at, json.dumps(labels)),
-                )
+                updated = conn.execute(
+                    "UPDATE alerts SET resolved_at=? WHERE id=? AND resolved_at IS NULL",
+                    (resolved_at, alert_id),
+                ).rowcount
+                if not updated:
+                    # No open row to close — insert a resolved record anyway
+                    conn.execute(
+                        "INSERT INTO alerts (id, name, severity, message, fired_at, resolved_at, labels_json) "
+                        "VALUES (?,?,?,?,?,?,?)",
+                        (
+                            alert_id,
+                            name,
+                            severity,
+                            message,
+                            fired_at,
+                            resolved_at,
+                            json.dumps(labels),
+                        ),
+                    )
             else:
+                # Only insert if there is no already-open (unresolved) row for this fingerprint
+                existing_open = conn.execute(
+                    "SELECT row_id FROM alerts WHERE id=? AND resolved_at IS NULL LIMIT 1",
+                    (alert_id,),
+                ).fetchone()
+                if existing_open:
+                    continue  # already tracked as firing
                 conn.execute(
                     "INSERT INTO alerts (id, name, severity, message, fired_at, resolved_at, labels_json) "
-                    "VALUES (?,?,?,?,?,NULL,?) "
-                    "ON CONFLICT(id) DO UPDATE SET "
-                    "name=excluded.name, severity=excluded.severity, "
-                    "message=excluded.message, fired_at=excluded.fired_at, "
-                    "resolved_at=NULL, labels_json=excluded.labels_json",
+                    "VALUES (?,?,?,?,?,NULL,?)",
                     (alert_id, name, severity, message, fired_at, json.dumps(labels)),
                 )
                 inserted_ids.append(alert_id)
@@ -524,7 +538,9 @@ async def ingest_alerts(
     # Broadcast new firing alerts to WebSocket clients
     for alert_id in inserted_ids:
         with _connect() as conn:
-            row = conn.execute("SELECT * FROM alerts WHERE id = ?", (alert_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM alerts WHERE id = ? ORDER BY row_id DESC LIMIT 1", (alert_id,)
+            ).fetchone()
         if row:
             await _bus.broadcast(
                 {

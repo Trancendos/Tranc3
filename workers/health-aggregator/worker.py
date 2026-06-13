@@ -219,8 +219,8 @@ async def _check_one(svc: Dict[str, Any]) -> Dict[str, Any]:
         "last_checked": datetime.now(timezone.utc).isoformat(),
     }
     try:
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            resp = await client.get(url)
+        client = _http_client or httpx.AsyncClient(timeout=HTTP_TIMEOUT)
+        resp = await client.get(url)
         latency = round((time.monotonic() - start) * 1000, 1)
         if resp.status_code < 400:
             result["status"] = "healthy"
@@ -307,8 +307,14 @@ class HistoryPoint(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+_http_client: Optional[httpx.AsyncClient] = None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global _http_client
+    # Shared HTTP client — reuses TCP connections across all health checks
+    _http_client = httpx.AsyncClient(timeout=HTTP_TIMEOUT)
     # OpenTelemetry instrumentation
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -327,7 +333,8 @@ async def lifespan(app: FastAPI):
     try:
         await task
     except asyncio.CancelledError:
-        pass
+        pass  # expected on graceful shutdown; task was intentionally cancelled
+    await _http_client.aclose()
     logger.info("health-aggregator stopped")
 
 

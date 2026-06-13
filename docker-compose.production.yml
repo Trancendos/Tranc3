@@ -358,9 +358,9 @@ services:
       - tempo-data:/tmp/tempo
       - ./monitoring/tempo.yml:/etc/tempo/config.yml:ro
     ports:
-      - "3200:3200"   # HTTP query API
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP HTTP receiver
+      - "3200:3200"     # HTTP query API
+      - "14317:4317"    # OTLP gRPC receiver (host 14317 → container 4317; avoids conflict with otel-collector)
+      - "14318:4318"    # OTLP HTTP receiver (host 14318 → container 4318)
     networks:
       - tranc3-net
     labels:
@@ -1491,8 +1491,8 @@ services:
     volumes:
       - ./config/signoz/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
+      - "24317:4317"   # OTLP gRPC (host 24317; avoids conflict with otel-collector on 4317)
+      - "24318:4318"   # OTLP HTTP (host 24318; avoids conflict with otel-collector on 4318)
     depends_on:
       - signoz-clickhouse
     networks:
