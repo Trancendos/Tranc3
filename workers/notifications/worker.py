@@ -414,7 +414,7 @@ class NotificationDispatcher:
             logger.warning("Webhook dispatch blocked: WEBHOOK_ALLOWED_DOMAINS not configured")
             return False
 
-        _p = urlparse(validated_url or url)
+        _p = urlparse(validated_url)
         _req_host = (_p.hostname or "").lower()
         _conn_host: Optional[str] = next(
             (d for d in _WEBHOOK_ALLOWED_DOMAINS if d == _req_host), None

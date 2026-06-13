@@ -317,6 +317,7 @@ class EntityTierUpdate(BaseModel):
 
     entity_ref: str
     tier: int
+    reason: str | None = None
 
 
 class EntityDetail(BaseModel):

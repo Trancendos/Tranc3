@@ -42,7 +42,8 @@ def set_context(
 
 
 def get_context() -> LogContext:
-    return _context_var.get()
+    ctx = _context_var.get()
+    return ctx if ctx is not None else LogContext()
 
 
 # ---------------------------------------------------------------------------
