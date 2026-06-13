@@ -274,6 +274,16 @@ class IdentitySummary(BaseModel):
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        from src.observability.otel import init_otel
+
+        init_otel(service_name="tranc3.infinity-one-service")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass  # OTel is optional — never block startup
     """Startup/shutdown lifecycle for the Infinity-One service."""
     # ── Startup ──
     logger.info("Infinity-One starting on port %d", PORT)

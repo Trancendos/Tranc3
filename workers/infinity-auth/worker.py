@@ -356,6 +356,16 @@ class RateLimiter:
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        from src.observability.otel import init_otel
+
+        init_otel(service_name="tranc3.infinity-auth")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass  # OTel is optional — never block startup
     await worker_kit.startup(app)
     worker_kit.health.register_daemon("auth_health_reporter", baseline_interval=60.0)
     logger.info("Infinity-Auth smart adaptive layer started")

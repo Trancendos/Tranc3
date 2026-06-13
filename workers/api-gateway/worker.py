@@ -220,6 +220,17 @@ app = FastAPI(
     description="API Gateway — replaces Cloudflare Worker. Zero external dependencies.",
 )
 
+# OpenTelemetry instrumentation
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+    from src.observability.otel import init_otel
+
+    init_otel(service_name="tranc3.api-gateway")
+    FastAPIInstrumentor.instrument_app(app)
+except Exception:
+    pass  # OTel is optional — never block startup
+
 _cors_origins = [
     o.strip()
     for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")

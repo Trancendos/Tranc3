@@ -157,6 +157,16 @@ class KeysResponse(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        from src.observability.otel import init_otel
+
+        init_otel(service_name="tranc3.cache-service")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass  # OTel is optional — never block startup
     init_db()
     _load_from_db()
     logger.info("Cache loaded %d keys from DB", len(_store))

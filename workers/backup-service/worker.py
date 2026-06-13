@@ -103,6 +103,16 @@ async def _scheduler() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        from src.observability.otel import init_otel
+
+        init_otel(service_name="tranc3.backup-service")
+        FastAPIInstrumentor.instrument_app(app)
+    except Exception:
+        pass  # OTel is optional — never block startup
     asyncio.create_task(_scheduler())
     logger.info("backup-service started on port %d — scheduler active", WORKER_PORT)
     yield

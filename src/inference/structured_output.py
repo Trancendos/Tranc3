@@ -10,21 +10,21 @@ models or paid APIs. Three strategies (tried in order):
 
 Zero-cost: uses stdlib json + optional lmformatenforcer (open-source).
 """
+
 from __future__ import annotations
 
+import importlib.util as _importlib_util
 import json
 import logging
 import re
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger("tranc3.inference.structured_output")
 
-# Optional: lmformatenforcer
-try:
-    from lmformatenforcer import JsonSchemaParser  # type: ignore[import]
-    _LMFE_AVAILABLE = True
-except ImportError:
-    _LMFE_AVAILABLE = False
+# Optional: lmformatenforcer — use find_spec to avoid importing an unused symbol.
+# Exported so callers can branch on token-level enforcement availability.
+lmformatenforcer_available: bool = _importlib_util.find_spec("lmformatenforcer") is not None
+del _importlib_util
 
 
 # ── Regex extraction ──────────────────────────────────────────────────────────

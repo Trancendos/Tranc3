@@ -21,6 +21,7 @@ Model recommendations (4-8GB RAM, CPU-only):
     - llama-3.2-3b-instruct.Q5_K_M.gguf     (~2.2GB)  — faster, less quality
     - phi-3-mini-128k-instruct.Q4_K_M.gguf  (~2.2GB)  — long context
 """
+
 from __future__ import annotations
 
 import logging

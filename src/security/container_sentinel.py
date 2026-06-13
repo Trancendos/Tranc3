@@ -26,6 +26,18 @@ _DANGEROUS_PATHS = [
     "/dev/kmem",
     "/proc/kcore",
     "/.dockerenv",  # Docker env file (expected — flag if modified)
+    # Common SUID/SGID binaries — flagged HIGH (expected), CRITICAL if unexpected
+    "/usr/bin/sudo",
+    "/usr/bin/su",
+    "/bin/su",
+    "/usr/bin/newgrp",
+    "/usr/bin/passwd",
+    "/usr/bin/chsh",
+    "/usr/bin/chfn",
+    "/usr/bin/mount",
+    "/usr/bin/umount",
+    "/bin/mount",
+    "/bin/umount",
 ]
 
 _DANGEROUS_ENV_VARS = [

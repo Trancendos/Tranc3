@@ -6,7 +6,6 @@ logger = logging.getLogger("src.bio_neural.consciousness_integration")
 
 from typing import Any, Dict, List, Optional  # noqa: E402
 
-import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: E402
@@ -80,9 +79,7 @@ class ConsciousnessAwareGenerator:
             },
         }
 
-    def _gateway_generate(
-        self, input_text: str, consciousness_factor: float, phi: float
-    ) -> str:
+    def _gateway_generate(self, input_text: str, consciousness_factor: float, phi: float) -> str:
         """Route to AI gateway with consciousness-enriched system prompt."""
         import asyncio
 
@@ -161,7 +158,9 @@ class ConsciousnessAwareGenerator:
 
         response_text = response.get("response", "")
         word_count = len(response_text.split())
-        sentence_count = max(response_text.count(".") + response_text.count("?") + response_text.count("!"), 1)
+        sentence_count = max(
+            response_text.count(".") + response_text.count("?") + response_text.count("!"), 1
+        )
         avg_sentence_len = word_count / sentence_count
 
         assessment = {
