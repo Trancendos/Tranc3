@@ -63,13 +63,13 @@ class VaultClient:
                 return value
         except httpx.HTTPStatusError as e:
             logger.error("Vault secret fetch failed (name redacted): %s", e)
-            raise VaultError(f"Failed to fetch secret '{secret_name}': {e}") from e
+            raise VaultError(f"Failed to fetch secret (name redacted): {e}") from e
         except Exception as e:
             logger.warning("Vault unreachable, falling back to env (name redacted): %s", e)
             env_val = os.getenv(secret_name.upper().replace("-", "_"), "")
             if env_val:
                 return env_val
-            raise VaultError(f"Vault unreachable and no env fallback for '{secret_name}'") from e
+            raise VaultError("Vault unreachable and no env fallback (name redacted)") from e
 
     async def set_secret(self, secret_name: str, value: str, metadata: dict | None = None) -> str:
         try:
