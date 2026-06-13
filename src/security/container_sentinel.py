@@ -121,16 +121,19 @@ class ContainerSentinel:
     def check_privileged_files(self) -> list[EscapeAlert]:
         """Check for SUID/SGID files or writable dangerous paths, and SUID binaries."""
         new_alerts = []
+        seen_paths: set[str] = set()
         for path_str in _DANGEROUS_PATHS:
             try:
                 p = Path(path_str)
                 if p.exists():
                     st = p.stat()
                     if st.st_mode & (stat.S_ISUID | stat.S_ISGID):
-                        a = self._alert(
-                            "suid_file", path_str, "CRITICAL", f"SUID/SGID bit set on {path_str}"
-                        )
-                        new_alerts.append(a)
+                        if path_str not in seen_paths:
+                            seen_paths.add(path_str)
+                            a = self._alert(
+                                "suid_file", path_str, "CRITICAL", f"SUID/SGID bit set on {path_str}"
+                            )
+                            new_alerts.append(a)
             except (PermissionError, OSError):
                 pass
         # Check for SUID binaries in well-known locations
@@ -138,12 +141,16 @@ class ContainerSentinel:
             try:
                 for entry in Path(bin_dir).iterdir():
                     if _SUID_BINARIES_PATTERN.match(str(entry)):
+                        entry_str = str(entry)
+                        if entry_str in seen_paths:
+                            continue
                         try:
                             st = entry.stat()
                             if st.st_mode & stat.S_ISUID:
+                                seen_paths.add(entry_str)
                                 a = self._alert(
                                     "suid_binary",
-                                    str(entry),
+                                    entry_str,
                                     "HIGH",
                                     f"SUID binary detected: {entry}",
                                 )

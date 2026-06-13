@@ -56,7 +56,11 @@ export function FocusTrap({
     if (active) {
       returnTarget.current = returnFocus ?? document.activeElement
       const firstFocusable = containerRef.current?.querySelector<HTMLElement>(FOCUSABLE)
-      firstFocusable?.focus()
+      if (firstFocusable) {
+        firstFocusable.focus()
+      } else {
+        containerRef.current?.focus()
+      }
     }
     return () => {
       if (active && returnTarget.current instanceof HTMLElement) {
@@ -106,6 +110,7 @@ export function FocusTrap({
       aria-describedby={ariaDescribedBy}
       aria-modal={ariaModal}
       onKeyDown={handleKeyDown}
+      tabIndex={-1}
     >
       {children}
     </div>

@@ -250,7 +250,7 @@ def build_env(
             env.get("DATABASE_URL", "") and not is_placeholder(env["DATABASE_URL"])
         ):
             warn("PostgreSQL not detected — DATABASE_URL must be set manually for production")
-        get_or_detect("DATABASE_URL", pg_url, "postgresql://tranc3:tranc3dev@localhost:5432/tranc3")
+        get_or_detect("DATABASE_URL", pg_url, "")
         get_or_detect("SETTINGS_DB_URL", pg_url, env.get("DATABASE_URL", ""))
     else:
         # Dev: fall back to SQLite if Postgres unavailable
@@ -707,14 +707,20 @@ def main() -> int:
         ok(f"Database: PostgreSQL at {db.split('@')[-1] if '@' in db else db}")
 
     redis_val = env.get("REDIS_URL", "")
-    ok(f"Cache: {redis_val}") if redis else warn(
-        "Cache: Redis not running — some features may degrade"
-    )
+    if redis_val and not redis_val.startswith("redis://localhost"):
+        ok(f"Cache: {redis_val}")
+    elif redis:
+        ok(f"Cache: {redis_val}")
+    else:
+        warn("Cache: Redis not running — some features may degrade")
 
     qdrant_val = env.get("QDRANT_URL", "")
-    ok(f"Vector DB: {qdrant_val}") if qdrant else warn(
-        "Vector DB: Qdrant not running — vector search will use in-memory fallback"
-    )
+    if qdrant_val and not qdrant_val.startswith("http://localhost"):
+        ok(f"Vector DB: {qdrant_val}")
+    elif qdrant:
+        ok(f"Vector DB: {qdrant_val}")
+    else:
+        warn("Vector DB: Qdrant not running — vector search will use in-memory fallback")
 
     mc = env.get("MAGNA_CARTA_ENABLED", "false")
     mc_path = REPO_ROOT / "compliance" / "magna-carta"

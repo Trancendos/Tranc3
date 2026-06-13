@@ -17,7 +17,11 @@ from typing import NamedTuple
 
 logger = logging.getLogger(__name__)
 
-BACKUP_DIR = Path(os.getenv("SQLITE_BACKUP_DIR", "./backups/sqlite"))
+_raw_backup_dir = os.getenv("SQLITE_BACKUP_DIR", "./backups/sqlite")
+BACKUP_DIR = Path(_raw_backup_dir).resolve()
+# Reject paths that escape the working directory via traversal
+if ".." in Path(_raw_backup_dir).parts:
+    raise ValueError(f"SQLITE_BACKUP_DIR must not contain '..': {_raw_backup_dir}")
 RETENTION_DAYS = 7
 MAX_BACKUPS_PER_DB = 14
 
