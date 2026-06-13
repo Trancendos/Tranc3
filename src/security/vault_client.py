@@ -114,11 +114,14 @@ async def migrate_env_secrets_to_vault(
 ) -> dict[str, bool]:
     """Migrate named environment secrets into the vault (one-time migration helper)."""
     results: dict[str, bool] = {}
+    migrated = 0
+    skipped = 0
+    failed = 0
     for name in secret_names:
         env_key = name.upper().replace("-", "_")
         value = os.getenv(env_key, "")
         if not value:
-            logger.info("Skipping %s — not set in environment", name)
+            skipped += 1
             results[name] = False
             continue
         try:
@@ -131,10 +134,16 @@ async def migrate_env_secrets_to_vault(
                 },
             )
             results[name] = True
-            logger.info("Migrated secret: %s", name)
+            migrated += 1
         except VaultError:
-            logger.error("Migration failed for %s", name)
+            failed += 1
             results[name] = False
+    logger.info(
+        "Vault migration complete: %d migrated, %d skipped, %d failed",
+        migrated,
+        skipped,
+        failed,
+    )
     return results
 
 
