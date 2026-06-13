@@ -129,6 +129,7 @@ class MetaRouter:
 
         try:
             from src.mesh.quantum_router import get_quantum_router
+
             self._quantum_router = get_quantum_router()
             self._advisors["quantum"] = RouterAdvisor("quantum", weight=1.0)
         except Exception:  # sub-router is optional; degraded gracefully
@@ -136,6 +137,7 @@ class MetaRouter:
 
         try:
             from src.mesh.genetic_router import get_genetic_router
+
             self._genetic_router = get_genetic_router()
             self._advisors["genetic"] = RouterAdvisor("genetic", weight=1.0)
         except Exception:  # sub-router is optional; degraded gracefully
@@ -143,6 +145,7 @@ class MetaRouter:
 
         try:
             from src.inference.thompson_sampler import get_sampler
+
             self._thompson_sampler = get_sampler()
             self._advisors["thompson"] = RouterAdvisor("thompson", weight=1.2)
         except Exception:  # sub-router is optional; degraded gracefully
@@ -150,6 +153,7 @@ class MetaRouter:
 
         try:
             from src.mesh.quota_enforcer import get_enforcer
+
             self._quota_enforcer = get_enforcer()
         except Exception:  # quota enforcer is optional; runs without hard stops
             pass
@@ -173,7 +177,9 @@ class MetaRouter:
             ranked = self._genetic_router.ranked()[:3]
             for i, gene in enumerate(ranked):
                 if gene.name not in exclude_set:
-                    votes[gene.name] = votes.get(gene.name, 0) + self._advisors["genetic"].weight * (3 - i)
+                    votes[gene.name] = votes.get(gene.name, 0) + self._advisors[
+                        "genetic"
+                    ].weight * (3 - i)
 
         if self._thompson_sampler:
             ranked_ts = self._thompson_sampler.rank_all()
@@ -206,7 +212,8 @@ class MetaRouter:
                     if err_rate > self._canary_rollback_threshold:
                         logger.warning(
                             "meta_router: canary rollback %s (err=%.1f%%)",
-                            canary.name, err_rate * 100,
+                            canary.name,
+                            err_rate * 100,
                         )
                         canary.canary_traffic_pct = 0.0
                         continue
@@ -227,8 +234,7 @@ class MetaRouter:
             votes = self._get_votes(exclude)
             # Filter out blocked providers
             allowed_votes = {
-                k: v for k, v in votes.items()
-                if not self._quota_enforcer.is_blocked(k)
+                k: v for k, v in votes.items() if not self._quota_enforcer.is_blocked(k)
             }
             if not allowed_votes:
                 return self._quota_enforcer.select_provider()
@@ -295,7 +301,10 @@ class MetaRouter:
         self._lazy_init()
         return {
             "metrics": {n: m.stats for n, m in self._metrics.items()},
-            "advisors": {n: {"weight": a.weight, "accuracy": round(a.accuracy, 3)} for n, a in self._advisors.items()},
+            "advisors": {
+                n: {"weight": a.weight, "accuracy": round(a.accuracy, 3)}
+                for n, a in self._advisors.items()
+            },
             "quota_dashboard": self._quota_enforcer.dashboard() if self._quota_enforcer else None,
         }
 
@@ -315,7 +324,7 @@ class DimensionalRouter:
 
     def __init__(self) -> None:
         self._nano: Optional[Any] = None
-        self._micro: dict[str, str] = {}   # capability → local worker URL
+        self._micro: dict[str, str] = {}  # capability → local worker URL
         self._macro: MetaRouter = MetaRouter()
 
     def set_nano_mesh(self, nano_mesh: Any) -> None:
@@ -339,10 +348,15 @@ class DimensionalRouter:
         # Micro: local worker
         if capability in self._micro:
             import httpx
+
             url = self._micro[capability]
             try:
-                async with httpx.AsyncClient(timeout=self.MICRO_LATENCY_BUDGET_MS / 1000.0) as client:
-                    resp = await client.post(url, json={"capability": capability, "args": list(args), "kwargs": kwargs})
+                async with httpx.AsyncClient(
+                    timeout=self.MICRO_LATENCY_BUDGET_MS / 1000.0
+                ) as client:
+                    resp = await client.post(
+                        url, json={"capability": capability, "args": list(args), "kwargs": kwargs}
+                    )
                     if resp.status_code == 200:
                         return resp.json()
             except Exception:  # micro layer unavailable; fall through to macro
@@ -374,6 +388,9 @@ def get_dimensional_router() -> DimensionalRouter:
 
 
 __all__ = [
-    "RouteMetrics", "MetaRouter", "DimensionalRouter",
-    "get_meta_router", "get_dimensional_router",
+    "RouteMetrics",
+    "MetaRouter",
+    "DimensionalRouter",
+    "get_meta_router",
+    "get_dimensional_router",
 ]

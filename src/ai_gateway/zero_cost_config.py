@@ -431,9 +431,7 @@ def discover_available_providers() -> Dict[str, bool]:
     available["openrouter"] = bool(os.getenv("OPENROUTER_API_KEY"))
 
     # HuggingFace — serverless inference free tier, requires HF_API_TOKEN
-    available["huggingface"] = bool(
-        os.getenv("HUGGINGFACE_API_TOKEN") or os.getenv("HF_API_TOKEN")
-    )
+    available["huggingface"] = bool(os.getenv("HUGGINGFACE_API_TOKEN") or os.getenv("HF_API_TOKEN"))
 
     # DeepSeek — requires API key (not free but cheap)
     available["deepseek"] = bool(os.getenv("DEEPSEEK_API_KEY"))

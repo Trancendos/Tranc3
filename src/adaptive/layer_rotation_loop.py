@@ -83,7 +83,9 @@ def _check_and_rotate(rotator: object) -> None:
             continue
 
         active_name = state.backends[state.index]
-        active_health: BackendHealth = state.health.get(active_name, BackendHealth(name=active_name))
+        active_health: BackendHealth = state.health.get(
+            active_name, BackendHealth(name=active_name)
+        )
 
         if active_health.available:
             logger.debug("Layer %s healthy on %s", layer_value, active_name)

@@ -40,6 +40,7 @@ from src.mesh.types import (
 
 try:
     from src.fluidic.fluid_router import FluidicRouter as _FluidRouter
+
     _FLUID_ROUTER_AVAILABLE = True
 except ImportError:
     _FluidRouter = None  # type: ignore[assignment,misc]

@@ -186,16 +186,13 @@ class IBridge(ABC):
 
     @property
     @abstractmethod
-    def domain(self) -> BridgeDomain:
-        ...
+    def domain(self) -> BridgeDomain: ...
 
     @abstractmethod
-    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket:
-        ...
+    def process_packet(self, packet: BridgeTrafficPacket) -> BridgeTrafficPacket: ...
 
     @abstractmethod
-    def health_check(self) -> BridgeHealthReport:
-        ...
+    def health_check(self) -> BridgeHealthReport: ...
 
     @abstractmethod
     def scan_and_cleanup(self) -> List[str]:
@@ -782,9 +779,7 @@ class SentinelStation:
 
         packet.traffic_class = TrafficClass.UNKNOWN  # de-classify before handing off
         packet.metadata["cross_bridge_via"] = "sentinel"
-        logger.info(
-            "Sentinel: cross-bridge packet %s routed to %s", packet.id, target_domain.value
-        )
+        logger.info("Sentinel: cross-bridge packet %s routed to %s", packet.id, target_domain.value)
         return bridge.process_packet(packet)
 
     def get_bridge(self, domain: BridgeDomain) -> Optional[IBridge]:

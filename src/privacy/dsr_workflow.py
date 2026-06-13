@@ -172,9 +172,7 @@ class DSRWorkflow:
 
     def get(self, dsr_id: str) -> DSRRequest | None:
         with self._conn() as conn:
-            row = conn.execute(
-                "SELECT * FROM dsr_requests WHERE dsr_id = ?", (dsr_id,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM dsr_requests WHERE dsr_id = ?", (dsr_id,)).fetchone()
         if not row:
             return None
         return self._row_to_req(row)
@@ -187,13 +185,17 @@ class DSRWorkflow:
             status=DSRStatus(row["status"]),
             created_at=datetime.fromisoformat(row["created_at"]),
             due_at=datetime.fromisoformat(row["due_at"]),
-            completed_at=datetime.fromisoformat(row["completed_at"]) if row["completed_at"] else None,
+            completed_at=datetime.fromisoformat(row["completed_at"])
+            if row["completed_at"]
+            else None,
             data_subject_id=row["data_subject_id"],
             details=json.loads(row["details_json"] or "{}"),
             audit_log=json.loads(row["audit_log_json"] or "[]"),
         )
 
-    def transition(self, dsr_id: str, new_status: DSRStatus, actor: str = "system", note: str = "") -> DSRRequest:
+    def transition(
+        self, dsr_id: str, new_status: DSRStatus, actor: str = "system", note: str = ""
+    ) -> DSRRequest:
         req = self.get(dsr_id)
         if not req:
             raise ValueError(f"DSR not found: {dsr_id}")
@@ -201,12 +203,14 @@ class DSRWorkflow:
         req.status = new_status
         if new_status in (DSRStatus.COMPLETED, DSRStatus.REJECTED):
             req.completed_at = datetime.now(timezone.utc)
-        req.audit_log.append({
-            "event": f"status_change:{old_status.value}->{new_status.value}",
-            "at": datetime.now(timezone.utc).isoformat(),
-            "by": actor,
-            "note": note,
-        })
+        req.audit_log.append(
+            {
+                "event": f"status_change:{old_status.value}->{new_status.value}",
+                "at": datetime.now(timezone.utc).isoformat(),
+                "by": actor,
+                "note": note,
+            }
+        )
         self._save(req)
         return req
 
@@ -249,7 +253,9 @@ class DSRWorkflow:
         req = self.get(req.dsr_id)
         if req:
             req.details["auto_processed"] = True
-            req.details["processing_note"] = "Data inventory collected — requires DPO review before dispatch"
+            req.details["processing_note"] = (
+                "Data inventory collected — requires DPO review before dispatch"
+            )
             self._save(req)
         logger.info("Auto-processed access request %s", req.dsr_id if req else "unknown")
 
@@ -267,10 +273,22 @@ class DSRWorkflow:
                     if not existing:
                         conn.execute(
                             "INSERT INTO dsr_sla_alerts (alert_id, dsr_id, alert_type, triggered_at) VALUES (?,?,?,?)",
-                            (alert_id, req.dsr_id, req.sla_risk, datetime.now(timezone.utc).isoformat()),
+                            (
+                                alert_id,
+                                req.dsr_id,
+                                req.sla_risk,
+                                datetime.now(timezone.utc).isoformat(),
+                            ),
                         )
-                        alerts.append(f"SLA {req.sla_risk}: {req.dsr_id} due in {req.days_remaining} days")
-                        logger.warning("SLA alert: %s %s days_remaining=%d", req.sla_risk, req.dsr_id, req.days_remaining)
+                        alerts.append(
+                            f"SLA {req.sla_risk}: {req.dsr_id} due in {req.days_remaining} days"
+                        )
+                        logger.warning(
+                            "SLA alert: %s %s days_remaining=%d",
+                            req.sla_risk,
+                            req.dsr_id,
+                            req.days_remaining,
+                        )
         return alerts
 
 

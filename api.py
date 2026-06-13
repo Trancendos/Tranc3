@@ -268,6 +268,7 @@ async def lifespan(app: FastAPI):
     if not _audit_key:
         _key_file = "logs/audit/.audit_signing_key"
         import pathlib
+
         if pathlib.Path(_key_file).exists():
             logger.warning(
                 "AUDIT_SIGNING_KEY not set in environment — using persistent key file (%s). "
@@ -1969,42 +1970,49 @@ async def mesh_stats() -> dict:
 
     try:
         from src.mesh.meta_router import get_meta_router
+
         out["meta_router"] = get_meta_router().stats
     except Exception as exc:
         out["meta_router"] = {"error": str(exc)}
 
     try:
         from src.mesh.quantum_router import get_quantum_router
+
         out["quantum_router"] = get_quantum_router().stats
     except Exception as exc:
         out["quantum_router"] = {"error": str(exc)}
 
     try:
         from src.mesh.genetic_router import get_genetic_router
+
         out["genetic_router"] = get_genetic_router().stats
     except Exception as exc:
         out["genetic_router"] = {"error": str(exc)}
 
     try:
         from src.mesh.quota_enforcer import get_enforcer
+
         out["quota_enforcer"] = get_enforcer().dashboard()
     except Exception as exc:
         out["quota_enforcer"] = {"error": str(exc)}
 
     try:
         from src.monitoring.zero_cost_tracker import tracker
+
         out["zero_cost_tracker"] = tracker.get_summary()
     except Exception as exc:
         out["zero_cost_tracker"] = {"error": str(exc)}
 
     try:
         from src.mesh.nano_mesh import get_nano_mesh
+
         out["nano_mesh"] = get_nano_mesh().stats
     except Exception as exc:
         out["nano_mesh"] = {"error": str(exc)}
 
     try:
         from src.fluidic.fluid_router import fluid_router
+
         out["fluid_router"] = fluid_router.stats
     except Exception as exc:
         out["fluid_router"] = {"error": str(exc)}
@@ -2021,6 +2029,7 @@ async def mesh_quota() -> dict:
     """Returns quota usage and availability for all 8 free AI providers."""
     try:
         from src.mesh.quota_enforcer import get_enforcer
+
         return get_enforcer().dashboard()
     except Exception:
         return {"error": "quota dashboard unavailable"}

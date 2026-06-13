@@ -66,7 +66,9 @@ def validate_mc_rule_004() -> dict:
     """MC-RULE-004: Control-to-component traceability documented."""
     control_map = REPO_ROOT / "docs" / "architecture" / "CONTROL-TO-COMPONENT-MAP.md"
     passed = control_map.exists()
-    return _rule("MC-RULE-004", passed, f"Control map: {passed}", [str(control_map)] if passed else [])
+    return _rule(
+        "MC-RULE-004", passed, f"Control map: {passed}", [str(control_map)] if passed else []
+    )
 
 
 def validate_mc_rule_005() -> dict:

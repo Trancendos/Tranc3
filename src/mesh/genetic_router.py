@@ -27,11 +27,11 @@ logger = logging.getLogger("tranc3.mesh.genetic_router")
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 
-EVAPORATION_RATE = 0.05    # Pheromone evaporation per tick (0-1)
-ALPHA = 1.0                # Pheromone influence weight
-BETA = 2.0                 # Heuristic (inverse latency) influence weight
-MUTATION_RATE = 0.02       # Probability of random weight mutation per selection
-MUTATION_MAGNITUDE = 0.1   # Max mutation delta
+EVAPORATION_RATE = 0.05  # Pheromone evaporation per tick (0-1)
+ALPHA = 1.0  # Pheromone influence weight
+BETA = 2.0  # Heuristic (inverse latency) influence weight
+MUTATION_RATE = 0.02  # Probability of random weight mutation per selection
+MUTATION_MAGNITUDE = 0.1  # Max mutation delta
 
 
 # ── Route gene ─────────────────────────────────────────────────────────────────
@@ -45,9 +45,9 @@ class RouteGene:
     """
 
     name: str
-    pheromone: float = 1.0       # ACO: accumulated positive signal
-    fitness: float = 1.0         # Genetic: composite health score
-    heuristic: float = 1.0       # 1/avg_latency (set from observation)
+    pheromone: float = 1.0  # ACO: accumulated positive signal
+    fitness: float = 1.0  # Genetic: composite health score
+    heuristic: float = 1.0  # 1/avg_latency (set from observation)
 
     # Observed stats
     success_count: int = 0

@@ -77,7 +77,11 @@ class NanoFunction:
         # Open circuit after 5 consecutive errors (simple heuristic)
         if self.error_rate > 0.5 and self.call_count >= 5:
             self.open_until = time.monotonic() + 30.0
-            logger.warning("nano_mesh: circuit opened for %s (error_rate=%.1f%%)", self.name, self.error_rate * 100)
+            logger.warning(
+                "nano_mesh: circuit opened for %s (error_rate=%.1f%%)",
+                self.name,
+                self.error_rate * 100,
+            )
 
     @property
     def stats(self) -> dict[str, Any]:
@@ -138,6 +142,7 @@ class NanoMesh:
         canary_pct: float = 0.0,
     ) -> Callable:
         """Decorator: register an async function as a nano capability."""
+
         def decorator(fn: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
             nano = NanoFunction(
                 name=fn.__name__,
@@ -150,9 +155,13 @@ class NanoMesh:
             self._functions.setdefault(capability, []).append(nano)
             logger.debug(
                 "nano_mesh: registered %s.%s (weight=%.2f, canary=%s)",
-                capability, fn.__name__, weight, is_canary,
+                capability,
+                fn.__name__,
+                weight,
+                is_canary,
             )
             return fn
+
         return decorator
 
     def add(self, capability: str, fn: Callable, **kwargs: Any) -> NanoFunction:
@@ -181,8 +190,7 @@ class NanoMesh:
     def _select_canary(self, capability: str) -> Optional[NanoFunction]:
         """Route to canary version based on configured canary_pct."""
         canaries = [
-            f for f in self._functions.get(capability, [])
-            if f.is_canary and not f.circuit_open
+            f for f in self._functions.get(capability, []) if f.is_canary and not f.circuit_open
         ]
         if not canaries:
             return None
@@ -206,9 +214,13 @@ class NanoMesh:
             all_fns = self._functions.get(capability, [])
             if all_fns:
                 target = all_fns[0]
-                logger.warning("nano_mesh: all circuits open for %s — probing %s", capability, target.name)
+                logger.warning(
+                    "nano_mesh: all circuits open for %s — probing %s", capability, target.name
+                )
             else:
-                raise RuntimeError(f"nano_mesh: no function registered for capability '{capability}'")
+                raise RuntimeError(
+                    f"nano_mesh: no function registered for capability '{capability}'"
+                )
 
         t0 = time.monotonic()
         try:
@@ -223,7 +235,9 @@ class NanoMesh:
             if fallback and fallback is not target:
                 logger.warning(
                     "nano_mesh: %s failed (%s), falling back to %s",
-                    target.name, exc, fallback.name,
+                    target.name,
+                    exc,
+                    fallback.name,
                 )
                 t0 = time.monotonic()
                 result = await fallback.fn(*args, **kwargs)
@@ -235,10 +249,7 @@ class NanoMesh:
 
     @property
     def stats(self) -> dict[str, Any]:
-        return {
-            cap: [f.stats for f in fns]
-            for cap, fns in self._functions.items()
-        }
+        return {cap: [f.stats for f in fns] for cap, fns in self._functions.items()}
 
 
 # ── Singleton ──────────────────────────────────────────────────────────────────

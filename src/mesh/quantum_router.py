@@ -39,8 +39,8 @@ class QuantumRoute:
     """
 
     name: str
-    amplitude: float = 1.0       # sqrt(probability)
-    phase: float = 0.0           # Phase angle (radians) — models interference
+    amplitude: float = 1.0  # sqrt(probability)
+    phase: float = 0.0  # Phase angle (radians) — models interference
     entangled_with: Optional[str] = None  # Partner route for correlated failover
 
     # Classical performance tracking
@@ -52,7 +52,7 @@ class QuantumRoute:
     @property
     def probability(self) -> float:
         """P(route selected) = amplitude²"""
-        return max(self.amplitude ** 2, 1e-9)
+        return max(self.amplitude**2, 1e-9)
 
     @property
     def fidelity(self) -> float:
@@ -152,7 +152,7 @@ class QuantumRouter:
 
     def _normalize(self) -> None:
         """Normalize amplitudes so probabilities sum to 1."""
-        total_sq = sum(r.amplitude ** 2 for r in self._routes.values())
+        total_sq = sum(r.amplitude**2 for r in self._routes.values())
         if total_sq > 0:
             norm = math.sqrt(total_sq)
             for r in self._routes.values():
@@ -206,7 +206,8 @@ class QuantumRouter:
                 partner.amplify(1.15)  # Boost failover partner
                 logger.debug(
                     "quantum_router: entanglement failover %s → %s",
-                    name, route.entangled_with,
+                    name,
+                    route.entangled_with,
                 )
             self._normalize()
 

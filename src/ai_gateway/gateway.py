@@ -197,6 +197,7 @@ class AIGateway:
             # Skip providers that have hit their free-tier quota threshold
             try:
                 from src.mesh.quota_enforcer import get_enforcer
+
                 if get_enforcer().is_blocked(route.provider):
                     logger.info(
                         "Skipping quota-blocked provider: %s",
@@ -239,7 +240,10 @@ class AIGateway:
                 # Wire zero-cost tracker
                 try:
                     from src.mesh.quota_enforcer import get_enforcer
-                    get_enforcer().record_request(route.provider, tokens=float(response.tokens_total))
+
+                    get_enforcer().record_request(
+                        route.provider, tokens=float(response.tokens_total)
+                    )
                 except Exception:  # quota tracking is best-effort; don't fail the request
                     pass
 

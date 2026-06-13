@@ -43,6 +43,7 @@ _KV_MOUNT: str = os.environ.get("OPENBAO_KV_MOUNT", "secret")
 
 try:
     import hvac  # type: ignore[import]
+
     _HVAC_AVAILABLE = True
 except ImportError:
     hvac = None  # type: ignore[assignment]
@@ -56,6 +57,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _get_hvac_client() -> Optional[Any]:
     """Return an authenticated hvac.Client pointed at OpenBao, or None."""
@@ -82,6 +84,7 @@ def _openbao_available() -> bool:
 # ---------------------------------------------------------------------------
 # These imports reference worker.py symbols; they are resolved at call-time
 # to avoid circular-import issues during module load.
+
 
 def _sqlite_store(key: str, value: str) -> Dict[str, Any]:
     import sqlite3
@@ -117,9 +120,7 @@ def _sqlite_get(key: str) -> Dict[str, Any]:
     from worker import _append_audit, _decrypt_secret, _get_db, _legacy_xor_decrypt  # noqa: PLC0415
 
     conn = _get_db()
-    row = conn.execute(
-        "SELECT * FROM secrets WHERE key=? AND is_active=1", (key,)
-    ).fetchone()
+    row = conn.execute("SELECT * FROM secrets WHERE key=? AND is_active=1", (key,)).fetchone()
     if row is None:
         conn.close()
         return {"ok": False, "backend": "sqlite", "error": "not found"}
@@ -146,9 +147,7 @@ def _sqlite_delete(key: str) -> Dict[str, Any]:
         conn.close()
         return {"ok": False, "backend": "sqlite", "error": "not found"}
     now = _now()
-    conn.execute(
-        "UPDATE secrets SET is_active=0, updated_at=? WHERE id=?", (now, row["id"])
-    )
+    conn.execute("UPDATE secrets SET is_active=0, updated_at=? WHERE id=?", (now, row["id"]))
     _append_audit(conn, row["id"], "secret.delete", details={"via": "openbao_client"})
     conn.commit()
     conn.close()
@@ -159,9 +158,7 @@ def _sqlite_list() -> Dict[str, Any]:
     from worker import _get_db  # noqa: PLC0415
 
     conn = _get_db()
-    rows = conn.execute(
-        "SELECT key FROM secrets WHERE is_active=1 ORDER BY key"
-    ).fetchall()
+    rows = conn.execute("SELECT key FROM secrets WHERE is_active=1 ORDER BY key").fetchall()
     conn.close()
     return {"ok": True, "backend": "sqlite", "keys": [r["key"] for r in rows]}
 
@@ -169,6 +166,7 @@ def _sqlite_list() -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def store_secret(key: str, value: str) -> Dict[str, Any]:
     """

@@ -16,7 +16,12 @@ _REDACT_PATTERNS: list[tuple[re.Pattern, str]] = [
     # Bearer tokens
     (re.compile(r"Bearer\s+[a-zA-Z0-9_\-\.]+", re.IGNORECASE), "Bearer [TOKEN-REDACTED]"),
     # API keys (generic — long alphanumeric strings after key= or api_key=)
-    (re.compile(r"(?i)(api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token)\s*[=:]\s*['\"]?([a-zA-Z0-9_\-\.]{20,})['\"]?"), r"\1=[SECRET-REDACTED]"),
+    (
+        re.compile(
+            r"(?i)(api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token)\s*[=:]\s*['\"]?([a-zA-Z0-9_\-\.]{20,})['\"]?"
+        ),
+        r"\1=[SECRET-REDACTED]",
+    ),
     # AWS-style keys
     (re.compile(r"AKIA[0-9A-Z]{16}"), "[AWS-KEY-REDACTED]"),
     # Hex secrets (32+ chars)
@@ -28,7 +33,12 @@ _REDACT_PATTERNS: list[tuple[re.Pattern, str]] = [
     # Credit card numbers (Luhn-like 13-19 digit sequences)
     (re.compile(r"\b(?:\d[ -]?){13,19}\b"), "[CC-REDACTED]"),
     # Private keys (PEM)
-    (re.compile(r"-----BEGIN [A-Z ]+PRIVATE KEY-----.*?-----END [A-Z ]+PRIVATE KEY-----", re.DOTALL), "[PRIVATE-KEY-REDACTED]"),
+    (
+        re.compile(
+            r"-----BEGIN [A-Z ]+PRIVATE KEY-----.*?-----END [A-Z ]+PRIVATE KEY-----", re.DOTALL
+        ),
+        "[PRIVATE-KEY-REDACTED]",
+    ),
     # Stripe keys
     (re.compile(r"sk_(?:live|test)_[a-zA-Z0-9]{24,}"), "[STRIPE-KEY-REDACTED]"),
 ]

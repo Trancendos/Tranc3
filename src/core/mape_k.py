@@ -2,6 +2,7 @@
 Reusable MAPE-K (Monitor-Analyze-Plan-Execute-Knowledge) loop.
 Runs in background thread, self-heals workers autonomously.
 """
+
 import json
 import sqlite3
 import statistics
@@ -101,7 +102,9 @@ class MAPEKLoop:
                     z = abs((metrics[key] - mean) / stdev)
                     if z > 2.0:
                         anomaly_score = max(anomaly_score, z)
-                        anomalies.append({"key": key, "z_score": z, "value": metrics[key], "mean": mean})
+                        anomalies.append(
+                            {"key": key, "z_score": z, "value": metrics[key], "mean": mean}
+                        )
 
         needs_action = anomaly_score > 2.0
         action = "none"
@@ -147,11 +150,14 @@ class MAPEKLoop:
         """Default executor: logs the plan steps."""
         if plan.get("priority", 0) > 0:
             steps = plan.get("steps", [])
-            self.update_knowledge("last_executed_plan", {
-                "steps": steps,
-                "timestamp": time.time(),
-                "priority": plan.get("priority", 0),
-            })
+            self.update_knowledge(
+                "last_executed_plan",
+                {
+                    "steps": steps,
+                    "timestamp": time.time(),
+                    "priority": plan.get("priority", 0),
+                },
+            )
         return True
 
     def _loop(self):
@@ -189,14 +195,16 @@ class MAPEKLoop:
 
             except Exception as exc:
                 with self._lock:
-                    self._history.append({
-                        "timestamp": cycle_start,
-                        "error": str(exc),
-                        "metrics": {},
-                        "analysis": {},
-                        "plan": {},
-                        "executed": False,
-                    })
+                    self._history.append(
+                        {
+                            "timestamp": cycle_start,
+                            "error": str(exc),
+                            "metrics": {},
+                            "analysis": {},
+                            "plan": {},
+                            "executed": False,
+                        }
+                    )
 
             elapsed = time.time() - cycle_start
             sleep_time = max(0, self._interval - elapsed)

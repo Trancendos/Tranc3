@@ -221,9 +221,7 @@ class QuotaEnforcer:
 
     def get_status(self, provider: str) -> ProviderStatus:
         quotas = list(self.get_usage(provider).values())
-        blocked = any(
-            q.limit != float("inf") and q.pct >= self.threshold_pct for q in quotas
-        )
+        blocked = any(q.limit != float("inf") and q.pct >= self.threshold_pct for q in quotas)
         reason = ""
         if blocked:
             over = [q for q in quotas if q.limit != float("inf") and q.pct >= self.threshold_pct]
@@ -285,7 +283,10 @@ class QuotaEnforcer:
                     "provider": s.provider,
                     "available": s.available,
                     "blocked_reason": s.blocked_reason,
-                    "quotas": {q.metric: {"pct": q.pct, "current": q.current, "limit": q.limit} for q in s.quotas},
+                    "quotas": {
+                        q.metric: {"pct": q.pct, "current": q.current, "limit": q.limit}
+                        for q in s.quotas
+                    },
                 }
                 for s in statuses
             ],

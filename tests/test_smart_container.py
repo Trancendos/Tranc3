@@ -1,6 +1,7 @@
 """
 Tests for src/core/smart_container.py
 """
+
 import os
 import sys
 
@@ -13,6 +14,7 @@ from src.core.smart_container import DIError, Lifetime, SmartContainer
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 class ServiceA:
     pass
@@ -32,6 +34,7 @@ class ServiceC:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_singleton_returns_same_instance():
     c = SmartContainer()

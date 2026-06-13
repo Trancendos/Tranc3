@@ -1,6 +1,7 @@
 """
 Tests for src/core/intelligent_logger.py
 """
+
 import io
 import json
 import logging
@@ -21,6 +22,7 @@ from src.core.intelligent_logger import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_logger_with_capture() -> tuple:
     """Return (IntelligentLogger, StringIO buffer)."""
     buf = io.StringIO()
@@ -37,6 +39,7 @@ def _make_logger_with_capture() -> tuple:
     logger._name = inner.name
     logger._service_name = "test-service"
     from src.core.intelligent_logger import AnomalyDetector, SeverityClassifier
+
     logger._classifier = SeverityClassifier()
     logger._anomaly = AnomalyDetector()
     logger._logger = inner
@@ -46,6 +49,7 @@ def _make_logger_with_capture() -> tuple:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_json_output_contains_context_fields():
     set_context(trace_id="trace-123", user_id="user-456", service_name="svc-test")

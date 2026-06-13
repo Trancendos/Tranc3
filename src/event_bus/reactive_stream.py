@@ -1,6 +1,7 @@
 """
 RxPY-inspired reactive streams — stdlib only.
 """
+
 from __future__ import annotations
 
 import queue

@@ -1,6 +1,7 @@
 """
 Tests for src/event_bus/reactive_stream.py
 """
+
 import os
 import sys
 
@@ -26,6 +27,7 @@ from_iterable = _mod.from_iterable
 # Tests
 # ---------------------------------------------------------------------------
 
+
 def test_observable_emits_values_to_observer():
     received = []
     obs = from_iterable([1, 2, 3])
@@ -41,9 +43,7 @@ def test_map_operator_transforms_values():
 
 def test_filter_operator_excludes_values():
     received = []
-    from_iterable([1, 2, 3, 4, 5]).filter(lambda x: x % 2 == 0).subscribe(
-        on_next=received.append
-    )
+    from_iterable([1, 2, 3, 4, 5]).filter(lambda x: x % 2 == 0).subscribe(on_next=received.append)
     assert received == [2, 4]
 
 

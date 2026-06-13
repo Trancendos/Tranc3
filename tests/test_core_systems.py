@@ -3,10 +3,12 @@ Tests for the 10 adaptive/intelligent platform systems.
 Covers: MAPEKLoop, AdaptiveRateLimiter, WorkerIntelligence, DNAConfig,
 SmartContainer, ReactiveStream, IntelligentLogger.
 """
+
 import threading
 import time
 
 # ── MAPEKLoop ─────────────────────────────────────────────────────────────
+
 
 class TestMAPEKLoop:
     def _make_monitor(self, values):
@@ -68,7 +70,15 @@ class TestMAPEKLoop:
         )
         # Manually seed history
         for val in normal:
-            loop._history.append({"metrics": val, "analysis": {}, "plan": {}, "executed": False, "timestamp": time.time()})
+            loop._history.append(
+                {
+                    "metrics": val,
+                    "analysis": {},
+                    "plan": {},
+                    "executed": False,
+                    "timestamp": time.time(),
+                }
+            )
 
         # Run one analysis cycle with spike
         metrics = {"cpu": 9999.0}
@@ -81,7 +91,9 @@ class TestMAPEKLoop:
 
         loop = MAPEKLoop(name="cap-test", monitor_fn=lambda: {}, interval_seconds=99999)
         for _ in range(1500):
-            loop._history.append({"metrics": {}, "analysis": {}, "plan": {}, "executed": False, "timestamp": 0})
+            loop._history.append(
+                {"metrics": {}, "analysis": {}, "plan": {}, "executed": False, "timestamp": 0}
+            )
 
         assert len(loop._history) <= 1000
 
@@ -119,6 +131,7 @@ class TestMAPEKLoop:
 
 
 # ── AdaptiveRateLimiter ────────────────────────────────────────────────────
+
 
 class TestAdaptiveRateLimiter:
     def test_allows_requests_under_limit(self):
@@ -192,6 +205,7 @@ class TestAdaptiveRateLimiter:
 
 # ── WorkerIntelligence ────────────────────────────────────────────────────
 
+
 class TestWorkerIntelligence:
     def test_health_score_starts_high(self):
         """A freshly registered worker with no data should score near 100."""
@@ -264,6 +278,7 @@ class TestWorkerIntelligence:
 
 # ── DNAConfig ─────────────────────────────────────────────────────────────
 
+
 class TestDNAConfig:
     def test_register_base_and_get_config(self, tmp_path):
         """register_base + get_active_config should return registered keys."""
@@ -315,6 +330,7 @@ class TestDNAConfig:
 
 
 # ── SmartContainer ────────────────────────────────────────────────────────
+
 
 class TestSmartContainer:
     def test_register_and_resolve_class(self):
@@ -414,11 +430,15 @@ class TestSmartContainer:
 
 # ── ReactiveStream ────────────────────────────────────────────────────────
 
+
 class TestReactiveStream:
     def test_subject_emit_and_subscribe(self):
         """Subject.emit should deliver values to subscriber."""
         import importlib.util
-        spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
+
+        spec = importlib.util.spec_from_file_location(
+            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+        )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
         Subject = rs.ObservableSubject
@@ -434,7 +454,10 @@ class TestReactiveStream:
     def test_map_transforms_values(self):
         """map() should apply transformation to each value."""
         import importlib.util
-        spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
+
+        spec = importlib.util.spec_from_file_location(
+            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+        )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
         Subject = rs.ObservableSubject
@@ -449,7 +472,10 @@ class TestReactiveStream:
     def test_filter_drops_values(self):
         """filter() should only pass values matching predicate."""
         import importlib.util
-        spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
+
+        spec = importlib.util.spec_from_file_location(
+            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+        )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
         Subject = rs.ObservableSubject
@@ -464,7 +490,10 @@ class TestReactiveStream:
     def test_take_limits_emissions(self):
         """take(n) should stop after n values."""
         import importlib.util
-        spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
+
+        spec = importlib.util.spec_from_file_location(
+            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+        )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
         Subject = rs.ObservableSubject
@@ -479,7 +508,10 @@ class TestReactiveStream:
     def test_dispose_stops_delivery(self):
         """dispose() should prevent further value delivery."""
         import importlib.util
-        spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
+
+        spec = importlib.util.spec_from_file_location(
+            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+        )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
         Subject = rs.ObservableSubject
@@ -496,7 +528,10 @@ class TestReactiveStream:
     def test_debounce_coalesces_rapid_emissions(self):
         """debounce() should emit only the last value within the window."""
         import importlib.util
-        spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
+
+        spec = importlib.util.spec_from_file_location(
+            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+        )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
         Subject = rs.ObservableSubject
@@ -516,7 +551,10 @@ class TestReactiveStream:
     def test_merge_with_combines_streams(self):
         """merge_with() should combine emissions from multiple observables."""
         import importlib.util
-        spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
+
+        spec = importlib.util.spec_from_file_location(
+            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+        )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
         Subject = rs.ObservableSubject
@@ -533,7 +571,10 @@ class TestReactiveStream:
     def test_error_handler_called(self):
         """on_error should be called when map raises."""
         import importlib.util
-        spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
+
+        spec = importlib.util.spec_from_file_location(
+            "reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py"
+        )
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
         Subject = rs.ObservableSubject
@@ -547,6 +588,7 @@ class TestReactiveStream:
 
 
 # ── IntelligentLogger ─────────────────────────────────────────────────────
+
 
 class TestIntelligentLogger:
     def test_info_log_does_not_crash(self):

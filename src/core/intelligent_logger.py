@@ -2,6 +2,7 @@
 Structured logger with context propagation, severity classification,
 and anomaly detection — stdlib only.
 """
+
 from __future__ import annotations
 
 import collections
@@ -17,6 +18,7 @@ from typing import Any, Deque, Dict, Optional
 # ---------------------------------------------------------------------------
 # Context
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class LogContext:
@@ -60,9 +62,7 @@ _WARNING_PATTERNS = re.compile(
     r"\b(warn(ing)?|deprecat|caution|slow|timeout|retry|retrying|high\s+latency)\b",
     re.IGNORECASE,
 )
-_DEBUG_PATTERNS = re.compile(
-    r"\b(debug|trace|verbose|dump|inspect)\b", re.IGNORECASE
-)
+_DEBUG_PATTERNS = re.compile(r"\b(debug|trace|verbose|dump|inspect)\b", re.IGNORECASE)
 
 
 class SeverityClassifier:
@@ -83,6 +83,7 @@ class SeverityClassifier:
 # ---------------------------------------------------------------------------
 # Anomaly detector (burst detection)
 # ---------------------------------------------------------------------------
+
 
 class AnomalyDetector:
     def __init__(self, window_secs: float = 60.0, burst_threshold: int = 10) -> None:
@@ -129,6 +130,7 @@ class AnomalyDetector:
 # JSON formatter for Loki ingestion
 # ---------------------------------------------------------------------------
 
+
 class _LokiJsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         ctx = get_context()
@@ -157,6 +159,7 @@ class _LokiJsonFormatter(logging.Formatter):
 # ---------------------------------------------------------------------------
 # IntelligentLogger
 # ---------------------------------------------------------------------------
+
 
 class IntelligentLogger:
     def __init__(
@@ -238,6 +241,7 @@ class IntelligentLogger:
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
+
 
 def get_logger(name: str, service_name: str = "") -> IntelligentLogger:
     return IntelligentLogger(name=name, service_name=service_name)
