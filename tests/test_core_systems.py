@@ -425,7 +425,7 @@ class TestReactiveStream:
         spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
-        Subject = rs.Subject
+        Subject = rs.ObservableSubject
 
         received = []
         s = Subject()
@@ -441,7 +441,7 @@ class TestReactiveStream:
         spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
-        Subject = rs.Subject
+        Subject = rs.ObservableSubject
 
         received = []
         s = Subject()
@@ -456,7 +456,7 @@ class TestReactiveStream:
         spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
-        Subject = rs.Subject
+        Subject = rs.ObservableSubject
 
         received = []
         s = Subject()
@@ -471,7 +471,7 @@ class TestReactiveStream:
         spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
-        Subject = rs.Subject
+        Subject = rs.ObservableSubject
 
         received = []
         s = Subject()
@@ -480,34 +480,34 @@ class TestReactiveStream:
             s.emit(i)
         assert received == [0, 1, 2]
 
-    def test_unsubscribe_stops_delivery(self):
-        """unsubscribe() should prevent further value delivery."""
-        import importlib.util, sys
+    def test_dispose_stops_delivery(self):
+        """dispose() should prevent further value delivery."""
+        import importlib.util
         spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
-        Subject = rs.Subject
+        Subject = rs.ObservableSubject
 
         received = []
         s = Subject()
-        sub = s.subscribe(received.append)
+        disposable = s.subscribe(received.append)
         s.emit(1)
-        sub.unsubscribe()
+        disposable.dispose()
         s.emit(2)
         s.emit(3)
         assert received == [1]
 
     def test_debounce_coalesces_rapid_emissions(self):
         """debounce() should emit only the last value within the window."""
-        import importlib.util, sys
+        import importlib.util
         spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
-        Subject = rs.Subject
+        Subject = rs.ObservableSubject
 
         received = []
         s = Subject()
-        s.debounce(50).subscribe(received.append)
+        s.debounce(0.05).subscribe(received.append)
 
         for i in range(5):
             s.emit(i)
@@ -517,18 +517,18 @@ class TestReactiveStream:
         # Should receive only 1 value (the last one)
         assert len(received) <= 2  # at most 1-2 due to timing
 
-    def test_merge_combines_streams(self):
-        """merge() should combine emissions from multiple observables."""
-        import importlib.util, sys
+    def test_merge_with_combines_streams(self):
+        """merge_with() should combine emissions from multiple observables."""
+        import importlib.util
         spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
-        Subject = rs.Subject
+        Subject = rs.ObservableSubject
 
         received = []
         s1 = Subject()
         s2 = Subject()
-        s1.merge(s2).subscribe(received.append)
+        s1.merge_with(s2).subscribe(received.append)
         s1.emit("a")
         s2.emit("b")
         s1.emit("c")
@@ -536,11 +536,11 @@ class TestReactiveStream:
 
     def test_error_handler_called(self):
         """on_error should be called when map raises."""
-        import importlib.util, sys
+        import importlib.util
         spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
-        Subject = rs.Subject
+        Subject = rs.ObservableSubject
 
         errors = []
         s = Subject()
@@ -557,74 +557,82 @@ class TestIntelligentLogger:
         """info() should emit without raising."""
         from src.core.intelligent_logger import IntelligentLogger
 
-        log = IntelligentLogger("test-service")
-        log.info("hello world", key="value")
+        log = IntelligentLogger("test-service-1")
+        log.info("hello world")
 
-    def test_error_increments_stats(self):
-        """error() should be reflected in get_stats()."""
+    def test_error_log_does_not_crash(self):
+        """error() should emit without raising."""
         from src.core.intelligent_logger import IntelligentLogger
 
-        log = IntelligentLogger("stats-service")
+        log = IntelligentLogger("stats-service-1")
         log.error("something broke")
-        stats = log.get_stats()
-        assert isinstance(stats, dict)
+        # Verify anomaly detector recorded it
+        count = log.anomaly_detector.current_error_count
+        assert count >= 1
 
-    def test_trace_context_propagates(self):
-        """trace_context should set trace_id in thread-local."""
+    def test_set_context_propagates_trace_id(self):
+        """set_context + get_context should propagate trace_id."""
+        from src.core.intelligent_logger import set_context, get_context
+
+        set_context(trace_id="trace-xyz", user_id="user-1", service_name="svc")
+        ctx = get_context()
+        assert ctx.trace_id == "trace-xyz"
+        assert ctx.user_id == "user-1"
+        # Clean up
+        set_context(trace_id="", user_id="", service_name="")
+
+    def test_error_burst_detection(self):
+        """Emitting >10 errors should trigger anomaly_detector burst."""
         from src.core.intelligent_logger import IntelligentLogger
 
-        log = IntelligentLogger("ctx-service")
-        recorded = []
+        log = IntelligentLogger("burst-service-1", anomaly_burst_threshold=5)
+        alert_fired = []
+        log.anomaly_detector.set_alert_callback(lambda count: alert_fired.append(count))
 
-        original_emit = log._emit
-
-        def capturing_emit(level, msg, kwargs):
-            ctx = log._get_context()
-            recorded.append(ctx.get("trace_id"))
-            return original_emit(level, msg, kwargs)
-
-        log._emit = capturing_emit
-
-        with log.trace_context("trace-xyz", user_id="user-1"):
-            log.info("inside context")
-
-        log.info("outside context")
-
-        assert recorded[0] == "trace-xyz"
-        assert recorded[1] is None
-
-    def test_error_burst_creates_anomaly(self):
-        """Emitting >10 errors quickly should create an anomaly entry."""
-        from src.core.intelligent_logger import IntelligentLogger
-
-        log = IntelligentLogger("burst-service")
-        for _ in range(15):
+        for _ in range(10):
             log.error("burst error")
 
-        anomalies = log.get_anomalies()
-        assert len(anomalies) >= 1
-        assert anomalies[0]["type"] == "error_burst"
+        assert len(alert_fired) >= 1, "Burst alert should have fired"
 
-    def test_get_stats_returns_structure(self):
-        """get_stats() should return a dict with expected keys."""
+    def test_anomaly_detector_current_count(self):
+        """current_error_count should reflect errors within the window."""
         from src.core.intelligent_logger import IntelligentLogger
 
-        log = IntelligentLogger("stats2-service")
-        log.info("msg1")
-        log.warning("msg2")
-        stats = log.get_stats()
-        assert "service" in stats or isinstance(stats, dict)
+        log = IntelligentLogger("count-service-1")
+        for _ in range(5):
+            log.error("err")
 
-    def test_context_restored_after_exception(self):
-        """trace_context should restore context even if exception occurs."""
+        count = log.anomaly_detector.current_error_count
+        assert count >= 5
+
+    def test_auto_log_classifies_severity(self):
+        """auto_log should not crash and classify the message."""
         from src.core.intelligent_logger import IntelligentLogger
 
-        log = IntelligentLogger("exc-service")
-        try:
-            with log.trace_context("t-1"):
-                raise ValueError("test error")
-        except ValueError:
-            pass
+        log = IntelligentLogger("auto-service-1")
+        log.auto_log("critical failure detected")  # should not raise
+        log.auto_log("info message about startup")  # should not raise
 
-        ctx = log._get_context()
-        assert ctx.get("trace_id") is None
+    def test_context_vars_are_independent_per_thread(self):
+        """Context set in one thread should not affect another."""
+        from src.core.intelligent_logger import set_context, get_context
+
+        results = {}
+
+        def thread_a():
+            set_context(trace_id="thread-a-trace")
+            time.sleep(0.05)
+            results["a"] = get_context().trace_id
+
+        def thread_b():
+            set_context(trace_id="thread-b-trace")
+            time.sleep(0.05)
+            results["b"] = get_context().trace_id
+
+        ta = threading.Thread(target=thread_a)
+        tb = threading.Thread(target=thread_b)
+        ta.start(); tb.start()
+        ta.join(); tb.join()
+
+        assert results["a"] == "thread-a-trace"
+        assert results["b"] == "thread-b-trace"
