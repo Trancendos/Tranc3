@@ -36,6 +36,16 @@ export { FocusTrap }               from './FocusTrap'             // ARIA APG di
 export { ContrastBadge, ContrastPreview } from './ContrastBadge'  // WCAG contrast ratio checker
 export { ToastCluster, useToast }  from './ToastCluster'          // Managed toast notifications
 
+// ── Shneiderman / IxDF / UpSlide / Impala — Rule-of-thumb components ────────
+export { UndoStack, UndoBar, useUndoStack }  from './UndoStack'         // Shneiderman Rule 6: Reversibility
+export type { UndoAction }                   from './UndoStack'
+export { ConsistencyShield }                 from './ConsistencyShield'  // Shneiderman Rule 1 + IxDF Rule 8
+export { ErrorBoundaryCell }                 from './ErrorBoundaryCell'  // Shneiderman Rule 5 + Nielsen #9
+export { ShortcutLayer, useShortcut }        from './ShortcutLayer'      // Shneiderman Rule 2: Shortcuts
+export type { Shortcut }                     from './ShortcutLayer'
+export { ClosureIndicator }                  from './ClosureIndicator'   // Shneiderman Rule 3+4: Closure
+export { MicroInteraction }                  from './MicroInteraction'   // UpSlide Micro-interactions
+
 // ── Hooks (re-exported for direct use) ──────────────────────────────────────
 export {
   useDoherty,

@@ -84,7 +84,7 @@ class VaultClient:
                 self._cache.pop(secret_name, None)
                 return data.get("id", "")
         except Exception as e:
-            raise VaultError(f"Failed to set secret '{secret_name}': {e}") from e
+            raise VaultError(f"Failed to set secret (name redacted): {e}") from e
 
     async def list_secrets(self) -> list[dict[str, Any]]:
         try:
@@ -105,7 +105,7 @@ class VaultClient:
                 return env_val
             return loop.run_until_complete(self.get_secret(secret_name))
         except Exception as e:
-            logger.warning("Sync vault get failed for %s, using env: %s", secret_name, e)
+            logger.warning("Sync vault get failed (name redacted), using env: %s", e)
             return os.getenv(secret_name.upper().replace("-", "_"), "")
 
 

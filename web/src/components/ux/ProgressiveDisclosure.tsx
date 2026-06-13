@@ -71,7 +71,7 @@ function useDisclosureGate(gate: GateType, delay: number) {
 function DisclosureItem({ layer, animate }: { layer: DisclosureLayer; animate: boolean }) {
   const gate = layer.gate ?? 'click'
   const delay = layer.delay ?? 2000
-  const { open, toggle, ref, hoverProps, supportsHover } = useDisclosureGate(gate, delay)
+  const { open, toggle, ref, hoverProps } = useDisclosureGate(gate, delay)
   const detailId = `pd-detail-${layer.id}`
   const isInteractive = gate === 'click' || gate === 'hover'
 
