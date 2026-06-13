@@ -471,12 +471,13 @@ async def append_event(
             ) from exc
         row_id = cur.lastrowid
 
+    safe_event_id = re.sub(r"[\r\n\t]", " ", str(event_id))[:64]
     safe_action = re.sub(r"[\r\n\t]", " ", str(body.action))[:200]
     safe_actor = re.sub(r"[\r\n\t]", " ", str(body.actor))[:200]
     logger.info(
         "audit event appended id=%d event_id=%s action=%s actor=%s",
         row_id,
-        event_id,
+        safe_event_id,
         safe_action,
         safe_actor,
     )
@@ -502,36 +503,32 @@ async def list_events(
     limit: int = Query(100, ge=1, le=1000, description="Max results to return"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
 ) -> List[AuditEventOut]:
-    clauses: List[str] = []
-    params: List[Any] = []
-
-    if service:
-        clauses.append("service = ?")
-        params.append(service)
-    if actor:
-        clauses.append("actor = ?")
-        params.append(actor)
-    if action:
-        clauses.append("action = ?")
-        params.append(action)
-    if from_:
-        clauses.append("timestamp >= ?")
-        params.append(from_)
-    if to:
-        clauses.append("timestamp <= ?")
-        params.append(to)
-    if severity:
-        clauses.append("severity = ?")
-        params.append(severity)
-
-    # clauses contains only hardcoded SQL fragments; user values go into params via ?
-    where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
-    params += [limit, offset]
-
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT * FROM audit_log" + where_sql + " ORDER BY id DESC LIMIT ? OFFSET ?",
-            params,
+            "SELECT * FROM audit_log WHERE"
+            " (? IS NULL OR service = ?)"
+            " AND (? IS NULL OR actor = ?)"
+            " AND (? IS NULL OR action = ?)"
+            " AND (? IS NULL OR timestamp >= ?)"
+            " AND (? IS NULL OR timestamp <= ?)"
+            " AND (? IS NULL OR severity = ?)"
+            " ORDER BY id DESC LIMIT ? OFFSET ?",
+            (
+                service,
+                service,
+                actor,
+                actor,
+                action,
+                action,
+                from_,
+                from_,
+                to,
+                to,
+                severity,
+                severity,
+                limit,
+                offset,
+            ),
         ).fetchall()
 
     return [_row_to_out(r) for r in rows]
@@ -593,24 +590,15 @@ async def export_ndjson(
     Download audit log as Newline-Delimited JSON (NDJSON) for compliance archival.
     Each line is one JSON object; safe for streaming large exports.
     """
-    clauses: List[str] = []
-    params: List[Any] = []
-
-    if from_:
-        clauses.append("timestamp >= ?")
-        params.append(from_)
-    if to:
-        clauses.append("timestamp <= ?")
-        params.append(to)
-
-    # clauses contains only hardcoded SQL fragments; user values go into params via ?
-    where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
 
     def _stream():
         with _connect() as conn:
             cur = conn.execute(
-                "SELECT * FROM audit_log" + where_sql + " ORDER BY id ASC",
-                params,
+                "SELECT * FROM audit_log WHERE"
+                " (? IS NULL OR timestamp >= ?)"
+                " AND (? IS NULL OR timestamp <= ?)"
+                " ORDER BY id ASC",
+                (from_, from_, to, to),
             )
             for row in cur:
                 record = {

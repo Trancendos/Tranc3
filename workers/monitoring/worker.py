@@ -429,25 +429,14 @@ async def list_alerts(
     state: Optional[str] = Query(None, description="Filter by state: firing|resolved"),
     limit: int = Query(100, ge=1, le=1000),
 ) -> List[AlertOut]:
-    clauses: List[str] = []
-    params: List[Any] = []
-
-    if severity:
-        clauses.append("severity = ?")
-        params.append(severity)
-    if state == "firing":
-        clauses.append("resolved_at IS NULL")
-    elif state == "resolved":
-        clauses.append("resolved_at IS NOT NULL")
-
-    # clauses contains only hardcoded SQL fragments; user values go into params via ?
-    where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
-    params.append(limit)
-
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT * FROM alerts" + where_sql + " ORDER BY fired_at DESC LIMIT ?",
-            params,
+            "SELECT * FROM alerts WHERE"
+            " (? IS NULL OR severity = ?)"
+            " AND (? IS NULL OR (? = 'firing' AND resolved_at IS NULL)"
+            "     OR (? = 'resolved' AND resolved_at IS NOT NULL))"
+            " ORDER BY fired_at DESC LIMIT ?",
+            (severity, severity, state, state, state, limit),
         ).fetchall()
 
     return [
@@ -620,24 +609,13 @@ async def list_snapshots(
     metric: Optional[str] = Query(None, alias="metric"),
     limit: int = Query(200, ge=1, le=5000),
 ) -> List[SnapshotOut]:
-    clauses: List[str] = []
-    params: List[Any] = []
-
-    if service:
-        clauses.append("service = ?")
-        params.append(service)
-    if metric:
-        clauses.append("metric_name = ?")
-        params.append(metric)
-
-    # clauses contains only hardcoded SQL fragments; user values go into params via ?
-    where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
-    params.append(limit)
-
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT * FROM metrics_snapshots" + where_sql + " ORDER BY captured_at DESC LIMIT ?",
-            params,
+            "SELECT * FROM metrics_snapshots WHERE"
+            " (? IS NULL OR service = ?)"
+            " AND (? IS NULL OR metric_name = ?)"
+            " ORDER BY captured_at DESC LIMIT ?",
+            (service, service, metric, metric, limit),
         ).fetchall()
 
     return [

@@ -21,8 +21,9 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger("tranc3.inference.structured_output")
 
-# Optional: lmformatenforcer — use find_spec to avoid importing an unused symbol
-_LMFE_AVAILABLE = _importlib_util.find_spec("lmformatenforcer") is not None
+# Optional: lmformatenforcer — use find_spec to avoid importing an unused symbol.
+# Exported so callers can branch on token-level enforcement availability.
+lmformatenforcer_available: bool = _importlib_util.find_spec("lmformatenforcer") is not None
 del _importlib_util
 
 
