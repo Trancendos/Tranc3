@@ -1,0 +1,94 @@
+version: "3.8"
+# Fabulousa (Penpot) — Styling, UX, UI & Design Center — Baron Von Hilton
+# Zero-cost self-hosted Figma alternative.
+
+services:
+  penpot-frontend:
+    image: penpotapp/frontend:latest
+    container_name: fabulousa-frontend
+    restart: unless-stopped
+    ports:
+      - "9001:80"
+    environment:
+      PENPOT_FLAGS: "${PENPOT_FLAGS:-enable-registration enable-login disable-email-verification}"
+    depends_on:
+      - penpot-backend
+      - penpot-exporter
+    networks:
+      - tranc3-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.penpot.rule=PathPrefix(`/design`)"
+      - "traefik.http.routers.penpot.entrypoints=web"
+      - "traefik.http.services.penpot.loadbalancer.server.port=80"
+
+  penpot-backend:
+    image: penpotapp/backend:latest
+    container_name: fabulousa-backend
+    restart: unless-stopped
+    environment:
+      PENPOT_FLAGS: "${PENPOT_FLAGS:-enable-registration enable-login disable-email-verification}"
+      PENPOT_SECRET_KEY: "${PENPOT_SECRET_KEY}"
+      PENPOT_DATABASE_URI: "postgresql://penpot:${PENPOT_DB_PASSWORD}@penpot-db/penpot"
+      PENPOT_DATABASE_USERNAME: "penpot"
+      PENPOT_DATABASE_PASSWORD: "${PENPOT_DB_PASSWORD}"
+      PENPOT_REDIS_URI: "redis://penpot-redis/0"
+      PENPOT_ASSETS_STORAGE_BACKEND: "assets-fs"
+      PENPOT_STORAGE_ASSETS_FS_DIRECTORY: "/opt/data/assets"
+      PENPOT_TELEMETRY_ENABLED: "false"
+      PENPOT_PUBLIC_URI: "${PENPOT_PUBLIC_URI:-http://localhost:9001}"
+    volumes:
+      - penpot-data:/opt/data
+    depends_on:
+      penpot-db:
+        condition: service_healthy
+      penpot-redis:
+        condition: service_started
+    networks:
+      - tranc3-network
+
+  penpot-exporter:
+    image: penpotapp/exporter:latest
+    container_name: fabulousa-exporter
+    restart: unless-stopped
+    environment:
+      PENPOT_PUBLIC_URI: "http://penpot-frontend"
+      PENPOT_REDIS_URI: "redis://penpot-redis/0"
+    networks:
+      - tranc3-network
+
+  penpot-db:
+    image: postgres:15-alpine
+    container_name: penpot-db
+    restart: unless-stopped
+    stop_signal: SIGINT
+    environment:
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      POSTGRES_DB: penpot
+      POSTGRES_USER: penpot
+      POSTGRES_PASSWORD: "${PENPOT_DB_PASSWORD}"
+    volumes:
+      - penpot-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U penpot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tranc3-network
+
+  penpot-redis:
+    image: redis:7-alpine
+    container_name: penpot-redis
+    restart: unless-stopped
+    networks:
+      - tranc3-network
+
+volumes:
+  penpot-data:
+  penpot-db-data:
+
+networks:
+  tranc3-network:
+    external: true
+    name: tranc3-network

@@ -513,6 +513,30 @@ async def lifespan(app: FastAPI):
     except Exception as _ti_exc:
         logger.warning("Section 7 threat intel loop unavailable: %s", sanitize_for_log(_ti_exc))
 
+    # Healing Bridge — wire health monitor → self-repair engine
+    try:
+        from src.healing.healing_bridge import HealingBridge
+        from src.healing.self_repair import SelfRepairEngine
+
+        if _health_monitor is not None:
+            _repair_engine = SelfRepairEngine()
+            _healing_bridge = HealingBridge(_health_monitor, _repair_engine)
+            _healing_bridge.attach()
+            logger.info("Healing Bridge active — health monitor wired to self-repair engine")
+    except Exception as _hb_exc:
+        logger.warning("Healing Bridge unavailable: %s", sanitize_for_log(_hb_exc))
+
+    # OpenTelemetry instrumentation
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        FastAPIInstrumentor.instrument_app(app)
+        logger.info("OpenTelemetry FastAPI instrumentation active")
+    except ImportError:
+        logger.debug("opentelemetry-instrumentation-fastapi not installed — traces disabled")
+    except Exception as _otel_exc:
+        logger.warning("OpenTelemetry instrumentation failed: %s", sanitize_for_log(_otel_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield

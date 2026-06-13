@@ -1,0 +1,216 @@
+groups:
+  - name: tranc3_workers
+    interval: 30s
+    rules:
+
+      # ── Worker availability ──────────────────────────────────────────────
+      - alert: WorkerDown
+        expr: up{job=~"tranc3-.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Worker {{ $labels.instance }} is DOWN"
+          description: "Worker {{ $labels.job }} ({{ $labels.instance }}) has been unreachable for more than 1 minute."
+          runbook: "https://trancendos.com/the-workshop/wiki/runbooks/worker-down"
+
+      - alert: WorkerRestartLoop
+        expr: increase(process_start_time_seconds{job=~"tranc3-.*"}[10m]) > 3
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Worker {{ $labels.instance }} is restart-looping"
+          description: "Worker {{ $labels.job }} has restarted >3 times in the last 10 minutes."
+
+      # ── Error rates ──────────────────────────────────────────────────────
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job=~"tranc3-.*", status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job=~"tranc3-.*"}[5m]))
+          ) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High HTTP 5xx error rate ({{ $value | humanizePercentage }})"
+          description: "More than 5% of requests are returning 5xx errors over the last 5 minutes."
+
+      - alert: CriticalErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job=~"tranc3-.*", status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job=~"tranc3-.*"}[5m]))
+          ) > 0.20
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Critical HTTP 5xx error rate ({{ $value | humanizePercentage }})"
+          description: "More than 20% of requests are failing. Immediate action required."
+
+      # ── Latency ─────────────────────────────────────────────────────────
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{job=~"tranc3-.*"}[5m])) by (le, job)
+          ) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "P95 latency > 2s for {{ $labels.job }}"
+          description: "95th percentile response time is {{ $value | humanizeDuration }} for {{ $labels.job }}."
+
+      - alert: VeryHighLatency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{job=~"tranc3-.*"}[5m])) by (le, job)
+          ) > 10.0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "P99 latency > 10s for {{ $labels.job }}"
+
+  - name: tranc3_infrastructure
+    interval: 60s
+    rules:
+
+      # ── Vault ────────────────────────────────────────────────────────────
+      - alert: VaultSealed
+        expr: vault_core_unsealed == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Vault is SEALED — secrets are inaccessible"
+          description: "The Void (Vault) has been sealed for more than 2 minutes. Workers cannot fetch secrets."
+          runbook: "https://trancendos.com/the-workshop/wiki/runbooks/vault-sealed"
+
+      - alert: VaultUnavailable
+        expr: up{job="vault"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Vault (The Void) is unreachable"
+
+      # ── Memory pressure ──────────────────────────────────────────────────
+      - alert: MemoryPressure
+        expr: |
+          (
+            1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+          ) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Host memory usage > 85% ({{ $value | humanizePercentage }})"
+          description: "Available memory is critically low. Consider scaling or reducing worker count."
+
+      - alert: MemoryCritical
+        expr: |
+          (
+            1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+          ) > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Host memory usage > 95% — OOM risk"
+
+      # ── Disk ─────────────────────────────────────────────────────────────
+      - alert: DiskSpaceLow
+        expr: |
+          (
+            1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})
+          ) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Disk usage > 80% on root filesystem"
+
+  - name: tranc3_messaging
+    interval: 30s
+    rules:
+
+      # ── NATS consumer lag ────────────────────────────────────────────────
+      - alert: NATSConsumerLag
+        expr: nats_consumer_num_pending > 1000
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "NATS consumer lag > 1000 messages (stream={{ $labels.stream_name }})"
+          description: "Consumer {{ $labels.consumer_name }} on stream {{ $labels.stream_name }} has {{ $value }} pending messages."
+
+      - alert: NATSConsumerLagCritical
+        expr: nats_consumer_num_pending > 10000
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "NATS consumer lag > 10k — processing stalled"
+
+      - alert: NATSServerDown
+        expr: up{job="nats"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "NATS (The HIVE) is DOWN"
+          description: "The HIVE message broker is unreachable. Agent coordination will fail."
+
+  - name: tranc3_ai
+    interval: 60s
+    rules:
+
+      # ── AI gateway ───────────────────────────────────────────────────────
+      - alert: AIGatewayAllProvidersFailed
+        expr: tranc3_ai_provider_healthy_count == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: ai
+        annotations:
+          summary: "All AI providers have failed — only stub responses available"
+          description: "Ollama, HuggingFace, and OpenRouter providers are all unhealthy. Platform is in offline mode."
+
+      - alert: AITokenBudgetExhausted
+        expr: tranc3_ai_token_budget_remaining_ratio < 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: ai
+        annotations:
+          summary: "AI token budget almost exhausted for tenant {{ $labels.tenant_id }}"
+
+      # ── Circuit breakers ─────────────────────────────────────────────────
+      - alert: CircuitBreakerOpen
+        expr: tranc3_circuit_breaker_state{state="open"} == 1
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Circuit breaker OPEN for {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has an open circuit breaker. Requests are being rejected."
