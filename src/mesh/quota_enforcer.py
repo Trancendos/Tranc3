@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -155,6 +156,7 @@ class QuotaEnforcer:
     ) -> None:
         self._db = _init_db(Path(db_path))
         self.threshold_pct = threshold_pct
+        self._lock = threading.Lock()
 
     # ── Usage tracking ─────────────────────────────────────────────────────
 
@@ -166,33 +168,35 @@ class QuotaEnforcer:
             self._inc(provider, "daily_tokens", tokens, today)
 
     def _inc(self, provider: str, metric: str, delta: float, today: str) -> None:
-        row = self._db.execute(
-            "SELECT value, window_start FROM provider_usage WHERE provider=? AND metric=?",
-            (provider, metric),
-        ).fetchone()
+        with self._lock:
+            row = self._db.execute(
+                "SELECT value, window_start FROM provider_usage WHERE provider=? AND metric=?",
+                (provider, metric),
+            ).fetchone()
 
-        if row is None:
-            self._db.execute(
-                "INSERT INTO provider_usage (provider, metric, value, window_start) VALUES (?,?,?,?)",
-                (provider, metric, delta, today),
-            )
-        else:
-            current_value, window_start = row
-            # Reset counter if new day
-            if window_start != today:
-                current_value = 0.0
-            self._db.execute(
-                "UPDATE provider_usage SET value=?, window_start=? WHERE provider=? AND metric=?",
-                (current_value + delta, today, provider, metric),
-            )
-        self._db.commit()
+            if row is None:
+                self._db.execute(
+                    "INSERT INTO provider_usage (provider, metric, value, window_start) VALUES (?,?,?,?)",
+                    (provider, metric, delta, today),
+                )
+            else:
+                current_value, window_start = row
+                # Reset counter if new day
+                if window_start != today:
+                    current_value = 0.0
+                self._db.execute(
+                    "UPDATE provider_usage SET value=?, window_start=? WHERE provider=? AND metric=?",
+                    (current_value + delta, today, provider, metric),
+                )
+            self._db.commit()
 
     def get_usage(self, provider: str) -> dict[str, ProviderQuota]:
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        rows = self._db.execute(
-            "SELECT metric, value, window_start FROM provider_usage WHERE provider=?",
-            (provider,),
-        ).fetchall()
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT metric, value, window_start FROM provider_usage WHERE provider=?",
+                (provider,),
+            ).fetchall()
         recorded = {r[0]: (r[1], r[2]) for r in rows}
 
         quotas: dict[str, ProviderQuota] = {}

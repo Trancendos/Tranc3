@@ -1435,6 +1435,7 @@ async def chat(
 
 # ── Streaming chat endpoint ───────────────────────────────────────────────────
 
+
 @app.post(
     "/chat/stream",
     tags=["inference"],
@@ -1442,7 +1443,7 @@ async def chat(
     description=(
         "Streaming variant of `/chat`. Returns Server-Sent Events (SSE) with token-by-token "
         "output. Tries Ollama → llama.cpp → gateway simulation in order. "
-        "Each event: `data: {\"content\": \"token\"}`. Stream ends with `data: [DONE]`."
+        'Each event: `data: {"content": "token"}`. Stream ends with `data: [DONE]`.'
     ),
 )
 async def chat_stream(
@@ -1463,8 +1464,8 @@ async def chat_stream(
         raise HTTPException(status_code=400, detail=safe_error_detail(e, 400))
 
     try:
-        from src.inference.streaming import stream_sse
         from src.inference.conversation_store import get_conversation_store
+        from src.inference.streaming import stream_sse
 
         # Build message list from session history if session_id provided
         session_id = getattr(chat_req, "session_id", None) or f"stream-{user_id}"
@@ -1491,6 +1492,7 @@ async def chat_stream(
 
 # ── Conversation history endpoints ────────────────────────────────────────────
 
+
 @app.get(
     "/conversations/{session_id}",
     tags=["inference"],
@@ -1503,6 +1505,7 @@ async def get_conversation(
 ):
     try:
         from src.inference.conversation_store import get_conversation_store
+
         store = get_conversation_store()
         messages = store.get_messages(session_id)
         return {"session_id": session_id, "messages": messages, "count": len(messages)}
@@ -1521,6 +1524,7 @@ async def delete_conversation(
 ):
     try:
         from src.inference.conversation_store import get_conversation_store
+
         get_conversation_store().delete_session(session_id)
         return {"deleted": session_id}
     except Exception as exc:
@@ -1528,6 +1532,7 @@ async def delete_conversation(
 
 
 # ── Thompson sampler stats ────────────────────────────────────────────────────
+
 
 @app.get(
     "/luminous/providers",
@@ -1538,6 +1543,7 @@ async def delete_conversation(
 async def provider_stats(current_user: dict = Depends(get_current_user)):
     try:
         from src.inference.thompson_sampler import get_sampler
+
         return {"providers": get_sampler().stats(), "ranked": get_sampler().rank_all()}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=safe_error_detail(exc, 500))
@@ -2071,7 +2077,7 @@ async def eval_score(
     tags=["mesh"],
     summary="Service mesh + routing statistics",
 )
-async def mesh_stats() -> dict:
+async def mesh_stats(current_user: dict = Depends(get_current_user)) -> dict:
     """
     Returns aggregated stats from all routing engines:
     quantum, genetic, meta, fluid, quota enforcer, and zero-cost tracker.
@@ -2082,50 +2088,50 @@ async def mesh_stats() -> dict:
         from src.mesh.meta_router import get_meta_router
 
         out["meta_router"] = get_meta_router().stats
-    except Exception as exc:
-        out["meta_router"] = {"error": str(exc)}
+    except Exception:
+        out["meta_router"] = {"error": "unavailable"}
 
     try:
         from src.mesh.quantum_router import get_quantum_router
 
         out["quantum_router"] = get_quantum_router().stats
-    except Exception as exc:
-        out["quantum_router"] = {"error": str(exc)}
+    except Exception:
+        out["quantum_router"] = {"error": "unavailable"}
 
     try:
         from src.mesh.genetic_router import get_genetic_router
 
         out["genetic_router"] = get_genetic_router().stats
-    except Exception as exc:
-        out["genetic_router"] = {"error": str(exc)}
+    except Exception:
+        out["genetic_router"] = {"error": "unavailable"}
 
     try:
         from src.mesh.quota_enforcer import get_enforcer
 
         out["quota_enforcer"] = get_enforcer().dashboard()
-    except Exception as exc:
-        out["quota_enforcer"] = {"error": str(exc)}
+    except Exception:
+        out["quota_enforcer"] = {"error": "unavailable"}
 
     try:
         from src.monitoring.zero_cost_tracker import tracker
 
         out["zero_cost_tracker"] = tracker.get_summary()
-    except Exception as exc:
-        out["zero_cost_tracker"] = {"error": str(exc)}
+    except Exception:
+        out["zero_cost_tracker"] = {"error": "unavailable"}
 
     try:
         from src.mesh.nano_mesh import get_nano_mesh
 
         out["nano_mesh"] = get_nano_mesh().stats
-    except Exception as exc:
-        out["nano_mesh"] = {"error": str(exc)}
+    except Exception:
+        out["nano_mesh"] = {"error": "unavailable"}
 
     try:
         from src.fluidic.fluid_router import fluid_router
 
         out["fluid_router"] = fluid_router.stats
-    except Exception as exc:
-        out["fluid_router"] = {"error": str(exc)}
+    except Exception:
+        out["fluid_router"] = {"error": "unavailable"}
 
     return out
 
@@ -2135,7 +2141,7 @@ async def mesh_stats() -> dict:
     tags=["mesh"],
     summary="Free-tier quota dashboard for all AI providers",
 )
-async def mesh_quota() -> dict:
+async def mesh_quota(current_user: dict = Depends(get_current_user)) -> dict:
     """Returns quota usage and availability for all 8 free AI providers."""
     try:
         from src.mesh.quota_enforcer import get_enforcer
