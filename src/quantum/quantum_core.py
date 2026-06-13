@@ -25,7 +25,10 @@ class NeuromorphicInterface:
         self.synaptic_plasticity = config.get("plasticity", "STDP")
 
     def create_spiking_network(
-        self, input_dim: int, hidden_layers: List[int], output_dim: int
+        self,
+        input_dim: int,
+        hidden_layers: List[int],
+        output_dim: int,
     ) -> nn.ModuleList:
         class SpikingNeuron(nn.Module):
             def __init__(self, input_size, output_size, tau=10.0):

@@ -593,7 +593,19 @@ class AIGatewayRouter:
 
             except Exception as e:
                 last_error = str(e)
-                logger.warning("Provider %s failed: %s", provider_name.value, e)
+                logger.warning(  # codeql[py/cleartext-logging]
+                    "Provider %s failed: %s", provider_name.value, sanitize_for_log(e)
+                )
+                try:
+                    from src.adaptive.provider_rotator import get_provider_rotator
+
+                    rate_limited = "429" in str(e) or "rate" in str(e).lower()
+                    get_provider_rotator().record_failure(
+                        provider_name.value,
+                        rate_limited=rate_limited,
+                    )
+                except Exception:
+                    pass
                 continue
 
         # All providers failed — use offline as last resort

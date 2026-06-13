@@ -27,6 +27,8 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from src.entities.health_metadata import health_entity_block
+
 WORKER_PORT = 8021
 WORKER_NAME = "cron-service"
 DB_PATH = Path(__file__).parent / "data" / "cron.db"

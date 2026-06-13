@@ -194,9 +194,8 @@ class ZeroTrustASGIMiddleware(BaseHTTPMiddleware):
                     ZeroTrustOptions(
                         mfa_routes=mfa_routes,
                         blocked_countries=blocked_countries,
-                    )
+                    ),
                 )
-                logger.info("ZeroTrustASGIMiddleware active (MFA routes: %s)", mfa_routes)
             except Exception:
                 self._enabled = False
                 logger.warning("ZeroTrustMiddleware unavailable — skipping zero-trust enforcement")

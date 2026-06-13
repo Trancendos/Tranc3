@@ -268,7 +268,8 @@ class InfinityHealthOrchestrator:
                 min_interval=5.0,
             )
             logger.info(
-                "AdaptivePulseController ready for %s", sanitize_for_log(self.config.service_name)
+                "AdaptivePulseController ready for %s",
+                sanitize_for_log(self.config.service_name),
             )
         else:
             self.pulse = None
@@ -339,7 +340,8 @@ class InfinityHealthOrchestrator:
             try:
                 app.add_middleware(TelemetryMiddleware)
                 logger.info(
-                    "TelemetryMiddleware mounted on %s", sanitize_for_log(self.config.service_name)
+                    "TelemetryMiddleware mounted on %s",
+                    sanitize_for_log(self.config.service_name),
                 )
             except Exception as e:
                 logger.warning("Could not mount TelemetryMiddleware: %s", sanitize_for_log(str(e)))
@@ -373,7 +375,8 @@ class InfinityHealthOrchestrator:
             task.cancel()
         self._loops.clear()
         logger.info(
-            "InfinityHealthOrchestrator stopped for %s", sanitize_for_log(self.config.service_name)
+            "InfinityHealthOrchestrator stopped for %s",
+            sanitize_for_log(self.config.service_name),
         )
 
     # ── Daemon Registration ───────────────────────────────────────────────────
@@ -455,7 +458,9 @@ class InfinityHealthOrchestrator:
         self.record_metric("request_latency_ms", latency_ms, feed_anomaly=True)
         if is_error:
             self.record_metric(
-                "error_count", self._metric_cache.get("error_count", 0) + 1, feed_anomaly=False
+                "error_count",
+                self._metric_cache.get("error_count", 0) + 1,
+                feed_anomaly=False,
             )
 
     # ── Health Score ──────────────────────────────────────────────────────────
@@ -489,7 +494,7 @@ class InfinityHealthOrchestrator:
                         "tier_icon": tier_icon,
                         "pulse_mode": self.pulse.current_mode.value if self.pulse else "unknown",
                         "reason": reason,
-                    }
+                    },
                 ),
             )
 
@@ -538,7 +543,8 @@ class InfinityHealthOrchestrator:
         penalty = {"low": 0.05, "medium": 0.15, "high": 0.25, "critical": 0.4}.get(severity, 0.05)
         new_score = max(0.0, self._health_score - penalty)
         self.update_health(
-            new_score, reason=f"anomaly:{getattr(anomaly, 'metric_name', 'unknown')}"
+            new_score,
+            reason=f"anomaly:{getattr(anomaly, 'metric_name', 'unknown')}",
         )
 
         # Publish to Sentinel security channel for critical anomalies

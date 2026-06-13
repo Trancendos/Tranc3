@@ -217,7 +217,7 @@ class WorkerBridge:
                     event_type=event_type,
                     source=source,
                     payload=payload,
-                )
+                ),
             )
             self._stats["events_published"] += 1
             return True

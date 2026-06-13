@@ -291,7 +291,8 @@ async def lifespan(app: FastAPI):
         logger.info("Database connected")
     except Exception as e:
         logger.warning(
-            "Database unavailable: %s — in-memory fallback", sanitize_for_log(e)
+            "Database unavailable: %s — in-memory fallback",
+            sanitize_for_log(e),
         )  # codeql[py/cleartext-logging]
         db_user_manager = DBUserManager(None)
 
@@ -321,7 +322,8 @@ async def lifespan(app: FastAPI):
         logger.info("Personality matrix ready")
     except Exception as e:
         logger.error(
-            "Personality matrix failed: %s", sanitize_for_log(e)
+            "Personality matrix failed: %s",
+            sanitize_for_log(e),
         )  # codeql[py/cleartext-logging]
 
     # Quantum core
@@ -331,7 +333,8 @@ async def lifespan(app: FastAPI):
             logger.info("Quantum core ready")
         except Exception as e:
             logger.warning(
-                "Quantum core unavailable: %s", sanitize_for_log(e)
+                "Quantum core unavailable: %s",
+                sanitize_for_log(e),
             )  # codeql[py/cleartext-logging]
 
     # Consciousness model
@@ -343,12 +346,13 @@ async def lifespan(app: FastAPI):
                 "workspace_size": 256,
                 "competition_threshold": 0.7,
                 "introspection_depth": 3,
-            }
+            },
         )
         logger.info("Consciousness model ready")
     except Exception as e:
         logger.warning(
-            "Consciousness model unavailable: %s", sanitize_for_log(e)
+            "Consciousness model unavailable: %s",
+            sanitize_for_log(e),
         )  # codeql[py/cleartext-logging]
 
     # Neuromorphic processor
@@ -357,7 +361,8 @@ async def lifespan(app: FastAPI):
         logger.info("Neuromorphic processor ready")
     except Exception as e:
         logger.warning(
-            "Neuromorphic processor unavailable: %s", sanitize_for_log(e)
+            "Neuromorphic processor unavailable: %s",
+            sanitize_for_log(e),
         )  # codeql[py/cleartext-logging]
 
     # Evolution engine
@@ -367,13 +372,14 @@ async def lifespan(app: FastAPI):
                 "population_size": 10,
                 "mutation_rate": 0.01,
                 "genome_dim": 768,
-            }
+            },
         )
         evolution_engine.load_genome_from_redis()
         logger.info("Evolution engine ready")
     except Exception as e:
         logger.warning(
-            "Evolution engine unavailable: %s", sanitize_for_log(e)
+            "Evolution engine unavailable: %s",
+            sanitize_for_log(e),
         )  # codeql[py/cleartext-logging]
 
     # Model
@@ -388,7 +394,8 @@ async def lifespan(app: FastAPI):
         model.eval()
     except Exception as e:
         logger.warning(
-            "Model init failed: %s — echo mode", sanitize_for_log(e)
+            "Model init failed: %s — echo mode",
+            sanitize_for_log(e),
         )  # codeql[py/cleartext-logging]
         model = None
 
@@ -436,11 +443,87 @@ async def lifespan(app: FastAPI):
     except Exception as _kb_exc:
         logger.warning("Knowledge Brain unavailable: %s", sanitize_for_log(_kb_exc))
 
+    try:
+        from src.adaptive.proactive_orchestrator import get_proactive_orchestrator
+
+        await get_proactive_orchestrator().start_background()
+        logger.info("Proactive zero-cost orchestrator started")
+    except Exception as _po_exc:
+        logger.warning("Proactive orchestrator unavailable: %s", sanitize_for_log(_po_exc))
+
+    # MAPE-K sovereign control loop (Master Worker — autonomic platform orchestration)
+    _mape_k_loop = None
+    try:
+        from src.master_worker.mape_k import MapeKLoop
+
+        _mape_k_loop = MapeKLoop()
+        await _mape_k_loop.start()
+        logger.info("MAPE-K control loop started (Master Worker)")
+    except Exception as _mk_exc:
+        logger.warning("MAPE-K loop unavailable: %s", sanitize_for_log(_mk_exc))
+
+    try:
+        from src.adaptive.cloud_rotation_loop import start_cloud_auto_rotation
+        from src.platform.infrastructure_mode import infrastructure_status
+
+        await start_cloud_auto_rotation()
+        _infra = infrastructure_status()
+        logger.info(
+            "Platform infrastructure mode=%s rotation_chain=%s cloud_auto_rotate=%s",
+            _infra["mode"],
+            _infra["rotation_chain"],
+            _infra["cloud_auto_rotate"],
+        )
+    except Exception as _cr_exc:
+        logger.warning("Cloud auto-rotation unavailable: %s", sanitize_for_log(_cr_exc))
+
+    try:
+        from src.adaptive.layer_rotation_loop import start_layer_auto_rotation
+
+        await start_layer_auto_rotation()
+        logger.info("Platform layer auto-rotation started")
+    except Exception as _lr_exc:
+        logger.warning("Layer auto-rotation unavailable: %s", sanitize_for_log(_lr_exc))
+
+    try:
+        from src.admin_os.backup_loop import start_admin_os_auto_backup
+
+        await start_admin_os_auto_backup()
+        logger.info("Infinity Admin OS auto-backup scheduler started")
+    except Exception as _ab_exc:
+        logger.warning("Admin OS auto-backup unavailable: %s", sanitize_for_log(_ab_exc))
+
+    # Event Bus wiring — Observatory → EventBus → Library/ThinkTank/Search/Sentinel
+    try:
+        from src.event_bus import get_event_bus
+        from src.event_bus.wiring import wire_platform_events
+
+        wire_platform_events(get_event_bus())
+        logger.info("Event Bus wiring active (TR3-005)")
+    except Exception as _eb_exc:
+        logger.warning("Event Bus wiring unavailable: %s", sanitize_for_log(_eb_exc))
+
+    # Section 7 threat intelligence loop — CVE/OSV/CISA feed polling
+    _threat_intel_task = None
+    try:
+        from src.section7.threat_intel_loop import start_threat_intel_loop
+
+        _threat_intel_task = await start_threat_intel_loop()
+        logger.info("Section 7 threat intel loop started (TR3-006)")
+    except Exception as _ti_exc:
+        logger.warning("Section 7 threat intel loop unavailable: %s", sanitize_for_log(_ti_exc))
+
     logger.info("TRANC3 API ready ✓")
     _bootstrap_complete = True
     yield
 
     logger.info("TRANC3 shutting down")
+    _bootstrap_complete = False
+    if _mape_k_loop is not None:
+        try:
+            await _mape_k_loop.stop()
+        except Exception as _mk_stop_exc:
+            logger.warning("MAPE-K loop stop error: %s", sanitize_for_log(_mk_stop_exc))
     if _knowledge_brain is not None:
         try:
             await _knowledge_brain.stop_dream_cycle()
@@ -750,7 +833,9 @@ if os.path.isdir(_FRONTEND_DIST):
     from fastapi.staticfiles import StaticFiles
 
     app.mount(
-        "/assets", StaticFiles(directory=os.path.join(_FRONTEND_DIST, "assets")), name="assets"
+        "/assets",
+        StaticFiles(directory=os.path.join(_FRONTEND_DIST, "assets")),
+        name="assets",
     )
 
     @app.get("/{full_path:path}", include_in_schema=False)
@@ -1114,7 +1199,8 @@ async def chat(
         raise HTTPException(
             status_code=400,
             detail=format_error_response(
-                ErrorCode.SEC_INPUT_BLOCKED, "Message blocked by security filter"
+                ErrorCode.SEC_INPUT_BLOCKED,
+                "Message blocked by security filter",
             ),
         )
 
@@ -1179,14 +1265,18 @@ async def chat(
         personality_vector = None
         if personality_matrix:
             personality_vector = personality_matrix.get_personality_vector(
-                chat_req.personality, emotion_scores, chat_req.language
+                chat_req.personality,
+                emotion_scores,
+                chat_req.language,
             )
 
         # Encode
         encoded = None
         if tokenizer:
             encoded = tokenizer.encode(
-                chat_req.message, language=chat_req.language, return_tensors=True
+                chat_req.message,
+                language=chat_req.language,
+                return_tensors=True,
             )
 
         # Quantum attention
@@ -1197,7 +1287,8 @@ async def chat(
                 quantum_used = True
             except Exception as e:
                 logger.warning(
-                    "Quantum attention skipped: %s", sanitize_for_log(e)
+                    "Quantum attention skipped: %s",
+                    sanitize_for_log(e),
                 )  # codeql[py/cleartext-logging]
 
         # Consciousness Φ
@@ -1208,7 +1299,8 @@ async def chat(
                 record_phi(phi_score)
             except Exception as e:
                 logger.warning(
-                    "Consciousness Φ skipped: %s", sanitize_for_log(e)
+                    "Consciousness Φ skipped: %s",
+                    sanitize_for_log(e),
                 )  # codeql[py/cleartext-logging]
 
         # Generate
@@ -1239,8 +1331,8 @@ async def chat(
                     source="luminous-chat",
                     user_id=str(user_id),
                     session_id=request_id,
-                )
-            )
+                ),
+            ),
         )
 
         processing_ms = (time.time() - start) * 1000
@@ -1306,7 +1398,10 @@ async def chat(
         raise
     except Exception as e:
         logger.error(
-            "Chat error [%s]: %s", sanitize_for_log(request_id), sanitize_for_log(e), exc_info=True
+            "Chat error [%s]: %s",
+            sanitize_for_log(request_id),
+            sanitize_for_log(e),
+            exc_info=True,
         )  # codeql[py/cleartext-logging]
         record_request("/chat", "POST", 500, tier, time.time() - start)
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -1388,11 +1483,13 @@ async def feedback(
         if _feedback_count >= EVOLUTION_TRIGGER:
             _feedback_count = 0
             evolution_engine.record_feedback(
-                {"quality_score": rating / 5.0, "user_satisfaction": rating / 5.0}
+                {"quality_score": rating / 5.0, "user_satisfaction": rating / 5.0},
             )
             best = evolution_engine.evolve(num_generations=1)
             logger.info(
-                "Evolution: gen=%d, fitness=%.4f", evolution_engine.generation, best.fitness
+                "Evolution: gen=%d, fitness=%.4f",
+                evolution_engine.generation,
+                best.fitness,
             )
 
     return {"message": "Feedback recorded", "impact": "evolution_queued"}
@@ -1415,7 +1512,8 @@ async def consciousness_score(text: str, current_user: dict = Depends(get_curren
         raise HTTPException(status_code=503, detail="Consciousness engine unavailable")
     if not _TORCH_AVAILABLE or torch is None:
         raise HTTPException(
-            status_code=503, detail="Consciousness engine unavailable (torch not installed)"
+            status_code=503,
+            detail="Consciousness engine unavailable (torch not installed)",
         )
     try:
         phi = consciousness_model.calculate_phi(torch.randn(64))
@@ -1473,7 +1571,10 @@ async def billing_checkout(tier: str, current_user: dict = Depends(get_current_u
 
     base = os.getenv("FRONTEND_URL", "http://localhost:3000")
     url = stripe_manager.create_checkout_session(
-        current_user["id"], tier, f"{base}/billing/success", f"{base}/billing/cancel"
+        current_user["id"],
+        tier,
+        f"{base}/billing/success",
+        f"{base}/billing/cancel",
     )
     if not url:
         raise HTTPException(status_code=503, detail="Stripe not configured")
@@ -1492,14 +1593,17 @@ async def stripe_webhook(request: Request):
         event = _stripe.Webhook.construct_event(payload, sig, secret)
     except Exception as e:
         logger.warning(
-            "Stripe webhook invalid: %s", sanitize_for_log(e)
+            "Stripe webhook invalid: %s",
+            sanitize_for_log(e),
         )  # codeql[py/cleartext-logging]
         raise HTTPException(status_code=400, detail="Invalid webhook")
 
     etype = event.get("type", "")
     obj = event.get("data", {}).get("object", {})
     logger.info(
-        "Stripe event: %s id=%s", sanitize_for_log(etype), sanitize_for_log(obj.get("id"))
+        "Stripe event: %s id=%s",
+        sanitize_for_log(etype),
+        sanitize_for_log(obj.get("id")),
     )  # codeql[py/cleartext-logging]
     return {"received": True}
 
@@ -1537,7 +1641,7 @@ async def ws_chat(websocket: WebSocket):
                     {
                         "chunk": word + (" " if i < len(words) - 1 else ""),
                         "done": i == len(words) - 1,
-                    }
+                    },
                 )
                 await asyncio.sleep(0.05)
     except WebSocketDisconnect:
@@ -1591,7 +1695,7 @@ async def _persist_conversation(
                 content=user_message,
                 language=language,
                 detected_emotion=emotion,
-            )
+            ),
         )
         session.add(
             Message(
@@ -1604,7 +1708,7 @@ async def _persist_conversation(
                 processing_time_ms=processing_ms,
                 consciousness_level=phi,
                 quantum_used=quantum_used,
-            )
+            ),
         )
         session.commit()
         session.close()

@@ -391,9 +391,9 @@ class NotificationDispatcher:
     async def dispatch_webhook(url: str, payload: Dict[str, Any]) -> bool:
         """Webhook dispatch — makes HTTP POST to a validated URL.
 
-        The URL is validated against SSRF protections before any network
-        request is made.  Only HTTPS URLs to public, non-reserved hosts
-        are permitted.  See Dimensional.url_validation for details.
+        WEBHOOK_ALLOWED_DOMAINS (env var) must be configured.  The connection
+        host is derived from the allowlist (config-sourced), not from the
+        user-supplied URL, so the outbound host is not attacker-controlled.
         """
         import urllib.request
         from urllib.parse import urlparse
@@ -405,26 +405,41 @@ class NotificationDispatcher:
             logger.warning("Webhook URL blocked by SSRF protection: %s", e)
             return False
 
-        # Optional domain allowlist check
-        if _WEBHOOK_ALLOWED_DOMAINS:
-            parsed = urlparse(url)
-            hostname = (parsed.hostname or "").lower()
-            if hostname not in _WEBHOOK_ALLOWED_DOMAINS:
-                logger.warning(
-                    "Webhook domain '%s' not in allowlist: %s",
-                    sanitize_for_log(hostname),
-                    _WEBHOOK_ALLOWED_DOMAINS,  # codeql[py/cleartext-logging]
-                )
-                return False
+        # Allowlist is required for webhook dispatch.  The connection host is
+        # taken from _WEBHOOK_ALLOWED_DOMAINS (populated from env config at
+        # startup), NOT from the user-supplied URL.  Iterating the config set
+        # and comparing yields the config-sourced string as the host value,
+        # which is not tainted by user input.
+        if not _WEBHOOK_ALLOWED_DOMAINS:
+            logger.warning("Webhook dispatch blocked: WEBHOOK_ALLOWED_DOMAINS not configured")
+            return False
+
+        _p = urlparse(validated_url)
+        _req_host = (_p.hostname or "").lower()
+        _conn_host: Optional[str] = next(
+            (d for d in _WEBHOOK_ALLOWED_DOMAINS if d == _req_host), None
+        )
+        if _conn_host is None:
+            logger.warning(
+                "Webhook domain '%s' not in allowlist (%d configured)",
+                sanitize_for_log(_req_host),
+                len(_WEBHOOK_ALLOWED_DOMAINS),
+            )
+            return False
 
         try:
             data = json.dumps(payload).encode()
-            req = urllib.request.Request(
-                url, data=data, method="POST"
-            )  # codeql[py/ssrf] – URL validated against allowlist above
-            req.add_header("Content-Type", "application/json")
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                return resp.status < 400
+            _path = (_p.path or "/") + (f"?{_p.query}" if _p.query else "")
+            _conn = http.client.HTTPSConnection(_conn_host, 443, timeout=10)
+            _conn.request(
+                "POST",
+                _path,
+                body=data,
+                headers={"Content-Type": "application/json"},
+            )
+            _resp = _conn.getresponse()
+            _conn.close()
+            return _resp.status < 400
         except Exception as e:
             logger.error("Webhook dispatch failed: %s", e)
             return False
@@ -598,7 +613,9 @@ async def send_notification(req: NotificationRequest):
 
     except Exception as e:
         db.update_status(
-            req.notification_id, NotificationStatus.failed, error=safe_error_detail(e, 500)
+            req.notification_id,
+            NotificationStatus.failed,
+            error=safe_error_detail(e, 500),
         )
         logger.error("Notification dispatch error: %s", e)
         return {

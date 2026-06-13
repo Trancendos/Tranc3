@@ -329,7 +329,15 @@ ROUTING_CHAINS: Dict[str, ZeroCostRoutingChain] = {
             "No local hardware needed. "
             "Groq → Gemini → Cerebras → SambaNova → OpenRouter → HuggingFace → Offline"
         ),
-        providers=["groq", "gemini", "cerebras", "sambanova", "openrouter", "huggingface", "offline"],
+        providers=[
+            "groq",
+            "gemini",
+            "cerebras",
+            "sambanova",
+            "openrouter",
+            "huggingface",
+            "offline",
+        ],
         models={
             "groq": "llama-3.3-70b-versatile",
             "gemini": "gemini-2.0-flash",
@@ -403,10 +411,9 @@ def discover_available_providers() -> Dict[str, bool]:
 
     # Ollama — check if OLLAMA_HOST is set or default localhost is reachable
     ollama_host = os.getenv("OLLAMA_URL", os.getenv("OLLAMA_HOST", "http://localhost:11434"))
-    available["ollama"] = (
-        bool(os.getenv("OLLAMA_URL") or os.getenv("OLLAMA_HOST"))
-        or _check_ollama_available(ollama_host)
-    )
+    available["ollama"] = bool(
+        os.getenv("OLLAMA_URL") or os.getenv("OLLAMA_HOST"),
+    ) or _check_ollama_available(ollama_host)
 
     # Groq — 14,400 req/day free, requires GROQ_API_KEY
     available["groq"] = bool(os.getenv("GROQ_API_KEY"))

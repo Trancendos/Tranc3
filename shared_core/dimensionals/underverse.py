@@ -522,7 +522,7 @@ class UnderverseRegistry:
             ),
             "pillars_represented": len({m.pillar for m in self._modules.values() if m.pillar}),
             "dimensionals_with_modules": len(
-                {m.parent_dimensional for m in self._modules.values() if m.parent_dimensional}
+                {m.parent_dimensional for m in self._modules.values() if m.parent_dimensional},
             ),
             "total_capabilities": len(self.get_capabilities_index()),
         }

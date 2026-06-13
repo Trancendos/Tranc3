@@ -153,7 +153,9 @@ def fix_b614(filepath: Path, lineno: int) -> bool:
             return False
         # Simple replacement: torch.load(x) → torch.load(x, weights_only=True)
         lines[lineno - 1] = re.sub(
-            r"torch\.load\(([^)]+)\)", r"torch.load(\1, weights_only=True)", line
+            r"torch\.load\(([^)]+)\)",
+            r"torch.load(\1, weights_only=True)",
+            line,
         )
         # Handle multi-line torch.load
         if "torch.load(" in lines[lineno - 1] and ")" not in lines[lineno - 1]:
@@ -181,7 +183,9 @@ def fix_b615(filepath: Path, lineno: int) -> bool:
     if "from_pretrained(" in line and "revision" not in line:
         # Add revision="main" as default (pins to a branch at minimum)
         lines[lineno - 1] = re.sub(
-            r"from_pretrained\(([^)]+)\)", r'from_pretrained(\1, revision="main")', line
+            r"from_pretrained\(([^)]+)\)",
+            r'from_pretrained(\1, revision="main")',
+            line,
         )
         write_file(filepath, "\n".join(lines))
         return True

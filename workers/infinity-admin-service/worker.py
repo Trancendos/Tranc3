@@ -1667,6 +1667,171 @@ async def get_entity_overrides_by_type(pid: str, entity_type: str, slot: str | N
     return {"pid": pid, "entity_type": entity_type, "overrides": [dict(r) for r in rows]}
 
 
+_VALID_TIER_REFS = frozenset(
+    {
+        "lead_ai",
+        "agent_alpha",
+        "agent_beta",
+        "bot_01",
+        "bot_02",
+        "bot_03",
+        "bot_04",
+    },
+)
+
+
+@_router.patch("/admin/entities/{pid}/tier")
+async def assign_entity_tier(pid: str, body: EntityTierUpdate, request: Request):
+    """Assign display tier for an entity slot (correct mislabeled UI tiers).
+
+    Stores entity_type='tier', slot=entity_ref, override_name=str(tier).
+    Does not move code-level class hierarchy — display/governance correction only.
+    """
+    user = getattr(request.state, "user", {})
+    actor = user.get("sub", "unknown")
+
+    if body.entity_ref.startswith("prime_"):
+        pass
+    elif body.entity_ref not in _VALID_TIER_REFS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"entity_ref must be one of {_VALID_TIER_REFS} or prime_N (e.g. prime_0)",
+        )
+
+    entity = get_entity_by_pid(pid)
+    if entity is None:
+        if not _PLATFORM_ENTITIES_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="Platform entity registry not accessible from this worker",
+            )
+        raise HTTPException(status_code=404, detail=f"Entity '{pid}' not found")
+
+    original = f"tier_default_{body.entity_ref}"
+    _upsert_override(
+        pid,
+        "tier",
+        body.entity_ref,
+        original,
+        str(body.tier),
+        actor,
+    )
+
+    _log_admin_action(
+        action_type="entity_tier_assigned",
+        actor_id=actor,
+        actor_username=user.get("username"),
+        target_type="entity_tier",
+        target_id=f"{pid}:{body.entity_ref}",
+        details={
+            "entity_ref": body.entity_ref,
+            "tier": body.tier,
+            "reason": body.reason,
+        },
+    )
+
+    await sentinel.publish(
+        SentinelEvent(
+            channel=SentinelChannel.PLATFORM,
+            event_type="entity_tier_assigned",
+            source="infinity_admin",
+            payload={
+                "pid": pid,
+                "entity_ref": body.entity_ref,
+                "tier": body.tier,
+            },
+        ),
+    )
+
+    return {
+        "message": "Tier assignment saved",
+        "pid": pid,
+        "entity_ref": body.entity_ref,
+        "tier": body.tier,
+    }
+
+
+class OrchestratorRename(BaseModel):
+    new_name: str = Field(..., min_length=1, max_length=200)
+    reason: str | None = None
+
+
+@_router.get("/admin/orchestrators")
+async def list_orchestrators():
+    """Tier 1 Orchestrators — effective names from admin DB overrides."""
+    from src.entities.orchestrator_effective import get_orchestrator_display_name
+
+    orchestrators = [p for p in PRIMES.values() if p.tier == Tier.ORCHESTRATOR]
+    return {
+        "tier": 1,
+        "tier_name": Tier.ORCHESTRATOR.display_name,
+        "orchestrators": [
+            {
+                "id": p.id,
+                "name": get_orchestrator_display_name(p.id, p.name),
+                "canonical_name": p.name,
+                "pillar": p.pillar.value if p.pillar else None,
+                "description": p.description,
+            }
+            for p in orchestrators
+        ],
+        "total": len(orchestrators),
+        "note": "Rename via PATCH /admin/orchestrators/{id}; per-location primes use PATCH .../primes/{idx}",
+    }
+
+
+@_router.patch("/admin/orchestrators/{orchestrator_id}")
+async def rename_orchestrator(
+    orchestrator_id: str,
+    body: OrchestratorRename,
+    request: Request,
+):
+    """Persist Tier-1 orchestrator display name (no nomenclature.py deploy)."""
+    from src.entities.orchestrator_effective import ORCHESTRATOR_PID
+
+    prime = PRIMES.get(orchestrator_id)
+    if prime is None or prime.tier != Tier.ORCHESTRATOR:
+        raise HTTPException(status_code=404, detail="Orchestrator not found")
+
+    actor = request.headers.get("X-Admin-Actor", "admin")
+    _upsert_override(
+        ORCHESTRATOR_PID,
+        "orchestrator",
+        orchestrator_id,
+        prime.name,
+        body.new_name,
+        actor,
+    )
+    db.execute(
+        """INSERT INTO admin_actions
+           (id, action_type, actor_id, actor_username, target_type, target_id, details, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            uuid.uuid4().hex[:16],
+            "orchestrator_renamed",
+            actor,
+            actor,
+            "orchestrator",
+            orchestrator_id,
+            json.dumps(
+                {
+                    "canonical": prime.name,
+                    "new_name": body.new_name,
+                    "reason": body.reason,
+                },
+            ),
+            datetime.now(timezone.utc).isoformat(),
+        ),
+    )
+    db.commit()
+    return {
+        "ok": True,
+        "id": orchestrator_id,
+        "canonical_name": prime.name,
+        "name": body.new_name,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Stats
 # ---------------------------------------------------------------------------

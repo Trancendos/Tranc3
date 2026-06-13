@@ -221,6 +221,32 @@ class TownHall:
                 description="IT service management best practices",
                 score=0.88,
                 articles="34 practices · Service Value System",
+            ),
+        )
+        self._register_registry_frameworks()
+
+    def _register_registry_frameworks(self) -> None:
+        """Sync config/townhall/frameworks.yaml entries as draft/active policies."""
+        try:
+            from src.townhall.framework_registry import get_framework_registry
+
+            reg = get_framework_registry()
+        except Exception:
+            return
+        for entry in reg.frameworks:
+            if entry.id in self._policies:
+                continue
+            status = PolicyStatus.ACTIVE if entry.status == "active" else PolicyStatus.DRAFT
+            self.register(
+                Policy(
+                    id=entry.id,
+                    name=entry.name,
+                    framework=entry.standard,
+                    description=f"{entry.domain} · {entry.standard}",
+                    status=status,
+                    score=0.9 if status == PolicyStatus.ACTIVE else 0.5,
+                    articles=entry.domain,
+                ),
             )
         )
 

@@ -30,6 +30,8 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from src.entities.health_metadata import health_entity_block
+
 WORKER_PORT = 8018
 WORKER_NAME = "email-service"
 DB_PATH = Path(__file__).parent / "data" / "email.db"

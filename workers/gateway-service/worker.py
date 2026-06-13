@@ -63,6 +63,10 @@ from Dimensional.infinity.sentinel_station import (
     SharedSSEGenerator,
     get_sentinel_station,
 )
+from Dimensional.sanitize import sanitize_for_log
+from shared_core.path_validation import PathTraversalError, existing_file_path_str
+from shared_core.url_validation import SSRFError, validate_workflow_id
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration

@@ -529,7 +529,9 @@ async def register(user: UserRegister, _=Depends(rate_limit_check)):
     db.commit()
 
     logger.info(
-        "user_registered: username=%s role=%s", sanitize_for_log(user.username), role
+        "user_registered: username=%s role=%s",
+        sanitize_for_log(user.username),
+        role,
     )  # codeql[py/cleartext-logging]
 
     return TokenResponse(
@@ -623,7 +625,9 @@ async def login(credentials: UserLogin, _=Depends(rate_limit_check)):
     db.commit()
 
     logger.info(
-        "user_login: username=%s role=%s", sanitize_for_log(credentials.username), role
+        "user_login: username=%s role=%s",
+        sanitize_for_log(credentials.username),
+        role,
     )  # codeql[py/cleartext-logging]
 
     return TokenResponse(

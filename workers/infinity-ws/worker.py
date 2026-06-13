@@ -146,7 +146,9 @@ class ConnectionManager:
             "metadata": metadata or {},
         }
         logger.info(
-            "ws_connected: user=%s, total=%s", sanitize_for_log(user_id), self.total_connections
+            "ws_connected: user=%s, total=%s",
+            sanitize_for_log(user_id),
+            self.total_connections,
         )  # codeql[py/cleartext-logging]
         return True
 

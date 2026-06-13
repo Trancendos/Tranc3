@@ -192,7 +192,11 @@ def store_secret(key: str, value: str) -> Dict[str, Any]:
             logger.debug("openbao_client: stored '%s' via OpenBao", key)
             return {"ok": True, "backend": "openbao", "key": key}
         except Exception as exc:  # noqa: BLE001
-            logger.warning("openbao_client: OpenBao write failed for '%s': %s — using SQLite", key, exc)
+            logger.warning(
+                "openbao_client: OpenBao write failed for '%s': %s — using SQLite",
+                key,
+                exc,
+            )
 
     return _sqlite_store(key, value)
 
@@ -221,7 +225,11 @@ def get_secret(key: str) -> Dict[str, Any]:
             logger.debug("openbao_client: fetched '%s' via OpenBao", key)
             return {"ok": True, "backend": "openbao", "key": key, "value": value}
         except Exception as exc:  # noqa: BLE001
-            logger.warning("openbao_client: OpenBao read failed for '%s': %s — using SQLite", key, exc)
+            logger.warning(
+                "openbao_client: OpenBao read failed for '%s': %s — using SQLite",
+                key,
+                exc,
+            )
 
     return _sqlite_get(key)
 
@@ -247,7 +255,11 @@ def delete_secret(key: str) -> Dict[str, Any]:
             logger.debug("openbao_client: deleted '%s' via OpenBao", key)
             return {"ok": True, "backend": "openbao", "key": key}
         except Exception as exc:  # noqa: BLE001
-            logger.warning("openbao_client: OpenBao delete failed for '%s': %s — using SQLite", key, exc)
+            logger.warning(
+                "openbao_client: OpenBao delete failed for '%s': %s — using SQLite",
+                key,
+                exc,
+            )
 
     return _sqlite_delete(key)
 

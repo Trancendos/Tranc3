@@ -152,5 +152,5 @@ except Exception as e:
 
     logging.getLogger(__name__).error(f"Configuration error: {e}")
     raise RuntimeError(
-        f"Tranc3 configuration failed: {e}. Check your environment variables and .env file."
+        f"Tranc3 configuration failed: {e}. Check your environment variables and .env file.",
     ) from e

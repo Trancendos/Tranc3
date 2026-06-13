@@ -41,7 +41,6 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
-# Phase 22.4: Dimensional Services
 from Dimensional.dimensionals import (
     get_dimensional_bus,
     get_dimensional_registry,
@@ -64,6 +63,10 @@ from Dimensional.infinity.sentinel_station import (
 
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
+
+# Phase 22.4: Dimensional Services
+from Dimensional.sanitize import sanitize_for_log
+from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration

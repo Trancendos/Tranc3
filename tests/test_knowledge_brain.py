@@ -360,7 +360,11 @@ class TestWikilinkParsing:
             KBPage(id="aliased", title="Aliased Target", content="I am the aliased target.")
         )
         await brain.put_page(
-            KBPage(id="src-alias", title="Source", content="Click [[Aliased Target|here]] to read.")
+            KBPage(
+                id="src-alias",
+                title="Source",
+                content="Click [[Aliased Target|here]] to read.",
+            ),
         )
         # Should not raise
         p = await brain.get_page("src-alias")

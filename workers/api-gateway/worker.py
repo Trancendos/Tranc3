@@ -60,6 +60,25 @@ ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "")
 PAYMENTS_SERVICE_URL = os.getenv("PAYMENTS_SERVICE_URL", "")
 TRANC3_AI_SERVICE_URL = os.getenv("TRANC3_AI_SERVICE_URL", "http://localhost:8001")
 
+_REQUIRED_PRODUCTION_UPSTREAMS = {
+    "AUTH_SERVICE_URL": AUTH_SERVICE_URL,
+    "USERS_SERVICE_URL": USERS_SERVICE_URL,
+    "PRODUCTS_SERVICE_URL": PRODUCTS_SERVICE_URL,
+    "ORDERS_SERVICE_URL": ORDERS_SERVICE_URL,
+    "PAYMENTS_SERVICE_URL": PAYMENTS_SERVICE_URL,
+    "TRANC3_AI_SERVICE_URL": TRANC3_AI_SERVICE_URL,
+}
+
+if ENVIRONMENT == "production":
+    missing_upstreams = [
+        name for name, value in _REQUIRED_PRODUCTION_UPSTREAMS.items() if not value.strip()
+    ]
+    if missing_upstreams:
+        raise RuntimeError(
+            "API Gateway production startup requires upstream service URLs: "
+            + ", ".join(missing_upstreams),
+        )
+
 # ── Logger ──────────────────────────────────────────────────────
 
 logger = logging.getLogger("api-gateway")

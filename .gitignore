@@ -88,3 +88,7 @@ aeonmind/python/*.egg-info/
 # Nexus test artifacts
 bridge-*
 nexus-*
+
+# Runtime data directories (backups and test workspaces)
+data/admin_os_backups/
+data/test_admin_os_workspace/

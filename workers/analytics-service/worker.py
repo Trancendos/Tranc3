@@ -24,6 +24,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+
 WORKER_PORT = 8016
 WORKER_NAME = "analytics-service"
 DB_PATH = Path(__file__).parent / "data" / "analytics.db"
@@ -179,14 +180,8 @@ async def health():
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "event_count": event_count,
         "metric_count": metric_count,
-        "entity": {
-            "location": "The Observatory",
-            "pillar": "Knowledge",
-            "lead_ai": "Norman Hawkins",
-            "primes": ["Cornelius MacIntyre"],
-            "primary_function": "Audit Log & Monitoring Platform",
-            "layer": "supporting",
-        },
+        "archive_count": archive_count,
+        "parquet_total_bytes": parquet_total_bytes,
     }
 
 
@@ -355,10 +350,10 @@ async def summary():
         event_count = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         metric_count = conn.execute("SELECT COUNT(*) FROM metrics").fetchone()[0]
         top_events = conn.execute(
-            "SELECT event_type, COUNT(*) as c FROM events GROUP BY event_type ORDER BY c DESC LIMIT 5"
+            "SELECT event_type, COUNT(*) as c FROM events GROUP BY event_type ORDER BY c DESC LIMIT 5",
         ).fetchall()
         top_metrics = conn.execute(
-            "SELECT name, AVG(value) as avg_val FROM metrics GROUP BY name ORDER BY avg_val DESC LIMIT 5"
+            "SELECT name, AVG(value) as avg_val FROM metrics GROUP BY name ORDER BY avg_val DESC LIMIT 5",
         ).fetchall()
     return {
         "total_events": event_count,

@@ -391,7 +391,7 @@ def _make_sentinel_fn(sentinel: Any) -> Callable:
                     event_type=event_type,
                     source="worker_kit",
                     payload=payload,
-                )
+                ),
             )
         except Exception as exc:
             logger.debug("Sentinel publish error: %s", exc)

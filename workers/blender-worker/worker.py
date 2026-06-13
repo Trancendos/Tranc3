@@ -240,7 +240,7 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning(
             "Blender not found in PATH or standard locations — "
-            "all render/scene endpoints will return 503."
+            "all render/scene endpoints will return 503.",
         )
     yield
 
