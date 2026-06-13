@@ -1,7 +1,7 @@
 """Self-tuning rate limiter. Tightens on high error rates, loosens on low."""
-import time
 import threading
-from collections import defaultdict, deque
+import time
+from collections import deque
 from typing import Dict
 
 

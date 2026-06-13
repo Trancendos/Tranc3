@@ -5,9 +5,7 @@ quantum router, genetic router, meta router.
 
 from __future__ import annotations
 
-import asyncio
 import pytest
-
 
 # ── QuotaEnforcer ─────────────────────────────────────────────────────────────
 

@@ -7,10 +7,8 @@ or use daemon threads (no stop needed — process cleanup handles it).
 """
 
 import time
-import threading
-import pytest
-from src.core.mape_k import MAPEKLoop
 
+from src.core.mape_k import MAPEKLoop
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 

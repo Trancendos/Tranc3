@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
-import shutil
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -33,6 +32,7 @@ class BackupResult(NamedTuple):
 
 
 import os
+
 BACKUP_DIR = Path(os.getenv("SQLITE_BACKUP_DIR", "./backups/sqlite"))
 
 

@@ -3,13 +3,8 @@ Tests for the 10 adaptive/intelligent platform systems.
 Covers: MAPEKLoop, AdaptiveRateLimiter, WorkerIntelligence, DNAConfig,
 SmartContainer, ReactiveStream, IntelligentLogger.
 """
-import time
 import threading
-import tempfile
-from pathlib import Path
-
-import pytest
-
+import time
 
 # ── MAPEKLoop ─────────────────────────────────────────────────────────────
 
@@ -102,6 +97,7 @@ class TestMAPEKLoop:
     def test_sqlite_persistence(self, tmp_path):
         """With db_path set, cycles should be persisted."""
         import sqlite3
+
         from src.core.mape_k import MAPEKLoop
 
         db = tmp_path / "test_mapek.db"
@@ -323,7 +319,7 @@ class TestDNAConfig:
 class TestSmartContainer:
     def test_register_and_resolve_class(self):
         """Should register and resolve a simple class."""
-        from src.core.smart_container import SmartContainer, Lifetime
+        from src.core.smart_container import Lifetime, SmartContainer
 
         class MyService:
             def greet(self):
@@ -336,7 +332,7 @@ class TestSmartContainer:
 
     def test_singleton_returns_same_instance(self):
         """SINGLETON lifetime should return the same instance each time."""
-        from src.core.smart_container import SmartContainer, Lifetime
+        from src.core.smart_container import Lifetime, SmartContainer
 
         class Counter:
             count = 0
@@ -353,7 +349,7 @@ class TestSmartContainer:
 
     def test_transient_returns_new_instance(self):
         """TRANSIENT lifetime should return different instances."""
-        from src.core.smart_container import SmartContainer, Lifetime
+        from src.core.smart_container import Lifetime, SmartContainer
 
         class Widget:
             pass
@@ -366,7 +362,7 @@ class TestSmartContainer:
 
     def test_factory_registration(self):
         """Factory function should be used when provided via register_factory."""
-        from src.core.smart_container import SmartContainer, Lifetime
+        from src.core.smart_container import SmartContainer
 
         class Config:
             def __init__(self, value):
@@ -421,7 +417,7 @@ class TestSmartContainer:
 class TestReactiveStream:
     def test_subject_emit_and_subscribe(self):
         """Subject.emit should deliver values to subscriber."""
-        import importlib.util, sys
+        import importlib.util
         spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
@@ -437,7 +433,7 @@ class TestReactiveStream:
 
     def test_map_transforms_values(self):
         """map() should apply transformation to each value."""
-        import importlib.util, sys
+        import importlib.util
         spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
@@ -452,7 +448,7 @@ class TestReactiveStream:
 
     def test_filter_drops_values(self):
         """filter() should only pass values matching predicate."""
-        import importlib.util, sys
+        import importlib.util
         spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
@@ -467,7 +463,7 @@ class TestReactiveStream:
 
     def test_take_limits_emissions(self):
         """take(n) should stop after n values."""
-        import importlib.util, sys
+        import importlib.util
         spec = importlib.util.spec_from_file_location("reactive_stream", "/home/user/Tranc3/src/event_bus/reactive_stream.py")
         rs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(rs)
@@ -572,7 +568,7 @@ class TestIntelligentLogger:
 
     def test_set_context_propagates_trace_id(self):
         """set_context + get_context should propagate trace_id."""
-        from src.core.intelligent_logger import set_context, get_context
+        from src.core.intelligent_logger import get_context, set_context
 
         set_context(trace_id="trace-xyz", user_id="user-1", service_name="svc")
         ctx = get_context()
@@ -615,7 +611,7 @@ class TestIntelligentLogger:
 
     def test_context_vars_are_independent_per_thread(self):
         """Context set in one thread should not affect another."""
-        from src.core.intelligent_logger import set_context, get_context
+        from src.core.intelligent_logger import get_context, set_context
 
         results = {}
 

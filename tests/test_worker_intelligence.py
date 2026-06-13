@@ -2,10 +2,7 @@
 Tests for WorkerIntelligence — src/core/worker_intelligence.py
 """
 
-import time
-import pytest
-from src.core.worker_intelligence import WorkerIntelligence, WorkerHealthReport
-
+from src.core.worker_intelligence import WorkerHealthReport, WorkerIntelligence
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 

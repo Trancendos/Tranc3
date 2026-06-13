@@ -24,7 +24,6 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-
 WORKER_PORT = 8016
 WORKER_NAME = "analytics-service"
 DB_PATH = Path(__file__).parent / "data" / "analytics.db"

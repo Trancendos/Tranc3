@@ -2,9 +2,7 @@
 Tests for DNAConfig — src/core/dna_config.py
 """
 
-import pytest
-from src.core.dna_config import DNAConfig, Variant
-
+from src.core.dna_config import DNAConfig
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -51,7 +49,7 @@ def test_promote_best_variant():
 
     promoted = dna.promote_best()
     assert promoted == mut_id
-    cfg = dna.get_active_config()
+    dna.get_active_config()
     # Allow for exploration jitter but active_id should now be mut_id
     assert dna._active_id == mut_id
 
@@ -89,7 +87,7 @@ def test_leaderboard_sorted_by_mean_score():
 def test_deactivate_removes_from_selection():
     """Deactivated variant must not be returned as active."""
     dna = DNAConfig(auto_promote=False, exploration_fraction=0.0)
-    base_id = dna.register_base(BASE_CFG)
+    dna.register_base(BASE_CFG)
     mut_id = dna.mutate({"batch_size": 64})
     # Force active to mut_id
     dna._active_id = mut_id

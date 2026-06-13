@@ -27,9 +27,6 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from Dimensional.error_handlers import log_server_error
-from src.entities.health_metadata import health_entity_block
-
 WORKER_PORT = 8029
 WORKER_NAME = "health-aggregator"
 DB_PATH = Path(__file__).parent / "data" / "health.db"

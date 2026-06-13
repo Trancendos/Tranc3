@@ -1,15 +1,14 @@
 """
 Tests for src/event_bus/reactive_stream.py
 """
-import sys
 import os
-import threading
-import time
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 # Import directly from the module file to avoid triggering src/event_bus/__init__.py
 import importlib.util as _ilu
+
 _spec = _ilu.spec_from_file_location(
     "reactive_stream",
     os.path.join(os.path.dirname(__file__), "..", "src", "event_bus", "reactive_stream.py"),

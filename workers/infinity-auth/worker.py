@@ -46,13 +46,13 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
-from shared_core.sanitize import sanitize_for_log
 
 # Phase 22.5: Infinity Ecosystem nomenclature
 from shared_core.infinity.nomenclature import InfinityRole, Tier
 
 # Phase 22.6: Smart Adaptive Intelligence
 from shared_core.infinity.worker_integration import InfinityWorkerKit
+from shared_core.sanitize import sanitize_for_log
 
 logger = logging.getLogger("tranc3.workers.infinity-auth")
 

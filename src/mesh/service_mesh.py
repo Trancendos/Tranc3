@@ -45,13 +45,6 @@ except ImportError:
     _FluidRouter = None  # type: ignore[assignment,misc]
     _FLUID_ROUTER_AVAILABLE = False
 
-try:
-    from src.mesh.quota_enforcer import get_enforcer as _get_quota_enforcer
-    _QUOTA_ENFORCER_AVAILABLE = True
-except ImportError:
-    _get_quota_enforcer = None  # type: ignore[assignment]
-    _QUOTA_ENFORCER_AVAILABLE = False
-
 logger = logging.getLogger("tranc3.mesh.service_mesh")
 
 

@@ -2,14 +2,14 @@
 Reusable MAPE-K (Monitor-Analyze-Plan-Execute-Knowledge) loop.
 Runs in background thread, self-heals workers autonomously.
 """
+import json
+import sqlite3
+import statistics
 import threading
 import time
-import sqlite3
-import json
-import statistics
 from collections import deque
-from typing import Callable, Dict, Any, Optional, List
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
 
 class MAPEKLoop:

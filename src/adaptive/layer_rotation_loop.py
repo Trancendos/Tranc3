@@ -18,7 +18,6 @@ import time
 from src.platform.infrastructure_mode import get_infrastructure_mode
 from src.platform.layer_rotator import (
     BackendHealth,
-    PlatformLayer,
     get_layer_rotator,
     layer_rotation_enabled,
 )

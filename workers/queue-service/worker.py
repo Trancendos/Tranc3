@@ -26,9 +26,6 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import safe_error_detail
-from src.entities.health_metadata import health_entity_block
-
 WORKER_PORT = 8022
 WORKER_NAME = "queue-service"
 DB_PATH = Path(__file__).parent / "data" / "queue.db"

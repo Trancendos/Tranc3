@@ -20,9 +20,6 @@ from typing import Dict, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from shared_core.path_validation import PathTraversalError, existing_file_path_str
-from shared_core.sanitize import sanitize_for_log
-
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------

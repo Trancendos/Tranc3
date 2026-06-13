@@ -19,10 +19,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import os
 import secrets
 import socket
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -569,7 +567,7 @@ def main() -> int:
     # ── Load or create ────────────────────────────────────────────────────────
     section("Generating secrets and configuration")
     existing = load_existing_env(ENV_FILE)
-    was_new = not ENV_FILE.exists()
+    not ENV_FILE.exists()
 
     if ENV_FILE.exists() and not args.force:
         info(f"Found existing .env ({len(existing)} variables) — preserving secrets, filling blanks")
@@ -620,19 +618,19 @@ def main() -> int:
         warn("Magna Carta: submodule not cloned — run scripts/setup_external_repos.sh")
 
     print(f"\n{_GREEN}{_BOLD}✓ .env ready.{_RESET}")
-    print(f"\nNext steps:")
-    print(f"  make migrate       — apply database schema")
-    print(f"  make dev-api       — start FastAPI backend on :8000")
-    print(f"  make compliance-check — run compliance report")
+    print("\nNext steps:")
+    print("  make migrate       — apply database schema")
+    print("  make dev-api       — start FastAPI backend on :8000")
+    print("  make compliance-check — run compliance report")
     if not pg:
-        print(f"\n  Note: PostgreSQL not detected. SQLite is used for local dev.")
-        print(f"  For production, set DATABASE_URL to a real PostgreSQL instance.")
+        print("\n  Note: PostgreSQL not detected. SQLite is used for local dev.")
+        print("  For production, set DATABASE_URL to a real PostgreSQL instance.")
 
     # Audit key reminder
     import pathlib as _pl
     _key_file = _pl.Path("logs/audit/.audit_signing_key")
     if env.get("AUDIT_SIGNING_KEY") and not is_placeholder(env.get("AUDIT_SIGNING_KEY", "")):
-        ok(f"AUDIT_SIGNING_KEY written to .env — add to Forgejo secrets for CI verification")
+        ok("AUDIT_SIGNING_KEY written to .env — add to Forgejo secrets for CI verification")
     elif _key_file.exists():
         warn(
             f"AUDIT_SIGNING_KEY was generated from existing key file {_key_file}. "

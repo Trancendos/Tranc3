@@ -15,14 +15,13 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import sqlite3
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("tranc3.core.dna_config")
 

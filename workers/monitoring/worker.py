@@ -37,9 +37,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import log_server_error, safe_error_detail
-from src.database.encrypted_sqlite import connect as sqlite3_connect
-from src.entities.health_metadata import health_entity_block
+from Dimensional.error_handlers import safe_error_detail
 
 # ---------------------------------------------------------------------------
 # Configuration

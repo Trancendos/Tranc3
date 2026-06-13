@@ -38,7 +38,6 @@ from Dimensional.error_handlers import safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
 
 load_dotenv()
-from src.core.startup_validator import validate_startup
 
 # ── Fail fast on missing critical secrets ────────────────────────────────────
 _SECRET_KEY = os.getenv("SECRET_KEY")
@@ -74,6 +73,9 @@ if not _REDIS_URL:
 from auth import get_current_user, token_manager  # codeql[py/cyclic-import]
 from src.auth.db_user_manager import DBUserManager  # noqa: F401  # intentional top-level import
 from src.auth.rbac import require_permission  # noqa: F401  # RBAC guards for protected routes
+from src.compliance.ai_transparency import AITransparencyMiddleware  # noqa: F401
+from src.compliance.cab_gate import CABMiddleware  # noqa: F401
+from src.compliance.middleware import MagnaCartaMiddleware  # noqa: F401
 from src.core.advanced_model import (
     AdvancedTransformerModel,  # noqa: F401  # intentional top-level import
 )
@@ -116,9 +118,6 @@ from src.security.ip_protection import (  # noqa: F401  # intentional top-level 
     abuse_detector,
     watermarker,
 )
-from src.compliance.middleware import MagnaCartaMiddleware  # noqa: F401
-from src.compliance.cab_gate import CABMiddleware  # noqa: F401
-from src.compliance.ai_transparency import AITransparencyMiddleware  # noqa: F401
 from src.security.middleware import (  # noqa: F401  # intentional top-level import
     GovernanceMiddleware,
     RBACMiddleware,
@@ -2022,5 +2021,5 @@ async def mesh_quota() -> dict:
     try:
         from src.mesh.quota_enforcer import get_enforcer
         return get_enforcer().dashboard()
-    except Exception as exc:
-        return {"error": str(exc)}
+    except Exception:
+        return {"error": "quota dashboard unavailable"}

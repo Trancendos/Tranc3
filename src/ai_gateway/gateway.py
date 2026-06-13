@@ -203,7 +203,7 @@ class AIGateway:
                         sanitize_for_log(route.provider),
                     )
                     continue
-            except Exception:
+            except Exception:  # quota enforcer is optional; proceed without check
                 pass
 
             try:
@@ -240,7 +240,7 @@ class AIGateway:
                 try:
                     from src.mesh.quota_enforcer import get_enforcer
                     get_enforcer().record_request(route.provider, tokens=float(response.tokens_total))
-                except Exception:
+                except Exception:  # quota tracking is best-effort; don't fail the request
                     pass
 
                 return response

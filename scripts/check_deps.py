@@ -23,7 +23,7 @@ def check(name: str, critical: bool = True):
 @check("torch", critical=True)
 def _torch():
     import torch
-    x = torch.randn(2, 2) @ torch.randn(2, 2)
+    torch.randn(2, 2) @ torch.randn(2, 2)
     return f"v{torch.__version__} cuda={torch.cuda.is_available()}"
 
 
@@ -42,8 +42,9 @@ def _ncps():
 
 @check("deap", critical=True)
 def _deap():
-    from deap import base, creator, tools
     import random
+
+    from deap import base, creator, tools
     creator.create("_TestFit", base.Fitness, weights=(-1.0,))
     creator.create("_TestInd", list, fitness=creator.FitnessMin if hasattr(creator, "FitnessMin") else creator._TestFit)
     tb = base.Toolbox()
@@ -56,8 +57,8 @@ def _deap():
 
 @check("pyswarms", critical=True)
 def _pyswarms():
-    import pyswarms as ps
     import numpy as np
+    import pyswarms as ps
     opt = ps.single.GlobalBestPSO(
         n_particles=5, dimensions=3,
         options={"c1": 0.5, "c2": 0.3, "w": 0.9}
@@ -68,9 +69,10 @@ def _pyswarms():
 
 @check("PersonalityLNN (integrated)", critical=True)
 def _personality_lnn():
-    import sys, os
+    import os
+    import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-    from src.personality.lnn import PersonalityLNN, LNNInput, _USING_LNN
+    from src.personality.lnn import _USING_LNN, LNNInput, PersonalityLNN
     lnn = PersonalityLNN()
     out = lnn.step(LNNInput(0.5, 0.8, 0.3, 0.5))
     mode = "CfC" if _USING_LNN else "EMA"
@@ -79,7 +81,7 @@ def _personality_lnn():
 
 @check("qiskit (Think Tank)", critical=False)
 def _qiskit():
-    from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+    from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
     from qiskit import transpile as qiskit_transpile
     from qiskit.circuit.library import QFT
     from qiskit_aer import AerSimulator
@@ -98,10 +100,12 @@ def _qiskit():
 
 @check("QuantumOptimizationEngine (integrated)", critical=False)
 def _quantum_engine():
-    import sys, os
+    import os
+    import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-    from src.quantum.quantum_engine import QuantumOptimizationEngine
     import numpy as np
+
+    from src.quantum.quantum_engine import QuantumOptimizationEngine
     engine = QuantumOptimizationEngine(num_qubits=4)
     info = engine.get_quantum_state_info()
     params = np.random.rand(12)
@@ -112,14 +116,18 @@ def _quantum_engine():
 
 @check("GeneticOptimizer (integrated)", critical=True)
 def _genetic_optimizer():
-    import sys, os
+    import os
+    import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     from src.nanoservices.genetic_optimizer.genetic_optimizer import (
-        GeneticOptimizer, GeneSpec, Objective, ObjectiveType
+        GeneSpec,
+        GeneticOptimizer,
+        Objective,
+        ObjectiveType,
     )
     specs = [GeneSpec("lr", 0.0001, 0.1), GeneSpec("batch", 8.0, 128.0)]
     objs = [Objective("latency", ObjectiveType.MINIMIZE)]
-    go = GeneticOptimizer(specs, objs)
+    GeneticOptimizer(specs, objs)
     return "GeneticOptimizer ready"
 
 

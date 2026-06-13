@@ -16,11 +16,10 @@ Zero-cost: stdlib only. No network I/O.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import random
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Optional
 
 logger = logging.getLogger("tranc3.mesh.nano_mesh")

@@ -10,9 +10,9 @@ from __future__ import annotations
 import logging
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -54,7 +54,7 @@ def _check_hipaa_controls() -> list[str]:
     """Return list of missing HIPAA controls."""
     missing = []
     for control in _REQUIRED_HIPAA_CONTROLS:
-        if not os.getenv(control, "").lower() in ("true", "1", "yes"):
+        if os.getenv(control, "").lower() not in ("true", "1", "yes"):
             missing.append(control)
     return missing
 

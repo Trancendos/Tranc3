@@ -24,7 +24,7 @@ from __future__ import annotations
 import logging
 import random
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Optional
 
 logger = logging.getLogger("tranc3.mesh.meta_router")
@@ -132,27 +132,27 @@ class MetaRouter:
             from src.mesh.quantum_router import get_quantum_router
             self._quantum_router = get_quantum_router()
             self._advisors["quantum"] = RouterAdvisor("quantum", weight=1.0)
-        except Exception:
+        except Exception:  # sub-router is optional; degraded gracefully
             pass
 
         try:
             from src.mesh.genetic_router import get_genetic_router
             self._genetic_router = get_genetic_router()
             self._advisors["genetic"] = RouterAdvisor("genetic", weight=1.0)
-        except Exception:
+        except Exception:  # sub-router is optional; degraded gracefully
             pass
 
         try:
             from src.inference.thompson_sampler import get_sampler
             self._thompson_sampler = get_sampler()
             self._advisors["thompson"] = RouterAdvisor("thompson", weight=1.2)
-        except Exception:
+        except Exception:  # sub-router is optional; degraded gracefully
             pass
 
         try:
             from src.mesh.quota_enforcer import get_enforcer
             self._quota_enforcer = get_enforcer()
-        except Exception:
+        except Exception:  # quota enforcer is optional; runs without hard stops
             pass
 
     def register_route(self, name: str, canary_pct: float = 0.0) -> None:
@@ -336,7 +336,7 @@ class DimensionalRouter:
                 if latency <= self.NANO_LATENCY_BUDGET_MS:
                     return result
                 # Nano was too slow — fall through to micro
-            except Exception:
+            except Exception:  # nano layer unavailable; fall through to micro
                 pass
 
         # Micro: local worker
@@ -348,7 +348,7 @@ class DimensionalRouter:
                     resp = await client.post(url, json={"capability": capability, "args": list(args), "kwargs": kwargs})
                     if resp.status_code == 200:
                         return resp.json()
-            except Exception:
+            except Exception:  # micro layer unavailable; fall through to macro
                 pass
 
         # Macro: cloud provider via meta-router

@@ -11,12 +11,11 @@ Zero-cost: Pure Python stdlib only.
 from __future__ import annotations
 
 import logging
-import math
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass, field
-from typing import Any, Callable, Deque, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Deque, Dict, List, Tuple
 
 logger = logging.getLogger("tranc3.core.worker_intelligence")
 
@@ -296,7 +295,7 @@ class WorkerIntelligence:
         ys = [p[1] for p in points]
         mx = sum(xs) / n
         my = sum(ys) / n
-        num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+        num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
         den = sum((x - mx) ** 2 for x in xs)
         return num / den if den != 0 else 0.0
 

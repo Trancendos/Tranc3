@@ -29,11 +29,6 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import safe_error_detail
-from Dimensional.sanitize import sanitize_for_log
-from shared_core.url_validation import SSRFError, validate_webhook_url
-from src.entities.health_metadata import health_entity_block
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------

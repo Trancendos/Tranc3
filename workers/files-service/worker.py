@@ -22,9 +22,6 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from Dimensional.error_handlers import safe_error_detail
-from src.entities.health_metadata import health_entity_block
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------

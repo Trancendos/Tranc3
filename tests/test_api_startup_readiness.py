@@ -1,7 +1,6 @@
 import ast
 from pathlib import Path
 
-
 API_PATH = Path(__file__).resolve().parents[1] / "api.py"
 API_TREE = ast.parse(API_PATH.read_text())
 

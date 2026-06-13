@@ -19,13 +19,12 @@ from __future__ import annotations
 import enum
 import logging
 import os
-import signal
 import subprocess
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("tranc3.core.cell_orchestrator")
 
@@ -305,7 +304,7 @@ class CellOrchestrator:
             self._stop_event.wait(timeout=self._monitor_interval_s)
 
     def _check_cells(self) -> None:
-        now = time.monotonic()
+        time.monotonic()
         with self._lock:
             cells = list(self._cells.values())
 
