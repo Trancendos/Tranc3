@@ -1950,3 +1950,77 @@ async def eval_score(
         token_f1=_tf1(body.hypothesis, body.reference)["f1"],
         hallucination=_hall(body.hypothesis, body.context or body.reference),
     )
+
+
+# ── Mesh + Routing Intelligence Endpoints ─────────────────────────────────────
+
+
+@app.get(
+    "/mesh/stats",
+    tags=["mesh"],
+    summary="Service mesh + routing statistics",
+)
+async def mesh_stats() -> dict:
+    """
+    Returns aggregated stats from all routing engines:
+    quantum, genetic, meta, fluid, quota enforcer, and zero-cost tracker.
+    """
+    out: dict = {}
+
+    try:
+        from src.mesh.meta_router import get_meta_router
+        out["meta_router"] = get_meta_router().stats
+    except Exception as exc:
+        out["meta_router"] = {"error": str(exc)}
+
+    try:
+        from src.mesh.quantum_router import get_quantum_router
+        out["quantum_router"] = get_quantum_router().stats
+    except Exception as exc:
+        out["quantum_router"] = {"error": str(exc)}
+
+    try:
+        from src.mesh.genetic_router import get_genetic_router
+        out["genetic_router"] = get_genetic_router().stats
+    except Exception as exc:
+        out["genetic_router"] = {"error": str(exc)}
+
+    try:
+        from src.mesh.quota_enforcer import get_enforcer
+        out["quota_enforcer"] = get_enforcer().dashboard()
+    except Exception as exc:
+        out["quota_enforcer"] = {"error": str(exc)}
+
+    try:
+        from src.monitoring.zero_cost_tracker import tracker
+        out["zero_cost_tracker"] = tracker.get_summary()
+    except Exception as exc:
+        out["zero_cost_tracker"] = {"error": str(exc)}
+
+    try:
+        from src.mesh.nano_mesh import get_nano_mesh
+        out["nano_mesh"] = get_nano_mesh().stats
+    except Exception as exc:
+        out["nano_mesh"] = {"error": str(exc)}
+
+    try:
+        from src.fluidic.fluid_router import fluid_router
+        out["fluid_router"] = fluid_router.stats
+    except Exception as exc:
+        out["fluid_router"] = {"error": str(exc)}
+
+    return out
+
+
+@app.get(
+    "/mesh/quota",
+    tags=["mesh"],
+    summary="Free-tier quota dashboard for all AI providers",
+)
+async def mesh_quota() -> dict:
+    """Returns quota usage and availability for all 8 free AI providers."""
+    try:
+        from src.mesh.quota_enforcer import get_enforcer
+        return get_enforcer().dashboard()
+    except Exception as exc:
+        return {"error": str(exc)}
