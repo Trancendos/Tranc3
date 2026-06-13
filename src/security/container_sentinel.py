@@ -131,7 +131,10 @@ class ContainerSentinel:
                         if path_str not in seen_paths:
                             seen_paths.add(path_str)
                             a = self._alert(
-                                "suid_file", path_str, "CRITICAL", f"SUID/SGID bit set on {path_str}"
+                                "suid_file",
+                                path_str,
+                                "CRITICAL",
+                                f"SUID/SGID bit set on {path_str}",
                             )
                             new_alerts.append(a)
             except (PermissionError, OSError):
