@@ -1,0 +1,129 @@
+global:
+  resolve_timeout: 5m
+  # Slack webhook — set ALERTMANAGER_SLACK_WEBHOOK env var and inject via envsubst or docker secret
+  slack_api_url: "${ALERTMANAGER_SLACK_WEBHOOK}"
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default'
+
+  routes:
+    # Critical / P0 alerts → immediate Slack + optional PagerDuty
+    - match:
+        severity: critical
+      receiver: 'critical'
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # High severity → Slack only
+    - match:
+        severity: high
+      receiver: 'high'
+      repeat_interval: 2h
+
+    # Warning / info → digest channel
+    - match_re:
+        severity: warning|info
+      receiver: 'digest'
+      group_wait: 5m
+      group_interval: 10m
+      repeat_interval: 12h
+
+    # Security alerts → dedicated channel
+    - match:
+        category: security
+      receiver: 'security'
+      group_wait: 10s
+      repeat_interval: 30m
+
+receivers:
+  - name: 'default'
+    webhook_configs:
+      - url: 'http://monitoring:8007/alerts'
+        send_resolved: true
+        http_config:
+          timeout: 10s
+
+  - name: 'critical'
+    slack_configs:
+      - channel: '#tranc3-critical'
+        send_resolved: true
+        title: '🚨 [{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          *Service:* {{ .Labels.service }}
+          *Since:* {{ .StartsAt | since }}
+          {{ end }}
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        icon_emoji: ':rotating_light:'
+    webhook_configs:
+      - url: 'http://monitoring:8007/alerts'
+        send_resolved: true
+
+  - name: 'high'
+    slack_configs:
+      - channel: '#tranc3-alerts'
+        send_resolved: true
+        title: '⚠️ [{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Service:* {{ .Labels.service }}
+          {{ end }}
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+    webhook_configs:
+      - url: 'http://monitoring:8007/alerts'
+        send_resolved: true
+
+  - name: 'digest'
+    slack_configs:
+      - channel: '#tranc3-digest'
+        send_resolved: false
+        title: 'ℹ️ Tranc3 Alert Digest'
+        text: |
+          {{ range .Alerts }}• {{ .Labels.alertname }} — {{ .Annotations.summary }}
+          {{ end }}
+    webhook_configs:
+      - url: 'http://monitoring:8007/alerts'
+        send_resolved: true
+
+  - name: 'security'
+    slack_configs:
+      - channel: '#tranc3-security'
+        send_resolved: true
+        title: '🔒 [SECURITY] {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Service:* {{ .Labels.service }}
+          {{ end }}
+        color: 'danger'
+        icon_emoji: ':lock:'
+    webhook_configs:
+      - url: 'http://monitoring:8007/alerts'
+        send_resolved: true
+
+inhibit_rules:
+  # If a service is completely down (critical), suppress its warning-level alerts
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']
+
+  # Suppress all alerts for a service if the entire platform is down
+  - source_match:
+      alertname: 'TranC3PlatformDown'
+    target_match_re:
+      severity: '.+'
+    equal: ['cluster']
