@@ -1,23 +1,12 @@
 # src/quantum/quantum_core.py
-from __future__ import annotations
 
 import logging
 from typing import Dict, List
 
 import numpy as np
-
-try:
-    import torch
-    import torch.nn as nn
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch
+import torch.nn as nn
 from qiskit import QuantumCircuit
-from qiskit import transpile as qiskit_transpile
 from qiskit.circuit.library import QFT
 from qiskit_aer import AerSimulator
 
@@ -35,10 +24,7 @@ class NeuromorphicInterface:
         self.synaptic_plasticity = config.get("plasticity", "STDP")
 
     def create_spiking_network(
-        self,
-        input_dim: int,
-        hidden_layers: List[int],
-        output_dim: int,
+        self, input_dim: int, hidden_layers: List[int], output_dim: int
     ) -> nn.ModuleList:
         class SpikingNeuron(nn.Module):
             def __init__(self, input_size, output_size, tau=10.0):
@@ -79,13 +65,11 @@ class QuantumNeuralCore:
         try:
             self.backend = AerSimulator(method="statevector")
             logger.info(
-                "QuantumNeuralCore initialised: %s qubits",
-                sanitize_for_log(self.num_qubits),
+                "QuantumNeuralCore initialised: %s qubits", sanitize_for_log(self.num_qubits)
             )
         except Exception as e:
             logger.warning(
-                "AerSimulator init failed: %s — falling back to classical",
-                sanitize_for_log(e),
+                "AerSimulator init failed: %s — falling back to classical", sanitize_for_log(e)
             )
             self.backend = None
 
@@ -115,10 +99,10 @@ class QuantumNeuralCore:
                 qc.ry(float(w) * np.pi, i)
             for i in range(n - 1):
                 qc.cx(i, i + 1)
-            qc.append(QFT(n, do_swaps=True).decompose(), range(n))
+            qc.append(QFT(n), range(n))
             qc.measure_all()
 
-            job = self.backend.run(qiskit_transpile(qc, self.backend), shots=512)
+            job = self.backend.run(qc, shots=512)
             counts = job.result().get_counts()
 
             # Map counts back to attention weights over input shape
@@ -132,8 +116,7 @@ class QuantumNeuralCore:
 
         except Exception as e:
             logger.warning(
-                "Quantum attention failed: %s — using classical fallback",
-                sanitize_for_log(e),
+                "Quantum attention failed: %s — using classical fallback", sanitize_for_log(e)
             )
             return self._classical_attention_fallback(input_state)
 
@@ -150,7 +133,7 @@ class QuantumNeuralCore:
             qc = QuantumCircuit(8)
             qc.h(range(8))
             qc.measure_all()
-            job = self.backend.run(qiskit_transpile(qc, self.backend), shots=1)
+            job = self.backend.run(qc, shots=1)
             counts = job.result().get_counts()
             bits = list(counts.keys())[0].replace(" ", "")
             return hex(int(bits, 2))[2:].zfill(2)
@@ -158,38 +141,6 @@ class QuantumNeuralCore:
             import secrets
 
             return secrets.token_hex(32)
-
-    def _emit_inference_event(
-        self,
-        prompt: str,
-        response: str,
-        model: str,
-        provider: str,
-        *,
-        failed: bool = False,
-    ) -> None:
-        """Emit an AI_INFERENCE_COMPLETE or AI_INFERENCE_FAILED event to the platform EventBus."""
-        try:
-            from src.event_bus import PlatformEventType, get_event_bus  # noqa: PLC0415
-
-            bus = get_event_bus()
-            event_type = (
-                PlatformEventType.AI_INFERENCE_FAILED
-                if failed
-                else PlatformEventType.AI_INFERENCE_COMPLETE
-            )
-            bus.emit_async(
-                event_type=event_type,
-                data={
-                    "prompt": prompt[:500],
-                    "response": response[:2000],
-                    "model": model,
-                    "provider": provider,
-                },
-                source="think-tank",
-            )
-        except Exception as exc:  # nosec B110
-            logger.debug("quantum_core: emit_inference_event failed: %s", exc)
 
     def get_state_info(self) -> Dict:
         return {

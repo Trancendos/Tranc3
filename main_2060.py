@@ -46,8 +46,7 @@ class TRANC3_2060:
                 return yaml.safe_load(f)
         except FileNotFoundError:
             logger.warning(
-                "Config not found at %s, using defaults",
-                sanitize_for_log(config_path),
+                "Config not found at %s, using defaults", sanitize_for_log(config_path)
             )  # codeql[py/cleartext-logging]
             return {
                 "quantum": {"num_qubits": 16},
@@ -76,8 +75,7 @@ class TRANC3_2060:
         encoded_input = self.quantum_encode(input_prompt)
 
         consciousness_state = self.consciousness.simulate_consciousness_stream(
-            encoded_input,
-            time_steps=1000,
+            encoded_input, time_steps=1000
         )
 
         phi = consciousness_state["average_phi"]
@@ -94,7 +92,7 @@ class TRANC3_2060:
                 "thought": thought,
                 "consciousness": consciousness_state,
                 "timestamp": asyncio.get_event_loop().time(),
-            },
+            }
         )
 
         return thought
@@ -109,21 +107,17 @@ class TRANC3_2060:
                 "input": input_data,
                 "attention": attention_state,
                 "context": global_state,
-            },
+            }
         )
 
         meta_results = self.consciousness.metacognition.self_monitor(
-            swarm_result["result"],
-            global_state,
+            swarm_result["result"], global_state
         )
 
         relevant_memories = self.memory.parallel_search(input_data)
 
         return self._synthesize_response(
-            swarm_result,
-            meta_results,
-            relevant_memories,
-            global_state,
+            swarm_result, meta_results, relevant_memories, global_state
         )
 
     async def _reactive_processing(self, input_data: torch.Tensor) -> Dict:
@@ -168,8 +162,7 @@ class TRANC3_2060:
             thought = await self.think_abstract(random_thought_seed)
 
             self_eval = self.consciousness.metacognition.self_monitor(
-                thought["internal_state"],
-                thought["global_workspace"],
+                thought["internal_state"], thought["global_workspace"]
             )
 
             if self_eval["self_assessment"]["uncertainty"] > 0.5:

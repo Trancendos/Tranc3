@@ -14,7 +14,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -23,11 +22,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import httpx
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8021
 WORKER_NAME = "cron-service"
@@ -132,10 +129,7 @@ async def _execute_job(job: dict) -> None:
             payload = json.loads(job["payload"] or "{}")
             async with httpx.AsyncClient(timeout=30) as client:
                 resp = await client.request(
-                    job["method"],
-                    job["url"],
-                    json=payload,
-                    headers=headers,
+                    job["method"], job["url"], json=payload, headers=headers
                 )
             response_body = resp.text[:500]
             if resp.status_code >= 400:
@@ -233,66 +227,41 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
     with get_conn() as conn:
         total = conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
         active = conn.execute("SELECT COUNT(*) FROM jobs WHERE enabled=1").fetchone()[0]
     return {
-        "entity": health_entity_block(8021, "cron-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "total_jobs": total,
         "active_jobs": active,
+        "entity": {
+            "location": "ChronosSphere / ArcStream",
+            "pillar": "DevOps",
+            "lead_ai": "Chronos",
+            "primes": ["Trancendos"],
+            "primary_function": "Task, Time & Scheduling Management",
+        },
     }
 
 
-@_router.get("/jobs")
+@app.get("/jobs")
 async def list_jobs(enabled: Optional[bool] = None):
     with get_conn() as conn:
         if enabled is not None:
             rows = conn.execute(
-                "SELECT * FROM jobs WHERE enabled = ? ORDER BY name",
-                (int(enabled),),
+                "SELECT * FROM jobs WHERE enabled = ? ORDER BY name", (int(enabled),)
             ).fetchall()
         else:
             rows = conn.execute("SELECT * FROM jobs ORDER BY name").fetchall()
     return {"jobs": [dict(r) for r in rows]}
 
 
-@_router.post("/jobs", status_code=201)
+@app.post("/jobs", status_code=201)
 async def create_job(req: JobCreate):
     import uuid
 
@@ -319,7 +288,7 @@ async def create_job(req: JobCreate):
     return {"id": job_id, "name": req.name, "schedule": req.schedule}
 
 
-@_router.get("/jobs/{job_id}")
+@app.get("/jobs/{job_id}")
 async def get_job(job_id: str):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
@@ -328,7 +297,7 @@ async def get_job(job_id: str):
     return dict(row)
 
 
-@_router.patch("/jobs/{job_id}")
+@app.patch("/jobs/{job_id}")
 async def update_job(job_id: str, req: JobUpdate):
     with get_conn() as conn:
         if not conn.execute("SELECT id FROM jobs WHERE id = ?", (job_id,)).fetchone():
@@ -347,7 +316,7 @@ async def update_job(job_id: str, req: JobUpdate):
     return {"updated": job_id}
 
 
-@_router.delete("/jobs/{job_id}")
+@app.delete("/jobs/{job_id}")
 async def delete_job(job_id: str):
     with get_conn() as conn:
         if not conn.execute("SELECT id FROM jobs WHERE id = ?", (job_id,)).fetchone():
@@ -358,7 +327,7 @@ async def delete_job(job_id: str):
     return {"deleted": job_id}
 
 
-@_router.post("/jobs/{job_id}/trigger")
+@app.post("/jobs/{job_id}/trigger")
 async def trigger_job(job_id: str):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
@@ -368,7 +337,7 @@ async def trigger_job(job_id: str):
     return {"triggered": job_id, "message": "Job queued for immediate execution"}
 
 
-@_router.get("/jobs/{job_id}/runs")
+@app.get("/jobs/{job_id}/runs")
 async def job_runs(job_id: str, limit: int = Query(20, le=200)):
     with get_conn() as conn:
         if not conn.execute("SELECT id FROM jobs WHERE id = ?", (job_id,)).fetchone():
@@ -378,9 +347,6 @@ async def job_runs(job_id: str, limit: int = Query(20, le=200)):
             (job_id, limit),
         ).fetchall()
     return {"job_id": job_id, "runs": [dict(r) for r in rows]}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

@@ -227,7 +227,7 @@ class TestAIGatewayRouting:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"ollama": ollama, "offline": offline},
-            ),
+            )
         )
         request = AIRequest(prompt="Hello")
         tenant_config = TenantAIConfig(
@@ -249,7 +249,7 @@ class TestAIGatewayRouting:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"ollama": failing, "openrouter": working},
-            ),
+            )
         )
         request = AIRequest(prompt="Hello")
         tenant_config = TenantAIConfig(
@@ -273,7 +273,7 @@ class TestAIGatewayRouting:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"ollama": failing1, "openrouter": failing2, "offline": offline},
-            ),
+            )
         )
         request = AIRequest(prompt="Hello")
         tenant_config = TenantAIConfig(
@@ -306,7 +306,7 @@ class TestAIGatewayRouting:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"ollama": ollama},
-            ),
+            )
         )
         request = AIRequest(prompt="Hello")
         # DEFAULT_TENANT_CONFIG has ollama at priority 0
@@ -322,7 +322,7 @@ class TestAIGatewayRouting:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"ollama": failing, "openrouter": working},
-            ),
+            )
         )
         # First call marks ollama as unhealthy
         request = AIRequest(prompt="Hello")
@@ -356,7 +356,7 @@ class TestAIGatewayCaching:
             config=AIGatewayConfig(
                 providers={"mock": provider},
                 cache_size=100,
-            ),
+            )
         )
 
         tenant_config = TenantAIConfig(
@@ -381,7 +381,7 @@ class TestAIGatewayCaching:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"mock": provider},
-            ),
+            )
         )
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -409,7 +409,7 @@ class TestAIGatewayTokenBudget:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"mock": provider},
-            ),
+            )
         )
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -429,7 +429,7 @@ class TestAIGatewayTokenBudget:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"mock": provider},
-            ),
+            )
         )
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -485,7 +485,7 @@ class TestAIGatewayMetrics:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"mock": provider},
-            ),
+            )
         )
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -503,7 +503,7 @@ class TestAIGatewayMetrics:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"mock": provider},
-            ),
+            )
         )
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -522,7 +522,7 @@ class TestAIGatewayMetrics:
         gateway = AIGateway(
             config=AIGatewayConfig(
                 providers={"ollama": failing, "openrouter": working},
-            ),
+            )
         )
         tenant_config = TenantAIConfig(
             tenant_id="test",
@@ -599,7 +599,7 @@ class TestAIGatewayTypes:
             messages=[
                 {"role": "system", "content": "You are helpful."},
                 {"role": "user", "content": "Hello"},
-            ],
+            ]
         )
         assert len(req.messages) == 2
 

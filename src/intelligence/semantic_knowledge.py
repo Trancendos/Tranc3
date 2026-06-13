@@ -652,7 +652,7 @@ class SemanticKnowledgeGraph:
                         nodes=nodes_matched,
                         edges=edges_ok,
                         score=score,
-                    ),
+                    )
                 )
                 return
             var = var_names[idx]
@@ -687,7 +687,7 @@ class SemanticKnowledgeGraph:
                     "fingerprint": n.fingerprint,
                     "created_at": n.created_at,
                     "updated_at": n.updated_at,
-                },
+                }
             )
         edges = []
         for e in self._edges.values():
@@ -701,7 +701,7 @@ class SemanticKnowledgeGraph:
                     "provenance": e.provenance,
                     "attributes": e.attributes,
                     "created_at": e.created_at,
-                },
+                }
             )
         return {
             "nodes": nodes,

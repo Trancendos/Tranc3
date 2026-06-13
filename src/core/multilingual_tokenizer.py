@@ -1,37 +1,14 @@
 # src/core/multilingual_tokenizer.py
 # TRANC3 Full Multilingual Engine
-from __future__ import annotations
 
 import logging
 from typing import Dict, List
 
+import langdetect
+import torch
+from transformers import AutoTokenizer
+
 from Dimensional.sanitize import sanitize_for_log
-
-try:
-    import langdetect as langdetect
-
-    _LANGDETECT_AVAILABLE = True
-except ImportError:
-    langdetect = None  # type: ignore[assignment]
-    _LANGDETECT_AVAILABLE = False
-
-try:
-    import torch
-
-    _TORCH_AVAILABLE = True
-except ImportError:
-    import types as _types
-
-    torch = _types.SimpleNamespace()  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-
-try:
-    from transformers import AutoTokenizer
-
-    _TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    AutoTokenizer = None  # type: ignore[assignment]
-    _TRANSFORMERS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +85,7 @@ class MultilingualTokenizer:
         model_name = getattr(config, "tokenizer_model", "bert-base-multilingual-cased")
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(  # nosec B615 — revision pinning via cache_dir; model pinned in config
-                model_name,
-                cache_dir=self.cache_dir,
+                model_name, cache_dir=self.cache_dir
             )
             logger.info("Tokenizer loaded: %s", sanitize_for_log(model_name))
         except Exception as e:

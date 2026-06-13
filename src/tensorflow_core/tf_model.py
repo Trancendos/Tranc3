@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 def TFAvailable() -> bool:
     """Return True if TensorFlow can be imported in this environment."""
     try:
+        import tensorflow as _tf  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -32,7 +34,7 @@ def _get_tf() -> Any:
         return tf
     except ImportError as exc:
         raise ImportError(
-            "TensorFlow is not installed.  Install it with: pip install tensorflow",
+            "TensorFlow is not installed.  Install it with: pip install tensorflow"
         ) from exc
 
 
@@ -128,9 +130,7 @@ class TFSequenceClassifier:
             x = tf.keras.layers.Dense(units, activation="relu", name=f"dense_{i}")(x)
 
         outputs = tf.keras.layers.Dense(
-            self.config.output_dim,
-            activation="softmax",
-            name="output",
+            self.config.output_dim, activation="softmax", name="output"
         )(x)
 
         self.model = tf.keras.Model(inputs=inputs, outputs=outputs, name=self.config.name)
@@ -185,8 +185,6 @@ class TFSequenceClassifier:
         """
         if self.model is None:
             self.build_model()
-        if self.model is None or self._optimizer is None:
-            return {"loss": float("nan"), "accuracy": 0.0}
 
         try:
             tf = _get_tf()
@@ -199,7 +197,7 @@ class TFSequenceClassifier:
 
             grads = tape.gradient(loss, self.model.trainable_variables)
             self._optimizer.apply_gradients(
-                zip(grads, self.model.trainable_variables, strict=False),
+                zip(grads, self.model.trainable_variables, strict=False)
             )
 
             # Compute batch accuracy
@@ -273,8 +271,7 @@ class TFReinforcementAgent:
         self.target_network.set_weights(self.q_network.get_weights())
 
         self._optimizer = tf.keras.optimizers.Adam(
-            learning_rate=self.config.learning_rate,
-            clipnorm=10.0,
+            learning_rate=self.config.learning_rate, clipnorm=10.0
         )
         self._loss_fn = tf.keras.losses.Huber()
 
@@ -330,8 +327,6 @@ class TFReinforcementAgent:
         """
         if self.q_network is None:
             self.build_q_network()
-        if self.q_network is None or self.target_network is None or self._optimizer is None:
-            return {"loss": float("nan"), "mean_q": 0.0}
 
         try:
             tf = _get_tf()
@@ -359,7 +354,7 @@ class TFReinforcementAgent:
 
             grads = tape.gradient(loss, self.q_network.trainable_variables)
             self._optimizer.apply_gradients(
-                zip(grads, self.q_network.trainable_variables, strict=False),
+                zip(grads, self.q_network.trainable_variables, strict=False)
             )
 
             # Soft-update target network: θ_target = τ·θ + (1-τ)·θ_target

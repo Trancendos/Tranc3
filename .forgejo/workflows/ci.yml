@@ -22,21 +22,12 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install uv (fast Python package manager)
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          export PATH="$HOME/.local/bin:$PATH"
-          uv --version
-
       - name: Install dependencies
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv pip install --system -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Lint (ruff)
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv pip install --system ruff --quiet
+          pip install ruff --quiet
           ruff check src/ api.py --select E,F,W --ignore E501 || true
 
       - name: Create logs dir
@@ -46,24 +37,6 @@ jobs:
         run: python -m pytest tests/test_smoke.py -v --tb=short -q
         env:
           SECRET_KEY: ci-test-secret-not-for-prod
-          JWT_SECRET: ci-test-jwt-secret-not-for-prod
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
-          ENVIRONMENT: test
-
-      - name: Production gate (fast)
-        run: |
-          python -m pytest \
-            tests/test_knowledge_brain.py \
-            tests/test_entity_effective.py \
-            tests/test_health_metadata.py \
-            tests/test_canonical_routes.py \
-            -q --tb=line
-        env:
-          SECRET_KEY: ci-test-secret-not-for-prod
-          JWT_SECRET: ci-test-jwt-secret-not-for-prod
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
           ENVIRONMENT: test
 
       - name: MCP / Spark import check
@@ -76,9 +49,6 @@ jobs:
           "
         env:
           SECRET_KEY: ci-test-secret-not-for-prod
-          JWT_SECRET: ci-test-jwt-secret-not-for-prod
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
 
       - name: Router import check
         run: |
@@ -106,9 +76,6 @@ jobs:
           "
         env:
           SECRET_KEY: ci-test-secret-not-for-prod
-          JWT_SECRET: ci-test-jwt-secret-not-for-prod
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
 
   # ─────────────────────────────────────────────────────────────────────────
   # Full suite — all test categories
@@ -126,16 +93,8 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install uv (fast Python package manager)
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          export PATH="$HOME/.local/bin:$PATH"
-          uv --version
-
       - name: Install dependencies
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv pip install --system -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Create logs dir
         run: mkdir -p logs
@@ -148,10 +107,9 @@ jobs:
             --junitxml=logs/junit.xml
         env:
           SECRET_KEY: ci-test-secret-not-for-prod
-          JWT_SECRET: ci-test-jwt-secret-not-for-prod
-          DATABASE_URL: sqlite:///./test.db
-          REDIS_URL: redis://localhost:6379/0
           ENVIRONMENT: test
+          REDIS_URL: ""
+          DATABASE_URL: ""
 
       - name: Upload test results
         if: always()
@@ -185,16 +143,8 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install uv (fast Python package manager)
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          export PATH="$HOME/.local/bin:$PATH"
-          uv --version
-
       - name: Install base worker deps
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv pip install --system fastapi>=0.110.0 uvicorn>=0.29.0 pydantic>=2.0.0 httpx>=0.27.0 python-multipart>=0.0.9
+        run: pip install fastapi>=0.110.0 uvicorn>=0.29.0 pydantic>=2.0.0 httpx>=0.27.0 python-multipart>=0.0.9
 
       - name: Validate all worker modules parse cleanly
         run: |

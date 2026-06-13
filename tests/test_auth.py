@@ -179,7 +179,7 @@ class TestZeroTrustMiddleware:
             {
                 "X-Client-IP": "10.0.0.1",
                 "X-Forwarded-For": "10.0.0.2",
-            },
+            }
         )
         assert ctx.ip_address == "10.0.0.1"
 
@@ -196,7 +196,7 @@ class TestZeroTrustMiddleware:
             {
                 "X-Device-Posture": "healthy",
                 "X-MFA-Verified": "true",
-            },
+            }
         )
         assert ctx.risk_score == 0
 
@@ -235,7 +235,7 @@ class TestZeroTrustMiddleware:
             ZeroTrustOptions(
                 mfa_routes=["/admin"],
                 mfa_bypass_for_healthy=False,
-            ),
+            )
         )
         ctx = ZeroTrustContext(mfa_verified=False)
         result = mw.evaluate(ctx, "/admin")
@@ -252,7 +252,7 @@ class TestZeroTrustMiddleware:
             ZeroTrustOptions(
                 mfa_routes=["/admin"],
                 mfa_bypass_for_healthy=True,
-            ),
+            )
         )
         ctx = ZeroTrustContext(
             mfa_verified=False,
@@ -265,7 +265,7 @@ class TestZeroTrustMiddleware:
         mw = ZeroTrustMiddleware(
             ZeroTrustOptions(
                 healthy_device_routes=["/secrets"],
-            ),
+            )
         )
         ctx = ZeroTrustContext(device_posture=DevicePostureStatus.HEALTHY)
         result = mw.evaluate(ctx, "/secrets")
@@ -275,7 +275,7 @@ class TestZeroTrustMiddleware:
         mw = ZeroTrustMiddleware(
             ZeroTrustOptions(
                 healthy_device_routes=["/secrets"],
-            ),
+            )
         )
         ctx = ZeroTrustContext(device_posture=DevicePostureStatus.UNHEALTHY)
         result = mw.evaluate(ctx, "/secrets")
@@ -304,7 +304,7 @@ class TestZeroTrustMiddleware:
             ZeroTrustOptions(
                 mfa_routes=["/admin/*"],
                 mfa_bypass_for_healthy=False,
-            ),
+            )
         )
         ctx = ZeroTrustContext(mfa_verified=False)
         result = mw.evaluate(ctx, "/admin/settings")

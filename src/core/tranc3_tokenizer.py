@@ -281,7 +281,7 @@ class Tranc3Tokenizer:
         ids.extend(
             self._python_encode(system)
             if not hasattr(self, "_hf_tokenizer")
-            else self._hf_tokenizer.encode(system, add_special_tokens=False).ids,
+            else self._hf_tokenizer.encode(system, add_special_tokens=False).ids
         )
         ids.append(SEP_ID)
 

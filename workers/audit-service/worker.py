@@ -14,7 +14,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -22,11 +21,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8025
 WORKER_NAME = "audit-service"
@@ -131,55 +128,32 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
     with get_conn() as conn:
         count = conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0]
         last = conn.execute(
-            "SELECT chain_hash, timestamp FROM audit_log ORDER BY id DESC LIMIT 1",
+            "SELECT chain_hash, timestamp FROM audit_log ORDER BY id DESC LIMIT 1"
         ).fetchone()
     return {
-        "entity": health_entity_block(8025, "audit-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "total_entries": count,
         "chain_tip": last["chain_hash"] if last else GENESIS_HASH,
+        "entity": {
+            "location": "The Observatory",
+            "pillar": "Knowledge",
+            "lead_ai": "Norman Hawkins",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Audit Log & Monitoring Platform",
+            "layer": "supporting",
+        },
     }
 
 
-@_router.post("/audit", status_code=201)
+@app.post("/audit", status_code=201)
 async def append_entry(entry: AuditIn):
     ts = entry.timestamp or time.time()
     prev_hash = _last_hash()
@@ -213,14 +187,14 @@ async def append_entry(entry: AuditIn):
     }
 
 
-@_router.post("/audit/batch", status_code=201)
+@app.post("/audit/batch", status_code=201)
 async def append_batch(batch: AuditBatchIn):
     results = []
     with get_conn() as conn:
         for entry in batch.entries:
             ts = entry.timestamp or time.time()
             row = conn.execute(
-                "SELECT chain_hash FROM audit_log ORDER BY id DESC LIMIT 1",
+                "SELECT chain_hash FROM audit_log ORDER BY id DESC LIMIT 1"
             ).fetchone()
             prev_hash = row["chain_hash"] if row else GENESIS_HASH
             cur = conn.execute(
@@ -246,7 +220,7 @@ async def append_batch(batch: AuditBatchIn):
     return {"inserted": len(results), "entries": results}
 
 
-@_router.get("/audit")
+@app.get("/audit")
 async def list_entries(
     actor: Optional[str] = None,
     action: Optional[str] = None,
@@ -282,7 +256,7 @@ async def list_entries(
     return {"total": total, "entries": [dict(r) for r in rows], "limit": limit, "offset": offset}
 
 
-@_router.get("/audit/{entry_id}")
+@app.get("/audit/{entry_id}")
 async def get_entry(entry_id: int):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM audit_log WHERE id = ?", (entry_id,)).fetchone()
@@ -291,7 +265,7 @@ async def get_entry(entry_id: int):
     return dict(row)
 
 
-@_router.get("/audit/verify/chain")
+@app.get("/audit/verify/chain")
 async def verify_chain():
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM audit_log ORDER BY id ASC").fetchall()
@@ -302,11 +276,7 @@ async def verify_chain():
     broken_at = None
     for row in rows:
         expected = _compute_hash(
-            row["id"],
-            row["actor"],
-            row["action"],
-            row["timestamp"],
-            row["prev_hash"],
+            row["id"], row["actor"], row["action"], row["timestamp"], row["prev_hash"]
         )
         if row["chain_hash"] != expected or row["prev_hash"] != prev_hash:
             broken_at = row["id"]
@@ -321,18 +291,18 @@ async def verify_chain():
     }
 
 
-@_router.get("/stats")
+@app.get("/stats")
 async def stats():
     with get_conn() as conn:
         total = conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0]
         by_actor = conn.execute(
-            "SELECT actor, COUNT(*) as c FROM audit_log GROUP BY actor ORDER BY c DESC LIMIT 10",
+            "SELECT actor, COUNT(*) as c FROM audit_log GROUP BY actor ORDER BY c DESC LIMIT 10"
         ).fetchall()
         by_action = conn.execute(
-            "SELECT action, COUNT(*) as c FROM audit_log GROUP BY action ORDER BY c DESC LIMIT 10",
+            "SELECT action, COUNT(*) as c FROM audit_log GROUP BY action ORDER BY c DESC LIMIT 10"
         ).fetchall()
         by_outcome = conn.execute(
-            "SELECT outcome, COUNT(*) as c FROM audit_log GROUP BY outcome",
+            "SELECT outcome, COUNT(*) as c FROM audit_log GROUP BY outcome"
         ).fetchall()
     return {
         "total_entries": total,
@@ -340,9 +310,6 @@ async def stats():
         "by_action": [dict(r) for r in by_action],
         "by_outcome": [dict(r) for r in by_outcome],
     }
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

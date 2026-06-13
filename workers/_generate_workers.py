@@ -272,7 +272,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -384,7 +384,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -466,5 +466,5 @@ if __name__ == "__main__":
         print(f"✅ Generated P3 stub: {name} (port {config['port']})")
 
     print(
-        f"\n🎉 Total: {len(WORKERS)} P2 workers + {len(P3_WORKERS)} P3 stubs = {len(WORKERS) + len(P3_WORKERS)} workers generated",
+        f"\n🎉 Total: {len(WORKERS)} P2 workers + {len(P3_WORKERS)} P3 stubs = {len(WORKERS) + len(P3_WORKERS)} workers generated"
     )

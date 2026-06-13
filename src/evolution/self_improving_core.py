@@ -1,6 +1,5 @@
 # src/evolution/self_improving_core.py
 # TRANC3 Self-Evolution Engine
-from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
@@ -8,15 +7,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 import numpy as np
-
-try:
-    import torch
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch
 
 from Dimensional.sanitize import sanitize_for_log
 
@@ -82,9 +73,7 @@ class FitnessEvaluator:
             self._feedback_history.pop(0)
 
     def evaluate(
-        self,
-        individual: Individual,
-        recent_feedback: Optional[List[Dict]] = None,
+        self, individual: Individual, recent_feedback: Optional[List[Dict]] = None
     ) -> float:
         feedback = recent_feedback or self._feedback_history[-10:]
         if not feedback:
@@ -127,7 +116,7 @@ class SelfEvolvingArchitecture:
             for _ in range(self.population_size)
         ]
         logger.info(
-            f"SelfEvolvingArchitecture initialised: pop={self.population_size}, dim={self.genome_dim}",
+            f"SelfEvolvingArchitecture initialised: pop={self.population_size}, dim={self.genome_dim}"
         )
 
     def evolve(self, num_generations: int = 1, feedback: Optional[List[Dict]] = None) -> Individual:
@@ -153,7 +142,7 @@ class SelfEvolvingArchitecture:
 
         best = self.population[0]
         logger.info(
-            f"Generation {self.generation}: best_fitness={best.fitness:.4f}, mutations={best.mutations}",
+            f"Generation {self.generation}: best_fitness={best.fitness:.4f}, mutations={best.mutations}"
         )
 
         # Persist best genome to Redis — Gap G25 action
@@ -178,7 +167,7 @@ class SelfEvolvingArchitecture:
                         "fitness": individual.fitness,
                         "generation": self.generation,
                         "mutations": individual.mutations,
-                    },
+                    }
                 ),
                 ex=86400 * 7,
             )  # 7-day TTL
@@ -201,7 +190,7 @@ class SelfEvolvingArchitecture:
                 self.population[0].fitness = saved["fitness"]
                 self.generation = saved.get("generation", 0)
                 logger.info(
-                    f"Genome restored from Redis: gen={self.generation}, fitness={saved['fitness']:.4f}",
+                    f"Genome restored from Redis: gen={self.generation}, fitness={saved['fitness']:.4f}"
                 )
                 return True
         except Exception as e:
@@ -210,10 +199,6 @@ class SelfEvolvingArchitecture:
 
     def get_best_genome(self) -> torch.Tensor:
         """Return best genome as a torch tensor for model injection."""
-        if not _TORCH_AVAILABLE:
-            raise RuntimeError(
-                "get_best_genome requires PyTorch, but it is not available in this runtime."
-            )
         best = max(self.population, key=lambda x: x.fitness)
         return torch.tensor(best.genome, dtype=torch.float32)
 

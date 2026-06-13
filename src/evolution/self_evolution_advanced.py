@@ -1,5 +1,4 @@
-# src/evolution/self_evolution_advanced.py
-from __future__ import annotations
+# src/core/self_evolution.py
 
 import logging
 
@@ -7,16 +6,8 @@ logger = logging.getLogger("src.evolution.self_evolution_advanced")
 
 from typing import Any, Dict, Optional  # noqa: E402
 
-try:  # noqa: E402
-    import torch
-    import torch.nn as nn
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch  # noqa: E402
+import torch.nn as nn  # noqa: E402
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: E402
 from src.core.feature_flags import FeatureFlag, FeatureFlagManager  # noqa: E402
@@ -32,9 +23,10 @@ class SelfEvolvingInference:
         self.config = config
         self.feature_manager = feature_manager
 
-        self.evolution_engine: Optional[SelfEvolvingArchitecture] = None
         if feature_manager.is_enabled(FeatureFlag.SELF_EVOLUTION):
             self.evolution_engine = SelfEvolvingArchitecture(config)
+        else:
+            self.evolution_engine = None
 
     def adapt_model(
         self,
@@ -65,8 +57,7 @@ class SelfEvolvingInference:
         fitness = (quality_score + user_satisfaction) / 2
 
         # Evolve architecture
-        if self.evolution_engine is not None:
-            self.evolution_engine.evolve(num_generations=1)
+        self.evolution_engine.evolve(num_generations=1)
 
         # Create adapted model layer
         adapted_layer = nn.Linear(input_data.size(-1), input_data.size(-1))
@@ -79,17 +70,13 @@ class SelfEvolvingInference:
         return adapted_layer
 
     def apply_adaptation(
-        self,
-        base_output: torch.Tensor,
-        adaptation_layer: nn.Module,
+        self, base_output: torch.Tensor, adaptation_layer: nn.Module
     ) -> torch.Tensor:
         """Apply evolutionary adaptation to output"""
         return adaptation_layer(base_output)
 
     def collect_feedback(
-        self,
-        response: Dict[str, Any],
-        user_feedback: Optional[Dict] = None,
+        self, response: Dict[str, Any], user_feedback: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """
         Collect and analyze feedback for evolution

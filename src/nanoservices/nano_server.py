@@ -435,8 +435,7 @@ if __name__ == "__main__":
     import uvicorn
 
     logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
+        level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s %(message)s"
     )
     uvicorn.run(
         "src.nanoservices.nano_server:nano_app",

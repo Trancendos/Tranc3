@@ -32,16 +32,16 @@ def generate_platform_entities_md():
     lines.append("**Tier structure:**")
     lines.append("- **Tier 1 - The Sovereign**: Ultimate orchestrator of the Tranc3 ecosystem")
     lines.append(
-        "- **Tier 2 - Primes**: Executive AI authorities that govern one or more locations",
+        "- **Tier 2 - Primes**: Executive AI authorities that govern one or more locations"
     )
     lines.append("- **Tier 3 - Lead AI**: The named AI that runs each location day-to-day")
     lines.append(
-        "- **Tier 4 - Agents**: Agent Alpha and Agent Beta - mid-tier automation per location",
+        "- **Tier 4 - Agents**: Agent Alpha and Agent Beta - mid-tier automation per location"
     )
     lines.append("- **Tier 5 - Bots**: Bot 01-04 - task-specific micro-workers per location")
     lines.append("")
     lines.append(
-        "**Pillars:** Architectural · Commercial/Financial · Creativity · Development (Code) · Knowledge · Security · DevOps · Wellbeing",
+        "**Pillars:** Architectural · Commercial/Financial · Creativity · Development (Code) · Knowledge · Security · DevOps · Wellbeing"
     )
     lines.append("")
     lines.append("---")
@@ -66,43 +66,43 @@ def generate_platform_entities_md():
     lines.append("| Rule | Resolved Form | Original Issue |")
     lines.append("|---|---|---|")
     lines.append(
-        "| Platform brain | The Digital Grid (with space) | The DigitalGrid (no space — typo) |",
+        "| Platform brain | The Digital Grid (with space) | The DigitalGrid (no space — typo) |"
     )
     lines.append(
-        "| Location vs AI | tAimra (location) / tAImra (Lead AI) | tAImra vs tAimra casing mismatch |",
+        "| Location vs AI | tAimra (location) / tAImra (Lead AI) | tAImra vs tAimra casing mismatch |"
     )
     lines.append(
-        "| Photo studio | Sashas Photo Studio (no apostrophe) | Sasha's Photo Studio (apostrophe) |",
+        "| Photo studio | Sashas Photo Studio (no apostrophe) | Sasha's Photo Studio (apostrophe) |"
     )
     lines.append(
-        "| Guardian title | The Guardian (Anchor: Orb of Orisis) | The Guardian (Anchor: Orb of Orisis) vs The Guardian (Marcus Magnolia) |",
+        "| Guardian title | The Guardian (Anchor: Orb of Orisis) | The Guardian (Anchor: Orb of Orisis) vs The Guardian (Marcus Magnolia) |"
     )
     lines.append(
-        "| Nexus AI | Nexus-Prime (Lead AI) | The Nexus (same name as location — tight coupling) |",
+        "| Nexus AI | Nexus-Prime (Lead AI) | The Nexus (same name as location — tight coupling) |"
     )
     lines.append(
-        "| Bot naming | All bots: Title-Case-Bot format | Inconsistent: some had -Bot suffix, some didn't |",
+        "| Bot naming | All bots: Title-Case-Bot format | Inconsistent: some had -Bot suffix, some didn't |"
     )
     lines.append(
-        "| Wireframe collision | Layout-Bot (Studio) / Wireframe-Bot (Turing's Hub) | Same name in two locations |",
+        "| Wireframe collision | Layout-Bot (Studio) / Wireframe-Bot (Turing's Hub) | Same name in two locations |"
     )
     lines.append(
-        "| The Weaver collision | The Flow-Weaver (Digital Grid) / The Time-Weaver (ChronosSphere) / The Weaver (Fabulousa) | Same agent name in three locations |",
+        "| The Weaver collision | The Flow-Weaver (Digital Grid) / The Time-Weaver (ChronosSphere) / The Weaver (Fabulousa) | Same agent name in three locations |"
     )
     lines.append(
-        "| The Guide collision | The Guide (Tranquility) / The VR-Guide (VRAR3D) | Same agent name in two locations |",
+        "| The Guide collision | The Guide (Tranquility) / The VR-Guide (VRAR3D) | Same agent name in two locations |"
     )
     lines.append(
-        "| Stamp collision | Stamp-Bot (Town Hall) / Seal-Stamp-Bot (Lighthouse) | Same bot name in two locations |",
+        "| Stamp collision | Stamp-Bot (Town Hall) / Seal-Stamp-Bot (Lighthouse) | Same bot name in two locations |"
     )
     lines.append(
-        "| Scanner collision | Scanner-Bot (DocUtari) / Scan-Bot (Warp Tunnel) | Same bot name in two locations |",
+        "| Scanner collision | Scanner-Bot (DocUtari) / Scan-Bot (Warp Tunnel) | Same bot name in two locations |"
     )
     lines.append(
-        "| Tracer collision | Tracer-Bot (Observatory) / Trace-Bot (Cryptex) | Same bot name in two locations |",
+        "| Tracer collision | Tracer-Bot (Observatory) / Trace-Bot (Cryptex) | Same bot name in two locations |"
     )
     lines.append(
-        "| Lens collision | Lens-Bot (Sashas Photo Studio) / VR-Lens-Bot (VRAR3D) | Same bot name in two locations |",
+        "| Lens collision | Lens-Bot (Sashas Photo Studio) / VR-Lens-Bot (VRAR3D) | Same bot name in two locations |"
     )
     lines.append("")
     lines.append("---")
@@ -195,10 +195,10 @@ def generate_platform_entities_md():
     lines.append("## Full Entity Table")
     lines.append("")
     lines.append(
-        "| PID | Location | Pillar | Lead AI (AID) | Primes | Agent α (SID) | Agent β (SID) | Bot 01 (NID) | Bot 02 (NID) | Bot 03 (NID) | Bot 04 (NID) |",
+        "| PID | Location | Pillar | Lead AI (AID) | Primes | Agent α (SID) | Agent β (SID) | Bot 01 (NID) | Bot 02 (NID) | Bot 03 (NID) | Bot 04 (NID) |"
     )
     lines.append(
-        "|-----|----------|--------|---------------|--------|---------------|---------------|--------------|--------------|--------------|--------------|",
+        "|-----|----------|--------|---------------|--------|---------------|---------------|--------------|--------------|--------------|--------------|"
     )
 
     # Sort by pillar order then by location name
@@ -216,7 +216,7 @@ def generate_platform_entities_md():
                 f"{entity.bot_01.code_name} ({entity.bot_01.nid}) | "
                 f"{entity.bot_02.code_name} ({entity.bot_02.nid}) | "
                 f"{entity.bot_03.code_name} ({entity.bot_03.nid}) | "
-                f"{entity.bot_04.code_name} ({entity.bot_04.nid}) |",
+                f"{entity.bot_04.code_name} ({entity.bot_04.nid}) |"
             )
 
     lines.append("")
@@ -263,13 +263,13 @@ def generate_platform_entities_md():
     lines.append("")
     lines.append("### Internal personality profiles not in entity table")
     lines.append(
-        "The following profiles exist in `src/personality/profiles/` but have no entry in the platform entity hierarchy. They are legacy/internal profiles predating the entity table:",
+        "The following profiles exist in `src/personality/profiles/` but have no entry in the platform entity hierarchy. They are legacy/internal profiles predating the entity table:"
     )
     lines.append("- `vesper-nightingale` — internal profile, unmapped")
     lines.append("- `atlas-meridian` — internal profile, unmapped")
     lines.append("")
     lines.append(
-        "These are **not** named locations and should not be referenced as platform entities until explicitly assigned.",
+        "These are **not** named locations and should not be referenced as platform entities until explicitly assigned."
     )
     lines.append("")
 
@@ -294,7 +294,7 @@ def generate_matrix_md():
     lines.append("# Tranc3 Repaired Entity Matrix — by Pillar")
     lines.append("")
     lines.append(
-        "Auto-generated from `src/entities/platform.py` with all naming convention repairs applied.",
+        "Auto-generated from `src/entities/platform.py` with all naming convention repairs applied."
     )
     lines.append("")
     lines.append("## Summary")
@@ -327,29 +327,29 @@ def generate_matrix_md():
             lines.append("| Tier | Role | Name | ID | Description |")
             lines.append("|------|------|------|----|-------------|")
             lines.append(
-                f"| 3 | Lead AI | **{entity.lead_ai}** | `{entity.aid}` | {entity.primary_function} |",
+                f"| 3 | Lead AI | **{entity.lead_ai}** | `{entity.aid}` | {entity.primary_function} |"
             )
             lines.append(
-                f"| 4 | Agent α | {entity.agent_alpha.code_name} | `{entity.agent_alpha.sid}` | {entity.agent_alpha.description} |",
+                f"| 4 | Agent α | {entity.agent_alpha.code_name} | `{entity.agent_alpha.sid}` | {entity.agent_alpha.description} |"
             )
             lines.append(
-                f"| 4 | Agent β | {entity.agent_beta.code_name} | `{entity.agent_beta.sid}` | {entity.agent_beta.description} |",
+                f"| 4 | Agent β | {entity.agent_beta.code_name} | `{entity.agent_beta.sid}` | {entity.agent_beta.description} |"
             )
             lines.append(
-                f"| 5 | Bot 01 | {entity.bot_01.code_name} | `{entity.bot_01.nid}` | {entity.bot_01.description} |",
+                f"| 5 | Bot 01 | {entity.bot_01.code_name} | `{entity.bot_01.nid}` | {entity.bot_01.description} |"
             )
             lines.append(
-                f"| 5 | Bot 02 | {entity.bot_02.code_name} | `{entity.bot_02.nid}` | {entity.bot_02.description} |",
+                f"| 5 | Bot 02 | {entity.bot_02.code_name} | `{entity.bot_02.nid}` | {entity.bot_02.description} |"
             )
             lines.append(
-                f"| 5 | Bot 03 | {entity.bot_03.code_name} | `{entity.bot_03.nid}` | {entity.bot_03.description} |",
+                f"| 5 | Bot 03 | {entity.bot_03.code_name} | `{entity.bot_03.nid}` | {entity.bot_03.description} |"
             )
             lines.append(
-                f"| 5 | Bot 04 | {entity.bot_04.code_name} | `{entity.bot_04.nid}` | {entity.bot_04.description} |",
+                f"| 5 | Bot 04 | {entity.bot_04.code_name} | `{entity.bot_04.nid}` | {entity.bot_04.description} |"
             )
             lines.append(f"| — | Primes | {', '.join(entity.primes)} | — | — |")
             lines.append(
-                f"| — | Port | {entity.worker_port or 'N/A'} | — | {entity.worker_path or 'N/A'} |",
+                f"| — | Port | {entity.worker_port or 'N/A'} | — | {entity.worker_path or 'N/A'} |"
             )
             lines.append("")
 
@@ -373,10 +373,10 @@ def generate_matrix_md():
     for loc_name, entity in PLATFORM_ENTITIES.items():
         lines.append(f"| {entity.aid} | 3 | {entity.lead_ai} | {loc_name} |")
         lines.append(
-            f"| {entity.agent_alpha.sid} | 4 | {entity.agent_alpha.code_name} | {loc_name} |",
+            f"| {entity.agent_alpha.sid} | 4 | {entity.agent_alpha.code_name} | {loc_name} |"
         )
         lines.append(
-            f"| {entity.agent_beta.sid} | 4 | {entity.agent_beta.code_name} | {loc_name} |",
+            f"| {entity.agent_beta.sid} | 4 | {entity.agent_beta.code_name} | {loc_name} |"
         )
         lines.append(f"| {entity.bot_01.nid} | 5 | {entity.bot_01.code_name} | {loc_name} |")
         lines.append(f"| {entity.bot_02.nid} | 5 | {entity.bot_02.code_name} | {loc_name} |")

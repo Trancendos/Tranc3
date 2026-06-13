@@ -9,14 +9,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 try:
     from auth import get_current_user  # noqa: F401
 except ImportError:
-    from fastapi import Depends, HTTPException, status
+    from fastapi import HTTPException, status
     from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
     _bearer = HTTPBearer(auto_error=False)
 
-    async def get_current_user(
-        credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-    ):
+    async def get_current_user(credentials: HTTPAuthorizationCredentials = None):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Auth module not available",

@@ -25,11 +25,9 @@ from pathlib import Path
 from typing import List, Optional
 
 import httpx
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8019
 WORKER_NAME = "sms-service"
@@ -186,36 +184,6 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
     with get_conn() as conn:
@@ -223,7 +191,6 @@ async def health():
         sent = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='sent'").fetchone()[0]
         failed = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='failed'").fetchone()[0]
     return {
-        "entity": health_entity_block(8019, "sms-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -232,10 +199,18 @@ async def health():
         "pending": pending,
         "sent": sent,
         "failed": failed,
+        "entity": {
+            "location": "The Nexus",
+            "pillar": "Architectural",
+            "lead_ai": "The Nexus",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "AI Communication Gateway & Transfer Hub",
+            "layer": "supporting",
+        },
     }
 
 
-@_router.post("/send", status_code=202)
+@app.post("/send", status_code=202)
 async def send_sms(req: SendIn):
     provider = req.provider or SMS_PROVIDER
     now = time.time()
@@ -248,7 +223,7 @@ async def send_sms(req: SendIn):
     return {"id": cur.lastrowid, "status": "queued", "to": req.to, "provider": provider}
 
 
-@_router.post("/send/batch", status_code=202)
+@app.post("/send/batch", status_code=202)
 async def send_batch(req: BatchSendIn):
     now = time.time()
     rows = [(m.to, m.message, m.provider or SMS_PROVIDER, now) for m in req.messages]
@@ -261,7 +236,7 @@ async def send_batch(req: BatchSendIn):
     return {"queued": len(rows)}
 
 
-@_router.get("/outbox")
+@app.get("/outbox")
 async def list_outbox(
     status: Optional[str] = None,
     limit: int = Query(50, le=500),
@@ -281,35 +256,31 @@ async def list_outbox(
     return {"total": total, "messages": [dict(r) for r in rows]}
 
 
-@_router.post("/outbox/{sms_id}/retry")
+@app.post("/outbox/{sms_id}/retry")
 async def retry_sms(sms_id: int):
     with get_conn() as conn:
         if not conn.execute("SELECT id FROM outbox WHERE id = ?", (sms_id,)).fetchone():
             raise HTTPException(status_code=404, detail="SMS not found")
         conn.execute(
-            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?",
-            (sms_id,),
+            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (sms_id,)
         )
         conn.commit()
     return {"retrying": sms_id}
 
 
-@_router.get("/stats")
+@app.get("/stats")
 async def stats():
     with get_conn() as conn:
         by_status = conn.execute(
-            "SELECT status, COUNT(*) as c FROM outbox GROUP BY status",
+            "SELECT status, COUNT(*) as c FROM outbox GROUP BY status"
         ).fetchall()
         by_provider = conn.execute(
-            "SELECT provider, COUNT(*) as c FROM outbox GROUP BY provider",
+            "SELECT provider, COUNT(*) as c FROM outbox GROUP BY provider"
         ).fetchall()
     return {
         "by_status": [dict(r) for r in by_status],
         "by_provider": [dict(r) for r in by_provider],
     }
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

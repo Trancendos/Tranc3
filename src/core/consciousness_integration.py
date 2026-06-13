@@ -1,5 +1,4 @@
 # src/core/consciousness_integration.py
-from __future__ import annotations
 
 import logging
 
@@ -8,15 +7,7 @@ logger = logging.getLogger("src.core.consciousness_integration")
 from typing import Any, Dict, List, Optional  # noqa: E402
 
 import numpy as np  # noqa: E402
-
-try:  # noqa: E402
-    import torch
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch  # noqa: E402
 
 from Dimensional.sanitize import sanitize_for_log  # noqa: E402
 from src.bio_neural.consciousness_engine import ConsciousnessModel  # noqa: E402
@@ -32,9 +23,10 @@ class ConsciousnessAwareGenerator:
         self.config = config
         self.feature_manager = feature_manager
 
-        self.consciousness: Optional[ConsciousnessModel] = None
         if feature_manager.is_enabled(FeatureFlag.CONSCIOUSNESS_ENGINE):
             self.consciousness = ConsciousnessModel(config)
+        else:
+            self.consciousness = None
 
     def generate_with_consciousness(
         self,
@@ -55,9 +47,7 @@ class ConsciousnessAwareGenerator:
             return self._classical_generate(input_text, personality_vector)
 
     def _conscious_generate(
-        self,
-        input_text: str,
-        personality_vector: torch.Tensor,
+        self, input_text: str, personality_vector: torch.Tensor
     ) -> Dict[str, Any]:
         """Consciousness-enhanced generation"""
 
@@ -66,8 +56,6 @@ class ConsciousnessAwareGenerator:
         neural_state = input_tensor.unsqueeze(0).unsqueeze(0)
 
         # Calculate consciousness metrics
-        if self.consciousness is None:
-            return self._classical_generate(input_text, personality_vector)
         phi = self.consciousness.calculate_phi(neural_state.squeeze())
 
         # Consciousness-modulated personality
@@ -92,9 +80,7 @@ class ConsciousnessAwareGenerator:
         }
 
     def _apply_consciousness_dynamics(
-        self,
-        state: torch.Tensor,
-        personality: torch.Tensor,
+        self, state: torch.Tensor, personality: torch.Tensor
     ) -> torch.Tensor:
         """Apply consciousness-inspired dynamics"""
         # Simplified consciousness-inspired transformation
@@ -103,9 +89,7 @@ class ConsciousnessAwareGenerator:
         return transformed + personality.unsqueeze(0).unsqueeze(0)
 
     def _classical_generate(
-        self,
-        input_text: str,
-        personality_vector: torch.Tensor,
+        self, input_text: str, personality_vector: torch.Tensor
     ) -> Dict[str, Any]:
         """Classical fallback generation"""
         response_text = f"Classical response: {input_text[:50]}..."
@@ -122,16 +106,13 @@ class ConsciousnessAwareGenerator:
         }
 
     def self_monitor_response(
-        self,
-        response: Dict[str, Any],
-        user_id: Optional[str] = None,
+        self, response: Dict[str, Any], user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Self-monitoring of generated responses
         """
         if not self.consciousness or not self.feature_manager.is_enabled(
-            FeatureFlag.CONSCIOUSNESS_ENGINE,
-            user_id,
+            FeatureFlag.CONSCIOUSNESS_ENGINE, user_id
         ):
             return {"self_assessment": "disabled"}
 
@@ -163,21 +144,3 @@ class ConsciousnessAwareGenerator:
             suggestions.append("Enhance quantum inspiration")
 
         return suggestions
-
-    async def compute_phi(self, text: str) -> float:
-        """Compute Integrated Information Theory (IIT) phi estimate for *text*."""
-        try:
-            if self.consciousness is not None:
-                state = self.consciousness(torch.zeros(1, len(text.split()), dtype=torch.long))
-                phi = float(state.get("phi", 0.0)) if isinstance(state, dict) else 0.0
-                return max(0.0, min(1.0, phi))
-        except Exception:
-            pass
-        # Heuristic fallback: lexical diversity as a phi proxy
-        words = text.split()
-        vocab = len(set(words))
-        return min(1.0, vocab / max(len(words), 1) * 2.0)
-
-
-# Alias for import compatibility
-ConsciousnessIntegration = ConsciousnessAwareGenerator

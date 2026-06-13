@@ -2,15 +2,9 @@
 .env
 .env.*
 !.env.example
-!.env.development.example
-!.env.uat.example
-!.env.production.example
 
 # Local sandbox CA cert (never commit)
 sandbox-ca.crt
-
-# Generated protobuf Go files (CI regenerates via protoc at build time)
-aeonmind/go/proto/*.pb.go
 
 # Python
 __pycache__/
@@ -30,19 +24,13 @@ htmlcov/
 .coverage
 coverage.xml
 
-# Rust build artifacts
-target/
-aeonmind/rust/target/
-
 # Virtual environments
 venv/
 .venv/
 env/
 
-# Models & cache (ML weights — not CodeQL extension models under .github/codeql/)
+# Models & cache
 models/
-!.github/codeql/
-!.github/codeql/**
 cache/
 *.pt
 *.bin
@@ -88,12 +76,3 @@ node_modules/
 .terraform/
 aeonmind/python/.venv/
 aeonmind/python/*.egg-info/
-
-# Nexus test artifacts
-bridge-*
-nexus-*
-
-# Runtime data directories (backups and test workspaces)
-data/admin_os_backups/
-data/test_admin_os_workspace/
-.claude/worktrees/

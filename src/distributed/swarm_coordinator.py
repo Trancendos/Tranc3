@@ -33,9 +33,7 @@ class SwarmCoordinator:
             await self.session.close()
 
     async def swarm_reasoning(
-        self,
-        problem: Dict[str, Any],
-        user_id: Optional[str] = None,
+        self, problem: Dict[str, Any], user_id: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Distributed reasoning across swarm nodes
@@ -74,7 +72,7 @@ class SwarmCoordinator:
             raise Exception("No valid swarm responses")
 
         # Consensus aggregation
-        consensus = self._swarm_consensus(valid_results)  # type: ignore[arg-type]
+        consensus = self._swarm_consensus(valid_results)
 
         return {
             "swarm_response": consensus,
@@ -84,7 +82,6 @@ class SwarmCoordinator:
 
     async def _query_node(self, node_url: str, sub_problem: Dict[str, Any]) -> Dict[str, Any]:
         """Query individual swarm node"""
-        assert self.session is not None  # noqa: S101 — session is set by __aenter__
         async with self.session.post(
             f"{node_url}/reason",
             json=sub_problem,
@@ -133,18 +130,14 @@ class SwarmCoordinator:
         self.swarm_nodes = [
             node
             for node, health in zip(new_nodes, health_results, strict=False)
-            if not isinstance(health, Exception)
-            and isinstance(health, dict)
-            and health.get("status") == "healthy"
+            if not isinstance(health, Exception) and health.get("status") == "healthy"
         ]
 
     async def _check_node_health(self, node_url: str) -> Dict[str, Any]:
         """Check health of swarm node"""
         try:
-            assert self.session is not None  # noqa: S101 — session is set by __aenter__
             async with self.session.get(
-                f"{node_url}/health",
-                timeout=aiohttp.ClientTimeout(total=5),
+                f"{node_url}/health", timeout=aiohttp.ClientTimeout(total=5)
             ) as response:
                 return await response.json()
         except Exception:

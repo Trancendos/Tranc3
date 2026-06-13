@@ -174,7 +174,7 @@ class TheArtifactory:
             "artifactory: pushed %s v%s digest=%s",
             sanitize_for_log(artifact.name),
             sanitize_for_log(version),
-            sanitize_for_log(sanitize_for_log(digest[:12]) if digest else ""),
+            sanitize_for_log(digest[:12]) if digest else "",
         )  # codeql[py/cleartext-logging]
         return ver
 

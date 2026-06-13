@@ -1,51 +1,21 @@
 # src/core/advanced_model.py
 # TRANC3 Core AI Engine - Full Implementation
-from __future__ import annotations  # defer annotation evaluation — keeps torch stubs importable
 
 import logging
 import math
 from typing import Dict, Optional, Tuple
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 from Dimensional.sanitize import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
-try:
-    import torch
-    import torch.nn as nn
-    import torch.nn.functional as F
-
-    _TORCH_AVAILABLE = True
-except ImportError:  # torch is an optional heavy dependency
-    import types as _types
-
-    _TORCH_AVAILABLE = False
-
-    # Minimal stubs so class bodies can be parsed without AttributeError at import
-    # The real stubs (which raise ImportError at instantiation) are defined below.
-    class _FakeModule:
-        def __init_subclass__(cls, **kw):
-            pass
-
-    _nn_stub = _types.SimpleNamespace(
-        Module=_FakeModule,
-        Linear=_FakeModule,
-        LayerNorm=_FakeModule,
-        Dropout=_FakeModule,
-    )
-    torch = _types.SimpleNamespace()  # type: ignore[assignment]
-    nn = _nn_stub  # type: ignore[assignment]
-    F = _types.SimpleNamespace()  # type: ignore[assignment]
-    logger.warning(
-        "PyTorch not installed — AdvancedTransformerModel unavailable. "
-        "Install torch to enable the neural inference backend.",
-    )
-
 
 # ============================================================
 # MULTI-HEAD ATTENTION WITH ROTARY EMBEDDINGS
-# (When torch is absent these classes use the _FakeModule stub base;
-#  the stubs at the bottom of this file override them to raise ImportError.)
 # ============================================================
 class RotaryEmbedding(nn.Module):
     def __init__(self, dim: int):
@@ -219,7 +189,7 @@ class AdvancedTransformerModel(nn.Module):
                     self.dropout_rate,
                 )
                 for _ in range(self.num_layers)
-            ],
+            ]
         )
 
         # Output
@@ -354,36 +324,3 @@ class AdvancedTransformerModel(nn.Module):
                     break
 
         return generated
-
-
-if not _TORCH_AVAILABLE:
-
-    class RotaryEmbedding:  # type: ignore[no-redef]
-        """Stub — torch not installed."""
-
-        def __init__(self, *a, **kw) -> None:
-            raise ImportError("PyTorch is required for RotaryEmbedding")
-
-    class AdvancedMultiHeadAttention:  # type: ignore[no-redef]
-        """Stub — torch not installed."""
-
-        def __init__(self, *a, **kw) -> None:
-            raise ImportError("PyTorch is required for AdvancedMultiHeadAttention")
-
-    class GatedFeedForward:  # type: ignore[no-redef]
-        """Stub — torch not installed."""
-
-        def __init__(self, *a, **kw) -> None:
-            raise ImportError("PyTorch is required for GatedFeedForward")
-
-    class TransformerBlock:  # type: ignore[no-redef]
-        """Stub — torch not installed."""
-
-        def __init__(self, *a, **kw) -> None:
-            raise ImportError("PyTorch is required for TransformerBlock")
-
-    class AdvancedTransformerModel:  # type: ignore[no-redef]
-        """Stub — torch not installed."""
-
-        def __init__(self, *a, **kw) -> None:
-            raise ImportError("PyTorch is required for AdvancedTransformerModel")

@@ -17,21 +17,21 @@ __version__ = "0.9.0"
 __author__ = "Trancendos"
 
 # Core modules — always available
-from .core.adaptive import AdaptiveConfig, AdaptiveMetaLearner
-from .core.definitions import AgentEntity, AiComplex, BotService, SentinelChannel, Tier
-from .core.fluidic_liquidic import LiquidReservoir, ReservoirConfig
-from .core.frontier_agent import FrontierAgent, FrontierAgentConfig
+from .core.definitions import Tier, SentinelChannel, BotService, AgentEntity, AiComplex
+from .core.adaptive import AdaptiveMetaLearner, AdaptiveConfig
 from .core.genetic_dna import DNAEvolutionEngine, GeneticConfig
-from .core.quantum import QuantumCircuitConfig, QuantumDecisionCircuit
-
-# Conditional Rust bindings
-from .core.rust_bridge import has_rust_bindings, rust_version
-
-# Services — bot services
-from .services.bot_services import BotServiceRegistry, BotServiceWorker
+from .core.fluidic_liquidic import LiquidReservoir, ReservoirConfig
+from .core.quantum import QuantumDecisionCircuit, QuantumCircuitConfig
+from .core.frontier_agent import FrontierAgent, FrontierAgentConfig
 
 # Systems — orchestrator
 from .systems.orchestrator import LogicalOrchestrator
+
+# Services — bot services
+from .services.bot_services import BotServiceWorker, BotServiceRegistry
+
+# Conditional Rust bindings
+from .core.rust_bridge import has_rust_bindings, rust_version
 
 __all__ = [
     # Version

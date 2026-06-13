@@ -26,21 +26,10 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    FastAPI,
-    Header,
-    HTTPException,
-    Query,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
-
-from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -166,19 +155,6 @@ app = FastAPI(title="Tranc3 Ledger Service", version="0.1.0", lifespan=_lifespan
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
@@ -186,12 +162,7 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "ok",
-        "service": "ledger-service",
-        "port": 8032,
-        "entity": health_entity_block(8032, "ledger-service"),
-    }
+    return {"status": "ok", "service": "ledger-service", "port": 8032}
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +170,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/entries", response_model=LedgerEntryResponse, status_code=201)
+@app.post("/entries", response_model=LedgerEntryResponse, status_code=201)
 async def append_entry(body: LedgerEntryCreate):
     conn = _get_db()
     now = _now()
@@ -239,7 +210,7 @@ async def append_entry(body: LedgerEntryCreate):
     )
 
 
-@_router.get("/entries", response_model=List[LedgerEntryResponse])
+@app.get("/entries", response_model=List[LedgerEntryResponse])
 async def query_entries(
     actor: Optional[str] = None,
     action: Optional[str] = None,
@@ -280,7 +251,7 @@ async def query_entries(
     ]
 
 
-@_router.get("/entries/{entry_id}", response_model=LedgerEntryResponse)
+@app.get("/entries/{entry_id}", response_model=LedgerEntryResponse)
 async def get_entry(entry_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM ledger_entries WHERE id=?", (entry_id,)).fetchone()
@@ -306,11 +277,11 @@ async def get_entry(entry_id: str):
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/verify")
+@app.get("/verify")
 async def verify_chain():
     conn = _get_db()
     rows = conn.execute(
-        "SELECT id, hash, prev_hash FROM ledger_entries ORDER BY rowid ASC",
+        "SELECT id, hash, prev_hash FROM ledger_entries ORDER BY rowid ASC"
     ).fetchall()
     conn.close()
 
@@ -347,12 +318,11 @@ async def verify_chain():
     return result
 
 
-@_router.get("/sentinel/history")
+@app.get("/sentinel/history")
 async def sentinel_history(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM sentinel_checks ORDER BY checked_at DESC LIMIT ? OFFSET ?",
-        (limit, offset),
+        "SELECT * FROM sentinel_checks ORDER BY checked_at DESC LIMIT ? OFFSET ?", (limit, offset)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -363,13 +333,13 @@ async def sentinel_history(limit: int = Query(50, ge=1, le=200), offset: int = Q
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/stats")
+@app.get("/stats")
 async def get_stats():
     conn = _get_db()
     total = conn.execute("SELECT COUNT(*) as c FROM ledger_entries").fetchone()["c"]
     sentinel_count = conn.execute("SELECT COUNT(*) as c FROM sentinel_checks").fetchone()["c"]
     last_check = conn.execute(
-        "SELECT checked_at FROM sentinel_checks ORDER BY checked_at DESC LIMIT 1",
+        "SELECT checked_at FROM sentinel_checks ORDER BY checked_at DESC LIMIT 1"
     ).fetchone()
     conn.close()
 
@@ -378,7 +348,7 @@ async def get_stats():
     if total > 1:
         conn2 = _get_db()
         rows = conn2.execute(
-            "SELECT hash, prev_hash FROM ledger_entries ORDER BY rowid ASC",
+            "SELECT hash, prev_hash FROM ledger_entries ORDER BY rowid ASC"
         ).fetchall()
         conn2.close()
         for i in range(1, len(rows)):
@@ -435,7 +405,7 @@ async def _broadcast_event(event_type: str, data: dict) -> None:
         _connected_ws.remove(ws)
 
 
-@_router.get("/events")
+@app.get("/events")
 async def _sse_events():
     async def _generator():
         while True:
@@ -446,7 +416,7 @@ async def _sse_events():
     return EventSourceResponse(_generator())
 
 
-@_router.get("/dashboard/summary")
+@app.get("/dashboard/summary")
 async def _dashboard_summary():
     """Aggregated summary optimized for dashboard consumption."""
     stats = await _get_stats_async()
@@ -478,9 +448,6 @@ async def _get_stats_async() -> dict:
 def _get_stats() -> dict:
     """Return basic service stats for real-time endpoints (sync fallback)."""
     return {"service": SERVICE_NAME, "port": PORT}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

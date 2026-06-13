@@ -5,7 +5,6 @@ import logging
 import os
 import sys
 import time
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Type
@@ -71,16 +70,15 @@ class NodeResult:
 # ---------------------------------------------------------------------------
 
 
-class BaseNode(ABC):
+class BaseNode:
     """Abstract base for all workflow nodes."""
 
     def __init__(self, config: NodeConfig) -> None:
         self.config = config
         self.logger = logging.getLogger(f"{__name__}.{config.type}.{config.id}")
 
-    @abstractmethod
     async def execute(self, inputs: Dict[str, Any], context: Dict[str, Any]) -> NodeResult:  # noqa: E501
-        ...
+        raise NotImplementedError(f"{self.__class__.__name__} must implement execute()")
 
     async def _with_timeout(self, coro, timeout: float):
         """Wrap a coroutine with asyncio.timeout (Python 3.11+) or wait_for."""
@@ -186,10 +184,7 @@ class LLMNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None,
-                duration_ms,
-                success=False,
-                error=safe_error_detail(exc, 500),
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
             )
 
 
@@ -267,15 +262,16 @@ class CodeExecNode(BaseNode):
         local_ns["context"] = context
         local_ns["result"] = None
 
-        _b: Any = __builtins__
-        if isinstance(_b, dict):
-            _safe_builtins: Dict[str, Any] = {
-                k: v for k, v in _b.items() if k in self._SAFE_BUILTINS
-            }
-        else:
-            _safe_builtins = {k: getattr(_b, k) for k in self._SAFE_BUILTINS if hasattr(_b, k)}
         safe_globals: Dict[str, Any] = {
-            "__builtins__": _safe_builtins,
+            "__builtins__": {
+                k: v
+                for k, v in __builtins__.items()  # type: ignore[union-attr]
+                if k in self._SAFE_BUILTINS
+            }
+            if isinstance(__builtins__, dict)
+            else {
+                k: getattr(__builtins__, k) for k in self._SAFE_BUILTINS if hasattr(__builtins__, k)
+            },
             "math": __import__("math"),
             "json": __import__("json"),
             "re": __import__("re"),
@@ -286,10 +282,10 @@ class CodeExecNode(BaseNode):
         original_stdout = sys.stdout
 
         async def _exec() -> Dict[str, Any]:
-            # nonlocal local_ns  # removed: never assigned in scope
+            nonlocal local_ns
             sys.stdout = stdout_capture
             try:
-                exec(compile(code, "<workflow_node>", "exec"), safe_globals, local_ns)  # noqa: S102  # nosec B102  # lgtm[py/unsafe-exec]
+                exec(compile(code, "<workflow_node>", "exec"), safe_globals, local_ns)  # noqa: S102  # nosec B102
             finally:
                 sys.stdout = original_stdout
             return {
@@ -366,10 +362,7 @@ class HTTPNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None,
-                duration_ms,
-                success=False,
-                error=safe_error_detail(exc, 500),
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
             )
 
 
@@ -386,7 +379,7 @@ class ConditionNode(BaseNode):
         expression = self.config.config.get("expression", "True")
         local_ns: Dict[str, Any] = {"inputs": inputs, "context": context, **inputs}
         try:
-            result = bool(eval(expression, {"__builtins__": {}}, local_ns))  # noqa: S307  # nosec B307  # lgtm[py/unsafe-eval]
+            result = bool(eval(expression, {"__builtins__": {}}, local_ns))  # noqa: S307  # nosec B307
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
                 {"condition": result, "branch": "true" if result else "false"},
@@ -451,22 +444,17 @@ class TransformNode(BaseNode):
         if expression:
             try:
                 local_ns = {"data": output, "inputs": inputs, "context": context}
-                eval_result = eval(expression, {"__builtins__": {}}, local_ns)  # noqa: S307  # nosec B307  # lgtm[py/unsafe-eval]
+                eval_result = eval(expression, {"__builtins__": {}}, local_ns)  # noqa: S307  # nosec B307
                 output = eval_result if isinstance(eval_result, dict) else {"result": eval_result}
             except Exception as exc:
                 duration_ms = (time.monotonic() - t0) * 1000
                 return self._make_result(
-                    None,
-                    duration_ms,
-                    success=False,
-                    error=safe_error_detail(exc, 500),
+                    None, duration_ms, success=False, error=safe_error_detail(exc, 500)
                 )
 
         duration_ms = (time.monotonic() - t0) * 1000
         return self._make_result(
-            output,
-            duration_ms,
-            metadata={"mapping_keys": list(mapping.keys())},
+            output, duration_ms, metadata={"mapping_keys": list(mapping.keys())}
         )
 
 
@@ -527,10 +515,7 @@ class VectorSearchNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None,
-                duration_ms,
-                success=False,
-                error=safe_error_detail(exc, 500),
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
             )
 
 
@@ -618,10 +603,7 @@ class SparkToolNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None,
-                duration_ms,
-                success=False,
-                error=safe_error_detail(exc, 500),
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
             )
 
 
@@ -762,10 +744,7 @@ class SkillCallNode(BaseNode):
         if not skill_name:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None,
-                duration_ms,
-                success=False,
-                error="No 'skill_name' specified",
+                None, duration_ms, success=False, error="No 'skill_name' specified"
             )
 
         fn = _SKILL_REGISTRY.get(skill_name)
@@ -794,10 +773,7 @@ class SkillCallNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None,
-                duration_ms,
-                success=False,
-                error=safe_error_detail(exc, 500),
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
             )
 
 
@@ -815,8 +791,7 @@ class MLPredictNode(BaseNode):
         t0 = time.monotonic()
         cfg = self.config.config
         endpoint = cfg.get("endpoint") or os.environ.get(
-            "TRANC3_MODEL_ENDPOINT",
-            self._DEFAULT_ENDPOINT,
+            "TRANC3_MODEL_ENDPOINT", self._DEFAULT_ENDPOINT
         )
         model_name = cfg.get("model_name", "tranc3-base")
         payload = {
@@ -849,10 +824,7 @@ class MLPredictNode(BaseNode):
         except Exception as exc:
             duration_ms = (time.monotonic() - t0) * 1000
             return self._make_result(
-                None,
-                duration_ms,
-                success=False,
-                error=safe_error_detail(exc, 500),
+                None, duration_ms, success=False, error=safe_error_detail(exc, 500)
             )
 
 
@@ -964,7 +936,7 @@ def create_node(config: NodeConfig) -> BaseNode:
     if node_class is None:
         raise ValueError(
             f"Unknown node type: {config.type!r}. "
-            f"Available types: {[t.value for t in NODE_REGISTRY] + list(_PHASE4_NODE_REGISTRY.keys())}",
+            f"Available types: {[t.value for t in NODE_REGISTRY] + list(_PHASE4_NODE_REGISTRY.keys())}"
         )
     return node_class(config)
 

@@ -10,6 +10,7 @@ temporal representation for downstream decision systems.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -17,7 +18,6 @@ import numpy as np
 @dataclass
 class ReservoirConfig:
     """Configuration for the Liquid Reservoir."""
-
     input_size: int = 10
     reservoir_size: int = 200
     spectral_radius: float = 0.95
@@ -25,13 +25,12 @@ class ReservoirConfig:
     input_scaling: float = 1.0
     connectivity: float = 0.1
     washout: int = 50
-    seed: int | None = None
+    seed: Optional[int] = None
 
 
 @dataclass
 class FluidicState:
     """Adaptive fluidic state tracking for an agent."""
-
     velocity: np.ndarray = field(default_factory=lambda: np.zeros(8))
     acceleration: np.ndarray = field(default_factory=lambda: np.zeros(8))
     energy: float = 1.0
@@ -74,24 +73,21 @@ class FluidicState:
 
     def compress(self) -> np.ndarray:
         """Return compressed state representation."""
-        return np.array(
-            [
-                self.energy,
-                self.coherence,
-                self.entropy,
-                self.compression,
-                float(np.mean(self.velocity)),
-                float(np.std(self.velocity)),
-                float(np.mean(self.acceleration)),
-                self.timestamp,
-            ]
-        )
+        return np.array([
+            self.energy,
+            self.coherence,
+            self.entropy,
+            self.compression,
+            float(np.mean(self.velocity)),
+            float(np.std(self.velocity)),
+            float(np.mean(self.acceleration)),
+            self.timestamp,
+        ])
 
 
 @dataclass
 class ReservoirState:
     """Snapshot of the reservoir state."""
-
     internal_state: np.ndarray
     fluidic_state: FluidicState
     spectral_radius: float
@@ -106,20 +102,21 @@ class LiquidReservoir:
     for adaptive behavior.
     """
 
-    def __init__(self, config: ReservoirConfig | None = None):
+    def __init__(self, config: Optional[ReservoirConfig] = None):
         self.config = config or ReservoirConfig()
         self.rng = np.random.RandomState(self.config.seed)
 
         # Initialize reservoir weights
-        self._W_input = (
-            self.rng.randn(self.config.reservoir_size, self.config.input_size)
-            * self.config.input_scaling
-        )
+        self._W_input = self.rng.randn(
+            self.config.reservoir_size, self.config.input_size
+        ) * self.config.input_scaling
 
         self._W_reservoir = self._init_reservoir_weights()
         self._state = np.zeros(self.config.reservoir_size)
-        self.fluidic = FluidicState(velocity=np.zeros(min(self.config.reservoir_size, 8)))
-        self._trained_readout: np.ndarray | None = None
+        self.fluidic = FluidicState(
+            velocity=np.zeros(min(self.config.reservoir_size, 8))
+        )
+        self._trained_readout: Optional[np.ndarray] = None
 
     def _init_reservoir_weights(self) -> np.ndarray:
         """Initialize reservoir weight matrix with target spectral radius."""
@@ -152,9 +149,8 @@ class LiquidReservoir:
         pre_activation = input_proj + recurrent
 
         # Leaky integrator update
-        new_state = (
-            1 - self.config.leaking_rate
-        ) * self._state + self.config.leaking_rate * np.tanh(pre_activation)
+        new_state = (1 - self.config.leaking_rate) * self._state + \
+                    self.config.leaking_rate * np.tanh(pre_activation)
 
         self._state = new_state
 
@@ -182,7 +178,9 @@ class LiquidReservoir:
     def reset(self) -> None:
         """Reset the reservoir state to zeros."""
         self._state = np.zeros(self.config.reservoir_size)
-        self.fluidic = FluidicState(velocity=np.zeros(min(self.config.reservoir_size, 8)))
+        self.fluidic = FluidicState(
+            velocity=np.zeros(min(self.config.reservoir_size, 8))
+        )
 
     def warmup(self, n_steps: int = 50) -> None:
         """Warm up the reservoir with random inputs."""
@@ -214,8 +212,8 @@ class LiquidReservoir:
         """
         # Collect reservoir states (skip washout)
         states = self.process_sequence(inputs)
-        states = states[self.config.washout :]
-        targets_trimmed = targets[self.config.washout :]
+        states = states[self.config.washout:]
+        targets_trimmed = targets[self.config.washout:]
 
         # Ridge regression: W_out = (S^T S + λI)^-1 S^T T
         S = states

@@ -68,8 +68,7 @@ def main() -> int:
         verify(hasattr(ProactiveAction, "HEAL"), "ProactiveAction.HEAL exists")
         verify(hasattr(ProactiveAction, "SCALE_UP"), "ProactiveAction.SCALE_UP exists")
         verify(
-            hasattr(ProactiveAction, "MIGRATE_STORAGE"),
-            "ProactiveAction.MIGRATE_STORAGE exists",
+            hasattr(ProactiveAction, "MIGRATE_STORAGE"), "ProactiveAction.MIGRATE_STORAGE exists"
         )
         verify(hasattr(ProactiveAction, "REBALANCE"), "ProactiveAction.REBALANCE exists")
         verify(hasattr(ProactiveAction, "HARDEN"), "ProactiveAction.HARDEN exists")

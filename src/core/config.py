@@ -27,8 +27,8 @@ class Tranc3Config(BaseSettings):
     ENVIRONMENT: str = Field(default="development")
 
     # ── Security (required) ──────────────────────────────────────────────
-    SECRET_KEY: str = Field(default="dev-secret-key-change-in-production")
-    JWT_SECRET: str = Field(default="dev-jwt-secret-change-in-production")
+    SECRET_KEY: str = Field(...)  # No default — must be set
+    JWT_SECRET: str = Field(...)  # No default — must be set
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
@@ -84,24 +84,6 @@ class Tranc3Config(BaseSettings):
     NANO_PORT: int = Field(default=8001)
     NANO_HEALTH_INTERVAL: float = Field(default=30.0)
 
-    @field_validator("SECRET_KEY", mode="after")
-    @classmethod
-    def validate_secret_key(cls, v: str) -> str:
-        if not v or not v.strip() or v == "dev-secret-key-change-in-production":
-            raise ValueError(
-                "SECRET_KEY must be set to a real secret. Set the SECRET_KEY environment variable.",
-            )
-        return v
-
-    @field_validator("JWT_SECRET", mode="after")
-    @classmethod
-    def validate_jwt_secret(cls, v: str) -> str:
-        if not v or not v.strip() or v == "dev-jwt-secret-change-in-production":
-            raise ValueError(
-                "JWT_SECRET must be set to a real secret. Set the JWT_SECRET environment variable.",
-            )
-        return v
-
     @field_validator("LOG_LEVEL", mode="before")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
@@ -150,12 +132,7 @@ try:
 except Exception as e:
     import logging
 
-    from shared_core.sanitize import sanitize_for_log
-
-    logging.getLogger(__name__).error(
-        "Configuration error: %s",
-        sanitize_for_log(e),
-    )
+    logging.getLogger(__name__).error(f"Configuration error: {e}")
     raise RuntimeError(
-        f"Tranc3 configuration failed: {e}. Check your environment variables and .env file.",
+        f"Tranc3 configuration failed: {e}. Check your environment variables and .env file."
     ) from e

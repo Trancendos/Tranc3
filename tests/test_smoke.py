@@ -97,7 +97,7 @@ class TestDigitalGridSmoke:
         async def _run():
             await bus.publish("smoke.event", {"ping": True})
 
-        asyncio.run(_run())
+        asyncio.get_event_loop().run_until_complete(_run())
         _log.info("grid.smoke event_bus received=%d", len(received))
         assert received
         assert received[0]["data"]["ping"] is True
@@ -110,9 +110,7 @@ class TestDigitalGridSmoke:
         ex = WorkflowExecutor()
         state = await ex.execute(wf, {"result": "smoke-ok"})
         _log.info(
-            "grid.smoke min_workflow status=%s elapsed_ms=%.1f",
-            state.status,
-            state.elapsed_ms,
+            "grid.smoke min_workflow status=%s elapsed_ms=%.1f", state.status, state.elapsed_ms
         )
         assert state.status == "completed"
         assert state.elapsed_ms >= 0

@@ -9,38 +9,9 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-try:
-    import torch
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch
 
 logger = logging.getLogger(__name__)
-
-
-def _get_device(device: Optional[str]) -> Optional[torch.device]:
-    """Select compute device; returns None when PyTorch is unavailable.
-
-    Emits a warning if a specific device is requested but torch is absent so
-    callers are not silently surprised by bootstrap-mode falling back.
-    """
-    if device is not None and not _TORCH_AVAILABLE:
-        logger.warning(
-            "Device %r requested but PyTorch is not available — ignoring; bootstrap mode active.",
-            device,
-        )
-    if torch is not None:  # type-narrows torch from Optional to module
-        try:
-            default = "cuda" if torch.cuda.is_available() else "cpu"
-        except RuntimeError:
-            logger.warning("CUDA availability check failed; falling back to CPU device.")
-            default = "cpu"
-        return torch.device(device or default)
-    return None
-
 
 _DEFAULT_MODEL_PATH = os.getenv("TRANC3_MODEL_PATH", "./models/tranc3-v1/tranc3-final.pt")
 _DEFAULT_TOKENIZER_PATH = os.getenv("TRANC3_TOKENIZER_PATH", "./models/tokenizer")
@@ -76,12 +47,11 @@ class Tranc3Engine:
     ):
         self._model_path = Path(model_path or _DEFAULT_MODEL_PATH)
         self._tokenizer_path = Path(tokenizer_path or _DEFAULT_TOKENIZER_PATH)
-        self._device = _get_device(device)
+        self._device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         self._model = None
         self._tokenizer = None
         self._loaded = False
-        # Bootstrap mode when torch is unavailable or weights are missing
-        self._bootstrap_mode = not _TORCH_AVAILABLE
+        self._bootstrap_mode = False
 
     # ─── Lifecycle ─────────────────────────────────────────────────────────────
 

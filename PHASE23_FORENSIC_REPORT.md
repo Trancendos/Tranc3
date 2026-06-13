@@ -42,7 +42,7 @@ The forensic investigation began with 263 failing tests (out of ~2,341 total). T
 **CI/CD**: Forgejo Actions, GitHub Actions, CodeQL, Trivy, Bandit, Semgrep  
 **Security**: OWASP hardening, RBAC, ABAC, zero-trust, vault, audit ledger  
 
-### 2.3 Dimensional Module Map
+### 2.3 Shared Core Module Map
 
 **infinity/** — Core intelligence and security layer:
 - `adaptive_intelligence.py` — Unified smart adaptive intelligence (HealthScore pipeline, AnomalyDetector, SelfRepairEngine, ForesightEngine)

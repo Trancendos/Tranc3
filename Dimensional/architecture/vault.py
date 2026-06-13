@@ -266,8 +266,8 @@ class VaultSecretLoader:
                 str_ptr = id(value)
                 # Overwrite the internal buffer pointer area
                 ctypes.memset(str_ptr, 0, min(buf_size, 64))
-            except (SystemError, ValueError, TypeError) as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except (SystemError, ValueError, TypeError):
+                pass
 
             if self._audit_enabled:
                 for entry in self._access_log:

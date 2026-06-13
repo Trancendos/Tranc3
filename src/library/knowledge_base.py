@@ -93,9 +93,7 @@ class Library:
         for tag in art.tags:
             self._tag_index.setdefault(tag, []).append(art.id)
         logger.debug(
-            "library: created article id=%s title=%r",
-            art.id,
-            sanitize_for_log(title),
+            "library: created article id=%s title=%r", art.id, sanitize_for_log(title)
         )  # codeql[py/cleartext-logging]
         self._emit_observatory_event(art, "article.created")
         return art
@@ -177,27 +175,6 @@ class Library:
             )
         except Exception:
             pass  # nosec B110 — graceful degradation; error logged upstream
-
-        # Also emit directly to the EventBus for search-service indexing
-        try:
-            from src.event_bus import get_event_bus  # noqa: PLC0415
-
-            bus = get_event_bus()
-            bus.emit_async(
-                event_type=event_type,
-                data={
-                    "id": art.id,
-                    "title": art.title,
-                    "body": art.body,
-                    "tags": art.tags,
-                    "author": art.author,
-                    "source": art.source,
-                    "status": art.status.value,
-                },
-                source="library",
-            )
-        except Exception:
-            pass  # nosec B110 — graceful degradation
 
     def _seed_platform_articles(self) -> None:
         """Seed initial platform documentation articles."""

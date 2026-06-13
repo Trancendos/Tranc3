@@ -22,37 +22,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
-
-from shared_core.path_validation import (
-    PathTraversalError,
-    existing_file_path_str,
-)
-from src.entities.health_metadata import health_entity_block
-
-# validate_existing_file is an alias for existing_file_path_str
-validate_existing_file = existing_file_path_str
 
 WORKER_PORT = 8028
 WORKER_NAME = "cdn-service"
 DB_PATH = Path(__file__).parent / "data" / "cdn.db"
 ASSETS_ROOT = Path(__file__).parent / "data" / "assets"
-
-
-def _asset_file_path(relative_path: str) -> Path:
-    """Resolve a user-supplied path under ASSETS_ROOT."""
-    normalized = relative_path.lstrip("/")
-    try:
-        return validate_existing_file(normalized, ASSETS_ROOT.resolve())
-    except PathTraversalError:
-        raise HTTPException(status_code=404, detail="Asset not found") from None
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Asset not found") from None
-
-
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 ASSETS_ROOT.mkdir(parents=True, exist_ok=True)
 
@@ -107,7 +85,7 @@ def init_db() -> None:
 
 
 def _file_etag(path: Path) -> str:
-    h = hashlib.sha1(usedforsecurity=False)
+    h = hashlib.sha1()
     h.update(str(path.stat().st_mtime).encode())
     h.update(str(path.stat().st_size).encode())
     return f'"{h.hexdigest()}"'
@@ -178,19 +156,6 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 POLICY_HEADERS = {
     "immutable": CACHE_IMMUTABLE,
     "long": CACHE_LONG,
@@ -206,7 +171,6 @@ async def health():
         total_size = conn.execute("SELECT COALESCE(SUM(size), 0) FROM assets").fetchone()[0]
         serve_count = conn.execute("SELECT COALESCE(SUM(serve_count), 0) FROM assets").fetchone()[0]
     return {
-        "entity": health_entity_block(8028, "cdn-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -214,10 +178,17 @@ async def health():
         "registered_assets": asset_count,
         "total_bytes": total_size,
         "total_serves": serve_count,
+        "entity": {
+            "location": "The Studio",
+            "pillar": "Creativity",
+            "lead_ai": "Voxx",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Central Hub of the Creativity Center",
+        },
     }
 
 
-@_router.get("/assets")
+@app.get("/assets")
 async def list_assets(
     prefix: Optional[str] = None,
     limit: int = 100,
@@ -237,19 +208,19 @@ async def list_assets(
     return {"assets": [dict(r) for r in rows]}
 
 
-@_router.get("/assets/stats")
+@app.get("/assets/stats")
 async def asset_stats():
     with get_conn() as conn:
         by_policy = conn.execute(
-            "SELECT cache_policy, COUNT(*) as count, SUM(size) as bytes FROM assets GROUP BY cache_policy",
+            "SELECT cache_policy, COUNT(*) as count, SUM(size) as bytes FROM assets GROUP BY cache_policy"
         ).fetchall()
         top = conn.execute(
-            "SELECT path, serve_count FROM assets ORDER BY serve_count DESC LIMIT 10",
+            "SELECT path, serve_count FROM assets ORDER BY serve_count DESC LIMIT 10"
         ).fetchall()
     return {"by_policy": [dict(r) for r in by_policy], "top_assets": [dict(r) for r in top]}
 
 
-@_router.get("/static/{path:path}")
+@app.get("/static/{path:path}")
 async def serve_asset(
     path: str,
     request: Request,
@@ -257,7 +228,10 @@ async def serve_asset(
     if_modified_since: Optional[str] = Header(None),
 ):
     asset_path = f"/{path}"
-    full_path = _asset_file_path(path)
+    full_path = ASSETS_ROOT / path
+
+    if not full_path.exists() or not full_path.is_file():
+        raise HTTPException(status_code=404, detail="Asset not found")
 
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM assets WHERE path = ?", (asset_path,)).fetchone()
@@ -299,13 +273,8 @@ async def serve_asset(
     if if_none_match and if_none_match == etag:
         return Response(status_code=304, headers={"ETag": etag, "Cache-Control": cache_control})
 
-    try:
-        response_path = existing_file_path_str(path.lstrip("/"), ASSETS_ROOT.resolve())
-    except (PathTraversalError, FileNotFoundError):
-        raise HTTPException(status_code=404, detail="Asset not found") from None
-
-    return FileResponse(  # codeql[py/path-injection] – response_path from existing_file_path_str barrier
-        response_path,
+    return FileResponse(
+        str(full_path),
         media_type=content_type,
         headers={
             "ETag": etag,
@@ -315,21 +284,22 @@ async def serve_asset(
     )
 
 
-@_router.post("/register")
+@app.post("/register")
 async def register_asset(req: AssetRegister):
-    full_path = _asset_file_path(req.path.lstrip("/"))
+    full_path = ASSETS_ROOT / req.path.lstrip("/")
+    if not full_path.exists():
+        raise HTTPException(status_code=404, detail="File not found in assets root")
     with get_conn() as conn:
         meta = _register_file(conn, req.path, full_path)
         if req.cache_policy:
             conn.execute(
-                "UPDATE assets SET cache_policy=? WHERE path=?",
-                (req.cache_policy, req.path),
+                "UPDATE assets SET cache_policy=? WHERE path=?", (req.cache_policy, req.path)
             )
         conn.commit()
     return {"registered": req.path, **meta}
 
 
-@_router.get("/serve-log/{path:path}")
+@app.get("/serve-log/{path:path}")
 async def serve_log(path: str, limit: int = 50):
     asset_path = f"/{path}"
     with get_conn() as conn:
@@ -338,9 +308,6 @@ async def serve_log(path: str, limit: int = 50):
             (asset_path, limit),
         ).fetchall()
     return {"path": asset_path, "log": [dict(r) for r in rows]}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

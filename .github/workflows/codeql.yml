@@ -54,45 +54,18 @@ jobs:
           config-file: .github/codeql-config.yml
           packs: ${{ matrix.packs }}
 
-      # Matrix JSON does not expand ${{ github.workspace }}; set options via GITHUB_ENV.
-      - name: Configure Python path-injection model pack
-        if: matrix.language == 'python'
-        run: |
-          PACK_ROOT="${GITHUB_WORKSPACE}/.github/codeql"
-          echo "CODEQL_ACTION_EXTRA_OPTIONS={\"database\":{\"run-queries\":[\"--additional-packs=${PACK_ROOT}\",\"--extension-packs=trancendos/tranc3-python-models\"]}}" >> "$GITHUB_ENV"
-
       - name: Perform CodeQL Analysis
         id: analyze
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
           output: sarif-results
-          upload: never
-
-      # path_validation.py is the path-injection sanitizer: internal os.path/open
-      # probes are intentional and already constrained under base_dir.
-      - name: Filter sanitizer-module path-injection false positives
-        if: matrix.language == 'python'
-        uses: advanced-security/filter-sarif@v1.1
-        with:
-          patterns: |
-            -Dimensional/path_validation.py:py/path-injection
-            -shared_core/path_validation.py:py/path-injection
-          input: sarif-results/${{ matrix.sarif-name }}.sarif
-          output: sarif-results/${{ matrix.sarif-name }}.sarif
-
-      - name: Upload SARIF
-        id: upload
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: sarif-results/${{ matrix.sarif-name }}.sarif
-          category: "/language:${{ matrix.language }}"
 
       - name: Dismiss suppressed alerts
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        if: github.ref == 'refs/heads/main'
         uses: advanced-security/dismiss-alerts@v2
         with:
-          sarif-id: ${{ steps.upload.outputs.sarif-id }}
+          sarif-id: ${{ steps.analyze.outputs.sarif-id }}
           sarif-file: sarif-results/${{ matrix.sarif-name }}.sarif
         env:
           GITHUB_TOKEN: ${{ github.token }}

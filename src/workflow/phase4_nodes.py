@@ -391,9 +391,7 @@ class MetaLearnNode:
                 outcome_key = cfg.get("outcome_key", "success")
                 success = bool(inputs.get(outcome_key, True))
                 await ml.record_outcome(
-                    result.prototype_id,
-                    success=success,
-                    parameters=base_params,
+                    result.prototype_id, success=success, parameters=base_params
                 )
             return NodeResult(
                 node_id=self.config.id,
@@ -700,10 +698,7 @@ class KnowledgeGraphNode:
                 etype = EdgeType[etype_str] if etype_str in EdgeType.__members__ else None
                 if cfg.get("all_paths"):
                     paths = await kg.all_paths(
-                        src_id,
-                        tgt_id,
-                        max_depth=int(cfg.get("max_depth", 6)),
-                        edge_type=etype,
+                        src_id, tgt_id, max_depth=int(cfg.get("max_depth", 6)), edge_type=etype
                     )
                     output = {"action": "path", "mode": "all", "paths": paths, "count": len(paths)}
                 else:

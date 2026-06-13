@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import sqlite3
 import threading
 import uuid
@@ -24,22 +23,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    FastAPI,
-    Header,
-    HTTPException,
-    Query,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import log_server_error, safe_error_detail
-from src.database.encrypted_sqlite import connect as sqlite3_connect
-from src.entities.health_metadata import health_entity_block
+from Dimensional.error_handlers import safe_error_detail
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -148,7 +136,7 @@ class MonitoringDatabase:
 
     def _get_conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3_connect(str(self.db_path), timeout=10)
+            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
             self._local.conn.row_factory = sqlite3.Row
             self._local.conn.execute("PRAGMA journal_mode=WAL")
             self._local.conn.execute("PRAGMA synchronous=NORMAL")
@@ -216,10 +204,10 @@ class MonitoringDatabase:
                 )
             """)
             cur.execute(
-                "CREATE INDEX IF NOT EXISTS idx_health_service ON health_reports(service_name)",
+                "CREATE INDEX IF NOT EXISTS idx_health_service ON health_reports(service_name)"
             )
             cur.execute(
-                "CREATE INDEX IF NOT EXISTS idx_health_timestamp ON health_reports(timestamp)",
+                "CREATE INDEX IF NOT EXISTS idx_health_timestamp ON health_reports(timestamp)"
             )
             cur.execute("CREATE INDEX IF NOT EXISTS idx_metrics_name ON metrics(name)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_metrics_timestamp ON metrics(timestamp)")
@@ -291,10 +279,7 @@ class MonitoringDatabase:
             )
 
     def query_metrics(
-        self,
-        name: str,
-        hours: int = 1,
-        labels: Optional[Dict[str, str]] = None,
+        self, name: str, hours: int = 1, labels: Optional[Dict[str, str]] = None
     ) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
@@ -346,7 +331,7 @@ class MonitoringDatabase:
         conn = self._get_conn()
         if enabled_only:
             rows = conn.execute(
-                "SELECT * FROM alert_rules WHERE enabled=1 ORDER BY name",
+                "SELECT * FROM alert_rules WHERE enabled=1 ORDER BY name"
             ).fetchall()
         else:
             rows = conn.execute("SELECT * FROM alert_rules ORDER BY name").fetchall()
@@ -378,9 +363,7 @@ class MonitoringDatabase:
         return alert
 
     def get_alerts(
-        self,
-        state: Optional[AlertState] = None,
-        hours: int = 168,
+        self, state: Optional[AlertState] = None, hours: int = 168
     ) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
@@ -417,7 +400,7 @@ class AlertEngine:
     def __init__(self, db: MonitoringDatabase):
         self.db = db
         self._metric_buffer: Dict[str, List[tuple]] = defaultdict(
-            list,
+            list
         )  # rule_id -> [(value, timestamp)]
 
     def evaluate(self, metric: MetricPayload):
@@ -502,7 +485,7 @@ class DashboardWSManager:
 
     async def broadcast(self, event_type: str, data: Any):
         msg = json.dumps(
-            {"type": event_type, "data": data, "timestamp": datetime.now(timezone.utc).isoformat()},
+            {"type": event_type, "data": data, "timestamp": datetime.now(timezone.utc).isoformat()}
         )
         stale = []
         with self._lock:
@@ -529,10 +512,6 @@ app = FastAPI(
     version="1.0.0",
 )
 
-from src.observability.prometheus_mount import mount_prometheus_endpoint
-
-mount_prometheus_endpoint(app, "monitoring")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -540,20 +519,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 STARTED_AT = datetime.now(timezone.utc)
 
 
@@ -566,16 +531,22 @@ STARTED_AT = datetime.now(timezone.utc)
 async def health():
     uptime = (datetime.now(timezone.utc) - STARTED_AT).total_seconds()
     return {
-        "entity": health_entity_block(8007, "the-observatory"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": uptime,
         "version": "1.0.0",
+        "entity": {
+            "location": "The Observatory",
+            "pillar": "Knowledge",
+            "lead_ai": "Norman Hawkins",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Audit Log & Monitoring Platform",
+        },
     }
 
 
-@_router.get("/stats")
+@app.get("/stats")
 async def stats():
     """Overview statistics for the monitoring system."""
     services = db.get_latest_health()
@@ -602,19 +573,18 @@ async def submit_health_report(report: HealthReport):
     """Submit a health report for a service."""
     db.store_health(report)
     await ws_manager.broadcast(
-        "health_update",
-        {"service": report.service_name, "status": report.status.value},
+        "health_update", {"service": report.service_name, "status": report.status.value}
     )
     return {"ok": True, "service": report.service_name, "status": report.status.value}
 
 
-@_router.get("/health/services")
+@app.get("/health/services")
 async def list_service_health():
     """Get latest health status for all services."""
     return {"services": db.get_latest_health()}
 
 
-@_router.get("/health/services/{service_name}")
+@app.get("/health/services/{service_name}")
 async def get_service_health(service_name: str, hours: int = Query(24, ge=1, le=168)):
     """Get health history for a specific service."""
     history = db.get_health_history(service_name, hours=hours)
@@ -628,7 +598,7 @@ async def get_service_health(service_name: str, hours: int = Query(24, ge=1, le=
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/metrics")
+@app.post("/metrics")
 async def submit_metric(metric: MetricPayload):
     """Submit a single metric data point."""
     db.store_metric(metric)
@@ -637,7 +607,7 @@ async def submit_metric(metric: MetricPayload):
     return {"ok": True, "name": metric.name, "value": metric.value}
 
 
-@_router.post("/metrics/batch")
+@app.post("/metrics/batch")
 async def submit_metrics_batch(metrics: List[MetricPayload]):
     """Submit multiple metric data points at once."""
     db.store_metrics_batch(metrics)
@@ -647,13 +617,13 @@ async def submit_metrics_batch(metrics: List[MetricPayload]):
     return {"ok": True, "count": len(metrics)}
 
 
-@_router.get("/metrics/names")
+@app.get("/metrics/names")
 async def list_metric_names():
     """List all distinct metric names."""
     return {"names": db.get_metric_names()}
 
 
-@_router.get("/metrics/query")
+@app.get("/metrics/query")
 async def query_metrics(
     name: str = Query(..., description="Metric name"),
     hours: int = Query(1, ge=1, le=168),
@@ -670,7 +640,7 @@ async def query_metrics(
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/alerts/rules")
+@app.post("/alerts/rules")
 async def create_alert_rule(rule: AlertRule):
     """Create a new alert rule."""
     created = db.create_alert_rule(rule)
@@ -678,13 +648,13 @@ async def create_alert_rule(rule: AlertRule):
     return {"ok": True, "rule": created}
 
 
-@_router.get("/alerts/rules")
+@app.get("/alerts/rules")
 async def list_alert_rules(enabled_only: bool = False):
     """List all alert rules."""
     return {"rules": db.get_alert_rules(enabled_only=enabled_only)}
 
 
-@_router.delete("/alerts/rules/{rule_id}")
+@app.delete("/alerts/rules/{rule_id}")
 async def delete_alert_rule(rule_id: str):
     """Delete an alert rule."""
     if not db.delete_alert_rule(rule_id):
@@ -697,7 +667,7 @@ async def delete_alert_rule(rule_id: str):
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/alerts")
+@app.get("/alerts")
 async def list_alerts(
     state: Optional[AlertState] = None,
     hours: int = Query(168, ge=1, le=720),
@@ -706,7 +676,7 @@ async def list_alerts(
     return {"alerts": db.get_alerts(state=state, hours=hours)}
 
 
-@_router.post("/alerts/{alert_id}/resolve")
+@app.post("/alerts/{alert_id}/resolve")
 async def resolve_alert(alert_id: str):
     """Manually resolve an alert."""
     if not db.resolve_alert(alert_id):
@@ -757,7 +727,7 @@ KNOWN_SERVICES = [
 ]
 
 
-@_router.post("/monitoring/collect")
+@app.post("/monitoring/collect")
 async def collect_health():
     """Trigger health collection from all known services. Called by scheduler or manually."""
     import urllib.error
@@ -778,19 +748,14 @@ async def collect_health():
                 db.store_health(report)
                 results.append({"service": svc["name"], "status": "healthy"})
         except Exception as e:
-            safe_message = log_server_error(
-                e,
-                500,
-                context=f"health collection for {svc['name']}",
-            )
             report = HealthReport(
                 service_name=svc["name"],
                 status=HealthStatus.unhealthy,
-                metadata={"error": safe_message},
+                metadata={"error": safe_error_detail(e, 500)},
             )
             db.store_health(report)
             results.append(
-                {"service": svc["name"], "status": "unhealthy", "error": safe_error_detail(e, 500)},
+                {"service": svc["name"], "status": "unhealthy", "error": safe_error_detail(e, 500)}
             )
 
     await ws_manager.broadcast("health_collection", {"results": results})
@@ -800,9 +765,6 @@ async def collect_health():
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-
-app.include_router(_router)
-
 
 if __name__ == "__main__":
     import uvicorn

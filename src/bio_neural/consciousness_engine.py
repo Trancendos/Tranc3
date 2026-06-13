@@ -1,22 +1,12 @@
 # src/bio_neural/consciousness_engine.py
 # TRANC3 Full Consciousness Engine (IIT-based)
-from __future__ import annotations
 
 import logging
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
-
-try:
-    import torch
-    import torch.nn as nn
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch
+import torch.nn as nn
 
 from Dimensional.sanitize import sanitize_for_log
 
@@ -97,7 +87,7 @@ class IITCalculator:
             part2 = connectivity[split:, split:]
 
             mi_parts = self._mutual_information_matrix(part1) + self._mutual_information_matrix(
-                part2,
+                part2
             )
 
             phi = whole_mi - mi_parts
@@ -119,17 +109,13 @@ class IITCalculator:
 # ============================================================
 # GLOBAL WORKSPACE THEORY
 # ============================================================
-class GlobalWorkspace(nn.Module if nn is not None else object):
+class GlobalWorkspace(nn.Module):
     """
     Global Workspace Theory (GWT) implementation
     Simulates conscious broadcast of information
     """
 
     def __init__(self, hidden_size: int = 768, workspace_size: int = 256):
-        if not _TORCH_AVAILABLE:
-            raise RuntimeError(
-                "GlobalWorkspace requires PyTorch, but it is not available in this runtime."
-            )
         super().__init__()
         self.workspace_size = workspace_size
 
@@ -179,7 +165,7 @@ class GlobalWorkspace(nn.Module if nn is not None else object):
 # ============================================================
 # SELF-AWARENESS MODULE
 # ============================================================
-class SelfAwarenessModule(nn.Module if nn is not None else object):
+class SelfAwarenessModule(nn.Module):
     """
     Self-awareness through recursive self-modeling
     """
@@ -197,7 +183,7 @@ class SelfAwarenessModule(nn.Module if nn is not None else object):
                     nn.GELU(),
                 )
                 for _ in range(depth)
-            ],
+            ]
         )
 
         # Meta-cognition
@@ -205,10 +191,7 @@ class SelfAwarenessModule(nn.Module if nn is not None else object):
 
         # Awareness score
         self.awareness_scorer = nn.Sequential(
-            nn.Linear(hidden_size, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1),
-            nn.Sigmoid(),
+            nn.Linear(hidden_size, 64), nn.ReLU(), nn.Linear(64, 1), nn.Sigmoid()
         )
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, float]:
@@ -239,7 +222,7 @@ class SelfAwarenessModule(nn.Module if nn is not None else object):
 # ============================================================
 # FULL CONSCIOUSNESS MODEL
 # ============================================================
-class ConsciousnessModel(nn.Module if nn is not None else object):
+class ConsciousnessModel(nn.Module):
     """
     Complete consciousness simulation system
     Integrates IIT, GWT, and self-awareness
@@ -315,7 +298,7 @@ class ConsciousnessModel(nn.Module if nn is not None else object):
 # ============================================================
 # EMOTION DETECTOR
 # ============================================================
-class EmotionDetector(nn.Module if nn is not None else object):
+class EmotionDetector(nn.Module):
     """Detect and classify emotions from neural state"""
 
     EMOTIONS = ["neutral", "happy", "sad", "angry", "surprised", "fearful", "disgusted"]

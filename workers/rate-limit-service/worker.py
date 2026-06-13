@@ -11,7 +11,6 @@ Zero-cost: In-memory token buckets (fast), SQLite for policy persistence.
 from __future__ import annotations
 
 import logging
-import os
 import sqlite3
 import threading
 import time
@@ -20,11 +19,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8026
 WORKER_NAME = "rate-limit-service"
@@ -164,36 +161,27 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
     with _lock:
         active_buckets = len(_buckets)
     return {
-        "entity": health_entity_block(8026, "rate-limit-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "active_buckets": active_buckets,
+        "entity": {
+            "location": "Cryptex",
+            "pillar": "Security",
+            "lead_ai": "Renik",
+            "primes": ["The Guardian (Marcus Magnolia)"],
+            "primary_function": "Cyber Defense (Threat Intel, DDoS, CVE)",
+        },
     }
 
 
-@_router.post("/check")
+@app.post("/check")
 async def check(req: CheckIn):
     result = _check_and_consume(req.key, req.policy, req.tokens)
     if not result["allowed"]:
@@ -205,7 +193,7 @@ async def check(req: CheckIn):
     return result
 
 
-@_router.post("/peek")
+@app.post("/peek")
 async def peek(req: CheckIn):
     """Check without consuming tokens."""
     policy = _get_policy(req.policy) or _get_policy("default")
@@ -227,21 +215,21 @@ async def peek(req: CheckIn):
     }
 
 
-@_router.delete("/buckets/{key}")
+@app.delete("/buckets/{key}")
 async def reset_bucket(key: str):
     with _lock:
         removed = _buckets.pop(key, None) is not None
     return {"key": key, "reset": removed}
 
 
-@_router.get("/policies")
+@app.get("/policies")
 async def list_policies():
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM policies ORDER BY name").fetchall()
     return {"policies": [dict(r) for r in rows]}
 
 
-@_router.post("/policies", status_code=201)
+@app.post("/policies", status_code=201)
 async def create_policy(req: PolicyCreate):
     with get_conn() as conn:
         if conn.execute("SELECT name FROM policies WHERE name = ?", (req.name,)).fetchone():
@@ -254,20 +242,17 @@ async def create_policy(req: PolicyCreate):
     return {"name": req.name, "capacity": req.capacity, "refill_rate": req.refill_rate}
 
 
-@_router.patch("/policies/{name}")
+@app.patch("/policies/{name}")
 async def update_policy(name: str, req: PolicyUpdate):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM policies WHERE name = ?", (name,)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Policy not found")
-        # Allowlist prevents any non-schema key from reaching the SQL string.
-        _updatable = frozenset({"capacity", "refill_rate", "description"})
-        updates = {k: v for k, v in req.model_dump(exclude_none=True).items() if k in _updatable}
+        updates = dict(req.model_dump(exclude_none=True).items())
         if updates:
-            set_clause = ", ".join(f"{k} = ?" for k in updates)  # keys are allowlisted
+            set_clause = ", ".join(f"{k} = ?" for k in updates)
             conn.execute(
-                f"UPDATE policies SET {set_clause} WHERE name = ?",
-                [*updates.values(), name],
+                f"UPDATE policies SET {set_clause} WHERE name = ?", [*updates.values(), name]
             )
             conn.commit()
     # Evict cached buckets for this policy
@@ -278,7 +263,7 @@ async def update_policy(name: str, req: PolicyUpdate):
     return {"updated": name, "evicted_buckets": len(evict)}
 
 
-@_router.delete("/policies/{name}")
+@app.delete("/policies/{name}")
 async def delete_policy(name: str):
     if name == "default":
         raise HTTPException(status_code=400, detail="Cannot delete the default policy")
@@ -290,14 +275,11 @@ async def delete_policy(name: str):
     return {"deleted": name}
 
 
-@_router.get("/stats")
+@app.get("/stats")
 async def stats():
     with _lock:
         snapshot = {k: {"tokens": v["tokens"], "policy": v["policy"]} for k, v in _buckets.items()}
     return {"active_buckets": len(snapshot), "buckets": snapshot}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

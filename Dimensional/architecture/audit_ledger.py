@@ -133,70 +133,26 @@ class AuditLedger:
         self._ledger_path = self._storage_dir / _LEDGER_FILE
         self._chain_path = self._storage_dir / _CHAIN_FILE
 
-        # Signing key for HMAC — resolution order:
-        #   1. Explicit signing_key argument
-        #   2. AUDIT_SIGNING_KEY env var
-        #   3. Persistent key file in storage_dir (survives restarts, single-node)
-        #   4. Ephemeral random key (warns loudly — tokens won't verify across restarts)
+        # Signing key for HMAC
         self._signing_key = signing_key or os.getenv("AUDIT_SIGNING_KEY", "")
-        self._key_is_ephemeral = False
-
         if not self._signing_key:
-            self._signing_key = self._load_or_create_persistent_key()
+            # Generate a key from machine-specific entropy.
+            # WARNING: This key is not portable — ledger verification requires
+            # the AUDIT_SIGNING_KEY env var to be explicitly set for multi-node
+            # or disaster-recovery scenarios. The fallback key combines hostname,
+            # process ID, and boot time to reduce collision risk across machines.
+            import socket
+            import time
 
-        # Load chain state
-        self._last_hash = "genesis"
-        self._sequence = 0
-        self._load_chain_state()
+            key_source = f"tranc3-audit-{socket.gethostname()}-{os.getpid()}-{time.time()}"
+            self._signing_key = hashlib.sha256(key_source.encode()).hexdigest()[:32]
+            import warnings
 
-    def _load_or_create_persistent_key(self) -> str:
-        """Load key from persistent file or generate and save a new one.
-
-        The key file lives in the same directory as the ledger so it travels
-        with the ledger on backups and volume mounts. It is NOT a substitute
-        for setting AUDIT_SIGNING_KEY in the environment on multi-node or
-        disaster-recovery deployments — only env var guarantees cross-node
-        consistency.
-        """
-        key_file = self._storage_dir / ".audit_signing_key"
-
-        if key_file.exists():
-            try:
-                key = key_file.read_text(encoding="utf-8").strip()
-                if len(key) >= 32:
-                    logger.info(
-                        "AuditLedger: loaded persistent signing key from %s. "
-                        "For multi-node or DR setups set AUDIT_SIGNING_KEY env var.",
-                        key_file,
-                    )
-                    return key
-            except OSError as exc:
-                logger.warning("AuditLedger: could not read key file %s: %s", key_file, exc)
-
-        # Generate a new stable key and persist it
-        import secrets
-
-        new_key = secrets.token_hex(32)  # 256-bit cryptographic random key
-        try:
-            key_file.write_text(new_key + "\n", encoding="utf-8")
-            key_file.chmod(0o600)  # owner-read only
-            logger.warning(
-                "AuditLedger: generated new persistent signing key → %s. "
-                "Back up this file alongside the ledger, or set AUDIT_SIGNING_KEY "
-                "env var to the same value for reproducible verification. "
-                "Run: python scripts/generate_env.py to persist it in .env",
-                key_file,
+            warnings.warn(
+                "AuditLedger: Using auto-generated signing key. Set AUDIT_SIGNING_KEY "
+                "env var for reproducible verification across restarts or multi-node deploys.",
+                stacklevel=2,
             )
-        except OSError as exc:
-            # Filesystem read-only or permission error — fall back to ephemeral
-            self._key_is_ephemeral = True
-            logger.critical(
-                "AuditLedger: cannot write key file (%s). Using ephemeral key — "
-                "audit tokens WILL NOT verify across restarts. "
-                "Set AUDIT_SIGNING_KEY env var immediately.",
-                exc,
-            )
-        return new_key
 
         # Load chain state
         self._last_hash = "genesis"  # Hash of the most recent record
@@ -365,32 +321,11 @@ class AuditLedger:
             "actors": actors,
             "chain_valid": self.verify_chain(),
             "storage_dir": str(self._storage_dir),
-            "key_status": self.get_key_status(),
         }
 
     def get_record_count(self) -> int:
         """Return the total number of records in the ledger."""
         return self._sequence
-
-    def get_key_status(self) -> Dict[str, Any]:
-        """Return signing key provenance for health/compliance checks."""
-        env_set = bool(os.getenv("AUDIT_SIGNING_KEY"))
-        key_file = self._storage_dir / ".audit_signing_key"
-        return {
-            "env_var_set": env_set,
-            "key_file_exists": key_file.exists(),
-            "key_is_ephemeral": getattr(self, "_key_is_ephemeral", False),
-            "key_file_path": str(key_file),
-            "recommendation": (
-                "OK — AUDIT_SIGNING_KEY env var is set"
-                if env_set
-                else (
-                    "WARN — using key file (single-node OK, set env var for multi-node/DR)"
-                    if key_file.exists()
-                    else "CRITICAL — ephemeral key; set AUDIT_SIGNING_KEY env var"
-                )
-            ),
-        }
 
     # ------------------------------------------------------------------
     # Internal: hashing

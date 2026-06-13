@@ -121,16 +121,14 @@ class TestAnalyticsService:
         db_path = str(tmp_path / "analytics.db")
         with patch.object(analytics_mod, "DB_PATH", db_path):
             analytics_mod.init_db()
-            secret = getattr(analytics_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(analytics_mod.app, headers=headers)
+            yield TestClient(analytics_mod.app)
 
     def test_health(self, client):
         r = client.get("/health")
         assert r.status_code == 200
         data = r.json()
         assert data["status"] == "healthy"
-        assert "live_events" in data
+        assert "event_count" in data
 
     def test_track_event(self, client):
         r = client.post(
@@ -150,7 +148,7 @@ class TestAnalyticsService:
                 "events": [
                     {"event_type": "click", "user_id": "u1"},
                     {"event_type": "scroll", "user_id": "u2"},
-                ],
+                ]
             },
         )
         assert r.status_code == 201
@@ -212,7 +210,7 @@ class TestAnalyticsService:
         r = client.get("/summary")
         assert r.status_code == 200
         data = r.json()
-        assert "live_events" in data
+        assert "total_events" in data
 
 
 # ===========================================================================
@@ -228,9 +226,7 @@ class TestSearchService:
         db_path = str(tmp_path / "search.db")
         with patch.object(search_mod, "DB_PATH", db_path):
             search_mod.init_db()
-            secret = getattr(search_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(search_mod.app, headers=headers)
+            yield TestClient(search_mod.app)
 
     def test_health(self, client):
         r = client.get("/health")
@@ -291,7 +287,7 @@ class TestSearchService:
                 "documents": [
                     {"id": "p1", "title": "Widget A", "body": "A great widget"},
                     {"id": "p2", "title": "Widget B", "body": "Another widget"},
-                ],
+                ]
             },
         )
         assert r.status_code == 201
@@ -317,9 +313,7 @@ class TestEmailService:
         db_path = str(tmp_path / "email.db")
         with patch.object(email_mod, "DB_PATH", db_path):
             email_mod.init_db()
-            secret = getattr(email_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(email_mod.app, headers=headers)
+            yield TestClient(email_mod.app)
 
     def test_health(self, client):
         r = client.get("/health")
@@ -360,7 +354,7 @@ class TestEmailService:
                 "emails": [
                     {"to": "a@example.com", "subject": "Email A", "body_text": "Body A"},
                     {"to": "b@example.com", "subject": "Email B", "body_text": "Body B"},
-                ],
+                ]
             },
         )
         assert r.status_code == 202
@@ -438,9 +432,7 @@ class TestSmsService:
         db_path = str(tmp_path / "sms.db")
         with patch.object(sms_mod, "DB_PATH", db_path):
             sms_mod.init_db()
-            secret = getattr(sms_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(sms_mod.app, headers=headers)
+            yield TestClient(sms_mod.app)
 
     def test_health(self, client):
         r = client.get("/health")
@@ -464,7 +456,7 @@ class TestSmsService:
                 "messages": [
                     {"to": "+15551111111", "message": "Hello A"},
                     {"to": "+15552222222", "message": "Hello B"},
-                ],
+                ]
             },
         )
         assert r.status_code == 202
@@ -502,9 +494,7 @@ class TestStorageService:
             patch.object(storage_mod, "STORAGE_ROOT", storage_path),
         ):
             storage_mod.init_db()
-            secret = getattr(storage_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(storage_mod.app, headers=headers)
+            yield TestClient(storage_mod.app)
 
     def test_health(self, client):
         r = client.get("/health")
@@ -592,9 +582,7 @@ class TestCronService:
         db_path = str(tmp_path / "cron.db")
         with patch.object(cron_mod, "DB_PATH", db_path):
             cron_mod.init_db()
-            secret = getattr(cron_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(cron_mod.app, headers=headers)
+            yield TestClient(cron_mod.app)
 
     def test_health(self, client):
         r = client.get("/health")
@@ -699,9 +687,7 @@ class TestQueueService:
         db_path = str(tmp_path / "queue.db")
         with patch.object(queue_mod, "DB_PATH", db_path):
             queue_mod.init_db()
-            secret = getattr(queue_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(queue_mod.app, headers=headers)
+            yield TestClient(queue_mod.app)
 
     def test_health(self, client):
         r = client.get("/health")
@@ -740,7 +726,7 @@ class TestQueueService:
                 "messages": [
                     {"payload": {"level": "INFO", "msg": "App started"}},
                     {"payload": {"level": "WARN", "msg": "High CPU"}},
-                ],
+                ]
             },
         )
         assert r.status_code == 201
@@ -760,8 +746,7 @@ class TestQueueService:
         client.post("/topics", json={"name": "ack-topic"})
         client.post("/topics/ack-topic/publish", json={"payload": {"x": 1}})
         consume = client.get(
-            "/topics/ack-topic/consume",
-            params={"consumer_id": "worker-ack"},
+            "/topics/ack-topic/consume", params={"consumer_id": "worker-ack"}
         ).json()
         msg_id = consume["messages"][0]["id"]
         r = client.post(f"/topics/ack-topic/ack/{msg_id}")
@@ -796,9 +781,7 @@ class TestCacheService:
         with patch.object(cache_mod, "DB_PATH", db_path):
             cache_mod._store.clear()
             cache_mod.init_db()
-            secret = getattr(cache_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(cache_mod.app, headers=headers)
+            yield TestClient(cache_mod.app)
         cache_mod._store.clear()
         cache_mod._store.update(saved_store)
 
@@ -895,9 +878,7 @@ class TestConfigService:
         db_path = str(tmp_path / "config.db")
         with patch.object(config_mod, "DB_PATH", db_path):
             config_mod.init_db()
-            secret = getattr(config_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(config_mod.app, headers=headers)
+            yield TestClient(config_mod.app)
 
     def test_health(self, client):
         r = client.get("/health")
@@ -963,7 +944,7 @@ class TestConfigService:
                     {"key": "k1", "value": "v1"},
                     {"key": "k2", "value": "v2"},
                     {"key": "k3", "value": "v3"},
-                ],
+                ]
             },
         )
         assert r.status_code == 200
@@ -998,9 +979,7 @@ class TestAuditService:
         db_path = str(tmp_path / "audit.db")
         with patch.object(audit_mod, "DB_PATH", db_path):
             audit_mod.init_db()
-            secret = getattr(audit_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(audit_mod.app, headers=headers)
+            yield TestClient(audit_mod.app)
 
     def test_health(self, client):
         r = client.get("/health")
@@ -1032,7 +1011,7 @@ class TestAuditService:
                 "entries": [
                     {"actor": "user:bob", "action": "view", "resource": "dashboard"},
                     {"actor": "user:bob", "action": "export", "resource": "report"},
-                ],
+                ]
             },
         )
         assert r.status_code == 201
@@ -1056,8 +1035,7 @@ class TestAuditService:
 
     def test_get_entry_by_id(self, client):
         created = client.post(
-            "/audit",
-            json={"actor": "user:alice", "action": "update", "resource": "profile"},
+            "/audit", json={"actor": "user:alice", "action": "update", "resource": "profile"}
         ).json()
         # ID returned as integer in 'id' field
         entry_id = created["id"]
@@ -1097,9 +1075,7 @@ class TestRateLimitService:
         with patch.object(rate_limit_mod, "DB_PATH", db_path):
             rate_limit_mod._buckets.clear()
             rate_limit_mod.init_db()
-            secret = getattr(rate_limit_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(rate_limit_mod.app, headers=headers)
+            yield TestClient(rate_limit_mod.app)
         rate_limit_mod._buckets.clear()
         rate_limit_mod._buckets.update(saved)
 
@@ -1176,9 +1152,7 @@ class TestGeoService:
         db_path = str(tmp_path / "geo.db")
         with patch.object(geo_mod, "DB_PATH", db_path):
             geo_mod.init_db()
-            secret = getattr(geo_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(geo_mod.app, headers=headers)
+            yield TestClient(geo_mod.app)
 
     def test_health(self, client):
         r = client.get("/health")
@@ -1258,9 +1232,7 @@ class TestCdnService:
             patch.object(cdn_mod, "ASSETS_ROOT", assets_root),
         ):
             cdn_mod.init_db()
-            secret = getattr(cdn_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(cdn_mod.app, headers=headers), assets_root
+            yield TestClient(cdn_mod.app), assets_root
 
     def test_health(self, client):
         client, _ = client
@@ -1325,9 +1297,7 @@ class TestHealthAggregator:
         with patch.object(health_agg_mod, "DB_PATH", db_path):
             health_agg_mod._latest.clear()
             health_agg_mod.init_db()
-            secret = getattr(health_agg_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(health_agg_mod.app, headers=headers)
+            yield TestClient(health_agg_mod.app)
         health_agg_mod._latest.clear()
         health_agg_mod._latest.update(saved)
 
@@ -1426,9 +1396,7 @@ class TestIdentityService:
         db_path = tmp_path / "identity.db"
         with patch.object(identity_mod, "DB_PATH", db_path):
             identity_mod.db = identity_mod.IdentitiesDatabase(db_path)
-            secret = getattr(identity_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(identity_mod.app, headers=headers)
+            yield TestClient(identity_mod.app)
 
     def test_health(self, client):
         r = client.get("/health")
@@ -1511,9 +1479,7 @@ class TestTheGrid:
         with patch.object(grid_mod, "DB_PATH", db_path):
             grid_mod.db = grid_mod.GridDatabase(db_path)
             grid_mod.engine = grid_mod.WorkflowEngine(grid_mod.db)
-            secret = getattr(grid_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(grid_mod.app, headers=headers)
+            yield TestClient(grid_mod.app)
 
     def test_health(self, client):
         r = client.get("/health")
@@ -1533,7 +1499,7 @@ class TestTheGrid:
                         "action": "transform",
                         "config": {"mapping": {"out": "input.value"}},
                         "depends_on": [],
-                    },
+                    }
                 ],
             },
         )
@@ -1582,7 +1548,7 @@ class TestTheGrid:
                         "action": "transform",
                         "config": {"mapping": {"result": "input.x"}},
                         "depends_on": [],
-                    },
+                    }
                 ],
             },
         ).json()
@@ -1610,7 +1576,7 @@ class TestTheGrid:
                         "action": "transform",
                         "config": {},
                         "depends_on": [],
-                    },
+                    }
                 ],
             },
         ).json()
@@ -1646,9 +1612,7 @@ class TestEnhancedUsersService:
         db_path = str(tmp_path / "users_v2.db")
         with patch.object(users_v2_mod, "DATABASE_PATH", db_path):
             users_v2_mod.db = users_v2_mod.UsersDatabase(db_path)
-            secret = getattr(users_v2_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            yield TestClient(users_v2_mod.app, headers=headers)
+            yield TestClient(users_v2_mod.app)
 
     def _create_user(self, client, suffix=""):
         username = f"user{suffix or str(uuid.uuid4())[:8]}"
@@ -1733,9 +1697,7 @@ class TestEnhancedUsersService:
         assert r.status_code == 200
         data = r.json()
         assert "reset_token" in data
-        # Token is emailed via notifications-service; API no longer returns it.
-        assert data["reset_token"] == ""
-        assert "reset link" in data["message"].lower()
+        assert len(data["reset_token"]) > 0
 
     def test_password_reset_unknown_email(self, client):
         r = client.post(

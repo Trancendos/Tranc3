@@ -37,7 +37,7 @@ import logging
 import re
 import secrets
 import time
-from typing import Dict, FrozenSet, Optional, Set
+from typing import Any, Dict, FrozenSet, Optional, Set
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -75,7 +75,8 @@ DEFAULT_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 # Permissions-Policy — disable unnecessary browser features
 DEFAULT_PERMISSIONS_POLICY = (
-    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=()"
+    "camera=(), microphone=(), geolocation=(), "
+    "payment=(), usb=(), magnetometer=(), gyroscope=()"
 )
 
 # Cross-Origin headers
@@ -88,10 +89,7 @@ CSRF_PROTECTED_METHODS: FrozenSet[str] = frozenset({"POST", "PUT", "DELETE", "PA
 
 # Dangerous patterns for input validation
 SQL_INJECTION_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(
-        r"(\b(union\s+select|select\s+.+\s+from|insert\s+into|delete\s+from|drop\s+table|alter\s+table)\b)",
-        re.IGNORECASE,
-    ),
+    re.compile(r"(\b(union\s+select|select\s+.+\s+from|insert\s+into|delete\s+from|drop\s+table|alter\s+table)\b)", re.IGNORECASE),
     re.compile(r"(--|;|/\*|\*/|xp_|sp_)", re.IGNORECASE),
     re.compile(r"(\b(exec(ute)?\s*\(?\s*@)\b)", re.IGNORECASE),
 ]
@@ -112,7 +110,6 @@ PATH_TRAVERSAL_PATTERNS: list[re.Pattern[str]] = [
 
 
 # ── CSRF Token Management ───────────────────────────────────────
-
 
 class CSRFManager:
     """
@@ -164,7 +161,6 @@ class CSRFManager:
 
 
 # ── Input Validation ─────────────────────────────────────────────
-
 
 class InputValidator:
     """
@@ -235,7 +231,6 @@ class InputValidator:
 
 
 # ── OWASP Hardening Middleware ───────────────────────────────────
-
 
 class OWASPHardeningMiddleware(BaseHTTPMiddleware):
     """

@@ -231,10 +231,8 @@ class SecureBytes:
     def __del__(self) -> None:
         try:
             self.zeroize()
-        except Exception as _exc:
-            logger.debug(
-                "suppressed %s", _exc, exc_info=False
-            )  # __del__ must never raise — safe to ignore zeroization failure
+        except Exception:
+            pass  # __del__ must never raise — safe to ignore zeroization failure
 
     def __exit__(self, *args: Any) -> None:
         self.zeroize()
@@ -341,10 +339,8 @@ class VaultAuditLogger:
                     try:
                         record = json.loads(last_line)
                         self._prev_hash = record.get("chain_hash", "genesis")
-                    except json.JSONDecodeError as _exc:
-                        logger.debug(
-                            "suppressed %s", _exc, exc_info=False
-                        )  # Corrupted audit line — use genesis hash as fallback
+                    except json.JSONDecodeError:
+                        pass  # Corrupted audit line — use genesis hash as fallback
 
     def log(self, event: VaultAuditEvent) -> None:
         """Record a vault audit event."""
@@ -837,10 +833,8 @@ class SoftHSM2Provider(HSMProvider):
                         "type": "secret_key",
                     }
                 )
-        except Exception as _exc:
-            logger.debug(
-                "suppressed %s", _exc, exc_info=False
-            )  # Key enumeration failure — return partial list
+        except Exception:
+            pass  # Key enumeration failure — return partial list
         return keys
 
     def close(self) -> None:
@@ -848,10 +842,8 @@ class SoftHSM2Provider(HSMProvider):
         if self._session is not None:
             try:
                 self._session.close()
-            except Exception as _exc:
-                logger.debug(
-                    "suppressed %s", _exc, exc_info=False
-                )  # Session close failure — safe to ignore during cleanup
+            except Exception:
+                pass  # Session close failure — safe to ignore during cleanup
             self._session = None
 
         self._pin.zeroize()
@@ -1146,10 +1138,8 @@ class YubiHSM2Provider(HSMProvider):
                 }
             ):
                 keys.append({"label": obj.label, "type": "secret_key"})
-        except Exception as _exc:
-            logger.debug(
-                "suppressed %s", _exc, exc_info=False
-            )  # Key enumeration failure — return partial list
+        except Exception:
+            pass  # Key enumeration failure — return partial list
         return keys
 
     def close(self) -> None:
@@ -1157,10 +1147,8 @@ class YubiHSM2Provider(HSMProvider):
         if self._session is not None:
             try:
                 self._session.close()
-            except Exception as _exc:
-                logger.debug(
-                    "suppressed %s", _exc, exc_info=False
-                )  # Session close failure — safe to ignore during cleanup
+            except Exception:
+                pass  # Session close failure — safe to ignore during cleanup
             self._session = None
 
         self._auth_password.zeroize()
@@ -1571,10 +1559,8 @@ class VaultSecretLoader:
         try:
             old_secret = self._load_secret(key)
             old_secret.zeroize()
-        except KeyError as _exc:
-            logger.debug(
-                "suppressed %s", _exc, exc_info=False
-            )  # Old secret didn't exist — that's fine
+        except KeyError:
+            pass  # Old secret didn't exist — that's fine
 
         # Store the new value
         self.store_secret(key, new_value)

@@ -27,21 +27,10 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    FastAPI,
-    Header,
-    HTTPException,
-    Query,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
-
-from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -184,10 +173,7 @@ def _get_current_mode(conn: sqlite3.Connection) -> str:
 
 
 def _set_current_mode(
-    conn: sqlite3.Connection,
-    mode: str,
-    reason: str = "",
-    triggered_by: str = "manual",
+    conn: sqlite3.Connection, mode: str, reason: str = "", triggered_by: str = "manual"
 ) -> None:
     now = _now()
     prev = _get_current_mode(conn)
@@ -215,19 +201,6 @@ app = FastAPI(title="Tranc3 Topology Service", version="0.1.0", lifespan=_lifesp
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
@@ -235,12 +208,7 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "ok",
-        "service": "topology-service",
-        "port": 8031,
-        "entity": health_entity_block(8031, "topology-service"),
-    }
+    return {"status": "ok", "service": "topology-service", "port": 8031}
 
 
 # ---------------------------------------------------------------------------
@@ -248,7 +216,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/mode")
+@app.get("/mode")
 async def get_current_mode():
     conn = _get_db()
     mode = _get_current_mode(conn)
@@ -256,14 +224,13 @@ async def get_current_mode():
     return {"mode": mode}
 
 
-@_router.put("/mode")
+@app.put("/mode")
 async def switch_mode(body: ModeSwitchRequest):
     try:
         target = TopologyMode(body.mode)
     except ValueError:
         raise HTTPException(
-            400,
-            f"Invalid mode '{body.mode}'. Must be one of {[m.value for m in TopologyMode]}",
+            400, f"Invalid mode '{body.mode}'. Must be one of {[m.value for m in TopologyMode]}"
         ) from None
 
     conn = _get_db()
@@ -273,12 +240,11 @@ async def switch_mode(body: ModeSwitchRequest):
     return {"mode": target.value, "reason": body.reason}
 
 
-@_router.get("/mode/history")
+@app.get("/mode/history")
 async def get_mode_history(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM topology_history ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        (limit, offset),
+        "SELECT * FROM topology_history ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -289,7 +255,7 @@ async def get_mode_history(limit: int = Query(50, ge=1, le=200), offset: int = Q
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/nodes", status_code=201)
+@app.post("/nodes", status_code=201)
 async def register_node(body: NodeRegister):
     conn = _get_db()
     now = _now()
@@ -321,11 +287,9 @@ async def register_node(body: NodeRegister):
     }
 
 
-@_router.get("/nodes")
+@app.get("/nodes")
 async def list_nodes(
-    status: Optional[str] = None,
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    status: Optional[str] = None, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)
 ):
     conn = _get_db()
     q = "SELECT * FROM node_health WHERE 1=1"
@@ -340,7 +304,7 @@ async def list_nodes(
     return [dict(r) for r in rows]
 
 
-@_router.put("/nodes/{node_id}/health")
+@app.put("/nodes/{node_id}/health")
 async def update_node_health(node_id: str, body: NodeHealthUpdate):
     conn = _get_db()
     now = _now()
@@ -355,7 +319,7 @@ async def update_node_health(node_id: str, body: NodeHealthUpdate):
     return {"id": node_id, "status": body.status, "latency_ms": body.latency_ms}
 
 
-@_router.delete("/nodes/{node_id}", status_code=204)
+@app.delete("/nodes/{node_id}", status_code=204)
 async def deregister_node(node_id: str):
     conn = _get_db()
     cur = conn.execute("DELETE FROM node_health WHERE id=?", (node_id,))
@@ -370,7 +334,7 @@ async def deregister_node(node_id: str):
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/migrations", status_code=201)
+@app.post("/migrations", status_code=201)
 async def create_migration(body: MigrationCreate):
     conn = _get_db()
     now = _now()
@@ -390,18 +354,17 @@ async def create_migration(body: MigrationCreate):
     }
 
 
-@_router.get("/migrations")
+@app.get("/migrations")
 async def list_migrations(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM migrations ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        (limit, offset),
+        "SELECT * FROM migrations ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 
-@_router.put("/migrations/{migration_id}/progress")
+@app.put("/migrations/{migration_id}/progress")
 async def update_migration_progress(migration_id: str, body: MigrationProgressUpdate):
     conn = _get_db()
     now = _now()
@@ -422,7 +385,7 @@ async def update_migration_progress(migration_id: str, body: MigrationProgressUp
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/failover")
+@app.post("/failover")
 async def trigger_failover(reason: str = "Automatic failover"):
     conn = _get_db()
     current = _get_current_mode(conn)
@@ -446,13 +409,13 @@ async def trigger_failover(reason: str = "Automatic failover"):
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/stats")
+@app.get("/stats")
 async def get_stats():
     conn = _get_db()
     mode = _get_current_mode(conn)
     total_nodes = conn.execute("SELECT COUNT(*) as c FROM node_health").fetchone()["c"]
     healthy_nodes = conn.execute(
-        "SELECT COUNT(*) as c FROM node_health WHERE status='healthy'",
+        "SELECT COUNT(*) as c FROM node_health WHERE status='healthy'"
     ).fetchone()["c"]
     total_migrations = conn.execute("SELECT COUNT(*) as c FROM migrations").fetchone()["c"]
     conn.close()
@@ -505,7 +468,7 @@ async def _broadcast_event(event_type: str, data: dict) -> None:
         _connected_ws.remove(ws)
 
 
-@_router.get("/events")
+@app.get("/events")
 async def _sse_events():
     async def _generator():
         while True:
@@ -516,7 +479,7 @@ async def _sse_events():
     return EventSourceResponse(_generator())
 
 
-@_router.get("/dashboard/summary")
+@app.get("/dashboard/summary")
 async def _dashboard_summary():
     """Aggregated summary optimized for dashboard consumption."""
     stats = await _get_stats_async()
@@ -548,9 +511,6 @@ async def _get_stats_async() -> dict:
 def _get_stats() -> dict:
     """Return basic service stats for real-time endpoints (sync fallback)."""
     return {"service": SERVICE_NAME, "port": PORT}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

@@ -968,7 +968,7 @@ class SparkToolRegistry:
         try:
 
             async def _run() -> Any:
-                exec(compile(code, "<mcp_code>", "exec"), namespace)  # noqa: S102  # nosec B102  # lgtm[py/unsafe-exec]
+                exec(compile(code, "<mcp_code>", "exec"), namespace)  # noqa: S102  # nosec B102
                 lines = code.strip().splitlines()
                 if lines:
                     last_line = lines[-1].strip()
@@ -982,10 +982,10 @@ class SparkToolRegistry:
                             "while ",
                             "if ",
                             "#",
-                        ),
+                        )
                     ):
                         try:
-                            return eval(last_line, namespace)  # noqa: S307  # nosec B307  # lgtm[py/unsafe-eval]
+                            return eval(last_line, namespace)  # noqa: S307  # nosec B307
                         except Exception:
                             return None
                 return None
@@ -1330,9 +1330,7 @@ try:
 
     _p4_count = _reg_p4(registry)
     logger.info(
-        "Phase 4 Spark tools loaded: %d tools added (total=%d)",
-        _p4_count,
-        len(registry._tools),
+        "Phase 4 Spark tools loaded: %d tools added (total=%d)", _p4_count, len(registry._tools)
     )
 except Exception as _p4_exc:
     logger.warning("Phase 4 Spark tools unavailable: %s", _p4_exc)
@@ -1348,9 +1346,7 @@ try:
 
     _p5_count = _reg_p5(registry)
     logger.info(
-        "Phase 5 Spark tools loaded: %d tools added (total=%d)",
-        _p5_count,
-        len(registry._tools),
+        "Phase 5 Spark tools loaded: %d tools added (total=%d)", _p5_count, len(registry._tools)
     )
 except Exception as _p5_exc:
     logger.warning("Phase 5 Spark tools unavailable: %s", _p5_exc)

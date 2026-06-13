@@ -467,9 +467,7 @@ class CollectiveMemory:
         self._running = True
         self._gc_task = asyncio.create_task(self._gc_loop())
         logger.info(
-            "collective_memory: started (max=%d, ttl=%.0fs)",
-            self._max_entries,
-            self._default_ttl,
+            "collective_memory: started (max=%d, ttl=%.0fs)", self._max_entries, self._default_ttl
         )
 
     async def stop(self) -> None:

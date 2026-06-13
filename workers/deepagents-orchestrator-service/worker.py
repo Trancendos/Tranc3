@@ -7,7 +7,6 @@ skill-based routing, and execution logging. Zero-cost self-hosted design.
 
 import asyncio
 import json
-import os
 import sqlite3
 import time
 import uuid
@@ -15,19 +14,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    FastAPI,
-    Header,
-    HTTPException,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
-
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 
 # ── Config ───────────────────────────────────────────────────────────────────
 SERVICE_NAME = "deepagents-orchestrator"
@@ -44,20 +33,6 @@ async def _lifespan(app):
 
 
 app = FastAPI(title=f"Tranc3 {SERVICE_NAME}", version="0.6.0", lifespan=_lifespan)
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 # ── Pydantic schemas ─────────────────────────────────────────────────────────
 
@@ -108,7 +83,7 @@ class SkillCreate(BaseModel):
     category: str
     description: str = ""
     proficiency_levels: list[str] = Field(
-        default_factory=lambda: ["beginner", "intermediate", "advanced", "expert"],
+        default_factory=lambda: ["beginner", "intermediate", "advanced", "expert"]
     )
 
 
@@ -116,7 +91,7 @@ class SkillCreate(BaseModel):
 
 
 def get_db() -> sqlite3.Connection:
-    db = sqlite3_connect(str(DB_PATH), timeout=10)
+    db = sqlite3.connect(str(DB_PATH), timeout=10)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA journal_mode=WAL")
     return db
@@ -220,10 +195,7 @@ def _now() -> float:
 
 
 def _log(
-    agent_id: str | None,
-    task_id: str | None,
-    action: str,
-    details: dict | None = None,
+    agent_id: str | None, task_id: str | None, action: str, details: dict | None = None
 ) -> None:
     db = get_db()
     db.execute(
@@ -244,8 +216,6 @@ def health():
     task_count = db.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
     skill_count = db.execute("SELECT COUNT(*) FROM skills").fetchone()[0]
     db.close()
-    from src.entities.health_metadata import health_entity_block
-
     return {
         "status": "healthy",
         "service": SERVICE_NAME,
@@ -253,14 +223,13 @@ def health():
         "agents": agent_count,
         "tasks": task_count,
         "skills": skill_count,
-        "entity": health_entity_block(PORT, SERVICE_NAME),
     }
 
 
 # ── Agent CRUD ───────────────────────────────────────────────────────────────
 
 
-@_router.post("/agents")
+@app.post("/agents")
 def create_agent(body: AgentCreate):
     aid = str(uuid.uuid4())
     now = _now()
@@ -284,13 +253,12 @@ def create_agent(body: AgentCreate):
     return {"id": aid, "name": body.name, "status": "active"}
 
 
-@_router.get("/agents")
+@app.get("/agents")
 def list_agents(status: str | None = None):
     db = get_db()
     if status:
         rows = db.execute(
-            "SELECT * FROM agents WHERE status=? ORDER BY created_at DESC",
-            (status,),
+            "SELECT * FROM agents WHERE status=? ORDER BY created_at DESC", (status,)
         ).fetchall()
     else:
         rows = db.execute("SELECT * FROM agents ORDER BY created_at DESC").fetchall()
@@ -308,12 +276,12 @@ def list_agents(status: str | None = None):
                 "metadata": json.loads(r["metadata"]),
                 "created_at": r["created_at"],
                 "updated_at": r["updated_at"],
-            },
+            }
         )
     return {"agents": result, "total": len(result)}
 
 
-@_router.get("/agents/{agent_id}")
+@app.get("/agents/{agent_id}")
 def get_agent(agent_id: str):
     db = get_db()
     row = db.execute("SELECT * FROM agents WHERE id=?", (agent_id,)).fetchone()
@@ -333,7 +301,7 @@ def get_agent(agent_id: str):
     }
 
 
-@_router.patch("/agents/{agent_id}")
+@app.patch("/agents/{agent_id}")
 def update_agent(agent_id: str, body: AgentUpdate):
     db = get_db()
     row = db.execute("SELECT * FROM agents WHERE id=?", (agent_id,)).fetchone()
@@ -362,7 +330,7 @@ def update_agent(agent_id: str, body: AgentUpdate):
     return {"id": agent_id, "updated": True}
 
 
-@_router.delete("/agents/{agent_id}")
+@app.delete("/agents/{agent_id}")
 def deregister_agent(agent_id: str):
     db = get_db()
     row = db.execute("SELECT * FROM agents WHERE id=?", (agent_id,)).fetchone()
@@ -380,7 +348,7 @@ def deregister_agent(agent_id: str):
 # ── Task CRUD ────────────────────────────────────────────────────────────────
 
 
-@_router.post("/tasks")
+@app.post("/tasks")
 def create_task(body: TaskCreate):
     tid = str(uuid.uuid4())
     now = _now()
@@ -388,8 +356,7 @@ def create_task(body: TaskCreate):
     db = get_db()
     if body.parent_task_id:
         parent = db.execute(
-            "SELECT delegation_depth FROM tasks WHERE id=?",
-            (body.parent_task_id,),
+            "SELECT delegation_depth FROM tasks WHERE id=?", (body.parent_task_id,)
         ).fetchone()
         if parent:
             depth = parent["delegation_depth"] + 1
@@ -415,7 +382,7 @@ def create_task(body: TaskCreate):
     return {"id": tid, "title": body.title, "status": "pending", "delegation_depth": depth}
 
 
-@_router.get("/tasks")
+@app.get("/tasks")
 def list_tasks(status: str | None = None, priority: int | None = None):
     db = get_db()
     query = "SELECT * FROM tasks WHERE 1=1"
@@ -446,12 +413,12 @@ def list_tasks(status: str | None = None, priority: int | None = None):
                 "error": r["error"],
                 "created_at": r["created_at"],
                 "updated_at": r["updated_at"],
-            },
+            }
         )
     return {"tasks": result, "total": len(result)}
 
 
-@_router.get("/tasks/{task_id}")
+@app.get("/tasks/{task_id}")
 def get_task(task_id: str):
     db = get_db()
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
@@ -477,7 +444,7 @@ def get_task(task_id: str):
     }
 
 
-@_router.patch("/tasks/{task_id}")
+@app.patch("/tasks/{task_id}")
 def update_task(task_id: str, body: TaskUpdate):
     db = get_db()
     row = db.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone()
@@ -509,7 +476,7 @@ def update_task(task_id: str, body: TaskUpdate):
 # ── Delegation ───────────────────────────────────────────────────────────────
 
 
-@_router.post("/delegate")
+@app.post("/delegate")
 def delegate_task(body: DelegationRequest):
     db = get_db()
     # Verify task
@@ -570,13 +537,12 @@ def delegate_task(body: DelegationRequest):
     }
 
 
-@_router.get("/delegations")
+@app.get("/delegations")
 def list_delegations(task_id: str | None = None):
     db = get_db()
     if task_id:
         rows = db.execute(
-            "SELECT * FROM delegations WHERE task_id=? ORDER BY created_at DESC",
-            (task_id,),
+            "SELECT * FROM delegations WHERE task_id=? ORDER BY created_at DESC", (task_id,)
         ).fetchall()
     else:
         rows = db.execute("SELECT * FROM delegations ORDER BY created_at DESC").fetchall()
@@ -592,7 +558,7 @@ def list_delegations(task_id: str | None = None):
                 "reason": r["reason"],
                 "depth_at_delegation": r["depth_at_delegation"],
                 "created_at": r["created_at"],
-            },
+            }
         )
     return {"delegations": result, "total": len(result)}
 
@@ -600,7 +566,7 @@ def list_delegations(task_id: str | None = None):
 # ── Skills ───────────────────────────────────────────────────────────────────
 
 
-@_router.post("/skills")
+@app.post("/skills")
 def create_skill(body: SkillCreate):
     sid = str(uuid.uuid4())
     now = _now()
@@ -625,13 +591,12 @@ def create_skill(body: SkillCreate):
     return {"id": sid, "name": body.name, "category": body.category}
 
 
-@_router.get("/skills")
+@app.get("/skills")
 def list_skills(category: str | None = None):
     db = get_db()
     if category:
         rows = db.execute(
-            "SELECT * FROM skills WHERE category=? ORDER BY name",
-            (category,),
+            "SELECT * FROM skills WHERE category=? ORDER BY name", (category,)
         ).fetchall()
     else:
         rows = db.execute("SELECT * FROM skills ORDER BY name").fetchall()
@@ -646,12 +611,12 @@ def list_skills(category: str | None = None):
                 "description": r["description"],
                 "proficiency_levels": json.loads(r["proficiency_levels"]),
                 "created_at": r["created_at"],
-            },
+            }
         )
     return {"skills": result, "total": len(result)}
 
 
-@_router.post("/agents/{agent_id}/skills/{skill_id}")
+@app.post("/agents/{agent_id}/skills/{skill_id}")
 def assign_skill(agent_id: str, skill_id: str, proficiency: str = "beginner"):
     db = get_db()
     agent = db.execute("SELECT * FROM agents WHERE id=?", (agent_id,)).fetchone()
@@ -677,7 +642,7 @@ def assign_skill(agent_id: str, skill_id: str, proficiency: str = "beginner"):
     return {"agent_id": agent_id, "skill_id": skill_id, "proficiency": proficiency}
 
 
-@_router.get("/agents/{agent_id}/skills")
+@app.get("/agents/{agent_id}/skills")
 def get_agent_skills(agent_id: str):
     db = get_db()
     agent = db.execute("SELECT * FROM agents WHERE id=?", (agent_id,)).fetchone()
@@ -699,7 +664,7 @@ def get_agent_skills(agent_id: str):
                 "category": r["category"],
                 "proficiency": r["proficiency"],
                 "acquired_at": r["acquired_at"],
-            },
+            }
         )
     return {"skills": result, "total": len(result)}
 
@@ -707,7 +672,7 @@ def get_agent_skills(agent_id: str):
 # ── Execution Logs ───────────────────────────────────────────────────────────
 
 
-@_router.get("/logs")
+@app.get("/logs")
 def get_logs(agent_id: str | None = None, task_id: str | None = None, limit: int = 100):
     db = get_db()
     query = "SELECT * FROM execution_logs WHERE 1=1"
@@ -732,7 +697,7 @@ def get_logs(agent_id: str | None = None, task_id: str | None = None, limit: int
                 "action": r["action"],
                 "details": json.loads(r["details"]),
                 "created_at": r["created_at"],
-            },
+            }
         )
     return {"logs": result, "total": len(result)}
 
@@ -740,7 +705,7 @@ def get_logs(agent_id: str | None = None, task_id: str | None = None, limit: int
 # ── Stats ────────────────────────────────────────────────────────────────────
 
 
-@_router.get("/stats")
+@app.get("/stats")
 def get_stats():
     db = get_db()
     agents_total = db.execute("SELECT COUNT(*) FROM agents").fetchone()[0]
@@ -748,7 +713,7 @@ def get_stats():
     tasks_total = db.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
     tasks_pending = db.execute("SELECT COUNT(*) FROM tasks WHERE status='pending'").fetchone()[0]
     tasks_running = db.execute(
-        "SELECT COUNT(*) FROM tasks WHERE status='assigned' OR status='running'",
+        "SELECT COUNT(*) FROM tasks WHERE status='assigned' OR status='running'"
     ).fetchone()[0]
     tasks_completed = db.execute("SELECT COUNT(*) FROM tasks WHERE status='completed'").fetchone()[
         0
@@ -836,7 +801,7 @@ async def _broadcast_event(event_type: str, data: dict) -> None:
         _connected_ws.remove(ws)
 
 
-@_router.get("/events")
+@app.get("/events")
 async def _sse_events():
     async def _generator():
         while True:
@@ -847,7 +812,7 @@ async def _sse_events():
     return EventSourceResponse(_generator())
 
 
-@_router.get("/dashboard/summary")
+@app.get("/dashboard/summary")
 async def _dashboard_summary():
     """Aggregated summary optimized for dashboard consumption."""
     stats = _get_stats()
@@ -861,9 +826,6 @@ async def _dashboard_summary():
             "sse": f"http://localhost:{PORT}/events",
         },
     }
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

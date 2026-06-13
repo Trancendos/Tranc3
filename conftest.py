@@ -10,42 +10,12 @@ from __future__ import annotations
 import json
 import logging
 import os
-import tempfile
 import time
 
 import pytest
 
-# ── Set critical env vars before any test module is imported ─────────────────
-# Use `or` fallback (not setdefault) so that CI passing empty strings is safe.
-for _var, _default in (
-    ("SECRET_KEY", "tranc3-test-secret-key-do-not-use-in-production"),
-    ("JWT_SECRET", "tranc3-test-jwt-secret-do-not-use-in-production"),
-    ("DATABASE_URL", "sqlite:///./test.db"),
-    ("REDIS_URL", "redis://localhost:6379/0"),
-    ("MASTER_KEY_SEED", "tranc3-test-master-key-seed-do-not-use-in-prod"),
-    ("INTERNAL_SECRET", "tranc3-test-internal-secret-do-not-use-in-prod"),
-):
-    os.environ[_var] = os.environ.get(_var) or _default
-
-# ── Worker SQLite DB paths ───────────────────────────────────────────────────
-# Some workers default SQLite paths to `/data/<name>.db` (production volumes).
-# Tests import worker modules directly, which can open DBs at import time.
-# Point configurable paths at a writable temp dir so collection never fails.
-_WORKER_DATA_DIR = os.environ.get("TRANC3_TEST_DATA_DIR") or tempfile.mkdtemp(
-    prefix="tranc3-test-data-"
-)
-os.environ["TRANC3_TEST_DATA_DIR"] = _WORKER_DATA_DIR
-for _var, _fname in (
-    ("USERS_DATABASE_PATH", "users.db"),
-    ("USERS_DB_PATH", "users.db"),  # legacy alias used by older branches/docs
-    ("AUTH_DATABASE_PATH", "auth.db"),
-):
-    os.environ[_var] = os.environ.get(_var) or os.path.join(_WORKER_DATA_DIR, _fname)
-
-# STORAGE_ROOT defaults to /mnt/data/tranc3 (NAS in production) — not writable in CI.
-os.environ["STORAGE_ROOT"] = os.environ.get("STORAGE_ROOT") or os.path.join(
-    _WORKER_DATA_DIR, "storage"
-)
+# ── Set SECRET_KEY before any test module is imported ────────────────────────
+os.environ.setdefault("SECRET_KEY", "tranc3-test-secret-key-do-not-use-in-production")
 
 # ── Configure root test logger ────────────────────────────────────────────────
 logging.basicConfig(
@@ -192,7 +162,7 @@ def sample_error_payloads():
         "command_injection": ["; ls -la", "| cat /etc/passwd", "`id`", "$(whoami)"],
         "null_bytes": [null + "admin", "test" + null + "injection", null * 3],
         "oversized": ["A" * 100_001, "B" * 1_000_000],
-        "unicode_tricks": ["\u200b", "\ufffd", "\u202e" + "txt.exe", "admin\u200b"],
+        "unicode_tricks": ["​", "�", "‮" + "txt.exe", "admin​"],
         "json_injection": ['{"__proto__": {"admin": true}}', '{"constructor": {"prototype": {}}}'],
         "empty": ["", "   ", "\t\n"],
     }

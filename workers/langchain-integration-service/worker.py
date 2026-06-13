@@ -31,21 +31,10 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    FastAPI,
-    Header,
-    HTTPException,
-    Query,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
-
-from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -279,44 +268,9 @@ app = FastAPI(title="Tranc3 LangChain Integration Service", version="0.1.0", lif
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
-    return {
-        "status": "ok",
-        "service": "langchain-integration-service",
-        "port": 8036,
-        "entity": health_entity_block(8036, "langchain-integration-service"),
-    }
+    return {"status": "ok", "service": "langchain-integration-service", "port": 8036}
 
 
 # ---------------------------------------------------------------------------
@@ -324,7 +278,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/templates", status_code=201)
+@app.post("/templates", status_code=201)
 async def create_template(body: PromptTemplateCreate):
     conn = _get_db()
     now = _now()
@@ -359,18 +313,17 @@ async def create_template(body: PromptTemplateCreate):
     }
 
 
-@_router.get("/templates")
+@app.get("/templates")
 async def list_templates(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM prompt_templates ORDER BY updated_at DESC LIMIT ? OFFSET ?",
-        (limit, offset),
+        "SELECT * FROM prompt_templates ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 
-@_router.get("/templates/{template_id}")
+@app.get("/templates/{template_id}")
 async def get_template(template_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM prompt_templates WHERE id=?", (template_id,)).fetchone()
@@ -380,7 +333,7 @@ async def get_template(template_id: str):
     return dict(row)
 
 
-@_router.delete("/templates/{template_id}", status_code=204)
+@app.delete("/templates/{template_id}", status_code=204)
 async def delete_template(template_id: str):
     conn = _get_db()
     cur = conn.execute("DELETE FROM prompt_templates WHERE id=?", (template_id,))
@@ -395,7 +348,7 @@ async def delete_template(template_id: str):
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/chains", status_code=201)
+@app.post("/chains", status_code=201)
 async def create_chain(body: ChainCreate):
     conn = _get_db()
     now = _now()
@@ -432,12 +385,11 @@ async def create_chain(body: ChainCreate):
     }
 
 
-@_router.get("/chains")
+@app.get("/chains")
 async def list_chains(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM chains ORDER BY updated_at DESC LIMIT ? OFFSET ?",
-        (limit, offset),
+        "SELECT * FROM chains ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -448,7 +400,7 @@ async def list_chains(limit: int = Query(50, ge=1, le=200), offset: int = Query(
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/execute", status_code=201)
+@app.post("/execute", status_code=201)
 async def execute_chain(body: ChainExecutionRequest):
     conn = _get_db()
     chain = conn.execute("SELECT * FROM chains WHERE id=?", (body.chain_id,)).fetchone()
@@ -489,7 +441,7 @@ async def execute_chain(body: ChainExecutionRequest):
     return dict(row)
 
 
-@_router.get("/executions")
+@app.get("/executions")
 async def list_executions(
     chain_id: Optional[str] = None,
     status: Optional[str] = None,
@@ -517,7 +469,7 @@ async def list_executions(
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/documents", status_code=201)
+@app.post("/documents", status_code=201)
 async def create_document(body: DocumentCreate):
     conn = _get_db()
     now = _now()
@@ -548,18 +500,17 @@ async def create_document(body: DocumentCreate):
     }
 
 
-@_router.get("/documents")
+@app.get("/documents")
 async def list_documents(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM documents ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        (limit, offset),
+        "SELECT * FROM documents ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 
-@_router.delete("/documents/{document_id}", status_code=204)
+@app.delete("/documents/{document_id}", status_code=204)
 async def delete_document(document_id: str):
     conn = _get_db()
     cur = conn.execute("DELETE FROM documents WHERE id=?", (document_id,))
@@ -574,7 +525,7 @@ async def delete_document(document_id: str):
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/tools", status_code=201)
+@app.post("/tools", status_code=201)
 async def create_tool(body: AgentToolCreate):
     conn = _get_db()
     now = _now()
@@ -600,12 +551,11 @@ async def create_tool(body: AgentToolCreate):
     return {"id": tid, "name": body.name, "tool_type": body.tool_type, "created_at": now}
 
 
-@_router.get("/tools")
+@app.get("/tools")
 async def list_tools(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM agent_tools ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        (limit, offset),
+        "SELECT * FROM agent_tools ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -616,7 +566,7 @@ async def list_tools(limit: int = Query(50, ge=1, le=200), offset: int = Query(0
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/graphs", status_code=201)
+@app.post("/graphs", status_code=201)
 async def create_graph(body: StateGraphCreate):
     conn = _get_db()
     now = _now()
@@ -654,12 +604,11 @@ async def create_graph(body: StateGraphCreate):
     }
 
 
-@_router.get("/graphs")
+@app.get("/graphs")
 async def list_graphs(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM state_graphs ORDER BY updated_at DESC LIMIT ? OFFSET ?",
-        (limit, offset),
+        "SELECT * FROM state_graphs ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -670,7 +619,7 @@ async def list_graphs(limit: int = Query(50, ge=1, le=200), offset: int = Query(
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/stats")
+@app.get("/stats")
 async def get_stats():
     conn = _get_db()
     templates = conn.execute("SELECT COUNT(*) as c FROM prompt_templates").fetchone()["c"]
@@ -733,7 +682,7 @@ async def _broadcast_event(event_type: str, data: dict) -> None:
         _connected_ws.remove(ws)
 
 
-@_router.get("/events")
+@app.get("/events")
 async def _sse_events():
     async def _generator():
         while True:
@@ -744,7 +693,7 @@ async def _sse_events():
     return EventSourceResponse(_generator())
 
 
-@_router.get("/dashboard/summary")
+@app.get("/dashboard/summary")
 async def _dashboard_summary():
     """Aggregated summary optimized for dashboard consumption."""
     stats = await _get_stats_async()
@@ -776,9 +725,6 @@ async def _get_stats_async() -> dict:
 def _get_stats() -> dict:
     """Return basic service stats for real-time endpoints (sync fallback)."""
     return {"service": SERVICE_NAME, "port": PORT}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

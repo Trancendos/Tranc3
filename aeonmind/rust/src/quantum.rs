@@ -22,18 +22,10 @@ use std::f64::consts::PI;
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum GateType {
-    X,
-    Y,
-    Z,
-    H,
-    Rx,
-    Ry,
-    Rz,
-    CNOT,
-    CZ,
-    SWAP,
-    Identity,
-    Phase,
+    X, Y, Z, H,
+    Rx, Ry, Rz,
+    CNOT, CZ, SWAP,
+    Identity, Phase,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,29 +38,12 @@ pub struct Gate {
 }
 
 impl Gate {
-    pub fn single(
-        gate_type: GateType,
-        target: usize,
-        parameter: Option<f64>,
-        layer: usize,
-    ) -> Self {
-        Self {
-            gate_type,
-            target,
-            control: None,
-            parameter,
-            layer,
-        }
+    pub fn single(gate_type: GateType, target: usize, parameter: Option<f64>, layer: usize) -> Self {
+        Self { gate_type, target, control: None, parameter, layer }
     }
 
     pub fn two_qubit(gate_type: GateType, target: usize, control: usize, layer: usize) -> Self {
-        Self {
-            gate_type,
-            target,
-            control: Some(control),
-            parameter: None,
-            layer,
-        }
+        Self { gate_type, target, control: Some(control), parameter: None, layer }
     }
 
     /// Get the 2×2 matrix for single-qubit gates.
@@ -82,7 +57,10 @@ impl Gate {
             GateType::X => [[zero, one], [one, zero]],
             GateType::Y => [[zero, -im], [im, zero]],
             GateType::Z => [[one, zero], [zero, -one]],
-            GateType::H => [[sqrt2_inv, sqrt2_inv], [sqrt2_inv, -sqrt2_inv]],
+            GateType::H => [
+                [sqrt2_inv, sqrt2_inv],
+                [sqrt2_inv, -sqrt2_inv],
+            ],
             GateType::Rx => {
                 let theta = self.parameter.unwrap_or(0.0);
                 let c = Complex64::new((theta / 2.0).cos(), 0.0);
@@ -163,10 +141,7 @@ impl QuantumState {
         let dim = 1 << n_qubits;
         let mut amplitudes = vec![Complex64::new(0.0, 0.0); dim];
         amplitudes[0] = Complex64::new(1.0, 0.0);
-        Self {
-            amplitudes,
-            n_qubits,
-        }
+        Self { amplitudes, n_qubits }
     }
 
     pub fn superposition(n_qubits: usize) -> Self {
@@ -180,19 +155,11 @@ impl QuantumState {
 
     pub fn probabilities(&self) -> Vec<f64> {
         let norm: f64 = self.amplitudes.iter().map(|a| a.norm_sqr()).sum();
-        self.amplitudes
-            .iter()
-            .map(|a| a.norm_sqr() / norm)
-            .collect()
+        self.amplitudes.iter().map(|a| a.norm_sqr() / norm).collect()
     }
 
     pub fn normalize(&mut self) {
-        let norm: f64 = self
-            .amplitudes
-            .iter()
-            .map(|a| a.norm_sqr())
-            .sum::<f64>()
-            .sqrt();
+        let norm: f64 = self.amplitudes.iter().map(|a| a.norm_sqr()).sum().sqrt();
         if norm > 0.0 {
             for a in &mut self.amplitudes {
                 *a /= norm;
@@ -202,8 +169,7 @@ impl QuantumState {
 
     pub fn entropy(&self) -> f64 {
         let probs = self.probabilities();
-        probs
-            .iter()
+        probs.iter()
             .filter(|&&p| p > 0.0)
             .map(|&p| -p * p.log2())
             .sum()
@@ -274,7 +240,7 @@ impl QuantumDecisionCircuit {
 
     /// Execute the circuit and return probabilities.
     pub fn execute(&self, input_data: Option<&[f64]>) -> Vec<f64> {
-        let _dim = 1 << self.n_qubits;
+        let dim = 1 << self.n_qubits;
         let mut state = QuantumState::zeros(self.n_qubits);
 
         let mut params = self.parameters.clone();
@@ -296,25 +262,13 @@ impl QuantumDecisionCircuit {
             for q in 0..self.n_qubits {
                 let p = offset + q * self.config.rotations_per_layer;
                 if self.config.rotations_per_layer >= 1 {
-                    apply_single_qubit_gate(
-                        &mut state,
-                        q,
-                        &Gate::single(GateType::Rz, q, Some(params[p]), layer_idx),
-                    );
+                    apply_single_qubit_gate(&mut state, q, &Gate::single(GateType::Rz, q, Some(params[p]), layer_idx));
                 }
                 if self.config.rotations_per_layer >= 2 && p + 1 < params.len() {
-                    apply_single_qubit_gate(
-                        &mut state,
-                        q,
-                        &Gate::single(GateType::Ry, q, Some(params[p + 1]), layer_idx),
-                    );
+                    apply_single_qubit_gate(&mut state, q, &Gate::single(GateType::Ry, q, Some(params[p + 1]), layer_idx));
                 }
                 if self.config.rotations_per_layer >= 3 && p + 2 < params.len() {
-                    apply_single_qubit_gate(
-                        &mut state,
-                        q,
-                        &Gate::single(GateType::Rz, q, Some(params[p + 2]), layer_idx),
-                    );
+                    apply_single_qubit_gate(&mut state, q, &Gate::single(GateType::Rz, q, Some(params[p + 2]), layer_idx));
                 }
             }
 
@@ -351,12 +305,7 @@ impl QuantumDecisionCircuit {
     /// Make a decision (argmax of probabilities).
     pub fn decide(&self, input_data: Option<&[f64]>) -> usize {
         let probs = self.execute(input_data);
-        probs
-            .iter()
-            .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-            .map(|(i, _)| i)
-            .unwrap_or(0)
+        probs.iter().enumerate().max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)).map(|(i, _)| i).unwrap_or(0)
     }
 
     /// Compute cost (entropy-based or cross-entropy).
@@ -365,42 +314,31 @@ impl QuantumDecisionCircuit {
         let eps = 1e-10;
 
         if let Some(target) = target_probs {
-            let target: Vec<f64> = target.iter().map(|&p| p.max(eps)).collect();
+            let target: Vec<f64> = target.iter().map(|&p| (p.max(eps))).collect();
             let sum: f64 = target.iter().sum();
             let target: Vec<f64> = target.iter().map(|&p| p / sum).collect();
-            probs
-                .iter()
-                .zip(target.iter())
+            probs.iter().zip(target.iter())
                 .map(|(&p, &t)| if p > eps { -t * p.ln() } else { 0.0 })
                 .sum()
         } else {
-            probs
-                .iter()
-                .filter(|&&p| p > eps)
-                .map(|&p| p * p.ln())
-                .sum()
+            probs.iter().filter(|&&p| p > eps).map(|&p| p * p.ln()).sum()
         }
     }
 
     /// Compute gradients using the parameter shift rule.
-    pub fn compute_gradients(
-        &self,
-        target_probs: Option<&[f64]>,
-        input_data: Option<&[f64]>,
-        shift: f64,
-    ) -> Vec<f64> {
+    pub fn compute_gradients(&self, target_probs: Option<&[f64]>, input_data: Option<&[f64]>, shift: f64) -> Vec<f64> {
         let mut gradients = vec![0.0; self.parameters.len()];
         let sin_shift = shift.sin();
 
         for i in 0..self.parameters.len() {
             let mut params_plus = self.parameters.clone();
             params_plus[i] += shift;
-            let circuit_plus = self.clone_with_params(params_plus);
+            let mut circuit_plus = self.clone_with_params(params_plus);
             let cost_plus = circuit_plus.compute_cost(target_probs, input_data);
 
             let mut params_minus = self.parameters.clone();
             params_minus[i] -= shift;
-            let circuit_minus = self.clone_with_params(params_minus);
+            let mut circuit_minus = self.clone_with_params(params_minus);
             let cost_minus = circuit_minus.compute_cost(target_probs, input_data);
 
             if sin_shift.abs() > 1e-10 {
@@ -425,14 +363,7 @@ impl QuantumDecisionCircuit {
     }
 
     /// Optimize circuit parameters using gradient descent.
-    pub fn optimize(
-        &mut self,
-        target_probs: Option<&[f64]>,
-        input_data: Option<&[f64]>,
-        n_iterations: usize,
-        learning_rate: f64,
-        adaptive_lr: bool,
-    ) -> Vec<OptimizationStep> {
+    pub fn optimize(&mut self, target_probs: Option<&[f64]>, input_data: Option<&[f64]>, n_iterations: usize, learning_rate: f64, adaptive_lr: bool) -> Vec<OptimizationStep> {
         let mut lr = learning_rate;
         let mut best_cost = f64::INFINITY;
         let mut best_params = self.parameters.clone();
@@ -498,18 +429,10 @@ impl QuantumDecisionCircuit {
     }
 
     /// Adaptively enable/disable layers.
-    pub fn adapt_layer_depth(&mut self, _current_cost: f64) {
-        if self.optimization_history.len() < 5 {
-            return;
-        }
+    pub fn adapt_layer_depth(&mut self, current_cost: f64) {
+        if self.optimization_history.len() < 5 { return; }
 
-        let recent: Vec<f64> = self
-            .optimization_history
-            .iter()
-            .rev()
-            .take(5)
-            .map(|s| s.cost)
-            .collect();
+        let recent: Vec<f64> = self.optimization_history.iter().rev().take(5).map(|s| s.cost).collect();
         let mean = recent.iter().sum::<f64>() / recent.len() as f64;
         let variance = recent.iter().map(|c| (c - mean).powi(2)).sum::<f64>() / recent.len() as f64;
 
@@ -551,19 +474,10 @@ impl QuantumDecisionCircuit {
             current_cost: self.current_cost,
         }
     }
-
-    pub fn n_qubits(&self) -> usize {
-        self.n_qubits
-    }
-
-    pub fn n_layers(&self) -> usize {
-        self.n_layers
-    }
 }
 
 // ─── Gate Application Helpers ───────────────────────────────
 
-#[allow(clippy::needless_range_loop)]
 fn apply_single_qubit_gate(state: &mut QuantumState, qubit: usize, gate: &Gate) {
     let matrix = gate.matrix();
     let dim = state.amplitudes.len();
@@ -603,7 +517,6 @@ fn apply_cnot(state: &mut QuantumState, control: usize, target: usize) {
     state.amplitudes = new_amps;
 }
 
-#[allow(dead_code)]
 fn apply_cz(state: &mut QuantumState, control: usize, target: usize) {
     let dim = state.amplitudes.len();
     let n = state.n_qubits;
@@ -631,11 +544,7 @@ mod tests {
 
     #[test]
     fn test_execute_returns_probabilities() {
-        let config = QuantumCircuitConfig {
-            n_qubits: 2,
-            n_layers: 1,
-            ..Default::default()
-        };
+        let config = QuantumCircuitConfig { n_qubits: 2, n_layers: 1, ..Default::default() };
         let circuit = QuantumDecisionCircuit::new(config);
         let probs = circuit.execute(None);
         assert_eq!(probs.len(), 4);
@@ -645,11 +554,7 @@ mod tests {
 
     #[test]
     fn test_decide() {
-        let config = QuantumCircuitConfig {
-            n_qubits: 2,
-            n_layers: 1,
-            ..Default::default()
-        };
+        let config = QuantumCircuitConfig { n_qubits: 2, n_layers: 1, ..Default::default() };
         let circuit = QuantumDecisionCircuit::new(config);
         let decision = circuit.decide(None);
         assert!(decision < 4);
@@ -657,11 +562,7 @@ mod tests {
 
     #[test]
     fn test_compute_cost() {
-        let config = QuantumCircuitConfig {
-            n_qubits: 2,
-            n_layers: 1,
-            ..Default::default()
-        };
+        let config = QuantumCircuitConfig { n_qubits: 2, n_layers: 1, ..Default::default() };
         let circuit = QuantumDecisionCircuit::new(config);
         let cost = circuit.compute_cost(None, None);
         assert!(cost.is_finite());
@@ -669,11 +570,7 @@ mod tests {
 
     #[test]
     fn test_compute_gradients() {
-        let config = QuantumCircuitConfig {
-            n_qubits: 2,
-            n_layers: 1,
-            ..Default::default()
-        };
+        let config = QuantumCircuitConfig { n_qubits: 2, n_layers: 1, ..Default::default() };
         let circuit = QuantumDecisionCircuit::new(config);
         let gradients = circuit.compute_gradients(None, None, PI / 2.0);
         assert_eq!(gradients.len(), circuit.parameters.len());
@@ -681,12 +578,7 @@ mod tests {
 
     #[test]
     fn test_optimize() {
-        let config = QuantumCircuitConfig {
-            n_qubits: 2,
-            n_layers: 1,
-            adaptive_depth: false,
-            ..Default::default()
-        };
+        let config = QuantumCircuitConfig { n_qubits: 2, n_layers: 1, adaptive_depth: false, ..Default::default() };
         let mut circuit = QuantumDecisionCircuit::new(config);
         let history = circuit.optimize(None, None, 10, 0.01, false);
         assert_eq!(history.len(), 10);
@@ -710,8 +602,7 @@ mod tests {
     fn test_entangling_strategies() {
         for strategy in &["linear", "circular", "full"] {
             let config = QuantumCircuitConfig {
-                n_qubits: 3,
-                n_layers: 1,
+                n_qubits: 3, n_layers: 1,
                 entangling_strategy: strategy.to_string(),
                 ..Default::default()
             };
@@ -747,13 +638,7 @@ mod tests {
 
     #[test]
     fn test_adapt_layer_depth() {
-        let config = QuantumCircuitConfig {
-            n_qubits: 2,
-            n_layers: 3,
-            adaptive_depth: true,
-            max_depth: 6,
-            ..Default::default()
-        };
+        let config = QuantumCircuitConfig { n_qubits: 2, n_layers: 3, adaptive_depth: true, max_depth: 6, ..Default::default() };
         let mut circuit = QuantumDecisionCircuit::new(config);
         circuit.adapt_layer_depth(1.0);
         assert!(circuit.depth() >= 1);

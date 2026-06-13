@@ -150,28 +150,13 @@ class TownHall:
 
     def status(self) -> Dict[str, Any]:
         policies = self.active_policies()
-        out: Dict[str, Any] = {
-            "location": "The Town Hall",
-            "lead_ai": "Tristuran",
+        return {
             "policies": len(policies),
             "overall_score": round(self.overall_score(), 4),
             "frameworks": list({p.framework for p in policies}),
             "recent_events": len(self._history),
             "policy_scores": {p.id: p.score for p in policies},
         }
-        try:
-            from src.townhall.framework_registry import get_framework_registry
-
-            reg = get_framework_registry()
-            out["registry"] = {
-                "version": reg.version,
-                "framework_count": len(reg.frameworks),
-                "domains": list(reg.by_domain().keys()),
-                "rooms": [r.name for r in reg.rooms],
-            }
-        except Exception:
-            pass
-        return out
 
     # ── Default policies ──────────────────────────────────────────────────────
 
@@ -185,7 +170,7 @@ class TownHall:
                 score=1.0,
                 articles="Art.5,6,13,17,25,32,33,35",
                 check=_check_gdpr,
-            ),
+            )
         )
         self.register(
             Policy(
@@ -195,7 +180,7 @@ class TownHall:
                 description="UK GDPR / Data Protection Act 2018",
                 score=0.97,
                 articles="DPDPD Act 2024 deviations",
-            ),
+            )
         )
         self.register(
             Policy(
@@ -206,7 +191,7 @@ class TownHall:
                 score=1.0,
                 articles="All services within free tiers",
                 check=_check_zero_cost,
-            ),
+            )
         )
         self.register(
             Policy(
@@ -216,7 +201,7 @@ class TownHall:
                 description="User data ownership and zero lock-in guarantee",
                 score=0.95,
                 articles="User ownership · Zero lock-in · Right to export",
-            ),
+            )
         )
         self.register(
             Policy(
@@ -226,7 +211,7 @@ class TownHall:
                 description="Project management principles",
                 score=0.92,
                 articles="7 principles · 7 themes · 7 processes",
-            ),
+            )
         )
         self.register(
             Policy(
@@ -236,33 +221,8 @@ class TownHall:
                 description="IT service management best practices",
                 score=0.88,
                 articles="34 practices · Service Value System",
-            ),
-        )
-        self._register_registry_frameworks()
-
-    def _register_registry_frameworks(self) -> None:
-        """Sync config/townhall/frameworks.yaml entries as draft/active policies."""
-        try:
-            from src.townhall.framework_registry import get_framework_registry
-
-            reg = get_framework_registry()
-        except Exception:
-            return
-        for entry in reg.frameworks:
-            if entry.id in self._policies:
-                continue
-            status = PolicyStatus.ACTIVE if entry.status == "active" else PolicyStatus.DRAFT
-            self.register(
-                Policy(
-                    id=entry.id,
-                    name=entry.name,
-                    framework=entry.standard,
-                    description=f"{entry.domain} · {entry.standard}",
-                    status=status,
-                    score=0.9 if status == PolicyStatus.ACTIVE else 0.5,
-                    articles=entry.domain,
-                ),
             )
+        )
 
 
 # ── Built-in policy checks ────────────────────────────────────────────────────

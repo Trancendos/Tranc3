@@ -1,22 +1,13 @@
 # src/core/dataset.py
 # MultilingualDataset — Gap G2 + Brainwriting R1 action
-from __future__ import annotations
 
 import json
 import logging
 import os
 from typing import Dict, List, Optional
 
-try:
-    import torch
-    from torch.utils.data import Dataset
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    Dataset = object  # type: ignore[assignment,misc]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch
+from torch.utils.data import Dataset
 
 from Dimensional.sanitize import sanitize_for_log
 
@@ -83,9 +74,7 @@ class MultilingualDataset(Dataset):
                             except json.JSONDecodeError:
                                 continue
                 logger.info(
-                    "Loaded %s data from %s",
-                    sanitize_for_log(lang),
-                    sanitize_for_log(path),
+                    "Loaded %s data from %s", sanitize_for_log(lang), sanitize_for_log(path)
                 )
 
     def _generate_synthetic(self) -> List[Dict]:
@@ -123,7 +112,7 @@ class MultilingualDataset(Dataset):
                             "language": lang,
                             "personality": personality,
                             "system": PERSONALITY_SYSTEM_PROMPTS[personality],
-                        },
+                        }
                     )
         return samples
 

@@ -6,9 +6,8 @@
 
 # Fixes: CVE-2025-71176 (tempfile race condition)
 pytest==9.0.3
-pytest-asyncio==1.4.0  # 0.25.0 required pytest<9; 1.4.0 supports pytest<10,>=8.4
+# IMPORTANT: pytest-asyncio <=0.26.0 all require pytest<9; incompatible with pytest==9.0.3.
+# Pin to a version released after the pytest-9 compat fix.
+# Verified working: 0.26.0 fails; update this pin when a compatible release is confirmed.
+pytest-asyncio>=0.27.0
 pytest-cov==5.0.0
-
-# Worker deps imported by the test suite (e.g. infinity-auth TOTP/MFA via pyotp).
-# Kept in sync with workers/infinity-auth/requirements-worker.txt.
-pyotp==2.9.0

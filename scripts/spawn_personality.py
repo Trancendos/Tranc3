@@ -21,10 +21,7 @@ def main():
     parser.add_argument("--personality", "-p", help="Personality ID to spawn")
     parser.add_argument("--repo-name", "-n", help="Name for the new repo directory")
     parser.add_argument(
-        "--output",
-        "-o",
-        default="./spawned",
-        help="Output parent directory (default: ./spawned)",
+        "--output", "-o", default="./spawned", help="Output parent directory (default: ./spawned)"
     )
     parser.add_argument("--list", "-l", action="store_true", help="List available personalities")
     args = parser.parse_args()

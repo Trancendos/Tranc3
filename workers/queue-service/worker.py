@@ -13,7 +13,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import sqlite3
 import time
 import uuid
@@ -22,12 +21,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
-from Dimensional.error_handlers import safe_error_detail
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8022
 WORKER_NAME = "queue-service"
@@ -50,7 +46,6 @@ def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
@@ -104,8 +99,7 @@ async def _visibility_restore_loop() -> None:
                 if row["retry_count"] + 1 >= MAX_RETRIES:
                     # promote to DLQ
                     msg = conn.execute(
-                        "SELECT * FROM messages WHERE id = ?",
-                        (row["id"],),
+                        "SELECT * FROM messages WHERE id = ?", (row["id"],)
                     ).fetchone()
                     conn.execute(
                         "INSERT OR REPLACE INTO dead_letters (id, topic, payload, retry_count, moved_at, last_error) VALUES (?,?,?,?,?,?)",
@@ -185,46 +179,15 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
     with get_conn() as conn:
         pending = conn.execute("SELECT COUNT(*) FROM messages WHERE status='pending'").fetchone()[0]
         processing = conn.execute(
-            "SELECT COUNT(*) FROM messages WHERE status='processing'",
+            "SELECT COUNT(*) FROM messages WHERE status='processing'"
         ).fetchone()[0]
         dlq = conn.execute("SELECT COUNT(*) FROM dead_letters").fetchone()[0]
     return {
-        "entity": health_entity_block(8022, "queue-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -232,13 +195,20 @@ async def health():
         "pending": pending,
         "processing": processing,
         "dead_letters": dlq,
+        "entity": {
+            "location": "The HIVE",
+            "pillar": "Architectural",
+            "lead_ai": "The Queen",
+            "primes": ["Cornelius MacIntyre"],
+            "primary_function": "Data Transport Hub",
+        },
     }
 
 
 # --- Topics ---
 
 
-@_router.post("/topics", status_code=201)
+@app.post("/topics", status_code=201)
 async def create_topic(req: TopicCreate):
     with get_conn() as conn:
         existing = conn.execute("SELECT name FROM topics WHERE name = ?", (req.name,)).fetchone()
@@ -252,14 +222,14 @@ async def create_topic(req: TopicCreate):
     return {"name": req.name, "description": req.description}
 
 
-@_router.get("/topics")
+@app.get("/topics")
 async def list_topics():
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM topics ORDER BY name").fetchall()
     return {"topics": [dict(r) for r in rows]}
 
 
-@_router.delete("/topics/{topic}")
+@app.delete("/topics/{topic}")
 async def delete_topic(topic: str):
     with get_conn() as conn:
         if not conn.execute("SELECT name FROM topics WHERE name = ?", (topic,)).fetchone():
@@ -273,29 +243,15 @@ async def delete_topic(topic: str):
 def _ensure_topic(topic: str) -> None:
     with get_conn() as conn:
         if not conn.execute("SELECT name FROM topics WHERE name = ?", (topic,)).fetchone():
-            raise HTTPException(status_code=404, detail="Topic not found")
+            raise HTTPException(status_code=404, detail=f"Topic '{topic}' not found")
 
 
 # --- Publish ---
 
 
-@_router.post("/topics/{topic}/publish", status_code=201)
+@app.post("/topics/{topic}/publish", status_code=201)
 async def publish(topic: str, req: PublishIn):
     _ensure_topic(topic)
-    # Capacity hard stop — queue depth
-    try:
-        import os
-        import sys
-
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-        from src.capacity.guard import CapacityExceededError, CapacityService, get_capacity_guard
-
-        get_capacity_guard().consume(CapacityService.QUEUE_DEPTH, amount=1)
-    except Exception as _qe:
-        from src.capacity.guard import CapacityExceededError
-
-        if isinstance(_qe, CapacityExceededError):
-            raise HTTPException(status_code=503, detail=safe_error_detail(_qe, 503)) from _qe
     now = time.time()
     msg_id = str(uuid.uuid4())
     visible_after = now + req.delay
@@ -308,7 +264,7 @@ async def publish(topic: str, req: PublishIn):
     return {"id": msg_id, "topic": topic, "enqueued_at": now}
 
 
-@_router.post("/topics/{topic}/publish/batch", status_code=201)
+@app.post("/topics/{topic}/publish/batch", status_code=201)
 async def publish_batch(topic: str, req: BatchPublishIn):
     _ensure_topic(topic)
     now = time.time()
@@ -328,7 +284,7 @@ async def publish_batch(topic: str, req: BatchPublishIn):
 # --- Consume ---
 
 
-@_router.get("/topics/{topic}/consume")
+@app.get("/topics/{topic}/consume")
 async def consume(
     topic: str,
     consumer_id: str = Query(...),
@@ -362,11 +318,11 @@ async def consume(
                 "enqueued_at": r["enqueued_at"],
             }
             for r in rows
-        ],
+        ]
     }
 
 
-@_router.post("/topics/{topic}/ack/{message_id}")
+@app.post("/topics/{topic}/ack/{message_id}")
 async def ack(topic: str, message_id: str):
     now = time.time()
     with get_conn() as conn:
@@ -376,8 +332,7 @@ async def ack(topic: str, message_id: str):
         ).fetchone()
         if not row:
             raise HTTPException(
-                status_code=404,
-                detail="Message not found or not in processing state",
+                status_code=404, detail="Message not found or not in processing state"
             )
         conn.execute(
             "UPDATE messages SET status='acknowledged', acked_at=? WHERE id=?",
@@ -387,7 +342,7 @@ async def ack(topic: str, message_id: str):
     return {"acked": message_id}
 
 
-@_router.post("/topics/{topic}/nack/{message_id}")
+@app.post("/topics/{topic}/nack/{message_id}")
 async def nack(topic: str, message_id: str):
     now = time.time()
     with get_conn() as conn:
@@ -397,8 +352,7 @@ async def nack(topic: str, message_id: str):
         ).fetchone()
         if not row:
             raise HTTPException(
-                status_code=404,
-                detail="Message not found or not in processing state",
+                status_code=404, detail="Message not found or not in processing state"
             )
         if row["retry_count"] + 1 >= MAX_RETRIES:
             conn.execute(
@@ -415,7 +369,7 @@ async def nack(topic: str, message_id: str):
     return {"nacked": message_id}
 
 
-@_router.get("/topics/{topic}/dead-letters")
+@app.get("/topics/{topic}/dead-letters")
 async def dead_letters(topic: str, limit: int = Query(50, le=500)):
     _ensure_topic(topic)
     with get_conn() as conn:
@@ -426,21 +380,18 @@ async def dead_letters(topic: str, limit: int = Query(50, le=500)):
     return {"dead_letters": [dict(r) for r in rows]}
 
 
-@_router.get("/topics/{topic}/stats")
+@app.get("/topics/{topic}/stats")
 async def topic_stats(topic: str):
     _ensure_topic(topic)
     with get_conn() as conn:
         pending = conn.execute(
-            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='pending'",
-            (topic,),
+            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='pending'", (topic,)
         ).fetchone()[0]
         processing = conn.execute(
-            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='processing'",
-            (topic,),
+            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='processing'", (topic,)
         ).fetchone()[0]
         acked = conn.execute(
-            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='acknowledged'",
-            (topic,),
+            "SELECT COUNT(*) FROM messages WHERE topic=? AND status='acknowledged'", (topic,)
         ).fetchone()[0]
         dlq = conn.execute("SELECT COUNT(*) FROM dead_letters WHERE topic=?", (topic,)).fetchone()[
             0
@@ -452,9 +403,6 @@ async def topic_stats(topic: str):
         "acknowledged": acked,
         "dead_letters": dlq,
     }
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

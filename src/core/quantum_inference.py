@@ -7,17 +7,8 @@ logger = logging.getLogger("src.core.quantum_inference")
 from typing import Optional  # noqa: E402
 
 import numpy as np  # noqa: E402
-
-try:  # noqa: E402
-    import torch
-    import torch.nn as nn
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch  # noqa: E402
+import torch.nn as nn  # noqa: E402
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister  # noqa: E402
 from qiskit_aer import AerSimulator  # noqa: E402
 
@@ -40,15 +31,10 @@ class QuantumInferenceEngine:
             self.num_qubits = min(config.get("num_qubits", 8), 16)  # Limit for simulation
 
         # Classical fallback
-        if _TORCH_AVAILABLE:
-            self.classical_model = nn.Linear(768, 768)  # Placeholder
-        else:
-            self.classical_model = None
+        self.classical_model = nn.Linear(768, 768)  # Placeholder
 
     def quantum_attention(
-        self,
-        input_tensor: torch.Tensor,
-        user_id: Optional[str] = None,
+        self, input_tensor: torch.Tensor, user_id: Optional[str] = None
     ) -> torch.Tensor:
         """
         Quantum attention with classical fallback
@@ -60,8 +46,7 @@ class QuantumInferenceEngine:
             return self._quantum_attention_core(input_tensor)
         except Exception as e:
             logger.warning(
-                "Quantum attention failed, falling back to classical: %s",
-                sanitize_for_log(e),
+                "Quantum attention failed, falling back to classical: %s", sanitize_for_log(e)
             )
             return self._classical_attention(input_tensor)
 
@@ -110,9 +95,7 @@ class QuantumInferenceEngine:
         return torch.matmul(weights, input_tensor)
 
     def quantum_memory_recall(
-        self,
-        query: torch.Tensor,
-        user_id: Optional[str] = None,
+        self, query: torch.Tensor, user_id: Optional[str] = None
     ) -> Optional[torch.Tensor]:
         """
         Quantum-enhanced memory recall

@@ -1,21 +1,10 @@
-from __future__ import annotations
-
 import logging
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
-try:
-    import torch
-    import torch.nn as nn
-    import torch.nn.functional as F
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
-    F = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +20,7 @@ class WorldModelConfig:
     reward_scale: float = 1.0
 
 
-class RepresentationNetwork(nn.Module if nn is not None else object):
+class RepresentationNetwork(nn.Module):
     """Encodes raw observations into a compact latent state.
 
     Architecture: linear projection → LayerNorm → ReLU (repeated) → state_dim output.
@@ -40,10 +29,6 @@ class RepresentationNetwork(nn.Module if nn is not None else object):
     """
 
     def __init__(self, config: WorldModelConfig) -> None:
-        if not _TORCH_AVAILABLE:
-            raise RuntimeError(
-                "RepresentationNetwork requires PyTorch, but it is not available in this runtime."
-            )
         super().__init__()
         obs_dim = config.state_dim * 4  # Canonical observable width
         self.config = config
@@ -83,7 +68,7 @@ class RepresentationNetwork(nn.Module if nn is not None else object):
         return self.net(obs)
 
 
-class DynamicsNetwork(nn.Module if nn is not None else object):
+class DynamicsNetwork(nn.Module):
     """Predicts the next latent state and immediate reward given state + action.
 
     The action is represented as a one-hot (or soft) vector of length action_dim
@@ -92,10 +77,6 @@ class DynamicsNetwork(nn.Module if nn is not None else object):
     """
 
     def __init__(self, config: WorldModelConfig) -> None:
-        if not _TORCH_AVAILABLE:
-            raise RuntimeError(
-                "DynamicsNetwork requires PyTorch, but it is not available in this runtime."
-            )
         super().__init__()
         in_dim = config.state_dim + config.action_dim
 
@@ -116,9 +97,7 @@ class DynamicsNetwork(nn.Module if nn is not None else object):
         self.config = config
 
     def forward(
-        self,
-        state: torch.Tensor,
-        action_vec: torch.Tensor,
+        self, state: torch.Tensor, action_vec: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Predict next state and reward.
 
@@ -136,7 +115,7 @@ class DynamicsNetwork(nn.Module if nn is not None else object):
         return next_state, reward
 
 
-class PredictionNetwork(nn.Module if nn is not None else object):
+class PredictionNetwork(nn.Module):
     """Policy and value heads operating on the latent state.
 
     Returns raw logits over the action vocabulary (to be softmax-ed externally)
@@ -144,10 +123,6 @@ class PredictionNetwork(nn.Module if nn is not None else object):
     """
 
     def __init__(self, config: WorldModelConfig) -> None:
-        if not _TORCH_AVAILABLE:
-            raise RuntimeError(
-                "PredictionNetwork requires PyTorch, but it is not available in this runtime."
-            )
         super().__init__()
         self.config = config
 
@@ -180,7 +155,7 @@ class PredictionNetwork(nn.Module if nn is not None else object):
         return policy_logits, value
 
 
-class MuZeroWorldModel(nn.Module if nn is not None else object):
+class MuZeroWorldModel(nn.Module):
     """MuZero-style world model combining representation, dynamics, and prediction.
 
     This implements the three core MuZero functions:
@@ -193,10 +168,6 @@ class MuZeroWorldModel(nn.Module if nn is not None else object):
     """
 
     def __init__(self, config: WorldModelConfig) -> None:
-        if not _TORCH_AVAILABLE:
-            raise RuntimeError(
-                "MuZeroWorldModel requires PyTorch, but it is not available in this runtime."
-            )
         super().__init__()
         self.config = config
         self.representation = RepresentationNetwork(config)
@@ -215,9 +186,7 @@ class MuZeroWorldModel(nn.Module if nn is not None else object):
         return self.representation(obs)
 
     def step(
-        self,
-        state: torch.Tensor,
-        action_idx: int,
+        self, state: torch.Tensor, action_idx: int
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """One model step: (state, action) → (next_state, reward, policy_logits, value).
 

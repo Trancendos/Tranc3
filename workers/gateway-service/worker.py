@@ -34,7 +34,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path as PathLib
-from typing import Any
+from typing import Any, Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
@@ -43,31 +43,32 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-# Phase 22.4: Dimensional Services integration
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
-from Dimensional.error_handlers import safe_error_detail
-
 # Phase 22: Infinity Ecosystem security integration
-from Dimensional.infinity.abac import ABACEngine, get_default_policies
+from Dimensional.infinity.abac import ABACEngine, Policy, PolicyEffect, get_default_policies
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware, WebSocketAuthManager
-from Dimensional.infinity.nomenclature import InfinityRole, Pillar, SentinelChannel, Tier
+from Dimensional.infinity.nomenclature import InfinityRole, SentinelChannel, Tier
 from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.rbac import RBACEngine
+from Dimensional.infinity.rbac import ENDPOINT_PERMISSIONS, Permission, RBACEngine
 
 # Phase 22.3: Sentinel Station event bus integration
 from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
+    SentinelStation,
     SharedSSEGenerator,
     get_sentinel_station,
 )
-from Dimensional.sanitize import sanitize_for_log
-from shared_core.path_validation import PathTraversalError, existing_file_path_str
-from shared_core.url_validation import SSRFError, validate_workflow_id
-from src.entities.health_metadata import health_entity_block
+
+# Phase 22.4: Dimensional Services integration
+from Dimensional.dimensionals import (
+    DimensionalServiceBus,
+    DimensionalServiceRegistry,
+    DimensionalServiceStatus,
+    UnderverseModule,
+    UnderverseRegistry,
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
+)
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -76,13 +77,7 @@ from src.entities.health_metadata import health_entity_block
 DB_PATH = os.environ.get("GATEWAY_DB_PATH", "data/gateway.db")
 PORT = int(os.environ.get("GATEWAY_PORT", "8040"))
 CACHE_TTL = int(os.environ.get("GATEWAY_CACHE_TTL", "5"))
-_jwt_secret_raw = os.environ.get("JWT_SECRET")
-if not _jwt_secret_raw:
-    raise RuntimeError(
-        "JWT_SECRET is not set. This service cannot validate tokens without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
-    )
-JWT_SECRET: str = _jwt_secret_raw
+JWT_SECRET = os.environ.get("JWT_SECRET", "")
 
 UPSTREAM_WORKERS = {
     "vault": {"port": 8030, "health": "/health", "stats": "/stats"},
@@ -133,7 +128,7 @@ from Dimensional.infinity.worker_integration import InfinityWorkerKit  # noqa: E
 
 worker_kit = InfinityWorkerKit(
     "gateway-service",
-    defense_threshold=20,  # Gateway is public-facing — moderate threshold
+    defense_threshold=20,         # Gateway is public-facing — moderate threshold
     defense_window_seconds=300,
     defense_block_seconds=900,
 )
@@ -179,7 +174,7 @@ def _init_db() -> None:
             reason      TEXT,
             timestamp   TEXT NOT NULL
         );
-        """,
+        """
     )
     conn.close()
 
@@ -210,7 +205,7 @@ async def _lifespan(app: FastAPI):
     await sentinel.start()
     logger.info(
         "Sentinel Station started (backend: %s)",
-        sanitize_for_log("redis" if sentinel.is_redis_connected else "fallback"),
+        "redis" if sentinel.is_redis_connected else "fallback",
     )
 
     # Create shared SSE generator for broadcasting events
@@ -263,18 +258,16 @@ async def _lifespan(app: FastAPI):
                 if worker_kit.health.should_fire("gateway_reporter"):
                     summary = worker_kit.health.get_health_summary().to_dict()
                     worker_kit.health.record_fire("gateway_reporter")
-                    await sentinel.publish(
-                        SentinelEvent(
-                            channel=SentinelChannel.PLATFORM,
-                            event_type="gateway_health_report",
-                            source="gateway",
-                            payload=summary,
-                        ),
-                    )
+                    await sentinel.publish(SentinelEvent(
+                        channel=SentinelChannel.PLATFORM,
+                        event_type="gateway_health_report",
+                        source="gateway",
+                        payload=summary,
+                    ))
             except asyncio.CancelledError:
                 break
             except Exception as exc:
-                logger.debug("Gateway background loop error: %s", sanitize_for_log(exc))
+                logger.debug("Gateway background loop error: %s", exc)
 
     _bg_task = asyncio.create_task(_bg_loop())
 
@@ -321,15 +314,9 @@ app.add_middleware(
 )
 
 # 3. CORS — innermost: must be last added (executed first)
-_cors_origins = [
-    o.strip()
-    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
-    if o.strip()
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
+    allow_origins=[os.environ.get("CORS_ORIGINS", "*")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -355,20 +342,10 @@ def _check_rbac(request: Request, endpoint: str, method: str) -> None:
             audit = rbac_engine.get_audit_context(user, endpoint, method)
             _log_access_audit(audit)
         except Exception:
-            logger.warning(
-                "RBAC audit logging failed for %s %s",
-                sanitize_for_log(method),
-                sanitize_for_log(endpoint),
-            )
-        logger.warning(
-            "RBAC denied %s %s for user=%s",
-            sanitize_for_log(method),
-            sanitize_for_log(endpoint),
-            sanitize_for_log(user.get("sub", "anonymous")),
-        )
+            logger.warning("RBAC audit logging failed for %s %s", method, endpoint)
         raise HTTPException(
             status_code=403,
-            detail="Access denied: insufficient permissions",
+            detail=f"Access denied: insufficient permissions for {method} {endpoint}",
         )
 
 
@@ -395,16 +372,9 @@ def _check_abac(
     environment = {"threat_level": abac_engine.threat_level.value}
 
     if not abac_engine.evaluate(subject, resource, action_attrs, environment):
-        logger.warning(
-            "ABAC denied action=%s resource=%s/%s user=%s",
-            sanitize_for_log(action),
-            sanitize_for_log(resource_type),
-            sanitize_for_log(resource_id),
-            sanitize_for_log(user.get("sub", "anonymous")),
-        )
         raise HTTPException(
             status_code=403,
-            detail="Access denied: policy denies this action",
+            detail=f"Access denied: ABAC policy denies {action} on {resource_type}/{resource_id}",
         )
 
 
@@ -586,7 +556,6 @@ class WorkflowCreate(BaseModel):
 @app.get("/health")
 async def health():
     return {
-        "entity": health_entity_block(8040, "unknown"),
         "status": "ok",
         "service": "gateway-service",
         "version": "0.8.0",
@@ -862,16 +831,10 @@ async def run_workflow(workflow_id: str, request: Request):
     _check_rbac(request, "POST:/api/workflows/{id}/run", "POST")
     _check_abac(request, "workflow", resource_id=workflow_id, action="execute")
 
-    try:
-        safe_workflow_id = validate_workflow_id(workflow_id)
-    except SSRFError as exc:
-        logger.warning("Invalid workflow id rejected: %s", sanitize_for_log(exc))
-        raise HTTPException(status_code=400, detail=safe_error_detail(exc, 400)) from exc
-
     async with httpx.AsyncClient() as client:
         try:
             r = await client.post(
-                f"{_base_url('workflow')}/workflows/{safe_workflow_id}/run",
+                f"{_base_url('workflow')}/workflows/{workflow_id}/run",
                 json={},
                 timeout=10.0,
             )
@@ -951,10 +914,9 @@ async def set_threat_level(body: dict, request: Request):
     try:
         new_level = ThreatLevel(level_str)
     except ValueError:
-        logger.warning("Invalid threat level rejected: %s", sanitize_for_log(level_str))
         raise HTTPException(
             400,
-            detail="Invalid threat level. Use: low, medium, high, critical",
+            detail=f"Invalid threat level: {level_str}. Use: low, medium, high, critical",
         ) from None
 
     old_level = abac_engine.threat_level
@@ -1020,9 +982,7 @@ async def check_access(
             "granted": abac_result,
             "resource_type": resource_type,
             "action": action,
-        }
-        if resource_type
-        else None,
+        } if resource_type else None,
         "overall": rbac_result and abac_result,
     }
 
@@ -1191,7 +1151,7 @@ async def _broadcast_event(
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "data": payload,
             "channel": channel,
-        },
+        }
     )
     disconnected = []
     for ws in ws_auth_manager.connections:
@@ -1282,8 +1242,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     "data": overview,
                     "authenticated": user is not None,
                     "tier": user.get("tier", "human") if user else "human",
-                },
-            ),
+                }
+            )
         )
 
         while True:
@@ -1306,8 +1266,8 @@ async def websocket_endpoint(websocket: WebSocket):
                             {
                                 "type": "subscribed",
                                 "channels": channels,
-                            },
-                        ),
+                            }
+                        )
                     )
                 elif msg_type == "ping":
                     await websocket.send_text(json.dumps({"type": "pong"}))
@@ -1318,14 +1278,14 @@ async def websocket_endpoint(websocket: WebSocket):
                             {
                                 "type": "overview",
                                 "data": overview,
-                            },
-                        ),
+                            }
+                        )
                     )
                 elif msg_type == "heartbeat":
                     # Explicit heartbeat for connection keepalive
                     ws_auth_manager.update_activity(websocket)
                     await websocket.send_text(
-                        json.dumps({"type": "heartbeat_ack", "ts": time.time()}),
+                        json.dumps({"type": "heartbeat_ack", "ts": time.time()})
                     )
             except json.JSONDecodeError:
                 await websocket.send_text(
@@ -1333,8 +1293,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         {
                             "type": "error",
                             "message": "Invalid JSON",
-                        },
-                    ),
+                        }
+                    )
                 )
     except WebSocketDisconnect:
         pass
@@ -1359,7 +1319,7 @@ async def _cleanup_stale_connections():
                 pass
             ws_auth_manager.unregister_connection(ws)
         if stale:
-            logger.info("Cleaned up %d stale WebSocket connections", sanitize_for_log(len(stale)))
+            logger.info("Cleaned up %d stale WebSocket connections", len(stale))
 
 
 # ---------------------------------------------------------------------------
@@ -1372,29 +1332,16 @@ DASHBOARD_DIR = PathLib(__file__).parent.parent.parent / "dashboard"
 @app.get("/dashboard/{path:path}")
 async def serve_dashboard(path: str = "index.html"):
     """Serve the AI Platform dashboard static files."""
-    try:
-        safe_path = existing_file_path_str(path, DASHBOARD_DIR)
-    except (PathTraversalError, FileNotFoundError):
-        raise HTTPException(404, "File not found") from None
-    return (
-        FileResponse(  # codeql[py/path-injection] – safe_path from existing_file_path_str barrier
-            safe_path,
-        )
-    )
+    file_path = DASHBOARD_DIR / path
+    if file_path.exists() and file_path.is_file():
+        return FileResponse(str(file_path))
+    raise HTTPException(404, "File not found") from None
 
 
 @app.get("/dashboard")
 async def serve_dashboard_index():
     """Serve the dashboard index."""
-    try:
-        safe_path = existing_file_path_str("index.html", DASHBOARD_DIR)
-    except (PathTraversalError, FileNotFoundError):
-        raise HTTPException(404, "File not found") from None
-    return (
-        FileResponse(  # codeql[py/path-injection] – safe_path from existing_file_path_str barrier
-            safe_path,
-        )
-    )
+    return FileResponse(str(DASHBOARD_DIR / "index.html"))
 
 
 # ---------------------------------------------------------------------------

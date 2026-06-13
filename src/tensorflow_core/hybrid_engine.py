@@ -4,15 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-
-try:
-    import torch
-except (ImportError, RuntimeError, OSError):  # pragma: no cover
-    # RuntimeError: CUDA init / driver mismatch; OSError: missing shared lib
-    torch = None  # type: ignore[assignment]
-    _TORCH_AVAILABLE = False
-else:
-    _TORCH_AVAILABLE = True
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -372,6 +364,8 @@ class HybridInferenceEngine:
         """
         if self._tf_available is None:
             try:
+                import tensorflow as _tf  # noqa: F401
+
                 self._tf_available = True
             except ImportError:
                 self._tf_available = False
@@ -458,6 +452,8 @@ class HybridInferenceEngine:
         # TensorFlow
         if self._tf_available is None:
             try:
+                import tensorflow as _tf  # noqa: F401
+
                 self._tf_available = True
             except ImportError:
                 self._tf_available = False

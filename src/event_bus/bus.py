@@ -23,7 +23,6 @@ from pathlib import Path
 from typing import Any, Callable
 
 from Dimensional.sanitize import sanitize_for_log
-from src.database.encrypted_sqlite import connect as sqlite3_connect
 from src.event_bus.types import (
     DEFAULT_EVENT_BUS_CONFIG,
     DeliveryResult,
@@ -34,15 +33,6 @@ from src.event_bus.types import (
     EventMetadata,
     EventSubscription,
 )
-
-# Optional NATS transport — imported lazily to avoid hard dependency
-try:
-    from src.event_bus.nats_transport import _event_type_to_subject
-
-    _NATS_TRANSPORT_AVAILABLE = True
-except ImportError:
-    _NATS_TRANSPORT_AVAILABLE = False
-    _event_type_to_subject = None  # type: ignore[assignment]
 
 logger = logging.getLogger("tranc3.event_bus")
 
@@ -82,9 +72,6 @@ class EventBus:
         self._event_log: list[EventEnvelope] = []
         self._db: sqlite3.Connection | None = None
 
-        # Optional NATS JetStream transport (set via set_nats_transport())
-        self._nats_transport: Any | None = None  # NATSTransport instance
-
         # Initialise SQLite if configured
         if self.config.sqlite_path:
             self._init_sqlite(self.config.sqlite_path)
@@ -93,7 +80,7 @@ class EventBus:
         """Initialise SQLite persistence."""
         db_path = Path(path)
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3_connect(str(db_path))
+        self._db = sqlite3.connect(str(db_path))
         self._db.execute("""
             CREATE TABLE IF NOT EXISTS events (
                 event_id TEXT PRIMARY KEY,
@@ -119,30 +106,6 @@ class EventBus:
             await self.flush()
         if self._db:
             self._db.close()
-        if self._nats_transport is not None:
-            await self._nats_transport.disconnect()
-
-    # ── NATS transport ───────────────────────────────────────
-
-    def set_nats_transport(self, transport: Any) -> None:
-        """
-        Attach an optional NATS JetStream transport adapter.
-
-        Once set, every call to ``emit()`` will publish the event through
-        NATS JetStream *in addition* to the local SQLite + callback delivery.
-
-        Pass a ``NATSTransport`` instance (from ``src.event_bus.nats_transport``).
-        The transport must already be connected (``await transport.connect()``).
-
-        Example::
-
-            from src.event_bus.nats_transport import make_nats_transport
-            transport = make_nats_transport()
-            await transport.connect()
-            bus.set_nats_transport(transport)
-        """
-        self._nats_transport = transport
-        logger.info("event_bus_nats_transport_attached")
 
     # ── Emit ─────────────────────────────────────────────────
 
@@ -183,20 +146,6 @@ class EventBus:
         # Buffer for batch processing
         self._buffer.append(event)
 
-        # Publish through NATS JetStream if transport is attached
-        if self._nats_transport is not None and _event_type_to_subject is not None:
-            try:
-                nats_subject = _event_type_to_subject(event_type)
-                await self._nats_transport.publish(
-                    nats_subject,
-                    event.model_dump(mode="json"),
-                )
-            except Exception as _nats_exc:  # noqa: BLE001
-                logger.error(
-                    "nats_publish_error",
-                    extra={"event_type": event_type, "error": str(_nats_exc)},
-                )
-
         # Find matching subscriptions
         results: list[DeliveryResult] = []
         matching_subs = self._find_matching_subscriptions(event)
@@ -230,7 +179,7 @@ class EventBus:
                     data=data,
                     source=source,
                     tenant_id=tenant_id,
-                ),
+                )
             )
         except RuntimeError:
             logger.warning("emit_async_no_loop", extra={"event_type": event_type})

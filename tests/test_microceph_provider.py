@@ -14,19 +14,18 @@ No live Ceph cluster is required — all I/O-bound paths are exercised via
 mocks or by testing the pure-Python CRUSH maths directly.
 """
 
-from __future__ import annotations  # noqa: I001
-
+from __future__ import annotations
 
 import pytest
 
 # ---------------------------------------------------------------------------
 # Module-level imports (verified importable)
 # ---------------------------------------------------------------------------
-from shared_core.architecture.microceph_provider import (
+from Dimensional.architecture.microceph_provider import (
     DEFAULT_POOLS,
+    MAX_PG_COUNT,
     MICROCEPH_CMD,
     MIN_PG_COUNT,
-    MAX_PG_COUNT,
     OSD_TARGET_PG_PER_OSD,
     CephHealthStatus,
     CrushBucket,
@@ -40,11 +39,10 @@ from shared_core.architecture.microceph_provider import (
     RgwCredentials,
     crush_hash,
     crush_place,
-    straw2_choose,
     get_microceph_provider,
     shutdown_microceph_provider,
+    straw2_choose,
 )
-
 
 # ===========================================================================
 # Constants
@@ -276,12 +274,12 @@ class TestPoolInfo:
 class TestRgwCredentials:
     def test_construction(self):
         creds = RgwCredentials(
-            access_key="TEST-ACCESS-KEY-123",  # pragma: allowlist secret
-            secret_key="test-secret-value",  # pragma: allowlist secret
+            access_key="AKIATEST123",
+            secret_key="supersecret",
             user_id="tranc3-admin",
             display_name="Tranc3 Admin",
         )
-        assert creds.access_key == "TEST-ACCESS-KEY-123"
+        assert creds.access_key == "AKIATEST123"
         assert creds.user_id == "tranc3-admin"
 
 
@@ -455,7 +453,7 @@ class TestSingletonHelpers:
     @pytest.mark.asyncio
     async def test_get_provider_returns_instance(self):
         """get_microceph_provider() should return a MicroCephProvider instance."""
-        from shared_core.architecture.microceph_provider import MicroCephProvider
+        from Dimensional.architecture.microceph_provider import MicroCephProvider
 
         provider = await get_microceph_provider()
         assert isinstance(provider, MicroCephProvider)

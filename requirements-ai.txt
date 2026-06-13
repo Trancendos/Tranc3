@@ -1,6 +1,6 @@
 # TRANC3 — Extended AI/ML Dependencies (Optional)
 # Only install if you need LangChain, Transformers, Qiskit, or LangFuse
-# Updated: 2026-06-07 — CVE Remediation + Security Hardening
+# Updated: 2025-07 — CVE Remediation
 
 # === AI Orchestration ===
 # Fixes: CVE-2024-7042 (SQL injection), CVE-2024-7774 (SSRF),
@@ -28,39 +28,3 @@ qiskit==2.4.1
 # === Observability ===
 # Fixes: CVE-2025-9799 (SSRF in LangFuse)
 langfuse==4.6.1
-
-# === Zero-Cost Local Inference ===
-# llama-cpp-python: Run GGUF quantized models (Llama, Mistral, Phi) locally for free.
-# Supports CPU (Oracle free ARM works — slow but free) and CUDA if available.
-# 7B model quantized to Q4_K_M runs in ~6GB RAM, ~0.5–2 tokens/sec on Oracle ARM.
-# HONEST: CPU inference is very slow — only viable for batch use or Oracle free VM.
-llama-cpp-python==0.3.9
-
-# === Vector Database (Self-Hosted, Genuinely Free) ===
-# ChromaDB: Local SQLite-backed vector store. No server needed in dev.
-# Production: runs with PostgreSQL backend (Supabase free tier or self-hosted Postgres).
-# Use for: RAG pipelines, semantic search, context memory.
-# SECURITY FIX (2026-06-07): Updated from 1.0.12 to 1.0.13 to resolve
-# pre-authentication code injection vulnerability (CRITICAL).
-# See: https://github.com/Trancendos/Tranc3/security/dependabot/41
-# Remediation: Isolated to trusted environments; validate input from RAG sources.
-chromadb==1.0.13
-
-# === Structured LLM Outputs ===
-# instructor: Pydantic-validated structured outputs from any LLM API.
-# Free to use, works with all providers in our rotation.
-instructor==1.8.3
-
-# === Fine-Tuning (Zero-Cost via Kaggle/Colab) ===
-# peft: LoRA/QLoRA/IA3 adapters. Run fine-tuning on Kaggle free 30 hrs/week.
-# Honest: training FROM SCRATCH at zero cost is not feasible. Fine-tuning is.
-peft==0.15.2
-
-# bitsandbytes: 4-bit/8-bit quantization for fitting larger models in less VRAM.
-# Required for QLoRA. Only useful if running on a machine with a CUDA GPU.
-# HONEST: this package provides zero benefit on CPU-only environments.
-bitsandbytes==0.47.0
-
-# unsloth: 2-5x faster LoRA/QLoRA training. Verified speedups, not marketing.
-# Only for Llama/Mistral/Phi model families on CUDA. CPU: no benefit.
-# unsloth==2025.6.10  # Uncomment when fine-tuning — large install

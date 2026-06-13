@@ -26,14 +26,11 @@ from __future__ import annotations
 
 import ast
 import json
-import logging
 import re
 from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set
-
-logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Data model
@@ -859,9 +856,9 @@ class SecurityScanner:
             try:
                 found = checker.check(tree, source, filepath)
                 violations.extend(found)
-            except Exception as _exc:
+            except Exception:
                 # Never let a single checker crash the whole scan
-                logger.debug("suppressed %s", _exc, exc_info=False)
+                pass
 
         return [v for v in violations if self._meets_threshold(v.severity)]
 

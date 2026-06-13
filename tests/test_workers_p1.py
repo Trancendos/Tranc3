@@ -37,20 +37,16 @@ def _import_worker(module_dotted: str, file_path: Path):
 
 
 users_mod = _import_worker(
-    "users_service_worker",
-    _TRANC3_ROOT / "workers" / "users-service" / "worker.py",
+    "users_service_worker", _TRANC3_ROOT / "workers" / "users-service" / "worker.py"
 )
 monitoring_mod = _import_worker(
-    "monitoring_worker",
-    _TRANC3_ROOT / "workers" / "monitoring" / "worker.py",
+    "monitoring_worker", _TRANC3_ROOT / "workers" / "monitoring" / "worker.py"
 )
 notifications_mod = _import_worker(
-    "notifications_worker",
-    _TRANC3_ROOT / "workers" / "notifications" / "worker.py",
+    "notifications_worker", _TRANC3_ROOT / "workers" / "notifications" / "worker.py"
 )
 ai_mod = _import_worker(
-    "infinity_ai_worker",
-    _TRANC3_ROOT / "workers" / "infinity-ai" / "worker.py",
+    "infinity_ai_worker", _TRANC3_ROOT / "workers" / "infinity-ai" / "worker.py"
 )
 
 
@@ -154,10 +150,7 @@ class TestUsersServiceHTTPEndpoints:
         test_db = users_mod.UsersDatabase(db_path=db_path)
 
         with patch.object(users_mod, "db", test_db):
-            client = TestClient(
-                users_mod.app,
-                headers={"X-Internal-Secret": users_mod._INTERNAL_SECRET},
-            )
+            client = TestClient(users_mod.app)
             yield client
 
         test_db._conn.close()
@@ -425,10 +418,7 @@ class TestMonitoringHTTPEndpoints:
         test_db = monitoring_mod.MonitoringDatabase(db_path=db_path)
 
         with patch.object(monitoring_mod, "db", test_db):
-            client = TestClient(
-                monitoring_mod.app,
-                headers={"X-Internal-Secret": monitoring_mod._INTERNAL_SECRET},
-            )
+            client = TestClient(monitoring_mod.app)
             yield client
 
     def test_health_endpoint(self, monitoring_client):
@@ -743,10 +733,7 @@ class TestNotificationsHTTPEndpoints:
         test_db = notifications_mod.NotificationsDatabase(db_path=db_path)
 
         with patch.object(notifications_mod, "db", test_db):
-            client = TestClient(
-                notifications_mod.app,
-                headers={"X-Internal-Secret": notifications_mod._INTERNAL_SECRET},
-            )
+            client = TestClient(notifications_mod.app)
             yield client
 
     def test_health_endpoint(self, notifications_client):
@@ -1056,10 +1043,7 @@ class TestAIHTTPEndpoints:
         test_db = ai_mod.AIDatabase(db_path=db_path)
 
         with patch.object(ai_mod, "db", test_db):
-            client = TestClient(
-                ai_mod.app,
-                headers={"X-Internal-Secret": ai_mod._INTERNAL_SECRET},
-            )
+            client = TestClient(ai_mod.app)
             yield client
 
     def test_health_endpoint(self, ai_client):

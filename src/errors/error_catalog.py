@@ -49,7 +49,6 @@ class ErrorCode(str, Enum):
     DB_WRITE_FAILED = "TRANC3-DB-002"
     DB_READ_FAILED = "TRANC3-DB-003"
     DB_MIGRATION_NEEDED = "TRANC3-DB-004"
-    DB_INVALID_IDENTIFIER = "TRANC3-DB-005"
 
     # Quantum
     QUANT_BACKEND_FAILED = "TRANC3-QUANT-001"
@@ -81,24 +80,6 @@ class ErrorCode(str, Enum):
     # Compliance
     COMP_VIOLATION = "TRANC3-COMP-001"
     COMP_GDPR_REQUIRED = "TRANC3-COMP-002"
-
-    # Workflow / The Digital Grid
-    WF_NODE_FAILED = "TRANC3-WF-001"
-    WF_CYCLE_DETECTED = "TRANC3-WF-002"
-    WF_TIMEOUT = "TRANC3-WF-003"
-    WF_INVALID_DAG = "TRANC3-WF-004"
-
-    # Validation / Input
-    VAL_SCHEMA_INVALID = "TRANC3-VAL-001"
-    VAL_FIELD_REQUIRED = "TRANC3-VAL-002"
-    VAL_FIELD_TOO_LONG = "TRANC3-VAL-003"
-    VAL_INJECTION_DETECTED = "TRANC3-VAL-004"
-
-    # Entity / Resource
-    ENT_NOT_FOUND = "TRANC3-ENT-001"
-    ENT_CONFLICT = "TRANC3-ENT-002"
-    ENT_UNAVAILABLE = "TRANC3-ENT-003"
-    ENT_ROTATION_FAILED = "TRANC3-ENT-004"
 
     # System
     SYS_REDIS_UNAVAILABLE = "TRANC3-SYS-001"
@@ -319,15 +300,6 @@ CATALOG: Dict[ErrorCode, ErrorDefinition] = {
         self_heal="run_migrations",
         severity="critical",
     ),
-    ErrorCode.DB_INVALID_IDENTIFIER: ErrorDefinition(
-        code=ErrorCode.DB_INVALID_IDENTIFIER,
-        http_status=400,
-        title="Invalid Database Identifier",
-        message="A database identifier (table or column name) failed validation.",
-        guidance="Identifiers must start with a letter or underscore and contain only alphanumerics and underscores.",
-        docs_url="/docs/errors/TRANC3-DB-005",
-        severity="error",
-    ),
     # Quantum
     ErrorCode.QUANT_BACKEND_FAILED: ErrorDefinition(
         code=ErrorCode.QUANT_BACKEND_FAILED,
@@ -490,122 +462,6 @@ CATALOG: Dict[ErrorCode, ErrorDefinition] = {
         docs_url="/docs/errors/TRANC3-COMP-002",
         severity="warning",
     ),
-    # Workflow / The Digital Grid
-    ErrorCode.WF_NODE_FAILED: ErrorDefinition(
-        code=ErrorCode.WF_NODE_FAILED,
-        http_status=500,
-        title="Workflow Node Failed",
-        message="A node in the workflow DAG raised an exception.",
-        guidance="Check the node execution log in GET /workflow/{id}/log. Fix the node handler and re-run.",
-        docs_url="/docs/errors/TRANC3-WF-001",
-        severity="error",
-        retryable=True,
-    ),
-    ErrorCode.WF_CYCLE_DETECTED: ErrorDefinition(
-        code=ErrorCode.WF_CYCLE_DETECTED,
-        http_status=422,
-        title="Workflow Cycle Detected",
-        message="The workflow DAG contains a cycle, which prevents topological execution.",
-        guidance="Review the workflow edges and remove any circular dependencies. Use GET /workflow/{id}/visualise to inspect the DAG.",
-        docs_url="/docs/errors/TRANC3-WF-002",
-        severity="error",
-    ),
-    ErrorCode.WF_TIMEOUT: ErrorDefinition(
-        code=ErrorCode.WF_TIMEOUT,
-        http_status=504,
-        title="Workflow Timeout",
-        message="The workflow exceeded its maximum execution time.",
-        guidance="Increase the timeout in the workflow config, or split the workflow into smaller sub-workflows.",
-        docs_url="/docs/errors/TRANC3-WF-003",
-        severity="error",
-        retryable=True,
-    ),
-    ErrorCode.WF_INVALID_DAG: ErrorDefinition(
-        code=ErrorCode.WF_INVALID_DAG,
-        http_status=422,
-        title="Invalid Workflow DAG",
-        message="The workflow definition is not a valid directed acyclic graph.",
-        guidance="Validate the workflow JSON/YAML against the schema at /docs/workflow-schema.json.",
-        docs_url="/docs/errors/TRANC3-WF-004",
-        severity="error",
-    ),
-    # Validation
-    ErrorCode.VAL_SCHEMA_INVALID: ErrorDefinition(
-        code=ErrorCode.VAL_SCHEMA_INVALID,
-        http_status=422,
-        title="Schema Validation Failed",
-        message="The request body did not match the expected schema.",
-        guidance="Check the response body for field-level details and correct the payload.",
-        docs_url="/docs/errors/TRANC3-VAL-001",
-        severity="warning",
-    ),
-    ErrorCode.VAL_FIELD_REQUIRED: ErrorDefinition(
-        code=ErrorCode.VAL_FIELD_REQUIRED,
-        http_status=422,
-        title="Required Field Missing",
-        message="One or more required fields were absent from the request.",
-        guidance="Ensure all required fields are present. Refer to the API docs for the endpoint schema.",
-        docs_url="/docs/errors/TRANC3-VAL-002",
-        severity="warning",
-    ),
-    ErrorCode.VAL_FIELD_TOO_LONG: ErrorDefinition(
-        code=ErrorCode.VAL_FIELD_TOO_LONG,
-        http_status=422,
-        title="Field Exceeds Maximum Length",
-        message="One or more fields exceed the allowed character limit.",
-        guidance="Reduce the length of the field value to the documented maximum.",
-        docs_url="/docs/errors/TRANC3-VAL-003",
-        severity="warning",
-    ),
-    ErrorCode.VAL_INJECTION_DETECTED: ErrorDefinition(
-        code=ErrorCode.VAL_INJECTION_DETECTED,
-        http_status=400,
-        title="Injection Pattern Detected",
-        message="The input contains disallowed patterns (XSS, SQLi, prompt injection).",
-        guidance="Remove all HTML tags, SQL keywords, and prompt manipulation phrases from the input.",
-        docs_url="/docs/errors/TRANC3-VAL-004",
-        severity="error",
-        self_heal="sanitize_input",
-    ),
-    # Entity
-    ErrorCode.ENT_NOT_FOUND: ErrorDefinition(
-        code=ErrorCode.ENT_NOT_FOUND,
-        http_status=404,
-        title="Entity Not Found",
-        message="The requested Trancendos entity or resource does not exist.",
-        guidance="Verify the entity name/ID using GET /platform/entities. Check the canonical entity list in PLATFORM_ENTITIES.md.",
-        docs_url="/docs/errors/TRANC3-ENT-001",
-        severity="warning",
-    ),
-    ErrorCode.ENT_CONFLICT: ErrorDefinition(
-        code=ErrorCode.ENT_CONFLICT,
-        http_status=409,
-        title="Entity Conflict",
-        message="A resource with this identifier already exists.",
-        guidance="Use a different identifier, or update the existing resource with PATCH.",
-        docs_url="/docs/errors/TRANC3-ENT-002",
-        severity="warning",
-    ),
-    ErrorCode.ENT_UNAVAILABLE: ErrorDefinition(
-        code=ErrorCode.ENT_UNAVAILABLE,
-        http_status=503,
-        title="Entity Unavailable",
-        message="The Trancendos entity is currently offline or in maintenance mode.",
-        guidance="Check GET /platform/entities/{name}/health. The entity rotation pool will attempt a failover automatically.",
-        docs_url="/docs/errors/TRANC3-ENT-003",
-        severity="error",
-        retryable=True,
-    ),
-    ErrorCode.ENT_ROTATION_FAILED: ErrorDefinition(
-        code=ErrorCode.ENT_ROTATION_FAILED,
-        http_status=503,
-        title="Entity Rotation Failed",
-        message="All instances in the entity's rotation pool are unhealthy.",
-        guidance="Check GET /platform/rotation/{entity} for pool health. Restart the failing workers or add pool instances.",
-        docs_url="/docs/errors/TRANC3-ENT-004",
-        severity="critical",
-        retryable=True,
-    ),
     # System
     ErrorCode.SYS_REDIS_UNAVAILABLE: ErrorDefinition(
         code=ErrorCode.SYS_REDIS_UNAVAILABLE,
@@ -654,7 +510,7 @@ def format_error_response(code: ErrorCode, detail: Optional[str] = None) -> Dict
             "docs_url": defn.docs_url,
             "retryable": defn.retryable,
             "severity": defn.severity,
-        },
+        }
     }
 
 

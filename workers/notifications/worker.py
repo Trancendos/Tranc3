@@ -11,7 +11,6 @@ Zero-cost: In-process dispatch, SQLite storage, no external SaaS.
 
 from __future__ import annotations
 
-import http.client
 import json
 import logging
 import os
@@ -25,15 +24,13 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from Dimensional.error_handlers import log_server_error, safe_error_detail
+from Dimensional.error_handlers import safe_error_detail
 from Dimensional.sanitize import sanitize_for_log
 from Dimensional.url_validation import SSRFError, validate_webhook_url
-from src.database.encrypted_sqlite import connect as sqlite3_connect
-from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -105,7 +102,7 @@ class NotificationTemplate(BaseModel):
 class UserPreferences(BaseModel):
     user_id: str
     channels_enabled: List[NotificationChannel] = Field(
-        default_factory=lambda: [NotificationChannel.in_app, NotificationChannel.email],
+        default_factory=lambda: [NotificationChannel.in_app, NotificationChannel.email]
     )
     quiet_hours_start: Optional[str] = None  # HH:MM format
     quiet_hours_end: Optional[str] = None
@@ -157,7 +154,7 @@ class NotificationsDatabase:
 
     def _get_conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3_connect(str(self.db_path), timeout=10)
+            self._local.conn = sqlite3.connect(str(self.db_path), timeout=10)
             self._local.conn.row_factory = sqlite3.Row
             self._local.conn.execute("PRAGMA journal_mode=WAL")
             self._local.conn.execute("PRAGMA synchronous=NORMAL")
@@ -220,9 +217,7 @@ class NotificationsDatabase:
     # -- Notifications --
 
     def create_notification(
-        self,
-        notif: NotificationRequest,
-        status: NotificationStatus = NotificationStatus.pending,
+        self, notif: NotificationRequest, status: NotificationStatus = NotificationStatus.pending
     ) -> Dict[str, Any]:
         now = datetime.now(timezone.utc).isoformat()
         with self._cursor() as cur:
@@ -244,10 +239,7 @@ class NotificationsDatabase:
         return {"notification_id": notif.notification_id, "status": status.value}
 
     def update_status(
-        self,
-        notification_id: str,
-        status: NotificationStatus,
-        error: Optional[str] = None,
+        self, notification_id: str, status: NotificationStatus, error: Optional[str] = None
     ):
         now = datetime.now(timezone.utc).isoformat()
         with self._cursor() as cur:
@@ -275,8 +267,7 @@ class NotificationsDatabase:
     def get_notification(self, notification_id: str) -> Optional[Dict[str, Any]]:
         conn = self._get_conn()
         row = conn.execute(
-            "SELECT * FROM notifications WHERE notification_id=?",
-            (notification_id,),
+            "SELECT * FROM notifications WHERE notification_id=?", (notification_id,)
         ).fetchone()
         return dict(row) if row else None
 
@@ -327,8 +318,7 @@ class NotificationsDatabase:
         conn = self._get_conn()
         if channel:
             rows = conn.execute(
-                "SELECT * FROM templates WHERE channel=? ORDER BY name",
-                (channel,),
+                "SELECT * FROM templates WHERE channel=? ORDER BY name", (channel,)
             ).fetchall()
         else:
             rows = conn.execute("SELECT * FROM templates ORDER BY name").fetchall()
@@ -372,16 +362,11 @@ class NotificationDispatcher:
 
     @staticmethod
     async def dispatch_email(
-        user_id: str,
-        subject: str,
-        body: str,
-        metadata: Dict[str, Any],
+        user_id: str, subject: str, body: str, metadata: Dict[str, Any]
     ) -> bool:
         """Email dispatch — in zero-cost mode, logs and marks as sent. Plug in SMTP or SES later."""
         logger.info(
-            "📧 EMAIL → user=%s subject='%s'",
-            sanitize_for_log(user_id),
-            sanitize_for_log(subject),
+            "📧 EMAIL → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject)
         )  # codeql[py/cleartext-logging]
         # In production: integrate with self-hosted mail or free-tier SMTP
         return True
@@ -394,87 +379,63 @@ class NotificationDispatcher:
 
     @staticmethod
     async def dispatch_push(
-        user_id: str,
-        subject: str,
-        body: str,
-        metadata: Dict[str, Any],
+        user_id: str, subject: str, body: str, metadata: Dict[str, Any]
     ) -> bool:
         """Push notification — zero-cost mode logs only. Plug in Web Push later."""
         logger.info(
-            "🔔 PUSH → user=%s subject='%s'",
-            sanitize_for_log(user_id),
-            sanitize_for_log(subject),
+            "🔔 PUSH → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject)
         )  # codeql[py/cleartext-logging]
         return True
 
     @staticmethod
     async def dispatch_webhook(url: str, payload: Dict[str, Any]) -> bool:
-        """Webhook dispatch — makes HTTPS POST to an allowlisted endpoint.
+        """Webhook dispatch — makes HTTP POST to a validated URL.
 
-        WEBHOOK_ALLOWED_DOMAINS (env var) must be configured.  The connection
-        host is derived from the allowlist (config-sourced), not from the
-        user-supplied URL, so the outbound host is not attacker-controlled.
+        The URL is validated against SSRF protections before any network
+        request is made.  Only HTTPS URLs to public, non-reserved hosts
+        are permitted.  See Dimensional.url_validation for details.
         """
+        import urllib.request
         from urllib.parse import urlparse
 
         # SSRF validation — blocks private IPs, metadata endpoints, non-HTTPS
         try:
-            validated_url = validate_webhook_url(url)
+            validate_webhook_url(url)
         except SSRFError as e:
-            logger.warning("Webhook URL blocked by SSRF protection: %s", sanitize_for_log(e))
+            logger.warning("Webhook URL blocked by SSRF protection: %s", e)
             return False
 
-        # Allowlist is required for webhook dispatch.  The connection host is
-        # taken from _WEBHOOK_ALLOWED_DOMAINS (populated from env config at
-        # startup), NOT from the user-supplied URL.  Iterating the config set
-        # and comparing yields the config-sourced string as the host value,
-        # which is not tainted by user input.
-        if not _WEBHOOK_ALLOWED_DOMAINS:
-            logger.warning("Webhook dispatch blocked: WEBHOOK_ALLOWED_DOMAINS not configured")
-            return False
-
-        _p = urlparse(validated_url)
-        _req_host = (_p.hostname or "").lower()
-        _conn_host: Optional[str] = next(
-            (d for d in _WEBHOOK_ALLOWED_DOMAINS if d == _req_host), None
-        )
-        if _conn_host is None:
-            logger.warning(
-                "Webhook domain '%s' not in allowlist (%d configured)",
-                sanitize_for_log(_req_host),
-                len(_WEBHOOK_ALLOWED_DOMAINS),
-            )
-            return False
+        # Optional domain allowlist check
+        if _WEBHOOK_ALLOWED_DOMAINS:
+            parsed = urlparse(url)
+            hostname = (parsed.hostname or "").lower()
+            if hostname not in _WEBHOOK_ALLOWED_DOMAINS:
+                logger.warning(
+                    "Webhook domain '%s' not in allowlist: %s",
+                    sanitize_for_log(hostname),
+                    _WEBHOOK_ALLOWED_DOMAINS,  # codeql[py/cleartext-logging]
+                )
+                return False
 
         try:
             data = json.dumps(payload).encode()
-            _path = (_p.path or "/") + (f"?{_p.query}" if _p.query else "")
-            _conn = http.client.HTTPSConnection(_conn_host, 443, timeout=10)
-            _conn.request(
-                "POST",
-                _path,
-                body=data,
-                headers={"Content-Type": "application/json"},
-            )
-            _resp = _conn.getresponse()
-            _conn.close()
-            return _resp.status < 400
+            req = urllib.request.Request(
+                url, data=data, method="POST"
+            )  # codeql[py/ssrf] – URL validated against allowlist above
+            req.add_header("Content-Type", "application/json")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return resp.status < 400
         except Exception as e:
-            logger.error("Webhook dispatch failed: %s", sanitize_for_log(e))
+            logger.error("Webhook dispatch failed: %s", e)
             return False
 
     @staticmethod
     async def dispatch_in_app(
-        user_id: str,
-        subject: str,
-        body: str,
-        metadata: Dict[str, Any],
+        user_id: str, subject: str, body: str, metadata: Dict[str, Any]
     ) -> bool:
         """In-app notification — stored in DB, client polls or uses WebSocket."""
         logger.info(
-            "💬 IN-APP → user=%s subject='%s'",
-            sanitize_for_log(user_id),
-            sanitize_for_log(subject),
+            "💬 IN-APP → user=%s subject='%s'", sanitize_for_log(user_id), sanitize_for_log(subject)
         )  # codeql[py/cleartext-logging]
         return True
 
@@ -493,10 +454,6 @@ app = FastAPI(
     version="1.0.0",
 )
 
-from src.observability.prometheus_mount import mount_prometheus_endpoint
-
-mount_prometheus_endpoint(app, "notifications")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -505,24 +462,6 @@ app.add_middleware(
 )
 
 STARTED_AT = datetime.now(timezone.utc)
-
-# ---------------------------------------------------------------------------
-# Internal auth
-# ---------------------------------------------------------------------------
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return  # unconfigured in test/dev — allow through
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 
 # ---------------------------------------------------------------------------
@@ -533,11 +472,18 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 @app.get("/health")
 async def health():
     return {
-        "entity": health_entity_block(8008, "notifications-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
+        "entity": {
+            "location": "Arcadia",
+            "pillar": "Commercial / Financial",
+            "lead_ai": "Lilli SC",
+            "primes": ["Dorris Fontaine"],
+            "primary_function": "Post-Login User Frontend, Forum & Email Hub",
+            "layer": "supporting",
+        },
     }
 
 
@@ -546,7 +492,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/notifications/send")
+@app.post("/notifications/send")
 async def send_notification(req: NotificationRequest):
     """Send a notification through the specified channel."""
     # Check user preferences
@@ -590,19 +536,13 @@ async def send_notification(req: NotificationRequest):
     try:
         if req.channel == NotificationChannel.email:
             success = await dispatcher.dispatch_email(
-                req.user_id,
-                req.subject,
-                req.body,
-                req.metadata,
+                req.user_id, req.subject, req.body, req.metadata
             )
         elif req.channel == NotificationChannel.sms:
             success = await dispatcher.dispatch_sms(req.user_id, req.body, req.metadata)
         elif req.channel == NotificationChannel.push:
             success = await dispatcher.dispatch_push(
-                req.user_id,
-                req.subject,
-                req.body,
-                req.metadata,
+                req.user_id, req.subject, req.body, req.metadata
             )
         elif req.channel == NotificationChannel.webhook:
             webhook_url = req.metadata.get("webhook_url", "")
@@ -610,15 +550,14 @@ async def send_notification(req: NotificationRequest):
                 return {"ok": False, "reason": "webhook_url missing from metadata"}
             # Validate webhook URL at the endpoint level (defense-in-depth)
             try:
-                validated_webhook_url = validate_webhook_url(webhook_url)
+                validate_webhook_url(webhook_url)
             except SSRFError as e:
-                log_server_error(e, 400, context="webhook URL validation")
                 raise HTTPException(
                     status_code=400,
-                    detail="Webhook URL rejected",
+                    detail=f"Webhook URL rejected: {e}",
                 ) from None
             success = await dispatcher.dispatch_webhook(
-                validated_webhook_url,
+                webhook_url,
                 {
                     "subject": req.subject,
                     "body": req.body,
@@ -627,10 +566,7 @@ async def send_notification(req: NotificationRequest):
             )
         elif req.channel == NotificationChannel.in_app:
             success = await dispatcher.dispatch_in_app(
-                req.user_id,
-                req.subject,
-                req.body,
-                req.metadata,
+                req.user_id, req.subject, req.body, req.metadata
             )
 
         if success:
@@ -638,25 +574,20 @@ async def send_notification(req: NotificationRequest):
             return {"ok": True, "notification_id": req.notification_id, "status": "sent"}
         else:
             db.update_status(
-                req.notification_id,
-                NotificationStatus.failed,
-                error="Dispatch failed",
+                req.notification_id, NotificationStatus.failed, error="Dispatch failed"
             )
             return {"ok": False, "notification_id": req.notification_id, "status": "failed"}
 
     except Exception as e:
-        log_server_error(e, 500, context="notification dispatch")
-        safe_message = safe_error_detail(e, 500)
         db.update_status(
-            req.notification_id,
-            NotificationStatus.failed,
-            error=safe_error_detail(e, 500),
+            req.notification_id, NotificationStatus.failed, error=safe_error_detail(e, 500)
         )
+        logger.error("Notification dispatch error: %s", e)
         return {
             "ok": False,
             "notification_id": req.notification_id,
             "status": "failed",
-            "error": safe_message,
+            "error": safe_error_detail(e, 500),
         }
 
 
@@ -665,7 +596,7 @@ async def send_notification(req: NotificationRequest):
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/notifications")
+@app.get("/notifications")
 async def list_notifications(
     user_id: Optional[str] = None,
     status: Optional[str] = None,
@@ -675,15 +606,12 @@ async def list_notifications(
     """List notifications with optional filtering."""
     return {
         "notifications": db.list_notifications(
-            user_id=user_id,
-            status=status,
-            limit=limit,
-            offset=offset,
-        ),
+            user_id=user_id, status=status, limit=limit, offset=offset
+        )
     }
 
 
-@_router.get("/notifications/{notification_id}")
+@app.get("/notifications/{notification_id}")
 async def get_notification(notification_id: str):
     """Get a specific notification by ID."""
     notif = db.get_notification(notification_id)
@@ -697,20 +625,20 @@ async def get_notification(notification_id: str):
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/templates")
+@app.post("/templates")
 async def create_template(template: NotificationTemplate):
     """Create a notification template."""
     created = db.create_template(template)
     return {"ok": True, "template_id": created.template_id}
 
 
-@_router.get("/templates")
+@app.get("/templates")
 async def list_templates(channel: Optional[str] = None):
     """List notification templates."""
     return {"templates": db.list_templates(channel=channel)}
 
 
-@_router.get("/templates/{template_id}")
+@app.get("/templates/{template_id}")
 async def get_template(template_id: str):
     """Get a specific template."""
     template = db.get_template(template_id)
@@ -719,7 +647,7 @@ async def get_template(template_id: str):
     return template
 
 
-@_router.delete("/templates/{template_id}")
+@app.delete("/templates/{template_id}")
 async def delete_template(template_id: str):
     """Delete a notification template."""
     if not db.delete_template(template_id):
@@ -732,7 +660,7 @@ async def delete_template(template_id: str):
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/preferences/{user_id}")
+@app.get("/preferences/{user_id}")
 async def get_preferences(user_id: str):
     """Get notification preferences for a user."""
     prefs = db.get_preferences(user_id)
@@ -742,15 +670,12 @@ async def get_preferences(user_id: str):
     return prefs
 
 
-@_router.put("/preferences/{user_id}")
+@app.put("/preferences/{user_id}")
 async def set_preferences(user_id: str, prefs: UserPreferences):
     """Set notification preferences for a user."""
     prefs.user_id = user_id
     db.set_preferences(prefs)
     return {"ok": True, "user_id": user_id}
-
-
-app.include_router(_router)
 
 
 # ---------------------------------------------------------------------------

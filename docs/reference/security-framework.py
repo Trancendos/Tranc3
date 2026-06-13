@@ -13,8 +13,8 @@ from typing import Dict, List, Optional
 import redis
 from fastapi import HTTPException
 from fastapi.security import HTTPBearer
-import bcrypt
 from jose import JWTError, jwt
+from passlib.context import CryptContext
 
 logger = logging.getLogger(__name__)
 
@@ -26,19 +26,7 @@ ALGORITHM      = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES  = 60
 REFRESH_TOKEN_EXPIRE_DAYS    = 30
 
-
-class _BcryptContext:
-    def hash(self, password: str) -> str:
-        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-
-    def verify(self, plain: str, hashed: str) -> bool:
-        try:
-            return bcrypt.checkpw(plain.encode(), hashed.encode())
-        except Exception:
-            return False
-
-
-pwd_context = _BcryptContext()
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
 
 # ============================================================

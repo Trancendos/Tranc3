@@ -16,7 +16,7 @@ Features:
 Routes:
   GET  /health                → health check
   GET  /                      → API info
-  /api/auth/*                 → AUTH_SERVICE_URL (public)
+  /api/auth/*                 → USERS_SERVICE_URL (public)
   /api/categories/*           → PRODUCTS_SERVICE_URL (public)
   GET /api/products/*         → PRODUCTS_SERVICE_URL (public)
   /api/users/*                → USERS_SERVICE_URL (auth required)
@@ -43,47 +43,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from Dimensional.sanitize import sanitize_for_log
-from src.entities.health_metadata import health_entity_block
-
-API_GATEWAY_PORT = 8003
 
 # ── Configuration ───────────────────────────────────────────────
 
-_jwt_secret_raw = os.getenv("JWT_SECRET")
-if not _jwt_secret_raw or _jwt_secret_raw == "dev-jwt-secret-not-for-prod":
-    raise RuntimeError(
-        "JWT_SECRET is not set (or still the default). "
-        "The API Gateway cannot start without a strong unique JWT secret. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
-    )
-JWT_SECRET: str = _jwt_secret_raw
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
-INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
-AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "")
+JWT_SECRET = os.getenv("JWT_SECRET", "dev-jwt-secret-not-for-prod")
 USERS_SERVICE_URL = os.getenv("USERS_SERVICE_URL", "")
 PRODUCTS_SERVICE_URL = os.getenv("PRODUCTS_SERVICE_URL", "")
 ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "")
 PAYMENTS_SERVICE_URL = os.getenv("PAYMENTS_SERVICE_URL", "")
 TRANC3_AI_SERVICE_URL = os.getenv("TRANC3_AI_SERVICE_URL", "http://localhost:8001")
-
-_REQUIRED_PRODUCTION_UPSTREAMS = {
-    "AUTH_SERVICE_URL": AUTH_SERVICE_URL,
-    "USERS_SERVICE_URL": USERS_SERVICE_URL,
-    "PRODUCTS_SERVICE_URL": PRODUCTS_SERVICE_URL,
-    "ORDERS_SERVICE_URL": ORDERS_SERVICE_URL,
-    "PAYMENTS_SERVICE_URL": PAYMENTS_SERVICE_URL,
-    "TRANC3_AI_SERVICE_URL": TRANC3_AI_SERVICE_URL,
-}
-
-if ENVIRONMENT == "production":
-    missing_upstreams = [
-        name for name, value in _REQUIRED_PRODUCTION_UPSTREAMS.items() if not value.strip()
-    ]
-    if missing_upstreams:
-        raise RuntimeError(
-            "API Gateway production startup requires upstream service URLs: "
-            + ", ".join(missing_upstreams),
-        )
 
 # ── Logger ──────────────────────────────────────────────────────
 
@@ -147,7 +115,6 @@ class CircuitBreaker:
 
 
 circuit_breakers = {
-    "auth": CircuitBreaker("auth"),
     "users": CircuitBreaker("users"),
     "products": CircuitBreaker("products"),
     "orders": CircuitBreaker("orders"),
@@ -195,21 +162,13 @@ auth_service = AuthService(JWT_SECRET)
 
 
 async def proxy_request(
-    request: Request,
-    target_base: str,
-    target_path: str,
-    request_id: str,
+    request: Request, target_base: str, target_path: str, request_id: str
 ) -> httpx.Response:
     """Proxy request to upstream service."""
     url = f"{target_base}{target_path}{request.url.query and '?' + str(request.url.query) or ''}"
-    headers = {
-        key: value
-        for key, value in request.headers.items()
-        if key.lower() not in {"host", "x-internal-secret"}
-    }
+    headers = dict(request.headers)
+    headers.pop("host", None)
     headers["X-Request-ID"] = request_id
-    if INTERNAL_SECRET:
-        headers["X-Internal-Secret"] = INTERNAL_SECRET
 
     body = None
     if request.method not in ("GET", "HEAD"):
@@ -234,19 +193,9 @@ app = FastAPI(
     description="API Gateway — replaces Cloudflare Worker. Zero external dependencies.",
 )
 
-from src.observability.prometheus_mount import mount_prometheus_endpoint
-
-mount_prometheus_endpoint(app, "api-gateway")
-
-_cors_origins = [
-    o.strip()
-    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
-    if o.strip()
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
@@ -262,11 +211,9 @@ async def health():
     return {
         "status": "healthy",
         "service": "api-gateway-worker",
-        "port": API_GATEWAY_PORT,
         "timestamp": int(time.time()),
         "circuitBreakers": {k: v.get_state() for k, v in circuit_breakers.items()},
         "hosting": "self-hosted (replaces Cloudflare Worker)",
-        "entity": health_entity_block(API_GATEWAY_PORT, "api-gateway-worker"),
     }
 
 
@@ -306,16 +253,16 @@ async def gateway(request: Request, path: str):
 
     # Public routes (no auth)
     if path.startswith("api/auth"):
-        target_service = AUTH_SERVICE_URL or USERS_SERVICE_URL
-        target_path = "/" + path.replace("api/auth", "auth", 1).lstrip("/")
-        breaker = circuit_breakers["auth"] if AUTH_SERVICE_URL else circuit_breakers["users"]
+        target_service = USERS_SERVICE_URL
+        target_path = "/" + path.replace("api/auth", "", 1).lstrip("/")
+        breaker = circuit_breakers["users"]
     elif path.startswith("api/categories"):
         target_service = PRODUCTS_SERVICE_URL
         target_path = "/" + path.replace("api/categories", "/categories", 1).lstrip("/")
         breaker = circuit_breakers["products"]
     elif path.startswith("api/products") and request.method == "GET":
         target_service = PRODUCTS_SERVICE_URL
-        target_path = "/" + path.replace("api/products", "", 1).lstrip("/")
+        target_path = "/" + path.replace("api/products", "/products", 1).lstrip("/")
         breaker = circuit_breakers["products"]
 
     # Auth-protected routes
@@ -335,25 +282,25 @@ async def gateway(request: Request, path: str):
             breaker = circuit_breakers["ai"]
         elif path.startswith("api/users"):
             target_service = USERS_SERVICE_URL
-            target_path = "/" + path.replace("api/users", "users", 1).lstrip("/")
+            target_path = "/" + path.replace("api/users", "", 1).lstrip("/")
             breaker = circuit_breakers["users"]
         elif path.startswith("api/orders"):
             target_service = ORDERS_SERVICE_URL
-            target_path = "/" + path.replace("api/orders", "", 1).lstrip("/")
+            target_path = "/" + path.replace("api/orders", "/orders", 1).lstrip("/")
             breaker = circuit_breakers["orders"]
         elif path.startswith("api/payments"):
             target_service = PAYMENTS_SERVICE_URL
-            target_path = "/" + path.replace("api/payments", "", 1).lstrip("/")
+            target_path = "/" + path.replace("api/payments", "/payments", 1).lstrip("/")
             breaker = circuit_breakers["payments"]
         elif path.startswith("api/products"):
             target_service = PRODUCTS_SERVICE_URL
-            target_path = "/" + path.replace("api/products", "", 1).lstrip("/")
+            target_path = "/" + path.replace("api/products", "/products", 1).lstrip("/")
             breaker = circuit_breakers["products"]
 
     if target_service and target_path is not None and breaker:
         try:
             resp = await breaker.execute(
-                lambda: proxy_request(request, target_service, target_path, request_id),
+                lambda: proxy_request(request, target_service, target_path, request_id)
             )
             elapsed = time.time() - start
             logger.info(
@@ -361,7 +308,7 @@ async def gateway(request: Request, path: str):
                 sanitize_for_log(request.method),
                 sanitize_for_log(path),
                 resp.status_code,
-                sanitize_for_log(elapsed * 1000),
+                elapsed * 1000,
             )  # codeql[py/cleartext-logging]
             return JSONResponse(
                 content=json.loads(resp.text)
@@ -373,17 +320,13 @@ async def gateway(request: Request, path: str):
         except Exception as e:
             if "Circuit" in str(e):
                 raise HTTPException(
-                    status_code=503,
-                    detail="Service temporarily unavailable. Retry in 60s.",
+                    status_code=503, detail="Service temporarily unavailable. Retry in 60s."
                 ) from None
             logger.error(
-                "Proxy failed: path=/%s error=%s",
-                sanitize_for_log(path),
-                sanitize_for_log(e),
+                "Proxy failed: path=/%s error=%s", sanitize_for_log(path), sanitize_for_log(e)
             )  # codeql[py/cleartext-logging]
             raise HTTPException(
-                status_code=502,
-                detail="Failed to reach upstream service.",
+                status_code=502, detail="Failed to reach upstream service."
             ) from None
 
     raise HTTPException(status_code=404, detail=f"{request.method} /{path} not found")

@@ -45,7 +45,6 @@ def _run_coro(coro):
     if loop and loop.is_running():
         # We're inside an already-running loop (shouldn't happen in sync tests)
         import concurrent.futures
-
         with concurrent.futures.ThreadPoolExecutor() as pool:
             return pool.submit(asyncio.run, coro).result()
     return asyncio.run(coro)
@@ -158,8 +157,8 @@ class TestProactiveDefenseLayer:
                     "path": "/health",
                     "method": "GET",
                     "user_agent": "TestClient/1.0",
-                },
-            ),
+                }
+            )
         )
         assert result.allowed is True
 
@@ -187,7 +186,7 @@ class TestProactiveDefenseLayer:
                         "path": f"/portal/login?attempt={i}",
                         "method": "POST",
                         "user_agent": "python-requests/2.28",
-                    },
+                    }
                 )
 
         _run_coro(_run_many())

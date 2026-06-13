@@ -14,7 +14,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -23,12 +22,9 @@ from pathlib import Path
 from typing import Dict
 
 import httpx
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from Dimensional.error_handlers import log_server_error
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8029
 WORKER_NAME = "health-aggregator"
@@ -138,17 +134,12 @@ async def _check_one(name: str, url: str) -> dict:
         }
     except Exception as exc:
         ms = (time.time() - start) * 1000
-        safe_message = log_server_error(
-            exc,
-            503,
-            context=f"health check for {name}",
-        )
         return {
             "service": name,
             "status": "down",
             "http_code": None,
             "response_ms": round(ms, 1),
-            "details": {"error": safe_message},
+            "details": {"error": str(exc)},
         }
 
 
@@ -217,41 +208,10 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
     healthy = sum(1 for v in _latest.values() if v["status"] == "healthy")
     return {
-        "entity": health_entity_block(8029, "health-aggregator"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -259,10 +219,17 @@ async def health():
         "monitored_services": len(_latest),
         "healthy": healthy,
         "degraded_or_down": len(_latest) - healthy,
+        "entity": {
+            "location": "DevOcity",
+            "pillar": "DevOps",
+            "lead_ai": "Kitty",
+            "primes": ["Trancendos"],
+            "primary_function": "Development Operations",
+        },
     }
 
 
-@_router.get("/status")
+@app.get("/status")
 async def status():
     summary = {
         "total": len(_latest),
@@ -273,14 +240,14 @@ async def status():
     return {"summary": summary, "services": list(_latest.values())}
 
 
-@_router.get("/status/{service}")
+@app.get("/status/{service}")
 async def service_status(service: str):
     if service not in _latest:
         raise HTTPException(status_code=404, detail="Service not found or not yet polled")
     return _latest[service]
 
 
-@_router.post("/check/{service}")
+@app.post("/check/{service}")
 async def force_check(service: str):
     with get_conn() as conn:
         row = conn.execute("SELECT url FROM services WHERE name = ?", (service,)).fetchone()
@@ -305,7 +272,7 @@ async def force_check(service: str):
     return result
 
 
-@_router.get("/history/{service}")
+@app.get("/history/{service}")
 async def service_history(service: str, limit: int = 50):
     with get_conn() as conn:
         rows = conn.execute(
@@ -315,14 +282,14 @@ async def service_history(service: str, limit: int = 50):
     return {"service": service, "history": [dict(r) for r in rows]}
 
 
-@_router.get("/services")
+@app.get("/services")
 async def list_services():
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM services ORDER BY name").fetchall()
     return {"services": [dict(r) for r in rows]}
 
 
-@_router.post("/services", status_code=201)
+@app.post("/services", status_code=201)
 async def register_service(req: ServiceRegister):
     with get_conn() as conn:
         conn.execute(
@@ -333,16 +300,13 @@ async def register_service(req: ServiceRegister):
     return {"registered": req.name, "url": req.url}
 
 
-@_router.delete("/services/{name}")
+@app.delete("/services/{name}")
 async def unregister_service(name: str):
     with get_conn() as conn:
         conn.execute("DELETE FROM services WHERE name = ?", (name,))
         conn.commit()
     _latest.pop(name, None)
     return {"unregistered": name}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

@@ -85,43 +85,40 @@ def _try_async_schedule(coro):
     except RuntimeError:
         return False
 
-
 logger = logging.getLogger(__name__)
 
 # ── Optional imports (graceful degradation) ──────────────────────────────────
 
 try:
-    from Dimensional.architecture.adaptive_pulse import (  # codeql[py/cyclic-import]
-        AdaptivePulseController,
-    )
+    from Dimensional.architecture.adaptive_pulse import AdaptivePulseController, PulseMode
 
     _PULSE_AVAILABLE = True
 except ImportError:
     _PULSE_AVAILABLE = False
     AdaptivePulseController = None  # type: ignore[assignment,misc]
+    PulseMode = None  # type: ignore[assignment,misc]
 
 try:
-    from src.healing.anomaly_detector import AnomalyDetector  # codeql[py/cyclic-import]
+    from src.healing.anomaly_detector import Anomaly, AnomalyDetector
 
     _ANOMALY_AVAILABLE = True
 except ImportError:
     _ANOMALY_AVAILABLE = False
     AnomalyDetector = None  # type: ignore[assignment,misc]
+    Anomaly = None  # type: ignore[assignment,misc]
 
 try:
-    from src.healing.self_repair import (  # codeql[py/cyclic-import]
-        AdaptiveConfigTuner,
-        SelfRepairEngine,
-    )
+    from src.healing.self_repair import AdaptiveConfigTuner, RepairStrategy, SelfRepairEngine
 
     _REPAIR_AVAILABLE = True
 except ImportError:
     _REPAIR_AVAILABLE = False
     SelfRepairEngine = None  # type: ignore[assignment,misc]
     AdaptiveConfigTuner = None  # type: ignore[assignment,misc]
+    RepairStrategy = None  # type: ignore[assignment,misc]
 
 try:
-    from src.fluidic.reactive_state import StateStore  # codeql[py/cyclic-import]
+    from src.fluidic.reactive_state import ReactiveState, StateStore  # noqa: F401
 
     _REACTIVE_AVAILABLE = True
 except ImportError:
@@ -129,7 +126,7 @@ except ImportError:
     StateStore = None  # type: ignore[assignment,misc]
 
 try:
-    from src.fluidic.hot_config import HotConfig  # codeql[py/cyclic-import]
+    from src.fluidic.hot_config import HotConfig
 
     _HOTCONFIG_AVAILABLE = True
 except ImportError:
@@ -137,10 +134,7 @@ except ImportError:
     HotConfig = None  # type: ignore[assignment,misc]
 
 try:
-    from Dimensional.middleware.telemetry import (  # codeql[py/cyclic-import]
-        TelemetryCollector,
-        TelemetryMiddleware,
-    )
+    from Dimensional.middleware.telemetry import TelemetryCollector, TelemetryMiddleware
 
     _TELEMETRY_AVAILABLE = True
 except ImportError:
@@ -149,8 +143,9 @@ except ImportError:
     TelemetryMiddleware = None  # type: ignore[assignment,misc]
 
 try:
-    from src.adaptive.foresight import (  # codeql[py/cyclic-import]
+    from src.adaptive.foresight import (  # noqa: F401
         ConversationTrajectoryPredictor,
+        ProbabilityVector,
     )
 
     _FORESIGHT_AVAILABLE = True
@@ -159,14 +154,13 @@ except ImportError:
     ConversationTrajectoryPredictor = None  # type: ignore[assignment,misc]
 
 try:
-    from Dimensional.security_automation.defense_engine import (  # codeql[py/cyclic-import]
-        DefenseEngine,
-    )
+    from Dimensional.security_automation.defense_engine import DefenseEngine, ThreatLevel
 
     _DEFENSE_AVAILABLE = True
 except ImportError:
     _DEFENSE_AVAILABLE = False
     DefenseEngine = None  # type: ignore[assignment,misc]
+    ThreatLevel = None  # type: ignore[assignment,misc]
 
 
 # ── Health Tier ───────────────────────────────────────────────────────────────
@@ -672,8 +666,8 @@ class InfinityHealthOrchestrator:
                     else 0.0,
                     "entropy": round(traj.entropy(), 4) if hasattr(traj, "entropy") else 0.0,
                 }
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
 
         return HealthSummary(
             service_name=self.config.service_name,
@@ -718,8 +712,8 @@ class InfinityHealthOrchestrator:
             try:
                 incidents = self.defense.list_incidents()
                 return [i.to_dict() if hasattr(i, "to_dict") else i for i in incidents]
-            except Exception as _exc:
-                logger.debug("suppressed %s", _exc, exc_info=False)
+            except Exception:
+                pass
         return []
 
 

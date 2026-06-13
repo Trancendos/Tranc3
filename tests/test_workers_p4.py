@@ -1,10 +1,9 @@
 """Phase 20 — P4 Worker test suite.
 
-Covers all 9 intelligence-layer workers (ports 8030–8038):
-  gbrain-bridge (8030), topology-service (8031), ledger-service (8032),
-  model-router-service (8033), workflow-engine-service (8034),
-  skills-benchmark-service (8035), langchain-integration-service (8036),
-  deepagents-orchestrator-service (8037), vault-service (8038)
+Covers all 8 ecosystem-matrix workers (ports 8030–8037):
+  vault-service, topology-service, ledger-service, model-router-service,
+  workflow-engine-service, skills-benchmark-service, langchain-integration-service,
+  deepagents-orchestrator-service
 """
 
 import os
@@ -59,15 +58,12 @@ def client(request):
         _module_cache[module_name] = mod
 
     mod = _module_cache[module_name]
-    # Pass X-Internal-Secret for workers that enforce it
-    secret = getattr(mod, "_INTERNAL_SECRET", "")
-    headers = {"X-Internal-Secret": secret} if secret else {}
-    c = TestClient(mod.app, headers=headers)
+    c = TestClient(mod.app)
     yield c
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 1. vault-service (8038)
+# 1. vault-service (8030)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -77,14 +73,12 @@ class TestVaultService:
         r = client.get("/health")
         assert r.status_code == 200
         d = r.json()
-        assert d["status"] == "deprecated"
+        assert d["status"] == "ok"
         assert d["service"] == "vault-service"
-        assert "successor" in d
 
     def test_create_and_get_secret(self, client):
         r = client.post(
-            "/secrets",
-            json={"key": "db-password", "value": "s3cret!", "tags": ["database"]},
+            "/secrets", json={"key": "db-password", "value": "s3cret!", "tags": ["database"]}
         )
         assert r.status_code == 201
         sid = r.json()["id"]
@@ -164,8 +158,7 @@ class TestTopologyService:
 
     def test_register_and_list_nodes(self, client):
         r = client.post(
-            "/nodes",
-            json={"name": "node-1", "type": "nas", "endpoint": "http://nas1:8000"},
+            "/nodes", json={"name": "node-1", "type": "nas", "endpoint": "http://nas1:8000"}
         )
         assert r.status_code == 201
         r2 = client.get("/nodes")
@@ -176,8 +169,7 @@ class TestTopologyService:
 
     def test_update_node_health(self, client):
         r = client.post(
-            "/nodes",
-            json={"name": "health-node", "type": "cloud", "endpoint": "http://c1:8000"},
+            "/nodes", json={"name": "health-node", "type": "cloud", "endpoint": "http://c1:8000"}
         )
         nid = r.json()["id"]
         r2 = client.put(f"/nodes/{nid}/health", json={"status": "healthy", "latency_ms": 42})
@@ -186,8 +178,7 @@ class TestTopologyService:
 
     def test_deregister_node(self, client):
         r = client.post(
-            "/nodes",
-            json={"name": "temp-node", "type": "hybrid", "endpoint": "http://h1:8000"},
+            "/nodes", json={"name": "temp-node", "type": "hybrid", "endpoint": "http://h1:8000"}
         )
         nid = r.json()["id"]
         r2 = client.delete(f"/nodes/{nid}")
@@ -219,8 +210,7 @@ class TestLedgerService:
 
     def test_append_and_list_entries(self, client):
         r = client.post(
-            "/entries",
-            json={"actor": "admin", "action": "create_secret", "resource": "db-pw"},
+            "/entries", json={"actor": "admin", "action": "create_secret", "resource": "db-pw"}
         )
         assert r.status_code == 201
         r2 = client.get("/entries")
@@ -458,8 +448,7 @@ class TestLangchainIntegrationService:
 
     def test_create_template(self, client):
         r = client.post(
-            "/templates",
-            json={"name": "greet", "template": "Hello {name}!", "variables": ["name"]},
+            "/templates", json={"name": "greet", "template": "Hello {name}!", "variables": ["name"]}
         )
         assert r.status_code == 201
         assert r.json()["name"] == "greet"
@@ -474,15 +463,13 @@ class TestLangchainIntegrationService:
 
     def test_create_chain(self, client):
         r = client.post(
-            "/chains",
-            json={"name": "seq-chain", "chain_type": "sequential", "template_ids": []},
+            "/chains", json={"name": "seq-chain", "chain_type": "sequential", "template_ids": []}
         )
         assert r.status_code == 201
 
     def test_create_document(self, client):
         r = client.post(
-            "/documents",
-            json={"name": "Test Doc", "content": "Some text content here."},
+            "/documents", json={"name": "Test Doc", "content": "Some text content here."}
         )
         assert r.status_code == 201
 
@@ -502,9 +489,7 @@ class TestLangchainIntegrationService:
 
 
 @pytest.mark.parametrize(
-    "client",
-    ["workers.deepagents-orchestrator-service.worker"],
-    indirect=True,
+    "client", ["workers.deepagents-orchestrator-service.worker"], indirect=True
 )
 class TestDeepagentsOrchestratorService:
     def test_health(self, client):
@@ -538,8 +523,7 @@ class TestDeepagentsOrchestratorService:
 
     def test_delegate_task(self, client):
         a1 = client.post(
-            "/agents",
-            json={"name": "delegator", "capabilities": ["reasoning"]},
+            "/agents", json={"name": "delegator", "capabilities": ["reasoning"]}
         ).json()
         a2 = client.post("/agents", json={"name": "worker", "capabilities": ["coding"]}).json()
         t = client.post("/tasks", json={"title": "delegate-me", "priority": 5}).json()

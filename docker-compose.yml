@@ -29,7 +29,7 @@ services:
       dockerfile: docker/Dockerfile.web
     container_name: tranc3-web
     ports:
-      - "3000:8080"
+      - "3000:80"
     depends_on:
       - api
     restart: unless-stopped
@@ -546,158 +546,6 @@ services:
       timeout: 5s
       retries: 3
 
-  # ── Phase 20: P4 Ecosystem-Matrix Workers (ports 8030–8037) ──────────────
-
-  # DEPRECATED — vault-service is retained only for migrating legacy AES-256-GCM
-  # records to The Void (infinity-void, port 8002). Do NOT store new secrets here.
-  # Run: python scripts/migrate_vault_secrets.py then remove this block.
-  # XOR cipher (Tranc3Vault2024!ZeroCostCrypto) has been eradicated.
-  vault-service:
-    build:
-      context: workers/vault-service
-    container_name: tranc3-vault-service
-    ports:
-      - "8038:8038"
-    environment:
-      - VAULT_DB_PATH=/data/vault.db
-      - SERVICE_PORT=8038
-      - VAULT_DEPRECATED=1
-    volumes:
-      - vault_data:/data
-    restart: "no"
-    profiles:
-      - vault-migration
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8038/health"]
-      interval: 60s
-      timeout: 5s
-      retries: 1
-
-  topology-service:
-    build:
-      context: workers/topology-service
-    container_name: tranc3-topology-service
-    ports:
-      - "8031:8031"
-    environment:
-      - TOPOLOGY_DB_PATH=/data/topology.db
-      - SERVICE_PORT=8031
-    volumes:
-      - topology_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8031/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  ledger-service:
-    build:
-      context: workers/ledger-service
-    container_name: tranc3-ledger-service
-    ports:
-      - "8032:8032"
-    environment:
-      - LEDGER_DB_PATH=/data/ledger.db
-      - SERVICE_PORT=8032
-    volumes:
-      - ledger_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8032/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  model-router-service:
-    build:
-      context: workers/model-router-service
-    container_name: tranc3-model-router-service
-    ports:
-      - "8033:8033"
-    environment:
-      - MODEL_ROUTER_DB_PATH=/data/model_router.db
-      - SERVICE_PORT=8033
-    volumes:
-      - model_router_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8033/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  workflow-engine-service:
-    build:
-      context: workers/workflow-engine-service
-    container_name: tranc3-workflow-engine-service
-    ports:
-      - "8034:8034"
-    environment:
-      - WORKFLOW_DB_PATH=/data/workflow.db
-      - SERVICE_PORT=8034
-    volumes:
-      - workflow_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8034/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  skills-benchmark-service:
-    build:
-      context: workers/skills-benchmark-service
-    container_name: tranc3-skills-benchmark-service
-    ports:
-      - "8035:8035"
-    environment:
-      - BENCHMARK_DB_PATH=/data/benchmark.db
-      - SERVICE_PORT=8035
-    volumes:
-      - benchmark_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8035/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  langchain-integration-service:
-    build:
-      context: workers/langchain-integration-service
-    container_name: tranc3-langchain-integration-service
-    ports:
-      - "8036:8036"
-    environment:
-      - LANGCHAIN_DB_PATH=/data/langchain.db
-      - SERVICE_PORT=8036
-    volumes:
-      - langchain_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8036/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  deepagents-orchestrator-service:
-    build:
-      context: workers/deepagents-orchestrator-service
-    container_name: tranc3-deepagents-orchestrator-service
-    ports:
-      - "8037:8037"
-    environment:
-      - SERVICE_PORT=8037
-    volumes:
-      - deepagents_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8037/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
 volumes:
   redis_data:
   prometheus_data:
@@ -726,11 +574,3 @@ volumes:
   geo_data:
   cdn_assets:
   cdn_data:
-  vault_data:
-  topology_data:
-  ledger_data:
-  model_router_data:
-  workflow_data:
-  benchmark_data:
-  langchain_data:
-  deepagents_data:

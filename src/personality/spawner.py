@@ -16,13 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from Dimensional.path_validation import (
-    PathTraversalError,
-    safe_join,
-    sanitize_filename,
-    validate_path,
-)
-from Dimensional.sanitize import sanitize_for_log
+from Dimensional.path_validation import PathTraversalError, safe_join, sanitize_filename
 
 logger = logging.getLogger(__name__)
 
@@ -54,15 +48,31 @@ def _resolve_output_base(output_dir: str) -> Path:
         PathTraversalError: If the path escapes all allowed roots.
         FileNotFoundError: If the parent of the path does not exist.
     """
+    candidate = Path(output_dir).resolve()
+
+    # Allow the path if it already exists and is under an allowed root
     for allowed_root in _ALLOWED_OUTPUT_ROOTS:
         try:
-            return validate_path(output_dir, allowed_root, allow_create=True)
-        except PathTraversalError:
+            candidate.relative_to(allowed_root)
+            return candidate
+        except ValueError:
             continue
 
+    # Also allow if the resolved parent exists and is under an allowed root
+    # (this handles the common case where output_dir is "./spawned" which
+    # may not yet exist)
+    parent = candidate.parent
+    if parent.exists():
+        for allowed_root in _ALLOWED_OUTPUT_ROOTS:
+            try:
+                parent.relative_to(allowed_root)
+                return candidate
+            except ValueError:
+                continue
+
     raise PathTraversalError(
-        f"Output directory {output_dir!r} is not under any allowed root. "
-        f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}",
+        f"Output directory {candidate} is not under any allowed root. "
+        f"Allowed roots: {[str(r) for r in _ALLOWED_OUTPUT_ROOTS]}"
     )
 
 
@@ -107,11 +117,7 @@ class PersonalitySpawner:
             raise FileExistsError(f"Target directory already exists: {target}")
 
         target.mkdir(parents=True, exist_ok=False)
-        logger.info(
-            "Spawning personality '%s' into %s",
-            sanitize_for_log(personality_id),
-            sanitize_for_log(target),
-        )
+        logger.info("Spawning personality '%s' into %s", personality_id, target)
 
         files_written = []
         files_written += self._write_config(target, profile)
@@ -413,7 +419,7 @@ class PersonalitySpawner:
         else:
             path.write_text(
                 "fastapi==0.111.0\nuvicorn[standard]==0.29.0\npydantic==2.7.1\n"
-                "python-dotenv==1.0.1\npyyaml==6.0.1\n",
+                "python-dotenv==1.0.1\npyyaml==6.0.1\n"
             )
         return [str(path)]
 
@@ -446,9 +452,5 @@ class PersonalitySpawner:
                 pid = data.get("id", f.stem)
                 profiles[pid] = data
             except Exception as e:
-                logger.warning(
-                    "Failed to load personality profile %s: %s",
-                    sanitize_for_log(f),
-                    sanitize_for_log(e),
-                )
+                logger.warning("Failed to load personality profile %s: %s", f, e)
         return profiles

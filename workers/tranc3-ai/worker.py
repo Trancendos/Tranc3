@@ -33,10 +33,6 @@ import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.entities.health_metadata import health_entity_block
-
-TRANC3_AI_PORT = 8001
-
 # ── Constants ──────────────────────────────────────────────────
 
 TRANC3_MODELS: dict[str, dict[str, Any]] = {
@@ -106,10 +102,6 @@ app = FastAPI(
     version="2.0.0",
     description="Self-hosted AI inference — replaces Cloudflare Worker. Zero external dependencies.",
 )
-
-from src.observability.prometheus_mount import mount_prometheus_endpoint
-
-mount_prometheus_endpoint(app, "tranc3-ai")
 
 app.add_middleware(
     CORSMiddleware,
@@ -182,7 +174,7 @@ def stub_chat(messages: list[dict], model: str = "tranc3-base") -> dict:
                     ),
                 },
                 "finish_reason": "stop",
-            },
+            }
         ],
         "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
     }
@@ -306,7 +298,6 @@ async def health():
     return {
         "status": "ok",
         "service": "tranc3-ai-worker",
-        "port": TRANC3_AI_PORT,
         "version": "2.0.0",
         "backend": mode,
         "backend_url": BACKEND_URL or None,
@@ -320,7 +311,6 @@ async def health():
             else "Self-owned inference active."
         ),
         "timestamp": int(__import__("time").time()),
-        "entity": health_entity_block(TRANC3_AI_PORT, "tranc3-ai-worker"),
     }
 
 
@@ -384,7 +374,7 @@ async def chat(request: Request, authorization: str | None = Header(None)):
                     "index": 0,
                     "message": {"role": "assistant", "content": nano["response"]},
                     "finish_reason": "stop",
-                },
+                }
             ],
             "usage": {
                 "prompt_tokens": 0,

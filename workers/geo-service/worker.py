@@ -18,7 +18,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
-import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -27,14 +26,9 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from Dimensional.error_handlers import safe_error_detail
-from Dimensional.sanitize import sanitize_for_log
-from shared_core.url_validation import SSRFError, validate_ip_address
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8027
 WORKER_NAME = "geo-service"
@@ -116,8 +110,7 @@ def _save_cache(ip: str, data: dict, source: str) -> None:
 
 
 async def _lookup_ip_api(ip: str) -> Optional[dict]:
-    safe_ip = validate_ip_address(ip)
-    url = f"http://ip-api.com/json/{safe_ip}?fields=status,country,countryCode,regionName,city,lat,lon,timezone,isp,org"
+    url = f"http://ip-api.com/json/{ip}?fields=status,country,countryCode,regionName,city,lat,lon,timezone,isp,org"
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get(url)
@@ -141,8 +134,7 @@ async def _lookup_ip_api(ip: str) -> Optional[dict]:
 
 
 async def _lookup_ipapi_co(ip: str) -> Optional[dict]:
-    safe_ip = validate_ip_address(ip)
-    url = f"https://ipapi.co/{safe_ip}/json/"
+    url = f"https://ipapi.co/{ip}/json/"
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get(url, headers={"User-Agent": "trancendos-geo-service/1.0"})
@@ -180,28 +172,22 @@ def _stub_result(ip: str) -> dict:
 
 
 async def lookup_ip(ip: str) -> dict:
-    try:
-        safe_ip = validate_ip_address(ip)
-    except SSRFError as exc:
-        logger.warning("Invalid IP address rejected: %s", sanitize_for_log(exc))
-        raise HTTPException(status_code=400, detail=safe_error_detail(exc, 400)) from exc
-
-    cached = _get_cached(safe_ip)
+    cached = _get_cached(ip)
     if cached:
         return {**cached, "cached": True}
 
     # Try ip-api.com first, then ipapi.co
-    data = await _lookup_ip_api(safe_ip)
+    data = await _lookup_ip_api(ip)
     source = "ip-api.com"
     if not data:
-        data = await _lookup_ipapi_co(safe_ip)
+        data = await _lookup_ipapi_co(ip)
         source = "ipapi.co"
     if not data:
-        data = _stub_result(safe_ip)
+        data = _stub_result(ip)
         source = "stub"
 
-    _save_cache(safe_ip, data, source)
-    return {**data, "ip": safe_ip, "source": source, "cached": False}
+    _save_cache(ip, data, source)
+    return {**data, "ip": ip, "source": source, "cached": False}
 
 
 # ---------------------------------------------------------------------------
@@ -262,51 +248,27 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
     with get_conn() as conn:
         cached = conn.execute("SELECT COUNT(*) FROM ip_cache").fetchone()[0]
     return {
-        "entity": health_entity_block(8027, "geo-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "cached_ips": cached,
+        "entity": {
+            "location": "The Dutchy",
+            "pillar": "DevOps",
+            "lead_ai": "Predictive lore",
+            "primes": ["Trancendos"],
+            "primary_function": "Intelligence & Market Analysis",
+        },
     }
 
 
-@_router.get("/lookup/{ip}")
+@app.get("/lookup/{ip}")
 async def lookup(ip: str):
     if ip in ("localhost", "127.0.0.1", "::1"):
         return {
@@ -324,13 +286,13 @@ async def lookup(ip: str):
     return {"ip": ip, **result}
 
 
-@_router.post("/lookup/batch")
+@app.post("/lookup/batch")
 async def lookup_batch(req: BatchIpIn):
     results = await asyncio.gather(*[lookup_ip(ip) for ip in req.ips[:100]])
     return {"results": [{"ip": ip, **r} for ip, r in zip(req.ips, results, strict=False)]}
 
 
-@_router.post("/distance")
+@app.post("/distance")
 async def distance(req: DistanceIn):
     km = _haversine(req.lat1, req.lon1, req.lat2, req.lon2)
     return {
@@ -341,17 +303,16 @@ async def distance(req: DistanceIn):
     }
 
 
-@_router.get("/cache")
+@app.get("/cache")
 async def cache_stats():
     now = time.time()
     with get_conn() as conn:
         total = conn.execute("SELECT COUNT(*) FROM ip_cache").fetchone()[0]
         fresh = conn.execute(
-            "SELECT COUNT(*) FROM ip_cache WHERE cached_at > ?",
-            (now - CACHE_TTL,),
+            "SELECT COUNT(*) FROM ip_cache WHERE cached_at > ?", (now - CACHE_TTL,)
         ).fetchone()[0]
         by_source = conn.execute(
-            "SELECT source, COUNT(*) as c FROM ip_cache GROUP BY source",
+            "SELECT source, COUNT(*) as c FROM ip_cache GROUP BY source"
         ).fetchall()
     return {
         "total_cached": total,
@@ -361,15 +322,12 @@ async def cache_stats():
     }
 
 
-@_router.delete("/cache/{ip}")
+@app.delete("/cache/{ip}")
 async def evict(ip: str):
     with get_conn() as conn:
         conn.execute("DELETE FROM ip_cache WHERE ip = ?", (ip,))
         conn.commit()
     return {"evicted": ip}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

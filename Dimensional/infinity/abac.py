@@ -41,18 +41,17 @@ Usage:
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 
-from Dimensional.infinity.nomenclature import InfinityRole, Tier
-from Dimensional.sanitize import sanitize_for_log
+from Dimensional.infinity.nomenclature import InfinityRole, Pillar, Tier
 
 logger = logging.getLogger(__name__)
 
 
 # ── Policy Effect ────────────────────────────────────────────────
-
 
 class PolicyEffect(str, Enum):
     """The effect of a policy evaluation."""
@@ -62,7 +61,6 @@ class PolicyEffect(str, Enum):
 
 
 # ── Sensitivity Levels ──────────────────────────────────────────
-
 
 class SensitivityLevel(str, Enum):
     """Resource sensitivity classification levels."""
@@ -75,7 +73,6 @@ class SensitivityLevel(str, Enum):
 
 
 # ── Threat Levels ────────────────────────────────────────────────
-
 
 class ThreatLevel(str, Enum):
     """Current threat level for adaptive access control."""
@@ -106,7 +103,6 @@ THREAT_ACCESS_REDUCTION: Dict[ThreatLevel, Set[str]] = {
 
 
 # ── Policy ───────────────────────────────────────────────────────
-
 
 class Policy:
     """A declarative access control policy.
@@ -192,7 +188,6 @@ class Policy:
 
 # ── ABAC Engine ──────────────────────────────────────────────────
 
-
 class ABACEngine:
     """
     Attribute-Based Access Control engine for the Infinity Ecosystem.
@@ -228,7 +223,7 @@ class ABACEngine:
     @threat_level.setter
     def threat_level(self, level: ThreatLevel) -> None:
         self._threat_level = level
-        logger.info("ABAC threat level changed to: %s", sanitize_for_log(level.value))
+        logger.info("ABAC threat level changed to: %s", level.value)
 
     def add_policy(self, policy: Policy) -> None:
         """Add a policy to the engine."""
@@ -274,32 +269,20 @@ class ABACEngine:
                 user_tier_value = subject.get("tier_value", 0)
                 if isinstance(user_tier_value, int):
                     if user_tier_value > min_tier:
-                        self._log_decision(
-                            subject, resource, action, env, False, "sensitivity_check"
-                        )
+                        self._log_decision(subject, resource, action, env, False, "sensitivity_check")
                         return False
                 else:
                     # If tier_value is a string name, convert
                     try:
-                        user_tier = (
-                            Tier[user_tier_value.upper()]
-                            if isinstance(user_tier_value, str)
-                            else Tier.HUMAN
-                        )
+                        user_tier = Tier[user_tier_value.upper()] if isinstance(user_tier_value, str) else Tier.HUMAN
                         if user_tier > min_tier:
-                            self._log_decision(
-                                subject, resource, action, env, False, "sensitivity_check"
-                            )
+                            self._log_decision(subject, resource, action, env, False, "sensitivity_check")
                             return False
                     except (KeyError, ValueError):
-                        self._log_decision(
-                            subject, resource, action, env, False, "sensitivity_check_invalid_tier"
-                        )
+                        self._log_decision(subject, resource, action, env, False, "sensitivity_check_invalid_tier")
                         return False
-            except ValueError as _exc:
-                logger.debug(
-                    "suppressed %s", sanitize_for_log(_exc), exc_info=False
-                )  # Unknown sensitivity, skip check
+            except ValueError:
+                pass  # Unknown sensitivity, skip check
 
         # Pre-policy checks: threat-level adaptive access
         threat = env.get("threat_level", self._threat_level.value)
@@ -309,21 +292,17 @@ class ABACEngine:
             if restricted_actions and action.get("action") in restricted_actions:
                 # Admins are exempt from threat-level restrictions
                 if subject.get("role") != InfinityRole.ADMIN:
-                    self._log_decision(
-                        subject, resource, action, env, False, "threat_level_restriction"
-                    )
+                    self._log_decision(subject, resource, action, env, False, "threat_level_restriction")
                     return False
-        except ValueError as _exc:
-            logger.debug("suppressed %s", sanitize_for_log(_exc), exc_info=False)
+        except ValueError:
+            pass
 
         # Evaluate policies
         permit_matched = False
         for policy in self._policies:
             if policy.matches(subject, resource, action, env):
                 if policy.effect == PolicyEffect.DENY:
-                    self._log_decision(
-                        subject, resource, action, env, False, f"deny_policy:{policy.id}"
-                    )
+                    self._log_decision(subject, resource, action, env, False, f"deny_policy:{policy.id}")
                     return False
                 if policy.effect == PolicyEffect.PERMIT:
                     permit_matched = True
@@ -370,16 +349,15 @@ class ABACEngine:
         if not granted:
             logger.info(
                 "ABAC denied: user=%s role=%s action=%s resource=%s reason=%s",
-                sanitize_for_log(subject.get("sub", "anonymous")),
-                sanitize_for_log(subject.get("role", "unknown")),
-                sanitize_for_log(action.get("action", "unknown")),
-                sanitize_for_log(resource.get("type", "unknown")),
-                sanitize_for_log(reason),
+                subject.get("sub", "anonymous"),
+                subject.get("role", "unknown"),
+                action.get("action", "unknown"),
+                resource.get("type", "unknown"),
+                reason,
             )
 
 
 # ── Default Policies ─────────────────────────────────────────────
-
 
 def get_default_policies() -> List[Policy]:
     """Get the default ABAC policies for the Infinity Ecosystem."""

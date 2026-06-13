@@ -9,9 +9,8 @@ import {
   ChevronDown, ChevronRight, Search, Bell, Settings, LayoutDashboard,
   RefreshCw, Wifi, WifiOff, ShieldAlert, Layers, CircuitBoard,
   BarChart3, Network, Lock, Unlock, EyeIcon, Gauge,
-  RadioTower, BrainCircuit, Loader2, SunMoon
+  RadioTower, BrainCircuit, Loader2
 } from 'lucide-react'
-import { useTheme } from '../contexts/ThemeContext'
 import { colors, pillars, hubIcons, type HubState, type SystemMode, type PillarDef } from './tokens'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -37,7 +36,7 @@ const iconMap: Record<string, React.FC<any>> = {
 function HubIcon({ hubId, size = 20, color }: { hubId: string; size?: number; color?: string }) {
   const iconName = hubIcons[hubId] || 'Hexagon'
   const IconComp = iconMap[iconName] || Hexagon
-  return <IconComp size={size} color={color} aria-hidden="true" />
+  return <IconComp size={size} color={color} />
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -195,12 +194,9 @@ function SystemModeBadge({ mode, size = 'sm' }: { mode: SystemMode; size?: 'sm' 
   const textSz = size === 'sm' ? 'text-[10px]' : 'text-xs'
 
   return (
-    <div
-      className={`flex items-center gap-1 px-2 py-0.5 rounded-full`}
-      style={{ backgroundColor: config.color + '20', border: `1px solid ${config.color}40` }}
-      aria-label={`System mode: ${config.label}`}
-    >
-      <Icon size={sz} color={config.color} aria-hidden="true" />
+    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full`}
+         style={{ backgroundColor: config.color + '20', border: `1px solid ${config.color}40` }}>
+      <Icon size={sz} color={config.color} />
       <span className={`${textSz} font-medium`} style={{ color: config.color }}>{config.label}</span>
     </div>
   )
@@ -222,7 +218,7 @@ function StatusDot({ status, pulse = false }: { status: HubState['status']; puls
   const c = colorMap[status] || colors.status.unknown
 
   return (
-    <div className="relative flex items-center justify-center" aria-hidden="true">
+    <div className="relative flex items-center justify-center">
       <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c }} />
       {(pulse && (status === 'online' || status === 'booting')) && (
         <div className="absolute w-2.5 h-2.5 rounded-full animate-ping" style={{ backgroundColor: c, opacity: 0.4 }} />
@@ -245,12 +241,9 @@ function CircuitBreakerBadge({ state }: { state: HubState['circuitBreaker'] }) {
   const Icon = c.icon
 
   return (
-    <div
-      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider"
-      style={{ backgroundColor: c.color + '20', color: c.color, border: `1px solid ${c.color}40` }}
-      aria-label={`Circuit breaker: ${c.label}`}
-    >
-      <Icon size={10} aria-hidden="true" />
+    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider"
+         style={{ backgroundColor: c.color + '20', color: c.color, border: `1px solid ${c.color}40` }}>
+      <Icon size={10} />
       {c.label}
     </div>
   )
@@ -269,14 +262,14 @@ function HealthRing({ score, size = 40 }: { score: number; size?: number }) {
                 colors.status.offline
 
   return (
-    <div className="relative" style={{ width: size, height: size }} aria-label={`Health score: ${score}%`}>
-      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#1E293B" strokeWidth={3} />
         <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={3}
                 strokeDasharray={circumference} strokeDashoffset={offset}
                 strokeLinecap="round" className="transition-all duration-700" />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+      <div className="absolute inset-0 flex items-center justify-center">
         <span className="text-[10px] font-mono font-bold" style={{ color }}>{score}</span>
       </div>
     </div>
@@ -289,24 +282,21 @@ function HealthRing({ score, size = 40 }: { score: number; size?: number }) {
 
 function ApiStatusBadge({ connected, lastRefresh }: { connected: boolean; lastRefresh: Date | null }) {
   return (
-    <div
-      className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
-      style={{
-        backgroundColor: connected ? '#10B98115' : '#F59E0B15',
-        border: `1px solid ${connected ? '#10B98130' : '#F59E0B30'}`,
-      }}
-      aria-label={connected ? `API connected, last refreshed ${lastRefresh?.toLocaleTimeString() ?? ''}` : 'Using mock data'}
-    >
+    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
+         style={{
+           backgroundColor: connected ? '#10B98115' : '#F59E0B15',
+           border: `1px solid ${connected ? '#10B98130' : '#F59E0B30'}`,
+         }}>
       {connected ? (
-        <Wifi size={10} className="text-green-400" aria-hidden="true" />
+        <Wifi size={10} className="text-green-400" />
       ) : (
-        <WifiOff size={10} className="text-amber-400" aria-hidden="true" />
+        <WifiOff size={10} className="text-amber-400" />
       )}
       <span className={`text-[10px] font-medium ${connected ? 'text-green-400' : 'text-amber-400'}`}>
         {connected ? 'Live' : 'Mock'}
       </span>
       {lastRefresh && (
-        <span className="text-[9px] text-gray-600" aria-hidden="true">
+        <span className="text-[9px] text-gray-600">
           {lastRefresh.toLocaleTimeString()}
         </span>
       )}
@@ -322,11 +312,9 @@ function HubCard({ hub, onClick }: { hub: HubState; onClick: (hub: HubState) => 
   const pillarColor = colors.hubs[hub.id as keyof typeof colors.hubs] || colors.brand.primary
 
   return (
-    <button
-      type="button"
+    <div
       onClick={() => onClick(hub)}
-      aria-label={`${hub.name} — ${hub.status}. View details.`}
-      className="group relative flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-lg text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+      className="group relative flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
       style={{
         backgroundColor: colors.brand.elevated,
         borderColor: hub.status === 'degraded' ? colors.status.degraded + '60' :
@@ -378,14 +366,12 @@ function HubCard({ hub, onClick }: { hub: HubState; onClick: (hub: HubState) => 
       </div>
 
       {/* Tier indicator */}
-      <div
-        aria-hidden="true"
-        className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-        style={{ backgroundColor: colors.tier[hub.tier as keyof typeof colors.tier] + '30',
-                 color: colors.tier[hub.tier as keyof typeof colors.tier] }}>
+      <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
+           style={{ backgroundColor: colors.tier[hub.tier as keyof typeof colors.tier] + '30',
+                    color: colors.tier[hub.tier as keyof typeof colors.tier] }}>
         T{hub.tier}
       </div>
-    </button>
+    </div>
   )
 }
 
@@ -393,63 +379,11 @@ function HubCard({ hub, onClick }: { hub: HubState; onClick: (hub: HubState) => 
 // Hub Detail Panel (with live API detail fetch)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const FOCUSABLE = [
-  'button:not([disabled])',
-  'a[href]',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  '[tabindex]:not([tabindex="-1"])',
-].join(', ')
-
 function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }) {
   const pillarColor = colors.hubs[hub.id as keyof typeof colors.hubs] || colors.brand.primary
   const pillarDef = pillars.find(p => p.id === hub.pillar)
   const [liveDetail, setLiveDetail] = useState<HubState | null>(null)
   const [detailLoading, setDetailLoading] = useState(true)
-  const panelRef = useRef<HTMLDivElement>(null)
-  const closeBtnRef = useRef<HTMLButtonElement>(null)
-
-  // Auto-focus close button when panel opens; restore focus on close
-  useEffect(() => {
-    const previousFocus = document.activeElement as HTMLElement | null
-    // Small delay ensures the panel is rendered and accessible
-    const timer = setTimeout(() => closeBtnRef.current?.focus(), 50)
-    return () => {
-      clearTimeout(timer)
-      // Return focus to the element that opened the panel
-      previousFocus?.focus()
-    }
-  }, [])
-
-  // Escape closes the panel
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); onClose() }
-    }
-    document.addEventListener('keydown', handleKey)
-    return () => document.removeEventListener('keydown', handleKey)
-  }, [onClose])
-
-  // Focus trap — keep Tab/Shift+Tab within the panel
-  useEffect(() => {
-    const panel = panelRef.current
-    if (!panel) return
-    const handleTab = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return
-      const focusable = [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)]
-      if (focusable.length === 0) return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (e.shiftKey) {
-        if (document.activeElement === first) { e.preventDefault(); last.focus() }
-      } else {
-        if (document.activeElement === last) { e.preventDefault(); first.focus() }
-      }
-    }
-    panel.addEventListener('keydown', handleTab)
-    return () => panel.removeEventListener('keydown', handleTab)
-  }, [])
 
   // Fetch detailed hub info from API when panel opens
   useEffect(() => {
@@ -468,20 +402,7 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
   const displayHub = liveDetail || hub
 
   return (
-    <>
-      {/* Backdrop — darkens main content behind dialog */}
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 bg-black/50 z-40"
-        onClick={onClose}
-      />
-    <div
-      ref={panelRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="hub-detail-title"
-      className="fixed inset-y-0 right-0 w-[420px] bg-gray-950 border-l border-gray-800 shadow-2xl z-50 flex flex-col overflow-hidden"
-    >
+    <div className="fixed inset-y-0 right-0 w-[420px] bg-gray-950 border-l border-gray-800 shadow-2xl z-50 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="p-6 border-b border-gray-800" style={{ background: `linear-gradient(135deg, ${pillarColor}15, transparent)` }}>
         <div className="flex items-center justify-between mb-4">
@@ -491,17 +412,12 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
               <HubIcon hubId={hub.id} size={24} color={pillarColor} />
             </div>
             <div>
-              <h2 id="hub-detail-title" className="text-lg font-bold text-white">{displayHub.name}</h2>
+              <h2 className="text-lg font-bold text-white">{displayHub.name}</h2>
               <span className="text-xs text-gray-500">{pillarDef?.name} Pillar · Tier {displayHub.tier}</span>
             </div>
           </div>
-          <button
-            ref={closeBtnRef}
-            onClick={onClose}
-            aria-label="Close hub detail panel"
-            className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-950"
-          >
-            <span aria-hidden="true">✕</span>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors">
+            ✕
           </button>
         </div>
 
@@ -532,8 +448,8 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
       {/* Services Grid */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {detailLoading && (
-          <div role="status" aria-live="polite" className="flex items-center gap-2 text-xs text-gray-500">
-            <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Loader2 size={12} className="animate-spin" />
             <span>Loading detail from API...</span>
           </div>
         )}
@@ -593,7 +509,6 @@ function HubDetailPanel({ hub, onClose }: { hub: HubState; onClose: () => void }
         </div>
       </div>
     </div>
-    </>
   )
 }
 
@@ -628,8 +543,8 @@ function Sidebar({
     <div className={`flex flex-col border-r border-gray-800 bg-gray-950 transition-all duration-200 ${collapsed ? 'w-16' : 'w-72'}`}>
       {/* Brand */}
       <div className="flex items-center gap-2 px-4 py-4 border-b border-gray-800">
-        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0" aria-hidden="true">
-          <Brain size={18} className="text-white" aria-hidden="true" />
+        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+          <Brain size={18} className="text-white" />
         </div>
         {!collapsed && (
           <div className="flex-1 min-w-0">
@@ -637,14 +552,9 @@ function Sidebar({
             <div className="text-[10px] text-gray-600">Ecosystem Command</div>
           </div>
         )}
-        <button
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-expanded={!collapsed}
-          aria-controls="dashboard-sidebar-nav"
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded hover:bg-gray-800 text-gray-600 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-        >
-          <ChevronRight size={14} className={`transition-transform ${collapsed ? '' : 'rotate-180'}`} aria-hidden="true" />
+        <button onClick={() => setCollapsed(!collapsed)}
+                className="p-1 rounded hover:bg-gray-800 text-gray-600 hover:text-white transition-colors">
+          <ChevronRight size={14} className={`transition-transform ${collapsed ? '' : 'rotate-180'}`} />
         </button>
       </div>
 
@@ -652,50 +562,33 @@ function Sidebar({
         <>
           {/* Nav to Chat */}
           <div className="px-3 py-2 border-b border-gray-800">
-            <button
-              onClick={() => navigate('/')}
-              aria-label="Back to Chat"
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-500 hover:text-white hover:bg-gray-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            >
-              <MessageSquare size={14} aria-hidden="true" />
+            <button onClick={() => navigate('/')}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-500 hover:text-white hover:bg-gray-900 transition-colors">
+              <MessageSquare size={14} />
               <span>Back to Chat</span>
             </button>
           </div>
 
           {/* System Mode Switcher */}
           <div className="px-3 py-3 border-b border-gray-800">
-            <div
-              id="system-mode-label"
-              className="text-[10px] text-gray-600 uppercase tracking-wider mb-2 px-1"
-            >
-              System Mode
-            </div>
-            <div role="group" aria-labelledby="system-mode-label" className="flex gap-1">
-              {([
-                ['TRUE_NAS',   'TrueNAS — local storage mode',  'NAS'],
-                ['HYBRID',     'Hybrid — mixed cloud and local', 'Mix'],
-                ['CLOUD_ONLY', 'Cloud Only — remote-first mode', 'Cloud'],
-              ] as [SystemMode, string, string][]).map(([mode, label, shortLabel]) => (
-                <button
-                  key={mode}
-                  onClick={() => onModeChange(mode)}
-                  aria-label={label}
-                  aria-pressed={systemMode === mode}
-                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-950 ${
-                    systemMode === mode ? 'text-white' : 'text-gray-600 hover:text-gray-400'
-                  }`}
-                  style={systemMode === mode ? {
-                    backgroundColor: colors.systemMode[mode] + '25',
-                    border: `1px solid ${colors.systemMode[mode]}50`,
-                    color: colors.systemMode[mode],
-                  } : { border: '1px solid transparent' }}
-                >
-                  {shortLabel}
+            <div className="text-[10px] text-gray-600 uppercase tracking-wider mb-2 px-1">System Mode</div>
+            <div className="flex gap-1">
+              {(['TRUE_NAS', 'HYBRID', 'CLOUD_ONLY'] as SystemMode[]).map(mode => (
+                <button key={mode} onClick={() => onModeChange(mode)}
+                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
+                          systemMode === mode ? 'text-white' : 'text-gray-600 hover:text-gray-400'
+                        }`}
+                        style={systemMode === mode ? {
+                          backgroundColor: colors.systemMode[mode] + '25',
+                          border: `1px solid ${colors.systemMode[mode]}50`,
+                          color: colors.systemMode[mode],
+                        } : { border: '1px solid transparent' }}>
+                  {mode === 'TRUE_NAS' ? 'NAS' : mode === 'HYBRID' ? 'Mix' : 'Cloud'}
                 </button>
               ))}
             </div>
-            {/* API status — decorative; screen-reader version below */}
-            <div className="mt-2 flex items-center gap-1 px-1" aria-hidden="true">
+            {/* API status indicator */}
+            <div className="mt-2 flex items-center gap-1 px-1">
               {apiConnected ? (
                 <Wifi size={10} className="text-green-500" />
               ) : (
@@ -705,39 +598,25 @@ function Sidebar({
                 {apiConnected ? 'Connected to API' : 'Using mock data'}
               </span>
             </div>
-            {/* Screen reader only status announcement */}
-            <span className="sr-only" role="status" aria-live="polite">
-              {apiConnected ? 'API connected — live data' : 'API unavailable — using mock data'}
-            </span>
           </div>
 
           {/* Search */}
           <div className="px-3 py-2 border-b border-gray-800">
             <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600" aria-hidden="true" />
-              <label htmlFor="hub-search" className="sr-only">Search hubs</label>
-              <input
-                id="hub-search"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search hubs…"
-                type="search"
-                autoComplete="off"
-                className="w-full bg-gray-900 border border-gray-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent transition-shadow"
-              />
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600" />
+              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                     placeholder="Search hubs..."
+                     className="w-full bg-gray-900 border border-gray-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-gray-700" />
             </div>
           </div>
 
           {/* Overview */}
           <div className="px-3 py-2">
-            <button
-              onClick={() => onSelectPillar(null)}
-              aria-pressed={activePillar === null}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-950 ${
-                activePillar === null ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
-              }`}
-            >
-              <LayoutDashboard size={14} aria-hidden="true" />
+            <button onClick={() => onSelectPillar(null)}
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors ${
+                      activePillar === null ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
+                    }`}>
+              <LayoutDashboard size={14} />
               <span className="flex-1 text-left">Overview</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-green-400">{onlineCount}</span>
@@ -750,8 +629,8 @@ function Sidebar({
           </div>
 
           {/* Pillars */}
-          <div id="dashboard-sidebar-nav" className="flex-1 overflow-y-auto px-3 pb-3 space-y-0.5">
-            <div id="pillars-label" className="text-[10px] text-gray-600 uppercase tracking-wider px-2 py-1">Pillars</div>
+          <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-0.5">
+            <div className="text-[10px] text-gray-600 uppercase tracking-wider px-2 py-1">Pillars</div>
             {pillars.map(pillar => {
               const pillarHubs = hubStates.filter(h => h.pillar === pillar.id)
               const pillarAlerts = pillarHubs.reduce((s, h) => s + h.alerts, 0)
@@ -761,14 +640,10 @@ function Sidebar({
               if (isFiltered) return null
 
               return (
-                <button
-                  key={pillar.id}
-                  onClick={() => onSelectPillar(pillar.id)}
-                  aria-pressed={activePillar === pillar.id}
-                  className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-950 ${
-                    activePillar === pillar.id ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
-                  }`}
-                >
+                <button key={pillar.id} onClick={() => onSelectPillar(pillar.id)}
+                        className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs transition-colors ${
+                          activePillar === pillar.id ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-900'
+                        }`}>
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: pillar.color }} />
                   <span className="flex-1 text-left truncate">{pillar.name}</span>
                   <span className="text-[10px] text-gray-600">{pillar.hubs.length}</span>
@@ -783,29 +658,20 @@ function Sidebar({
       )}
 
       {collapsed && (
-        <div id="dashboard-sidebar-nav" className="flex-1 flex flex-col items-center py-3 gap-2">
-          <button
-            onClick={() => onSelectPillar(null)}
-            aria-label="Show all hubs — Overview"
-            aria-pressed={activePillar === null}
-            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 ${
-              activePillar === null ? 'bg-gray-800 text-white' : 'text-gray-600 hover:text-white hover:bg-gray-900'
-            }`}
-          >
-            <LayoutDashboard size={16} aria-hidden="true" />
+        <div className="flex-1 flex flex-col items-center py-3 gap-2">
+          <button onClick={() => onSelectPillar(null)}
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+                    activePillar === null ? 'bg-gray-800 text-white' : 'text-gray-600 hover:text-white hover:bg-gray-900'
+                  }`}>
+            <LayoutDashboard size={16} />
           </button>
           {pillars.map(pillar => (
-            <button
-              key={pillar.id}
-              onClick={() => onSelectPillar(pillar.id)}
-              aria-label={`Filter by ${pillar.name} pillar`}
-              aria-pressed={activePillar === pillar.id}
-              className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 ${
-                activePillar === pillar.id ? 'bg-gray-800' : 'hover:bg-gray-900'
-              }`}
-            >
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: pillar.color }} aria-hidden="true" />
-              <span className="sr-only">{pillar.name}</span>
+            <button key={pillar.id} onClick={() => onSelectPillar(pillar.id)}
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+                      activePillar === pillar.id ? 'bg-gray-800' : 'hover:bg-gray-900'
+                    }`}
+                    title={pillar.name}>
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: pillar.color }} />
             </button>
           ))}
         </div>
@@ -833,7 +699,6 @@ function TopBar({
   onRefresh: () => void
   refreshing: boolean
 }) {
-  const { theme, toggleTheme } = useTheme()
   const totalHubs = hubStates.length
   const onlineHubs = hubStates.filter(h => h.status === 'online').length
   const totalServices = hubStates.reduce((s, h) => s + h.services, 0)
@@ -851,70 +716,47 @@ function TopBar({
 
       <div className="flex items-center gap-6">
         {/* Stats */}
-        <dl className="flex items-center gap-5 text-xs" aria-label="Ecosystem statistics">
+        <div className="flex items-center gap-5 text-xs">
           <div className="flex items-center gap-1.5">
-            <Activity size={14} className="text-green-400" aria-hidden="true" />
-            <dd className="text-gray-400">{onlineHubs}/{totalHubs}</dd>
-            <dt className="text-gray-600">hubs</dt>
+            <Activity size={14} className="text-green-400" />
+            <span className="text-gray-400">{onlineHubs}/{totalHubs}</span>
+            <span className="text-gray-600">hubs</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Server size={14} className="text-blue-400" aria-hidden="true" />
-            <dd className="text-gray-400">{totalServices}</dd>
-            <dt className="text-gray-600">services</dt>
+            <Server size={14} className="text-blue-400" />
+            <span className="text-gray-400">{totalServices}</span>
+            <span className="text-gray-600">services</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Gauge size={14} style={{ color: modeColor }} aria-hidden="true" />
-            <dd className="text-gray-400">{avgHealth}%</dd>
-            <dt className="text-gray-600">health</dt>
+            <Gauge size={14} style={{ color: modeColor }} />
+            <span className="text-gray-400">{avgHealth}%</span>
+            <span className="text-gray-600">health</span>
           </div>
           {totalAlerts > 0 && (
             <div className="flex items-center gap-1.5">
-              <AlertTriangle size={14} className="text-amber-400" aria-hidden="true" />
-              <dd className="text-amber-400 font-semibold">{totalAlerts}</dd>
-              <dt className="text-gray-600">alerts</dt>
+              <AlertTriangle size={14} className="text-amber-400" />
+              <span className="text-amber-400 font-semibold">{totalAlerts}</span>
+              <span className="text-gray-600">alerts</span>
             </div>
           )}
-        </dl>
+        </div>
 
         {/* Actions */}
-        {/* Screen reader live announcement for refresh state */}
-        <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-          {refreshing ? 'Refreshing dashboard data…' : ''}
-        </span>
-
-        <div className="flex items-center gap-2" role="toolbar" aria-label="Dashboard actions">
-          <button
-            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-          >
-            <SunMoon size={16} aria-hidden="true" />
+        <div className="flex items-center gap-2">
+          <button onClick={onRefresh}
+                  className={`p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors ${refreshing ? 'animate-spin' : ''}`}>
+            <RefreshCw size={16} />
           </button>
-          <button
-            aria-label={refreshing ? 'Refreshing dashboard data' : 'Refresh dashboard'}
-            aria-busy={refreshing}
-            onClick={onRefresh}
-            disabled={refreshing}
-            className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {/* Spin only the icon, not the entire button (preserves focus ring) */}
-            <span className={refreshing ? 'block animate-spin' : 'block'} aria-hidden="true">
-              <RefreshCw size={16} />
-            </span>
-          </button>
-          <button
-            aria-label={totalAlerts > 0 ? `Notifications — ${totalAlerts} alert${totalAlerts !== 1 ? 's' : ''}` : 'Notifications — no alerts'}
-            className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors relative focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-          >
-            <Bell size={16} aria-hidden="true" />
+          <button className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors relative">
+            <Bell size={16} />
             {totalAlerts > 0 && (
-              <div aria-hidden="true" className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center">
+              <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center">
                 <span className="text-[8px] font-bold text-white">{totalAlerts > 9 ? '9+' : totalAlerts}</span>
               </div>
             )}
           </button>
-          <button aria-label="Open settings" className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
-            <Settings size={16} aria-hidden="true" />
+          <button className="p-2 rounded-lg hover:bg-gray-800 text-gray-500 hover:text-white transition-colors">
+            <Settings size={16} />
           </button>
         </div>
       </div>
@@ -942,23 +784,19 @@ function NeuralBusViz({
   const protocol = neuralBus?.protocol ?? 'Neural-Bus/v1'
 
   return (
-    <section aria-labelledby="neural-bus-heading" className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
+    <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Radio size={14} className="text-violet-400" aria-hidden="true" />
-          <h2 id="neural-bus-heading" className="text-xs font-semibold text-gray-300">Neural Bus</h2>
+          <Radio size={14} className="text-violet-400" />
+          <span className="text-xs font-semibold text-gray-300">Neural Bus</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[9px] text-gray-600 font-mono" aria-hidden="true">{protocol}</span>
+          <span className="text-[9px] text-gray-600 font-mono">{protocol}</span>
           <span className="text-[10px] text-gray-600">{activeNodes} nodes active</span>
         </div>
       </div>
 
-      <div
-        role="img"
-        aria-label={`Neural Bus topology: ${activeNodes} nodes active, status ${busStatus}`}
-        className="relative h-24 flex items-center justify-center"
-      >
+      <div className="relative h-24 flex items-center justify-center">
         {/* Central node */}
         <div className="absolute w-8 h-8 rounded-full bg-violet-600/30 border border-violet-500/50 flex items-center justify-center">
           <Brain size={14} className="text-violet-300" />
@@ -977,16 +815,14 @@ function NeuralBusViz({
             : (colors.hubs[hubId as keyof typeof colors.hubs] || colors.brand.primary)
 
           return (
-            <div
-              key={hubId}
-              aria-hidden="true"
-              className="absolute w-5 h-5 rounded-full flex items-center justify-center transition-all duration-500"
-              style={{
-                transform: `translate(${x}px, ${y}px)`,
-                backgroundColor: hubColor + '30',
-                border: `1.5px solid ${hubColor}60`,
-              }}
-            >
+            <div key={hubId}
+                 className="absolute w-5 h-5 rounded-full flex items-center justify-center transition-all duration-500"
+                 style={{
+                   transform: `translate(${x}px, ${y}px)`,
+                   backgroundColor: hubColor + '30',
+                   border: `1.5px solid ${hubColor}60`,
+                 }}
+                 title={hubId}>
               <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: hubColor }} />
             </div>
           )
@@ -1003,7 +839,7 @@ function NeuralBusViz({
           })}
         </svg>
       </div>
-    </section>
+    </div>
   )
 }
 
@@ -1026,42 +862,42 @@ function CitadelWidget({
   const avgHealth = citadel?.avg_health ?? Math.round(hubStates.reduce((s, h) => s + h.healthScore, 0) / hubStates.length)
 
   return (
-    <section aria-labelledby="citadel-heading" className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
+    <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
       <div className="flex items-center gap-2 mb-3">
-        <Shield size={14} className="text-red-400" aria-hidden="true" />
-        <h2 id="citadel-heading" className="text-xs font-semibold text-gray-300">The Citadel — Master OS</h2>
+        <Shield size={14} className="text-red-400" />
+        <span className="text-xs font-semibold text-gray-300">The Citadel — Master OS</span>
       </div>
 
-      <dl className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <div className="flex flex-col items-center py-2 px-1 rounded-lg bg-gray-800/50">
-          <Server size={14} className="text-blue-400 mb-1" aria-hidden="true" />
-          <dd className="text-sm font-bold text-white">{totalServices}</dd>
-          <dt className="text-[9px] text-gray-600">Services</dt>
+          <Server size={14} className="text-blue-400 mb-1" />
+          <span className="text-sm font-bold text-white">{totalServices}</span>
+          <span className="text-[9px] text-gray-600">Services</span>
         </div>
         <div className="flex flex-col items-center py-2 px-1 rounded-lg bg-gray-800/50">
-          <Cpu size={14} className="text-emerald-400 mb-1" aria-hidden="true" />
-          <dd className="text-sm font-bold text-white">{totalAgents}</dd>
-          <dt className="text-[9px] text-gray-600">Agents</dt>
+          <Cpu size={14} className="text-emerald-400 mb-1" />
+          <span className="text-sm font-bold text-white">{totalAgents}</span>
+          <span className="text-[9px] text-gray-600">Agents</span>
         </div>
         <div className="flex flex-col items-center py-2 px-1 rounded-lg bg-gray-800/50">
-          <ShieldAlert size={14} className={openCircuits > 0 ? 'text-red-400 mb-1' : 'text-green-400 mb-1'} aria-hidden="true" />
-          <dd className={`text-sm font-bold ${openCircuits > 0 ? 'text-red-400' : 'text-green-400'}`}>{openCircuits}</dd>
-          <dt className="text-[9px] text-gray-600">Tripped</dt>
+          <ShieldAlert size={14} className={openCircuits > 0 ? 'text-red-400 mb-1' : 'text-green-400 mb-1'} />
+          <span className={`text-sm font-bold ${openCircuits > 0 ? 'text-red-400' : 'text-green-400'}`}>{openCircuits}</span>
+          <span className="text-[9px] text-gray-600">Tripped</span>
         </div>
         <div className="flex flex-col items-center py-2 px-1 rounded-lg bg-gray-800/50">
-          <Gauge size={14} style={{ color: avgHealth >= 85 ? '#10B981' : avgHealth >= 50 ? '#F59E0B' : '#EF4444' }} className="mb-1" aria-hidden="true" />
-          <dd className="text-sm font-bold text-white">{avgHealth}%</dd>
-          <dt className="text-[9px] text-gray-600">Health</dt>
+          <Gauge size={14} style={{ color: avgHealth >= 85 ? '#10B981' : avgHealth >= 50 ? '#F59E0B' : '#EF4444' }} className="mb-1" />
+          <span className="text-sm font-bold text-white">{avgHealth}%</span>
+          <span className="text-[9px] text-gray-600">Health</span>
         </div>
-      </dl>
+      </div>
 
       {halfOpenCircuits > 0 && (
-        <div role="alert" className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-900/20 border border-amber-800/30">
-          <AlertTriangle size={12} className="text-amber-400" aria-hidden="true" />
+        <div className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-900/20 border border-amber-800/30">
+          <AlertTriangle size={12} className="text-amber-400" />
           <span className="text-[10px] text-amber-400">{halfOpenCircuits} circuit(s) in half-open state</span>
         </div>
       )}
-    </section>
+    </div>
   )
 }
 
@@ -1080,21 +916,14 @@ function SecurityWidget({ security }: { security: SecurityPosture | null }) {
   const vaultStatus = security?.vault_status ?? 'Sealed'
 
   return (
-    <section aria-labelledby="security-heading" className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
-      <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {scanStatus === 'scanning' ? 'Security scan in progress' : scanStatus === 'complete' ? 'Security scan complete' : ''}
-      </div>
+    <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Lock size={14} className="text-emerald-400" aria-hidden="true" />
-          <h2 id="security-heading" className="text-xs font-semibold text-gray-300">Security Posture</h2>
+          <Lock size={14} className="text-emerald-400" />
+          <span className="text-xs font-semibold text-gray-300">Security Posture</span>
         </div>
-        <button
-          onClick={() => { setScanStatus('scanning'); setTimeout(() => setScanStatus('complete'), 2000) }}
-          aria-label={scanStatus === 'scanning' ? 'Security scan in progress' : scanStatus === 'complete' ? 'Security scan complete' : 'Run security scan'}
-          aria-busy={scanStatus === 'scanning'}
-          className="text-[10px] px-2 py-1 rounded bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-        >
+        <button onClick={() => { setScanStatus('scanning'); setTimeout(() => setScanStatus('complete'), 2000) }}
+                className="text-[10px] px-2 py-1 rounded bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors">
           {scanStatus === 'scanning' ? 'Scanning...' : scanStatus === 'complete' ? '✓ Done' : 'Run Scan'}
         </button>
       </div>
@@ -1123,7 +952,7 @@ function SecurityWidget({ security }: { security: SecurityPosture | null }) {
           <span className={`text-xs font-mono ${vaultStatus === 'Sealed' ? 'text-green-400' : 'text-amber-400'}`}>{vaultStatus}</span>
         </div>
       </div>
-    </section>
+    </div>
   )
 }
 
@@ -1186,13 +1015,9 @@ export default function TrancendosDashboard() {
 
   if (loading && hubStates.length === 0) {
     return (
-      <div
-        role="status"
-        aria-label="Loading ecosystem data"
-        className="flex h-screen bg-gray-950 text-white items-center justify-center"
-      >
+      <div className="flex h-screen bg-gray-950 text-white items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 size={32} aria-hidden="true" className="animate-spin text-blue-500" />
+          <Loader2 size={32} className="animate-spin text-blue-500" />
           <span className="text-sm text-gray-400">Loading Ecosystem Data...</span>
         </div>
       </div>

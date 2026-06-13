@@ -38,8 +38,7 @@ def parse_violations(scan_output: str) -> list[Violation]:
     violations = []
     # Pattern: [CATEGORY] SEVERITY file:line:col — message
     pattern = re.compile(
-        r"\[(\S+)\]\s+(\S+)\s+(\S+):(\d+):(\d+)\s+—\s+(.+?)\n\s+💡\s+(.+)",
-        re.MULTILINE,
+        r"\[(\S+)\]\s+(\S+)\s+(\S+):(\d+):(\d+)\s+—\s+(.+?)\n\s+💡\s+(.+)", re.MULTILINE
     )
     for m in pattern.finditer(scan_output):
         violations.append(
@@ -51,7 +50,7 @@ def parse_violations(scan_output: str) -> list[Violation]:
                 col=int(m.group(5)),
                 message=m.group(6),
                 hint=m.group(7),
-            ),
+            )
         )
     return violations
 
@@ -322,9 +321,7 @@ def fix_cwe327_file(filepath: str, target_lines: set[int]) -> int:
         elif "hashlib.md5(" in line and "usedforsecurity" not in line:
             # hashlib.md5(data) → hashlib.md5(data, usedforsecurity=False)
             lines[idx] = re.sub(
-                r"hashlib\.md5\(([^)]+)\)",
-                r"hashlib.md5(\1, usedforsecurity=False)",
-                line,
+                r"hashlib\.md5\(([^)]+)\)", r"hashlib.md5(\1, usedforsecurity=False)", line
             )
             applied += 1
 
@@ -334,9 +331,7 @@ def fix_cwe327_file(filepath: str, target_lines: set[int]) -> int:
             applied += 1
         elif "hashlib.sha1(" in line and "usedforsecurity" not in line:
             lines[idx] = re.sub(
-                r"hashlib\.sha1\(([^)]+)\)",
-                r"hashlib.sha1(\1, usedforsecurity=False)",
-                line,
+                r"hashlib\.sha1\(([^)]+)\)", r"hashlib.sha1(\1, usedforsecurity=False)", line
             )
             applied += 1
 
@@ -382,9 +377,7 @@ def fix_cwe209_file(filepath: str, target_lines: set[int]) -> int:
         # Pattern: detail=str(exc) or "detail": str(exc)
         if re.search(r"detail\s*=\s*str\(exc\)", line):
             lines[idx] = re.sub(
-                r"detail\s*=\s*str\(exc\)",
-                "detail=safe_error_detail(exc, 500)",
-                line,
+                r"detail\s*=\s*str\(exc\)", "detail=safe_error_detail(exc, 500)", line
             )
             applied += 1
         # Pattern: str(exc) in f-string or concatenation

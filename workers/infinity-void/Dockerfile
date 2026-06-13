@@ -1,19 +1,28 @@
 FROM python:3.11-slim
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
-  && rm -rf /var/lib/apt/lists/* \
-  && groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
+
+LABEL maintainer="Trancendos"
+LABEL description="The Void — self-hosted encrypted secrets vault (replaces Cloudflare Worker)"
+
+# Security: non-root user
+RUN groupadd -r worker && useradd -r -g worker -d /app -s /sbin/nologin worker
 
 WORKDIR /app
-COPY --chown=worker:worker workers/infinity-void/requirements-worker.txt .
-RUN pip install --no-cache-dir -r requirements-worker.txt
-COPY --chown=worker:worker workers/infinity-void/worker.py .
-COPY --chown=worker:worker src/entities/ ./src/entities/
-COPY --chown=worker:worker src/observability/prometheus_mount.py ./src/observability/prometheus_mount.py
 
-RUN mkdir -p src/observability Dimensional 2>/dev/null; touch src/__init__.py src/entities/__init__.py src/observability/__init__.py; [ -f Dimensional/sanitize.py ] && touch Dimensional/__init__.py || true
+COPY --chown=worker:worker requirements-worker.txt .
+RUN pip install --no-cache-dir -r requirements-worker.txt
+
+COPY --chown=worker:worker worker.py .
+
+VOLUME ["/data"]
+
+ENV VOID_DATA_DIR=/data
+
+# Security: drop to non-root user
 USER worker
+
 EXPOSE 8002
+
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD curl -f http://localhost:8002/health || exit 1
 
-CMD ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["python", "worker.py"]

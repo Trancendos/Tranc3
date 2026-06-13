@@ -49,9 +49,6 @@ class TestErrorCode:
             "SEC",
             "COMP",
             "SYS",
-            "WF",
-            "VAL",
-            "ENT",
         }
         assert domains == expected
 
@@ -192,8 +189,7 @@ class TestFormatErrorResponse:
 
     def test_custom_detail_overrides_message(self):
         result = format_error_response(
-            ErrorCode.AUTH_TOKEN_INVALID,
-            detail="Token is base64 garbage",
+            ErrorCode.AUTH_TOKEN_INVALID, detail="Token is base64 garbage"
         )
         assert result["error"]["message"] == "Token is base64 garbage"
 

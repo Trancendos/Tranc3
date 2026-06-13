@@ -15,13 +15,13 @@ Tests cover:
 No live OCI connection is required — all network I/O is mocked.
 """
 
-from __future__ import annotations  # noqa: I001
+from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from shared_core.architecture.oci_adaptive_provider import (
+from Dimensional.architecture.oci_adaptive_provider import (
     OCI_FREE_TIER_LIMITS,
     AdaptiveInstanceDatum,
     AdaptiveProviderConfig,
@@ -35,7 +35,6 @@ from shared_core.architecture.oci_adaptive_provider import (
     SystemMode,
     _aws_sig4_sign,
 )
-
 
 # ===========================================================================
 # Constants
@@ -204,7 +203,7 @@ class TestOciQuotaTracker:
     def fresh_tracker(self, tmp_path, monkeypatch):
         # OciQuotaTracker persists to /tmp/tranc3_oci_quota.json — redirect to a
         # fresh temp file so tests are fully isolated from each other and from the host.
-        import shared_core.architecture.oci_adaptive_provider as _mod
+        import Dimensional.architecture.oci_adaptive_provider as _mod
 
         sidecar = str(tmp_path / "oci_quota_test.json")
         monkeypatch.setattr(_mod.OciQuotaTracker, "_SIDECAR", sidecar)
@@ -299,7 +298,7 @@ class TestAwsSig4Sign:
         url="https://example.r2.cloudflarestorage.com/bucket/key",
         headers={"content-type": "application/octet-stream"},
         body=b"",
-        access_key="AKIAIOSFODNN7EXAMPLE",  # pragma: allowlist secret
+        access_key="AKIAIOSFODNN7EXAMPLE",
         secret_key="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",  # pragma: allowlist secret
         service="s3",
         region="auto",
@@ -325,7 +324,7 @@ class TestAwsSig4Sign:
     def test_authorization_contains_access_key(self):
         signed = _aws_sig4_sign(**self._BASE_ARGS)
         auth = next(v for k, v in signed.items() if k.lower() == "authorization")
-        assert "AKIAIOSFODNN7EXAMPLE" in auth  # pragma: allowlist secret
+        assert "AKIAIOSFODNN7EXAMPLE" in auth
 
     def test_authorization_contains_credential_scope(self):
         signed = _aws_sig4_sign(**self._BASE_ARGS)

@@ -8,30 +8,30 @@ Otherwise, the pure Python implementations are used.
 
 from __future__ import annotations
 
+from typing import Any, Optional
+
 import numpy as np
 
-from .adaptive import AdaptiveConfig, AdaptiveMetaLearner
-from .definitions import TIER_NAMES, Tier
-from .fluidic_liquidic import LiquidReservoir, ReservoirConfig
+from .definitions import Tier, TIER_NAMES
+from .adaptive import AdaptiveMetaLearner, AdaptiveConfig
 from .genetic_dna import DNAEvolutionEngine, GeneticConfig
-from .quantum import QuantumCircuitConfig, QuantumDecisionCircuit
+from .fluidic_liquidic import LiquidReservoir, ReservoirConfig
+from .quantum import QuantumDecisionCircuit, QuantumCircuitConfig
 
 
 def has_rust_bindings() -> bool:
     """Check if the Rust extension module is available."""
     try:
-        import _aeonmind_rust  # noqa: F401
-
+        import _aeonmind_rust
         return True
     except ImportError:
         return False
 
 
-def rust_version() -> str | None:
+def rust_version() -> Optional[str]:
     """Get the Rust extension module version, if available."""
     try:
         import _aeonmind_rust
-
         return getattr(_aeonmind_rust, "__version__", None)
     except ImportError:
         return None
@@ -49,14 +49,13 @@ def tier_hierarchy() -> str:
 class RustLiquidReservoir:
     """Wrapper for the Rust LiquidReservoir with Python fallback."""
 
-    def __init__(self, config: ReservoirConfig | None = None):
+    def __init__(self, config: Optional[ReservoirConfig] = None):
         self.config = config or ReservoirConfig()
         self._rust_impl = None
 
         if has_rust_bindings():
             try:
                 import _aeonmind_rust
-
                 self._rust_impl = _aeonmind_rust.RustLiquidReservoir(
                     input_size=self.config.input_size,
                     reservoir_size=self.config.reservoir_size,
@@ -90,14 +89,13 @@ class RustLiquidReservoir:
 class RustEvolutionEngine:
     """Wrapper for the Rust EvolutionEngine with Python fallback."""
 
-    def __init__(self, config: GeneticConfig | None = None):
+    def __init__(self, config: Optional[GeneticConfig] = None):
         self.config = config or GeneticConfig()
         self._rust_impl = None
 
         if has_rust_bindings():
             try:
                 import _aeonmind_rust
-
                 self._rust_impl = _aeonmind_rust.RustEvolutionEngine(
                     population_size=self.config.population_size,
                     dna_length=self.config.dna_length,
@@ -124,14 +122,13 @@ class RustEvolutionEngine:
 class RustQuantumCircuit:
     """Wrapper for the Rust QuantumCircuit with Python fallback."""
 
-    def __init__(self, config: QuantumCircuitConfig | None = None):
+    def __init__(self, config: Optional[QuantumCircuitConfig] = None):
         self.config = config or QuantumCircuitConfig()
         self._rust_impl = None
 
         if has_rust_bindings():
             try:
                 import _aeonmind_rust
-
                 self._rust_impl = _aeonmind_rust.RustQuantumCircuit(
                     n_qubits=self.config.n_qubits,
                     n_layers=self.config.n_layers,
@@ -156,14 +153,13 @@ class RustQuantumCircuit:
 class RustAdaptiveLearner:
     """Wrapper for the Rust AdaptiveLearner with Python fallback."""
 
-    def __init__(self, n_params: int = 32, config: AdaptiveConfig | None = None):
+    def __init__(self, n_params: int = 32, config: Optional[AdaptiveConfig] = None):
         self.config = config or AdaptiveConfig()
         self._rust_impl = None
 
         if has_rust_bindings():
             try:
                 import _aeonmind_rust
-
                 self._rust_impl = _aeonmind_rust.RustAdaptiveLearner(
                     n_params=n_params,
                     learning_rate=self.config.learning_rate,
@@ -177,7 +173,7 @@ class RustAdaptiveLearner:
     def step(self, gradient: np.ndarray) -> np.ndarray:
         if self._rust_impl is not None:
             return np.array(self._rust_impl.step(gradient.tolist()))
-        self._python_impl.step(gradient)
+        result = self._python_impl.step(gradient)
         return self._python_impl.parameters
 
     def parameters(self) -> np.ndarray:

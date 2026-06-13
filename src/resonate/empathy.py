@@ -71,7 +71,7 @@ class Resonate:
                 "- **UK**: Samaritans — 116 123 (free, 24/7)\n"
                 "- **US**: 988 Suicide & Crisis Lifeline — call or text 988\n"
                 "- **International**: [findahelpline.com](https://findahelpline.com)\n"
-                "You don't have to face this alone. 💙",
+                "You don't have to face this alone. 💙"
             )
         elif sensitivity_level in ("medium", "high"):
             parts.append(f"\n\n*{random.choice(_VALIDATION_PHRASES)}*")  # nosec B311 — non-cryptographic phrase variation
@@ -98,8 +98,7 @@ class Resonate:
         except Exception:
             pass  # nosec B110 — observation failure must not block escalation
         logger.warning(
-            "resonate: human escalation triggered for user=%s",
-            sanitize_for_log(user_id),
+            "resonate: human escalation triggered for user=%s", sanitize_for_log(user_id)
         )  # codeql[py/cleartext-logging]
         return {
             "escalated": True,

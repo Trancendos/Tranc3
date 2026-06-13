@@ -26,21 +26,10 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    FastAPI,
-    Header,
-    HTTPException,
-    Query,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
-
-from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -258,19 +247,6 @@ app = FastAPI(title="Tranc3 Skills Benchmark Service", version="0.1.0", lifespan
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
@@ -278,12 +254,7 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "ok",
-        "service": "skills-benchmark-service",
-        "port": 8035,
-        "entity": health_entity_block(8035, "skills-benchmark-service"),
-    }
+    return {"status": "ok", "service": "skills-benchmark-service", "port": 8035}
 
 
 # ---------------------------------------------------------------------------
@@ -291,7 +262,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/suites", status_code=201)
+@app.post("/suites", status_code=201)
 async def create_suite(body: SuiteCreate):
     conn = _get_db()
     now = _now()
@@ -327,7 +298,7 @@ async def create_suite(body: SuiteCreate):
     }
 
 
-@_router.get("/suites")
+@app.get("/suites")
 async def list_suites(
     category: Optional[str] = None,
     limit: int = Query(50, ge=1, le=200),
@@ -358,7 +329,7 @@ async def list_suites(
     ]
 
 
-@_router.get("/suites/{suite_id}")
+@app.get("/suites/{suite_id}")
 async def get_suite(suite_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM suites WHERE id=?", (suite_id,)).fetchone()
@@ -382,7 +353,7 @@ async def get_suite(suite_id: str):
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/evaluations", status_code=201)
+@app.post("/evaluations", status_code=201)
 async def create_evaluation(body: EvaluationCreate):
     conn = _get_db()
     # Verify suite exists
@@ -409,7 +380,7 @@ async def create_evaluation(body: EvaluationCreate):
     }
 
 
-@_router.get("/evaluations")
+@app.get("/evaluations")
 async def list_evaluations(
     suite_id: Optional[str] = None,
     model_name: Optional[str] = None,
@@ -436,7 +407,7 @@ async def list_evaluations(
     return [dict(r) for r in rows]
 
 
-@_router.put("/evaluations/{evaluation_id}/complete")
+@app.put("/evaluations/{evaluation_id}/complete")
 async def complete_evaluation(evaluation_id: str, body: EvaluationComplete):
     conn = _get_db()
     now = _now()
@@ -456,7 +427,7 @@ async def complete_evaluation(evaluation_id: str, body: EvaluationComplete):
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/leaderboard")
+@app.get("/leaderboard")
 async def get_leaderboard(category: Optional[str] = None, limit: int = Query(50, ge=1, le=200)):
     conn = _get_db()
     q = """
@@ -482,7 +453,7 @@ async def get_leaderboard(category: Optional[str] = None, limit: int = Query(50,
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/skill-gaps")
+@app.get("/skill-gaps")
 async def get_skill_gaps():
     conn = _get_db()
     # Find categories where no model scores above 0.7
@@ -501,7 +472,7 @@ async def get_skill_gaps():
                     "best_score": r["best_score"] or 0.0,
                     "avg_score": r["avg_score"] or 0.0,
                     "gap": "No model meets threshold (0.7)",
-                },
+                }
             )
     conn.close()
     return gaps
@@ -512,16 +483,16 @@ async def get_skill_gaps():
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/stats")
+@app.get("/stats")
 async def get_stats():
     conn = _get_db()
     total_suites = conn.execute("SELECT COUNT(*) as c FROM suites").fetchone()["c"]
     total_evals = conn.execute("SELECT COUNT(*) as c FROM evaluations").fetchone()["c"]
     completed = conn.execute(
-        "SELECT COUNT(*) as c FROM evaluations WHERE status='completed'",
+        "SELECT COUNT(*) as c FROM evaluations WHERE status='completed'"
     ).fetchone()["c"]
     pending = conn.execute(
-        "SELECT COUNT(*) as c FROM evaluations WHERE status='pending'",
+        "SELECT COUNT(*) as c FROM evaluations WHERE status='pending'"
     ).fetchone()["c"]
     conn.close()
     return {
@@ -573,7 +544,7 @@ async def _broadcast_event(event_type: str, data: dict) -> None:
         _connected_ws.remove(ws)
 
 
-@_router.get("/events")
+@app.get("/events")
 async def _sse_events():
     async def _generator():
         while True:
@@ -584,7 +555,7 @@ async def _sse_events():
     return EventSourceResponse(_generator())
 
 
-@_router.get("/dashboard/summary")
+@app.get("/dashboard/summary")
 async def _dashboard_summary():
     """Aggregated summary optimized for dashboard consumption."""
     stats = await _get_stats_async()
@@ -616,9 +587,6 @@ async def _get_stats_async() -> dict:
 def _get_stats() -> dict:
     """Return basic service stats for real-time endpoints (sync fallback)."""
     return {"service": SERVICE_NAME, "port": PORT}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

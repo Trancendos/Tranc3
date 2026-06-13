@@ -379,16 +379,10 @@ class TestSemanticKnowledgeGraph:
 
         async def _test():
             svc = KnowledgeNode(
-                label="ServiceA",
-                semantic_type="service",
-                tags={"api"},
-                confidence=0.9,
+                label="ServiceA", semantic_type="service", tags={"api"}, confidence=0.9
             )
             dep = KnowledgeNode(
-                label="Database",
-                semantic_type="storage",
-                tags={"db"},
-                confidence=0.85,
+                label="Database", semantic_type="storage", tags={"db"}, confidence=0.85
             )
             sid = await kg.add_node(svc)
             did = await kg.add_node(dep)
@@ -427,7 +421,7 @@ class TestCausalReasoner:
                     effect="wet_road",
                     strength=CausalStrength.SUFFICIENT,
                     confidence=0.95,
-                ),
+                )
             )
             await cr.add_rule(
                 CausalRule(
@@ -435,7 +429,7 @@ class TestCausalReasoner:
                     effect="accident_risk",
                     strength=CausalStrength.CONTRIBUTING,
                     confidence=0.6,
-                ),
+                )
             )
             # observe(event, probability) — async
             await cr.observe("rain", 1.0)
@@ -459,7 +453,7 @@ class TestCausalReasoner:
                     effect="crash",
                     strength=CausalStrength.SUFFICIENT,
                     confidence=0.9,
-                ),
+                )
             )
             await cr.observe("crash", 1.0)
             # diagnose(effects=[...]) — async; result has .causes list of (event, prob) tuples
@@ -647,8 +641,8 @@ class TestSparkHandlerSmoke:
                     "key": "smoke:test:1",
                     "value": {"x": 42},
                     "topic": "smoke",
-                },
-            ),
+                }
+            )
         )
         assert result.get("ok") or result.get("error")  # Either ok or graceful error
 
@@ -666,8 +660,8 @@ class TestSparkHandlerSmoke:
             _handle_causal_predict(
                 {
                     "observations": {"rain": True},
-                },
-            ),
+                }
+            )
         )
         assert result.get("ok") or result.get("error")
 
@@ -678,8 +672,8 @@ class TestSparkHandlerSmoke:
             _handle_knowledge_graph_add(
                 {
                     "node": {"label": "Test Node", "semantic_type": "test"},
-                },
-            ),
+                }
+            )
         )
         assert result.get("ok") or result.get("error")
 

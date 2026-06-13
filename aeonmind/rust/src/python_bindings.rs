@@ -1,19 +1,46 @@
-/*
+"""
 AeonMind Rust Python Bindings — PyO3 Module Definitions.
 
 Exposes the Rust core functionality to Python via PyO3/maturin.
-Part of the Tranc3 Infinity Ecosystem.
-*/
-
-// pyo3 ? operator triggers this false-positive for From<PyErr> for PyErr
-#![allow(clippy::useless_conversion)]
+All structs and enums are annotated with #[pyclass] and methods
+with #[pymethods] for seamless Python interop.
+"""
 
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 
-use crate::adaptive::{AdaptiveConfig as RustAdaptiveConfig, AdaptiveMetaLearner};
-use crate::genetic::{EvolutionEngine, GeneticConfig as RustGeneticConfig};
+use crate::{Tier, SentinelChannel, AeonMindError, EntityType, AiComplex, AgentEntity, BotService};
 use crate::liquid::{LiquidReservoir, ReservoirConfig as RustReservoirConfig};
-use crate::quantum::{QuantumCircuitConfig as RustQuantumConfig, QuantumDecisionCircuit};
+use crate::genetic::{EvolutionEngine, GeneticConfig as RustGeneticConfig};
+use crate::quantum::{QuantumDecisionCircuit, QuantumCircuitConfig as RustQuantumConfig};
+use crate::adaptive::{AdaptiveMetaLearner, AdaptiveConfig as RustAdaptiveConfig};
+use crate::wasm_bridge::{WasmAgent, WasmAgentConfig as RustWasmConfig, FluidicAgentState, IntelligenceScore, ScoringWeights};
+
+// ── Tier & SentinelChannel PyO3 ─────────────────────────────────────────────
+
+#[pymethods]
+impl Tier {
+    #[getter]
+    fn value(&self) -> u8 {
+        *self as u8
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Tier::{:?}({})", self, *self as u8)
+    }
+}
+
+#[pymethods]
+impl SentinelChannel {
+    #[getter]
+    fn value(&self) -> &str {
+        self.as_str()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("SentinelChannel::{}", self.as_str())
+    }
+}
 
 // ── Liquid Reservoir PyO3 ───────────────────────────────────────────────────
 
@@ -25,21 +52,23 @@ pub struct PyLiquidReservoir {
 #[pymethods]
 impl PyLiquidReservoir {
     #[new]
-    #[pyo3(signature = (input_size=10, reservoir_size=200, spectral_radius=0.95, leak_rate=0.3))]
+    #[pyo3(signature = (input_size=10, reservoir_size=200, spectral_radius=0.95, leaking_rate=0.3, seed=None))]
     fn new(
         input_size: usize,
         reservoir_size: usize,
         spectral_radius: f64,
-        leak_rate: f64,
+        leaking_rate: f64,
+        seed: Option<u64>,
     ) -> PyResult<Self> {
         let config = RustReservoirConfig {
             input_size,
             reservoir_size,
             spectral_radius,
-            leak_rate,
+            leaking_rate,
             input_scaling: 1.0,
-            sparsity: 0.1,
-            ..Default::default()
+            connectivity: 0.1,
+            washout: 50,
+            seed,
         };
         Ok(Self {
             inner: LiquidReservoir::new(config),
@@ -47,7 +76,7 @@ impl PyLiquidReservoir {
     }
 
     fn step(&mut self, input_data: Vec<f64>) -> Vec<f64> {
-        self.inner.step(&input_data).to_vec()
+        self.inner.step(&input_data)
     }
 
     fn reset(&mut self) {
@@ -92,19 +121,14 @@ impl PyEvolutionEngine {
         }
     }
 
-    #[allow(clippy::useless_conversion)]
-    fn evolve(&mut self, fitness_fn: &Bound<'_, PyAny>) -> PyResult<f64> {
-        // Snapshot DNAs first to avoid borrow conflict during fitness assignment.
-        let dnas: Vec<Vec<f64>> = self
-            .inner
-            .population()
-            .iter()
-            .map(|ind| ind.dna().to_vec())
-            .collect();
-
+    fn evolve(&mut self, fitness_fn: &PyAny) -> PyResult<f64> {
+        let population = self.inner.population();
         let mut best_fitness = f64::NEG_INFINITY;
-        for (i, dna) in dnas.iter().enumerate() {
-            let result = fitness_fn.call1((dna.clone(),))?;
+
+        for i in 0..population.len() {
+            let dna = population[i].dna().to_vec();
+            let args = (dna,);
+            let result = fitness_fn.call1(args)?;
             let fitness: f64 = result.extract()?;
             if fitness > best_fitness {
                 best_fitness = fitness;
@@ -112,7 +136,7 @@ impl PyEvolutionEngine {
             self.inner.set_fitness(i, fitness);
         }
 
-        self.inner.advance_generation();
+        self.inner.evolve_generation();
         Ok(best_fitness)
     }
 
@@ -148,12 +172,12 @@ impl PyQuantumCircuit {
         }
     }
 
-    fn execute(&self) -> Vec<f64> {
-        self.inner.execute(None)
+    fn execute(&mut self) -> Vec<f64> {
+        self.inner.execute()
     }
 
-    fn decide(&self) -> usize {
-        self.inner.decide(None)
+    fn decide(&mut self) -> usize {
+        self.inner.decide()
     }
 
     fn n_qubits(&self) -> usize {
@@ -178,23 +202,21 @@ impl PyAdaptiveLearner {
     #[pyo3(signature = (n_params=32, learning_rate=0.01, memory_size=10))]
     fn new(n_params: usize, learning_rate: f64, memory_size: usize) -> Self {
         let config = RustAdaptiveConfig {
-            n_parameters: n_params,
             learning_rate,
-            history_size: memory_size,
+            memory_size,
             ..Default::default()
         };
         Self {
-            inner: AdaptiveMetaLearner::new(config),
+            inner: AdaptiveMetaLearner::new(n_params, config),
         }
     }
 
     fn step(&mut self, gradient: Vec<f64>) -> Vec<f64> {
-        self.inner.step(&gradient);
-        self.inner.parameters_array().to_vec()
+        self.inner.step(&gradient)
     }
 
     fn parameters(&self) -> Vec<f64> {
-        self.inner.parameters_array().to_vec()
+        self.inner.parameters().to_vec()
     }
 }
 

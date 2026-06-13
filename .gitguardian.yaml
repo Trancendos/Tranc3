@@ -9,9 +9,6 @@ secret:
   ignored_paths:
     - "tests/**"
     - "docs/reference/**"
-    - "cloudflare/**"
-    - "deploy/**"
-    - ".env.*.example"
 
   ignored_matches:
     - name: OpenAI test key fixture in test_adaptive_automation.py
@@ -24,19 +21,3 @@ secret:
       match: "private_key_pem=os.environ"
     - name: OCI adaptive provider — MinIO admin default (dev-only, not production)
       match: "minioadmin"
-    - name: UAT seed script — demo passwords for disposable test fixtures only (not production)
-      match: "uat-demo-admin-2024!"
-    - name: UAT seed script — demo user password fixture
-      match: "uat-demo-user-2024!"
-    - name: UAT seed script — demo operator password fixture
-      match: "uat-demo-operator-2024!"
-    - name: Cloudflare account ID — non-secret public infrastructure identifier visible in browser URL
-      match: "e0214028cb64d31232f5662548a55e4e"
-    - name: Cloudflare KV namespace — tranc3-ai AI_CACHE (non-secret resource binding)
-      match: "2a0e09cfd22741eeb3245607ce6e76fd"
-    - name: Cloudflare KV namespace — tranc3-ai TRANC3-SESSIONS (non-secret resource binding)
-      match: "f321bee2495547ad9e224522f214defd"
-    - name: Cloudflare KV namespace — trancendos-api-gateway CACHE (non-secret resource binding)
-      match: "aa064ae803e5423db7b517400187b693"
-    - name: Cloudflare D1 database ID — infinity-void (non-secret resource identifier)
-      match: "48e89d58-abd8-456b-a6ad-58ededaba597"

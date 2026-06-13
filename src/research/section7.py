@@ -97,7 +97,7 @@ class Section7:
             score = th_status.get("overall_score", 1.0)
             if score < 0.9:
                 recommendations.append(
-                    f"Compliance score {score:.0%} is below 90% threshold — review policy gaps.",
+                    f"Compliance score {score:.0%} is below 90% threshold — review policy gaps."
                 )
         except Exception as exc:
             logger.debug("section7: townhall unavailable: %s", exc)
@@ -110,12 +110,11 @@ class Section7:
             findings.append({"source": "cryptex", "data": cx_stats})
             sources.append("cryptex")
             high_signals = cx_stats.get("by_severity", {}).get(
-                ThreatSeverity.HIGH.value,
-                0,
+                ThreatSeverity.HIGH.value, 0
             ) + cx_stats.get("by_severity", {}).get(ThreatSeverity.CRITICAL.value, 0)
             if high_signals > 0:
                 recommendations.append(
-                    f"Cryptex has {high_signals} HIGH/CRITICAL threat signals — investigate.",
+                    f"Cryptex has {high_signals} HIGH/CRITICAL threat signals — investigate."
                 )
         except Exception as exc:
             logger.debug("section7: cryptex unavailable: %s", exc)
@@ -173,11 +172,11 @@ class Section7:
                     "source": "cryptex",
                     "recent_signals": [s.to_dict() for s in recent],
                     "stats": cx.stats(),
-                },
+                }
             )
             if cx.stats().get("blocked_ips", 0) > 0:
                 recommendations.append(
-                    f"{cx.stats()['blocked_ips']} IPs currently blocked by Cryptex.",
+                    f"{cx.stats()['blocked_ips']} IPs currently blocked by Cryptex."
                 )
         except Exception as exc:
             logger.debug("section7: cryptex unavailable: %s", exc)
@@ -191,7 +190,7 @@ class Section7:
                 {
                     "source": "observatory",
                     "security_events": [e.to_dict() for e in security_events],
-                },
+                }
             )
         except Exception as exc:
             logger.debug("section7: observatory unavailable: %s", exc)
@@ -213,9 +212,7 @@ class Section7:
         return self._reports.get(report_id)
 
     def recent(
-        self,
-        limit: int = 10,
-        report_type: Optional[ReportType] = None,
+        self, limit: int = 10, report_type: Optional[ReportType] = None
     ) -> List[ResearchReport]:
         reports = list(self._reports.values())
         if report_type:

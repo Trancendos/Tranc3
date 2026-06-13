@@ -38,44 +38,42 @@ import sqlite3
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
-
 # Phase 22: Infinity Ecosystem security integration
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
-from Dimensional.infinity.nomenclature import SentinelChannel
+from Dimensional.infinity.nomenclature import InfinityRole, SentinelChannel, Tier
 from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.rbac import RBACEngine
+from Dimensional.infinity.rbac import Permission, RBACEngine
 
 # Sentinel Station core
 from Dimensional.infinity.sentinel_config import sentinel_config
 from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
+    SentinelStation,
     SharedSSEGenerator,
     get_sentinel_station,
+)
+
+# Phase 22.4: Dimensional Services integration
+from Dimensional.dimensionals import (
+    DimensionalServiceBus,
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
 )
 
 # Phase 22.6: Smart Adaptive Intelligence + ReactiveState
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
 
-# Phase 22.4: Dimensional Services integration
-from Dimensional.sanitize import sanitize_for_log
-from src.entities.health_metadata import health_entity_block
-
 # Optional: ReactiveState for live Sentinel topology
 try:
     from src.fluidic.reactive_state import StateStore
-
     _REACTIVE_AVAILABLE = True
 except ImportError:
     _REACTIVE_AVAILABLE = False
@@ -86,13 +84,7 @@ except ImportError:
 
 PORT = int(os.environ.get("SENTINEL_PORT", "8041"))
 DB_PATH = os.environ.get("SENTINEL_DB_PATH", "data/sentinel_station.db")
-_jwt_secret_raw = os.environ.get("JWT_SECRET")
-if not _jwt_secret_raw:
-    raise RuntimeError(
-        "JWT_SECRET is not set. This service cannot validate tokens without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
-    )
-JWT_SECRET: str = _jwt_secret_raw
+JWT_SECRET = os.environ.get("JWT_SECRET", "")
 
 logger = logging.getLogger("sentinel-station-service")
 
@@ -127,14 +119,12 @@ if _REACTIVE_AVAILABLE:
     sentinel_topology_state = StateStore()
     # Set initial state
     try:
-        sentinel_topology_state.set(
-            {
-                "channels": {},
-                "subscribers": 0,
-                "events_published": 0,
-                "redis_connected": False,
-            },
-        )
+        sentinel_topology_state.set({
+            "channels": {},
+            "subscribers": 0,
+            "events_published": 0,
+            "redis_connected": False,
+        })
     except Exception:
         sentinel_topology_state = None
 else:
@@ -175,7 +165,7 @@ def _init_db() -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_event_log_channel ON event_log(channel);
         CREATE INDEX IF NOT EXISTS idx_event_log_created ON event_log(created_at);
-        """,
+        """
     )
     conn.close()
 
@@ -195,15 +185,9 @@ def _check_rbac(request: Request, endpoint: str, method: str) -> None:
     """Check RBAC access for the given endpoint/method. Raises 403 if denied."""
     user = _get_user(request)
     if not rbac_engine.check_access(user, endpoint, method):
-        logger.warning(
-            "RBAC denied method=%s endpoint=%s user=%s",
-            sanitize_for_log(method),
-            sanitize_for_log(endpoint),
-            sanitize_for_log(user.get("sub", "anonymous")),
-        )
         raise HTTPException(
             status_code=403,
-            detail="Access denied: insufficient permissions",
+            detail=f"Access denied: insufficient permissions for {method} {endpoint}",
         )
 
 
@@ -222,8 +206,8 @@ async def _lifespan(app: FastAPI):
     await sentinel.start()
     logger.info(
         "Sentinel Station started (backend: %s, port: %d)",
-        sanitize_for_log("redis" if sentinel.is_redis_connected else "fallback"),
-        sanitize_for_log(PORT),
+        "redis" if sentinel.is_redis_connected else "fallback",
+        PORT,
     )
 
     # Create shared SSE generator for broadcasting events
@@ -264,34 +248,29 @@ async def _lifespan(app: FastAPI):
                     )
                     # Update reactive topology state
                     if sentinel_topology_state is not None:
-                        sentinel_topology_state.set(
-                            {
-                                "channels": stats.get("channel_stats", {}),
-                                "subscribers": stats.get("total_subscribers", 0),
-                                "events_published": stats.get("events_published", 0),
-                                "redis_connected": sentinel.is_redis_connected,
-                            },
-                        )
+                        sentinel_topology_state.set({
+                            "channels": stats.get("channel_stats", {}),
+                            "subscribers": stats.get("total_subscribers", 0),
+                            "events_published": stats.get("events_published", 0),
+                            "redis_connected": sentinel.is_redis_connected,
+                        })
                     worker_kit.health.record_fire("topology_updater")
 
                 if worker_kit.health.should_fire("health_reporter"):
                     summary = worker_kit.health.get_health_summary()
-                    summary_dict = summary.to_dict()
-                    worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
+                    summary_dict = summary.to_dict(); worker_kit.health.update_health(summary_dict.get("health_score", 1.0))
                     worker_kit.health.record_fire("health_reporter")
                     # Broadcast sentinel health to the platform channel
-                    await sentinel.publish(
-                        SentinelEvent(
-                            channel=SentinelChannel.PLATFORM,
-                            event_type="sentinel_health_report",
-                            source="sentinel_station",
-                            payload=summary_dict,
-                        ),
-                    )
+                    await sentinel.publish(SentinelEvent(
+                        channel=SentinelChannel.PLATFORM,
+                        event_type="sentinel_health_report",
+                        source="sentinel_station",
+                        payload=summary_dict,
+                    ))
             except asyncio.CancelledError:
                 break
             except Exception as exc:
-                logger.debug("Sentinel background loop error: %s", sanitize_for_log(exc))
+                logger.debug("Sentinel background loop error: %s", exc)
 
     _bg_task = asyncio.create_task(_bg_loop())
 
@@ -336,15 +315,9 @@ app.add_middleware(
     jwt_secret=JWT_SECRET,
 )
 
-_cors_origins = [
-    o.strip()
-    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
-    if o.strip()
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
+    allow_origins=[os.environ.get("CORS_ORIGINS", "*")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -383,7 +356,6 @@ async def health():
     sentinel_health = await sentinel.health_check()
     health_summary = worker_kit.health.get_health_summary()
     return {
-        "entity": health_entity_block(8041, "unknown"),
         "status": "ok",
         "service": "sentinel-station-service",
         "version": "0.8.0",
@@ -440,10 +412,9 @@ async def publish_event(body: EventPublish, request: Request):
     # Validate channel name
     valid_channels = [ch.value for ch in SentinelChannel]
     if body.channel not in valid_channels:
-        logger.warning("Invalid channel rejected: %s", sanitize_for_log(body.channel))
         raise HTTPException(
             400,
-            detail="Invalid channel",
+            detail=f"Invalid channel: {body.channel}. Valid channels: {', '.join(valid_channels)}",
         )
 
     # Publish through Sentinel Station
@@ -498,7 +469,7 @@ async def publish_events_batch(events: list[EventPublish], request: Request):
 
     for i, body in enumerate(events):
         if body.channel not in valid_channels:
-            errors.append({"index": i, "error": "Invalid channel"})
+            errors.append({"index": i, "error": f"Invalid channel: {body.channel}"})
             continue
 
         event = await sentinel.publish(
@@ -507,13 +478,11 @@ async def publish_events_batch(events: list[EventPublish], request: Request):
             event_type=body.event_type,
             source=body.source,
         )
-        published.append(
-            {
-                "id": event.id,
-                "channel": event.channel,
-                "event_type": event.event_type,
-            },
-        )
+        published.append({
+            "id": event.id,
+            "channel": event.channel,
+            "event_type": event.event_type,
+        })
 
     return {
         "published": published,
@@ -567,14 +536,13 @@ async def create_subscription(body: SubscriptionCreate, request: Request):
 
     valid_channels = [ch.value for ch in SentinelChannel]
     if body.channel not in valid_channels:
-        logger.warning("Invalid channel rejected: %s", sanitize_for_log(body.channel))
         raise HTTPException(
             400,
-            detail="Invalid channel",
+            detail=f"Invalid channel: {body.channel}. Valid channels: {', '.join(valid_channels)}",
         )
 
     # Subscribe through Sentinel Station
-    await sentinel.subscribe(body.channel)
+    queue = await sentinel.subscribe(body.channel)
 
     # Persist subscription record
     sub_id = uuid.uuid4().hex[:16]
@@ -607,7 +575,9 @@ async def list_subscriptions(request: Request):
 
     db = _get_db()
     try:
-        rows = db.execute("SELECT * FROM subscriptions ORDER BY created_at DESC").fetchall()
+        rows = db.execute(
+            "SELECT * FROM subscriptions ORDER BY created_at DESC"
+        ).fetchall()
         return [dict(r) for r in rows]
     finally:
         db.close()
@@ -671,10 +641,9 @@ async def channel_stats(channel_name: str, request: Request):
 
     valid_channels = [ch.value for ch in SentinelChannel]
     if channel_name not in valid_channels:
-        logger.warning("Invalid channel rejected: %s", sanitize_for_log(channel_name))
         raise HTTPException(
             400,
-            detail="Invalid channel",
+            detail=f"Invalid channel: {channel_name}. Valid channels: {', '.join(valid_channels)}",
         )
 
     stats = sentinel.get_stats()
@@ -706,12 +675,10 @@ async def _sentinel_event_generator():
             try:
                 yield {
                     "event": "keepalive",
-                    "data": json.dumps(
-                        {
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
-                            "service": "sentinel-station",
-                        },
-                    ),
+                    "data": json.dumps({
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "service": "sentinel-station",
+                    }),
                 }
                 await asyncio.sleep(30)
             except asyncio.CancelledError:

@@ -28,21 +28,10 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    FastAPI,
-    Header,
-    HTTPException,
-    Query,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
-
-from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -244,19 +233,6 @@ app = FastAPI(title="Tranc3 Workflow Engine Service", version="0.1.0", lifespan=
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
@@ -264,12 +240,7 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "ok",
-        "service": "workflow-engine-service",
-        "port": 8034,
-        "entity": health_entity_block(8034, "workflow-engine-service"),
-    }
+    return {"status": "ok", "service": "workflow-engine-service", "port": 8034}
 
 
 # ---------------------------------------------------------------------------
@@ -277,7 +248,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/workflows", status_code=201)
+@app.post("/workflows", status_code=201)
 async def create_workflow(body: WorkflowCreate):
     # Validate DAG
     if body.steps and _detect_cycle(body.steps):
@@ -312,12 +283,11 @@ async def create_workflow(body: WorkflowCreate):
     }
 
 
-@_router.get("/workflows")
+@app.get("/workflows")
 async def list_workflows(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM workflows ORDER BY updated_at DESC LIMIT ? OFFSET ?",
-        (limit, offset),
+        "SELECT * FROM workflows ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset)
     ).fetchall()
     conn.close()
     return [
@@ -334,7 +304,7 @@ async def list_workflows(limit: int = Query(50, ge=1, le=200), offset: int = Que
     ]
 
 
-@_router.get("/workflows/{workflow_id}")
+@app.get("/workflows/{workflow_id}")
 async def get_workflow(workflow_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM workflows WHERE id=?", (workflow_id,)).fetchone()
@@ -357,7 +327,7 @@ async def get_workflow(workflow_id: str):
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/workflows/{workflow_id}/runs", status_code=201)
+@app.post("/workflows/{workflow_id}/runs", status_code=201)
 async def start_run(workflow_id: str, body: RunStart = None):
     conn = _get_db()
     wf = conn.execute("SELECT * FROM workflows WHERE id=?", (workflow_id,)).fetchone()
@@ -408,7 +378,7 @@ async def start_run(workflow_id: str, body: RunStart = None):
     }
 
 
-@_router.get("/runs/{run_id}")
+@app.get("/runs/{run_id}")
 async def get_run(run_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM runs WHERE id=?", (run_id,)).fetchone()
@@ -430,7 +400,7 @@ async def get_run(run_id: str):
     }
 
 
-@_router.put("/runs/{run_id}/steps/{step_id}/complete")
+@app.put("/runs/{run_id}/steps/{step_id}/complete")
 async def complete_step(run_id: str, step_id: str, body: StepComplete = None):
     conn = _get_db()
     run = conn.execute("SELECT * FROM runs WHERE id=?", (run_id,)).fetchone()
@@ -481,7 +451,7 @@ async def complete_step(run_id: str, step_id: str, body: StepComplete = None):
     }
 
 
-@_router.put("/runs/{run_id}/steps/{step_id}/fail")
+@app.put("/runs/{run_id}/steps/{step_id}/fail")
 async def fail_step(run_id: str, step_id: str, body: StepFail = None):
     conn = _get_db()
     run = conn.execute("SELECT * FROM runs WHERE id=?", (run_id,)).fetchone()
@@ -508,7 +478,7 @@ async def fail_step(run_id: str, step_id: str, body: StepFail = None):
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/runs/{run_id}/checkpoint", status_code=201)
+@app.post("/runs/{run_id}/checkpoint", status_code=201)
 async def create_checkpoint(run_id: str, body: CheckpointCreate):
     conn = _get_db()
     run = conn.execute("SELECT * FROM runs WHERE id=?", (run_id,)).fetchone()
@@ -533,12 +503,11 @@ async def create_checkpoint(run_id: str, body: CheckpointCreate):
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/runs/{run_id}/logs")
+@app.get("/runs/{run_id}/logs")
 async def get_run_logs(run_id: str):
     conn = _get_db()
     rows = conn.execute(
-        "SELECT * FROM checkpoints WHERE run_id=? ORDER BY created_at",
-        (run_id,),
+        "SELECT * FROM checkpoints WHERE run_id=? ORDER BY created_at", (run_id,)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -549,7 +518,7 @@ async def get_run_logs(run_id: str):
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/stats")
+@app.get("/stats")
 async def get_stats():
     conn = _get_db()
     total_wf = conn.execute("SELECT COUNT(*) as c FROM workflows").fetchone()["c"]
@@ -608,7 +577,7 @@ async def _broadcast_event(event_type: str, data: dict) -> None:
         _connected_ws.remove(ws)
 
 
-@_router.get("/events")
+@app.get("/events")
 async def _sse_events():
     async def _generator():
         while True:
@@ -619,7 +588,7 @@ async def _sse_events():
     return EventSourceResponse(_generator())
 
 
-@_router.get("/dashboard/summary")
+@app.get("/dashboard/summary")
 async def _dashboard_summary():
     """Aggregated summary optimized for dashboard consumption."""
     stats = await _get_stats_async()
@@ -651,9 +620,6 @@ async def _get_stats_async() -> dict:
 def _get_stats() -> dict:
     """Return basic service stats for real-time endpoints (sync fallback)."""
     return {"service": SERVICE_NAME, "port": PORT}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

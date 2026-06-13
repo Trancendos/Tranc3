@@ -13,19 +13,16 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import sqlite3
 import time
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8023
 WORKER_NAME = "cache-service"
@@ -41,15 +38,11 @@ logger = logging.getLogger(WORKER_NAME)
 # ---------------------------------------------------------------------------
 
 
-@contextmanager
-def get_conn():
+def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
-    try:
-        yield conn
-    finally:
-        conn.close()
+    return conn
 
 
 def init_db() -> None:
@@ -182,42 +175,11 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
     now = time.time()
     active = sum(1 for _, (_, exp) in _store.items() if exp is None or exp > now)
     return {
-        "entity": health_entity_block(8023, "cache-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -226,7 +188,7 @@ async def health():
     }
 
 
-@_router.get("/cache/{key}", response_model=GetResponse)
+@app.get("/cache/{key}", response_model=GetResponse)
 async def get_key(key: str):
     now = time.time()
     if key not in _store:
@@ -240,7 +202,7 @@ async def get_key(key: str):
     return GetResponse(key=key, value=value, ttl_remaining=ttl_remaining)
 
 
-@_router.put("/cache/{key}", response_model=SetResponse)
+@app.put("/cache/{key}", response_model=SetResponse)
 async def set_key(key: str, req: SetRequest):
     expires_at = (time.time() + req.ttl) if req.ttl else None
     _store[key] = (req.value, expires_at)
@@ -251,7 +213,7 @@ async def set_key(key: str, req: SetRequest):
     return SetResponse(key=key, ttl=req.ttl, expires_at=exp_str)
 
 
-@_router.delete("/cache/{key}")
+@app.delete("/cache/{key}")
 async def delete_key(key: str):
     if key not in _store:
         raise HTTPException(status_code=404, detail="Key not found")
@@ -260,7 +222,7 @@ async def delete_key(key: str):
     return {"deleted": key}
 
 
-@_router.get("/cache/{key}/exists")
+@app.get("/cache/{key}/exists")
 async def key_exists(key: str):
     now = time.time()
     exists = key in _store
@@ -272,7 +234,7 @@ async def key_exists(key: str):
     return {"key": key, "exists": exists}
 
 
-@_router.post("/cache/mset")
+@app.post("/cache/mset")
 async def mset(req: MultiSetRequest):
     results = []
     for k, v in req.entries.items():
@@ -283,7 +245,7 @@ async def mset(req: MultiSetRequest):
     return {"set": results, "count": len(results)}
 
 
-@_router.post("/cache/mget")
+@app.post("/cache/mget")
 async def mget(keys: List[str]):
     now = time.time()
     result = {}
@@ -295,7 +257,7 @@ async def mget(keys: List[str]):
     return result
 
 
-@_router.get("/cache", response_model=KeysResponse)
+@app.get("/cache", response_model=KeysResponse)
 async def list_keys(pattern: Optional[str] = Query(None, description="Glob-style prefix filter")):
     now = time.time()
     keys = [k for k, (_, exp) in _store.items() if exp is None or exp > now]
@@ -304,7 +266,7 @@ async def list_keys(pattern: Optional[str] = Query(None, description="Glob-style
     return KeysResponse(keys=keys, count=len(keys))
 
 
-@_router.delete("/cache")
+@app.delete("/cache")
 async def flush():
     count = len(_store)
     _store.clear()
@@ -312,7 +274,7 @@ async def flush():
     return {"flushed": count}
 
 
-@_router.get("/stats")
+@app.get("/stats")
 async def stats():
     now = time.time()
     active = [(k, exp) for k, (_, exp) in _store.items() if exp is None or exp > now]
@@ -323,9 +285,6 @@ async def stats():
         "with_expiry": sum(1 for _, exp in active if exp is not None),
         "expiring_in_60s": len(expired_soon),
     }
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

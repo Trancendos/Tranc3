@@ -128,10 +128,10 @@ class AgentRuntime:
         self._results: Dict[str, Any] = {}
 
         # Lazy-loaded components (initialized on start)
-        self._task_decomposer: Optional[Any] = None
-        self._tool_bridge: Optional[Any] = None
-        self._memory_stream: Optional[Any] = None
-        self._goal_manager: Optional[Any] = None
+        self._task_decomposer = None
+        self._tool_bridge = None
+        self._memory_stream = None
+        self._goal_manager = None
 
         # Observers
         self._state_observers: List[Callable[[AgentState, AgentState], None]] = []
@@ -202,10 +202,7 @@ class AgentRuntime:
     # -----------------------------------------------------------------------
 
     async def assign_goal(
-        self,
-        description: str,
-        priority: int = 5,
-        metadata: Optional[Dict] = None,
+        self, description: str, priority: int = 5, metadata: Optional[Dict] = None
     ) -> str:
         """
         Assign a new goal to the agent. Returns the goal ID.
@@ -216,7 +213,6 @@ class AgentRuntime:
         if self._goal_manager is None:
             self._init_components()
 
-        assert self._goal_manager is not None  # noqa: S101 — set by _init_components()
         goal_id = await self._goal_manager.add_goal(
             description=description,
             priority=priority,
@@ -261,10 +257,6 @@ class AgentRuntime:
 
         # Decompose if needed
         self._set_state(AgentState.PLANNING)
-        if self._task_decomposer is None:
-            await self._goal_manager.mark_failed(active_goal.goal_id, "Task decomposer unavailable")
-            self._total_errors += 1
-            return None
         decomposition = await self._task_decomposer.decompose(active_goal.description)
 
         if not decomposition.subtasks:
@@ -286,8 +278,7 @@ class AgentRuntime:
 
                 if step.status == "completed":
                     await self._goal_manager.update_progress(
-                        active_goal.goal_id,
-                        increment=1.0 / len(decomposition.subtasks),
+                        active_goal.goal_id, increment=1.0 / len(decomposition.subtasks)
                     )
                 break
 

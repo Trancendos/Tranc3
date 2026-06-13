@@ -39,24 +39,19 @@ def _import_worker(module_dotted: str, file_path: Path):
 
 grid_mod = _import_worker("the_grid_worker", _TRANC3_ROOT / "workers" / "the-grid" / "worker.py")
 products_mod = _import_worker(
-    "products_service_worker",
-    _TRANC3_ROOT / "workers" / "products-service" / "worker.py",
+    "products_service_worker", _TRANC3_ROOT / "workers" / "products-service" / "worker.py"
 )
 orders_mod = _import_worker(
-    "orders_service_worker",
-    _TRANC3_ROOT / "workers" / "orders-service" / "worker.py",
+    "orders_service_worker", _TRANC3_ROOT / "workers" / "orders-service" / "worker.py"
 )
 payments_mod = _import_worker(
-    "payments_service_worker",
-    _TRANC3_ROOT / "workers" / "payments-service" / "worker.py",
+    "payments_service_worker", _TRANC3_ROOT / "workers" / "payments-service" / "worker.py"
 )
 files_mod = _import_worker(
-    "files_service_worker",
-    _TRANC3_ROOT / "workers" / "files-service" / "worker.py",
+    "files_service_worker", _TRANC3_ROOT / "workers" / "files-service" / "worker.py"
 )
 identity_mod = _import_worker(
-    "identity_service_worker",
-    _TRANC3_ROOT / "workers" / "identity-service" / "worker.py",
+    "identity_service_worker", _TRANC3_ROOT / "workers" / "identity-service" / "worker.py"
 )
 
 
@@ -183,9 +178,7 @@ class TestGridHTTPEndpoints:
         test_engine = grid_mod.WorkflowEngine(test_db)
 
         with patch.object(grid_mod, "db", test_db), patch.object(grid_mod, "engine", test_engine):
-            secret = getattr(grid_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            client = TestClient(grid_mod.app, headers=headers)
+            client = TestClient(grid_mod.app)
             yield client
 
     def test_health_endpoint(self, grid_client):
@@ -336,9 +329,7 @@ class TestGenericCRUDWorker:
         db_path = tmp_path / "test_products.db"
         test_db = products_mod.ProductsDatabase(db_path=db_path)
         with patch.object(products_mod, "db", test_db):
-            secret = getattr(products_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            client = TestClient(products_mod.app, headers=headers)
+            client = TestClient(products_mod.app)
             yield client
 
     @pytest.fixture
@@ -346,9 +337,7 @@ class TestGenericCRUDWorker:
         db_path = tmp_path / "test_orders.db"
         test_db = orders_mod.OrdersDatabase(db_path=db_path)
         with patch.object(orders_mod, "db", test_db):
-            secret = getattr(orders_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            client = TestClient(orders_mod.app, headers=headers)
+            client = TestClient(orders_mod.app)
             yield client
 
     @pytest.fixture
@@ -356,9 +345,7 @@ class TestGenericCRUDWorker:
         db_path = tmp_path / "test_payments.db"
         test_db = payments_mod.PaymentsDatabase(db_path=db_path)
         with patch.object(payments_mod, "db", test_db):
-            secret = getattr(payments_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            client = TestClient(payments_mod.app, headers=headers)
+            client = TestClient(payments_mod.app)
             yield client
 
     @pytest.fixture
@@ -366,9 +353,7 @@ class TestGenericCRUDWorker:
         db_path = tmp_path / "test_files.db"
         test_db = files_mod.FilesDatabase(db_path=db_path)
         with patch.object(files_mod, "db", test_db):
-            secret = getattr(files_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            client = TestClient(files_mod.app, headers=headers)
+            client = TestClient(files_mod.app)
             yield client
 
     @pytest.fixture
@@ -376,9 +361,7 @@ class TestGenericCRUDWorker:
         db_path = tmp_path / "test_identity.db"
         test_db = identity_mod.IdentitiesDatabase(db_path=db_path)
         with patch.object(identity_mod, "db", test_db):
-            secret = getattr(identity_mod, "_INTERNAL_SECRET", "")
-            headers = {"X-Internal-Secret": secret} if secret else {}
-            client = TestClient(identity_mod.app, headers=headers)
+            client = TestClient(identity_mod.app)
             yield client
 
     # Products Service Tests
@@ -479,8 +462,7 @@ class TestGenericCRUDWorker:
 
     def test_orders_update(self, orders_client):
         create = orders_client.post(
-            "/",
-            json={"user_id": "user-123", "total": 10.0, "status": "pending"},
+            "/", json={"user_id": "user-123", "total": 10.0, "status": "pending"}
         )
         order_id = create.json()["order_id"]
 
@@ -530,8 +512,7 @@ class TestGenericCRUDWorker:
 
     def test_payments_get(self, payments_client):
         create = payments_client.post(
-            "/",
-            json={"order_id": "order-123", "user_id": "user-123", "amount": 50.0},
+            "/", json={"order_id": "order-123", "user_id": "user-123", "amount": 50.0}
         )
         payment_id = create.json()["payment_id"]
 
@@ -558,8 +539,7 @@ class TestGenericCRUDWorker:
 
     def test_payments_delete(self, payments_client):
         create = payments_client.post(
-            "/",
-            json={"order_id": "order-123", "user_id": "user-123", "amount": 5.0},
+            "/", json={"order_id": "order-123", "user_id": "user-123", "amount": 5.0}
         )
         payment_id = create.json()["payment_id"]
 
@@ -591,12 +571,10 @@ class TestGenericCRUDWorker:
 
     def test_files_list(self, files_client):
         files_client.post(
-            "/",
-            json={"filename": "file1.txt", "size_bytes": 100, "path": "/files/file1.txt"},
+            "/", json={"filename": "file1.txt", "size_bytes": 100, "path": "/files/file1.txt"}
         )
         files_client.post(
-            "/",
-            json={"filename": "file2.txt", "size_bytes": 200, "path": "/files/file2.txt"},
+            "/", json={"filename": "file2.txt", "size_bytes": 200, "path": "/files/file2.txt"}
         )
 
         response = files_client.get("/")
@@ -606,8 +584,7 @@ class TestGenericCRUDWorker:
 
     def test_files_get(self, files_client):
         create = files_client.post(
-            "/",
-            json={"filename": "getme.pdf", "size_bytes": 512, "path": "/files/getme.pdf"},
+            "/", json={"filename": "getme.pdf", "size_bytes": 512, "path": "/files/getme.pdf"}
         )
         file_id = create.json()["file_id"]
 
@@ -618,8 +595,7 @@ class TestGenericCRUDWorker:
 
     def test_files_update(self, files_client):
         create = files_client.post(
-            "/",
-            json={"filename": "update.pdf", "size_bytes": 100, "path": "/files/update.pdf"},
+            "/", json={"filename": "update.pdf", "size_bytes": 100, "path": "/files/update.pdf"}
         )
         file_id = create.json()["file_id"]
 
@@ -629,8 +605,7 @@ class TestGenericCRUDWorker:
 
     def test_files_delete(self, files_client):
         create = files_client.post(
-            "/",
-            json={"filename": "delete.pdf", "size_bytes": 50, "path": "/files/delete.pdf"},
+            "/", json={"filename": "delete.pdf", "size_bytes": 50, "path": "/files/delete.pdf"}
         )
         file_id = create.json()["file_id"]
 
@@ -662,12 +637,10 @@ class TestGenericCRUDWorker:
 
     def test_identity_list(self, identity_client):
         identity_client.post(
-            "/",
-            json={"user_id": "user-1", "provider": "local", "provider_id": "local-1"},
+            "/", json={"user_id": "user-1", "provider": "local", "provider_id": "local-1"}
         )
         identity_client.post(
-            "/",
-            json={"user_id": "user-2", "provider": "local", "provider_id": "local-2"},
+            "/", json={"user_id": "user-2", "provider": "local", "provider_id": "local-2"}
         )
 
         response = identity_client.get("/")
@@ -677,8 +650,7 @@ class TestGenericCRUDWorker:
 
     def test_identity_get(self, identity_client):
         create = identity_client.post(
-            "/",
-            json={"user_id": "user-123", "provider": "local", "provider_id": "local-123"},
+            "/", json={"user_id": "user-123", "provider": "local", "provider_id": "local-123"}
         )
         identity_id = create.json()["identity_id"]
 
@@ -705,8 +677,7 @@ class TestGenericCRUDWorker:
 
     def test_identity_delete(self, identity_client):
         create = identity_client.post(
-            "/",
-            json={"user_id": "user-123", "provider": "local", "provider_id": "local-123"},
+            "/", json={"user_id": "user-123", "provider": "local", "provider_id": "local-123"}
         )
         identity_id = create.json()["identity_id"]
 

@@ -181,10 +181,7 @@ class DefenseEngine:
         self._blocked_count = 0
         self._allowed_count = 0
         self._seed_default_firewall_rules()
-        logger.info(
-            "DefenseEngine initialized with %d default rules",
-            sanitize_for_log(len(self._firewall_rules)),
-        )
+        logger.info("DefenseEngine initialized with %d default rules", len(self._firewall_rules))
 
     # ─── Firewall ────────────────────────────────────────────
 
@@ -217,8 +214,8 @@ class DefenseEngine:
         logger.info(
             "Firewall rule added: %s (priority=%d, action=%s)",
             sanitize_for_log(name),
-            sanitize_for_log(priority),
-            sanitize_for_log(action.value),
+            priority,
+            action.value,
         )
         return rule
 
@@ -317,7 +314,7 @@ class DefenseEngine:
         logger.warning(
             "Security incident created: %s (severity=%s)",
             sanitize_for_log(title),
-            sanitize_for_log(severity.value),
+            severity.value,
         )
         return incident
 

@@ -50,17 +50,12 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
-
-from Dimensional.dimensionals import (
-    get_dimensional_bus,
-    get_dimensional_registry,
-    get_underverse_registry,
-)
 
 # Phase 22: Infinity Ecosystem security
 from Dimensional.infinity.auth_gateway import AuthGatewayMiddleware
@@ -69,25 +64,31 @@ from Dimensional.infinity.nomenclature import (
     INFINITY_LOCATIONS,
     InfinityLocation,
     InfinityRole,
+    Pillar,
     SentinelChannel,
     Tier,
     TransferSystem,
 )
 from Dimensional.infinity.owasp_hardening import OWASPHardeningMiddleware
-from Dimensional.infinity.rbac import RBACEngine
+from Dimensional.infinity.rbac import Permission, RBACEngine
 
 # Phase 22.3: Sentinel Station event bus
 from Dimensional.infinity.sentinel_station import (
     SentinelEvent,
+    SentinelStation,
     get_sentinel_station,
+)
+
+# Phase 22.4: Dimensional Services
+from Dimensional.dimensionals import (
+    DimensionalServiceBus,
+    get_dimensional_bus,
+    get_dimensional_registry,
+    get_underverse_registry,
 )
 
 # Phase 22.6: Smart Adaptive Intelligence
 from Dimensional.infinity.worker_integration import InfinityWorkerKit
-
-# Phase 22.4: Dimensional Services
-from Dimensional.sanitize import sanitize_for_log
-from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -95,22 +96,13 @@ from src.entities.health_metadata import health_entity_block
 
 PORT = int(os.environ.get("INFINITY_PORTAL_PORT", "8042"))
 DB_PATH = os.environ.get("INFINITY_PORTAL_DB_PATH", "data/infinity_portal.db")
-_jwt_secret_raw = os.environ.get("JWT_SECRET")
-if not _jwt_secret_raw:
-    raise RuntimeError(
-        "JWT_SECRET is not set. This service cannot validate tokens without it. "
-        'Generate one: python -c "import secrets; print(secrets.token_hex(32))"',
-    )
-JWT_SECRET: str = _jwt_secret_raw
+JWT_SECRET = os.environ.get("JWT_SECRET", "")
 
 # Upstream service ports
 AUTH_SERVICE_PORT = int(os.environ.get("AUTH_SERVICE_PORT", "8005"))
 AUTH_SERVICE_URL = os.environ.get("AUTH_SERVICE_URL", f"http://localhost:{AUTH_SERVICE_PORT}")
 GATEWAY_SERVICE_PORT = int(os.environ.get("GATEWAY_SERVICE_PORT", "8040"))
-GATEWAY_SERVICE_URL = os.environ.get(
-    "GATEWAY_SERVICE_URL",
-    f"http://localhost:{GATEWAY_SERVICE_PORT}",
-)
+GATEWAY_SERVICE_URL = os.environ.get("GATEWAY_SERVICE_URL", f"http://localhost:{GATEWAY_SERVICE_PORT}")
 
 logger = logging.getLogger("infinity-portal-service")
 
@@ -216,7 +208,6 @@ db = PortalDatabase()
 
 class PortalLogin(BaseModel):
     """Login request for the Infinity Portal."""
-
     username: str = Field(min_length=3, max_length=50)
     password: str = Field(min_length=1, max_length=128)
     totp_code: str | None = None
@@ -225,7 +216,6 @@ class PortalLogin(BaseModel):
 
 class PortalRegister(BaseModel):
     """Registration request for the Infinity Portal."""
-
     username: str = Field(min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
@@ -235,7 +225,6 @@ class PortalRegister(BaseModel):
 
 class PortalSessionResponse(BaseModel):
     """Response after successful login/registration."""
-
     session_id: str
     access_token: str
     refresh_token: str
@@ -253,7 +242,6 @@ class PortalSessionResponse(BaseModel):
 
 class GateRoutingResponse(BaseModel):
     """Response from the Infinity Gate routing."""
-
     user_id: str
     username: str
     role: str
@@ -269,7 +257,6 @@ class GateRoutingResponse(BaseModel):
 
 class PortalStatusResponse(BaseModel):
     """Current portal status and configuration."""
-
     status: str
     portal_name: str
     ecosystem_name: str
@@ -354,11 +341,7 @@ class InfinityGate:
         infinity_role = cls.ROLE_INFINITY_ROLE_MAP.get(role_lower, InfinityRole.USER)
 
         # Determine transfer system based on destination
-        if destination in (
-            InfinityLocation.ADMIN,
-            InfinityLocation.ARCADIA,
-            InfinityLocation.CITADEL,
-        ):
+        if destination in (InfinityLocation.ADMIN, InfinityLocation.ARCADIA, InfinityLocation.CITADEL):
             transfer = TransferSystem.BRIDGE
         elif destination in (InfinityLocation.CENTRAL,):
             transfer = TransferSystem.NEXUS
@@ -424,12 +407,12 @@ async def call_auth_service(method: str, path: str, json_data: dict | None = Non
         raise HTTPException(
             status_code=503,
             detail="Infinity Auth service unavailable. Please try again later.",
-        ) from None
+        )
     except httpx.TimeoutException:
         raise HTTPException(
             status_code=504,
             detail="Infinity Auth service timeout. Please try again later.",
-        ) from None
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -463,19 +446,17 @@ async def _lifespan(app: FastAPI):
     underverse_registry.heartbeat("session_manager")
 
     # Publish portal startup event
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.PLATFORM,
-            event_type="portal_started",
-            source="infinity_portal",
-            payload={
-                "port": PORT,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "smart_adaptive": True,
-                "subsystems": list(worker_kit.get_kit_stats().get("subsystems", {}).keys()),
-            },
-        ),
-    )
+    await sentinel.publish(SentinelEvent(
+        channel=SentinelChannel.PLATFORM,
+        event_type="portal_started",
+        source="infinity_portal",
+        payload={
+            "port": PORT,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "smart_adaptive": True,
+            "subsystems": list(worker_kit.get_kit_stats().get("subsystems", {}).keys()),
+        },
+    ))
 
     logger.info("Infinity Portal ready — the front door to the Infinity Ecosystem ✨")
 
@@ -487,7 +468,7 @@ async def _lifespan(app: FastAPI):
                 # Session cleaner daemon
                 if worker_kit.health.should_fire("session_cleaner"):
                     active = db.execute(
-                        "SELECT COUNT(*) as cnt FROM portal_sessions WHERE is_active = 1",
+                        "SELECT COUNT(*) as cnt FROM portal_sessions WHERE is_active = 1"
                     ).fetchone()["cnt"]
                     worker_kit.health.record_metric("portal_active_sessions", float(active))
                     worker_kit.health.record_fire("session_cleaner")
@@ -501,14 +482,12 @@ async def _lifespan(app: FastAPI):
                     worker_kit.health.record_fire("health_reporter")
 
                     # Publish health to Sentinel
-                    await sentinel.publish(
-                        SentinelEvent(
-                            channel=SentinelChannel.PLATFORM,
-                            event_type="health_report",
-                            source="infinity_portal",
-                            payload=summary_dict,
-                        ),
-                    )
+                    await sentinel.publish(SentinelEvent(
+                        channel=SentinelChannel.PLATFORM,
+                        event_type="health_report",
+                        source="infinity_portal",
+                        payload=summary_dict,
+                    ))
 
             except asyncio.CancelledError:
                 break
@@ -528,14 +507,12 @@ async def _lifespan(app: FastAPI):
         pass
 
     # Publish shutdown event
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.PLATFORM,
-            event_type="portal_stopping",
-            source="infinity_portal",
-            payload={"timestamp": datetime.now(timezone.utc).isoformat()},
-        ),
-    )
+    await sentinel.publish(SentinelEvent(
+        channel=SentinelChannel.PLATFORM,
+        event_type="portal_stopping",
+        source="infinity_portal",
+        payload={"timestamp": datetime.now(timezone.utc).isoformat()},
+    ))
 
     # Stop all layers
     await worker_kit.shutdown()
@@ -561,14 +538,9 @@ app = FastAPI(
 )
 
 # CORS
-_cors_origins = [
-    o.strip()
-    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
-    if o.strip()
-]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -692,16 +664,7 @@ def _log_gate_routing(
         """INSERT INTO gate_routing_log
            (id, user_id, username, role, from_location, to_location, routed_at, transfer_system)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-        (
-            uuid.uuid4().hex[:16],
-            user_id,
-            username,
-            role,
-            from_location,
-            to_location,
-            now,
-            transfer_system,
-        ),
+        (uuid.uuid4().hex[:16], user_id, username, role, from_location, to_location, now, transfer_system),
     )
     db.commit()
 
@@ -716,7 +679,6 @@ async def health():
     """Health check for the Infinity Portal service."""
     health_summary = worker_kit.health.get_health_summary()
     return {
-        "entity": health_entity_block(8042, "unknown"),
         "status": "healthy",
         "service": "infinity-portal",
         "location": "Infinity Portal",
@@ -734,7 +696,7 @@ async def health():
 async def portal_status():
     """Get the current status and configuration of the Infinity Portal."""
     active_sessions = db.execute(
-        "SELECT COUNT(*) as cnt FROM portal_sessions WHERE is_active = 1",
+        "SELECT COUNT(*) as cnt FROM portal_sessions WHERE is_active = 1"
     ).fetchone()["cnt"]
 
     return PortalStatusResponse(
@@ -745,8 +707,7 @@ async def portal_status():
         locations={loc.value: info.get("name", "") for loc, info in INFINITY_LOCATIONS.items()},
         gate_routing={role: loc.value for role, loc in GATE_ROUTING.items()},
         transfer_systems={
-            ts.value: info.get("name", "")
-            for ts, info in {
+            ts.value: info.get("name", "") for ts, info in {
                 TransferSystem.NEXUS: {"name": "The Nexus"},
                 TransferSystem.HIVE: {"name": "The HIVE"},
                 TransferSystem.BRIDGE: {"name": "The Infinity Bridge"},
@@ -777,22 +738,16 @@ async def portal_login(request: Request, login: PortalLogin):
     user_agent = request.headers.get("user-agent", "unknown")
 
     # Phase 22.6: Proactive defense evaluation
-    defense_result = await worker_kit.defense.evaluate_request(
-        {
-            "ip": client_ip,
-            "path": "/portal/login",
-            "method": "POST",
-            "user_agent": user_agent,
-        },
-    )
+    defense_result = await worker_kit.defense.evaluate_request({
+        "ip": client_ip,
+        "path": "/portal/login",
+        "method": "POST",
+        "user_agent": user_agent,
+    })
     if not defense_result.allowed:
-        logger.warning(
-            "Defense layer blocked login: %s",
-            sanitize_for_log(defense_result.reason),
-        )
         raise HTTPException(
             status_code=429,
-            detail="Request blocked by defense layer",
+            detail=f"Request blocked by defense layer: {defense_result.reason}",
         )
 
     # Call Infinity Auth for authentication
@@ -814,10 +769,7 @@ async def portal_login(request: Request, login: PortalLogin):
     # Phase 22.6: Confirm routing via FluidicGateway for weighted adaptive routing
     try:
         fluid_route = await worker_kit.gateway.route(role, auth_result["user_id"])
-        worker_kit.gateway.record_route_success(
-            fluid_route.target_location,
-            (time.time() - t_start) * 1000,
-        )
+        worker_kit.gateway.record_route_success(fluid_route.target_location, (time.time() - t_start) * 1000)
     except Exception:
         pass
 
@@ -860,21 +812,19 @@ async def portal_login(request: Request, login: PortalLogin):
     worker_kit.health.record_metric("portal_logins", 1.0)
 
     # Publish Sentinel event for auth activity
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.BRIDGE,
-            event_type="user_authenticated",
-            source="infinity_portal",
-            payload={
-                "user_id": auth_result["user_id"],
-                "username": auth_result["username"],
-                "role": role,
-                "routed_to": routing.routed_to,
-                "transfer_system": routing.transfer_system,
-                "latency_ms": latency_ms,
-            },
-        ),
-    )
+    await sentinel.publish(SentinelEvent(
+        channel=SentinelChannel.BRIDGE,
+        event_type="user_authenticated",
+        source="infinity_portal",
+        payload={
+            "user_id": auth_result["user_id"],
+            "username": auth_result["username"],
+            "role": role,
+            "routed_to": routing.routed_to,
+            "transfer_system": routing.transfer_system,
+            "latency_ms": latency_ms,
+        },
+    ))
 
     return PortalSessionResponse(
         session_id=session_id,
@@ -906,22 +856,16 @@ async def portal_register(request: Request, registration: PortalRegister):
     user_agent = request.headers.get("user-agent", "unknown")
 
     # Phase 22.6: Proactive defense evaluation
-    defense_result = await worker_kit.defense.evaluate_request(
-        {
-            "ip": client_ip,
-            "path": "/portal/register",
-            "method": "POST",
-            "user_agent": user_agent,
-        },
-    )
+    defense_result = await worker_kit.defense.evaluate_request({
+        "ip": client_ip,
+        "path": "/portal/register",
+        "method": "POST",
+        "user_agent": user_agent,
+    })
     if not defense_result.allowed:
-        logger.warning(
-            "Defense layer blocked login: %s",
-            sanitize_for_log(defense_result.reason),
-        )
         raise HTTPException(
             status_code=429,
-            detail="Request blocked by defense layer",
+            detail=f"Request blocked by defense layer: {defense_result.reason}",
         )
 
     # Call Infinity Auth for registration
@@ -979,20 +923,18 @@ async def portal_register(request: Request, registration: PortalRegister):
     worker_kit.health.record_metric("portal_registrations", 1.0)
 
     # Publish Sentinel event
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.BRIDGE,
-            event_type="user_registered",
-            source="infinity_portal",
-            payload={
-                "user_id": auth_result["user_id"],
-                "username": auth_result["username"],
-                "role": role,
-                "routed_to": routing.routed_to,
-                "latency_ms": latency_ms,
-            },
-        ),
-    )
+    await sentinel.publish(SentinelEvent(
+        channel=SentinelChannel.BRIDGE,
+        event_type="user_registered",
+        source="infinity_portal",
+        payload={
+            "user_id": auth_result["user_id"],
+            "username": auth_result["username"],
+            "role": role,
+            "routed_to": routing.routed_to,
+            "latency_ms": latency_ms,
+        },
+    ))
 
     return PortalSessionResponse(
         session_id=session_id,
@@ -1024,23 +966,6 @@ async def portal_logout(request: Request):
     )
     db.commit()
 
-    # Revoke JWT at auth service so the token cannot be reused
-    auth_header = request.headers.get("Authorization")
-    if auth_header:
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as _client:
-                _revoke_resp = await _client.post(
-                    f"{AUTH_SERVICE_URL}/auth/logout",
-                    headers={"Authorization": auth_header},
-                )
-                if _revoke_resp.status_code >= 400:
-                    logger.warning(
-                        "portal_logout: auth service returned %d when revoking JWT — token may still be active",
-                        _revoke_resp.status_code,
-                    )
-        except Exception:
-            logger.warning("portal_logout: could not reach auth service to revoke JWT")
-
     # Log event
     client_ip = request.client.host if request.client else "unknown"
     _log_portal_event(
@@ -1051,14 +976,12 @@ async def portal_logout(request: Request):
     )
 
     # Publish Sentinel event
-    await sentinel.publish(
-        SentinelEvent(
-            channel=SentinelChannel.BRIDGE,
-            event_type="user_logout",
-            source="infinity_portal",
-            payload={"user_id": user_id, "username": username},
-        ),
-    )
+    await sentinel.publish(SentinelEvent(
+        channel=SentinelChannel.BRIDGE,
+        event_type="user_logout",
+        source="infinity_portal",
+        payload={"user_id": user_id, "username": username},
+    ))
 
     return {"message": "Logged out from Infinity Portal", "redirect": "/portal/login"}
 
@@ -1110,14 +1033,12 @@ async def list_locations():
     """List all Infinity Locations in the Trancendos Universe."""
     locations = []
     for loc, info in INFINITY_LOCATIONS.items():
-        locations.append(
-            {
-                "id": loc.value,
-                "name": info.get("name", ""),
-                "purpose": info.get("purpose", ""),
-                "description": info.get("description", ""),
-            },
-        )
+        locations.append({
+            "id": loc.value,
+            "name": info.get("name", ""),
+            "purpose": info.get("purpose", ""),
+            "description": info.get("description", ""),
+        })
     return {"locations": locations, "total": len(locations)}
 
 
@@ -1127,14 +1048,12 @@ async def gate_info():
     routing_rules = []
     for role, location in InfinityGate.EXTENDED_ROUTING.items():
         info = INFINITY_LOCATIONS.get(location, {})
-        routing_rules.append(
-            {
-                "role": role,
-                "destination_id": location.value,
-                "destination_name": info.get("name", ""),
-                "purpose": info.get("purpose", ""),
-            },
-        )
+        routing_rules.append({
+            "role": role,
+            "destination_id": location.value,
+            "destination_name": info.get("name", ""),
+            "purpose": info.get("purpose", ""),
+        })
 
     return {
         "gate_name": "Infinity Gate",
@@ -1151,14 +1070,12 @@ async def transfer_systems():
 
     systems = []
     for ts, info in TRANSFER_SYSTEMS.items():
-        systems.append(
-            {
-                "id": ts.value,
-                "name": info.get("name", ""),
-                "transfers": info.get("transfers", ""),
-                "description": info.get("description", ""),
-            },
-        )
+        systems.append({
+            "id": ts.value,
+            "name": info.get("name", ""),
+            "transfers": info.get("transfers", ""),
+            "description": info.get("description", ""),
+        })
     return {"transfer_systems": systems, "total": len(systems)}
 
 
@@ -1230,14 +1147,20 @@ async def routing_history(limit: int = Query(50, ge=1, le=500)):
 async def stats():
     """Get Infinity Portal service statistics including smart adaptive layer stats."""
     active_sessions = db.execute(
-        "SELECT COUNT(*) as cnt FROM portal_sessions WHERE is_active = 1",
+        "SELECT COUNT(*) as cnt FROM portal_sessions WHERE is_active = 1"
     ).fetchone()["cnt"]
 
-    total_sessions = db.execute("SELECT COUNT(*) as cnt FROM portal_sessions").fetchone()["cnt"]
+    total_sessions = db.execute(
+        "SELECT COUNT(*) as cnt FROM portal_sessions"
+    ).fetchone()["cnt"]
 
-    total_events = db.execute("SELECT COUNT(*) as cnt FROM portal_events").fetchone()["cnt"]
+    total_events = db.execute(
+        "SELECT COUNT(*) as cnt FROM portal_events"
+    ).fetchone()["cnt"]
 
-    total_routing = db.execute("SELECT COUNT(*) as cnt FROM gate_routing_log").fetchone()["cnt"]
+    total_routing = db.execute(
+        "SELECT COUNT(*) as cnt FROM gate_routing_log"
+    ).fetchone()["cnt"]
 
     return {
         "service": "infinity-portal",

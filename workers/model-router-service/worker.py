@@ -26,21 +26,10 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    FastAPI,
-    Header,
-    HTTPException,
-    Query,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
-
-from src.entities.health_metadata import health_entity_block
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -123,7 +112,7 @@ def _seed_default_models() -> None:
             250,
             7,
         ),
-        # gpt-4o-mini removed — OpenAI is a paid API (~$0.00015/1k tokens); zero-cost violation
+        ("gpt-4o-mini", "openai", "gpt-4o-mini", 1, ["chat", "completion", "vision"], 0.0, 180, 6),
         ("llama3.1:8b", "ollama", "llama3.1:8b", 1, ["chat", "completion"], 0.0, 200, 5),
         (
             "qwen2.5-coder:7b",
@@ -136,17 +125,6 @@ def _seed_default_models() -> None:
             5,
         ),
         ("nomic-embed-text", "ollama", "nomic-embed-text", 1, ["embedding"], 0.0, 50, 3),
-        # Cerebras free tier — 60k TPM / 1M TPD; zero-cost
-        (
-            "cerebras-llama3.3-70b",
-            "cerebras",
-            "llama3.3-70b",
-            1,
-            ["chat", "completion", "reasoning"],
-            0.0,
-            180,
-            6,
-        ),
     ]
     for name, provider, model_id, is_free, caps, cost, latency, priority in defaults:
         mid = _new_id()
@@ -245,19 +223,6 @@ app = FastAPI(title="Tranc3 Model Router Service", version="0.1.0", lifespan=_li
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
@@ -265,12 +230,7 @@ _router = APIRouter(dependencies=[Depends(require_internal_auth)])
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "ok",
-        "service": "model-router-service",
-        "port": 8033,
-        "entity": health_entity_block(8033, "model-router-service"),
-    }
+    return {"status": "ok", "service": "model-router-service", "port": 8033}
 
 
 # ---------------------------------------------------------------------------
@@ -278,7 +238,7 @@ async def health():
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/models", status_code=201)
+@app.post("/models", status_code=201)
 async def register_model(body: ModelRegister):
     conn = _get_db()
     now = _now()
@@ -314,11 +274,9 @@ async def register_model(body: ModelRegister):
     }
 
 
-@_router.get("/models")
+@app.get("/models")
 async def list_models(
-    active_only: bool = True,
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    active_only: bool = True, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)
 ):
     conn = _get_db()
     q = "SELECT * FROM models WHERE 1=1"
@@ -332,7 +290,7 @@ async def list_models(
     return [dict(r) for r in rows]
 
 
-@_router.get("/models/{model_id}")
+@app.get("/models/{model_id}")
 async def get_model(model_id: str):
     conn = _get_db()
     row = conn.execute("SELECT * FROM models WHERE id=?", (model_id,)).fetchone()
@@ -342,7 +300,7 @@ async def get_model(model_id: str):
     return dict(row)
 
 
-@_router.delete("/models/{model_id}", status_code=204)
+@app.delete("/models/{model_id}", status_code=204)
 async def deregister_model(model_id: str):
     conn = _get_db()
     cur = conn.execute("DELETE FROM models WHERE id=?", (model_id,))
@@ -357,7 +315,7 @@ async def deregister_model(model_id: str):
 # ---------------------------------------------------------------------------
 
 
-@_router.post("/route")
+@app.post("/route")
 async def route_request(body: RouteRequest):
     conn = _get_db()
     q = "SELECT * FROM models WHERE is_active=1 AND is_free=1"
@@ -407,7 +365,7 @@ async def route_request(body: RouteRequest):
 # ---------------------------------------------------------------------------
 
 
-@_router.put("/models/{model_id}/health")
+@app.put("/models/{model_id}/health")
 async def report_health(model_id: str, body: HealthReport):
     conn = _get_db()
     now = _now()
@@ -429,14 +387,14 @@ async def report_health(model_id: str, body: HealthReport):
 # ---------------------------------------------------------------------------
 
 
-@_router.get("/stats")
+@app.get("/stats")
 async def get_stats():
     conn = _get_db()
     total = conn.execute("SELECT COUNT(*) as c FROM models").fetchone()["c"]
     free = conn.execute("SELECT COUNT(*) as c FROM models WHERE is_free=1").fetchone()["c"]
     active = conn.execute("SELECT COUNT(*) as c FROM models WHERE is_active=1").fetchone()["c"]
     total_requests = conn.execute(
-        "SELECT COALESCE(SUM(total_requests), 0) as c FROM models",
+        "SELECT COALESCE(SUM(total_requests), 0) as c FROM models"
     ).fetchone()["c"]
     conn.close()
     return {
@@ -488,7 +446,7 @@ async def _broadcast_event(event_type: str, data: dict) -> None:
         _connected_ws.remove(ws)
 
 
-@_router.get("/events")
+@app.get("/events")
 async def _sse_events():
     async def _generator():
         while True:
@@ -499,7 +457,7 @@ async def _sse_events():
     return EventSourceResponse(_generator())
 
 
-@_router.get("/dashboard/summary")
+@app.get("/dashboard/summary")
 async def _dashboard_summary():
     """Aggregated summary optimized for dashboard consumption."""
     stats = await _get_stats_async()
@@ -531,9 +489,6 @@ async def _get_stats_async() -> dict:
 def _get_stats() -> dict:
     """Return basic service stats for real-time endpoints (sync fallback)."""
     return {"service": SERVICE_NAME, "port": PORT}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

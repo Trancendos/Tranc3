@@ -47,8 +47,7 @@ class CircuitBreaker:
             if time.time() - self._last_failure > self.recovery_timeout:
                 self._state = CircuitState.HALF_OPEN
                 logger.info(
-                    "Circuit %s: OPEN → HALF_OPEN (testing recovery)",
-                    sanitize_for_log(self.name),
+                    "Circuit %s: OPEN → HALF_OPEN (testing recovery)", sanitize_for_log(self.name)
                 )
         return self._state
 
@@ -96,8 +95,7 @@ class CircuitBreaker:
                 self._failure_count = 0
                 self._success_count = 0
                 logger.info(
-                    "Circuit %s: HALF_OPEN → CLOSED (recovered)",
-                    sanitize_for_log(self.name),
+                    "Circuit %s: HALF_OPEN → CLOSED (recovered)", sanitize_for_log(self.name)
                 )
         else:
             self._failure_count = 0
@@ -106,13 +104,12 @@ class CircuitBreaker:
         self._failure_count += 1
         self._last_failure = time.time()
         logger.warning(
-            f"Circuit {self.name}: failure {self._failure_count}/{self.failure_threshold} — {error}",
+            f"Circuit {self.name}: failure {self._failure_count}/{self.failure_threshold} — {error}"
         )
         if self._failure_count >= self.failure_threshold:
             self._state = CircuitState.OPEN
             logger.error(
-                "Circuit %s: CLOSED → OPEN (too many failures)",
-                sanitize_for_log(self.name),
+                "Circuit %s: CLOSED → OPEN (too many failures)", sanitize_for_log(self.name)
             )
 
     def get_status(self) -> Dict:
@@ -179,7 +176,7 @@ class LoopValidator:
         history = list(self._history[loop_id])
         if len(history) >= 10 and len(set(history[-10:])) == 1:
             logger.warning(
-                f"LOOP_VALIDATOR: Stagnation detected in '{loop_id}' — value unchanged for 10 iterations",
+                f"LOOP_VALIDATOR: Stagnation detected in '{loop_id}' — value unchanged for 10 iterations"
             )
             return False
         return True
@@ -208,10 +205,9 @@ def with_retry(max_attempts: int = 3, backoff: float = 1.0, exceptions=(Exceptio
                         raise
                     wait = backoff * (2 ** (attempt - 1))
                     logger.warning(
-                        f"Retry {attempt}/{max_attempts} for {func.__name__}: {e} — waiting {wait}s",
+                        f"Retry {attempt}/{max_attempts} for {func.__name__}: {e} — waiting {wait}s"
                     )
                     time.sleep(wait)
-            raise RuntimeError(f"Retry loop exhausted for {func.__name__}")
 
         return wrapper
 
@@ -245,12 +241,10 @@ class SelfHealer:
             return {"healed": True, "action": action_name, "result": result}
         except Exception as e:
             self._history.append(
-                {"action": action_name, "time": time.time(), "result": f"failed: {e}"},
+                {"action": action_name, "time": time.time(), "result": f"failed: {e}"}
             )
             logger.error(
-                "SelfHealer: '%s' failed: %s",
-                sanitize_for_log(action_name),
-                sanitize_for_log(e),
+                "SelfHealer: '%s' failed: %s", sanitize_for_log(action_name), sanitize_for_log(e)
             )
             return {"healed": False, "action": action_name, "error": str(e)}
 
@@ -262,14 +256,10 @@ class SelfHealer:
 CIRCUITS: Dict[str, CircuitBreaker] = {
     "model_inference": CircuitBreaker("model_inference", failure_threshold=5, recovery_timeout=30),
     "quantum_attention": CircuitBreaker(
-        "quantum_attention",
-        failure_threshold=3,
-        recovery_timeout=10,
+        "quantum_attention", failure_threshold=3, recovery_timeout=10
     ),
     "consciousness_phi": CircuitBreaker(
-        "consciousness_phi",
-        failure_threshold=5,
-        recovery_timeout=15,
+        "consciousness_phi", failure_threshold=5, recovery_timeout=15
     ),
     "database_write": CircuitBreaker("database_write", failure_threshold=3, recovery_timeout=60),
     "redis_ops": CircuitBreaker("redis_ops", failure_threshold=5, recovery_timeout=30),

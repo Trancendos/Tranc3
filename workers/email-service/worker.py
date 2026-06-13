@@ -26,11 +26,9 @@ from email.utils import formataddr
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8018
 WORKER_NAME = "email-service"
@@ -236,36 +234,6 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
     with get_conn() as conn:
@@ -273,7 +241,6 @@ async def health():
         sent = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='sent'").fetchone()[0]
         failed = conn.execute("SELECT COUNT(*) FROM outbox WHERE status='failed'").fetchone()[0]
     return {
-        "entity": health_entity_block(8018, "email-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
@@ -282,10 +249,18 @@ async def health():
         "pending": pending,
         "sent": sent,
         "failed": failed,
+        "entity": {
+            "location": "Arcadia",
+            "pillar": "Commercial / Financial",
+            "lead_ai": "Lilli SC",
+            "primes": ["Dorris Fontaine"],
+            "primary_function": "Post-Login User Frontend, Forum & Email Hub",
+            "layer": "supporting",
+        },
     }
 
 
-@_router.post("/send", status_code=202)
+@app.post("/send", status_code=202)
 async def send_email(req: SendIn):
     now = time.time()
     with get_conn() as conn:
@@ -305,7 +280,7 @@ async def send_email(req: SendIn):
     return {"id": cur.lastrowid, "status": "queued", "to": req.to}
 
 
-@_router.post("/send/batch", status_code=202)
+@app.post("/send/batch", status_code=202)
 async def send_batch(req: BatchSendIn):
     now = time.time()
     rows = [
@@ -321,7 +296,7 @@ async def send_batch(req: BatchSendIn):
     return {"queued": len(rows)}
 
 
-@_router.get("/outbox")
+@app.get("/outbox")
 async def list_outbox(
     status: Optional[str] = None,
     limit: int = Query(50, le=500),
@@ -341,15 +316,14 @@ async def list_outbox(
     return {"total": total, "emails": [dict(r) for r in rows]}
 
 
-@_router.post("/outbox/{email_id}/retry")
+@app.post("/outbox/{email_id}/retry")
 async def retry_email(email_id: int):
     with get_conn() as conn:
         row = conn.execute("SELECT id, status FROM outbox WHERE id = ?", (email_id,)).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Email not found")
         conn.execute(
-            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?",
-            (email_id,),
+            "UPDATE outbox SET status='pending', retry_count=0, error=NULL WHERE id=?", (email_id,)
         )
         conn.commit()
     return {"retrying": email_id}
@@ -358,7 +332,7 @@ async def retry_email(email_id: int):
 # --- Templates ---
 
 
-@_router.post("/templates", status_code=201)
+@app.post("/templates", status_code=201)
 async def create_template(req: TemplateCreate):
     with get_conn() as conn:
         if conn.execute("SELECT id FROM templates WHERE id = ?", (req.id,)).fetchone():
@@ -371,16 +345,16 @@ async def create_template(req: TemplateCreate):
     return {"id": req.id, "name": req.name}
 
 
-@_router.get("/templates")
+@app.get("/templates")
 async def list_templates():
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT id, name, subject, created_at FROM templates ORDER BY name",
+            "SELECT id, name, subject, created_at FROM templates ORDER BY name"
         ).fetchall()
     return {"templates": [dict(r) for r in rows]}
 
 
-@_router.post("/templates/{template_id}/send", status_code=202)
+@app.post("/templates/{template_id}/send", status_code=202)
 async def send_template(template_id: str, req: TemplateRender):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM templates WHERE id = ?", (template_id,)).fetchone()
@@ -405,9 +379,6 @@ async def send_template(template_id: str, req: TemplateRender):
         )
         conn.commit()
     return {"id": cur.lastrowid, "status": "queued", "to": req.to, "template": template_id}
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":

@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -21,11 +20,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
-from src.entities.health_metadata import health_entity_block
 
 WORKER_PORT = 8017
 WORKER_NAME = "search-service"
@@ -154,63 +151,39 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
-_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
-
-
-async def require_internal_auth(
-    x_internal_secret: str = Header(default="", alias="X-Internal-Secret"),
-) -> None:
-    if not _INTERNAL_SECRET:
-        return
-    if x_internal_secret != _INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Internal-Secret header")
-
-
-_router = APIRouter(dependencies=[Depends(require_internal_auth)])
-
-
 @app.get("/health")
 async def health():
     with get_conn() as conn:
         index_count = conn.execute("SELECT COUNT(*) FROM indices").fetchone()[0]
         doc_count = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
     return {
-        "entity": health_entity_block(8017, "search-service"),
         "status": "healthy",
         "service": WORKER_NAME,
         "port": WORKER_PORT,
         "uptime_seconds": (datetime.now(timezone.utc) - STARTED_AT).total_seconds(),
         "indices": index_count,
         "documents": doc_count,
+        "entity": {
+            "location": "The Library",
+            "pillar": "Knowledge",
+            "lead_ai": "Zimik",
+            "primes": ["Norman Hawkins"],
+            "primary_function": "Knowledge Base & Wiki",
+        },
     }
 
 
 # --- Indices ---
 
 
-@_router.get("/indices")
+@app.get("/indices")
 async def list_indices():
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM indices ORDER BY name").fetchall()
     return {"indices": [dict(r) for r in rows]}
 
 
-@_router.post("/indices", status_code=201)
+@app.post("/indices", status_code=201)
 async def create_index(req: IndexCreate):
     with get_conn() as conn:
         if conn.execute("SELECT name FROM indices WHERE name = ?", (req.name,)).fetchone():
@@ -223,7 +196,7 @@ async def create_index(req: IndexCreate):
     return {"name": req.name, "description": req.description}
 
 
-@_router.delete("/indices/{name}")
+@app.delete("/indices/{name}")
 async def delete_index(name: str):
     if name == "default":
         raise HTTPException(status_code=400, detail="Cannot delete the default index")
@@ -240,14 +213,13 @@ async def delete_index(name: str):
 # --- Documents ---
 
 
-@_router.put("/indices/{index}/documents/{doc_id}", status_code=200)
+@app.put("/indices/{index}/documents/{doc_id}", status_code=200)
 async def index_document(index: str, doc_id: str, doc: DocumentIn):
     _ensure_index(index)
     now = time.time()
     with get_conn() as conn:
         existing = conn.execute(
-            "SELECT rowid FROM documents WHERE index_name=? AND id=?",
-            (index, doc_id),
+            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
         ).fetchone()
         if existing:
             conn.execute(
@@ -262,8 +234,7 @@ async def index_document(index: str, doc_id: str, doc: DocumentIn):
             )
             conn.execute("UPDATE indices SET doc_count=doc_count+1 WHERE name=?", (index,))
         row = conn.execute(
-            "SELECT rowid FROM documents WHERE index_name=? AND id=?",
-            (index, doc_id),
+            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
         ).fetchone()
         conn.execute(
             "INSERT INTO fts_default(rowid, id, index_name, title, body) VALUES (?,?,?,?,?)",
@@ -273,7 +244,7 @@ async def index_document(index: str, doc_id: str, doc: DocumentIn):
     return {"indexed": doc_id, "index": index}
 
 
-@_router.post("/indices/{index}/documents/batch", status_code=201)
+@app.post("/indices/{index}/documents/batch", status_code=201)
 async def batch_index(index: str, req: BatchIndexIn):
     _ensure_index(index)
     now = time.time()
@@ -281,8 +252,7 @@ async def batch_index(index: str, req: BatchIndexIn):
     with get_conn() as conn:
         for doc in req.documents:
             existing = conn.execute(
-                "SELECT rowid FROM documents WHERE index_name=? AND id=?",
-                (index, doc.id),
+                "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc.id)
             ).fetchone()
             if existing:
                 conn.execute(
@@ -297,8 +267,7 @@ async def batch_index(index: str, req: BatchIndexIn):
                 )
                 inserted += 1
             row = conn.execute(
-                "SELECT rowid FROM documents WHERE index_name=? AND id=?",
-                (index, doc.id),
+                "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc.id)
             ).fetchone()
             conn.execute(
                 "INSERT INTO fts_default(rowid, id, index_name, title, body) VALUES (?,?,?,?,?)",
@@ -309,13 +278,12 @@ async def batch_index(index: str, req: BatchIndexIn):
     return {"indexed": len(req.documents), "index": index}
 
 
-@_router.delete("/indices/{index}/documents/{doc_id}")
+@app.delete("/indices/{index}/documents/{doc_id}")
 async def delete_document(index: str, doc_id: str):
     _ensure_index(index)
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT rowid FROM documents WHERE index_name=? AND id=?",
-            (index, doc_id),
+            "SELECT rowid FROM documents WHERE index_name=? AND id=?", (index, doc_id)
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Document not found")
@@ -329,7 +297,7 @@ async def delete_document(index: str, doc_id: str):
 # --- Search ---
 
 
-@_router.get("/search")
+@app.get("/search")
 async def search(
     q: str,
     index: str = "default",
@@ -364,18 +332,15 @@ async def search(
         d = dict(r)
         try:
             d["metadata"] = json.loads(d["metadata"])
-        except json.JSONDecodeError:
-            d["metadata"] = {}
+        except Exception:
+            pass
         results.append(d)
     return {"query": q, "index": index, "results": results, "count": len(results)}
 
 
-@_router.post("/search")
+@app.post("/search")
 async def search_post(req: SearchIn):
     return await search(req.query, req.index, req.limit, req.offset, req.highlight)
-
-
-app.include_router(_router)
 
 
 if __name__ == "__main__":
